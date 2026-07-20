@@ -1269,7 +1269,9 @@
     .sidebar{
       position:static;width:100% !important;height:auto;flex-direction:row;overflow-x:auto;
       overflow-y:visible;padding:14px;align-items:center;
+      scrollbar-width:none;-ms-overflow-style:none;
     }
+    .sidebar::-webkit-scrollbar{display:none;}
     .brand{border:none;padding:0 16px 0 4px;margin:0;}
     .brand-text, .nav-label{display:block !important;}
     nav{flex-direction:row;padding:0;}
@@ -2679,6 +2681,63 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentShopId = null;
 let currentUser = null;
+
+// ---- Product image storage (Supabase Storage, not base64-in-the-row) ----
+const PRODUCT_IMAGE_BUCKET = 'product-images';
+const PRODUCT_IMAGE_URL_PREFIX = `${SUPABASE_URL}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/`;
+
+function extFromMimeType(type){
+  const known = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg'};
+  return known[type] || 'jpg';
+}
+
+// Uploads one image under a per-shop folder (so storage RLS can gate on
+// shop_id the same way the app tables do) at a fresh random path -- never
+// reused, so replacing a product's photo can't collide with the old one
+// while both briefly exist.
+async function uploadProductImageBlob(blob, shopId){
+  const path = `${shopId}/${crypto.randomUUID()}.${extFromMimeType(blob.type)}`;
+  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, blob, { contentType: blob.type || 'image/jpeg' });
+  if(error) throw error;
+  return sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+// Returns the storage object path if `url` is one of our own product-image
+// URLs, or null for anything else (legacy base64 data: URIs, blob: object
+// URLs used for local previews, or no image at all) -- so callers never
+// try to delete something that isn't actually a stored object.
+function productImageStoragePath(url){
+  return (typeof url === 'string' && url.startsWith(PRODUCT_IMAGE_URL_PREFIX))
+    ? url.slice(PRODUCT_IMAGE_URL_PREFIX.length)
+    : null;
+}
+
+async function deleteProductImageIfStored(url){
+  const path = productImageStoragePath(url);
+  if(!path) return;
+  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
+  if(error) console.error('Failed to delete product image from storage:', error);
+}
+
+// One-time-per-shop cleanup: any product still carrying an old base64
+// data: URI in `image` gets its photo re-uploaded to Storage and its row
+// repointed at the new URL. Self-terminating -- once every product's image
+// is a Storage URL, the filter below is empty and this is a no-op, so it's
+// safe to just call unconditionally on every boot.
+async function migrateBase64ProductImages(shopId){
+  const legacy = data.products.filter(p=> typeof p.image === 'string' && p.image.startsWith('data:'));
+  if(!legacy.length) return;
+  toast(`Migrating ${legacy.length} product photo${legacy.length===1?'':'s'} to storage…`, 4000);
+  for(const p of legacy){
+    try{
+      const blob = await (await fetch(p.image)).blob();
+      p.image = await uploadProductImageBlob(blob, shopId);
+    } catch(e){
+      console.error('Image migration failed for product', p.id, e);
+    }
+  }
+  await saveData();
+}
 
 // Small local-only UI prefs (e.g. sidebar collapsed state) still use plain
 // localStorage -- these never held price-book data and aren't part of the
@@ -6902,7 +6961,9 @@ function variantEffectiveCaption(v){
 /* ---- Variant attribute/combination builder (used inside the product modal) ---- */
 let draftVariantAttrs = [];   // [{name:'Color', values:'Red, Blue'}]
 let draftVariants = [];       // [{sku:'RED-S', combo:{Color:'Red', Size:'S'}}]
-let draftProductImage = null; // data URL of the uploaded product photo, or null
+let draftProductImage = null; // Storage URL of the uploaded product photo, or null
+let originalProductImage = null;       // the image URL the product had when the form opened (for edit)
+let sessionUploadedImagePaths = [];    // storage paths uploaded during this modal session, not yet committed
 
 function renderVariantAttrRows(){
   const wrap = document.getElementById('variantAttrsWrap');
@@ -7213,18 +7274,47 @@ function setProductImagePreview(dataUrl){
   }
 }
 document.getElementById('p_image_upload_btn').addEventListener('click', ()=> document.getElementById('p_image_input').click());
-document.getElementById('p_image_input').addEventListener('change', (e)=>{
+document.getElementById('p_image_input').addEventListener('change', async (e)=>{
   const file = e.target.files && e.target.files[0];
   e.target.value = '';
   if(!file) return;
   if(!file.type.startsWith('image/')){ toast('Please choose an image file'); return; }
   if(file.size > 4*1024*1024){ toast('Image is too large — please use one under 4MB'); return; }
-  const reader = new FileReader();
-  reader.onload = ()=> setProductImagePreview(reader.result);
-  reader.onerror = ()=> toast('Could not read that image');
-  reader.readAsDataURL(file);
+
+  const localPreview = URL.createObjectURL(file);
+  setProductImagePreview(localPreview);
+  const saveBtn = document.getElementById('p_save');
+  saveBtn.disabled = true;
+  try{
+    const url = await uploadProductImageBlob(file, currentShopId);
+    sessionUploadedImagePaths.push(productImageStoragePath(url));
+    setProductImagePreview(url);
+  } catch(err){
+    console.error('Image upload failed:', err);
+    toast('Image upload failed: ' + ((err && err.message) || err));
+    setProductImagePreview(originalProductImage || null);
+  } finally {
+    URL.revokeObjectURL(localPreview);
+    saveBtn.disabled = false;
+  }
 });
 document.getElementById('p_image_remove_btn').addEventListener('click', ()=> setProductImagePreview(null));
+// Deletes every image uploaded to Storage during this modal session except
+// `keepUrl` (pass null to discard all of them) -- called on save (keeping
+// only the final image) and on cancel (keeping none), so an upload that
+// gets replaced or abandoned mid-session doesn't linger in the bucket forever.
+async function discardUnsavedProductImages(keepUrl){
+  const keepPath = productImageStoragePath(keepUrl);
+  const toDelete = sessionUploadedImagePaths.filter(p=>p!==keepPath);
+  sessionUploadedImagePaths = [];
+  if(!toDelete.length) return;
+  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove(toDelete);
+  if(error) console.error('Failed to clean up unused product images:', error);
+}
+function cancelProductForm(){
+  discardUnsavedProductImages(null).catch(e=>console.error(e));
+  resetProductForm();
+}
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
   editingProductId = id;
@@ -7235,6 +7325,8 @@ function editProduct(id){
   document.getElementById('p_subcategory').value = p.subcategory || '';
   refreshPresetDatalists();
   document.getElementById('p_notes').value = p.notes;
+  originalProductImage = p.image || null;
+  sessionUploadedImagePaths = [];
   setProductImagePreview(p.image || null);
   document.getElementById('p_wholesale_markup_type').value = p.wholesaleMarkupType || 'percent';
   document.getElementById('p_wholesale_markup_value').value = p.wholesaleMarkupValue || '';
@@ -7258,6 +7350,8 @@ function resetProductForm(){
   document.getElementById('p_retail_markup_type').value = 'percent';
   document.getElementById('p_id').disabled = false;
   document.getElementById('productFormTitle').textContent = 'Add product';
+  originalProductImage = null;
+  sessionUploadedImagePaths = [];
   setProductImagePreview(null);
   draftVariantAttrs = [];
   draftVariants = [];
@@ -7267,8 +7361,10 @@ function resetProductForm(){
 }
 function deleteProduct(id){
   if(!confirm('Delete this product? Price entries referencing it will remain but show a blank product.')) return;
+  const product = data.products.find(p=>p.id===id);
   data.products = data.products.filter(p=>p.id!==id);
   saveData(); triggerProductsRender(); toast('Product deleted');
+  if(product && product.image) deleteProductImageIfStored(product.image).catch(e=>console.error(e));
 }
 function deleteVariant(productId, variantIdx){
   const p = data.products.find(x=>x.id===productId); if(!p || !p.variants) return;
@@ -7352,11 +7448,17 @@ document.getElementById('p_save').addEventListener('click', ()=>{
     data.products.push(record);
   }
   ensurePresetCategory(record.category, record.subcategory);
+  const priorImage = editingProductId ? originalProductImage : null;
   saveData(); closeModal('productModal'); resetProductForm(); triggerProductsRender(); renderPresets();
   toast('Product saved');
+  // Fire-and-forget storage cleanup: drop any images uploaded this session
+  // that didn't end up being the saved one, and -- when editing -- the old
+  // image it replaced, so orphaned objects don't pile up in the bucket.
+  discardUnsavedProductImages(record.image).catch(e=>console.error(e));
+  if(priorImage && priorImage !== record.image) deleteProductImageIfStored(priorImage).catch(e=>console.error(e));
 });
-document.getElementById('p_cancel').addEventListener('click', ()=>closeModalAndReset('productModal', resetProductForm));
-document.getElementById('productModalClose').addEventListener('click', ()=>closeModalAndReset('productModal', resetProductForm));
+document.getElementById('p_cancel').addEventListener('click', ()=>closeModalAndReset('productModal', cancelProductForm));
+document.getElementById('productModalClose').addEventListener('click', ()=>closeModalAndReset('productModal', cancelProductForm));
 document.getElementById('p_search').addEventListener('input', triggerProductsRender);
 document.getElementById('p_category_filter').addEventListener('change', triggerProductsRender);
 document.getElementById('p_supplier_filter').addEventListener('change', triggerProductsRender);
@@ -9348,6 +9450,7 @@ async function boot(){
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
     initLastSynced(data, currentShopId);
+    await migrateBase64ProductImages(currentShopId);
   } catch(e){
     console.error('Failed to start app:', e);
     const el = ensureAuthOverlay();
