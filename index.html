@@ -2671,9 +2671,20 @@
   <img id="imgLightboxImg" src="" alt="">
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-/* ---------------- Storage ---------------- */
-const STORE_KEY = 'priceBookData_v1';
+/* ---------------- Storage (Supabase) ---------------- */
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhneXdqYWlmZG1ncmNud3hzdHhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjM3MjEsImV4cCI6MjEwMDEzOTcyMX0.rmZgeNeP_LE3ODfepI-UVDQUKvKiw-pr4wF9zWzwe4k';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentShopId = null;
+let currentUser = null;
+
+// Small local-only UI prefs (e.g. sidebar collapsed state) still use plain
+// localStorage -- these never held price-book data and aren't part of the
+// Supabase migration.
+function lsGet(key){ try{ return localStorage.getItem(key); } catch(e){ return null; } }
+function lsSet(key, val){ try{ localStorage.setItem(key, val); } catch(e){} }
 
 function seedData(){
   return {
@@ -2766,143 +2777,460 @@ function quoteAgedOffBoard(q){
   return !!(q.invoiced && q.invoicedTs && (Date.now() - q.invoicedTs) >= SQ_BOARD_HIDE_AFTER_MS);
 }
 
-// Some browsers (Safari in particular, and some strict privacy settings)
-// block localStorage entirely when a file is opened directly from disk
-// (file:// URLs) rather than served from a website. If that call throws,
-// it happens at the very top of this script -- before any button's
-// addEventListener() runs -- so EVERY button on the page ends up dead.
-// These wrappers catch that and fall back to an in-memory store instead,
-// so the app still loads and stays interactive (it just won't remember
-// data between visits in that specific situation).
-const memStore = {};
-let storageBlocked = false;
-function lsGet(key){
-  try{ return localStorage.getItem(key); }
-  catch(e){ storageBlocked = true; return (key in memStore) ? memStore[key] : null; }
-}
-function lsSet(key, val){
-  try{ localStorage.setItem(key, val); }
-  catch(e){ storageBlocked = true; memStore[key] = val; }
+// ---- Supabase-backed loadData()/saveData() -----------------------------
+// loadData() reassembles the exact `data` shape the rest of this file
+// already expects. saveData() diffs against `lastSynced` -- a snapshot of
+// the rows as of the last successful write, per collection -- and only
+// upserts what changed and deletes what disappeared, instead of
+// re-sending every collection on every call.
+//
+// lastSynced is seeded right after loadData() (see initLastSynced() in
+// boot()) so the first edit after opening the app diffs against what's
+// actually on the server. For a brand-new shop it's left empty, which
+// correctly makes the first saveData() upload the whole seed.
+//
+// Still true, unchanged from the fast-cut version:
+//   - saveData() isn't awaited by its ~64 call sites (fire-and-forget), so
+//     a failed sync only surfaces as a toast, and two rapid saves can race
+//     each other's writes.
+//   - new-row ids are still assigned client-side via the nextX counters
+//     below; two staff creating rows at the same moment from different
+//     sessions can in theory pick the same id (see migration 0002's notes).
+//     prices/stock_log/cash_txns/saved_quotes/purchase_invoices use a bare
+//     bigint `id` as their primary key (not scoped by shop_id), so that
+//     collision risk is actually cross-shop, not just same-shop -- out of
+//     scope here, called out so it isn't mistaken for something this
+//     change fixed.
+//
+// One behavior change worth knowing: "Clear all data" and "Import backup"
+// both replace `data` wholesale and call saveData(). Since deletes now
+// propagate, that means Clear all data actually deletes the shop's rows
+// in Supabase too (previously it only ever cleared the in-memory copy).
+
+async function loadData(shopId){
+  const sel = (table) => sb.from(table).select('*').eq('shop_id', shopId);
+  const [
+    suppliersR, customersR, debtLogR, productsR, pricesR,
+    stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
+    savedQuotesR, purchaseInvoicesR, settingsR
+  ] = await Promise.all([
+    sel('suppliers'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
+    sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
+    sel('saved_quotes'), sel('purchase_invoices'),
+    sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle()
+  ]);
+  [suppliersR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR]
+    .forEach(r=>{ if(r.error) throw r.error; });
+
+  const debtByCustomer = {};
+  (debtLogR.data||[]).forEach(l=>{
+    (debtByCustomer[l.customer_id] ||= []).push({id:l.id, date:l.date, type:l.type, amount:Number(l.amount)||0, note:l.note||''});
+  });
+
+  const stock = {};
+  (stockR.data||[]).forEach(s=>{ stock[s.key] = Number(s.qty)||0; });
+
+  const stockLots = {};
+  (stockLotsR.data||[]).forEach(l=>{ (stockLots[l.key] ||= []).push({qty:Number(l.qty)||0, cost: l.cost==null ? null : Number(l.cost)}); });
+
+  const cashDays = {};
+  (cashDaysR.data||[]).forEach(cd=>{ cashDays[cd.date] = {opening:cd.opening, actual:cd.actual, openingSet: !!cd.opening_set}; });
+
+  const settings = settingsR.data || {};
+  const presets = settings.presets || {};
+  const seed = seedData();
+  const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
+
+  return {
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
+    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
+    nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
+    products: (productsR.data||[]).map(p=>({
+      id:p.id, name:p.name, type:p.type||'simple', category:p.category, subcategory:p.subcategory||'',
+      notes:p.notes, image:p.image||null,
+      wholesaleMarkupType:p.wholesale_markup_type, wholesaleMarkupValue:Number(p.wholesale_markup_value)||0,
+      retailMarkupType:p.retail_markup_type, retailMarkupValue:Number(p.retail_markup_value)||0,
+      variantAttributes:p.variant_attributes||[], variants:p.variants||[]
+    })),
+    prices: (pricesR.data||[]).map(pr=>({
+      id:pr.id, productId:pr.product_id, variantIdx:pr.variant_idx, supplierId:pr.supplier_id,
+      wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
+      date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0
+    })),
+    nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
+    stock, stockLots,
+    stockLog: (stockLogR.data||[]).map(l=>({id:l.id, key:l.key, productId:l.product_id, variantIdx:l.variant_idx, label:l.label, type:l.type, delta:Number(l.delta)||0, qtyAfter:Number(l.qty_after)||0, note:l.note||'', date:l.date, at:l.at})),
+    nextStockLogId: (stockLogR.data||[]).length ? Math.max(0,...stockLogR.data.map(l=>l.id||0))+1 : 1,
+    cashDays,
+    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:t.account, type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time})),
+    nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
+    quote,
+    nextQuoteLineId: (quote.items && quote.items.length) ? Math.max(0,...quote.items.map(i=>i.id||0))+1 : 1,
+    savedQuotes: (savedQuotesR.data||[]).map(q=>({
+      id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
+      invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
+      amountPaid:Number(q.amount_paid)||0, voided:!!q.voided, date:q.date,
+      client:{name:'', phone:''}, items:[], savedAt:null, payments:[], customerId:null, debtCharged:0,
+      ...(q.payload||{})
+    })),
+    nextSavedQuoteId: (savedQuotesR.data||[]).length ? Math.max(0,...savedQuotesR.data.map(q=>q.id||0))+1 : 1,
+    purchaseInvoices: (purchaseInvoicesR.data||[]).map(pi=>({
+      id:pi.id, quoteId:pi.quote_id, date:pi.date,
+      customerName:'', supplierId:null, supplierName:'', items:[], amountPaid:0, payments:[], voided:false,
+      ...(pi.payload||{})
+    })),
+    nextPurchaseInvoiceId: (purchaseInvoicesR.data||[]).length ? Math.max(0,...purchaseInvoicesR.data.map(pi=>pi.id||0))+1 : 1,
+    presetCategories: presets.categories || seed.presetCategories,
+    presetUnits: presets.units || seed.presetUnits,
+    presetIncomeCategories: presets.incomeCategories || seed.presetIncomeCategories,
+    presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
+    presetAttributes: presets.attributes || seed.presetAttributes,
+    seeded: true
+  };
 }
 
-function loadData(){
-  const raw = lsGet(STORE_KEY);
-  let d;
-  if(!raw){
-    d = seedData();
-    lsSet(STORE_KEY, JSON.stringify(d));
-    return d;
+let lastSynced = {};
+
+function cloneJSON(x){ return x === undefined ? x : JSON.parse(JSON.stringify(x)); }
+
+function keyRowsById(rows, field){
+  const m = {};
+  rows.forEach(r=> m[String(r[field])] = cloneJSON(r));
+  return m;
+}
+
+// Builds the exact row shapes saveData() sends to Supabase, from the
+// current `data`. Shared with initLastSynced() so the snapshot used for
+// diffing is always built the same way as what actually gets upserted.
+function buildSyncRows(d, shopId){
+  const debtLogRows = [];
+  d.customers.forEach(c=> (c.debtLog||[]).forEach(l=> debtLogRows.push({
+    id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
+  })));
+  return {
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
+    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt})),
+    debtLog: debtLogRows,
+    products: d.products.map(p=>({
+      shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
+      notes:p.notes, image:p.image,
+      wholesale_markup_type:p.wholesaleMarkupType, wholesale_markup_value:p.wholesaleMarkupValue,
+      retail_markup_type:p.retailMarkupType, retail_markup_value:p.retailMarkupValue,
+      variant_attributes:p.variantAttributes, variants:p.variants
+    })),
+    prices: d.prices.map(pr=>({
+      id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
+      wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty
+    })),
+    stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
+    stockLots: d.stockLots,
+    stockLog: d.stockLog.map(l=>({
+      id:l.id, shop_id:shopId, key:l.key, product_id:l.productId, variant_idx:l.variantIdx,
+      label:l.label, type:l.type, delta:l.delta, qty_after:l.qtyAfter, note:l.note, date:l.date, at:l.at
+    })),
+    cashDays: Object.keys(d.cashDays).map(date=>({
+      shop_id:shopId, date, opening:d.cashDays[date].opening, actual:d.cashDays[date].actual,
+      opening_set:d.cashDays[date].openingSet
+    })),
+    cashTxns: d.cashTxns.map(t=>({
+      id:t.id, shop_id:shopId, date:t.date, account:t.account, type:t.type, category:t.category,
+      amount:t.amount, description:t.description, time:t.time
+    })),
+    savedQuotes: d.savedQuotes.map(q=>({
+      id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
+      date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
+      invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
+      amount_paid:q.amountPaid, voided:q.voided,
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged}
+    })),
+    purchaseInvoices: d.purchaseInvoices.map(pi=>({
+      id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
+      payload:{customerName:pi.customerName, supplierId:pi.supplierId, supplierName:pi.supplierName, items:pi.items, amountPaid:pi.amountPaid, payments:pi.payments, voided:pi.voided}
+    })),
+    settings: {
+      shop_id: shopId,
+      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes},
+      quote_draft: d.quote
+    }
+  };
+}
+
+// Seeds lastSynced right after a fresh loadData(), so the first edit made
+// after opening the app diffs against what's actually on the server
+// instead of an empty snapshot (which would otherwise re-upload
+// everything unchanged on the very next saveData()).
+function initLastSynced(d, shopId){
+  const rows = buildSyncRows(d, shopId);
+  lastSynced = {
+    suppliers: keyRowsById(rows.suppliers, 'id'),
+    customers: keyRowsById(rows.customers, 'id'),
+    debtLog: keyRowsById(rows.debtLog, 'id'),
+    products: keyRowsById(rows.products, 'id'),
+    prices: keyRowsById(rows.prices, 'id'),
+    stock: keyRowsById(rows.stock, 'key'),
+    stockLots: cloneJSON(d.stockLots),
+    stockLog: keyRowsById(rows.stockLog, 'id'),
+    cashDays: keyRowsById(rows.cashDays, 'date'),
+    cashTxns: keyRowsById(rows.cashTxns, 'id'),
+    savedQuotes: keyRowsById(rows.savedQuotes, 'id'),
+    purchaseInvoices: keyRowsById(rows.purchaseInvoices, 'id'),
+    settings: cloneJSON(rows.settings)
+  };
+}
+
+// Diffs `rows` (keyed by `idField`) against lastSynced[collectionKey] and
+// pushes at most one upsert op and one delete op onto `ops` for whatever
+// actually changed. Each op carries its own commit(), so lastSynced only
+// advances for the parts of the write that actually succeeded -- a part
+// that fails gets re-diffed (and retried) on the next saveData() call.
+function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows){
+  const prev = lastSynced[collectionKey] || (lastSynced[collectionKey] = {});
+  const currById = {};
+  rows.forEach(r=> currById[String(r[idField])] = r);
+
+  const toUpsert = rows.filter(r=> JSON.stringify(r) !== JSON.stringify(prev[String(r[idField])]));
+  const removedKeys = Object.keys(prev).filter(k=> !(k in currById));
+  const toDeleteValues = removedKeys.map(k=> prev[k][idField]);
+
+  if(toUpsert.length){
+    ops.push({
+      run: ()=> sb.from(tableName).upsert(toUpsert),
+      commit: ()=> toUpsert.forEach(r=> prev[String(r[idField])] = cloneJSON(r))
+    });
   }
-  try{ d = JSON.parse(raw); } catch(e){ return seedData(); }
-  // migrate older saved data that predates the Inventory feature
-  if(!d.stock) d.stock = {};
-  if(!d.stockLots) d.stockLots = {};
-  if(!d.stockLog) d.stockLog = [];
-  if(!d.nextStockLogId) d.nextStockLogId = d.stockLog.length? Math.max(0,...d.stockLog.map(e=>e.id||0))+1 : 1;
-  // migrate older saved data that predates the Customers feature
-  if(!d.customers) d.customers = [];
-  d.customers.forEach(c=>{
-    if(c.debt===undefined) c.debt = 0;
-    if(!c.debtLog) c.debtLog = [];
+  if(toDeleteValues.length){
+    ops.push({
+      run: ()=> sb.from(tableName).delete().eq('shop_id', shopId).in(idField, toDeleteValues),
+      commit: ()=> removedKeys.forEach(k=> delete prev[k])
+    });
+  }
+}
+
+// stock_lots rows have no app-level id, so a per-key change is still a
+// delete+insert of that key's lots -- but only for keys that actually
+// changed or disappeared, not the whole shop on every save.
+function addStockLotsDiffOps(ops, shopId, stockLotsMap){
+  const prev = lastSynced.stockLots || (lastSynced.stockLots = {});
+  const changedKeys = Object.keys(stockLotsMap).filter(k=> JSON.stringify(stockLotsMap[k]) !== JSON.stringify(prev[k]));
+  const removedKeys = Object.keys(prev).filter(k=> !Object.prototype.hasOwnProperty.call(stockLotsMap, k));
+  const rewriteKeys = changedKeys.concat(removedKeys);
+  if(!rewriteKeys.length) return;
+
+  ops.push({
+    run: async ()=>{
+      const del = await sb.from('stock_lots').delete().eq('shop_id', shopId).in('key', rewriteKeys);
+      if(del.error) return del;
+      const insertRows = [];
+      changedKeys.forEach(k=> (stockLotsMap[k]||[]).forEach(l=> insertRows.push({shop_id:shopId, key:k, qty:l.qty, cost:l.cost})));
+      return insertRows.length ? await sb.from('stock_lots').insert(insertRows) : {error:null};
+    },
+    commit: ()=>{
+      changedKeys.forEach(k=> prev[k] = cloneJSON(stockLotsMap[k]));
+      removedKeys.forEach(k=> delete prev[k]);
+    }
   });
-  if(!d.nextCustomerDebtLogId) d.nextCustomerDebtLogId = d.customers.reduce((max,c)=>Math.max(max, ...(c.debtLog||[]).map(l=>l.id||0)), 0) + 1;
-  // migrate older saved data that predates the Cash Book feature
-  if(!d.cashDays) d.cashDays = {};
-  if(!d.cashTxns) d.cashTxns = [];
-  if(!d.nextCashTxnId) d.nextCashTxnId = 1;
-  if(!d.quote) d.quote = {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
-  if(d.quote.savedId === undefined) d.quote.savedId = null;
-  if(!d.nextQuoteLineId) d.nextQuoteLineId = 1;
-  if(!d.savedQuotes) d.savedQuotes = [];
-  if(!d.nextSavedQuoteId) d.nextSavedQuoteId = d.savedQuotes.length? Math.max(0,...d.savedQuotes.map(q=>q.id||0))+1 : 1;
-  // migrate older saved quotes that predate the status board
-  d.savedQuotes.forEach(q=>{ if(!q.status || !SQ_STATUSES[q.status]) q.status = 'draft'; });
-  // migrate older saved quotes that predate the Invoices feature
-  d.savedQuotes.forEach(q=>{ if(q.invoiced===undefined) q.invoiced = false; if(q.invoicedAt===undefined) q.invoicedAt = null; });
-  // migrate older saved quotes that predate the 24h auto-transfer-to-Invoices
-  // rule -- backfill invoicedTs from the invoicedAt date so already-invoiced
-  // quotes age off the board on schedule instead of never leaving it.
-  d.savedQuotes.forEach(q=>{
-    if(q.invoicedTs===undefined) q.invoicedTs = (q.invoiced && q.invoicedAt) ? new Date(q.invoicedAt).getTime() : null;
+}
+
+// app_settings is a singleton row per shop; compare everything except
+// updated_at (which is always freshly generated) so an unrelated change
+// doesn't cause a spurious upsert just because the timestamp differs.
+function addSettingsDiffOp(ops, shopId, settingsCore){
+  if(JSON.stringify(settingsCore) === JSON.stringify(lastSynced.settings)) return;
+  ops.push({
+    run: ()=> sb.from('app_settings').upsert({...settingsCore, updated_at: new Date().toISOString()}),
+    commit: ()=> { lastSynced.settings = cloneJSON(settingsCore); }
   });
-  // migrate older saved quotes that predate payment tracking on invoices
-  d.savedQuotes.forEach(q=>{ if(q.amountPaid===undefined) q.amountPaid = 0; if(!q.payments) q.payments = []; if(q.voided===undefined) q.voided = false; });
-  // migrate older saved quotes that predate automatic invoice<->debt sync —
-  // establish a baseline (matched to an existing customer by name where
-  // possible) WITHOUT changing any customer's current debt total, so past
-  // balances aren't retroactively altered. Future payments/edits/voids on
-  // these invoices will stay in sync with customer debt from here on.
-  d.savedQuotes.forEach(q=>{
-    if(q.debtCharged!==undefined) return;
-    if(q.customerId===undefined) q.customerId = null;
-    q.debtCharged = (q.invoiced && !q.voided) ? invoiceBalanceDue(q) : 0;
-    if(!q.customerId){
-      const name = (q.client.name||'').trim();
-      if(name){
-        const existing = d.customers.find(c=>(c.name||'').trim().toLowerCase()===name.toLowerCase());
-        if(existing) q.customerId = existing.id;
+}
+
+async function saveData(){
+  const shopId = currentShopId;
+
+  // Some existing UI actions (e.g. "Clear all data") rebuild `data` from a
+  // partial object literal that predates newer collections. Old localStorage
+  // saveData() silently tolerated that (JSON.stringify skips undefined
+  // keys); this one iterates each collection directly, so normalize first.
+  ['suppliers','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
+
+  const rows = buildSyncRows(data, shopId);
+  const ops = [];
+
+  addDiffOps(ops, 'suppliers', 'suppliers', 'id', shopId, rows.suppliers);
+  addDiffOps(ops, 'customers', 'customers', 'id', shopId, rows.customers);
+  addDiffOps(ops, 'debtLog', 'customer_debt_log', 'id', shopId, rows.debtLog);
+  addDiffOps(ops, 'products', 'products', 'id', shopId, rows.products);
+  addDiffOps(ops, 'prices', 'prices', 'id', shopId, rows.prices);
+  addDiffOps(ops, 'stock', 'stock', 'key', shopId, rows.stock);
+  addStockLotsDiffOps(ops, shopId, rows.stockLots);
+  addDiffOps(ops, 'stockLog', 'stock_log', 'id', shopId, rows.stockLog);
+  addDiffOps(ops, 'cashDays', 'cash_days', 'date', shopId, rows.cashDays);
+  addDiffOps(ops, 'cashTxns', 'cash_txns', 'id', shopId, rows.cashTxns);
+  addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
+  addDiffOps(ops, 'purchaseInvoices', 'purchase_invoices', 'id', shopId, rows.purchaseInvoices);
+  addSettingsDiffOp(ops, shopId, rows.settings);
+
+  if(!ops.length) return;
+
+  const results = await Promise.all(ops.map(op=> op.run()));
+  results.forEach((r, i)=>{ if(!(r && r.error)) ops[i].commit(); });
+
+  const failed = results.find(r=> r && r.error);
+  if(failed){
+    console.error('saveData failed:', failed.error);
+    toast('Sync failed — a change may not have been saved (' + failed.error.message + ')', 5000);
+  }
+}
+
+// ---- Auth + shop membership bootstrap -----------------------------------
+
+function ensureAuthOverlay(){
+  let el = document.getElementById('authOverlay');
+  if(el) return el;
+  el = document.createElement('div');
+  el.id = 'authOverlay';
+  el.style.cssText = 'position:fixed;inset:0;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;';
+  document.body.appendChild(el);
+  return el;
+}
+function hideAuthOverlay(){
+  const el = document.getElementById('authOverlay');
+  if(el) el.remove();
+}
+
+// Authoritative "am I really logged in" check. sb.auth.getSession() only
+// reads whatever's cached in local storage and does NOT talk to the
+// server -- a stale, corrupted, or not-yet-fully-established session can
+// make it return a truthy session object even when there's no valid user
+// server-side, which is exactly what let ensureAuthAndShop() skip the
+// login screen while every subsequent write got rejected by RLS
+// (auth.uid() NULL). getUser() re-validates the JWT against Supabase Auth
+// before returning, so it's the only safe gate for this decision.
+async function getAuthedUser(){
+  const { data, error } = await sb.auth.getUser();
+  if(error || !data || !data.user) return null;
+  return data.user;
+}
+
+function showLoginScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;">
+        <h2 style="margin:0 0 16px;font-size:18px;">Sign in</h2>
+        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="auth_signin_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Sign in</button>
+        <button id="auth_signup_btn" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Create account</button>
+      </div>`;
+    const statusEl = el.querySelector('#auth_status');
+    const setStatus = (msg, kind)=>{
+      statusEl.textContent = msg;
+      statusEl.style.color = kind==='ok' ? '#3A9A5C' : kind==='busy' ? '#aaa' : '#f66';
+    };
+    const doAuth = async (mode)=>{
+      const email = el.querySelector('#auth_email').value.trim();
+      const password = el.querySelector('#auth_password').value;
+      if(!email || !password){ setStatus('Enter an email and password', 'err'); return; }
+      const signinBtn = el.querySelector('#auth_signin_btn');
+      const signupBtn = el.querySelector('#auth_signup_btn');
+      signinBtn.disabled = true; signupBtn.disabled = true;
+      setStatus(mode==='signup' ? 'Creating account…' : 'Signing in…', 'busy');
+      const { error } = mode==='signup'
+        ? await sb.auth.signUp({email, password})
+        : await sb.auth.signInWithPassword({email, password});
+      if(error){
+        signinBtn.disabled = false; signupBtn.disabled = false;
+        setStatus(error.message, 'err');
+        return;
       }
-    }
+      // Confirm there's a real, server-validated user before declaring
+      // success -- a signUp() on a project with email confirmation ON
+      // returns no error but also no usable session yet.
+      const user = await getAuthedUser();
+      signinBtn.disabled = false; signupBtn.disabled = false;
+      if(!user){
+        setStatus('Check your email to confirm your account, then sign in.', 'err');
+        return;
+      }
+      setStatus('Signed in — loading your shop…', 'ok');
+      resolve();
+    };
+    el.querySelector('#auth_signin_btn').addEventListener('click', ()=>doAuth('signin'));
+    el.querySelector('#auth_signup_btn').addEventListener('click', ()=>doAuth('signup'));
   });
-  // migrate older saved data that predates the Purchase Invoices feature
-  if(!d.purchaseInvoices) d.purchaseInvoices = [];
-  if(!d.nextPurchaseInvoiceId) d.nextPurchaseInvoiceId = d.purchaseInvoices.length? Math.max(0,...d.purchaseInvoices.map(pi=>pi.id||0))+1 : 1;
-  d.purchaseInvoices.forEach(pi=>{
-    if(pi.amountPaid===undefined) pi.amountPaid = 0;
-    if(!pi.payments) pi.payments = [];
-    if(pi.voided===undefined) pi.voided = false;
-  });
-  // migrate older saved data that predates presets
-  if(!d.presetCategories) d.presetCategories = seedData().presetCategories;
-  if(!d.presetUnits) d.presetUnits = seedData().presetUnits;
-  if(!d.presetIncomeCategories) d.presetIncomeCategories = seedData().presetIncomeCategories;
-  if(!d.presetExpenseCategories) d.presetExpenseCategories = seedData().presetExpenseCategories;
-  if(!d.presetAttributes) d.presetAttributes = seedData().presetAttributes;
-  // migrate older saved data that predates split wholesale/retail markup rules
-  (d.products||[]).forEach(p=>{
-    if(p.markupType !== undefined && p.wholesaleMarkupType === undefined){
-      p.wholesaleMarkupType = p.markupType;
-      p.wholesaleMarkupValue = p.markupValue;
-    }
-    if(p.wholesaleMarkupType === undefined) p.wholesaleMarkupType = 'percent';
-    if(p.wholesaleMarkupValue === undefined) p.wholesaleMarkupValue = 0;
-    if(p.retailMarkupType === undefined) p.retailMarkupType = 'percent';
-    if(p.retailMarkupValue === undefined) p.retailMarkupValue = 0;
-    if(p.packQty === undefined) p.packQty = p.unitsPerCtn || 0;
-    if(p.packUnit === undefined) p.packUnit = p.packQty>0 ? 'Ctn' : '';
-    if(p.subcategory === undefined) p.subcategory = '';
-    if(p.variantAttributes === undefined) p.variantAttributes = [];
-    if(p.variants === undefined) p.variants = [];
-    if(p.type === undefined) p.type = (p.variants && p.variants.length>0) ? 'variable' : 'simple';
-    // migrate older variants that predate per-variant markup overrides --
-    // default to "no override", which falls back to the product's rule
-    (p.variants||[]).forEach(v=>{
-      if(v.wholesaleMarkupType === undefined) v.wholesaleMarkupType = 'percent';
-      if(v.wholesaleMarkupValue === undefined) v.wholesaleMarkupValue = 0;
-      if(v.retailMarkupType === undefined) v.retailMarkupType = 'percent';
-      if(v.retailMarkupValue === undefined) v.retailMarkupValue = 0;
+}
+
+function showCreateShopScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+        <h2 style="margin:0 0 8px;font-size:18px;">Create your shop</h2>
+        <p style="margin:0 0 16px;font-size:13px;color:#aaa;">You're not a member of any shop yet. Create one to get started.</p>
+        <input id="shop_name" type="text" placeholder="Shop name" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <div id="shop_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="shop_create_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Create shop</button>
+      </div>`;
+    const errEl = el.querySelector('#shop_error');
+    el.querySelector('#shop_create_btn').addEventListener('click', async ()=>{
+      errEl.textContent = '';
+      const name = el.querySelector('#shop_name').value.trim();
+      if(!name){ errEl.textContent = 'Enter a shop name'; return; }
+      const { data: shop, error: shopErr } = await sb.from('shops').insert({name, created_by: currentUser.id}).select().single();
+      if(shopErr){ errEl.textContent = shopErr.message; return; }
+      const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
+      if(memberErr){ errEl.textContent = memberErr.message; return; }
+      currentShopId = shop.id;
+      data = seedData();
+      await saveData();
+      resolve(shop.id);
     });
   });
-  // migrate older saved data that predates per-variant pricing -- existing
-  // entries had no variantIdx, meaning "applies to the whole product"; keep
-  // them that way so nothing already recorded is lost or reassigned.
-  (d.prices||[]).forEach(pr=>{
-    if(pr.variantIdx === undefined) pr.variantIdx = null;
-    // migrate older saved data that predates per-price-entry packing details --
-    // packing used to live on the product; carry the product's old values
-    // over to each of its price entries as a starting point.
-    if(pr.unit === undefined){
-      const product = (d.products||[]).find(p=>p.id===pr.productId);
-      pr.unit = product && product.unit ? product.unit : '';
-      pr.packUnit = product && product.packUnit ? product.packUnit : '';
-      pr.packQty = product && product.packQty ? product.packQty : 0;
-    }
-  });
-  return d;
 }
-function saveData(){ lsSet(STORE_KEY, JSON.stringify(data)); }
 
-let data = loadData();
+function showShopPicker(memberships){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    const options = memberships.map(m=>`<option value="${m.shop_id}">${(m.shops && m.shops.name) || m.shop_id}</option>`).join('');
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+        <h2 style="margin:0 0 16px;font-size:18px;">Choose a shop</h2>
+        <select id="shop_select" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">${options}</select>
+        <button id="shop_pick_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Continue</button>
+      </div>`;
+    el.querySelector('#shop_pick_btn').addEventListener('click', ()=>{
+      resolve(el.querySelector('#shop_select').value);
+    });
+  });
+}
+
+async function ensureAuthAndShop(){
+  let user = await getAuthedUser();
+  if(!user){
+    await showLoginScreen();
+    user = await getAuthedUser();
+    // showLoginScreen() only resolves after its own getAuthedUser() check
+    // passed, so this should always succeed -- but never trust a session
+    // enough to skip re-checking right before using it for a write.
+    if(!user) throw new Error('Sign-in did not complete');
+  }
+  currentUser = user;
+
+  const { data: memberships, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
+  if(error) throw error;
+
+  if(!memberships.length){
+    currentShopId = await showCreateShopScreen();
+  } else if(memberships.length === 1){
+    currentShopId = memberships[0].shop_id;
+  } else {
+    currentShopId = await showShopPicker(memberships);
+  }
+  hideAuthOverlay();
+}
+
+let data = null;
 
 /* ---------------- Utilities ---------------- */
 function toast(msg, duration){
@@ -9015,11 +9343,21 @@ function renderAll(){
   if(document.getElementById('tab-dashboard').style.display !== 'none') renderDashboard();
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
 }
-document.getElementById('pr_date').value = todayISO();
-renderAll();
-if(storageBlocked){
-  toast('Note: this browser is blocking saved data for local files — your changes won\'t be remembered after you close this page. Try opening this file in Chrome or Firefox, or host it online, to fix this.', 8000);
+async function boot(){
+  try{
+    await ensureAuthAndShop();
+    data = await loadData(currentShopId);
+    initLastSynced(data, currentShopId);
+  } catch(e){
+    console.error('Failed to start app:', e);
+    const el = ensureAuthOverlay();
+    el.innerHTML = `<div style="color:#f66;font-family:sans-serif;max-width:400px;text-align:center;">Couldn't load your price book: ${(e && e.message) || e}. Reload to try again.</div>`;
+    return;
+  }
+  document.getElementById('pr_date').value = todayISO();
+  renderAll();
 }
+boot();
 </script>
 </body>
 </html>
