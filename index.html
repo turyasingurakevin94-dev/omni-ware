@@ -609,6 +609,8 @@
     display:flex;flex-direction:column;gap:11px;transition:border-color .12s ease,box-shadow .12s ease;
   }
   .price-card:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
+  .price-card-oos{background:#FAFAFA;opacity:0.75;}
+  .price-card-oos:hover{opacity:1;}
   .prc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
   .prc-head-main{display:flex;gap:10px;align-items:flex-start;min-width:0;}
   .prc-title{display:flex;flex-direction:column;gap:5px;min-width:0;}
@@ -621,6 +623,10 @@
   }
   .prc-source-pill.purchase{background:#E3EEFB;color:#3E6FA6;}
   .prc-source-pill.manual{background:#EEF1F3;color:var(--ink-soft);}
+  .prc-oos-pill{
+    font-size:9.5px;font-weight:700;letter-spacing:0.2px;text-transform:uppercase;
+    padding:2px 7px;border-radius:20px;white-space:nowrap;background:#F7D9D3;color:var(--danger);
+  }
   .prc-supplier{
     display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
     padding-bottom:11px;border-bottom:1px solid var(--line);
@@ -664,6 +670,7 @@
   }
   .pc-icon-btn:hover{color:var(--navy);border-color:var(--ink-soft);}
   .pc-icon-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
+  .pc-icon-btn-active-danger{color:var(--danger);border-color:var(--danger);}
   .pc-icon-btn .icon{width:14px;height:14px;}
   .pc-meta{display:flex;flex-wrap:wrap;gap:6px;}
   .pc-details{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-soft);}
@@ -1971,9 +1978,11 @@
             <label>Category</label>
             <select id="p_category_filter"><option value="">All categories</option></select>
           </div>
-          <div class="field p-toolbar-filter">
+          <div class="field p-toolbar-filter searchable-select">
             <label>Supplier</label>
-            <select id="p_supplier_filter"><option value="">All suppliers</option></select>
+            <input type="text" id="p_supplier_filter_search" placeholder="All suppliers" autocomplete="off">
+            <input type="hidden" id="p_supplier_filter">
+            <div class="suggestions" id="p_supplier_filter_suggestions"></div>
           </div>
         </div>
         <div id="productsTableWrap"></div>
@@ -2029,7 +2038,11 @@
         <div class="p-toolbar">
           <div class="field p-toolbar-search"><input id="pr_search" placeholder="Search by product, variant, supplier, or ID..."></div>
           <div class="field p-toolbar-filter"><label>Category</label><select id="pr_category_filter"><option value="">All categories</option></select></div>
-          <div class="field p-toolbar-filter"><label>Supplier</label><select id="pr_supplier_filter"></select></div>
+          <div class="field p-toolbar-filter searchable-select"><label>Supplier</label>
+            <input type="text" id="pr_supplier_filter_search" placeholder="All suppliers" autocomplete="off">
+            <input type="hidden" id="pr_supplier_filter">
+            <div class="suggestions" id="pr_supplier_filter_suggestions"></div>
+          </div>
         </div>
         <div id="pricesTableWrap"></div>
       </div>
@@ -2541,7 +2554,11 @@
           <div class="suggestions" id="pr_suggestions"></div>
           <div class="info-banner" id="pr_variant_hint" style="display:none;"></div>
         </div>
-        <div class="field"><label>Supplier</label><select id="pr_supplier"></select></div>
+        <div class="field searchable-select"><label>Supplier</label>
+          <input type="text" id="pr_supplier_search" placeholder="Search suppliers..." autocomplete="off">
+          <input type="hidden" id="pr_supplier">
+          <div class="suggestions" id="pr_supplier_suggestions"></div>
+        </div>
         <div class="field"><label>Wholesale price (UGX)</label><input id="pr_wholesale" type="number" min="0" placeholder="e.g. 37000"></div>
         <div class="field"><label>Retail price (UGX)</label><input id="pr_retail" type="number" min="0" placeholder="e.g. 41000"></div>
         <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
@@ -2983,7 +3000,7 @@ async function loadData(shopId){
       id:pr.id, productId:pr.product_id, variantIdx:pr.variant_idx, supplierId:pr.supplier_id,
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
-      priceSource:pr.price_source||''
+      priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
     stock, stockLots,
@@ -3051,7 +3068,7 @@ function buildSyncRows(d, shopId){
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
       wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
-      price_source:pr.priceSource||''
+      price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock
     })),
     stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
     stockLots: d.stockLots,
@@ -3441,6 +3458,8 @@ function agingDaysLabel(days){
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
+const ICON_NO_STOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m4.9 4.9 14.2 14.2"/></svg>';
+const ICON_RESTOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/></svg>';
 const ICON_PURCHASE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>';
 const ICON_ADJUST = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 12h16M14 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 18h16M8 18a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/></svg>';
 const ICON_PRICE_RULE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
@@ -3760,8 +3779,10 @@ function productPackInfo(productId, variantIdx=null){
 }
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
+// Excludes anything marked out of stock -- a supplier that doesn't
+// currently have the item shouldn't be recommended as a place to buy it.
 function rankedPriceRows(productId, variantIdx=null){
-  return productPriceRows(productId, variantIdx).slice().sort((a,b)=>{
+  return productPriceRows(productId, variantIdx).filter(r=>!r.outOfStock).sort((a,b)=>{
     const aw = a.wholesale!=null ? a.wholesale : Infinity;
     const bw = b.wholesale!=null ? b.wholesale : Infinity;
     if(aw!==bw) return aw-bw;
@@ -3800,6 +3821,9 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price)
     priceRow.date = todayISO();
     priceRow.priceSource = 'purchase';
   }
+  // An actual purchase from this supplier is proof they have it -- clear
+  // any stale "out of stock" flag rather than making someone remember to.
+  priceRow.outOfStock = false;
 }
 // Human-readable packing details for a quote line, e.g. "25 Kg per Bag" --
 // falls back to just the unit sold in when no pack size is on file.
@@ -4071,6 +4095,65 @@ function readSuggestionSelection(e){
   return { id: item.dataset.id, variantIdx: (vidx===undefined || vidx==='') ? null : Number(vidx) };
 }
 
+/* ---------------- Supplier picker (type-to-filter) ----------------
+   Every place a supplier needs choosing used to be a plain <select>,
+   which gets painful to scan/scroll once the supplier list is long.
+   These build the same suggestions-dropdown markup the product pickers
+   already use, so picking a supplier stays fast as the list grows. */
+function supplierSuggestionEntries(tokens){
+  const list = tokens.length
+    ? data.suppliers.filter(s=>matchesAllTokens((s.id+' '+s.name).toLowerCase(), tokens))
+    : data.suppliers.slice();
+  return list.slice().sort((a,b)=>a.name.localeCompare(b.name));
+}
+// extraItems (e.g. "All suppliers", "Our stock") are always pinned at the
+// top, unfiltered by the search text -- always reachable without typing.
+function supplierSuggestionsHTML(tokens, extraItems){
+  const entries = supplierSuggestionEntries(tokens);
+  let html = (extraItems||[]).map(x=>`<div class="suggestion-item" data-id="${esc(x.id)}">${esc(x.label)}</div>`).join('');
+  if(entries.length){
+    html += entries.map(s=>`<div class="suggestion-item" data-id="${esc(s.id)}">${highlightTokens(s.name, tokens)}</div>`).join('');
+  } else if(!html){
+    html = data.suppliers.length===0 ? '<div class="suggestion-empty">No suppliers yet — add one in the Suppliers tab.</div>' : '<div class="suggestion-empty">No matching suppliers.</div>';
+  }
+  return html;
+}
+// One shared listener (bound once, not re-added per render) that closes
+// any open supplier-suggestions dropdown when a click lands outside it.
+// Needed because a couple of these pickers get rebuilt on every render
+// (Add-to-quote's Other supplier, the quote table's per-row picker) --
+// binding a fresh document-level listener inside those render functions
+// would pile up a new one on every re-render.
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('.searchable-select')) return;
+  document.querySelectorAll('.suggestions.show').forEach(box=>box.classList.remove('show'));
+});
+// Wires a supplier *filter* (as opposed to a picker that commits a value
+// to a record): typing only narrows the suggestions shown, filtering the
+// underlying list only happens once a suggestion (including "All
+// suppliers") is actually clicked -- shared by the Price Registry and
+// Products tab supplier filters.
+function wireSupplierFilterSearch(searchId, hiddenId, boxId, onChange){
+  const searchEl = document.getElementById(searchId);
+  const hiddenEl = document.getElementById(hiddenId);
+  const boxEl = document.getElementById(boxId);
+  function openBox(){
+    boxEl.innerHTML = supplierSuggestionsHTML(searchTokens(searchEl.value), [{id:'', label:'All suppliers'}]);
+    boxEl.classList.add('show');
+  }
+  searchEl.addEventListener('input', openBox);
+  searchEl.addEventListener('focus', (e)=>{ e.target.select(); openBox(); });
+  boxEl.addEventListener('mousedown', (e)=>{
+    const item = e.target.closest('.suggestion-item');
+    if(!item) return;
+    const id = item.dataset.id;
+    hiddenEl.value = id;
+    searchEl.value = id ? supplierName(id) : '';
+    boxEl.classList.remove('show');
+    onChange();
+  });
+}
+
 /* ---------------- Add-item picker modal (New Quote) ----------------
    Clicking the + in a quote row's gutter opens this modal on the search
    list. Picking a product (or a specific variant) switches to a stage
@@ -4250,10 +4333,10 @@ function renderIpStage(){
   const otherPriced = ranked.filter(r=>!rankedIds.has(r.supplierId));
   const pricedIds = new Set(ranked.map(r=>r.supplierId));
   const unpriced = data.suppliers.filter(s=>!pricedIds.has(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
-  const otherOptions = [
-    ...otherPriced.map(r=>`<option value="${esc(r.supplierId)}" ${r.supplierId===ipSelectedSupplierId?'selected':''}>${esc(r.sname)} — ${fmtUGX(r.wholesale!=null?r.wholesale:r.retail)}</option>`),
-    ...unpriced.map(s=>`<option value="${esc(s.id)}" ${s.id===ipSelectedSupplierId?'selected':''}>${esc(s.name)} — no price on file</option>`)
-  ].join('');
+  const otherSupplierEntries = [
+    ...otherPriced.map(r=>({id:r.supplierId, label:`${r.sname} — ${fmtUGX(r.wholesale!=null?r.wholesale:r.retail)}`})),
+    ...unpriced.map(s=>({id:s.id, label:`${s.name} — no price on file`}))
+  ];
 
   // Buy @ is recorded automatically as the actual cost we'd pay (stock
   // cost, or the supplier's raw quoted price) — it isn't a field in this
@@ -4303,8 +4386,10 @@ function renderIpStage(){
     <div class="q-chosen-line">Buying from: <strong>${ipSelectedSupplierId? esc(supplierName(ipSelectedSupplierId)) : 'no supplier chosen'}</strong>${ipSelectedSupplierId==='__stock__'?` <span style="color:var(--ink-soft);font-weight:400;">(${stockQty} on hand)</span>`:''}</div>
 
     <div class="q-add-row">
-      ${(otherPriced.length+unpriced.length)>0 ? `<div class="field q-other-field"><label>Other supplier</label>
-        <select id="ip_other_supplier"><option value="">— choose —</option>${otherOptions}</select>
+      ${(otherPriced.length+unpriced.length)>0 ? `<div class="field q-other-field searchable-select"><label>Other supplier</label>
+        <input type="text" id="ip_other_supplier_search" placeholder="Search suppliers..." autocomplete="off">
+        <input type="hidden" id="ip_other_supplier">
+        <div class="suggestions" id="ip_other_supplier_suggestions"></div>
       </div>` : ''}
       <div class="field"><label>Qty</label><input type="number" id="ip_qty" min="1" step="any" value="1"></div>
       <div class="field"><label>Price each (UGX)</label><input type="number" id="ip_price" min="0" step="any" value="${sellStart}"></div>
@@ -4320,10 +4405,23 @@ function renderIpStage(){
       renderIpStage();
     });
   });
-  const otherSelect = document.getElementById('ip_other_supplier');
-  if(otherSelect){
-    otherSelect.addEventListener('change', (e)=>{
-      if(e.target.value){ ipSelectedSupplierId = e.target.value; ipSelectedRecType = null; renderIpStage(); }
+  const otherSearchEl = document.getElementById('ip_other_supplier_search');
+  if(otherSearchEl){
+    const otherBoxEl = document.getElementById('ip_other_supplier_suggestions');
+    function renderOtherSupplierBox(query){
+      const tokens = searchTokens(query);
+      const matches = tokens.length ? otherSupplierEntries.filter(x=>matchesAllTokens(x.label.toLowerCase(), tokens)) : otherSupplierEntries;
+      otherBoxEl.innerHTML = matches.length ? matches.map(x=>`<div class="suggestion-item" data-id="${esc(x.id)}">${highlightTokens(x.label, tokens)}</div>`).join('') : '<div class="suggestion-empty">No matching suppliers.</div>';
+      otherBoxEl.classList.add('show');
+    }
+    otherSearchEl.addEventListener('input', (e)=> renderOtherSupplierBox(e.target.value));
+    otherSearchEl.addEventListener('focus', (e)=>{ e.target.select(); renderOtherSupplierBox(e.target.value); });
+    otherBoxEl.addEventListener('mousedown', (e)=>{
+      const item = e.target.closest('.suggestion-item');
+      if(!item) return;
+      ipSelectedSupplierId = item.dataset.id;
+      ipSelectedRecType = null;
+      renderIpStage();
     });
   }
   function ipSelectRecCard(card){
@@ -4372,13 +4470,9 @@ function renderQuoteItems(){
   ensureQuote();
   const wrap = document.getElementById('q_itemsWrap');
   const items = data.quote.items;
-  const allSupplierOptions = (selectedId, item)=>{
-    const stockOpt = `<option value="__stock__" ${selectedId==='__stock__'?'selected':''}>Our stock (${getStockQty(item.productId, item.variantIdx)})</option>`;
-    const supplierOpts = data.suppliers.map(s=>
-      `<option value="${esc(s.id)}" ${s.id===selectedId?'selected':''}>${esc(s.name)}</option>`
-    ).join('');
-    return stockOpt + supplierOpts;
-  };
+  const supplierDisplayLabel = (selectedId, item)=> selectedId==='__stock__'
+    ? `Our stock (${getStockQty(item.productId, item.variantIdx)})`
+    : supplierName(selectedId);
 
   // Sell @ is the suggested selling price for the buy price currently on
   // the row, worked out from that product's retail markup rule (falls
@@ -4405,7 +4499,11 @@ function renderQuoteItems(){
       </div></td>
       <td><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></td>
       <td><input type="number" class="qty-input q-qty" min="1" step="any" value="${it.qty}"></td>
-      <td><select class="q-supplier-select q-supplier">${allSupplierOptions(it.supplierId, it)}</select></td>
+      <td><div class="q-supplier-picker searchable-select">
+        <input type="text" class="q-supplier-select q-supplier-search" value="${esc(supplierDisplayLabel(it.supplierId, it))}" autocomplete="off">
+        <input type="hidden" class="q-supplier" value="${esc(it.supplierId)}">
+        <div class="suggestions q-supplier-suggestions"></div>
+      </div></td>
       <td><input type="number" class="price-input q-price" min="0" step="any" value="${Math.round(it.price)}"></td>
       <td><div class="q-sell-cell">
         <input type="number" class="price-input q-sell ${it.sellPrice!=null&&it.sellPrice!==''?'q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" title="${it.sellPrice!=null&&it.sellPrice!==''?'Manually set — click the reset icon to go back to the suggested price':'Suggested price — edit to override'}">
@@ -4459,8 +4557,20 @@ function renderQuoteItems(){
         saveData(); renderQuoteItems();
       });
     }
-    row.querySelector('.q-supplier').addEventListener('change', (e)=>{
-      item.supplierId = e.target.value;
+    const supSearchEl = row.querySelector('.q-supplier-search');
+    const supBoxEl = row.querySelector('.q-supplier-suggestions');
+    function renderRowSupplierBox(query){
+      const tokens = searchTokens(query);
+      const extra = [{id:'__stock__', label:`Our stock (${getStockQty(item.productId, item.variantIdx)})`}];
+      supBoxEl.innerHTML = supplierSuggestionsHTML(tokens, extra);
+      supBoxEl.classList.add('show');
+    }
+    supSearchEl.addEventListener('input', (e)=> renderRowSupplierBox(e.target.value));
+    supSearchEl.addEventListener('focus', (e)=>{ e.target.select(); renderRowSupplierBox(e.target.value); });
+    supBoxEl.addEventListener('mousedown', (e)=>{
+      const el = e.target.closest('.suggestion-item');
+      if(!el) return;
+      item.supplierId = el.dataset.id;
       item.supplierName = supplierName(item.supplierId);
       saveData(); renderQuoteItems();
     });
@@ -7249,13 +7359,11 @@ document.getElementById('v_generate_btn').addEventListener('click', generateVari
 
 function populateProductFilterDropdowns(selectedCategory, selectedSupplier){
   const catSel = document.getElementById('p_category_filter');
-  const supSel = document.getElementById('p_supplier_filter');
   const categories = [...new Set(data.products.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   catSel.innerHTML = '<option value="">All categories</option>' +
     categories.map(c=>`<option value="${esc(c)}" ${c===selectedCategory?'selected':''}>${esc(c)}</option>`).join('');
-  const suppliersSorted = [...data.suppliers].sort((a,b)=>a.name.localeCompare(b.name));
-  supSel.innerHTML = '<option value="">All suppliers</option>' +
-    suppliersSorted.map(s=>`<option value="${esc(s.id)}" ${s.id===selectedSupplier?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('p_supplier_filter').value = selectedSupplier || '';
+  document.getElementById('p_supplier_filter_search').value = selectedSupplier ? supplierName(selectedSupplier) : '';
 }
 function triggerProductsRender(){
   renderProducts(
@@ -7685,7 +7793,7 @@ document.getElementById('p_cancel').addEventListener('click', ()=>closeModalAndR
 document.getElementById('productModalClose').addEventListener('click', ()=>closeModalAndReset('productModal', cancelProductForm));
 document.getElementById('p_search').addEventListener('input', triggerProductsRender);
 document.getElementById('p_category_filter').addEventListener('change', triggerProductsRender);
-document.getElementById('p_supplier_filter').addEventListener('change', triggerProductsRender);
+wireSupplierFilterSearch('p_supplier_filter_search', 'p_supplier_filter', 'p_supplier_filter_suggestions', triggerProductsRender);
 
 /* ================= PRICE LIST ================= */
 let editingPriceId = null;
@@ -7786,10 +7894,27 @@ function reverseQuoteStockDeduction(q){
 }
 
 function refreshPriceDropdowns(){
-  const supSel = document.getElementById('pr_supplier');
-  supSel.innerHTML = data.suppliers.map(s=>`<option value="${esc(s.id)}">${esc(s.id)} — ${esc(s.name)}</option>`).join('') || '<option value="">No suppliers yet</option>';
   if(!document.getElementById('pr_date').value) document.getElementById('pr_date').value = todayISO();
 }
+function selectPrSupplier(id){
+  document.getElementById('pr_supplier').value = id;
+  document.getElementById('pr_supplier_search').value = id ? supplierName(id) : '';
+  document.getElementById('pr_supplier_suggestions').classList.remove('show');
+}
+document.getElementById('pr_supplier_search').addEventListener('input', (e)=>{
+  document.getElementById('pr_supplier').value = '';
+  document.getElementById('pr_supplier_suggestions').innerHTML = supplierSuggestionsHTML(searchTokens(e.target.value));
+  document.getElementById('pr_supplier_suggestions').classList.add('show');
+});
+document.getElementById('pr_supplier_search').addEventListener('focus', (e)=>{
+  e.target.select();
+  document.getElementById('pr_supplier_suggestions').innerHTML = supplierSuggestionsHTML(searchTokens(e.target.value));
+  document.getElementById('pr_supplier_suggestions').classList.add('show');
+});
+document.getElementById('pr_supplier_suggestions').addEventListener('mousedown', (e)=>{
+  const item = e.target.closest('.suggestion-item');
+  if(item) selectPrSupplier(item.dataset.id);
+});
 
 function prSuggestionsList(query){
   renderSuggestionBox(document.getElementById('pr_suggestions'), searchTokens(query));
@@ -7869,7 +7994,7 @@ function priceSummaryLine(r){
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
 function priceCardHTML(r, tokens){
-  return `<div class="price-card">
+  return `<div class="price-card ${r.outOfStock?'price-card-oos':''}">
     <div class="prc-head">
       <div class="prc-head-main">
         ${productThumbHTML({image:r.image, name:r.pname})}
@@ -7877,12 +8002,14 @@ function priceCardHTML(r, tokens){
           <div class="prc-name">${highlightTokens(r.pname, tokens)}</div>
           <div class="prc-meta">
             <span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span>
+            ${r.outOfStock ? `<span class="prc-oos-pill" title="Excluded from best-supplier recommendations">Out of stock</span>` : ''}
             ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
               : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
           </div>
         </div>
       </div>
       <div class="pc-actions">
+        <button class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
         <button class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
         <button class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
       </div>
@@ -7900,10 +8027,8 @@ function priceCardHTML(r, tokens){
 }
 
 function populatePriceSupplierFilter(selected){
-  const sel = document.getElementById('pr_supplier_filter');
-  const suppliersSorted = [...data.suppliers].sort((a,b)=>a.name.localeCompare(b.name));
-  sel.innerHTML = '<option value="">All suppliers</option>' +
-    suppliersSorted.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('pr_supplier_filter').value = selected || '';
+  document.getElementById('pr_supplier_filter_search').value = selected ? supplierName(selected) : '';
 }
 function populatePriceCategoryFilter(selected){
   const sel = document.getElementById('pr_category_filter');
@@ -7937,7 +8062,7 @@ function editPrice(id){
   editingPriceId = id;
   refreshPriceDropdowns();
   selectPrProduct(r.productId, r.variantIdx==null ? null : r.variantIdx);
-  document.getElementById('pr_supplier').value = r.supplierId;
+  selectPrSupplier(r.supplierId);
   document.getElementById('pr_wholesale').value = r.wholesale;
   document.getElementById('pr_retail').value = r.retail;
   document.getElementById('pr_date').value = r.date;
@@ -7953,6 +8078,7 @@ function resetPriceForm(){
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_product_search').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
+  selectPrSupplier('');
   document.getElementById('pr_wholesale').value='';
   document.getElementById('pr_retail').value='';
   document.getElementById('pr_date').value = todayISO();
@@ -7965,6 +8091,16 @@ function deletePrice(id){
   if(!confirm('Delete this price entry?')) return;
   data.prices = data.prices.filter(p=>p.id!==id);
   saveData(); triggerPricesRender(); toast('Price entry deleted');
+}
+// Flags a supplier's price entry as unavailable without deleting it --
+// the price stays on file for reference, but rankedPriceRows() (Purchase
+// Stock, Add item to quote) and Compare Prices skip it, so an out-of-
+// stock supplier stops being recommended as somewhere to buy from.
+function toggleOutOfStock(id){
+  const r = data.prices.find(p=>p.id===id); if(!r) return;
+  r.outOfStock = !r.outOfStock;
+  saveData(); triggerPricesRender();
+  toast(r.outOfStock ? 'Marked out of stock — hidden from best-supplier recommendations' : 'Marked back in stock');
 }
 document.getElementById('pr_add_btn').addEventListener('click', ()=>{ refreshPriceDropdowns(); resetPriceForm(); openModal('priceModal'); });
 document.getElementById('pr_save').addEventListener('click', ()=>{
@@ -7992,17 +8128,21 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     priceSource: 'manual'
   };
   if(editingPriceId){
+    // Editing an entry through this form only touches the fields above --
+    // its out-of-stock flag (toggled separately, on the price card) is
+    // left exactly as it was, so fixing a typo in the price doesn't
+    // silently put a flagged-out supplier back into recommendations.
     const idx = data.prices.findIndex(p=>p.id===editingPriceId);
-    data.prices[idx] = {...record, id: editingPriceId};
+    data.prices[idx] = {...record, id: editingPriceId, outOfStock: !!data.prices[idx].outOfStock};
   } else {
     // A new price entry for a product+variant+supplier that already has one
     // on file replaces it, rather than piling up stale duplicates — only the
     // latest price per supplier per item is kept.
     const dupIdx = data.prices.findIndex(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
     if(dupIdx!==-1){
-      data.prices[dupIdx] = {...record, id: data.prices[dupIdx].id};
+      data.prices[dupIdx] = {...record, id: data.prices[dupIdx].id, outOfStock: !!data.prices[dupIdx].outOfStock};
     } else {
-      data.prices.push({...record, id: data.nextPriceId++});
+      data.prices.push({...record, id: data.nextPriceId++, outOfStock: false});
     }
   }
   saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
@@ -8011,7 +8151,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
 document.getElementById('pr_cancel').addEventListener('click', ()=>closeModalAndReset('priceModal', resetPriceForm));
 document.getElementById('priceModalClose').addEventListener('click', ()=>closeModalAndReset('priceModal', resetPriceForm));
 document.getElementById('pr_search').addEventListener('input', triggerPricesRender);
-document.getElementById('pr_supplier_filter').addEventListener('change', triggerPricesRender);
+wireSupplierFilterSearch('pr_supplier_filter_search', 'pr_supplier_filter', 'pr_supplier_filter_suggestions', triggerPricesRender);
 document.getElementById('pr_category_filter').addEventListener('change', triggerPricesRender);
 
 document.getElementById('pr_print').addEventListener('click', ()=>{
@@ -8132,7 +8272,7 @@ function renderCompare(){
   const product = data.products.find(x=>x.id===productId);
   const variantRaw = document.getElementById('cmp_variant').value;
   const variantIdx = variantRaw==='' ? null : Number(variantRaw);
-  const rows = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx).map(p=>({...p, sname: supplierName(p.supplierId)}));
+  const rows = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && !p.outOfStock).map(p=>({...p, sname: supplierName(p.supplierId)}));
   if(rows.length===0){ wrap.innerHTML = '<div class="empty">No prices recorded yet for this product.</div>'; return; }
 
   const wholesaleRows = rows.filter(r=>r.wholesale!=null).slice().sort((a,b)=>a.wholesale-b.wholesale);
