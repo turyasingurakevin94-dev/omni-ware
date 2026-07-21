@@ -1292,6 +1292,32 @@
   .inv-bulk-dd-menu button{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 10px;border-radius:6px;font-size:13px;color:var(--ink);width:100%;}
   .inv-bulk-dd-menu button:hover{background:#F1F4F6;}
 
+  /* Mobile card layout for the Purchase Invoices ledger (phone breakpoint
+     swaps .pi-table-wrap for .pi-cards -- see @media max-width:820px).
+     Reuses .inv-doc-link, .inv-status, .pi-progress-bar and friends,
+     .pc-icon-btn, .sc-stat as-is; only the card shell below is new. */
+  .pi-cards{display:none;flex-direction:column;gap:10px;margin-top:8px;}
+  .pi-cards-select-all{margin-bottom:2px;}
+  .pi-card{
+    background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px 14px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .pi-card-voided{background:#FAFAFA;}
+  .pi-card-voided .pi-card-title, .pi-card-voided .pi-card-meta, .pi-card-voided .sc-stats,
+  .pi-card-voided .sc-stat b, .pi-card-voided .sc-stat span{color:var(--ink-soft);text-decoration:line-through;}
+  .pi-card-voided .inv-status{text-decoration:none;}
+  .pi-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .pi-card-title{display:flex;align-items:center;gap:8px;min-width:0;}
+  .pi-card-title .pi-doc-check{margin:0;flex-shrink:0;}
+  .pi-card-title .an-rank{flex-shrink:0;}
+  .pi-card-meta{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-soft);}
+  .pi-card .sc-stats{padding-top:9px;}
+  .pi-card-foot{display:flex;flex-direction:column;gap:8px;padding-top:9px;border-top:1px solid var(--line);}
+  .pi-cards-summary{
+    display:flex;gap:8px;margin-top:4px;padding:12px 14px;background:#F7F9FB;
+    border:1px solid var(--line);border-radius:11px;
+  }
+
   .inv-pay-summary{display:flex;gap:18px;flex-wrap:wrap;background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
   .inv-pay-summary .ip-cell{display:flex;flex-direction:column;gap:3px;}
   .inv-pay-summary .ip-label{font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
@@ -1507,6 +1533,9 @@
     .qp-finbar-cell.margin{flex-direction:row;align-items:center;justify-content:space-between;}
     .q-rec-card{aspect-ratio:auto;padding:12px 6px;}
     .q-rec-value{font-size:14px;}
+    /* Purchase Invoices: swap the 11-column ledger table for stacked cards. */
+    .pi-table-wrap{display:none;}
+    .pi-cards{display:flex;}
   }
 </style>
 </head>
@@ -6380,6 +6409,7 @@ function renderPurchaseInvoices(filter=''){
 
   const sortArrow = (key)=> PI_SORT_STATE.key===key ? `<span class="sort-arrow">${PI_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
   let totalAmt=0, totalPaid=0, totalDue=0;
+  const cardsArr = [];
   const rowsHtml = invoices.map((pi,i)=>{
     const total = purchaseInvoiceTotal(pi);
     const paid = Number(pi.amountPaid)||0;
@@ -6389,34 +6419,58 @@ function renderPurchaseInvoices(filter=''){
     const collectionPct = purchaseInvoiceCollectionPct(pi);
     const isRestock = collectionPct===null;
     const barPct = isRestock ? purchaseInvoiceSupplierPaidPct(pi) : collectionPct;
+    const fromOrderLabel = pi.customerName ? `Order for ${pi.customerName}` : (pi.quoteId ? '' : 'Stock restock');
+    const actionsHtml = `<button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
+      <button type="button" class="pc-icon-btn pi-doc-pay" data-id="${pi.id}" title="Record payment to supplier"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
+      <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${pi.voided?'Unvoid purchase invoice':'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
+    const progressHtml = `<div class="pi-progress-bar ${isRestock?'restock':'collected'}" title="${isRestock ? `${Math.round(barPct)}% paid to supplier so far` : `${Math.round(barPct)}% of this order collected from the client so far`}">
+        <div class="pi-progress-fill" style="width:${barPct}%;"></div>
+      </div>
+      <div class="pi-progress-label">${Math.round(barPct)}% ${isRestock?'paid':'collected'}</div>`;
+
+    cardsArr.push(`<div class="pi-card ${pi.voided?'pi-card-voided':''}" data-id="${pi.id}">
+      <div class="pi-card-top">
+        <div class="pi-card-title">
+          <input type="checkbox" class="sq-card-check pi-doc-check" data-id="${pi.id}">
+          <span class="an-rank">${i+1}</span>
+          <button type="button" class="inv-doc-link pi-doc-view" data-id="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button>
+        </div>
+        <div class="inv-row-actions">${actionsHtml}</div>
+      </div>
+      <div class="pi-card-meta">
+        <div>${esc(pi.date || '')} · ${esc(pi.supplierName || 'Unknown supplier')}</div>
+        ${fromOrderLabel ? `<div>${esc(fromOrderLabel)}</div>` : ''}
+      </div>
+      <div class="sc-stats">
+        <div class="sc-stat"><b>${fmtUGX(Math.round(total))}</b><span>Total</span></div>
+        <div class="sc-stat"><b>${fmtUGX(Math.round(paid))}</b><span>Paid</span></div>
+        <div class="sc-stat"><b>${fmtUGX(Math.round(due))}</b><span>Balance</span></div>
+      </div>
+      <div class="pi-card-foot">
+        <span class="inv-status ${status.cls}">${esc(status.label)}${pi.voided?' (voided)':''}</span>
+        <div class="pi-progress-cell">${progressHtml}</div>
+      </div>
+    </div>`);
+
     return `<tr data-id="${pi.id}" class="${pi.voided?'inv-row-voided':''}">
       <td><input type="checkbox" class="sq-card-check pi-doc-check" data-id="${pi.id}"></td>
       <td class="an-rank">${i+1}</td>
       <td>${esc(pi.date || '')}</td>
       <td><button type="button" class="inv-doc-link pi-doc-view" data-id="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button></td>
       <td>${esc(pi.supplierName || 'Unknown supplier')}</td>
-      <td>${esc(pi.customerName ? `Order for ${pi.customerName}` : (pi.quoteId ? '' : 'Stock restock'))}</td>
+      <td>${esc(fromOrderLabel)}</td>
       <td class="price">${fmtUGX(Math.round(total))}</td>
       <td class="price">${fmtUGX(Math.round(paid))}</td>
       <td class="price">${fmtUGX(Math.round(due))}</td>
       <td><span class="inv-status ${status.cls}">${esc(status.label)}${pi.voided?' (voided)':''}</span></td>
-      <td class="pi-progress-cell">
-        <div class="pi-progress-bar ${isRestock?'restock':'collected'}" title="${isRestock ? `${Math.round(barPct)}% paid to supplier so far` : `${Math.round(barPct)}% of this order collected from the client so far`}">
-          <div class="pi-progress-fill" style="width:${barPct}%;"></div>
-        </div>
-        <div class="pi-progress-label">${Math.round(barPct)}% ${isRestock?'paid':'collected'}</div>
-      </td>
+      <td class="pi-progress-cell">${progressHtml}</td>
       <td>
-        <div class="inv-row-actions">
-          <button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
-          <button type="button" class="pc-icon-btn pi-doc-pay" data-id="${pi.id}" title="Record payment to supplier"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-          <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${pi.voided?'Unvoid purchase invoice':'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
-        </div>
+        <div class="inv-row-actions">${actionsHtml}</div>
       </td>
     </tr>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="an-scroll"><table>
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table>
     <thead><tr>
       <th><input type="checkbox" id="pi_doc_select_all_th"></th>
       <th>No.</th>
@@ -6440,7 +6494,16 @@ function renderPurchaseInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(totalDue))}</td>
       <td></td><td></td><td></td>
     </tr></tfoot>
-  </table></div>`;
+  </table></div>
+  <div class="pi-cards">
+    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="pi_doc_select_all_cards"> Select all</label>
+    ${cardsArr.join('')}
+    <div class="pi-cards-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>Total</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalPaid))}</b><span>Paid</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDue))}</b><span>Balance</span></div>
+    </div>
+  </div>`;
 
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
@@ -6463,6 +6526,10 @@ function renderPurchaseInvoices(filter=''){
   }));
   const selectAllTh = document.getElementById('pi_doc_select_all_th');
   if(selectAllTh) selectAllTh.addEventListener('change', (e)=>{
+    document.querySelectorAll('.pi-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
+  });
+  const selectAllCards = document.getElementById('pi_doc_select_all_cards');
+  if(selectAllCards) selectAllCards.addEventListener('change', (e)=>{
     document.querySelectorAll('.pi-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
   });
 }
