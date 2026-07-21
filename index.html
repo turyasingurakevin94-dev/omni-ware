@@ -9514,7 +9514,27 @@ function renderCbTransactions(){
   const wrap = document.getElementById('cbTxnTableWrap');
   const rows = data.cashTxns.filter(t=>t.date===date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
   if(rows.length===0){ wrap.innerHTML = '<div class="empty">No transactions logged for this day yet.</div>'; return; }
-  wrap.innerHTML = `<table><thead><tr>
+  const cardsHtml = rows.map(t=>`
+    <div class="pi-card">
+      <div class="pi-card-top">
+        <div class="pi-card-title">
+          <span class="an-rank">${esc(t.time||'')}</span>
+          <span class="${typeClass(t.type)}">${typeLabel(t.type)}</span>
+        </div>
+        <div class="row-actions">
+          <button onclick="editCashTxn(${t.id})">${ICON_EDIT}Edit</button>
+          <button class="danger" onclick="deleteCashTxn(${t.id})">${ICON_TRASH}Delete</button>
+        </div>
+      </div>
+      <div class="pi-card-meta">
+        <div>${esc(accountLabel(t.account))} · ${esc(t.category||'Uncategorized')}</div>
+        ${t.description ? `<div>${esc(t.description)}</div>` : ''}
+      </div>
+      <div class="pi-card-foot">
+        <span class="q-line-total price">${fmtUGX(t.amount)}</span>
+      </div>
+    </div>`).join('');
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
     <th>Time</th><th>Account</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th></th>
   </tr></thead><tbody>
   ${rows.map(t=>`
@@ -9530,7 +9550,8 @@ function renderCbTransactions(){
         <button class="danger" onclick="deleteCashTxn(${t.id})">${ICON_TRASH}Delete</button>
       </td>
     </tr>`).join('')}
-  </tbody></table>`;
+  </tbody></table></div>
+  <div class="pi-cards">${cardsHtml}</div>`;
 }
 
 /* ---- Cash In / Cash Out forms (inside popup modals) ---- */
