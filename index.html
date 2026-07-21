@@ -1227,6 +1227,17 @@
   .inv-status.unsettled{color:var(--danger);}
   .inv-status.settled{color:var(--good);}
   .inv-status.partial{color:var(--accent-ink);}
+  /* Purchase invoice "Collection progress" column -- blue bar = % of the
+     linked customer order collected so far (prorated across suppliers on
+     that order); amber bar = a restock invoice's own % paid to the
+     supplier, deliberately a different colour since it's a different
+     metric (no client order to collect from). */
+  .pi-progress-cell{min-width:120px;}
+  .pi-progress-bar{height:8px;border-radius:5px;background:#EEF1F3;overflow:hidden;}
+  .pi-progress-fill{height:100%;border-radius:5px;transition:width .28s ease;}
+  .pi-progress-bar.collected .pi-progress-fill{background:#3E6FA6;}
+  .pi-progress-bar.restock .pi-progress-fill{background:var(--accent);}
+  .pi-progress-label{font-size:10.5px;color:var(--ink-soft);margin-top:3px;white-space:nowrap;}
   tr.inv-row-voided td{color:var(--ink-soft);text-decoration:line-through;}
   tr.inv-row-voided .inv-status{text-decoration:none;}
   .inv-row-actions{display:flex;gap:6px;justify-content:flex-end;}
@@ -5290,6 +5301,43 @@ function syncInvoiceDebtCharge(q){
   applyInvoiceDebtCharge(q, invoiceDebtDesired(q));
 }
 
+// This customer's invoiced, unvoided quotes that still have a balance
+// due, oldest first -- the pool a Debtors List payment gets applied
+// against. Mirrors creditorOutstandingInvoices() on the supplier side.
+function customerOutstandingInvoices(customerId){
+  return data.savedQuotes
+    .filter(q=>q.customerId===customerId && q.invoiced && !q.voided && invoiceBalanceDue(q)>0)
+    .sort((a,b)=>(a.invoicedAt||a.date||'').localeCompare(b.invoicedAt||b.date||''));
+}
+// Allocates a lump-sum customer payment across their outstanding
+// invoices, oldest first, each portion going through the same
+// q.payments/q.amountPaid + syncInvoiceDebtCharge path a single-invoice
+// payment would -- so every invoice's own balance stays accurate instead
+// of only the customer's aggregate debt figure moving. Mirrors
+// allocateCreditorPayment() on the supplier side. Any amount left over
+// once every invoice is settled (e.g. debt that was never tied to an
+// invoice, just added as a manual charge) is returned as `unapplied` for
+// the caller to apply directly against the customer's balance.
+function allocateCustomerPayment(customerId, amount, account, note){
+  const invoices = customerOutstandingInvoices(customerId);
+  let remaining = amount;
+  let applied = 0;
+  for(const q of invoices){
+    if(remaining<=0) break;
+    const due = invoiceBalanceDue(q);
+    const pay = Math.min(remaining, due);
+    if(pay<=0) continue;
+    if(!q.payments) q.payments = [];
+    const cashTxnId = addCashReceipt(account, pay, 'Debt Payment', note || `Payment — ${invoiceNumberLabel(q)}`);
+    q.payments.push({date: todayISO(), amount: pay, note, cashTxnId});
+    q.amountPaid = (Number(q.amountPaid)||0) + pay;
+    syncInvoiceDebtCharge(q);
+    remaining -= pay;
+    applied += pay;
+  }
+  return {applied, unapplied: remaining};
+}
+
 // Converts a completed quote into an invoice, or reverts it back -- only
 // reachable once a quote has reached Step 4 (Completed). Flips the invoiced
 // flag + records/clears the date, AND is the point at which "Our stock"
@@ -5883,6 +5931,28 @@ function purchaseInvoicePaymentStatusLabel(pi){
   if(paid>=total) return {cls:'settled', label:'Settled'};
   return {cls:'partial', label:'Partial'};
 }
+// How much of what's owed to THIS supplier has effectively been earned
+// back from the client so far -- null when there's no client order to
+// collect from (a restock purchase invoice). A customer's payment isn't
+// earmarked per-supplier, so it's treated as applying proportionally
+// across every supplier on that order; working the math out, that always
+// lands on the same percentage as the order's own payment progress,
+// regardless of this invoice's particular share of the order total.
+function purchaseInvoiceCollectionPct(pi){
+  if(!pi.quoteId) return null;
+  const q = data.savedQuotes.find(x=>x.id===pi.quoteId);
+  if(!q) return null;
+  const orderTotal = savedQuoteTotal(q);
+  if(orderTotal<=0) return 0;
+  return Math.max(0, Math.min(100, (Number(q.amountPaid)||0) / orderTotal * 100));
+}
+// For a restock purchase invoice (no client order attached), the relevant
+// progress instead is how much of it WE'VE paid the supplier.
+function purchaseInvoiceSupplierPaidPct(pi){
+  const total = purchaseInvoiceTotal(pi);
+  if(total<=0) return 0;
+  return Math.max(0, Math.min(100, (Number(pi.amountPaid)||0) / total * 100));
+}
 
 // Groups an invoiced quote's items by supplier and creates one purchase
 // invoice per supplier group. Clears out any purchase invoices already on
@@ -6015,6 +6085,9 @@ function renderPurchaseInvoices(filter=''){
     const due = total - paid;
     totalAmt += total; totalPaid += paid; totalDue += due;
     const status = purchaseInvoicePaymentStatusLabel(pi);
+    const collectionPct = purchaseInvoiceCollectionPct(pi);
+    const isRestock = collectionPct===null;
+    const barPct = isRestock ? purchaseInvoiceSupplierPaidPct(pi) : collectionPct;
     return `<tr data-id="${pi.id}" class="${pi.voided?'inv-row-voided':''}">
       <td><input type="checkbox" class="sq-card-check pi-doc-check" data-id="${pi.id}"></td>
       <td class="an-rank">${i+1}</td>
@@ -6026,6 +6099,12 @@ function renderPurchaseInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(paid))}</td>
       <td class="price">${fmtUGX(Math.round(due))}</td>
       <td><span class="inv-status ${status.cls}">${esc(status.label)}${pi.voided?' (voided)':''}</span></td>
+      <td class="pi-progress-cell">
+        <div class="pi-progress-bar ${isRestock?'restock':'collected'}" title="${isRestock ? `${Math.round(barPct)}% paid to supplier so far` : `${Math.round(barPct)}% of this order collected from the client so far`}">
+          <div class="pi-progress-fill" style="width:${barPct}%;"></div>
+        </div>
+        <div class="pi-progress-label">${Math.round(barPct)}% ${isRestock?'paid':'collected'}</div>
+      </td>
       <td>
         <div class="inv-row-actions">
           <button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
@@ -6048,6 +6127,7 @@ function renderPurchaseInvoices(filter=''){
       <th>Paid to supplier</th>
       <th>Balance due</th>
       <th>Payment status</th>
+      <th>Collection progress</th>
       <th></th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
@@ -6057,7 +6137,7 @@ function renderPurchaseInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(totalAmt))}</td>
       <td class="price">${fmtUGX(Math.round(totalPaid))}</td>
       <td class="price">${fmtUGX(Math.round(totalDue))}</td>
-      <td></td><td></td>
+      <td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>`;
 
@@ -7217,15 +7297,26 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   const amount = Number(document.getElementById('cd_amount').value)||0;
   if(amount<=0){ toast('Enter an amount greater than 0'); return; }
   const note = document.getElementById('cd_note').value.trim();
-  const delta = editingCustomerDebtType==='charge' ? amount : -amount;
-  c.debt = Math.max(0, (Number(c.debt)||0) + delta);
   if(!c.debtLog) c.debtLog = [];
-  let cashTxnId = null;
-  if(editingCustomerDebtType==='payment'){
+  if(editingCustomerDebtType==='charge'){
+    c.debt = Math.max(0, (Number(c.debt)||0) + amount);
+    c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type:'charge', amount, note, cashTxnId:null});
+  } else {
     const account = document.getElementById('cd_account').value;
-    cashTxnId = addCashReceipt(account, amount, 'Debt Payment', note || `Payment — ${c.name}`);
+    // Apply against outstanding invoices first (oldest first) so each
+    // invoice's own balance actually moves -- otherwise the next time any
+    // of them syncs (paid, edited, voided), it recomputes its balance
+    // from its own unchanged amountPaid and pushes the "missing" amount
+    // straight back onto c.debt, silently undoing this payment. Only the
+    // leftover (debt never tied to an invoice, e.g. a manual charge)
+    // reduces c.debt directly.
+    const {unapplied} = allocateCustomerPayment(c.id, amount, account, note);
+    if(unapplied>0){
+      c.debt = Math.max(0, (Number(c.debt)||0) - unapplied);
+      const cashTxnId = addCashReceipt(account, unapplied, 'Debt Payment', note || `Payment — ${c.name}`);
+      c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
+    }
   }
-  c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type: editingCustomerDebtType, amount, note, cashTxnId});
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
   renderCustomers(document.getElementById('c_search').value);
