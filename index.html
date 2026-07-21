@@ -5920,12 +5920,41 @@ function renderInvoices(filter=''){
 
   const sortArrow = (key)=> INV_SORT_STATE.key===key ? `<span class="sort-arrow">${INV_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
   let totalAmt=0, totalPaid=0, totalDue=0;
+  const cardsArr = [];
   const rowsHtml = invoices.map((q,i)=>{
     const total = savedQuoteTotal(q);
     const paid = Number(q.amountPaid)||0;
     const due = total - paid;
     totalAmt += total; totalPaid += paid; totalDue += due;
     const status = invoicePaymentStatusLabel(q);
+    const notesLabel = (q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '';
+    const actionsHtml = `<button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
+      <button type="button" class="pc-icon-btn inv-doc-receive" data-id="${q.id}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
+      <button type="button" class="pc-icon-btn danger inv-doc-void" data-id="${q.id}" title="${q.voided?'Unvoid invoice':'Void invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
+
+    cardsArr.push(`<div class="pi-card ${q.voided?'pi-card-voided':''}" data-id="${q.id}">
+      <div class="pi-card-top">
+        <div class="pi-card-title">
+          <input type="checkbox" class="sq-card-check inv-doc-check" data-id="${q.id}">
+          <span class="an-rank">${i+1}</span>
+          <button type="button" class="inv-doc-link inv-doc-view" data-id="${q.id}">${esc(invoiceNumberLabel(q))}</button>
+        </div>
+        <div class="inv-row-actions">${actionsHtml}</div>
+      </div>
+      <div class="pi-card-meta">
+        <div>${esc(q.invoicedAt || q.date || '')} · ${esc(q.client.name || 'Unnamed client')}</div>
+        ${notesLabel ? `<div>${esc(notesLabel)}</div>` : ''}
+      </div>
+      <div class="sc-stats">
+        <div class="sc-stat"><b>${fmtUGX(Math.round(total))}</b><span>Total</span></div>
+        <div class="sc-stat"><b>${fmtUGX(Math.round(paid))}</b><span>Paid</span></div>
+        <div class="sc-stat"><b>${fmtUGX(Math.round(due))}</b><span>Balance</span></div>
+      </div>
+      <div class="pi-card-foot">
+        <span class="inv-status ${status.cls}">${esc(status.label)}${q.voided?' (voided)':''}</span>
+      </div>
+    </div>`);
+
     return `<tr data-id="${q.id}" class="${q.voided?'inv-row-voided':''}">
       <td><input type="checkbox" class="sq-card-check inv-doc-check" data-id="${q.id}"></td>
       <td class="an-rank">${i+1}</td>
@@ -5936,18 +5965,14 @@ function renderInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(paid))}</td>
       <td class="price">${fmtUGX(Math.round(due))}</td>
       <td><span class="inv-status ${status.cls}">${esc(status.label)}${q.voided?' (voided)':''}</span></td>
-      <td>${esc((q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '')}</td>
+      <td>${esc(notesLabel)}</td>
       <td>
-        <div class="inv-row-actions">
-          <button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
-          <button type="button" class="pc-icon-btn inv-doc-receive" data-id="${q.id}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-          <button type="button" class="pc-icon-btn danger inv-doc-void" data-id="${q.id}" title="${q.voided?'Unvoid invoice':'Void invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
-        </div>
+        <div class="inv-row-actions">${actionsHtml}</div>
       </td>
     </tr>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="an-scroll"><table>
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table>
     <thead><tr>
       <th><input type="checkbox" id="inv_doc_select_all_th"></th>
       <th>No.</th>
@@ -5970,7 +5995,16 @@ function renderInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(totalDue))}</td>
       <td></td><td></td><td></td>
     </tr></tfoot>
-  </table></div>`;
+  </table></div>
+  <div class="pi-cards">
+    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="inv_doc_select_all_cards"> Select all</label>
+    ${cardsArr.join('')}
+    <div class="pi-cards-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>Total</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalPaid))}</b><span>Paid</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDue))}</b><span>Balance</span></div>
+    </div>
+  </div>`;
 
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
@@ -5993,6 +6027,10 @@ function renderInvoices(filter=''){
   }));
   const selectAllTh = document.getElementById('inv_doc_select_all_th');
   if(selectAllTh) selectAllTh.addEventListener('change', (e)=>{
+    document.querySelectorAll('.inv-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
+  });
+  const selectAllCards = document.getElementById('inv_doc_select_all_cards');
+  if(selectAllCards) selectAllCards.addEventListener('change', (e)=>{
     document.querySelectorAll('.inv-doc-check').forEach(cb=>{ cb.checked = e.target.checked; });
   });
 }
