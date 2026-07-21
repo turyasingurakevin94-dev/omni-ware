@@ -392,6 +392,16 @@
   }
   .tag-badge .dot{width:4px;height:4px;border-radius:50%;background:#fff;}
 
+  /* Mobile card layout for the Compare Prices Wholesale/Retail tables --
+     phone breakpoint swaps .cmp-table-wrap for .cmp-cards. Read-only,
+     no wiring needed. Reuses .sc-stats/.sc-stat and .tag-badge as-is. */
+  .cmp-cards{display:none;flex-direction:column;gap:10px;}
+  .cmp-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+  .cmp-card-best{border-color:var(--good);background:var(--good-bg);}
+  .cmp-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .cmp-card-supplier{font-weight:600;font-size:13.5px;}
+  .cmp-card .sc-stats{padding-top:0;border-top:none;}
+
   .toast{
     position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 18px;
     border-radius:8px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);
@@ -1533,9 +1543,12 @@
     .qp-finbar-cell.margin{flex-direction:row;align-items:center;justify-content:space-between;}
     .q-rec-card{aspect-ratio:auto;padding:12px 6px;}
     .q-rec-value{font-size:14px;}
-    /* Purchase Invoices: swap the 11-column ledger table for stacked cards. */
+    /* Purchase Invoices / Invoices: swap the ledger table for stacked cards. */
     .pi-table-wrap{display:none;}
     .pi-cards{display:flex;}
+    /* Compare Prices: swap the Wholesale/Retail tables for stacked cards. */
+    .cmp-table-wrap{display:none;}
+    .cmp-cards{display:flex;}
   }
 </style>
 </head>
@@ -9201,7 +9214,19 @@ function renderCompare(){
   function buildTable(list, field){
     if(list.length===0) return '<div class="empty">No prices of this type yet.</div>';
     const showSuggested = field==='wholesale' ? !!wholesaleRule : !!retailRule;
-    return `<table><thead><tr><th>Supplier</th><th>Unit</th><th>Price</th>${showSuggested?'<th>Suggested Selling Price</th>':''}<th>Date</th></tr></thead><tbody>
+    const cardsArr = list.map((r,i)=>`
+      <div class="cmp-card ${i===0?'cmp-card-best':''}">
+        <div class="cmp-card-top">
+          <span class="cmp-card-supplier">${esc(r.sname)}</span>
+          ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}
+        </div>
+        <div class="sc-stats">
+          <div class="sc-stat"><b>${fmtUGXPerUnit(r[field], r.unit)}</b><span>Price</span></div>
+          ${showSuggested?`<div class="sc-stat"><b class="txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</b><span>Suggested</span></div>`:''}
+          <div class="sc-stat"><b>${esc(r.date)}</b><span>Date</span></div>
+        </div>
+      </div>`).join('');
+    return `<div class="cmp-table-wrap"><table><thead><tr><th>Supplier</th><th>Unit</th><th>Price</th>${showSuggested?'<th>Suggested Selling Price</th>':''}<th>Date</th></tr></thead><tbody>
       ${list.map((r,i)=>`
         <tr class="${i===0?'best':''}">
           <td>${esc(r.sname)} ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}</td>
@@ -9210,7 +9235,8 @@ function renderCompare(){
           ${showSuggested?`<td class="price txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</td>`:''}
           <td>${esc(r.date)}</td>
         </tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table></div>
+    <div class="cmp-cards">${cardsArr}</div>`;
   }
 
   wrap.innerHTML = `<div class="cmp-result-head">
