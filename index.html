@@ -923,6 +923,34 @@
   .q-margin-pill.warn{background:#FCEACB;color:var(--accent-ink);}
   .q-margin-pill.danger{background:#F7D9D3;color:var(--danger);}
 
+  /* Mobile card layout for the quote items list (phone breakpoint swaps
+     .qp-items-table-wrap for .qp-items-cards -- see @media max-width:820px).
+     Desktop keeps the table; these rules just define the card shell so it's
+     ready to show once the breakpoint flips visibility. */
+  .qp-items-cards{display:none;flex-direction:column;gap:10px;margin-top:8px;}
+  .qc-card{
+    background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px 14px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .qc-card.qc-card-warn{background:#FFF7E8;border-color:#EAD6A8;}
+  .qc-card.qc-card-danger{background:#FBEEEC;border-color:#EFC5BB;}
+  .qc-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  .qc-card-title{display:flex;align-items:flex-start;gap:9px;min-width:0;}
+  .qc-card-title .q-row-num{padding-top:1px;}
+  .qc-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .qc-field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .qc-field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--ink-soft);}
+  .qc-field .qty-input, .qc-field .price-input{width:100%;box-sizing:border-box;font-size:14px;padding:8px 9px;}
+  .qc-field-full{width:100%;}
+  .qc-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--line);}
+  .qc-card-foot .q-line-total{font-size:14.5px;}
+  .qc-add-card{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:13px;border:1.5px dashed #C7CFD8;border-radius:11px;color:var(--ink-soft);font-weight:700;font-size:13px;
+  }
+  .qc-add-card:hover{border-color:var(--good);color:var(--good);background:#F4F8F5;}
+  .qc-add-card .icon{width:16px;height:16px;}
+
   /* Client history panel shown under the client name field once a known
      client is typed/selected — previous order count + any outstanding debt */
   .q-client-history{
@@ -1468,6 +1496,17 @@
     html, body{overflow-x:hidden;}
     .qp-toolbar{overflow-x:auto;padding-bottom:2px;}
     .qp-tbtn{flex-shrink:0;}
+    /* Add New Quote: swap the 8-column table for stacked cards -- there's
+       no way to fit Item/Qty/Supplier/Buy/Sell/Margin/Total in ~340px. */
+    .qp-items-table-wrap{display:none;}
+    .qp-items-cards{display:flex;}
+    .qp-finbar{display:grid;grid-template-columns:1fr 1fr;}
+    .qp-finbar-cell{border-bottom:1px solid var(--line);}
+    .qp-finbar-cell.buy, .qp-finbar-cell.margin{border-right:none;}
+    .qp-finbar-cell.profit, .qp-finbar-cell.margin{border-bottom:none;}
+    .qp-finbar-cell.margin{flex-direction:row;align-items:center;justify-content:space-between;}
+    .q-rec-card{aspect-ratio:auto;padding:12px 6px;}
+    .q-rec-value{font-size:14px;}
   }
 </style>
 </head>
@@ -4870,6 +4909,7 @@ function renderQuoteItems(){
   // under cost) are flagged red. Purely visual — doesn't block saving/printing.
   const MARGIN_WARN_PCT = 10;
   let grandBuy = 0, grandSell = 0;
+  const cardsArr = [];
   const rowsHtml = items.map((it, idx)=>{
     const buy = Number(it.price)||0;
     const qty = Number(it.qty)||0;
@@ -4878,9 +4918,43 @@ function renderQuoteItems(){
     grandBuy += lineTotal;
     grandSell += qty * sell;
     const marginPct = sell>0 ? ((sell-buy)/sell*100) : (buy>0 ? -100 : 0);
-    let rowMarginClass = '', pillClass = 'good';
-    if(sell<=0 || sell<=buy){ rowMarginClass = 'q-row-margin-danger'; pillClass = 'danger'; }
-    else if(marginPct < MARGIN_WARN_PCT){ rowMarginClass = 'q-row-margin-warn'; pillClass = 'warn'; }
+    let rowMarginClass = '', cardMarginClass = '', pillClass = 'good';
+    if(sell<=0 || sell<=buy){ rowMarginClass = 'q-row-margin-danger'; cardMarginClass = 'qc-card-danger'; pillClass = 'danger'; }
+    else if(marginPct < MARGIN_WARN_PCT){ rowMarginClass = 'q-row-margin-warn'; cardMarginClass = 'qc-card-warn'; pillClass = 'warn'; }
+
+    // Shared between the desktop table cell and the mobile card -- same
+    // markup, same classes, so the single wiring pass below (keyed off
+    // data-line + these child classes) works against either container.
+    const supplierPickerHTML = `<div class="q-supplier-picker searchable-select">
+        <input type="text" class="q-supplier-select q-supplier-search" value="${esc(supplierDisplayLabel(it.supplierId, it))}" autocomplete="off">
+        <input type="hidden" class="q-supplier" value="${esc(it.supplierId)}">
+        <div class="suggestions q-supplier-suggestions"></div>
+      </div>`;
+    const sellCellHTML = `<div class="q-sell-cell">
+        <input type="number" class="price-input q-sell ${it.sellPrice!=null&&it.sellPrice!==''?'q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" title="${it.sellPrice!=null&&it.sellPrice!==''?'Manually set — click the reset icon to go back to the suggested price':'Suggested price — edit to override'}">
+        ${it.sellPrice!=null&&it.sellPrice!==''?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
+      </div>`;
+
+    cardsArr.push(`<div class="qc-card ${cardMarginClass}" data-line="${it.lineId}">
+      <div class="qc-card-top">
+        <div class="qc-card-title">
+          <span class="q-row-num">${idx+1}</span>
+          <div><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></div>
+        </div>
+        <button class="q-remove-icon" title="Remove item"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="qc-card-grid">
+        <div class="qc-field"><label>Qty</label><input type="number" class="qty-input q-qty" min="1" step="any" value="${it.qty}"></div>
+        <div class="qc-field"><label>Buy @ (UGX)</label><input type="number" class="price-input q-price" min="0" step="any" value="${Math.round(it.price)}"></div>
+      </div>
+      <div class="qc-field qc-field-full"><label>Supplier</label>${supplierPickerHTML}</div>
+      <div class="qc-field qc-field-full"><label>Sell @ (UGX)</label>${sellCellHTML}</div>
+      <div class="qc-card-foot">
+        <div class="q-margin-pill ${pillClass}">${Math.round(marginPct)}% margin</div>
+        <div class="q-line-total price">${fmtUGX(lineTotal)}</div>
+      </div>
+    </div>`);
+
     return `<tr data-line="${it.lineId}" class="${rowMarginClass}">
       <td class="q-gutter-cell"><div class="q-gutter">
         <span class="q-row-num">${idx+1}</span>
@@ -4888,16 +4962,9 @@ function renderQuoteItems(){
       </div></td>
       <td><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></td>
       <td><input type="number" class="qty-input q-qty" min="1" step="any" value="${it.qty}"></td>
-      <td><div class="q-supplier-picker searchable-select">
-        <input type="text" class="q-supplier-select q-supplier-search" value="${esc(supplierDisplayLabel(it.supplierId, it))}" autocomplete="off">
-        <input type="hidden" class="q-supplier" value="${esc(it.supplierId)}">
-        <div class="suggestions q-supplier-suggestions"></div>
-      </div></td>
+      <td>${supplierPickerHTML}</td>
       <td><input type="number" class="price-input q-price" min="0" step="any" value="${Math.round(it.price)}"></td>
-      <td><div class="q-sell-cell">
-        <input type="number" class="price-input q-sell ${it.sellPrice!=null&&it.sellPrice!==''?'q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" title="${it.sellPrice!=null&&it.sellPrice!==''?'Manually set — click the reset icon to go back to the suggested price':'Suggested price — edit to override'}">
-        ${it.sellPrice!=null&&it.sellPrice!==''?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
-      </div></td>
+      <td>${sellCellHTML}</td>
       <td><div class="q-margin-pill ${pillClass}">${Math.round(marginPct)}% margin</div></td>
       <td class="q-line-total price">${fmtUGX(lineTotal)}</td>
     </tr>`;
@@ -4914,16 +4981,21 @@ function renderQuoteItems(){
   const profit = grandSell - grandBuy;
   const profitColor = profit < 0 ? 'var(--danger)' : 'var(--good)';
 
-  wrap.innerHTML = `<table><thead><tr>
+  wrap.innerHTML = `<div class="qp-items-table-wrap"><table><thead><tr>
     <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th class="q-supplier-th">Supplier</th><th>Buy @</th><th>Sell @</th><th>Margin</th><th>Line total</th>
   </tr></thead><tbody>${rowsHtml}${addRowHtml}
     <tr class="q-grand-row"><td colspan="7" style="text-align:right;">Grand total</td><td class="price">${fmtUGX(grandBuy)}</td></tr>
     <tr class="q-profit-row"><td colspan="7" style="text-align:right;">Estimated profit</td><td class="price" style="color:${profitColor};">${fmtUGX(profit)}</td></tr>
-  </tbody></table>`;
+  </tbody></table></div>
+  <div class="qp-items-cards">${cardsArr.join('')}
+    <button type="button" class="qc-add-card" id="q_add_card_btn">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add item</span>
+    </button>
+  </div>`;
 
   renderQuoteFinbar(grandBuy, grandSell, profit);
 
-  wrap.querySelectorAll('tr[data-line]').forEach(row=>{
+  wrap.querySelectorAll('[data-line]').forEach(row=>{
     const lineId = Number(row.dataset.line);
     const item = data.quote.items.find(x=>x.lineId===lineId);
     row.querySelector('.q-qty').addEventListener('change', (e)=>{
@@ -4971,6 +5043,7 @@ function renderQuoteItems(){
 
   wrap.querySelector('#q_add_row_btn').addEventListener('click', openItemPicker);
   wrap.querySelector('.q-add-row-placeholder').addEventListener('click', openItemPicker);
+  wrap.querySelector('#q_add_card_btn').addEventListener('click', openItemPicker);
 }
 
 // Glanceable Sell / Buy / Profit / Margin% strip shown above the print
