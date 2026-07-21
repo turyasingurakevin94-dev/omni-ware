@@ -1136,6 +1136,20 @@
   .sq-card{
     background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px;
     border-left:3px solid var(--sq-accent,var(--line));
+    position:relative;
+  }
+  /* Flags a card that's stayed in its current step past the limit set
+     under Presets > Order Tracking. Blinks so it stands out on the board
+     without having to compare timestamps by eye. */
+  .sq-overdue-flag{
+    position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;
+    background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 4px rgba(20,30,40,0.25);animation:sq-blink 1.1s ease-in-out infinite;
+  }
+  .sq-overdue-flag .icon{width:13px;height:13px;stroke-width:2.6;}
+  @keyframes sq-blink{
+    0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(192,57,43,0.5);}
+    50%{opacity:0.55;box-shadow:0 0 0 5px rgba(192,57,43,0);}
   }
   .sq-card-top{display:flex;align-items:flex-start;gap:8px;}
   .sq-card-check{margin-top:2px;flex-shrink:0;}
@@ -2144,6 +2158,7 @@
             <button type="button" class="preset-tab" data-ptab="attributes">Attributes</button>
             <button type="button" class="preset-tab" data-ptab="income-cats">Cash In Categories</button>
             <button type="button" class="preset-tab" data-ptab="expense-cats">Cash Out Categories</button>
+            <button type="button" class="preset-tab" data-ptab="order-tracking">Order Tracking</button>
           </div>
         </div>
 
@@ -2191,6 +2206,11 @@
             <button type="button" id="preset_expense_cat_add">Add</button>
           </div>
           <div id="presetExpenseCatsWrap"></div>
+        </div>
+
+        <div class="preset-pane" id="ppane-order-tracking" style="display:none;">
+          <p class="preset-hint">If an order sits in one of these steps on the Order Tracking board longer than its limit, its card gets a blinking warning flag. Leave a step blank or 0 to turn its warning off.</p>
+          <div class="form-grid" id="presetOrderLimitsWrap" style="max-width:640px;"></div>
         </div>
       </div>
     </section>
@@ -3030,6 +3050,7 @@ async function loadData(shopId){
     presetIncomeCategories: presets.incomeCategories || seed.presetIncomeCategories,
     presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
     presetAttributes: presets.attributes || seed.presetAttributes,
+    presetOrderStageLimits: presets.orderStageLimits || {},
     seeded: true
   };
 }
@@ -3089,7 +3110,7 @@ function buildSyncRows(d, shopId){
       date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged}
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt}
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
@@ -3097,7 +3118,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes},
+      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits},
       quote_draft: d.quote
     }
   };
@@ -4878,6 +4899,10 @@ document.getElementById('q_save_btn').addEventListener('click', ()=>{
     items: JSON.parse(JSON.stringify(data.quote.items)),
     savedAt: new Date().toISOString(),
     status: idxExisting>-1 ? data.savedQuotes[idxExisting].status : 'draft',
+    // When this step was entered — powers the Order Tracking board's
+    // overdue warning. Only setSavedQuoteStatus() ever advances it;
+    // re-saving the quote's own content (this record) must not reset it.
+    stageEnteredAt: idxExisting>-1 ? (data.savedQuotes[idxExisting].stageEnteredAt || Date.now()) : Date.now(),
     invoiced: idxExisting>-1 ? !!data.savedQuotes[idxExisting].invoiced : false,
     invoicedAt: idxExisting>-1 ? (data.savedQuotes[idxExisting].invoicedAt||null) : null,
     invoicedTs: idxExisting>-1 ? (data.savedQuotes[idxExisting].invoicedTs||null) : null,
@@ -4979,6 +5004,7 @@ function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  if(q.status!==status) q.stageEnteredAt = Date.now();
   q.status = status;
   saveData();
   renderSavedQuotes();
@@ -5111,11 +5137,27 @@ function updateOrderStatusBar(){
 }
 document.getElementById('orderStatusBar').addEventListener('click', ()=> goToTab('quote-saved'));
 
+// Re-renders the board on a timer so a card's overdue flag appears on its
+// own once a step's time limit is crossed, rather than only updating the
+// next time something else happens to trigger a render. Only bothers
+// while the board is actually the visible tab.
+setInterval(()=>{
+  const tab = document.getElementById('tab-quote-saved');
+  if(tab && tab.style.display !== 'none') renderSavedQuotes();
+}, 60000);
+
 function renderSavedQuotes(){
   ensureQuote();
   updateOrderStatusBar();
   const wrap = document.getElementById('savedQuotesWrap');
   const allQuotes = data.savedQuotes;
+  // Orders saved before stageEnteredAt existed (or that have otherwise
+  // never had their status changed since) won't have it set -- back-fill
+  // those now so the overdue check below has something to compare
+  // against, instead of silently never flagging them.
+  let backfilled = false;
+  allQuotes.forEach(q=>{ if(!q.stageEnteredAt){ q.stageEnteredAt = Date.now(); backfilled = true; } });
+  if(backfilled) saveData();
   const quotes = allQuotes.filter(q=>!quoteAgedOffBoard(q));
   if(allQuotes.length===0){
     wrap.innerHTML = '<div class="empty">No orders yet — build a quote above and click "Save quote".</div>';
@@ -5128,8 +5170,16 @@ function renderSavedQuotes(){
     return;
   }
 
-  const cardHTML = (q)=>`
+  // Presets > Order Tracking sets, per step, how long an order can sit
+  // there before its card should flag as overdue. 0/blank leaves that
+  // step's warning off.
+  const stageLimits = data.presetOrderStageLimits || {};
+  const cardHTML = (q)=>{
+    const limitMin = Number(stageLimits[q.status])||0;
+    const overdue = limitMin>0 && q.stageEnteredAt && (Date.now() - q.stageEnteredAt) > limitMin*60000;
+    return `
     <div class="sq-card" data-id="${q.id}" style="--sq-accent:${SQ_STATUSES[q.status].color};">
+      ${overdue ? `<span class="sq-overdue-flag" title="In ${esc(SQ_STATUSES[q.status].label)} for over ${limitMin} minute${limitMin===1?'':'s'}">${ICON_WARN}</span>` : ''}
       <div class="sq-card-top">
         <input type="checkbox" class="sq-check sq-card-check" data-id="${q.id}">
         <div class="sq-card-info">
@@ -5160,6 +5210,7 @@ function renderSavedQuotes(){
         </button>
       </div>
     </div>`;
+  };
 
   wrap.innerHTML = `<div class="sq-board">${SQ_STATUS_ORDER.map(status=>{
     const group = quotes.filter(q=>q.status===status);
@@ -8945,6 +8996,27 @@ function renderPresets(){
   renderPresetIncomeCats();
   renderPresetExpenseCats();
   refreshPresetDatalists();
+  renderPresetOrderLimits();
+}
+// One time-limit field per Order Tracking step (draft/preparing/pending
+// delivery/completed), built from SQ_STATUS_ORDER so it stays in sync if
+// the steps themselves ever change.
+function renderPresetOrderLimits(){
+  const wrap = document.getElementById('presetOrderLimitsWrap');
+  const limits = data.presetOrderStageLimits || {};
+  wrap.innerHTML = SQ_STATUS_ORDER.map(status=>`
+    <div class="field"><label>${esc(SQ_STATUSES[status].label)} (minutes)</label>
+      <input type="number" class="preset-order-limit-input" data-status="${status}" min="0" step="1" value="${limits[status]||''}" placeholder="e.g. 60">
+    </div>`).join('');
+  wrap.querySelectorAll('.preset-order-limit-input').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      if(!data.presetOrderStageLimits) data.presetOrderStageLimits = {};
+      data.presetOrderStageLimits[inp.dataset.status] = Math.max(0, Number(inp.value)||0);
+      saveData();
+      renderSavedQuotes();
+      toast('Order tracking limits updated');
+    });
+  });
 }
 document.getElementById('preset_cat_add').addEventListener('click', ()=>{
   const input = document.getElementById('preset_cat_new');
