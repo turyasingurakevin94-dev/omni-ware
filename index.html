@@ -10292,7 +10292,24 @@ function renderStockLog(){
   const wrap = document.getElementById('invLogWrap');
   const entries = (data.stockLog||[]).slice(-20).reverse();
   if(entries.length===0){ wrap.innerHTML = '<div class="empty">No stock movements recorded yet.</div>'; return; }
-  wrap.innerHTML = `<table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th></tr></thead><tbody>
+  const cardsHtml = entries.map(e=>`
+    <div class="pi-card">
+      <div class="pi-card-top">
+        <div class="pi-card-title">
+          <span class="an-rank">${esc(e.date)}</span>
+          <span class="cmp-card-supplier">${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</span>
+        </div>
+      </div>
+      <div class="pi-card-meta">
+        <div>${esc(e.label||e.productId)}</div>
+        ${e.note ? `<div>${esc(e.note)}</div>` : ''}
+      </div>
+      <div class="sc-stats">
+        <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${e.delta}</b><span>Change</span></div>
+        <div class="sc-stat"><b>${e.qtyAfter}</b><span>Resulting stock</span></div>
+      </div>
+    </div>`).join('');
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th></tr></thead><tbody>
     ${entries.map(e=>`<tr>
       <td>${esc(e.date)}</td>
       <td>${esc(e.label||e.productId)}</td>
@@ -10301,7 +10318,8 @@ function renderStockLog(){
       <td class="price">${e.qtyAfter}</td>
       <td>${esc(e.note||'')}</td>
     </tr>`).join('')}
-  </tbody></table>`;
+  </tbody></table></div>
+  <div class="pi-cards">${cardsHtml}</div>`;
 }
 
 /* Add/adjust-stock modal — search step mirrors the quote item picker's
