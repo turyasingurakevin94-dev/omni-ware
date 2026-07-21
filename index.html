@@ -1327,6 +1327,11 @@
     display:flex;gap:8px;margin-top:4px;padding:12px 14px;background:#F7F9FB;
     border:1px solid var(--line);border-radius:11px;
   }
+  /* Analytics report cards can carry 4-6 numeric columns (see
+     reportCardHTML) -- too many for .sc-stats' default single-row flex,
+     so this modifier wraps them into a 2-column grid instead. */
+  .an-card-stats{flex-wrap:wrap;gap:10px 14px;}
+  .an-card-stats .sc-stat{flex:1 1 40%;min-width:100px;}
 
   .inv-pay-summary{display:flex;gap:18px;flex-wrap:wrap;background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
   .inv-pay-summary .ip-cell{display:flex;flex-direction:column;gap:3px;}
@@ -6976,6 +6981,30 @@ function anFormatCell(col, value){
   if(col.numeric) return Number(value||0).toLocaleString('en-UG', {maximumFractionDigits:2});
   return esc(value||'');
 }
+// Builds one mobile-card row for any AN_COLUMNS/PAN_COLUMNS-shaped report
+// table -- the first text column becomes the card title, remaining text
+// columns fold into a meta line, and every numeric column becomes a stat
+// in a wrapping grid. Shared by Sales and Purchase Analytics so neither
+// screen's per-view column set (doc/item/customer, item/supplier) needs
+// its own hand-built card layout.
+function reportCardHTML(cols, row, idx, formatCellFn){
+  const textCols = cols.filter(c=>!c.numeric);
+  const numCols = cols.filter(c=>c.numeric);
+  const title = textCols.length ? formatCellFn(textCols[0], row[textCols[0].key]) : '';
+  const metaCols = textCols.slice(1).map(c=>formatCellFn(c, row[c.key])).filter(Boolean);
+  return `<div class="pi-card">
+    <div class="pi-card-top">
+      <div class="pi-card-title">
+        <span class="an-rank">${idx+1}</span>
+        <span class="cmp-card-supplier">${title || '—'}</span>
+      </div>
+    </div>
+    ${metaCols.length ? `<div class="pi-card-meta"><div>${metaCols.join(' · ')}</div></div>` : ''}
+    <div class="sc-stats an-card-stats">
+      ${numCols.map(c=>`<div class="sc-stat"><b>${formatCellFn(c, row[c.key])}</b><span>${esc(c.label)}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
 function renderAnTable(){
   let rows = anRowsForView();
   const q = document.getElementById('an_table_search').value.trim().toLowerCase();
@@ -6994,13 +7023,14 @@ function renderAnTable(){
       : '<div class="empty">No rows match your search.</div>';
     return;
   }
-  wrap.innerHTML = `<table><thead><tr>
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
     <th>No.</th>
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
     ${cols.map(c=>`<td class="${c.numeric?'price':''}">${anFormatCell(c, r[c.key])}</td>`).join('')}
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`).join('')}</tbody></table></div>
+  <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, anFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
     if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
@@ -7183,13 +7213,14 @@ function renderPanTable(){
       : '<div class="empty">No rows match your search.</div>';
     return;
   }
-  wrap.innerHTML = `<table><thead><tr>
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
     <th>No.</th>
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
     ${cols.map(c=>`<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`).join('')}
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`).join('')}</tbody></table></div>
+  <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, panFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
     if(sort.key===key) sort.dir *= -1; else { sort.key = key; sort.dir = -1; }
