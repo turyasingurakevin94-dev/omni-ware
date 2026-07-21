@@ -615,6 +615,12 @@
   .prc-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
   .prc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .prc-date{font-size:11px;color:var(--ink-soft);}
+  .prc-source-pill{
+    font-size:9.5px;font-weight:700;letter-spacing:0.2px;text-transform:uppercase;
+    padding:2px 7px;border-radius:20px;white-space:nowrap;
+  }
+  .prc-source-pill.purchase{background:#E3EEFB;color:#3E6FA6;}
+  .prc-source-pill.manual{background:#EEF1F3;color:var(--ink-soft);}
   .prc-supplier{
     display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
     padding-bottom:11px;border-bottom:1px solid var(--line);
@@ -703,8 +709,8 @@
   .inv-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
   .inv-card-sub{font-size:11.5px;color:var(--ink-soft);}
   .inv-card-meta{display:flex;flex-wrap:wrap;gap:6px;}
-  .inv-card-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--line);}
-  .inv-card-stats{display:flex;align-items:center;gap:18px;}
+  .inv-card-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--line);}
+  .inv-card-stats{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;}
   .inv-qty-wrap{display:flex;flex-direction:column;gap:1px;}
   .inv-qty-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
   .inv-qty{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:19px;color:var(--ink);}
@@ -825,6 +831,7 @@
   .qp-items-panel th{padding:7px 8px;}
   .qp-items-panel td{padding:7px 8px;vertical-align:middle;}
   .q-gutter-th{width:38px;}
+  .q-supplier-th{width:170px;}
   .q-gutter-cell{width:38px;text-align:center;padding:6px 4px !important;}
   .q-gutter{display:flex;align-items:center;justify-content:center;gap:6px;}
   .q-row-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);min-width:14px;text-align:center;}
@@ -867,7 +874,7 @@
   tr.q-row-margin-danger td{background:#FBEEEC;}
   .q-margin-pill{
     display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;
-    padding:1px 6px;border-radius:20px;margin-top:3px;white-space:nowrap;
+    padding:1px 6px;border-radius:20px;white-space:nowrap;
   }
   .q-margin-pill.good{background:var(--good-bg);color:var(--good);}
   .q-margin-pill.warn{background:#FCEACB;color:var(--accent-ink);}
@@ -2598,6 +2605,60 @@
   </div>
 </div>
 
+<!-- STOCK PRICING RULE MODAL -->
+<div class="modal-overlay" id="stockRuleModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Stock pricing rule</h2>
+      <button class="modal-close" id="stockRuleModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="q-stage-name" id="stockRuleItemName" style="margin-bottom:10px;"></div>
+      <div id="stockRuleCompareWrap" style="margin-bottom:14px;"></div>
+
+      <div class="form-panel">
+        <div class="form-panel-head">
+          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+          <div class="form-panel-title">Stock-only markup rule<small>Applied only when quoting from stock on hand — leave blank to use this item's default rule</small></div>
+        </div>
+        <div class="markup-rules-grid">
+          <div>
+            <div class="form-section-label">Wholesale</div>
+            <div class="form-grid">
+              <div class="field"><label>Type</label>
+                <select id="sr_wholesale_type">
+                  <option value="percent">Percentage (%)</option>
+                  <option value="fixed">Fixed amount (UGX)</option>
+                </select>
+              </div>
+              <div class="field"><label>Value</label><input id="sr_wholesale_value" type="number" min="0" step="any" placeholder="Default"></div>
+            </div>
+          </div>
+          <div>
+            <div class="form-section-label">Retail</div>
+            <div class="form-grid">
+              <div class="field"><label>Type</label>
+                <select id="sr_retail_type">
+                  <option value="percent">Percentage (%)</option>
+                  <option value="fixed">Fixed amount (UGX)</option>
+                </select>
+              </div>
+              <div class="field"><label>Value</label><input id="sr_retail_value" type="number" min="0" step="any" placeholder="Default"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="sr_clear_btn">Use default rule</button>
+        <button class="btn btn-accent" id="sr_save_btn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CASH IN MODAL -->
 <div class="modal-overlay" id="cashInModal">
   <div class="modal modal-wide">
@@ -2914,12 +2975,15 @@ async function loadData(shopId){
       notes:p.notes, image:p.image||null,
       wholesaleMarkupType:p.wholesale_markup_type, wholesaleMarkupValue:Number(p.wholesale_markup_value)||0,
       retailMarkupType:p.retail_markup_type, retailMarkupValue:Number(p.retail_markup_value)||0,
+      stockWholesaleMarkupType:p.stock_wholesale_markup_type||'percent', stockWholesaleMarkupValue:Number(p.stock_wholesale_markup_value)||0,
+      stockRetailMarkupType:p.stock_retail_markup_type||'percent', stockRetailMarkupValue:Number(p.stock_retail_markup_value)||0,
       variantAttributes:p.variant_attributes||[], variants:p.variants||[]
     })),
     prices: (pricesR.data||[]).map(pr=>({
       id:pr.id, productId:pr.product_id, variantIdx:pr.variant_idx, supplierId:pr.supplier_id,
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
-      date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0
+      date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
+      priceSource:pr.price_source||''
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
     stock, stockLots,
@@ -2980,11 +3044,14 @@ function buildSyncRows(d, shopId){
       notes:p.notes, image:p.image,
       wholesale_markup_type:p.wholesaleMarkupType, wholesale_markup_value:p.wholesaleMarkupValue,
       retail_markup_type:p.retailMarkupType, retail_markup_value:p.retailMarkupValue,
+      stock_wholesale_markup_type:p.stockWholesaleMarkupType, stock_wholesale_markup_value:p.stockWholesaleMarkupValue,
+      stock_retail_markup_type:p.stockRetailMarkupType, stock_retail_markup_value:p.stockRetailMarkupValue,
       variant_attributes:p.variantAttributes, variants:p.variants
     })),
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
-      wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty
+      wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
+      price_source:pr.priceSource||''
     })),
     stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
     stockLots: d.stockLots,
@@ -3376,6 +3443,7 @@ const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9
 const ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
 const ICON_PURCHASE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>';
 const ICON_ADJUST = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 12h16M14 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 18h16M8 18a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/></svg>';
+const ICON_PRICE_RULE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
 const ICON_INFO = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg>';
 const ICON_WARN = '<svg class="icon" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
 // Shows/hides the small contextual banners used for situation-specific
@@ -3421,7 +3489,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
   if(e.target.id==='imgLightbox') closeImageLightbox();
 });
 
-['supplierModal','productModal','priceModal','itemPickerModal','invModal'].forEach(id=>{
+['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal'].forEach(id=>{
   document.getElementById(id).addEventListener('mousedown', (e)=>{
     if(e.target.id===id){
       if(id==='supplierModal') closeModalAndReset(id, resetSupplierForm);
@@ -3429,6 +3497,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
       if(id==='priceModal') closeModalAndReset(id, resetPriceForm);
       if(id==='itemPickerModal') closeModal(id);
       if(id==='invModal') closeModal(id);
+      if(id==='stockRuleModal') closeModal(id);
     }
   });
 });
@@ -3682,6 +3751,14 @@ function productUnitLabel(productId, variantIdx=null){
   return row ? row.unit : '';
 }
 
+// Pack size to show alongside stock counts (e.g. "25 Kg per Bag"), taken
+// from the cheapest price entry on file that has one set — mirrors the
+// best-supplier pack info shown in the purchase popup.
+function productPackInfo(productId, variantIdx=null){
+  const row = rankedPriceRows(productId, variantIdx).find(r=>r.packQty && r.packUnit);
+  return row ? {packQty:row.packQty, packUnit:row.packUnit, unit:row.unit} : null;
+}
+
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 function rankedPriceRows(productId, variantIdx=null){
   return productPriceRows(productId, variantIdx).slice().sort((a,b)=>{
@@ -3707,6 +3784,23 @@ function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null){
 // have a sane number to charge, never a blank. If the person has
 // manually edited the sell price for this line (it.sellPrice set), that
 // override always wins over the computed suggestion.
+// Keeps the Price Registry in sync with what a supplier is actually
+// charging: whenever a Buy @ price gets recorded or edited at a figure
+// different from what's on file for that product+supplier (from a stock
+// purchase or by hand on a quote line), the matching entry is updated to
+// match rather than being left stale. No-ops for "Our stock" or when
+// there's no matching entry to update.
+function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price){
+  if(!supplierId || supplierId==='__stock__' || price==null) return;
+  const priceRow = data.prices.find(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
+  if(!priceRow) return;
+  const field = priceRow.wholesale!=null ? 'wholesale' : 'retail';
+  if(Number(priceRow[field])!==price){
+    priceRow[field] = price;
+    priceRow.date = todayISO();
+    priceRow.priceSource = 'purchase';
+  }
+}
 // Human-readable packing details for a quote line, e.g. "25 Kg per Bag" --
 // falls back to just the unit sold in when no pack size is on file.
 function quoteItemPackingLabel(it){
@@ -3719,7 +3813,12 @@ function quoteItemSellPrice(it){
   const product = data.products.find(x=>x.id===it.productId);
   if(!product) return buy;
   const variantIdx = it.variantIdx==null ? null : it.variantIdx;
-  const sugg = quoteSuggestedPrice(product, buy, 'retail', variantIdx);
+  // A line sourced from our own stock uses the stock-only markup rule
+  // (falling back to the product's default rule when none is set) —
+  // every other line always uses the default rule.
+  const sugg = it.supplierId==='__stock__'
+    ? quoteSuggestedStockPrice(product, buy, 'retail', variantIdx)
+    : quoteSuggestedPrice(product, buy, 'retail', variantIdx);
   return sugg!=null ? sugg : buy;
 }
 
@@ -3738,6 +3837,36 @@ function effectiveMarkupRule(product, variantIdx, kind){
   const pVal = Number(product[kind+'MarkupValue'])||0;
   if(pVal>0) return {type:product[kind+'MarkupType'], value:pVal, source:'product'};
   return null;
+}
+
+// Same fallback shape as effectiveMarkupRule, but for the "stock only"
+// override: a variant's own stock rule if set, else the product's stock
+// rule if set, else the item's regular default rule (product/variant) —
+// so stock pricing always has a sane fallback without anyone having to
+// set it explicitly.
+function effectiveStockMarkupRule(product, variantIdx, kind){
+  if(!product) return null;
+  const typeKey = 'stock'+kind.charAt(0).toUpperCase()+kind.slice(1)+'MarkupType';
+  const valKey = 'stock'+kind.charAt(0).toUpperCase()+kind.slice(1)+'MarkupValue';
+  if(variantIdx!=null && product.variants && product.variants[variantIdx]){
+    const v = product.variants[variantIdx];
+    const vVal = Number(v[valKey])||0;
+    if(vVal>0) return {type:v[typeKey], value:vVal, source:'variant-stock'};
+  }
+  const pVal = Number(product[valKey])||0;
+  if(pVal>0) return {type:product[typeKey], value:pVal, source:'product-stock'};
+  return effectiveMarkupRule(product, variantIdx, kind);
+}
+function suggestedStockSellingPrice(product, basePrice, kind, variantIdx=null){
+  if(basePrice==null || !product) return null;
+  const rule = effectiveStockMarkupRule(product, variantIdx, kind);
+  if(!rule) return null;
+  return rule.type==='fixed' ? basePrice+rule.value : basePrice*(1+rule.value/100);
+}
+function quoteSuggestedStockPrice(product, basePrice, kind, variantIdx=null){
+  if(basePrice==null) return null;
+  const s = suggestedStockSellingPrice(product, basePrice, kind, variantIdx);
+  return s!=null ? s : basePrice;
 }
 
 function loadQuoteClientDate(){
@@ -4079,12 +4208,13 @@ function renderIpStage(){
   const stockCost = getFIFOUnitCost(ipProductId, variantIdx);
 
   // When "Our stock" is selected, base the recommended prices on what we
-  // actually paid for the stock on hand (+ the item's markup rule) rather
-  // than on a supplier's current list price.
+  // actually paid for the stock on hand (+ the item's stock-only markup
+  // rule, falling back to its default rule) rather than on a supplier's
+  // current list price.
   let suggWholesale, suggRetail;
   if(ipSelectedSupplierId==='__stock__' && stockCost!=null){
-    suggWholesale = quoteSuggestedPrice(product, stockCost, 'wholesale', variantIdx);
-    suggRetail = quoteSuggestedPrice(product, stockCost, 'retail', variantIdx);
+    suggWholesale = quoteSuggestedStockPrice(product, stockCost, 'wholesale', variantIdx);
+    suggRetail = quoteSuggestedStockPrice(product, stockCost, 'retail', variantIdx);
   } else {
     suggWholesale = refRow && refRow.wholesale!=null ? quoteSuggestedPrice(product, refRow.wholesale, 'wholesale', variantIdx) : null;
     suggRetail = refRow && refRow.retail!=null ? quoteSuggestedPrice(product, refRow.retail, 'retail', variantIdx) : null;
@@ -4125,7 +4255,17 @@ function renderIpStage(){
     ...unpriced.map(s=>`<option value="${esc(s.id)}" ${s.id===ipSelectedSupplierId?'selected':''}>${esc(s.name)} — no price on file</option>`)
   ].join('');
 
-  const startPrice = suggRetail!=null ? Math.round(suggRetail) : (refRow && refRow.retail!=null ? Math.round(refRow.retail) : '');
+  // Buy @ is recorded automatically as the actual cost we'd pay (stock
+  // cost, or the supplier's raw quoted price) — it isn't a field in this
+  // popup, only editable later from the quote table.
+  const buyStart = ipSelectedSupplierId==='__stock__'
+    ? (stockCost!=null ? Math.round(stockCost) : 0)
+    : (refRow ? Math.round(refRow.wholesale!=null ? refRow.wholesale : refRow.retail) : 0);
+  // The popup's one price field is "Price each" — it's the sell price
+  // charged to the client. Defaults to the suggested retail price;
+  // clicking a "Recommended price" card also sets this field, never Buy @.
+  const sellStart = suggRetail!=null ? Math.round(suggRetail)
+    : (suggWholesale!=null ? Math.round(suggWholesale) : buyStart);
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head">
@@ -4167,7 +4307,7 @@ function renderIpStage(){
         <select id="ip_other_supplier"><option value="">— choose —</option>${otherOptions}</select>
       </div>` : ''}
       <div class="field"><label>Qty</label><input type="number" id="ip_qty" min="1" step="any" value="1"></div>
-      <div class="field"><label>Price each (UGX)</label><input type="number" id="ip_price" min="0" step="any" value="${startPrice}"></div>
+      <div class="field"><label>Price each (UGX)</label><input type="number" id="ip_price" min="0" step="any" value="${sellStart}"></div>
       <button class="btn btn-accent" id="ip_add_btn">Add to quote</button>
     </div>
   </div>`;
@@ -4190,6 +4330,8 @@ function renderIpStage(){
     const type = card.dataset.use;
     const val = type==='wholesale' ? suggWholesale : suggRetail;
     if(val==null) return;
+    // Recommended prices advise what to charge the client — they set
+    // this popup's one price field, which is saved as Sell @.
     document.getElementById('ip_price').value = Math.round(val);
     ipSelectedRecType = type;
     wrap.querySelectorAll('.q-rec-card').forEach(c=>{
@@ -4207,7 +4349,7 @@ function renderIpStage(){
 
   document.getElementById('ip_add_btn').addEventListener('click', ()=>{
     const qty = Number(document.getElementById('ip_qty').value) || 1;
-    const price = Number(document.getElementById('ip_price').value) || 0;
+    const sellPrice = Number(document.getElementById('ip_price').value) || 0;
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
@@ -4217,7 +4359,7 @@ function renderIpStage(){
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
       packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
       qty, supplierId, supplierName: supplierName(supplierId),
-      price
+      price: buyStart, sellPrice
     });
     saveData();
     closeModal('itemPickerModal');
@@ -4268,9 +4410,8 @@ function renderQuoteItems(){
       <td><div class="q-sell-cell">
         <input type="number" class="price-input q-sell ${it.sellPrice!=null&&it.sellPrice!==''?'q-sell-manual':''}" min="0" step="any" value="${Math.round(sell)}" title="${it.sellPrice!=null&&it.sellPrice!==''?'Manually set — click the reset icon to go back to the suggested price':'Suggested price — edit to override'}">
         ${it.sellPrice!=null&&it.sellPrice!==''?`<button type="button" class="q-sell-reset" title="Reset to suggested price"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>`:''}
-      </div>
-      <div class="q-margin-pill ${pillClass}">${marginPct>=0?'':''}${Math.round(marginPct)}% margin</div>
-      </td>
+      </div></td>
+      <td><div class="q-margin-pill ${pillClass}">${Math.round(marginPct)}% margin</div></td>
       <td class="q-line-total price">${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
@@ -4279,7 +4420,7 @@ function renderQuoteItems(){
     <td class="q-gutter-cell"><div class="q-gutter">
       <button class="q-add-icon" id="q_add_row_btn" title="Add item"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </div></td>
-    <td colspan="5" class="q-add-row-placeholder">Click + to add an item…</td>
+    <td colspan="6" class="q-add-row-placeholder">Click + to add an item…</td>
     <td></td>
   </tr>`;
 
@@ -4287,10 +4428,10 @@ function renderQuoteItems(){
   const profitColor = profit < 0 ? 'var(--danger)' : 'var(--good)';
 
   wrap.innerHTML = `<table><thead><tr>
-    <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th>Supplier</th><th>Buy @</th><th>Sell @</th><th>Line total</th>
+    <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th class="q-supplier-th">Supplier</th><th>Buy @</th><th>Sell @</th><th>Margin</th><th>Line total</th>
   </tr></thead><tbody>${rowsHtml}${addRowHtml}
-    <tr class="q-grand-row"><td colspan="6" style="text-align:right;">Grand total</td><td class="price">${fmtUGX(grandBuy)}</td></tr>
-    <tr class="q-profit-row"><td colspan="6" style="text-align:right;">Estimated profit</td><td class="price" style="color:${profitColor};">${fmtUGX(profit)}</td></tr>
+    <tr class="q-grand-row"><td colspan="7" style="text-align:right;">Grand total</td><td class="price">${fmtUGX(grandBuy)}</td></tr>
+    <tr class="q-profit-row"><td colspan="7" style="text-align:right;">Estimated profit</td><td class="price" style="color:${profitColor};">${fmtUGX(profit)}</td></tr>
   </tbody></table>`;
 
   renderQuoteFinbar(grandBuy, grandSell, profit);
@@ -4304,6 +4445,7 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
       item.price = Number(e.target.value) || 0;
+      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price);
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
@@ -7347,6 +7489,83 @@ function editProduct(id){
   document.getElementById('productFormTitle').textContent = 'Edit product';
   openModal('productModal');
 }
+/* ---- Stock pricing rule modal (Inventory tab) ----
+   Lets a shop set a markup rule that applies only when quoting straight off
+   the shelf ("Our stock"), separate from the product's default rule used
+   for supplier-sourced quotes. Leaving it blank falls back to the default
+   rule automatically -- see effectiveStockMarkupRule(). */
+let srProductId = null, srVariantIdx = null;
+function openPriceRuleEditor(productId, variantIdx){
+  const p = data.products.find(x=>x.id===productId); if(!p) return;
+  srProductId = productId;
+  srVariantIdx = variantIdx;
+  const target = variantIdx!=null ? p.variants[variantIdx] : p;
+  const displayName = variantIdx!=null ? `${p.name} — ${variantLabel(p.variants[variantIdx].combo)}` : p.name;
+  document.getElementById('stockRuleItemName').textContent = displayName;
+
+  document.getElementById('sr_wholesale_type').value = target.stockWholesaleMarkupType || 'percent';
+  document.getElementById('sr_wholesale_value').value = target.stockWholesaleMarkupValue || '';
+  document.getElementById('sr_retail_type').value = target.stockRetailMarkupType || 'percent';
+  document.getElementById('sr_retail_value').value = target.stockRetailMarkupValue || '';
+
+  const defaultW = effectiveMarkupRule(p, variantIdx, 'wholesale');
+  const defaultR = effectiveMarkupRule(p, variantIdx, 'retail');
+  document.getElementById('sr_wholesale_value').placeholder = defaultW ? `Default: ${markupRuleLabel(defaultW.type, defaultW.value).replace(/<[^>]+>/g,'')}` : 'Default: no rule';
+  document.getElementById('sr_retail_value').placeholder = defaultR ? `Default: ${markupRuleLabel(defaultR.type, defaultR.value).replace(/<[^>]+>/g,'')}` : 'Default: no rule';
+
+  renderStockRuleCompare(p, variantIdx);
+  openModal('stockRuleModal');
+}
+// Shows how the cost of what's currently on the shelf stacks up against
+// the cheapest supplier quote on file for the same item, so a shop can
+// judge whether their own stock is worth pricing differently.
+function renderStockRuleCompare(product, variantIdx){
+  const wrap = document.getElementById('stockRuleCompareWrap');
+  const stockCost = getFIFOUnitCost(product.id, variantIdx);
+  const unit = productUnitLabel(product.id, variantIdx);
+  if(stockCost==null){
+    wrap.innerHTML = `<div class="q-empty-hint">No stock cost on file yet for this item.</div>`;
+    return;
+  }
+  const ranked = rankedPriceRows(product.id, variantIdx);
+  const best = ranked[0] || null;
+  if(!best){
+    wrap.innerHTML = `<div class="q-chosen-line">Your stock cost: <strong>${fmtUGXPerUnit(stockCost, unit)}</strong> — no supplier prices on file to compare against.</div>`;
+    return;
+  }
+  const bestCost = best.wholesale!=null ? best.wholesale : best.retail;
+  const diff = stockCost - bestCost;
+  const cheaper = diff < 0;
+  const closeEnough = Math.abs(diff) < 1;
+  const cmpLabel = closeEnough ? 'about the same as' : `${fmtUGX(Math.abs(diff))} ${cheaper?'cheaper than':'more than'}`;
+  wrap.innerHTML = `<div class="q-chosen-line">Your stock cost: <strong>${fmtUGXPerUnit(stockCost, unit)}</strong>
+    — <strong style="color:${closeEnough?'var(--ink-soft)':(cheaper?'var(--good)':'var(--danger)')};">${cmpLabel}</strong>
+    the next best supplier, ${esc(best.sname)} (${fmtUGXPerUnit(bestCost, unit)}).</div>`;
+}
+document.getElementById('stockRuleModalClose').addEventListener('click', ()=>closeModal('stockRuleModal'));
+document.getElementById('sr_clear_btn').addEventListener('click', ()=>{
+  const p = data.products.find(x=>x.id===srProductId); if(!p) return;
+  const target = srVariantIdx!=null ? p.variants[srVariantIdx] : p;
+  target.stockWholesaleMarkupValue = 0;
+  target.stockRetailMarkupValue = 0;
+  saveData();
+  document.getElementById('sr_wholesale_value').value = '';
+  document.getElementById('sr_retail_value').value = '';
+  renderInventory();
+  toast('Reset to the default pricing rule');
+});
+document.getElementById('sr_save_btn').addEventListener('click', ()=>{
+  const p = data.products.find(x=>x.id===srProductId); if(!p) return;
+  const target = srVariantIdx!=null ? p.variants[srVariantIdx] : p;
+  target.stockWholesaleMarkupType = document.getElementById('sr_wholesale_type').value;
+  target.stockWholesaleMarkupValue = Number(document.getElementById('sr_wholesale_value').value)||0;
+  target.stockRetailMarkupType = document.getElementById('sr_retail_type').value;
+  target.stockRetailMarkupValue = Number(document.getElementById('sr_retail_value').value)||0;
+  saveData();
+  closeModal('stockRuleModal');
+  renderInventory();
+  toast('Stock pricing rule saved');
+});
 function resetProductForm(){
   editingProductId = null;
   ['p_id','p_name','p_category','p_subcategory','p_notes','p_wholesale_markup_value','p_retail_markup_value'].forEach(id=>document.getElementById(id).value='');
@@ -7656,7 +7875,11 @@ function priceCardHTML(r, tokens){
         ${productThumbHTML({image:r.image, name:r.pname})}
         <div class="prc-title">
           <div class="prc-name">${highlightTokens(r.pname, tokens)}</div>
-          <div class="prc-meta"><span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span></div>
+          <div class="prc-meta">
+            <span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span>
+            ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
+              : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
+          </div>
         </div>
       </div>
       <div class="pc-actions">
@@ -7765,7 +7988,8 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     date,
     unit: document.getElementById('pr_unit').value.trim(),
     packUnit: document.getElementById('pr_pack_unit').value.trim(),
-    packQty: Number(document.getElementById('pr_pack_qty').value)||0
+    packQty: Number(document.getElementById('pr_pack_qty').value)||0,
+    priceSource: 'manual'
   };
   if(editingPriceId){
     const idx = data.prices.findIndex(p=>p.id===editingPriceId);
@@ -8806,6 +9030,13 @@ function renderInventory(){
       const qty = getStockQty(p.id, variantIdx);
       const unitCost = getFIFOUnitCost(p.id, variantIdx);
       const costUnit = productUnitLabel(p.id, variantIdx);
+      const packInfo = productPackInfo(p.id, variantIdx);
+      let packsLabel = null;
+      if(packInfo){
+        const packs = Math.floor(qty / packInfo.packQty);
+        const rem = qty % packInfo.packQty;
+        packsLabel = `${packs} ${esc(packInfo.packUnit)}` + (rem>0 ? ` + ${rem} ${esc(packInfo.unit||'unit')}` : '');
+      }
       const subLabel = variantIdx==null ? p.id : `${variantLabel(p.variants[variantIdx].combo)} · ${p.variants[variantIdx].sku || `${p.id}-${variantIdx+1}`}`;
       const vidxAttr = variantIdx==null ? '' : variantIdx;
       return `<div class="inv-card">
@@ -8821,8 +9052,12 @@ function renderInventory(){
           <div class="inv-card-stats">
             <div class="inv-qty-wrap">
               <span class="inv-qty-label">In stock</span>
-              <span class="inv-qty ${qty===0?'zero':''}">${qty}</span>
+              <span class="inv-qty ${qty===0?'zero':''}">${qty}${costUnit ? ` ${esc(costUnit)}` : ''}</span>
             </div>
+            ${packsLabel ? `<div class="inv-qty-wrap">
+              <span class="inv-qty-label">Packs available</span>
+              <span class="inv-cost">${packsLabel}</span>
+            </div>` : ''}
             <div class="inv-qty-wrap">
               <span class="inv-qty-label">Cost/unit</span>
               <span class="inv-cost">${unitCost!=null ? fmtUGXPerUnit(unitCost, costUnit) : '—'}</span>
@@ -8831,6 +9066,7 @@ function renderInventory(){
           <div class="pc-actions">
             <button type="button" class="pc-icon-btn inv-action-btn" title="Purchase (restock)" data-action="purchase" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PURCHASE}</button>
             <button type="button" class="pc-icon-btn inv-action-btn" title="Adjust stock" data-action="adjust" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_ADJUST}</button>
+            <button type="button" class="pc-icon-btn inv-price-rule-btn" title="Override price rule" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PRICE_RULE}</button>
           </div>
         </div>
       </div>`;
@@ -8840,6 +9076,12 @@ function renderInventory(){
       btn.addEventListener('click', ()=>{
         const vidx = btn.dataset.vidx===''? null : Number(btn.dataset.vidx);
         openInventoryModal(btn.dataset.id, vidx, btn.dataset.action);
+      });
+    });
+    wrap.querySelectorAll('.inv-price-rule-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const vidx = btn.dataset.vidx===''? null : Number(btn.dataset.vidx);
+        openPriceRuleEditor(btn.dataset.id, vidx);
       });
     });
   }
@@ -9084,6 +9326,10 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     const supplierLabel = invPurchaseSupplierId ? supplierName(invPurchaseSupplierId) : '';
     let note = supplierLabel ? `Purchased from ${supplierLabel}` : 'Purchased';
     if(price!=null) note += ` @ ${fmtUGX(price)} each`;
+    // Buying at a different price than what's on file for this supplier
+    // means their price has changed -- keep the Price Registry current
+    // instead of letting it go stale.
+    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price);
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
     generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     saveData();
