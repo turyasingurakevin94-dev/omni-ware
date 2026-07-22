@@ -1635,6 +1635,9 @@
   .wv-actions{display:flex;gap:10px;}
   .wv-actions .btn{flex:1;}
   .wv-item-progress{color:var(--ink-soft);font-size:13px;margin-bottom:10px;}
+  .wv-item-photo{display:flex;justify-content:center;margin-bottom:14px;}
+  .wv-item-photo .q-stage-thumb, .wv-item-photo .q-stage-thumb-placeholder{width:140px;height:140px;border-radius:14px;}
+  .wv-item-photo .q-stage-thumb-placeholder .icon{width:48px;height:48px;}
   .wv-item-name{font-size:20px;font-weight:700;margin-bottom:6px;}
   .wv-item-qty{font-size:15px;margin-bottom:4px;}
   .wv-item-source{font-size:14px;color:var(--accent-ink);background:var(--good-bg);border-radius:8px;padding:8px 10px;margin-bottom:16px;}
@@ -7905,9 +7908,11 @@ function renderWorkerPickStepper(q){
   }
   const qty = it.qty!=null ? it.qty : '';
   const unit = it.packUnit || it.unit || '';
+  const product = (data.products||[]).find(p=>p.id===it.productId);
   wrap.innerHTML = `<div class="wv-card">
     <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
     <div class="wv-item-progress">Item ${cursor+1} of ${items.length}</div>
+    <div class="wv-item-photo">${ipStageThumbHTML(product||{})}</div>
     <div class="wv-item-name">${esc(it.productName||'Item')}</div>
     <div class="wv-item-qty">Pack <strong>${esc(qty)} ${esc(unit)}</strong></div>
     <div class="wv-item-source">${esc(pickItemSourceLabel(it))}</div>
