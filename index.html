@@ -1655,16 +1655,6 @@
   .wv-item-source{font-size:14px;color:var(--accent-ink);background:#FDF1DC;border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
   .wv-item-source .icon{width:16px;height:16px;flex-shrink:0;}
   .wv-mark-btn{width:100%;padding:14px;font-size:16px;}
-  /* Checklist: lets a worker jump to and re-check any item, forward or
-     back, instead of only ever being able to move ahead one at a time. */
-  .wv-checklist{margin-top:16px;display:flex;flex-direction:column;gap:6px;}
-  .wv-check-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit;}
-  .wv-check-row.current{border-color:var(--good);background:var(--good-bg);}
-  .wv-check-dot{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid var(--line);color:var(--ink-soft);}
-  .wv-check-row.done .wv-check-dot{background:var(--good);border-color:var(--good);color:#fff;}
-  .wv-check-name{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .wv-check-name.done{color:var(--ink-soft);text-decoration:line-through;}
-  .wv-check-qty{font-size:13px;color:var(--ink-soft);flex-shrink:0;}
   .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
 </style>
 </head>
@@ -7916,10 +7906,9 @@ const ICON_CHEVRON_RIGHT = '<svg class="icon" viewBox="0 0 24 24"><path d="M9 18
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
 const ICON_LOCATION_PIN = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 22s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 
-// Free back-and-forth navigation through items, each with its own picked/
-// not-picked status shown via a checklist a worker can tap to jump around
-// -- finishing is gated on every item being marked packed, not on having
-// stepped past the last one, since a worker can now revisit earlier items.
+// One item at a time, same as before -- but a worker can now step both
+// ways (not just forward), and the current item shows its own packed
+// status directly, instead of a forward-only one-way stepper.
 function renderWorkerPickStepper(q){
   const wrap = document.getElementById('wv_activeWrap');
   if(!q){ wrap.innerHTML=''; return; }
@@ -7928,8 +7917,7 @@ function renderWorkerPickStepper(q){
     wrap.innerHTML = `<div class="wv-card"><div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div><div class="wv-card-sub">No items on this order.</div></div>`;
     return;
   }
-  const doneCount = items.filter(row=>row.pickStatus==='done').length;
-  const allDone = doneCount===items.length;
+  const allDone = items.every(row=>row.pickStatus==='done');
   const cursor = Math.min(Math.max(q.pickCursor||0, 0), items.length-1);
   const it = items[cursor];
   const isDone = it.pickStatus==='done';
@@ -7937,22 +7925,11 @@ function renderWorkerPickStepper(q){
   const unit = it.packUnit || it.unit || '';
   const product = (data.products||[]).find(p=>p.id===it.productId);
 
-  const checklistHTML = `<div class="wv-checklist">${items.map((row, i)=>{
-    const done = row.pickStatus==='done';
-    const rQty = row.qty!=null ? row.qty : '';
-    const rUnit = row.packUnit || row.unit || '';
-    return `<button type="button" class="wv-check-row ${i===cursor?'current':''} ${done?'done':''}" data-idx="${i}">
-      <span class="wv-check-dot">${done ? ICON_CHECK_SMALL : (i+1)}</span>
-      <span class="wv-check-name ${done?'done':''}">${esc(row.productName||'Item')}</span>
-      <span class="wv-check-qty">${esc(rQty)} ${esc(rUnit)}</span>
-    </button>`;
-  }).join('')}</div>`;
-
   wrap.innerHTML = `<div class="wv-card">
     <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
     <div class="wv-nav-row">
       <button type="button" class="wv-nav-btn" id="wv_prev_btn" ${cursor===0?'disabled':''} aria-label="Previous item">${ICON_CHEVRON_LEFT}</button>
-      <div class="wv-item-progress">Item ${cursor+1} of ${items.length} — ${doneCount} packed</div>
+      <div class="wv-item-progress">Item ${cursor+1} of ${items.length}</div>
       <button type="button" class="wv-nav-btn" id="wv_next_btn" ${cursor===items.length-1?'disabled':''} aria-label="Next item">${ICON_CHEVRON_RIGHT}</button>
     </div>
     <div class="wv-item-photo">${ipStageThumbHTML(product||{})}${isDone ? `<div class="wv-item-done-flag">${ICON_CHECK_SMALL}</div>` : ''}</div>
@@ -7963,16 +7940,12 @@ function renderWorkerPickStepper(q){
     </div>
     <div class="wv-item-source">${ICON_LOCATION_PIN}<span>${esc(pickItemSourceLabel(it))}</span></div>
     <button type="button" class="btn ${isDone ? 'btn-ghost' : 'btn-accent'} wv-mark-btn" id="wv_mark_btn">${isDone ? 'Packed — tap to undo' : 'Mark as packed'}</button>
-    ${checklistHTML}
-    <button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:14px;" ${allDone?'':'disabled'}>${allDone ? 'Finish preparing order' : `Pack all items to finish (${doneCount}/${items.length})`}</button>
+    ${allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:10px;">Finish preparing order</button>` : ''}
   </div>`;
 
   document.getElementById('wv_prev_btn').addEventListener('click', ()=>moveStepperCursor(q.id, -1));
   document.getElementById('wv_next_btn').addEventListener('click', ()=>moveStepperCursor(q.id, +1));
   document.getElementById('wv_mark_btn').addEventListener('click', ()=>toggleItemPicked(q.id));
-  wrap.querySelectorAll('.wv-check-row').forEach(row=>{
-    row.addEventListener('click', ()=>jumpToItem(q.id, Number(row.dataset.idx)));
-  });
   if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
 }
 
@@ -7982,13 +7955,6 @@ function moveStepperCursor(orderId, delta){
   const items = q.items||[];
   q.pickCursor = Math.min(Math.max((q.pickCursor||0)+delta, 0), Math.max(items.length-1, 0));
   renderWorkerView(); // browsing alone doesn't need to hit the network
-}
-
-function jumpToItem(orderId, idx){
-  const q = data.savedQuotes.find(x=>x.id===orderId);
-  if(!q) return;
-  q.pickCursor = idx;
-  renderWorkerView();
 }
 
 function toggleItemPicked(orderId){
