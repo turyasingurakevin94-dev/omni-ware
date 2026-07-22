@@ -1200,16 +1200,11 @@
   .sq-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start;}
   @media (max-width:980px){ .sq-board{grid-template-columns:repeat(2,minmax(0,1fr));} }
   @media (max-width:620px){ .sq-board{grid-template-columns:1fr;} }
-  /* Phone-only step switcher above the board -- see @media max-width:820px
+  /* Phone-only step switcher above the board -- a connected stepper (not a
+     scrolling pill row) so all 4 steps are always visible with zero
+     horizontal scroll. See @media max-width:820px for the full ruleset and
      for the rules that actually hide all but the active .sq-col. */
-  .sq-step-pills{display:none;}
-  .sq-step-pill{
-    all:unset;box-sizing:border-box;flex-shrink:0;display:flex;align-items:center;gap:6px;
-    padding:8px 14px;border-radius:20px;border:1.5px solid var(--line);font-size:12.5px;font-weight:700;
-    color:var(--ink-soft);cursor:pointer;white-space:nowrap;
-  }
-  .sq-step-pill.active{border-color:var(--pill-accent,var(--navy));color:var(--ink);background:#F5F7F8;}
-  .sq-step-pill-count{font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .sq-stepper{display:none;}
   .sq-col{display:flex;flex-direction:column;min-width:0;}
   .sq-col-head{display:flex;align-items:center;gap:8px;padding:0 2px 10px;}
   .sq-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
@@ -1442,7 +1437,10 @@
     background:var(--panel);border-bottom:1px solid var(--line);
     align-items:center;padding:0 16px;box-shadow:0 1px 2px rgba(20,30,40,0.04);
   }
-  .mt-title{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--ink);letter-spacing:0.2px;}
+  .mt-title{
+    font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--ink);letter-spacing:0.2px;
+    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
   .mobile-bottomnav{
     /* Explicit flex-direction/gap/padding here because it's a <nav> element
        (deliberately, so it's picked up by the existing 'nav button[data-tab]'
@@ -1507,7 +1505,12 @@
       padding:calc(var(--mobile-topbar-h) + 16px) 16px calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 24px);
       margin-left:0 !important;max-width:none;
     }
-    .order-status-bar{display:none;}
+    .order-status-bar{display:none;} /* desktop widget stays hidden -- #orderStatusBarMobile below replaces it */
+    #orderStatusBarMobile{
+      display:flex;position:static;flex:0 0 auto;align-self:stretch;
+      margin-left:8px;box-shadow:none;padding:0;
+    }
+    #orderStatusBarMobile .osb-item{padding:0 7px;gap:5px;}
     .toast{bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 16px);}
     .compare-cols{grid-template-columns:1fr;}
     /* Touch targets -- desktop's 26-28px icon buttons are below the ~44px
@@ -1523,8 +1526,38 @@
     }
     .modal-body{max-height:none;flex:1;min-height:0;padding-bottom:calc(22px + env(safe-area-inset-bottom));}
     .modal-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom));}
-    /* Order Tracking: one step at a time instead of 4 stacked columns. */
-    .sq-step-pills{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;}
+    /* Order Tracking: one step at a time instead of 4 stacked columns,
+       switched via a connected stepper -- 4 equal flex:1 columns with no
+       overflow-x anywhere, so it can never need horizontal scroll no
+       matter how narrow the phone or how long a label gets. */
+    .sq-stepper{display:flex;position:relative;margin-bottom:16px;padding:4px 2px 0;}
+    .sq-stepper::before{
+      content:'';position:absolute;top:21px;left:12.5%;right:12.5%;height:2px;
+      background:var(--line);z-index:0;
+    }
+    .sq-stepper-step{
+      all:unset;box-sizing:border-box;position:relative;z-index:1;flex:1 1 0;min-width:0;
+      display:flex;flex-direction:column;align-items:center;gap:5px;padding:2px 2px 4px;cursor:pointer;
+    }
+    .sq-stepper-node{
+      position:relative;width:26px;height:26px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      background:var(--panel);border:1.5px solid var(--pill-accent,var(--line));transition:background .15s ease;
+    }
+    .sq-stepper-num{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--pill-accent,var(--ink-soft));}
+    .sq-stepper-step.active .sq-stepper-node{background:var(--pill-accent,var(--navy));}
+    .sq-stepper-step.active .sq-stepper-num{color:#fff;}
+    .sq-stepper-count{
+      position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
+      background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--panel);
+    }
+    .sq-stepper-step.active .sq-stepper-count{background:var(--pill-accent,var(--ink));}
+    .sq-stepper-label{
+      font-size:9.5px;line-height:1.15;font-weight:600;color:var(--ink-soft);text-align:center;
+      white-space:normal;overflow-wrap:anywhere;max-width:100%;
+    }
+    .sq-stepper-step.active .sq-stepper-label{color:var(--ink);font-weight:700;}
     .sq-board{grid-template-columns:1fr !important;}
     .sq-board[data-active-step="draft"] .sq-col:not([data-status="draft"]){display:none;}
     .sq-board[data-active-step="preparing"] .sq-col:not([data-status="preparing"]){display:none;}
@@ -1556,7 +1589,9 @@
     .cmp-cards{display:flex;}
     /* Presets: the segmented tab-pill row (6 tabs, some multi-word labels)
        doesn't fit in ~340px -- scroll it horizontally instead of wrapping,
-       same pattern as .qp-toolbar and .sq-step-pills. */
+       same pattern as .qp-toolbar. (Order Tracking's own step switcher used
+       to work this way too, via .sq-step-pills -- it's now a non-scrolling
+       .sq-stepper instead, since a step overview shouldn't need scrolling.) */
     .preset-tabs{overflow-x:auto;max-width:100%;}
     .preset-tab{flex-shrink:0;}
   }
@@ -1567,6 +1602,7 @@
 <!-- MOBILE SHELL (phone breakpoint only — see @media max-width:820px) -->
 <div class="mobile-topbar" id="mobileTopbar">
   <span class="mt-title" id="mobileTopbarTitle">Dashboard</span>
+  <div class="order-status-bar" id="orderStatusBarMobile" title="Click to view the Order tracking board"></div>
 </div>
 
 <nav class="mobile-bottomnav" id="mobileBottomnav">
@@ -5725,11 +5761,12 @@ function toggleQuoteInvoiced(id){
 // board -- same status grouping and same "aged off the board" rule (an
 // invoiced order that's been sitting for 24h+ lives only in Invoices from
 // then on, so it shouldn't still count as an active order here either).
+// Two copies of the same widget share this one render: #orderStatusBar
+// (desktop, floats fixed top-right) and #orderStatusBarMobile (phone,
+// lives inside the mobile topbar itself so it can never collide with it).
 function updateOrderStatusBar(){
-  const el = document.getElementById('orderStatusBar');
-  if(!el) return;
   const quotes = data.savedQuotes.filter(q=>!quoteAgedOffBoard(q));
-  el.innerHTML = SQ_STATUS_ORDER.map(status=>{
+  const html = SQ_STATUS_ORDER.map(status=>{
     const count = quotes.filter(q=>q.status===status).length;
     return `<div class="osb-item">
       <span class="osb-dot" style="background:${SQ_STATUSES[status].color};"></span>
@@ -5737,8 +5774,15 @@ function updateOrderStatusBar(){
       <span class="osb-count">${count}</span>
     </div>`;
   }).join('');
+  ['orderStatusBar','orderStatusBarMobile'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = html;
+  });
 }
-document.getElementById('orderStatusBar').addEventListener('click', ()=> goToTab('quote-saved'));
+['orderStatusBar','orderStatusBarMobile'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('click', ()=> goToTab('quote-saved'));
+});
 
 // Re-renders the board on a timer so a card's overdue flag appears on its
 // own once a step's time limit is crossed, rather than only updating the
@@ -5820,12 +5864,21 @@ function renderSavedQuotes(){
     </div>`;
   };
 
-  // Phone-only step switcher: one pill per step so a card list can be
-  // viewed without scrolling past every earlier step first. Desktop
-  // ignores this entirely and shows all 4 columns side by side as before.
-  const pillsHtml = `<div class="sq-step-pills">${SQ_STATUS_ORDER.map(status=>{
+  // Phone-only step switcher: a connected 4-step stepper (dot/number + live
+  // count + short label) so the whole pipeline is visible at once with zero
+  // horizontal scrolling, and tapping a step filters the card list below to
+  // just that stage. Desktop ignores this entirely and shows all 4 columns
+  // side by side as before.
+  const pillsHtml = `<div class="sq-stepper" role="tablist" aria-label="Order tracking steps">${SQ_STATUS_ORDER.map((status,i)=>{
     const count = quotes.filter(q=>q.status===status).length;
-    return `<button type="button" class="sq-step-pill${status===sqActiveMobileStep?' active':''}" data-status="${status}" style="--pill-accent:${SQ_STATUSES[status].color};">${esc(SQ_STATUSES[status].label)} <span class="sq-step-pill-count">${count}</span></button>`;
+    const active = status===sqActiveMobileStep;
+    return `<button type="button" class="sq-stepper-step${active?' active':''}" data-status="${status}" role="tab" aria-selected="${active}" style="--pill-accent:${SQ_STATUSES[status].color};">
+      <span class="sq-stepper-node">
+        <span class="sq-stepper-num">${i+1}</span>
+        ${count>0 ? `<span class="sq-stepper-count">${count}</span>` : ''}
+      </span>
+      <span class="sq-stepper-label">${esc(ORDER_STATUS_SHORT_LABELS[status])}</span>
+    </button>`;
   }).join('')}</div>`;
 
   const boardHtml = `<div class="sq-board" data-active-step="${sqActiveMobileStep}">${SQ_STATUS_ORDER.map(status=>{
@@ -5844,9 +5897,13 @@ function renderSavedQuotes(){
   }).join('')}</div>`;
 
   wrap.innerHTML = pillsHtml + boardHtml;
-  wrap.querySelectorAll('.sq-step-pill').forEach(pill=>pill.addEventListener('click', ()=>{
-    sqActiveMobileStep = pill.dataset.status;
-    wrap.querySelectorAll('.sq-step-pill').forEach(p=>p.classList.toggle('active', p===pill));
+  wrap.querySelectorAll('.sq-stepper-step').forEach(step=>step.addEventListener('click', ()=>{
+    sqActiveMobileStep = step.dataset.status;
+    wrap.querySelectorAll('.sq-stepper-step').forEach(s=>{
+      const isActive = s===step;
+      s.classList.toggle('active', isActive);
+      s.setAttribute('aria-selected', isActive);
+    });
     wrap.querySelector('.sq-board').dataset.activeStep = sqActiveMobileStep;
   }));
 
