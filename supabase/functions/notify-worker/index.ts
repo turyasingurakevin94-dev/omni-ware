@@ -13,6 +13,14 @@ const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
 
+console.log("notify-worker: boot", {
+  hasUrl: !!SUPABASE_URL,
+  hasServiceKey: !!SERVICE_ROLE_KEY,
+  hasVapidPublic: !!VAPID_PUBLIC_KEY,
+  hasVapidPrivate: !!VAPID_PRIVATE_KEY,
+  vapidSubject: VAPID_SUBJECT,
+});
+
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -25,6 +33,12 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const payload = await req.json().catch(() => null);
+  console.log("notify-worker: payload received", {
+    table: payload?.table,
+    type: payload?.type,
+    newAssignedWorkerId: payload?.record?.payload?.assignedWorkerId,
+    oldAssignedWorkerId: payload?.old_record?.payload?.assignedWorkerId,
+  });
   if (!payload || payload.table !== "saved_quotes" || payload.type !== "UPDATE") {
     return json({ ok: true, skipped: "not a saved_quotes update" });
   }
@@ -43,6 +57,12 @@ Deno.serve(async (req) => {
     .select("id, endpoint, p256dh, auth_key")
     .eq("shop_id", record.shop_id)
     .eq("staff_id", newWorkerId);
+  console.log("notify-worker: subscription lookup", {
+    shopId: record.shop_id,
+    staffId: newWorkerId,
+    subCount: subs?.length,
+    subErr,
+  });
   if (subErr) return json({ error: subErr.message }, 500);
   if (!subs?.length) return json({ ok: true, skipped: "worker has no push subscription" });
 
@@ -60,6 +80,11 @@ Deno.serve(async (req) => {
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
         notificationPayload,
       ).catch(async (err) => {
+        console.error("notify-worker: sendNotification failed", {
+          statusCode: err?.statusCode,
+          message: err?.message,
+          body: err?.body,
+        });
         if (err.statusCode === 404 || err.statusCode === 410) {
           await admin.from("push_subscriptions").delete().eq("id", sub.id);
         }
@@ -67,6 +92,7 @@ Deno.serve(async (req) => {
       })
     ),
   );
+  console.log("notify-worker: send results", results.map((r) => r.status === "fulfilled" ? "ok" : String(r.reason)));
 
   return json({ ok: true, sent: results.filter((r) => r.status === "fulfilled").length, total: subs.length });
 });
