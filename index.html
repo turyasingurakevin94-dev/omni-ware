@@ -5756,7 +5756,18 @@ function openAssignStaffModal(orderId, toStatus, role){
       if(!pendingAssign) return;
       const {orderId, toStatus, role} = pendingAssign;
       const order = data.savedQuotes.find(x=>x.id===orderId);
-      if(order) order[STAGE_ASSIGNMENT_FIELD[role]] = row.dataset.id;
+      if(order){
+        order[STAGE_ASSIGNMENT_FIELD[role]] = row.dataset.id;
+        // Worker assignments need pickingStatus set so the Worker view's
+        // accept/deny + item stepper actually picks this order up --
+        // autoAssignNextOrder() does this too, but that only fires for
+        // orders picked up *after* a worker finishes a previous one; this
+        // is the path every order's first-ever assignment goes through.
+        if(role==='worker'){
+          order.pickingStatus = 'awaiting_accept';
+          order.pickCursor = 0;
+        }
+      }
       pendingAssign = null;
       closeModal('assignStaffModal');
       setSavedQuoteStatus(orderId, toStatus);
