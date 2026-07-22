@@ -988,6 +988,27 @@
   .q-client-history b{color:var(--ink);}
   .q-client-history .owed{color:var(--danger);font-weight:700;}
 
+  /* "Usually buys" strip -- shown right under the history box once a known
+     client with prior orders is typed/selected. Horizontally scrollable
+     chips (not a dropdown/table) so it stays glanceable on a live call and
+     never fights the client-name autocomplete for vertical space. */
+  .q-client-usual{display:none;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:2px;}
+  .q-client-usual.show{display:flex;}
+  .q-usual-chip{
+    flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:7px 8px 7px 7px;max-width:220px;
+  }
+  .q-usual-chip .q-stage-thumb, .q-usual-chip .q-stage-thumb-placeholder{width:32px;height:32px;border-radius:7px;}
+  .q-usual-chip-info{min-width:0;}
+  .q-usual-chip-name{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
+  .q-usual-chip-meta{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .q-usual-chip-add{
+    all:unset;flex-shrink:0;cursor:pointer;width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;background:var(--accent);color:#2A1B00;
+  }
+  .q-usual-chip-add:hover{background:#e69c2a;}
+  .q-usual-chip-add .icon{width:14px;height:14px;stroke-width:2.5;}
+
   /* Financial summary bar above the quote action buttons */
   .qp-finbar{
     display:flex;align-items:stretch;gap:0;margin-top:14px;border:1px solid var(--line);border-radius:10px;
@@ -2020,6 +2041,7 @@
           <div class="field"><label>Date</label><input type="date" id="q_date"></div>
         </div>
         <div class="q-client-history" id="q_client_history"></div>
+        <div class="q-client-usual" id="q_client_usual"></div>
       </div>
 
       <div class="quote-layout">
@@ -4415,6 +4437,69 @@ function closeClientAcDropdown(){
   dd.style.display = 'none';
   dd.innerHTML = '';
 }
+// Aggregates a client's past order items (by product+variant) so the rep
+// can see what they usually buy while still on the call -- same name-match
+// and current-quote exclusion renderClientHistoryBox() already uses, just
+// broken down per item instead of a single order count. Sorted by how
+// often it's been ordered, then most recent.
+function customerPurchaseHistory(nameLower){
+  const orders = data.savedQuotes.filter(q=>
+    ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
+  );
+  const map = new Map();
+  orders.forEach(q=>{
+    const orderedAt = q.savedAt || '';
+    (q.items||[]).forEach(it=>{
+      const key = (it.productId||('name:'+(it.productName||''))) + '::' + (it.variantIdx==null ? '' : it.variantIdx);
+      const qty = Number(it.qty)||0;
+      if(!map.has(key)){
+        map.set(key, {
+          productId: it.productId||null, variantIdx: it.variantIdx==null ? null : Number(it.variantIdx),
+          productName: it.productName || 'Item', unit: it.unit||'',
+          timesOrdered:0, lastQty:0, lastOrderedAt:''
+        });
+      }
+      const row = map.get(key);
+      row.timesOrdered += 1;
+      if(orderedAt >= row.lastOrderedAt){ row.lastOrderedAt = orderedAt; row.lastQty = qty; }
+    });
+  });
+  return [...map.values()].sort((a,b)=> b.timesOrdered - a.timesOrdered || b.lastOrderedAt.localeCompare(a.lastOrderedAt));
+}
+// Horizontally-scrollable chip strip of what this client usually buys --
+// tapping the + jumps straight into the item picker's supplier/price stage
+// for that product (not a raw re-add of the old line), so the quote always
+// picks up current pricing/stock rather than whatever was true last time.
+function renderClientUsualBuys(nameLower){
+  const wrap = document.getElementById('q_client_usual');
+  if(!wrap) return;
+  const rows = nameLower ? customerPurchaseHistory(nameLower).slice(0,8) : [];
+  if(!rows.length){ wrap.classList.remove('show'); wrap.innerHTML=''; return; }
+  wrap.innerHTML = rows.map((r,i)=>{
+    const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
+    return `<div class="q-usual-chip" data-idx="${i}">
+      ${ipStageThumbHTML(product||{})}
+      <div class="q-usual-chip-info">
+        <div class="q-usual-chip-name" title="${esc(r.productName)}">${esc(r.productName)}</div>
+        <div class="q-usual-chip-meta">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</div>
+      </div>
+      ${product ? `<button type="button" class="q-usual-chip-add" title="Add to this quote" data-idx="${i}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      </button>` : ''}
+    </div>`;
+  }).join('');
+  wrap.classList.add('show');
+  wrap.querySelectorAll('.q-usual-chip-add').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const r = rows[Number(btn.dataset.idx)];
+      if(!r || !r.productId) return;
+      openModal('itemPickerModal');
+      ipSelectProduct(r.productId, r.variantIdx);
+      const qtyEl = document.getElementById('ip_qty');
+      if(qtyEl && r.lastQty>0) qtyEl.value = r.lastQty;
+    });
+  });
+}
 // Shows a small strip under the client fields with how many previous
 // orders this client has (matched by name against saved quotes) and any
 // outstanding debt on file — so the rep sees it while still on the call.
@@ -4422,12 +4507,13 @@ function renderClientHistoryBox(){
   const box = document.getElementById('q_client_history');
   if(!box) return;
   const name = (document.getElementById('q_client_name').value||'').trim();
-  if(!name){ box.classList.remove('show'); box.innerHTML=''; return; }
+  if(!name){ box.classList.remove('show'); box.innerHTML=''; renderClientUsualBuys(''); return; }
   const nameLower = name.toLowerCase();
   const customer = data.customers.find(c=>(c.name||'').trim().toLowerCase()===nameLower);
   const priorOrders = data.savedQuotes.filter(q=>
     ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
   ).length;
+  renderClientUsualBuys(nameLower);
   if(!customer && priorOrders===0){ box.classList.remove('show'); box.innerHTML=''; return; }
   const debt = customer ? Number(customer.debt)||0 : 0;
   const parts = [`<b>${priorOrders}</b> previous order${priorOrders===1?'':'s'}`];
