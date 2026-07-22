@@ -1648,8 +1648,10 @@
   .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:18px;}
   .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:40px;height:40px;}
   .wv-carousel-card.focused .wv-carousel-photo{cursor:pointer;}
-  .wv-carousel-tick{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:var(--good);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);}
-  .wv-carousel-tick .icon{width:18px;height:18px;stroke-width:3;}
+  .wv-carousel-badge{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .wv-carousel-badge.pending{background:var(--panel);color:var(--ink-soft);}
+  .wv-carousel-badge.done{background:var(--good);color:#fff;}
+  .wv-carousel-badge .icon{width:14px;height:14px;stroke-width:3;}
   .wv-carousel-name{font-size:15px;font-weight:700;text-align:center;margin-top:10px;}
   .wv-carousel-qty{font-size:14px;font-weight:700;color:var(--good);text-align:center;margin-top:2px;}
   .wv-carousel-source{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:2px;}
@@ -7929,7 +7931,7 @@ function renderWorkerPickStepper(q){
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-photo" data-idx="${i}">
         ${ipStageThumbHTML(product||{})}
-        ${isDone ? `<div class="wv-carousel-tick">${ICON_CHECK_SMALL}</div>` : ''}
+        <div class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</div>
       </div>
       <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
       <div class="wv-carousel-qty">Pack ${esc(qty)} ${esc(unit)}</div>
@@ -7995,7 +7997,7 @@ function renderWorkerFinishButton(q){
   if(!el) return;
   const items = q.items||[];
   const allDone = items.length>0 && items.every(row=>row.pickStatus==='done');
-  el.innerHTML = allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:6px;">Finish preparing order</button>` : '';
+  el.innerHTML = allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:6px;">Mark as finished</button>` : '';
   if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
 }
 
