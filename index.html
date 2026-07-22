@@ -5454,20 +5454,8 @@ function deleteSavedQuote(id){
   toast('Quote deleted');
 }
 
-// "3 minutes ago" / "2 hours ago" / "5 days ago" style label for when a quote was last saved.
-function savedAgoLabel(iso){
-  if(!iso) return '';
-  const then = new Date(iso).getTime();
-  if(isNaN(then)) return '';
-  const diffSec = Math.max(0, Math.floor((Date.now() - then)/1000));
-  if(diffSec < 60) return 'just now';
-  const diffMin = Math.floor(diffSec/60);
-  if(diffMin < 60) return `${diffMin} minute${diffMin===1?'':'s'} ago`;
-  const diffHr = Math.floor(diffMin/60);
-  if(diffHr < 24) return `${diffHr} hour${diffHr===1?'':'s'} ago`;
-  const diffDay = Math.floor(diffHr/24);
-  return `${diffDay} day${diffDay===1?'':'s'} ago`;
-}
+// savedAgoLabel() now lives in shared-worker.js (needed there too, for the
+// delivery-picker's "since 2 hours ago" busy status).
 
 function savedQuoteTotal(q){
   return q.items.reduce((s,it)=> s + (Number(it.qty)||0)*quoteItemSellPrice(it), 0);
@@ -7444,20 +7432,8 @@ function staffInitials(name){
   if(parts.length===0) return '?';
   return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
 }
-// Orders a staff member is currently on, in either capacity: an order
-// they're assigned to prep sits in Being Prepared, one they're assigned
-// to deliver sits in Pending Delivery -- checked independently of their
-// primary role since a worker can be doing either. Mirrors the same
-// per-step visibility rule the order cards themselves use.
-function staffActiveOrders(s){
-  const asWorker = data.savedQuotes
-    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing' && !quoteAgedOffBoard(q))
-    .map(q=>({order:q, capacity:'worker'}));
-  const asDelivery = data.savedQuotes
-    .filter(q=>q.assignedDeliveryId===s.id && q.status==='pending_delivery' && !quoteAgedOffBoard(q))
-    .map(q=>({order:q, capacity:'delivery'}));
-  return [...asWorker, ...asDelivery];
-}
+// staffActiveOrders() now lives in shared-worker.js (needed there too, for
+// the delivery-picker's busy/idle status).
 function staffCardHTML(s){
   const activeOrders = s.unavailable ? [] : staffActiveOrders(s);
   const busy = activeOrders.length>0;

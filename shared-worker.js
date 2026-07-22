@@ -503,6 +503,35 @@ function staffName(id){
   return s ? s.name : '(removed staff)';
 }
 
+function savedAgoLabel(iso){
+  if(!iso) return '';
+  const then = new Date(iso).getTime();
+  if(isNaN(then)) return '';
+  const diffSec = Math.max(0, Math.floor((Date.now() - then)/1000));
+  if(diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec/60);
+  if(diffMin < 60) return `${diffMin} minute${diffMin===1?'':'s'} ago`;
+  const diffHr = Math.floor(diffMin/60);
+  if(diffHr < 24) return `${diffHr} hour${diffHr===1?'':'s'} ago`;
+  const diffDay = Math.floor(diffHr/24);
+  return `${diffDay} day${diffDay===1?'':'s'} ago`;
+}
+
+// Orders a staff member is currently on, in either capacity: an order
+// they're assigned to prep sits in Being Prepared, one they're assigned
+// to deliver sits in Pending Delivery -- checked independently of their
+// primary role since a worker can be doing either. Mirrors the same
+// per-step visibility rule the order cards themselves use.
+function staffActiveOrders(s){
+  const asWorker = data.savedQuotes
+    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing' && !quoteAgedOffBoard(q))
+    .map(q=>({order:q, capacity:'worker'}));
+  const asDelivery = data.savedQuotes
+    .filter(q=>q.assignedDeliveryId===s.id && q.status==='pending_delivery' && !quoteAgedOffBoard(q))
+    .map(q=>({order:q, capacity:'delivery'}));
+  return [...asWorker, ...asDelivery];
+}
+
 // A minimal, DOM-independent version of the admin board's assign-staff
 // modal -- built at call time instead of relying on markup that only
 // exists in the admin app (#assignStaffModal), so it works the same in
@@ -522,14 +551,30 @@ function promptAssignDelivery(orderId){
     const el = document.createElement('div');
     el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
     el.innerHTML = `
-      <div style="background:var(--panel);border-radius:14px;padding:20px;width:340px;max-width:100%;">
+      <div style="background:var(--panel);border-radius:14px;padding:20px;width:340px;max-width:100%;max-height:80vh;overflow-y:auto;">
         <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Who's delivering this?</div>
         <div style="color:var(--ink-soft);font-size:13px;margin-bottom:14px;">Choose who's taking "${esc(q ? (q.client.name||'this order') : 'this order')}" out for delivery.</div>
-        <div id="wvAssignList"></div>
+        <div id="wvAssignList" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>`;
-    el.querySelector('#wvAssignList').innerHTML = candidates.map(s=>`
-      <button type="button" class="btn btn-ghost" style="width:100%;text-align:left;margin-bottom:8px;" data-id="${esc(s.id)}">${esc(s.name)}${s.phone ? ` — ${esc(s.phone)}` : ''}</button>
-    `).join('');
+    // Explicit display:block on each row -- the shared .btn class does
+    // `all:unset` (needed so it doesn't inherit default <button> chrome),
+    // which also resets display to its initial value (inline) unless a
+    // flex/grid parent blockifies it for free. These rows have neither, so
+    // width:100% would otherwise be silently ignored and every candidate's
+    // name would run together instead of stacking -- exactly what caused
+    // the reported overlap.
+    el.querySelector('#wvAssignList').innerHTML = candidates.map(s=>{
+      const activeOrders = staffActiveOrders(s);
+      const busy = activeOrders.length>0;
+      const statusLine = busy
+        ? activeOrders.map(({order:o, capacity})=>`${capacity==='worker'?'Preparing':'Delivering'} for ${esc(o.client.name||'Unnamed client')} — since ${esc(savedAgoLabel(o.stageEnteredAt))}`).join('<br>')
+        : 'Idle';
+      return `
+        <button type="button" class="btn btn-ghost" style="display:block;width:100%;text-align:left;padding:10px 12px;" data-id="${esc(s.id)}">
+          <div style="font-weight:700;">${esc(s.name)}${s.phone ? ` <span style="font-weight:400;color:var(--ink-soft);">— ${esc(s.phone)}</span>` : ''}</div>
+          <div style="font-size:12px;margin-top:2px;color:${busy?'var(--accent-ink)':'var(--good)'};">${statusLine}</div>
+        </button>`;
+    }).join('');
     const finish = (id)=>{ document.body.removeChild(el); resolve(id); };
     el.querySelectorAll('button[data-id]').forEach(btn=>{
       btn.addEventListener('click', ()=>finish(btn.dataset.id));
