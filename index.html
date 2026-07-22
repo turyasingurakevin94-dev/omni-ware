@@ -1634,26 +1634,28 @@
   .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
   .wv-actions{display:flex;gap:10px;}
   .wv-actions .btn{flex:1;}
-  /* Item stepper: nav row (prev/next + "N of M"), a big glanceable photo,
-     product name as secondary text, then the qty-to-pack as the single
-     most dominant element on the screen -- that's the number a worker is
-     most likely to get wrong under time pressure. */
-  .wv-nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .wv-nav-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
-  .wv-nav-btn:disabled{opacity:0.35;cursor:default;}
-  .wv-item-progress{color:var(--ink-soft);font-size:13px;font-weight:600;text-align:center;}
-  .wv-item-photo{display:flex;justify-content:center;margin-bottom:14px;position:relative;}
-  .wv-item-photo .q-stage-thumb, .wv-item-photo .q-stage-thumb-placeholder{width:140px;height:140px;border-radius:14px;}
-  .wv-item-photo .q-stage-thumb-placeholder .icon{width:48px;height:48px;}
-  .wv-item-done-flag{position:absolute;top:-6px;right:calc(50% - 82px);width:32px;height:32px;border-radius:50%;background:var(--good);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--panel);}
-  .wv-item-done-flag .icon{width:18px;height:18px;stroke-width:3;}
-  .wv-item-name{font-size:16px;font-weight:600;color:var(--ink-soft);text-align:center;margin-bottom:10px;}
-  .wv-qty-hero{text-align:center;background:var(--good-bg);border-radius:14px;padding:14px 10px;margin-bottom:12px;}
-  .wv-qty-hero-label{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-bottom:2px;}
-  .wv-qty-hero-value{font-size:40px;line-height:1.1;font-weight:800;color:var(--good);}
-  .wv-qty-hero-value .unit{font-size:18px;font-weight:600;margin-left:6px;}
-  .wv-item-source{font-size:14px;color:var(--accent-ink);background:#FDF1DC;border-radius:8px;padding:10px 12px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-  .wv-item-source .icon{width:16px;height:16px;flex-shrink:0;}
+  /* Item carousel: swipe horizontally between items (native scroll-snap,
+     no gesture library needed) instead of tapping next/back buttons. Only
+     the centered card is interactive -- tapping it toggles picked/not
+     picked directly on the photo (a green tick overlay is the only status
+     indicator), tapping a peeking side card just brings it to center. */
+  .wv-carousel-title{font-weight:600;padding:0 4px 10px;}
+  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;padding:6px 18% 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .wv-carousel::-webkit-scrollbar{display:none;}
+  .wv-carousel-card{flex:0 0 64%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;opacity:.4;transform:scale(.87);transition:opacity .2s ease,transform .2s ease;}
+  .wv-carousel-card.focused{opacity:1;transform:scale(1);}
+  .wv-carousel-photo{position:relative;width:100%;aspect-ratio:1;border-radius:18px;}
+  .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:18px;}
+  .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:40px;height:40px;}
+  .wv-carousel-card.focused .wv-carousel-photo{cursor:pointer;}
+  .wv-carousel-tick{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;background:var(--good);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .wv-carousel-tick .icon{width:18px;height:18px;stroke-width:3;}
+  .wv-carousel-name{font-size:15px;font-weight:700;text-align:center;margin-top:10px;}
+  .wv-carousel-qty{font-size:14px;font-weight:700;color:var(--good);text-align:center;margin-top:2px;}
+  .wv-carousel-source{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:2px;}
+  .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:12px 0 4px;}
+  .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);}
+  .wv-carousel-dot.focused{background:var(--good);width:16px;border-radius:4px;}
   .wv-mark-btn{width:100%;padding:14px;font-size:16px;}
   .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
 </style>
@@ -7901,14 +7903,14 @@ function pickItemSourceLabel(it){
   return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
 }
 
-const ICON_CHEVRON_LEFT = '<svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>';
-const ICON_CHEVRON_RIGHT = '<svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
-const ICON_LOCATION_PIN = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 22s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 
-// One item at a time, same as before -- but a worker can now step both
-// ways (not just forward), and the current item shows its own packed
-// status directly, instead of a forward-only one-way stepper.
+// Swipeable carousel: every item renders once as a horizontally
+// scroll-snapped card; swiping is native browser scrolling (no gesture
+// library), and only the centered card is "live" -- tapping its photo
+// toggles picked/not-picked (a green tick overlay is the only status
+// shown, no label buttons), tapping a peeking side card just brings it
+// to center instead of acting on it.
 function renderWorkerPickStepper(q){
   const wrap = document.getElementById('wv_activeWrap');
   if(!q){ wrap.innerHTML=''; return; }
@@ -7917,66 +7919,84 @@ function renderWorkerPickStepper(q){
     wrap.innerHTML = `<div class="wv-card"><div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div><div class="wv-card-sub">No items on this order.</div></div>`;
     return;
   }
-  const allDone = items.every(row=>row.pickStatus==='done');
   const cursor = Math.min(Math.max(q.pickCursor||0, 0), items.length-1);
-  const it = items[cursor];
-  const isDone = it.pickStatus==='done';
-  const qty = it.qty!=null ? it.qty : '';
-  const unit = it.packUnit || it.unit || '';
-  const product = (data.products||[]).find(p=>p.id===it.productId);
 
-  wrap.innerHTML = `<div class="wv-card">
-    <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
-    <div class="wv-nav-row">
-      <button type="button" class="wv-nav-btn" id="wv_prev_btn" ${cursor===0?'disabled':''} aria-label="Previous item">${ICON_CHEVRON_LEFT}</button>
-      <div class="wv-item-progress">Item ${cursor+1} of ${items.length}</div>
-      <button type="button" class="wv-nav-btn" id="wv_next_btn" ${cursor===items.length-1?'disabled':''} aria-label="Next item">${ICON_CHEVRON_RIGHT}</button>
-    </div>
-    <div class="wv-item-photo">${ipStageThumbHTML(product||{})}${isDone ? `<div class="wv-item-done-flag">${ICON_CHECK_SMALL}</div>` : ''}</div>
-    <div class="wv-item-name">${esc(it.productName||'Item')}</div>
-    <div class="wv-qty-hero">
-      <div class="wv-qty-hero-label">Pack</div>
-      <div class="wv-qty-hero-value">${esc(qty)}<span class="unit">${esc(unit)}</span></div>
-    </div>
-    <div class="wv-item-source">${ICON_LOCATION_PIN}<span>${esc(pickItemSourceLabel(it))}</span></div>
-    <button type="button" class="btn ${isDone ? 'btn-ghost' : 'btn-accent'} wv-mark-btn" id="wv_mark_btn">${isDone ? 'Packed — tap to undo' : 'Mark as packed'}</button>
-    ${allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:10px;">Finish preparing order</button>` : ''}
-  </div>`;
+  const cardsHTML = items.map((it, i)=>{
+    const product = (data.products||[]).find(p=>p.id===it.productId);
+    const isDone = it.pickStatus==='done';
+    const qty = it.qty!=null ? it.qty : '';
+    const unit = it.packUnit || it.unit || '';
+    return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
+      <div class="wv-carousel-photo" data-idx="${i}">
+        ${ipStageThumbHTML(product||{})}
+        ${isDone ? `<div class="wv-carousel-tick">${ICON_CHECK_SMALL}</div>` : ''}
+      </div>
+      <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
+      <div class="wv-carousel-qty">Pack ${esc(qty)} ${esc(unit)}</div>
+      <div class="wv-carousel-source">${esc(pickItemSourceLabel(it))}</div>
+    </div>`;
+  }).join('');
 
-  document.getElementById('wv_prev_btn').addEventListener('click', ()=>moveStepperCursor(q.id, -1));
-  document.getElementById('wv_next_btn').addEventListener('click', ()=>moveStepperCursor(q.id, +1));
-  document.getElementById('wv_mark_btn').addEventListener('click', ()=>toggleItemPicked(q.id));
-  if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
+  const dotsHTML = `<div class="wv-carousel-dots">${items.map((_,i)=>`<span class="wv-carousel-dot ${i===cursor?'focused':''}"></span>`).join('')}</div>`;
+
+  wrap.innerHTML = `
+    <div class="wv-carousel-title">${esc(q.client.name||'Unnamed client')}</div>
+    <div class="wv-carousel" id="wv_carousel">${cardsHTML}</div>
+    ${dotsHTML}
+    <div id="wv_finishWrap"></div>
+  `;
+
+  const carousel = document.getElementById('wv_carousel');
+  carousel.querySelectorAll('.wv-carousel-photo').forEach(photo=>{
+    photo.addEventListener('click', ()=>{
+      const card = photo.closest('.wv-carousel-card');
+      if(card.classList.contains('focused')) toggleItemPickedAt(q.id, Number(photo.dataset.idx));
+      else card.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+    });
+  });
+  let scrollTimer = null;
+  carousel.addEventListener('scroll', ()=>{
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(()=>updateCarouselFocus(carousel, q), 90);
+  });
+  // Land on the previously-focused card without animating (right after a
+  // toggle re-render, or when reopening the app).
+  carousel.children[cursor]?.scrollIntoView({inline:'center', block:'nearest'});
+
+  renderWorkerFinishButton(q);
 }
 
-function moveStepperCursor(orderId, delta){
-  const q = data.savedQuotes.find(x=>x.id===orderId);
-  if(!q) return;
-  const items = q.items||[];
-  q.pickCursor = Math.min(Math.max((q.pickCursor||0)+delta, 0), Math.max(items.length-1, 0));
-  renderWorkerView(); // browsing alone doesn't need to hit the network
+function updateCarouselFocus(carousel, q){
+  const mid = carousel.scrollLeft + carousel.clientWidth/2;
+  let closest = 0, closestDist = Infinity;
+  [...carousel.children].forEach((card, i)=>{
+    const dist = Math.abs((card.offsetLeft + card.offsetWidth/2) - mid);
+    if(dist < closestDist){ closestDist = dist; closest = i; }
+  });
+  [...carousel.children].forEach((card, i)=>card.classList.toggle('focused', i===closest));
+  document.querySelectorAll('.wv-carousel-dot').forEach((dot, i)=>dot.classList.toggle('focused', i===closest));
+  q.pickCursor = closest;
 }
 
-function toggleItemPicked(orderId){
+function toggleItemPickedAt(orderId, idx){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
-  const items = q.items||[];
-  const it = items[q.pickCursor||0];
+  const it = (q.items||[])[idx];
   if(!it) return;
-  if(it.pickStatus==='done'){
-    it.pickStatus = 'pending';
-    it.pickedQty = null;
-  } else {
-    it.pickStatus = 'done';
-    it.pickedQty = it.qty;
-    // Jump straight to the next not-yet-packed item so working straight
-    // down the list stays a single tap per item, while the arrows/
-    // checklist still let the worker freely go back to any item.
-    const nextPending = items.findIndex((row, i)=> i>(q.pickCursor||0) && row.pickStatus!=='done');
-    if(nextPending!==-1) q.pickCursor = nextPending;
-  }
+  if(it.pickStatus==='done'){ it.pickStatus='pending'; it.pickedQty=null; }
+  else { it.pickStatus='done'; it.pickedQty=it.qty; }
+  q.pickCursor = idx;
   saveData();
-  renderWorkerView();
+  renderWorkerView(); // a deliberate tap, not mid-scroll -- safe to fully re-render
+}
+
+function renderWorkerFinishButton(q){
+  const el = document.getElementById('wv_finishWrap');
+  if(!el) return;
+  const items = q.items||[];
+  const allDone = items.length>0 && items.every(row=>row.pickStatus==='done');
+  el.innerHTML = allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:6px;">Finish preparing order</button>` : '';
+  if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
 }
 
 function finishPreparingOrder(orderId){
