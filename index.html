@@ -143,7 +143,13 @@
   @media (max-width: 1180px){ .osb-label{display:none;} .osb-item{padding:0 9px;gap:0;} }
 
   /* Main */
-  main{flex:1;padding:68px 40px 32px;max-width:1180px;margin-left:var(--sidebar-w);transition:margin-left .18s ease;}
+  /* min-width:0 overrides a flex item's default min-width:auto (which
+     otherwise refuses to shrink below its content's min-content size) --
+     without it, a wide descendant (e.g. the Purchase Invoices table) can
+     force `main` itself wider than the viewport even though that table's
+     own .an-scroll{overflow-x:auto} wrapper is supposed to absorb the
+     overflow internally. */
+  main{flex:1;min-width:0;padding:68px 40px 32px;max-width:1180px;margin-left:var(--sidebar-w);transition:margin-left .18s ease;}
   .page-head{margin-bottom:24px;}
   .page-head h1{
     font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;color:var(--ink);
@@ -950,7 +956,7 @@
   .qc-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .qc-field{display:flex;flex-direction:column;gap:4px;min-width:0;}
   .qc-field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;color:var(--ink-soft);}
-  .qc-field .qty-input, .qc-field .price-input{width:100%;box-sizing:border-box;font-size:14px;padding:8px 9px;}
+  .qc-field .qty-input, .qc-field .price-input, .qc-field .cb-actual-input{width:100%;box-sizing:border-box;font-size:14px;padding:8px 9px;}
   .qc-field-full{width:100%;}
   .qc-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:9px;border-top:1px solid var(--line);}
   .qc-card-foot .q-line-total{font-size:14.5px;}
@@ -9837,10 +9843,7 @@ function renderCbSummary(){
   const date = currentCbDate();
   const rec = getDayRecord(date);
   const wrap = document.getElementById('cbSummaryWrap');
-  wrap.innerHTML = `<table class="cb-summary-table"><thead><tr>
-    <th>Account</th><th>Opening</th><th>Receipts</th><th>Payments</th><th>Expenses</th><th>Calculated Closing</th><th>Actual Counted</th><th>Variance</th>
-  </tr></thead><tbody>
-  ${ACCOUNTS.map(a=>{
+  const cardsHtml = ACCOUNTS.map(a=>{
     const {totalReceipts, totalPayments, totalExpenses} = cbAccountTotals(date, a.key);
     const opening = rec.opening[a.key]||0;
     const closing = opening + totalReceipts - totalPayments - totalExpenses;
@@ -9852,18 +9855,42 @@ function renderCbSummary(){
         ? `<span class="variance-ok">Matches ✓</span>`
         : `<span class="variance-bad">${variance>0?'+':''}${fmtUGX(variance)}</span>`;
     }
-    return `<tr>
+    const inputHtml = `<input type="number" min="0" data-account="${a.key}" class="cb-actual-input" value="${actualVal===null||actualVal===undefined?'':actualVal}" placeholder="Enter count">`;
+    return {a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml};
+  });
+
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="cb-summary-table"><thead><tr>
+    <th>Account</th><th>Opening</th><th>Receipts</th><th>Payments</th><th>Expenses</th><th>Calculated Closing</th><th>Actual Counted</th><th>Variance</th>
+  </tr></thead><tbody>
+  ${cardsHtml.map(({a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml})=>`<tr>
       <td>${esc(a.label)}</td>
       <td class="price">${fmtUGX(opening)}</td>
       <td class="price txn-receipt">${fmtUGX(totalReceipts)}</td>
       <td class="price txn-payment">${fmtUGX(totalPayments)}</td>
       <td class="price txn-expense">${fmtUGX(totalExpenses)}</td>
       <td class="price">${fmtUGX(closing)}</td>
-      <td><input type="number" min="0" data-account="${a.key}" class="cb-actual-input" value="${actualVal===null||actualVal===undefined?'':actualVal}" placeholder="Enter count"></td>
+      <td>${inputHtml}</td>
       <td>${varianceHtml}</td>
-    </tr>`;
-  }).join('')}
-  </tbody></table>`;
+    </tr>`).join('')}
+  </tbody></table></div>
+  <div class="pi-cards">${cardsHtml.map(({a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml})=>`
+    <div class="pi-card">
+      <div class="pi-card-top">
+        <div class="pi-card-title"><span class="cmp-card-supplier">${esc(a.label)}</span></div>
+      </div>
+      <div class="sc-stats an-card-stats">
+        <div class="sc-stat"><b>${fmtUGX(opening)}</b><span>Opening</span></div>
+        <div class="sc-stat"><b class="txn-receipt">${fmtUGX(totalReceipts)}</b><span>Receipts</span></div>
+        <div class="sc-stat"><b class="txn-payment">${fmtUGX(totalPayments)}</b><span>Payments</span></div>
+        <div class="sc-stat"><b class="txn-expense">${fmtUGX(totalExpenses)}</b><span>Expenses</span></div>
+        <div class="sc-stat"><b>${fmtUGX(closing)}</b><span>Calculated Closing</span></div>
+      </div>
+      <div class="pi-card-foot">
+        <div class="qc-field qc-field-full"><label>Actual Counted</label>${inputHtml}</div>
+        <div>${varianceHtml}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
 
   wrap.querySelectorAll('.cb-actual-input').forEach(input=>{
     input.addEventListener('change', ()=>{
