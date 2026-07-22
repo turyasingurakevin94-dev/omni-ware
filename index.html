@@ -3887,12 +3887,21 @@ function showSetPasswordScreen(){
       <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
         <h2 style="margin:0 0 8px;font-size:18px;">Set your password</h2>
         <p style="margin:0 0 16px;font-size:13px;color:#aaa;">Choose a password so you can sign back in next time.</p>
-        <input id="setpw_pw1" type="password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <input id="setpw_pw2" type="password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw1" type="password" autocomplete="new-password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw2" type="password" autocomplete="new-password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#aaa;margin-bottom:12px;cursor:pointer;">
+          <input type="checkbox" id="setpw_show">
+          Show password
+        </label>
         <div id="setpw_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
         <button id="setpw_save_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Save password</button>
       </div>`;
     const errEl = el.querySelector('#setpw_error');
+    el.querySelector('#setpw_show').addEventListener('change', (e)=>{
+      const t = e.target.checked ? 'text' : 'password';
+      el.querySelector('#setpw_pw1').type = t;
+      el.querySelector('#setpw_pw2').type = t;
+    });
     el.querySelector('#setpw_save_btn').addEventListener('click', async ()=>{
       errEl.textContent = '';
       const pw1 = el.querySelector('#setpw_pw1').value;
