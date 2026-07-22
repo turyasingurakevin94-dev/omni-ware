@@ -3994,6 +3994,7 @@ async function ensureAuthAndShop(){
 
 let data = null;
 let myStaff = null;
+let hasPushSubscription = false;
 
 /* ---------------- Utilities ---------------- */
 function toast(msg, duration){
@@ -7812,7 +7813,7 @@ function renderWorkerView(){
     document.getElementById('wv_activeWrap').innerHTML = '';
     return;
   }
-  document.getElementById('wv_enablePushWrap').style.display = ('Notification' in window && Notification.permission!=='granted') ? '' : 'none';
+  document.getElementById('wv_enablePushWrap').style.display = ('Notification' in window && !hasPushSubscription) ? '' : 'none';
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
@@ -7973,6 +7974,7 @@ async function enableWorkerPushNotifications(){
       endpoint: sub.endpoint, p256dh: keys.p256dh, auth_key: keys.auth
     }, { onConflict: 'endpoint' });
     if(error) throw error;
+    hasPushSubscription = true;
     document.getElementById('wv_enablePushWrap').style.display = 'none';
     toast('Notifications enabled');
   }catch(err){
@@ -11399,6 +11401,13 @@ async function boot(){
   if(myStaff){
     document.getElementById('workerNavItem').style.display = '';
     document.getElementById('mmsWorkerViewBtn').style.display = '';
+    // Whether the "Enable notifications" card should show is based on
+    // having an actual saved subscription row, not on the browser's
+    // Notification.permission -- that can be "granted" (e.g. after the
+    // user resets it in site settings) well before enableWorkerPushNotifications()
+    // has ever successfully completed its subscribe()+upsert().
+    const { data: existingSub } = await sb.from('push_subscriptions').select('id').eq('staff_id', myStaff.id).eq('user_id', currentUser.id).limit(1).maybeSingle();
+    hasPushSubscription = !!existingSub;
   }
   if(forcedWorkerMode){
     document.body.classList.add('worker-only-mode');
