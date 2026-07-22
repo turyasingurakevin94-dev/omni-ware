@@ -1860,6 +1860,10 @@
     </nav>
     <div class="sidebar-foot">
       <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <button type="button" id="adminSignoutBtn" class="nav-parent-btn" title="Sign out" style="width:100%;">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span class="nav-label">Sign out</span>
+      </button>
     </div>
    </div>
     <button class="collapse-toggle" id="collapseToggle" title="Collapse sidebar">
@@ -3284,6 +3288,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+// Supabase appends #...&type=invite (or type=recovery) to the redirect URL
+// when a login session was established from an invite/password-reset email
+// link rather than a normal sign-in. Captured before anything else touches
+// location.hash, so ensureAuthAndShop() can tell "fresh session from a
+// link, no password set yet" apart from "normal returning session."
+const initialAuthLinkType = new URLSearchParams(location.hash.slice(1)).get('type');
+
 /* ---------------- Storage (Supabase) ---------------- */
 const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
@@ -3817,7 +3828,8 @@ function showLoginScreen(){
         <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
         <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
         <button id="auth_signin_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Sign in</button>
-        <button id="auth_signup_btn" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Create account</button>
+        <button id="auth_signup_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Create account</button>
+        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#8ab4e0;cursor:pointer;font-size:13px;">Forgot password?</button>
       </div>`;
     const statusEl = el.querySelector('#auth_status');
     const setStatus = (msg, kind)=>{
@@ -3854,6 +3866,43 @@ function showLoginScreen(){
     };
     el.querySelector('#auth_signin_btn').addEventListener('click', ()=>doAuth('signin'));
     el.querySelector('#auth_signup_btn').addEventListener('click', ()=>doAuth('signup'));
+    el.querySelector('#auth_forgot_btn').addEventListener('click', async ()=>{
+      const email = (el.querySelector('#auth_email').value||'').trim();
+      if(!email){ setStatus('Enter your email above first, then tap "Forgot password?"', 'err'); return; }
+      setStatus('Sending reset link…', 'busy');
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      setStatus(error ? error.message : 'Check your email for a password reset link.', error ? 'err' : 'ok');
+    });
+  });
+}
+
+// Shown right after a fresh session was established from an invite or
+// password-reset email link (see initialAuthLinkType) -- those links log
+// the user in but never set a password, so without this step a worker
+// would have no way to sign back in once that one-time session expires.
+function showSetPasswordScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+        <h2 style="margin:0 0 8px;font-size:18px;">Set your password</h2>
+        <p style="margin:0 0 16px;font-size:13px;color:#aaa;">Choose a password so you can sign back in next time.</p>
+        <input id="setpw_pw1" type="password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw2" type="password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <div id="setpw_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="setpw_save_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Save password</button>
+      </div>`;
+    const errEl = el.querySelector('#setpw_error');
+    el.querySelector('#setpw_save_btn').addEventListener('click', async ()=>{
+      errEl.textContent = '';
+      const pw1 = el.querySelector('#setpw_pw1').value;
+      const pw2 = el.querySelector('#setpw_pw2').value;
+      if(pw1.length < 6){ errEl.textContent = 'Password must be at least 6 characters'; return; }
+      if(pw1 !== pw2){ errEl.textContent = 'Passwords do not match'; return; }
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      if(error){ errEl.textContent = error.message; return; }
+      resolve();
+    });
   });
 }
 
@@ -3910,6 +3959,11 @@ async function ensureAuthAndShop(){
     // passed, so this should always succeed -- but never trust a session
     // enough to skip re-checking right before using it for a write.
     if(!user) throw new Error('Sign-in did not complete');
+  } else if(initialAuthLinkType==='invite' || initialAuthLinkType==='recovery'){
+    // An invite/reset link just logged this session in without a password
+    // ever being set -- make them choose one now, or they'd have no way
+    // back in once this one-time link's session eventually expires.
+    await showSetPasswordScreen();
   }
   currentUser = user;
 
@@ -11346,10 +11400,12 @@ async function boot(){
   }
   handlePendingNotificationRoute();
 }
-document.getElementById('wv_signout_btn').addEventListener('click', async ()=>{
+async function signOutAndReload(){
   await sb.auth.signOut();
   location.reload();
-});
+}
+document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
+document.getElementById('adminSignoutBtn').addEventListener('click', signOutAndReload);
 boot();
 </script>
 </body>
