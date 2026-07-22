@@ -2026,6 +2026,13 @@
         <p class="dash-panel-note">Regular customers overdue against their own usual ordering rhythm — worth a call before a competitor gets there first.</p>
         <div id="dash_goingQuiet"></div>
       </div>
+
+      <!-- 7. DEMAND BREADTH -->
+      <div class="panel">
+        <div class="dash-panel-title"><h2>Demand Breadth</h2></div>
+        <p class="dash-panel-note">Top sellers in the selected window, ranked by unique buyers rather than just volume — a product moving big numbers through one or two customers is more exposed than the same volume spread across many.</p>
+        <div id="dash_demandBreadth"></div>
+      </div>
     </section>
 
     <!-- NEW QUOTE -->
@@ -10800,6 +10807,39 @@ function dashGoingQuietCustomers(){
   });
   return rows.sort((a,b)=>b.extraDays-a.extraDays);
 }
+// For each product sold in the given invoices, how many DISTINCT customers
+// bought it (breadth) alongside total volume (depth), plus how concentrated
+// that volume is in its single biggest buyer -- a product moving big
+// numbers can still be fragile if nearly all of it traces back to one
+// customer who could stop ordering any time. anRowsByItem() already totals
+// qty/sales/profit per product but has no per-customer breakdown, which is
+// the whole point here, so this walks the same invoices independently.
+function dashDemandBreadth(invoices){
+  const map = new Map();
+  invoices.forEach(q=>{
+    const buyer = ((q.client&&q.client.name)||'').trim() || 'Unnamed client';
+    (q.items||[]).forEach(it=>{
+      const key = (it.productId||'?') + '::' + (it.variantIdx==null ? '' : it.variantIdx);
+      const qty = Number(it.qty)||0;
+      if(qty<=0) return;
+      if(!map.has(key)){
+        const product = data.products.find(p=>p.id===it.productId);
+        map.set(key, {name: it.productName || (product ? product.name : 'Unknown item'), qty:0, byBuyer: new Map()});
+      }
+      const row = map.get(key);
+      row.qty += qty;
+      row.byBuyer.set(buyer, (row.byBuyer.get(buyer)||0) + qty);
+    });
+  });
+  return [...map.values()].map(r=>{
+    let topBuyerName = '', topBuyerQty = 0;
+    r.byBuyer.forEach((qty, name)=>{ if(qty>topBuyerQty){ topBuyerQty = qty; topBuyerName = name; } });
+    return {
+      name: r.name, qty: r.qty, buyers: r.byBuyer.size, topBuyerName,
+      concentration: r.qty>0 ? topBuyerQty/r.qty*100 : 0
+    };
+  });
+}
 function dashDebtorExposure(){
   return data.customers
     .map(c=>({name:c.name||'Unnamed customer', debt:Number(c.debt)||0, ageDays: (Number(c.debt)||0)>0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1}))
@@ -11019,6 +11059,16 @@ function renderDashboard(){
   goingQuiet.slice(0,3).forEach(g=>{
     threats.push({level:'warn', title:'Customer going quiet', body:`<b>${esc(g.name)}</b> usually orders every ~${Math.round(g.avgGapDays)} days — it's been ${Math.round(g.sinceLastDays)} days since their last order.`});
   });
+  const breadth = dashDemandBreadth(curInvoices);
+  // Only worth flagging among products that actually move volume -- a
+  // low-volume item bought entirely by one customer isn't a real
+  // dependency risk, it's just a niche item.
+  breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,5)
+    .filter(r=>r.concentration>=60)
+    .slice(0,3)
+    .forEach(r=>{
+      threats.push({level:'warn', title:'Demand concentration risk', body:`<b>${esc(r.name)}</b>: ${r.concentration.toFixed(0)}% of this window's volume came from a single customer, <b>${esc(r.topBuyerName)}</b>.`});
+    });
   document.getElementById('dash_threatList').innerHTML = threats.length ? threats.map(t=>`
     <div class="threat-card ${t.level}">
       <div class="threat-card-head"><strong>${esc(t.title)}</strong><span class="threat-pill ${t.level}">${t.level}</span></div>
@@ -11057,6 +11107,13 @@ function renderDashboard(){
     <table class="dash-mini-table"><thead><tr><th>Customer</th><th class="num">Usual gap</th><th class="num">Since last order</th></tr></thead>
     <tbody>${quietRows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${Math.round(r.avgGapDays)}d</td><td class="num"><span class="dash-badge ${r.sinceLastDays>r.avgGapDays*2?'bad':'warn'}">${Math.round(r.sinceLastDays)}d</span></td></tr>`).join('')}</tbody></table>
   ` : `<div class="threat-empty">No regular customers overdue right now.</div>`;
+
+  // Demand breadth
+  const breadthRows = breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,8);
+  document.getElementById('dash_demandBreadth').innerHTML = breadthRows.length ? `
+    <table class="dash-mini-table"><thead><tr><th>Item</th><th class="num">Qty sold</th><th class="num">Buyers</th></tr></thead>
+    <tbody>${breadthRows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${r.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</td><td class="num"><span class="dash-badge ${r.buyers===1?'bad':(r.buyers<=4?'warn':'good')}" title="${r.buyers===1?`All from ${esc(r.topBuyerName)}`:''}">${r.buyers}</span></td></tr>`).join('')}</tbody></table>
+  ` : `<div class="threat-empty">No sales in this window yet.</div>`;
 }
 document.getElementById('dash_range_preset').addEventListener('change', renderDashboard);
 
