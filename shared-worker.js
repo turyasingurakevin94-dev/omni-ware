@@ -198,6 +198,40 @@ function showSetPasswordScreen(){
   });
 }
 
+// Only reachable if a login has zero shop_members rows -- normal signup
+// (admin app) creates one immediately, and invited workers already have
+// one from invite-worker, so in practice this is a rare fallback rather
+// than the worker app's main path. seedData() (the full default price
+// book) only exists in the admin app; the worker app has nothing sensible
+// to seed, so it just starts that shop with an empty savedQuotes list.
+function showCreateShopScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+        <h2 style="margin:0 0 8px;font-size:18px;">Create your shop</h2>
+        <p style="margin:0 0 16px;font-size:13px;color:#aaa;">You're not a member of any shop yet. Create one to get started.</p>
+        <input id="shop_name" type="text" placeholder="Shop name" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <div id="shop_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="shop_create_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Create shop</button>
+      </div>`;
+    const errEl = el.querySelector('#shop_error');
+    el.querySelector('#shop_create_btn').addEventListener('click', async ()=>{
+      errEl.textContent = '';
+      const name = el.querySelector('#shop_name').value.trim();
+      if(!name){ errEl.textContent = 'Enter a shop name'; return; }
+      const { data: shop, error: shopErr } = await sb.from('shops').insert({name, created_by: currentUser.id}).select().single();
+      if(shopErr){ errEl.textContent = shopErr.message; return; }
+      const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
+      if(memberErr){ errEl.textContent = memberErr.message; return; }
+      currentShopId = shop.id;
+      data = (typeof seedData === 'function') ? seedData() : { savedQuotes: [] };
+      await saveData();
+      resolve(shop.id);
+    });
+  });
+}
+
 function showShopPicker(memberships){
   return new Promise((resolve)=>{
     const el = ensureAuthOverlay();

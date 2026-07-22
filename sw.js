@@ -34,7 +34,11 @@ self.addEventListener('notificationclick', (event) => {
       client.focus();
       client.postMessage({ orderId, action });
     } else {
-      await self.clients.openWindow(`/?orderId=${encodeURIComponent(orderId || '')}&action=${encodeURIComponent(action)}`);
+      // Cold start (no tab open at all): land on the standalone worker app,
+      // since that's who these push notifications are for. A dual-role
+      // admin+worker with a tab already open instead gets the postMessage
+      // path above, which works the same in either app.
+      await self.clients.openWindow(`/worker.html?orderId=${encodeURIComponent(orderId || '')}&action=${encodeURIComponent(action)}`);
     }
   })());
 });

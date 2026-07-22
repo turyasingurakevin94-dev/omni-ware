@@ -9,6 +9,13 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+// Where the invite email's link lands a worker -- the standalone worker
+// app, not the admin app, so they land straight on their orders instead of
+// having to find their way there. Override via `supabase secrets set
+// WORKER_APP_URL=...` if the production domain ever changes; this must
+// also be added to Supabase Auth's Redirect URLs allow-list (Dashboard ->
+// Authentication -> URL Configuration) or the link will be rejected.
+const WORKER_APP_URL = Deno.env.get("WORKER_APP_URL") || "https://omni-ware.vercel.app/worker.html";
 
 // The browser sends an OPTIONS preflight before the real POST (it carries
 // custom headers like apikey/authorization). Without these on every
@@ -87,7 +94,9 @@ Deno.serve(async (req) => {
     // address is new; if it already belongs to an existing user, fall back to
     // looking that user up so this staff row can still be linked to it.
     let userId: string;
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email);
+    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: WORKER_APP_URL,
+    });
     console.log("invite-worker: inviteUserByEmail result", {
       invitedUserId: invited?.user?.id,
       inviteErr: inviteErr ? { message: inviteErr.message, status: inviteErr.status, name: inviteErr.name } : null,
