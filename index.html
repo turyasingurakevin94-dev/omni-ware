@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Price Book — Hardware Price Comparison</title>
+<link rel="manifest" href="/manifest.json">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
@@ -1618,6 +1619,25 @@
     .preset-tabs{overflow-x:auto;max-width:100%;}
     .preset-tab{flex-shrink:0;}
   }
+
+  /* Worker mode: a staff-only login sees nothing but the pick & pack view --
+     the normal admin chrome (sidebar, mobile nav/topbar/FAB) is hidden. */
+  body.worker-only-mode .sidebar,
+  body.worker-only-mode .mobile-bottomnav,
+  body.worker-only-mode .mobile-topbar,
+  body.worker-only-mode .mobile-fab,
+  body.worker-only-mode .mobile-more-sheet{display:none !important;}
+  .worker-view-wrap{max-width:520px;margin:0 auto;padding:16px;}
+  .worker-toggle-btn{margin-left:auto;}
+  .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .wv-card-title{font-weight:600;margin-bottom:4px;}
+  .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
+  .wv-actions{display:flex;gap:10px;}
+  .wv-actions .btn{flex:1;}
+  .wv-item-progress{color:var(--ink-soft);font-size:13px;margin-bottom:10px;}
+  .wv-item-name{font-size:20px;font-weight:700;margin-bottom:6px;}
+  .wv-item-qty{font-size:15px;margin-bottom:4px;}
+  .wv-item-source{font-size:14px;color:var(--accent-ink);background:var(--good-bg);border-radius:8px;padding:8px 10px;margin-bottom:16px;}
 </style>
 </head>
 <body>
@@ -1682,6 +1702,7 @@
       <button type="button" class="mms-item" data-tab="staff">Staff</button>
       <button type="button" class="mms-item" data-tab="suppliers">Suppliers</button>
       <button type="button" class="mms-item" data-tab="purchase-invoices">Purchase invoices</button>
+      <button type="button" class="mms-item" id="mmsWorkerViewBtn" data-tab="worker" style="display:none;">Worker view</button>
     </div>
     <div class="mms-group">
       <div class="mms-group-label">Reports</div>
@@ -1768,6 +1789,10 @@
       <button data-tab="staff" title="Staff">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
         <span class="nav-label">Staff</span>
+      </button>
+      <button data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        <span class="nav-label">Worker view</span>
       </button>
       <div class="nav-item" id="supplierNavItem">
         <button type="button" class="nav-parent-btn" title="Supplier">
@@ -2381,6 +2406,26 @@
           <h2>Delivery personnel <span class="staff-group-note">(workers can also be picked for delivery)</span></h2>
           <div id="staffDeliveryWrap"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- WORKER PICK & PACK -->
+    <section id="tab-worker" style="display:none;">
+      <div class="worker-view-wrap">
+        <div class="page-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <h1>My orders</h1>
+            <p>Orders assigned to you for preparation.</p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="wv_signout_btn" style="display:none;">Sign out</button>
+        </div>
+        <div id="wv_enablePushWrap" class="wv-card" style="display:none;">
+          <div class="wv-card-title">Turn on notifications</div>
+          <div class="wv-card-sub">Get notified the moment an order is assigned to you, even if the app is closed.</div>
+          <button type="button" class="btn btn-accent" id="wv_enablePushBtn">Enable notifications</button>
+        </div>
+        <div id="wv_pendingWrap"></div>
+        <div id="wv_activeWrap"></div>
       </div>
     </section>
 
@@ -3241,10 +3286,23 @@
 <script>
 /* ---------------- Storage (Supabase) ---------------- */
 const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhneXdqYWlmZG1ncmNud3hzdHhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NjM3MjEsImV4cCI6MjEwMDEzOTcyMX0.rmZgeNeP_LE3ODfepI-UVDQUKvKiw-pr4wF9zWzwe4k';
+const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentShopId = null;
 let currentUser = null;
+let currentMemberRole = null;
+
+// Public half of the VAPID keypair used to sign Web Push subscriptions --
+// safe to ship client-side (that's the point of VAPID). Generate the pair
+// with `npx web-push generate-vapid-keys`, put the public half here, and
+// set the private half + subject as secrets on the notify-worker Edge
+// Function (`supabase secrets set VAPID_PRIVATE_KEY=... VAPID_SUBJECT=...`).
+const VAPID_PUBLIC_KEY = 'BKqANIr7AQuAGOmO3bRhSTBhN-fTVRIy9tRb43Z6LxdgcEyS38Lm_V0lFMX3wfm84Doqofxh77-_jYwimT9IqNc';
+
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').catch(err=>console.error('SW registration failed:', err));
+}
 
 // ---- Product image storage (Supabase Storage, not base64-in-the-row) ----
 const PRODUCT_IMAGE_BUCKET = 'product-images';
@@ -3470,7 +3528,7 @@ async function loadData(shopId){
 
   return {
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
-    staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
+    staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
@@ -3577,7 +3635,7 @@ function buildSyncRows(d, shopId){
       date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId}
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, workerAcceptedAt:q.workerAcceptedAt||null}
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
@@ -3860,15 +3918,19 @@ async function ensureAuthAndShop(){
 
   if(!memberships.length){
     currentShopId = await showCreateShopScreen();
+    currentMemberRole = 'owner';
   } else if(memberships.length === 1){
     currentShopId = memberships[0].shop_id;
+    currentMemberRole = memberships[0].role;
   } else {
     currentShopId = await showShopPicker(memberships);
+    currentMemberRole = (memberships.find(m=>m.shop_id===currentShopId)||{}).role || null;
   }
   hideAuthOverlay();
 }
 
 let data = null;
+let myStaff = null;
 
 /* ---------------- Utilities ---------------- */
 function toast(msg, duration){
@@ -4121,6 +4183,7 @@ function goToTab(tab){
   if(tab==='inventory') renderInventory();
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
+  if(tab==='worker') renderWorkerView();
   if(tab==='analytics-sales') renderSalesAnalytics();
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
   if(tab==='analytics-debtors') renderDebtorsList();
@@ -5861,7 +5924,7 @@ function renderSavedQuotes(){
             <div class="sq-meta-row">• Saved ${esc(savedAgoLabel(q.savedAt))}</div>
             <div class="sq-meta-row">• ${q.items.length} item${q.items.length===1?'':'s'}</div>
             <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
-            ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span></div>` : ''}
+            ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedDeliveryId))}</span></div>` : ''}
           </div>
         </div>
@@ -7561,6 +7624,11 @@ function staffCardHTML(s){
       ${s.phone ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(s.phone)}</span></div>` : ''}
       ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
     </div>
+    <div class="st-login-row" style="margin-top:8px">
+      ${s.userId
+        ? `<span class="st-status-pill idle">Has app login</span>`
+        : `<button type="button" class="btn btn-ghost" onclick="sendLoginInvite('${esc(s.id)}')">Send login invite</button>`}
+    </div>
     <div class="st-status-block">
       ${s.unavailable ? `<span class="st-status-pill unavailable">Unavailable</span>`
         : busy ? `<span class="st-status-pill busy">Busy — ${activeOrders.length} order${activeOrders.length===1?'':'s'}</span>`
@@ -7614,6 +7682,23 @@ function resetStaffForm(){
   document.getElementById('st_id').disabled = false;
   document.getElementById('staffFormTitle').textContent = 'Add staff';
 }
+// Grants a staff member an app login (via a Supabase invite email) and
+// links it to their staff row, so they can be recognized as themselves in
+// the worker pick & pack view. Runs server-side (service role) because it
+// needs to both create the auth user and write shop_members/staff.user_id,
+// neither of which a plain shop member's RLS-scoped session can do.
+async function sendLoginInvite(id){
+  const s = data.staff.find(x=>x.id===id); if(!s) return;
+  const email = (prompt(`Email to send ${s.name}'s login invite to:`)||'').trim();
+  if(!email) return;
+  try{
+    const { error } = await sb.functions.invoke('invite-worker', { body: { shopId: currentShopId, staffId: id, email } });
+    if(error) throw error;
+    toast(`Login invite sent to ${email}`);
+  }catch(err){
+    toast(`Could not send invite: ${err.message||err}`);
+  }
+}
 function deleteStaff(id){
   if(!confirm('Delete this staff member? Orders already assigned to them will keep showing their name.')) return;
   data.staff = data.staff.filter(s=>s.id!==id);
@@ -7644,6 +7729,220 @@ document.getElementById('st_save').addEventListener('click', ()=>{
 document.getElementById('st_cancel').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('staffModalClose').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('st_search').addEventListener('input', e=>renderStaff(e.target.value));
+
+/* ================= WORKER PICK & PACK ================= */
+// Orders assigned to the logged-in worker (myStaff, resolved in boot()),
+// walked one item at a time: accept/deny a new assignment, then step
+// through payload.items[] via pickCursor until the order is fully packed.
+// Mirrors the read/write shape stepSavedQuoteStatus()/openAssignStaffModal()
+// already use for assignedWorkerId -- this view never introduces a parallel
+// data model, just a worker-facing lens on the same saved_quotes rows.
+
+function myWorkerOrders(){
+  if(!myStaff) return [];
+  return data.savedQuotes.filter(q=>q.assignedWorkerId===myStaff.id && !q.voided && !quoteAgedOffBoard(q));
+}
+
+function renderWorkerView(){
+  if(!myStaff){
+    document.getElementById('wv_pendingWrap').innerHTML = `<div class="empty">This login isn't linked to a staff profile yet. Ask an admin to send you a login invite from the Staff tab.</div>`;
+    document.getElementById('wv_activeWrap').innerHTML = '';
+    return;
+  }
+  document.getElementById('wv_enablePushWrap').style.display = ('Notification' in window && Notification.permission!=='granted') ? '' : 'none';
+  const mine = myWorkerOrders();
+  const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
+  const active = mine.find(q=>q.pickingStatus==='in_progress');
+  renderWorkerPendingList(pending);
+  renderWorkerPickStepper(active);
+}
+
+function renderWorkerPendingList(pending){
+  const wrap = document.getElementById('wv_pendingWrap');
+  if(!pending.length){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = pending.map(q=>`
+    <div class="wv-card" data-id="${q.id}">
+      <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
+      <div class="wv-card-sub">${(q.items||[]).length} item${(q.items||[]).length===1?'':'s'} to prepare</div>
+      <div class="wv-actions">
+        <button type="button" class="btn btn-accent wv-accept-btn">Accept</button>
+        <button type="button" class="btn btn-ghost wv-deny-btn">Deny</button>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('.wv-accept-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>acceptOrderAssignment(Number(btn.closest('[data-id]').dataset.id)));
+  });
+  wrap.querySelectorAll('.wv-deny-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>denyOrderAssignment(Number(btn.closest('[data-id]').dataset.id)));
+  });
+}
+
+function acceptOrderAssignment(orderId){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q || q.pickingStatus!=='awaiting_accept') return;
+  q.pickingStatus = 'in_progress';
+  q.workerAcceptedAt = Date.now();
+  q.pickCursor = 0;
+  (q.items||[]).forEach(it=>{ if(!it.pickStatus) it.pickStatus='pending'; });
+  saveData();
+  renderWorkerView();
+}
+
+function denyOrderAssignment(orderId){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  q.assignedWorkerId = null;
+  q.pickingStatus = null;
+  saveData();
+  renderWorkerView();
+  if(document.getElementById('tab-quote-saved') && document.getElementById('tab-quote-saved').style.display!=='none') renderSavedQuotes();
+  toast('Order declined — it\'s back in the unassigned pool');
+}
+
+// "Where to get it" reuses the item's existing supplierId, exactly as the
+// Purchase Invoices / stock-deduction logic elsewhere already treats it:
+// '__stock__' or unset means the shop's own shelf stock, anything else is a
+// real supplier row to source it from.
+function pickItemSourceLabel(it){
+  if(!it.supplierId || it.supplierId==='__stock__') return 'Pick from shop';
+  const sup = (data.suppliers||[]).find(s=>s.id===it.supplierId);
+  if(!sup) return it.supplierName || 'Supplier';
+  return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
+}
+
+function renderWorkerPickStepper(q){
+  const wrap = document.getElementById('wv_activeWrap');
+  if(!q){ wrap.innerHTML=''; return; }
+  const items = q.items||[];
+  const cursor = Math.min(q.pickCursor||0, items.length);
+  const it = items[cursor];
+  if(!it){
+    // Every item done but finishPreparingOrder() hasn't run yet (shouldn't
+    // normally happen since stepPickCursor() calls it automatically) --
+    // give the worker an explicit way out rather than a dead-end screen.
+    wrap.innerHTML = `<div class="wv-card">
+      <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
+      <div class="wv-card-sub">All items packed.</div>
+      <button type="button" class="btn btn-accent" id="wv_finish_btn">Mark finished preparing</button>
+    </div>`;
+    document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
+    return;
+  }
+  const qty = it.qty!=null ? it.qty : '';
+  const unit = it.packUnit || it.unit || '';
+  wrap.innerHTML = `<div class="wv-card">
+    <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
+    <div class="wv-item-progress">Item ${cursor+1} of ${items.length}</div>
+    <div class="wv-item-name">${esc(it.productName||'Item')}</div>
+    <div class="wv-item-qty">Pack <strong>${esc(qty)} ${esc(unit)}</strong></div>
+    <div class="wv-item-source">${esc(pickItemSourceLabel(it))}</div>
+    <button type="button" class="btn btn-accent" id="wv_next_item_btn">${cursor+1===items.length ? 'Done — finish order' : 'Item packed — next'}</button>
+  </div>`;
+  document.getElementById('wv_next_item_btn').addEventListener('click', ()=>stepPickCursor(q.id));
+}
+
+function stepPickCursor(orderId){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  const items = q.items||[];
+  const it = items[q.pickCursor||0];
+  if(it){ it.pickStatus='done'; it.pickedQty = it.qty; }
+  q.pickCursor = (q.pickCursor||0) + 1;
+  if(q.pickCursor >= items.length){ finishPreparingOrder(orderId); return; }
+  saveData();
+  renderWorkerView();
+}
+
+function finishPreparingOrder(orderId){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  q.pickingStatus = 'done';
+  const workerId = q.assignedWorkerId;
+  saveData(); // persist the finished pick state even if the status-advance below can't complete yet (e.g. no delivery staff configured)
+  stepSavedQuoteStatus(orderId, +1); // existing pipeline: preparing -> pending_delivery
+  if(workerId) autoAssignNextOrder(workerId);
+  renderWorkerView();
+}
+
+// Opportunistic, non-exclusive auto-assign: whenever a worker finishes an
+// order they may already be holding others (openAssignStaffModal has never
+// enforced one-at-a-time), so this just hands them the oldest unassigned
+// order still needing preparation, if one exists.
+function autoAssignNextOrder(workerId){
+  const staff = data.staff.find(s=>s.id===workerId);
+  if(!staff || staff.unavailable) return;
+  const next = data.savedQuotes
+    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing'))
+    .sort((a,b)=> new Date(a.savedAt||0) - new Date(b.savedAt||0))[0];
+  if(!next) return;
+  next.assignedWorkerId = workerId;
+  next.pickingStatus = 'awaiting_accept';
+  next.pickCursor = 0;
+  if(next.status==='draft'){ next.status = 'preparing'; next.stageEnteredAt = Date.now(); }
+  saveData(); // saveData()'s upsert is what the notify-worker webhook fires on
+  if(document.getElementById('tab-quote-saved') && document.getElementById('tab-quote-saved').style.display!=='none') renderSavedQuotes();
+}
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+
+async function enableWorkerPushNotifications(){
+  if(!myStaff){ toast('No staff profile linked to this login yet'); return; }
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){ toast('Push notifications are not supported on this device/browser'); return; }
+  try{
+    const permission = await Notification.requestPermission();
+    if(permission!=='granted'){ toast('Notifications permission was not granted'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const keys = sub.toJSON().keys;
+    const { error } = await sb.from('push_subscriptions').upsert({
+      shop_id: currentShopId, staff_id: myStaff.id, user_id: currentUser.id,
+      endpoint: sub.endpoint, p256dh: keys.p256dh, auth_key: keys.auth
+    }, { onConflict: 'endpoint' });
+    if(error) throw error;
+    document.getElementById('wv_enablePushWrap').style.display = 'none';
+    toast('Notifications enabled');
+  }catch(err){
+    toast(`Could not enable notifications: ${err.message||err}`);
+  }
+}
+document.getElementById('wv_enablePushBtn').addEventListener('click', enableWorkerPushNotifications);
+
+// Routes a push notification tap: a foreground tab gets a postMessage from
+// sw.js, a cold-started tab gets ?orderId=&action= on the URL instead
+// (clients.openWindow() can't postMessage into a page that doesn't exist
+// yet). Both paths funnel through here once boot() has finished loading.
+navigator.serviceWorker && navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', e=>{
+  if(e.data && e.data.orderId) routeNotificationAction(e.data.orderId, e.data.action);
+});
+function routeNotificationAction(orderId, action){
+  orderId = Number(orderId);
+  if(!orderId) return;
+  goToTab('worker');
+  if(action==='accept') acceptOrderAssignment(orderId);
+  else if(action==='deny') denyOrderAssignment(orderId);
+}
+function handlePendingNotificationRoute(){
+  const params = new URLSearchParams(location.search);
+  const orderId = params.get('orderId');
+  const action = params.get('action');
+  if(orderId){
+    routeNotificationAction(orderId, action);
+    params.delete('orderId'); params.delete('action');
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs?'?'+qs:''));
+  }
+}
 
 /* ================= CUSTOMERS ================= */
 let editingCustomerId = null;
@@ -11019,6 +11318,7 @@ function renderAll(){
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
 }
 async function boot(){
+  registerServiceWorker();
   try{
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
@@ -11031,8 +11331,25 @@ async function boot(){
     return;
   }
   document.getElementById('pr_date').value = todayISO();
-  renderAll();
+  myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
+  const forcedWorkerMode = !!myStaff && currentMemberRole==='staff';
+  if(myStaff){
+    document.getElementById('workerNavItem').style.display = '';
+    document.getElementById('mmsWorkerViewBtn').style.display = '';
+  }
+  if(forcedWorkerMode){
+    document.body.classList.add('worker-only-mode');
+    document.getElementById('wv_signout_btn').style.display = '';
+    goToTab('worker');
+  } else {
+    renderAll();
+  }
+  handlePendingNotificationRoute();
 }
+document.getElementById('wv_signout_btn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  location.reload();
+});
 boot();
 </script>
 </body>
