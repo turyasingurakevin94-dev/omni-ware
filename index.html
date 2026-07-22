@@ -339,6 +339,7 @@
   .dash-badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
   .dash-badge.good{background:var(--good-bg);color:var(--good);}
   .dash-badge.bad{background:#FBE7E3;color:var(--danger);}
+  .dash-badge.warn{background:#FDF0D9;color:var(--accent-ink);}
 
   .an-subtabs{display:flex;gap:22px;margin-bottom:18px;border-bottom:1px solid var(--line);}
   .an-subtabs button{
@@ -2017,6 +2018,13 @@
           <p class="dash-panel-note">Customers with the oldest unpaid balances.</p>
           <div id="dash_leakage"></div>
         </div>
+      </div>
+
+      <!-- 6. CUSTOMERS GOING QUIET -->
+      <div class="panel">
+        <div class="dash-panel-title"><h2>Customers Going Quiet</h2></div>
+        <p class="dash-panel-note">Regular customers overdue against their own usual ordering rhythm — worth a call before a competitor gets there first.</p>
+        <div id="dash_goingQuiet"></div>
       </div>
     </section>
 
@@ -10759,6 +10767,39 @@ function dashSupplierPriceInflation(){
   });
   return flags.sort((a,b)=>b.squeeze-a.squeeze).slice(0,3);
 }
+// Flags regular customers who've gone quiet: compares the gap since their
+// last order against their OWN historical average gap between orders, so
+// a weekly buyer overdue by a week is flagged just as readily as a
+// monthly buyer overdue by a month -- a single fixed "N days since last
+// order" cutoff would miss the former and false-alarm on the latter.
+// Needs at least 2 past orders to establish a rhythm; a customer with only
+// one order ever doesn't have one yet, so they're left out here (that's a
+// different signal -- new-customer follow-up -- not "going quiet").
+function dashGoingQuietCustomers(){
+  const rows = [];
+  data.customers.forEach(c=>{
+    const nameLower = (c.name||'').trim().toLowerCase();
+    if(!nameLower) return;
+    const orderTimes = data.savedQuotes
+      .filter(q=>!q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower)
+      .map(q=>q.savedAt ? new Date(q.savedAt).getTime() : NaN)
+      .filter(t=>!isNaN(t))
+      .sort((a,b)=>a-b);
+    if(orderTimes.length<2) return;
+    const first = orderTimes[0], last = orderTimes[orderTimes.length-1];
+    const avgGapDays = (last-first) / (orderTimes.length-1) / 86400000;
+    if(avgGapDays<=0) return;
+    const sinceLastDays = (Date.now()-last) / 86400000;
+    const extraDays = sinceLastDays - avgGapDays;
+    // Overdue by at least 50% of their usual gap, with a 7-day floor so a
+    // customer who orders every couple of days isn't flagged over natural
+    // day-to-day jitter.
+    if(sinceLastDays >= avgGapDays*1.5 && sinceLastDays>=7){
+      rows.push({name:c.name||'Unnamed customer', avgGapDays, sinceLastDays, extraDays, orderCount:orderTimes.length});
+    }
+  });
+  return rows.sort((a,b)=>b.extraDays-a.extraDays);
+}
 function dashDebtorExposure(){
   return data.customers
     .map(c=>({name:c.name||'Unnamed customer', debt:Number(c.debt)||0, ageDays: (Number(c.debt)||0)>0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1}))
@@ -10974,6 +11015,10 @@ function renderDashboard(){
   dashStockOutExposure().forEach(s=>{
     threats.push({level:'info', title:'Stock-out risk', body:`<b>${esc(s.name)}</b> has ~${s.qty} left, roughly ${s.daysLeft.toFixed(1)} days of cover at current sale pace.`});
   });
+  const goingQuiet = dashGoingQuietCustomers();
+  goingQuiet.slice(0,3).forEach(g=>{
+    threats.push({level:'warn', title:'Customer going quiet', body:`<b>${esc(g.name)}</b> usually orders every ~${Math.round(g.avgGapDays)} days — it's been ${Math.round(g.sinceLastDays)} days since their last order.`});
+  });
   document.getElementById('dash_threatList').innerHTML = threats.length ? threats.map(t=>`
     <div class="threat-card ${t.level}">
       <div class="threat-card-head"><strong>${esc(t.title)}</strong><span class="threat-pill ${t.level}">${t.level}</span></div>
@@ -11005,6 +11050,13 @@ function renderDashboard(){
     <table class="dash-mini-table"><thead><tr><th>Customer</th><th class="num">Owed</th><th class="num">Age</th></tr></thead>
     <tbody>${leak.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${fmtUGX(r.debt)}</td><td class="num"><span class="dash-badge ${r.ageDays>30?'bad':'good'}">${r.ageDays>=0?r.ageDays+'d':'—'}</span></td></tr>`).join('')}</tbody></table>
   ` : `<div class="threat-empty">No outstanding customer debt right now.</div>`;
+
+  // Customers going quiet
+  const quietRows = goingQuiet.slice(0,5);
+  document.getElementById('dash_goingQuiet').innerHTML = quietRows.length ? `
+    <table class="dash-mini-table"><thead><tr><th>Customer</th><th class="num">Usual gap</th><th class="num">Since last order</th></tr></thead>
+    <tbody>${quietRows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${Math.round(r.avgGapDays)}d</td><td class="num"><span class="dash-badge ${r.sinceLastDays>r.avgGapDays*2?'bad':'warn'}">${Math.round(r.sinceLastDays)}d</span></td></tr>`).join('')}</tbody></table>
+  ` : `<div class="threat-empty">No regular customers overdue right now.</div>`;
 }
 document.getElementById('dash_range_preset').addEventListener('change', renderDashboard);
 
