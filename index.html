@@ -1635,29 +1635,33 @@
   .wv-actions{display:flex;gap:10px;}
   .wv-actions .btn{flex:1;}
   /* Item carousel: swipe horizontally between items (native scroll-snap,
-     no gesture library needed) instead of tapping next/back buttons. Only
-     the centered card is interactive -- tapping it toggles picked/not
-     picked directly on the photo (a green tick overlay is the only status
-     indicator), tapping a peeking side card just brings it to center.
-     The carousel bleeds past the page's own side padding (negative
-     margin) so the focused card can be as large as the screen allows --
-     mobile-first, this is the one thing on the page a worker looks at. */
+     no gesture library needed) instead of tapping next/back buttons.
+     Photo, name, quantity and source all live inside one bordered card;
+     the "Pick"/"Picked" badge is an actual button pinned to that card's
+     top-right corner, not just the photo. Only the centered card is
+     interactive -- a peeking side card just brings itself to center when
+     tapped. The carousel bleeds past the page's own side padding
+     (negative margin) so the focused card can be as large as the screen
+     allows -- mobile-first, this is the one thing a worker looks at. */
   .wv-carousel-title{font-weight:600;padding:0 4px 10px;}
-  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -12px;padding:6px 8% 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -12px;padding:6px 5% 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .wv-carousel::-webkit-scrollbar{display:none;}
-  .wv-carousel-card{flex:0 0 84%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;opacity:.4;transform:scale(.9);transition:opacity .2s ease,transform .2s ease;}
+  .wv-carousel-card{flex:0 0 90%;scroll-snap-align:center;opacity:.4;transform:scale(.92);transition:opacity .2s ease,transform .2s ease;}
   .wv-carousel-card.focused{opacity:1;transform:scale(1);}
-  .wv-carousel-photo{position:relative;width:100%;aspect-ratio:1;border-radius:20px;}
-  .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:20px;}
-  .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:64px;height:64px;}
-  .wv-carousel-card.focused .wv-carousel-photo{cursor:pointer;}
-  .wv-carousel-badge{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .wv-carousel-card-inner{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;}
+  .wv-carousel-card.focused .wv-carousel-card-inner{cursor:pointer;}
+  .wv-carousel-photo{width:100%;aspect-ratio:1;}
+  .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:0;border:none;}
+  .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:70px;height:70px;}
+  .wv-carousel-badge{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:4px;padding:7px 14px;border-radius:999px;font:700 13px inherit;box-shadow:0 2px 6px rgba(0,0,0,.3);border:none;cursor:pointer;}
   .wv-carousel-badge.pending{background:var(--panel);color:var(--ink-soft);}
   .wv-carousel-badge.done{background:var(--good);color:#fff;}
   .wv-carousel-badge .icon{width:15px;height:15px;stroke-width:3;}
-  .wv-carousel-name{font-size:17px;font-weight:700;text-align:center;margin-top:12px;}
-  .wv-carousel-qty{font-size:15px;font-weight:700;color:var(--good);text-align:center;margin-top:3px;}
-  .wv-carousel-source{font-size:13px;color:var(--ink-soft);text-align:center;margin-top:3px;}
+  .wv-carousel-body{padding:14px 16px 4px;}
+  .wv-carousel-name{font-size:17px;font-weight:700;text-align:center;}
+  .wv-carousel-qty-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-top:10px;}
+  .wv-carousel-qty{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;color:var(--ink);text-align:center;margin-top:2px;}
+  .wv-carousel-source{margin-top:14px;background:#DCEEFB;color:var(--ink);font-size:13.5px;font-weight:500;text-align:center;padding:12px 16px;}
   .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:14px 0 4px;}
   .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);}
   .wv-carousel-dot.focused{background:var(--good);width:16px;border-radius:4px;}
@@ -7932,13 +7936,16 @@ function renderWorkerPickStepper(q){
     const qty = it.qty!=null ? it.qty : '';
     const unit = it.packUnit || it.unit || '';
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
-      <div class="wv-carousel-photo" data-idx="${i}">
-        ${ipStageThumbHTML(product||{})}
-        <div class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</div>
+      <div class="wv-carousel-card-inner" data-idx="${i}">
+        <div class="wv-carousel-photo">${ipStageThumbHTML(product||{})}</div>
+        <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
+        <div class="wv-carousel-body">
+          <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
+          <div class="wv-carousel-qty-label">Pack</div>
+          <div class="wv-carousel-qty">${esc(qty)} ${esc(unit)}</div>
+        </div>
+        <div class="wv-carousel-source">${esc(pickItemSourceLabel(it))}</div>
       </div>
-      <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
-      <div class="wv-carousel-qty">Pack ${esc(qty)} ${esc(unit)}</div>
-      <div class="wv-carousel-source">${esc(pickItemSourceLabel(it))}</div>
     </div>`;
   }).join('');
 
@@ -7952,10 +7959,14 @@ function renderWorkerPickStepper(q){
   `;
 
   const carousel = document.getElementById('wv_carousel');
-  carousel.querySelectorAll('.wv-carousel-photo').forEach(photo=>{
-    photo.addEventListener('click', ()=>{
-      const card = photo.closest('.wv-carousel-card');
-      if(card.classList.contains('focused')) toggleItemPickedAt(q.id, Number(photo.dataset.idx));
+  // A single listener on the whole card (photo + badge + name/qty/source)
+  // -- tapping the "Pick"/"Picked" badge button (or anywhere else on a
+  // focused card) toggles it; the badge button click bubbles up here
+  // rather than needing its own separate handler.
+  carousel.querySelectorAll('.wv-carousel-card-inner').forEach(inner=>{
+    inner.addEventListener('click', ()=>{
+      const card = inner.closest('.wv-carousel-card');
+      if(card.classList.contains('focused')) toggleItemPickedAt(q.id, Number(inner.dataset.idx));
       else card.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
     });
   });
