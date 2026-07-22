@@ -7436,26 +7436,13 @@ document.getElementById('s_search').addEventListener('input', e=>renderSuppliers
 
 /* ================= STAFF ================= */
 let editingStaffId = null;
-const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel'};
+// STAFF_ROLE_LABELS / staffName / staffEligibleForRole now live in
+// shared-worker.js (needed there too, for the worker app's own
+// delivery-assignment prompt).
 function staffInitials(name){
   const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   if(parts.length===0) return '?';
   return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
-}
-// Resolves a staff id to a display name -- falls back gracefully if the
-// staff member was since deleted, so an order's assignment history still
-// shows something sane instead of breaking.
-function staffName(id){
-  if(!id) return '';
-  const s = data.staff.find(x=>x.id===id);
-  return s ? s.name : '(removed staff)';
-}
-// Workers can also be picked as the delivery person for an order (many
-// shops don't have dedicated riders spare for every order) -- dedicated
-// delivery personnel aren't assumed to also prepare/pack, though.
-function staffEligibleForRole(s, role){
-  if(role==='delivery') return s.role==='delivery' || s.role==='worker';
-  return s.role===role;
 }
 // Orders a staff member is currently on, in either capacity: an order
 // they're assigned to prep sits in Being Prepared, one they're assigned

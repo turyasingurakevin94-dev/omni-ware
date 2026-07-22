@@ -201,16 +201,17 @@ let myStaff = null;
 let hasPushSubscription = false;
 let lastSynced = {};
 
-// This app only ever needs a slice of the shop's data: the caller's own
-// staff row (to resolve myStaff), every supplier (for "where to get it"
-// labels), just enough of each product to show a photo, and every saved
-// quote in the shop (so a worker who finishes an order can see -- and get
-// auto-assigned -- the next unassigned one). Stock, cash, customers,
-// prices and purchase invoices are all admin-only concerns this app never
-// touches.
+// This app only ever needs a slice of the shop's data: every staff row
+// (to resolve myStaff, and to list delivery-eligible candidates when
+// finishing an order -- see promptAssignDelivery() in shared-worker.js),
+// every supplier (for "where to get it" labels), just enough of each
+// product to show a photo, and every saved quote in the shop (so a worker
+// who finishes an order can see -- and get auto-assigned -- the next
+// unassigned one). Stock, cash, customers, prices and purchase invoices
+// are all admin-only concerns this app never touches.
 async function loadWorkerData(shopId){
   const [staffR, suppliersR, productsR, savedQuotesR] = await Promise.all([
-    sb.from('staff').select('*').eq('shop_id', shopId).eq('user_id', currentUser.id),
+    sb.from('staff').select('*').eq('shop_id', shopId),
     sb.from('suppliers').select('*').eq('shop_id', shopId),
     sb.from('products').select('id, name, image').eq('shop_id', shopId),
     sb.from('saved_quotes').select('*').eq('shop_id', shopId),

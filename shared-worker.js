@@ -486,17 +486,76 @@ function renderWorkerFinishButton(q){
   if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
 }
 
-// Advances the order straight to pending_delivery -- doesn't go through
-// the admin board's stepSavedQuoteStatus()/openAssignStaffModal() pipeline
-// (that modal's markup only exists in the admin app), so a delivery
-// person isn't auto-prompted for here; an admin still assigns one from
-// Order Tracking same as always.
-function finishPreparingOrder(orderId){
+// Workers can also be picked as the delivery person for an order (many
+// shops don't have dedicated riders spare for every order) -- dedicated
+// delivery personnel aren't assumed to also prepare/pack, though.
+const STAFF_ROLE_LABELS = {worker:'Worker', delivery:'Delivery personnel'};
+function staffEligibleForRole(s, role){
+  if(role==='delivery') return s.role==='delivery' || s.role==='worker';
+  return s.role===role;
+}
+// Resolves a staff id to a display name -- falls back gracefully if the
+// staff member was since deleted, so an order's assignment history still
+// shows something sane instead of breaking.
+function staffName(id){
+  if(!id) return '';
+  const s = (data.staff||[]).find(x=>x.id===id);
+  return s ? s.name : '(removed staff)';
+}
+
+// A minimal, DOM-independent version of the admin board's assign-staff
+// modal -- built at call time instead of relying on markup that only
+// exists in the admin app (#assignStaffModal), so it works the same in
+// the standalone worker app. Resolves the picked staff id, or null if
+// there's nobody eligible or the worker backs out (tapping the backdrop),
+// in which case the order simply stays in Being Prepared and an admin can
+// still assign delivery from Order Tracking as always.
+function promptAssignDelivery(orderId){
+  return new Promise((resolve)=>{
+    const candidates = (data.staff||[]).filter(s=>staffEligibleForRole(s, 'delivery') && !s.unavailable);
+    if(!candidates.length){
+      toast(`Add a ${STAFF_ROLE_LABELS.delivery} in the Staff tab first`);
+      resolve(null);
+      return;
+    }
+    const q = data.savedQuotes.find(x=>x.id===orderId);
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
+    el.innerHTML = `
+      <div style="background:var(--panel);border-radius:14px;padding:20px;width:340px;max-width:100%;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Who's delivering this?</div>
+        <div style="color:var(--ink-soft);font-size:13px;margin-bottom:14px;">Choose who's taking "${esc(q ? (q.client.name||'this order') : 'this order')}" out for delivery.</div>
+        <div id="wvAssignList"></div>
+      </div>`;
+    el.querySelector('#wvAssignList').innerHTML = candidates.map(s=>`
+      <button type="button" class="btn btn-ghost" style="width:100%;text-align:left;margin-bottom:8px;" data-id="${esc(s.id)}">${esc(s.name)}${s.phone ? ` — ${esc(s.phone)}` : ''}</button>
+    `).join('');
+    const finish = (id)=>{ document.body.removeChild(el); resolve(id); };
+    el.querySelectorAll('button[data-id]').forEach(btn=>{
+      btn.addEventListener('click', ()=>finish(btn.dataset.id));
+    });
+    el.addEventListener('mousedown', (e)=>{ if(e.target===el) finish(null); });
+    document.body.appendChild(el);
+  });
+}
+
+// Mirrors the admin board's own step-forward pipeline (preparing ->
+// pending_delivery requires picking a delivery person first) instead of
+// just forcing the status forward -- skipping that gate meant orders a
+// worker finished never got a delivery person assigned, and never got a
+// second chance to since the status had already moved past it.
+async function finishPreparingOrder(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
   const items = q.items||[];
   if(items.length && items.some(row=>row.pickStatus!=='done')) return; // guard: button is disabled otherwise
   q.pickingStatus = 'done';
+  saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
+
+  const deliveryStaffId = await promptAssignDelivery(orderId);
+  if(!deliveryStaffId){ renderWorkerView(); return; }
+
+  q.assignedDeliveryId = deliveryStaffId;
   q.status = 'pending_delivery';
   q.stageEnteredAt = Date.now();
   const workerId = q.assignedWorkerId;
