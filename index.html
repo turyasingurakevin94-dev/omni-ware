@@ -593,6 +593,7 @@
   .st-status-pill.idle{background:#EEF1F3;color:var(--ink-soft);}
   .st-status-pill.busy{background:var(--good-bg);color:var(--good);}
   .st-status-pill.unavailable{background:#F7D9D3;color:var(--danger);}
+  .st-status-pill.agent{background:#EEE6FA;color:#6D3FC0;}
   .st-active-list{display:flex;flex-direction:column;gap:5px;}
   .st-active-row{display:flex;align-items:center;gap:6px;font-size:12px;}
   .st-active-row .sq-assignee-icon{flex-shrink:0;}
@@ -1765,6 +1766,7 @@
       <div class="mms-group-label">People</div>
       <button type="button" class="mms-item" data-tab="customers">Customers</button>
       <button type="button" class="mms-item" data-tab="staff">Staff</button>
+      <button type="button" class="mms-item" data-tab="agents">Sales Agents</button>
       <button type="button" class="mms-item" data-tab="suppliers">Suppliers</button>
       <button type="button" class="mms-item" data-tab="purchase-invoices">Purchase invoices</button>
       <button type="button" class="mms-item" id="mmsWorkerViewBtn" data-tab="worker" style="display:none;">Worker view</button>
@@ -1854,6 +1856,10 @@
       <button data-tab="staff" title="Staff">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
         <span class="nav-label">Staff</span>
+      </button>
+      <button data-tab="agents" title="Sales Agents">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="nav-label">Sales Agents</span>
       </button>
       <button data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
@@ -2493,6 +2499,27 @@
       </div>
     </section>
 
+    <!-- SALES AGENTS -->
+    <section id="tab-agents" style="display:none;">
+      <div class="page-head">
+        <h1>Sales Agents</h1>
+        <p>External partners who sell on your behalf through the standalone Agent app. Their clients' identities stay private to them -- orders they submit show up here under their own name with an "Agent order" badge.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">All agents</h2>
+          <button class="btn btn-accent btn-icon" id="ag_invite_btn">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Invite agent
+          </button>
+        </div>
+        <div class="search-bar" style="margin-top:14px;"><input id="ag_search" placeholder="Search by name or phone..."></div>
+      </div>
+      <div class="panel">
+        <div id="agentsWrap"></div>
+      </div>
+    </section>
+
     <!-- WORKER PICK & PACK -->
     <section id="tab-worker" style="display:none;">
       <div class="worker-view-wrap">
@@ -2873,6 +2900,37 @@
     <div class="modal-foot">
       <button class="btn btn-ghost" id="st_cancel">Cancel</button>
       <button class="btn btn-accent" id="st_save">Save staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE AGENT MODAL -->
+<div class="modal-overlay" id="agentModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Invite a sales agent</h2>
+      <button class="modal-close" id="agentModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint">Sends a login invite by email and adds them to your agent roster in one step -- they'll land straight in the standalone Agent app.</p>
+      <div class="form-grid">
+        <div class="field"><label>Agent ID</label><input id="ag_id" placeholder="e.g. AG001"></div>
+        <div class="field"><label>Agent name</label><input id="ag_name" placeholder="e.g. Peter Ochieng"></div>
+        <div class="field"><label>Contact phone</label><input id="ag_phone" placeholder="e.g. 0700 000 000"></div>
+        <div class="field"><label>Email (for their login invite)</label><input id="ag_email" type="email" placeholder="e.g. peter@example.com"></div>
+        <div class="field" style="grid-column:1/-1;"><label>Payment terms</label>
+          <select id="ag_payment_term">
+            <option value="prepay">Pay before we prepare (recommended to start)</option>
+            <option value="pay_on_delivery">Pay on delivery</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="ag_cancel">Cancel</button>
+      <button class="btn btn-accent" id="ag_invite_save">Send invite</button>
     </div>
   </div>
 </div>
@@ -3504,6 +3562,7 @@ function seedData(){
       {id:'ST001', name:'Musa Kato', phone:'0700 555 111', role:'worker', notes:''},
       {id:'ST002', name:'Grace Namuli', phone:'0700 555 222', role:'delivery', notes:''},
     ],
+    agents: [],
     customers: [
       {id:'C001', name:'Sarah Namono', phone:'0700 111 222', location:'Ntinda', debt:0, notes:'Pays cash, regular buyer', debtLog:[]},
       {id:'C002', name:'Kato Construction Ltd', phone:'0772 333 444', location:'Kyaliwajjala', debt:250000, notes:'Site contractor — buys in bulk', debtLog:[{id:1, date:'2026-07-10', type:'charge', amount:250000, note:'Materials for Kyaliwajjala site, on credit'}]},
@@ -3616,14 +3675,15 @@ async function loadData(shopId){
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
-    savedQuotesR, purchaseInvoicesR, settingsR
+    savedQuotesR, purchaseInvoicesR, settingsR, agentsR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
     sel('saved_quotes'), sel('purchase_invoices'),
-    sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle()
+    sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
+    sel('agents')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -3648,6 +3708,7 @@ async function loadData(shopId){
   return {
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
+    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, notes:a.notes||'', userId:a.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
@@ -3720,6 +3781,9 @@ function buildSyncRows(d, shopId){
   return {
     suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
+    // user_id is deliberately omitted -- only invite-agent (service role)
+    // ever sets it, same reasoning as staff.user_id in 0011.
+    agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, payment_term:a.paymentTerm, unavailable:!!a.unavailable, notes:a.notes})),
     customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
@@ -3761,7 +3825,12 @@ function buildSyncRows(d, shopId){
       date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, workerAcceptedAt:q.workerAcceptedAt||null}
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, workerAcceptedAt:q.workerAcceptedAt||null,
+        // Agent-originated orders only -- undefined/absent for a normal
+        // order, preserved here rather than dropped so an admin re-saving
+        // this quote (advancing its status, editing an item, etc.) never
+        // silently strips what agent-submit-order originally set.
+        originAgentId:q.originAgentId, agentClientId:q.agentClientId, deliveryMode:q.deliveryMode, deliveryAddress:q.deliveryAddress, agentPaymentStatus:q.agentPaymentStatus}
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
@@ -3784,6 +3853,7 @@ function initLastSynced(d, shopId){
   lastSynced = {
     suppliers: keyRowsById(rows.suppliers, 'id'),
     staff: keyRowsById(rows.staff, 'id'),
+    agents: keyRowsById(rows.agents, 'id'),
     customers: keyRowsById(rows.customers, 'id'),
     debtLog: keyRowsById(rows.debtLog, 'id'),
     products: keyRowsById(rows.products, 'id'),
@@ -3845,7 +3915,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -3853,6 +3923,7 @@ async function saveData(){
 
   addDiffOps(ops, 'suppliers', 'suppliers', 'id', shopId, rows.suppliers);
   addDiffOps(ops, 'staff', 'staff', 'id', shopId, rows.staff);
+  addDiffOps(ops, 'agents', 'agents', 'id', shopId, rows.agents);
   addDiffOps(ops, 'customers', 'customers', 'id', shopId, rows.customers);
   addDiffOps(ops, 'debtLog', 'customer_debt_log', 'id', shopId, rows.debtLog);
   addDiffOps(ops, 'products', 'products', 'id', shopId, rows.products);
@@ -4014,7 +4085,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
   if(e.target.id==='imgLightbox') closeImageLightbox();
 });
 
-['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal'].forEach(id=>{
+['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal'].forEach(id=>{
   document.getElementById(id).addEventListener('mousedown', (e)=>{
     if(e.target.id===id){
       if(id==='supplierModal') closeModalAndReset(id, resetSupplierForm);
@@ -4025,6 +4096,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
       if(id==='stockRuleModal') closeModal(id);
       if(id==='staffModal') closeModalAndReset(id, resetStaffForm);
       if(id==='assignStaffModal') closeAssignStaffModal();
+      if(id==='agentModal') closeModalAndReset(id, resetAgentForm);
     }
   });
 });
@@ -4037,6 +4109,7 @@ document.addEventListener('keydown', (e)=>{
   if(document.getElementById('itemPickerModal').classList.contains('show')) closeModal('itemPickerModal');
   if(document.getElementById('invModal').classList.contains('show')) closeModal('invModal');
   if(document.getElementById('staffModal').classList.contains('show')) closeModalAndReset('staffModal', resetStaffForm);
+  if(document.getElementById('agentModal').classList.contains('show')) closeModalAndReset('agentModal', resetAgentForm);
   if(document.getElementById('assignStaffModal').classList.contains('show')) closeAssignStaffModal();
   if(document.getElementById('piPaymentModal').classList.contains('show')) closeModalAndReset('piPaymentModal', resetPiPaymentForm);
   if(document.getElementById('creditorPaymentModal').classList.contains('show')) closeModalAndReset('creditorPaymentModal', resetCreditorPaymentForm);
@@ -4131,6 +4204,7 @@ function goToTab(tab){
   if(tab==='inventory') renderInventory();
   if(tab==='customers') renderCustomers(document.getElementById('c_search').value);
   if(tab==='staff') renderStaff(document.getElementById('st_search').value);
+  if(tab==='agents') renderAgents(document.getElementById('ag_search').value);
   if(tab==='worker') renderWorkerView();
   if(tab==='analytics-sales') renderSalesAnalytics();
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
@@ -5614,14 +5688,20 @@ function savedQuoteTotal(q){
 
 // Read-only lookup for the Order Tracking card -- matches the same way
 // resolveInvoiceCustomer() does (linked customerId first, else by client
-// name) but never creates a customer record just to render a card.
+// name) but never creates a customer record just to render a card. For an
+// agent order there's no linked customer at all (the real client is
+// deliberately never in `customers` -- see 0012_sales_agents.sql), so
+// falls back to the delivery address the agent supplied, which is the
+// only location data that's ever meant to be shop-visible for one of
+// these orders.
 function orderCustomerLocation(q){
   let c = q.customerId ? data.customers.find(x=>x.id===q.customerId) : null;
   if(!c){
     const name = (q.client.name||'').trim();
     if(name) c = data.customers.find(x=>(x.name||'').trim().toLowerCase()===name.toLowerCase());
   }
-  return c ? (c.location||'') : '';
+  if(c && c.location) return c.location;
+  return q.deliveryMode==='shop_delivery' ? (q.deliveryAddress||'') : '';
 }
 
 function setSavedQuoteStatus(id, status){
@@ -5924,7 +6004,7 @@ function renderSavedQuotes(){
       <div class="sq-card-top">
         <input type="checkbox" class="sq-check sq-card-check" data-id="${q.id}">
         <div class="sq-card-info">
-          <div class="sq-client">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}</div>
+          <div class="sq-client">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}</div>
           ${location ? `<div class="sq-location-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(location)}</span></div>` : ''}
           <div class="sq-card-meta-rows">
             <div class="sq-meta-row">• Saved ${esc(savedAgoLabel(q.savedAt))}</div>
@@ -7710,6 +7790,107 @@ document.getElementById('st_save').addEventListener('click', ()=>{
 document.getElementById('st_cancel').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('staffModalClose').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('st_search').addEventListener('input', e=>renderStaff(e.target.value));
+
+/* ================= SALES AGENTS ================= */
+// Agents live in their own `agents` table, deliberately not shop_members
+// (see supabase/migrations/0012_sales_agents.sql) -- this admin UI is the
+// only place their payment terms get set, since the agent app itself only
+// ever shows an agent their own current term, never lets them change it.
+function agentCardHTML(a){
+  const initials = (a.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  return `<div class="supplier-card ${a.unavailable?'staff-card-unavailable':''}">
+    <div class="sc-head">
+      <div class="sc-avatar">${esc(initials)}</div>
+      <div class="sc-title">
+        <div class="sc-name">${esc(a.name)}</div>
+        <div class="sc-id">${esc(a.id)}</div>
+      </div>
+      <div class="sc-actions">
+        <button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable?'Mark active':'Mark inactive'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
+        <button class="pc-icon-btn danger" title="Remove agent" onclick="deleteAgent('${esc(a.id)}')">${ICON_TRASH}</button>
+      </div>
+    </div>
+    <div class="sc-details">
+      ${a.phone ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(a.phone)}</span></div>` : ''}
+      ${a.email ? `<div class="sc-notes">${esc(a.email)}</div>` : ''}
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Payment terms</label>
+      <select class="ag-payment-term-select" data-id="${esc(a.id)}">
+        <option value="prepay" ${a.paymentTerm==='prepay'?'selected':''}>Pay before we prepare</option>
+        <option value="pay_on_delivery" ${a.paymentTerm==='pay_on_delivery'?'selected':''}>Pay on delivery</option>
+      </select>
+    </div>
+  </div>`;
+}
+function renderAgents(filter=''){
+  const tokens = searchTokens(filter);
+  let rows = (data.agents||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(tokens.length){
+    rows = rows.filter(a=>matchesAllTokens((a.name+' '+(a.phone||'')+' '+a.id).toLowerCase(), tokens));
+  }
+  const wrap = document.getElementById('agentsWrap');
+  if(rows.length===0){
+    wrap.innerHTML = (data.agents||[]).length===0
+      ? `<div class="empty">No sales agents yet. Invite one to get started.</div>`
+      : '<div class="empty">No matches.</div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="supplier-grid">${rows.map(agentCardHTML).join('')}</div>`;
+  wrap.querySelectorAll('.ag-payment-term-select').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const a = data.agents.find(x=>x.id===sel.dataset.id); if(!a) return;
+      a.paymentTerm = sel.value;
+      saveData();
+      toast(`${a.name}'s payment terms updated`);
+    });
+  });
+}
+function toggleAgentAvailability(id){
+  const a = data.agents.find(x=>x.id===id); if(!a) return;
+  a.unavailable = !a.unavailable;
+  saveData(); renderAgents(document.getElementById('ag_search').value);
+  toast(a.unavailable ? `${a.name} marked inactive` : `${a.name} marked active`);
+}
+function deleteAgent(id){
+  const a = data.agents.find(x=>x.id===id); if(!a) return;
+  if(!confirm(`Remove ${a.name} as an agent? Their private client list will be deleted too. Orders they already submitted will keep showing their name.`)) return;
+  data.agents = data.agents.filter(x=>x.id!==id);
+  saveData(); renderAgents();
+  toast('Agent removed');
+}
+function resetAgentForm(){
+  ['ag_id','ag_name','ag_phone','ag_email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ag_payment_term').value = 'prepay';
+}
+document.getElementById('ag_invite_btn').addEventListener('click', ()=>{ resetAgentForm(); openModal('agentModal'); });
+document.getElementById('ag_cancel').addEventListener('click', ()=>closeModalAndReset('agentModal', resetAgentForm));
+document.getElementById('agentModalClose').addEventListener('click', ()=>closeModalAndReset('agentModal', resetAgentForm));
+document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
+  const id = document.getElementById('ag_id').value.trim();
+  const name = document.getElementById('ag_name').value.trim();
+  const email = document.getElementById('ag_email').value.trim();
+  if(!id || !name || !email){ toast('Agent ID, name and email are required'); return; }
+  if(data.agents.some(a=>a.id===id)){ toast('That Agent ID already exists'); return; }
+  const phone = document.getElementById('ag_phone').value.trim();
+  const paymentTerm = document.getElementById('ag_payment_term').value;
+  const btn = document.getElementById('ag_invite_save');
+  btn.disabled = true;
+  try{
+    const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, agentId: id, name, phone, email, paymentTerm } });
+    if(error) throw error;
+    if(res && res.error) throw new Error(res.error);
+    data.agents.push({ id, name, phone, email, paymentTerm, unavailable:false, userId: (res && res.userId) || null });
+    saveData();
+    closeModal('agentModal'); resetAgentForm(); renderAgents();
+    toast(`Invite sent to ${email}`);
+  }catch(err){
+    toast(`Could not send invite: ${err.message||err}`);
+  }finally{
+    btn.disabled = false;
+  }
+});
+document.getElementById('ag_search').addEventListener('input', e=>renderAgents(e.target.value));
 
 // Worker pick & pack (myWorkerOrders, renderWorkerView, accept/deny,
 // carousel stepper, autoAssignNextOrder, push notification handling, etc.)
@@ -11237,6 +11418,7 @@ function renderAll(){
   renderSuppliers(document.getElementById('s_search').value);
   renderCustomers(document.getElementById('c_search').value);
   renderStaff(document.getElementById('st_search').value);
+  renderAgents(document.getElementById('ag_search').value);
   triggerProductsRender();
   refreshPriceDropdowns();
   populatePriceSupplierFilter(document.getElementById('pr_supplier_filter').value);
