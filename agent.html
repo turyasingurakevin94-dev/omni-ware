@@ -147,11 +147,32 @@
     </div>
 
     <button type="button" class="btn btn-accent btn-block" id="ag_newQuoteBtn">+ New quote</button>
+    <button type="button" class="btn btn-ghost btn-block" id="ag_exploreBtn" style="margin-top:8px;">Explore</button>
 
     <div class="ag-section-title">My clients</div>
     <div id="ag_clientsWrap"></div>
 
     <div class="wv-footer" id="ag_signout_btn">Sign out</div>
+  </div>
+
+  <!-- EXPLORE -->
+  <div id="ag_exploreView" style="display:none;">
+    <div class="page-head">
+      <button type="button" class="ag-back-btn" id="ag_explore_back_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div><h1>Explore</h1></div>
+    </div>
+
+    <div class="ag-section-title">My cluster</div>
+    <div id="ag_clusterWrap"></div>
+
+    <div class="ag-section-title">Sponsored items</div>
+    <p class="ag-cost-hint" style="margin:-4px 0 10px;">Extra bonus commission some suppliers are funding. Add one to your cluster before you sell it to start earning the bonus.</p>
+    <div id="ag_sponsoredWrap"></div>
+
+    <div class="ag-section-title">New arrivals</div>
+    <div id="ag_arrivalsWrap"></div>
   </div>
 
   <!-- NEW QUOTE -->
@@ -445,22 +466,138 @@ function resetQuoteForm(){
   renderCart();
 }
 
+async function ensureCatalogLoaded(){
+  if(catalog.length) return;
+  try{
+    const res = await callAgentFn('agent-catalog', { action: 'list' });
+    catalog = (res.items||[]).filter(it=>it.available);
+  }catch(err){
+    toast(`Could not load catalog: ${err.message||err}`);
+  }
+}
+
 async function openQuoteView(){
   resetQuoteForm();
   document.getElementById('ag_homeView').style.display = 'none';
   document.getElementById('ag_quoteView').style.display = 'block';
-  if(!catalog.length){
-    try{
-      const res = await callAgentFn('agent-catalog', { action: 'list' });
-      catalog = (res.items||[]).filter(it=>it.available);
-    }catch(err){
-      toast(`Could not load catalog: ${err.message||err}`);
-    }
-  }
+  await ensureCatalogLoaded();
 }
 document.getElementById('ag_newQuoteBtn').addEventListener('click', openQuoteView);
 document.getElementById('ag_quote_back_btn').addEventListener('click', ()=>{
   document.getElementById('ag_quoteView').style.display = 'none';
+  document.getElementById('ag_homeView').style.display = 'block';
+});
+
+/* ---------------- Explore + commission cluster ---------------- */
+let promotions = [], cluster = [];
+
+function isInCluster(productId, variantIdx){
+  const vi = variantIdx==null ? '' : String(variantIdx);
+  return cluster.some(c=>c.product_id===productId && String(c.variant_idx||'')===vi);
+}
+
+async function loadExploreData(){
+  await ensureCatalogLoaded();
+  try{
+    const [promoRes, clusterRes] = await Promise.all([
+      callAgentFn('agent-catalog', { action: 'promotions' }),
+      sb.from('agent_clusters').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id),
+    ]);
+    if(clusterRes.error) throw clusterRes.error;
+    promotions = promoRes.items || [];
+    cluster = clusterRes.data || [];
+  }catch(err){
+    toast(`Could not load Explore: ${err.message||err}`);
+  }
+}
+
+function promotionCardHTML(promo){
+  const inCluster = isInCluster(promo.productId, promo.variantIdx);
+  const bonusLabel = promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus / unit` : `${promo.bonusValue}% bonus`;
+  return `<div class="ag-list-item" style="cursor:default;">
+    ${promo.image ? `<img class="ag-item-thumb" src="${esc(promo.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
+    <div class="ag-list-item-body">
+      <div class="ag-list-item-name">${esc(promo.name)}</div>
+      <div class="ag-list-item-meta">${esc(bonusLabel)}</div>
+    </div>
+    <button type="button" class="btn ${inCluster?'btn-ghost':'btn-accent'}" style="padding:8px 12px;font-size:12.5px;" data-pid="${esc(promo.productId)}" data-vidx="${promo.variantIdx==null?'':promo.variantIdx}">${inCluster?'Remove':'Add'}</button>
+  </div>`;
+}
+
+function newArrivalsHTML(){
+  const cutoff = Date.now() - 30*24*60*60*1000;
+  const items = catalog
+    .filter(it=>it.createdAt && new Date(it.createdAt).getTime() >= cutoff)
+    .sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 10);
+  if(!items.length) return '';
+  return items.map(it=>`
+    <div class="ag-item-result" style="background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;">
+      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
+      <div class="ag-item-result-body">
+        <div class="ag-item-result-name">${esc(it.name)}</div>
+        <div class="ag-item-result-price">From ${fmtUGX(it.floorPrice)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderExplore(){
+  const inCluster = promotions.filter(p=>isInCluster(p.productId, p.variantIdx));
+  const notInCluster = promotions.filter(p=>!isInCluster(p.productId, p.variantIdx));
+
+  document.getElementById('ag_clusterWrap').innerHTML = inCluster.length
+    ? inCluster.map(promotionCardHTML).join('')
+    : `<div class="empty">Add a sponsored item below to start tracking bonus commission on it.</div>`;
+
+  document.getElementById('ag_sponsoredWrap').innerHTML = notInCluster.length
+    ? notInCluster.map(promotionCardHTML).join('')
+    : `<div class="empty">No sponsored items right now -- check back later.</div>`;
+
+  document.getElementById('ag_arrivalsWrap').innerHTML = newArrivalsHTML() || `<div class="empty">Nothing new recently.</div>`;
+}
+
+async function toggleClusterMembership(productId, variantIdx){
+  const viStr = variantIdx==null ? '' : String(variantIdx);
+  const already = isInCluster(productId, variantIdx);
+  try{
+    if(already){
+      const { error } = await sb.from('agent_clusters').delete()
+        .eq('shop_id', currentShopId).eq('agent_id', myAgent.id).eq('product_id', productId).eq('variant_idx', viStr);
+      if(error) throw error;
+      cluster = cluster.filter(c=>!(c.product_id===productId && String(c.variant_idx||'')===viStr));
+      toast('Removed from your cluster');
+    } else {
+      const { data: inserted, error } = await sb.from('agent_clusters')
+        .insert({ shop_id: currentShopId, agent_id: myAgent.id, product_id: productId, variant_idx: viStr })
+        .select().single();
+      if(error) throw error;
+      cluster.push(inserted);
+      toast('Added -- sell it to start earning the bonus');
+    }
+    renderExplore();
+  }catch(err){
+    toast(`Could not update your cluster: ${err.message||err}`);
+  }
+}
+document.getElementById('ag_exploreView').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-pid]');
+  if(!btn) return;
+  const vidx = btn.dataset.vidx === '' ? null : Number(btn.dataset.vidx);
+  toggleClusterMembership(btn.dataset.pid, vidx);
+});
+
+async function openExploreView(){
+  document.getElementById('ag_homeView').style.display = 'none';
+  document.getElementById('ag_exploreView').style.display = 'block';
+  document.getElementById('ag_clusterWrap').innerHTML = '<div class="empty">Loading…</div>';
+  document.getElementById('ag_sponsoredWrap').innerHTML = '';
+  document.getElementById('ag_arrivalsWrap').innerHTML = '';
+  await loadExploreData();
+  renderExplore();
+}
+document.getElementById('ag_exploreBtn').addEventListener('click', openExploreView);
+document.getElementById('ag_explore_back_btn').addEventListener('click', ()=>{
+  document.getElementById('ag_exploreView').style.display = 'none';
   document.getElementById('ag_homeView').style.display = 'block';
 });
 
