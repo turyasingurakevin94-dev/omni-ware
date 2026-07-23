@@ -287,6 +287,7 @@ async function boot(){
   if(myStaff){
     const { data: existingSub } = await sb.from('push_subscriptions').select('id').eq('staff_id', myStaff.id).eq('user_id', currentUser.id).limit(1).maybeSingle();
     hasPushSubscription = !!existingSub;
+    if(isNativeApp()) registerNativePushListeners();
   }
   renderWorkerView();
   document.body.classList.remove('app-loading');

@@ -20,6 +20,33 @@ supabase secrets set VAPID_SUBJECT=mailto:you@yourshop.com
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to every deployed function — no need to set those.
 
+## 2b. Native Android push (FCM) — optional, alongside Web Push
+
+The installed worker APK (see `capacitor.config.json`) uses real native
+notifications via Firebase Cloud Messaging instead of Web Push — set this
+up too if workers are using the APK rather than a browser-installed PWA.
+Both channels work side by side; a shop can have a mix of both.
+
+1. In the [Firebase Console](https://console.firebase.google.com), create a
+   project and add an Android app with package name `com.omniware.worker`
+   (must match `capacitor.config.json`'s `appId`). Download the generated
+   `google-services.json` and place it at `android/app/google-services.json`
+   (safe to commit — it's public app config, not a secret, same category as
+   the Supabase anon key).
+2. Project settings → **Service accounts** tab → "Generate new private key"
+   — downloads a service account JSON. This one *is* sensitive (grants
+   server-side send authority) — never commit it or paste it into chat.
+   Set it directly as a secret:
+   ```
+   supabase secrets set FIREBASE_SERVICE_ACCOUNT_JSON="$(cat path/to/downloaded-file.json)"
+   ```
+3. Rebuild the APK (push to `main` — see `.github/workflows/build-worker-apk.yml`)
+   so the new `google-services.json` is bundled in.
+
+If `FIREBASE_SERVICE_ACCOUNT_JSON` isn't set, `notify-worker` just skips any
+subscriber rows that only have an `fcm_token` (logs why) and keeps sending
+Web Push notifications to everyone else normally.
+
 ## 3. Deploy
 
 ```

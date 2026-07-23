@@ -303,7 +303,7 @@ function renderWorkerView(){
     document.getElementById('wv_activeWrap').innerHTML = '';
     return;
   }
-  document.getElementById('wv_enablePushWrap').style.display = ('Notification' in window && !hasPushSubscription) ? '' : 'none';
+  document.getElementById('wv_enablePushWrap').style.display = ((isNativeApp() || 'Notification' in window) && !hasPushSubscription) ? '' : 'none';
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
@@ -659,8 +659,18 @@ function urlBase64ToUint8Array(base64String){
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
+// True only inside the installed Android APK (Capacitor's native bridge
+// injects `window.Capacitor` into WebView pages loaded from the app's own
+// local origin) -- false for a plain browser tab or a browser-installed
+// PWA, which don't have this object at all. Drives which push channel
+// (native FCM vs. Web Push) a device registers for.
+function isNativeApp(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
 async function enableWorkerPushNotifications(){
   if(!myStaff){ toast('No staff profile linked to this login yet'); return; }
+  if(isNativeApp()) return enableNativePush();
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){ toast('Push notifications are not supported on this device/browser'); return; }
   try{
     const permission = await Notification.requestPermission();
@@ -687,6 +697,48 @@ async function enableWorkerPushNotifications(){
   }
 }
 document.getElementById('wv_enablePushBtn').addEventListener('click', enableWorkerPushNotifications);
+
+// Native (installed APK) push: permission + registration go through the
+// plugin's own Android-native prompts, not the web Notification API. The
+// actual FCM token doesn't come back from register() itself -- it arrives
+// asynchronously via the 'registration' listener set up once in
+// registerNativePushListeners(), called from worker.html's boot().
+async function enableNativePush(){
+  const { PushNotifications } = window.Capacitor.Plugins;
+  try{
+    let perm = await PushNotifications.checkPermissions();
+    if(perm.receive!=='granted') perm = await PushNotifications.requestPermissions();
+    if(perm.receive!=='granted'){ toast('Notifications permission was not granted'); return; }
+    await PushNotifications.register();
+  }catch(err){
+    toast(`Could not enable notifications: ${err.message||err}`);
+  }
+}
+function registerNativePushListeners(){
+  const { PushNotifications } = window.Capacitor.Plugins;
+  PushNotifications.addListener('registration', async (token)=>{
+    const { error } = await sb.from('push_subscriptions').upsert({
+      shop_id: currentShopId, staff_id: myStaff.id, user_id: currentUser.id,
+      fcm_token: token.value
+    }, { onConflict: 'fcm_token' });
+    if(error){ toast(`Could not enable notifications: ${error.message}`); return; }
+    hasPushSubscription = true;
+    const wrap = document.getElementById('wv_enablePushWrap');
+    if(wrap) wrap.style.display = 'none';
+    toast('Notifications enabled');
+  });
+  PushNotifications.addListener('registrationError', (err)=>{
+    toast(`Could not enable notifications: ${(err && err.error) || err}`);
+  });
+  // Native delivers the tap straight into this listener with the order id
+  // already attached -- no URL round-trip needed the way the Web Push path
+  // requires (see handlePendingNotificationRoute() below, which exists only
+  // because a cold-started browser tab has no live page to postMessage into).
+  PushNotifications.addListener('pushNotificationActionPerformed', (action)=>{
+    const orderId = action.notification && action.notification.data && action.notification.data.orderId;
+    if(orderId) routeNotificationAction(orderId, action.actionId);
+  });
+}
 
 // Routes a push notification tap: a foreground tab gets a postMessage from
 // sw.js, a cold-started tab gets ?orderId=&action= on the URL instead
