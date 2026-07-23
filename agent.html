@@ -256,8 +256,8 @@
   .ag-grid-body{padding:10px 12px 12px;}
   .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:10.5px;font-weight:700;padding:3px 8px 3px 6px;border-radius:20px;margin-bottom:6px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
-  .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
-  .ag-grid-variant{font-weight:500;color:var(--ink-soft);font-size:12px;}
+  .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
+  .ag-grid-variant{display:block;font-weight:500;color:var(--ink-soft);font-size:12px;margin-bottom:3px;}
   .ag-grid-pack{font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;}
   .ag-grid-price{font-size:15px;font-weight:800;color:var(--accent-dark);letter-spacing:-0.01em;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:3px;}
@@ -541,6 +541,13 @@ function toast(msg, duration){
 }
 
 function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
+// Per-unit product price shown while browsing (e.g. "2,350/ctn") --
+// distinct from fmtUGX's totals/summaries elsewhere, which keep the
+// explicit "UGX" prefix since they're not always obviously per-unit.
+function fmtPricePerUnit(n, unit){
+  const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
+  return unit ? `${amount}/${esc(String(unit).toLowerCase())}` : amount;
+}
 
 function ensureAuthOverlay(){
   let el = document.getElementById('authOverlay');
@@ -1222,9 +1229,10 @@ function browseCardHTML(it, promoted, opts){
     </div>
     <div class="ag-grid-body">
       ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
-      <div class="ag-grid-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
+      <div class="ag-grid-name">${esc(it.name)}</div>
+      ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      <div class="ag-grid-price">${fmtUGX(it.floorPrice)}</div>
+      <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
   </div>`;
@@ -1330,8 +1338,9 @@ function renderSearchSuggestions(){
     <div class="ag-item-result" data-idx="${i}">
       ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
       <div class="ag-item-result-body">
-        <div class="ag-item-result-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
-        <div class="ag-item-result-price">${fmtUGX(it.floorPrice)}</div>
+        <div class="ag-item-result-name">${esc(it.name)}</div>
+        ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
+        <div class="ag-item-result-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
       </div>
     </div>`).join('');
   box.classList.add('show');
@@ -1377,7 +1386,8 @@ async function openAddItemPanel(item){
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
-      <div class="ag-overlay-title">${esc(item.name)}${item.variantLabel ? ` <span class="ag-grid-variant">(${esc(item.variantLabel)})</span>` : ''}</div>
+      <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
+      ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
       <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
@@ -1428,7 +1438,8 @@ function renderCart(){
   wrap.innerHTML = cart.map((it,i)=>`
     <div class="ag-cart-row">
       <div class="ag-cart-row-body">
-        <div class="ag-cart-row-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
+        <div class="ag-cart-row-name">${esc(it.name)}</div>
+        ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
         <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
       </div>
       <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
