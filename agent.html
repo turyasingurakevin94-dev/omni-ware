@@ -602,14 +602,28 @@ async function loadExploreData(){
   }
 }
 
-function promotionCardHTML(promo){
+// Sold at least once, ever, across any non-voided order -- the simplest
+// signal for whether a cluster pick has actually been pushed yet. Only
+// checked for the "My cluster" group (reminder=true); a plain "not sold
+// yet" nudge, not a hard requirement -- the bonus itself is still earned
+// retroactively on any future sale as long as the item stays in the
+// cluster.
+function hasSoldItem(productId, variantIdx){
+  const vi = variantIdx==null ? '' : String(variantIdx);
+  return myOrders.some(o=>!o.voided && (o.items||[]).some(it=>it.productId===productId && String(it.variantIdx==null?'':it.variantIdx)===vi));
+}
+
+function promotionCardHTML(promo, opts){
+  opts = opts || {};
   const inCluster = isInCluster(promo.productId, promo.variantIdx);
   const bonusLabel = promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus / unit` : `${promo.bonusValue}% bonus`;
+  const needsReminder = opts.reminder && !hasSoldItem(promo.productId, promo.variantIdx);
+  const meta = needsReminder ? `<span style="color:var(--danger);">Not sold yet</span> · ${esc(bonusLabel)}` : esc(bonusLabel);
   return `<div class="ag-list-item" style="cursor:default;">
     ${promo.image ? `<img class="ag-item-thumb" src="${esc(promo.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
     <div class="ag-list-item-body">
       <div class="ag-list-item-name">${esc(promo.name)}</div>
-      <div class="ag-list-item-meta">${esc(bonusLabel)}</div>
+      <div class="ag-list-item-meta">${meta}</div>
     </div>
     <button type="button" class="btn ${inCluster?'btn-ghost':'btn-accent'}" style="padding:8px 12px;font-size:12.5px;" data-pid="${esc(promo.productId)}" data-vidx="${promo.variantIdx==null?'':promo.variantIdx}">${inCluster?'Remove':'Add'}</button>
   </div>`;
@@ -637,7 +651,7 @@ function renderExplore(){
   const notInCluster = promotions.filter(p=>!isInCluster(p.productId, p.variantIdx));
 
   document.getElementById('ag_clusterWrap').innerHTML = inCluster.length
-    ? inCluster.map(promotionCardHTML).join('')
+    ? inCluster.map(p=>promotionCardHTML(p, {reminder:true})).join('')
     : `<div class="empty">Add a sponsored item below to start tracking bonus commission on it.</div>`;
 
   document.getElementById('ag_sponsoredWrap').innerHTML = notInCluster.length
