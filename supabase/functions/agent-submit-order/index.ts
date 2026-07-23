@@ -164,13 +164,37 @@ Deno.serve(async (req) => {
     const presets = settingsRow?.presets || {};
 
     const productIds = [...new Set(items.map((it: any) => String(it.productId)))];
-    const [{ data: products, error: productsErr }, { data: priceRows, error: priceErr }] = await Promise.all([
+    const [
+      { data: products, error: productsErr },
+      { data: priceRows, error: priceErr },
+      { data: clusterRows, error: clusterErr },
+      { data: promoRows, error: promoErr },
+    ] = await Promise.all([
       admin.from("products").select("*").eq("shop_id", shopId).in("id", productIds),
       admin.from("prices").select("*").eq("shop_id", shopId).in("product_id", productIds),
+      admin.from("agent_clusters").select("product_id, variant_idx").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
+      admin.from("agent_promotions").select("product_id, variant_idx, bonus_type, bonus_value, starts_at, ends_at").eq("shop_id", shopId).eq("active", true).in("product_id", productIds),
     ]);
     if (productsErr) return json({ error: productsErr.message, stage: "products_lookup" }, 500);
     if (priceErr) return json({ error: priceErr.message, stage: "prices_lookup" }, 500);
+    if (clusterErr) return json({ error: clusterErr.message, stage: "cluster_lookup" }, 500);
+    if (promoErr) return json({ error: promoErr.message, stage: "promo_lookup" }, 500);
     const productsById = new Map<string, any>((products || []).map((p) => [p.id, p]));
+
+    // Bonus commission is only ever locked in if the item was ALREADY in the
+    // agent's cluster before this order (see 0012_sales_agents.sql) -- there's
+    // nothing to game by adding it to the cluster after the sale. The bonus
+    // itself is computed here, once, as a snapshot: it's based on the real
+    // floor price (what the shop actually sold at), never the agent's own
+    // resale price to their client, so an agent can't inflate their own bonus
+    // just by typing a higher client-facing price.
+    const clusterKeys = new Set((clusterRows || []).map((c) => `${c.product_id}::${c.variant_idx || ""}`));
+    const today = todayISO();
+    const promoByKey = new Map(
+      (promoRows || [])
+        .filter((p) => (!p.starts_at || p.starts_at <= today) && (!p.ends_at || p.ends_at >= today))
+        .map((p) => [`${p.product_id}::${p.variant_idx || ""}`, p])
+    );
 
     const lineItems: any[] = [];
     for (const it of items) {
@@ -186,6 +210,14 @@ Deno.serve(async (req) => {
       const priced = computeFloorPrice(product, best, Number(it.qty), discountWholesalePct, discountRetailPct);
       if (!priced) return json({ error: `Could not price ${product.name}` }, 409);
 
+      const key = `${product.id}::${variantIdx == null ? "" : variantIdx}`;
+      const promo = promoByKey.get(key);
+      const bonusCommission = promo && clusterKeys.has(key)
+        ? (promo.bonus_type === "fixed"
+          ? Number(promo.bonus_value) * Number(it.qty)
+          : (Number(promo.bonus_value) / 100) * priced.floorPrice * Number(it.qty))
+        : 0;
+
       lineItems.push({
         productId: product.id,
         variantIdx,
@@ -198,6 +230,7 @@ Deno.serve(async (req) => {
         price: priced.cost, // the real supplier cost this floor price was computed from
         sellPrice: priced.floorPrice, // what the shop is actually owed for this line
         agentSellPrice: Number(it.agentSellPrice), // the agent's own price to their client -- their business, not the shop's
+        bonusCommission, // snapshot supplier-funded bonus, locked in at submit time -- see comment above
       });
     }
 
