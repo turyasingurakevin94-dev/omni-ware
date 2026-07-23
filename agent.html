@@ -208,6 +208,13 @@
   .ag-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
   .ag-search-icon .icon{width:17px;height:17px;}
 
+  .ag-search-suggestions{
+    position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--panel);border-radius:16px;
+    box-shadow:0 14px 32px rgba(10,20,40,0.22);max-height:min(60vh,380px);overflow-y:auto;z-index:60;
+    display:none;padding:6px;color:var(--ink);
+  }
+  .ag-search-suggestions.show{display:block;}
+
   .ag-recent-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
   .ag-recent-chip{all:unset;cursor:pointer;padding:7px 14px;border-radius:20px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink);}
   .ag-recent-chip:hover{border-color:var(--accent);}
@@ -319,6 +326,7 @@
       <div class="ag-search-bar" id="ag_searchBarWrap">
         <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
+        <div class="ag-search-suggestions" id="ag_searchSuggestions"></div>
       </div>
       <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
         <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -1302,13 +1310,55 @@ function updateHeroCompact(){
   const hasQuery = input.value.trim().length > 0;
   document.getElementById('ag_browseHero').classList.toggle('compact', active || hasQuery);
 }
-document.getElementById('ag_browse_search').addEventListener('input', ()=>{ updateHeroCompact(); renderBrowseGrid(); });
+
+// Autosuggest dropdown: a compact list right under the search bar,
+// so a match is one tap away without scrolling past the keyboard --
+// separate from the full results grid further down, which keeps
+// updating live too for anyone who wants to browse everything.
+let searchSuggestionMatches = [];
+function renderSearchSuggestions(){
+  const box = document.getElementById('ag_searchSuggestions');
+  const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
+  if(!q){ box.classList.remove('show'); box.innerHTML = ''; searchSuggestionMatches = []; return; }
+  searchSuggestionMatches = catalog.filter(it=>(it.name||'').toLowerCase().includes(q)).slice(0, 8);
+  if(!searchSuggestionMatches.length){
+    box.innerHTML = `<div class="empty">No matching products.</div>`;
+    box.classList.add('show');
+    return;
+  }
+  box.innerHTML = searchSuggestionMatches.map((it,i)=>`
+    <div class="ag-item-result" data-idx="${i}">
+      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
+      <div class="ag-item-result-body">
+        <div class="ag-item-result-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
+        <div class="ag-item-result-price">${fmtUGX(it.floorPrice)}</div>
+      </div>
+    </div>`).join('');
+  box.classList.add('show');
+}
+document.getElementById('ag_searchSuggestions').addEventListener('mousedown', (e)=>{
+  const row = e.target.closest('.ag-item-result[data-idx]');
+  if(!row) return;
+  const item = searchSuggestionMatches[Number(row.dataset.idx)];
+  document.getElementById('ag_searchSuggestions').classList.remove('show');
+  if(item) openAddItemPanel(item);
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#ag_searchBarWrap')) document.getElementById('ag_searchSuggestions').classList.remove('show');
+});
+
+document.getElementById('ag_browse_search').addEventListener('input', ()=>{
+  updateHeroCompact();
+  renderBrowseGrid();
+  renderSearchSuggestions();
+});
 document.getElementById('ag_browse_search').addEventListener('focus', ()=>{
   updateHeroCompact();
   // On mobile the keyboard covers the bottom half of the screen -- bring
-  // the search bar (and whatever renders just below it) to the very top
-  // of the visible area instead of leaving results hidden under the fold.
+  // the search bar (and the suggestion dropdown right under it) to the
+  // very top of the visible area instead of leaving it under the fold.
   document.getElementById('ag_searchBarWrap').scrollIntoView({ behavior:'smooth', block:'start' });
+  renderSearchSuggestions();
 });
 document.getElementById('ag_browse_search').addEventListener('blur', (e)=>{
   saveRecentSearch(e.target.value);
