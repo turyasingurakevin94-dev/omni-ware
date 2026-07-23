@@ -11,10 +11,16 @@
     --panel: #FFFFFF;
     --ink: #12151A;
     --ink-soft: #6B7280;
-    --line: #E5E7EB;
+    --line: #E9EBEF;
     --accent: #2563EB;
     --accent-dark: #1D4ED8;
     --accent-soft: #EAF1FE;
+    --teal: #0D9488;
+    --teal-soft: #E4F4F2;
+    --rust: #DC5F3C;
+    --rust-soft: #FBEAE4;
+    --slate: #475569;
+    --slate-soft: #EBEDF1;
     --good: #16A34A;
     --good-bg: #E9F7EF;
     --danger: #DC2626;
@@ -34,17 +40,20 @@
   body.app-loading .agent-shell{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
-  .agent-shell{max-width:520px;margin:0 auto;}
-  .agent-view-wrap{padding:16px 16px 90px;}
+  .agent-shell{max-width:520px;margin:0 auto;position:relative;}
+  .agent-view-wrap{padding-bottom:92px;}
+  .ag-pad{padding:0 16px 16px;}
+  .ag-pad-top{padding:16px 16px 0;}
 
   .ag-tab-head{margin-bottom:16px;}
-  .ag-tab-head h1{font-size:23px;font-weight:800;margin:0 0 2px;letter-spacing:-0.02em;}
-  .ag-tab-head p{margin:0;color:var(--ink-soft);font-size:13.5px;}
-  .ag-back-btn{all:unset;cursor:pointer;display:flex;align-items:center;color:var(--ink-soft);padding:6px 8px 6px 0;flex-shrink:0;}
+  .ag-tab-head h1{font-size:22px;font-weight:800;margin:0;letter-spacing:-0.02em;}
+  .ag-back-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .ag-back-btn{all:unset;cursor:pointer;display:flex;align-items:center;color:var(--ink-soft);padding:6px;margin-left:-6px;flex-shrink:0;border-radius:8px;}
+  .ag-back-btn:hover{background:var(--line);}
   .ag-back-btn .icon{width:20px;height:20px;}
 
   .btn{
-    all:unset;box-sizing:border-box;cursor:pointer;padding:12px 18px;border-radius:10px;font-size:14.5px;font-weight:700;
+    all:unset;box-sizing:border-box;cursor:pointer;padding:13px 18px;border-radius:12px;font-size:14.5px;font-weight:700;
     text-align:center;display:block;
   }
   .btn-accent{background:var(--accent);color:#fff;}
@@ -63,9 +72,10 @@
   .field input:focus, .field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
 
   .empty{padding:26px 16px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
-  .empty-state{padding:40px 20px;text-align:center;}
-  .empty-state .icon{width:40px;height:40px;color:var(--line);margin-bottom:12px;}
-  .empty-state p{color:var(--ink-soft);font-size:14px;margin:0 0 16px;}
+  .empty-state{padding:44px 20px;text-align:center;}
+  .empty-state-icon{width:76px;height:76px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+  .empty-state-icon .icon{width:32px;height:32px;}
+  .empty-state p{color:var(--ink-soft);font-size:14px;margin:0 0 18px;}
 
   .toast{
     position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;padding:12px 18px;
@@ -74,37 +84,45 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  .ag-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;}
+  .ag-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;}
   .ag-card-title{font-weight:700;margin-bottom:10px;font-size:14px;}
 
-  .ag-trust-banner{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--accent-dark);border-radius:12px;padding:13px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;}
-  .ag-trust-banner .icon{width:18px;height:18px;flex-shrink:0;margin-top:1px;}
+  /* ---- Hero (Browse / Earnings) ---- */
+  .ag-hero{
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    border-radius:0 0 26px 26px;
+    padding:18px 16px 22px;
+    color:#fff;
+    margin-bottom:18px;
+  }
+  .ag-hero-greeting{font-size:19px;font-weight:800;letter-spacing:-0.01em;}
+  .ag-hero-sub{font-size:12.5px;opacity:.82;margin:2px 0 14px;}
 
-  .ag-earnings-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
-  .ag-earnings-label{font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;}
-  .ag-earnings-value{font-size:30px;font-weight:800;margin-top:4px;letter-spacing:-0.02em;}
-  .ag-earnings-split-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;font-size:14px;}
-  .ag-earnings-split-row:not(:last-child){border-bottom:1px solid var(--line);}
-  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
-  .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-  .ag-order-row-client{font-weight:600;font-size:14px;}
-  .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
-  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
+  .ag-trust-banner{display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,0.14);color:#fff;border-radius:12px;padding:12px 13px;font-size:12.5px;line-height:1.5;margin-top:14px;}
+  .ag-trust-banner .icon{width:17px;height:17px;flex-shrink:0;margin-top:1px;opacity:.9;}
 
-  .ag-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .ag-month-nav-btn{all:unset;cursor:pointer;padding:8px;border-radius:8px;color:var(--ink-soft);display:flex;}
-  .ag-month-nav-btn:hover{background:var(--bg);color:var(--ink);}
-  .ag-month-nav-btn[disabled]{opacity:.3;cursor:default;pointer-events:none;}
-  .ag-month-nav-btn .icon{width:20px;height:20px;}
-  .ag-month-nav-label{font-weight:700;font-size:14.5px;}
+  .ag-hero-earn-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
+  .ag-hero-earn-value{font-size:32px;font-weight:800;margin:4px 0 14px;letter-spacing:-0.02em;}
+  .ag-hero-split{display:flex;gap:10px;}
+  .ag-hero-split-item{flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;}
+  .ag-hero-split-item span{display:block;font-size:10.5px;opacity:.85;margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .ag-hero-split-item b{font-size:15px;font-weight:800;}
 
-  .ag-claim-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;}
+  .ag-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .ag-month-nav-btn{all:unset;cursor:pointer;padding:6px;border-radius:8px;color:rgba(255,255,255,0.85);display:flex;}
+  .ag-month-nav-btn:hover{background:rgba(255,255,255,0.15);}
+  .ag-month-nav-btn[disabled]{opacity:.35;cursor:default;pointer-events:none;}
+  .ag-month-nav-btn .icon{width:19px;height:19px;}
+  .ag-month-nav-label{font-weight:700;font-size:14.5px;color:#fff;}
+
+  .ag-claim-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;text-align:center;}
   .ag-claim-status{font-size:13.5px;color:var(--ink-soft);font-weight:600;}
 
-  .ag-section-title{font-size:12.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:22px 0 10px;}
+  .ag-section-title{font-size:15.5px;font-weight:800;letter-spacing:-0.01em;margin:22px 0 10px;display:flex;align-items:center;justify-content:space-between;}
+  .ag-section-title small{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
 
-  .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;}
-  .ag-list-item-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:8px;}
+  .ag-list-item-avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13.5px;flex-shrink:0;}
   .ag-list-item-body{min-width:0;flex:1;}
   .ag-list-item-name{font-weight:600;font-size:14px;}
   .ag-list-item-meta{font-size:12px;color:var(--ink-soft);}
@@ -125,84 +143,124 @@
   .ag-cart-row-price{font-weight:700;font-size:14px;white-space:nowrap;}
   .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
-  .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:11px;padding:11px 13px;}
+  .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
   .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
   .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
-  .ag-overlay-card{background:var(--panel);border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
+  .ag-overlay-card{background:var(--panel);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
   @media (min-width:560px){
     .ag-overlay{align-items:center;padding:20px;}
-    .ag-overlay-card{border-radius:18px;}
+    .ag-overlay-card{border-radius:20px;}
   }
-  .ag-overlay-title{font-weight:700;font-size:16px;margin-bottom:14px;}
+  .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;}
+  .ag-overlay-title{font-weight:800;font-size:17px;margin-bottom:14px;letter-spacing:-0.01em;}
   .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
 
-  .ag-radio-card{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
+  .ag-radio-card{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
   .ag-radio-card.selected{border-color:var(--accent);background:var(--accent-soft);}
   .ag-radio-card input{margin:0;accent-color:var(--accent);}
 
-  /* ---- Search + filter chips (Browse tab) ---- */
-  .ag-search-bar{position:relative;margin-bottom:12px;}
-  .ag-search-bar input{width:100%;padding:12px 14px 12px 40px;border:1px solid var(--line);border-radius:12px;font-size:14.5px;background:var(--panel);font-family:inherit;color:var(--ink);}
-  .ag-search-bar input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-  .ag-search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
+  /* ---- Search + recent searches + category strip (Browse) ---- */
+  .ag-search-bar{position:relative;}
+  .ag-search-bar input{width:100%;padding:13px 14px 13px 42px;border:none;border-radius:14px;font-size:14.5px;background:#fff;font-family:inherit;color:var(--ink);box-shadow:0 2px 8px rgba(10,20,40,0.12);}
+  .ag-search-bar input:focus{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,0.5);}
+  .ag-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
   .ag-search-icon .icon{width:17px;height:17px;}
 
-  .ag-chips-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:16px;scrollbar-width:none;}
+  .ag-recent-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
+  .ag-recent-chip{all:unset;cursor:pointer;padding:7px 14px;border-radius:20px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink);}
+  .ag-recent-chip:hover{border-color:var(--accent);}
+
+  .ag-chips-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:6px;scrollbar-width:none;}
   .ag-chips-row::-webkit-scrollbar{display:none;}
   .ag-chip-btn{all:unset;cursor:pointer;padding:8px 15px;border-radius:20px;background:var(--panel);border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;flex-shrink:0;}
   .ag-chip-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-  /* ---- Product grid (Browse tab) ---- */
+  .ag-cat-strip{display:flex;gap:16px;overflow-x:auto;padding:4px 0 6px;margin-bottom:6px;scrollbar-width:none;}
+  .ag-cat-strip::-webkit-scrollbar{display:none;}
+  .ag-cat-item{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:64px;}
+  .ag-cat-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .12s;}
+  .ag-cat-icon .icon{width:22px;height:22px;}
+  .ag-cat-item:active .ag-cat-icon{transform:scale(0.92);}
+  .ag-cat-item.active .ag-cat-icon{outline:2.5px solid var(--ink);outline-offset:2px;}
+  .ag-cat-label{font-size:11px;font-weight:600;color:var(--ink-soft);text-align:center;line-height:1.25;}
+  .ag-cat-item.active .ag-cat-label{color:var(--ink);}
+
+  /* ---- Product cards: grid + horizontal scroll variants ---- */
   .ag-browse-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-  .ag-grid-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;}
+  .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
+  .ag-scroll-row::-webkit-scrollbar{display:none;}
+  .ag-scroll-row .ag-grid-card{width:150px;flex-shrink:0;}
+
+  .ag-grid-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(16,24,32,0.04);}
   .ag-grid-card:hover{border-color:var(--accent);}
-  .ag-grid-thumb-wrap{position:relative;aspect-ratio:1/1;background:#F3F4F6;}
+  .ag-grid-thumb-wrap{position:relative;aspect-ratio:1/1;background:#F1F3F5;}
   .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
-  .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#C7CDD5;}
   .ag-grid-body{padding:10px 12px 12px;}
-  .ag-bonus-pill{display:inline-block;background:var(--bonus-bg);color:var(--bonus);font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin-bottom:6px;}
+  .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:10.5px;font-weight:700;padding:3px 8px 3px 6px;border-radius:20px;margin-bottom:6px;}
+  .ag-bonus-pill .icon{width:10px;height:10px;}
   .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
   .ag-grid-price{font-size:13.5px;font-weight:700;color:var(--ink);}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:3px;}
 
   .ag-star-btn{
-    all:unset;position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:50%;
-    background:rgba(255,255,255,0.94);display:flex;align-items:center;justify-content:center;
-    color:#C4C9D1;box-shadow:0 1px 4px rgba(0,0,0,0.16);
+    all:unset;position:absolute;top:8px;right:8px;width:29px;height:29px;border-radius:50%;
+    background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;
+    color:#C4C9D1;box-shadow:0 1px 4px rgba(0,0,0,0.18);
   }
   .ag-star-btn .icon{width:15px;height:15px;}
   .ag-star-btn.active{color:var(--bonus);}
+  .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
+  .ag-sponsor-tag .icon{width:10px;height:10px;}
+
+  /* ---- Profile card + menu (Account) ---- */
+  .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
+  .ag-profile-avatar{width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;flex-shrink:0;}
+  .ag-profile-name{font-weight:800;font-size:16.5px;letter-spacing:-0.01em;}
+  .ag-profile-phone{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+
+  .ag-menu-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px;cursor:pointer;}
+  .ag-menu-row:hover{border-color:var(--accent);}
+  .ag-menu-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ag-menu-icon .icon{width:19px;height:19px;}
+  .ag-menu-label{font-weight:700;font-size:14.5px;flex:1;}
+  .ag-menu-count{font-size:13px;color:var(--ink-soft);font-weight:600;}
+  .ag-menu-chevron{color:var(--ink-soft);width:18px;height:18px;flex-shrink:0;}
+
+  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+  .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .ag-order-row-client{font-weight:600;font-size:14px;}
+  .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
+  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
 
   /* ---- Bottom tab bar (Earnings / Browse / Account) ---- */
   .ag-tabbar{
     position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
-    display:flex;max-width:520px;margin:0 auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:200;
+    display:flex;max-width:520px;margin:0 auto;padding:7px 6px calc(7px + env(safe-area-inset-bottom));z-index:200;
     box-shadow:0 -2px 14px rgba(16,24,32,0.05);
   }
   .ag-navbtn{
-    all:unset;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;
-    cursor:pointer;color:var(--ink-soft);font-size:10.5px;font-weight:700;border-radius:10px;
+    all:unset;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px 4px;
+    cursor:pointer;color:var(--ink-soft);font-size:10.5px;font-weight:700;
   }
-  .ag-navbtn .icon{width:22px;height:22px;}
+  .ag-navbtn-pill{padding:5px 17px;border-radius:14px;margin-bottom:2px;transition:background-color .15s;display:flex;}
+  .ag-navbtn-pill .icon{width:21px;height:21px;}
   .ag-navbtn.active{color:var(--accent);}
+  .ag-navbtn.active .ag-navbtn-pill{background:var(--accent-soft);}
 
   /* ---- Floating Quote button ---- */
   .ag-fab{
-    all:unset;position:fixed;left:calc(50% - 260px + 16px);bottom:calc(66px + env(safe-area-inset-bottom));
-    width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;
-    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(37,99,235,0.38);
-    cursor:pointer;z-index:250;
+    all:unset;position:fixed;left:16px;bottom:calc(70px + env(safe-area-inset-bottom));
+    display:none;align-items:center;gap:9px;background:var(--ink);color:#fff;
+    padding:14px 20px 14px 16px;border-radius:32px;box-shadow:0 8px 20px rgba(18,21,26,0.32);
+    cursor:pointer;z-index:250;font-weight:700;font-size:13.5px;
   }
-  @media (max-width:552px){ .ag-fab{ left:16px; } }
-  .ag-fab .icon{width:23px;height:23px;}
-  .ag-fab-badge{
-    position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;
-    background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;border-radius:10px;
-    display:none;align-items:center;justify-content:center;line-height:1;border:2px solid var(--bg);
-  }
+  @media (min-width:552px){ .ag-fab{ left:calc(50% - 260px + 16px); } }
+  .ag-fab.show{display:flex;}
+  .ag-fab .icon{width:19px;height:19px;}
 </style>
 </head>
 <body class="app-loading">
@@ -212,94 +270,128 @@
 
   <!-- BROWSE (first screen shown) -->
   <div id="ag_browseView" style="display:none;">
-    <div class="ag-tab-head">
-      <h1>Browse</h1>
-      <p>Find what your client needs, then add it to the quote.</p>
+    <div class="ag-hero">
+      <div class="ag-hero-greeting" id="ag_hero_greeting">Hi</div>
+      <div class="ag-hero-sub">What does your client need today?</div>
+      <div class="ag-search-bar">
+        <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
+      </div>
+      <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.</span>
+      </div>
     </div>
 
-    <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span>Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.</span>
-    </div>
+    <div class="ag-pad">
+      <div id="ag_recentSearchesWrap"></div>
+      <div id="ag_catStripWrap"></div>
 
-    <div class="ag-search-bar">
-      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-      <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
-    </div>
+      <div class="ag-chips-row" id="ag_browseChips">
+        <button type="button" class="ag-chip-btn active" data-filter="all">All</button>
+        <button type="button" class="ag-chip-btn" data-filter="sponsored">Sponsored</button>
+        <button type="button" class="ag-chip-btn" data-filter="cluster">My cluster</button>
+        <button type="button" class="ag-chip-btn" data-filter="new">New</button>
+      </div>
 
-    <div class="ag-chips-row" id="ag_browseChips">
-      <button type="button" class="ag-chip-btn active" data-filter="all">All</button>
-      <button type="button" class="ag-chip-btn" data-filter="sponsored">Sponsored</button>
-      <button type="button" class="ag-chip-btn" data-filter="cluster">My cluster</button>
-      <button type="button" class="ag-chip-btn" data-filter="new">New</button>
-    </div>
+      <div id="ag_orderAgainSection" style="display:none;">
+        <div class="ag-section-title">Order again</div>
+        <div class="ag-scroll-row" id="ag_orderAgainRow"></div>
+      </div>
 
-    <div class="ag-browse-grid" id="ag_browseGrid"></div>
+      <div id="ag_sponsoredSection" style="display:none;">
+        <div class="ag-section-title">Sponsored for you</div>
+        <div class="ag-scroll-row" id="ag_sponsoredRow"></div>
+      </div>
+
+      <div class="ag-section-title" id="ag_gridTitle">All products</div>
+      <div class="ag-browse-grid" id="ag_browseGrid"></div>
+    </div>
   </div>
 
   <!-- EARNINGS -->
   <div id="ag_earningsView" style="display:none;">
-    <div class="ag-tab-head">
-      <h1>Earnings</h1>
-      <p>Your margin plus any supplier bonus, month by month.</p>
+    <div class="ag-hero">
+      <div class="ag-month-nav">
+        <button type="button" class="ag-month-nav-btn" id="ag_earnings_prev_btn" aria-label="Previous month"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="ag-month-nav-label" id="ag_earningsMonthLabel">This month</div>
+        <button type="button" class="ag-month-nav-btn" id="ag_earnings_next_btn" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="ag-hero-earn-label">Total earned</div>
+      <div class="ag-hero-earn-value" id="ag_earningsTotalValue">UGX 0</div>
+      <div class="ag-hero-split">
+        <div class="ag-hero-split-item"><span>Your margin</span><b id="ag_earningsMarginValue">UGX 0</b></div>
+        <div class="ag-hero-split-item"><span>Bonus</span><b id="ag_earningsBonusValue">UGX 0</b></div>
+      </div>
     </div>
 
-    <div class="ag-month-nav">
-      <button type="button" class="ag-month-nav-btn" id="ag_earnings_prev_btn" aria-label="Previous month"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <div class="ag-month-nav-label" id="ag_earningsMonthLabel">This month</div>
-      <button type="button" class="ag-month-nav-btn" id="ag_earnings_next_btn" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    <div class="ag-pad">
+      <div id="ag_claimWrap"></div>
+      <div class="ag-section-title">Orders that month</div>
+      <div id="ag_earningsOrdersWrap"></div>
     </div>
-
-    <div class="ag-earnings-card">
-      <div class="ag-earnings-label">Total earned</div>
-      <div class="ag-earnings-value" id="ag_earningsTotalValue">UGX 0</div>
-    </div>
-    <div class="ag-card">
-      <div class="ag-earnings-split-row"><span>Your margin</span><b id="ag_earningsMarginValue">UGX 0</b></div>
-      <div class="ag-earnings-split-row"><span>Bonus commission</span><b id="ag_earningsBonusValue">UGX 0</b></div>
-    </div>
-
-    <div id="ag_claimWrap"></div>
-
-    <div class="ag-section-title">Orders that month</div>
-    <div id="ag_earningsOrdersWrap"></div>
   </div>
 
   <!-- ACCOUNT -->
-  <div id="ag_accountView" style="display:none;">
-    <div class="ag-tab-head">
-      <h1 id="ag_account_greeting">Hi</h1>
-      <p>Your clients, order history, and account.</p>
+  <div id="ag_accountView" class="ag-pad-top" style="display:none;">
+    <div class="ag-tab-head"><h1>Account</h1></div>
+
+    <div class="ag-profile-card">
+      <div class="ag-profile-avatar" id="ag_profile_avatar">A</div>
+      <div>
+        <div class="ag-profile-name" id="ag_profile_name">Agent</div>
+        <div class="ag-profile-phone" id="ag_profile_phone"></div>
+      </div>
     </div>
 
-    <div class="ag-section-title">My clients</div>
-    <div id="ag_clientsWrap"></div>
+    <div class="ag-menu-row" id="ag_menu_clients">
+      <span class="ag-menu-icon" style="background:var(--accent-soft);color:var(--accent);"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+      <span class="ag-menu-label">My clients</span>
+      <span class="ag-menu-count" id="ag_menu_clients_count">0</span>
+      <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <div class="ag-menu-row" id="ag_menu_orders">
+      <span class="ag-menu-icon" style="background:var(--teal-soft);color:var(--teal);"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
+      <span class="ag-menu-label">Order history</span>
+      <span class="ag-menu-count" id="ag_menu_orders_count">0</span>
+      <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
 
-    <div class="ag-section-title">Order history</div>
-    <div id="ag_orderHistoryWrap"></div>
-
-    <div class="ag-section-title">Account</div>
-    <div class="ag-card" style="cursor:pointer;" id="ag_signout_btn">
-      <div style="display:flex;align-items:center;gap:10px;color:var(--danger);font-weight:600;font-size:14px;">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-        Sign out
-      </div>
+    <div class="ag-menu-row" id="ag_signout_btn" style="margin-top:20px;">
+      <span class="ag-menu-icon" style="background:var(--danger-bg);color:var(--danger);"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></span>
+      <span class="ag-menu-label" style="color:var(--danger);">Sign out</span>
     </div>
   </div>
 
+  <!-- CLIENTS LIST (sub-screen of Account) -->
+  <div id="ag_clientsListView" class="ag-pad-top" style="display:none;">
+    <div class="ag-back-row">
+      <button type="button" class="ag-back-btn" id="ag_clients_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 style="font-size:20px;font-weight:800;margin:0;">My clients</h1>
+    </div>
+    <div id="ag_clientsListWrap"></div>
+  </div>
+
+  <!-- ORDER HISTORY (sub-screen of Account) -->
+  <div id="ag_orderHistoryListView" class="ag-pad-top" style="display:none;">
+    <div class="ag-back-row">
+      <button type="button" class="ag-back-btn" id="ag_orders_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 style="font-size:20px;font-weight:800;margin:0;">Order history</h1>
+    </div>
+    <div id="ag_orderHistoryListWrap"></div>
+  </div>
+
   <!-- QUOTE (opened via the floating button, not a tab) -->
-  <div id="ag_quoteView" style="display:none;">
-    <div class="ag-tab-head" style="display:flex;align-items:center;gap:8px;">
-      <button type="button" class="ag-back-btn" id="ag_quote_close_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <div><h1 style="margin:0;">Quote</h1></div>
+  <div id="ag_quoteView" class="ag-pad-top" style="display:none;">
+    <div class="ag-back-row">
+      <button type="button" class="ag-back-btn" id="ag_quote_close_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 style="font-size:20px;font-weight:800;margin:0;">Quote</h1>
     </div>
 
     <div class="empty-state" id="ag_cartEmptyState" style="display:none;">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.6 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L21 6H6"/></svg>
+      <div class="empty-state-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
       <p>Your quote is empty.</p>
-      <button type="button" class="btn btn-accent" id="ag_cart_browse_btn" style="display:inline-block;padding:11px 22px;">Browse products</button>
+      <button type="button" class="btn btn-accent" id="ag_cart_browse_btn" style="display:inline-block;padding:12px 24px;">Browse products</button>
     </div>
 
     <div id="ag_cartContent">
@@ -335,20 +427,20 @@
 
 <button type="button" class="ag-fab" id="ag_quoteFab" aria-label="Quote">
   <svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
-  <span class="ag-fab-badge" id="ag_cartBadge">0</span>
+  <span id="ag_fab_label">0 items</span>
 </button>
 
 <nav class="ag-tabbar" id="ag_tabbar">
   <button type="button" class="ag-navbtn" data-tab="earnings">
-    <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+    <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
     Earnings
   </button>
-  <button type="button" class="ag-navbtn active" data-tab="browse">
-    <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+  <button type="button" class="ag-navbtn" data-tab="browse">
+    <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
     Browse
   </button>
   <button type="button" class="ag-navbtn" data-tab="account">
-    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+    <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
     Account
   </button>
 </nav>
@@ -555,21 +647,27 @@ async function loadAgentHomeData(){
   myOrders = (ordersData || []).map(mapOrderRow);
 }
 
-/* ================= TAB NAVIGATION ================= */
-// Only these three are real nav-bar tabs. Quote is opened via the floating
-// button instead of a tab -- it's a task you dip into (build an order),
-// not a place you browse, so it doesn't compete for one of three slots.
+/* ================= NAVIGATION ================= */
+// Only these three are real nav-bar tabs. Quote, My clients and Order
+// history are all opened as their own full screens with a back arrow --
+// tasks you dip into, not places you browse, so they don't compete for
+// one of three tab slots.
 const TABS = ['earnings','browse','account'];
+const ALL_VIEWS = ['ag_earningsView','ag_browseView','ag_accountView','ag_quoteView','ag_clientsListView','ag_orderHistoryListView'];
 let lastMainTab = 'browse';
 
+function showOnlyView(id){
+  ALL_VIEWS.forEach(v=> document.getElementById(v).style.display = (v===id) ? 'block' : 'none');
+}
+function refreshFabVisibility(){
+  document.getElementById('ag_quoteFab').classList.toggle('show', cart.length > 0);
+}
+
 function switchTab(tab){
-  TABS.forEach(t=>{
-    document.getElementById('ag_'+t+'View').style.display = (t===tab) ? 'block' : 'none';
-  });
-  document.getElementById('ag_quoteView').style.display = 'none';
-  document.getElementById('ag_quoteFab').style.display = 'flex';
+  showOnlyView('ag_'+tab+'View');
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   lastMainTab = tab;
+  refreshFabVisibility();
   window.scrollTo(0, 0);
   if(tab==='browse') openBrowseView();
   if(tab==='account') renderAccount();
@@ -581,10 +679,9 @@ document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
 });
 
 function openQuoteScreen(){
-  TABS.forEach(t=> document.getElementById('ag_'+t+'View').style.display = 'none');
-  document.getElementById('ag_quoteView').style.display = 'block';
-  document.getElementById('ag_quoteFab').style.display = 'none';
+  showOnlyView('ag_quoteView');
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ag_quoteFab').classList.remove('show');
   window.scrollTo(0, 0);
   renderCartTab();
 }
@@ -592,9 +689,8 @@ document.getElementById('ag_quoteFab').addEventListener('click', openQuoteScreen
 document.getElementById('ag_quote_close_btn').addEventListener('click', ()=> switchTab(lastMainTab));
 
 function updateCartBadge(){
-  const badge = document.getElementById('ag_cartBadge');
-  if(cart.length > 0){ badge.textContent = String(cart.length); badge.style.display = 'flex'; }
-  else{ badge.style.display = 'none'; }
+  document.getElementById('ag_fab_label').textContent = `${cart.length} item${cart.length===1?'':'s'}`;
+  refreshFabVisibility();
 }
 
 /* ================= EARNINGS ================= */
@@ -732,62 +828,81 @@ document.getElementById('ag_earnings_next_btn').addEventListener('click', ()=>{
   renderEarnings();
 });
 
-/* ================= ACCOUNT ================= */
-function renderAccountClients(){
-  const wrap = document.getElementById('ag_clientsWrap');
-  if(!agentClients.length){
-    wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`;
-    return;
-  }
-  const ordersByClient = new Map();
+/* ================= ACCOUNT + sub-screens ================= */
+function orderTotal(o){
+  return (o.items||[]).reduce((s,it)=> s + (Number(it.agentSellPrice)||0) * (Number(it.qty)||0), 0);
+}
+function clientOrderCounts(){
+  const m = new Map();
   myOrders.forEach(o=>{
     if(!o.agentClientId) return;
-    if(!ordersByClient.has(o.agentClientId)) ordersByClient.set(o.agentClientId, []);
-    ordersByClient.get(o.agentClientId).push(o);
+    if(!m.has(o.agentClientId)) m.set(o.agentClientId, []);
+    m.get(o.agentClientId).push(o);
   });
-  wrap.innerHTML = agentClients.map(c=>{
-    const orders = ordersByClient.get(c.id) || [];
-    const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-    return `<div class="ag-list-item">
-      <div class="ag-list-item-avatar">${esc(initials)}</div>
-      <div class="ag-list-item-body">
-        <div class="ag-list-item-name">${esc(c.name)}</div>
-        <div class="ag-list-item-meta">${orders.length} order${orders.length===1?'':'s'}${c.phone?' · '+esc(c.phone):''}</div>
-      </div>
-    </div>`;
-  }).join('');
+  return m;
 }
-function renderOrderHistory(){
-  const wrap = document.getElementById('ag_orderHistoryWrap');
-  const orders = myOrders.filter(o=>!o.voided).slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
-  if(!orders.length){
-    wrap.innerHTML = `<div class="empty">No orders yet.</div>`;
-    return;
-  }
-  wrap.innerHTML = orders.map(o=>{
-    const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
-    const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
-    const total = (o.items||[]).reduce((s,it)=> s + (Number(it.agentSellPrice)||0) * (Number(it.qty)||0), 0);
-    return `<div class="ag-order-row">
-      <div class="ag-order-row-head">
-        <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
-        <div class="ag-order-row-date">${esc(date)}</div>
-      </div>
-      <div class="ag-order-row-split">${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(total)}</div>
-    </div>`;
-  }).join('');
+function clientRowHTML(c, orders){
+  const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  return `<div class="ag-list-item">
+    <div class="ag-list-item-avatar">${esc(initials)}</div>
+    <div class="ag-list-item-body">
+      <div class="ag-list-item-name">${esc(c.name)}</div>
+      <div class="ag-list-item-meta">${orders.length} order${orders.length===1?'':'s'}${c.phone?' · '+esc(c.phone):''}</div>
+    </div>
+  </div>`;
+}
+function orderRowHTML(o){
+  const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
+  const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
+  return `<div class="ag-order-row">
+    <div class="ag-order-row-head">
+      <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
+      <div class="ag-order-row-date">${esc(date)}</div>
+    </div>
+    <div class="ag-order-row-split">${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</div>
+  </div>`;
 }
 function renderAccount(){
-  document.getElementById('ag_account_greeting').textContent = `Hi, ${myAgent.name}`;
-  renderAccountClients();
-  renderOrderHistory();
+  const initials = (myAgent.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('ag_profile_avatar').textContent = initials;
+  document.getElementById('ag_profile_name').textContent = myAgent.name;
+  document.getElementById('ag_profile_phone').textContent = myAgent.phone || myAgent.email || '';
+  document.getElementById('ag_menu_clients_count').textContent = agentClients.length;
+  document.getElementById('ag_menu_orders_count').textContent = myOrders.filter(o=>!o.voided).length;
 }
+function renderClientsListScreen(){
+  const wrap = document.getElementById('ag_clientsListWrap');
+  if(!agentClients.length){ wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`; return; }
+  const counts = clientOrderCounts();
+  wrap.innerHTML = agentClients.map(c=>clientRowHTML(c, counts.get(c.id)||[])).join('');
+}
+function renderOrderHistoryScreen(){
+  const wrap = document.getElementById('ag_orderHistoryListWrap');
+  const orders = myOrders.filter(o=>!o.voided).slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
+  if(!orders.length){ wrap.innerHTML = `<div class="empty">No orders yet.</div>`; return; }
+  wrap.innerHTML = orders.map(orderRowHTML).join('');
+}
+document.getElementById('ag_menu_clients').addEventListener('click', ()=>{
+  showOnlyView('ag_clientsListView');
+  refreshFabVisibility();
+  renderClientsListScreen();
+});
+document.getElementById('ag_menu_orders').addEventListener('click', ()=>{
+  showOnlyView('ag_orderHistoryListView');
+  refreshFabVisibility();
+  renderOrderHistoryScreen();
+});
+document.getElementById('ag_clients_back_btn').addEventListener('click', ()=> switchTab('account'));
+document.getElementById('ag_orders_back_btn').addEventListener('click', ()=> switchTab('account'));
 document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
 
 /* ================= BROWSE + commission cluster ================= */
 let promotions = [], cluster = [];
 let browseDataLoaded = false;
 let browseFilter = 'all';
+let browseCategoryFilter = null;
+let recentSearches = [];
+try{ recentSearches = JSON.parse(localStorage.getItem('agentRecentSearches')||'[]'); }catch(_e){ recentSearches = []; }
 
 function isInCluster(productId, variantIdx){
   const vi = variantIdx==null ? '' : String(variantIdx);
@@ -837,9 +952,39 @@ function promotedMap(){
   return m;
 }
 
+function catalogEntry(productId, variantIdx){
+  return catalog.find(it=>it.productId===productId && String(it.variantIdx==null?'':it.variantIdx)===String(variantIdx==null?'':variantIdx));
+}
+
+// Distinct products this agent has personally sold before, most-recent
+// first -- the "you already know this one" shortcut real ordering apps
+// lead with, so a repeat order takes one tap instead of a fresh search.
+function orderAgainItems(){
+  const seen = new Set();
+  const out = [];
+  myOrders.filter(o=>!o.voided).slice().sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||'')).forEach(o=>{
+    (o.items||[]).forEach(it=>{
+      const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
+      if(seen.has(key)) return;
+      const ce = catalogEntry(it.productId, it.variantIdx);
+      if(ce){ seen.add(key); out.push(ce); }
+    });
+  });
+  return out.slice(0, 10);
+}
+function sponsoredItems(){
+  return promotions.map(p=>catalogEntry(p.productId, p.variantIdx)).filter(Boolean);
+}
+
+function showingDiscoveryExtras(){
+  const q = document.getElementById('ag_browse_search').value.trim();
+  return !q && browseFilter==='all' && !browseCategoryFilter;
+}
+
 function browseItems(){
   const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
   let items = catalog.slice();
+  if(browseCategoryFilter) items = items.filter(it=>it.category===browseCategoryFilter);
   if(browseFilter==='sponsored'){
     const promoted = promotedMap();
     items = items.filter(it=>promoted.has(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`));
@@ -856,7 +1001,73 @@ function browseItems(){
 const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>`;
 
-function browseCardHTML(it, promoted){
+// Flat, single-path category icons keyed by keyword match against the
+// shop's own free-text category names -- there's no fixed taxonomy to
+// hardcode a real icon set against, so this degrades gracefully to a
+// generic package icon for anything unrecognized.
+const CAT_ICONS = [
+  { test: /cement|concrete/, svg: `<path d="M9 3h6l1.5 4.5v11A2.5 2.5 0 0114 21h-4a2.5 2.5 0 01-2.5-2.5v-11L9 3z"/><path d="M9 8h6"/><path d="M9 13h6"/>` },
+  { test: /steel|iron|metal/, svg: `<path d="M14.7 6.3a4 4 0 10-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.8 2.8-2-2z"/>` },
+  { test: /pipe|plumb|water/, svg: `<path d="M12 2c4 5 7 9.5 7 13a7 7 0 01-14 0c0-3.5 3-8 7-13z"/>` },
+  { test: /electr|cable|wire/, svg: `<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>` },
+  { test: /paint/, svg: `<rect x="4" y="4" width="12" height="6" rx="1.5"/><path d="M10 10v3a2 2 0 002 2h1a2 2 0 002-2v-1a2 2 0 012-2h1"/><path d="M18 12v6"/>` },
+  { test: /wood|timber/, svg: `<rect x="3" y="6" width="18" height="3" rx="1"/><rect x="3" y="11" width="18" height="3" rx="1"/><rect x="3" y="16" width="18" height="3" rx="1"/>` },
+  { test: /roof/, svg: `<path d="M3 11L12 4l9 7"/><path d="M5 10v10h14V10"/>` },
+  { test: /tool|hardware/, svg: `<path d="M17 3l4 4-3 3-4-4 3-3z"/><path d="M14 6l-9.5 9.5a1.5 1.5 0 002 2L16 8"/>` },
+  { test: /nail|screw|fasten|bolt/, svg: `<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>` },
+];
+function categoryIconSVG(name){
+  const n = (name||'').toLowerCase();
+  const match = CAT_ICONS.find(c=>c.test.test(n));
+  return `<svg class="icon" viewBox="0 0 24 24">${match ? match.svg : ICON_PLACEHOLDER.replace(/<\/?svg[^>]*>/g,'')}</svg>`;
+}
+const CAT_PALETTE = [
+  { bg: 'var(--accent-soft)', fg: 'var(--accent)' },
+  { bg: 'var(--teal-soft)', fg: 'var(--teal)' },
+  { bg: 'var(--rust-soft)', fg: 'var(--rust)' },
+  { bg: 'var(--slate-soft)', fg: 'var(--slate)' },
+];
+
+function renderCategoryStrip(){
+  const wrap = document.getElementById('ag_catStripWrap');
+  const cats = [...new Set(catalog.map(it=>it.category).filter(Boolean))].slice(0, 10);
+  if(!cats.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="ag-cat-strip" id="ag_catStrip">${cats.map((c,i)=>{
+    const pal = CAT_PALETTE[i % CAT_PALETTE.length];
+    return `<button type="button" class="ag-cat-item ${browseCategoryFilter===c?'active':''}" data-cat="${esc(c)}">
+      <span class="ag-cat-icon" style="background:${pal.bg};color:${pal.fg};">${categoryIconSVG(c)}</span>
+      <span class="ag-cat-label">${esc(c)}</span>
+    </button>`;
+  }).join('')}</div>`;
+  document.getElementById('ag_catStrip').addEventListener('click', (e)=>{
+    const item = e.target.closest('.ag-cat-item');
+    if(!item) return;
+    browseCategoryFilter = (browseCategoryFilter === item.dataset.cat) ? null : item.dataset.cat;
+    renderBrowseGrid();
+  });
+}
+
+function renderRecentSearches(){
+  const wrap = document.getElementById('ag_recentSearchesWrap');
+  const q = document.getElementById('ag_browse_search').value.trim();
+  if(q || !recentSearches.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="ag-recent-row">${recentSearches.map(s=>`<button type="button" class="ag-recent-chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>`;
+  wrap.querySelectorAll('.ag-recent-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      document.getElementById('ag_browse_search').value = chip.dataset.q;
+      renderBrowseGrid();
+    });
+  });
+}
+function saveRecentSearch(q){
+  q = q.trim();
+  if(!q) return;
+  recentSearches = [q, ...recentSearches.filter(x=>x.toLowerCase()!==q.toLowerCase())].slice(0, 5);
+  localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
+}
+
+function browseCardHTML(it, promoted, opts){
+  opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
   const promo = promoted.get(key);
   const inCluster = promo && isInCluster(it.productId, it.variantIdx);
@@ -865,10 +1076,11 @@ function browseCardHTML(it, promoted){
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
+      ${opts.sponsorTag ? `<span class="ag-sponsor-tag">${ICON_STAR}Sponsored</span>` : ''}
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${promo ? `<span class="ag-bonus-pill">${esc(bonusLabel)}</span>` : ''}
+      ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
       <div class="ag-grid-name">${esc(it.name)}</div>
       <div class="ag-grid-price">From ${fmtUGX(it.floorPrice)}</div>
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
@@ -878,6 +1090,21 @@ function browseCardHTML(it, promoted){
 
 function renderBrowseGrid(){
   const promoted = promotedMap();
+  renderRecentSearches();
+  renderCategoryStrip();
+
+  const discovery = showingDiscoveryExtras();
+  const orderAgain = discovery ? orderAgainItems() : [];
+  const sponsored = discovery ? sponsoredItems() : [];
+
+  document.getElementById('ag_orderAgainSection').style.display = orderAgain.length ? 'block' : 'none';
+  if(orderAgain.length) document.getElementById('ag_orderAgainRow').innerHTML = orderAgain.map(it=>browseCardHTML(it, promoted)).join('');
+
+  document.getElementById('ag_sponsoredSection').style.display = sponsored.length ? 'block' : 'none';
+  if(sponsored.length) document.getElementById('ag_sponsoredRow').innerHTML = sponsored.map(it=>browseCardHTML(it, promoted, {sponsorTag:true})).join('');
+
+  document.getElementById('ag_gridTitle').innerHTML = discovery ? 'All products' : `Results <small>${browseItems().length} item${browseItems().length===1?'':'s'}</small>`;
+
   const items = browseItems();
   const grid = document.getElementById('ag_browseGrid');
   if(!items.length){
@@ -911,7 +1138,10 @@ async function toggleClusterMembership(productId, variantIdx){
   }
 }
 
-document.getElementById('ag_browseGrid').addEventListener('click', (e)=>{
+// One delegated listener for the whole Browse view -- covers the grid,
+// the Order-again row, and the Sponsored row alike, since all three use
+// the same .ag-grid-card markup.
+document.getElementById('ag_browseView').addEventListener('click', (e)=>{
   const starBtn = e.target.closest('[data-star-pid]');
   if(starBtn){
     const vidx = starBtn.dataset.starVidx === '' ? null : Number(starBtn.dataset.starVidx);
@@ -919,19 +1149,22 @@ document.getElementById('ag_browseGrid').addEventListener('click', (e)=>{
     return;
   }
   const card = e.target.closest('.ag-grid-card');
-  if(!card) return;
-  const vidx = card.dataset.vidx === '' ? null : Number(card.dataset.vidx);
-  const item = catalog.find(it=>it.productId===card.dataset.pid && String(it.variantIdx==null?'':it.variantIdx)===card.dataset.vidx);
-  if(item) openAddItemPanel(item);
+  if(card){
+    const item = catalogEntry(card.dataset.pid, card.dataset.vidx === '' ? null : Number(card.dataset.vidx));
+    if(item) openAddItemPanel(item);
+    return;
+  }
+  const chip = e.target.closest('.ag-chip-btn');
+  if(chip){
+    document.querySelectorAll('#ag_browseChips .ag-chip-btn').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    browseFilter = chip.dataset.filter;
+    renderBrowseGrid();
+  }
 });
 document.getElementById('ag_browse_search').addEventListener('input', renderBrowseGrid);
-document.getElementById('ag_browseChips').addEventListener('click', (e)=>{
-  const chip = e.target.closest('.ag-chip-btn');
-  if(!chip) return;
-  document.querySelectorAll('#ag_browseChips .ag-chip-btn').forEach(c=>c.classList.remove('active'));
-  chip.classList.add('active');
-  browseFilter = chip.dataset.filter;
-  renderBrowseGrid();
+document.getElementById('ag_browse_search').addEventListener('blur', (e)=>{
+  saveRecentSearch(e.target.value);
 });
 
 async function openBrowseView(){
@@ -945,6 +1178,7 @@ async function openAddItemPanel(item){
   el.className = 'ag-overlay';
   el.innerHTML = `
     <div class="ag-overlay-card">
+      ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title">${esc(item.name)}</div>
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
@@ -1142,6 +1376,7 @@ async function boot(){
     el.innerHTML = `<div style="color:#f66;font-family:inherit;max-width:400px;text-align:center;padding:0 20px;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
     return;
   }
+  document.getElementById('ag_hero_greeting').textContent = `Hi, ${myAgent.name}`;
   if(!localStorage.getItem('agentTrustBannerSeen')){
     document.getElementById('ag_trustBanner').style.display = 'flex';
     localStorage.setItem('agentTrustBannerSeen', '1');
