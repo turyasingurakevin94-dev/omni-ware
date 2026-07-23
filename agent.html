@@ -227,19 +227,13 @@
   .ag-cat-label{font-size:11px;font-weight:600;color:var(--ink-soft);text-align:center;line-height:1.25;}
   .ag-cat-item.active .ag-cat-label{color:var(--ink);}
 
-  /* ---- Subcategory panel, slides in from the right ---- */
-  .ag-subcat-backdrop{position:fixed;inset:0;background:rgba(15,20,26,0.45);z-index:405;opacity:0;pointer-events:none;transition:opacity .25s ease;}
-  .ag-subcat-backdrop.show{opacity:1;pointer-events:auto;}
-  .ag-subcat-panel{
-    position:fixed;top:0;right:0;bottom:0;width:82%;max-width:340px;background:var(--panel);z-index:410;
-    box-shadow:-10px 0 28px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform .28s ease;
-    overflow-y:auto;
-  }
-  .ag-subcat-panel.show{transform:translateX(0);}
-  .ag-subcat-head{display:flex;align-items:center;justify-content:space-between;padding:18px 10px 12px 20px;position:sticky;top:0;background:var(--panel);}
-  .ag-subcat-head h2{font-size:17px;font-weight:800;margin:0;letter-spacing:-0.01em;}
-  .ag-subcat-row{all:unset;box-sizing:border-box;display:block;width:100%;padding:14px 20px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line);}
-  .ag-subcat-row.active{color:var(--accent);background:var(--accent-soft);}
+  /* ---- Subcategory chips: a second horizontally-scrolling row under the
+     category icons, appearing once a category with subcategories is
+     picked -- same swipe-left-right idiom as the icon strip above it. ---- */
+  .ag-subcat-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin:-2px 0 12px;scrollbar-width:none;}
+  .ag-subcat-chips::-webkit-scrollbar{display:none;}
+  .ag-subcat-chip{all:unset;cursor:pointer;padding:7px 14px;border-radius:20px;background:var(--accent-soft);border:1px solid transparent;font-size:12px;font-weight:700;color:var(--accent-dark);white-space:nowrap;flex-shrink:0;}
+  .ag-subcat-chip.active{background:var(--accent);color:#fff;}
 
   /* ---- Product cards: grid + horizontal scroll variants ---- */
   .ag-browse-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
@@ -335,6 +329,7 @@
     <div class="ag-pad">
       <div id="ag_recentSearchesWrap"></div>
       <div id="ag_catStripWrap"></div>
+      <div id="ag_subcatChipsWrap"></div>
 
       <div class="ag-chips-row" id="ag_browseChips">
         <button type="button" class="ag-chip-btn active" data-filter="all">All</button>
@@ -514,15 +509,6 @@
     Account
   </button>
 </nav>
-
-<div class="ag-subcat-backdrop" id="ag_subcatBackdrop"></div>
-<div class="ag-subcat-panel" id="ag_subcatPanel">
-  <div class="ag-subcat-head">
-    <h2 id="ag_subcatTitle">Category</h2>
-    <button type="button" class="ag-back-btn" id="ag_subcatClose"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
-  <div id="ag_subcatList"></div>
-</div>
 
 <div class="toast" id="toast"></div>
 
@@ -1160,49 +1146,38 @@ function renderCategoryStrip(){
     if(!item) return;
     const cat = item.dataset.cat;
     if(browseCategoryFilter === cat){
-      // Tapping an already-active category clears it -- the panel (below)
-      // is how you narrow further or switch to "All <category>"; tapping
-      // the icon a second time is the fast path back to everything.
+      // Tapping an already-active category clears it and its subcategory
+      // chip row -- the fast path back to everything.
       browseCategoryFilter = null;
       browseSubcategoryFilter = null;
       renderBrowseGrid();
       return;
     }
-    const subs = [...new Set(catalog.filter(it=>it.category===cat).map(it=>it.subcategory).filter(Boolean))];
-    if(subs.length){
-      openSubcategoryPanel(cat, subs);
-    } else {
-      browseCategoryFilter = cat;
-      browseSubcategoryFilter = null;
-      renderBrowseGrid();
-    }
+    browseCategoryFilter = cat;
+    browseSubcategoryFilter = null;
+    renderBrowseGrid();
   });
+  renderSubcategoryChips();
 }
 
-let subcatPanelCategory = null;
-function openSubcategoryPanel(category, subs){
-  subcatPanelCategory = category;
-  document.getElementById('ag_subcatTitle').textContent = category;
-  const allRow = `<button type="button" class="ag-subcat-row ${!browseSubcategoryFilter?'active':''}" data-sub="">All ${esc(category)}</button>`;
-  const subRows = subs.map(s=>`<button type="button" class="ag-subcat-row ${browseSubcategoryFilter===s?'active':''}" data-sub="${esc(s)}">${esc(s)}</button>`).join('');
-  document.getElementById('ag_subcatList').innerHTML = allRow + subRows;
-  document.getElementById('ag_subcatPanel').classList.add('show');
-  document.getElementById('ag_subcatBackdrop').classList.add('show');
+// A second horizontally-scrolling chip row under the category icons,
+// same swipe idiom as the row above it -- appears only once a category
+// with real subcategories in the data is selected.
+function renderSubcategoryChips(){
+  const wrap = document.getElementById('ag_subcatChipsWrap');
+  if(!browseCategoryFilter){ wrap.innerHTML = ''; return; }
+  const subs = [...new Set(catalog.filter(it=>it.category===browseCategoryFilter).map(it=>it.subcategory).filter(Boolean))];
+  if(!subs.length){ wrap.innerHTML = ''; return; }
+  const allChip = `<button type="button" class="ag-subcat-chip ${!browseSubcategoryFilter?'active':''}" data-sub="">All ${esc(browseCategoryFilter)}</button>`;
+  const subChips = subs.map(s=>`<button type="button" class="ag-subcat-chip ${browseSubcategoryFilter===s?'active':''}" data-sub="${esc(s)}">${esc(s)}</button>`).join('');
+  wrap.innerHTML = `<div class="ag-subcat-chips" id="ag_subcatChips">${allChip}${subChips}</div>`;
+  document.getElementById('ag_subcatChips').addEventListener('click', (e)=>{
+    const chip = e.target.closest('.ag-subcat-chip');
+    if(!chip) return;
+    browseSubcategoryFilter = chip.dataset.sub || null;
+    renderBrowseGrid();
+  });
 }
-function closeSubcategoryPanel(){
-  document.getElementById('ag_subcatPanel').classList.remove('show');
-  document.getElementById('ag_subcatBackdrop').classList.remove('show');
-}
-document.getElementById('ag_subcatList').addEventListener('click', (e)=>{
-  const row = e.target.closest('.ag-subcat-row');
-  if(!row) return;
-  browseCategoryFilter = subcatPanelCategory;
-  browseSubcategoryFilter = row.dataset.sub || null;
-  closeSubcategoryPanel();
-  renderBrowseGrid();
-});
-document.getElementById('ag_subcatClose').addEventListener('click', closeSubcategoryPanel);
-document.getElementById('ag_subcatBackdrop').addEventListener('click', closeSubcategoryPanel);
 
 function renderRecentSearches(){
   const wrap = document.getElementById('ag_recentSearchesWrap');
