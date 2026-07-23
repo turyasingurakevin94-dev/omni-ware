@@ -87,6 +87,16 @@
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
   .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
 
+  .ag-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .ag-month-nav-btn{all:unset;cursor:pointer;padding:8px;border-radius:8px;color:var(--ink-soft);display:flex;}
+  .ag-month-nav-btn:hover{background:var(--panel);color:var(--ink);}
+  .ag-month-nav-btn[disabled]{opacity:.3;cursor:default;pointer-events:none;}
+  .ag-month-nav-btn .icon{width:20px;height:20px;}
+  .ag-month-nav-label{font-weight:700;font-size:14.5px;}
+
+  .ag-claim-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;}
+  .ag-claim-status{font-size:13.5px;color:var(--ink-soft);font-weight:600;}
+
   .ag-section-title{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 8px;}
 
   .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
@@ -173,8 +183,14 @@
       <div><h1>Earnings</h1></div>
     </div>
 
+    <div class="ag-month-nav">
+      <button type="button" class="ag-month-nav-btn" id="ag_earnings_prev_btn" aria-label="Previous month"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ag-month-nav-label" id="ag_earningsMonthLabel">This month</div>
+      <button type="button" class="ag-month-nav-btn" id="ag_earnings_next_btn" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+
     <div class="ag-earnings-card">
-      <div class="ag-earnings-label" id="ag_earningsMonthLabel">This month</div>
+      <div class="ag-earnings-label">Total earned</div>
       <div class="ag-earnings-value" id="ag_earningsTotalValue">UGX 0</div>
     </div>
     <div class="ag-card">
@@ -182,7 +198,9 @@
       <div class="ag-earnings-split-row"><span>Bonus commission</span><b id="ag_earningsBonusValue">UGX 0</b></div>
     </div>
 
-    <div class="ag-section-title">Orders this month</div>
+    <div id="ag_claimWrap"></div>
+
+    <div class="ag-section-title">Orders that month</div>
     <div id="ag_earningsOrdersWrap"></div>
   </div>
 
@@ -502,18 +520,78 @@ function renderHome(){
 /* ---------------- Earnings ---------------- */
 const ORDER_STATUS_LABEL = { draft:'Draft', preparing:'Preparing', pending_delivery:'Out for delivery', completed:'Completed' };
 
+let earningsViewMonth = currentMonthKey();
+let myClaims = [];
+
+function shiftMonth(monthKey, delta){
+  const [y, m] = monthKey.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabel(monthKey){
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-UG', { month:'long', year:'numeric' });
+}
+function findClaim(monthKey){
+  return myClaims.find(c=>c.month===monthKey);
+}
+
+async function loadMyClaims(){
+  try{
+    const { data, error } = await sb.from('agent_commission_claims').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id);
+    if(error) throw error;
+    myClaims = data || [];
+  }catch(err){
+    toast(`Could not load claim status: ${err.message||err}`);
+  }
+}
+
+function renderClaimCard(monthKey, bonus){
+  const wrap = document.getElementById('ag_claimWrap');
+  if(monthKey >= currentMonthKey()){
+    wrap.innerHTML = `<div class="ag-claim-card"><div class="ag-claim-status">This month is still in progress -- you can claim its bonus once it ends.</div></div>`;
+    return;
+  }
+  if(!(bonus > 0)){ wrap.innerHTML = ''; return; }
+  const claim = findClaim(monthKey);
+  if(!claim){
+    wrap.innerHTML = `<div class="ag-claim-card"><button type="button" class="btn btn-accent btn-block" id="ag_claim_btn">Claim ${fmtUGX(bonus)} bonus</button></div>`;
+    document.getElementById('ag_claim_btn').addEventListener('click', ()=> submitClaim(monthKey));
+  } else if(claim.status==='paid'){
+    const date = claim.paid_at ? new Date(claim.paid_at).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
+    wrap.innerHTML = `<div class="ag-claim-card"><div class="ag-claim-status" style="color:var(--good);">Paid${date ? ' on '+esc(date) : ''}</div></div>`;
+  } else {
+    wrap.innerHTML = `<div class="ag-claim-card"><div class="ag-claim-status">Requested -- awaiting payment</div></div>`;
+  }
+}
+
+async function submitClaim(monthKey){
+  const btn = document.getElementById('ag_claim_btn');
+  if(btn) btn.disabled = true;
+  try{
+    const res = await callAgentFn('agent-claim-commission', { month: monthKey });
+    myClaims = myClaims.filter(c=>c.month!==monthKey).concat([res.claim]);
+    renderClaimCard(monthKey, monthEarnings(monthKey).bonus);
+    toast('Claim submitted');
+  }catch(err){
+    toast(`Could not submit claim: ${err.message||err}`);
+    if(btn) btn.disabled = false;
+  }
+}
+
 function renderEarnings(){
-  const now = new Date();
-  const monthKey = currentMonthKey();
-  document.getElementById('ag_earningsMonthLabel').textContent = now.toLocaleDateString('en-UG', { month:'long', year:'numeric' });
+  const monthKey = earningsViewMonth;
+  document.getElementById('ag_earningsMonthLabel').textContent = monthLabel(monthKey);
+  document.getElementById('ag_earnings_next_btn').disabled = monthKey >= currentMonthKey();
   const { margin, bonus, total, orders } = monthEarnings(monthKey);
   document.getElementById('ag_earningsTotalValue').textContent = fmtUGX(total);
   document.getElementById('ag_earningsMarginValue').textContent = fmtUGX(margin);
   document.getElementById('ag_earningsBonusValue').textContent = fmtUGX(bonus);
+  renderClaimCard(monthKey, bonus);
 
   const wrap = document.getElementById('ag_earningsOrdersWrap');
   if(!orders.length){
-    wrap.innerHTML = `<div class="empty">No orders yet this month.</div>`;
+    wrap.innerHTML = `<div class="empty">No orders that month.</div>`;
     return;
   }
   const sorted = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
@@ -530,14 +608,25 @@ function renderEarnings(){
     </div>`;
   }).join('');
 }
-document.getElementById('ag_earningsCard').addEventListener('click', ()=>{
+document.getElementById('ag_earningsCard').addEventListener('click', async ()=>{
+  earningsViewMonth = currentMonthKey();
   document.getElementById('ag_homeView').style.display = 'none';
   document.getElementById('ag_earningsView').style.display = 'block';
+  await loadMyClaims();
   renderEarnings();
 });
 document.getElementById('ag_earnings_back_btn').addEventListener('click', ()=>{
   document.getElementById('ag_earningsView').style.display = 'none';
   document.getElementById('ag_homeView').style.display = 'block';
+});
+document.getElementById('ag_earnings_prev_btn').addEventListener('click', ()=>{
+  earningsViewMonth = shiftMonth(earningsViewMonth, -1);
+  renderEarnings();
+});
+document.getElementById('ag_earnings_next_btn').addEventListener('click', ()=>{
+  if(earningsViewMonth >= currentMonthKey()) return;
+  earningsViewMonth = shiftMonth(earningsViewMonth, 1);
+  renderEarnings();
 });
 
 /* ---------------- New Quote flow ---------------- */

@@ -2516,6 +2516,7 @@
       <div class="agent-subtabs" id="agentSubTabs">
         <button type="button" class="agent-subtab active" data-atab="roster">Agents</button>
         <button type="button" class="agent-subtab" data-atab="promotions">Promotions</button>
+        <button type="button" class="agent-subtab" data-atab="claims">Commission Claims</button>
       </div>
 
       <div id="apane-roster">
@@ -2547,6 +2548,16 @@
         </div>
         <div class="panel">
           <div id="promotionsWrap"></div>
+        </div>
+      </div>
+
+      <div id="apane-claims" style="display:none;">
+        <div class="panel">
+          <h2 style="margin-bottom:0;">Commission claims</h2>
+          <p class="preset-hint" style="margin:12px 0 0;">Supplier-funded bonus commission agents have requested payout for. Your own margin never appears here -- an agent collects that directly from their client, it's not money you owe them.</p>
+        </div>
+        <div class="panel">
+          <div id="claimsWrap"></div>
         </div>
       </div>
     </section>
@@ -8048,7 +8059,9 @@ document.getElementById('agentSubTabs').addEventListener('click', (e)=>{
   const atab = btn.dataset.atab;
   document.getElementById('apane-roster').style.display = atab==='roster' ? '' : 'none';
   document.getElementById('apane-promotions').style.display = atab==='promotions' ? '' : 'none';
+  document.getElementById('apane-claims').style.display = atab==='claims' ? '' : 'none';
   if(atab==='promotions') renderAgentPromotions();
+  if(atab==='claims') renderCommissionClaims();
 });
 
 function promotionBonusLabel(promo){
@@ -8213,6 +8226,66 @@ document.getElementById('promo_save').addEventListener('click', async ()=>{
     btn.disabled = false;
   }
 });
+
+/* ---- Commission claims (agent_commission_claims) ----
+   Lazily fetched only when the Claims sub-tab is opened, and written
+   directly via the Supabase client for the same identity-column reason as
+   agent_promotions above. The claimed amount itself is never editable
+   here -- it's a server-computed snapshot from agent-claim-commission
+   (see that function's own comment on why); an admin can only mark a
+   claim paid once they've actually settled it with the agent. */
+let commissionClaims = null;
+
+function claimMonthLabel(monthKey){
+  const [y, m] = monthKey.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('en-UG', { month:'long', year:'numeric' });
+}
+function claimCardHTML(c){
+  const agent = data.agents.find(a=>a.id===c.agent_id);
+  const paidDate = c.paid_at ? new Date(c.paid_at).toLocaleDateString() : '';
+  return `<div class="price-card">
+    <div class="prc-head">
+      <div class="prc-head-main">
+        <div class="prc-title">
+          <div class="prc-name">${esc(agent ? agent.name : c.agent_id)}</div>
+          <div class="prc-meta"><span class="prc-date">${esc(claimMonthLabel(c.month))} · ${fmtUGX(c.bonus_amount)}</span></div>
+        </div>
+      </div>
+      <div class="pc-actions">
+        ${c.status==='paid'
+          ? `<span class="st-status-pill busy" title="${esc(paidDate)}">Paid</span>`
+          : `<button class="btn btn-accent" style="padding:8px 14px;font-size:12.5px;" onclick="markClaimPaid(${c.id})">Mark as paid</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+async function renderCommissionClaims(){
+  const wrap = document.getElementById('claimsWrap');
+  if(commissionClaims===null){
+    wrap.innerHTML = '<div class="empty">Loading…</div>';
+    const { data: rows, error } = await sb.from('agent_commission_claims').select('*').eq('shop_id', currentShopId).order('requested_at', {ascending:false});
+    if(error){ wrap.innerHTML = '<div class="empty">Could not load claims.</div>'; toast('Could not load claims: '+error.message); return; }
+    commissionClaims = rows || [];
+  }
+  if(!commissionClaims.length){
+    wrap.innerHTML = `<div class="empty">No commission claims yet.</div>`;
+    return;
+  }
+  const sorted = commissionClaims.slice().sort((a,b)=>{
+    if(a.status !== b.status) return a.status==='requested' ? -1 : 1;
+    return b.month.localeCompare(a.month);
+  });
+  wrap.innerHTML = `<div class="price-grid">${sorted.map(claimCardHTML).join('')}</div>`;
+}
+async function markClaimPaid(id){
+  const c = commissionClaims.find(x=>x.id===id); if(!c) return;
+  if(!confirm(`Mark ${fmtUGX(c.bonus_amount)} for ${claimMonthLabel(c.month)} as paid? Make sure you've actually settled it with the agent first.`)) return;
+  const { error } = await sb.from('agent_commission_claims').update({ status:'paid', paid_at: new Date().toISOString() }).eq('shop_id', currentShopId).eq('id', id);
+  if(error){ toast('Could not update: '+error.message); return; }
+  c.status = 'paid'; c.paid_at = new Date().toISOString();
+  renderCommissionClaims();
+  toast('Marked as paid');
+}
 
 // Worker pick & pack (myWorkerOrders, renderWorkerView, accept/deny,
 // carousel stepper, autoAssignNextOrder, push notification handling, etc.)
