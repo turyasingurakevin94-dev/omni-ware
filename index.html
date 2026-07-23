@@ -2935,6 +2935,25 @@
   </div>
 </div>
 
+<!-- AGENT PREPAYMENT GATE MODAL -->
+<div class="modal-overlay" id="agentPrepayModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Payment required first</h2>
+      <button class="modal-close" id="agentPrepayModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint" id="agentPrepayText"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="agentPrepayCancel">Cancel</button>
+      <button class="btn btn-accent" id="agentPrepayConfirm">Mark as paid &amp; continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- ASSIGN STAFF MODAL (Order Tracking step transitions) -->
 <div class="modal-overlay" id="assignStaffModal">
   <div class="modal">
@@ -4085,7 +4104,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
   if(e.target.id==='imgLightbox') closeImageLightbox();
 });
 
-['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal'].forEach(id=>{
+['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal','agentPrepayModal'].forEach(id=>{
   document.getElementById(id).addEventListener('mousedown', (e)=>{
     if(e.target.id===id){
       if(id==='supplierModal') closeModalAndReset(id, resetSupplierForm);
@@ -4097,6 +4116,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
       if(id==='staffModal') closeModalAndReset(id, resetStaffForm);
       if(id==='assignStaffModal') closeAssignStaffModal();
       if(id==='agentModal') closeModalAndReset(id, resetAgentForm);
+      if(id==='agentPrepayModal') closeModal(id);
     }
   });
 });
@@ -4110,6 +4130,7 @@ document.addEventListener('keydown', (e)=>{
   if(document.getElementById('invModal').classList.contains('show')) closeModal('invModal');
   if(document.getElementById('staffModal').classList.contains('show')) closeModalAndReset('staffModal', resetStaffForm);
   if(document.getElementById('agentModal').classList.contains('show')) closeModalAndReset('agentModal', resetAgentForm);
+  if(document.getElementById('agentPrepayModal').classList.contains('show')) closeModal('agentPrepayModal');
   if(document.getElementById('assignStaffModal').classList.contains('show')) closeAssignStaffModal();
   if(document.getElementById('piPaymentModal').classList.contains('show')) closeModalAndReset('piPaymentModal', resetPiPaymentForm);
   if(document.getElementById('creditorPaymentModal').classList.contains('show')) closeModalAndReset('creditorPaymentModal', resetCreditorPaymentForm);
@@ -5704,6 +5725,15 @@ function orderCustomerLocation(q){
   return q.deliveryMode==='shop_delivery' ? (q.deliveryAddress||'') : '';
 }
 
+// staffName() resolves a real staff id -- '__agent__' is the sentinel a
+// self-pickup agent order's assignedDeliveryId gets set to instead (no
+// shop delivery staff involved at all), which staffName() would otherwise
+// render as "(removed staff)".
+function deliveryAssigneeLabel(q){
+  if(q.assignedDeliveryId==='__agent__') return 'Agent pickup';
+  return staffName(q.assignedDeliveryId);
+}
+
 function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -5713,6 +5743,27 @@ function setSavedQuoteStatus(id, status){
   saveData();
   renderSavedQuotes();
 }
+
+// agentPaymentBlocksPreparing() lives in shared-worker.js -- also needed
+// there, for autoAssignNextOrder()'s own draft-order eligibility check.
+let pendingPrepayOrderId = null;
+function promptAgentPrepayment(q){
+  const agent = data.agents.find(a=>a.id===q.originAgentId);
+  const owed = (q.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0)*(Number(it.qty)||0), 0);
+  document.getElementById('agentPrepayText').textContent = `${agent ? agent.name : 'This agent'} pays before you start preparing their orders — ${fmtUGX(owed)} owed for this one. Confirm you've received it to continue.`;
+  pendingPrepayOrderId = q.id;
+  openModal('agentPrepayModal');
+}
+document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
+  const q = data.savedQuotes.find(x=>x.id===pendingPrepayOrderId);
+  closeModal('agentPrepayModal');
+  if(!q) return;
+  q.agentPaymentStatus = 'paid';
+  saveData();
+  stepSavedQuoteStatus(q.id, 1); // re-attempt now that payment is recorded
+});
+document.getElementById('agentPrepayCancel').addEventListener('click', ()=>closeModal('agentPrepayModal'));
+document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>closeModal('agentPrepayModal'));
 
 // Which staff role must be picked before an order can move INTO the given
 // step -- keyed by the destination status. A forward move whose
@@ -5728,9 +5779,20 @@ function stepSavedQuoteStatus(id, dir){
   const nextIdx = idx + dir;
   if(nextIdx < 0 || nextIdx >= SQ_STATUS_ORDER.length) return;
   const toStatus = SQ_STATUS_ORDER[nextIdx];
+  if(dir>0 && toStatus==='preparing' && agentPaymentBlocksPreparing(q)){
+    promptAgentPrepayment(q);
+    return;
+  }
   if(dir>0){
     const role = STAGE_ASSIGNMENT_ROLE[toStatus];
-    if(role){ openAssignStaffModal(id, toStatus, role); return; }
+    // A self-pickup agent order has no shop delivery staff to assign --
+    // skip the picker and use the same '__agent__' sentinel
+    // finishPreparingOrder() (shared-worker.js) uses for the same case.
+    if(role==='delivery' && q.deliveryMode==='agent_pickup'){
+      q.assignedDeliveryId = '__agent__';
+    } else if(role){
+      openAssignStaffModal(id, toStatus, role); return;
+    }
   } else {
     // Moving backward out of a role-gated step retires that assignment --
     // an order sent back from Pending Delivery to Being Prepared isn't
@@ -6011,7 +6073,7 @@ function renderSavedQuotes(){
             <div class="sq-meta-row">• ${q.items.length} item${q.items.length===1?'':'s'}</div>
             <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
             ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
-            ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedDeliveryId))}</span></div>` : ''}
+            ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
           </div>
         </div>
       </div>
