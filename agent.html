@@ -12,11 +12,11 @@
     --ink: #12151A;
     --ink-soft: #6B7280;
     --line: #E9EBEF;
-    --accent: #2563EB;
-    --accent-dark: #1D4ED8;
-    --accent-soft: #EAF1FE;
-    --teal: #0D9488;
-    --teal-soft: #E4F4F2;
+    --accent: #0EA5A0;
+    --accent-dark: #0B7F7A;
+    --accent-soft: #E1F5F3;
+    --blue: #2563EB;
+    --blue-soft: #EAF1FE;
     --rust: #DC5F3C;
     --rust-soft: #FBEAE4;
     --slate: #475569;
@@ -101,12 +101,43 @@
   .ag-trust-banner{display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,0.14);color:#fff;border-radius:12px;padding:12px 13px;font-size:12.5px;line-height:1.5;margin-top:14px;}
   .ag-trust-banner .icon{width:17px;height:17px;flex-shrink:0;margin-top:1px;opacity:.9;}
 
-  .ag-hero-earn-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
-  .ag-hero-earn-value{font-size:32px;font-weight:800;margin:4px 0 14px;letter-spacing:-0.02em;}
-  .ag-hero-split{display:flex;gap:10px;}
-  .ag-hero-split-item{flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;}
-  .ag-hero-split-item span{display:block;font-size:10.5px;opacity:.85;margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
-  .ag-hero-split-item b{font-size:15px;font-weight:800;}
+  /* ---- Wallet card (Earnings) ---- */
+  .ag-wallet-card{
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    border-radius:22px;
+    padding:18px 20px 16px;
+    color:#fff;
+    box-shadow:0 14px 28px rgba(14,165,160,0.28);
+    margin-bottom:16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .ag-wallet-card::after{
+    content:'';position:absolute;top:-46px;right:-36px;width:150px;height:150px;
+    border-radius:50%;background:rgba(255,255,255,0.07);
+  }
+  .ag-wallet-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
+  .ag-wallet-value{font-size:32px;font-weight:800;margin:4px 0 14px;letter-spacing:-0.02em;}
+  .ag-wallet-split{display:flex;gap:10px;margin-bottom:16px;}
+  .ag-wallet-split-item{flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;}
+  .ag-wallet-split-item span{display:block;font-size:10.5px;opacity:.85;margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .ag-wallet-split-item b{font-size:15px;font-weight:800;}
+  .ag-wallet-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid rgba(255,255,255,0.22);font-size:10.5px;letter-spacing:.05em;position:relative;}
+  .ag-wallet-name{font-weight:700;text-transform:uppercase;opacity:.92;}
+  .ag-wallet-brand{font-weight:800;opacity:.7;}
+
+  .ag-quick-actions{display:flex;gap:12px;margin-bottom:4px;}
+  .ag-qa-btn{all:unset;flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 8px;}
+  .ag-qa-btn:hover{border-color:var(--accent);}
+  .ag-qa-icon{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;}
+  .ag-qa-icon .icon{width:19px;height:19px;}
+  .ag-qa-label{font-size:11.5px;font-weight:700;color:var(--ink);text-align:center;}
+
+  .ag-trend-months{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--ink-soft);font-weight:600;}
+
+  .ag-seg-tabs{display:flex;background:var(--bg);border-radius:13px;padding:4px;margin-bottom:14px;}
+  .ag-seg-btn{all:unset;flex:1;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;}
+  .ag-seg-btn.active{background:var(--ink);color:#fff;}
 
   .ag-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
   .ag-month-nav-btn{all:unset;cursor:pointer;padding:6px;border-radius:8px;color:rgba(255,255,255,0.85);display:flex;}
@@ -304,26 +335,44 @@
   </div>
 
   <!-- EARNINGS -->
-  <div id="ag_earningsView" style="display:none;">
-    <div class="ag-hero">
+  <div id="ag_earningsView" class="ag-pad-top" style="display:none;">
+    <div class="ag-tab-head"><h1>Earnings</h1></div>
+
+    <div class="ag-wallet-card">
       <div class="ag-month-nav">
         <button type="button" class="ag-month-nav-btn" id="ag_earnings_prev_btn" aria-label="Previous month"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
         <div class="ag-month-nav-label" id="ag_earningsMonthLabel">This month</div>
         <button type="button" class="ag-month-nav-btn" id="ag_earnings_next_btn" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
-      <div class="ag-hero-earn-label">Total earned</div>
-      <div class="ag-hero-earn-value" id="ag_earningsTotalValue">UGX 0</div>
-      <div class="ag-hero-split">
-        <div class="ag-hero-split-item"><span>Your margin</span><b id="ag_earningsMarginValue">UGX 0</b></div>
-        <div class="ag-hero-split-item"><span>Bonus</span><b id="ag_earningsBonusValue">UGX 0</b></div>
+      <div class="ag-wallet-label">Total earned</div>
+      <div class="ag-wallet-value" id="ag_earningsTotalValue">UGX 0</div>
+      <div class="ag-wallet-split">
+        <div class="ag-wallet-split-item"><span>Your margin</span><b id="ag_earningsMarginValue">UGX 0</b></div>
+        <div class="ag-wallet-split-item"><span>Bonus</span><b id="ag_earningsBonusValue">UGX 0</b></div>
+      </div>
+      <div class="ag-wallet-foot">
+        <span class="ag-wallet-name" id="ag_wallet_name">AGENT</span>
+        <span class="ag-wallet-brand">OMNI-WARE</span>
       </div>
     </div>
 
-    <div class="ag-pad">
-      <div id="ag_claimWrap"></div>
-      <div class="ag-section-title">Orders that month</div>
-      <div id="ag_earningsOrdersWrap"></div>
+    <div class="ag-quick-actions">
+      <button type="button" class="ag-qa-btn" id="ag_qa_clients">
+        <span class="ag-qa-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        <span class="ag-qa-label">My clients</span>
+      </button>
+      <button type="button" class="ag-qa-btn" id="ag_qa_history">
+        <span class="ag-qa-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
+        <span class="ag-qa-label">Order history</span>
+      </button>
     </div>
+
+    <div class="ag-section-title">Last 6 months</div>
+    <div class="ag-card" id="ag_trendCardWrap"></div>
+
+    <div id="ag_claimWrap"></div>
+    <div class="ag-section-title">Orders that month</div>
+    <div id="ag_earningsOrdersWrap"></div>
   </div>
 
   <!-- ACCOUNT -->
@@ -345,7 +394,7 @@
       <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
     </div>
     <div class="ag-menu-row" id="ag_menu_orders">
-      <span class="ag-menu-icon" style="background:var(--teal-soft);color:var(--teal);"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
+      <span class="ag-menu-icon" style="background:var(--blue-soft);color:var(--blue);"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
       <span class="ag-menu-label">Order history</span>
       <span class="ag-menu-count" id="ag_menu_orders_count">0</span>
       <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
@@ -371,6 +420,10 @@
     <div class="ag-back-row">
       <button type="button" class="ag-back-btn" id="ag_orders_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <h1 style="font-size:20px;font-weight:800;margin:0;">Order history</h1>
+    </div>
+    <div class="ag-seg-tabs" id="ag_orderHistorySeg">
+      <button type="button" class="ag-seg-btn active" data-seg="ongoing">Ongoing</button>
+      <button type="button" class="ag-seg-btn" data-seg="completed">Completed</button>
     </div>
     <div id="ag_orderHistoryListWrap"></div>
   </div>
@@ -794,11 +847,40 @@ function renderEarnings(){
     </div>`;
   }).join('');
 }
+// A stable "last 6 months" overview, anchored to now -- deliberately not
+// re-rendered on prev/next (that's a separate drill-down below it into
+// whichever single month is being inspected).
+function renderTrendChart(){
+  const months = [];
+  for(let i=5;i>=0;i--) months.push(shiftMonth(currentMonthKey(), -i));
+  const totals = months.map(m=>monthEarnings(m).total);
+  const max = Math.max(1, ...totals);
+  const w = 300, h = 64, pad = 4;
+  const stepX = (w - pad*2) / (months.length - 1);
+  const pts = totals.map((t,i)=> [pad + i*stepX, h - pad - (t/max)*(h-pad*2)]);
+  const line = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = line + ` L${pts[pts.length-1][0].toFixed(1)},${h-pad} L${pts[0][0].toFixed(1)},${h-pad} Z`;
+  document.getElementById('ag_trendCardWrap').innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:64px;display:block;" preserveAspectRatio="none">
+      <defs><linearGradient id="agSparkFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" style="stop-color:var(--accent);stop-opacity:0.32"/>
+        <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#agSparkFill)"/>
+      <path d="${line}" fill="none" style="stroke:var(--accent);" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="ag-trend-months">${months.map(m=>`<span>${esc(monthLabel(m).split(' ')[0].slice(0,3))}</span>`).join('')}</div>`;
+}
+
 async function openEarningsView(){
   earningsViewMonth = currentMonthKey();
+  document.getElementById('ag_wallet_name').textContent = (myAgent.name||'').toUpperCase();
+  renderTrendChart();
   await loadMyClaims();
   renderEarnings();
 }
+document.getElementById('ag_qa_clients').addEventListener('click', ()=> openClientsScreen('earnings'));
+document.getElementById('ag_qa_history').addEventListener('click', ()=> openOrderHistoryScreen('earnings'));
 document.getElementById('ag_earnings_prev_btn').addEventListener('click', ()=>{
   earningsViewMonth = shiftMonth(earningsViewMonth, -1);
   renderEarnings();
@@ -857,22 +939,42 @@ function renderClientsListScreen(){
   const counts = clientOrderCounts();
   wrap.innerHTML = agentClients.map(c=>clientRowHTML(c, counts.get(c.id)||[])).join('');
 }
+let orderHistorySegment = 'ongoing';
 function renderOrderHistoryScreen(){
   const wrap = document.getElementById('ag_orderHistoryListWrap');
-  const orders = myOrders.filter(o=>!o.voided).slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
-  if(!orders.length){ wrap.innerHTML = `<div class="empty">No orders yet.</div>`; return; }
+  let orders = myOrders.filter(o=>!o.voided);
+  orders = orders.filter(o=> orderHistorySegment==='ongoing' ? o.status!=='completed' : o.status==='completed');
+  orders = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
+  if(!orders.length){ wrap.innerHTML = `<div class="empty">No ${orderHistorySegment} orders.</div>`; return; }
   wrap.innerHTML = orders.map(orderRowHTML).join('');
 }
-document.getElementById('ag_menu_clients').addEventListener('click', ()=>{
-  showOnlyView('ag_clientsListView');
-  renderClientsListScreen();
-});
-document.getElementById('ag_menu_orders').addEventListener('click', ()=>{
-  showOnlyView('ag_orderHistoryListView');
+document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.ag-seg-btn');
+  if(!btn) return;
+  document.querySelectorAll('#ag_orderHistorySeg .ag-seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  orderHistorySegment = btn.dataset.seg;
   renderOrderHistoryScreen();
 });
-document.getElementById('ag_clients_back_btn').addEventListener('click', ()=> switchTab('account'));
-document.getElementById('ag_orders_back_btn').addEventListener('click', ()=> switchTab('account'));
+
+// Both sub-screens can be reached from either Account's menu or
+// Earnings' quick actions -- remember which, so the back arrow returns
+// to wherever the agent actually came from instead of always Account.
+let subScreenReturnTab = 'account';
+function openClientsScreen(returnTab){
+  subScreenReturnTab = returnTab || 'account';
+  showOnlyView('ag_clientsListView');
+  renderClientsListScreen();
+}
+function openOrderHistoryScreen(returnTab){
+  subScreenReturnTab = returnTab || 'account';
+  showOnlyView('ag_orderHistoryListView');
+  renderOrderHistoryScreen();
+}
+document.getElementById('ag_menu_clients').addEventListener('click', ()=> openClientsScreen('account'));
+document.getElementById('ag_menu_orders').addEventListener('click', ()=> openOrderHistoryScreen('account'));
+document.getElementById('ag_clients_back_btn').addEventListener('click', ()=> switchTab(subScreenReturnTab));
+document.getElementById('ag_orders_back_btn').addEventListener('click', ()=> switchTab(subScreenReturnTab));
 document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
 
 /* ================= BROWSE + commission cluster ================= */
@@ -1002,7 +1104,7 @@ function categoryIconSVG(name){
 }
 const CAT_PALETTE = [
   { bg: 'var(--accent-soft)', fg: 'var(--accent)' },
-  { bg: 'var(--teal-soft)', fg: 'var(--teal)' },
+  { bg: 'var(--blue-soft)', fg: 'var(--blue)' },
   { bg: 'var(--rust-soft)', fg: 'var(--rust)' },
   { bg: 'var(--slate-soft)', fg: 'var(--slate)' },
 ];
