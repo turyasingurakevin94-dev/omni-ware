@@ -9,12 +9,12 @@
 // only the single computed floor price a given quantity would cost the
 // agent, plus plain display info (name, image, category, packaging size).
 //
-// The floor-price math deliberately mirrors the admin app's own
-// suggestedSellingPrice()/effectiveMarkupRule() (index.html) exactly, so
-// "our price" here means the same thing it means everywhere else in the
-// app -- an agent's discount is calculated off of that real number, not a
-// separately-invented one.
+// The pricing math lives in ../_shared/agent-pricing.ts, shared with
+// agent-submit-order -- so the number an agent sees while browsing here
+// and the number actually charged at order submission can never drift
+// apart from each other.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { computeFloorPrice, pickBestPriceRow, resolveDiscountPcts } from "../_shared/agent-pricing.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -31,68 +31,6 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "content-type": "application/json", ...CORS_HEADERS },
   });
-}
-
-type MarkupKind = "wholesale" | "retail";
-type MarkupRule = { type: string; value: number } | null;
-
-function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind): MarkupRule {
-  if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
-    const v = product.variants[variantIdx];
-    const vVal = Number(v[kind + "MarkupValue"]) || 0;
-    if (vVal > 0) return { type: v[kind + "MarkupType"], value: vVal };
-  }
-  const colVal = Number(product[kind + "_markup_value"]) || 0;
-  if (colVal > 0) return { type: product[kind + "_markup_type"], value: colVal };
-  return null;
-}
-
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null): number | null {
-  if (basePrice == null) return null;
-  const rule = effectiveMarkupRule(product, variantIdx, kind);
-  if (!rule) return null;
-  return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
-}
-
-// Cheapest-by-wholesale, tie-broken by retail -- same ranking
-// rankedPriceRows() uses client-side, so "the best supplier" means the
-// same thing here that it means on the admin app's own quote builder.
-function pickBestPriceRow(rows: any[]): any | null {
-  const priced = rows.filter((r) => !r.out_of_stock);
-  if (!priced.length) return null;
-  return priced.slice().sort((a, b) => {
-    const aw = a.wholesale != null ? a.wholesale : Infinity;
-    const bw = b.wholesale != null ? b.wholesale : Infinity;
-    if (aw !== bw) return aw - bw;
-    const ar = a.retail != null ? a.retail : Infinity;
-    const br = b.retail != null ? b.retail : Infinity;
-    return ar - br;
-  })[0];
-}
-
-// The core mechanic: quantity decides whether the wholesale or retail
-// tier applies (>= the supplier's own pack size unlocks wholesale), our
-// markup turns that tier's raw cost into "our price", the agent's
-// discount comes off of THAT -- and the result can never be pushed below
-// the actual cost for that tier, no matter what discount is configured.
-function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
-  if (!priceRow) return null;
-  const packQty = Number(priceRow.pack_qty) || 0;
-  const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
-  const variantIdx = priceRow.variant_idx == null || priceRow.variant_idx === "" ? null : Number(priceRow.variant_idx);
-  const cost = tier === "wholesale" ? priceRow.wholesale : priceRow.retail;
-  if (cost == null) return null;
-  const costNum = Number(cost);
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
-  const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
-  const discounted = ourPrice * (1 - (discountPct || 0) / 100);
-  return {
-    tier,
-    floorPrice: Math.max(costNum, discounted),
-    unit: priceRow.unit || "",
-    packUnit: priceRow.pack_unit || "",
-    packQty,
-  };
 }
 
 Deno.serve(async (req) => {
@@ -126,18 +64,16 @@ Deno.serve(async (req) => {
         .from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle();
       if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
       const presets = settingsRow?.presets || {};
-      const defaultWholesalePct = Number(presets.agentDiscountWholesalePct) || 0;
-      const defaultRetailPct = Number(presets.agentDiscountRetailPct) || 0;
 
       if (action === "price") {
         const { productId, variantIdx, qty } = body;
         if (!productId || !(Number(qty) > 0)) return json({ error: "productId and a positive qty are required" }, 400);
         // prices.variant_idx is nullable and stores real SQL NULL for a
         // non-variant product (matching how the admin app writes it) --
-        // unlike agent_promotions/agent_clusters below, which use '' by
-        // choice so they can sit in a composite primary key. .is()/.eq()
-        // have to be picked per case or a non-variant product's price
-        // rows would silently match nothing.
+        // unlike agent_promotions/agent_clusters, which use '' by choice
+        // so they can sit in a composite primary key. .is()/.eq() have to
+        // be picked per case or a non-variant product's price rows would
+        // silently match nothing.
         let priceQuery = admin.from("prices").select("*").eq("shop_id", shopId).eq("product_id", productId);
         priceQuery = variantIdx == null ? priceQuery.is("variant_idx", null) : priceQuery.eq("variant_idx", String(variantIdx));
         const [{ data: product, error: productErr }, { data: priceRows, error: priceErr }] = await Promise.all([
@@ -150,11 +86,11 @@ Deno.serve(async (req) => {
 
         const best = pickBestPriceRow(priceRows || []);
         if (!best) return json({ ok: true, available: false });
-        const discountWholesalePct = product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct;
-        const discountRetailPct = product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct;
+        const { discountWholesalePct, discountRetailPct } = resolveDiscountPcts(product, presets);
         const result = computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct);
         if (!result) return json({ ok: true, available: false });
-        return json({ ok: true, available: true, ...result });
+        const { cost, ...safeResult } = result; // cost never leaves this function
+        return json({ ok: true, available: true, ...safeResult });
       }
 
       // action === "list": every product with safe display fields plus a
@@ -176,8 +112,7 @@ Deno.serve(async (req) => {
       });
 
       const items = (products || []).flatMap((p) => {
-        const discountWholesalePct = p.agent_discount_wholesale_pct != null ? Number(p.agent_discount_wholesale_pct) : defaultWholesalePct;
-        const discountRetailPct = p.agent_discount_retail_pct != null ? Number(p.agent_discount_retail_pct) : defaultRetailPct;
+        const { discountWholesalePct, discountRetailPct } = resolveDiscountPcts(p, presets);
         const variantCount = Array.isArray(p.variants) ? p.variants.length : 0;
         const variantIdxs: (number | null)[] = variantCount > 0 ? p.variants.map((_: any, i: number) => i) : [null];
         return variantIdxs.map((variantIdx) => {

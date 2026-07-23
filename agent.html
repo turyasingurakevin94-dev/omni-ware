@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omni-Ware Agent</title>
+<link rel="manifest" href="/manifest-agent.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #EDF0F2;
+    --panel: #FFFFFF;
+    --ink: #1B2430;
+    --ink-soft: #57626F;
+    --line: #D8DEE3;
+    --accent: #6D3FC0;
+    --accent-ink: #2C1B4D;
+    --good: #2F7D4F;
+    --good-bg: #E4F3EA;
+    --danger: #C0392B;
+    --navy: #1B2430;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+  }
+  body.app-loading .agent-view-wrap{display:none !important;}
+  .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
+
+  .page-head{margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+  .page-head h1{
+    font-family:'Archivo Black',sans-serif;font-size:22px;margin:0 0 4px 0;color:var(--ink);
+  }
+  .page-head p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+
+  .btn{
+    all:unset;cursor:pointer;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;
+    text-align:center;display:block;
+  }
+  .btn-accent{background:var(--accent);color:#fff;}
+  .btn-accent:hover{background:#5c33a3;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .btn-block{width:100%;}
+  .btn[disabled]{opacity:.5;cursor:default;}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .field label{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .field input, .field select{
+    padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:14px;
+    font-family:inherit;background:#FBFCFD;color:var(--ink);width:100%;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .radio-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;cursor:pointer;}
+
+  .empty{padding:22px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 18px;
+    border-radius:8px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    opacity:0;transform:translateY(8px);transition:all 0.25s ease;pointer-events:none;z-index:150;
+    display:flex;align-items:center;gap:8px;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .agent-view-wrap{max-width:520px;margin:0 auto;padding:16px;}
+  .ag-back-btn{all:unset;cursor:pointer;display:flex;align-items:center;color:var(--ink-soft);padding:6px 8px 6px 0;}
+  .ag-back-btn .icon{width:20px;height:20px;}
+
+  .ag-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .ag-card-title{font-weight:700;margin-bottom:10px;font-size:14px;}
+
+  .ag-earnings-card{background:var(--accent);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+  .ag-earnings-label{font-size:12px;opacity:.85;text-transform:uppercase;letter-spacing:.04em;}
+  .ag-earnings-value{font-family:'Archivo Black',sans-serif;font-size:28px;margin-top:4px;}
+
+  .ag-section-title{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 8px;}
+
+  .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
+  .ag-list-item:hover{border-color:var(--accent);}
+  .ag-list-item-avatar{width:34px;height:34px;border-radius:50%;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .ag-list-item-body{min-width:0;flex:1;}
+  .ag-list-item-name{font-weight:600;font-size:14px;}
+  .ag-list-item-meta{font-size:12px;color:var(--ink-soft);}
+  .ag-list-item-quiet .ag-list-item-avatar{background:#FDF0D9;color:var(--accent-ink);}
+
+  .ag-item-result{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:8px;cursor:pointer;}
+  .ag-item-result:hover{background:#F5F3FA;}
+  .ag-item-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
+  .ag-item-thumb-placeholder{width:38px;height:38px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .ag-item-result-body{min-width:0;flex:1;}
+  .ag-item-result-name{font-size:13.5px;font-weight:600;}
+  .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
+
+  .ag-cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .ag-cart-row:last-child{border-bottom:none;}
+  .ag-cart-row-body{flex:1;min-width:0;}
+  .ag-cart-row-name{font-size:13.5px;font-weight:600;}
+  .ag-cart-row-meta{font-size:12px;color:var(--ink-soft);}
+  .ag-cart-row-price{font-weight:700;font-size:14px;white-space:nowrap;}
+  .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;}
+
+  .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F5F3FA;border-radius:9px;padding:10px 12px;}
+  .ag-chip-name{font-weight:600;font-size:14px;}
+  .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
+  .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600;}
+
+  .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
+  .ag-overlay-card{background:var(--panel);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
+  @media (min-width:560px){
+    .ag-overlay{align-items:center;padding:20px;}
+    .ag-overlay-card{border-radius:16px;}
+  }
+  .ag-overlay-title{font-weight:700;font-size:16px;margin-bottom:14px;}
+  .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
+
+  .ag-trust-banner{background:var(--good-bg);color:var(--good);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;}
+
+  .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
+</style>
+</head>
+<body class="app-loading">
+
+<div class="agent-view-wrap">
+
+  <!-- HOME -->
+  <div id="ag_homeView">
+    <div class="page-head">
+      <div>
+        <h1>My Orders</h1>
+        <p id="ag_welcome"></p>
+      </div>
+    </div>
+
+    <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
+      Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.
+    </div>
+
+    <div class="ag-earnings-card">
+      <div class="ag-earnings-label">Earned this month</div>
+      <div class="ag-earnings-value" id="ag_earningsValue">UGX 0</div>
+    </div>
+
+    <button type="button" class="btn btn-accent btn-block" id="ag_newQuoteBtn">+ New quote</button>
+
+    <div class="ag-section-title">My clients</div>
+    <div id="ag_clientsWrap"></div>
+
+    <div class="wv-footer" id="ag_signout_btn">Sign out</div>
+  </div>
+
+  <!-- NEW QUOTE -->
+  <div id="ag_quoteView" style="display:none;">
+    <div class="page-head">
+      <button type="button" class="ag-back-btn" id="ag_quote_back_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div><h1>New quote</h1></div>
+    </div>
+
+    <div class="ag-card">
+      <div class="ag-card-title">Client</div>
+      <div id="ag_clientChosenWrap" style="display:none;"></div>
+      <div id="ag_clientPickWrap">
+        <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+        <div id="ag_client_suggestions"></div>
+      </div>
+    </div>
+
+    <div class="ag-card">
+      <div class="ag-card-title">Add items</div>
+      <input type="text" id="ag_item_search" placeholder="Search products..." autocomplete="off">
+      <div id="ag_item_suggestions"></div>
+    </div>
+
+    <div class="ag-card" id="ag_cartCard" style="display:none;">
+      <div class="ag-card-title">Order items</div>
+      <div id="ag_cartWrap"></div>
+    </div>
+
+    <div class="ag-card">
+      <div class="ag-card-title">Delivery</div>
+      <label class="radio-row"><input type="radio" name="ag_delivery" id="ag_delivery_pickup" value="agent_pickup" checked> I'll pick it up myself</label>
+      <label class="radio-row"><input type="radio" name="ag_delivery" id="ag_delivery_shop" value="shop_delivery"> Shop delivers</label>
+      <div id="ag_deliveryAddressWrap" style="display:none;">
+        <div class="field"><label>Delivery address</label><input type="text" id="ag_delivery_address" placeholder="e.g. Plot 12, Ntinda Road"></div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-accent btn-block" id="ag_submit_btn">Submit order</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// Deliberately self-contained rather than loading shared-worker.js -- that
+// file's top-level code wires event listeners against worker-view DOM
+// elements (#wv_enablePushBtn etc.) that don't exist on this page, which
+// would throw and abort the whole script before anything else in it ran.
+// The handful of generic helpers below (esc/toast/auth overlay/login
+// screen) are intentionally small, bounded duplication rather than risk
+// coupling this page to a file two other already-shipped apps depend on.
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, duration){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), duration || 2200);
+}
+
+function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
+
+function ensureAuthOverlay(){
+  let el = document.getElementById('authOverlay');
+  if(el) return el;
+  el = document.createElement('div');
+  el.id = 'authOverlay';
+  el.style.cssText = 'position:fixed;inset:0;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;';
+  document.body.appendChild(el);
+  return el;
+}
+function hideAuthOverlay(){
+  const el = document.getElementById('authOverlay');
+  if(el) el.remove();
+}
+
+async function getAuthedUser(){
+  const { data, error } = await sb.auth.getUser();
+  if(error || !data || !data.user) return null;
+  return data.user;
+}
+
+function showLoginScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;">
+        <h2 style="margin:0 0 16px;font-size:18px;">Sign in</h2>
+        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="auth_signin_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;background:#6D3FC0;color:#fff;cursor:pointer;">Sign in</button>
+        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#b79ce8;cursor:pointer;font-size:13px;">Forgot password?</button>
+      </div>`;
+    const statusEl = el.querySelector('#auth_status');
+    const setStatus = (msg, kind)=>{
+      statusEl.textContent = msg;
+      statusEl.style.color = kind==='ok' ? '#3A9A5C' : kind==='busy' ? '#aaa' : '#f66';
+    };
+    el.querySelector('#auth_signin_btn').addEventListener('click', async ()=>{
+      const email = el.querySelector('#auth_email').value.trim();
+      const password = el.querySelector('#auth_password').value;
+      if(!email || !password){ setStatus('Enter an email and password', 'err'); return; }
+      const btn = el.querySelector('#auth_signin_btn');
+      btn.disabled = true;
+      setStatus('Signing in…', 'busy');
+      const { error } = await sb.auth.signInWithPassword({email, password});
+      btn.disabled = false;
+      if(error){ setStatus(error.message, 'err'); return; }
+      const user = await getAuthedUser();
+      if(!user){ setStatus('Sign-in did not complete, try again.', 'err'); return; }
+      setStatus('Signed in…', 'ok');
+      resolve();
+    });
+    el.querySelector('#auth_forgot_btn').addEventListener('click', async ()=>{
+      const email = (el.querySelector('#auth_email').value||'').trim();
+      if(!email){ setStatus('Enter your email above first, then tap "Forgot password?"', 'err'); return; }
+      setStatus('Sending reset link…', 'busy');
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      setStatus(error ? error.message : 'Check your email for a password reset link.', error ? 'err' : 'ok');
+    });
+  });
+}
+
+function showSetPasswordScreen(){
+  return new Promise((resolve)=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+        <h2 style="margin:0 0 8px;font-size:18px;">Set your password</h2>
+        <p style="margin:0 0 16px;font-size:13px;color:#aaa;">Choose a password so you can sign back in next time.</p>
+        <input id="setpw_pw1" type="password" autocomplete="new-password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw2" type="password" autocomplete="new-password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#aaa;margin-bottom:12px;cursor:pointer;">
+          <input type="checkbox" id="setpw_show">
+          Show password
+        </label>
+        <div id="setpw_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
+        <button id="setpw_save_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#6D3FC0;color:#fff;cursor:pointer;">Save password</button>
+      </div>`;
+    const errEl = el.querySelector('#setpw_error');
+    el.querySelector('#setpw_show').addEventListener('change', (e)=>{
+      const t = e.target.checked ? 'text' : 'password';
+      el.querySelector('#setpw_pw1').type = t;
+      el.querySelector('#setpw_pw2').type = t;
+    });
+    el.querySelector('#setpw_save_btn').addEventListener('click', async ()=>{
+      errEl.textContent = '';
+      const pw1 = el.querySelector('#setpw_pw1').value;
+      const pw2 = el.querySelector('#setpw_pw2').value;
+      if(pw1.length < 6){ errEl.textContent = 'Password must be at least 6 characters'; return; }
+      if(pw1 !== pw2){ errEl.textContent = 'Passwords do not match'; return; }
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      if(error){ errEl.textContent = error.message; return; }
+      resolve();
+    });
+  });
+}
+
+async function signOutAndReload(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+const initialAuthLinkType = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null, currentShopId = null, myAgent = null;
+let agentClients = [], myOrders = [], catalog = [];
+let cart = [], chosenClient = null;
+
+// Agents are deliberately NOT shop_members (see 0012_sales_agents.sql) --
+// there's no shop_members row to look up here at all, unlike the admin/
+// worker apps' ensureAuthAndShop(). This looks up the agents table
+// directly by user_id instead.
+async function ensureAgentAuth(){
+  let user = await getAuthedUser();
+  if(!user){
+    await showLoginScreen();
+    user = await getAuthedUser();
+    if(!user) throw new Error('Sign-in did not complete');
+  } else if(initialAuthLinkType==='invite' || initialAuthLinkType==='recovery'){
+    await showSetPasswordScreen();
+  }
+  currentUser = user;
+
+  const { data: agentRow, error } = await sb.from('agents').select('*').eq('user_id', user.id).maybeSingle();
+  if(error) throw error;
+  if(!agentRow){
+    throw new Error("This login isn't linked to an agent account. Ask the shop to send you an invite.");
+  }
+  currentShopId = agentRow.shop_id;
+  myAgent = { id: agentRow.id, name: agentRow.name, phone: agentRow.phone, email: agentRow.email, paymentTerm: agentRow.payment_term };
+  hideAuthOverlay();
+}
+
+async function callAgentFn(name, body){
+  const { data, error } = await sb.functions.invoke(name, { body: { shopId: currentShopId, ...body } });
+  if(error) throw error;
+  if(data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function mapOrderRow(q){
+  const payload = q.payload || {};
+  return {
+    id: q.id, status: q.status,
+    items: payload.items || [],
+    savedAt: payload.savedAt || null,
+    agentClientId: payload.agentClientId || null,
+    deliveryMode: payload.deliveryMode || null,
+    agentPaymentStatus: payload.agentPaymentStatus || 'unpaid',
+  };
+}
+
+async function loadAgentHomeData(){
+  const [{ data: clientsData, error: clientsErr }, { data: ordersData, error: ordersErr }] = await Promise.all([
+    sb.from('agent_clients').select('*').eq('shop_id', currentShopId).order('name'),
+    sb.from('saved_quotes').select('*').eq('shop_id', currentShopId),
+  ]);
+  if(clientsErr) throw clientsErr;
+  if(ordersErr) throw ordersErr;
+  agentClients = clientsData || [];
+  myOrders = (ordersData || []).map(mapOrderRow);
+}
+
+function computeMonthEarnings(){
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let total = 0;
+  myOrders.forEach(o=>{
+    if(!o.savedAt || !o.savedAt.startsWith(monthKey)) return;
+    (o.items||[]).forEach(it=>{
+      const margin = (Number(it.agentSellPrice)||0) - (Number(it.sellPrice)||0);
+      total += margin * (Number(it.qty)||0);
+    });
+  });
+  return total;
+}
+
+function renderHome(){
+  document.getElementById('ag_welcome').textContent = `Hi, ${myAgent.name}`;
+  document.getElementById('ag_earningsValue').textContent = fmtUGX(computeMonthEarnings());
+
+  const wrap = document.getElementById('ag_clientsWrap');
+  if(!agentClients.length){
+    wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`;
+    return;
+  }
+  const ordersByClient = new Map();
+  myOrders.forEach(o=>{
+    if(!o.agentClientId) return;
+    if(!ordersByClient.has(o.agentClientId)) ordersByClient.set(o.agentClientId, []);
+    ordersByClient.get(o.agentClientId).push(o);
+  });
+  wrap.innerHTML = agentClients.map(c=>{
+    const orders = ordersByClient.get(c.id) || [];
+    const initials = (c.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    return `<div class="ag-list-item">
+      <div class="ag-list-item-avatar">${esc(initials)}</div>
+      <div class="ag-list-item-body">
+        <div class="ag-list-item-name">${esc(c.name)}</div>
+        <div class="ag-list-item-meta">${orders.length} order${orders.length===1?'':'s'}${c.phone?' · '+esc(c.phone):''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- New Quote flow ---------------- */
+
+function resetQuoteForm(){
+  cart = [];
+  chosenClient = null;
+  document.getElementById('ag_client_search').value = '';
+  document.getElementById('ag_client_suggestions').innerHTML = '';
+  document.getElementById('ag_clientChosenWrap').style.display = 'none';
+  document.getElementById('ag_clientPickWrap').style.display = 'block';
+  document.getElementById('ag_item_search').value = '';
+  document.getElementById('ag_item_suggestions').innerHTML = '';
+  document.getElementById('ag_delivery_pickup').checked = true;
+  document.getElementById('ag_delivery_address').value = '';
+  document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
+  renderCart();
+}
+
+async function openQuoteView(){
+  resetQuoteForm();
+  document.getElementById('ag_homeView').style.display = 'none';
+  document.getElementById('ag_quoteView').style.display = 'block';
+  if(!catalog.length){
+    try{
+      const res = await callAgentFn('agent-catalog', { action: 'list' });
+      catalog = (res.items||[]).filter(it=>it.available);
+    }catch(err){
+      toast(`Could not load catalog: ${err.message||err}`);
+    }
+  }
+}
+document.getElementById('ag_newQuoteBtn').addEventListener('click', openQuoteView);
+document.getElementById('ag_quote_back_btn').addEventListener('click', ()=>{
+  document.getElementById('ag_quoteView').style.display = 'none';
+  document.getElementById('ag_homeView').style.display = 'block';
+});
+
+/* ---- Client picking ---- */
+function renderClientSuggestions(query){
+  const box = document.getElementById('ag_client_suggestions');
+  const q = query.trim().toLowerCase();
+  const matches = q ? agentClients.filter(c=>(c.name||'').toLowerCase().includes(q)) : agentClients.slice(0, 6);
+  let html = matches.map(c=>`<div class="ag-item-result" data-id="${esc(c.id)}"><div class="ag-item-result-body"><div class="ag-item-result-name">${esc(c.name)}</div><div class="ag-item-result-price">${esc(c.phone||'')}</div></div></div>`).join('');
+  if(q && !matches.some(c=>(c.name||'').toLowerCase()===q)){
+    html += `<div class="ag-item-result" id="ag_client_add_new"><div class="ag-item-result-body"><div class="ag-item-result-name">+ Add "${esc(query.trim())}" as a new client</div></div></div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('.ag-item-result[data-id]').forEach(row=>{
+    row.addEventListener('click', ()=> selectClient(agentClients.find(c=>String(c.id)===row.dataset.id)));
+  });
+  const addNew = document.getElementById('ag_client_add_new');
+  if(addNew) addNew.addEventListener('click', ()=> openNewClientPanel(query.trim()));
+}
+document.getElementById('ag_client_search').addEventListener('input', e=>renderClientSuggestions(e.target.value));
+document.getElementById('ag_client_search').addEventListener('focus', e=>renderClientSuggestions(e.target.value));
+
+function selectClient(client){
+  if(!client) return;
+  chosenClient = client;
+  document.getElementById('ag_clientPickWrap').style.display = 'none';
+  const wrap = document.getElementById('ag_clientChosenWrap');
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
+  document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
+    chosenClient = null;
+    wrap.style.display = 'none';
+    document.getElementById('ag_clientPickWrap').style.display = 'block';
+    document.getElementById('ag_client_search').value = '';
+    renderClientSuggestions('');
+  });
+}
+
+function openNewClientPanel(prefillName){
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">Add a client</div>
+      <div class="field"><label>Name</label><input id="ag_nc_name" type="text" value="${esc(prefillName||'')}"></div>
+      <div class="field"><label>Phone</label><input id="ag_nc_phone" type="text"></div>
+      <div class="field"><label>Location (optional)</label><input id="ag_nc_location" type="text"></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_nc_save_btn">Save client</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  document.getElementById('ag_nc_save_btn').addEventListener('click', async ()=>{
+    const name = document.getElementById('ag_nc_name').value.trim();
+    if(!name){ toast('Enter a name'); return; }
+    const phone = document.getElementById('ag_nc_phone').value.trim();
+    const location = document.getElementById('ag_nc_location').value.trim();
+    const { data: inserted, error } = await sb.from('agent_clients')
+      .insert({ shop_id: currentShopId, agent_id: myAgent.id, name, phone: phone||null, location: location||null })
+      .select().single();
+    if(error){ toast(`Could not save client: ${error.message}`); return; }
+    agentClients.push(inserted);
+    document.body.removeChild(el);
+    selectClient(inserted);
+  });
+}
+
+/* ---- Item picking ---- */
+function renderItemSuggestions(query){
+  const box = document.getElementById('ag_item_suggestions');
+  const q = query.trim().toLowerCase();
+  if(!q){ box.innerHTML = ''; return; }
+  const matches = catalog.filter(it=>(it.name||'').toLowerCase().includes(q)).slice(0, 8);
+  if(!matches.length){ box.innerHTML = `<div class="empty">No matching items.</div>`; return; }
+  box.innerHTML = matches.map((it,i)=>`
+    <div class="ag-item-result" data-idx="${i}">
+      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
+      <div class="ag-item-result-body">
+        <div class="ag-item-result-name">${esc(it.name)}</div>
+        <div class="ag-item-result-price">From ${fmtUGX(it.floorPrice)}${it.packQty ? ` · ${esc(it.packQty)} ${esc(it.unit||'')} per ${esc(it.packUnit||'pack')}` : ''}</div>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('.ag-item-result[data-idx]').forEach(row=>{
+    row.addEventListener('click', ()=> openAddItemPanel(matches[Number(row.dataset.idx)]));
+  });
+}
+document.getElementById('ag_item_search').addEventListener('input', e=>renderItemSuggestions(e.target.value));
+
+async function openAddItemPanel(item){
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">${esc(item.name)}</div>
+      <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
+      <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
+      <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to order</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+
+  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty;
+  const qtyEl = document.getElementById('ag_ai_qty');
+  const priceEl = document.getElementById('ag_ai_price');
+  const hintEl = document.getElementById('ag_ai_cost_hint');
+  let repricing = false;
+  const reprice = async ()=>{
+    const qty = Number(qtyEl.value);
+    if(!(qty>0) || repricing) return;
+    repricing = true;
+    try{
+      const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
+      if(res.available){
+        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
+        hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
+      }
+    }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
+    repricing = false;
+  };
+  qtyEl.addEventListener('change', reprice);
+
+  document.getElementById('ag_ai_add_btn').addEventListener('click', ()=>{
+    const qty = Number(qtyEl.value);
+    const agentSellPrice = Number(priceEl.value);
+    if(!(qty>0)){ toast('Enter a quantity'); return; }
+    if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
+    cart.push({
+      productId: item.productId, variantIdx: item.variantIdx, name: item.name,
+      qty, unit: liveUnit, packUnit: livePackUnit,
+      floorPrice: liveFloor, agentSellPrice,
+    });
+    document.body.removeChild(el);
+    renderCart();
+    document.getElementById('ag_item_search').value = '';
+    document.getElementById('ag_item_suggestions').innerHTML = '';
+    toast('Added to order');
+  });
+}
+
+function renderCart(){
+  const card = document.getElementById('ag_cartCard');
+  const wrap = document.getElementById('ag_cartWrap');
+  if(!cart.length){ card.style.display = 'none'; wrap.innerHTML=''; return; }
+  card.style.display = 'block';
+  wrap.innerHTML = cart.map((it,i)=>`
+    <div class="ag-cart-row">
+      <div class="ag-cart-row-body">
+        <div class="ag-cart-row-name">${esc(it.name)}</div>
+        <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
+      </div>
+      <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
+      <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>`).join('');
+  wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ cart.splice(Number(btn.dataset.idx), 1); renderCart(); });
+  });
+}
+
+/* ---- Delivery + submit ---- */
+document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    document.getElementById('ag_deliveryAddressWrap').style.display = document.getElementById('ag_delivery_shop').checked ? 'block' : 'none';
+  });
+});
+
+document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
+  if(!chosenClient){ toast('Choose or add a client first'); return; }
+  if(!cart.length){ toast('Add at least one item'); return; }
+  const deliveryMode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
+  const deliveryAddress = document.getElementById('ag_delivery_address').value.trim();
+  if(deliveryMode==='shop_delivery' && !deliveryAddress){ toast('Enter a delivery address'); return; }
+
+  const btn = document.getElementById('ag_submit_btn');
+  btn.disabled = true;
+  try{
+    const res = await callAgentFn('agent-submit-order', {
+      agentClientId: chosenClient.id,
+      items: cart.map(it=>({ productId: it.productId, variantIdx: it.variantIdx, qty: it.qty, agentSellPrice: it.agentSellPrice })),
+      deliveryMode,
+      deliveryAddress: deliveryMode==='shop_delivery' ? deliveryAddress : undefined,
+    });
+    toast('Order submitted');
+    await loadAgentHomeData();
+    renderHome();
+    document.getElementById('ag_quoteView').style.display = 'none';
+    document.getElementById('ag_homeView').style.display = 'block';
+  }catch(err){
+    toast(`Could not submit order: ${err.message||err}`);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
+
+async function boot(){
+  try{
+    await ensureAgentAuth();
+    await loadAgentHomeData();
+  }catch(e){
+    console.error('Failed to start app:', e);
+    const el = ensureAuthOverlay();
+    el.innerHTML = `<div style="color:#f66;font-family:sans-serif;max-width:400px;text-align:center;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
+    return;
+  }
+  if(!localStorage.getItem('agentTrustBannerSeen')){
+    document.getElementById('ag_trustBanner').style.display = 'block';
+    localStorage.setItem('agentTrustBannerSeen', '1');
+  }
+  renderHome();
+  document.body.classList.remove('app-loading');
+}
+boot();
+</script>
+</body>
+</html>
