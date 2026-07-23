@@ -584,11 +584,27 @@ function promptAssignDelivery(orderId){
   });
 }
 
+// An agent's own payment term gates whether their draft order can even
+// start being prepared -- "pay before we prepare" (set per-agent in the
+// admin app's Sales Agents tab) only means something if something
+// actually checks it before letting the order move. Non-agent orders
+// (originAgentId unset) are never gated. Needs data.agents, which both
+// the admin app and the worker apps now load (a plain worker/delivery
+// session can read it read-only -- see 0013_agents_readable_by_shop_members.sql).
+function agentPaymentBlocksPreparing(q){
+  if(!q.originAgentId) return false;
+  const agent = (data.agents||[]).find(a=>a.id===q.originAgentId);
+  return !!(agent && agent.paymentTerm==='prepay' && q.agentPaymentStatus!=='paid');
+}
+
 // Mirrors the admin board's own step-forward pipeline (preparing ->
 // pending_delivery requires picking a delivery person first) instead of
 // just forcing the status forward -- skipping that gate meant orders a
 // worker finished never got a delivery person assigned, and never got a
-// second chance to since the status had already moved past it.
+// second chance to since the status had already moved past it. An agent
+// order set to pick up themselves skips that picker entirely -- there's
+// no shop delivery staff to assign -- using the same '__agent__' sentinel
+// the admin board's own stepSavedQuoteStatus() uses for the same case.
 async function finishPreparingOrder(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
@@ -597,8 +613,13 @@ async function finishPreparingOrder(orderId){
   q.pickingStatus = 'done';
   saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
 
-  const deliveryStaffId = await promptAssignDelivery(orderId);
-  if(!deliveryStaffId){ renderWorkerView(); return; }
+  let deliveryStaffId;
+  if(q.deliveryMode==='agent_pickup'){
+    deliveryStaffId = '__agent__';
+  } else {
+    deliveryStaffId = await promptAssignDelivery(orderId);
+    if(!deliveryStaffId){ renderWorkerView(); return; }
+  }
 
   q.assignedDeliveryId = deliveryStaffId;
   q.status = 'pending_delivery';
@@ -613,12 +634,14 @@ async function finishPreparingOrder(orderId){
 // Opportunistic, non-exclusive auto-assign: whenever a worker finishes an
 // order they may already be holding others (assignment has never enforced
 // one-at-a-time), so this just hands them the oldest unassigned order
-// still needing preparation, if one exists.
+// still needing preparation, if one exists -- skipping any agent order
+// that's still waiting on its required prepayment, since that one isn't
+// actually ready to be worked on yet.
 function autoAssignNextOrder(workerId){
   const staff = data.staff.find(s=>s.id===workerId);
   if(!staff || staff.unavailable) return;
   const next = data.savedQuotes
-    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing'))
+    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing') && !agentPaymentBlocksPreparing(q))
     .sort((a,b)=> new Date(a.savedAt||0) - new Date(b.savedAt||0))[0];
   if(!next) return;
   next.assignedWorkerId = workerId;

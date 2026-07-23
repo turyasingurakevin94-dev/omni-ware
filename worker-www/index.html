@@ -204,22 +204,27 @@ let lastSynced = {};
 // This app only ever needs a slice of the shop's data: every staff row
 // (to resolve myStaff, and to list delivery-eligible candidates when
 // finishing an order -- see promptAssignDelivery() in shared-worker.js),
-// every supplier (for "where to get it" labels), just enough of each
-// product to show a photo, and every saved quote in the shop (so a worker
-// who finishes an order can see -- and get auto-assigned -- the next
+// every agent's payment term (read-only -- see
+// 0013_agents_readable_by_shop_members.sql -- so autoAssignNextOrder()
+// can skip a draft order still waiting on its required prepayment), every
+// supplier (for "where to get it" labels), just enough of each product to
+// show a photo, and every saved quote in the shop (so a worker who
+// finishes an order can see -- and get auto-assigned -- the next
 // unassigned one). Stock, cash, customers, prices and purchase invoices
 // are all admin-only concerns this app never touches.
 async function loadWorkerData(shopId){
-  const [staffR, suppliersR, productsR, savedQuotesR] = await Promise.all([
+  const [staffR, agentsR, suppliersR, productsR, savedQuotesR] = await Promise.all([
     sb.from('staff').select('*').eq('shop_id', shopId),
+    sb.from('agents').select('id, payment_term').eq('shop_id', shopId),
     sb.from('suppliers').select('*').eq('shop_id', shopId),
     sb.from('products').select('id, name, image').eq('shop_id', shopId),
     sb.from('saved_quotes').select('*').eq('shop_id', shopId),
   ]);
-  [staffR, suppliersR, productsR, savedQuotesR].forEach(r=>{ if(r.error) throw r.error; });
+  [staffR, agentsR, suppliersR, productsR, savedQuotesR].forEach(r=>{ if(r.error) throw r.error; });
 
   return {
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
+    agents: (agentsR.data||[]).map(a=>({id:a.id, paymentTerm:a.payment_term||'prepay'})),
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
     products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null})),
     savedQuotes: (savedQuotesR.data||[]).map(q=>({
