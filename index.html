@@ -528,6 +528,8 @@
   .markup-rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .markup-rules-grid .form-section-label{margin-top:0;padding-top:0;border-top:none;}
   @media (max-width:640px){.markup-rules-grid{grid-template-columns:1fr;}}
+  .agent-discount-hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .agent-discount-warn{font-size:12px;color:var(--danger);margin-top:4px;font-weight:600;}
 
   .variant-cards{display:flex;flex-direction:column;gap:12px;}
   .variant-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px 16px;}
@@ -2696,6 +2698,7 @@
             <button type="button" class="preset-tab" data-ptab="income-cats">Cash In Categories</button>
             <button type="button" class="preset-tab" data-ptab="expense-cats">Cash Out Categories</button>
             <button type="button" class="preset-tab" data-ptab="order-tracking">Order Tracking</button>
+            <button type="button" class="preset-tab" data-ptab="agent-discounts">Agent Discounts</button>
           </div>
         </div>
 
@@ -2748,6 +2751,14 @@
         <div class="preset-pane" id="ppane-order-tracking" style="display:none;">
           <p class="preset-hint">If an order sits in one of these steps on the Order Tracking board longer than its limit, its card gets a blinking warning flag. Leave a step blank or 0 to turn its warning off.</p>
           <div class="form-grid" id="presetOrderLimitsWrap" style="max-width:640px;"></div>
+        </div>
+
+        <div class="preset-pane" id="ppane-agent-discounts" style="display:none;">
+          <p class="preset-hint">The default discount external sales agents see off your normal wholesale/retail prices. Any product can override either one individually in its own edit form -- this is just the fallback when a product doesn't. A discount can never actually push an agent's price below your cost, no matter what's set here.</p>
+          <div class="form-grid" style="max-width:420px;">
+            <div class="field"><label>Wholesale discount (%)</label><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 10"></div>
+            <div class="field"><label>Retail discount (%)</label><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 8"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -3110,6 +3121,32 @@
               </div>
               <div class="field"><label>Value</label><input id="p_retail_markup_value" type="number" min="0" step="any" placeholder="e.g. 10"></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-panel">
+        <div class="form-panel-head">
+          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <div class="form-panel-title">Agent discount override<small>Leave blank to use the shop-wide default from Presets</small></div>
+          <span class="info-tip" tabindex="0" style="margin-left:auto;"><span class="tip-bubble">Only affects the standalone agent app's floor price -- never your own quotes. A discount can never actually push an agent's price below your cost, no matter what's set here; the hint below is just a heads-up while you type.</span></span>
+        </div>
+        <div class="markup-rules-grid">
+          <div>
+            <div class="form-section-label">Wholesale discount override (%)</div>
+            <div class="form-grid">
+              <div class="field"><input id="p_agent_discount_wholesale" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+            </div>
+            <div class="agent-discount-hint" id="p_agent_discount_wholesale_hint"></div>
+            <div class="agent-discount-warn" id="p_agent_discount_wholesale_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
+          </div>
+          <div>
+            <div class="form-section-label">Retail discount override (%)</div>
+            <div class="form-grid">
+              <div class="field"><input id="p_agent_discount_retail" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+            </div>
+            <div class="agent-discount-hint" id="p_agent_discount_retail_hint"></div>
+            <div class="agent-discount-warn" id="p_agent_discount_retail_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
           </div>
         </div>
       </div>
@@ -3619,6 +3656,11 @@ async function loadData(shopId){
       wholesaleMarkupType:p.wholesale_markup_type, wholesaleMarkupValue:Number(p.wholesale_markup_value)||0,
       retailMarkupType:p.retail_markup_type, retailMarkupValue:Number(p.retail_markup_value)||0,
       stockWholesaleMarkupType:p.stock_wholesale_markup_type||'percent', stockWholesaleMarkupValue:Number(p.stock_wholesale_markup_value)||0,
+      // Nullable and deliberately never defaulted to 0 here -- null means
+      // "no override, use the shop-wide agent discount preset", which is a
+      // different thing from an explicit 0% override.
+      agentDiscountWholesalePct: p.agent_discount_wholesale_pct==null ? null : Number(p.agent_discount_wholesale_pct),
+      agentDiscountRetailPct: p.agent_discount_retail_pct==null ? null : Number(p.agent_discount_retail_pct),
       stockRetailMarkupType:p.stock_retail_markup_type||'percent', stockRetailMarkupValue:Number(p.stock_retail_markup_value)||0,
       variantAttributes:p.variant_attributes||[], variants:p.variants||[]
     })),
@@ -3657,6 +3699,8 @@ async function loadData(shopId){
     presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
     presetAttributes: presets.attributes || seed.presetAttributes,
     presetOrderStageLimits: presets.orderStageLimits || {},
+    presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
+    presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     seeded: true
   };
 }
@@ -3685,7 +3729,13 @@ function buildSyncRows(d, shopId){
       retail_markup_type:p.retailMarkupType, retail_markup_value:p.retailMarkupValue,
       stock_wholesale_markup_type:p.stockWholesaleMarkupType, stock_wholesale_markup_value:p.stockWholesaleMarkupValue,
       stock_retail_markup_type:p.stockRetailMarkupType, stock_retail_markup_value:p.stockRetailMarkupValue,
+      agent_discount_wholesale_pct:p.agentDiscountWholesalePct, agent_discount_retail_pct:p.agentDiscountRetailPct,
       variant_attributes:p.variantAttributes, variants:p.variants
+      // created_at is deliberately omitted here -- it's not in this
+      // write payload at all, so upsert() never touches it on an
+      // existing row (only a fresh insert gets the column's own
+      // now()-default), preserving each product's real creation date
+      // across every future edit.
     })),
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
@@ -3719,7 +3769,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits},
+      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct},
       quote_draft: d.quote
     }
   };
@@ -8692,6 +8742,8 @@ function editProduct(id){
   document.getElementById('p_wholesale_markup_value').value = p.wholesaleMarkupValue || '';
   document.getElementById('p_retail_markup_type').value = p.retailMarkupType || 'percent';
   document.getElementById('p_retail_markup_value').value = p.retailMarkupValue || '';
+  document.getElementById('p_agent_discount_wholesale').value = p.agentDiscountWholesalePct!=null ? p.agentDiscountWholesalePct : '';
+  document.getElementById('p_agent_discount_retail').value = p.agentDiscountRetailPct!=null ? p.agentDiscountRetailPct : '';
   draftVariantAttrs = (p.variantAttributes||[]).map(a=>({name:a.name, values:(a.values||[]).join(', ')}));
   draftVariants = (p.variants||[]).map(v=>({sku:v.sku||'', combo:{...v.combo},
     wholesaleMarkupType:v.wholesaleMarkupType||'percent', wholesaleMarkupValue:v.wholesaleMarkupValue||0,
@@ -8700,6 +8752,7 @@ function editProduct(id){
   renderVariantsList();
   setProductType(p.type==='variable' ? 'variable' : 'simple');
   document.getElementById('productFormTitle').textContent = 'Edit product';
+  renderAgentDiscountHints();
   openModal('productModal');
 }
 /* ---- Stock pricing rule modal (Inventory tab) ----
@@ -8781,7 +8834,7 @@ document.getElementById('sr_save_btn').addEventListener('click', ()=>{
 });
 function resetProductForm(){
   editingProductId = null;
-  ['p_id','p_name','p_category','p_subcategory','p_notes','p_wholesale_markup_value','p_retail_markup_value'].forEach(id=>document.getElementById(id).value='');
+  ['p_id','p_name','p_category','p_subcategory','p_notes','p_wholesale_markup_value','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>document.getElementById(id).value='');
   refreshPresetDatalists();
   document.getElementById('p_wholesale_markup_type').value = 'percent';
   document.getElementById('p_retail_markup_type').value = 'percent';
@@ -8795,6 +8848,7 @@ function resetProductForm(){
   renderVariantAttrRows();
   renderVariantsList();
   setProductType('simple');
+  renderAgentDiscountHints();
 }
 function deleteProduct(id){
   if(!confirm('Delete this product? Price entries referencing it will remain but show a blank product.')) return;
@@ -8822,6 +8876,45 @@ function deleteVariant(productId, variantIdx){
 // Makes sure a category (and sub-category) typed on a product also exists
 // in the presets list, so it's suggested for future products without a
 // separate trip to the Presets tab.
+// A live, best-effort estimate of how much agent discount the CURRENTLY
+// TYPED markup rule (even if not yet saved) can absorb before an agent's
+// floor price would dip to cost, based on the cheapest priced supplier
+// currently on file for this product. Only ever a heads-up -- the actual
+// guarantee is the runtime safety clamp inside the agent-catalog Edge
+// Function, which checks against real cost at the moment of sale, not
+// this snapshot. Silently does nothing until a Product ID is entered and
+// at least one price is on file for it, same as the item picker's own
+// "recommended price" cards.
+function renderAgentDiscountHints(){
+  const id = document.getElementById('p_id').value.trim();
+  const draftProduct = {
+    wholesaleMarkupType: document.getElementById('p_wholesale_markup_type').value,
+    wholesaleMarkupValue: Number(document.getElementById('p_wholesale_markup_value').value)||0,
+    retailMarkupType: document.getElementById('p_retail_markup_type').value,
+    retailMarkupValue: Number(document.getElementById('p_retail_markup_value').value)||0,
+  };
+  const best = id ? rankedPriceRows(id, null)[0] : null;
+  ['wholesale','retail'].forEach(kind=>{
+    const hintEl = document.getElementById('p_agent_discount_'+kind+'_hint');
+    const warnEl = document.getElementById('p_agent_discount_'+kind+'_warn');
+    const inputEl = document.getElementById('p_agent_discount_'+kind);
+    const cost = best ? best[kind] : null;
+    if(cost==null){
+      hintEl.textContent = 'No price on file yet to estimate against.';
+      warnEl.style.display = 'none';
+      return;
+    }
+    const ourPrice = suggestedSellingPrice(draftProduct, cost, kind, null) ?? cost;
+    const ceiling = ourPrice>0 ? Math.max(0, (ourPrice-cost)/ourPrice*100) : 0;
+    hintEl.textContent = `Current markup allows up to ${ceiling.toFixed(1)}% off before hitting cost.`;
+    const typed = inputEl.value==='' ? null : Number(inputEl.value);
+    warnEl.style.display = (typed!=null && typed>ceiling) ? '' : 'none';
+  });
+}
+['p_id','p_wholesale_markup_type','p_wholesale_markup_value','p_retail_markup_type','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderAgentDiscountHints);
+});
+
 function ensurePresetCategory(category, subcategory){
   if(!category) return;
   if(!data.presetCategories) data.presetCategories = [];
@@ -8858,6 +8951,10 @@ document.getElementById('p_save').addEventListener('click', ()=>{
     wholesaleMarkupValue: Number(document.getElementById('p_wholesale_markup_value').value)||0,
     retailMarkupType: document.getElementById('p_retail_markup_type').value,
     retailMarkupValue: Number(document.getElementById('p_retail_markup_value').value)||0,
+    // Blank stays null ("use the shop-wide preset default") rather than
+    // collapsing to 0, which would instead mean "override to no discount".
+    agentDiscountWholesalePct: document.getElementById('p_agent_discount_wholesale').value==='' ? null : Math.min(100, Math.max(0, Number(document.getElementById('p_agent_discount_wholesale').value)||0)),
+    agentDiscountRetailPct: document.getElementById('p_agent_discount_retail').value==='' ? null : Math.min(100, Math.max(0, Number(document.getElementById('p_agent_discount_retail').value)||0)),
     variantAttributes, variants,
   };
   if(editingProductId){
@@ -10106,7 +10203,24 @@ function renderPresets(){
   renderPresetExpenseCats();
   refreshPresetDatalists();
   renderPresetOrderLimits();
+  renderPresetAgentDiscounts();
 }
+function renderPresetAgentDiscounts(){
+  document.getElementById('preset_agent_discount_wholesale').value = data.presetAgentDiscountWholesalePct || '';
+  document.getElementById('preset_agent_discount_retail').value = data.presetAgentDiscountRetailPct || '';
+}
+document.getElementById('preset_agent_discount_wholesale').addEventListener('change', (e)=>{
+  data.presetAgentDiscountWholesalePct = Math.min(100, Math.max(0, Number(e.target.value)||0));
+  e.target.value = data.presetAgentDiscountWholesalePct || '';
+  saveData();
+  toast('Default agent wholesale discount updated');
+});
+document.getElementById('preset_agent_discount_retail').addEventListener('change', (e)=>{
+  data.presetAgentDiscountRetailPct = Math.min(100, Math.max(0, Number(e.target.value)||0));
+  e.target.value = data.presetAgentDiscountRetailPct || '';
+  saveData();
+  toast('Default agent retail discount updated');
+});
 // One time-limit field per Order Tracking step (draft/preparing/pending
 // delivery/completed), built from SQ_STATUS_ORDER so it stays in sync if
 // the steps themselves ever change.
