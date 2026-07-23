@@ -27,6 +27,7 @@
     --danger-bg: #FDECEC;
     --bonus: #B45309;
     --bonus-bg: #FEF3E2;
+    --font-money: ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -125,11 +126,11 @@
     border-radius:50%;background:rgba(255,255,255,0.07);
   }
   .ag-wallet-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
-  .ag-wallet-value{font-size:32px;font-weight:800;margin:4px 0 14px;letter-spacing:-0.02em;}
+  .ag-wallet-value{font-family:var(--font-money);font-size:30px;font-weight:700;margin:4px 0 14px;letter-spacing:-0.01em;}
   .ag-wallet-split{display:flex;gap:10px;margin-bottom:16px;}
   .ag-wallet-split-item{flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;}
   .ag-wallet-split-item span{display:block;font-size:10.5px;opacity:.85;margin-bottom:2px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
-  .ag-wallet-split-item b{font-size:15px;font-weight:800;}
+  .ag-wallet-split-item b{font-family:var(--font-money);font-size:14.5px;font-weight:700;}
   .ag-wallet-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid rgba(255,255,255,0.22);font-size:10.5px;letter-spacing:.05em;position:relative;}
   .ag-wallet-name{font-weight:700;text-transform:uppercase;opacity:.92;}
   .ag-wallet-brand{font-weight:800;opacity:.7;}
@@ -173,13 +174,14 @@
   .ag-item-result-body{min-width:0;flex:1;}
   .ag-item-result-name{font-size:13.5px;font-weight:600;}
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
+  .ag-item-result-price.money{font-family:var(--font-money);font-size:12.5px;color:var(--accent-dark);font-weight:600;}
 
   .ag-cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
   .ag-cart-row:last-child{border-bottom:none;}
   .ag-cart-row-body{flex:1;min-width:0;}
   .ag-cart-row-name{font-size:13.5px;font-weight:600;}
   .ag-cart-row-meta{font-size:12px;color:var(--ink-soft);}
-  .ag-cart-row-price{font-weight:700;font-size:14px;white-space:nowrap;}
+  .ag-cart-row-price{font-family:var(--font-money);font-weight:700;font-size:13.5px;white-space:nowrap;}
   .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
   .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;}
@@ -214,6 +216,16 @@
     display:none;padding:6px;color:var(--ink);
   }
   .ag-search-suggestions.show{display:block;}
+
+  /* ---- Client search (Quote screen) -- same polished input idiom as
+     Browse's search bar, but a bordered-on-white variant since this one
+     sits inside a plain card rather than the teal hero. ---- */
+  .ag-client-search-wrap{position:relative;}
+  .ag-client-search-wrap input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:12px;font-size:14.5px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
+  .ag-client-search-wrap input:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft);}
+  #ag_client_suggestions:not(:empty){margin-top:10px;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(16,24,32,0.05);}
+  #ag_client_suggestions .ag-item-result{border-radius:0;padding:11px 12px;}
+  #ag_client_suggestions .ag-item-result:not(:last-child){border-bottom:1px solid var(--line);}
 
   .ag-recent-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
   .ag-recent-chip{all:unset;cursor:pointer;padding:7px 14px;border-radius:20px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink);}
@@ -259,7 +271,7 @@
   .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
   .ag-grid-variant{display:block;font-weight:500;color:var(--ink-soft);font-size:12px;margin-bottom:3px;}
   .ag-grid-pack{font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;}
-  .ag-grid-price{font-size:15px;font-weight:800;color:var(--accent-dark);letter-spacing:-0.01em;}
+  .ag-grid-price{font-family:var(--font-money);font-size:12.5px;font-weight:700;color:var(--accent-dark);line-height:1.3;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:3px;}
 
   .ag-star-btn{
@@ -475,7 +487,10 @@
         <div class="ag-card-title">Client</div>
         <div id="ag_clientChosenWrap" style="display:none;"></div>
         <div id="ag_clientPickWrap">
-          <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+          <div class="ag-client-search-wrap">
+            <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
+            <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+          </div>
           <div id="ag_client_suggestions"></div>
         </div>
       </div>
@@ -541,12 +556,10 @@ function toast(msg, duration){
 }
 
 function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
-// Per-unit product price shown while browsing (e.g. "2,350/ctn") --
-// distinct from fmtUGX's totals/summaries elsewhere, which keep the
-// explicit "UGX" prefix since they're not always obviously per-unit.
+// Per-unit product price shown while browsing (e.g. "UGX 10,000 per ctn").
 function fmtPricePerUnit(n, unit){
   const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
-  return unit ? `${amount}/${esc(String(unit).toLowerCase())}` : amount;
+  return unit ? `UGX ${amount} per ${esc(String(unit).toLowerCase())}` : `UGX ${amount}`;
 }
 
 function ensureAuthOverlay(){
@@ -1340,7 +1353,7 @@ function renderSearchSuggestions(){
       <div class="ag-item-result-body">
         <div class="ag-item-result-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        <div class="ag-item-result-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+        <div class="ag-item-result-price money">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
       </div>
     </div>`).join('');
   box.classList.add('show');
@@ -1477,13 +1490,27 @@ function resetCartAfterSubmit(){
 }
 
 /* ---- Client picking ---- */
+function clientInitials(name){
+  return (name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
 function renderClientSuggestions(query){
   const box = document.getElementById('ag_client_suggestions');
   const q = query.trim().toLowerCase();
   const matches = q ? agentClients.filter(c=>(c.name||'').toLowerCase().includes(q)) : agentClients.slice(0, 6);
-  let html = matches.map(c=>`<div class="ag-item-result" data-id="${esc(c.id)}"><div class="ag-item-result-body"><div class="ag-item-result-name">${esc(c.name)}</div><div class="ag-item-result-price">${esc(c.phone||'')}</div></div></div>`).join('');
+  let html = matches.map(c=>`<div class="ag-item-result" data-id="${esc(c.id)}">
+    <div class="ag-list-item-avatar">${esc(clientInitials(c.name))}</div>
+    <div class="ag-item-result-body">
+      <div class="ag-item-result-name">${esc(c.name)}</div>
+      <div class="ag-item-result-price">${esc(c.phone||'No phone on file')}</div>
+    </div>
+  </div>`).join('');
   if(q && !matches.some(c=>(c.name||'').toLowerCase()===q)){
-    html += `<div class="ag-item-result" id="ag_client_add_new"><div class="ag-item-result-body"><div class="ag-item-result-name">+ Add "${esc(query.trim())}" as a new client</div></div></div>`;
+    html += `<div class="ag-item-result" id="ag_client_add_new">
+      <div class="ag-list-item-avatar">+</div>
+      <div class="ag-item-result-body">
+        <div class="ag-item-result-name">Add "${esc(query.trim())}" as a new client</div>
+      </div>
+    </div>`;
   }
   box.innerHTML = html;
   box.querySelectorAll('.ag-item-result[data-id]').forEach(row=>{
