@@ -198,11 +198,26 @@ Deno.serve(async (req) => {
         return variantIdxs.map((variantIdx) => {
           const key = `${p.id}::${variantIdx == null ? "" : variantIdx}`;
           const best = pickBestPriceRow(rowsByProduct.get(key) || []);
-          const priced = best ? computeFloorPrice(p, best, 1, discountWholesalePct, discountRetailPct) : null;
+          let priced = best ? computeFloorPrice(p, best, 1, discountWholesalePct, discountRetailPct) : null;
+          // A price entry with only a wholesale figure (no retail) fails
+          // the qty=1 probe above and would otherwise vanish from Browse
+          // entirely, even though it's a real, orderable item -- retry at
+          // the pack quantity so it's at least visible. This only affects
+          // the display price; the real per-order price (action: "price")
+          // always re-derives the correct tier from the agent's actual
+          // quantity, so a genuinely small order still correctly gets
+          // rejected at submit time if no retail price exists.
+          if (!priced && best && Number(best.pack_qty) > 0) {
+            priced = computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct);
+          }
+          const variantLabel = variantIdx != null && Array.isArray(p.variants) && p.variants[variantIdx]
+            ? Object.values(p.variants[variantIdx].combo || {}).join(" / ")
+            : "";
           return {
             productId: p.id,
             variantIdx,
             name: p.name,
+            variantLabel,
             category: p.category,
             subcategory: p.subcategory,
             image: p.image,
@@ -235,16 +250,21 @@ Deno.serve(async (req) => {
 
       const productIds = [...new Set(live.map((pr) => pr.product_id))];
       const { data: products, error: productsErr } = await admin
-        .from("products").select("id, name, image, category").eq("shop_id", shopId).in("id", productIds);
+        .from("products").select("id, name, image, category, variants").eq("shop_id", shopId).in("id", productIds);
       if (productsErr) return json({ error: productsErr.message, stage: "promotion_products_lookup" }, 500);
       const byId = new Map<string, any>((products || []).map((p) => [p.id, p]));
 
       const items = live.map((pr) => {
         const p = byId.get(pr.product_id);
+        const variantIdx = pr.variant_idx === "" ? null : Number(pr.variant_idx);
+        const variantLabel = variantIdx != null && p && Array.isArray(p.variants) && p.variants[variantIdx]
+          ? Object.values(p.variants[variantIdx].combo || {}).join(" / ")
+          : "";
         return {
           productId: pr.product_id,
-          variantIdx: pr.variant_idx === "" ? null : pr.variant_idx,
+          variantIdx,
           name: p?.name || "Item",
+          variantLabel,
           image: p?.image || null,
           category: p?.category || "",
           bonusType: pr.bonus_type,
