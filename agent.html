@@ -94,9 +94,17 @@
     padding:18px 16px 22px;
     color:#fff;
     margin-bottom:18px;
+    transition:padding .18s ease;
   }
-  .ag-hero-greeting{font-size:19px;font-weight:800;letter-spacing:-0.01em;}
-  .ag-hero-sub{font-size:12.5px;opacity:.82;margin:2px 0 14px;}
+  .ag-hero-greeting{font-size:19px;font-weight:800;letter-spacing:-0.01em;overflow:hidden;max-height:30px;transition:max-height .18s ease,opacity .18s ease,margin .18s ease;}
+  .ag-hero-sub{font-size:12.5px;opacity:.82;margin:2px 0 14px;overflow:hidden;max-height:20px;transition:max-height .18s ease,opacity .18s ease,margin .18s ease;}
+  /* Compact mode: while the agent is actively searching, the keyboard
+     eats the bottom half of the screen -- shrinking the greeting text
+     (not the search bar itself) keeps results visible right below it
+     instead of buried under the fold. */
+  .ag-hero.compact{padding-top:14px;}
+  .ag-hero.compact .ag-hero-greeting{max-height:0;opacity:0;margin:0;}
+  .ag-hero.compact .ag-hero-sub{max-height:0;opacity:0;margin:0;}
 
   .ag-trust-banner{display:flex;gap:10px;align-items:flex-start;background:rgba(255,255,255,0.14);color:#fff;border-radius:12px;padding:12px 13px;font-size:12.5px;line-height:1.5;margin-top:14px;}
   .ag-trust-banner .icon{width:17px;height:17px;flex-shrink:0;margin-top:1px;opacity:.9;}
@@ -219,6 +227,20 @@
   .ag-cat-label{font-size:11px;font-weight:600;color:var(--ink-soft);text-align:center;line-height:1.25;}
   .ag-cat-item.active .ag-cat-label{color:var(--ink);}
 
+  /* ---- Subcategory panel, slides in from the right ---- */
+  .ag-subcat-backdrop{position:fixed;inset:0;background:rgba(15,20,26,0.45);z-index:405;opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  .ag-subcat-backdrop.show{opacity:1;pointer-events:auto;}
+  .ag-subcat-panel{
+    position:fixed;top:0;right:0;bottom:0;width:82%;max-width:340px;background:var(--panel);z-index:410;
+    box-shadow:-10px 0 28px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform .28s ease;
+    overflow-y:auto;
+  }
+  .ag-subcat-panel.show{transform:translateX(0);}
+  .ag-subcat-head{display:flex;align-items:center;justify-content:space-between;padding:18px 10px 12px 20px;position:sticky;top:0;background:var(--panel);}
+  .ag-subcat-head h2{font-size:17px;font-weight:800;margin:0;letter-spacing:-0.01em;}
+  .ag-subcat-row{all:unset;box-sizing:border-box;display:block;width:100%;padding:14px 20px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line);}
+  .ag-subcat-row.active{color:var(--accent);background:var(--accent-soft);}
+
   /* ---- Product cards: grid + horizontal scroll variants ---- */
   .ag-browse-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
@@ -233,8 +255,10 @@
   .ag-grid-body{padding:10px 12px 12px;}
   .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:10.5px;font-weight:700;padding:3px 8px 3px 6px;border-radius:20px;margin-bottom:6px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
-  .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
-  .ag-grid-price{font-size:13.5px;font-weight:700;color:var(--ink);}
+  .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
+  .ag-grid-variant{font-weight:500;color:var(--ink-soft);font-size:12px;}
+  .ag-grid-pack{font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;}
+  .ag-grid-price{font-size:15px;font-weight:800;color:var(--accent-dark);letter-spacing:-0.01em;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:3px;}
 
   .ag-star-btn{
@@ -295,10 +319,10 @@
 
   <!-- BROWSE (first screen shown) -->
   <div id="ag_browseView" style="display:none;">
-    <div class="ag-hero">
+    <div class="ag-hero" id="ag_browseHero">
       <div class="ag-hero-greeting" id="ag_hero_greeting">Hi</div>
       <div class="ag-hero-sub">What does your client need today?</div>
-      <div class="ag-search-bar">
+      <div class="ag-search-bar" id="ag_searchBarWrap">
         <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
       </div>
@@ -490,6 +514,15 @@
     Account
   </button>
 </nav>
+
+<div class="ag-subcat-backdrop" id="ag_subcatBackdrop"></div>
+<div class="ag-subcat-panel" id="ag_subcatPanel">
+  <div class="ag-subcat-head">
+    <h2 id="ag_subcatTitle">Category</h2>
+    <button type="button" class="ag-back-btn" id="ag_subcatClose"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div id="ag_subcatList"></div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -982,6 +1015,7 @@ let promotions = [], cluster = [];
 let browseDataLoaded = false;
 let browseFilter = 'all';
 let browseCategoryFilter = null;
+let browseSubcategoryFilter = null;
 let recentSearches = [];
 try{ recentSearches = JSON.parse(localStorage.getItem('agentRecentSearches')||'[]'); }catch(_e){ recentSearches = []; }
 
@@ -1059,13 +1093,14 @@ function sponsoredItems(){
 
 function showingDiscoveryExtras(){
   const q = document.getElementById('ag_browse_search').value.trim();
-  return !q && browseFilter==='all' && !browseCategoryFilter;
+  return !q && browseFilter==='all' && !browseCategoryFilter && !browseSubcategoryFilter;
 }
 
 function browseItems(){
   const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
   let items = catalog.slice();
   if(browseCategoryFilter) items = items.filter(it=>it.category===browseCategoryFilter);
+  if(browseSubcategoryFilter) items = items.filter(it=>it.subcategory===browseSubcategoryFilter);
   if(browseFilter==='sponsored'){
     const promoted = promotedMap();
     items = items.filter(it=>promoted.has(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`));
@@ -1123,10 +1158,51 @@ function renderCategoryStrip(){
   document.getElementById('ag_catStrip').addEventListener('click', (e)=>{
     const item = e.target.closest('.ag-cat-item');
     if(!item) return;
-    browseCategoryFilter = (browseCategoryFilter === item.dataset.cat) ? null : item.dataset.cat;
-    renderBrowseGrid();
+    const cat = item.dataset.cat;
+    if(browseCategoryFilter === cat){
+      // Tapping an already-active category clears it -- the panel (below)
+      // is how you narrow further or switch to "All <category>"; tapping
+      // the icon a second time is the fast path back to everything.
+      browseCategoryFilter = null;
+      browseSubcategoryFilter = null;
+      renderBrowseGrid();
+      return;
+    }
+    const subs = [...new Set(catalog.filter(it=>it.category===cat).map(it=>it.subcategory).filter(Boolean))];
+    if(subs.length){
+      openSubcategoryPanel(cat, subs);
+    } else {
+      browseCategoryFilter = cat;
+      browseSubcategoryFilter = null;
+      renderBrowseGrid();
+    }
   });
 }
+
+let subcatPanelCategory = null;
+function openSubcategoryPanel(category, subs){
+  subcatPanelCategory = category;
+  document.getElementById('ag_subcatTitle').textContent = category;
+  const allRow = `<button type="button" class="ag-subcat-row ${!browseSubcategoryFilter?'active':''}" data-sub="">All ${esc(category)}</button>`;
+  const subRows = subs.map(s=>`<button type="button" class="ag-subcat-row ${browseSubcategoryFilter===s?'active':''}" data-sub="${esc(s)}">${esc(s)}</button>`).join('');
+  document.getElementById('ag_subcatList').innerHTML = allRow + subRows;
+  document.getElementById('ag_subcatPanel').classList.add('show');
+  document.getElementById('ag_subcatBackdrop').classList.add('show');
+}
+function closeSubcategoryPanel(){
+  document.getElementById('ag_subcatPanel').classList.remove('show');
+  document.getElementById('ag_subcatBackdrop').classList.remove('show');
+}
+document.getElementById('ag_subcatList').addEventListener('click', (e)=>{
+  const row = e.target.closest('.ag-subcat-row');
+  if(!row) return;
+  browseCategoryFilter = subcatPanelCategory;
+  browseSubcategoryFilter = row.dataset.sub || null;
+  closeSubcategoryPanel();
+  renderBrowseGrid();
+});
+document.getElementById('ag_subcatClose').addEventListener('click', closeSubcategoryPanel);
+document.getElementById('ag_subcatBackdrop').addEventListener('click', closeSubcategoryPanel);
 
 function renderRecentSearches(){
   const wrap = document.getElementById('ag_recentSearchesWrap');
@@ -1154,6 +1230,7 @@ function browseCardHTML(it, promoted, opts){
   const inCluster = promo && isInCluster(it.productId, it.variantIdx);
   const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
+  const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -1162,8 +1239,9 @@ function browseCardHTML(it, promoted, opts){
     </div>
     <div class="ag-grid-body">
       ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
-      <div class="ag-grid-name">${esc(it.name)}</div>
-      <div class="ag-grid-price">From ${fmtUGX(it.floorPrice)}</div>
+      <div class="ag-grid-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
+      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
+      <div class="ag-grid-price">${fmtUGX(it.floorPrice)}</div>
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
   </div>`;
@@ -1243,9 +1321,23 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
     renderBrowseGrid();
   }
 });
-document.getElementById('ag_browse_search').addEventListener('input', renderBrowseGrid);
+function updateHeroCompact(){
+  const input = document.getElementById('ag_browse_search');
+  const active = document.activeElement === input;
+  const hasQuery = input.value.trim().length > 0;
+  document.getElementById('ag_browseHero').classList.toggle('compact', active || hasQuery);
+}
+document.getElementById('ag_browse_search').addEventListener('input', ()=>{ updateHeroCompact(); renderBrowseGrid(); });
+document.getElementById('ag_browse_search').addEventListener('focus', ()=>{
+  updateHeroCompact();
+  // On mobile the keyboard covers the bottom half of the screen -- bring
+  // the search bar (and whatever renders just below it) to the very top
+  // of the visible area instead of leaving results hidden under the fold.
+  document.getElementById('ag_searchBarWrap').scrollIntoView({ behavior:'smooth', block:'start' });
+});
 document.getElementById('ag_browse_search').addEventListener('blur', (e)=>{
   saveRecentSearch(e.target.value);
+  updateHeroCompact();
 });
 
 async function openBrowseView(){
@@ -1260,7 +1352,7 @@ async function openAddItemPanel(item){
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
-      <div class="ag-overlay-title">${esc(item.name)}</div>
+      <div class="ag-overlay-title">${esc(item.name)}${item.variantLabel ? ` <span class="ag-grid-variant">(${esc(item.variantLabel)})</span>` : ''}</div>
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
       <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
@@ -1295,7 +1387,7 @@ async function openAddItemPanel(item){
     if(!(qty>0)){ toast('Enter a quantity'); return; }
     if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
-      productId: item.productId, variantIdx: item.variantIdx, name: item.name,
+      productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
       qty, unit: liveUnit, packUnit: livePackUnit,
       floorPrice: liveFloor, agentSellPrice,
     });
@@ -1311,7 +1403,7 @@ function renderCart(){
   wrap.innerHTML = cart.map((it,i)=>`
     <div class="ag-cart-row">
       <div class="ag-cart-row-body">
-        <div class="ag-cart-row-name">${esc(it.name)}</div>
+        <div class="ag-cart-row-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-grid-variant">(${esc(it.variantLabel)})</span>` : ''}</div>
         <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
       </div>
       <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
