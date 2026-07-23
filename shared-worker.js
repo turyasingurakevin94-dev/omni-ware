@@ -370,7 +370,7 @@ function denyOrderAssignment(orderId){
 // '__stock__' or unset means the shop's own shelf stock, anything else is a
 // real supplier row to source it from.
 function pickItemSourceLabel(it){
-  if(!it.supplierId || it.supplierId==='__stock__') return 'Pick from shop';
+  if(!it.supplierId || it.supplierId==='__stock__') return 'Shop';
   const sup = (data.suppliers||[]).find(s=>s.id===it.supplierId);
   if(!sup) return it.supplierName || 'Supplier';
   return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
@@ -408,7 +408,7 @@ function renderWorkerPickStepper(q){
           <div class="wv-carousel-qty-label">Pack</div>
           <div class="wv-carousel-qty">${esc(qty)} ${esc(unit)}</div>
         </div>
-        <div class="wv-carousel-source">${esc(pickItemSourceLabel(it))}</div>
+        <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
       </div>
     </div>`;
   }).join('');
