@@ -44,10 +44,7 @@ Deno.serve(async (req) => {
     const { shopId, month } = body;
     if (!shopId || !month) return json({ error: "shopId and month are required" }, 400);
     if (!/^\d{4}-\d{2}$/.test(month)) return json({ error: "month must be in 'YYYY-MM' form" }, 400);
-    // TEMPORARY (testing only, no real order history to test against yet) --
-    // allows claiming the CURRENT month too. Revert to `>=` before real
-    // agents start using this, so a month can only be claimed once it's over.
-    if (month > currentMonthKey()) return json({ error: "Can only claim a month once it has ended" }, 400);
+    if (month >= currentMonthKey()) return json({ error: "Can only claim a month once it has ended" }, 400);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing Authorization header" }, 401);
