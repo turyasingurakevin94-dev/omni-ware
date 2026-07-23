@@ -303,6 +303,8 @@ function renderWorkerView(){
     document.getElementById('wv_activeWrap').innerHTML = '';
     return;
   }
+  const greetingEl = document.getElementById('wv_greeting');
+  if(greetingEl) greetingEl.textContent = `${timeOfDayGreeting()}, ${(myStaff.name||'').split(' ')[0] || 'there'}`;
   document.getElementById('wv_enablePushWrap').style.display = ((isNativeApp() || 'Notification' in window) && !hasPushSubscription) ? '' : 'none';
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
@@ -389,6 +391,13 @@ function denyOrderAssignment(orderId){
   renderWorkerView();
   refreshAdminOrderBoardIfOpen();
   toast('Order declined — it\'s back in the unassigned pool');
+}
+
+function timeOfDayGreeting(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Good morning';
+  if(h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 // "Where to get it" reuses the item's existing supplierId, exactly as the
