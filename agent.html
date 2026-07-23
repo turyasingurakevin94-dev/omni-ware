@@ -6,82 +6,86 @@
 <title>Omni-Ware Agent</title>
 <link rel="manifest" href="/manifest-agent.json">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap');
-
   :root{
-    --bg: #EDF0F2;
+    --bg: #F5F6F8;
     --panel: #FFFFFF;
-    --ink: #1B2430;
-    --ink-soft: #57626F;
-    --line: #D8DEE3;
-    --accent: #6D3FC0;
-    --accent-ink: #2C1B4D;
-    --good: #2F7D4F;
-    --good-bg: #E4F3EA;
-    --danger: #C0392B;
-    --navy: #1B2430;
+    --ink: #12151A;
+    --ink-soft: #6B7280;
+    --line: #E5E7EB;
+    --accent: #2563EB;
+    --accent-dark: #1D4ED8;
+    --accent-soft: #EAF1FE;
+    --good: #16A34A;
+    --good-bg: #E9F7EF;
+    --danger: #DC2626;
+    --danger-bg: #FDECEC;
+    --bonus: #B45309;
+    --bonus-bg: #FEF3E2;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
     background:var(--bg);
     color:var(--ink);
-    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     min-height:100vh;
+    -webkit-font-smoothing:antialiased;
   }
-  body.app-loading .agent-view-wrap{display:none !important;}
+  body.app-loading .agent-shell{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
-  .page-head{margin-bottom:20px;display:flex;align-items:center;gap:10px;}
-  .page-head h1{
-    font-family:'Archivo Black',sans-serif;font-size:22px;margin:0 0 4px 0;color:var(--ink);
-  }
-  .page-head p{margin:0;color:var(--ink-soft);font-size:13.5px;}
+  .agent-shell{max-width:520px;margin:0 auto;}
+  .agent-view-wrap{padding:16px 16px 90px;}
+
+  .ag-tab-head{margin-bottom:16px;}
+  .ag-tab-head h1{font-size:23px;font-weight:800;margin:0 0 2px;letter-spacing:-0.02em;}
+  .ag-tab-head p{margin:0;color:var(--ink-soft);font-size:13.5px;}
 
   .btn{
-    all:unset;cursor:pointer;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;
+    all:unset;box-sizing:border-box;cursor:pointer;padding:12px 18px;border-radius:10px;font-size:14.5px;font-weight:700;
     text-align:center;display:block;
   }
   .btn-accent{background:var(--accent);color:#fff;}
-  .btn-accent:hover{background:#5c33a3;}
-  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
-  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .btn-accent:hover{background:var(--accent-dark);}
+  .btn-ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
   .btn-block{width:100%;}
   .btn[disabled]{opacity:.5;cursor:default;}
 
   .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
   .field label{font-size:12px;font-weight:600;color:var(--ink-soft);}
   .field input, .field select{
-    padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:14px;
+    padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14.5px;
     font-family:inherit;background:#FBFCFD;color:var(--ink);width:100%;
   }
-  .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
-  .radio-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;cursor:pointer;}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
 
-  .empty{padding:22px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .empty{padding:26px 16px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .empty-state{padding:40px 20px;text-align:center;}
+  .empty-state .icon{width:40px;height:40px;color:var(--line);margin-bottom:12px;}
+  .empty-state p{color:var(--ink-soft);font-size:14px;margin:0 0 16px;}
 
   .toast{
-    position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 18px;
-    border-radius:8px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);
-    opacity:0;transform:translateY(8px);transition:all 0.25s ease;pointer-events:none;z-index:150;
-    display:flex;align-items:center;gap:8px;
+    position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;padding:12px 18px;
+    border-radius:10px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    opacity:0;transition:all 0.25s ease;pointer-events:none;z-index:500;max-width:90%;text-align:center;
   }
-  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  .agent-view-wrap{max-width:520px;margin:0 auto;padding:16px;}
-  .ag-back-btn{all:unset;cursor:pointer;display:flex;align-items:center;color:var(--ink-soft);padding:6px 8px 6px 0;}
-  .ag-back-btn .icon{width:20px;height:20px;}
-
-  .ag-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .ag-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;}
   .ag-card-title{font-weight:700;margin-bottom:10px;font-size:14px;}
 
-  .ag-earnings-card{background:var(--accent);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:16px;}
-  .ag-earnings-label{font-size:12px;opacity:.85;text-transform:uppercase;letter-spacing:.04em;}
-  .ag-earnings-value{font-family:'Archivo Black',sans-serif;font-size:28px;margin-top:4px;}
-  .ag-earnings-link{font-size:12.5px;opacity:.85;margin-top:8px;font-weight:600;}
-  .ag-earnings-split-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:14px;}
+  .ag-trust-banner{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--accent-dark);border-radius:12px;padding:13px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;}
+  .ag-trust-banner .icon{width:18px;height:18px;flex-shrink:0;margin-top:1px;}
+
+  .ag-earnings-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;cursor:pointer;}
+  .ag-earnings-card:hover{border-color:var(--accent);}
+  .ag-earnings-label{font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;}
+  .ag-earnings-value{font-size:30px;font-weight:800;margin-top:4px;letter-spacing:-0.02em;}
+  .ag-earnings-link{font-size:12.5px;color:var(--ink-soft);margin-top:8px;font-weight:600;}
+  .ag-earnings-split-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;font-size:14px;}
   .ag-earnings-split-row:not(:last-child){border-bottom:1px solid var(--line);}
-  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
   .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
   .ag-order-row-client{font-weight:600;font-size:14px;}
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
@@ -94,23 +98,21 @@
   .ag-month-nav-btn .icon{width:20px;height:20px;}
   .ag-month-nav-label{font-weight:700;font-size:14.5px;}
 
-  .ag-claim-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center;}
+  .ag-claim-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;}
   .ag-claim-status{font-size:13.5px;color:var(--ink-soft);font-weight:600;}
 
-  .ag-section-title{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 8px;}
+  .ag-section-title{font-size:12.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:22px 0 10px;}
 
-  .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
-  .ag-list-item:hover{border-color:var(--accent);}
-  .ag-list-item-avatar{width:34px;height:34px;border-radius:50%;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .ag-list-item{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:8px;}
+  .ag-list-item-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
   .ag-list-item-body{min-width:0;flex:1;}
   .ag-list-item-name{font-weight:600;font-size:14px;}
   .ag-list-item-meta{font-size:12px;color:var(--ink-soft);}
-  .ag-list-item-quiet .ag-list-item-avatar{background:#FDF0D9;color:var(--accent-ink);}
 
-  .ag-item-result{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:8px;cursor:pointer;}
-  .ag-item-result:hover{background:#F5F3FA;}
-  .ag-item-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
-  .ag-item-thumb-placeholder{width:38px;height:38px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .ag-item-result{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px;cursor:pointer;}
+  .ag-item-result:hover{background:var(--accent-soft);}
+  .ag-item-thumb{width:38px;height:38px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
+  .ag-item-thumb-placeholder{width:38px;height:38px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
   .ag-item-result-body{min-width:0;flex:1;}
   .ag-item-result-name{font-size:13.5px;font-weight:600;}
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
@@ -121,66 +123,182 @@
   .ag-cart-row-name{font-size:13.5px;font-weight:600;}
   .ag-cart-row-meta{font-size:12px;color:var(--ink-soft);}
   .ag-cart-row-price{font-weight:700;font-size:14px;white-space:nowrap;}
-  .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;}
+  .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
-  .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F5F3FA;border-radius:9px;padding:10px 12px;}
+  .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:11px;padding:11px 13px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
-  .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:600;}
+  .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
-  .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
-  .ag-overlay-card{background:var(--panel);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
+  .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
+  .ag-overlay-card{background:var(--panel);border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
   @media (min-width:560px){
     .ag-overlay{align-items:center;padding:20px;}
-    .ag-overlay-card{border-radius:16px;}
+    .ag-overlay-card{border-radius:18px;}
   }
   .ag-overlay-title{font-weight:700;font-size:16px;margin-bottom:14px;}
   .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
 
-  .ag-trust-banner{background:var(--good-bg);color:var(--good);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:16px;}
+  .ag-radio-card{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
+  .ag-radio-card.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .ag-radio-card input{margin:0;accent-color:var(--accent);}
 
-  .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
+  /* ---- Search + filter chips (Browse tab) ---- */
+  .ag-search-bar{position:relative;margin-bottom:12px;}
+  .ag-search-bar input{width:100%;padding:12px 14px 12px 40px;border:1px solid var(--line);border-radius:12px;font-size:14.5px;background:var(--panel);font-family:inherit;color:var(--ink);}
+  .ag-search-bar input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .ag-search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
+  .ag-search-icon .icon{width:17px;height:17px;}
+
+  .ag-chips-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:16px;scrollbar-width:none;}
+  .ag-chips-row::-webkit-scrollbar{display:none;}
+  .ag-chip-btn{all:unset;cursor:pointer;padding:8px 15px;border-radius:20px;background:var(--panel);border:1px solid var(--line);font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;flex-shrink:0;}
+  .ag-chip-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  /* ---- Product grid (Browse tab) ---- */
+  .ag-browse-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  .ag-grid-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;}
+  .ag-grid-card:hover{border-color:var(--accent);}
+  .ag-grid-thumb-wrap{position:relative;aspect-ratio:1/1;background:#F3F4F6;}
+  .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
+  .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
+  .ag-grid-body{padding:10px 12px 12px;}
+  .ag-bonus-pill{display:inline-block;background:var(--bonus-bg);color:var(--bonus);font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;margin-bottom:6px;}
+  .ag-grid-name{font-size:13px;font-weight:600;line-height:1.32;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.64em;}
+  .ag-grid-price{font-size:13.5px;font-weight:700;color:var(--ink);}
+  .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:3px;}
+
+  .ag-star-btn{
+    all:unset;position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:50%;
+    background:rgba(255,255,255,0.94);display:flex;align-items:center;justify-content:center;
+    color:#C4C9D1;box-shadow:0 1px 4px rgba(0,0,0,0.16);
+  }
+  .ag-star-btn .icon{width:15px;height:15px;}
+  .ag-star-btn.active{color:var(--bonus);}
+
+  /* ---- Bottom tab bar ---- */
+  .ag-tabbar{
+    position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
+    display:flex;max-width:520px;margin:0 auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:200;
+    box-shadow:0 -2px 14px rgba(16,24,32,0.05);
+  }
+  .ag-navbtn{
+    all:unset;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;
+    cursor:pointer;color:var(--ink-soft);font-size:10.5px;font-weight:700;border-radius:10px;
+  }
+  .ag-navbtn-iconwrap{position:relative;}
+  .ag-navbtn .icon{width:22px;height:22px;}
+  .ag-navbtn.active{color:var(--accent);}
+  .ag-cart-badge{
+    position:absolute;top:-5px;right:-9px;min-width:16px;height:16px;padding:0 4px;
+    background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;
+    display:none;align-items:center;justify-content:center;line-height:1;
+  }
 </style>
 </head>
 <body class="app-loading">
 
+<div class="agent-shell">
 <div class="agent-view-wrap">
 
   <!-- HOME -->
   <div id="ag_homeView">
-    <div class="page-head">
-      <div>
-        <h1>My Orders</h1>
-        <p id="ag_welcome"></p>
-      </div>
+    <div class="ag-tab-head">
+      <h1 id="ag_welcome">Hi</h1>
+      <p>Here's what's happening with your orders.</p>
     </div>
 
     <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
-      Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.</span>
     </div>
 
-    <div class="ag-earnings-card" id="ag_earningsCard" style="cursor:pointer;">
+    <div class="ag-earnings-card" id="ag_earningsCard">
       <div class="ag-earnings-label">Earned this month</div>
       <div class="ag-earnings-value" id="ag_earningsValue">UGX 0</div>
       <div class="ag-earnings-link">See breakdown &rsaquo;</div>
     </div>
 
-    <button type="button" class="btn btn-accent btn-block" id="ag_newQuoteBtn">+ New quote</button>
-    <button type="button" class="btn btn-ghost btn-block" id="ag_exploreBtn" style="margin-top:8px;">Explore</button>
-
     <div class="ag-section-title">My clients</div>
     <div id="ag_clientsWrap"></div>
 
-    <div class="wv-footer" id="ag_signout_btn">Sign out</div>
+    <div class="ag-section-title">Account</div>
+    <div class="ag-card" style="cursor:pointer;" id="ag_signout_btn">
+      <div style="display:flex;align-items:center;gap:10px;color:var(--danger);font-weight:600;font-size:14px;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        Sign out
+      </div>
+    </div>
+  </div>
+
+  <!-- BROWSE -->
+  <div id="ag_browseView" style="display:none;">
+    <div class="ag-tab-head">
+      <h1>Browse</h1>
+      <p>Find what your client needs, then add it to the cart.</p>
+    </div>
+
+    <div class="ag-search-bar">
+      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
+    </div>
+
+    <div class="ag-chips-row" id="ag_browseChips">
+      <button type="button" class="ag-chip-btn active" data-filter="all">All</button>
+      <button type="button" class="ag-chip-btn" data-filter="sponsored">Sponsored</button>
+      <button type="button" class="ag-chip-btn" data-filter="cluster">My cluster</button>
+      <button type="button" class="ag-chip-btn" data-filter="new">New</button>
+    </div>
+
+    <div class="ag-browse-grid" id="ag_browseGrid"></div>
+  </div>
+
+  <!-- CART -->
+  <div id="ag_cartView" style="display:none;">
+    <div class="ag-tab-head">
+      <h1>Cart</h1>
+      <p>Review the order, then submit it.</p>
+    </div>
+
+    <div class="empty-state" id="ag_cartEmptyState" style="display:none;">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.6 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L21 6H6"/></svg>
+      <p>Your cart is empty.</p>
+      <button type="button" class="btn btn-accent" id="ag_cart_browse_btn" style="display:inline-block;padding:11px 22px;">Browse products</button>
+    </div>
+
+    <div id="ag_cartContent">
+      <div class="ag-card">
+        <div class="ag-card-title">Items</div>
+        <div id="ag_cartWrap"></div>
+      </div>
+
+      <div class="ag-card">
+        <div class="ag-card-title">Client</div>
+        <div id="ag_clientChosenWrap" style="display:none;"></div>
+        <div id="ag_clientPickWrap">
+          <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+          <div id="ag_client_suggestions"></div>
+        </div>
+      </div>
+
+      <div class="ag-card">
+        <div class="ag-card-title">Delivery</div>
+        <label class="ag-radio-card" id="ag_delivery_pickup_label"><input type="radio" name="ag_delivery" id="ag_delivery_pickup" value="agent_pickup" checked> I'll pick it up myself</label>
+        <label class="ag-radio-card" id="ag_delivery_shop_label"><input type="radio" name="ag_delivery" id="ag_delivery_shop" value="shop_delivery"> Shop delivers</label>
+        <div id="ag_deliveryAddressWrap" style="display:none;">
+          <div class="field" style="margin-top:10px;"><label>Delivery address</label><input type="text" id="ag_delivery_address" placeholder="e.g. Plot 12, Ntinda Road"></div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-accent btn-block" id="ag_submit_btn">Submit order</button>
+    </div>
   </div>
 
   <!-- EARNINGS -->
   <div id="ag_earningsView" style="display:none;">
-    <div class="page-head">
-      <button type="button" class="ag-back-btn" id="ag_earnings_back_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <div><h1>Earnings</h1></div>
+    <div class="ag-tab-head">
+      <h1>Earnings</h1>
+      <p>Your margin plus any supplier bonus, month by month.</p>
     </div>
 
     <div class="ag-month-nav">
@@ -189,7 +307,7 @@
       <button type="button" class="ag-month-nav-btn" id="ag_earnings_next_btn" aria-label="Next month"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
 
-    <div class="ag-earnings-card">
+    <div class="ag-earnings-card" style="cursor:default;">
       <div class="ag-earnings-label">Total earned</div>
       <div class="ag-earnings-value" id="ag_earningsTotalValue">UGX 0</div>
     </div>
@@ -204,68 +322,30 @@
     <div id="ag_earningsOrdersWrap"></div>
   </div>
 
-  <!-- EXPLORE -->
-  <div id="ag_exploreView" style="display:none;">
-    <div class="page-head">
-      <button type="button" class="ag-back-btn" id="ag_explore_back_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <div><h1>Explore</h1></div>
-    </div>
-
-    <div class="ag-section-title">My cluster</div>
-    <div id="ag_clusterWrap"></div>
-
-    <div class="ag-section-title">Sponsored items</div>
-    <p class="ag-cost-hint" style="margin:-4px 0 10px;">Extra bonus commission some suppliers are funding. Add one to your cluster before you sell it to start earning the bonus.</p>
-    <div id="ag_sponsoredWrap"></div>
-
-    <div class="ag-section-title">New arrivals</div>
-    <div id="ag_arrivalsWrap"></div>
-  </div>
-
-  <!-- NEW QUOTE -->
-  <div id="ag_quoteView" style="display:none;">
-    <div class="page-head">
-      <button type="button" class="ag-back-btn" id="ag_quote_back_btn">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      <div><h1>New quote</h1></div>
-    </div>
-
-    <div class="ag-card">
-      <div class="ag-card-title">Client</div>
-      <div id="ag_clientChosenWrap" style="display:none;"></div>
-      <div id="ag_clientPickWrap">
-        <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
-        <div id="ag_client_suggestions"></div>
-      </div>
-    </div>
-
-    <div class="ag-card">
-      <div class="ag-card-title">Add items</div>
-      <input type="text" id="ag_item_search" placeholder="Search products..." autocomplete="off">
-      <div id="ag_item_suggestions"></div>
-    </div>
-
-    <div class="ag-card" id="ag_cartCard" style="display:none;">
-      <div class="ag-card-title">Order items</div>
-      <div id="ag_cartWrap"></div>
-    </div>
-
-    <div class="ag-card">
-      <div class="ag-card-title">Delivery</div>
-      <label class="radio-row"><input type="radio" name="ag_delivery" id="ag_delivery_pickup" value="agent_pickup" checked> I'll pick it up myself</label>
-      <label class="radio-row"><input type="radio" name="ag_delivery" id="ag_delivery_shop" value="shop_delivery"> Shop delivers</label>
-      <div id="ag_deliveryAddressWrap" style="display:none;">
-        <div class="field"><label>Delivery address</label><input type="text" id="ag_delivery_address" placeholder="e.g. Plot 12, Ntinda Road"></div>
-      </div>
-    </div>
-
-    <button type="button" class="btn btn-accent btn-block" id="ag_submit_btn">Submit order</button>
-  </div>
-
 </div>
+</div>
+
+<nav class="ag-tabbar" id="ag_tabbar">
+  <button type="button" class="ag-navbtn active" data-tab="home">
+    <span class="ag-navbtn-iconwrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10"/></svg></span>
+    Home
+  </button>
+  <button type="button" class="ag-navbtn" data-tab="browse">
+    <span class="ag-navbtn-iconwrap"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+    Browse
+  </button>
+  <button type="button" class="ag-navbtn" data-tab="cart">
+    <span class="ag-navbtn-iconwrap">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.6 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L21 6H6"/></svg>
+      <span class="ag-cart-badge" id="ag_cartBadge">0</span>
+    </span>
+    Cart
+  </button>
+  <button type="button" class="ag-navbtn" data-tab="earnings">
+    <span class="ag-navbtn-iconwrap"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+    Earnings
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -296,7 +376,7 @@ function ensureAuthOverlay(){
   if(el) return el;
   el = document.createElement('div');
   el.id = 'authOverlay';
-  el.style.cssText = 'position:fixed;inset:0;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;';
+  el.style.cssText = 'position:fixed;inset:0;background:#12151A;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
   document.body.appendChild(el);
   return el;
 }
@@ -315,13 +395,13 @@ function showLoginScreen(){
   return new Promise((resolve)=>{
     const el = ensureAuthOverlay();
     el.innerHTML = `
-      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;">
+      <div style="background:#1c1f26;padding:32px;border-radius:14px;width:320px;max-width:90vw;">
         <h2 style="margin:0 0 16px;font-size:18px;">Sign in</h2>
-        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
+        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
         <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="auth_signin_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;background:#6D3FC0;color:#fff;cursor:pointer;">Sign in</button>
-        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#b79ce8;cursor:pointer;font-size:13px;">Forgot password?</button>
+        <button id="auth_signin_btn" style="width:100%;padding:11px;margin-bottom:8px;border-radius:8px;border:none;background:#2563EB;color:#fff;cursor:pointer;font-weight:600;">Sign in</button>
+        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#8DAEF2;cursor:pointer;font-size:13px;">Forgot password?</button>
       </div>`;
     const statusEl = el.querySelector('#auth_status');
     const setStatus = (msg, kind)=>{
@@ -357,17 +437,17 @@ function showSetPasswordScreen(){
   return new Promise((resolve)=>{
     const el = ensureAuthOverlay();
     el.innerHTML = `
-      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
+      <div style="background:#1c1f26;padding:32px;border-radius:14px;width:320px;max-width:90vw;color:#eee;font-family:inherit;">
         <h2 style="margin:0 0 8px;font-size:18px;">Set your password</h2>
         <p style="margin:0 0 16px;font-size:13px;color:#aaa;">Choose a password so you can sign back in next time.</p>
-        <input id="setpw_pw1" type="password" autocomplete="new-password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <input id="setpw_pw2" type="password" autocomplete="new-password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw1" type="password" autocomplete="new-password" placeholder="New password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
+        <input id="setpw_pw2" type="password" autocomplete="new-password" placeholder="Confirm password" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#aaa;margin-bottom:12px;cursor:pointer;">
           <input type="checkbox" id="setpw_show">
           Show password
         </label>
         <div id="setpw_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="setpw_save_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#6D3FC0;color:#fff;cursor:pointer;">Save password</button>
+        <button id="setpw_save_btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:#2563EB;color:#fff;cursor:pointer;font-weight:600;">Save password</button>
       </div>`;
     const errEl = el.querySelector('#setpw_error');
     el.querySelector('#setpw_show').addEventListener('change', (e)=>{
@@ -469,6 +549,31 @@ async function loadAgentHomeData(){
   myOrders = (ordersData || []).map(mapOrderRow);
 }
 
+/* ================= TAB NAVIGATION ================= */
+const TABS = ['home','browse','cart','earnings'];
+function switchTab(tab){
+  TABS.forEach(t=>{
+    document.getElementById('ag_'+t+'View').style.display = (t===tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  window.scrollTo(0, 0);
+  if(tab==='home') renderHome();
+  if(tab==='browse') openBrowseView();
+  if(tab==='cart') renderCartTab();
+  if(tab==='earnings') openEarningsView();
+}
+document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.ag-navbtn');
+  if(btn) switchTab(btn.dataset.tab);
+});
+
+function updateCartBadge(){
+  const badge = document.getElementById('ag_cartBadge');
+  if(cart.length > 0){ badge.textContent = String(cart.length); badge.style.display = 'flex'; }
+  else{ badge.style.display = 'none'; }
+}
+
+/* ================= HOME ================= */
 function currentMonthKey(){
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -508,7 +613,7 @@ function renderHome(){
 
   const wrap = document.getElementById('ag_clientsWrap');
   if(!agentClients.length){
-    wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`;
+    wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first order.</div>`;
     return;
   }
   const ordersByClient = new Map();
@@ -529,8 +634,10 @@ function renderHome(){
     </div>`;
   }).join('');
 }
+document.getElementById('ag_earningsCard').addEventListener('click', ()=> switchTab('earnings'));
+document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
 
-/* ---------------- Earnings ---------------- */
+/* ================= EARNINGS ================= */
 const ORDER_STATUS_LABEL = { draft:'Draft', preparing:'Preparing', pending_delivery:'Out for delivery', completed:'Completed' };
 
 let earningsViewMonth = currentMonthKey();
@@ -621,17 +728,11 @@ function renderEarnings(){
     </div>`;
   }).join('');
 }
-document.getElementById('ag_earningsCard').addEventListener('click', async ()=>{
+async function openEarningsView(){
   earningsViewMonth = currentMonthKey();
-  document.getElementById('ag_homeView').style.display = 'none';
-  document.getElementById('ag_earningsView').style.display = 'block';
   await loadMyClaims();
   renderEarnings();
-});
-document.getElementById('ag_earnings_back_btn').addEventListener('click', ()=>{
-  document.getElementById('ag_earningsView').style.display = 'none';
-  document.getElementById('ag_homeView').style.display = 'block';
-});
+}
 document.getElementById('ag_earnings_prev_btn').addEventListener('click', ()=>{
   earningsViewMonth = shiftMonth(earningsViewMonth, -1);
   renderEarnings();
@@ -642,21 +743,14 @@ document.getElementById('ag_earnings_next_btn').addEventListener('click', ()=>{
   renderEarnings();
 });
 
-/* ---------------- New Quote flow ---------------- */
+/* ================= BROWSE + commission cluster ================= */
+let promotions = [], cluster = [];
+let browseDataLoaded = false;
+let browseFilter = 'all';
 
-function resetQuoteForm(){
-  cart = [];
-  chosenClient = null;
-  document.getElementById('ag_client_search').value = '';
-  document.getElementById('ag_client_suggestions').innerHTML = '';
-  document.getElementById('ag_clientChosenWrap').style.display = 'none';
-  document.getElementById('ag_clientPickWrap').style.display = 'block';
-  document.getElementById('ag_item_search').value = '';
-  document.getElementById('ag_item_suggestions').innerHTML = '';
-  document.getElementById('ag_delivery_pickup').checked = true;
-  document.getElementById('ag_delivery_address').value = '';
-  document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
-  renderCart();
+function isInCluster(productId, variantIdx){
+  const vi = variantIdx==null ? '' : String(variantIdx);
+  return cluster.some(c=>c.product_id===productId && String(c.variant_idx||'')===vi);
 }
 
 async function ensureCatalogLoaded(){
@@ -669,27 +763,8 @@ async function ensureCatalogLoaded(){
   }
 }
 
-async function openQuoteView(){
-  resetQuoteForm();
-  document.getElementById('ag_homeView').style.display = 'none';
-  document.getElementById('ag_quoteView').style.display = 'block';
-  await ensureCatalogLoaded();
-}
-document.getElementById('ag_newQuoteBtn').addEventListener('click', openQuoteView);
-document.getElementById('ag_quote_back_btn').addEventListener('click', ()=>{
-  document.getElementById('ag_quoteView').style.display = 'none';
-  document.getElementById('ag_homeView').style.display = 'block';
-});
-
-/* ---------------- Explore + commission cluster ---------------- */
-let promotions = [], cluster = [];
-
-function isInCluster(productId, variantIdx){
-  const vi = variantIdx==null ? '' : String(variantIdx);
-  return cluster.some(c=>c.product_id===productId && String(c.variant_idx||'')===vi);
-}
-
-async function loadExploreData(){
+async function ensureBrowseDataLoaded(){
+  if(browseDataLoaded) return;
   await ensureCatalogLoaded();
   try{
     const [promoRes, clusterRes] = await Promise.all([
@@ -699,68 +774,76 @@ async function loadExploreData(){
     if(clusterRes.error) throw clusterRes.error;
     promotions = promoRes.items || [];
     cluster = clusterRes.data || [];
+    browseDataLoaded = true;
   }catch(err){
-    toast(`Could not load Explore: ${err.message||err}`);
+    toast(`Could not load products: ${err.message||err}`);
   }
 }
 
 // Sold at least once, ever, across any non-voided order -- the simplest
-// signal for whether a cluster pick has actually been pushed yet. Only
-// checked for the "My cluster" group (reminder=true); a plain "not sold
-// yet" nudge, not a hard requirement -- the bonus itself is still earned
-// retroactively on any future sale as long as the item stays in the
-// cluster.
+// signal for whether a cluster pick has actually been pushed yet. A plain
+// "not sold yet" nudge, not a hard requirement -- the bonus itself is
+// still earned retroactively on any future sale as long as the item
+// stays in the cluster.
 function hasSoldItem(productId, variantIdx){
   const vi = variantIdx==null ? '' : String(variantIdx);
   return myOrders.some(o=>!o.voided && (o.items||[]).some(it=>it.productId===productId && String(it.variantIdx==null?'':it.variantIdx)===vi));
 }
 
-function promotionCardHTML(promo, opts){
-  opts = opts || {};
-  const inCluster = isInCluster(promo.productId, promo.variantIdx);
-  const bonusLabel = promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus / unit` : `${promo.bonusValue}% bonus`;
-  const needsReminder = opts.reminder && !hasSoldItem(promo.productId, promo.variantIdx);
-  const meta = needsReminder ? `<span style="color:var(--danger);">Not sold yet</span> · ${esc(bonusLabel)}` : esc(bonusLabel);
-  return `<div class="ag-list-item" style="cursor:default;">
-    ${promo.image ? `<img class="ag-item-thumb" src="${esc(promo.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
-    <div class="ag-list-item-body">
-      <div class="ag-list-item-name">${esc(promo.name)}</div>
-      <div class="ag-list-item-meta">${meta}</div>
+function promotedMap(){
+  const m = new Map();
+  promotions.forEach(p=> m.set(`${p.productId}::${p.variantIdx==null?'':p.variantIdx}`, p));
+  return m;
+}
+
+function browseItems(){
+  const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
+  let items = catalog.slice();
+  if(browseFilter==='sponsored'){
+    const promoted = promotedMap();
+    items = items.filter(it=>promoted.has(`${it.productId}::${it.variantIdx==null?'':it.variantIdx}`));
+  } else if(browseFilter==='cluster'){
+    items = items.filter(it=>isInCluster(it.productId, it.variantIdx));
+  } else if(browseFilter==='new'){
+    const cutoff = Date.now() - 30*24*60*60*1000;
+    items = items.filter(it=>it.createdAt && new Date(it.createdAt).getTime() >= cutoff);
+  }
+  if(q) items = items.filter(it=>(it.name||'').toLowerCase().includes(q));
+  return items;
+}
+
+const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
+const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>`;
+
+function browseCardHTML(it, promoted){
+  const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
+  const promo = promoted.get(key);
+  const inCluster = promo && isInCluster(it.productId, it.variantIdx);
+  const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
+  const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
+  return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
+    <div class="ag-grid-thumb-wrap">
+      ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
+      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
-    <button type="button" class="btn ${inCluster?'btn-ghost':'btn-accent'}" style="padding:8px 12px;font-size:12.5px;" data-pid="${esc(promo.productId)}" data-vidx="${promo.variantIdx==null?'':promo.variantIdx}">${inCluster?'Remove':'Add'}</button>
+    <div class="ag-grid-body">
+      ${promo ? `<span class="ag-bonus-pill">${esc(bonusLabel)}</span>` : ''}
+      <div class="ag-grid-name">${esc(it.name)}</div>
+      <div class="ag-grid-price">From ${fmtUGX(it.floorPrice)}</div>
+      ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
+    </div>
   </div>`;
 }
 
-function newArrivalsHTML(){
-  const cutoff = Date.now() - 30*24*60*60*1000;
-  const items = catalog
-    .filter(it=>it.createdAt && new Date(it.createdAt).getTime() >= cutoff)
-    .sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 10);
-  if(!items.length) return '';
-  return items.map(it=>`
-    <div class="ag-item-result" style="background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;">
-      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
-      <div class="ag-item-result-body">
-        <div class="ag-item-result-name">${esc(it.name)}</div>
-        <div class="ag-item-result-price">From ${fmtUGX(it.floorPrice)}</div>
-      </div>
-    </div>`).join('');
-}
-
-function renderExplore(){
-  const inCluster = promotions.filter(p=>isInCluster(p.productId, p.variantIdx));
-  const notInCluster = promotions.filter(p=>!isInCluster(p.productId, p.variantIdx));
-
-  document.getElementById('ag_clusterWrap').innerHTML = inCluster.length
-    ? inCluster.map(p=>promotionCardHTML(p, {reminder:true})).join('')
-    : `<div class="empty">Add a sponsored item below to start tracking bonus commission on it.</div>`;
-
-  document.getElementById('ag_sponsoredWrap').innerHTML = notInCluster.length
-    ? notInCluster.map(promotionCardHTML).join('')
-    : `<div class="empty">No sponsored items right now -- check back later.</div>`;
-
-  document.getElementById('ag_arrivalsWrap').innerHTML = newArrivalsHTML() || `<div class="empty">Nothing new recently.</div>`;
+function renderBrowseGrid(){
+  const promoted = promotedMap();
+  const items = browseItems();
+  const grid = document.getElementById('ag_browseGrid');
+  if(!items.length){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">No matching products.</div>`;
+    return;
+  }
+  grid.innerHTML = items.map(it=>browseCardHTML(it, promoted)).join('');
 }
 
 async function toggleClusterMembership(productId, variantIdx){
@@ -781,32 +864,133 @@ async function toggleClusterMembership(productId, variantIdx){
       cluster.push(inserted);
       toast('Added -- sell it to start earning the bonus');
     }
-    renderExplore();
+    renderBrowseGrid();
   }catch(err){
     toast(`Could not update your cluster: ${err.message||err}`);
   }
 }
-document.getElementById('ag_exploreView').addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-pid]');
-  if(!btn) return;
-  const vidx = btn.dataset.vidx === '' ? null : Number(btn.dataset.vidx);
-  toggleClusterMembership(btn.dataset.pid, vidx);
+
+document.getElementById('ag_browseGrid').addEventListener('click', (e)=>{
+  const starBtn = e.target.closest('[data-star-pid]');
+  if(starBtn){
+    const vidx = starBtn.dataset.starVidx === '' ? null : Number(starBtn.dataset.starVidx);
+    toggleClusterMembership(starBtn.dataset.starPid, vidx);
+    return;
+  }
+  const card = e.target.closest('.ag-grid-card');
+  if(!card) return;
+  const vidx = card.dataset.vidx === '' ? null : Number(card.dataset.vidx);
+  const item = catalog.find(it=>it.productId===card.dataset.pid && String(it.variantIdx==null?'':it.variantIdx)===card.dataset.vidx);
+  if(item) openAddItemPanel(item);
+});
+document.getElementById('ag_browse_search').addEventListener('input', renderBrowseGrid);
+document.getElementById('ag_browseChips').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.ag-chip-btn');
+  if(!chip) return;
+  document.querySelectorAll('#ag_browseChips .ag-chip-btn').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  browseFilter = chip.dataset.filter;
+  renderBrowseGrid();
 });
 
-async function openExploreView(){
-  document.getElementById('ag_homeView').style.display = 'none';
-  document.getElementById('ag_exploreView').style.display = 'block';
-  document.getElementById('ag_clusterWrap').innerHTML = '<div class="empty">Loading…</div>';
-  document.getElementById('ag_sponsoredWrap').innerHTML = '';
-  document.getElementById('ag_arrivalsWrap').innerHTML = '';
-  await loadExploreData();
-  renderExplore();
+async function openBrowseView(){
+  document.getElementById('ag_browseGrid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Loading…</div>';
+  await ensureBrowseDataLoaded();
+  renderBrowseGrid();
 }
-document.getElementById('ag_exploreBtn').addEventListener('click', openExploreView);
-document.getElementById('ag_explore_back_btn').addEventListener('click', ()=>{
-  document.getElementById('ag_exploreView').style.display = 'none';
-  document.getElementById('ag_homeView').style.display = 'block';
-});
+
+async function openAddItemPanel(item){
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">${esc(item.name)}</div>
+      <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
+      <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
+      <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to cart</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+
+  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty;
+  const qtyEl = document.getElementById('ag_ai_qty');
+  const priceEl = document.getElementById('ag_ai_price');
+  const hintEl = document.getElementById('ag_ai_cost_hint');
+  let repricing = false;
+  const reprice = async ()=>{
+    const qty = Number(qtyEl.value);
+    if(!(qty>0) || repricing) return;
+    repricing = true;
+    try{
+      const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
+      if(res.available){
+        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
+        hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
+      }
+    }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
+    repricing = false;
+  };
+  qtyEl.addEventListener('change', reprice);
+
+  document.getElementById('ag_ai_add_btn').addEventListener('click', ()=>{
+    const qty = Number(qtyEl.value);
+    const agentSellPrice = Number(priceEl.value);
+    if(!(qty>0)){ toast('Enter a quantity'); return; }
+    if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
+    cart.push({
+      productId: item.productId, variantIdx: item.variantIdx, name: item.name,
+      qty, unit: liveUnit, packUnit: livePackUnit,
+      floorPrice: liveFloor, agentSellPrice,
+    });
+    document.body.removeChild(el);
+    updateCartBadge();
+    toast('Added to cart');
+  });
+}
+
+/* ================= CART + client + delivery + submit ================= */
+function renderCart(){
+  const wrap = document.getElementById('ag_cartWrap');
+  wrap.innerHTML = cart.map((it,i)=>`
+    <div class="ag-cart-row">
+      <div class="ag-cart-row-body">
+        <div class="ag-cart-row-name">${esc(it.name)}</div>
+        <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
+      </div>
+      <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
+      <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>`).join('');
+  wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      cart.splice(Number(btn.dataset.idx), 1);
+      updateCartBadge();
+      renderCartTab();
+    });
+  });
+}
+function renderCartTab(){
+  const hasItems = cart.length > 0;
+  document.getElementById('ag_cartEmptyState').style.display = hasItems ? 'none' : 'block';
+  document.getElementById('ag_cartContent').style.display = hasItems ? 'block' : 'none';
+  if(hasItems) renderCart();
+}
+document.getElementById('ag_cart_browse_btn').addEventListener('click', ()=> switchTab('browse'));
+
+function resetCartAfterSubmit(){
+  cart = [];
+  chosenClient = null;
+  document.getElementById('ag_client_search').value = '';
+  document.getElementById('ag_client_suggestions').innerHTML = '';
+  document.getElementById('ag_clientChosenWrap').style.display = 'none';
+  document.getElementById('ag_clientPickWrap').style.display = 'block';
+  document.getElementById('ag_delivery_pickup').checked = true;
+  document.getElementById('ag_delivery_pickup_label').classList.add('selected');
+  document.getElementById('ag_delivery_shop_label').classList.remove('selected');
+  document.getElementById('ag_delivery_address').value = '';
+  document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
+  updateCartBadge();
+}
 
 /* ---- Client picking ---- */
 function renderClientSuggestions(query){
@@ -871,101 +1055,11 @@ function openNewClientPanel(prefillName){
   });
 }
 
-/* ---- Item picking ---- */
-function renderItemSuggestions(query){
-  const box = document.getElementById('ag_item_suggestions');
-  const q = query.trim().toLowerCase();
-  if(!q){ box.innerHTML = ''; return; }
-  const matches = catalog.filter(it=>(it.name||'').toLowerCase().includes(q)).slice(0, 8);
-  if(!matches.length){ box.innerHTML = `<div class="empty">No matching items.</div>`; return; }
-  box.innerHTML = matches.map((it,i)=>`
-    <div class="ag-item-result" data-idx="${i}">
-      ${it.image ? `<img class="ag-item-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-item-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`}
-      <div class="ag-item-result-body">
-        <div class="ag-item-result-name">${esc(it.name)}</div>
-        <div class="ag-item-result-price">From ${fmtUGX(it.floorPrice)}${it.packQty ? ` · ${esc(it.packQty)} ${esc(it.unit||'')} per ${esc(it.packUnit||'pack')}` : ''}</div>
-      </div>
-    </div>`).join('');
-  box.querySelectorAll('.ag-item-result[data-idx]').forEach(row=>{
-    row.addEventListener('click', ()=> openAddItemPanel(matches[Number(row.dataset.idx)]));
-  });
-}
-document.getElementById('ag_item_search').addEventListener('input', e=>renderItemSuggestions(e.target.value));
-
-async function openAddItemPanel(item){
-  const el = document.createElement('div');
-  el.className = 'ag-overlay';
-  el.innerHTML = `
-    <div class="ag-overlay-card">
-      <div class="ag-overlay-title">${esc(item.name)}</div>
-      <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
-      <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
-      <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to order</button>
-    </div>`;
-  document.body.appendChild(el);
-  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-
-  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty;
-  const qtyEl = document.getElementById('ag_ai_qty');
-  const priceEl = document.getElementById('ag_ai_price');
-  const hintEl = document.getElementById('ag_ai_cost_hint');
-  let repricing = false;
-  const reprice = async ()=>{
-    const qty = Number(qtyEl.value);
-    if(!(qty>0) || repricing) return;
-    repricing = true;
-    try{
-      const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
-      if(res.available){
-        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
-        hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
-      }
-    }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
-    repricing = false;
-  };
-  qtyEl.addEventListener('change', reprice);
-
-  document.getElementById('ag_ai_add_btn').addEventListener('click', ()=>{
-    const qty = Number(qtyEl.value);
-    const agentSellPrice = Number(priceEl.value);
-    if(!(qty>0)){ toast('Enter a quantity'); return; }
-    if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
-    cart.push({
-      productId: item.productId, variantIdx: item.variantIdx, name: item.name,
-      qty, unit: liveUnit, packUnit: livePackUnit,
-      floorPrice: liveFloor, agentSellPrice,
-    });
-    document.body.removeChild(el);
-    renderCart();
-    document.getElementById('ag_item_search').value = '';
-    document.getElementById('ag_item_suggestions').innerHTML = '';
-    toast('Added to order');
-  });
-}
-
-function renderCart(){
-  const card = document.getElementById('ag_cartCard');
-  const wrap = document.getElementById('ag_cartWrap');
-  if(!cart.length){ card.style.display = 'none'; wrap.innerHTML=''; return; }
-  card.style.display = 'block';
-  wrap.innerHTML = cart.map((it,i)=>`
-    <div class="ag-cart-row">
-      <div class="ag-cart-row-body">
-        <div class="ag-cart-row-name">${esc(it.name)}</div>
-        <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
-      </div>
-      <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
-      <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>`).join('');
-  wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ cart.splice(Number(btn.dataset.idx), 1); renderCart(); });
-  });
-}
-
 /* ---- Delivery + submit ---- */
 document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
   r.addEventListener('change', ()=>{
+    document.getElementById('ag_delivery_pickup_label').classList.toggle('selected', document.getElementById('ag_delivery_pickup').checked);
+    document.getElementById('ag_delivery_shop_label').classList.toggle('selected', document.getElementById('ag_delivery_shop').checked);
     document.getElementById('ag_deliveryAddressWrap').style.display = document.getElementById('ag_delivery_shop').checked ? 'block' : 'none';
   });
 });
@@ -988,17 +1082,14 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
     });
     toast('Order submitted');
     await loadAgentHomeData();
-    renderHome();
-    document.getElementById('ag_quoteView').style.display = 'none';
-    document.getElementById('ag_homeView').style.display = 'block';
+    resetCartAfterSubmit();
+    switchTab('home');
   }catch(err){
     toast(`Could not submit order: ${err.message||err}`);
   }finally{
     btn.disabled = false;
   }
 });
-
-document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
 
 async function boot(){
   try{
@@ -1007,13 +1098,15 @@ async function boot(){
   }catch(e){
     console.error('Failed to start app:', e);
     const el = ensureAuthOverlay();
-    el.innerHTML = `<div style="color:#f66;font-family:sans-serif;max-width:400px;text-align:center;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
+    el.innerHTML = `<div style="color:#f66;font-family:inherit;max-width:400px;text-align:center;padding:0 20px;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
     return;
   }
   if(!localStorage.getItem('agentTrustBannerSeen')){
-    document.getElementById('ag_trustBanner').style.display = 'block';
+    document.getElementById('ag_trustBanner').style.display = 'flex';
     localStorage.setItem('agentTrustBannerSeen', '1');
   }
+  document.getElementById('ag_delivery_pickup_label').classList.add('selected');
+  updateCartBadge();
   renderHome();
   document.body.classList.remove('app-loading');
 }
