@@ -30,14 +30,13 @@
     min-height:100vh;
     display:flex;
     flex-direction:column;
-    justify-content:center;
   }
   /* Hides everything until boot() has loaded the worker's data --
      avoids a flash of an empty page. */
   body.app-loading .worker-view-wrap{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
-  .page-head{margin-bottom:24px;padding-right:74px;}
+  .page-head{margin-bottom:24px;}
   .page-head h1{
     font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;color:var(--ink);
     letter-spacing:0.2px;
@@ -84,7 +83,14 @@
   }
   .q-stage-thumb-placeholder .icon{width:19px;height:19px;}
 
-  .worker-view-wrap{width:100%;max-width:520px;margin:0 auto;padding:12px;}
+  .worker-view-wrap{width:100%;max-width:520px;margin:0 auto;padding:12px;display:flex;flex-direction:column;flex:1;min-height:0;}
+  /* The header (idle "Pick & Pack" heading, or the active order's client
+     name) sits outside the centered body on purpose -- it's the one thing
+     that should NOT shift position as a worker swipes between items or
+     moves on to their next order. Only .wv-body's content re-centers. */
+  .wv-header{flex-shrink:0;padding-right:74px;}
+  .wv-active-header{font-size:21px;font-weight:800;margin-bottom:8px;}
+  .wv-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
   .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
   .wv-card-title{font-weight:600;margin-bottom:4px;}
   .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
@@ -99,7 +105,6 @@
      tapped. The carousel bleeds past the page's own side padding
      (negative margin) so the focused card can be as large as the screen
      allows -- mobile-first, this is the one thing a worker looks at. */
-  .wv-carousel-title{font-size:21px;font-weight:800;padding:0 74px 8px 4px;}
   .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -12px;padding:4px 5% 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .wv-carousel::-webkit-scrollbar{display:none;}
   /* Only opacity changes on focus -- no scale/transform, which is what
@@ -147,17 +152,22 @@
 <body class="app-loading">
 
 <div class="worker-view-wrap">
-  <div class="page-head" id="wv_pageHead">
-    <h1>Pick &amp; Pack</h1>
-    <p>Orders assigned to you for preparation.</p>
+  <div class="wv-header" id="wv_header">
+    <div class="page-head" id="wv_pageHead">
+      <h1>Pick &amp; Pack</h1>
+      <p>Orders assigned to you for preparation.</p>
+    </div>
+    <div class="wv-active-header" id="wv_activeHeader" style="display:none;"></div>
   </div>
-  <div id="wv_enablePushWrap" class="wv-card" style="display:none;">
-    <div class="wv-card-title">Turn on notifications</div>
-    <div class="wv-card-sub">Get notified the moment an order is assigned to you, even if the app is closed.</div>
-    <button type="button" class="btn btn-accent" id="wv_enablePushBtn">Enable notifications</button>
+  <div class="wv-body">
+    <div id="wv_enablePushWrap" class="wv-card" style="display:none;">
+      <div class="wv-card-title">Turn on notifications</div>
+      <div class="wv-card-sub">Get notified the moment an order is assigned to you, even if the app is closed.</div>
+      <button type="button" class="btn btn-accent" id="wv_enablePushBtn">Enable notifications</button>
+    </div>
+    <div id="wv_pendingWrap"></div>
+    <div id="wv_activeWrap"></div>
   </div>
-  <div id="wv_pendingWrap"></div>
-  <div id="wv_activeWrap"></div>
   <div class="wv-footer" id="wv_signout_btn">Sign out</div>
 </div>
 

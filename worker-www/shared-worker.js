@@ -307,11 +307,18 @@ function renderWorkerView(){
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
-  // Hide the generic page heading while a worker is actively picking --
-  // the client's name already shows above the carousel, and reclaiming
-  // that space helps the whole card fit on one screen without scrolling.
+  // Client name lives in the persistent header, not inside the scrolling
+  // carousel -- swapping which of these two shows (rather than having the
+  // name scroll past as part of the carousel content) keeps that header
+  // area visually stable as a worker moves between items or on to their
+  // next order; only its text changes, never its position.
   const pageHead = document.getElementById('wv_pageHead');
+  const activeHeader = document.getElementById('wv_activeHeader');
   if(pageHead) pageHead.style.display = active ? 'none' : '';
+  if(activeHeader){
+    activeHeader.style.display = active ? '' : 'none';
+    if(active) activeHeader.textContent = active.client.name || 'Unnamed client';
+  }
   renderWorkerPendingList(pending);
   renderWorkerPickStepper(active);
 }
@@ -389,7 +396,7 @@ function renderWorkerPickStepper(q){
   if(!q){ wrap.innerHTML=''; return; }
   const items = q.items||[];
   if(!items.length){
-    wrap.innerHTML = `<div class="wv-card"><div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div><div class="wv-card-sub">No items on this order.</div></div>`;
+    wrap.innerHTML = `<div class="wv-card"><div class="wv-card-sub">No items on this order.</div></div>`;
     return;
   }
   const cursor = Math.min(Math.max(q.pickCursor||0, 0), items.length-1);
@@ -416,7 +423,6 @@ function renderWorkerPickStepper(q){
   const dotsHTML = `<div class="wv-carousel-dots">${items.map((_,i)=>`<span class="wv-carousel-dot ${i===cursor?'focused':''}"></span>`).join('')}</div>`;
 
   wrap.innerHTML = `
-    <div class="wv-carousel-title">${esc(q.client.name||'Unnamed client')}</div>
     <div class="wv-carousel" id="wv_carousel">${cardsHTML}</div>
     ${dotsHTML}
     <div id="wv_finishWrap"></div>
