@@ -6,20 +6,27 @@
 <title>Omni-Ware Worker</title>
 <link rel="manifest" href="/manifest-worker.json">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
   :root{
-    --bg: #EDF0F2;
+    --bg: #EEF4F1;
     --panel: #FFFFFF;
-    --ink: #1B2430;
-    --ink-soft: #57626F;
-    --line: #D8DEE3;
-    --accent: #F2A93C;
-    --accent-ink: #7A4A02;
-    --good: #2F7D4F;
-    --good-bg: #E4F3EA;
+    --ink: #0F241D;
+    --ink-soft: #5B7069;
+    --ink-faint: #8B9A94;
+    --line: #DCE6E2;
+    --accent: #0E8F71;
+    --accent-deep: #0A6B56;
+    --accent-ink: #FFFFFF;
+    --accent-tint: #E1F5EF;
+    --amber: #C97A26;
+    --amber-tint: #FBE9D6;
+    --good: #0E8F71;
+    --good-bg: #E1F5EF;
     --danger: #C0392B;
-    --navy: #1B2430;
+    --navy: #0F241D;
+    --shadow-card: 0 1px 2px rgba(15,36,29,.04), 0 8px 20px rgba(15,36,29,.06);
+    --shadow-hero: 0 10px 24px rgba(10,107,86,.24);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -36,20 +43,21 @@
   body.app-loading .worker-view-wrap{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
+  .wv-eyebrow{margin:0 0 4px;color:var(--accent-deep);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
   .page-head{margin-bottom:24px;}
   .page-head h1{
-    font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;color:var(--ink);
-    letter-spacing:0.2px;
+    font-family:'Manrope',sans-serif;font-size:22px;font-weight:800;margin:0;color:var(--ink);
+    letter-spacing:-0.2px;
   }
-  .page-head p{margin:0;color:var(--ink-soft);font-size:14px;}
+  .page-head p{margin:4px 0 0;color:var(--ink-soft);font-size:14px;}
 
   .btn{
-    all:unset;cursor:pointer;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;
+    all:unset;box-sizing:border-box;cursor:pointer;padding:12px 18px;border-radius:13px;font-size:14px;font-weight:700;
     text-align:center;
   }
-  .btn-accent{background:var(--accent);color:#2A1B00;}
-  .btn-accent:hover{background:#e69c2a;}
-  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .btn-accent{background:var(--accent);color:var(--accent-ink);}
+  .btn-accent:hover{background:var(--accent-deep);}
+  .btn-ghost{background:var(--panel);color:var(--ink-soft);border:1px solid var(--line);}
   .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
 
   .empty{padding:28px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
@@ -89,13 +97,37 @@
      that should NOT shift position as a worker swipes between items or
      moves on to their next order. Only .wv-body's content re-centers. */
   .wv-header{flex-shrink:0;padding-right:74px;}
-  .wv-active-header{font-size:21px;font-weight:800;margin-bottom:8px;}
+  /* The active order's client name + progress renders as a filled "hero"
+     card (mirrors a balance-card pattern) instead of plain text -- gives
+     a worker the at-a-glance "where am I on this order" the plain title
+     never did. It's still just innerHTML swapped inside the same #wv_
+     activeHeader mount point, so the header stays positionally stable. */
+  .wv-hero{
+    background:linear-gradient(155deg, var(--accent) 0%, var(--accent-deep) 100%);
+    border-radius:20px;padding:16px 18px 15px;color:#fff;box-shadow:var(--shadow-hero);
+    margin-bottom:16px;
+  }
+  .wv-hero-label{margin:0 0 3px;font-size:11px;font-weight:700;color:#BFF0E1;text-transform:uppercase;letter-spacing:.07em;}
+  .wv-hero-name{font-family:'Manrope',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.2px;}
+  .wv-hero-progress-label{margin-top:12px;font-size:12.5px;font-weight:600;color:#D8F4EA;}
+  .wv-hero-track{height:6px;border-radius:99px;background:rgba(255,255,255,.24);margin-top:7px;overflow:hidden;}
+  .wv-hero-fill{height:100%;border-radius:99px;background:#fff;transition:width .35s ease;}
   .wv-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
-  .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
-  .wv-card-title{font-weight:600;margin-bottom:4px;}
+  .wv-card{background:var(--panel);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow-card);}
+  .wv-card-title{font-weight:700;margin-bottom:4px;}
   .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
   .wv-actions{display:flex;gap:10px;}
   .wv-actions .btn{flex:1;}
+  /* Pending-order cards: an initial avatar + item-count pill give a worker
+     more to scan at a glance than a bare name/subtitle ever did. */
+  .wv-pending-card{background:var(--panel);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow-card);}
+  .wv-pending-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .wv-avatar{
+    width:40px;height:40px;border-radius:12px;background:var(--accent-tint);color:var(--accent-deep);
+    display:flex;align-items:center;justify-content:center;font-family:'Manrope';font-weight:800;font-size:15px;flex-shrink:0;
+  }
+  .wv-pending-name{font-family:'Manrope';font-weight:700;font-size:15px;flex:1;min-width:0;}
+  .wv-count-pill{background:var(--amber-tint);color:var(--amber);font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap;}
   /* Item carousel: swipe horizontally between items (native scroll-snap,
      no gesture library needed) instead of tapping next/back buttons.
      Photo, name, quantity and source all live inside one bordered card;
@@ -113,34 +145,33 @@
      that quirk (it resolves against this container's own content box), so
      these spacers -- not scroll-snap-align targets themselves -- give the
      first/last card genuine, correctly-sized room to center into. */
-  .wv-carousel::before,.wv-carousel::after{content:'';flex:0 0 5%;}
+  .wv-carousel::before,.wv-carousel::after{content:'';flex:0 0 6%;}
   .wv-carousel::-webkit-scrollbar{display:none;}
-  /* Only opacity changes on focus -- no scale/transform, which is what
-     made side cards feel like they were "shaking" as scroll position was
-     recalculated. A calm fade reads as intentional instead of jittery. */
-  .wv-carousel-card{flex:0 0 90%;scroll-snap-align:center;opacity:.35;transition:opacity .25s ease;margin-right:10px;}
+  /* Opacity + a light scale change on focus -- no shake-inducing transform
+     recalculated mid-scroll, just a settled "this one's live" feel. */
+  .wv-carousel-card{flex:0 0 88%;scroll-snap-align:center;opacity:.4;transform:scale(.96);transition:opacity .25s ease,transform .25s ease;margin-right:10px;}
   .wv-carousel-card:last-child{margin-right:0;}
-  .wv-carousel-card.focused{opacity:1;}
-  .wv-carousel-card-inner{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-  .wv-carousel-card.focused .wv-carousel-card-inner{cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.12);}
-  .wv-carousel-photo{width:100%;aspect-ratio:1;border-bottom:1px solid var(--line);border-radius:20px 20px 0 0;overflow:hidden;}
+  .wv-carousel-card.focused{opacity:1;transform:scale(1);}
+  .wv-carousel-card-inner{position:relative;background:var(--panel);border-radius:22px;box-shadow:var(--shadow-card);}
+  .wv-carousel-card.focused .wv-carousel-card-inner{cursor:pointer;}
+  .wv-carousel-photo{width:100%;aspect-ratio:1;border-bottom:1px solid var(--line);border-radius:22px 22px 0 0;overflow:hidden;}
   .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:0;border:none;}
   .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:70px;height:70px;}
-  .wv-carousel-badge{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:4px;padding:7px 14px;border-radius:999px;font:700 13px inherit;box-shadow:0 1px 4px rgba(0,0,0,.18);border:none;cursor:pointer;}
-  .wv-carousel-badge.pending{background:var(--panel);color:var(--ink-soft);}
-  .wv-carousel-badge.done{background:var(--good);color:#fff;}
-  .wv-carousel-badge .icon{width:15px;height:15px;stroke-width:3;}
-  .wv-carousel-body{padding:12px 16px 2px;}
-  .wv-carousel-name{font-size:17px;font-weight:700;text-align:center;}
-  .wv-carousel-qty-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-top:8px;}
-  .wv-carousel-qty{font-family:'Archivo Black',sans-serif;font-size:28px;color:var(--ink);text-align:center;margin-top:3px;letter-spacing:.3px;}
-  .wv-carousel-source{margin-top:12px;border-top:2px dotted var(--line);background:#DCEEFB;text-align:center;padding:9px 16px 11px;border-radius:0 0 20px 20px;}
-  .wv-carousel-source-label{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
-  .wv-carousel-source-value{font-size:14.5px;font-weight:700;color:var(--ink);margin-top:2px;}
-  .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:10px 0 2px;}
-  .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);}
-  .wv-carousel-dot.focused{background:var(--good);width:16px;border-radius:4px;}
-  .wv-mark-btn{width:auto;padding:10px 26px;font-size:14px;display:block;margin:14px auto 0;}
+  .wv-carousel-badge{position:absolute;top:13px;right:13px;display:flex;align-items:center;gap:4px;padding:8px 15px;border-radius:999px;font:700 12.5px inherit;box-shadow:0 2px 8px rgba(15,36,29,.16);border:none;cursor:pointer;transition:background .15s ease,color .15s ease;}
+  .wv-carousel-badge.pending{background:#fff;color:var(--ink-soft);}
+  .wv-carousel-badge.done{background:var(--accent);color:#fff;}
+  .wv-carousel-badge .icon{width:14px;height:14px;stroke-width:3;}
+  .wv-carousel-body{padding:15px 17px 3px;}
+  .wv-carousel-name{font-size:15.5px;font-weight:600;text-align:center;}
+  .wv-carousel-qty-label{font-size:10.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;text-align:center;margin-top:9px;}
+  .wv-carousel-qty{font-family:'Manrope',sans-serif;font-weight:800;font-size:26px;color:var(--ink);text-align:center;margin-top:2px;letter-spacing:-.2px;}
+  .wv-carousel-source{margin-top:13px;background:var(--accent-tint);text-align:center;padding:10px 16px 12px;}
+  .wv-carousel-source-label{font-size:10px;font-weight:700;color:var(--accent-deep);text-transform:uppercase;letter-spacing:.05em;opacity:.75;}
+  .wv-carousel-source-value{font-size:13.5px;font-weight:700;color:var(--accent-deep);margin-top:2px;}
+  .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:12px 0 2px;}
+  .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:all .2s ease;}
+  .wv-carousel-dot.focused{background:var(--accent);width:18px;border-radius:4px;}
+  .wv-mark-btn{width:auto;padding:12px 28px;font-size:14px;display:block;margin:16px auto 0;}
   .wv-footer{
     position:fixed;
     top:max(14px, env(safe-area-inset-top));
@@ -163,10 +194,11 @@
 <div class="worker-view-wrap">
   <div class="wv-header" id="wv_header">
     <div class="page-head" id="wv_pageHead">
-      <h1>Pick &amp; Pack</h1>
+      <p class="wv-eyebrow">Pick &amp; pack</p>
+      <h1>Your queue</h1>
       <p>Orders assigned to you for preparation.</p>
     </div>
-    <div class="wv-active-header" id="wv_activeHeader" style="display:none;"></div>
+    <div id="wv_activeHeader" style="display:none;"></div>
   </div>
   <div class="wv-body">
     <div id="wv_enablePushWrap" class="wv-card" style="display:none;">

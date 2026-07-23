@@ -307,17 +307,28 @@ function renderWorkerView(){
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
-  // Client name lives in the persistent header, not inside the scrolling
-  // carousel -- swapping which of these two shows (rather than having the
-  // name scroll past as part of the carousel content) keeps that header
-  // area visually stable as a worker moves between items or on to their
-  // next order; only its text changes, never its position.
+  // Client name + progress live in the persistent header, not inside the
+  // scrolling carousel -- swapping which of these two shows (rather than
+  // having them scroll past as part of the carousel content) keeps that
+  // header area visually stable as a worker moves between items or on to
+  // their next order; only its content changes, never its position.
   const pageHead = document.getElementById('wv_pageHead');
   const activeHeader = document.getElementById('wv_activeHeader');
   if(pageHead) pageHead.style.display = active ? 'none' : '';
   if(activeHeader){
     activeHeader.style.display = active ? '' : 'none';
-    if(active) activeHeader.textContent = active.client.name || 'Unnamed client';
+    if(active){
+      const items = active.items||[];
+      const doneCount = items.filter(it=>it.pickStatus==='done').length;
+      const pct = items.length ? Math.round(doneCount/items.length*100) : 0;
+      activeHeader.innerHTML = `
+        <div class="wv-hero">
+          <p class="wv-hero-label">Now picking</p>
+          <p class="wv-hero-name">${esc(active.client.name||'Unnamed client')}</p>
+          <p class="wv-hero-progress-label">${doneCount} of ${items.length} picked</p>
+          <div class="wv-hero-track"><div class="wv-hero-fill" style="width:${pct}%;"></div></div>
+        </div>`;
+    }
   }
   renderWorkerPendingList(pending);
   renderWorkerPickStepper(active);
@@ -326,15 +337,23 @@ function renderWorkerView(){
 function renderWorkerPendingList(pending){
   const wrap = document.getElementById('wv_pendingWrap');
   if(!pending.length){ wrap.innerHTML=''; return; }
-  wrap.innerHTML = pending.map(q=>`
-    <div class="wv-card" data-id="${q.id}">
-      <div class="wv-card-title">${esc(q.client.name||'Unnamed client')}</div>
-      <div class="wv-card-sub">${(q.items||[]).length} item${(q.items||[]).length===1?'':'s'} to prepare</div>
-      <div class="wv-actions">
-        <button type="button" class="btn btn-accent wv-accept-btn">Accept</button>
-        <button type="button" class="btn btn-ghost wv-deny-btn">Deny</button>
+  wrap.innerHTML = pending.map(q=>{
+    const name = q.client.name || 'Unnamed client';
+    const initial = (name.trim().charAt(0) || '?').toUpperCase();
+    const count = (q.items||[]).length;
+    return `
+    <div class="wv-pending-card" data-id="${q.id}">
+      <div class="wv-pending-top">
+        <div class="wv-avatar">${esc(initial)}</div>
+        <div class="wv-pending-name">${esc(name)}</div>
+        <span class="wv-count-pill">${count} item${count===1?'':'s'}</span>
       </div>
-    </div>`).join('');
+      <div class="wv-actions">
+        <button type="button" class="btn btn-ghost wv-deny-btn">Deny</button>
+        <button type="button" class="btn btn-accent wv-accept-btn">Accept</button>
+      </div>
+    </div>`;
+  }).join('');
   wrap.querySelectorAll('.wv-accept-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>acceptOrderAssignment(Number(btn.closest('[data-id]').dataset.id)));
   });
