@@ -478,6 +478,13 @@
   .preset-tab{all:unset;cursor:pointer;padding:7px 16px;border-radius:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
   .preset-tab:hover{color:var(--ink);}
   .preset-tab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,40,0.14);}
+  /* Same look as the Presets tab's own sub-tabs, kept as a separate class
+     so the generic .preset-tab click handler (which looks for a
+     ppane-<data-ptab> element) doesn't also try to wire these up. */
+  .agent-subtabs{display:flex;gap:3px;background:#F1F3F5;padding:3px;border-radius:9px;flex-shrink:0;width:fit-content;margin-bottom:16px;}
+  .agent-subtab{all:unset;cursor:pointer;padding:7px 16px;border-radius:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .agent-subtab:hover{color:var(--ink);}
+  .agent-subtab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,40,0.14);}
   .preset-hint{margin:0 0 10px;font-size:12px;color:var(--ink-soft);}
   .preset-inline-add{display:flex;gap:8px;max-width:340px;margin-bottom:12px;}
   .preset-inline-add.wide{max-width:520px;}
@@ -2505,18 +2512,42 @@
         <h1>Sales Agents</h1>
         <p>External partners who sell on your behalf through the standalone Agent app. Their clients' identities stay private to them -- orders they submit show up here under their own name with an "Agent order" badge.</p>
       </div>
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">All agents</h2>
-          <button class="btn btn-accent btn-icon" id="ag_invite_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Invite agent
-          </button>
-        </div>
-        <div class="search-bar" style="margin-top:14px;"><input id="ag_search" placeholder="Search by name or phone..."></div>
+
+      <div class="agent-subtabs" id="agentSubTabs">
+        <button type="button" class="agent-subtab active" data-atab="roster">Agents</button>
+        <button type="button" class="agent-subtab" data-atab="promotions">Promotions</button>
       </div>
-      <div class="panel">
-        <div id="agentsWrap"></div>
+
+      <div id="apane-roster">
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">All agents</h2>
+            <button class="btn btn-accent btn-icon" id="ag_invite_btn">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Invite agent
+            </button>
+          </div>
+          <div class="search-bar" style="margin-top:14px;"><input id="ag_search" placeholder="Search by name or phone..."></div>
+        </div>
+        <div class="panel">
+          <div id="agentsWrap"></div>
+        </div>
+      </div>
+
+      <div id="apane-promotions" style="display:none;">
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">Supplier-funded promotions</h2>
+            <button class="btn btn-accent btn-icon" id="promo_add_btn">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              New promotion
+            </button>
+          </div>
+          <p class="preset-hint" style="margin:12px 0 0;">Products a supplier has agreed to fund an extra push on. Agents see these on their Explore page as a bonus commission -- never who's funding it -- and choose whether to add them to their own cluster.</p>
+        </div>
+        <div class="panel">
+          <div id="promotionsWrap"></div>
+        </div>
       </div>
     </section>
 
@@ -2950,6 +2981,48 @@
     <div class="modal-foot">
       <button class="btn btn-ghost" id="agentPrepayCancel">Cancel</button>
       <button class="btn btn-accent" id="agentPrepayConfirm">Mark as paid &amp; continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPLIER-FUNDED PROMOTION MODAL -->
+<div class="modal-overlay" id="promoModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="promoFormTitle">New promotion</h2>
+      <button class="modal-close" id="promoModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint">Agents never see who's funding this -- only the bonus itself, and only once they choose to add the product to their own commission cluster.</p>
+      <div class="form-grid">
+        <div class="field compare-select searchable-select" style="grid-column:1/-1;max-width:none;">
+          <label>Product</label>
+          <input type="text" id="promo_product_search" placeholder="Search by product name or ID..." autocomplete="off">
+          <input type="hidden" id="promo_product">
+          <input type="hidden" id="promo_variant">
+          <div class="suggestions" id="promo_suggestions"></div>
+        </div>
+        <div class="field searchable-select"><label>Funding supplier (optional)</label>
+          <input type="text" id="promo_supplier_search" placeholder="Leave blank if not tied to one supplier..." autocomplete="off">
+          <input type="hidden" id="promo_supplier">
+          <div class="suggestions" id="promo_supplier_suggestions"></div>
+        </div>
+        <div class="field"><label>Bonus type</label>
+          <select id="promo_bonus_type">
+            <option value="percent">% of sale price</option>
+            <option value="fixed">Fixed amount (UGX) per unit</option>
+          </select>
+        </div>
+        <div class="field"><label>Bonus value</label><input id="promo_bonus_value" type="number" min="0" step="any" placeholder="e.g. 5"></div>
+        <div class="field"><label>Starts (optional)</label><input id="promo_starts_at" type="date"></div>
+        <div class="field"><label>Ends (optional)</label><input id="promo_ends_at" type="date"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="promo_cancel">Cancel</button>
+      <button class="btn btn-accent" id="promo_save">Save promotion</button>
     </div>
   </div>
 </div>
@@ -4104,7 +4177,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
   if(e.target.id==='imgLightbox') closeImageLightbox();
 });
 
-['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal','agentPrepayModal'].forEach(id=>{
+['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal','agentPrepayModal','promoModal'].forEach(id=>{
   document.getElementById(id).addEventListener('mousedown', (e)=>{
     if(e.target.id===id){
       if(id==='supplierModal') closeModalAndReset(id, resetSupplierForm);
@@ -4117,6 +4190,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
       if(id==='assignStaffModal') closeAssignStaffModal();
       if(id==='agentModal') closeModalAndReset(id, resetAgentForm);
       if(id==='agentPrepayModal') closeModal(id);
+      if(id==='promoModal') closeModalAndReset(id, resetPromotionForm);
     }
   });
 });
@@ -4131,6 +4205,7 @@ document.addEventListener('keydown', (e)=>{
   if(document.getElementById('staffModal').classList.contains('show')) closeModalAndReset('staffModal', resetStaffForm);
   if(document.getElementById('agentModal').classList.contains('show')) closeModalAndReset('agentModal', resetAgentForm);
   if(document.getElementById('agentPrepayModal').classList.contains('show')) closeModal('agentPrepayModal');
+  if(document.getElementById('promoModal').classList.contains('show')) closeModalAndReset('promoModal', resetPromotionForm);
   if(document.getElementById('assignStaffModal').classList.contains('show')) closeAssignStaffModal();
   if(document.getElementById('piPaymentModal').classList.contains('show')) closeModalAndReset('piPaymentModal', resetPiPaymentForm);
   if(document.getElementById('creditorPaymentModal').classList.contains('show')) closeModalAndReset('creditorPaymentModal', resetCreditorPaymentForm);
@@ -7953,6 +8028,191 @@ document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
   }
 });
 document.getElementById('ag_search').addEventListener('input', e=>renderAgents(e.target.value));
+
+/* ---- Supplier-funded promotions (agent_promotions) ----
+   Lazily fetched only when the Promotions sub-tab is opened (admin-only,
+   rarely changes -- not worth folding into the main loadData() boot
+   sequence), and written directly via the Supabase client rather than
+   through saveData()'s addDiffOps/diff-sync system: agent_promotions.id is
+   `generated always as identity`, so unlike every other collection here
+   the client can never assign its own id, which the generic diff-sync
+   pattern assumes it can. */
+let agentPromotions = null;
+let editingPromotionId = null;
+
+document.getElementById('agentSubTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.agent-subtab');
+  if(!btn) return;
+  document.querySelectorAll('#agentSubTabs .agent-subtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const atab = btn.dataset.atab;
+  document.getElementById('apane-roster').style.display = atab==='roster' ? '' : 'none';
+  document.getElementById('apane-promotions').style.display = atab==='promotions' ? '' : 'none';
+  if(atab==='promotions') renderAgentPromotions();
+});
+
+function promotionBonusLabel(promo){
+  return promo.bonus_type==='fixed' ? `${fmtUGX(promo.bonus_value)} bonus / unit` : `${promo.bonus_value}% bonus`;
+}
+function promotionCardHTML(promo){
+  const product = data.products.find(p=>p.id===promo.product_id);
+  const variantIdx = (promo.variant_idx==null || promo.variant_idx==='') ? null : Number(promo.variant_idx);
+  const pname = product ? productDisplayLabel(product, variantIdx) : promo.product_id;
+  const supplier = promo.supplier_id ? data.suppliers.find(s=>s.id===promo.supplier_id) : null;
+  return `<div class="price-card ${promo.active?'':'price-card-oos'}">
+    <div class="prc-head">
+      <div class="prc-head-main">
+        ${productThumbHTML(product||{image:null,name:pname})}
+        <div class="prc-title">
+          <div class="prc-name">${esc(pname)}</div>
+          <div class="prc-meta"><span class="prc-date">${esc(promotionBonusLabel(promo))}${promo.active?'':' — inactive'}</span></div>
+        </div>
+      </div>
+      <div class="pc-actions">
+        <button class="pc-icon-btn ${promo.active?'pc-icon-btn-active-danger':''}" title="${promo.active?'Deactivate':'Activate'}" onclick="togglePromotionActive(${promo.id})">${promo.active?ICON_NO_STOCK:ICON_RESTOCK}</button>
+        <button class="pc-icon-btn" title="Edit promotion" onclick="editPromotion(${promo.id})">${ICON_EDIT}</button>
+        <button class="pc-icon-btn danger" title="Delete promotion" onclick="deletePromotion(${promo.id})">${ICON_TRASH}</button>
+      </div>
+    </div>
+    ${supplier ? `<div class="prc-supplier"><svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>Funded by ${esc(supplier.name)}</div>` : ''}
+  </div>`;
+}
+async function renderAgentPromotions(){
+  const wrap = document.getElementById('promotionsWrap');
+  if(agentPromotions===null){
+    wrap.innerHTML = '<div class="empty">Loading…</div>';
+    const { data: rows, error } = await sb.from('agent_promotions').select('*').eq('shop_id', currentShopId).order('id', {ascending:false});
+    if(error){ wrap.innerHTML = '<div class="empty">Could not load promotions.</div>'; toast('Could not load promotions: '+error.message); return; }
+    agentPromotions = rows || [];
+  }
+  if(!agentPromotions.length){
+    wrap.innerHTML = `<div class="empty">No promotions yet. Add one when a supplier agrees to fund extra push on a product.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="price-grid">${agentPromotions.map(promotionCardHTML).join('')}</div>`;
+}
+function resetPromotionForm(){
+  editingPromotionId = null;
+  document.getElementById('promo_product').value = '';
+  document.getElementById('promo_variant').value = '';
+  document.getElementById('promo_product_search').value = '';
+  selectPromoSupplier('');
+  document.getElementById('promo_bonus_type').value = 'percent';
+  document.getElementById('promo_bonus_value').value = '';
+  document.getElementById('promo_starts_at').value = '';
+  document.getElementById('promo_ends_at').value = '';
+  document.getElementById('promoFormTitle').textContent = 'New promotion';
+}
+function editPromotion(id){
+  const promo = agentPromotions.find(x=>x.id===id); if(!promo) return;
+  editingPromotionId = id;
+  selectPromoProduct(promo.product_id, (promo.variant_idx==null || promo.variant_idx==='') ? null : Number(promo.variant_idx));
+  selectPromoSupplier(promo.supplier_id || '');
+  document.getElementById('promo_bonus_type').value = promo.bonus_type;
+  document.getElementById('promo_bonus_value').value = promo.bonus_value;
+  document.getElementById('promo_starts_at').value = promo.starts_at || '';
+  document.getElementById('promo_ends_at').value = promo.ends_at || '';
+  document.getElementById('promoFormTitle').textContent = 'Edit promotion';
+  openModal('promoModal');
+}
+async function togglePromotionActive(id){
+  const promo = agentPromotions.find(x=>x.id===id); if(!promo) return;
+  const { error } = await sb.from('agent_promotions').update({ active: !promo.active }).eq('shop_id', currentShopId).eq('id', id);
+  if(error){ toast('Could not update: '+error.message); return; }
+  promo.active = !promo.active;
+  renderAgentPromotions();
+  toast(promo.active ? 'Promotion activated' : 'Promotion deactivated');
+}
+async function deletePromotion(id){
+  if(!confirm('Delete this promotion? Agents who already added it to their cluster will stop seeing a bonus for it.')) return;
+  const { error } = await sb.from('agent_promotions').delete().eq('shop_id', currentShopId).eq('id', id);
+  if(error){ toast('Could not delete: '+error.message); return; }
+  agentPromotions = agentPromotions.filter(x=>x.id!==id);
+  renderAgentPromotions();
+  toast('Promotion deleted');
+}
+function selectPromoSupplier(id){
+  document.getElementById('promo_supplier').value = id;
+  document.getElementById('promo_supplier_search').value = id ? supplierName(id) : '';
+  document.getElementById('promo_supplier_suggestions').classList.remove('show');
+}
+document.getElementById('promo_supplier_search').addEventListener('input', (e)=>{
+  document.getElementById('promo_supplier').value = '';
+  document.getElementById('promo_supplier_suggestions').innerHTML = supplierSuggestionsHTML(searchTokens(e.target.value));
+  document.getElementById('promo_supplier_suggestions').classList.add('show');
+});
+document.getElementById('promo_supplier_search').addEventListener('focus', (e)=>{
+  e.target.select();
+  document.getElementById('promo_supplier_suggestions').innerHTML = supplierSuggestionsHTML(searchTokens(e.target.value));
+  document.getElementById('promo_supplier_suggestions').classList.add('show');
+});
+document.getElementById('promo_supplier_suggestions').addEventListener('mousedown', (e)=>{
+  const item = e.target.closest('.suggestion-item');
+  if(item) selectPromoSupplier(item.dataset.id);
+});
+function selectPromoProduct(id, variantIdx=null){
+  const p = data.products.find(x=>x.id===id);
+  document.getElementById('promo_product').value = id;
+  document.getElementById('promo_variant').value = variantIdx==null ? '' : variantIdx;
+  document.getElementById('promo_product_search').value = p ? productDisplayLabel(p, variantIdx) : '';
+  document.getElementById('promo_suggestions').classList.remove('show');
+}
+document.getElementById('promo_product_search').addEventListener('input', (e)=>{
+  document.getElementById('promo_product').value = '';
+  document.getElementById('promo_variant').value = '';
+  renderSuggestionBox(document.getElementById('promo_suggestions'), searchTokens(e.target.value));
+});
+document.getElementById('promo_product_search').addEventListener('focus', (e)=> renderSuggestionBox(document.getElementById('promo_suggestions'), searchTokens(e.target.value)));
+document.getElementById('promo_suggestions').addEventListener('mousedown', (e)=>{
+  const sel = readSuggestionSelection(e);
+  if(sel) selectPromoProduct(sel.id, sel.variantIdx);
+});
+document.getElementById('promo_add_btn').addEventListener('click', ()=>{ resetPromotionForm(); openModal('promoModal'); });
+document.getElementById('promo_cancel').addEventListener('click', ()=>closeModalAndReset('promoModal', resetPromotionForm));
+document.getElementById('promoModalClose').addEventListener('click', ()=>closeModalAndReset('promoModal', resetPromotionForm));
+document.getElementById('promo_save').addEventListener('click', async ()=>{
+  const productId = document.getElementById('promo_product').value;
+  const variantIdxRaw = document.getElementById('promo_variant').value;
+  const bonusType = document.getElementById('promo_bonus_type').value;
+  const bonusValue = Number(document.getElementById('promo_bonus_value').value);
+  if(!productId){ toast('Pick a product first'); return; }
+  if(!(bonusValue > 0)){ toast('Enter a bonus value greater than 0'); return; }
+  if(bonusType==='percent' && bonusValue > 100){ toast("A percent bonus over 100% doesn't make sense"); return; }
+  const supplierId = document.getElementById('promo_supplier').value || null;
+  const startsAt = document.getElementById('promo_starts_at').value || null;
+  const endsAt = document.getElementById('promo_ends_at').value || null;
+  const row = {
+    shop_id: currentShopId,
+    product_id: productId,
+    variant_idx: variantIdxRaw === '' ? '' : String(variantIdxRaw),
+    supplier_id: supplierId,
+    bonus_type: bonusType,
+    bonus_value: bonusValue,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  };
+  const btn = document.getElementById('promo_save');
+  btn.disabled = true;
+  try{
+    if(editingPromotionId){
+      const { data: updated, error } = await sb.from('agent_promotions').update(row).eq('shop_id', currentShopId).eq('id', editingPromotionId).select().single();
+      if(error) throw error;
+      const idx = agentPromotions.findIndex(x=>x.id===editingPromotionId);
+      if(idx>=0) agentPromotions[idx] = updated;
+    } else {
+      const { data: inserted, error } = await sb.from('agent_promotions').insert({...row, active:true}).select().single();
+      if(error) throw error;
+      agentPromotions = agentPromotions || [];
+      agentPromotions.unshift(inserted);
+    }
+    closeModal('promoModal'); resetPromotionForm(); renderAgentPromotions();
+    toast('Promotion saved');
+  }catch(err){
+    toast(`Could not save promotion: ${err.message||err}`);
+  }finally{
+    btn.disabled = false;
+  }
+});
 
 // Worker pick & pack (myWorkerOrders, renderWorkerView, accept/deny,
 // carousel stepper, autoAssignNextOrder, push notification handling, etc.)
