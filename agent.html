@@ -246,21 +246,15 @@
     all:unset;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px 4px;
     cursor:pointer;color:var(--ink-soft);font-size:10.5px;font-weight:700;
   }
-  .ag-navbtn-pill{padding:5px 17px;border-radius:14px;margin-bottom:2px;transition:background-color .15s;display:flex;}
+  .ag-navbtn-pill{position:relative;padding:5px 17px;border-radius:14px;margin-bottom:2px;transition:background-color .15s;display:flex;}
   .ag-navbtn-pill .icon{width:21px;height:21px;}
   .ag-navbtn.active{color:var(--accent);}
   .ag-navbtn.active .ag-navbtn-pill{background:var(--accent-soft);}
-
-  /* ---- Floating Quote button ---- */
-  .ag-fab{
-    all:unset;position:fixed;left:16px;bottom:calc(70px + env(safe-area-inset-bottom));
-    display:none;align-items:center;gap:9px;background:var(--ink);color:#fff;
-    padding:14px 20px 14px 16px;border-radius:32px;box-shadow:0 8px 20px rgba(18,21,26,0.32);
-    cursor:pointer;z-index:250;font-weight:700;font-size:13.5px;
+  .ag-nav-badge{
+    position:absolute;top:-3px;right:2px;min-width:16px;height:16px;padding:0 4px;
+    background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:10px;
+    display:none;align-items:center;justify-content:center;line-height:1;border:2px solid var(--panel);
   }
-  @media (min-width:552px){ .ag-fab{ left:calc(50% - 260px + 16px); } }
-  .ag-fab.show{display:flex;}
-  .ag-fab .icon{width:19px;height:19px;}
 </style>
 </head>
 <body class="app-loading">
@@ -381,12 +375,9 @@
     <div id="ag_orderHistoryListWrap"></div>
   </div>
 
-  <!-- QUOTE (opened via the floating button, not a tab) -->
+  <!-- QUOTE -->
   <div id="ag_quoteView" class="ag-pad-top" style="display:none;">
-    <div class="ag-back-row">
-      <button type="button" class="ag-back-btn" id="ag_quote_close_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <h1 style="font-size:20px;font-weight:800;margin:0;">Quote</h1>
-    </div>
+    <div class="ag-tab-head"><h1>Quote</h1></div>
 
     <div class="empty-state" id="ag_cartEmptyState" style="display:none;">
       <div class="empty-state-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
@@ -425,19 +416,21 @@
 </div>
 </div>
 
-<button type="button" class="ag-fab" id="ag_quoteFab" aria-label="Quote">
-  <svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
-  <span id="ag_fab_label">0 items</span>
-</button>
-
 <nav class="ag-tabbar" id="ag_tabbar">
+  <button type="button" class="ag-navbtn" data-tab="browse">
+    <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10"/></svg></span>
+    Home
+  </button>
+  <button type="button" class="ag-navbtn" data-tab="quote">
+    <span class="ag-navbtn-pill">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+      <span class="ag-nav-badge" id="ag_quote_nav_badge">0</span>
+    </span>
+    Quote
+  </button>
   <button type="button" class="ag-navbtn" data-tab="earnings">
     <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
     Earnings
-  </button>
-  <button type="button" class="ag-navbtn" data-tab="browse">
-    <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-    Browse
   </button>
   <button type="button" class="ag-navbtn" data-tab="account">
     <span class="ag-navbtn-pill"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
@@ -652,24 +645,21 @@ async function loadAgentHomeData(){
 // history are all opened as their own full screens with a back arrow --
 // tasks you dip into, not places you browse, so they don't compete for
 // one of three tab slots.
-const TABS = ['earnings','browse','account'];
-const ALL_VIEWS = ['ag_earningsView','ag_browseView','ag_accountView','ag_quoteView','ag_clientsListView','ag_orderHistoryListView'];
+const TABS = ['browse','quote','earnings','account'];
+const ALL_VIEWS = ['ag_browseView','ag_quoteView','ag_earningsView','ag_accountView','ag_clientsListView','ag_orderHistoryListView'];
 let lastMainTab = 'browse';
 
 function showOnlyView(id){
   ALL_VIEWS.forEach(v=> document.getElementById(v).style.display = (v===id) ? 'block' : 'none');
-}
-function refreshFabVisibility(){
-  document.getElementById('ag_quoteFab').classList.toggle('show', cart.length > 0);
 }
 
 function switchTab(tab){
   showOnlyView('ag_'+tab+'View');
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   lastMainTab = tab;
-  refreshFabVisibility();
   window.scrollTo(0, 0);
   if(tab==='browse') openBrowseView();
+  if(tab==='quote') renderCartTab();
   if(tab==='account') renderAccount();
   if(tab==='earnings') openEarningsView();
 }
@@ -678,19 +668,10 @@ document.getElementById('ag_tabbar').addEventListener('click', (e)=>{
   if(btn) switchTab(btn.dataset.tab);
 });
 
-function openQuoteScreen(){
-  showOnlyView('ag_quoteView');
-  document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('ag_quoteFab').classList.remove('show');
-  window.scrollTo(0, 0);
-  renderCartTab();
-}
-document.getElementById('ag_quoteFab').addEventListener('click', openQuoteScreen);
-document.getElementById('ag_quote_close_btn').addEventListener('click', ()=> switchTab(lastMainTab));
-
 function updateCartBadge(){
-  document.getElementById('ag_fab_label').textContent = `${cart.length} item${cart.length===1?'':'s'}`;
-  refreshFabVisibility();
+  const badge = document.getElementById('ag_quote_nav_badge');
+  if(cart.length > 0){ badge.textContent = String(cart.length); badge.style.display = 'flex'; }
+  else{ badge.style.display = 'none'; }
 }
 
 /* ================= EARNINGS ================= */
@@ -884,12 +865,10 @@ function renderOrderHistoryScreen(){
 }
 document.getElementById('ag_menu_clients').addEventListener('click', ()=>{
   showOnlyView('ag_clientsListView');
-  refreshFabVisibility();
   renderClientsListScreen();
 });
 document.getElementById('ag_menu_orders').addEventListener('click', ()=>{
   showOnlyView('ag_orderHistoryListView');
-  refreshFabVisibility();
   renderOrderHistoryScreen();
 });
 document.getElementById('ag_clients_back_btn').addEventListener('click', ()=> switchTab('account'));
