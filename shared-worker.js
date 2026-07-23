@@ -385,6 +385,18 @@ function pickItemSourceLabel(it){
 
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
 
+// scrollIntoView({inline:'center'}) doesn't reliably land a card dead-center
+// once scroll-snap-type is in play -- it's snap-aware, not purely geometric,
+// and can settle a card off-center by however much the gap between cards
+// happens to throw its snap-point math off. A direct scrollLeft computed
+// from the card's own offsetLeft/offsetWidth is exact and immune to that.
+function centerCarouselCard(carousel, card, smooth){
+  if(!card) return;
+  const target = card.offsetLeft - (carousel.clientWidth - card.offsetWidth) / 2;
+  if(smooth) carousel.scrollTo({left: target, behavior: 'smooth'});
+  else carousel.scrollLeft = target;
+}
+
 // Swipeable carousel: every item renders once as a horizontally
 // scroll-snapped card; swiping is native browser scrolling (no gesture
 // library), and only the centered card is "live" -- tapping its photo
@@ -437,7 +449,7 @@ function renderWorkerPickStepper(q){
     inner.addEventListener('click', ()=>{
       const card = inner.closest('.wv-carousel-card');
       if(card.classList.contains('focused')) toggleItemPickedAt(q.id, Number(inner.dataset.idx));
-      else card.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+      else centerCarouselCard(carousel, card, true);
     });
   });
   // Update focus once scrolling actually settles, not continuously while
@@ -454,7 +466,7 @@ function renderWorkerPickStepper(q){
   }
   // Land on the previously-focused card without animating (right after a
   // toggle re-render, or when reopening the app).
-  carousel.children[cursor]?.scrollIntoView({inline:'center', block:'nearest'});
+  centerCarouselCard(carousel, carousel.children[cursor], false);
 
   renderWorkerFinishButton(q);
 }

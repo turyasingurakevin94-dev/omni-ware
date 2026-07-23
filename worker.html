@@ -105,12 +105,21 @@
      tapped. The carousel bleeds past the page's own side padding
      (negative margin) so the focused card can be as large as the screen
      allows -- mobile-first, this is the one thing a worker looks at. */
-  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -12px;padding:4px 5% 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -12px;padding:4px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  /* Percentage PADDING resolves against the containing block's width, not
+     this element's own (wider, thanks to the negative margin above) width
+     -- that came out too narrow to ever let a boundary card scroll into
+     true center. Percentage flex-basis on real flex items doesn't have
+     that quirk (it resolves against this container's own content box), so
+     these spacers -- not scroll-snap-align targets themselves -- give the
+     first/last card genuine, correctly-sized room to center into. */
+  .wv-carousel::before,.wv-carousel::after{content:'';flex:0 0 5%;}
   .wv-carousel::-webkit-scrollbar{display:none;}
   /* Only opacity changes on focus -- no scale/transform, which is what
      made side cards feel like they were "shaking" as scroll position was
      recalculated. A calm fade reads as intentional instead of jittery. */
-  .wv-carousel-card{flex:0 0 90%;scroll-snap-align:center;opacity:.35;transition:opacity .25s ease;}
+  .wv-carousel-card{flex:0 0 90%;scroll-snap-align:center;opacity:.35;transition:opacity .25s ease;margin-right:10px;}
+  .wv-carousel-card:last-child{margin-right:0;}
   .wv-carousel-card.focused{opacity:1;}
   .wv-carousel-card-inner{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
   .wv-carousel-card.focused .wv-carousel-card-inner{cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.12);}
@@ -318,8 +327,14 @@ async function boot(){
     hasPushSubscription = !!existingSub;
     if(isNativeApp()) registerNativePushListeners();
   }
-  renderWorkerView();
+  // Remove the loading class before rendering, not after -- the carousel's
+  // initial scrollIntoView() (centering the focused card) is a no-op on an
+  // element with no layout box, and body.app-loading forces .worker-view-wrap
+  // to display:none. Rendering into a still-hidden wrap left the carousel
+  // permanently stuck at scrollLeft 0 (visually left-shifted) since there's
+  // no repaint afterwards that would let it retroactively center itself.
   document.body.classList.remove('app-loading');
+  renderWorkerView();
   handlePendingNotificationRoute();
 }
 boot();
