@@ -428,7 +428,20 @@ async function ensureAgentAuth(){
 
 async function callAgentFn(name, body){
   const { data, error } = await sb.functions.invoke(name, { body: { shopId: currentShopId, ...body } });
-  if(error) throw error;
+  if(error){
+    // On a non-2xx response, supabase-js only gives us a generic
+    // "Edge Function returned a non-2xx status code" in error.message --
+    // the function's own { error: "..." } body (the actually useful part)
+    // is on error.context, the raw Response, and has to be read separately.
+    let msg = error.message;
+    try{
+      if(error.context && typeof error.context.json === 'function'){
+        const parsed = await error.context.json();
+        if(parsed && parsed.error) msg = parsed.error;
+      }
+    }catch(_e){ /* keep the generic message if the body isn't JSON */ }
+    throw new Error(msg);
+  }
   if(data && data.error) throw new Error(data.error);
   return data;
 }
