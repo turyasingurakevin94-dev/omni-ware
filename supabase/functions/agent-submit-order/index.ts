@@ -4,9 +4,16 @@
 // whether the VALUES inside are honest -- a client-side insert would let a
 // tampered request declare an artificially low price for what the agent
 // actually owes the shop. Every item's floor price is recomputed here,
-// server-side, from live data, the same way agent-catalog computes it (see
-// ../_shared/agent-pricing.ts) -- the client's own idea of the floor price
-// is never trusted, only used as a display figure earlier in the flow.
+// server-side, from live data, the same way agent-catalog computes it --
+// the client's own idea of the floor price is never trusted, only used as
+// a display figure earlier in the flow.
+//
+// The pricing helpers below are deliberately duplicated verbatim in
+// agent-catalog rather than imported from a shared file -- these functions
+// are deployed by pasting one file at a time into the Supabase Dashboard,
+// which has no way to pull in a second file, so a shared-module import
+// would silently fail to deploy. If either copy ever needs to change,
+// change both.
 //
 // The shop-facing side of this order is built to look exactly like a
 // normal order an admin/rep created themselves: `client` is the AGENT's
@@ -19,11 +26,74 @@
 // own commission tracking -- the shop never transacts at that number and
 // has no stake in it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { computeFloorPrice, pickBestPriceRow, resolveDiscountPcts } from "../_shared/agent-pricing.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+type MarkupKind = "wholesale" | "retail";
+type MarkupRule = { type: string; value: number } | null;
+
+function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind): MarkupRule {
+  if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
+    const v = product.variants[variantIdx];
+    const vVal = Number(v[kind + "MarkupValue"]) || 0;
+    if (vVal > 0) return { type: v[kind + "MarkupType"], value: vVal };
+  }
+  const colVal = Number(product[kind + "_markup_value"]) || 0;
+  if (colVal > 0) return { type: product[kind + "_markup_type"], value: colVal };
+  return null;
+}
+
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null): number | null {
+  if (basePrice == null) return null;
+  const rule = effectiveMarkupRule(product, variantIdx, kind);
+  if (!rule) return null;
+  return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
+}
+
+function pickBestPriceRow(rows: any[]): any | null {
+  const priced = rows.filter((r) => !r.out_of_stock);
+  if (!priced.length) return null;
+  return priced.slice().sort((a, b) => {
+    const aw = a.wholesale != null ? a.wholesale : Infinity;
+    const bw = b.wholesale != null ? b.wholesale : Infinity;
+    if (aw !== bw) return aw - bw;
+    const ar = a.retail != null ? a.retail : Infinity;
+    const br = b.retail != null ? b.retail : Infinity;
+    return ar - br;
+  })[0];
+}
+
+function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
+  if (!priceRow) return null;
+  const packQty = Number(priceRow.pack_qty) || 0;
+  const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
+  const variantIdx = priceRow.variant_idx == null || priceRow.variant_idx === "" ? null : Number(priceRow.variant_idx);
+  const cost = tier === "wholesale" ? priceRow.wholesale : priceRow.retail;
+  if (cost == null) return null;
+  const costNum = Number(cost);
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
+  const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
+  const discounted = ourPrice * (1 - (discountPct || 0) / 100);
+  return {
+    tier,
+    floorPrice: Math.max(costNum, discounted),
+    cost: costNum,
+    unit: priceRow.unit || "",
+    packUnit: priceRow.pack_unit || "",
+    packQty,
+  };
+}
+
+function resolveDiscountPcts(product: any, presets: any) {
+  const defaultWholesalePct = Number(presets?.agentDiscountWholesalePct) || 0;
+  const defaultRetailPct = Number(presets?.agentDiscountRetailPct) || 0;
+  return {
+    discountWholesalePct: product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct,
+    discountRetailPct: product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct,
+  };
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
