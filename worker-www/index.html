@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omni-Ware Worker</title>
+<link rel="manifest" href="manifest-worker.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #EDF0F2;
+    --panel: #FFFFFF;
+    --ink: #1B2430;
+    --ink-soft: #57626F;
+    --line: #D8DEE3;
+    --accent: #F2A93C;
+    --accent-ink: #7A4A02;
+    --good: #2F7D4F;
+    --good-bg: #E4F3EA;
+    --danger: #C0392B;
+    --navy: #1B2430;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+  }
+  /* Hides everything until boot() has loaded the worker's data --
+     avoids a flash of an empty page. */
+  body.app-loading .worker-view-wrap{display:none !important;}
+  .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
+
+  .page-head{margin-bottom:24px;}
+  .page-head h1{
+    font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;color:var(--ink);
+    letter-spacing:0.2px;
+  }
+  .page-head p{margin:0;color:var(--ink-soft);font-size:14px;}
+
+  .btn{
+    all:unset;cursor:pointer;padding:10px 18px;border-radius:7px;font-size:14px;font-weight:700;
+    text-align:center;
+  }
+  .btn-accent{background:var(--accent);color:#2A1B00;}
+  .btn-accent:hover{background:#e69c2a;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+
+  .empty{padding:28px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 18px;
+    border-radius:8px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    opacity:0;transform:translateY(8px);transition:all 0.25s ease;pointer-events:none;z-index:150;
+    display:flex;align-items:center;gap:8px;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .img-zoomable{cursor:zoom-in;}
+  .lightbox-overlay{
+    position:fixed;inset:0;background:rgba(15,20,26,0.82);display:flex;align-items:center;
+    justify-content:center;padding:40px;z-index:300;opacity:0;visibility:hidden;transition:opacity .15s ease;
+  }
+  .lightbox-overlay.show{opacity:1;visibility:visible;}
+  .lightbox-overlay img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,0.45);}
+  .lightbox-close{
+    all:unset;cursor:pointer;position:fixed;top:22px;right:26px;color:#fff;display:flex;
+    padding:8px;border-radius:8px;background:rgba(255,255,255,0.12);z-index:301;
+  }
+  .lightbox-close:hover{background:rgba(255,255,255,0.22);}
+  .lightbox-close .icon{width:18px;height:18px;}
+
+  .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
+  .q-stage-thumb-placeholder{
+    width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
+    background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  }
+  .q-stage-thumb-placeholder .icon{width:19px;height:19px;}
+
+  .worker-view-wrap{max-width:520px;margin:0 auto;padding:12px;}
+  .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .wv-card-title{font-weight:600;margin-bottom:4px;}
+  .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
+  .wv-actions{display:flex;gap:10px;}
+  .wv-actions .btn{flex:1;}
+  /* Item carousel: swipe horizontally between items (native scroll-snap,
+     no gesture library needed) instead of tapping next/back buttons.
+     Photo, name, quantity and source all live inside one bordered card;
+     the "Pick"/"Picked" badge is an actual button pinned to that card's
+     top-right corner, not just the photo. Only the centered card is
+     interactive -- a peeking side card just brings itself to center when
+     tapped. The carousel bleeds past the page's own side padding
+     (negative margin) so the focused card can be as large as the screen
+     allows -- mobile-first, this is the one thing a worker looks at. */
+  .wv-carousel-title{font-size:21px;font-weight:800;padding:0 4px 8px;}
+  .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -12px;padding:4px 5% 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .wv-carousel::-webkit-scrollbar{display:none;}
+  /* Only opacity changes on focus -- no scale/transform, which is what
+     made side cards feel like they were "shaking" as scroll position was
+     recalculated. A calm fade reads as intentional instead of jittery. */
+  .wv-carousel-card{flex:0 0 90%;scroll-snap-align:center;opacity:.35;transition:opacity .25s ease;}
+  .wv-carousel-card.focused{opacity:1;}
+  .wv-carousel-card-inner{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .wv-carousel-card.focused .wv-carousel-card-inner{cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.12);}
+  .wv-carousel-photo{width:100%;aspect-ratio:1;border-bottom:1px solid var(--line);border-radius:20px 20px 0 0;overflow:hidden;}
+  .wv-carousel-photo .q-stage-thumb, .wv-carousel-photo .q-stage-thumb-placeholder{width:100%;height:100%;border-radius:0;border:none;}
+  .wv-carousel-photo .q-stage-thumb-placeholder .icon{width:70px;height:70px;}
+  .wv-carousel-badge{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:4px;padding:7px 14px;border-radius:999px;font:700 13px inherit;box-shadow:0 1px 4px rgba(0,0,0,.18);border:none;cursor:pointer;}
+  .wv-carousel-badge.pending{background:var(--panel);color:var(--ink-soft);}
+  .wv-carousel-badge.done{background:var(--good);color:#fff;}
+  .wv-carousel-badge .icon{width:15px;height:15px;stroke-width:3;}
+  .wv-carousel-body{padding:12px 16px 2px;}
+  .wv-carousel-name{font-size:17px;font-weight:700;text-align:center;}
+  .wv-carousel-qty-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-top:8px;}
+  .wv-carousel-qty{font-family:'Archivo Black',sans-serif;font-size:28px;color:var(--ink);text-align:center;margin-top:3px;letter-spacing:.3px;}
+  .wv-carousel-source{margin-top:12px;border-top:2px dotted var(--line);background:#DCEEFB;color:var(--ink);font-size:13.5px;font-weight:500;text-align:center;padding:11px 16px;border-radius:0 0 20px 20px;}
+  .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:10px 0 2px;}
+  .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);}
+  .wv-carousel-dot.focused{background:var(--good);width:16px;border-radius:4px;}
+  .wv-mark-btn{width:auto;padding:10px 26px;font-size:14px;display:block;margin:14px auto 0;}
+  .wv-footer{text-align:center;font-size:13px;color:var(--ink-soft);padding:18px 0 4px;cursor:pointer;}
+</style>
+</head>
+<body class="app-loading">
+
+<div class="worker-view-wrap">
+  <div class="page-head" id="wv_pageHead">
+    <h1>Pick &amp; Pack</h1>
+    <p>Orders assigned to you for preparation.</p>
+  </div>
+  <div id="wv_enablePushWrap" class="wv-card" style="display:none;">
+    <div class="wv-card-title">Turn on notifications</div>
+    <div class="wv-card-sub">Get notified the moment an order is assigned to you, even if the app is closed.</div>
+    <button type="button" class="btn btn-accent" id="wv_enablePushBtn">Enable notifications</button>
+  </div>
+  <div id="wv_pendingWrap"></div>
+  <div id="wv_activeWrap"></div>
+  <div class="wv-footer" id="wv_signout_btn">Sign out</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- IMAGE LIGHTBOX -->
+<div class="lightbox-overlay" id="imgLightbox">
+  <button class="lightbox-close" id="imgLightboxClose" aria-label="Close">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <img id="imgLightboxImg" src="" alt="">
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="shared-worker.js"></script>
+<script>
+// Supabase appends #...&type=invite (or type=recovery) to the redirect URL
+// for invite/reset emails -- read once, before createClient() consumes the
+// hash to establish the session, so ensureAuthAndShop() can tell a brand
+// new worker apart from a normal returning sign-in.
+const initialAuthLinkType = new URLSearchParams(location.hash.replace(/^#/, '')).get('type');
+
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentShopId = null;
+let currentUser = null;
+let currentMemberRole = null;
+
+const VAPID_PUBLIC_KEY = 'BKqANIr7AQuAGOmO3bRhSTBhN-fTVRIy9tRb43Z6LxdgcEyS38Lm_V0lFMX3wfm84Doqofxh77-_jYwimT9IqNc';
+
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').catch(err=>console.error('SW registration failed:', err));
+}
+
+document.addEventListener('click', (e)=>{
+  const zoomEl = e.target.closest('.img-zoomable');
+  if(zoomEl) openImageLightbox(zoomEl.src, zoomEl.alt);
+});
+function openImageLightbox(src, alt){
+  document.getElementById('imgLightboxImg').src = src;
+  document.getElementById('imgLightboxImg').alt = alt || '';
+  document.getElementById('imgLightbox').classList.add('show');
+}
+function closeImageLightbox(){
+  document.getElementById('imgLightbox').classList.remove('show');
+  document.getElementById('imgLightboxImg').src = '';
+}
+document.getElementById('imgLightboxClose').addEventListener('click', closeImageLightbox);
+document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
+  if(e.target.id==='imgLightbox') closeImageLightbox();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape' && document.getElementById('imgLightbox').classList.contains('show')) closeImageLightbox();
+});
+
+let data = null;
+let myStaff = null;
+let hasPushSubscription = false;
+let lastSynced = {};
+
+// This app only ever needs a slice of the shop's data: every staff row
+// (to resolve myStaff, and to list delivery-eligible candidates when
+// finishing an order -- see promptAssignDelivery() in shared-worker.js),
+// every supplier (for "where to get it" labels), just enough of each
+// product to show a photo, and every saved quote in the shop (so a worker
+// who finishes an order can see -- and get auto-assigned -- the next
+// unassigned one). Stock, cash, customers, prices and purchase invoices
+// are all admin-only concerns this app never touches.
+async function loadWorkerData(shopId){
+  const [staffR, suppliersR, productsR, savedQuotesR] = await Promise.all([
+    sb.from('staff').select('*').eq('shop_id', shopId),
+    sb.from('suppliers').select('*').eq('shop_id', shopId),
+    sb.from('products').select('id, name, image').eq('shop_id', shopId),
+    sb.from('saved_quotes').select('*').eq('shop_id', shopId),
+  ]);
+  [staffR, suppliersR, productsR, savedQuotesR].forEach(r=>{ if(r.error) throw r.error; });
+
+  return {
+    staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
+    products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null})),
+    savedQuotes: (savedQuotesR.data||[]).map(q=>({
+      id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
+      invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
+      amountPaid:Number(q.amount_paid)||0, voided:!!q.voided, date:q.date,
+      client:{name:'', phone:''}, items:[], savedAt:null, payments:[], customerId:null, debtCharged:0,
+      ...(q.payload||{})
+    })),
+  };
+}
+
+// Same shape saveData() upserts in the admin app's buildSyncRows(), scoped
+// down to just savedQuotes -- the only collection this app ever mutates.
+function buildWorkerSyncRows(d, shopId){
+  return {
+    savedQuotes: d.savedQuotes.map(q=>({
+      id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
+      date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
+      invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
+      amount_paid:q.amountPaid, voided:q.voided,
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, workerAcceptedAt:q.workerAcceptedAt||null}
+    })),
+  };
+}
+
+async function saveData(){
+  const shopId = currentShopId;
+  if(!data.savedQuotes) data.savedQuotes = [];
+  const rows = buildWorkerSyncRows(data, shopId);
+  const ops = [];
+  addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
+  if(!ops.length) return;
+
+  const results = await Promise.all(ops.map(op=> op.run()));
+  results.forEach((r, i)=>{ if(!(r && r.error)) ops[i].commit(); });
+
+  const failed = results.find(r=> r && r.error);
+  if(failed){
+    console.error('saveData failed:', failed.error);
+    toast('Sync failed — a change may not have been saved (' + failed.error.message + ')', 5000);
+  }
+}
+
+document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
+
+async function boot(){
+  registerServiceWorker();
+  try{
+    await ensureAuthAndShop();
+    data = await loadWorkerData(currentShopId);
+    lastSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(data, currentShopId).savedQuotes, 'id') };
+  } catch(e){
+    console.error('Failed to start app:', e);
+    const el = ensureAuthOverlay();
+    el.innerHTML = `<div style="color:#f66;font-family:sans-serif;max-width:400px;text-align:center;">Couldn't load your orders: ${(e && e.message) || e}. Reload to try again.</div>`;
+    return;
+  }
+  myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
+  if(myStaff){
+    const { data: existingSub } = await sb.from('push_subscriptions').select('id').eq('staff_id', myStaff.id).eq('user_id', currentUser.id).limit(1).maybeSingle();
+    hasPushSubscription = !!existingSub;
+  }
+  renderWorkerView();
+  document.body.classList.remove('app-loading');
+  handlePendingNotificationRoute();
+}
+boot();
+</script>
+</body>
+</html>
