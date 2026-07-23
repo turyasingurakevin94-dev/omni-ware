@@ -78,6 +78,14 @@
   .ag-earnings-card{background:var(--accent);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:16px;}
   .ag-earnings-label{font-size:12px;opacity:.85;text-transform:uppercase;letter-spacing:.04em;}
   .ag-earnings-value{font-family:'Archivo Black',sans-serif;font-size:28px;margin-top:4px;}
+  .ag-earnings-link{font-size:12.5px;opacity:.85;margin-top:8px;font-weight:600;}
+  .ag-earnings-split-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:14px;}
+  .ag-earnings-split-row:not(:last-child){border-bottom:1px solid var(--line);}
+  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .ag-order-row-client{font-weight:600;font-size:14px;}
+  .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
+  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
 
   .ag-section-title{font-size:13px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 8px;}
 
@@ -141,9 +149,10 @@
       Your clients' names and numbers are yours alone -- we never see them, unless you choose our delivery, and even then only the address needed to get there.
     </div>
 
-    <div class="ag-earnings-card">
+    <div class="ag-earnings-card" id="ag_earningsCard" style="cursor:pointer;">
       <div class="ag-earnings-label">Earned this month</div>
       <div class="ag-earnings-value" id="ag_earningsValue">UGX 0</div>
+      <div class="ag-earnings-link">See breakdown &rsaquo;</div>
     </div>
 
     <button type="button" class="btn btn-accent btn-block" id="ag_newQuoteBtn">+ New quote</button>
@@ -153,6 +162,28 @@
     <div id="ag_clientsWrap"></div>
 
     <div class="wv-footer" id="ag_signout_btn">Sign out</div>
+  </div>
+
+  <!-- EARNINGS -->
+  <div id="ag_earningsView" style="display:none;">
+    <div class="page-head">
+      <button type="button" class="ag-back-btn" id="ag_earnings_back_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div><h1>Earnings</h1></div>
+    </div>
+
+    <div class="ag-earnings-card">
+      <div class="ag-earnings-label" id="ag_earningsMonthLabel">This month</div>
+      <div class="ag-earnings-value" id="ag_earningsTotalValue">UGX 0</div>
+    </div>
+    <div class="ag-card">
+      <div class="ag-earnings-split-row"><span>Your margin</span><b id="ag_earningsMarginValue">UGX 0</b></div>
+      <div class="ag-earnings-split-row"><span>Bonus commission</span><b id="ag_earningsBonusValue">UGX 0</b></div>
+    </div>
+
+    <div class="ag-section-title">Orders this month</div>
+    <div id="ag_earningsOrdersWrap"></div>
   </div>
 
   <!-- EXPLORE -->
@@ -387,7 +418,7 @@ async function callAgentFn(name, body){
 function mapOrderRow(q){
   const payload = q.payload || {};
   return {
-    id: q.id, status: q.status,
+    id: q.id, status: q.status, voided: !!q.voided,
     items: payload.items || [],
     savedAt: payload.savedAt || null,
     agentClientId: payload.agentClientId || null,
@@ -407,18 +438,37 @@ async function loadAgentHomeData(){
   myOrders = (ordersData || []).map(mapOrderRow);
 }
 
-function computeMonthEarnings(){
+function currentMonthKey(){
   const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  let total = 0;
-  myOrders.forEach(o=>{
-    if(!o.savedAt || !o.savedAt.startsWith(monthKey)) return;
-    (o.items||[]).forEach(it=>{
-      const margin = (Number(it.agentSellPrice)||0) - (Number(it.sellPrice)||0);
-      total += margin * (Number(it.qty)||0);
-    });
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+
+// Two independent commission streams (see the design notes in
+// 0012_sales_agents.sql / agent-submit-order): the agent's own margin,
+// entirely their own business, and a supplier-funded bonus that only
+// exists for items that were already in their cluster at sale time.
+// Voided orders never happened as far as either stream is concerned.
+function orderEarnings(o){
+  let margin = 0, bonus = 0;
+  (o.items||[]).forEach(it=>{
+    margin += ((Number(it.agentSellPrice)||0) - (Number(it.sellPrice)||0)) * (Number(it.qty)||0);
+    bonus += Number(it.bonusCommission)||0;
   });
-  return total;
+  return { margin, bonus, total: margin + bonus };
+}
+
+function monthEarnings(monthKey){
+  let margin = 0, bonus = 0;
+  const orders = myOrders.filter(o=>!o.voided && o.savedAt && o.savedAt.startsWith(monthKey));
+  orders.forEach(o=>{
+    const e = orderEarnings(o);
+    margin += e.margin; bonus += e.bonus;
+  });
+  return { margin, bonus, total: margin + bonus, orders };
+}
+
+function computeMonthEarnings(){
+  return monthEarnings(currentMonthKey()).total;
 }
 
 function renderHome(){
@@ -448,6 +498,47 @@ function renderHome(){
     </div>`;
   }).join('');
 }
+
+/* ---------------- Earnings ---------------- */
+const ORDER_STATUS_LABEL = { draft:'Draft', preparing:'Preparing', pending_delivery:'Out for delivery', completed:'Completed' };
+
+function renderEarnings(){
+  const now = new Date();
+  const monthKey = currentMonthKey();
+  document.getElementById('ag_earningsMonthLabel').textContent = now.toLocaleDateString('en-UG', { month:'long', year:'numeric' });
+  const { margin, bonus, total, orders } = monthEarnings(monthKey);
+  document.getElementById('ag_earningsTotalValue').textContent = fmtUGX(total);
+  document.getElementById('ag_earningsMarginValue').textContent = fmtUGX(margin);
+  document.getElementById('ag_earningsBonusValue').textContent = fmtUGX(bonus);
+
+  const wrap = document.getElementById('ag_earningsOrdersWrap');
+  if(!orders.length){
+    wrap.innerHTML = `<div class="empty">No orders yet this month.</div>`;
+    return;
+  }
+  const sorted = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
+  wrap.innerHTML = sorted.map(o=>{
+    const e = orderEarnings(o);
+    const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
+    const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short' }) : '';
+    return `<div class="ag-order-row">
+      <div class="ag-order-row-head">
+        <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
+        <div class="ag-order-row-date">${esc(date)} · ${esc(ORDER_STATUS_LABEL[o.status] || o.status)}</div>
+      </div>
+      <div class="ag-order-row-split">Your margin: ${fmtUGX(e.margin)}${e.bonus ? ` · Bonus: ${fmtUGX(e.bonus)}` : ''}</div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('ag_earningsCard').addEventListener('click', ()=>{
+  document.getElementById('ag_homeView').style.display = 'none';
+  document.getElementById('ag_earningsView').style.display = 'block';
+  renderEarnings();
+});
+document.getElementById('ag_earnings_back_btn').addEventListener('click', ()=>{
+  document.getElementById('ag_earningsView').style.display = 'none';
+  document.getElementById('ag_homeView').style.display = 'block';
+});
 
 /* ---------------- New Quote flow ---------------- */
 
