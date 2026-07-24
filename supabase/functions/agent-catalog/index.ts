@@ -224,6 +224,7 @@ Deno.serve(async (req) => {
             createdAt: p.created_at,
             available: !!priced,
             floorPrice: priced?.floorPrice ?? null,
+            tier: priced?.tier ?? "",
             unit: priced?.unit ?? "",
             packUnit: priced?.packUnit ?? "",
             packQty: priced?.packQty ?? 0,
