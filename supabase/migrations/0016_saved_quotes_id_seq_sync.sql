@@ -25,6 +25,11 @@ begin
 end;
 $$;
 
+-- DROP + CREATE (not CREATE OR REPLACE TRIGGER) so this migration is
+-- safe to paste and re-run more than once against the same database --
+-- e.g. after a dashboard SQL editor run reports an error partway through
+-- and it's unclear which statements before it actually committed.
+drop trigger if exists saved_quotes_sync_id_seq on saved_quotes;
 create trigger saved_quotes_sync_id_seq
 after insert on saved_quotes
 for each row
