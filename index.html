@@ -2829,6 +2829,10 @@
             <div class="field"><label>Wholesale discount (%)</label><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 10"></div>
             <div class="field"><label>Retail discount (%)</label><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 8"></div>
           </div>
+          <p class="preset-hint">How long a product must have already been sitting in an agent's commission cluster before a sale of it can earn its bonus. Stops an agent from starring a high-bonus item right before checkout just to collect the bonus.</p>
+          <div class="form-grid" style="max-width:420px;">
+            <div class="field"><label>Cluster bonus wait period (days)</label><input type="number" id="preset_agent_cluster_wait_days" min="0" step="1" placeholder="e.g. 7"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -3866,6 +3870,7 @@ async function loadData(shopId){
     presetOrderStageLimits: presets.orderStageLimits || {},
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
+    presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     seeded: true
   };
 }
@@ -3942,7 +3947,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct},
+      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays},
       quote_draft: d.quote
     }
   };
@@ -10785,6 +10790,10 @@ function renderPresets(){
 function renderPresetAgentDiscounts(){
   document.getElementById('preset_agent_discount_wholesale').value = data.presetAgentDiscountWholesalePct || '';
   document.getElementById('preset_agent_discount_retail').value = data.presetAgentDiscountRetailPct || '';
+  // Unlike the two discount % fields above, 0 is a meaningful, distinct
+  // choice here (bonus earned instantly) -- so it must render as "0", not
+  // fall back to blank/placeholder the way `|| ''` would.
+  document.getElementById('preset_agent_cluster_wait_days').value = data.presetAgentClusterWaitDays!=null ? data.presetAgentClusterWaitDays : '';
 }
 document.getElementById('preset_agent_discount_wholesale').addEventListener('change', (e)=>{
   data.presetAgentDiscountWholesalePct = Math.min(100, Math.max(0, Number(e.target.value)||0));
@@ -10797,6 +10806,12 @@ document.getElementById('preset_agent_discount_retail').addEventListener('change
   e.target.value = data.presetAgentDiscountRetailPct || '';
   saveData();
   toast('Default agent retail discount updated');
+});
+document.getElementById('preset_agent_cluster_wait_days').addEventListener('change', (e)=>{
+  data.presetAgentClusterWaitDays = e.target.value==='' ? 7 : Math.max(0, Math.round(Number(e.target.value)||0));
+  e.target.value = data.presetAgentClusterWaitDays;
+  saveData();
+  toast('Cluster bonus wait period updated');
 });
 // One time-limit field per Order Tracking step (draft/preparing/pending
 // delivery/completed), built from SQ_STATUS_ORDER so it stays in sync if
