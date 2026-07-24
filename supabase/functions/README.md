@@ -2,30 +2,10 @@
 
 Both functions need the Supabase CLI logged in and linked to the project (`supabase link`).
 
-## 1. Generate VAPID keys (once)
+## 1. Native Android push (FCM)
 
-```
-npx web-push generate-vapid-keys
-```
-
-Put the **public** key into `VAPID_PUBLIC_KEY` in `index.html` (search for `REPLACE_WITH_GENERATED_VAPID_PUBLIC_KEY`). Keep the **private** key server-side only — never commit it.
-
-## 2. Set secrets
-
-```
-supabase secrets set VAPID_PUBLIC_KEY=<public key>
-supabase secrets set VAPID_PRIVATE_KEY=<private key>
-supabase secrets set VAPID_SUBJECT=mailto:you@yourshop.com
-```
-
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to every deployed function — no need to set those.
-
-## 2b. Native Android push (FCM) — optional, alongside Web Push
-
-The installed worker APK (see `capacitor.config.json`) uses real native
-notifications via Firebase Cloud Messaging instead of Web Push — set this
-up too if workers are using the APK rather than a browser-installed PWA.
-Both channels work side by side; a shop can have a mix of both.
+The installed worker APK (see `capacitor.config.json`) uses native
+notifications via Firebase Cloud Messaging.
 
 1. In the [Firebase Console](https://console.firebase.google.com), create a
    project and add an Android app with package name `com.omniware.worker`
@@ -43,18 +23,20 @@ Both channels work side by side; a shop can have a mix of both.
 3. Rebuild the APK (push to `main` — see `.github/workflows/build-worker-apk.yml`)
    so the new `google-services.json` is bundled in.
 
-If `FIREBASE_SERVICE_ACCOUNT_JSON` isn't set, `notify-worker` just skips any
-subscriber rows that only have an `fcm_token` (logs why) and keeps sending
-Web Push notifications to everyone else normally.
+If `FIREBASE_SERVICE_ACCOUNT_JSON` isn't set, `notify-worker` just skips the
+send and logs why — no error, no crash.
 
-## 3. Deploy
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to
+every deployed function — no need to set those.
+
+## 2. Deploy
 
 ```
 supabase functions deploy invite-worker
 supabase functions deploy notify-worker
 ```
 
-## 4. Wire the Database Webhook (Dashboard, one-time)
+## 3. Wire the Database Webhook (Dashboard, one-time)
 
 Database → Webhooks → Create a new webhook:
 - Table: `saved_quotes`

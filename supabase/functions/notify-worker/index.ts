@@ -5,21 +5,14 @@
 // reassignment, and autoAssignNextOrder() alike, since all three just
 // mutate the same payload.assignedWorkerId field on this table.
 //
-// A subscriber row carries exactly one of two channels (see
-// 0014_native_push.sql): a Web Push subscription (endpoint/p256dh/auth_key,
-// for worker.html installed as a browser PWA) or an FCM token (for the
-// installed Android APK, which gets a real native notification instead of
-// one routed through the browser's push plumbing). Both are sent from this
-// one function so a shop with a mix of APK and browser-PWA workers is
-// covered from a single webhook firing.
+// Delivery is native FCM only (see 0014_native_push.sql for the
+// push_subscriptions.fcm_token column) -- Web Push was retired since every
+// worker install is the Android APK now, and browser-based delivery
+// couldn't reliably foreground the installed app on tap.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import webpush from "npm:web-push@3";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
 const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
 
 let firebaseServiceAccount: { project_id: string; client_email: string; private_key: string } | null = null;
@@ -34,13 +27,8 @@ if (FIREBASE_SERVICE_ACCOUNT_JSON) {
 console.log("notify-worker: boot", {
   hasUrl: !!SUPABASE_URL,
   hasServiceKey: !!SERVICE_ROLE_KEY,
-  hasVapidPublic: !!VAPID_PUBLIC_KEY,
-  hasVapidPrivate: !!VAPID_PRIVATE_KEY,
-  vapidSubject: VAPID_SUBJECT,
   hasFirebaseServiceAccount: !!firebaseServiceAccount,
 });
-
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -152,9 +140,10 @@ Deno.serve(async (req) => {
 
   const { data: subs, error: subErr } = await admin
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth_key, fcm_token")
+    .select("id, fcm_token")
     .eq("shop_id", record.shop_id)
-    .eq("staff_id", newWorkerId);
+    .eq("staff_id", newWorkerId)
+    .not("fcm_token", "is", null);
   console.log("notify-worker: subscription lookup", {
     shopId: record.shop_id,
     staffId: newWorkerId,
@@ -164,61 +153,40 @@ Deno.serve(async (req) => {
   if (subErr) return json({ error: subErr.message }, 500);
   if (!subs?.length) return json({ ok: true, skipped: "worker has no push subscription" });
 
+  if (!firebaseServiceAccount) {
+    return json({ ok: true, skipped: "FIREBASE_SERVICE_ACCOUNT_JSON not configured" });
+  }
+  const fsa = firebaseServiceAccount;
+
   const itemCount = Array.isArray(record.payload?.items) ? record.payload.items.length : 0;
   const clientName = record.client_name || "a client";
   const title = "New order to prepare";
   const body = `${clientName} — ${itemCount} item${itemCount === 1 ? "" : "s"}`;
-  const webPushPayload = JSON.stringify({ title, body, orderId: record.id });
 
-  // Captured into locals (rather than read from the outer `let` inside the
-  // .map() callback below) so TypeScript can actually narrow them past
-  // null once -- it won't trust a mutable outer-scope variable to still be
-  // non-null inside a closure, even one invoked synchronously.
-  const fsa = firebaseServiceAccount;
-  let fcmAccessToken: string | null = null;
-  if (fsa && subs.some((s) => s.fcm_token)) {
-    try {
-      fcmAccessToken = await getFcmAccessToken(fsa);
-    } catch (e) {
-      console.error("notify-worker: FCM auth failed", e);
-    }
+  let fcmAccessToken: string;
+  try {
+    fcmAccessToken = await getFcmAccessToken(fsa);
+  } catch (e) {
+    console.error("notify-worker: FCM auth failed", e);
+    return json({ error: "FCM auth failed" }, 500);
   }
 
   const results = await Promise.allSettled(
-    subs.map((sub) => {
-      if (sub.fcm_token) {
-        if (!fcmAccessToken || !fsa) {
-          return Promise.reject(new Error("FCM not configured (FIREBASE_SERVICE_ACCOUNT_JSON missing or auth failed)"));
-        }
-        return sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token, title, body, record.id)
-          .then(async (resp) => {
-            if (!resp.ok) {
-              const errBody = await resp.json().catch(() => ({}));
-              console.error("notify-worker: FCM send failed", { status: resp.status, errBody });
-              const fcmStatus = errBody?.error?.status;
-              if (fcmStatus === "UNREGISTERED" || fcmStatus === "NOT_FOUND" || resp.status === 404) {
-                await admin.from("push_subscriptions").delete().eq("id", sub.id);
-              }
-              throw new Error(`FCM send failed: ${JSON.stringify(errBody)}`);
+    subs.map((sub) =>
+      sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token as string, title, body, record.id)
+        .then(async (resp) => {
+          if (!resp.ok) {
+            const errBody = await resp.json().catch(() => ({}));
+            console.error("notify-worker: FCM send failed", { status: resp.status, errBody });
+            const fcmStatus = errBody?.error?.status;
+            if (fcmStatus === "UNREGISTERED" || fcmStatus === "NOT_FOUND" || resp.status === 404) {
+              await admin.from("push_subscriptions").delete().eq("id", sub.id);
             }
-            return resp;
-          });
-      }
-      return webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-        webPushPayload,
-      ).catch(async (err) => {
-        console.error("notify-worker: sendNotification failed", {
-          statusCode: err?.statusCode,
-          message: err?.message,
-          body: err?.body,
-        });
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          await admin.from("push_subscriptions").delete().eq("id", sub.id);
-        }
-        throw err;
-      });
-    }),
+            throw new Error(`FCM send failed: ${JSON.stringify(errBody)}`);
+          }
+          return resp;
+        })
+    ),
   );
   console.log("notify-worker: send results", results.map((r) => r.status === "fulfilled" ? "ok" : String(r.reason)));
 

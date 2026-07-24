@@ -3595,17 +3595,6 @@ let currentShopId = null;
 let currentUser = null;
 let currentMemberRole = null;
 
-// Public half of the VAPID keypair used to sign Web Push subscriptions --
-// safe to ship client-side (that's the point of VAPID). Generate the pair
-// with `npx web-push generate-vapid-keys`, put the public half here, and
-// set the private half + subject as secrets on the notify-worker Edge
-// Function (`supabase secrets set VAPID_PRIVATE_KEY=... VAPID_SUBJECT=...`).
-const VAPID_PUBLIC_KEY = 'BKqANIr7AQuAGOmO3bRhSTBhN-fTVRIy9tRb43Z6LxdgcEyS38Lm_V0lFMX3wfm84Doqofxh77-_jYwimT9IqNc';
-
-function registerServiceWorker(){
-  if(!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('/sw.js').catch(err=>console.error('SW registration failed:', err));
-}
 
 // ---- Product image storage (Supabase Storage, not base64-in-the-row) ----
 const PRODUCT_IMAGE_BUCKET = 'product-images';
@@ -11841,7 +11830,6 @@ function renderAll(){
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
 }
 async function boot(){
-  registerServiceWorker();
   try{
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
@@ -11878,7 +11866,6 @@ async function boot(){
   // normal admin) is already in place -- avoids ever flashing the wrong
   // one first, on every refresh.
   document.body.classList.remove('app-loading');
-  handlePendingNotificationRoute();
 }
 // signOutAndReload() now lives in shared-worker.js.
 document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);

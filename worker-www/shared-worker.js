@@ -4,7 +4,7 @@
 // on. It expects the HOST page to already have declared these globals
 // before this script runs any of its top-level side effects: `sb`,
 // `data`, `saveData`, `currentShopId`, `currentUser`, `currentMemberRole`,
-// `myStaff`, `hasPushSubscription`, `VAPID_PUBLIC_KEY`,
+// `myStaff`, `hasPushSubscription`,
 // `initialAuthLinkType`, `lastSynced` -- plus the matching DOM elements
 // (#toast, #wv_pendingWrap, #wv_activeWrap, #wv_enablePushWrap,
 // #wv_enablePushBtn, #wv_pageHead, #wv_signout_btn, #authOverlay mount
@@ -305,7 +305,7 @@ function renderWorkerView(){
   }
   const greetingEl = document.getElementById('wv_greeting');
   if(greetingEl) greetingEl.textContent = `${timeOfDayGreeting()}, ${(myStaff.name||'').split(' ')[0] || 'there'}`;
-  document.getElementById('wv_enablePushWrap').style.display = ((isNativeApp() || 'Notification' in window) && !hasPushSubscription) ? '' : 'none';
+  document.getElementById('wv_enablePushWrap').style.display = (isNativeApp() && !hasPushSubscription) ? '' : 'none';
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
@@ -698,49 +698,20 @@ function autoAssignNextOrder(workerId){
   refreshAdminOrderBoardIfOpen();
 }
 
-function urlBase64ToUint8Array(base64String){
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
-}
-
 // True only inside the installed Android APK (Capacitor's native bridge
 // injects `window.Capacitor` into WebView pages loaded from the app's own
-// local origin) -- false for a plain browser tab or a browser-installed
-// PWA, which don't have this object at all. Drives which push channel
-// (native FCM vs. Web Push) a device registers for.
+// local origin) -- false for a plain browser tab, which has no native push
+// channel at all now that Web Push has been retired in favor of native FCM
+// (browser-based delivery couldn't reliably foreground the installed app,
+// and every worker install is the APK now).
 function isNativeApp(){
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 }
 
 async function enableWorkerPushNotifications(){
   if(!myStaff){ toast('No staff profile linked to this login yet'); return; }
-  if(isNativeApp()) return enableNativePush();
-  if(!('serviceWorker' in navigator) || !('PushManager' in window)){ toast('Push notifications are not supported on this device/browser'); return; }
-  try{
-    const permission = await Notification.requestPermission();
-    if(permission!=='granted'){ toast('Notifications permission was not granted'); return; }
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-    }
-    const keys = sub.toJSON().keys;
-    const { error } = await sb.from('push_subscriptions').upsert({
-      shop_id: currentShopId, staff_id: myStaff.id, user_id: currentUser.id,
-      endpoint: sub.endpoint, p256dh: keys.p256dh, auth_key: keys.auth
-    }, { onConflict: 'endpoint' });
-    if(error) throw error;
-    hasPushSubscription = true;
-    document.getElementById('wv_enablePushWrap').style.display = 'none';
-    toast('Notifications enabled');
-  }catch(err){
-    toast(`Could not enable notifications: ${err.message||err}`);
-  }
+  if(!isNativeApp()){ toast('Notifications require the installed app'); return; }
+  return enableNativePush();
 }
 document.getElementById('wv_enablePushBtn').addEventListener('click', enableWorkerPushNotifications);
 
@@ -781,22 +752,16 @@ function registerNativePushListeners(){
     toast(`Could not enable notifications: ${(err && err.error) || err}`);
   });
   // Native delivers the tap straight into this listener with the order id
-  // already attached -- no URL round-trip needed the way the Web Push path
-  // requires (see handlePendingNotificationRoute() below, which exists only
-  // because a cold-started browser tab has no live page to postMessage into).
+  // already attached -- delivered straight from the OS, no cold-start URL
+  // round-trip needed (that was only ever a Web Push workaround, for a
+  // clients.openWindow() call that can't postMessage into a page that
+  // doesn't exist yet).
   PushNotifications.addListener('pushNotificationActionPerformed', (action)=>{
     const orderId = action.notification && action.notification.data && action.notification.data.orderId;
     if(orderId) routeNotificationAction(orderId, action.actionId);
   });
 }
 
-// Routes a push notification tap: a foreground tab gets a postMessage from
-// sw.js, a cold-started tab gets ?orderId=&action= on the URL instead
-// (clients.openWindow() can't postMessage into a page that doesn't exist
-// yet). Both paths funnel through here once boot() has finished loading.
-navigator.serviceWorker && navigator.serviceWorker.addEventListener && navigator.serviceWorker.addEventListener('message', e=>{
-  if(e.data && e.data.orderId) routeNotificationAction(e.data.orderId, e.data.action);
-});
 function routeNotificationAction(orderId, action){
   orderId = Number(orderId);
   if(!orderId) return;
@@ -805,15 +770,4 @@ function routeNotificationAction(orderId, action){
   if(typeof goToTab === 'function') goToTab('worker');
   if(action==='accept') acceptOrderAssignment(orderId);
   else if(action==='deny') denyOrderAssignment(orderId);
-}
-function handlePendingNotificationRoute(){
-  const params = new URLSearchParams(location.search);
-  const orderId = params.get('orderId');
-  const action = params.get('action');
-  if(orderId){
-    routeNotificationAction(orderId, action);
-    params.delete('orderId'); params.delete('action');
-    const qs = params.toString();
-    history.replaceState(null, '', location.pathname + (qs?'?'+qs:''));
-  }
 }
