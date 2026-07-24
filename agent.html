@@ -1197,7 +1197,12 @@ async function ensureBrowseDataLoaded(){
     if(clusterRes.error) throw clusterRes.error;
     promotions = promoRes.items || [];
     cluster = clusterRes.data || [];
-    clusterWaitDays = Number(promoRes.clusterWaitDays) || 0;
+    // NOT `Number(x)||0` -- that can't tell "the shop set 0 days" apart
+    // from "agent-catalog hasn't been redeployed with this field yet",
+    // and both collapsing to 0 means every cluster item would silently
+    // look instantly eligible, hiding the wait-period note entirely with
+    // no visible error.
+    clusterWaitDays = promoRes.clusterWaitDays!=null ? Number(promoRes.clusterWaitDays) : null;
     browseDataLoaded = true;
   }catch(err){
     toast(`Could not load products: ${err.message||err}`);
