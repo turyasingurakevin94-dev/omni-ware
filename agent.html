@@ -1132,7 +1132,7 @@ function browseItems(){
     const cutoff = Date.now() - 30*24*60*60*1000;
     items = items.filter(it=>it.createdAt && new Date(it.createdAt).getTime() >= cutoff);
   }
-  if(q) items = items.filter(it=>(it.name||'').toLowerCase().includes(q));
+  if(q) items = items.filter(it=>(it.name||'').toLowerCase().includes(q) || (it.variantLabel||'').toLowerCase().includes(q));
   return items;
 }
 
@@ -1349,7 +1349,7 @@ function renderSearchSuggestions(){
   const box = document.getElementById('ag_searchSuggestions');
   const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
   if(!q){ box.classList.remove('show'); box.innerHTML = ''; searchSuggestionMatches = []; return; }
-  searchSuggestionMatches = catalog.filter(it=>(it.name||'').toLowerCase().includes(q)).slice(0, 8);
+  searchSuggestionMatches = catalog.filter(it=>(it.name||'').toLowerCase().includes(q) || (it.variantLabel||'').toLowerCase().includes(q)).slice(0, 8);
   if(!searchSuggestionMatches.length){
     box.innerHTML = `<div class="empty">No matching products.</div>`;
     box.classList.add('show');
