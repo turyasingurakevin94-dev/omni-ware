@@ -327,6 +327,18 @@
   .ag-order-row-client{font-weight:600;font-size:14px;}
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
   .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
+  /* Ongoing orders: what's happening right now ("Andrew is preparing your
+     order"). Completed orders: whether this order is settled with the shop
+     or still owes a balance. Same slot, different meaning per status, each
+     with its own color so the state reads before the text is even read. */
+  .ag-order-status{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;}
+  .ag-order-status .icon{width:15px;height:15px;flex-shrink:0;}
+  .ag-order-status.waiting{color:var(--ink-soft);}
+  .ag-order-status.preparing{color:var(--accent-dark);}
+  .ag-order-status.delivering{color:var(--blue);}
+  .ag-order-status.pickup{color:var(--rust);}
+  .ag-order-status.settled{color:var(--good);}
+  .ag-order-status.due{color:var(--danger);}
 
   /* ---- Bottom tab bar (Earnings / Browse / Account) ---- */
   .ag-tabbar{
@@ -761,6 +773,9 @@ function mapOrderRow(q){
     agentClientId: payload.agentClientId || null,
     deliveryMode: payload.deliveryMode || null,
     agentPaymentStatus: payload.agentPaymentStatus || 'unpaid',
+    assignedWorkerId: payload.assignedWorkerId || null,
+    assignedDeliveryId: payload.assignedDeliveryId || null,
+    amountPaid: Number(q.amount_paid) || 0,
   };
 }
 
@@ -996,15 +1011,67 @@ function clientRowHTML(c, orders){
     </div>
   </div>`;
 }
+// Names of whoever's assigned to an in-progress order, resolved via the
+// agent_staff_names RPC (agents have no direct RLS access to `staff` --
+// see 0015_agent_staff_names.sql) and cached here so re-renders (e.g.
+// switching Ongoing/Completed) don't refetch.
+let orderStaffNames = new Map();
+async function ensureOrderStaffNamesLoaded(){
+  const ids = new Set();
+  myOrders.forEach(o=>{
+    if(o.voided || o.status==='completed') return;
+    if(o.assignedWorkerId) ids.add(o.assignedWorkerId);
+    if(o.assignedDeliveryId && o.assignedDeliveryId!=='__agent__') ids.add(o.assignedDeliveryId);
+  });
+  const missing = [...ids].filter(id=>!orderStaffNames.has(id));
+  if(!missing.length) return;
+  try{
+    const { data, error } = await sb.rpc('agent_staff_names', { p_shop_id: currentShopId, p_staff_ids: missing });
+    if(error) throw error;
+    (data||[]).forEach(row=> orderStaffNames.set(row.id, row.name));
+  }catch(err){ /* names just stay generic ("being prepared") if this fails */ }
+}
+
+// What's happening with an ongoing order right now, in the same voice a
+// delivery app uses -- "Andrew is preparing your order" -- so the agent
+// doesn't have to guess or go ask.
+function orderStatusInfo(o){
+  if(o.status==='pending_delivery'){
+    if(o.deliveryMode==='agent_pickup') return { cls:'pickup', icon:ICON_PIN, text:'Ready — come pick up your order' };
+    const name = o.assignedDeliveryId ? orderStaffNames.get(o.assignedDeliveryId) : null;
+    return { cls:'delivering', icon:ICON_TRUCK, text: name ? `${name} is delivering your order` : 'Your order is out for delivery' };
+  }
+  if(o.status==='preparing'){
+    const name = o.assignedWorkerId ? orderStaffNames.get(o.assignedWorkerId) : null;
+    return { cls:'preparing', icon:ICON_CLOCK, text: name ? `${name} is preparing your order` : 'Your order is being prepared' };
+  }
+  return { cls:'waiting', icon:ICON_CLOCK, text:'Order received — not yet started' };
+}
+
+// A completed order's balance is with the SHOP, not the client -- what the
+// client paid the agent is the agent's own business and was never tracked
+// here. sellPrice (not agentSellPrice) is what the shop is actually owed;
+// a prepay agent's balance is settled the moment agentPaymentStatus flips
+// to 'paid' (amountPaid itself is never touched for that path).
+function orderBalanceInfo(o){
+  const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+  const balance = o.agentPaymentStatus==='paid' ? 0 : Math.max(0, shopTotal - (Number(o.amountPaid)||0));
+  return balance<=0
+    ? { cls:'settled', icon:ICON_CHECK, text:'Settled with the shop' }
+    : { cls:'due', icon:null, text:`Balance owed to shop: ${fmtUGX(balance)}` };
+}
+
 function orderRowHTML(o){
   const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
   const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
+  const extra = o.status==='completed' ? orderBalanceInfo(o) : orderStatusInfo(o);
   return `<div class="ag-order-row">
     <div class="ag-order-row-head">
       <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
       <div class="ag-order-row-date">${esc(date)}</div>
     </div>
     <div class="ag-order-row-split">${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</div>
+    <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span></div>
   </div>`;
 }
 function renderAccount(){
@@ -1052,6 +1119,10 @@ function openOrderHistoryScreen(returnTab){
   subScreenReturnTab = returnTab || 'account';
   showOnlyView('ag_orderHistoryListView');
   renderOrderHistoryScreen();
+  // Names arrive after the first paint (a real network call) -- the list
+  // shows generic status text immediately, then re-renders with names
+  // filled in rather than blocking the screen open on it.
+  ensureOrderStaffNamesLoaded().then(renderOrderHistoryScreen);
 }
 document.getElementById('ag_menu_clients').addEventListener('click', ()=> openClientsScreen('account'));
 document.getElementById('ag_menu_orders').addEventListener('click', ()=> openOrderHistoryScreen('account'));
@@ -1169,6 +1240,12 @@ const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" str
 // retail/wholesale badge's meaning by shape, not color alone.
 const ICON_TAG = `<svg class="icon" viewBox="0 0 24 24"><path d="M20.59 13.41 12 22l-9-9V4h9l9 9.41a2 2 0 0 1 0 2.83z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>`;
 const ICON_BOXES = `<svg class="icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>`;
+// Order-history status icons: waiting/preparing = clock, delivering =
+// truck, self-pickup = map pin, settled = check.
+const ICON_CLOCK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`;
+const ICON_TRUCK = `<svg class="icon" viewBox="0 0 24 24"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.5V16h-8z"/><circle cx="6.5" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>`;
+const ICON_PIN = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5A7 7 0 1 0 5 9.5C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>`;
+const ICON_CHECK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>`;
 
 // Flat, single-path category icons keyed by keyword match against the
 // shop's own free-text category names -- there's no fixed taxonomy to
