@@ -205,10 +205,13 @@
 
   /* ---- Search + recent searches + category strip (Browse) ---- */
   .ag-search-bar{position:relative;}
-  .ag-search-bar input{width:100%;padding:13px 14px 13px 42px;border:none;border-radius:14px;font-size:14.5px;background:#fff;font-family:inherit;color:var(--ink);box-shadow:0 2px 8px rgba(10,20,40,0.12);}
+  .ag-search-bar input{width:100%;padding:13px 40px 13px 42px;border:none;border-radius:14px;font-size:14.5px;background:#fff;font-family:inherit;color:var(--ink);box-shadow:0 2px 8px rgba(10,20,40,0.12);}
   .ag-search-bar input:focus{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,0.5);}
   .ag-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
   .ag-search-icon .icon{width:17px;height:17px;}
+  .ag-search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border:none;border-radius:50%;background:var(--bg);color:var(--ink-soft);display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .ag-search-clear .icon{width:14px;height:14px;}
+  .ag-search-clear.show{display:flex;}
 
   .ag-search-suggestions{
     position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--panel);border-radius:16px;
@@ -338,6 +341,7 @@
       <div class="ag-search-bar" id="ag_searchBarWrap">
         <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         <input type="text" id="ag_browse_search" placeholder="Search products..." autocomplete="off">
+        <button type="button" class="ag-search-clear" id="ag_browse_search_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         <div class="ag-search-suggestions" id="ag_searchSuggestions"></div>
       </div>
       <div class="ag-trust-banner" id="ag_trustBanner" style="display:none;">
@@ -1223,6 +1227,8 @@ function renderRecentSearches(){
   wrap.querySelectorAll('.ag-recent-chip').forEach(chip=>{
     chip.addEventListener('click', ()=>{
       document.getElementById('ag_browse_search').value = chip.dataset.q;
+      updateHeroCompact();
+      updateSearchClearBtn();
       renderBrowseGrid();
     });
   });
@@ -1377,8 +1383,23 @@ document.addEventListener('click', (e)=>{
   if(!e.target.closest('#ag_searchBarWrap')) document.getElementById('ag_searchSuggestions').classList.remove('show');
 });
 
+function updateSearchClearBtn(){
+  const hasQuery = document.getElementById('ag_browse_search').value.length > 0;
+  document.getElementById('ag_browse_search_clear').classList.toggle('show', hasQuery);
+}
 document.getElementById('ag_browse_search').addEventListener('input', ()=>{
   updateHeroCompact();
+  updateSearchClearBtn();
+  renderBrowseGrid();
+  renderSearchSuggestions();
+});
+document.getElementById('ag_browse_search_clear').addEventListener('mousedown', (e)=>{ e.preventDefault(); });
+document.getElementById('ag_browse_search_clear').addEventListener('click', ()=>{
+  const input = document.getElementById('ag_browse_search');
+  input.value = '';
+  input.focus();
+  updateHeroCompact();
+  updateSearchClearBtn();
   renderBrowseGrid();
   renderSearchSuggestions();
 });
