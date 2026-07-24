@@ -1396,11 +1396,13 @@ async function openBrowseView(){
 async function openAddItemPanel(item){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
+  const packLabel = item.packQty ? `${esc(item.packQty)} ${esc(item.unit||'')} / ${esc(item.packUnit||'pack')}` : (item.unit ? `Per ${esc(item.unit)}` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
+      <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
       <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
@@ -1413,6 +1415,7 @@ async function openAddItemPanel(item){
   const qtyEl = document.getElementById('ag_ai_qty');
   const priceEl = document.getElementById('ag_ai_price');
   const hintEl = document.getElementById('ag_ai_cost_hint');
+  const packLabelEl = document.getElementById('ag_ai_pack_label');
   let repricing = false;
   const reprice = async ()=>{
     const qty = Number(qtyEl.value);
@@ -1423,6 +1426,7 @@ async function openAddItemPanel(item){
       if(res.available){
         liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
         hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
+        packLabelEl.textContent = livePackQty ? `${livePackQty} ${liveUnit||''} / ${livePackUnit||'pack'}` : (liveUnit ? `Per ${liveUnit}` : '');
       }
     }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
     repricing = false;
@@ -1436,7 +1440,7 @@ async function openAddItemPanel(item){
     if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
-      qty, unit: liveUnit, packUnit: livePackUnit,
+      qty, unit: liveUnit, packUnit: livePackUnit, packQty: livePackQty,
       floorPrice: liveFloor, agentSellPrice,
     });
     document.body.removeChild(el);
@@ -1448,16 +1452,20 @@ async function openAddItemPanel(item){
 /* ================= QUOTE + client + delivery + submit ================= */
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
-  wrap.innerHTML = cart.map((it,i)=>`
+  wrap.innerHTML = cart.map((it,i)=>{
+    const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : '';
+    return `
     <div class="ag-cart-row">
       <div class="ag-cart-row-body">
         <div class="ag-cart-row-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
+        ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
         <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
       </div>
       <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
       <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
