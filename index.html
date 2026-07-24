@@ -520,7 +520,11 @@
   .preset-list{display:flex;flex-direction:column;}
   .preset-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;}
   .preset-row:last-child{border-bottom:none;}
-  .preset-row-name{font-size:13px;font-weight:700;color:var(--ink);flex-shrink:0;min-width:100px;}
+  .preset-row-name{font-size:13px;font-weight:700;color:var(--ink);flex-shrink:0;min-width:100px;display:inline-flex;align-items:center;gap:4px;}
+  .preset-row-name button{all:unset;cursor:pointer;display:flex;color:var(--ink-soft);width:14px;height:14px;align-items:center;justify-content:center;border-radius:50%;}
+  .preset-row-name button:hover{color:var(--accent);background:#EEF1F3;}
+  .preset-row-name button .icon{width:10px;height:10px;}
+  .preset-row-name-input{font:inherit;font-size:13px;font-weight:700;color:var(--ink);border:1px solid var(--accent);border-radius:6px;padding:3px 8px;min-width:100px;flex-shrink:0;}
   .preset-row-chips{display:flex;flex-wrap:wrap;gap:5px;flex:1 1 200px;align-items:center;min-width:120px;}
   .preset-row-add{display:flex;gap:5px;flex-shrink:0;}
   .preset-row-add input{width:120px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px;font-family:inherit;}
@@ -10789,15 +10793,44 @@ document.querySelectorAll('.preset-tab').forEach(btn=>{
     document.getElementById('ppane-'+btn.dataset.ptab).style.display='block';
   });
 });
-function renderPresetCategories(){
+// Shared inline-rename UX for a preset chip/row currently swapped for an
+// <input> (matched by inputSelector). getCurrent/isDup/setValue operate on
+// whatever array backs that input's data-idx; onCancel/onSaved re-render.
+function wireChipRename(wrap, inputSelector, {getCurrent, isDup, setValue, onCancel, onSaved}){
+  const input = wrap.querySelector(inputSelector);
+  if(!input) return;
+  input.focus(); input.select();
+  let cancelled = false;
+  const commit = ()=>{
+    if(cancelled) return;
+    const idx = Number(input.dataset.idx);
+    const val = input.value.trim();
+    if(!val || val===getCurrent(idx)){ onCancel(); return; }
+    if(isDup(idx, val)){ toast('That already exists'); onCancel(); return; }
+    setValue(idx, val);
+    saveData(); onSaved();
+  };
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); input.blur(); }
+    else if(e.key==='Escape'){ e.preventDefault(); cancelled=true; onCancel(); }
+  });
+  input.addEventListener('blur', commit);
+}
+function renderPresetCategories(edit){
+  edit = edit || {};
   const wrap = document.getElementById('presetCategoriesWrap');
   const cats = data.presetCategories||[];
   if(cats.length===0){ wrap.innerHTML = '<div class="preset-empty">No categories yet — add one above.</div>'; return; }
   wrap.innerHTML = `<div class="preset-list">${cats.map((c,i)=>`
     <div class="preset-row" data-idx="${i}">
-      <span class="preset-row-name">${esc(c.name)}</span>
+      ${edit.type==='name' && edit.idx===i ?
+        `<input type="text" class="preset-row-name-input preset-cat-name-input" data-idx="${i}" value="${esc(c.name)}">` :
+        `<span class="preset-row-name">${esc(c.name)}<button type="button" class="preset-chip-edit preset-cat-name-edit" data-idx="${i}" title="Rename category">${ICON_EDIT}</button></span>`}
       <div class="preset-row-chips">
-        ${(c.subcategories||[]).map((s,si)=>`<span class="preset-chip">${esc(s)}<button type="button" class="preset-sub-remove" data-idx="${i}" data-sidx="${si}" title="Remove sub-category"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}
+        ${(c.subcategories||[]).map((s,si)=> edit.type==='sub' && edit.idx===i && edit.sidx===si ?
+          `<span class="preset-chip preset-chip-editing"><input type="text" class="preset-sub-edit-input" data-idx="${si}" value="${esc(s)}"></span>` :
+          `<span class="preset-chip">${esc(s)}<button type="button" class="preset-chip-edit preset-sub-edit" data-idx="${i}" data-sidx="${si}" title="Rename sub-category">${ICON_EDIT}</button><button type="button" class="preset-sub-remove" data-idx="${i}" data-sidx="${si}" title="Remove sub-category"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`
+        ).join('')}
       </div>
       <div class="preset-row-add">
         <input type="text" class="preset-sub-new" data-idx="${i}" placeholder="+ sub-category">
@@ -10831,6 +10864,26 @@ function renderPresetCategories(){
   wrap.querySelectorAll('.preset-sub-new').forEach(inp=>inp.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); wrap.querySelector(`.preset-sub-add[data-idx="${inp.dataset.idx}"]`).click(); }
   }));
+  wrap.querySelectorAll('.preset-cat-name-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetCategories({type:'name', idx:Number(e.currentTarget.dataset.idx)});
+  }));
+  wrap.querySelectorAll('.preset-sub-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetCategories({type:'sub', idx:Number(e.currentTarget.dataset.idx), sidx:Number(e.currentTarget.dataset.sidx)});
+  }));
+  wireChipRename(wrap, '.preset-cat-name-input', {
+    getCurrent: idx => data.presetCategories[idx].name,
+    isDup: (idx, val) => data.presetCategories.some((c,ci)=>ci!==idx && c.name.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data.presetCategories[idx].name = val; },
+    onCancel: () => renderPresetCategories(),
+    onSaved: () => { renderPresets(); toast('Category renamed'); }
+  });
+  wireChipRename(wrap, '.preset-sub-edit-input', {
+    getCurrent: idx => data.presetCategories[edit.idx].subcategories[idx],
+    isDup: (idx, val) => data.presetCategories[edit.idx].subcategories.some((s,si)=>si!==idx && s.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data.presetCategories[edit.idx].subcategories[idx] = val; },
+    onCancel: () => renderPresetCategories(),
+    onSaved: () => { renderPresets(); toast('Sub-category renamed'); }
+  });
 }
 function renderPresetUnits(editIdx){
   const wrap = document.getElementById('presetUnitsWrap');
@@ -10847,48 +10900,54 @@ function renderPresetUnits(editIdx){
   wrap.querySelectorAll('.preset-unit-edit').forEach(btn=>btn.addEventListener('click', e=>{
     renderPresetUnits(Number(e.currentTarget.dataset.idx));
   }));
-  const editInput = wrap.querySelector('.preset-unit-edit-input');
-  if(editInput){
-    editInput.focus(); editInput.select();
-    let cancelled = false;
-    const commit = ()=>{
-      if(cancelled) return;
-      const idx = Number(editInput.dataset.idx);
-      const val = editInput.value.trim();
-      if(!val || val===data.presetUnits[idx]){ renderPresetUnits(); return; }
-      if(data.presetUnits.some((u,ui)=>ui!==idx && u.toLowerCase()===val.toLowerCase())){ toast('That unit already exists'); renderPresetUnits(); return; }
-      data.presetUnits[idx] = val;
-      saveData(); renderPresets();
-      toast('Unit renamed');
-    };
-    editInput.addEventListener('keydown', e=>{
-      if(e.key==='Enter'){ e.preventDefault(); editInput.blur(); }
-      else if(e.key==='Escape'){ e.preventDefault(); cancelled=true; renderPresetUnits(); }
-    });
-    editInput.addEventListener('blur', commit);
-  }
+  wireChipRename(wrap, '.preset-unit-edit-input', {
+    getCurrent: idx => data.presetUnits[idx],
+    isDup: (idx, val) => data.presetUnits.some((u,ui)=>ui!==idx && u.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data.presetUnits[idx] = val; },
+    onCancel: () => renderPresetUnits(),
+    onSaved: () => { renderPresets(); toast('Unit renamed'); }
+  });
 }
-function renderPresetCashCats(dataKey, wrapId, removeClass){
+function renderPresetCashCats(dataKey, wrapId, removeClass, editClass, editIdx){
   const wrap = document.getElementById(wrapId);
   const cats = data[dataKey]||[];
   wrap.innerHTML = cats.length===0 ? '<div class="preset-empty">No categories yet — add one above.</div>' :
-    `<div class="preset-chip-flow">${cats.map((c,i)=>`<span class="preset-chip">${esc(c)}<button type="button" class="${removeClass}" data-idx="${i}" title="Remove category"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
+    `<div class="preset-chip-flow">${cats.map((c,i)=> i===editIdx ?
+      `<span class="preset-chip preset-chip-editing"><input type="text" class="${editClass}-input" data-idx="${i}" value="${esc(c)}"></span>` :
+      `<span class="preset-chip">${esc(c)}<button type="button" class="preset-chip-edit ${editClass}" data-idx="${i}" title="Rename category">${ICON_EDIT}</button><button type="button" class="${removeClass}" data-idx="${i}" title="Remove category"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`
+    ).join('')}</div>`;
   wrap.querySelectorAll('.'+removeClass).forEach(btn=>btn.addEventListener('click', e=>{
     data[dataKey].splice(Number(e.currentTarget.dataset.idx),1);
     saveData(); renderPresets(); renderCbFlowAnalytics();
   }));
+  wrap.querySelectorAll('.'+editClass).forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetCashCats(dataKey, wrapId, removeClass, editClass, Number(e.currentTarget.dataset.idx));
+  }));
+  wireChipRename(wrap, '.'+editClass+'-input', {
+    getCurrent: idx => data[dataKey][idx],
+    isDup: (idx, val) => data[dataKey].some((c,ci)=>ci!==idx && c.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data[dataKey][idx] = val; },
+    onCancel: () => renderPresetCashCats(dataKey, wrapId, removeClass, editClass),
+    onSaved: () => { renderPresets(); renderCbFlowAnalytics(); toast('Category renamed'); }
+  });
 }
-function renderPresetIncomeCats(){ renderPresetCashCats('presetIncomeCategories','presetIncomeCatsWrap','preset-income-cat-remove'); }
-function renderPresetExpenseCats(){ renderPresetCashCats('presetExpenseCategories','presetExpenseCatsWrap','preset-expense-cat-remove'); }
-function renderPresetAttrs(){
+function renderPresetIncomeCats(){ renderPresetCashCats('presetIncomeCategories','presetIncomeCatsWrap','preset-income-cat-remove','preset-income-cat-edit'); }
+function renderPresetExpenseCats(){ renderPresetCashCats('presetExpenseCategories','presetExpenseCatsWrap','preset-expense-cat-remove','preset-expense-cat-edit'); }
+function renderPresetAttrs(edit){
+  edit = edit || {};
   const wrap = document.getElementById('presetAttrsWrap');
   const attrs = data.presetAttributes||[];
   if(attrs.length===0){ wrap.innerHTML = '<div class="preset-empty">No attribute presets yet — add one above.</div>'; return; }
   wrap.innerHTML = `<div class="preset-list">${attrs.map((a,i)=>`
     <div class="preset-row" data-idx="${i}">
-      <span class="preset-row-name">${esc(a.name)}</span>
+      ${edit.type==='name' && edit.idx===i ?
+        `<input type="text" class="preset-row-name-input preset-attr-name-input" data-idx="${i}" value="${esc(a.name)}">` :
+        `<span class="preset-row-name">${esc(a.name)}<button type="button" class="preset-chip-edit preset-attr-name-edit" data-idx="${i}" title="Rename attribute">${ICON_EDIT}</button></span>`}
       <div class="preset-row-chips">
-        ${(a.values||[]).map((v,vi)=>`<span class="preset-chip">${esc(v)}<button type="button" class="preset-val-remove" data-idx="${i}" data-vidx="${vi}" title="Remove value"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}
+        ${(a.values||[]).map((v,vi)=> edit.type==='value' && edit.idx===i && edit.vidx===vi ?
+          `<span class="preset-chip preset-chip-editing"><input type="text" class="preset-attr-val-edit-input" data-idx="${vi}" value="${esc(v)}"></span>` :
+          `<span class="preset-chip">${esc(v)}<button type="button" class="preset-chip-edit preset-attr-val-edit" data-idx="${i}" data-vidx="${vi}" title="Rename value">${ICON_EDIT}</button><button type="button" class="preset-val-remove" data-idx="${i}" data-vidx="${vi}" title="Remove value"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`
+        ).join('')}
       </div>
       <div class="preset-row-add">
         <input type="text" class="preset-val-new" data-idx="${i}" placeholder="+ value">
@@ -10922,6 +10981,26 @@ function renderPresetAttrs(){
   wrap.querySelectorAll('.preset-val-new').forEach(inp=>inp.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); wrap.querySelector(`.preset-val-add[data-idx="${inp.dataset.idx}"]`).click(); }
   }));
+  wrap.querySelectorAll('.preset-attr-name-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetAttrs({type:'name', idx:Number(e.currentTarget.dataset.idx)});
+  }));
+  wrap.querySelectorAll('.preset-attr-val-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetAttrs({type:'value', idx:Number(e.currentTarget.dataset.idx), vidx:Number(e.currentTarget.dataset.vidx)});
+  }));
+  wireChipRename(wrap, '.preset-attr-name-input', {
+    getCurrent: idx => data.presetAttributes[idx].name,
+    isDup: (idx, val) => data.presetAttributes.some((a,ai)=>ai!==idx && a.name.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data.presetAttributes[idx].name = val; },
+    onCancel: () => renderPresetAttrs(),
+    onSaved: () => { renderPresets(); toast('Attribute renamed'); }
+  });
+  wireChipRename(wrap, '.preset-attr-val-edit-input', {
+    getCurrent: idx => data.presetAttributes[edit.idx].values[idx],
+    isDup: (idx, val) => data.presetAttributes[edit.idx].values.some((v,vi)=>vi!==idx && v.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => { data.presetAttributes[edit.idx].values[idx] = val; },
+    onCancel: () => renderPresetAttrs(),
+    onSaved: () => { renderPresets(); toast('Value renamed'); }
+  });
 }
 // Feeds the presets into the datalists that back the Category/Sub-category,
 // Unit/Pack unit, and variant attribute-name fields elsewhere in the app.
