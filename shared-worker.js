@@ -376,6 +376,16 @@ function pickItemSourceLabel(it){
   return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
 }
 
+// Same combo-values-joined format used everywhere else a variant is shown
+// (productVariantLabel() in index.html, agent-catalog's variantLabel) --
+// without this a worker sees only the base product name and has to guess
+// which variant (color, size, ...) the order actually needs.
+function pickItemVariantLabel(it, product){
+  if(it.variantIdx==null || it.variantIdx==='' || !product || !Array.isArray(product.variants)) return '';
+  const v = product.variants[it.variantIdx];
+  return v ? Object.values(v.combo||{}).join(' / ') : '';
+}
+
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
 
 // Swipeable carousel: every item renders once as a horizontally
@@ -399,12 +409,14 @@ function renderWorkerPickStepper(q){
     const isDone = it.pickStatus==='done';
     const qty = it.qty!=null ? it.qty : '';
     const unit = it.packUnit || it.unit || '';
+    const variant = pickItemVariantLabel(it, product);
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
         <div class="wv-carousel-photo">${ipStageThumbHTML(product||{})}</div>
         <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
         <div class="wv-carousel-body">
           <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
+          ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
           <div class="wv-carousel-qty-label">Pack</div>
           <div class="wv-carousel-qty">${esc(qty)} ${esc(unit)}</div>
         </div>
