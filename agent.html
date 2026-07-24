@@ -283,6 +283,11 @@
   .ag-grid-body{padding:12px 13px 13px;}
   .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;margin-bottom:7px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
+  /* How long a promo (and its bonus) has left -- a plain line under the
+     pill rather than crammed inside it, so a long "min Nunit"-style wrap
+     never happens no matter how the countdown text is worded. */
+  .ag-promo-countdown{font-size:10px;font-weight:700;color:var(--bonus);margin:-3px 0 7px;}
+  .ag-promo-countdown.urgent{color:var(--rust);}
   .ag-grid-name{font-size:13.5px;font-weight:700;letter-spacing:-0.006em;color:var(--ink);line-height:1.3;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ag-grid-variant{display:inline-block;max-width:100%;font-weight:700;font-size:10.5px;letter-spacing:.01em;color:var(--accent-dark);background:var(--accent-soft);padding:2.5px 7px;border-radius:6px;margin:5px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ag-grid-pack{font-size:10.5px;font-weight:500;color:var(--ink-soft);letter-spacing:.005em;margin-bottom:7px;}
@@ -1356,6 +1361,20 @@ function priceTierBadgeHTML(tier){
   return '';
 }
 
+// Only ever called with a promo that already passed the backend's
+// "starts_at <= today <= ends_at" filter, so a past-dated result here
+// can't happen -- diff is always >= 0 for anything actually shown.
+// urgent flags the last 2 days, so the countdown itself signals "act now"
+// via color rather than an agent having to parse the number.
+function promoDaysLeftInfo(endsAt){
+  if(!endsAt) return null;
+  const end = new Date(endsAt + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((end - today) / 86400000);
+  const label = diff<=0 ? 'Ends today' : diff===1 ? '1 day left' : `${diff} days left`;
+  return { label, urgent: diff<=1 };
+}
+
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
@@ -1363,6 +1382,7 @@ function browseCardHTML(it, promoted, opts){
   const inCluster = promo && isInCluster(it.productId, it.variantIdx);
   const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
+  const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
   const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
@@ -1372,6 +1392,7 @@ function browseCardHTML(it, promoted, opts){
     </div>
     <div class="ag-grid-body">
       ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
+      ${countdown ? `<div class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</div>` : ''}
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}

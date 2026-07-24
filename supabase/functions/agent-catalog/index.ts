@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
           category: p?.category || "",
           bonusType: pr.bonus_type,
           bonusValue: Number(pr.bonus_value),
+          endsAt: pr.ends_at || null,
         };
       });
       return json({ ok: true, items });
