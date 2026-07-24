@@ -113,6 +113,19 @@ function resolveDiscountPcts(product: any, presets: any) {
   };
 }
 
+// Duplicated verbatim from agent-submit-order (see that file's module
+// header for why) -- how many days a cluster item must have already been
+// starred before a sale of it earns its bonus there. Sent to the agent
+// app purely so it can explain, before a sale happens, why a given
+// cluster item's bonus isn't live yet -- this function never gates
+// anything itself here, agent-submit-order's own copy is the only one
+// that actually decides what a real order earns.
+const DEFAULT_CLUSTER_WAIT_DAYS = 7;
+function resolveClusterWaitDays(presets: any): number {
+  const v = presets?.agentClusterWaitDays;
+  return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -236,6 +249,17 @@ Deno.serve(async (req) => {
     }
 
     if (action === "promotions") {
+      // clusterWaitDays travels with every response (even an empty one) so
+      // the frontend can explain, for any cluster item, exactly how many
+      // days are left before a sale of it would actually earn its bonus --
+      // agents have no RLS access to app_settings/presets directly (same
+      // reasoning as everywhere else in this file), so this is the only
+      // way that number ever reaches them.
+      const { data: settingsRow, error: settingsErr } = await admin
+        .from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle();
+      if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
+      const clusterWaitDays = resolveClusterWaitDays(settingsRow?.presets || {});
+
       const today = new Date().toISOString().slice(0, 10);
       const { data: promos, error: promoErr } = await admin
         .from("agent_promotions")
@@ -247,7 +271,7 @@ Deno.serve(async (req) => {
       const live = (promos || []).filter((pr) =>
         (!pr.starts_at || pr.starts_at <= today) && (!pr.ends_at || pr.ends_at >= today)
       );
-      if (!live.length) return json({ ok: true, items: [] });
+      if (!live.length) return json({ ok: true, items: [], clusterWaitDays });
 
       const productIds = [...new Set(live.map((pr) => pr.product_id))];
       const { data: products, error: productsErr } = await admin
@@ -273,7 +297,7 @@ Deno.serve(async (req) => {
           endsAt: pr.ends_at || null,
         };
       });
-      return json({ ok: true, items });
+      return json({ ok: true, items, clusterWaitDays });
     }
 
     return json({ error: `Unknown action: ${action}` }, 400);
