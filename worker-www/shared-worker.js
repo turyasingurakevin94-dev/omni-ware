@@ -336,6 +336,22 @@ function renderWorkerView(){
   renderWorkerPickStepper(active);
 }
 
+// "Requested 12 min ago" etc, from the real timestamp set when an order
+// was actually assigned (manual assignment or autoAssignNextOrder) --
+// never fabricated, so an order with no timestamp (shouldn't happen for
+// any order assigned since this field existed, but safe for older data)
+// just omits the line rather than showing a made-up time.
+function timeAgoLabel(ts){
+  if(!ts) return null;
+  const mins = Math.floor((Date.now()-ts)/60000);
+  if(mins < 1) return 'Requested just now';
+  if(mins < 60) return `Requested ${mins} min${mins===1?'':'s'} ago`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `Requested ${hrs} hr${hrs===1?'':'s'} ago`;
+  const days = Math.floor(hrs/24);
+  return `Requested ${days} day${days===1?'':'s'} ago`;
+}
+
 function renderWorkerPendingList(pending){
   const wrap = document.getElementById('wv_pendingWrap');
   if(!pending.length){ wrap.innerHTML=''; return; }
@@ -343,11 +359,15 @@ function renderWorkerPendingList(pending){
     const name = q.client.name || 'Unnamed client';
     const initial = (name.trim().charAt(0) || '?').toUpperCase();
     const count = (q.items||[]).length;
+    const meta = timeAgoLabel(q.pickingAssignedAt);
     return `
     <div class="wv-pending-card" data-id="${q.id}">
       <div class="wv-pending-top">
         <div class="wv-avatar">${esc(initial)}</div>
-        <div class="wv-pending-name">${esc(name)}</div>
+        <div class="wv-pending-text">
+          <div class="wv-pending-name">${esc(name)}</div>
+          ${meta ? `<div class="wv-pending-meta">${esc(meta)}</div>` : ''}
+        </div>
         <span class="wv-count-pill">${count} item${count===1?'':'s'}</span>
       </div>
       <div class="wv-actions">
@@ -693,6 +713,7 @@ function autoAssignNextOrder(workerId){
   next.assignedWorkerId = workerId;
   next.pickingStatus = 'awaiting_accept';
   next.pickCursor = 0;
+  next.pickingAssignedAt = Date.now();
   if(next.status==='draft'){ next.status = 'preparing'; next.stageEnteredAt = Date.now(); }
   saveData(); // saveData()'s upsert is what the notify-worker webhook fires on
   refreshAdminOrderBoardIfOpen();
@@ -762,12 +783,27 @@ function registerNativePushListeners(){
   });
 }
 
-function routeNotificationAction(orderId, action){
+async function routeNotificationAction(orderId, action){
   orderId = Number(orderId);
   if(!orderId) return;
   // goToTab() only exists in the admin app (multiple tabs); the
   // standalone worker app has nothing else to switch away from.
   if(typeof goToTab === 'function') goToTab('worker');
+  // A tap can arrive while the app was merely backgrounded (not killed),
+  // so the in-memory order list may still be whatever it was before this
+  // push -- refreshing first means accept/deny always finds the order,
+  // and a plain tap (no action button attached to the notification, the
+  // only real case right now) still lands on an up-to-date screen instead
+  // of showing nothing new until some other refresh happens to occur.
+  if(typeof loadWorkerData === 'function' && currentShopId){
+    try{
+      data = await loadWorkerData(currentShopId);
+      lastSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(data, currentShopId).savedQuotes, 'id') };
+    }catch(err){
+      console.error('Failed to refresh after notification tap:', err);
+    }
+  }
   if(action==='accept') acceptOrderAssignment(orderId);
   else if(action==='deny') denyOrderAssignment(orderId);
+  else renderWorkerView();
 }
