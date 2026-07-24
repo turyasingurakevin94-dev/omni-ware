@@ -3368,12 +3368,23 @@
           <input type="hidden" id="pr_supplier">
           <div class="suggestions" id="pr_supplier_suggestions"></div>
         </div>
-        <div class="field"><label>Wholesale price (UGX)</label><input id="pr_wholesale" type="number" min="0" placeholder="e.g. 37000"></div>
-        <div class="field"><label>Retail price (UGX)</label><input id="pr_retail" type="number" min="0" placeholder="e.g. 41000"></div>
+        <div class="field" id="pr_wholesale_field"><label>Wholesale price (UGX)</label><input id="pr_wholesale" type="number" min="0" placeholder="e.g. 37000"></div>
+        <div class="field" id="pr_retail_field"><label>Retail price (UGX)</label><input id="pr_retail" type="number" min="0" placeholder="e.g. 41000"></div>
         <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
       </div>
+      <!-- Bulk mode: picking a variable product itself (not one specific
+           variant) swaps the single wholesale/retail fields above for one
+           row per variant here, so a supplier's whole price list for a
+           product can be entered -- or reviewed and corrected -- in one
+           save instead of repeating this whole modal per variant. -->
+      <div id="pr_bulk_wrap" style="display:none;">
+        <div class="section-label-row form-section-label" style="margin-top:16px;">Prices per variant
+          <span class="info-tip" tabindex="0"><span class="tip-bubble">Enter a wholesale and/or retail price for as many variants as this supplier actually quoted -- leave any you don't have yet blank and come back to fill them in later the same way. Switching supplier reloads this list with whatever that supplier already has on file.</span></span>
+        </div>
+        <div id="pr_bulk_variants_wrap"></div>
+      </div>
       <div class="section-label-row form-section-label" style="margin-top:16px;">Packing
-        <span class="info-tip" tabindex="0"><span class="tip-bubble">How this supplier's price is quoted. Leave Pack unit / Units per pack blank if it's only ever quoted by the single Unit. Example: Unit = Kg, Pack unit = Bag, Units per pack = 25 → shows as "25 Kg / Bag".</span></span>
+        <span class="info-tip" tabindex="0"><span class="tip-bubble">How this supplier's price is quoted. Leave Pack unit / Units per pack blank if it's only ever quoted by the single Unit. Example: Unit = Kg, Pack unit = Bag, Units per pack = 25 → shows as "25 Kg / Bag". In bulk mode this applies to every variant -- if a supplier packs different variants differently, price those ones separately by picking the specific variant instead.</span></span>
       </div>
       <div class="form-grid">
         <div class="field"><label>Unit</label><input id="pr_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre"></div>
@@ -4844,7 +4855,12 @@ function productDisplayLabel(p, variantIdx){
 // Builds one entry per simple product, and one entry per variant of a
 // variable product (only variants matching the search survive), so the
 // list mirrors the Products tab's flattened, per-variant matching.
-function buildProductSuggestionEntries(tokens){
+// opts.includeWholeProduct additionally puts the product itself (no
+// specific variant) at the top of its own variant list -- only the price
+// entry form asks for this, since picking it is what switches that form
+// into bulk mode (one row per variant) rather than picking one variant.
+function buildProductSuggestionEntries(tokens, opts){
+  opts = opts || {};
   const entries = [];
   data.products.forEach(p=>{
     if(p.type==='variable'){
@@ -4853,9 +4869,13 @@ function buildProductSuggestionEntries(tokens){
         if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
         return;
       }
+      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
+      if(opts.includeWholeProduct && (!tokens.length || matchesAllTokens(haystack, tokens))){
+        entries.push({p, variantIdx:null, wholeProduct:true});
+      }
       p.variants.forEach((v,idx)=>{
-        const haystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
-        if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:idx});
+        const vHaystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
+        if(!tokens.length || matchesAllTokens(vHaystack, tokens)) entries.push({p, variantIdx:idx});
       });
     } else {
       const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
@@ -4865,7 +4885,12 @@ function buildProductSuggestionEntries(tokens){
   return entries.slice(0, 30);
 }
 function suggestionEntryHTML(entry, tokens){
-  const {p, variantIdx} = entry;
+  const {p, variantIdx, wholeProduct} = entry;
+  if(wholeProduct){
+    return `<div class="suggestion-item" data-id="${esc(p.id)}"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}
+      <div class="suggestion-variant-note">All ${p.variants.length} variants — price them together</div>
+    </div>`;
+  }
   if(variantIdx==null){
     return `<div class="suggestion-item" data-id="${esc(p.id)}"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}</div>`;
   }
@@ -4876,8 +4901,8 @@ function suggestionEntryHTML(entry, tokens){
     <div class="suggestion-variant-note">${highlightTokens(variantLabel(v.combo), tokens)}</div>
   </div>`;
 }
-function renderSuggestionBox(box, tokens){
-  const entries = buildProductSuggestionEntries(tokens);
+function renderSuggestionBox(box, tokens, opts){
+  const entries = buildProductSuggestionEntries(tokens, opts);
   if(data.products.length===0){
     box.innerHTML = '<div class="suggestion-empty">No products yet — add one in the Products tab.</div>';
   } else if(entries.length===0){
@@ -9684,6 +9709,10 @@ function selectPrSupplier(id){
   document.getElementById('pr_supplier').value = id;
   document.getElementById('pr_supplier_search').value = id ? supplierName(id) : '';
   document.getElementById('pr_supplier_suggestions').classList.remove('show');
+  // In bulk mode the per-variant rows are pre-filled from whichever
+  // supplier is selected -- switching supplier means switching whose
+  // prices those rows should show.
+  if(prBulkMode) renderPrBulkVariants();
 }
 document.getElementById('pr_supplier_search').addEventListener('input', (e)=>{
   document.getElementById('pr_supplier').value = '';
@@ -9701,28 +9730,81 @@ document.getElementById('pr_supplier_suggestions').addEventListener('mousedown',
 });
 
 function prSuggestionsList(query){
-  renderSuggestionBox(document.getElementById('pr_suggestions'), searchTokens(query));
+  renderSuggestionBox(document.getElementById('pr_suggestions'), searchTokens(query), {includeWholeProduct:true});
 }
 function hidePrSuggestions(){ document.getElementById('pr_suggestions').classList.remove('show'); }
+// True while the price form is in "whole product" mode -- picking a
+// variable product itself (not one of its specific variants) switches the
+// modal from one wholesale/retail pair into a per-variant table, so a
+// supplier's full price list for that product can be entered or reviewed
+// in a single save.
+let prBulkMode = false;
+function setPrBulkMode(on){
+  prBulkMode = on;
+  document.getElementById('pr_wholesale_field').style.display = on ? 'none' : '';
+  document.getElementById('pr_retail_field').style.display = on ? 'none' : '';
+  document.getElementById('pr_bulk_wrap').style.display = on ? '' : 'none';
+  if(on) renderPrBulkVariants();
+}
 function selectPrProduct(id, variantIdx=null){
   const p = data.products.find(x=>x.id===id);
   document.getElementById('pr_product').value = id;
   document.getElementById('pr_variant').value = variantIdx==null ? '' : variantIdx;
   document.getElementById('pr_product_search').value = p ? productDisplayLabel(p, variantIdx) : '';
   const hint = document.getElementById('pr_variant_hint');
+  const hasVariants = p && p.type==='variable' && p.variants && p.variants.length;
   if(p && variantIdx!=null && p.variants && p.variants[variantIdx]){
     setInfoBanner(hint, `Recording this price for the ${variantLabel(p.variants[variantIdx].combo)} variant only — other variants of "${p.name}" keep their own prices.`);
+  } else if(hasVariants){
+    setInfoBanner(hint, `"${p.name}" has ${p.variants.length} variants — enter a price for each one below.`);
   } else if(p && p.type==='variable'){
     setInfoBanner(hint, `"${p.name}" is a variable product but has no variants yet — add variants in the Products tab so prices can be set per variant.`, true);
   } else {
     hideInfoBanner(hint);
   }
+  setPrBulkMode(!!(hasVariants && variantIdx==null));
   hidePrSuggestions();
+}
+// One row per variant, pre-filled from whatever price entry the currently
+// selected supplier already has on file for it (blank if none yet) --
+// same dedup key (product + variant + supplier) editPrice()/pr_save
+// already use for a single entry, just looped.
+function renderPrBulkVariants(){
+  const wrap = document.getElementById('pr_bulk_variants_wrap');
+  const productId = document.getElementById('pr_product').value;
+  const supplierId = document.getElementById('pr_supplier').value;
+  const p = data.products.find(x=>x.id===productId);
+  if(!p || !Array.isArray(p.variants) || !p.variants.length){ wrap.innerHTML = ''; return; }
+  // Packing (unit/pack unit/units per pack) is one shared set of fields
+  // for the whole bulk save, not per-row -- pre-fill them from whatever
+  // this supplier already has on file for any variant of this product,
+  // so saving without touching them keeps existing packing info instead
+  // of blanking it out on every variant a save happens to also touch.
+  const packSample = supplierId ? data.prices.find(pr=>pr.productId===productId && pr.supplierId===supplierId) : null;
+  document.getElementById('pr_unit').value = packSample ? (packSample.unit||'') : '';
+  document.getElementById('pr_pack_unit').value = packSample ? (packSample.packUnit||'') : '';
+  document.getElementById('pr_pack_qty').value = packSample && packSample.packQty ? packSample.packQty : '';
+  wrap.innerHTML = p.variants.map((v,i)=>{
+    const existing = supplierId
+      ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
+      : null;
+    return `
+    <div class="variant-card" data-idx="${i}" style="margin-bottom:10px;">
+      <div class="variant-card-head" style="border-bottom:none;margin-bottom:10px;padding-bottom:0;">
+        <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo||{}).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
+      </div>
+      <div class="vc-grid" style="margin-bottom:0;">
+        <div class="field"><label>Wholesale price (UGX)</label><input class="pr-bulk-wholesale" type="number" min="0" data-idx="${i}" value="${existing && existing.wholesale!=null ? existing.wholesale : ''}" placeholder="e.g. 37000"></div>
+        <div class="field"><label>Retail price (UGX)</label><input class="pr-bulk-retail" type="number" min="0" data-idx="${i}" value="${existing && existing.retail!=null ? existing.retail : ''}" placeholder="e.g. 41000"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 document.getElementById('pr_product_search').addEventListener('input', (e)=>{
   document.getElementById('pr_product').value = '';
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
+  setPrBulkMode(false);
   prSuggestionsList(e.target.value);
 });
 document.getElementById('pr_product_search').addEventListener('focus', (e)=> prSuggestionsList(e.target.value));
@@ -9862,6 +9944,7 @@ function resetPriceForm(){
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_product_search').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
+  setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_wholesale').value='';
   document.getElementById('pr_retail').value='';
@@ -9889,14 +9972,47 @@ function toggleOutOfStock(id){
 document.getElementById('pr_add_btn').addEventListener('click', ()=>{ refreshPriceDropdowns(); resetPriceForm(); openModal('priceModal'); });
 document.getElementById('pr_save').addEventListener('click', ()=>{
   const productId = document.getElementById('pr_product').value;
-  const variantRaw = document.getElementById('pr_variant').value;
-  const variantIdx = variantRaw==='' ? null : Number(variantRaw);
   const supplierId = document.getElementById('pr_supplier').value;
-  const wholesale = document.getElementById('pr_wholesale').value;
-  const retail = document.getElementById('pr_retail').value;
   const date = document.getElementById('pr_date').value || todayISO();
   if(!productId || !supplierId){ toast('Add at least one product and supplier first'); return; }
   const product = data.products.find(p=>p.id===productId);
+
+  if(prBulkMode){
+    if(!product || !Array.isArray(product.variants) || !product.variants.length){ toast('This product has no variants to price'); return; }
+    const unit = document.getElementById('pr_unit').value.trim();
+    const packUnit = document.getElementById('pr_pack_unit').value.trim();
+    const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+    let saved = 0, cleared = 0;
+    product.variants.forEach((v,i)=>{
+      const w = document.querySelector(`.pr-bulk-wholesale[data-idx="${i}"]`).value;
+      const r = document.querySelector(`.pr-bulk-retail[data-idx="${i}"]`).value;
+      const dupIdx = data.prices.findIndex(p=>p.productId===productId && p.variantIdx===i && p.supplierId===supplierId);
+      if(w==='' && r===''){
+        // Nothing entered for this variant -- if a row was pre-filled from
+        // an existing entry and the admin cleared it, that's a deliberate
+        // removal, not just "nothing to say about this one".
+        if(dupIdx!==-1){ data.prices.splice(dupIdx,1); cleared++; }
+        return;
+      }
+      const record = {
+        productId, variantIdx:i, supplierId,
+        wholesale: w===''?null:Number(w), retail: r===''?null:Number(r),
+        date, unit, packUnit, packQty, priceSource:'manual'
+      };
+      if(dupIdx!==-1) data.prices[dupIdx] = {...record, id:data.prices[dupIdx].id, outOfStock:!!data.prices[dupIdx].outOfStock};
+      else data.prices.push({...record, id:data.nextPriceId++, outOfStock:false});
+      saved++;
+    });
+    if(saved===0 && cleared===0){ toast('Enter at least one variant price'); return; }
+    saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
+    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}`);
+    return;
+  }
+
+  const variantRaw = document.getElementById('pr_variant').value;
+  const variantIdx = variantRaw==='' ? null : Number(variantRaw);
+  const wholesale = document.getElementById('pr_wholesale').value;
+  const retail = document.getElementById('pr_retail').value;
   if(product && product.type==='variable' && product.variants && product.variants.length && variantIdx==null){
     toast('Choose a specific variant to price — search and pick one from the list'); return;
   }
