@@ -6,6 +6,17 @@
 <title>Omni-Ware Agent</title>
 <link rel="manifest" href="/manifest-agent.json">
 <style>
+  /* Self-hosted (not a live Google Fonts CDN call) so money figures still
+     render with zero external-network dependency -- one small same-origin
+     file, cached like any other app asset, with a monospace fallback in
+     --font-money in case it's ever slow to arrive. */
+  @font-face{
+    font-family:'Fraunces';
+    font-style:normal;
+    font-weight:700 900;
+    font-display:swap;
+    src:url('/fonts/Fraunces-Black.woff2') format('woff2');
+  }
   :root{
     --bg: #F5F6F8;
     --panel: #FFFFFF;
@@ -27,7 +38,8 @@
     --danger-bg: #FDECEC;
     --bonus: #B45309;
     --bonus-bg: #FEF3E2;
-    --font-money: ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+    --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-money: 'Fraunces', ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -275,7 +287,14 @@
   .ag-grid-variant{display:inline-block;max-width:100%;font-weight:700;font-size:10.5px;letter-spacing:.01em;color:var(--accent-dark);background:var(--accent-soft);padding:2.5px 7px;border-radius:6px;margin:5px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ag-grid-pack{font-size:10.5px;font-weight:500;color:var(--ink-soft);letter-spacing:.005em;margin-bottom:7px;}
   .ag-grid-price{font-family:var(--font-money);font-size:13.5px;font-weight:800;letter-spacing:-0.01em;color:var(--accent-dark);line-height:1.25;}
-  .ag-price-unit{font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
+  .ag-price-unit{font-family:var(--font-sans);font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
+  /* Which pricing tier the shown figure is: retail (buy any amount) vs
+     wholesale (only unlocks once you buy a full pack/carton+) -- without
+     this an agent can't tell the two apart until they've already typed a
+     quantity and watched the price jump. */
+  .ag-price-tier{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+  .ag-price-tier.retail{color:var(--ink-soft);}
+  .ag-price-tier.wholesale{color:var(--rust);}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
@@ -1243,6 +1262,16 @@ function saveRecentSearch(q){
   localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
 }
 
+// Wholesale-tier cards get the min-qty spelled out -- that's the number
+// that actually changes if an agent orders less than they assumed.
+// escapeHtml=false when assigning to a node's textContent (see packSentence).
+function priceTierLabel(tier, packQty, unit, escapeHtml){
+  const e = escapeHtml===false ? (s=>s) : esc;
+  if(tier==='wholesale') return `Wholesale${packQty ? ` · min ${e(packQty)}${e(String(unit||'').toLowerCase())}` : ''}`;
+  if(tier==='retail') return 'Retail price';
+  return '';
+}
+
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
@@ -1251,6 +1280,7 @@ function browseCardHTML(it, promoted, opts){
   const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
   const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
+  const tierLabel = priceTierLabel(it.tier, it.packQty, it.unit);
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -1262,6 +1292,7 @@ function browseCardHTML(it, promoted, opts){
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
+      ${tierLabel ? `<div class="ag-price-tier ${esc(it.tier)}">${tierLabel}</div>` : ''}
       <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
@@ -1436,6 +1467,7 @@ async function openAddItemPanel(item){
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
+      <div class="ag-price-tier ${esc(item.tier||'')}" id="ag_ai_tier_label">${priceTierLabel(item.tier, item.packQty, item.unit)}</div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
       <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
       <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
@@ -1443,11 +1475,12 @@ async function openAddItemPanel(item){
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 
-  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty;
+  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty, liveTier = item.tier;
   const qtyEl = document.getElementById('ag_ai_qty');
   const priceEl = document.getElementById('ag_ai_price');
   const hintEl = document.getElementById('ag_ai_cost_hint');
   const packLabelEl = document.getElementById('ag_ai_pack_label');
+  const tierLabelEl = document.getElementById('ag_ai_tier_label');
   let repricing = false;
   const reprice = async ()=>{
     const qty = Number(qtyEl.value);
@@ -1456,9 +1489,11 @@ async function openAddItemPanel(item){
     try{
       const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
       if(res.available){
-        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
+        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty; liveTier = res.tier;
         hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
         packLabelEl.textContent = packSentence(livePackQty, liveUnit, livePackUnit, false);
+        tierLabelEl.className = `ag-price-tier ${liveTier||''}`;
+        tierLabelEl.textContent = priceTierLabel(liveTier, livePackQty, liveUnit, false);
       }
     }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
     repricing = false;
@@ -1472,7 +1507,7 @@ async function openAddItemPanel(item){
     if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
-      qty, unit: liveUnit, packUnit: livePackUnit, packQty: livePackQty,
+      qty, unit: liveUnit, packUnit: livePackUnit, packQty: livePackQty, tier: liveTier,
       floorPrice: liveFloor, agentSellPrice,
     });
     document.body.removeChild(el);
