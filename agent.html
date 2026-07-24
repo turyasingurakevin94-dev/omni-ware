@@ -289,12 +289,13 @@
   .ag-grid-price{font-family:var(--font-money);font-size:13.5px;font-weight:800;letter-spacing:-0.01em;color:var(--accent-dark);line-height:1.25;}
   .ag-price-unit{font-family:var(--font-sans);font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
   /* Which pricing tier the shown figure is: retail (buy any amount) vs
-     wholesale (only unlocks once you buy a full pack/carton+) -- without
-     this an agent can't tell the two apart until they've already typed a
-     quantity and watched the price jump. */
-  .ag-price-tier{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
-  .ag-price-tier.retail{color:var(--ink-soft);}
-  .ag-price-tier.wholesale{color:var(--rust);}
+     wholesale (only unlocks once you buy a full pack/carton+) -- a solid
+     badge, not just tinted text, so it reads at a glance instead of
+     blending into the pack-info line right above it. */
+  .ag-price-tier{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 8px;border-radius:20px;margin-bottom:6px;white-space:nowrap;}
+  .ag-price-tier .icon{width:10px;height:10px;}
+  .ag-price-tier.retail{color:var(--slate);background:var(--slate-soft);}
+  .ag-price-tier.wholesale{color:#fff;background:var(--rust);}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
@@ -1164,6 +1165,10 @@ function browseItems(){
 
 const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>`;
+// Retail = single tag; wholesale = a stack of boxes -- reinforces the
+// retail/wholesale badge's meaning by shape, not color alone.
+const ICON_TAG = `<svg class="icon" viewBox="0 0 24 24"><path d="M20.59 13.41 12 22l-9-9V4h9l9 9.41a2 2 0 0 1 0 2.83z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>`;
+const ICON_BOXES = `<svg class="icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>`;
 
 // Flat, single-path category icons keyed by keyword match against the
 // shop's own free-text category names -- there's no fixed taxonomy to
@@ -1262,13 +1267,15 @@ function saveRecentSearch(q){
   localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
 }
 
-// Wholesale-tier cards get the min-qty spelled out -- that's the number
-// that actually changes if an agent orders less than they assumed.
-// escapeHtml=false when assigning to a node's textContent (see packSentence).
-function priceTierLabel(tier, packQty, unit, escapeHtml){
-  const e = escapeHtml===false ? (s=>s) : esc;
-  if(tier==='wholesale') return `Wholesale${packQty ? ` · min ${e(packQty)}${e(String(unit||'').toLowerCase())}` : ''}`;
-  if(tier==='retail') return 'Retail price';
+// Kept short and single-line on purpose -- the exact min quantity for
+// wholesale is already spelled out right above in the pack-info line, so
+// repeating it here would just make the badge wrap and lose its pill
+// shape. Returns the full inner HTML of the badge (icon + text), safe to
+// assign via innerHTML anywhere -- the icon reinforces the retail/
+// wholesale meaning by shape, not color alone.
+function priceTierBadgeHTML(tier){
+  if(tier==='wholesale') return `${ICON_BOXES}<span>Wholesale price</span>`;
+  if(tier==='retail') return `${ICON_TAG}<span>Retail price</span>`;
   return '';
 }
 
@@ -1280,7 +1287,6 @@ function browseCardHTML(it, promoted, opts){
   const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
   const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
-  const tierLabel = priceTierLabel(it.tier, it.packQty, it.unit);
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -1292,7 +1298,7 @@ function browseCardHTML(it, promoted, opts){
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      ${tierLabel ? `<div class="ag-price-tier ${esc(it.tier)}">${tierLabel}</div>` : ''}
+      ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
       <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
@@ -1467,7 +1473,7 @@ async function openAddItemPanel(item){
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
       <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
-      <div class="ag-price-tier ${esc(item.tier||'')}" id="ag_ai_tier_label">${priceTierLabel(item.tier, item.packQty, item.unit)}</div>
+      <div class="ag-price-tier ${esc(item.tier||'')}" id="ag_ai_tier_label">${priceTierBadgeHTML(item.tier)}</div>
       <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
       <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
       <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
@@ -1493,7 +1499,7 @@ async function openAddItemPanel(item){
         hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
         packLabelEl.textContent = packSentence(livePackQty, liveUnit, livePackUnit, false);
         tierLabelEl.className = `ag-price-tier ${liveTier||''}`;
-        tierLabelEl.textContent = priceTierLabel(liveTier, livePackQty, liveUnit, false);
+        tierLabelEl.innerHTML = priceTierBadgeHTML(liveTier);
       }
     }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
     repricing = false;
