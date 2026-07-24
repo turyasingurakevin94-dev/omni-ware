@@ -561,6 +561,14 @@ function fmtPricePerUnit(n, unit){
   const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
   return unit ? `UGX ${amount} /${esc(String(unit).toLowerCase())}` : `UGX ${amount}`;
 }
+// e.g. "Sold per 'ctn', and there are 20pkt in a 'ctn'"
+// escapeHtml=false when assigning to a node's textContent (already injection-safe,
+// and esc()'s HTML-entity output would otherwise show up as literal text).
+function packSentence(packQty, unit, packUnit, escapeHtml){
+  const e = escapeHtml===false ? (s=>s) : esc;
+  if(packQty && packUnit) return `Sold per '${e(packUnit)}', and there are ${e(packQty)}${e(unit||'')} in a '${e(packUnit)}'`;
+  return unit ? `Sold per '${e(unit)}'` : '';
+}
 
 function ensureAuthOverlay(){
   let el = document.getElementById('authOverlay');
@@ -1396,7 +1404,7 @@ async function openBrowseView(){
 async function openAddItemPanel(item){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
-  const packLabel = item.packQty ? `${esc(item.packQty)} ${esc(item.unit||'')} / ${esc(item.packUnit||'pack')}` : (item.unit ? `Per ${esc(item.unit)}` : '');
+  const packLabel = packSentence(item.packQty, item.unit, item.packUnit);
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
@@ -1426,7 +1434,7 @@ async function openAddItemPanel(item){
       if(res.available){
         liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty;
         hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
-        packLabelEl.textContent = livePackQty ? `${livePackQty} ${liveUnit||''} / ${livePackUnit||'pack'}` : (liveUnit ? `Per ${liveUnit}` : '');
+        packLabelEl.textContent = packSentence(livePackQty, liveUnit, livePackUnit, false);
       }
     }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
     repricing = false;
@@ -1453,7 +1461,7 @@ async function openAddItemPanel(item){
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
   wrap.innerHTML = cart.map((it,i)=>{
-    const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : '';
+    const packLabel = packSentence(it.packQty, it.unit, it.packUnit);
     return `
     <div class="ag-cart-row">
       <div class="ag-cart-row-body">
