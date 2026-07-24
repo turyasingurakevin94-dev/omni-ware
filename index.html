@@ -377,6 +377,20 @@
   .searchable-select .suggestion-item .sid{color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:11.5px;margin-right:6px;}
   .searchable-select .suggestion-empty{padding:12px;color:var(--ink-soft);font-size:13px;}
   .searchable-select .suggestion-variant-note{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  /* The "whole product / price them together" row (bulk mode entry point)
+     needs to visually stand out from the plain per-variant rows around it,
+     or it just reads as one more list item and never gets noticed. */
+  .searchable-select .suggestion-item.suggestion-bulk{
+    background:#FEF6E7;border-left:3px solid var(--accent);padding-left:9px;
+  }
+  .searchable-select .suggestion-item.suggestion-bulk:hover{background:#FCEACB;}
+  .suggestion-bulk-badge{
+    display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:var(--accent-ink);
+    font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+    padding:2.5px 8px 2.5px 6px;border-radius:20px;margin-left:8px;vertical-align:middle;
+  }
+  .suggestion-bulk-badge .icon{width:11px;height:11px;stroke-width:2.5;}
+  .suggestion-bulk-note{font-size:11.5px;color:var(--accent-ink);font-weight:600;margin-top:2px;}
   mark.sr-hl{background:#FBE39A;color:inherit;padding:0 1px;border-radius:2px;}
 
   /* Print */
@@ -4887,8 +4901,8 @@ function buildProductSuggestionEntries(tokens, opts){
 function suggestionEntryHTML(entry, tokens){
   const {p, variantIdx, wholeProduct} = entry;
   if(wholeProduct){
-    return `<div class="suggestion-item" data-id="${esc(p.id)}"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}
-      <div class="suggestion-variant-note">All ${p.variants.length} variants — price them together</div>
+    return `<div class="suggestion-item suggestion-bulk" data-id="${esc(p.id)}"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}<span class="suggestion-bulk-badge"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Bulk price</span>
+      <div class="suggestion-bulk-note">All ${p.variants.length} variants — price them together in one go</div>
     </div>`;
   }
   if(variantIdx==null){
