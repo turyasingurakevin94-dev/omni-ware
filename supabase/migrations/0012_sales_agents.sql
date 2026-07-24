@@ -80,9 +80,11 @@ create policy "agent manages own clients" on agent_clients
 -- ---------------------------------------------------------------------
 -- Commission cluster: which supplier-promoted products an agent has
 -- opted into pushing. Bonus commission is only ever calculated and
--- locked in at the moment of a sale if the item was already in the
--- agent's cluster at that time (app-level check, not enforced here) --
--- so there's nothing to game by adding an item after the fact.
+-- locked in at the moment of a sale if added_at is already at least the
+-- shop's configured wait period old (agent-submit-order's
+-- resolveClusterWaitDays(); app-level check, not enforced here) -- so
+-- there's nothing to game by starring a high-bonus item right before
+-- checkout.
 create table agent_clusters (
   shop_id uuid not null references shops(id) on delete cascade,
   agent_id text not null,

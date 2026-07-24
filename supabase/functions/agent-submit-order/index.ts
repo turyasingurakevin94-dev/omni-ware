@@ -95,6 +95,17 @@ function resolveDiscountPcts(product: any, presets: any) {
   };
 }
 
+// How long an item must have already sat in an agent's cluster before a
+// sale of it can earn the cluster bonus -- closes the obvious hole where
+// an agent stars a high-bonus item right before checkout, sells it, then
+// un-stars it again with no real "cluster building" behind it. Shop-wide,
+// configurable in Presets; 7 days when the shop hasn't set one.
+const DEFAULT_CLUSTER_WAIT_DAYS = 7;
+function resolveClusterWaitDays(presets: any): number {
+  const v = presets?.agentClusterWaitDays;
+  return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -172,7 +183,7 @@ Deno.serve(async (req) => {
     ] = await Promise.all([
       admin.from("products").select("*").eq("shop_id", shopId).in("id", productIds),
       admin.from("prices").select("*").eq("shop_id", shopId).in("product_id", productIds),
-      admin.from("agent_clusters").select("product_id, variant_idx").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
+      admin.from("agent_clusters").select("product_id, variant_idx, added_at").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
       admin.from("agent_promotions").select("product_id, variant_idx, bonus_type, bonus_value, starts_at, ends_at").eq("shop_id", shopId).eq("active", true).in("product_id", productIds),
     ]);
     if (productsErr) return json({ error: productsErr.message, stage: "products_lookup" }, 500);
@@ -181,14 +192,24 @@ Deno.serve(async (req) => {
     if (promoErr) return json({ error: promoErr.message, stage: "promo_lookup" }, 500);
     const productsById = new Map<string, any>((products || []).map((p) => [p.id, p]));
 
-    // Bonus commission is only ever locked in if the item was ALREADY in the
-    // agent's cluster before this order (see 0012_sales_agents.sql) -- there's
-    // nothing to game by adding it to the cluster after the sale. The bonus
-    // itself is computed here, once, as a snapshot: it's based on the real
-    // floor price (what the shop actually sold at), never the agent's own
-    // resale price to their client, so an agent can't inflate their own bonus
-    // just by typing a higher client-facing price.
-    const clusterKeys = new Set((clusterRows || []).map((c) => `${c.product_id}::${c.variant_idx || ""}`));
+    // Bonus commission only ever locks in if the item has been sitting in
+    // the agent's cluster for at least resolveClusterWaitDays() already --
+    // not merely "in the cluster right now" (see 0012_sales_agents.sql for
+    // the original, weaker version of this comment). Otherwise an agent
+    // could star a high-bonus item moments before checkout, collect the
+    // bonus, then un-star it -- no real cluster-building behind it. The
+    // bonus itself is computed here, once, as a snapshot: it's based on
+    // the real floor price (what the shop actually sold at), never the
+    // agent's own resale price to their client, so an agent can't inflate
+    // their own bonus just by typing a higher client-facing price.
+    const clusterWaitDays = resolveClusterWaitDays(presets);
+    const clusterWaitMs = clusterWaitDays * 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+    const eligibleClusterKeys = new Set(
+      (clusterRows || [])
+        .filter((c) => nowMs - new Date(c.added_at).getTime() >= clusterWaitMs)
+        .map((c) => `${c.product_id}::${c.variant_idx || ""}`)
+    );
     const today = todayISO();
     const promoByKey = new Map(
       (promoRows || [])
@@ -212,7 +233,7 @@ Deno.serve(async (req) => {
 
       const key = `${product.id}::${variantIdx == null ? "" : variantIdx}`;
       const promo = promoByKey.get(key);
-      const bonusCommission = promo && clusterKeys.has(key)
+      const bonusCommission = promo && eligibleClusterKeys.has(key)
         ? (promo.bonus_type === "fixed"
           ? Number(promo.bonus_value) * Number(it.qty)
           : (Number(promo.bonus_value) / 100) * priced.floorPrice * Number(it.qty))
