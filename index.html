@@ -512,8 +512,11 @@
   }
   .preset-chip button{all:unset;cursor:pointer;display:flex;color:var(--ink-soft);width:15px;height:15px;align-items:center;justify-content:center;border-radius:50%;}
   .preset-chip button:hover{color:var(--danger);background:#fff;}
+  .preset-chip button.preset-chip-edit:hover{color:var(--accent);}
   .preset-chip .icon{width:10px;height:10px;}
   .preset-chip-flow{display:flex;flex-wrap:wrap;gap:6px;}
+  .preset-chip-editing{padding:2px;background:none;}
+  .preset-chip-editing input{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);border:1px solid var(--accent);border-radius:16px;padding:4px 10px;min-width:80px;}
   .preset-list{display:flex;flex-direction:column;}
   .preset-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;}
   .preset-row:last-child{border-bottom:none;}
@@ -10838,15 +10841,41 @@ function renderPresetCategories(){
     if(e.key==='Enter'){ e.preventDefault(); wrap.querySelector(`.preset-sub-add[data-idx="${inp.dataset.idx}"]`).click(); }
   }));
 }
-function renderPresetUnits(){
+function renderPresetUnits(editIdx){
   const wrap = document.getElementById('presetUnitsWrap');
   const units = data.presetUnits||[];
   wrap.innerHTML = units.length===0 ? '<div class="preset-empty">No units yet — add one above.</div>' :
-    `<div class="preset-chip-flow">${units.map((u,i)=>`<span class="preset-chip">${esc(u)}<button type="button" class="preset-unit-remove" data-idx="${i}" title="Remove unit"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
+    `<div class="preset-chip-flow">${units.map((u,i)=> i===editIdx ?
+      `<span class="preset-chip preset-chip-editing"><input type="text" class="preset-unit-edit-input" data-idx="${i}" value="${esc(u)}"></span>` :
+      `<span class="preset-chip">${esc(u)}<button type="button" class="preset-chip-edit preset-unit-edit" data-idx="${i}" title="Rename unit">${ICON_EDIT}</button><button type="button" class="preset-unit-remove" data-idx="${i}" title="Remove unit"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`
+    ).join('')}</div>`;
   wrap.querySelectorAll('.preset-unit-remove').forEach(btn=>btn.addEventListener('click', e=>{
     data.presetUnits.splice(Number(e.currentTarget.dataset.idx),1);
     saveData(); renderPresets();
   }));
+  wrap.querySelectorAll('.preset-unit-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetUnits(Number(e.currentTarget.dataset.idx));
+  }));
+  const editInput = wrap.querySelector('.preset-unit-edit-input');
+  if(editInput){
+    editInput.focus(); editInput.select();
+    let cancelled = false;
+    const commit = ()=>{
+      if(cancelled) return;
+      const idx = Number(editInput.dataset.idx);
+      const val = editInput.value.trim();
+      if(!val || val===data.presetUnits[idx]){ renderPresetUnits(); return; }
+      if(data.presetUnits.some((u,ui)=>ui!==idx && u.toLowerCase()===val.toLowerCase())){ toast('That unit already exists'); renderPresetUnits(); return; }
+      data.presetUnits[idx] = val;
+      saveData(); renderPresets();
+      toast('Unit renamed');
+    };
+    editInput.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); editInput.blur(); }
+      else if(e.key==='Escape'){ e.preventDefault(); cancelled=true; renderPresetUnits(); }
+    });
+    editInput.addEventListener('blur', commit);
+  }
 }
 function renderPresetCashCats(dataKey, wrapId, removeClass){
   const wrap = document.getElementById(wrapId);
