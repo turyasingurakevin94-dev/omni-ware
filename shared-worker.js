@@ -763,6 +763,10 @@ async function enableNativePush(){
 function registerNativePushListeners(){
   const { PushNotifications } = window.Capacitor.Plugins;
   PushNotifications.addListener('registration', async (token)=>{
+    // boot() also calls this silently on every native launch (once already
+    // subscribed) to keep the stored token current after a reinstall --
+    // only toast on a genuine first-time opt-in, not that silent refresh.
+    const wasAlreadySubscribed = hasPushSubscription;
     const { error } = await sb.from('push_subscriptions').upsert({
       shop_id: currentShopId, staff_id: myStaff.id, user_id: currentUser.id,
       fcm_token: token.value
@@ -771,7 +775,7 @@ function registerNativePushListeners(){
     hasPushSubscription = true;
     const wrap = document.getElementById('wv_enablePushWrap');
     if(wrap) wrap.style.display = 'none';
-    toast('Notifications enabled');
+    if(!wasAlreadySubscribed) toast('Notifications enabled');
   });
   PushNotifications.addListener('registrationError', (err)=>{
     toast(`Could not enable notifications: ${(err && err.error) || err}`);

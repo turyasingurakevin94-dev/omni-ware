@@ -359,7 +359,19 @@ async function boot(){
   if(myStaff){
     const { data: existingSub } = await sb.from('push_subscriptions').select('id').eq('staff_id', myStaff.id).eq('user_id', currentUser.id).limit(1).maybeSingle();
     hasPushSubscription = !!existingSub;
-    if(isNativeApp()) registerNativePushListeners();
+    if(isNativeApp()){
+      registerNativePushListeners();
+      // Reinstalling the APK (a new debug build, a signature mismatch
+      // forcing uninstall/reinstall) silently mints a new FCM token, but
+      // the DB still has whatever token was registered the first time the
+      // user tapped "Enable notifications" -- that row going stale after a
+      // reinstall is exactly why a push can stop arriving with no error
+      // anywhere (FCM just accepts the send for a token nobody's listening
+      // on anymore). Re-registering on every native launch once permission
+      // is already granted is a silent no-op prompt-wise (checkPermissions
+      // already returns granted) but keeps the stored token current.
+      if(hasPushSubscription) enableNativePush();
+    }
   }
   // Remove the loading class before rendering, not after -- the carousel's
   // initial scrollIntoView() (centering the focused card) is a no-op on an
