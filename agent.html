@@ -561,12 +561,12 @@ function fmtPricePerUnit(n, unit){
   const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
   return unit ? `UGX ${amount} /${esc(String(unit).toLowerCase())}` : `UGX ${amount}`;
 }
-// e.g. "Sold per ctn, and there are 20pkt in a ctn"
+// e.g. "Sold per pkt, and there are 20pkt in a ctn"
 // escapeHtml=false when assigning to a node's textContent (already injection-safe,
 // and esc()'s HTML-entity output would otherwise show up as literal text).
 function packSentence(packQty, unit, packUnit, escapeHtml){
   const e = escapeHtml===false ? (s=>s) : esc;
-  if(packQty && packUnit) return `Sold per ${e(packUnit)}, and there are ${e(packQty)}${e(unit||'')} in a ${e(packUnit)}`;
+  if(packQty && packUnit) return `Sold per ${e(unit||'')}, and there are ${e(packQty)}${e(unit||'')} in a ${e(packUnit)}`;
   return unit ? `Sold per ${e(unit)}` : '';
 }
 
