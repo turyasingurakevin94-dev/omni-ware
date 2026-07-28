@@ -60,16 +60,22 @@ function suggestedSellingPrice(product: any, basePrice: number | null, kind: Mar
   return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
 }
 
-// Resolves the unit price a price row actually charges at a given order
-// quantity: the flat wholesale/retail figure by default, or the highest
-// tier whose minQty the quantity clears. Duplicated verbatim in
-// agent-submit-order (see that file's module header for why) and mirrors
-// index.html's own tieredUnitPrice() exactly.
+// One shared tier list (row.tiers) covers both sides of the wholesale/
+// retail curve -- a tier only counts toward "wholesale" if it needs at
+// least a full pack to unlock (the same qty-vs-pack-size line that
+// already decides which of the two applies below), otherwise it counts
+// toward "retail". Nothing declares which side a tier belongs to; its own
+// minQty does. Duplicated verbatim in agent-submit-order (see that file's
+// module header for why) and mirrors index.html's own tieredUnitPrice()
+// exactly.
 function tieredUnitPrice(row: any, qty: number, kind: MarkupKind): number | null {
   const base = row[kind];
   if (base == null) return null;
-  const tiers = row[kind === "wholesale" ? "wholesale_tiers" : "retail_tiers"];
-  if (!Array.isArray(tiers) || !tiers.length) return Number(base);
+  const packQty = Number(row.pack_qty) || 0;
+  const tiers = (Array.isArray(row.tiers) ? row.tiers : []).filter((t: any) =>
+    kind === "wholesale" ? (packQty > 0 && t.minQty >= packQty) : (packQty === 0 || t.minQty < packQty)
+  );
+  if (!tiers.length) return Number(base);
   let best = Number(base), bestMinQty = 0;
   tiers.forEach((t: any) => {
     if (t.price != null && qty >= t.minQty && t.minQty >= bestMinQty) { best = Number(t.price); bestMinQty = t.minQty; }
