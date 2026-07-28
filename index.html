@@ -4677,9 +4677,9 @@ function deriveWholesaleRetail(tiers, packQty){
     retail: retailTier ? retailTier.price : null
   };
 }
-function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null){
+function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null, packQty=0){
   if(basePrice==null) return null;
-  const s = suggestedSellingPrice(product, basePrice, kind, variantIdx);
+  const s = suggestedSellingPrice(product, basePrice, kind, variantIdx, packQty);
   return s!=null ? s : basePrice;
 }
 
@@ -4777,15 +4777,19 @@ function effectiveStockMarkupRule(product, variantIdx, kind){
   if(pVal>0) return {type:product[typeKey], value:pVal, source:'product-stock'};
   return effectiveMarkupRule(product, variantIdx, kind);
 }
-function suggestedStockSellingPrice(product, basePrice, kind, variantIdx=null){
+function suggestedStockSellingPrice(product, basePrice, kind, variantIdx=null, packQty=0){
   if(basePrice==null || !product) return null;
   const rule = effectiveStockMarkupRule(product, variantIdx, kind);
   if(!rule) return null;
-  return rule.type==='fixed' ? basePrice+rule.value : basePrice*(1+rule.value/100);
+  if(rule.type==='fixed'){
+    const fixedPerUnit = (kind==='wholesale' && packQty>0) ? rule.value/packQty : rule.value;
+    return basePrice+fixedPerUnit;
+  }
+  return basePrice*(1+rule.value/100);
 }
-function quoteSuggestedStockPrice(product, basePrice, kind, variantIdx=null){
+function quoteSuggestedStockPrice(product, basePrice, kind, variantIdx=null, packQty=0){
   if(basePrice==null) return null;
-  const s = suggestedStockSellingPrice(product, basePrice, kind, variantIdx);
+  const s = suggestedStockSellingPrice(product, basePrice, kind, variantIdx, packQty);
   return s!=null ? s : basePrice;
 }
 
@@ -5295,13 +5299,13 @@ function renderIpStage(){
   // current list price.
   let suggWholesale, suggRetail;
   if(ipSelectedSupplierId==='__stock__' && stockCost!=null){
-    suggWholesale = quoteSuggestedStockPrice(product, stockCost, 'wholesale', variantIdx);
-    suggRetail = quoteSuggestedStockPrice(product, stockCost, 'retail', variantIdx);
+    suggWholesale = quoteSuggestedStockPrice(product, stockCost, 'wholesale', variantIdx, packQty);
+    suggRetail = quoteSuggestedStockPrice(product, stockCost, 'retail', variantIdx, packQty);
   } else {
     const wTiered = refRow && refRow.wholesale!=null ? tieredUnitPrice(refRow, qty, 'wholesale') : null;
     const rTiered = refRow && refRow.retail!=null ? tieredUnitPrice(refRow, qty, 'retail') : null;
-    suggWholesale = wTiered!=null ? quoteSuggestedPrice(product, wTiered, 'wholesale', variantIdx) : null;
-    suggRetail = rTiered!=null ? quoteSuggestedPrice(product, rTiered, 'retail', variantIdx) : null;
+    suggWholesale = wTiered!=null ? quoteSuggestedPrice(product, wTiered, 'wholesale', variantIdx, packQty) : null;
+    suggRetail = rTiered!=null ? quoteSuggestedPrice(product, rTiered, 'retail', variantIdx, packQty) : null;
   }
 
   const stockCardHtml = stockQty>0 ? `<label class="q-supplier-card stock-card ${ipSelectedSupplierId==='__stock__'?'selected':''}">
@@ -9748,7 +9752,7 @@ function renderAgentDiscountHints(){
       warnEl.style.display = 'none';
       return;
     }
-    const ourPrice = suggestedSellingPrice(draftProduct, cost, kind, null) ?? cost;
+    const ourPrice = suggestedSellingPrice(draftProduct, cost, kind, null, Number(best.packQty)||0) ?? cost;
     const ceiling = ourPrice>0 ? Math.max(0, (ourPrice-cost)/ourPrice*100) : 0;
     hintEl.textContent = `Current markup allows up to ${ceiling.toFixed(1)}% off before hitting cost.`;
     const typed = inputEl.value==='' ? null : Number(inputEl.value);
@@ -10514,11 +10518,23 @@ document.addEventListener('click', (e)=>{
   if(!e.target.closest('.searchable-select')) hideCmpSuggestions();
 });
 
-function suggestedSellingPrice(product, basePrice, kind, variantIdx=null){
+// A fixed wholesale markup is naturally an amount added to the PACK price
+// (e.g. +10,000 on a 300,000/ctn cost -> 310,000/ctn = 15,500/dzn), not to
+// the per-unit price -- wholesale is bought and sold by the pack, so
+// that's the number a shop actually types when they say "add 10,000".
+// Percent markups don't need this: they scale identically whichever way
+// you compute them, so only 'fixed' needs the pack conversion. packQty is
+// the item's Units per pack; 0 (no pack info) means there's no pack to
+// convert through, so the fixed amount applies directly as before.
+function suggestedSellingPrice(product, basePrice, kind, variantIdx=null, packQty=0){
   if(basePrice==null || !product) return null;
   const rule = effectiveMarkupRule(product, variantIdx, kind);
   if(!rule) return null;
-  return rule.type==='fixed' ? basePrice+rule.value : basePrice*(1+rule.value/100);
+  if(rule.type==='fixed'){
+    const fixedPerUnit = (kind==='wholesale' && packQty>0) ? rule.value/packQty : rule.value;
+    return basePrice+fixedPerUnit;
+  }
+  return basePrice*(1+rule.value/100);
 }
 
 function renderCompare(){
@@ -10555,7 +10571,7 @@ function renderCompare(){
         </div>
         <div class="sc-stats">
           <div class="sc-stat"><b>${fmtUGXPerUnit(r[field], r.unit)}</b><span>Price</span></div>
-          ${showSuggested?`<div class="sc-stat"><b class="txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</b><span>Suggested</span></div>`:''}
+          ${showSuggested?`<div class="sc-stat"><b class="txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx, r.packQty))}</b><span>Suggested</span></div>`:''}
           <div class="sc-stat"><b>${esc(r.date)}</b><span>Date</span></div>
         </div>
         ${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}
@@ -10566,7 +10582,7 @@ function renderCompare(){
           <td>${esc(r.sname)} ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}</td>
           <td>${esc(r.unit)}</td>
           <td class="price">${fmtUGX(r[field])}${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}</td>
-          ${showSuggested?`<td class="price txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</td>`:''}
+          ${showSuggested?`<td class="price txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx, r.packQty))}</td>`:''}
           <td>${esc(r.date)}</td>
         </tr>`).join('')}
     </tbody></table></div>

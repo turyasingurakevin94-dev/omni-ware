@@ -53,11 +53,20 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
   return null;
 }
 
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null): number | null {
+// A fixed wholesale markup is naturally an amount added to the PACK price
+// (e.g. +10,000 on a 300,000/ctn cost -> 310,000/ctn = 15,500/dzn), not the
+// per-unit price -- wholesale is bought and sold by the pack. Percent
+// markups don't need this (they scale identically either way). Mirrors
+// index.html's own suggestedSellingPrice() exactly.
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0): number | null {
   if (basePrice == null) return null;
   const rule = effectiveMarkupRule(product, variantIdx, kind);
   if (!rule) return null;
-  return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
+  if (rule.type === "fixed") {
+    const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
+    return basePrice + fixedPerUnit;
+  }
+  return basePrice * (1 + rule.value / 100);
 }
 
 // One shared tier list (row.tiers) covers both sides of the wholesale/
@@ -115,7 +124,7 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   // has one, for this same quantity.
   const costNum = tieredUnitPrice(priceRow, qty, tier);
   if (costNum == null) return null;
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
   const discounted = ourPrice * (1 - (discountPct || 0) / 100);
   return {
