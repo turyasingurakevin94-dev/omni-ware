@@ -3402,13 +3402,11 @@
           <input type="hidden" id="pr_supplier">
           <div class="suggestions" id="pr_supplier_suggestions"></div>
         </div>
-        <div class="field" id="pr_wholesale_field"><label>Wholesale price (UGX)</label><input id="pr_wholesale" type="number" min="0" placeholder="e.g. 37000"></div>
-        <div class="field" id="pr_retail_field"><label>Retail price (UGX)</label><input id="pr_retail" type="number" min="0" placeholder="e.g. 41000"></div>
         <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
       </div>
       <div id="pr_tiers_wrap" style="display:none;">
-        <div class="section-label-row form-section-label" style="margin-top:16px;">Volume pricing (optional)
-          <span class="info-tip" tabindex="0"><span class="tip-bubble">Add a breakpoint wherever this supplier's price actually changes with quantity -- e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don't need to sort them yourself. Leave empty to charge the wholesale/retail prices above at every quantity.</span></span>
+        <div class="section-label-row form-section-label" style="margin-top:16px;">Pricing
+          <span class="info-tip" tabindex="0"><span class="tip-bubble">Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier's price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don't need to sort them yourself.</span></span>
         </div>
         <div id="pr_tiers_list_wrap"></div>
         <div class="pr-tier-add">
@@ -4620,6 +4618,22 @@ function tieredUnitPrice(row, qty, kind){
   });
   return best;
 }
+// The price entry form no longer has separate flat wholesale/retail
+// inputs -- everything's typed into the one tier list. wholesale/retail
+// are derived from it for the many places that still read those two
+// flat fields directly (Compare Prices ranking, quote suggestions, agent
+// pricing, markup rules): the lowest-quantity tier on each side of the
+// pack-size split becomes that side's rate, same as what the flat field
+// used to mean -- "the price before any volume discount kicks in".
+function deriveWholesaleRetail(tiers, packQty){
+  const sorted = (tiers||[]).slice().sort((a,b)=>a.minQty-b.minQty);
+  const retailTier = sorted.find(t=> packQty===0 || t.minQty<packQty);
+  const wholesaleTier = packQty>0 ? sorted.find(t=>t.minQty>=packQty) : undefined;
+  return {
+    wholesale: wholesaleTier ? wholesaleTier.price : null,
+    retail: retailTier ? retailTier.price : null
+  };
+}
 function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null){
   if(basePrice==null) return null;
   const s = suggestedSellingPrice(product, basePrice, kind, variantIdx);
@@ -4646,6 +4660,17 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price)
   const field = priceRow.wholesale!=null ? 'wholesale' : 'retail';
   if(Number(priceRow[field])!==price){
     priceRow[field] = price;
+    // The flat field is only a derived view of "the lowest-quantity tier
+    // on this side" (see deriveWholesaleRetail) -- correcting it here has
+    // to update that same tier too, or the next quote at that quantity
+    // would silently keep resolving to the old, now-stale tier price.
+    if(!Array.isArray(priceRow.tiers)) priceRow.tiers = [];
+    const baseTiers = tiersForKind(priceRow, field).sort((a,b)=>a.minQty-b.minQty);
+    if(baseTiers.length) baseTiers[0].price = price;
+    else {
+      priceRow.tiers.push({minQty: field==='wholesale' ? (Number(priceRow.packQty)||0) : 1, price});
+      priceRow.tiers.sort((a,b)=>a.minQty-b.minQty);
+    }
     priceRow.date = todayISO();
     priceRow.priceSource = 'purchase';
   }
@@ -9941,8 +9966,6 @@ function hidePrSuggestions(){ document.getElementById('pr_suggestions').classLis
 let prBulkMode = false;
 function setPrBulkMode(on){
   prBulkMode = on;
-  document.getElementById('pr_wholesale_field').style.display = on ? 'none' : '';
-  document.getElementById('pr_retail_field').style.display = on ? 'none' : '';
   document.getElementById('pr_bulk_wrap').style.display = on ? '' : 'none';
   // Volume pricing is per single product+variant+supplier entry -- bulk
   // mode prices every variant at once, so there's no one place to hang a
@@ -10143,19 +10166,32 @@ function renderPrices(filter='', supplierFilter='', categoryFilter=''){
   }
   wrap.innerHTML = `<div class="price-grid">${rows.map(r=>priceCardHTML(r, tokens)).join('')}</div>`;
 }
+// A price entry saved before the single-list rework (or one that's only
+// ever had flat wholesale/retail typed, never a tier) has no `tiers` of
+// its own -- reconstruct one so editing it through the unified list still
+// shows its real prices instead of an empty form. Retail becomes the
+// qty-1 tier; wholesale becomes the tier at exactly the pack quantity
+// (skipped if there's no pack size, since a flat wholesale price with no
+// pack qty was already unreachable before this rework -- qty>=packQty
+// can never be true when packQty is 0).
+function tiersFromLegacyRow(r){
+  if(Array.isArray(r.tiers) && r.tiers.length) return r.tiers.map(t=>({...t}));
+  const synthesized = [];
+  if(r.retail!=null) synthesized.push({minQty:1, price:Number(r.retail)});
+  if(r.wholesale!=null && Number(r.packQty)>0) synthesized.push({minQty:Number(r.packQty), price:Number(r.wholesale)});
+  return synthesized;
+}
 function editPrice(id){
   const r = data.prices.find(x=>x.id===id); if(!r) return;
   editingPriceId = id;
   refreshPriceDropdowns();
   selectPrProduct(r.productId, r.variantIdx==null ? null : r.variantIdx);
   selectPrSupplier(r.supplierId);
-  document.getElementById('pr_wholesale').value = r.wholesale;
-  document.getElementById('pr_retail').value = r.retail;
   document.getElementById('pr_date').value = r.date;
   document.getElementById('pr_unit').value = r.unit || '';
   document.getElementById('pr_pack_unit').value = r.packUnit || '';
   document.getElementById('pr_pack_qty').value = r.packQty || '';
-  prTiers = Array.isArray(r.tiers) ? r.tiers.map(t=>({...t})) : [];
+  prTiers = tiersFromLegacyRow(r);
   renderPrTierUnitOptions();
   renderPrTiers();
   document.getElementById('priceFormTitle').textContent = 'Edit price entry';
@@ -10170,8 +10206,6 @@ function resetPriceForm(){
   prTiers = [];
   setPrBulkMode(false);
   selectPrSupplier('');
-  document.getElementById('pr_wholesale').value='';
-  document.getElementById('pr_retail').value='';
   document.getElementById('pr_date').value = todayISO();
   document.getElementById('pr_unit').value = '';
   document.getElementById('pr_pack_unit').value = '';
@@ -10237,20 +10271,24 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
 
   const variantRaw = document.getElementById('pr_variant').value;
   const variantIdx = variantRaw==='' ? null : Number(variantRaw);
-  const wholesale = document.getElementById('pr_wholesale').value;
-  const retail = document.getElementById('pr_retail').value;
   if(product && product.type==='variable' && product.variants && product.variants.length && variantIdx==null){
     toast('Choose a specific variant to price — search and pick one from the list'); return;
   }
-  if(wholesale==='' && retail===''){ toast('Enter a wholesale or retail price'); return; }
+  if(prTiers.length===0){ toast('Add at least one price'); return; }
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  // wholesale/retail are derived from the tier list rather than typed
+  // separately -- the lowest-quantity tier on each side of the pack-size
+  // split becomes that side's rate, same as everywhere else that still
+  // reads these two flat fields (Compare Prices, quote suggestions,
+  // agent pricing) expects.
+  const { wholesale, retail } = deriveWholesaleRetail(prTiers, packQty);
   const record = {
     productId, variantIdx, supplierId,
-    wholesale: wholesale===''? null : Number(wholesale),
-    retail: retail===''? null : Number(retail),
+    wholesale, retail,
     date,
     unit: document.getElementById('pr_unit').value.trim(),
     packUnit: document.getElementById('pr_pack_unit').value.trim(),
-    packQty: Number(document.getElementById('pr_pack_qty').value)||0,
+    packQty,
     priceSource: 'manual',
     tiers: prTiers.slice()
   };
