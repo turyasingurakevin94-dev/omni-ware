@@ -539,6 +539,19 @@
     .preset-row-remove{margin-left:0;}
   }
 
+  /* Price entry modal -- volume/tiered pricing */
+  .pr-tiers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;}
+  .pr-tiers-label{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .pr-tier-chip{font-size:11.5px;}
+  .pr-tier-empty{font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .pr-tier-add{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+  .pr-tier-add input[type=number]{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;}
+  .pr-tier-add select{padding:6px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-family:inherit;background:#fff;}
+  .pr-tier-add .pr-tier-at{font-size:12px;color:var(--ink-soft);}
+  .pr-tier-add .pr-tier-price{width:104px;}
+  .pr-tier-add button{all:unset;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:700;color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;}
+  .pr-tier-add button:hover{color:var(--ink);border-color:var(--ink-soft);}
+
   /* Product modal — sectioned panels + per-variant cards */
   .modal.modal-xwide{max-width:940px;}
   .form-panel{background:#F7F9FB;border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;}
@@ -731,6 +744,8 @@
   .prc-price-box span{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
   .prc-price-box b{font-family:'IBM Plex Mono',monospace;font-size:14.5px;color:var(--ink);font-weight:600;}
   .prc-unit{font-size:11px;color:var(--ink-soft);font-weight:500;}
+  .prc-tiers-note{display:flex;align-items:flex-start;gap:5px;font-size:11px;color:var(--ink-soft);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.5;}
+  .prc-tiers-note .icon{width:12px;height:12px;flex-shrink:0;margin-top:2px;color:var(--accent-ink);}
   .prc-summary{
     font-size:10.5px;color:#3E6FA6;background:#EAF3FC;padding:5px 9px;border-radius:6px;
     line-height:1.5;margin:2px 0 2px;display:block;
@@ -3412,6 +3427,37 @@
         <div class="field" id="pr_retail_field"><label>Retail price (UGX)</label><input id="pr_retail" type="number" min="0" placeholder="e.g. 41000"></div>
         <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
       </div>
+      <div id="pr_tiers_wrap" style="display:none;">
+        <div class="section-label-row form-section-label" style="margin-top:16px;">Volume pricing (optional)
+          <span class="info-tip" tabindex="0"><span class="tip-bubble">Charge a different unit price once the ordered quantity crosses a threshold -- e.g. 1,500 each, but 1,400 each once buying by the carton or more. Wholesale and retail can break at different quantities. Leave empty to charge the price above at every quantity.</span></span>
+        </div>
+        <div class="pr-tiers-grid">
+          <div>
+            <div class="pr-tiers-label">Wholesale tiers</div>
+            <div id="pr_wholesale_tiers_wrap"></div>
+            <div class="pr-tier-add">
+              <span class="pr-tier-at">At</span>
+              <input type="number" id="pr_wtier_qty" min="0" step="any" placeholder="Qty">
+              <select id="pr_wtier_unit"></select>
+              <span class="pr-tier-at">charge</span>
+              <input type="number" id="pr_wtier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
+              <button type="button" id="pr_wtier_add">+ Add tier</button>
+            </div>
+          </div>
+          <div>
+            <div class="pr-tiers-label">Retail tiers</div>
+            <div id="pr_retail_tiers_wrap"></div>
+            <div class="pr-tier-add">
+              <span class="pr-tier-at">At</span>
+              <input type="number" id="pr_rtier_qty" min="0" step="any" placeholder="Qty">
+              <select id="pr_rtier_unit"></select>
+              <span class="pr-tier-at">charge</span>
+              <input type="number" id="pr_rtier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
+              <button type="button" id="pr_rtier_add">+ Add tier</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <!-- Bulk mode: picking a variable product itself (not one specific
            variant) swaps the single wholesale/retail fields above for one
            row per variant here, so a supplier's whole price list for a
@@ -3877,7 +3923,9 @@ async function loadData(shopId){
       id:pr.id, productId:pr.product_id, variantIdx:pr.variant_idx, supplierId:pr.supplier_id,
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
-      priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock
+      priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
+      wholesaleTiers: Array.isArray(pr.wholesale_tiers) ? pr.wholesale_tiers : [],
+      retailTiers: Array.isArray(pr.retail_tiers) ? pr.retail_tiers : []
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
     stock, stockLots,
@@ -3953,7 +4001,8 @@ function buildSyncRows(d, shopId){
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
       wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
-      price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock
+      price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
+      wholesale_tiers: pr.wholesaleTiers||[], retail_tiers: pr.retailTiers||[]
     })),
     stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
     stockLots: d.stockLots,
@@ -4569,6 +4618,22 @@ function rankedPriceRows(productId, variantIdx=null){
   });
 }
 
+// Resolves the unit price a price row actually charges at a given order
+// quantity: the flat wholesale/retail figure by default, or the highest
+// tier whose minQty the quantity clears (tiers are {minQty, price},
+// minQty always in the row's base unit -- see pr_tiers_* in the price
+// entry modal for how pack-based thresholds get converted before saving).
+function tieredUnitPrice(row, qty, kind){
+  if(!row) return null;
+  const base = row[kind];
+  const tiers = row[kind+'Tiers'];
+  if(!Array.isArray(tiers) || !tiers.length) return base;
+  let best = base, bestMinQty = 0;
+  tiers.forEach(t=>{
+    if(t.price!=null && qty>=t.minQty && t.minQty>=bestMinQty){ best = t.price; bestMinQty = t.minQty; }
+  });
+  return best;
+}
 function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null){
   if(basePrice==null) return null;
   const s = suggestedSellingPrice(product, basePrice, kind, variantIdx);
@@ -5020,6 +5085,10 @@ let ipProductId = null;
 let ipVariantIdx = null;
 let ipSelectedSupplierId = null;
 let ipSelectedRecType = null; // 'wholesale' | 'retail' | null
+// Persisted across renderIpStage() re-renders (which rebuild #ip_qty from
+// scratch) so a quantity the shopper already typed survives a supplier
+// switch or the qty-change recompute below, instead of snapping to 1.
+let ipQty = 1;
 
 function ipRenderList(query){
   const tokens = searchTokens(query);
@@ -5099,6 +5168,7 @@ function ipSelectProduct(id, variantIdx=null){
   ipVariantIdx = variantIdx==null ? null : Number(variantIdx);
   ipSelectedSupplierId = null;
   ipSelectedRecType = null;
+  ipQty = 1;
   document.getElementById('ipModalTitle').textContent = 'Add item to quote';
   document.getElementById('ip_search_view').style.display = 'none';
   document.getElementById('ip_stage_view').style.display = 'block';
@@ -5139,6 +5209,12 @@ function renderIpStage(){
   const refRow = selectedRow || ranked[0] || null;
   const unit = refRow ? (refRow.unit || '') : '';
   const stockCost = getFIFOUnitCost(ipProductId, variantIdx);
+  // Quantity is picked further down in this same stage (the Qty field),
+  // so it has to persist across re-renders rather than reset to 1 --
+  // see ipQty's declaration for why. Every price below is resolved for
+  // this quantity, so a volume tier actually shows up as soon as it's
+  // reached instead of only after adding the item.
+  const qty = ipQty;
 
   // When "Our stock" is selected, base the recommended prices on what we
   // actually paid for the stock on hand (+ the item's stock-only markup
@@ -5149,8 +5225,10 @@ function renderIpStage(){
     suggWholesale = quoteSuggestedStockPrice(product, stockCost, 'wholesale', variantIdx);
     suggRetail = quoteSuggestedStockPrice(product, stockCost, 'retail', variantIdx);
   } else {
-    suggWholesale = refRow && refRow.wholesale!=null ? quoteSuggestedPrice(product, refRow.wholesale, 'wholesale', variantIdx) : null;
-    suggRetail = refRow && refRow.retail!=null ? quoteSuggestedPrice(product, refRow.retail, 'retail', variantIdx) : null;
+    const wTiered = refRow && refRow.wholesale!=null ? tieredUnitPrice(refRow, qty, 'wholesale') : null;
+    const rTiered = refRow && refRow.retail!=null ? tieredUnitPrice(refRow, qty, 'retail') : null;
+    suggWholesale = wTiered!=null ? quoteSuggestedPrice(product, wTiered, 'wholesale', variantIdx) : null;
+    suggRetail = rTiered!=null ? quoteSuggestedPrice(product, rTiered, 'retail', variantIdx) : null;
   }
 
   const stockCardHtml = stockQty>0 ? `<label class="q-supplier-card stock-card ${ipSelectedSupplierId==='__stock__'?'selected':''}">
@@ -5165,6 +5243,11 @@ function renderIpStage(){
   </label>` : '';
 
   const rankLabels = ['BEST', '2ND', '3RD'];
+  // Ranking itself (top3/ranked ordering) still sorts by each supplier's
+  // flat qty-1 price -- only the prices shown on the cards follow the
+  // quantity currently typed. A supplier with a steeper volume tier could
+  // in principle overtake another at higher quantities without swapping
+  // rank order here; re-sorting live by qty is a further enhancement.
   const cardsHtml = top3.map((r,i)=>{
     const sel = r.supplierId===ipSelectedSupplierId;
     return `<label class="q-supplier-card ${i===0?'best':''} ${sel?'selected':''}">
@@ -5174,7 +5257,7 @@ function renderIpStage(){
           <span class="q-sc-rank ${i===0?'best':''}">${rankLabels[i]}</span>
           <span class="q-sc-name">${esc(r.sname)}</span>
         </div>
-        <div class="q-sc-prices">${fmtUGXPerUnit(r.wholesale, r.unit)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(r.retail, r.unit)}</div>
+        <div class="q-sc-prices">${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'wholesale'), r.unit)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</div>
       </div>
     </label>`;
   }).join('');
@@ -5189,11 +5272,11 @@ function renderIpStage(){
   ];
 
   // Buy @ is recorded automatically as the actual cost we'd pay (stock
-  // cost, or the supplier's raw quoted price) — it isn't a field in this
-  // popup, only editable later from the quote table.
+  // cost, or the supplier's raw quoted price at this quantity) — it isn't
+  // a field in this popup, only editable later from the quote table.
   const buyStart = ipSelectedSupplierId==='__stock__'
     ? (stockCost!=null ? Math.round(stockCost) : 0)
-    : (refRow ? Math.round(refRow.wholesale!=null ? refRow.wholesale : refRow.retail) : 0);
+    : (refRow ? Math.round(tieredUnitPrice(refRow, qty, refRow.wholesale!=null ? 'wholesale' : 'retail')) : 0);
   // The popup's one price field is "Price each" — it's the sell price
   // charged to the client. Defaults to the suggested retail price;
   // clicking a "Recommended price" card also sets this field, never Buy @.
@@ -5241,7 +5324,7 @@ function renderIpStage(){
         <input type="hidden" id="ip_other_supplier">
         <div class="suggestions" id="ip_other_supplier_suggestions"></div>
       </div>` : ''}
-      <div class="field"><label>Qty</label><input type="number" id="ip_qty" min="1" step="any" value="1"></div>
+      <div class="field"><label>Qty</label><input type="number" id="ip_qty" min="1" step="any" value="${qty}"></div>
       <div class="field"><label>Price each (UGX)</label><input type="number" id="ip_price" min="0" step="any" value="${sellStart}"></div>
       <button class="btn btn-accent" id="ip_add_btn">Add to quote</button>
     </div>
@@ -5254,6 +5337,15 @@ function renderIpStage(){
       ipSelectedRecType = null;
       renderIpStage();
     });
+  });
+  // Re-resolves recommended prices, supplier-card prices and Buy @ for
+  // whatever volume tier this quantity now falls into. Uses 'change'
+  // rather than 'input' (matching the quote table's own qty field) so a
+  // full re-render doesn't fire on every keystroke.
+  wrap.querySelector('#ip_qty').addEventListener('change', (e)=>{
+    ipQty = Number(e.target.value) || 1;
+    ipSelectedRecType = null;
+    renderIpStage();
   });
   const otherSearchEl = document.getElementById('ip_other_supplier_search');
   if(otherSearchEl){
@@ -5421,7 +5513,21 @@ function renderQuoteItems(){
     const lineId = Number(row.dataset.line);
     const item = data.quote.items.find(x=>x.lineId===lineId);
     row.querySelector('.q-qty').addEventListener('change', (e)=>{
-      item.qty = Number(e.target.value) || 1;
+      const oldQty = item.qty;
+      const newQty = Number(e.target.value) || 1;
+      // Follow this item's volume tiers to the new quantity, but only when
+      // Buy @ still matches what the tiers themselves produced for the old
+      // quantity -- if it had already been hand-edited away from that
+      // (a manual override), a qty tweak shouldn't silently overwrite it.
+      if(item.supplierId && item.supplierId!=='__stock__'){
+        const priceRow = data.prices.find(p=>p.productId===item.productId && (p.variantIdx==null?null:p.variantIdx)===(item.variantIdx==null?null:item.variantIdx) && p.supplierId===item.supplierId);
+        if(priceRow){
+          const field = priceRow.wholesale!=null ? 'wholesale' : 'retail';
+          const oldTierPrice = tieredUnitPrice(priceRow, oldQty, field);
+          if(Number(item.price)===Number(oldTierPrice)) item.price = tieredUnitPrice(priceRow, newQty, field);
+        }
+      }
+      item.qty = newQty;
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
@@ -9735,6 +9841,77 @@ function reverseQuoteStockDeduction(q){
 function refreshPriceDropdowns(){
   if(!document.getElementById('pr_date').value) document.getElementById('pr_date').value = todayISO();
 }
+
+// Volume/tiered pricing on the standard (non-bulk) price entry form.
+// prWholesaleTiers/prRetailTiers hold {minQty, price} for the entry
+// currently being added/edited -- minQty is always in the base unit, a
+// pack-based threshold (e.g. "1 ctn") is converted using pr_pack_qty at
+// the moment a tier is added, not re-derived later.
+let prWholesaleTiers = [];
+let prRetailTiers = [];
+// Keeps the "at qty ___ [per pc / per ctn]" unit dropdowns in the tier
+// rows in sync with whatever unit/pack unit/pack qty are currently typed
+// in the Packing section -- the pack option only appears once there's a
+// pack unit and a pack qty to convert with.
+function renderPrTierUnitOptions(){
+  const unit = document.getElementById('pr_unit').value.trim() || 'unit';
+  const packUnit = document.getElementById('pr_pack_unit').value.trim();
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const hasPack = packUnit && packQty>0;
+  const optionsHTML = `<option value="unit">per ${esc(unit)}</option>` +
+    (hasPack ? `<option value="pack">per ${esc(packUnit)} (${packQty} ${esc(unit)})</option>` : '');
+  ['pr_wtier_unit','pr_rtier_unit'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const prevVal = sel.value;
+    sel.innerHTML = optionsHTML;
+    sel.value = (prevVal==='pack' && hasPack) ? 'pack' : 'unit';
+  });
+}
+function prTierChipLabel(t, unit, packUnit, packQty){
+  const qtyLabel = (packQty>0 && packUnit && t.minQty>0 && t.minQty%packQty===0)
+    ? `${t.minQty/packQty} ${packUnit}`
+    : `${t.minQty} ${unit||'units'}`;
+  return `${qtyLabel}+: ${fmtUGX(t.price)}`;
+}
+function renderPrTiers(){
+  const unit = document.getElementById('pr_unit').value.trim();
+  const packUnit = document.getElementById('pr_pack_unit').value.trim();
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const renderList = (wrapId, tiers, onRemove)=>{
+    const wrap = document.getElementById(wrapId);
+    wrap.innerHTML = tiers.length===0 ? '<div class="pr-tier-empty">No tiers yet — flat price at every quantity.</div>' :
+      `<div class="preset-chip-flow">${tiers.map((t,i)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, unit, packUnit, packQty))}<button type="button" class="pr-tier-remove" data-idx="${i}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
+    wrap.querySelectorAll('.pr-tier-remove').forEach(btn=>btn.addEventListener('click', e=>{
+      onRemove(Number(e.currentTarget.dataset.idx));
+    }));
+  };
+  renderList('pr_wholesale_tiers_wrap', prWholesaleTiers, i=>{ prWholesaleTiers.splice(i,1); renderPrTiers(); });
+  renderList('pr_retail_tiers_wrap', prRetailTiers, i=>{ prRetailTiers.splice(i,1); renderPrTiers(); });
+}
+function addPrTier(kind){
+  const prefix = kind==='wholesale' ? 'w' : 'r';
+  const qtyInput = document.getElementById(`pr_${prefix}tier_qty`);
+  const unitSel = document.getElementById(`pr_${prefix}tier_unit`);
+  const priceInput = document.getElementById(`pr_${prefix}tier_price`);
+  const rawQty = Number(qtyInput.value);
+  const price = Number(priceInput.value);
+  if(!rawQty || rawQty<=0){ toast('Enter a quantity for the tier'); return; }
+  if(!price || price<=0){ toast('Enter a price for the tier'); return; }
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const minQty = unitSel.value==='pack' ? rawQty*packQty : rawQty;
+  const arr = kind==='wholesale' ? prWholesaleTiers : prRetailTiers;
+  if(arr.some(t=>t.minQty===minQty)){ toast('A tier already exists at that quantity'); return; }
+  arr.push({minQty, price});
+  arr.sort((a,b)=>a.minQty-b.minQty);
+  qtyInput.value = ''; priceInput.value = '';
+  renderPrTiers();
+}
+document.getElementById('pr_wtier_add').addEventListener('click', ()=>addPrTier('wholesale'));
+document.getElementById('pr_rtier_add').addEventListener('click', ()=>addPrTier('retail'));
+['pr_unit','pr_pack_unit','pr_pack_qty'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{ if(!prBulkMode){ renderPrTierUnitOptions(); renderPrTiers(); } });
+});
+
 function selectPrSupplier(id){
   document.getElementById('pr_supplier').value = id;
   document.getElementById('pr_supplier_search').value = id ? supplierName(id) : '';
@@ -9774,7 +9951,12 @@ function setPrBulkMode(on){
   document.getElementById('pr_wholesale_field').style.display = on ? 'none' : '';
   document.getElementById('pr_retail_field').style.display = on ? 'none' : '';
   document.getElementById('pr_bulk_wrap').style.display = on ? '' : 'none';
+  // Volume pricing is per single product+variant+supplier entry -- bulk
+  // mode prices every variant at once, so there's no one place to hang a
+  // tier ladder on; keep it flat there for now.
+  document.getElementById('pr_tiers_wrap').style.display = on ? 'none' : '';
   if(on) renderPrBulkVariants();
+  else { renderPrTierUnitOptions(); renderPrTiers(); }
 }
 function selectPrProduct(id, variantIdx=null){
   const p = data.products.find(x=>x.id===id);
@@ -9919,7 +10101,24 @@ function priceCardHTML(r, tokens){
       <div class="prc-price-box"><span>Wholesale</span><b>${fmtUGXPerUnit(r.wholesale, r.unit)}</b></div>
       <div class="prc-price-box"><span>Retail</span><b>${fmtUGXPerUnit(r.retail, r.unit)}</b></div>
     </div>
+    ${priceTiersSummaryHTML(r)}
   </div>`;
+}
+// Compact "Volume pricing: Wholesale 12+ 35,000 · Retail 12+ 39,000" line
+// shown on a price card/comparison row when the entry has tiers, so the
+// tier ladder is visible without opening the entry to edit it.
+function priceTierSummaryPart(tiers, unit, packUnit, packQty){
+  if(!Array.isArray(tiers) || !tiers.length) return '';
+  return tiers.map(t=>prTierChipLabel(t, unit, packUnit, packQty)).join(' · ');
+}
+function priceTiersSummaryHTML(r){
+  const w = priceTierSummaryPart(r.wholesaleTiers, r.unit, r.packUnit, r.packQty);
+  const ret = priceTierSummaryPart(r.retailTiers, r.unit, r.packUnit, r.packQty);
+  if(!w && !ret) return '';
+  const parts = [];
+  if(w) parts.push(`Wholesale ${esc(w)}`);
+  if(ret) parts.push(`Retail ${esc(ret)}`);
+  return `<div class="prc-tiers-note"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Volume pricing: ${parts.join('  ·  ')}</div>`;
 }
 
 function populatePriceSupplierFilter(selected){
@@ -9965,6 +10164,10 @@ function editPrice(id){
   document.getElementById('pr_unit').value = r.unit || '';
   document.getElementById('pr_pack_unit').value = r.packUnit || '';
   document.getElementById('pr_pack_qty').value = r.packQty || '';
+  prWholesaleTiers = Array.isArray(r.wholesaleTiers) ? r.wholesaleTiers.map(t=>({...t})) : [];
+  prRetailTiers = Array.isArray(r.retailTiers) ? r.retailTiers.map(t=>({...t})) : [];
+  renderPrTierUnitOptions();
+  renderPrTiers();
   document.getElementById('priceFormTitle').textContent = 'Edit price entry';
   openModal('priceModal');
 }
@@ -9974,6 +10177,7 @@ function resetPriceForm(){
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_product_search').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
+  prWholesaleTiers = []; prRetailTiers = [];
   setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_wholesale').value='';
@@ -9983,6 +10187,8 @@ function resetPriceForm(){
   document.getElementById('pr_pack_unit').value = '';
   document.getElementById('pr_pack_qty').value = '';
   document.getElementById('priceFormTitle').textContent = 'Add price entry';
+  renderPrTierUnitOptions();
+  renderPrTiers();
 }
 function deletePrice(id){
   if(!confirm('Delete this price entry?')) return;
@@ -10055,7 +10261,9 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     unit: document.getElementById('pr_unit').value.trim(),
     packUnit: document.getElementById('pr_pack_unit').value.trim(),
     packQty: Number(document.getElementById('pr_pack_qty').value)||0,
-    priceSource: 'manual'
+    priceSource: 'manual',
+    wholesaleTiers: prWholesaleTiers.slice(),
+    retailTiers: prRetailTiers.slice()
   };
   if(editingPriceId){
     // Editing an entry through this form only touches the fields above --
@@ -10220,6 +10428,7 @@ function renderCompare(){
   function buildTable(list, field){
     if(list.length===0) return '<div class="empty">No prices of this type yet.</div>';
     const showSuggested = field==='wholesale' ? !!wholesaleRule : !!retailRule;
+    const tierNote = r => priceTierSummaryPart(r[field+'Tiers'], r.unit, r.packUnit, r.packQty);
     const cardsArr = list.map((r,i)=>`
       <div class="cmp-card ${i===0?'cmp-card-best':''}">
         <div class="cmp-card-top">
@@ -10231,13 +10440,14 @@ function renderCompare(){
           ${showSuggested?`<div class="sc-stat"><b class="txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</b><span>Suggested</span></div>`:''}
           <div class="sc-stat"><b>${esc(r.date)}</b><span>Date</span></div>
         </div>
+        ${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}
       </div>`).join('');
     return `<div class="cmp-table-wrap"><table><thead><tr><th>Supplier</th><th>Unit</th><th>Price</th>${showSuggested?'<th>Suggested Selling Price</th>':''}<th>Date</th></tr></thead><tbody>
       ${list.map((r,i)=>`
         <tr class="${i===0?'best':''}">
           <td>${esc(r.sname)} ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}</td>
           <td>${esc(r.unit)}</td>
-          <td class="price">${fmtUGX(r[field])}</td>
+          <td class="price">${fmtUGX(r[field])}${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}</td>
           ${showSuggested?`<td class="price txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx))}</td>`:''}
           <td>${esc(r.date)}</td>
         </tr>`).join('')}
