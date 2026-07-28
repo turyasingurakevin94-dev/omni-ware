@@ -1103,7 +1103,23 @@
   }
   .ip-back:hover{color:var(--navy);}
   .ip-back .icon{width:13px;height:13px;}
-  .q-stage-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+  .q-stage-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+  /* Quantity -- placed right below the header since every price further
+     down in this stage is resolved against it, rather than at the bottom
+     where it read as an afterthought to numbers it had already produced. */
+  .q-qty-row{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:#F7F9FB;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:10px;
+  }
+  .q-qty-field{flex-shrink:0;gap:3px;}
+  .q-qty-field label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);}
+  .q-qty-input-group{display:flex;gap:6px;}
+  .q-qty-input-group input{
+    width:76px;padding:6px 9px;border:1px solid var(--line);border-radius:7px;
+    font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;background:#fff;
+  }
+  .q-qty-input-group select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;}
+  .q-qty-hint{font-size:11px;color:var(--ink-soft);}
   .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .q-stage-thumb-placeholder{
     width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
@@ -1121,25 +1137,29 @@
     padding:6px 9px;border-radius:7px;margin-bottom:8px;
   }
 
-  /* Recommended prices — square cards with an icon, side by side */
-  .q-rec-cards{display:flex;gap:10px;margin-bottom:8px;}
+  /* Recommended prices — compact horizontal rows (icon + label/value +
+     use-link), not the tall squares these used to be, so the pair takes
+     one short strip instead of competing with the supplier list for
+     height and forcing the whole popup to scroll. */
+  .q-rec-cards{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
   .q-rec-card{
-    flex:1;aspect-ratio:1/1;box-sizing:border-box;border:1px solid var(--line);border-radius:14px;background:#fff;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-    padding:10px;text-align:center;transition:border-color .12s ease, box-shadow .12s ease;
+    box-sizing:border-box;border:1px solid var(--line);border-radius:10px;background:#fff;
+    display:flex;align-items:center;gap:9px;
+    padding:8px 10px;text-align:left;transition:border-color .12s ease, box-shadow .12s ease;
     cursor:pointer;
   }
   .q-rec-card:hover{border-color:#C7CFD8;box-shadow:0 3px 10px rgba(20,30,40,0.06);}
   .q-rec-card:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
   .q-rec-card.q-rec-disabled{cursor:default;opacity:0.55;pointer-events:none;}
   .q-rec-card.q-rec-disabled:hover{border-color:var(--line);box-shadow:none;}
-  .q-rec-icon{width:26px;height:26px;color:var(--navy);}
-  .q-rec-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);}
-  .q-rec-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;color:var(--ink);white-space:nowrap;}
-  .q-rec-value .prc-unit{font-size:11px;font-weight:500;color:var(--ink-soft);}
+  .q-rec-icon{width:20px;height:20px;color:var(--navy);flex-shrink:0;}
+  .q-rec-info{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;}
+  .q-rec-label{font-size:9.5px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);}
+  .q-rec-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .q-rec-value .prc-unit{font-size:10.5px;font-weight:500;color:var(--ink-soft);}
   .q-rec-use{
     all:unset;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--ink-soft);
-    white-space:nowrap;text-decoration:underline;
+    white-space:nowrap;text-decoration:underline;flex-shrink:0;
   }
   .q-rec-use:hover{color:var(--navy);}
   .q-rec-card.selected{
@@ -1163,8 +1183,11 @@
   .q-stage-summary div+div{margin-top:1px;}
   .q-stage-col-right{min-width:0;}
 
-  /* Supplier cards — vertical stack, cheapest on top */
-  .q-supplier-cards{display:flex;flex-direction:column;gap:7px;margin-bottom:8px;}
+  /* Supplier cards — vertical stack, cheapest on top. Capped with its own
+     scroll rather than letting a shop with many suppliers push the whole
+     popup into needing to scroll -- a handful of suppliers (the common
+     case) never hits this height at all. */
+  .q-supplier-cards{display:flex;flex-direction:column;gap:7px;margin-bottom:8px;max-height:260px;overflow-y:auto;padding-right:2px;}
   .q-supplier-card{
     box-sizing:border-box;cursor:pointer;border:1.5px solid var(--line);border-radius:12px;
     padding:10px 12px;background:#fff;display:flex;align-items:center;gap:10px;
@@ -1678,7 +1701,6 @@
     .qp-finbar-cell.buy, .qp-finbar-cell.margin{border-right:none;}
     .qp-finbar-cell.profit, .qp-finbar-cell.margin{border-bottom:none;}
     .qp-finbar-cell.margin{flex-direction:row;align-items:center;justify-content:space-between;}
-    .q-rec-card{aspect-ratio:auto;padding:12px 6px;}
     .q-rec-value{font-size:14px;}
     /* Purchase Invoices / Invoices: swap the ledger table for stacked cards. */
     .pi-table-wrap{display:none;}
@@ -4162,12 +4184,33 @@ function fmtPriceCompact(n, unit){
   const num = Math.round(Number(n)).toLocaleString('en-UG');
   return unit ? `${num}<span class="prc-unit">/${esc(unit)}</span>` : num;
 }
+// Wholesale is naturally quoted (and thought about) by the pack -- "300,000
+// a carton" -- not by the single piece, so a per-unit rate shown alongside
+// a retail per-unit rate (e.g. "15,000/dzn") reads as if it costs MORE by
+// the piece, which is backwards. Converts to the pack-level price whenever
+// the row has pack info, falling back to a plain per-unit figure otherwise.
+function fmtPriceCompactPack(n, row){
+  if(n===null||n===undefined||n==='') return '—';
+  const packQty = row ? Number(row.packQty)||0 : 0;
+  const packUnit = row ? row.packUnit : '';
+  if(packQty>0 && packUnit) return fmtPriceCompact(Number(n)*packQty, packUnit);
+  return fmtPriceCompact(n, row ? row.unit : '');
+}
 // Formats a price together with the unit it applies to, e.g. "10,000 UGX/Tin" —
 // makes clear which packing unit a supplier's quoted price is for.
 function fmtUGXPerUnit(n, unit){
   if(n===null||n===undefined||n==='') return '—';
   const base = fmtUGX(n);
   return unit ? `${base}<span class="prc-unit">/${esc(unit)}</span>` : base;
+}
+// Same pack-level conversion as fmtPriceCompactPack, for the fuller
+// "10,000 UGX/Tin" style used on the supplier comparison cards.
+function fmtUGXPerUnitPack(n, row){
+  if(n===null||n===undefined||n==='') return '—';
+  const packQty = row ? Number(row.packQty)||0 : 0;
+  const packUnit = row ? row.packUnit : '';
+  if(packQty>0 && packUnit) return fmtUGXPerUnit(Number(n)*packQty, packUnit);
+  return fmtUGXPerUnit(n, row ? row.unit : '');
 }
 // esc() now lives in shared-worker.js.
 // Renders a stored YYYY-MM-DD date as a relative "N days ago" label
@@ -5107,7 +5150,17 @@ let ipSelectedRecType = null; // 'wholesale' | 'retail' | null
 // Persisted across renderIpStage() re-renders (which rebuild #ip_qty from
 // scratch) so a quantity the shopper already typed survives a supplier
 // switch or the qty-change recompute below, instead of snapping to 1.
-let ipQty = 1;
+// ipQtyRaw is whatever number is actually typed; ipQtyUnitMode says
+// whether that number counts in the base unit ('unit', e.g. dozens) or
+// in packs ('pack', e.g. cartons) -- ipComputeQty() converts the two into
+// the real base-unit quantity everything else (tiers, markup, totals)
+// is resolved against.
+let ipQtyRaw = 1;
+let ipQtyUnitMode = 'unit';
+function ipComputeQty(rawQty, unitMode, packQty){
+  const raw = Number(rawQty)||1;
+  return Math.max(1, unitMode==='pack' && packQty>0 ? raw*packQty : raw);
+}
 
 function ipRenderList(query){
   const tokens = searchTokens(query);
@@ -5187,7 +5240,8 @@ function ipSelectProduct(id, variantIdx=null){
   ipVariantIdx = variantIdx==null ? null : Number(variantIdx);
   ipSelectedSupplierId = null;
   ipSelectedRecType = null;
-  ipQty = 1;
+  ipQtyRaw = 1;
+  ipQtyUnitMode = 'unit';
   document.getElementById('ipModalTitle').textContent = 'Add item to quote';
   document.getElementById('ip_search_view').style.display = 'none';
   document.getElementById('ip_stage_view').style.display = 'block';
@@ -5228,12 +5282,20 @@ function renderIpStage(){
   const refRow = selectedRow || ranked[0] || null;
   const unit = refRow ? (refRow.unit || '') : '';
   const stockCost = getFIFOUnitCost(ipProductId, variantIdx);
-  // Quantity is picked further down in this same stage (the Qty field),
-  // so it has to persist across re-renders rather than reset to 1 --
-  // see ipQty's declaration for why. Every price below is resolved for
-  // this quantity, so a volume tier actually shows up as soon as it's
-  // reached instead of only after adding the item.
-  const qty = ipQty;
+  // Quantity is picked in the Qty row right below the header, so it has to
+  // persist across re-renders rather than reset to 1 -- see ipQtyRaw's
+  // declaration for why. Every price below is resolved for this quantity,
+  // so a volume tier actually shows up as soon as it's reached instead of
+  // only after adding the item. ipQtyUnitMode lets that quantity be typed
+  // in either the base unit (e.g. dozens) or a pack (e.g. cartons) -- it
+  // only makes sense while this row's own packQty backs it up, so falls
+  // back to the base unit the moment that stops being true (e.g. after
+  // switching to a supplier/stock with no pack info).
+  const packQty = refRow ? Number(refRow.packQty)||0 : 0;
+  const packUnit = refRow ? (refRow.packUnit||'') : '';
+  const hasPack = packQty>0 && !!packUnit;
+  if(ipQtyUnitMode==='pack' && !hasPack) ipQtyUnitMode = 'unit';
+  const qty = ipComputeQty(ipQtyRaw, ipQtyUnitMode, packQty);
 
   // When "Our stock" is selected, base the recommended prices on what we
   // actually paid for the stock on hand (+ the item's stock-only markup
@@ -5276,7 +5338,7 @@ function renderIpStage(){
           <span class="q-sc-rank ${i===0?'best':''}">${rankLabels[i]}</span>
           <span class="q-sc-name">${esc(r.sname)}</span>
         </div>
-        <div class="q-sc-prices">${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'wholesale'), r.unit)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</div>
+        <div class="q-sc-prices">${fmtUGXPerUnitPack(tieredUnitPrice(r, qty, 'wholesale'), r)}<span class="q-sc-sep">/</span>${fmtUGXPerUnit(tieredUnitPrice(r, qty, 'retail'), r.unit)}</div>
       </div>
     </label>`;
   }).join('');
@@ -5302,11 +5364,25 @@ function renderIpStage(){
   const sellStart = suggRetail!=null ? Math.round(suggRetail)
     : (suggWholesale!=null ? Math.round(suggWholesale) : buyStart);
 
+  const qtyUnitOptionsHTML = `<option value="unit" ${ipQtyUnitMode==='unit'?'selected':''}>${esc(unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" ${ipQtyUnitMode==='pack'?'selected':''}>${esc(packUnit)} (${packQty} ${esc(unit||'unit')})</option>` : '');
+
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head">
       ${ipStageThumbHTML(product)}
       <div class="q-stage-name">${esc(displayName)}</div>
       <div class="q-stage-summary">${ipStageSummaryLine(product, refRow, unit, variantIdx)}</div>
+    </div>
+
+    <div class="q-qty-row">
+      <div class="field q-qty-field">
+        <label>Quantity</label>
+        <div class="q-qty-input-group">
+          <input type="number" id="ip_qty" min="0" step="any" value="${ipQtyRaw}">
+          <select id="ip_qty_unit">${qtyUnitOptionsHTML}</select>
+        </div>
+      </div>
+      <div class="q-qty-hint">Prices below update for this quantity.</div>
     </div>
 
     ${ranked.length===0 ? `<div class="q-no-prices">No prices recorded for this item yet. Set a price manually below, or add price entries in the Price Registry tab.</div>` : ''}
@@ -5317,15 +5393,19 @@ function renderIpStage(){
         <div class="q-rec-cards">
           <div class="q-rec-card ${ipSelectedRecType==='wholesale'?'selected':''} ${suggWholesale==null?'q-rec-disabled':''}" data-use="wholesale" role="button" tabindex="${suggWholesale==null?'-1':'0'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-            <span class="q-rec-label">Wholesale</span>
-            <span class="q-rec-value">${fmtPriceCompact(suggWholesale, unit)}</span>
-            ${suggWholesale!=null?`<span class="q-rec-use">${ipSelectedRecType==='wholesale'?'✓ Using this':'Use →'}</span>`:''}
+            <div class="q-rec-info">
+              <span class="q-rec-label">Wholesale</span>
+              <span class="q-rec-value">${fmtPriceCompactPack(suggWholesale, refRow)}</span>
+            </div>
+            ${suggWholesale!=null?`<span class="q-rec-use">${ipSelectedRecType==='wholesale'?'✓ Using':'Use →'}</span>`:''}
           </div>
           <div class="q-rec-card q-rec-retail ${ipSelectedRecType==='retail'?'selected':''} ${suggRetail==null?'q-rec-disabled':''}" data-use="retail" role="button" tabindex="${suggRetail==null?'-1':'0'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            <span class="q-rec-label">Retail</span>
-            <span class="q-rec-value">${fmtPriceCompact(suggRetail, unit)}</span>
-            ${suggRetail!=null?`<span class="q-rec-use">${ipSelectedRecType==='retail'?'✓ Using this':'Use →'}</span>`:''}
+            <div class="q-rec-info">
+              <span class="q-rec-label">Retail</span>
+              <span class="q-rec-value">${fmtPriceCompact(suggRetail, unit)}</span>
+            </div>
+            ${suggRetail!=null?`<span class="q-rec-use">${ipSelectedRecType==='retail'?'✓ Using':'Use →'}</span>`:''}
           </div>
         </div>
       </div>
@@ -5343,7 +5423,6 @@ function renderIpStage(){
         <input type="hidden" id="ip_other_supplier">
         <div class="suggestions" id="ip_other_supplier_suggestions"></div>
       </div>` : ''}
-      <div class="field"><label>Qty</label><input type="number" id="ip_qty" min="1" step="any" value="${qty}"></div>
       <div class="field"><label>Price each (UGX)</label><input type="number" id="ip_price" min="0" step="any" value="${sellStart}"></div>
       <button class="btn btn-accent" id="ip_add_btn">Add to quote</button>
     </div>
@@ -5361,11 +5440,14 @@ function renderIpStage(){
   // whatever volume tier this quantity now falls into. Uses 'change'
   // rather than 'input' (matching the quote table's own qty field) so a
   // full re-render doesn't fire on every keystroke.
-  wrap.querySelector('#ip_qty').addEventListener('change', (e)=>{
-    ipQty = Number(e.target.value) || 1;
+  const handleQtyChange = ()=>{
+    ipQtyRaw = Number(document.getElementById('ip_qty').value) || 1;
+    ipQtyUnitMode = document.getElementById('ip_qty_unit').value;
     ipSelectedRecType = null;
     renderIpStage();
-  });
+  };
+  wrap.querySelector('#ip_qty').addEventListener('change', handleQtyChange);
+  wrap.querySelector('#ip_qty_unit').addEventListener('change', handleQtyChange);
   const otherSearchEl = document.getElementById('ip_other_supplier_search');
   if(otherSearchEl){
     const otherBoxEl = document.getElementById('ip_other_supplier_suggestions');
@@ -5407,18 +5489,27 @@ function renderIpStage(){
   });
 
   document.getElementById('ip_add_btn').addEventListener('click', ()=>{
-    const qty = Number(document.getElementById('ip_qty').value) || 1;
+    // Recomputed fresh rather than trusting the render-time closures above
+    // -- qty/unit changes always trigger a full re-render before this can
+    // fire, but recomputing here is cheap insurance against relying on
+    // that timing.
+    const rawQty = document.getElementById('ip_qty').value;
+    const qtyUnitMode = document.getElementById('ip_qty_unit').value;
+    const qty = ipComputeQty(rawQty, qtyUnitMode, packQty);
     const sellPrice = Number(document.getElementById('ip_price').value) || 0;
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
+    const buyPrice = supplierId==='__stock__'
+      ? (stockCost!=null ? Math.round(stockCost) : 0)
+      : (refRow ? Math.round(tieredUnitPrice(refRow, qty, refRow.wholesale!=null ? 'wholesale' : 'retail')) : 0);
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
       productId: ipProductId, variantIdx: ipVariantIdx, productName: displayName, unit,
       packUnit: refRow ? (refRow.packUnit||'') : '', packQty: refRow ? (refRow.packQty||0) : '',
       qty, supplierId, supplierName: supplierName(supplierId),
-      price: buyStart, sellPrice
+      price: buyPrice, sellPrice
     });
     saveData();
     closeModal('itemPickerModal');
