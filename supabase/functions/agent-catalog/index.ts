@@ -60,6 +60,23 @@ function suggestedSellingPrice(product: any, basePrice: number | null, kind: Mar
   return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
 }
 
+// Resolves the unit price a price row actually charges at a given order
+// quantity: the flat wholesale/retail figure by default, or the highest
+// tier whose minQty the quantity clears. Duplicated verbatim in
+// agent-submit-order (see that file's module header for why) and mirrors
+// index.html's own tieredUnitPrice() exactly.
+function tieredUnitPrice(row: any, qty: number, kind: MarkupKind): number | null {
+  const base = row[kind];
+  if (base == null) return null;
+  const tiers = row[kind === "wholesale" ? "wholesale_tiers" : "retail_tiers"];
+  if (!Array.isArray(tiers) || !tiers.length) return Number(base);
+  let best = Number(base), bestMinQty = 0;
+  tiers.forEach((t: any) => {
+    if (t.price != null && qty >= t.minQty && t.minQty >= bestMinQty) { best = Number(t.price); bestMinQty = t.minQty; }
+  });
+  return best;
+}
+
 // Cheapest-by-wholesale, tie-broken by retail -- same ranking
 // rankedPriceRows() uses client-side, so "the best supplier" means the
 // same thing here that it means on the admin app's own quote builder.
@@ -86,9 +103,12 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   const packQty = Number(priceRow.pack_qty) || 0;
   const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
   const variantIdx = priceRow.variant_idx == null || priceRow.variant_idx === "" ? null : Number(priceRow.variant_idx);
-  const cost = tier === "wholesale" ? priceRow.wholesale : priceRow.retail;
-  if (cost == null) return null;
-  const costNum = Number(cost);
+  // Which of wholesale/retail applies is still decided purely by qty vs.
+  // pack size above (unchanged) -- but the actual unit price within that
+  // tier now also follows the entry's own volume-pricing ladder, if it
+  // has one, for this same quantity.
+  const costNum = tieredUnitPrice(priceRow, qty, tier);
+  if (costNum == null) return null;
   const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
   const discounted = ourPrice * (1 - (discountPct || 0) / 100);
