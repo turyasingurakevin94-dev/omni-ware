@@ -355,6 +355,7 @@
   th.sortable .sort-arrow{margin-left:4px;font-size:9px;}
   .an-rank{color:var(--ink-soft);}
   .an-scroll{overflow-x:auto;}
+  .an-total-row td{border-top:2px solid var(--line);background:#F7F9FB;}
 
   /* Compare tab */
   .compare-select{max-width:360px;margin-bottom:22px;position:relative;}
@@ -2972,6 +2973,35 @@
   </div>
 </div>
 
+<!-- SUPPLIER COMMISSION MODAL -->
+<div class="modal-overlay" id="supplierCommissionModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Commission — <span id="scm_supplier_name"></span></h2>
+      <button class="modal-close" id="supplierCommissionModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 14px;">What this supplier pays you for selling their products, usually recorded once a month.</p>
+      <div class="form-grid">
+        <div class="field"><label>Period</label><input type="month" id="scm_period"></div>
+        <div class="field"><label>Amount (UGX)</label><input type="number" min="0" step="any" id="scm_amount" placeholder="e.g. 150000"></div>
+        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="scm_notes" placeholder="optional"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="scm_form_cancel" style="display:none;">Cancel edit</button>
+        <button type="button" class="btn btn-accent" id="scm_save_entry">Save commission</button>
+      </div>
+      <div class="section-label-row form-section-label" style="margin-top:18px;">Recorded so far</div>
+      <div id="scm_list_wrap"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="scm_close">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- CUSTOMER MODAL -->
 <div class="modal-overlay" id="customerModal">
   <div class="modal">
@@ -3884,15 +3914,15 @@ async function loadData(shopId){
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
-    savedQuotesR, purchaseInvoicesR, settingsR, agentsR
+    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
     sel('saved_quotes'), sel('purchase_invoices'),
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
-    sel('agents')
+    sel('agents'), sel('supplier_commissions')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -3974,6 +4004,8 @@ async function loadData(shopId){
       ...(pi.payload||{})
     })),
     nextPurchaseInvoiceId: (purchaseInvoicesR.data||[]).length ? Math.max(0,...purchaseInvoicesR.data.map(pi=>pi.id||0))+1 : 1,
+    supplierCommissions: (supplierCommissionsR.data||[]).map(c=>({id:c.id, supplierId:c.supplier_id, period:c.period, amount:Number(c.amount)||0, notes:c.notes||''})),
+    nextSupplierCommissionId: (supplierCommissionsR.data||[]).length ? Math.max(0,...supplierCommissionsR.data.map(c=>c.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
     presetIncomeCategories: presets.incomeCategories || seed.presetIncomeCategories,
@@ -4058,6 +4090,9 @@ function buildSyncRows(d, shopId){
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
       payload:{customerName:pi.customerName, supplierId:pi.supplierId, supplierName:pi.supplierName, items:pi.items, amountPaid:pi.amountPaid, payments:pi.payments, voided:pi.voided}
     })),
+    supplierCommissions: d.supplierCommissions.map(c=>({
+      id:c.id, shop_id:shopId, supplier_id:c.supplierId, period:c.period, amount:c.amount, notes:c.notes||null
+    })),
     settings: {
       shop_id: shopId,
       presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays},
@@ -4087,6 +4122,7 @@ function initLastSynced(d, shopId){
     cashTxns: keyRowsById(rows.cashTxns, 'id'),
     savedQuotes: keyRowsById(rows.savedQuotes, 'id'),
     purchaseInvoices: keyRowsById(rows.purchaseInvoices, 'id'),
+    supplierCommissions: keyRowsById(rows.supplierCommissions, 'id'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -4163,7 +4199,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -4183,6 +4219,7 @@ async function saveData(){
   addDiffOps(ops, 'cashTxns', 'cash_txns', 'id', shopId, rows.cashTxns);
   addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
   addDiffOps(ops, 'purchaseInvoices', 'purchase_invoices', 'id', shopId, rows.purchaseInvoices);
+  addDiffOps(ops, 'supplierCommissions', 'supplier_commissions', 'id', shopId, rows.supplierCommissions);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -7839,11 +7876,13 @@ const PAN_COLUMNS = {
   supplier: [
     {key:'name', label:'Supplier name'},
     {key:'amt', label:'Amt', numeric:true, money:true},
-    {key:'docCount', label:'Doc number', numeric:true}
+    {key:'docCount', label:'Doc number', numeric:true},
+    {key:'commission', label:'Commission', numeric:true, money:true}
   ]
 };
 let panView = 'item'; // 'item' | 'supplier'
 let panLastEntries = [];
+let panLastRange = {from:null, to:null};
 const panSortState = {
   item: {key:'amt', dir:-1},
   supplier: {key:'amt', dir:-1}
@@ -7899,22 +7938,41 @@ function panRowsByItem(invoices){
   });
   return [...map.values()];
 }
-function panRowsBySupplier(invoices){
+// A commission entry is stamped with a 'YYYY-MM' period rather than an
+// exact date, so it's counted in range by treating it as landing on the
+// 1st of that month -- consistent with how every other purchase-analytics
+// number here is filtered against the same from/to.
+function panSupplierCommissionsInRange(from, to){
+  return (data.supplierCommissions||[]).filter(c=>{
+    const d = c.period ? c.period+'-01' : '';
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  });
+}
+function panRowsBySupplier(invoices, from, to){
   const map = new Map();
   invoices.forEach(pi=>{
     const sid = pi.supplierId || '__unknown__';
     if(!map.has(sid)){
-      map.set(sid, {name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0});
+      map.set(sid, {name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0, commission:0});
     }
     const row = map.get(sid);
     row.docCount += 1;
     row.amt += purchaseInvoiceTotal(pi);
     (pi.items||[]).forEach(it=>{ row.qty += Number(it.qty)||0; });
   });
+  // A supplier can have commission recorded for a period with no purchase
+  // invoice in range at all -- still worth a row so the commission isn't
+  // silently dropped from the table.
+  panSupplierCommissionsInRange(from, to).forEach(c=>{
+    if(!map.has(c.supplierId)) map.set(c.supplierId, {name: supplierName(c.supplierId), amt:0, docCount:0, qty:0, commission:0});
+    map.get(c.supplierId).commission += Number(c.amount)||0;
+  });
   return [...map.values()];
 }
 function panRowsForView(){
-  return panView==='supplier' ? panRowsBySupplier(panLastEntries) : panRowsByItem(panLastEntries);
+  return panView==='supplier' ? panRowsBySupplier(panLastEntries, panLastRange.from, panLastRange.to) : panRowsByItem(panLastEntries);
 }
 function panOverallTotals(invoices){
   let amt=0, qty=0;
@@ -7957,13 +8015,24 @@ function renderPanTable(){
       : '<div class="empty">No rows match your search.</div>';
     return;
   }
+  // Only the supplier view gets a running total row -- an item-level total
+  // would just be a meaningless sum of unrelated products' amounts.
+  const totalRowHTML = panView==='supplier' ? `<tfoot><tr class="an-total-row">
+    <td></td>
+    ${cols.map(c=>{
+      if(c.key==='name') return `<td><strong>Total</strong></td>`;
+      if(!c.numeric) return `<td></td>`;
+      const sum = rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0);
+      return `<td class="price"><strong>${panFormatCell(c, sum)}</strong></td>`;
+    }).join('')}
+  </tr></tfoot>` : '';
   wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
     <th>No.</th>
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
     ${cols.map(c=>`<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`).join('')}
-  </tr>`).join('')}</tbody></table></div>
+  </tr>`).join('')}</tbody>${totalRowHTML}</table></div>
   <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, panFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
@@ -7973,6 +8042,7 @@ function renderPanTable(){
 }
 function renderPurchaseAnalytics(){
   const {from, to} = panGetDateRange();
+  panLastRange = {from, to};
   panLastEntries = panInvoicesInRange(from, to);
   renderPanKpis();
   renderPanTable();
@@ -8072,6 +8142,7 @@ function supplierCardHTML(s, productMatches){
         <div class="sc-id">${esc(s.id)}</div>
       </div>
       <div class="sc-actions">
+        <button class="pc-icon-btn" title="Record commission" onclick="openSupplierCommissionModal('${esc(s.id)}')"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
         <button class="pc-icon-btn" title="Edit supplier" onclick="editSupplier('${esc(s.id)}')">${ICON_EDIT}</button>
         <button class="pc-icon-btn danger" title="Delete supplier" onclick="deleteSupplier('${esc(s.id)}')">${ICON_TRASH}</button>
       </div>
@@ -8162,6 +8233,82 @@ document.getElementById('s_save').addEventListener('click', ()=>{
 document.getElementById('s_cancel').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('supplierModalClose').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('s_search').addEventListener('input', e=>renderSuppliers(e.target.value));
+
+/* ---- Supplier commissions: what a supplier pays the shop for selling
+   their products, recorded per period (usually monthly) since that's how
+   suppliers actually pay it out. Feeds the "Statistics by supplier"
+   purchase-analytics column/total -- see panRowsBySupplier(). ---- */
+let scmSupplierId = null;
+let scmEditingId = null;
+function openSupplierCommissionModal(supplierId){
+  const s = data.suppliers.find(x=>x.id===supplierId); if(!s) return;
+  scmSupplierId = supplierId;
+  document.getElementById('scm_supplier_name').textContent = s.name;
+  resetSupplierCommissionForm();
+  renderSupplierCommissionList();
+  openModal('supplierCommissionModal');
+}
+function resetSupplierCommissionForm(){
+  scmEditingId = null;
+  document.getElementById('scm_period').value = '';
+  document.getElementById('scm_amount').value = '';
+  document.getElementById('scm_notes').value = '';
+  document.getElementById('scm_form_cancel').style.display = 'none';
+  document.getElementById('scm_save_entry').textContent = 'Save commission';
+}
+function renderSupplierCommissionList(){
+  const wrap = document.getElementById('scm_list_wrap');
+  const rows = data.supplierCommissions.filter(c=>c.supplierId===scmSupplierId).slice().sort((a,b)=>b.period.localeCompare(a.period));
+  if(rows.length===0){ wrap.innerHTML = '<div class="q-empty-hint">No commission recorded yet for this supplier.</div>'; return; }
+  wrap.innerHTML = `<div class="preset-list">${rows.map(c=>`
+    <div class="preset-row" data-id="${c.id}">
+      <span class="preset-row-name">${esc(claimMonthLabel(c.period))}</span>
+      <span style="font-weight:700;">${fmtUGX(c.amount)}</span>
+      <span style="flex:1;color:var(--ink-soft);font-size:12.5px;">${esc(c.notes||'')}</span>
+      <button type="button" class="pc-icon-btn sc-comm-edit" data-id="${c.id}" title="Edit">${ICON_EDIT}</button>
+      <button type="button" class="pc-icon-btn danger sc-comm-remove" data-id="${c.id}" title="Delete">${ICON_TRASH}</button>
+    </div>`).join('')}</div>`;
+  wrap.querySelectorAll('.sc-comm-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    const c = data.supplierCommissions.find(x=>x.id===Number(e.currentTarget.dataset.id)); if(!c) return;
+    scmEditingId = c.id;
+    document.getElementById('scm_period').value = c.period;
+    document.getElementById('scm_amount').value = c.amount;
+    document.getElementById('scm_notes').value = c.notes||'';
+    document.getElementById('scm_form_cancel').style.display = '';
+    document.getElementById('scm_save_entry').textContent = 'Update commission';
+  }));
+  wrap.querySelectorAll('.sc-comm-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    const id = Number(e.currentTarget.dataset.id);
+    if(!confirm('Delete this commission entry?')) return;
+    data.supplierCommissions = data.supplierCommissions.filter(c=>c.id!==id);
+    saveData(); renderSupplierCommissionList();
+    if(document.getElementById('tab-analytics-purchase').style.display!=='none') renderPurchaseAnalytics();
+    toast('Commission entry deleted');
+  }));
+}
+document.getElementById('scm_save_entry').addEventListener('click', ()=>{
+  const period = document.getElementById('scm_period').value;
+  const amount = Number(document.getElementById('scm_amount').value);
+  const notes = document.getElementById('scm_notes').value.trim();
+  if(!period){ toast('Pick a period'); return; }
+  if(!amount || amount<=0){ toast('Enter a commission amount'); return; }
+  const dup = data.supplierCommissions.find(c=>c.supplierId===scmSupplierId && c.period===period && c.id!==scmEditingId);
+  if(dup){ toast('A commission is already recorded for that period — edit it instead'); return; }
+  if(scmEditingId){
+    const row = data.supplierCommissions.find(c=>c.id===scmEditingId);
+    row.period = period; row.amount = amount; row.notes = notes;
+  } else {
+    data.supplierCommissions.push({id: data.nextSupplierCommissionId++, supplierId: scmSupplierId, period, amount, notes});
+  }
+  saveData();
+  resetSupplierCommissionForm();
+  renderSupplierCommissionList();
+  if(document.getElementById('tab-analytics-purchase').style.display!=='none') renderPurchaseAnalytics();
+  toast('Commission saved');
+});
+document.getElementById('scm_form_cancel').addEventListener('click', resetSupplierCommissionForm);
+document.getElementById('scm_close').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
+document.getElementById('supplierCommissionModalClose').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
 
 /* ================= STAFF ================= */
 let editingStaffId = null;
