@@ -66,8 +66,23 @@ function quoteAgedOffBoard(q){
   return !!(q.invoiced && q.invoicedTs && (Date.now() - q.invoicedTs) >= SQ_BOARD_HIDE_AFTER_MS);
 }
 
-function ipStageThumbHTML(product){
-  if(product.image) return `<img class="q-stage-thumb img-zoomable" src="${product.image}" alt="${esc(product.name)}">`;
+// Which photo actually represents a product (and, for a variable product,
+// one specific variant of it): that variant's own photo if it has one,
+// else the product's own photo, else this product's category's shared
+// default, else nothing (callers fall back to a placeholder icon).
+// Shared by both host apps -- worker.html's slimmer product fetch simply
+// never populates `.variants`/`.category`, so those branches just no-op
+// there and it degrades to today's plain `.image` lookup.
+function resolveProductImage(p, variantIdx){
+  if(!p) return null;
+  if(variantIdx!=null && Array.isArray(p.variants) && p.variants[variantIdx] && p.variants[variantIdx].image) return p.variants[variantIdx].image;
+  if(p.image) return p.image;
+  const cat = p.category && data.presetCategories ? data.presetCategories.find(c=>c.name===p.category) : null;
+  return (cat && cat.image) || null;
+}
+function ipStageThumbHTML(product, variantIdx){
+  const src = resolveProductImage(product, variantIdx);
+  if(src) return `<img class="q-stage-thumb img-zoomable" src="${src}" alt="${esc(product.name)}">`;
   return `<div class="q-stage-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
 
