@@ -4720,6 +4720,20 @@ function tieredUnitPrice(row, qty, kind){
   });
   return best;
 }
+// What buying a given quantity from this price row would actually cost
+// per unit: whichever side (wholesale/retail) that quantity naturally
+// earns (same qty-vs-pack-size boundary used everywhere else to decide
+// between the two), falling back to the other side if the natural one
+// has nothing on file at all for this row. Used to rank suppliers by what
+// they'd actually charge for a specific purchase quantity, rather than by
+// their flat qty-1 rate.
+function purchasePriceAtQty(row, qty){
+  const packQty = Number(row.packQty)||0;
+  const natural = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
+  const other = natural==='wholesale' ? 'retail' : 'wholesale';
+  const price = tieredUnitPrice(row, qty, natural);
+  return price!=null ? price : tieredUnitPrice(row, qty, other);
+}
 // The price entry form no longer has separate flat wholesale/retail
 // inputs -- everything's typed into the one tier list. wholesale/retail
 // are derived from it for the many places that still read those two
@@ -11944,6 +11958,12 @@ let invProductId = null;
 let invVariantIdx = null;
 let invPresetAction = null; // 'purchase' | 'adjust' | null — tailors the modal title and default reason
 let invPurchaseSupplierId = null; // sticky supplier selection within the purchase stage
+// Same idea as ipQtyRaw/ipQtyUnitMode in the New Quote item picker: the raw
+// number typed counts in either the row's base unit or a pack, depending on
+// invPurchaseQtyUnitMode -- ipComputeQty() (shared helper) converts the two
+// into the real base-unit quantity suppliers get ranked and priced by.
+let invPurchaseQtyRaw = '';
+let invPurchaseQtyUnitMode = 'unit';
 
 function invRenderList(query){
   const tokens = searchTokens(query);
@@ -11977,6 +11997,7 @@ function invRenderList(query){
 }
 function invShowSearchView(){
   invProductId = null; invVariantIdx = null; invPresetAction = null; invPurchaseSupplierId = null;
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit';
   document.getElementById('invModalTitle').textContent = 'Adjust stock';
   document.getElementById('inv_stage_view').style.display = 'none';
   document.getElementById('inv_stage_view').innerHTML = '';
@@ -12002,6 +12023,7 @@ function invSelectProduct(id, variantIdx=null, action=null){
   invVariantIdx = variantIdx==null ? null : Number(variantIdx);
   invPresetAction = action;
   invPurchaseSupplierId = null;
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit';
   document.getElementById('invModalTitle').textContent = action==='purchase' ? 'Purchase stock' : 'Adjust stock';
   document.getElementById('inv_search_view').style.display = 'none';
   document.getElementById('inv_stage_view').style.display = 'block';
@@ -12089,17 +12111,56 @@ function renderInvStage(){
   });
 }
 
-// Purchase (restock) stage — shows the 3 cheapest suppliers for this item as
-// horizontal cards, then quantity + price-purchased-at fields underneath.
+// Converts whatever's typed in the qty field into a real base-unit
+// quantity -- same idea as ipComputeQty, minus its "always at least 1"
+// floor (a New Quote line always represents at least one of something;
+// an empty/zero purchase quantity here genuinely means nothing to buy
+// yet, so it should resolve to 0 rather than being forced up to 1).
+function invPurchaseQtyValue(rawQty, unitMode, packQty){
+  const raw = Number(rawQty)||0;
+  return unitMode==='pack' && packQty>0 ? raw*packQty : raw;
+}
+// Purchase (restock) stage — shows the cheapest suppliers for the quantity
+// actually being bought (re-ranked live as that quantity crosses a volume
+// breakpoint) as horizontal cards, then quantity + price-purchased-at
+// fields underneath. The best card's price auto-fills "Price purchased
+// at", which stays a normal editable field either way.
 function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn){
-  const ranked = rankedPriceRows(invProductId, variantIdx);
-  const top3 = ranked.slice(0, 3);
+  const allRows = productPriceRows(invProductId, variantIdx).filter(r=>!r.outOfStock);
+
+  // A typed "3" means something different depending on whether it's 3
+  // loose units or 3 packs, and that depends on units-per-pack -- which
+  // varies by supplier. Use whichever supplier is currently selected
+  // (sticky across re-renders) to supply that context, falling back to
+  // the flat-cheapest row the very first time this stage renders for an
+  // item, before any quantity or selection has been made yet.
+  const staticRanked = rankedPriceRows(invProductId, variantIdx);
+  const contextRow = allRows.find(r=>r.supplierId===invPurchaseSupplierId) || staticRanked[0] || null;
+  const packQty = contextRow ? Number(contextRow.packQty)||0 : 0;
+  const packUnit = contextRow ? (contextRow.packUnit||'') : '';
+  const unit = contextRow ? (contextRow.unit||'') : '';
+  const hasPack = packQty>0 && !!packUnit;
+  if(invPurchaseQtyUnitMode==='pack' && !hasPack) invPurchaseQtyUnitMode = 'unit';
+  const qty = invPurchaseQtyValue(invPurchaseQtyRaw, invPurchaseQtyUnitMode, packQty);
+
+  // Suppliers are ranked by what they'd actually charge for THIS quantity
+  // (their own volume tiers, if any) rather than by their flat qty-1 rate
+  // -- the "best" one can change as the typed quantity crosses a
+  // breakpoint, which is the whole point of asking "for this quantity".
+  const rankedForQty = allRows
+    .map(r=>({...r, purchasePrice: purchasePriceAtQty(r, qty)}))
+    .sort((a,b)=>{
+      const ap = a.purchasePrice!=null ? a.purchasePrice : Infinity;
+      const bp = b.purchasePrice!=null ? b.purchasePrice : Infinity;
+      return ap-bp;
+    });
+  const top3 = rankedForQty.slice(0, 3);
 
   if(!invPurchaseSupplierId || !top3.some(r=>r.supplierId===invPurchaseSupplierId)){
     invPurchaseSupplierId = top3.length ? top3[0].supplierId : null;
   }
   const selectedRow = top3.find(r=>r.supplierId===invPurchaseSupplierId) || null;
-  const startPrice = selectedRow ? (selectedRow.wholesale!=null ? selectedRow.wholesale : selectedRow.retail) : '';
+  const startPrice = selectedRow && selectedRow.purchasePrice!=null ? Math.round(selectedRow.purchasePrice) : '';
 
   const rankLabels = ['BEST', '2ND', '3RD'];
   const cardsHtml = top3.map((r,i)=>{
@@ -12109,26 +12170,38 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
       <input type="radio" class="q-sch-radio" name="inv_purchase_supplier_radio" value="${esc(r.supplierId)}" ${sel?'checked':''}>
       <span class="q-sch-rank ${i===0?'best':''}">${rankLabels[i]}</span>
       <span class="q-sch-name">${esc(r.sname)}</span>
-      <span class="q-sch-price">${fmtUGX(r.wholesale!=null ? r.wholesale : r.retail)}</span>
+      <span class="q-sch-price">${fmtUGX(r.purchasePrice)}</span>
       <span class="q-sch-unit">per ${esc(r.unit || 'unit')}</span>
       ${packLabel ? `<span class="q-sch-pack">${esc(packLabel)}</span>` : ''}
     </label>`;
   }).join('');
+
+  const qtyUnitOptionsHTML = `<option value="unit" ${invPurchaseQtyUnitMode==='unit'?'selected':''}>${esc(unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" ${invPurchaseQtyUnitMode==='pack'?'selected':''}>${esc(packUnit)} (${packQty} ${esc(unit||'unit')})</option>` : '');
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head"><div class="q-stage-name">${esc(displayName)}</div></div>
     <div class="q-stage-summary" style="margin-top:0;">Currently in stock: <strong>${current}</strong></div>
 
     ${top3.length
-      ? `<div class="q-section-label" style="margin-top:14px;">Cheapest suppliers for this item</div>
+      ? `<div class="q-section-label" style="margin-top:14px;">Cheapest suppliers for this quantity</div>
          <div class="q-supplier-cards-h">${cardsHtml}</div>`
       : `<div class="q-empty-hint" style="margin-top:14px;">No priced suppliers for this item yet — add prices in the Price Registry tab.</div>`}
 
-    <div class="form-grid" style="margin-top:14px;">
-      <div class="field"><label>Quantity purchased</label><input type="number" id="inv_purchase_qty" min="0" step="any" placeholder="e.g. 20"></div>
-      <div class="field"><label>Price purchased at (UGX, per unit)</label><input type="number" id="inv_purchase_price" min="0" step="any" value="${startPrice}"></div>
+    <div class="q-qty-row" style="margin-top:14px;">
+      <div class="field q-qty-field">
+        <label>Quantity purchased</label>
+        <div class="q-qty-input-group">
+          <input type="number" id="inv_purchase_qty" min="0" step="any" placeholder="e.g. 20" value="${esc(invPurchaseQtyRaw)}">
+          <select id="inv_purchase_qty_unit">${qtyUnitOptionsHTML}</select>
+        </div>
+      </div>
+      <div class="field q-qty-field">
+        <label>Price purchased at (UGX per ${esc(unit||'unit')})</label>
+        <input type="number" id="inv_purchase_price" min="0" step="any" value="${startPrice}">
+      </div>
     </div>
-    <div class="q-chosen-line" id="inv_purchase_preview">New stock will be: <strong>${current}</strong></div>
+    <div class="q-chosen-line" id="inv_purchase_preview">New stock will be: <strong>${Math.max(0, current + qty)}</strong></div>
     <div class="btn-row"><button class="btn btn-accent" id="inv_purchase_save_btn">Save</button></div>
   </div>`;
 
@@ -12141,19 +12214,39 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   });
 
   const qtyInput = document.getElementById('inv_purchase_qty');
+  const qtyUnitSel = document.getElementById('inv_purchase_qty_unit');
   qtyInput.addEventListener('input', ()=>{
-    const q = Number(qtyInput.value) || 0;
+    const q = invPurchaseQtyValue(qtyInput.value, qtyUnitSel.value, packQty);
     const after = Math.max(0, current + q);
     document.getElementById('inv_purchase_preview').innerHTML = `New stock will be: <strong>${after}</strong>`;
   });
+  // Re-resolves which supplier is cheapest and refills the price field for
+  // whatever volume tier this quantity now falls into. Clears the sticky
+  // supplier selection so it re-defaults to the new best one -- unlike the
+  // New Quote item picker (where a manual pick should survive further
+  // qty edits), the whole point here is "recommend the best supplier for
+  // this quantity", so the recommendation has to keep following the
+  // quantity rather than staying pinned on whoever was cheapest before.
+  // A manual card click still wins until the next qty/unit change.
+  // Uses 'change' rather than 'input' (same as the New Quote item picker's
+  // own qty field) so a full re-render doesn't fire on every keystroke.
+  const handleQtyChange = ()=>{
+    invPurchaseQtyRaw = qtyInput.value;
+    invPurchaseQtyUnitMode = qtyUnitSel.value;
+    invPurchaseSupplierId = null;
+    renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
+  };
+  qtyInput.addEventListener('change', handleQtyChange);
+  qtyUnitSel.addEventListener('change', handleQtyChange);
 
   document.getElementById('inv_purchase_save_btn').addEventListener('click', ()=>{
-    const q = Number(qtyInput.value) || 0;
+    const q = invPurchaseQtyValue(qtyInput.value, qtyUnitSel.value, packQty);
     if(q<=0){ toast('Enter a quantity greater than 0'); return; }
     const priceRaw = document.getElementById('inv_purchase_price').value;
     const price = priceRaw==='' ? null : Number(priceRaw);
     const supplierLabel = invPurchaseSupplierId ? supplierName(invPurchaseSupplierId) : '';
     let note = supplierLabel ? `Purchased from ${supplierLabel}` : 'Purchased';
+    if(qtyUnitSel.value==='pack' && packQty>0) note += ` — ${qtyInput.value} ${packUnit}`;
     if(price!=null) note += ` @ ${fmtUGX(price)} each`;
     // Buying at a different price than what's on file for this supplier
     // means their price has changed -- keep the Price Registry current
