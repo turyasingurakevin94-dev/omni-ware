@@ -215,17 +215,21 @@ Deno.serve(async (req) => {
       { data: priceRows, error: priceErr },
       { data: clusterRows, error: clusterErr },
       { data: promoRows, error: promoErr },
+      { data: suppliers, error: suppliersErr },
     ] = await Promise.all([
       admin.from("products").select("*").eq("shop_id", shopId).in("id", productIds),
       admin.from("prices").select("*").eq("shop_id", shopId).in("product_id", productIds),
       admin.from("agent_clusters").select("product_id, variant_idx, added_at").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
       admin.from("agent_promotions").select("product_id, variant_idx, bonus_type, bonus_value, starts_at, ends_at").eq("shop_id", shopId).eq("active", true).in("product_id", productIds),
+      admin.from("suppliers").select("id, name").eq("shop_id", shopId),
     ]);
     if (productsErr) return json({ error: productsErr.message, stage: "products_lookup" }, 500);
     if (priceErr) return json({ error: priceErr.message, stage: "prices_lookup" }, 500);
     if (clusterErr) return json({ error: clusterErr.message, stage: "cluster_lookup" }, 500);
     if (promoErr) return json({ error: promoErr.message, stage: "promo_lookup" }, 500);
+    if (suppliersErr) return json({ error: suppliersErr.message, stage: "suppliers_lookup" }, 500);
     const productsById = new Map<string, any>((products || []).map((p) => [p.id, p]));
+    const supplierNamesById = new Map<string, string>((suppliers || []).map((s) => [s.id, s.name]));
 
     // Bonus commission only ever locks in if the item has been sitting in
     // the agent's cluster for at least resolveClusterWaitDays() already --
@@ -282,7 +286,16 @@ Deno.serve(async (req) => {
         packUnit: priced.packUnit,
         packQty: priced.packQty,
         qty: Number(it.qty),
-        supplierId: null, supplierName: null, // never carried on an agent-originated line -- see module header
+        // The supplier this floor price was actually costed from -- carried
+        // forward (unlike the rest of this line, nothing about supplierId is
+        // agent-facing or trust-sensitive) so the shop can see where to buy
+        // the item from, and so marking the order invoiced auto-generates a
+        // purchase invoice against this supplier the same way it already
+        // does for a staff-built quote. Still just a starting point: an
+        // admin can reassign it to a different supplier from the order's
+        // edit view like any other line item, e.g. if this one's since sold
+        // out or a better price came in after the order was placed.
+        supplierId: best.supplier_id, supplierName: supplierNamesById.get(best.supplier_id) || null,
         price: priced.cost, // the real supplier cost this floor price was computed from
         sellPrice: priced.floorPrice, // what the shop is actually owed for this line
         agentSellPrice: Number(it.agentSellPrice), // the agent's own price to their client -- their business, not the shop's
