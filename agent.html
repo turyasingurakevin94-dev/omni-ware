@@ -338,8 +338,12 @@
   .ag-price-tier.retail{color:var(--slate);background:var(--slate-soft);}
   .ag-price-tier.wholesale{color:#fff;background:var(--rust);}
   /* "Buy more, pay less" teaser on a grid card -- always one line, always
-     per the same base unit as the price right above it. */
-  .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--accent-dark);margin-top:5px;}
+     per the same base unit as the price right above it. Muted rather than
+     colored like the real price (ag-grid-price/ag-item-result-price) --
+     this is supplementary context about a DIFFERENT quantity, not a
+     second price for the one being shown, and styling it just as boldly
+     invited reading it as one. */
+  .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:500;color:var(--ink-soft);margin-top:5px;}
   .ag-bulk-hint .icon{width:11px;height:11px;flex-shrink:0;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
@@ -1465,7 +1469,7 @@ function promoDaysLeftInfo(endsAt){
 // tease volume pricing the same way.
 function bulkHintHTML(it){
   if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
-  return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} for ${fmtAmount(it.bestTierPrice)} each</div>`;
+  return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is for ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} at ${fmtAmount(it.bestTierPrice)} each.</div>`;
 }
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
