@@ -371,11 +371,12 @@
   .ag-menu-count{font-size:13px;color:var(--ink-soft);font-weight:600;}
   .ag-menu-chevron{color:var(--ink-soft);width:18px;height:18px;flex-shrink:0;}
 
-  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
   .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
   .ag-order-row-client{font-weight:600;font-size:14px;}
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
-  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
+  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ag-order-row-items-link{color:var(--accent);font-weight:700;white-space:nowrap;}
   /* Ongoing orders: what's happening right now ("Andrew is preparing your
      order"). Completed orders: whether this order is settled with the shop
      or still owes a balance. Same slot, different meaning per status, each
@@ -1126,14 +1127,50 @@ function orderRowHTML(o){
   const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
   const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
   const extra = o.status==='completed' ? orderBalanceInfo(o) : orderStatusInfo(o);
-  return `<div class="ag-order-row">
+  const itemCount = (o.items||[]).length;
+  return `<div class="ag-order-row" data-order-id="${esc(o.id)}">
     <div class="ag-order-row-head">
       <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
       <div class="ag-order-row-date">${esc(date)}</div>
     </div>
-    <div class="ag-order-row-split">${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</div>
+    <div class="ag-order-row-split">
+      <span>${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</span>
+      <span class="ag-order-row-items-link">${itemCount} item${itemCount===1?'':'s'} &rsaquo;</span>
+    </div>
     <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span></div>
   </div>`;
+}
+function orderItemRowHTML(it){
+  const ce = catalogEntry(it.productId, it.variantIdx);
+  const packLabel = packSentence(it.packQty, it.unit, it.packUnit);
+  return `<div class="ag-cart-row">
+    <div class="ag-cart-row-body">
+      <div class="ag-cart-row-name">${esc(it.productName)}</div>
+      ${ce && ce.variantLabel ? `<div class="ag-grid-variant">${esc(ce.variantLabel)}</div>` : ''}
+      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
+      <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
+    </div>
+    <div class="ag-cart-row-price">${fmtUGX((Number(it.agentSellPrice)||0) * (Number(it.qty)||0))}</div>
+  </div>`;
+}
+function openOrderItemsPanel(orderId){
+  const o = myOrders.find(x=>String(x.id)===String(orderId));
+  if(!o) return;
+  const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title" style="margin-bottom:2px;">${esc(client ? client.name : 'Order')}</div>
+      <div class="ag-cost-hint">${(o.items||[]).length} item${(o.items||[]).length===1?'':'s'}</div>
+      ${(o.items||[]).map(orderItemRowHTML).join('')}
+      <div class="ag-cart-row" style="border-top:2px solid var(--line);margin-top:4px;padding-top:12px;">
+        <div class="ag-cart-row-body"><div class="ag-cart-row-name">Total</div></div>
+        <div class="ag-cart-row-price">${fmtUGX(orderTotal(o))}</div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 }
 function renderAccount(){
   const initials = (myAgent.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
@@ -1165,6 +1202,11 @@ document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
   btn.classList.add('active');
   orderHistorySegment = btn.dataset.seg;
   renderOrderHistoryScreen();
+});
+document.getElementById('ag_orderHistoryListWrap').addEventListener('click', (e)=>{
+  const row = e.target.closest('.ag-order-row[data-order-id]');
+  if(!row) return;
+  openOrderItemsPanel(row.dataset.orderId);
 });
 
 // Both sub-screens can be reached from either Account's menu or
