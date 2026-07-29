@@ -7882,12 +7882,11 @@ const PAN_COLUMNS = {
     {key:'name', label:'Supplier name'},
     {key:'amt', label:'Amt', numeric:true, money:true},
     {key:'docCount', label:'Doc number', numeric:true},
-    {key:'commission', label:'Commission', numeric:true, money:true}
+    {key:'commission', label:'Expected commission', numeric:true, money:true}
   ]
 };
 let panView = 'item'; // 'item' | 'supplier'
 let panLastEntries = [];
-let panLastRange = {from:null, to:null};
 const panSortState = {
   item: {key:'amt', dir:-1},
   supplier: {key:'amt', dir:-1}
@@ -7943,46 +7942,33 @@ function panRowsByItem(invoices){
   });
   return [...map.values()];
 }
-// A commission entry is stamped with a 'YYYY-MM' period rather than an
-// exact date, so it's counted in range by treating it as landing on the
-// 1st of that month -- consistent with how every other purchase-analytics
-// number here is filtered against the same from/to.
-function panSupplierCommissionsInRange(from, to){
-  return (data.supplierCommissions||[]).filter(c=>{
-    const d = c.period ? c.period+'-01' : '';
-    if(from && d < from) return false;
-    if(to && d > to) return false;
-    return true;
-  });
-}
-function panRowsBySupplier(invoices, from, to){
+// The Commission column is a projection, not a lookup: rate% x however
+// much was actually bought from that supplier within the selected date
+// range, so it always matches whatever range is picked (a recorded
+// supplier_commissions entry is stamped to a calendar month, which won't
+// line up with an arbitrary "last 7 days" or custom range). Null means
+// "no rate on file", kept distinct from an honest 0 so the table can show
+// "--" instead of implying nothing is owed.
+function panRowsBySupplier(invoices){
   const map = new Map();
   invoices.forEach(pi=>{
     const sid = pi.supplierId || '__unknown__';
     if(!map.has(sid)){
-      map.set(sid, {supplierId: sid, name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0, commission:0});
+      map.set(sid, {supplierId: sid, name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0});
     }
     const row = map.get(sid);
     row.docCount += 1;
     row.amt += purchaseInvoiceTotal(pi);
     (pi.items||[]).forEach(it=>{ row.qty += Number(it.qty)||0; });
   });
-  // A supplier can have commission recorded for a period with no purchase
-  // invoice in range at all -- still worth a row so the commission isn't
-  // silently dropped from the table.
-  panSupplierCommissionsInRange(from, to).forEach(c=>{
-    if(!map.has(c.supplierId)) map.set(c.supplierId, {supplierId: c.supplierId, name: supplierName(c.supplierId), amt:0, docCount:0, qty:0, commission:0});
-    map.get(c.supplierId).commission += Number(c.amount)||0;
+  return [...map.values()].map(r=>{
+    const s = data.suppliers.find(x=>x.id===r.supplierId);
+    const pct = s && s.commissionPct!=null ? s.commissionPct : null;
+    return {...r, commission: pct!=null ? Math.round(r.amt * pct / 100) : null};
   });
-  // Flags a supplier that was actually bought from in this range but has
-  // no commission recorded for it yet, so a real gap doesn't just read as
-  // an unremarkable "0" next to every other number in the row -- only for
-  // suppliers with an agreed rate on file, since that's the only case an
-  // absence actually means something.
-  return [...map.values()].map(r=>({...r, commissionMissing: r.docCount>0 && r.commission===0 && supplierExpectsCommission(r.supplierId)}));
 }
 function panRowsForView(){
-  return panView==='supplier' ? panRowsBySupplier(panLastEntries, panLastRange.from, panLastRange.to) : panRowsByItem(panLastEntries);
+  return panView==='supplier' ? panRowsBySupplier(panLastEntries) : panRowsByItem(panLastEntries);
 }
 function panOverallTotals(invoices){
   let amt=0, qty=0;
@@ -8003,6 +7989,9 @@ function renderPanKpis(){
   `;
 }
 function panFormatCell(col, value){
+  // Expected commission is only meaningful once a supplier has a rate on
+  // file -- null (no rate) reads as "--", distinct from an honest 0.
+  if(col.key==='commission' && value==null) return '--';
   if(col.money) return fmtUGX(Math.round(Number(value)||0));
   if(col.numeric) return Number(value||0).toLocaleString('en-UG', {maximumFractionDigits:2});
   return esc(value||'');
@@ -8041,10 +8030,7 @@ function renderPanTable(){
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
-    ${cols.map(c=>{
-      if(c.key==='commission' && r.commissionMissing) return `<td class="price"><span class="st-status-pill unavailable" title="This supplier had purchases in range but no commission recorded for the matching period">Missing</span></td>`;
-      return `<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`;
-    }).join('')}
+    ${cols.map(c=>`<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`).join('')}
   </tr>`).join('')}</tbody>${totalRowHTML}</table></div>
   <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, panFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
@@ -8055,7 +8041,6 @@ function renderPanTable(){
 }
 function renderPurchaseAnalytics(){
   const {from, to} = panGetDateRange();
-  panLastRange = {from, to};
   panLastEntries = panInvoicesInRange(from, to);
   renderPanKpis();
   renderPanTable();
@@ -8084,7 +8069,8 @@ document.getElementById('pan_export_btn').addEventListener('click', ()=>{
   rows.forEach((r,i)=>{
     const vals = cols.map(c=>{
       let v = r[c.key];
-      if(c.money) v = Math.round(Number(v)||0);
+      if(c.key==='commission' && v==null) v = '';
+      else if(c.money) v = Math.round(Number(v)||0);
       else v = v==null ? '' : v;
       return `"${String(v).replace(/"/g,'""')}"`;
     });
