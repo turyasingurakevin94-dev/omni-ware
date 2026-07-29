@@ -2983,23 +2983,11 @@
       </button>
     </div>
     <div class="modal-body">
-      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 14px;">What this supplier pays you for selling their products, usually recorded once a month.</p>
+      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 14px;">What this supplier pays you for selling their products.</p>
       <div class="form-grid">
         <div class="field"><label>Commission rate (%)</label><input type="number" min="0" max="100" step="any" id="scm_pct" placeholder="e.g. 3"></div>
       </div>
-      <div class="field-hint" style="margin:6px 0 16px;">When set, this rate auto-fills the amount below from that period's purchases from this supplier (still editable), and is what turns on the "missing commission" flag for this supplier.</div>
-      <div class="section-label-row form-section-label">Record a period</div>
-      <div class="form-grid">
-        <div class="field"><label>Period</label><input type="month" id="scm_period"></div>
-        <div class="field"><label>Amount (UGX)</label><input type="number" min="0" step="any" id="scm_amount" placeholder="e.g. 150000"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="scm_notes" placeholder="optional"></div>
-      </div>
-      <div class="btn-row">
-        <button type="button" class="btn btn-ghost" id="scm_form_cancel" style="display:none;">Cancel edit</button>
-        <button type="button" class="btn btn-accent" id="scm_save_entry">Save commission</button>
-      </div>
-      <div class="section-label-row form-section-label" style="margin-top:18px;">Recorded so far</div>
-      <div id="scm_list_wrap"></div>
+      <div class="field-hint" style="margin:6px 0 0;">Applied to purchases from this supplier to show expected commission in Purchase analytics — Statistics by supplier.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="scm_close">Close</button>
@@ -8122,18 +8110,8 @@ function supplierPriceMatches(supplierId, tokens){
     return aw-bw;
   });
 }
-// The period a commission entry recorded "now" would use -- the same
-// 'YYYY-MM' shape as every supplier_commissions row's period column.
-function currentPeriod(){ return todayISO().slice(0,7); }
-function supplierMissingCurrentCommission(supplierId){
-  if(!supplierExpectsCommission(supplierId)) return false;
-  return !data.supplierCommissions.some(c=>c.supplierId===supplierId && c.period===currentPeriod());
-}
 function supplierCardHTML(s, productMatches){
   const stats = supplierStats(s.id);
-  const missingCommissionFlag = supplierMissingCurrentCommission(s.id)
-    ? `<div style="margin-top:10px;"><span class="st-status-pill unavailable" title="No commission recorded yet for this period">No commission — ${esc(claimMonthLabel(currentPeriod()))}</span></div>`
-    : '';
   const matchesHtml = (productMatches && productMatches.length) ? `
     <div class="sc-matches">
       <div class="sc-matches-label">Matching prices</div>
@@ -8162,7 +8140,6 @@ function supplierCardHTML(s, productMatches){
       ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
       ${(!s.phone && !s.location && !s.notes) ? `<div class="sc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
     </div>
-    ${missingCommissionFlag}
     ${matchesHtml}
     <div class="sc-stats">
       <div class="sc-stat"><b>${stats.priced}</b><span>Priced items</span></div>
@@ -8248,44 +8225,22 @@ document.getElementById('s_cancel').addEventListener('click', ()=>closeModalAndR
 document.getElementById('supplierModalClose').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('s_search').addEventListener('input', e=>renderSuppliers(e.target.value));
 
-/* ---- Supplier commissions: what a supplier pays the shop for selling
-   their products, recorded per period (usually monthly) since that's how
-   suppliers actually pay it out. Feeds the "Statistics by supplier"
-   purchase-analytics column/total -- see panRowsBySupplier(). ---- */
+/* ---- Supplier commission rate: what % a supplier pays the shop for
+   selling their products. Drives the "Expected commission" column in
+   Purchase analytics -- Statistics by supplier -- see panRowsBySupplier(). ---- */
 let scmSupplierId = null;
-let scmEditingId = null;
-// Total purchases from this supplier that fall inside a given 'YYYY-MM'
-// period -- what a % rate is applied to when suggesting a commission amount.
-function supplierPurchaseTotalForPeriod(supplierId, period){
-  if(!period) return 0;
-  return (data.purchaseInvoices||[]).filter(pi=>!pi.voided && pi.supplierId===supplierId && (pi.date||'').startsWith(period))
-    .reduce((sum,pi)=> sum + purchaseInvoiceTotal(pi), 0);
-}
-// A supplier only "expects" a commission -- and only gets flagged for a
-// missing one -- once a rate has actually been agreed and set; a supplier
-// with no rate on file just isn't part of a commission arrangement yet.
+// A supplier only "expects" a commission once a rate has actually been
+// agreed and set; a supplier with no rate on file just isn't part of a
+// commission arrangement.
 function supplierExpectsCommission(supplierId){
   const s = data.suppliers.find(x=>x.id===supplierId);
   return !!(s && s.commissionPct!=null && s.commissionPct>0);
-}
-// Auto-fills the amount field from rate% x that period's purchases -- only
-// while adding a NEW entry (never overwrites one already being edited,
-// same "auto-fill but still editable" rule as elsewhere in this app).
-function updateSuggestedCommissionAmount(){
-  if(scmEditingId) return;
-  const s = data.suppliers.find(x=>x.id===scmSupplierId); if(!s) return;
-  const period = document.getElementById('scm_period').value;
-  if(!period || s.commissionPct==null) return;
-  const total = supplierPurchaseTotalForPeriod(scmSupplierId, period);
-  document.getElementById('scm_amount').value = Math.round(total * s.commissionPct / 100) || '';
 }
 function openSupplierCommissionModal(supplierId){
   const s = data.suppliers.find(x=>x.id===supplierId); if(!s) return;
   scmSupplierId = supplierId;
   document.getElementById('scm_supplier_name').textContent = s.name;
   document.getElementById('scm_pct').value = s.commissionPct!=null ? s.commissionPct : '';
-  resetSupplierCommissionForm();
-  renderSupplierCommissionList();
   openModal('supplierCommissionModal');
 }
 document.getElementById('scm_pct').addEventListener('change', ()=>{
@@ -8293,69 +8248,8 @@ document.getElementById('scm_pct').addEventListener('change', ()=>{
   const val = document.getElementById('scm_pct').value;
   s.commissionPct = val==='' ? null : Math.min(100, Math.max(0, Number(val)||0));
   saveData();
-  updateSuggestedCommissionAmount();
   renderSuppliers(document.getElementById('s_search').value);
 });
-document.getElementById('scm_period').addEventListener('change', updateSuggestedCommissionAmount);
-function resetSupplierCommissionForm(){
-  scmEditingId = null;
-  document.getElementById('scm_period').value = '';
-  document.getElementById('scm_amount').value = '';
-  document.getElementById('scm_notes').value = '';
-  document.getElementById('scm_form_cancel').style.display = 'none';
-  document.getElementById('scm_save_entry').textContent = 'Save commission';
-}
-function renderSupplierCommissionList(){
-  const wrap = document.getElementById('scm_list_wrap');
-  const rows = data.supplierCommissions.filter(c=>c.supplierId===scmSupplierId).slice().sort((a,b)=>b.period.localeCompare(a.period));
-  if(rows.length===0){ wrap.innerHTML = '<div class="q-empty-hint">No commission recorded yet for this supplier.</div>'; return; }
-  wrap.innerHTML = `<div class="preset-list">${rows.map(c=>`
-    <div class="preset-row" data-id="${c.id}">
-      <span class="preset-row-name">${esc(claimMonthLabel(c.period))}</span>
-      <span style="font-weight:700;">${fmtUGX(c.amount)}</span>
-      <span style="flex:1;color:var(--ink-soft);font-size:12.5px;">${esc(c.notes||'')}</span>
-      <button type="button" class="pc-icon-btn sc-comm-edit" data-id="${c.id}" title="Edit">${ICON_EDIT}</button>
-      <button type="button" class="pc-icon-btn danger sc-comm-remove" data-id="${c.id}" title="Delete">${ICON_TRASH}</button>
-    </div>`).join('')}</div>`;
-  wrap.querySelectorAll('.sc-comm-edit').forEach(btn=>btn.addEventListener('click', e=>{
-    const c = data.supplierCommissions.find(x=>x.id===Number(e.currentTarget.dataset.id)); if(!c) return;
-    scmEditingId = c.id;
-    document.getElementById('scm_period').value = c.period;
-    document.getElementById('scm_amount').value = c.amount;
-    document.getElementById('scm_notes').value = c.notes||'';
-    document.getElementById('scm_form_cancel').style.display = '';
-    document.getElementById('scm_save_entry').textContent = 'Update commission';
-  }));
-  wrap.querySelectorAll('.sc-comm-remove').forEach(btn=>btn.addEventListener('click', e=>{
-    const id = Number(e.currentTarget.dataset.id);
-    if(!confirm('Delete this commission entry?')) return;
-    data.supplierCommissions = data.supplierCommissions.filter(c=>c.id!==id);
-    saveData(); renderSupplierCommissionList();
-    if(document.getElementById('tab-analytics-purchase').style.display!=='none') renderPurchaseAnalytics();
-    toast('Commission entry deleted');
-  }));
-}
-document.getElementById('scm_save_entry').addEventListener('click', ()=>{
-  const period = document.getElementById('scm_period').value;
-  const amount = Number(document.getElementById('scm_amount').value);
-  const notes = document.getElementById('scm_notes').value.trim();
-  if(!period){ toast('Pick a period'); return; }
-  if(!amount || amount<=0){ toast('Enter a commission amount'); return; }
-  const dup = data.supplierCommissions.find(c=>c.supplierId===scmSupplierId && c.period===period && c.id!==scmEditingId);
-  if(dup){ toast('A commission is already recorded for that period — edit it instead'); return; }
-  if(scmEditingId){
-    const row = data.supplierCommissions.find(c=>c.id===scmEditingId);
-    row.period = period; row.amount = amount; row.notes = notes;
-  } else {
-    data.supplierCommissions.push({id: data.nextSupplierCommissionId++, supplierId: scmSupplierId, period, amount, notes});
-  }
-  saveData();
-  resetSupplierCommissionForm();
-  renderSupplierCommissionList();
-  if(document.getElementById('tab-analytics-purchase').style.display!=='none') renderPurchaseAnalytics();
-  toast('Commission saved');
-});
-document.getElementById('scm_form_cancel').addEventListener('click', resetSupplierCommissionForm);
 document.getElementById('scm_close').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
 document.getElementById('supplierCommissionModalClose').addEventListener('click', ()=>closeModal('supplierCommissionModal'));
 
