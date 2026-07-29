@@ -211,6 +211,36 @@
   .ag-overlay-title{font-weight:800;font-size:17px;margin-bottom:14px;letter-spacing:-0.01em;}
   .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
 
+  /* Quantity + its unit selector on one line -- picking the item's own
+     pack unit (Ctn, Dzn, ...) instead of its base unit changes what a
+     typed number means, so the two controls have to stay visually
+     joined rather than reading like two unrelated fields. */
+  .ag-qty-unit-row{display:flex;gap:8px;}
+  .ag-qty-unit-row input{flex:1;min-width:0;}
+  .ag-qty-unit-row select{flex-shrink:0;width:auto;font-weight:600;}
+
+  /* Full breakpoint ladder shown once an item's detail panel is open --
+     every row states a quantity range and the price for it, both always
+     in whichever ONE unit is currently selected above, so there's never
+     a moment where two different units are on screen for the price at
+     once. */
+  .ag-tier-ladder{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+  .ag-tier-ladder .ag-tl-head{display:flex;justify-content:space-between;padding:8px 12px;background:#FAFBFC;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--line);}
+  .ag-tl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .ag-tl-row:last-child{border-bottom:none;}
+  .ag-tl-row.earned{background:var(--good-bg);}
+  .ag-tl-qty{display:flex;align-items:center;gap:7px;color:var(--ink);font-weight:600;}
+  .ag-tl-icon{width:19px;height:19px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ag-tl-icon .icon{width:10px;height:10px;}
+  .ag-tl-icon.retail{color:var(--slate);background:var(--slate-soft);}
+  .ag-tl-icon.wholesale{color:#fff;background:var(--rust);}
+  .ag-tl-note{font-size:10px;color:var(--ink-soft);font-weight:500;}
+  .ag-tl-price{font-family:var(--font-money);font-weight:800;color:var(--ink);font-size:12.5px;white-space:nowrap;}
+  .ag-tl-row.earned .ag-tl-price{color:var(--good);}
+  .ag-tl-check{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;color:var(--good);text-transform:uppercase;letter-spacing:.03em;}
+  .ag-tl-check .icon{width:9px;height:9px;}
+  .ag-tl-loading{padding:14px 12px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
+
   .ag-radio-card{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
   .ag-radio-card.selected{border-color:var(--accent);background:var(--accent-soft);}
   .ag-radio-card input{margin:0;accent-color:var(--accent);}
@@ -307,6 +337,10 @@
   .ag-price-tier .icon{width:10px;height:10px;}
   .ag-price-tier.retail{color:var(--slate);background:var(--slate-soft);}
   .ag-price-tier.wholesale{color:#fff;background:var(--rust);}
+  /* "Buy more, pay less" teaser on a grid card -- always one line, always
+     per the same base unit as the price right above it. */
+  .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--accent-dark);margin-top:5px;}
+  .ag-bulk-hint .icon{width:11px;height:11px;flex-shrink:0;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
@@ -1418,6 +1452,16 @@ function browseCardHTML(it, promoted, opts){
   const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
   const clusterWait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
   const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
+  // "Buy more, pay less" is only ever one line: the single cheapest
+  // breakpoint this item has (bestTierMinQty/bestTierPrice, already
+  // resolved server-side), always stated per the SAME base unit as the
+  // headline price above it -- never a pack unit, so there's never a
+  // question of whether a number on this card is per piece, dozen, or
+  // carton. The full ladder (and the option to view it in pack terms)
+  // only ever shows up once this card is tapped.
+  const bulkHint = (it.bestTierMinQty!=null && it.bestTierPrice!=null)
+    ? `<div class="ag-bulk-hint">${ICON_BOXES}Buy ${esc(it.bestTierMinQty)}+ for ${fmtPricePerUnit(it.bestTierPrice, it.unit)}</div>`
+    : '';
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -1433,6 +1477,7 @@ function browseCardHTML(it, promoted, opts){
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
       ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
       <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+      ${bulkHint}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
   </div>`;
@@ -1597,6 +1642,54 @@ async function openBrowseView(){
   renderBrowseGrid();
 }
 
+// Finds the breakpoint a given (base-unit) quantity actually earns -- the
+// highest minQty at or below it. Mirrors the server's own tieredUnitPrice()
+// resolution rule; safe to do purely client-side because every tier in
+// `tiers` already carries its final agent-facing floor price, not a raw
+// cost an agent shouldn't be able to derive markup/discount from.
+function tierForQty(tiers, qty){
+  let best = null;
+  (tiers||[]).forEach(t=>{ if(qty>=t.minQty && (!best || t.minQty>=best.minQty)) best = t; });
+  return best || (tiers && tiers[0]) || null;
+}
+// Turns the raw ascending tier ladder into display rows in whichever unit
+// is currently selected -- the item's base unit, or its own pack unit. A
+// breakpoint that doesn't land on a whole pack has no honest way to state
+// itself in pack terms (nobody buys "0.05 of a carton"), so that one row
+// always falls back to the base unit regardless of what's selected, with
+// a short note instead of an invented fraction.
+function buildTierDisplayRows(tiers, unit, packUnit, packQty, viewUnit){
+  return (tiers||[]).map((t, i)=>{
+    const nextMinQty = i+1 < tiers.length ? tiers[i+1].minQty : null;
+    const maxQty = nextMinQty!=null ? nextMinQty - 1 : null;
+    const usePack = viewUnit==='pack' && packQty>0 && t.minQty % packQty === 0;
+    if(usePack){
+      const minPack = t.minQty / packQty;
+      const maxPack = maxQty!=null ? Math.floor(maxQty/packQty) : null;
+      return {
+        minQty: t.minQty, tier: t.tier,
+        qtyLabel: maxPack!=null ? `${minPack} – ${maxPack} ${packUnit}` : `${minPack}+ ${packUnit}`,
+        price: t.unitPrice*packQty, priceUnit: packUnit, note: null
+      };
+    }
+    return {
+      minQty: t.minQty, tier: t.tier,
+      qtyLabel: maxQty!=null ? `${t.minQty} – ${maxQty} ${unit}` : `${t.minQty}+ ${unit}`,
+      price: t.unitPrice, priceUnit: unit,
+      note: (viewUnit==='pack' && packQty>0) ? `below 1 ${packUnit} — priced individually` : null
+    };
+  });
+}
+function tierLadderRowHTML(row, earned){
+  return `<div class="ag-tl-row ${earned?'earned':''}">
+    <div class="ag-tl-qty">
+      <span class="ag-tl-icon ${esc(row.tier||'retail')}">${row.tier==='wholesale'?ICON_BOXES:ICON_TAG}</span>
+      <div>${esc(row.qtyLabel)}${earned?` <span class="ag-tl-check">${ICON_CHECK}Your price</span>`:''}${row.note?`<div class="ag-tl-note">${esc(row.note)}</div>`:''}</div>
+    </div>
+    <span class="ag-tl-price">${fmtUGX(row.price)}<span class="ag-price-unit">/${esc(row.priceUnit)}</span></span>
+  </div>`;
+}
+
 async function openAddItemPanel(item){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
@@ -1609,6 +1702,12 @@ async function openAddItemPanel(item){
   const clusterWaitHTML = clusterWait && !clusterWait.eligible
     ? `<div class="ag-cluster-wait" style="margin-bottom:14px;">${ICON_CLOCK}This sale won't earn its cluster bonus yet -- unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>`
     : '';
+  const hasPack = Number(item.packQty)>0 && !!item.packUnit;
+  // Defaults to the item's own pack unit (Ctn, Dzn, ...) rather than
+  // pieces -- an agent quoting a client is far more often thinking in
+  // packs than in loose units, and switching to "pc" is one tap away.
+  const qtyUnitOptionsHTML = `<option value="unit">${esc(item.unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" selected>${esc(item.packUnit)} (${esc(item.packQty)} ${esc(item.unit||'')})</option>` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
@@ -1616,49 +1715,100 @@ async function openAddItemPanel(item){
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
       ${clusterWaitHTML}
-      <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
-      <div class="ag-price-tier ${esc(item.tier||'')}" id="ag_ai_tier_label">${priceTierBadgeHTML(item.tier)}</div>
-      <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
-      <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
+      <div class="field">
+        <label>Quantity</label>
+        <div class="ag-qty-unit-row">
+          <input id="ag_ai_qty" type="number" min="0.01" step="any" value="1">
+          <select id="ag_ai_qty_unit">${qtyUnitOptionsHTML}</select>
+        </div>
+      </div>
+      <div id="ag_ai_ladder_wrap"><div class="ag-tl-loading">Loading price breakdown…</div></div>
+      <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}" disabled></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn" disabled>Loading…</button>
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 
-  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty, liveTier = item.tier;
   const qtyEl = document.getElementById('ag_ai_qty');
+  const unitEl = document.getElementById('ag_ai_qty_unit');
   const priceEl = document.getElementById('ag_ai_price');
-  const hintEl = document.getElementById('ag_ai_cost_hint');
-  const packLabelEl = document.getElementById('ag_ai_pack_label');
-  const tierLabelEl = document.getElementById('ag_ai_tier_label');
-  let repricing = false;
-  const reprice = async ()=>{
-    const qty = Number(qtyEl.value);
-    if(!(qty>0) || repricing) return;
-    repricing = true;
-    try{
-      const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
-      if(res.available){
-        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty; liveTier = res.tier;
-        hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
-        packLabelEl.textContent = packSentence(livePackQty, liveUnit, livePackUnit, false);
-        tierLabelEl.className = `ag-price-tier ${liveTier||''}`;
-        tierLabelEl.innerHTML = priceTierBadgeHTML(liveTier);
-      }
-    }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
-    repricing = false;
-  };
-  qtyEl.addEventListener('change', reprice);
+  const priceLabelEl = document.getElementById('ag_ai_price_label');
+  const ladderWrap = document.getElementById('ag_ai_ladder_wrap');
+  const addBtn = document.getElementById('ag_ai_add_btn');
 
-  document.getElementById('ag_ai_add_btn').addEventListener('click', ()=>{
-    const qty = Number(qtyEl.value);
+  // Populated once the ladder loads; every further qty/unit change is
+  // resolved against this locally -- no more network round-trips per
+  // keystroke, and the highlight/price update instantly instead of
+  // waiting on a fresh server call each time.
+  let tiers = null, unit = item.unit, packUnit = item.packUnit, packQty = Number(item.packQty)||0;
+  let earnedRow = null;
+
+  function currentBaseQty(){
+    const raw = Number(qtyEl.value)||0;
+    return unitEl.value==='pack' && packQty>0 ? raw*packQty : raw;
+  }
+  function rerender(){
+    if(!tiers || !tiers.length){ return; }
+    const baseQty = Math.max(0.01, currentBaseQty());
+    earnedRow = tierForQty(tiers, baseQty);
+    if(tiers.length>1){
+      const rows = buildTierDisplayRows(tiers, unit, packUnit, packQty, unitEl.value);
+      ladderWrap.innerHTML = `<div class="ag-tier-ladder">
+        <div class="ag-tl-head"><span>Quantity</span><span>Price</span></div>
+        ${rows.map(r=>tierLadderRowHTML(r, earnedRow && r.minQty===earnedRow.minQty)).join('')}
+      </div>`;
+    } else {
+      ladderWrap.innerHTML = '';
+    }
+    const priceUnit = unitEl.value==='pack' && packQty>0 ? packUnit : unit;
+    const priceValue = unitEl.value==='pack' && packQty>0 ? earnedRow.unitPrice*packQty : earnedRow.unitPrice;
+    priceLabelEl.textContent = `Your price to the client (per ${priceUnit})`;
+    priceEl.value = Math.round(priceValue);
+    priceEl.disabled = false;
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add to quote';
+  }
+
+  try{
+    // qty here is only a bootstrap probe -- every quantity's real price
+    // comes from `tiers` below, resolved locally from here on.
+    const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty: 1 });
+    if(res.available && Array.isArray(res.tiers) && res.tiers.length){
+      tiers = res.tiers.slice().sort((a,b)=>a.minQty-b.minQty);
+      unit = res.unit; packUnit = res.packUnit; packQty = Number(res.packQty)||0;
+      document.getElementById('ag_ai_pack_label').textContent = packSentence(packQty, unit, packUnit, false);
+      if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
+      rerender();
+    } else {
+      throw new Error('unavailable');
+    }
+  }catch(err){
+    // Fall back to the single flat price already known from Browse rather
+    // than leaving the panel stuck loading -- same tolerance the old
+    // per-qty reprice() had for a transient failure. Forced to the base
+    // unit regardless of the item's own pack size: that one flat number
+    // is only ever confirmed at the qty=1 (or pack-qty) probe Browse
+    // already did, so extrapolating it into a per-pack figure here would
+    // be a guess, not a real price -- better to show the one number that
+    // actually is real than a wrong one that looks precise.
+    tiers = [{ minQty: 1, unitPrice: item.floorPrice, tier: item.tier }];
+    unit = item.unit; packUnit = item.packUnit; packQty = Number(item.packQty)||0;
+    unitEl.value = 'unit';
+    rerender();
+  }
+
+  qtyEl.addEventListener('change', rerender);
+  unitEl.addEventListener('change', rerender);
+
+  addBtn.addEventListener('click', ()=>{
+    const qty = currentBaseQty();
     const agentSellPrice = Number(priceEl.value);
     if(!(qty>0)){ toast('Enter a quantity'); return; }
     if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
-      qty, unit: liveUnit, packUnit: livePackUnit, packQty: livePackQty, tier: liveTier,
-      floorPrice: liveFloor, agentSellPrice,
+      qty, unit, packUnit, packQty, tier: earnedRow ? earnedRow.tier : item.tier,
+      floorPrice: earnedRow ? earnedRow.unitPrice : item.floorPrice, agentSellPrice,
     });
     document.body.removeChild(el);
     updateCartBadge();
