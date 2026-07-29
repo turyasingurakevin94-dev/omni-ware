@@ -6408,18 +6408,17 @@ function customerOutstandingInvoices(customerId){
     .filter(q=>q.customerId===customerId && q.invoiced && !q.voided && invoiceBalanceDue(q)>0)
     .sort((a,b)=>(a.invoicedAt||a.date||'').localeCompare(b.invoicedAt||b.date||''));
 }
-// Renders a checkbox + per-row editable-amount picker for one customer's
+// Renders a checkbox + per-row amount picker for one customer's
 // outstanding invoices (oldest first) into `wrap` -- the shared UI both
 // the Customers tab's "Record payment" modal and the Cash Book's "Cash
 // in" modal use, so picking which invoice(s) a payment applies to looks
-// and behaves identically everywhere it's offered. Checking a row
-// defaults its amount to that invoice's full balance due (settle it),
-// but it's a plain editable number input -- same "auto-fill but still
-// editable" rule used elsewhere in this app -- so a partial payment per
-// invoice is just as easy. `onChange` fires after every check/amount
-// edit so the caller can refresh whatever running total it shows.
+// and behaves identically everywhere it's offered. `onChange` fires after
+// every check/amount edit so the caller can run invoicePickerCascade()
+// (it knows the total amount field, this shared picker doesn't) and
+// refresh whatever running total it shows.
 function renderInvoicePicker(wrap, customerId, onChange){
   const invoices = customerOutstandingInvoices(customerId);
+  wrap._checkOrder = [];
   if(invoices.length===0){
     wrap.innerHTML = '<div class="q-empty-hint">No outstanding invoices for this customer.</div>';
     if(onChange) onChange();
@@ -6445,11 +6444,21 @@ function renderInvoicePicker(wrap, customerId, onChange){
 
   const rowChecks = ()=>[...wrap.querySelectorAll('.ip-pick-row')];
   const amtInput = id => wrap.querySelector(`.ip-pick-amt[data-id="${id}"]`);
+  // Checking/unchecking only tracks the order invoices were picked in --
+  // the actual amount per row is filled in by invoicePickerCascade(),
+  // which the caller's onChange runs against the total amount field it
+  // owns. A manual edit to one row (the 'input' listener below) is left
+  // alone until the next structural change re-cascades over everything.
   rowChecks().forEach(cb=>cb.addEventListener('change', ()=>{
-    const amt = amtInput(cb.dataset.id);
+    const id = Number(cb.dataset.id);
+    const amt = amtInput(id);
     amt.disabled = !cb.checked;
-    if(cb.checked && !amt.value) amt.value = amt.dataset.due;
-    if(!cb.checked) amt.value = '';
+    if(cb.checked){
+      if(!wrap._checkOrder.includes(id)) wrap._checkOrder.push(id);
+    } else {
+      wrap._checkOrder = wrap._checkOrder.filter(x=>x!==id);
+      amt.value = '';
+    }
     if(onChange) onChange();
   }));
   wrap.querySelectorAll('.ip-pick-amt').forEach(inp=>inp.addEventListener('input', ()=>{ if(onChange) onChange(); }));
@@ -6457,6 +6466,23 @@ function renderInvoicePicker(wrap, customerId, onChange){
     rowChecks().forEach(cb=>{ cb.checked = e.target.checked; cb.dispatchEvent(new Event('change')); });
   });
   if(onChange) onChange();
+}
+// Distributes `amount` across whichever invoices are checked, in the
+// order they were checked (falling straight through to the next one once
+// an invoice's own balance due is covered) -- e.g. 200,000 entered against
+// a 100,000 then a 50,000 then a 70,000 invoice (checked in that order)
+// pays the first two off in full and leaves the third with a 20,000
+// balance, rather than requiring each row to be filled in by hand.
+function invoicePickerCascade(wrap, amount){
+  let remaining = Math.max(0, Number(amount)||0);
+  (wrap._checkOrder||[]).forEach(id=>{
+    const inp = wrap.querySelector(`.ip-pick-amt[data-id="${id}"]`);
+    if(!inp) return;
+    const due = Number(inp.dataset.due)||0;
+    const pay = Math.min(remaining, due);
+    inp.value = pay;
+    remaining -= pay;
+  });
 }
 // Reads back whatever's currently checked in a renderInvoicePicker() --
 // clamping each row's amount to its own balance due, since a number
@@ -8993,9 +9019,10 @@ function deleteCustomerDebtLog(customerId, logId){
 function updateCdPickerSummary(){
   const wrap = document.getElementById('cd_invoice_picker_wrap');
   const el = document.getElementById('cd_invoice_picker_summary');
+  const amount = Number(document.getElementById('cd_amount').value)||0;
+  invoicePickerCascade(wrap, amount);
   const selections = invoicePickerSelections(wrap);
   const allocated = selections.reduce((s,a)=>s+a.amount, 0);
-  const amount = Number(document.getElementById('cd_amount').value)||0;
   const remaining = amount - allocated;
   if(selections.length===0){ el.textContent = 'Any amount above that isn\'t allocated to an invoice reduces the customer\'s general balance.'; el.style.color = ''; return; }
   if(remaining < -0.01){
@@ -11487,9 +11514,10 @@ function resolveCbInCustomer(){
 function updateCbInPickerSummary(){
   const wrap = document.getElementById('cb_in_invoice_picker_wrap');
   const el = document.getElementById('cb_in_invoice_picker_summary');
+  const amount = Number(document.getElementById('cb_in_amount').value)||0;
+  invoicePickerCascade(wrap, amount);
   const selections = invoicePickerSelections(wrap);
   const allocated = selections.reduce((s,a)=>s+a.amount, 0);
-  const amount = Number(document.getElementById('cb_in_amount').value)||0;
   const remaining = amount - allocated;
   if(selections.length===0){ el.textContent = 'Select invoices above to collect this cash-in against them.'; el.style.color = ''; return; }
   if(remaining < -0.01){
