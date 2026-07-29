@@ -135,7 +135,7 @@
   }
   .ag-wallet-card::after{
     content:'';position:absolute;top:-46px;right:-36px;width:150px;height:150px;
-    border-radius:50%;background:rgba(255,255,255,0.07);
+    border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none;
   }
   .ag-wallet-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
   .ag-wallet-value{font-family:var(--font-money);font-size:30px;font-weight:700;margin:4px 0 14px;letter-spacing:-0.01em;}
@@ -869,6 +869,7 @@ function switchTab(tab){
   showOnlyView('ag_'+tab+'View');
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   lastMainTab = tab;
+  localStorage.setItem('agentLastTab', tab);
   window.scrollTo(0, 0);
   if(tab==='browse') openBrowseView();
   if(tab==='quote') renderCartTab();
@@ -1034,9 +1035,19 @@ function renderTrendChart(){
 async function openEarningsView(){
   earningsViewMonth = currentMonthKey();
   document.getElementById('ag_wallet_name').textContent = (myAgent.name||'').toUpperCase();
-  renderTrendChart();
+  // Each step wrapped separately so a failure in one (e.g. the claims
+  // fetch) can't leave the rest of the screen looking blank -- previously
+  // an uncaught throw anywhere in here silently aborted the whole
+  // function (switchTab never awaits this), leaving every value at its
+  // unrendered placeholder with no visible sign of why.
+  try{ renderTrendChart(); }catch(err){ console.error('renderTrendChart failed:', err); }
   await loadMyClaims();
-  renderEarnings();
+  try{
+    renderEarnings();
+  }catch(err){
+    console.error('renderEarnings failed:', err);
+    toast(`Could not load earnings: ${err.message||err}`);
+  }
 }
 document.getElementById('ag_qa_clients').addEventListener('click', ()=> openClientsScreen('earnings'));
 document.getElementById('ag_qa_history').addEventListener('click', ()=> openOrderHistoryScreen('earnings'));
@@ -2053,7 +2064,8 @@ async function boot(){
   }
   document.getElementById('ag_delivery_pickup_label').classList.add('selected');
   updateCartBadge();
-  switchTab('browse');
+  const savedTab = localStorage.getItem('agentLastTab');
+  switchTab(TABS.includes(savedTab) ? savedTab : 'browse');
   document.body.classList.remove('app-loading');
 }
 boot();
