@@ -638,18 +638,12 @@ function toast(msg, duration){
 }
 
 function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
-// Per-unit product price shown while browsing (e.g. "UGX 10,000 /ctn"), with
-// the "/unit" suffix wrapped so it can be de-emphasized -- the amount is
-// what an agent scans for, the unit is confirming detail.
-function fmtPricePerUnit(n, unit){
-  const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
-  return unit ? `UGX ${amount}<span class="ag-price-unit">/${esc(String(unit).toLowerCase())}</span>` : `UGX ${amount}`;
-}
-// Same amount, no "UGX" prefix -- used on Browse's grid cards, where every
-// card already repeats the currency on both the headline price and the
-// "buy more" hint, and the two-column layout is tight enough that the
-// extra characters push things into an awkward wrap. The unit's shown
-// separately right where it's needed instead.
+// Per-unit product price shown while browsing, without a currency prefix --
+// every surface that shows this already repeats it on more than one line
+// (a headline price plus a "buy more" hint), and the layouts involved
+// (2-column grid cards, a compact search-suggestions dropdown) are tight
+// enough that the extra characters push things into an awkward wrap. The
+// unit's shown separately right where it's needed instead.
 function fmtAmount(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
 function fmtAmountPerUnit(n, unit){
   const amount = fmtAmount(n);
@@ -1460,6 +1454,19 @@ function promoDaysLeftInfo(endsAt){
   return { label, urgent: diff<=1 };
 }
 
+// "Buy more, pay less" is only ever one line: the single cheapest
+// breakpoint this item has (bestTierMinQty/bestTierPrice, already
+// resolved server-side), always stated per the SAME base unit as the
+// headline price shown alongside it -- never a pack unit, so there's
+// never a question of whether a number here is per piece, dozen, or
+// carton. The full ladder (and the option to view it in pack terms)
+// only ever shows up once the item itself is tapped. Shared by the
+// browse grid card and the search-suggestions dropdown so both surfaces
+// tease volume pricing the same way.
+function bulkHintHTML(it){
+  if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
+  return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} for ${fmtAmount(it.bestTierPrice)} each</div>`;
+}
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
@@ -1470,16 +1477,6 @@ function browseCardHTML(it, promoted, opts){
   const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
   const clusterWait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
   const packLabel = it.packQty ? `1 ${esc(it.packUnit||'pack')} has ${esc(it.packQty)} ${esc(pluralizeUnit(it.unit))}` : (it.unit ? `Per ${esc(it.unit)}` : '');
-  // "Buy more, pay less" is only ever one line: the single cheapest
-  // breakpoint this item has (bestTierMinQty/bestTierPrice, already
-  // resolved server-side), always stated per the SAME base unit as the
-  // headline price above it -- never a pack unit, so there's never a
-  // question of whether a number on this card is per piece, dozen, or
-  // carton. The full ladder (and the option to view it in pack terms)
-  // only ever shows up once this card is tapped.
-  const bulkHint = (it.bestTierMinQty!=null && it.bestTierPrice!=null)
-    ? `<div class="ag-bulk-hint">${ICON_BOXES}Best price is ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} for ${fmtAmount(it.bestTierPrice)} each</div>`
-    : '';
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -1495,7 +1492,7 @@ function browseCardHTML(it, promoted, opts){
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
       ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
       <div class="ag-grid-price">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
-      ${bulkHint}
+      ${bulkHintHTML(it)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
   </div>`;
@@ -1605,7 +1602,8 @@ function renderSearchSuggestions(){
       <div class="ag-item-result-body">
         <div class="ag-item-result-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        <div class="ag-item-result-price money">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+        <div class="ag-item-result-price money">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
+        ${bulkHintHTML(it)}
       </div>
     </div>`).join('');
   box.classList.add('show');
