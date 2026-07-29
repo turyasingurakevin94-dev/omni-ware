@@ -2985,6 +2985,11 @@
     <div class="modal-body">
       <p style="color:var(--ink-soft);font-size:13px;margin:0 0 14px;">What this supplier pays you for selling their products, usually recorded once a month.</p>
       <div class="form-grid">
+        <div class="field"><label>Commission rate (%)</label><input type="number" min="0" max="100" step="any" id="scm_pct" placeholder="e.g. 3"></div>
+      </div>
+      <div class="field-hint" style="margin:6px 0 16px;">When set, this rate auto-fills the amount below from that period's purchases from this supplier (still editable), and is what turns on the "missing commission" flag for this supplier.</div>
+      <div class="section-label-row form-section-label">Record a period</div>
+      <div class="form-grid">
         <div class="field"><label>Period</label><input type="month" id="scm_period"></div>
         <div class="field"><label>Amount (UGX)</label><input type="number" min="0" step="any" id="scm_amount" placeholder="e.g. 150000"></div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="scm_notes" placeholder="optional"></div>
@@ -3945,7 +3950,7 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, notes:a.notes||'', userId:a.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
@@ -4032,7 +4037,7 @@ function buildSyncRows(d, shopId){
     id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
@@ -7955,7 +7960,7 @@ function panRowsBySupplier(invoices, from, to){
   invoices.forEach(pi=>{
     const sid = pi.supplierId || '__unknown__';
     if(!map.has(sid)){
-      map.set(sid, {name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0, commission:0});
+      map.set(sid, {supplierId: sid, name: pi.supplierId ? supplierName(pi.supplierId) : '(unknown supplier)', amt:0, docCount:0, qty:0, commission:0});
     }
     const row = map.get(sid);
     row.docCount += 1;
@@ -7966,13 +7971,15 @@ function panRowsBySupplier(invoices, from, to){
   // invoice in range at all -- still worth a row so the commission isn't
   // silently dropped from the table.
   panSupplierCommissionsInRange(from, to).forEach(c=>{
-    if(!map.has(c.supplierId)) map.set(c.supplierId, {name: supplierName(c.supplierId), amt:0, docCount:0, qty:0, commission:0});
+    if(!map.has(c.supplierId)) map.set(c.supplierId, {supplierId: c.supplierId, name: supplierName(c.supplierId), amt:0, docCount:0, qty:0, commission:0});
     map.get(c.supplierId).commission += Number(c.amount)||0;
   });
   // Flags a supplier that was actually bought from in this range but has
   // no commission recorded for it yet, so a real gap doesn't just read as
-  // an unremarkable "0" next to every other number in the row.
-  return [...map.values()].map(r=>({...r, commissionMissing: r.docCount>0 && r.commission===0}));
+  // an unremarkable "0" next to every other number in the row -- only for
+  // suppliers with an agreed rate on file, since that's the only case an
+  // absence actually means something.
+  return [...map.values()].map(r=>({...r, commissionMissing: r.docCount>0 && r.commission===0 && supplierExpectsCommission(r.supplierId)}));
 }
 function panRowsForView(){
   return panView==='supplier' ? panRowsBySupplier(panLastEntries, panLastRange.from, panLastRange.to) : panRowsByItem(panLastEntries);
@@ -8133,6 +8140,7 @@ function supplierPriceMatches(supplierId, tokens){
 // 'YYYY-MM' shape as every supplier_commissions row's period column.
 function currentPeriod(){ return todayISO().slice(0,7); }
 function supplierMissingCurrentCommission(supplierId){
+  if(!supplierExpectsCommission(supplierId)) return false;
   return !data.supplierCommissions.some(c=>c.supplierId===supplierId && c.period===currentPeriod());
 }
 function supplierCardHTML(s, productMatches){
@@ -8230,11 +8238,15 @@ document.getElementById('s_save').addEventListener('click', ()=>{
   const name = document.getElementById('s_name').value.trim();
   if(!id || !name){ toast('Supplier ID and name are required'); return; }
   if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast('That Supplier ID already exists'); return; }
+  // Commission rate is managed from the commission modal, not this form --
+  // carry whatever's already on file forward so saving here doesn't wipe it.
+  const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
   const record = {
     id, name,
     phone: document.getElementById('s_phone').value.trim(),
     location: document.getElementById('s_location').value.trim(),
     notes: document.getElementById('s_notes').value.trim(),
+    commissionPct: priorPct!=null ? priorPct : null,
   };
   if(editingSupplierId){
     const idx = data.suppliers.findIndex(s=>s.id===editingSupplierId);
@@ -8256,14 +8268,49 @@ document.getElementById('s_search').addEventListener('input', e=>renderSuppliers
    purchase-analytics column/total -- see panRowsBySupplier(). ---- */
 let scmSupplierId = null;
 let scmEditingId = null;
+// Total purchases from this supplier that fall inside a given 'YYYY-MM'
+// period -- what a % rate is applied to when suggesting a commission amount.
+function supplierPurchaseTotalForPeriod(supplierId, period){
+  if(!period) return 0;
+  return (data.purchaseInvoices||[]).filter(pi=>!pi.voided && pi.supplierId===supplierId && (pi.date||'').startsWith(period))
+    .reduce((sum,pi)=> sum + purchaseInvoiceTotal(pi), 0);
+}
+// A supplier only "expects" a commission -- and only gets flagged for a
+// missing one -- once a rate has actually been agreed and set; a supplier
+// with no rate on file just isn't part of a commission arrangement yet.
+function supplierExpectsCommission(supplierId){
+  const s = data.suppliers.find(x=>x.id===supplierId);
+  return !!(s && s.commissionPct!=null && s.commissionPct>0);
+}
+// Auto-fills the amount field from rate% x that period's purchases -- only
+// while adding a NEW entry (never overwrites one already being edited,
+// same "auto-fill but still editable" rule as elsewhere in this app).
+function updateSuggestedCommissionAmount(){
+  if(scmEditingId) return;
+  const s = data.suppliers.find(x=>x.id===scmSupplierId); if(!s) return;
+  const period = document.getElementById('scm_period').value;
+  if(!period || s.commissionPct==null) return;
+  const total = supplierPurchaseTotalForPeriod(scmSupplierId, period);
+  document.getElementById('scm_amount').value = Math.round(total * s.commissionPct / 100) || '';
+}
 function openSupplierCommissionModal(supplierId){
   const s = data.suppliers.find(x=>x.id===supplierId); if(!s) return;
   scmSupplierId = supplierId;
   document.getElementById('scm_supplier_name').textContent = s.name;
+  document.getElementById('scm_pct').value = s.commissionPct!=null ? s.commissionPct : '';
   resetSupplierCommissionForm();
   renderSupplierCommissionList();
   openModal('supplierCommissionModal');
 }
+document.getElementById('scm_pct').addEventListener('change', ()=>{
+  const s = data.suppliers.find(x=>x.id===scmSupplierId); if(!s) return;
+  const val = document.getElementById('scm_pct').value;
+  s.commissionPct = val==='' ? null : Math.min(100, Math.max(0, Number(val)||0));
+  saveData();
+  updateSuggestedCommissionAmount();
+  renderSuppliers(document.getElementById('s_search').value);
+});
+document.getElementById('scm_period').addEventListener('change', updateSuggestedCommissionAmount);
 function resetSupplierCommissionForm(){
   scmEditingId = null;
   document.getElementById('scm_period').value = '';
