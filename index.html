@@ -10485,12 +10485,17 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       // A variant with its own override ladder uses that; everything else
       // follows the shared one entered above.
       const effectiveTiers = prBulkVariantOverrides[i] || prTiers;
-      const dupIdx = data.prices.findIndex(p=>p.productId===productId && p.variantIdx===i && p.supplierId===supplierId);
+      // A supplier only ever has one current price for a given item -- once
+      // they change it, the old figure isn't relevant any more, so this
+      // save replaces every existing entry for this product+variant+supplier
+      // rather than piling up alongside it (removing all matches, not just
+      // the first, also cleans up any stray duplicates already on file).
+      const dups = data.prices.filter(p=>p.productId===productId && p.variantIdx===i && p.supplierId===supplierId);
       if(effectiveTiers.length===0){
         // Nothing entered for this variant -- if a row was pre-filled from
         // an existing entry and the admin cleared it, that's a deliberate
         // removal, not just "nothing to say about this one".
-        if(dupIdx!==-1){ data.prices.splice(dupIdx,1); cleared++; }
+        if(dups.length){ data.prices = data.prices.filter(p=>!dups.includes(p)); cleared++; }
         return;
       }
       const derived = deriveWholesaleRetail(effectiveTiers, packQty);
@@ -10500,8 +10505,9 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         date, unit, packUnit, packQty, priceSource:'manual',
         tiers: effectiveTiers.map(t=>({...t}))
       };
-      if(dupIdx!==-1) data.prices[dupIdx] = {...record, id:data.prices[dupIdx].id, outOfStock:!!data.prices[dupIdx].outOfStock};
-      else data.prices.push({...record, id:data.nextPriceId++, outOfStock:false});
+      const keep = dups[0];
+      data.prices = data.prices.filter(p=>!dups.includes(p));
+      data.prices.push({...record, id: keep ? keep.id : data.nextPriceId++, outOfStock: keep ? !!keep.outOfStock : false});
       saved++;
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
@@ -10537,19 +10543,24 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     // Editing an entry through this form only touches the fields above --
     // its out-of-stock flag (toggled separately, on the price card) is
     // left exactly as it was, so fixing a typo in the price doesn't
-    // silently put a flagged-out supplier back into recommendations.
-    const idx = data.prices.findIndex(p=>p.id===editingPriceId);
-    data.prices[idx] = {...record, id: editingPriceId, outOfStock: !!data.prices[idx].outOfStock};
+    // silently put a flagged-out supplier back into recommendations. If
+    // the edit also changed product/variant/supplier to match some OTHER
+    // entry already on file, that other one is now a duplicate of this
+    // same edited row and gets folded away rather than left stranded.
+    const wasOutOfStock = !!data.prices.find(p=>p.id===editingPriceId).outOfStock;
+    const otherDups = data.prices.filter(p=>p.id!==editingPriceId && p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
+    if(otherDups.length) data.prices = data.prices.filter(p=>!otherDups.includes(p));
+    data.prices[data.prices.findIndex(p=>p.id===editingPriceId)] = {...record, id: editingPriceId, outOfStock: wasOutOfStock};
   } else {
-    // A new price entry for a product+variant+supplier that already has one
-    // on file replaces it, rather than piling up stale duplicates — only the
-    // latest price per supplier per item is kept.
-    const dupIdx = data.prices.findIndex(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
-    if(dupIdx!==-1){
-      data.prices[dupIdx] = {...record, id: data.prices[dupIdx].id, outOfStock: !!data.prices[dupIdx].outOfStock};
-    } else {
-      data.prices.push({...record, id: data.nextPriceId++, outOfStock: false});
-    }
+    // A supplier only ever has one current price for a given item -- once
+    // they change it, the old figure isn't relevant any more, so this save
+    // replaces every existing entry for this product+variant+supplier
+    // rather than piling up alongside it (removing all matches, not just
+    // the first, also cleans up any stray duplicates already on file).
+    const dups = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
+    const keep = dups[0];
+    data.prices = data.prices.filter(p=>!dups.includes(p));
+    data.prices.push({...record, id: keep ? keep.id : data.nextPriceId++, outOfStock: keep ? !!keep.outOfStock : false});
   }
   saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
   toast('Price entry saved');
