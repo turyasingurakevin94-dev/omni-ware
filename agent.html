@@ -428,6 +428,23 @@
   .ag-order-status.pickup{color:var(--rust);}
   .ag-order-status.settled{color:var(--good);}
   .ag-order-status.due{color:var(--danger);}
+  .ag-order-status .momo-pay-now-btn{all:unset;cursor:pointer;margin-left:auto;background:var(--accent);color:#fff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:20px;}
+
+  /* Mobile money payment flow (payment-choice + pay modals). */
+  .momo-choice-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:var(--panel);}
+  .momo-choice-btn.btn-accent{border-color:transparent;}
+  .momo-choice-label{font-size:14.5px;font-weight:700;}
+  .momo-choice-sub{font-size:12px;font-weight:500;opacity:.85;}
+  .momo-choice-btn:not(.btn-accent) .momo-choice-sub{color:var(--ink-soft);}
+  .momo-provider-choice{display:flex;flex-direction:column;gap:8px;}
+  .momo-provider-radio{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .momo-provider-radio.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .momo-flow-status{margin:4px 0 14px;}
+  .momo-flow-waiting,.momo-flow-success,.momo-flow-error{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600;}
+  .momo-flow-waiting{background:#FFF6DE;color:#8A6D1D;}
+  .momo-flow-success{background:#E6F6EE;color:var(--good);}
+  .momo-flow-error{background:#FDECEC;color:var(--danger);}
+  .momo-flow-waiting .icon,.momo-flow-success .icon{width:16px;height:16px;flex-shrink:0;}
 
   /* ---- Bottom tab bar (Earnings / Browse / Account) ---- */
   .ag-tabbar{
@@ -1215,6 +1232,13 @@ async function ensureOrderStaffNamesLoaded(){
 // delivery app uses -- "Andrew is preparing your order" -- so the agent
 // doesn't have to guess or go ask.
 function orderStatusInfo(o){
+  // A prepay order the shop hasn't started preparing yet, because
+  // agentPaymentBlocksPreparing() (shared-worker.js) is holding it in
+  // 'draft' until agentPaymentStatus flips to 'paid' -- surface it as an
+  // action the agent can actually take, not just generic waiting text.
+  if(myAgent.paymentTerm==='prepay' && o.status==='draft' && o.agentPaymentStatus!=='paid'){
+    return { cls:'due', icon:null, text:'Payment needed before we can start preparing this order', payNow:true };
+  }
   if(o.status==='pending_delivery'){
     if(o.deliveryMode==='agent_pickup') return { cls:'pickup', icon:ICON_PIN, text:'Ready — come pick up your order' };
     const name = o.assignedDeliveryId ? orderStaffNames.get(o.assignedDeliveryId) : null;
@@ -1254,7 +1278,7 @@ function orderRowHTML(o){
       <span>${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</span>
       <span class="ag-order-row-items-link">${itemCount} item${itemCount===1?'':'s'} &rsaquo;</span>
     </div>
-    <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span></div>
+    <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span>${extra.payNow ? `<button type="button" class="momo-pay-now-btn" data-order-id="${esc(o.id)}">Pay now</button>` : ''}</div>
   </div>`;
 }
 function orderItemRowHTML(it){
@@ -1321,6 +1345,12 @@ document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
   renderOrderHistoryScreen();
 });
 document.getElementById('ag_orderHistoryListWrap').addEventListener('click', (e)=>{
+  const payBtn = e.target.closest('.momo-pay-now-btn');
+  if(payBtn){
+    const o = myOrders.find(x=>String(x.id)===String(payBtn.dataset.orderId));
+    if(o) openPaymentChoiceModal(o);
+    return;
+  }
   const row = e.target.closest('.ag-order-row[data-order-id]');
   if(!row) return;
   openOrderItemsPanel(row.dataset.orderId);
@@ -2150,6 +2180,129 @@ function openNewClientPanel(prefillName){
   });
 }
 
+/* ---- Mobile money payment ----
+   An agent explicitly chooses how they're paying: Cash still falls into
+   today's existing flow untouched (the shop admin confirms receipt by
+   hand, agentPrepayModal in index.html) -- picking it here just closes
+   this prompt with a reminder, no state changes. Mobile Money is the new
+   path: a real MTN/Airtel "request to pay" push to the agent's phone,
+   confirmed automatically once they approve it there. */
+function orderOwedAmount(o){
+  return (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+}
+function openPaymentChoiceModal(order){
+  const owed = orderOwedAmount(order);
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">How will you pay?</div>
+      <div class="ag-cost-hint">Order #${esc(order.id)} -- ${fmtUGX(owed)} owed to the shop</div>
+      <button type="button" class="btn btn-block momo-choice-btn" id="ag_pay_cash_btn">
+        <span class="momo-choice-label">Cash</span>
+        <span class="momo-choice-sub">Hand cash to the shop -- they'll confirm once received</span>
+      </button>
+      <button type="button" class="btn btn-accent btn-block momo-choice-btn" id="ag_pay_momo_btn" style="margin-top:10px;">
+        <span class="momo-choice-label">Mobile Money</span>
+        <span class="momo-choice-sub">Pay now with MTN or Airtel -- settles instantly</span>
+      </button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  document.getElementById('ag_pay_cash_btn').addEventListener('click', ()=>{
+    document.body.removeChild(el);
+    toast("Hand cash to the shop -- they'll mark this order paid once received.");
+  });
+  document.getElementById('ag_pay_momo_btn').addEventListener('click', ()=>{
+    document.body.removeChild(el);
+    openMomoPaymentModal(order);
+  });
+}
+
+function openMomoPaymentModal(order){
+  const owed = orderOwedAmount(order);
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">Pay with Mobile Money</div>
+      <div class="ag-cost-hint">Order #${esc(order.id)} -- ${fmtUGX(owed)}</div>
+      <div class="field">
+        <label>Provider</label>
+        <div class="momo-provider-choice">
+          <label class="momo-provider-radio selected"><input type="radio" name="ag_momo_provider" value="mtn" checked> MTN Mobile Money</label>
+          <label class="momo-provider-radio"><input type="radio" name="ag_momo_provider" value="airtel"> Airtel Money</label>
+        </div>
+      </div>
+      <div class="field"><label>Phone number to pay from</label><input type="text" id="ag_momo_phone" value="${esc(myAgent.phone||'')}" placeholder="e.g. 0772123456"></div>
+      <div id="ag_momo_status" class="momo-flow-status" style="display:none;"></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_momo_send_btn">Send payment prompt</button>
+    </div>`;
+  document.body.appendChild(el);
+  const closeModal = ()=>{ if(el.parentNode) document.body.removeChild(el); };
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) closeModal(); });
+  el.querySelectorAll('input[name="ag_momo_provider"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      el.querySelectorAll('.momo-provider-radio').forEach(l=>l.classList.toggle('selected', l.querySelector('input').checked));
+    });
+  });
+
+  const sendBtn = document.getElementById('ag_momo_send_btn');
+  const statusEl = document.getElementById('ag_momo_status');
+  let polling = false;
+
+  async function pollStatus(paymentId, attemptsLeft){
+    if(!polling) return;
+    try{
+      const res = await callAgentFn('check-momo-payment-status', { paymentId });
+      if(res.status==='successful'){
+        polling = false;
+        statusEl.innerHTML = `<div class="momo-flow-success">${ICON_CHECK}Payment received!</div>`;
+        await loadAgentHomeData();
+        renderOrderHistoryScreen();
+        setTimeout(closeModal, 1400);
+        return;
+      }
+      if(res.status==='failed' || res.status==='cancelled'){
+        polling = false;
+        statusEl.innerHTML = `<div class="momo-flow-error">Payment ${esc(res.status)}. You can try again.</div>`;
+        sendBtn.disabled = false; sendBtn.textContent = 'Send payment prompt';
+        return;
+      }
+    }catch(err){
+      // Transient network error while polling -- keep trying, same
+      // tolerance as everywhere else in this app for a flaky connection.
+    }
+    if(attemptsLeft<=0){
+      polling = false;
+      statusEl.innerHTML = `<div class="momo-flow-error">Still waiting -- if you approved it, this can take a moment. Try checking again.</div>`;
+      sendBtn.disabled = false; sendBtn.textContent = 'Check again';
+      return;
+    }
+    setTimeout(()=>pollStatus(paymentId, attemptsLeft-1), 3000);
+  }
+
+  sendBtn.addEventListener('click', async ()=>{
+    const provider = el.querySelector('input[name="ag_momo_provider"]:checked').value;
+    const phone = document.getElementById('ag_momo_phone').value.trim();
+    if(!phone){ toast('Enter the phone number to pay from'); return; }
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `<div class="momo-flow-waiting">${ICON_CLOCK}Sending payment request…</div>`;
+    try{
+      const res = await callAgentFn('agent-initiate-momo-payment', { orderId: order.id, provider, phone });
+      statusEl.innerHTML = `<div class="momo-flow-waiting">${ICON_CLOCK}Check your phone and approve the payment request.</div>`;
+      sendBtn.textContent = 'Waiting for approval…';
+      polling = true;
+      pollStatus(res.paymentId, 30); // ~90s of polling at 3s intervals
+    }catch(err){
+      statusEl.innerHTML = `<div class="momo-flow-error">Could not send the request: ${esc(err.message||err)}</div>`;
+      sendBtn.disabled = false; sendBtn.textContent = 'Send payment prompt';
+    }
+  });
+}
+
 /* ---- Delivery + submit ---- */
 document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
   r.addEventListener('change', ()=>{
@@ -2181,6 +2334,10 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
     await loadAgentHomeData();
     resetCartAfterSubmit();
     switchTab('browse');
+    if(myAgent.paymentTerm==='prepay'){
+      const order = myOrders.find(o=>o.id===res.orderId);
+      if(order) openPaymentChoiceModal(order);
+    }
   }catch(err){
     toast(`Could not submit order: ${err.message||err}`);
   }finally{
