@@ -196,6 +196,25 @@
   .ag-cart-row-price{font-family:var(--font-money);font-weight:800;font-size:13.5px;letter-spacing:-0.01em;white-space:nowrap;}
   .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
+  /* Quote items -- a ledger/receipt table (Qty / Particulars / Rate /
+     Amount) rather than cards, so the on-screen quote already reads like
+     the paper invoice books it's replacing. */
+  .ag-receipt-table{width:100%;border-collapse:collapse;}
+  .ag-receipt-table th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);text-align:left;padding:0 6px 8px 0;border-bottom:2px solid var(--line);}
+  .ag-receipt-table td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .ag-receipt-table tbody tr:last-child td{border-bottom:1px solid var(--line);}
+  .ag-receipt-qty{white-space:nowrap;font-size:12px;color:var(--ink-soft);width:1%;}
+  .ag-receipt-name{font-size:13.5px;font-weight:700;letter-spacing:-0.005em;}
+  .ag-receipt-table th.ag-receipt-rate,
+  .ag-receipt-table th.ag-receipt-amount,
+  .ag-receipt-table td.ag-receipt-rate,
+  .ag-receipt-table td.ag-receipt-amount{text-align:right;}
+  .ag-receipt-rate,.ag-receipt-amount{font-family:var(--font-money);white-space:nowrap;font-weight:700;font-size:13px;}
+  .ag-receipt-remove{width:1%;padding:10px 0 10px 4px;}
+  .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
+  .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ink-soft);}
+  .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:15px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
+
   .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
@@ -567,7 +586,25 @@
     <div id="ag_cartContent">
       <div class="ag-card">
         <div class="ag-card-title">Items</div>
-        <div id="ag_cartWrap"></div>
+        <table class="ag-receipt-table">
+          <thead>
+            <tr>
+              <th class="ag-receipt-qty">Qty</th>
+              <th>Particulars</th>
+              <th class="ag-receipt-rate">Rate</th>
+              <th class="ag-receipt-amount">Amount</th>
+              <th class="ag-receipt-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="ag_cartWrap"></tbody>
+          <tfoot>
+            <tr class="ag-receipt-total-row">
+              <td colspan="3" class="ag-receipt-total-label">Total</td>
+              <td class="ag-receipt-total-value" id="ag_cartTotalValue">UGX 0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
       <div class="ag-card">
@@ -1889,20 +1926,24 @@ async function openAddItemPanel(item){
 /* ================= QUOTE + client + delivery + submit ================= */
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
+  let total = 0;
   wrap.innerHTML = cart.map((it,i)=>{
-    const packLabel = packSentence(it.packQty, it.unit, it.packUnit);
+    const rate = Number(it.agentSellPrice)||0;
+    const amount = rate * (Number(it.qty)||0);
+    total += amount;
     return `
-    <div class="ag-cart-row">
-      <div class="ag-cart-row-body">
-        <div class="ag-cart-row-name">${esc(it.name)}</div>
+    <tr>
+      <td class="ag-receipt-qty">${esc(it.qty)} ${esc(it.unit||'')}</td>
+      <td>
+        <div class="ag-receipt-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-        <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
-      </div>
-      <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
-      <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>`;
+      </td>
+      <td class="ag-receipt-rate">${fmtAmount(rate)}</td>
+      <td class="ag-receipt-amount">${fmtAmount(amount)}</td>
+      <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
+    </tr>`;
   }).join('');
+  document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
   wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
