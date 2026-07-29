@@ -839,6 +839,54 @@ let currentUser = null, currentShopId = null, myAgent = null;
 let agentClients = [], myOrders = [], catalog = [];
 let cart = [], chosenClient = null;
 
+// A quote is often built over several minutes while walking a shop floor
+// or standing with a client -- a stray reload (or the OS killing the tab
+// in the background) shouldn't throw away items already added. Every
+// mutation below persists the in-progress draft; boot() restores it
+// before the agent ever sees an empty cart. Cleared once the order is
+// actually submitted (resetCartAfterSubmit) since there's nothing left
+// to resume at that point.
+const QUOTE_DRAFT_KEY = 'agentQuoteDraft';
+// Restoring one field at a time (selectClient, dispatching the delivery
+// radio's change event) reuses the same code paths a real edit does --
+// including their saveQuoteDraft() calls. Left unguarded, the first field
+// restored would immediately re-save the draft with every *other* field
+// still at its pre-restore default, clobbering the very draft being read.
+let restoringQuoteDraft = false;
+function saveQuoteDraft(){
+  if(restoringQuoteDraft) return;
+  const deliveryMode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
+  const deliveryAddress = document.getElementById('ag_delivery_address').value;
+  try{
+    localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
+      cart, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
+    }));
+  }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
+}
+function clearQuoteDraft(){
+  try{ localStorage.removeItem(QUOTE_DRAFT_KEY); }catch(_e){}
+}
+function restoreQuoteDraft(){
+  let draft;
+  try{ draft = JSON.parse(localStorage.getItem(QUOTE_DRAFT_KEY) || 'null'); }catch(_e){ draft = null; }
+  if(!draft) return;
+  restoringQuoteDraft = true;
+  try{
+    if(Array.isArray(draft.cart) && draft.cart.length) cart = draft.cart;
+    if(draft.chosenClientId!=null){
+      const client = agentClients.find(c=>String(c.id)===String(draft.chosenClientId));
+      if(client) selectClient(client);
+    }
+    if(draft.deliveryMode==='shop_delivery'){
+      document.getElementById('ag_delivery_shop').checked = true;
+      document.getElementById('ag_delivery_shop').dispatchEvent(new Event('change'));
+    }
+    if(draft.deliveryAddress) document.getElementById('ag_delivery_address').value = draft.deliveryAddress;
+  } finally {
+    restoringQuoteDraft = false;
+  }
+}
+
 // Agents are deliberately NOT shop_members (see 0012_sales_agents.sql) --
 // there's no shop_members row to look up here at all, unlike the admin/
 // worker apps' ensureAuthAndShop(). This looks up the agents table
@@ -1955,6 +2003,7 @@ async function openAddItemPanel(item){
     });
     document.body.removeChild(el);
     updateCartBadge();
+    saveQuoteDraft();
     toast('Added to quote');
   });
 }
@@ -1993,6 +2042,7 @@ function renderCart(){
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
       updateCartBadge();
+      saveQuoteDraft();
       renderCartTab();
     });
   });
@@ -2018,6 +2068,7 @@ function resetCartAfterSubmit(){
   document.getElementById('ag_delivery_address').value = '';
   document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
   updateCartBadge();
+  clearQuoteDraft();
 }
 
 /* ---- Client picking ---- */
@@ -2060,12 +2111,14 @@ function selectClient(client){
   const wrap = document.getElementById('ag_clientChosenWrap');
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
+  saveQuoteDraft();
   document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
     chosenClient = null;
     wrap.style.display = 'none';
     document.getElementById('ag_clientPickWrap').style.display = 'block';
     document.getElementById('ag_client_search').value = '';
     renderClientSuggestions('');
+    saveQuoteDraft();
   });
 }
 
@@ -2103,8 +2156,10 @@ document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
     document.getElementById('ag_delivery_pickup_label').classList.toggle('selected', document.getElementById('ag_delivery_pickup').checked);
     document.getElementById('ag_delivery_shop_label').classList.toggle('selected', document.getElementById('ag_delivery_shop').checked);
     document.getElementById('ag_deliveryAddressWrap').style.display = document.getElementById('ag_delivery_shop').checked ? 'block' : 'none';
+    saveQuoteDraft();
   });
 });
+document.getElementById('ag_delivery_address').addEventListener('input', saveQuoteDraft);
 
 document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
   if(!chosenClient){ toast('Choose or add a client first'); return; }
@@ -2149,6 +2204,7 @@ async function boot(){
     localStorage.setItem('agentTrustBannerSeen', '1');
   }
   document.getElementById('ag_delivery_pickup_label').classList.add('selected');
+  restoreQuoteDraft();
   updateCartBadge();
   const savedTab = localStorage.getItem('agentLastTab');
   switchTab(TABS.includes(savedTab) ? savedTab : 'browse');
