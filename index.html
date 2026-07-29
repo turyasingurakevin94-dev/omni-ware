@@ -813,6 +813,11 @@
   .img-upload-controls{display:flex;flex-direction:column;gap:8px;}
   .img-upload-btns{display:flex;gap:8px;}
   .img-upload-hint{font-size:11.5px;color:var(--ink-soft);}
+  .img-upload-sm{margin-bottom:12px;}
+  .img-upload-sm .thumb-sm-preview{width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
+  .img-upload-sm .thumb-sm-placeholder{width:52px;height:52px;border-radius:8px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
+  .img-upload-sm .thumb-sm-placeholder .icon{width:18px;height:18px;}
+  .preset-cat-photo{display:flex;align-items:center;gap:8px;}
   .pack-none{color:var(--ink-soft);}
 
   /* Inventory cards */
@@ -4958,7 +4963,7 @@ function renderClientUsualBuys(nameLower){
   wrap.innerHTML = rows.map((r,i)=>{
     const product = r.productId ? data.products.find(p=>p.id===r.productId) : null;
     return `<div class="q-usual-chip" data-idx="${i}">
-      ${ipStageThumbHTML(product||{})}
+      ${ipStageThumbHTML(product||{}, r.variantIdx)}
       <div class="q-usual-chip-info">
         <div class="q-usual-chip-name" title="${esc(r.productName)}">${esc(r.productName)}</div>
         <div class="q-usual-chip-meta">Last: ${esc(r.lastQty)} ${esc(r.unit)} · ${esc(savedAgoLabel(r.lastOrderedAt))}</div>
@@ -5241,7 +5246,7 @@ function ipRenderList(query){
     const priceNote = best ? fmtUGXPerUnit(best.retail!=null?best.retail:best.wholesale, best.unit) : 'No price on file';
     if(variantIdx==null){
       return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}">
-        ${ipThumbHTML(p)}
+        ${ipThumbHTML(p, variantIdx)}
         <div class="ip-item-main"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}</div>
         <div class="ip-item-price">${priceNote}</div>
       </div>`;
@@ -5249,7 +5254,7 @@ function ipRenderList(query){
     const v = p.variants[variantIdx];
     const idLabel = v.sku ? v.sku : `${p.id}-${variantIdx+1}`;
     return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}" data-vidx="${variantIdx}">
-      ${ipThumbHTML(p)}
+      ${ipThumbHTML(p, variantIdx)}
       <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)}
       <div class="suggestion-variant-note">${highlightTokens(variantLabel(v.combo), tokens)}</div></div>
       <div class="ip-item-price">${priceNote}</div>
@@ -5447,7 +5452,7 @@ function renderIpStage(){
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head">
-      ${ipStageThumbHTML(product)}
+      ${ipStageThumbHTML(product, variantIdx)}
       <div class="q-stage-name">${esc(displayName)}</div>
       <div class="q-stage-summary">${ipStageSummaryLine(product, refRow, unit, variantIdx)}</div>
     </div>
@@ -8431,7 +8436,7 @@ function promotionCardHTML(promo){
   return `<div class="price-card ${promo.active?'':'price-card-oos'}">
     <div class="prc-head">
       <div class="prc-head-main">
-        ${productThumbHTML(product||{image:null,name:pname})}
+        ${productThumbHTML(product||{image:null,name:pname}, variantIdx)}
         <div class="prc-title">
           <div class="prc-name">${esc(pname)}</div>
           <div class="prc-meta"><span class="prc-date">${esc(promotionBonusLabel(promo))}${promo.active?'':' — inactive'}</span></div>
@@ -9308,6 +9313,7 @@ let draftVariants = [];       // [{sku:'RED-S', combo:{Color:'Red', Size:'S'}}]
 let draftProductImage = null; // Storage URL of the uploaded product photo, or null
 let originalProductImage = null;       // the image URL the product had when the form opened (for edit)
 let sessionUploadedImagePaths = [];    // storage paths uploaded during this modal session, not yet committed
+let originalVariantImagesBySig = {};   // combo-signature -> image URL the variant had when the form opened (for edit)
 
 function renderVariantAttrRows(){
   const wrap = document.getElementById('variantAttrsWrap');
@@ -9358,6 +9364,27 @@ function renderVariantsList(){
         <div class="field"><label>SKU / code</label><input class="v-sku" data-idx="${i}" value="${esc(v.sku||'')}" placeholder="optional"></div>
       </div>
 
+      <div class="vc-subhead">Photo <span class="vc-markup-hint">— leave blank to use the product photo, or the category default</span></div>
+      <div class="img-upload img-upload-sm">
+        <img class="v-image-preview thumb-sm-preview" data-idx="${i}" style="display:${v.image?'':'none'};" alt="Variant photo preview" src="${v.image?esc(v.image):''}">
+        <div class="v-image-placeholder thumb-sm-placeholder" data-idx="${i}" style="display:${v.image?'none':''};">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+        </div>
+        <div class="img-upload-controls">
+          <input type="file" class="v-image-input" data-idx="${i}" accept="image/*" style="display:none;">
+          <div class="img-upload-btns">
+            <button type="button" class="btn btn-ghost btn-icon v-image-upload" data-idx="${i}">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+              Upload photo
+            </button>
+            <button type="button" class="btn btn-ghost btn-icon danger v-image-remove" data-idx="${i}" style="display:${v.image?'':'none'};">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+              Remove
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="vc-markup-block">
         <div class="vc-subhead" style="margin-bottom:10px;">Markup rule override <span class="vc-markup-hint">— leave blank to use the product's default rule above</span></div>
         <div class="vc-grid">
@@ -9398,6 +9425,61 @@ function renderVariantsList(){
     draftVariants.splice(Number(e.currentTarget.dataset.idx), 1);
     renderVariantsList();
   }));
+  wrap.querySelectorAll('.v-image-upload').forEach(btn=>btn.addEventListener('click', e=>{
+    const idx = e.currentTarget.dataset.idx;
+    wrap.querySelector(`.v-image-input[data-idx="${idx}"]`).click();
+  }));
+  wrap.querySelectorAll('.v-image-input').forEach(inp=>inp.addEventListener('change', async e=>{
+    const idx = Number(e.target.dataset.idx);
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ toast('Please choose an image file'); return; }
+    if(file.size > 4*1024*1024){ toast('Image is too large — please use one under 4MB'); return; }
+    const localPreview = URL.createObjectURL(file);
+    setVariantImagePreview(idx, localPreview);
+    const saveBtn = document.getElementById('p_save');
+    saveBtn.disabled = true;
+    try{
+      const url = await uploadProductImageBlob(file, currentShopId);
+      sessionUploadedImagePaths.push(productImageStoragePath(url));
+      setVariantImagePreview(idx, url);
+    } catch(err){
+      console.error('Variant image upload failed:', err);
+      toast('Image upload failed: ' + ((err && err.message) || err));
+      const sig = draftVariants[idx] ? JSON.stringify(draftVariants[idx].combo) : null;
+      setVariantImagePreview(idx, (sig && originalVariantImagesBySig[sig]) || null);
+    } finally {
+      URL.revokeObjectURL(localPreview);
+      saveBtn.disabled = false;
+    }
+  }));
+  wrap.querySelectorAll('.v-image-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    setVariantImagePreview(Number(e.currentTarget.dataset.idx), null);
+  }));
+}
+// Updates one variant's photo widget in place (rather than re-rendering the
+// whole list), so an in-flight upload on one card doesn't disturb another
+// card's unsaved SKU/markup edits.
+function setVariantImagePreview(idx, url){
+  if(!draftVariants[idx]) return;
+  draftVariants[idx].image = url || null;
+  const card = document.querySelector(`#variantsListWrap .variant-card[data-idx="${idx}"]`);
+  if(!card) return;
+  const img = card.querySelector('.v-image-preview');
+  const placeholder = card.querySelector('.v-image-placeholder');
+  const removeBtn = card.querySelector('.v-image-remove');
+  if(draftVariants[idx].image){
+    img.src = draftVariants[idx].image;
+    img.style.display = '';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = '';
+  } else {
+    img.src = '';
+    img.style.display = 'none';
+    placeholder.style.display = '';
+    removeBtn.style.display = 'none';
+  }
 }
 // Re-renders just the effective-rule captions (cheap, keeps input focus)
 // on every variant card. Used whenever a value that could change which
@@ -9460,12 +9542,16 @@ function triggerProductsRender(){
   );
 }
 function variantLabel(combo){ return Object.values(combo).join(' / '); }
-function productThumbHTML(p){
-  if(p.image) return `<img class="pc-thumb img-zoomable" src="${p.image}" alt="${esc(p.name)}">`;
+// resolveProductImage() now lives in shared-worker.js (needed there too,
+// for the worker app's pick&pack thumbnails).
+function productThumbHTML(p, variantIdx){
+  const src = resolveProductImage(p, variantIdx);
+  if(src) return `<img class="pc-thumb img-zoomable" src="${src}" alt="${esc(p.name)}">`;
   return `<div class="pc-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
-function ipThumbHTML(p){
-  if(p.image) return `<img class="ip-thumb img-zoomable" src="${p.image}" alt="${esc(p.name)}">`;
+function ipThumbHTML(p, variantIdx){
+  const src = resolveProductImage(p, variantIdx);
+  if(src) return `<img class="ip-thumb img-zoomable" src="${src}" alt="${esc(p.name)}">`;
   return `<div class="ip-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
 function simpleCardHTML(p, tokens=[]){
@@ -9527,7 +9613,7 @@ function variantCardHTML(p, v, idx, tokens=[]){
     <div class="product-card">
       <div class="pc-head">
         <div class="pc-head-main">
-          ${productThumbHTML(p)}
+          ${productThumbHTML(p, idx)}
           <div class="pc-title">
             <span class="id-pill">${highlightTokens(idLabel, tokens)}</span>
             <div class="pc-parent-label">${highlightTokens(p.name, tokens)}</div>
@@ -9642,12 +9728,15 @@ document.getElementById('p_image_input').addEventListener('change', async (e)=>{
 });
 document.getElementById('p_image_remove_btn').addEventListener('click', ()=> setProductImagePreview(null));
 // Deletes every image uploaded to Storage during this modal session except
-// `keepUrl` (pass null to discard all of them) -- called on save (keeping
-// only the final image) and on cancel (keeping none), so an upload that
-// gets replaced or abandoned mid-session doesn't linger in the bucket forever.
-async function discardUnsavedProductImages(keepUrl){
-  const keepPath = productImageStoragePath(keepUrl);
-  const toDelete = sessionUploadedImagePaths.filter(p=>p!==keepPath);
+// whichever ones ended up kept -- pass the product's final image plus every
+// variant's final image (or null/[] to discard all of them). Called on save
+// (keeping only what actually got saved) and on cancel (keeping none), so an
+// upload that gets replaced or abandoned mid-session doesn't linger in the
+// bucket forever. Accepts either a single URL or an array, for callers that
+// only ever have one to keep.
+async function discardUnsavedProductImages(keepUrls){
+  const keepPaths = new Set((Array.isArray(keepUrls) ? keepUrls : [keepUrls]).map(productImageStoragePath).filter(Boolean));
+  const toDelete = sessionUploadedImagePaths.filter(p=>!keepPaths.has(p));
   sessionUploadedImagePaths = [];
   if(!toDelete.length) return;
   const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove(toDelete);
@@ -9677,9 +9766,11 @@ function editProduct(id){
   document.getElementById('p_agent_discount_wholesale').value = p.agentDiscountWholesalePct!=null ? p.agentDiscountWholesalePct : '';
   document.getElementById('p_agent_discount_retail').value = p.agentDiscountRetailPct!=null ? p.agentDiscountRetailPct : '';
   draftVariantAttrs = (p.variantAttributes||[]).map(a=>({name:a.name, values:(a.values||[]).join(', ')}));
-  draftVariants = (p.variants||[]).map(v=>({sku:v.sku||'', combo:{...v.combo},
+  draftVariants = (p.variants||[]).map(v=>({sku:v.sku||'', combo:{...v.combo}, image:v.image||null,
     wholesaleMarkupType:v.wholesaleMarkupType||'percent', wholesaleMarkupValue:v.wholesaleMarkupValue||0,
     retailMarkupType:v.retailMarkupType||'percent', retailMarkupValue:v.retailMarkupValue||0}));
+  originalVariantImagesBySig = {};
+  (p.variants||[]).forEach(v=>{ originalVariantImagesBySig[JSON.stringify(v.combo)] = v.image || null; });
   renderVariantAttrRows();
   renderVariantsList();
   setProductType(p.type==='variable' ? 'variable' : 'simple');
@@ -9777,6 +9868,7 @@ function resetProductForm(){
   setProductImagePreview(null);
   draftVariantAttrs = [];
   draftVariants = [];
+  originalVariantImagesBySig = {};
   renderVariantAttrRows();
   renderVariantsList();
   setProductType('simple');
@@ -9788,6 +9880,7 @@ function deleteProduct(id){
   data.products = data.products.filter(p=>p.id!==id);
   saveData(); triggerProductsRender(); toast('Product deleted');
   if(product && product.image) deleteProductImageIfStored(product.image).catch(e=>console.error(e));
+  (product && product.variants || []).forEach(v=>{ if(v.image) deleteProductImageIfStored(v.image).catch(e=>console.error(e)); });
 }
 function deleteVariant(productId, variantIdx){
   const p = data.products.find(x=>x.id===productId); if(!p || !p.variants) return;
@@ -9804,6 +9897,7 @@ function deleteVariant(productId, variantIdx){
     if(pr.productId===productId && pr.variantIdx!=null && pr.variantIdx>variantIdx) pr.variantIdx--;
   });
   saveData(); triggerProductsRender(); toast('Variant deleted');
+  if(v.image) deleteProductImageIfStored(v.image).catch(e=>console.error(e));
 }
 // Makes sure a category (and sub-category) typed on a product also exists
 // in the presets list, so it's suggested for future products without a
@@ -9870,7 +9964,7 @@ document.getElementById('p_save').addEventListener('click', ()=>{
   const variantAttributes = type==='variable' ? draftVariantAttrs
     .map(a=>({name:a.name.trim(), values:a.values.split(',').map(v=>v.trim()).filter(Boolean)}))
     .filter(a=>a.name && a.values.length) : [];
-  const variants = type==='variable' ? draftVariants.map(v=>({sku:(v.sku||'').trim(), combo:v.combo,
+  const variants = type==='variable' ? draftVariants.map(v=>({sku:(v.sku||'').trim(), combo:v.combo, image:v.image||null,
     wholesaleMarkupType:v.wholesaleMarkupType||'percent', wholesaleMarkupValue:Number(v.wholesaleMarkupValue)||0,
     retailMarkupType:v.retailMarkupType||'percent', retailMarkupValue:Number(v.retailMarkupValue)||0})) : [];
   const record = {
@@ -9915,13 +10009,21 @@ document.getElementById('p_save').addEventListener('click', ()=>{
   }
   ensurePresetCategory(record.category, record.subcategory);
   const priorImage = editingProductId ? originalProductImage : null;
+  // Any combo whose saved image differs from (or dropped) what the form
+  // opened with -- including combos removed entirely -- had its old image
+  // replaced, not just re-uploaded, so it needs its own delete below.
+  const priorVariantImages = editingProductId ? Object.entries(originalVariantImagesBySig)
+    .filter(([sig, oldImg]) => oldImg && (variants.find(v=>JSON.stringify(v.combo)===sig)||{}).image !== oldImg)
+    .map(([,oldImg]) => oldImg) : [];
   saveData(); closeModal('productModal'); resetProductForm(); triggerProductsRender(); renderPresets();
   toast('Product saved');
   // Fire-and-forget storage cleanup: drop any images uploaded this session
-  // that didn't end up being the saved one, and -- when editing -- the old
-  // image it replaced, so orphaned objects don't pile up in the bucket.
-  discardUnsavedProductImages(record.image).catch(e=>console.error(e));
+  // that didn't end up being the saved one (product's or any variant's),
+  // and -- when editing -- the old images they replaced, so orphaned
+  // objects don't pile up in the bucket.
+  discardUnsavedProductImages([record.image, ...variants.map(v=>v.image)]).catch(e=>console.error(e));
   if(priorImage && priorImage !== record.image) deleteProductImageIfStored(priorImage).catch(e=>console.error(e));
+  priorVariantImages.forEach(img=>deleteProductImageIfStored(img).catch(e=>console.error(e)));
 });
 document.getElementById('p_cancel').addEventListener('click', ()=>closeModalAndReset('productModal', cancelProductForm));
 document.getElementById('productModalClose').addEventListener('click', ()=>closeModalAndReset('productModal', cancelProductForm));
@@ -10339,7 +10441,7 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter=''){
   let rows = data.prices.map(pr => {
     const product = data.products.find(p=>p.id===pr.productId);
     const pname = product ? productVariantLabel(product, pr.variantIdx) : productName(pr.productId);
-    return {...pr, pname, sname: supplierName(pr.supplierId), category: product ? (product.category||'') : '', image: product ? product.image : null};
+    return {...pr, pname, sname: supplierName(pr.supplierId), category: product ? (product.category||'') : '', image: resolveProductImage(product, pr.variantIdx)};
   });
   if(supplierFilter) rows = rows.filter(r=>r.supplierId===supplierFilter);
   if(categoryFilter) rows = rows.filter(r=>r.category===categoryFilter);
@@ -10657,14 +10759,14 @@ function cmpSuggestionEntryHTML(entry, tokens){
   const {p, variantIdx} = entry;
   if(variantIdx==null){
     return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}">
-      ${ipThumbHTML(p)}
+      ${ipThumbHTML(p, variantIdx)}
       <div class="ip-item-main"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}</div>
     </div>`;
   }
   const v = p.variants[variantIdx];
   const idLabel = v.sku ? v.sku : `${p.id}-${variantIdx+1}`;
   return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}" data-vidx="${variantIdx}">
-    ${ipThumbHTML(p)}
+    ${ipThumbHTML(p, variantIdx)}
     <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)}
     <div class="suggestion-variant-note">${highlightTokens(variantLabel(v.combo), tokens)}</div></div>
   </div>`;
@@ -10788,7 +10890,7 @@ function renderCompare(){
   }
 
   wrap.innerHTML = `<div class="cmp-result-head">
-      ${ipStageThumbHTML(product)}
+      ${ipStageThumbHTML(product, variantIdx)}
       <div class="cmp-result-head-text">
         <div class="cmp-result-name">${esc(product.name)}</div>
         ${variantIdx!=null && product.variants && product.variants[variantIdx] ? `<div class="cmp-result-variant">${esc(variantLabel(product.variants[variantIdx].combo))}</div>` : ''}
@@ -11377,6 +11479,20 @@ function renderPresetCategories(edit){
       ${edit.type==='name' && edit.idx===i ?
         `<input type="text" class="preset-row-name-input preset-cat-name-input" data-idx="${i}" value="${esc(c.name)}">` :
         `<span class="preset-row-name">${esc(c.name)}<button type="button" class="preset-chip-edit preset-cat-name-edit" data-idx="${i}" title="Rename category">${ICON_EDIT}</button></span>`}
+      <div class="preset-cat-photo">
+        <img class="preset-cat-image-preview thumb-sm-preview" data-idx="${i}" style="display:${c.image?'':'none'};" alt="Category photo" src="${c.image?esc(c.image):''}">
+        <div class="preset-cat-image-placeholder thumb-sm-placeholder" data-idx="${i}" style="display:${c.image?'none':''};">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+        </div>
+        <input type="file" class="preset-cat-image-input" data-idx="${i}" accept="image/*" style="display:none;">
+        <button type="button" class="btn btn-ghost btn-icon preset-cat-image-upload" data-idx="${i}">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+          Default photo
+        </button>
+        <button type="button" class="btn btn-ghost btn-icon danger preset-cat-image-remove" data-idx="${i}" style="display:${c.image?'':'none'};">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+        </button>
+      </div>
       <div class="preset-row-chips">
         ${(c.subcategories||[]).map((s,si)=> edit.type==='sub' && edit.idx===i && edit.sidx===si ?
           `<span class="preset-chip preset-chip-editing"><input type="text" class="preset-sub-edit-input" data-idx="${si}" value="${esc(s)}"></span>` :
@@ -11414,6 +11530,43 @@ function renderPresetCategories(edit){
   }));
   wrap.querySelectorAll('.preset-sub-new').forEach(inp=>inp.addEventListener('keydown', e=>{
     if(e.key==='Enter'){ e.preventDefault(); wrap.querySelector(`.preset-sub-add[data-idx="${inp.dataset.idx}"]`).click(); }
+  }));
+  wrap.querySelectorAll('.preset-cat-image-upload').forEach(btn=>btn.addEventListener('click', e=>{
+    wrap.querySelector(`.preset-cat-image-input[data-idx="${e.currentTarget.dataset.idx}"]`).click();
+  }));
+  wrap.querySelectorAll('.preset-cat-image-input').forEach(inp=>inp.addEventListener('change', async e=>{
+    const idx = Number(e.target.dataset.idx);
+    const cat = data.presetCategories[idx];
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!file || !cat) return;
+    if(!file.type.startsWith('image/')){ toast('Please choose an image file'); return; }
+    if(file.size > 4*1024*1024){ toast('Image is too large — please use one under 4MB'); return; }
+    const row = wrap.querySelector(`.preset-row[data-idx="${idx}"]`);
+    const img = row.querySelector('.preset-cat-image-preview');
+    const oldImage = cat.image || null;
+    try{
+      const url = await uploadProductImageBlob(file, currentShopId);
+      cat.image = url;
+      img.src = url;
+      img.style.display = '';
+      row.querySelector('.preset-cat-image-placeholder').style.display = 'none';
+      row.querySelector('.preset-cat-image-remove').style.display = '';
+      saveData();
+      if(oldImage) deleteProductImageIfStored(oldImage).catch(err=>console.error(err));
+    } catch(err){
+      console.error('Category photo upload failed:', err);
+      toast('Image upload failed: ' + ((err && err.message) || err));
+    }
+  }));
+  wrap.querySelectorAll('.preset-cat-image-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    const idx = Number(e.currentTarget.dataset.idx);
+    const cat = data.presetCategories[idx];
+    const oldImage = cat.image || null;
+    cat.image = null;
+    saveData();
+    renderPresetCategories(edit);
+    if(oldImage) deleteProductImageIfStored(oldImage).catch(err=>console.error(err));
   }));
   wrap.querySelectorAll('.preset-cat-name-edit').forEach(btn=>btn.addEventListener('click', e=>{
     renderPresetCategories({type:'name', idx:Number(e.currentTarget.dataset.idx)});
@@ -11857,7 +12010,7 @@ function renderInventory(){
       const vidxAttr = variantIdx==null ? '' : variantIdx;
       return `<div class="inv-card">
         <div class="inv-card-head">
-          ${productThumbHTML(p)}
+          ${productThumbHTML(p, variantIdx)}
           <div class="inv-card-title">
             <div class="inv-card-name">${esc(p.name)}</div>
             <div class="inv-card-sub">${esc(subLabel)}</div>
@@ -12039,7 +12192,7 @@ function renderInvStage(){
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head">
-      ${ipStageThumbHTML(product)}
+      ${ipStageThumbHTML(product, variantIdx)}
       <div class="q-stage-name">${esc(displayName)}</div>
     </div>
 
