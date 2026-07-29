@@ -13233,31 +13233,48 @@ async function boot(){
   // normal admin) is already in place -- avoids ever flashing the wrong
   // one first, on every refresh.
   document.body.classList.remove('app-loading');
-  handlePendingNotificationRoute();
+  // handlePendingNotificationRoute() (the cold-start ?orderId=&action= URL
+  // handler) no longer exists -- Web Push was retired in favor of native
+  // FCM push, which delivers a notification tap straight into
+  // routeNotificationAction() with no URL round-trip needed at all.
   startDataPolling();
 }
-// Periodically re-pulls this shop's data in the background so a change
-// made from another device/tab shows up without a manual reload -- the
-// app has no Realtime subscriptions, so this is the low-effort stand-in.
-// Skipped whenever it could clobber something the user is mid-edit on:
-// the tab is backgrounded, a modal is open, or focus is inside a text
-// field (typing a quote client's name, editing an amount, etc.).
+// Tracks the last moment the user actually typed anything, anywhere on
+// the page -- used below to hold off a background refresh for a few
+// seconds after real activity, rather than for as long as some field
+// merely *has* focus (a field a user clicked into and then left alone,
+// e.g. after tabbing away without blurring, would otherwise block every
+// refresh forever, which is why the poll looked like it never ran).
+let lastUserInputAt = 0;
+document.addEventListener('input', ()=>{ lastUserInputAt = Date.now(); }, true);
+// Re-pulls this shop's data in the background so a change made from
+// another device/tab shows up without a manual reload -- the app has no
+// Realtime subscriptions, so this is the low-effort stand-in. Skipped
+// whenever it could clobber something the user is mid-edit on: a modal
+// is open, or they typed in the last few seconds (a quote client's name,
+// an amount, etc.).
+async function pollForUpdatesNow(){
+  if(document.querySelector('.modal-overlay.show')) return;
+  if(Date.now() - lastUserInputAt < 5000) return;
+  try{
+    data = await loadData(currentShopId);
+    initLastSynced(data, currentShopId);
+    goToTab(currentActiveTab);
+  } catch(err){
+    console.error('Background refresh failed:', err);
+  }
+}
 let dataPollTimer = null;
 function startDataPolling(){
   if(dataPollTimer) return;
-  dataPollTimer = setInterval(async ()=>{
-    if(document.hidden) return;
-    if(document.querySelector('.modal-overlay.show')) return;
-    const active = document.activeElement;
-    if(active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName)) return;
-    try{
-      data = await loadData(currentShopId);
-      initLastSynced(data, currentShopId);
-      goToTab(currentActiveTab);
-    } catch(err){
-      console.error('Background refresh failed:', err);
-    }
-  }, 30000);
+  dataPollTimer = setInterval(()=>{ if(!document.hidden) pollForUpdatesNow(); }, 30000);
+  // A tab that was backgrounded when a scheduled tick fired shouldn't
+  // have to wait up to another full 30s after coming back into view --
+  // nudge an immediate refresh the moment it becomes visible again (the
+  // guards inside pollForUpdatesNow() still apply).
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden) pollForUpdatesNow();
+  });
 }
 // signOutAndReload() now lives in shared-worker.js.
 document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
