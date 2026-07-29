@@ -432,7 +432,12 @@
 
   /* Mobile money payment flow (payment-choice + pay modals). */
   .momo-choice-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:var(--panel);}
-  .momo-choice-btn.btn-accent{border-color:transparent;}
+  /* .btn-accent's own background/color (defined earlier in this stylesheet)
+     loses to the plain .momo-choice-btn rule above at equal specificity,
+     since source order is the tiebreaker -- re-assert it explicitly here
+     so the Mobile Money button doesn't render as white text on a white
+     background (invisible, not just miscolored). */
+  .momo-choice-btn.btn-accent{border-color:transparent;background:var(--accent);color:#fff;}
   .momo-choice-label{font-size:14.5px;font-weight:700;}
   .momo-choice-sub{font-size:12px;font-weight:500;opacity:.85;}
   .momo-choice-btn:not(.btn-accent) .momo-choice-sub{color:var(--ink-soft);}
