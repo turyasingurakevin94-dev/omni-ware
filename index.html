@@ -549,6 +549,10 @@
   .pr-tier-add .pr-tier-price{width:104px;}
   .pr-tier-add button{all:unset;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:700;color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;}
   .pr-tier-add button:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .pr-bulk-tier-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .pr-bulk-tier-status{font-size:11.5px;color:var(--ink-soft);}
+  .pr-bulk-tier-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
+  .pr-bulk-tier-toggle:hover{text-decoration:underline;}
 
   /* Product modal — sectioned panels + per-variant cards */
   .modal.modal-xwide{max-width:940px;}
@@ -9987,6 +9991,10 @@ function refreshPriceDropdowns(){
 // per-pack price are converted using pr_pack_qty at the moment a tier is
 // added, not re-derived later.
 let prTiers = [];
+// Bulk mode only: one entry per variant, null meaning "follow the shared
+// ladder above" or an array meaning "this variant has its own ladder
+// instead". Index-aligned with the selected product's variants array.
+let prBulkVariantOverrides = [];
 // Keeps the "at qty ___ [per pc / per ctn]" and "charge ___ [per pc / per
 // ctn]" unit dropdowns in sync with whatever unit/pack unit/pack qty are
 // currently typed in the Packing section -- the pack option only appears
@@ -10028,6 +10036,9 @@ function renderPrTiers(){
     prTiers.splice(Number(e.currentTarget.dataset.idx),1);
     renderPrTiers();
   }));
+  // Variants still following the shared ladder (no override of their own)
+  // display it live, so editing it here up top needs to redraw them too.
+  if(prBulkMode) renderPrBulkVariantRows();
 }
 function addPrTier(){
   const qtyInput = document.getElementById('pr_tier_qty');
@@ -10098,9 +10109,9 @@ function setPrBulkMode(on){
   // each variant's own wholesale/retail), since retyping the same
   // breakpoints per variant was the whole complaint -- in single mode
   // it's just that one entry's own tiers, as before.
-  document.getElementById('pr_tiers_label_text').textContent = on ? 'Volume pricing (applies to every variant)' : 'Pricing';
+  document.getElementById('pr_tiers_label_text').textContent = on ? 'Volume pricing (default for every variant)' : 'Pricing';
   document.getElementById('pr_tiers_tip_text').textContent = on
-    ? 'Add a shared price breakpoint here once and it\'s saved onto every variant below, alongside that variant\'s own wholesale/retail price -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity vs. Units per pack below. Leave empty if variants need completely different volume pricing -- you can still add that to one individually later by editing its own entry.'
+    ? 'Add a shared price breakpoint here once and every variant below follows it by default -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity vs. Units per pack below. Need one variant priced differently? Use "Customize for this variant" on its card below to give it its own ladder instead.'
     : 'Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier\'s price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don\'t need to sort them yourself.';
   if(on) renderPrBulkVariants();
   renderPrTierUnitOptions();
@@ -10128,19 +10139,21 @@ function selectPrProduct(id, variantIdx=null){
   // renderPrBulkVariants() re-derives it from whatever supplier ends up
   // selected, so neither path is left showing another entry's stale list.
   prTiers = [];
+  prBulkVariantOverrides = [];
   setPrBulkMode(!!(hasVariants && variantIdx==null));
   hidePrSuggestions();
 }
-// One row per variant, pre-filled from whatever price entry the currently
-// selected supplier already has on file for it (blank if none yet) --
-// same dedup key (product + variant + supplier) editPrice()/pr_save
-// already use for a single entry, just looped.
+// One card per variant, pre-filled from whatever price entry the currently
+// selected supplier already has on file for it -- same dedup key (product +
+// variant + supplier) editPrice()/pr_save already use for a single entry,
+// just looped. A variant with its own saved entry gets that entry's own
+// tiers as an override (it's already known to differ from the rest);
+// everything else starts out following the shared ladder above.
 function renderPrBulkVariants(){
-  const wrap = document.getElementById('pr_bulk_variants_wrap');
   const productId = document.getElementById('pr_product').value;
   const supplierId = document.getElementById('pr_supplier').value;
   const p = data.products.find(x=>x.id===productId);
-  if(!p || !Array.isArray(p.variants) || !p.variants.length){ wrap.innerHTML = ''; return; }
+  if(!p || !Array.isArray(p.variants) || !p.variants.length){ document.getElementById('pr_bulk_variants_wrap').innerHTML = ''; return; }
   // Packing (unit/pack unit/units per pack) is one shared set of fields
   // for the whole bulk save, not per-row -- pre-fill them from whatever
   // this supplier already has on file for any variant of this product,
@@ -10156,29 +10169,97 @@ function renderPrBulkVariants(){
   // it's still just one representative variant's tiers, so it won't
   // catch variants that were later edited individually to diverge.
   prTiers = packSample && Array.isArray(packSample.tiers) ? packSample.tiers.map(t=>({...t})) : [];
-  renderPrTierUnitOptions();
-  renderPrTiers();
-  wrap.innerHTML = p.variants.map((v,i)=>{
+  prBulkVariantOverrides = p.variants.map((v,i)=>{
     const existing = supplierId
       ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
       : null;
+    return existing ? tiersFromLegacyRow(existing) : null;
+  });
+  renderPrTierUnitOptions();
+  renderPrTiers();
+  renderPrBulkVariantRows();
+}
+// Redraws just the per-variant cards from current prBulkVariantOverrides /
+// prTiers state, without touching packing fields or re-deriving overrides
+// from saved data -- called after every tier add/remove/toggle so in-progress
+// edits (including ones the shared ladder above hasn't been saved yet) stay
+// visible instead of being clobbered by a fresh reload from data.prices.
+function renderPrBulkVariantRows(){
+  const wrap = document.getElementById('pr_bulk_variants_wrap');
+  const productId = document.getElementById('pr_product').value;
+  const p = data.products.find(x=>x.id===productId);
+  if(!p || !Array.isArray(p.variants) || !p.variants.length){ wrap.innerHTML = ''; return; }
+  const unit = document.getElementById('pr_unit').value.trim();
+  const packUnit = document.getElementById('pr_pack_unit').value.trim();
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const unitOptionsHTML = document.getElementById('pr_tier_qty_unit').innerHTML;
+  wrap.innerHTML = p.variants.map((v,i)=>{
+    const override = prBulkVariantOverrides[i];
+    const tiers = override || prTiers;
+    const chipsHTML = tiers.length
+      ? `<div class="preset-chip-flow">${tiers.map((t,ti)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, unit, packUnit, packQty))}${override ? `<button type="button" class="pr-bulk-tier-remove" data-idx="${i}" data-ti="${ti}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</span>`).join('')}</div>`
+      : `<div class="pr-tier-empty">${override ? 'No tiers yet for this variant.' : 'No shared pricing set yet.'}</div>`;
     return `
     <div class="variant-card" data-idx="${i}" style="margin-bottom:10px;">
       <div class="variant-card-head" style="border-bottom:none;margin-bottom:10px;padding-bottom:0;">
         <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo||{}).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
       </div>
-      <div class="vc-grid" style="margin-bottom:0;">
-        <div class="field"><label>Wholesale price (UGX)</label><input class="pr-bulk-wholesale" type="number" min="0" data-idx="${i}" value="${existing && existing.wholesale!=null ? existing.wholesale : ''}" placeholder="e.g. 37000"></div>
-        <div class="field"><label>Retail price (UGX)</label><input class="pr-bulk-retail" type="number" min="0" data-idx="${i}" value="${existing && existing.retail!=null ? existing.retail : ''}" placeholder="e.g. 41000"></div>
+      <div class="pr-bulk-tier-head">
+        <span class="pr-bulk-tier-status">${override ? 'Custom pricing for this variant' : 'Uses shared volume pricing above'}</span>
+        <button type="button" class="pr-bulk-tier-toggle" data-idx="${i}">${override ? 'Use shared pricing instead' : 'Customize for this variant'}</button>
       </div>
+      ${chipsHTML}
+      ${override ? `<div class="pr-tier-add">
+        <span class="pr-tier-at">At</span>
+        <input type="number" class="pr-bulk-tier-qty" data-idx="${i}" min="0" step="any" placeholder="Qty">
+        <select class="pr-bulk-tier-qty-unit" data-idx="${i}">${unitOptionsHTML}</select>
+        <span class="pr-tier-at">charge</span>
+        <input type="number" class="pr-tier-price pr-bulk-tier-price" data-idx="${i}" min="0" step="any" placeholder="UGX">
+        <select class="pr-bulk-tier-price-unit" data-idx="${i}">${unitOptionsHTML}</select>
+        <button type="button" class="pr-bulk-tier-add" data-idx="${i}">+ Add tier</button>
+      </div>` : ''}
     </div>`;
   }).join('');
+  wrap.querySelectorAll('.pr-bulk-tier-toggle').forEach(btn=>btn.addEventListener('click', e=>{
+    toggleBulkVariantOverride(Number(e.currentTarget.dataset.idx));
+  }));
+  wrap.querySelectorAll('.pr-bulk-tier-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    const idx = Number(e.currentTarget.dataset.idx), ti = Number(e.currentTarget.dataset.ti);
+    prBulkVariantOverrides[idx].splice(ti,1);
+    renderPrBulkVariantRows();
+  }));
+  wrap.querySelectorAll('.pr-bulk-tier-add').forEach(btn=>btn.addEventListener('click', e=>{
+    addBulkVariantTier(Number(e.currentTarget.dataset.idx));
+  }));
+}
+function toggleBulkVariantOverride(idx){
+  prBulkVariantOverrides[idx] = prBulkVariantOverrides[idx] ? null : prTiers.map(t=>({...t}));
+  renderPrBulkVariantRows();
+}
+function addBulkVariantTier(idx){
+  const qtyInput = document.querySelector(`.pr-bulk-tier-qty[data-idx="${idx}"]`);
+  const qtyUnitSel = document.querySelector(`.pr-bulk-tier-qty-unit[data-idx="${idx}"]`);
+  const priceInput = document.querySelector(`.pr-bulk-tier-price[data-idx="${idx}"]`);
+  const priceUnitSel = document.querySelector(`.pr-bulk-tier-price-unit[data-idx="${idx}"]`);
+  const rawQty = Number(qtyInput.value);
+  const rawPrice = Number(priceInput.value);
+  if(!rawQty || rawQty<=0){ toast('Enter a quantity for the tier'); return; }
+  if(!rawPrice || rawPrice<=0){ toast('Enter a price for the tier'); return; }
+  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const minQty = qtyUnitSel.value==='pack' ? rawQty*packQty : rawQty;
+  const price = priceUnitSel.value==='pack' && packQty>0 ? rawPrice/packQty : rawPrice;
+  const tiers = prBulkVariantOverrides[idx];
+  if(tiers.some(t=>t.minQty===minQty)){ toast('A tier already exists at that quantity'); return; }
+  tiers.push({minQty, price});
+  tiers.sort((a,b)=>a.minQty-b.minQty);
+  renderPrBulkVariantRows();
 }
 document.getElementById('pr_product_search').addEventListener('input', (e)=>{
   document.getElementById('pr_product').value = '';
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
   prTiers = [];
+  prBulkVariantOverrides = [];
   setPrBulkMode(false);
   prSuggestionsList(e.target.value);
 });
@@ -10351,6 +10432,7 @@ function resetPriceForm(){
   document.getElementById('pr_product_search').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
   prTiers = [];
+  prBulkVariantOverrides = [];
   setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_date').value = todayISO();
@@ -10391,32 +10473,29 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
     let saved = 0, cleared = 0;
     product.variants.forEach((v,i)=>{
-      const w = document.querySelector(`.pr-bulk-wholesale[data-idx="${i}"]`).value;
-      const r = document.querySelector(`.pr-bulk-retail[data-idx="${i}"]`).value;
+      // A variant with its own override ladder uses that; everything else
+      // follows the shared one entered above.
+      const effectiveTiers = prBulkVariantOverrides[i] || prTiers;
       const dupIdx = data.prices.findIndex(p=>p.productId===productId && p.variantIdx===i && p.supplierId===supplierId);
-      if(w==='' && r==='' && prTiers.length===0){
+      if(effectiveTiers.length===0){
         // Nothing entered for this variant -- if a row was pre-filled from
         // an existing entry and the admin cleared it, that's a deliberate
         // removal, not just "nothing to say about this one".
         if(dupIdx!==-1){ data.prices.splice(dupIdx,1); cleared++; }
         return;
       }
-      // The shared tier list applies identically to every variant; if a
-      // variant's own flat wholesale/retail was left blank, fall back to
-      // what those shared tiers imply rather than skipping the variant --
-      // that's the whole point of setting volume pricing once for all of them.
-      const derived = prTiers.length ? deriveWholesaleRetail(prTiers, packQty) : {wholesale:null, retail:null};
+      const derived = deriveWholesaleRetail(effectiveTiers, packQty);
       const record = {
         productId, variantIdx:i, supplierId,
-        wholesale: w===''?derived.wholesale:Number(w), retail: r===''?derived.retail:Number(r),
+        wholesale: derived.wholesale, retail: derived.retail,
         date, unit, packUnit, packQty, priceSource:'manual',
-        tiers: prTiers.map(t=>({...t}))
+        tiers: effectiveTiers.map(t=>({...t}))
       };
       if(dupIdx!==-1) data.prices[dupIdx] = {...record, id:data.prices[dupIdx].id, outOfStock:!!data.prices[dupIdx].outOfStock};
       else data.prices.push({...record, id:data.nextPriceId++, outOfStock:false});
       saved++;
     });
-    if(saved===0 && cleared===0){ toast('Enter at least one variant price'); return; }
+    if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
     saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
     toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}`);
     return;
