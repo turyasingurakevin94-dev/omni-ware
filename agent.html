@@ -1917,13 +1917,28 @@ async function openAddItemPanel(item){
   unitEl.addEventListener('change', rerender);
 
   addBtn.addEventListener('click', ()=>{
+    const raw = Number(qtyEl.value)||0;
+    const usingPack = unitEl.value==='pack' && packQty>0;
     const qty = currentBaseQty();
-    const agentSellPrice = Number(priceEl.value);
-    if(!(qty>0)){ toast('Enter a quantity'); return; }
-    if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
+    // priceEl shows a per-pack price when a pack unit is selected (see
+    // rerender() above -- earnedRow.unitPrice*packQty), but qty here is
+    // always in base units to match the tier lookup the server repeats
+    // on submit. Storing the pack price against the base-unit qty as-is
+    // was the bug: 10 Ctn at 300,000/Ctn got stored as qty=200 (dzn) at
+    // agentSellPrice=300,000, so every total multiplied by an extra
+    // packQty. agentSellPrice is always kept per BASE unit here; the cart
+    // separately remembers what the agent actually typed (displayQty/
+    // displayUnit) purely so the receipt can show "10 Ctn" instead of
+    // silently converting it to "200 dzn".
+    const enteredPrice = Number(priceEl.value);
+    const agentSellPrice = usingPack ? enteredPrice/packQty : enteredPrice;
+    if(!(raw>0)){ toast('Enter a quantity'); return; }
+    if(!(enteredPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
-      qty, unit, packUnit, packQty, tier: earnedRow ? earnedRow.tier : item.tier,
+      qty, unit, packUnit, packQty,
+      displayQty: raw, displayUnit: usingPack ? packUnit : unit,
+      tier: earnedRow ? earnedRow.tier : item.tier,
       floorPrice: earnedRow ? earnedRow.unitPrice : item.floorPrice, agentSellPrice,
     });
     document.body.removeChild(el);
@@ -1937,12 +1952,21 @@ function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
   let total = 0;
   wrap.innerHTML = cart.map((it,i)=>{
-    const rate = Number(it.agentSellPrice)||0;
-    const amount = rate * (Number(it.qty)||0);
+    // agentSellPrice is always stored per base unit; qty is always base
+    // units too, so the amount is correct regardless of what the agent
+    // actually picked in the panel. displayQty/displayUnit (what they
+    // typed, e.g. "10 Ctn") are shown instead of the base-unit qty/unit
+    // purely for the receipt -- rate is scaled back up to match whichever
+    // unit is being displayed so Rate x Qty still equals Amount.
+    const baseQty = Number(it.qty)||0;
+    const amount = (Number(it.agentSellPrice)||0) * baseQty;
     total += amount;
+    const displayQty = it.displayQty!=null ? it.displayQty : baseQty;
+    const displayUnit = it.displayUnit || it.unit || '';
+    const rate = displayQty>0 ? amount/displayQty : 0;
     return `
     <tr>
-      <td class="ag-receipt-qty">${esc(it.qty)} ${esc(it.unit||'')}</td>
+      <td class="ag-receipt-qty">${esc(displayQty)} ${esc(displayUnit)}</td>
       <td>
         <div class="ag-receipt-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
