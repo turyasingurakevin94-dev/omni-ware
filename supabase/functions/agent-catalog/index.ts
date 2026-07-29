@@ -137,6 +137,34 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   };
 }
 
+// A price row saved before the tier-list rework (or one that's only ever
+// had flat wholesale/retail typed, never a tier) has no `tiers` of its
+// own -- synthesize one so the ladder below still reflects its real
+// prices instead of coming back empty. Mirrors index.html's own
+// tiersFromLegacyRow() exactly.
+function effectiveTiers(row: any): { minQty: number; price: number }[] {
+  if (Array.isArray(row.tiers) && row.tiers.length) return row.tiers;
+  const synthesized: { minQty: number; price: number }[] = [];
+  if (row.retail != null) synthesized.push({ minQty: 1, price: Number(row.retail) });
+  if (row.wholesale != null && Number(row.pack_qty) > 0) synthesized.push({ minQty: Number(row.pack_qty), price: Number(row.wholesale) });
+  return synthesized;
+}
+
+// Every quantity breakpoint this price row has, each resolved into the
+// same agent-facing floor price computeFloorPrice() would return for a
+// real order placed at exactly that quantity -- markup and discount
+// already applied, cost never included. Lets the app show the whole
+// price curve at once (so an agent can see what a bigger order would
+// cost before typing it) without exposing anything beyond what a single
+// "price" call already exposes for one quantity at a time.
+function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct: number, discountRetailPct: number) {
+  const tiers = effectiveTiers(priceRow).slice().sort((a, b) => a.minQty - b.minQty);
+  return tiers.map((t) => {
+    const resolved = computeFloorPrice(product, priceRow, t.minQty, discountWholesalePct, discountRetailPct);
+    return resolved ? { minQty: t.minQty, unitPrice: resolved.floorPrice, tier: resolved.tier } : null;
+  }).filter((x): x is { minQty: number; unitPrice: number; tier: MarkupKind } => x != null);
+}
+
 // Resolves the two agent-discount percentages that apply to a product:
 // its own per-product override if set, else the shop-wide preset default.
 function resolveDiscountPcts(product: any, presets: any) {
@@ -218,7 +246,12 @@ Deno.serve(async (req) => {
         const result = computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct);
         if (!result) return json({ ok: true, available: false });
         const { cost, ...safeResult } = result; // cost never leaves this function
-        return json({ ok: true, available: true, ...safeResult });
+        // The full breakpoint ladder travels alongside the single resolved
+        // price for the requested qty -- the app fetches this once when an
+        // item's detail panel opens, then resolves every further qty/unit
+        // change against it locally instead of calling this action again.
+        const tiers = buildFloorPriceLadder(product, best, discountWholesalePct, discountRetailPct);
+        return json({ ok: true, available: true, ...safeResult, tiers });
       }
 
       // action === "list": every product with safe display fields plus a
@@ -258,6 +291,23 @@ Deno.serve(async (req) => {
           if (!priced && best && Number(best.pack_qty) > 0) {
             priced = computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct);
           }
+          // The single cheapest breakpoint this item has, only when it
+          // actually beats the headline price above -- lets Browse tease
+          // "buy more, pay less" with one number instead of shipping the
+          // whole ladder for every item in a list that could be hundreds
+          // long (the add-to-quote panel fetches the full ladder itself,
+          // once, only for the one item an agent has actually opened).
+          let bestTierMinQty: number | null = null, bestTierPrice: number | null = null;
+          if (best) {
+            const ladder = buildFloorPriceLadder(p, best, discountWholesalePct, discountRetailPct);
+            if (ladder.length > 1) {
+              const cheapest = ladder.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a));
+              if (priced && cheapest.unitPrice < priced.floorPrice) {
+                bestTierMinQty = cheapest.minQty;
+                bestTierPrice = cheapest.unitPrice;
+              }
+            }
+          }
           const variantLabel = variantIdx != null && Array.isArray(p.variants) && p.variants[variantIdx]
             ? Object.values(p.variants[variantIdx].combo || {}).join(" / ")
             : "";
@@ -276,6 +326,8 @@ Deno.serve(async (req) => {
             unit: priced?.unit ?? "",
             packUnit: priced?.packUnit ?? "",
             packQty: priced?.packQty ?? 0,
+            bestTierMinQty,
+            bestTierPrice,
           };
         });
       });
