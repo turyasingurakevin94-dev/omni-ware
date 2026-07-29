@@ -7978,7 +7978,10 @@ function panRowsBySupplier(invoices, from, to){
     if(!map.has(c.supplierId)) map.set(c.supplierId, {name: supplierName(c.supplierId), amt:0, docCount:0, qty:0, commission:0});
     map.get(c.supplierId).commission += Number(c.amount)||0;
   });
-  return [...map.values()];
+  // Flags a supplier that was actually bought from in this range but has
+  // no commission recorded for it yet, so a real gap doesn't just read as
+  // an unremarkable "0" next to every other number in the row.
+  return [...map.values()].map(r=>({...r, commissionMissing: r.docCount>0 && r.commission===0}));
 }
 function panRowsForView(){
   return panView==='supplier' ? panRowsBySupplier(panLastEntries, panLastRange.from, panLastRange.to) : panRowsByItem(panLastEntries);
@@ -8040,7 +8043,10 @@ function renderPanTable(){
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
-    ${cols.map(c=>`<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`).join('')}
+    ${cols.map(c=>{
+      if(c.key==='commission' && r.commissionMissing) return `<td class="price"><span class="st-status-pill unavailable" title="This supplier had purchases in range but no commission recorded for the matching period">Missing</span></td>`;
+      return `<td class="${c.numeric?'price':''}">${panFormatCell(c, r[c.key])}</td>`;
+    }).join('')}
   </tr>`).join('')}</tbody>${totalRowHTML}</table></div>
   <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, panFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
@@ -8132,8 +8138,17 @@ function supplierPriceMatches(supplierId, tokens){
     return aw-bw;
   });
 }
+// The period a commission entry recorded "now" would use -- the same
+// 'YYYY-MM' shape as every supplier_commissions row's period column.
+function currentPeriod(){ return todayISO().slice(0,7); }
+function supplierMissingCurrentCommission(supplierId){
+  return !data.supplierCommissions.some(c=>c.supplierId===supplierId && c.period===currentPeriod());
+}
 function supplierCardHTML(s, productMatches){
   const stats = supplierStats(s.id);
+  const missingCommissionFlag = supplierMissingCurrentCommission(s.id)
+    ? `<div style="margin-top:10px;"><span class="st-status-pill unavailable" title="No commission recorded yet for this period">No commission — ${esc(claimMonthLabel(currentPeriod()))}</span></div>`
+    : '';
   const matchesHtml = (productMatches && productMatches.length) ? `
     <div class="sc-matches">
       <div class="sc-matches-label">Matching prices</div>
@@ -8162,6 +8177,7 @@ function supplierCardHTML(s, productMatches){
       ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
       ${(!s.phone && !s.location && !s.notes) ? `<div class="sc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
     </div>
+    ${missingCommissionFlag}
     ${matchesHtml}
     <div class="sc-stats">
       <div class="sc-stat"><b>${stats.priced}</b><span>Priced items</span></div>
