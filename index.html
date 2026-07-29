@@ -4498,7 +4498,10 @@ const supplierNavItem = document.getElementById('supplierNavItem');
 const productsNavItem = document.getElementById('productsNavItem');
 const settingsNavItem = document.getElementById('settingsNavItem');
 
+let currentActiveTab = 'quote';
 function goToTab(tab){
+  currentActiveTab = tab;
+  lsSet('pbLastTab', tab);
   tabButtons.forEach(b=>b.classList.remove('active'));
   const target = [...tabButtons].find(b=>b.dataset.tab===tab);
   if(target) target.classList.add('active');
@@ -13211,12 +13214,42 @@ async function boot(){
     goToTab('worker');
   } else {
     renderAll();
+    // Land back on whatever tab was open before the last reload, instead
+    // of always showing Add Quote (the tab that's simply visible-by-
+    // default in the raw HTML) -- renderAll() already rendered every
+    // tab's content above, so this just needs to flip which one shows.
+    const savedTab = lsGet('pbLastTab');
+    if(savedTab && document.getElementById('tab-'+savedTab)) goToTab(savedTab);
   }
   // Only reveal the app shell now that the correct view (worker-only or
   // normal admin) is already in place -- avoids ever flashing the wrong
   // one first, on every refresh.
   document.body.classList.remove('app-loading');
   handlePendingNotificationRoute();
+  startDataPolling();
+}
+// Periodically re-pulls this shop's data in the background so a change
+// made from another device/tab shows up without a manual reload -- the
+// app has no Realtime subscriptions, so this is the low-effort stand-in.
+// Skipped whenever it could clobber something the user is mid-edit on:
+// the tab is backgrounded, a modal is open, or focus is inside a text
+// field (typing a quote client's name, editing an amount, etc.).
+let dataPollTimer = null;
+function startDataPolling(){
+  if(dataPollTimer) return;
+  dataPollTimer = setInterval(async ()=>{
+    if(document.hidden) return;
+    if(document.querySelector('.modal-overlay.show')) return;
+    const active = document.activeElement;
+    if(active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName)) return;
+    try{
+      data = await loadData(currentShopId);
+      initLastSynced(data, currentShopId);
+      goToTab(currentActiveTab);
+    } catch(err){
+      console.error('Background refresh failed:', err);
+    }
+  }, 30000);
 }
 // signOutAndReload() now lives in shared-worker.js.
 document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
