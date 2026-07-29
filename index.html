@@ -3457,8 +3457,8 @@
         <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
       </div>
       <div id="pr_tiers_wrap" style="display:none;">
-        <div class="section-label-row form-section-label" style="margin-top:16px;">Pricing
-          <span class="info-tip" tabindex="0"><span class="tip-bubble">Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier's price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don't need to sort them yourself.</span></span>
+        <div class="section-label-row form-section-label" style="margin-top:16px;"><span id="pr_tiers_label_text">Pricing</span>
+          <span class="info-tip" tabindex="0"><span class="tip-bubble" id="pr_tiers_tip_text">Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier's price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don't need to sort them yourself.</span></span>
         </div>
         <div id="pr_tiers_list_wrap"></div>
         <div class="pr-tier-add">
@@ -10061,7 +10061,7 @@ function addPrTier(){
 }
 document.getElementById('pr_tier_add').addEventListener('click', addPrTier);
 ['pr_unit','pr_pack_unit','pr_pack_qty'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{ if(!prBulkMode){ renderPrTierUnitOptions(); renderPrTiers(); } });
+  document.getElementById(id).addEventListener('input', ()=>{ renderPrTierUnitOptions(); renderPrTiers(); });
 });
 
 function selectPrSupplier(id){
@@ -10101,12 +10101,19 @@ let prBulkMode = false;
 function setPrBulkMode(on){
   prBulkMode = on;
   document.getElementById('pr_bulk_wrap').style.display = on ? '' : 'none';
-  // Volume pricing is per single product+variant+supplier entry -- bulk
-  // mode prices every variant at once, so there's no one place to hang a
-  // tier ladder on; keep it flat there for now.
-  document.getElementById('pr_tiers_wrap').style.display = on ? 'none' : '';
+  document.getElementById('pr_tiers_wrap').style.display = '';
+  // Volume pricing is shown either way, but its meaning shifts: in bulk
+  // mode it's one shared ladder saved onto every variant below (on top of
+  // each variant's own wholesale/retail), since retyping the same
+  // breakpoints per variant was the whole complaint -- in single mode
+  // it's just that one entry's own tiers, as before.
+  document.getElementById('pr_tiers_label_text').textContent = on ? 'Volume pricing (applies to every variant)' : 'Pricing';
+  document.getElementById('pr_tiers_tip_text').textContent = on
+    ? 'Add a shared price breakpoint here once and it\'s saved onto every variant below, alongside that variant\'s own wholesale/retail price -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity vs. Units per pack below. Leave empty if variants need completely different volume pricing -- you can still add that to one individually later by editing its own entry.'
+    : 'Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier\'s price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don\'t need to sort them yourself.';
   if(on) renderPrBulkVariants();
-  else { renderPrTierUnitOptions(); renderPrTiers(); }
+  renderPrTierUnitOptions();
+  renderPrTiers();
 }
 function selectPrProduct(id, variantIdx=null){
   const p = data.products.find(x=>x.id===id);
@@ -10124,6 +10131,12 @@ function selectPrProduct(id, variantIdx=null){
   } else {
     hideInfoBanner(hint);
   }
+  // Picking a (possibly different) product/variant target always starts
+  // its tiers fresh -- editPrice() overwrites this again right after with
+  // the specific entry's own tiers, and bulk mode's own setPrBulkMode ->
+  // renderPrBulkVariants() re-derives it from whatever supplier ends up
+  // selected, so neither path is left showing another entry's stale list.
+  prTiers = [];
   setPrBulkMode(!!(hasVariants && variantIdx==null));
   hidePrSuggestions();
 }
@@ -10146,6 +10159,14 @@ function renderPrBulkVariants(){
   document.getElementById('pr_unit').value = packSample ? (packSample.unit||'') : '';
   document.getElementById('pr_pack_unit').value = packSample ? (packSample.packUnit||'') : '';
   document.getElementById('pr_pack_qty').value = packSample && packSample.packQty ? packSample.packQty : '';
+  // Same best-effort convenience as the packing fields above: if this
+  // supplier already has a shared tier ladder on file for the product
+  // (from an earlier bulk save), show it pre-filled rather than blank --
+  // it's still just one representative variant's tiers, so it won't
+  // catch variants that were later edited individually to diverge.
+  prTiers = packSample && Array.isArray(packSample.tiers) ? packSample.tiers.map(t=>({...t})) : [];
+  renderPrTierUnitOptions();
+  renderPrTiers();
   wrap.innerHTML = p.variants.map((v,i)=>{
     const existing = supplierId
       ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
@@ -10166,6 +10187,7 @@ document.getElementById('pr_product_search').addEventListener('input', (e)=>{
   document.getElementById('pr_product').value = '';
   document.getElementById('pr_variant').value = '';
   document.getElementById('pr_variant_hint').style.display = 'none';
+  prTiers = [];
   setPrBulkMode(false);
   prSuggestionsList(e.target.value);
 });
@@ -10381,17 +10403,23 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       const w = document.querySelector(`.pr-bulk-wholesale[data-idx="${i}"]`).value;
       const r = document.querySelector(`.pr-bulk-retail[data-idx="${i}"]`).value;
       const dupIdx = data.prices.findIndex(p=>p.productId===productId && p.variantIdx===i && p.supplierId===supplierId);
-      if(w==='' && r===''){
+      if(w==='' && r==='' && prTiers.length===0){
         // Nothing entered for this variant -- if a row was pre-filled from
         // an existing entry and the admin cleared it, that's a deliberate
         // removal, not just "nothing to say about this one".
         if(dupIdx!==-1){ data.prices.splice(dupIdx,1); cleared++; }
         return;
       }
+      // The shared tier list applies identically to every variant; if a
+      // variant's own flat wholesale/retail was left blank, fall back to
+      // what those shared tiers imply rather than skipping the variant --
+      // that's the whole point of setting volume pricing once for all of them.
+      const derived = prTiers.length ? deriveWholesaleRetail(prTiers, packQty) : {wholesale:null, retail:null};
       const record = {
         productId, variantIdx:i, supplierId,
-        wholesale: w===''?null:Number(w), retail: r===''?null:Number(r),
-        date, unit, packUnit, packQty, priceSource:'manual'
+        wholesale: w===''?derived.wholesale:Number(w), retail: r===''?derived.retail:Number(r),
+        date, unit, packUnit, packQty, priceSource:'manual',
+        tiers: prTiers.map(t=>({...t}))
       };
       if(dupIdx!==-1) data.prices[dupIdx] = {...record, id:data.prices[dupIdx].id, outOfStock:!!data.prices[dupIdx].outOfStock};
       else data.prices.push({...record, id:data.nextPriceId++, outOfStock:false});
