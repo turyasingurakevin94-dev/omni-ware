@@ -3929,7 +3929,17 @@ async function loadData(shopId){
       variantAttributes:p.variant_attributes||[], variants:p.variants||[]
     })),
     prices: (pricesR.data||[]).map(pr=>({
-      id:pr.id, productId:pr.product_id, variantIdx:pr.variant_idx, supplierId:pr.supplier_id,
+      id:pr.id, productId:pr.product_id,
+      // variant_idx is a text column (it predates variants existing at
+      // all, see 0002) so it always comes back from Postgres as a string
+      // like "0" -- everywhere else on the client treats it as a number
+      // (or null for a non-variant product), so leaving it as a string
+      // here made every === comparison against it fail silently once data
+      // had round-tripped through Supabase, including the "replace this
+      // supplier's existing price" dedup check on save (it always looked
+      // like no existing entry existed, so a new one piled up instead).
+      variantIdx: pr.variant_idx==null || pr.variant_idx==='' ? null : Number(pr.variant_idx),
+      supplierId:pr.supplier_id,
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
       priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
@@ -4073,6 +4083,32 @@ function initLastSynced(d, shopId){
     purchaseInvoices: keyRowsById(rows.purchaseInvoices, 'id'),
     settings: cloneJSON(rows.settings)
   };
+}
+
+// A now-fixed loadData() bug (variant_idx is a text column, so it always
+// came back from Postgres as a string -- every === comparison against it
+// on the client, including the "replace this supplier's existing price"
+// dedup check on save, silently failed once price data had round-tripped
+// through Supabase at least once) let a supplier's updated price for a
+// variant pile up alongside their old one instead of replacing it, for
+// any account that hit this. Folds any such leftover duplicates down to
+// just the most recently saved one (highest id) per product+variant+
+// supplier -- the same rule a normal save already applies -- so accounts
+// that already have the duplicates self-heal on next load rather than
+// carrying them forever. Must run after initLastSynced() so the rows it
+// drops are still known to lastSynced and get deleted from Supabase on
+// the next saveData(), instead of just disappearing from view locally.
+function dedupeLoadedPrices(d){
+  const bestByKey = new Map();
+  d.prices.forEach(p=>{
+    const key = p.productId+'::'+p.variantIdx+'::'+p.supplierId;
+    const existing = bestByKey.get(key);
+    if(!existing || Number(p.id)>Number(existing.id)) bestByKey.set(key, p);
+  });
+  const deduped = [...bestByKey.values()];
+  const removed = d.prices.length - deduped.length;
+  d.prices = deduped;
+  return removed;
 }
 
 // addDiffOps() now lives in shared-worker.js (same diff-against-lastSynced
@@ -12584,6 +12620,7 @@ async function boot(){
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
     initLastSynced(data, currentShopId);
+    if(dedupeLoadedPrices(data)) await saveData();
     await migrateBase64ProductImages(currentShopId);
   } catch(e){
     console.error('Failed to start app:', e);
