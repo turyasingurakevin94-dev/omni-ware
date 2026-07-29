@@ -502,6 +502,16 @@
   .agent-subtab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,40,0.14);}
   .preset-hint{margin:0 0 10px;font-size:12px;color:var(--ink-soft);}
   .preset-inline-add{display:flex;gap:8px;max-width:340px;margin-bottom:12px;}
+  .momo-provider-card{max-width:420px;}
+  .momo-enabled-toggle{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;}
+  .momo-status-row{font-size:12px;color:var(--ink-soft);margin:2px 0 12px;}
+  .momo-status-row.configured{color:var(--good,#1a7f4e);}
+  .btn-link{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
+  .btn-link:hover{text-decoration:underline;}
+  .momo-status-pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:#F1F3F5;color:var(--ink-soft);}
+  .momo-status-pill.successful{background:#E6F6EE;color:var(--good,#1a7f4e);}
+  .momo-status-pill.failed,.momo-status-pill.timeout{background:#FDECEC;color:var(--danger,#c0392b);}
+  .momo-status-pill.pending{background:#FFF6DE;color:#8A6D1D;}
   .preset-inline-add.wide{max-width:520px;}
   .preset-inline-add input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;font-family:inherit;background:#fff;min-width:0;}
   .preset-inline-add button{all:unset;cursor:pointer;padding:7px 15px;border-radius:7px;font-size:12px;font-weight:700;background:var(--navy);color:#fff;white-space:nowrap;text-align:center;flex-shrink:0;}
@@ -2612,6 +2622,7 @@
         <button type="button" class="agent-subtab active" data-atab="roster">Agents</button>
         <button type="button" class="agent-subtab" data-atab="promotions">Promotions</button>
         <button type="button" class="agent-subtab" data-atab="claims">Commission Claims</button>
+        <button type="button" class="agent-subtab" data-atab="momo">Mobile Money</button>
       </div>
 
       <div id="apane-roster">
@@ -2653,6 +2664,58 @@
         </div>
         <div class="panel">
           <div id="claimsWrap"></div>
+        </div>
+      </div>
+
+      <div id="apane-momo" style="display:none;">
+        <div class="panel">
+          <h2 style="margin-bottom:0;">Mobile money providers</h2>
+          <p class="preset-hint" style="margin:12px 0 0;">Lets agents pay for their orders straight from the Agent app via a real MTN/Airtel payment prompt to their phone, instead of you confirming cash by hand. Each provider needs its own merchant API credentials for this shop specifically -- sign up on MTN's / Airtel's developer portal to get sandbox keys before going live. Credentials are only ever readable by shop owners/admins.</p>
+        </div>
+        <div class="panel">
+          <div class="momo-provider-card">
+            <div class="panel-head-row">
+              <h2 style="margin-bottom:0;">MTN Mobile Money</h2>
+              <label class="momo-enabled-toggle"><input type="checkbox" id="momo_mtn_enabled"> Enabled</label>
+            </div>
+            <div class="field">
+              <label>Environment</label>
+              <select id="momo_mtn_environment">
+                <option value="sandbox">Sandbox (testing)</option>
+                <option value="production">Production (live)</option>
+              </select>
+            </div>
+            <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
+            <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
+            <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
+            <div class="momo-status-row" id="momo_mtn_status"></div>
+            <button type="button" class="btn btn-accent" id="momo_mtn_save_btn">Save MTN settings</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="momo-provider-card">
+            <div class="panel-head-row">
+              <h2 style="margin-bottom:0;">Airtel Money</h2>
+              <label class="momo-enabled-toggle"><input type="checkbox" id="momo_airtel_enabled"> Enabled</label>
+            </div>
+            <div class="field">
+              <label>Environment</label>
+              <select id="momo_airtel_environment">
+                <option value="sandbox">Sandbox (testing)</option>
+                <option value="production">Production (live)</option>
+              </select>
+            </div>
+            <div class="field"><label>Client ID</label><input type="password" id="momo_airtel_clientId" autocomplete="off" placeholder="From the Airtel Money developer portal"></div>
+            <div class="field"><label>Client secret</label><input type="password" id="momo_airtel_clientSecret" autocomplete="off"></div>
+            <div class="momo-status-row" id="momo_airtel_status"></div>
+            <button type="button" class="btn btn-accent" id="momo_airtel_save_btn">Save Airtel settings</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">Payment activity</h2>
+          </div>
+          <div id="momoLedgerWrap"></div>
         </div>
       </div>
     </section>
@@ -8635,8 +8698,10 @@ document.getElementById('agentSubTabs').addEventListener('click', (e)=>{
   document.getElementById('apane-roster').style.display = atab==='roster' ? '' : 'none';
   document.getElementById('apane-promotions').style.display = atab==='promotions' ? '' : 'none';
   document.getElementById('apane-claims').style.display = atab==='claims' ? '' : 'none';
+  document.getElementById('apane-momo').style.display = atab==='momo' ? '' : 'none';
   if(atab==='promotions') renderAgentPromotions();
   if(atab==='claims') renderCommissionClaims();
+  if(atab==='momo'){ renderMomoProviderSettings(); renderMomoLedger(); }
 });
 
 function promotionBonusLabel(promo){
@@ -8860,6 +8925,115 @@ async function markClaimPaid(id){
   c.status = 'paid'; c.paid_at = new Date().toISOString();
   renderCommissionClaims();
   toast('Marked as paid');
+}
+
+/* ---- Mobile money providers (shop_payment_providers) ----
+   Lets an agent pay for an order via a real MTN/Airtel "request to pay"
+   prompt instead of the shop admin manually confirming cash was handed
+   over (agentPrepayModal, still unchanged as the cash fallback). Every
+   shop needs its own real merchant credentials -- this table is
+   admin/owner-only (RLS: is_shop_admin), read here purely to know
+   whether each provider is already configured, never re-displayed in
+   the form once saved (fields stay blank; only a non-blank field is
+   sent to the server, merged with whatever's already stored, so saving
+   one changed field never blanks out the others). */
+let momoProviders = null; // { mtn: row|null, airtel: row|null }
+const MOMO_CREDENTIAL_FIELDS = {
+  mtn: ['subscriptionKey', 'apiUser', 'apiKey'],
+  airtel: ['clientId', 'clientSecret'],
+};
+async function loadMomoProviders(){
+  const { data: rows, error } = await sb.from('shop_payment_providers').select('*').eq('shop_id', currentShopId);
+  if(error){ toast('Could not load mobile money settings: '+error.message); momoProviders = { mtn:null, airtel:null }; return; }
+  momoProviders = { mtn:null, airtel:null };
+  (rows||[]).forEach(r=>{ momoProviders[r.provider] = r; });
+}
+function populateMomoProviderForm(provider){
+  const row = momoProviders[provider];
+  document.getElementById(`momo_${provider}_enabled`).checked = !!(row && row.enabled);
+  document.getElementById(`momo_${provider}_environment`).value = (row && row.environment) || 'sandbox';
+  MOMO_CREDENTIAL_FIELDS[provider].forEach(f=>{ document.getElementById(`momo_${provider}_${f}`).value = ''; });
+  const hasCreds = !!(row && row.credentials && Object.keys(row.credentials).length);
+  const statusEl = document.getElementById(`momo_${provider}_status`);
+  statusEl.textContent = hasCreds ? 'Credentials configured -- leave a field blank to keep it unchanged.' : 'Not configured yet.';
+  statusEl.classList.toggle('configured', hasCreds);
+}
+async function renderMomoProviderSettings(){
+  if(momoProviders===null) await loadMomoProviders();
+  populateMomoProviderForm('mtn');
+  populateMomoProviderForm('airtel');
+}
+async function saveMomoProvider(provider){
+  const btn = document.getElementById(`momo_${provider}_save_btn`);
+  btn.disabled = true;
+  try{
+    const enabled = document.getElementById(`momo_${provider}_enabled`).checked;
+    const environment = document.getElementById(`momo_${provider}_environment`).value;
+    const existing = (momoProviders[provider] && momoProviders[provider].credentials) || {};
+    const credentials = { ...existing };
+    let anyEntered = false;
+    MOMO_CREDENTIAL_FIELDS[provider].forEach(f=>{
+      const val = document.getElementById(`momo_${provider}_${f}`).value.trim();
+      if(val){ credentials[f] = val; anyEntered = true; }
+    });
+    if(enabled && !Object.keys(credentials).length){ toast('Enter this provider\'s credentials before enabling it'); return; }
+    const { data: saved, error } = await sb.from('shop_payment_providers')
+      .upsert({ shop_id: currentShopId, provider, environment, enabled, credentials, updated_at: new Date().toISOString() }, { onConflict:'shop_id,provider' })
+      .select().single();
+    if(error){ toast('Could not save: '+error.message); return; }
+    momoProviders[provider] = saved;
+    populateMomoProviderForm(provider);
+    toast(`${provider==='mtn'?'MTN':'Airtel'} settings saved${anyEntered?'':' (no credential changes)'}`);
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('momo_mtn_save_btn').addEventListener('click', ()=>saveMomoProvider('mtn'));
+document.getElementById('momo_airtel_save_btn').addEventListener('click', ()=>saveMomoProvider('airtel'));
+
+/* ---- Mobile money payment activity (agent_mobile_payments) ----
+   Read-only reconciliation ledger -- rows are only ever written by the
+   momo Edge Functions (service role), never directly by this app. */
+let momoPayments = null;
+function momoPaymentStatusLabel(status){
+  return { pending:'Pending', successful:'Successful', failed:'Failed', cancelled:'Cancelled', timeout:'Timed out' }[status] || status;
+}
+async function renderMomoLedger(){
+  const wrap = document.getElementById('momoLedgerWrap');
+  if(momoPayments===null){
+    wrap.innerHTML = '<div class="empty">Loading…</div>';
+    const { data: rows, error } = await sb.from('agent_mobile_payments').select('*').eq('shop_id', currentShopId).order('created_at', {ascending:false}).limit(200);
+    if(error){ wrap.innerHTML = '<div class="empty">Could not load payment activity.</div>'; toast('Could not load payment activity: '+error.message); return; }
+    momoPayments = rows || [];
+  }
+  if(!momoPayments.length){ wrap.innerHTML = '<div class="empty">No mobile money payments yet.</div>'; return; }
+  wrap.innerHTML = `<table class="dash-mini-table"><thead><tr>
+      <th>When</th><th>Agent</th><th>Order</th><th>Provider</th><th>Phone</th><th>Amount</th><th>Status</th><th></th>
+    </tr></thead><tbody>${momoPayments.map(p=>{
+      const agent = data.agents.find(a=>a.id===p.agent_id);
+      const when = p.created_at ? new Date(p.created_at).toLocaleString('en-UG', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+      return `<tr>
+        <td>${esc(when)}</td>
+        <td>${esc(agent ? agent.name : p.agent_id)}</td>
+        <td>${p.order_id!=null ? '#'+esc(p.order_id) : '—'}</td>
+        <td>${p.provider==='mtn'?'MTN':'Airtel'}</td>
+        <td>${esc(p.phone)}</td>
+        <td>${fmtUGX(p.amount)}</td>
+        <td><span class="momo-status-pill ${esc(p.status)}">${esc(momoPaymentStatusLabel(p.status))}</span></td>
+        <td>${p.status==='pending' ? `<button type="button" class="btn-link" onclick="recheckMomoPayment(${p.id})">Re-check</button>` : ''}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+async function recheckMomoPayment(id){
+  try{
+    const { data: res, error } = await sb.functions.invoke('check-momo-payment-status', { body: { shopId: currentShopId, paymentId: id } });
+    if(error) throw error;
+    momoPayments = null;
+    renderMomoLedger();
+    toast(res && res.status ? `Status: ${momoPaymentStatusLabel(res.status)}` : 'Rechecked');
+  }catch(err){
+    toast('Could not recheck: '+(err.message||err));
+  }
 }
 
 // Worker pick & pack (myWorkerOrders, renderWorkerView, accept/deny,
