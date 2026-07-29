@@ -645,6 +645,24 @@ function fmtPricePerUnit(n, unit){
   const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
   return unit ? `UGX ${amount}<span class="ag-price-unit">/${esc(String(unit).toLowerCase())}</span>` : `UGX ${amount}`;
 }
+// Same amount, no "UGX" prefix -- used on Browse's grid cards, where every
+// card already repeats the currency on both the headline price and the
+// "buy more" hint, and the two-column layout is tight enough that the
+// extra characters push things into an awkward wrap. The unit's shown
+// separately right where it's needed instead.
+function fmtAmount(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
+function fmtAmountPerUnit(n, unit){
+  const amount = fmtAmount(n);
+  return unit ? `${amount}<span class="ag-price-unit">/${esc(String(unit).toLowerCase())}</span>` : amount;
+}
+// Naive plural for a packaging unit (Ctn -> Ctns, pc -> pcs) -- good enough
+// for the short abbreviations actually used as units/pack units in this
+// app; skips units that already end in "s" rather than risk doubling one.
+function pluralizeUnit(unit){
+  const u = String(unit||'').trim();
+  if(!u || /s$/i.test(u)) return u;
+  return u + 's';
+}
 // e.g. "Sold per pkt, and there are 20pkt in a ctn"
 // escapeHtml=false when assigning to a node's textContent (already injection-safe,
 // and esc()'s HTML-entity output would otherwise show up as literal text).
@@ -1451,7 +1469,7 @@ function browseCardHTML(it, promoted, opts){
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
   const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
   const clusterWait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
-  const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
+  const packLabel = it.packQty ? `1 ${esc(it.packUnit||'pack')} has ${esc(it.packQty)} ${esc(pluralizeUnit(it.unit))}` : (it.unit ? `Per ${esc(it.unit)}` : '');
   // "Buy more, pay less" is only ever one line: the single cheapest
   // breakpoint this item has (bestTierMinQty/bestTierPrice, already
   // resolved server-side), always stated per the SAME base unit as the
@@ -1460,7 +1478,7 @@ function browseCardHTML(it, promoted, opts){
   // carton. The full ladder (and the option to view it in pack terms)
   // only ever shows up once this card is tapped.
   const bulkHint = (it.bestTierMinQty!=null && it.bestTierPrice!=null)
-    ? `<div class="ag-bulk-hint">${ICON_BOXES}Buy ${esc(it.bestTierMinQty)}+ for ${fmtPricePerUnit(it.bestTierPrice, it.unit)}</div>`
+    ? `<div class="ag-bulk-hint">${ICON_BOXES}Best price is ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} for ${fmtAmount(it.bestTierPrice)} each</div>`
     : '';
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
@@ -1476,7 +1494,7 @@ function browseCardHTML(it, promoted, opts){
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
       ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
-      <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+      <div class="ag-grid-price">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
       ${bulkHint}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
@@ -1693,7 +1711,6 @@ function tierLadderRowHTML(row, earned){
 async function openAddItemPanel(item){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
-  const packLabel = packSentence(item.packQty, item.unit, item.packUnit);
   // Same lookup browseCardHTML uses -- this panel only ever gets a plain
   // catalog item, not one already carrying its promo/cluster status.
   const promo = promotedMap().get(`${item.productId}::${item.variantIdx==null?'':item.variantIdx}`);
@@ -1713,7 +1730,6 @@ async function openAddItemPanel(item){
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
-      <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
       ${clusterWaitHTML}
       <div class="field">
         <label>Quantity</label>
@@ -1776,7 +1792,6 @@ async function openAddItemPanel(item){
     if(res.available && Array.isArray(res.tiers) && res.tiers.length){
       tiers = res.tiers.slice().sort((a,b)=>a.minQty-b.minQty);
       unit = res.unit; packUnit = res.packUnit; packQty = Number(res.packQty)||0;
-      document.getElementById('ag_ai_pack_label').textContent = packSentence(packQty, unit, packUnit, false);
       if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
       rerender();
     } else {
