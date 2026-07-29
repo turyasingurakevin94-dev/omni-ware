@@ -3164,7 +3164,7 @@
 
 <!-- CUSTOMER DEBT ADJUSTMENT MODAL -->
 <div class="modal-overlay" id="customerDebtModal">
-  <div class="modal">
+  <div class="modal modal-wide">
     <div class="modal-head">
       <h2 id="customerDebtModalTitle">Add charge</h2>
       <button class="modal-close" id="customerDebtModalClose" aria-label="Close">
@@ -3182,6 +3182,11 @@
           </select>
         </div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="cd_note" placeholder="e.g. Goods on credit / part payment"></div>
+      </div>
+      <div id="cd_invoice_picker_section" style="display:none;">
+        <div class="section-label-row form-section-label" style="margin-top:14px;">Apply to invoice(s)</div>
+        <div id="cd_invoice_picker_wrap"></div>
+        <div class="field-hint" id="cd_invoice_picker_summary" style="margin-top:6px;"></div>
       </div>
       <div class="cc-history" id="customerDebtHistory" style="margin-top:14px;"></div>
     </div>
@@ -3633,7 +3638,16 @@
         <div class="field"><label>Amount (UGX)</label><input type="number" id="cb_in_amount" min="0" placeholder="e.g. 50000"></div>
         <div class="field" style="grid-column:1/-1;"><label>Description</label><input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client"></div>
         <div class="field"><label>Time</label><input type="time" id="cb_in_time"></div>
+        <div class="field" style="grid-column:1/-1;"><label>Customer (optional — apply this to their invoice(s))</label>
+          <input type="text" id="cb_in_customer" list="dl_cb_in_customers" placeholder="Type a customer name to collect against their outstanding invoices">
+        </div>
       </div>
+      <div id="cb_in_invoice_picker_section" style="display:none;">
+        <div class="section-label-row form-section-label" style="margin-top:10px;">Apply to invoice(s)</div>
+        <div id="cb_in_invoice_picker_wrap"></div>
+        <div class="field-hint" id="cb_in_invoice_picker_summary" style="margin-top:6px;"></div>
+      </div>
+      <datalist id="dl_cb_in_customers"></datalist>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="cb_in_cancel" style="display:none;">Cancel edit</button>
@@ -6394,33 +6408,104 @@ function customerOutstandingInvoices(customerId){
     .filter(q=>q.customerId===customerId && q.invoiced && !q.voided && invoiceBalanceDue(q)>0)
     .sort((a,b)=>(a.invoicedAt||a.date||'').localeCompare(b.invoicedAt||b.date||''));
 }
-// Allocates a lump-sum customer payment across their outstanding
-// invoices, oldest first, each portion going through the same
-// q.payments/q.amountPaid + syncInvoiceDebtCharge path a single-invoice
-// payment would -- so every invoice's own balance stays accurate instead
-// of only the customer's aggregate debt figure moving. Mirrors
-// allocateCreditorPayment() on the supplier side. Any amount left over
-// once every invoice is settled (e.g. debt that was never tied to an
-// invoice, just added as a manual charge) is returned as `unapplied` for
-// the caller to apply directly against the customer's balance.
-function allocateCustomerPayment(customerId, amount, account, note){
+// Renders a checkbox + per-row editable-amount picker for one customer's
+// outstanding invoices (oldest first) into `wrap` -- the shared UI both
+// the Customers tab's "Record payment" modal and the Cash Book's "Cash
+// in" modal use, so picking which invoice(s) a payment applies to looks
+// and behaves identically everywhere it's offered. Checking a row
+// defaults its amount to that invoice's full balance due (settle it),
+// but it's a plain editable number input -- same "auto-fill but still
+// editable" rule used elsewhere in this app -- so a partial payment per
+// invoice is just as easy. `onChange` fires after every check/amount
+// edit so the caller can refresh whatever running total it shows.
+function renderInvoicePicker(wrap, customerId, onChange){
   const invoices = customerOutstandingInvoices(customerId);
-  let remaining = amount;
-  let applied = 0;
-  for(const q of invoices){
-    if(remaining<=0) break;
+  if(invoices.length===0){
+    wrap.innerHTML = '<div class="q-empty-hint">No outstanding invoices for this customer.</div>';
+    if(onChange) onChange();
+    return;
+  }
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
+    <th><input type="checkbox" class="ip-pick-all"></th>
+    <th>Date</th><th>Invoice</th><th class="price">Total</th><th class="price">Paid</th><th class="price">Balance due</th><th class="price">This payment</th>
+  </tr></thead><tbody>${invoices.map(q=>{
+    const total = savedQuoteTotal(q);
+    const paid = Number(q.amountPaid)||0;
     const due = invoiceBalanceDue(q);
-    const pay = Math.min(remaining, due);
-    if(pay<=0) continue;
+    return `<tr>
+      <td><input type="checkbox" class="ip-pick-row" data-id="${q.id}"></td>
+      <td>${esc(q.invoicedAt||q.date||'')}</td>
+      <td>${esc(invoiceNumberLabel(q))}</td>
+      <td class="price">${fmtUGX(total)}</td>
+      <td class="price">${fmtUGX(paid)}</td>
+      <td class="price">${fmtUGX(due)}</td>
+      <td class="price"><input type="number" class="ip-pick-amt" data-id="${q.id}" data-due="${due}" min="0" max="${due}" step="any" style="width:110px;" disabled></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+
+  const rowChecks = ()=>[...wrap.querySelectorAll('.ip-pick-row')];
+  const amtInput = id => wrap.querySelector(`.ip-pick-amt[data-id="${id}"]`);
+  rowChecks().forEach(cb=>cb.addEventListener('change', ()=>{
+    const amt = amtInput(cb.dataset.id);
+    amt.disabled = !cb.checked;
+    if(cb.checked && !amt.value) amt.value = amt.dataset.due;
+    if(!cb.checked) amt.value = '';
+    if(onChange) onChange();
+  }));
+  wrap.querySelectorAll('.ip-pick-amt').forEach(inp=>inp.addEventListener('input', ()=>{ if(onChange) onChange(); }));
+  wrap.querySelector('.ip-pick-all').addEventListener('change', e=>{
+    rowChecks().forEach(cb=>{ cb.checked = e.target.checked; cb.dispatchEvent(new Event('change')); });
+  });
+  if(onChange) onChange();
+}
+// Reads back whatever's currently checked in a renderInvoicePicker() --
+// clamping each row's amount to its own balance due, since a number
+// input's `max` only stops the spinner buttons, not typing past it.
+function invoicePickerSelections(wrap){
+  return [...wrap.querySelectorAll('.ip-pick-row:checked')].map(cb=>{
+    const inp = wrap.querySelector(`.ip-pick-amt[data-id="${cb.dataset.id}"]`);
+    const due = Number(inp.dataset.due)||0;
+    return {quoteId: Number(cb.dataset.id), amount: Math.min(due, Math.max(0, Number(inp.value)||0))};
+  }).filter(a=>a.amount>0);
+}
+// Applies a set of {quoteId, amount} allocations the user explicitly
+// picked (via renderInvoicePicker) -- each portion goes through the same
+// q.payments/q.amountPaid + syncInvoiceDebtCharge path a single-invoice
+// payment would, so every invoice's own balance stays accurate instead of
+// only the customer's aggregate debt figure moving.
+function applyCustomerPaymentAllocations(allocations, account, note, category, date){
+  let applied = 0;
+  (allocations||[]).forEach(({quoteId, amount})=>{
+    const q = data.savedQuotes.find(x=>x.id===quoteId);
+    if(!q) return;
+    const pay = Math.min(Math.max(0,amount), invoiceBalanceDue(q));
+    if(pay<=0) return;
     if(!q.payments) q.payments = [];
-    const cashTxnId = addCashReceipt(account, pay, 'Debt Payment', note || `Payment — ${invoiceNumberLabel(q)}`);
-    q.payments.push({date: todayISO(), amount: pay, note, cashTxnId});
+    const cashTxnId = addCashReceipt(account, pay, category || 'Debt Payment', note || `Payment — ${invoiceNumberLabel(q)}`, date);
+    q.payments.push({date: date || todayISO(), amount: pay, note, cashTxnId});
     q.amountPaid = (Number(q.amountPaid)||0) + pay;
     syncInvoiceDebtCharge(q);
-    remaining -= pay;
     applied += pay;
+  });
+  return applied;
+}
+// The single path every customer payment goes through, whichever screen
+// it was entered from (Customers tab, Debtors List, or a customer-linked
+// Cash Book "cash in"): apply the user's chosen invoice allocations first,
+// then whatever's left of `amount` reduces the customer's general
+// (non-invoice) balance -- e.g. debt that was never tied to an invoice,
+// just added as a manual charge.
+function recordCustomerPayment(customerId, amount, account, note, selections, category, date){
+  const c = data.customers.find(x=>x.id===customerId); if(!c) return 0;
+  if(!c.debtLog) c.debtLog = [];
+  const applied = applyCustomerPaymentAllocations(selections, account, note, category, date);
+  const unapplied = Math.max(0, amount - applied);
+  if(unapplied>0){
+    c.debt = Math.max(0, (Number(c.debt)||0) - unapplied);
+    const cashTxnId = addCashReceipt(account, unapplied, category || 'Debt Payment', note || `Payment — ${c.name}`, date);
+    c.debtLog.push({id: data.nextCustomerDebtLogId++, date: date || todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
   }
-  return {applied, unapplied: remaining};
+  return applied + unapplied;
 }
 
 // Converts a completed quote into an invoice, or reverts it back -- only
@@ -8905,6 +8990,23 @@ function deleteCustomerDebtLog(customerId, logId){
   }
   toast('Entry removed');
 }
+function updateCdPickerSummary(){
+  const wrap = document.getElementById('cd_invoice_picker_wrap');
+  const el = document.getElementById('cd_invoice_picker_summary');
+  const selections = invoicePickerSelections(wrap);
+  const allocated = selections.reduce((s,a)=>s+a.amount, 0);
+  const amount = Number(document.getElementById('cd_amount').value)||0;
+  const remaining = amount - allocated;
+  if(selections.length===0){ el.textContent = 'Any amount above that isn\'t allocated to an invoice reduces the customer\'s general balance.'; el.style.color = ''; return; }
+  if(remaining < -0.01){
+    el.textContent = `Allocated ${fmtUGX(allocated)} across ${selections.length} invoice${selections.length===1?'':'s'} — exceeds the ${fmtUGX(amount)} entered above by ${fmtUGX(-remaining)}.`;
+    el.style.color = 'var(--danger)';
+  } else {
+    el.textContent = `Allocated ${fmtUGX(allocated)} across ${selections.length} invoice${selections.length===1?'':'s'}${remaining>0.01?`; remaining ${fmtUGX(remaining)} reduces the general balance`:''}.`;
+    el.style.color = '';
+  }
+}
+document.getElementById('cd_amount').addEventListener('input', updateCdPickerSummary);
 function openCustomerDebtModal(id, type){
   const c = data.customers.find(x=>x.id===id); if(!c) return;
   editingCustomerDebtId = id;
@@ -8914,6 +9016,13 @@ function openCustomerDebtModal(id, type){
   document.getElementById('cd_note').value = '';
   document.getElementById('cd_account_field').style.display = (type==='payment') ? '' : 'none';
   document.getElementById('cd_account').value = 'cash';
+  const pickerSection = document.getElementById('cd_invoice_picker_section');
+  if(type==='payment' && customerOutstandingInvoices(id).length){
+    pickerSection.style.display = '';
+    renderInvoicePicker(document.getElementById('cd_invoice_picker_wrap'), id, updateCdPickerSummary);
+  } else {
+    pickerSection.style.display = 'none';
+  }
   document.getElementById('customerDebtHistory').innerHTML = customerDebtHistoryHTML(c);
   document.getElementById('customerDebtHistory').querySelectorAll('.debt-log-del').forEach(btn=>btn.addEventListener('click', ()=>{
     deleteCustomerDebtLog(id, Number(btn.dataset.id));
@@ -8924,6 +9033,8 @@ function resetCustomerDebtForm(){
   editingCustomerDebtId = null;
   document.getElementById('cd_amount').value = '';
   document.getElementById('cd_note').value = '';
+  document.getElementById('cd_invoice_picker_section').style.display = 'none';
+  document.getElementById('cd_invoice_picker_wrap').innerHTML = '';
 }
 document.getElementById('cd_save').addEventListener('click', ()=>{
   const c = data.customers.find(x=>x.id===editingCustomerDebtId); if(!c) return;
@@ -8936,19 +9047,18 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
     c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type:'charge', amount, note, cashTxnId:null});
   } else {
     const account = document.getElementById('cd_account').value;
-    // Apply against outstanding invoices first (oldest first) so each
-    // invoice's own balance actually moves -- otherwise the next time any
-    // of them syncs (paid, edited, voided), it recomputes its balance
-    // from its own unchanged amountPaid and pushes the "missing" amount
-    // straight back onto c.debt, silently undoing this payment. Only the
-    // leftover (debt never tied to an invoice, e.g. a manual charge)
-    // reduces c.debt directly.
-    const {unapplied} = allocateCustomerPayment(c.id, amount, account, note);
-    if(unapplied>0){
-      c.debt = Math.max(0, (Number(c.debt)||0) - unapplied);
-      const cashTxnId = addCashReceipt(account, unapplied, 'Debt Payment', note || `Payment — ${c.name}`);
-      c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
-    }
+    const pickerVisible = document.getElementById('cd_invoice_picker_section').style.display !== 'none';
+    const selections = pickerVisible ? invoicePickerSelections(document.getElementById('cd_invoice_picker_wrap')) : [];
+    const allocated = selections.reduce((s,a)=>s+a.amount, 0);
+    if(allocated > amount + 0.01){ toast('Allocated amount exceeds the amount received'); return; }
+    // Apply the user's chosen invoice(s) first so each invoice's own
+    // balance actually moves -- otherwise the next time any of them syncs
+    // (paid, edited, voided), it recomputes its balance from its own
+    // unchanged amountPaid and pushes the "missing" amount straight back
+    // onto c.debt, silently undoing this payment. Only whatever's left
+    // over (debt never tied to an invoice, e.g. a manual charge) reduces
+    // c.debt directly.
+    recordCustomerPayment(c.id, amount, account, note, selections);
   }
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
@@ -11323,6 +11433,10 @@ function resetCashTxnForms(){
   document.getElementById('cb_in_time').value = new Date().toTimeString().slice(0,5);
   document.getElementById('cb_in_cancel').style.display = 'none';
   document.getElementById('cbInTitle').textContent = 'Cash In';
+  document.getElementById('cb_in_customer').value = '';
+  document.getElementById('cb_in_invoice_picker_section').style.display = 'none';
+  document.getElementById('cb_in_invoice_picker_wrap').innerHTML = '';
+  document.getElementById('dl_cb_in_customers').innerHTML = data.customers.map(c=>`<option value="${esc(c.name)}">`).join('');
 
   document.getElementById('cb_out_amount').value = '';
   document.getElementById('cb_out_category').value = '';
@@ -11360,12 +11474,79 @@ function setupCashCatQuickAdd(prefix, dataKey){
 }
 setupCashCatQuickAdd('cb_in', 'presetIncomeCategories');
 setupCashCatQuickAdd('cb_out', 'presetExpenseCategories');
+
+// A cash-in only gets linked to a customer's invoice(s) when the typed
+// name matches an existing customer exactly -- an unmatched name is just
+// treated as free text on a plain, unlinked income entry (this field is
+// optional, so that's the safe fallback rather than an error).
+function resolveCbInCustomer(){
+  const name = document.getElementById('cb_in_customer').value.trim();
+  if(!name) return null;
+  return data.customers.find(c=>(c.name||'').trim().toLowerCase()===name.toLowerCase()) || null;
+}
+function updateCbInPickerSummary(){
+  const wrap = document.getElementById('cb_in_invoice_picker_wrap');
+  const el = document.getElementById('cb_in_invoice_picker_summary');
+  const selections = invoicePickerSelections(wrap);
+  const allocated = selections.reduce((s,a)=>s+a.amount, 0);
+  const amount = Number(document.getElementById('cb_in_amount').value)||0;
+  const remaining = amount - allocated;
+  if(selections.length===0){ el.textContent = 'Select invoices above to collect this cash-in against them.'; el.style.color = ''; return; }
+  if(remaining < -0.01){
+    el.textContent = `Allocated ${fmtUGX(allocated)} across ${selections.length} invoice${selections.length===1?'':'s'} — exceeds the ${fmtUGX(amount)} entered above by ${fmtUGX(-remaining)}.`;
+    el.style.color = 'var(--danger)';
+  } else {
+    el.textContent = `Allocated ${fmtUGX(allocated)} across ${selections.length} invoice${selections.length===1?'':'s'}${remaining>0.01?`; remaining ${fmtUGX(remaining)} reduces their general balance`:''}.`;
+    el.style.color = '';
+  }
+}
+function updateCbInInvoicePicker(){
+  const customer = resolveCbInCustomer();
+  const section = document.getElementById('cb_in_invoice_picker_section');
+  if(!customer || customerOutstandingInvoices(customer.id).length===0){
+    section.style.display = 'none';
+    document.getElementById('cb_in_invoice_picker_wrap').innerHTML = '';
+    return;
+  }
+  section.style.display = '';
+  renderInvoicePicker(document.getElementById('cb_in_invoice_picker_wrap'), customer.id, updateCbInPickerSummary);
+}
+document.getElementById('cb_in_customer').addEventListener('input', updateCbInInvoicePicker);
+document.getElementById('cb_in_amount').addEventListener('input', updateCbInPickerSummary);
+
 function saveCashTxn(column){
   const prefix = column==='in' ? 'cb_in_' : 'cb_out_';
   const amount = Number(document.getElementById(prefix+'amount').value);
   const description = document.getElementById(prefix+'desc').value.trim();
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   if(!description){ toast('Add a short description'); return; }
+
+  // A fresh (not being edited) cash-in linked to a customer goes through
+  // the same allocation path as the Customers tab's "Record payment" --
+  // applied to whichever invoice(s) were picked, then any remainder
+  // reduces the customer's general balance -- instead of landing as a
+  // plain, unlinked income row.
+  if(column==='in' && !editingCashTxnId){
+    const customer = resolveCbInCustomer();
+    if(customer){
+      const account = document.getElementById('cb_in_account').value;
+      const category = document.getElementById('cb_in_category').value.trim();
+      const pickerVisible = document.getElementById('cb_in_invoice_picker_section').style.display !== 'none';
+      const selections = pickerVisible ? invoicePickerSelections(document.getElementById('cb_in_invoice_picker_wrap')) : [];
+      const allocated = selections.reduce((s,a)=>s+a.amount, 0);
+      if(allocated > amount + 0.01){ toast('Allocated amount exceeds the amount entered'); return; }
+      recordCustomerPayment(customer.id, amount, account, description, selections, category, currentCbDate());
+      saveData();
+      closeModal('cashInModal');
+      resetCashTxnForms();
+      renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+      renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+      renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+      toast('Cash in recorded');
+      return;
+    }
+  }
+
   const type = column==='in' ? 'receipt' : document.getElementById('cb_out_type').value;
   const record = {
     date: currentCbDate(),
