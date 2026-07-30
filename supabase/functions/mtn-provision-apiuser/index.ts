@@ -1,14 +1,21 @@
-// One-time setup helper: creates an MTN MoMo sandbox API user + API key
-// via MTN's own API (there is no portal page for this -- you can only
+// One-time setup helper: creates an MTN MoMo API user + API key via
+// MTN's own API (there is no portal page for this -- you can only
 // create it by calling POST /v1_0/apiuser yourself, and that's also the
 // only place the callback URL gets registered, via `providerCallbackHost`
 // in that same request). Admin only provides the subscription key
 // (obtained from subscribing to the Collections product on
-// momodeveloper.mtn.com); everything else is generated here and wired
-// straight to this project's mtn-payment-webhook.
+// momodeveloper.mtn.com, or from MTN's go-live approval for production);
+// everything else is generated here and wired straight to this project's
+// mtn-payment-webhook.
 //
-// Sandbox only -- MTN's production API user/key are issued as part of
-// the merchant go-live process, not self-provisioned this way.
+// Handles both sandbox and production (body.environment). Sandbox is
+// confirmed working end-to-end. Production support is untested against
+// a real MTN merchant account -- MTN's docs describe the same
+// apiuser/apikey creation flow working against the live host once
+// you have a production subscription key from MTN's go-live process,
+// but that's the best available guidance, not a verified fact. If it
+// fails, ask MTN for the API user/key directly and paste them into the
+// admin UI's fields by hand instead -- that path works regardless.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -34,6 +41,7 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
     const { shopId } = body;
     if (!shopId) return json({ error: "shopId is required" }, 400);
+    const environment = body.environment === "production" ? "production" : "sandbox";
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing Authorization header" }, 401);
@@ -56,7 +64,7 @@ Deno.serve(async (req) => {
       "Accept": "application/json",
     };
     const callbackUrl = `${SUPABASE_URL.replace(/\.supabase\.co\/?$/, ".functions.supabase.co")}/mtn-payment-webhook`;
-    const mtnBase = "https://sandbox.momodeveloper.mtn.com";
+    const mtnBase = environment === "production" ? "https://proxy.momoapi.mtn.com" : "https://sandbox.momodeveloper.mtn.com";
     const apiUserId = crypto.randomUUID();
 
     const createUserRes = await fetch(`${mtnBase}/v1_0/apiuser`, {
@@ -85,13 +93,13 @@ Deno.serve(async (req) => {
     const credentials = { ...(existing?.credentials || {}), subscriptionKey, apiUser: apiUserId, apiKey };
     const { data: saved, error: upsertErr } = await admin
       .from("shop_payment_providers")
-      .upsert({ shop_id: shopId, provider: "mtn", environment: "sandbox", credentials, updated_at: new Date().toISOString() }, { onConflict: "shop_id,provider" })
+      .upsert({ shop_id: shopId, provider: "mtn", environment, credentials, updated_at: new Date().toISOString() }, { onConflict: "shop_id,provider" })
       .select().single();
     if (upsertErr) return json({ error: upsertErr.message, stage: "save" }, 500);
 
     return json({ ok: true, provider: saved, callbackUrl });
   } catch (err) {
-    console.error("mtn-provision-sandbox: uncaught error", err);
+    console.error("mtn-provision-apiuser: uncaught error", err);
     return json({ error: String(err && (err as Error).message || err), stage: "uncaught" }, 500);
   }
 });

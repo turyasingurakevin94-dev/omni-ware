@@ -2689,7 +2689,7 @@
             <div class="field"><label>Subscription key</label><input type="password" id="momo_mtn_subscriptionKey" autocomplete="off" placeholder="From the MTN MoMo developer portal"></div>
             <div class="momo-provision-row">
               <button type="button" class="btn btn-ghost" id="momo_mtn_provision_btn">Auto-generate API user + key (sandbox)</button>
-              <p class="preset-hint" style="margin:6px 0 0;">MTN doesn't have a portal page for this -- enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. For production credentials issued directly by MTN, paste them into the fields below instead.</p>
+              <p class="preset-hint" style="margin:6px 0 0;" id="momo_mtn_provision_hint">MTN doesn't have a portal page for this -- enter your subscription key above and click this to create a sandbox API user/key and wire up the payment callback automatically. Switch Environment to Production once you have a production subscription key from MTN's go-live approval and this same button will attempt it there too (untested against a real MTN merchant account -- if it fails, ask MTN for the API user/key directly and paste them into the fields below instead).</p>
             </div>
             <div class="field"><label>API user</label><input type="password" id="momo_mtn_apiUser" autocomplete="off"></div>
             <div class="field"><label>API key</label><input type="password" id="momo_mtn_apiKey" autocomplete="off"></div>
@@ -8962,7 +8962,13 @@ function populateMomoProviderForm(provider){
   const statusEl = document.getElementById(`momo_${provider}_status`);
   statusEl.textContent = hasCreds ? 'Credentials configured -- leave a field blank to keep it unchanged.' : 'Not configured yet.';
   statusEl.classList.toggle('configured', hasCreds);
+  if(provider==='mtn') updateMtnProvisionButtonLabel();
 }
+function updateMtnProvisionButtonLabel(){
+  const env = document.getElementById('momo_mtn_environment').value;
+  document.getElementById('momo_mtn_provision_btn').textContent = `Auto-generate API user + key (${env})`;
+}
+document.getElementById('momo_mtn_environment').addEventListener('change', updateMtnProvisionButtonLabel);
 async function renderMomoProviderSettings(){
   if(momoProviders===null) await loadMomoProviders();
   populateMomoProviderForm('mtn');
@@ -8998,11 +9004,15 @@ document.getElementById('momo_airtel_save_btn').addEventListener('click', ()=>sa
 
 // MTN has no portal page for creating an API user/key or setting the
 // payment callback -- both only happen by calling MTN's own API, which
-// is what mtn-provision-sandbox does server-side (browser fetch would
+// is what mtn-provision-apiuser does server-side (browser fetch would
 // hit MTN's CORS wall anyway). Only the subscription key is ours to
-// type in; the rest is generated and wired up automatically.
+// type in; the rest is generated and wired up automatically. Works for
+// whichever environment is selected above -- production self-provisioning
+// is untested against a live MTN merchant account, see that function's
+// header comment.
 document.getElementById('momo_mtn_provision_btn').addEventListener('click', async ()=>{
   const btn = document.getElementById('momo_mtn_provision_btn');
+  const environment = document.getElementById('momo_mtn_environment').value;
   const subscriptionKey = document.getElementById('momo_mtn_subscriptionKey').value.trim();
   if(!subscriptionKey && !(momoProviders.mtn && momoProviders.mtn.credentials && momoProviders.mtn.credentials.subscriptionKey)){
     toast('Enter your MTN subscription key first');
@@ -9012,12 +9022,12 @@ document.getElementById('momo_mtn_provision_btn').addEventListener('click', asyn
   const originalText = btn.textContent;
   btn.textContent = 'Generating…';
   try{
-    const { data: res, error } = await sb.functions.invoke('mtn-provision-sandbox', { body: { shopId: currentShopId, subscriptionKey } });
+    const { data: res, error } = await sb.functions.invoke('mtn-provision-apiuser', { body: { shopId: currentShopId, subscriptionKey, environment } });
     if(error) throw error;
     if(res.error) throw new Error(res.error);
     momoProviders.mtn = res.provider;
     populateMomoProviderForm('mtn');
-    toast('MTN sandbox API user + key created -- enable MTN above once you\'re ready to test.');
+    toast(`MTN ${environment} API user + key created -- enable MTN above once you're ready to test.`);
   }catch(err){
     toast('Could not auto-generate: '+(err.message||err));
   }finally{

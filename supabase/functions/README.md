@@ -61,13 +61,27 @@ for this one, `shop_payment_providers` holds them per-shop.
 1. Sign up for a developer account and get a **sandbox** subscription key /
    client credentials first:
    - MTN: https://momodeveloper.mtn.com — subscribe to the "Collections"
-     product to get a subscription key. That's the only thing to get from
-     MTN's portal — there is no portal page for creating an API user/key
-     or setting a callback URL; both only exist as MTN API calls
-     (`POST /v1_0/apiuser` with `providerCallbackHost` in the body, then
-     `POST /v1_0/apiuser/{id}/apikey`). `mtn-provision-sandbox` (below)
-     does this for you from the admin UI — just paste the subscription
-     key in and click the button, no manual API calls needed.
+     product to get a **sandbox** subscription key. That's the only thing
+     to get from MTN's portal — there is no portal page for creating an
+     API user/key or setting a callback URL; both only exist as MTN API
+     calls (`POST /v1_0/apiuser` with `providerCallbackHost` in the body,
+     then `POST /v1_0/apiuser/{id}/apikey`). `mtn-provision-apiuser`
+     (below) does this for you from the admin UI — just paste the
+     subscription key in, pick the environment, and click the button, no
+     manual API calls needed. **Going live**: production access is a
+     separate MTN business process — you (or the shop) must already be,
+     or become, an approved MTN Mobile Money merchant in Uganda (business
+     registration + KYC with MTN's merchant services team, not just a
+     developer-portal signup). Once approved, MTN's momodeveloper.mtn.com
+     "Go Live" flow issues a **production** subscription key for the
+     Collections product; paste that in, switch Environment to
+     Production, and click "Auto-generate API user + key" again — it'll
+     attempt the same self-provisioning flow against MTN's live host.
+     This has not been verified against a real MTN merchant account; if
+     MTN's production process turns out to issue the API user/key
+     directly instead, just paste them into the API user / API key
+     fields by hand — the payment code already branches correctly on
+     `environment` either way.
    - Airtel: https://developers.airtel.africa — register an app for
      Collections to get a client ID + client secret, and look for a
      "Callback URL" / "Notification URL" field in the app's settings to
@@ -82,16 +96,17 @@ for this one, `shop_payment_providers` holds them per-shop.
    supabase functions deploy check-momo-payment-status
    supabase functions deploy mtn-payment-webhook
    supabase functions deploy airtel-payment-webhook
-   supabase functions deploy mtn-provision-sandbox
+   supabase functions deploy mtn-provision-apiuser
    ```
 3. In index.html → Sales Agents → Mobile Money:
    - MTN: paste the subscription key, click "Auto-generate API user + key
-     (sandbox)" — this calls MTN's API directly and points
-     `providerCallbackHost` at your deployed `mtn-payment-webhook` URL
-     automatically. Community reports say MTN's *sandbox* callbacks often
-     don't fire at all (no real phone to approve the PIN prompt) —
-     `check-momo-payment-status` polling is what actually resolves
-     payments either way, so don't rely on the sandbox webhook working.
+     (sandbox/production, matching the Environment selector above)" —
+     this calls MTN's API directly and points `providerCallbackHost` at
+     your deployed `mtn-payment-webhook` URL automatically. Community
+     reports say MTN's *sandbox* callbacks often don't fire at all (no
+     real phone to approve the PIN prompt) — `check-momo-payment-status`
+     polling is what actually resolves payments either way, so don't rely
+     on the sandbox webhook working.
    - Airtel: paste the client ID/secret you registered, and separately
      register `airtel-payment-webhook`'s URL in the Airtel portal per
      step 1 above.
