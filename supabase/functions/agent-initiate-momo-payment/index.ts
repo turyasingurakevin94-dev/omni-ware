@@ -31,6 +31,25 @@ function json(body: unknown, status = 200) {
 
 // --- MTN MoMo (Collections) -------------------------------------------
 // https://momodeveloper.mtn.com -- Collections product, requesttopay.
+// MTN's sandbox gateway sits behind a WAF that occasionally rejects
+// requests with a generic "Request Rejected... consult your
+// administrator" HTML page instead of a real API response -- observed
+// in practice to correlate with Deno's fetch() sending no User-Agent at
+// all, which some WAF rulesets treat as non-browser/bot traffic on this
+// endpoint specifically (the token endpoint doesn't seem to trigger it).
+// A normal-looking User-Agent + Accept header is the standard fix for
+// this class of false positive.
+const MTN_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; omni-ware/1.0; +https://omni-ware.example)",
+  "Accept": "application/json",
+};
+// A WAF block page is HTML, not the JSON MTN's API actually returns --
+// surface that distinction instead of dumping a wall of HTML into an
+// error a shop owner has to read.
+function describeMtnFailure(status: number, text: string) {
+  if (/<html/i.test(text)) return `MTN's servers rejected the request (HTTP ${status}) -- this looks like a firewall block on MTN's side, not a real API error. Try again in a moment.`;
+  return `MTN request failed (${status}): ${text}`;
+}
 async function mtnRequestToPay(creds: any, environment: string, opts: { referenceId: string; amount: number; phone: string; payerMessage: string; payeeNote: string }) {
   const base = environment === "production"
     ? "https://proxy.momoapi.mtn.com"
@@ -38,16 +57,18 @@ async function mtnRequestToPay(creds: any, environment: string, opts: { referenc
   const tokenRes = await fetch(`${base}/collection/token/`, {
     method: "POST",
     headers: {
+      ...MTN_HEADERS,
       "Ocp-Apim-Subscription-Key": creds.subscriptionKey,
       "Authorization": "Basic " + btoa(`${creds.apiUser}:${creds.apiKey}`),
     },
   });
-  if (!tokenRes.ok) throw new Error(`MTN auth failed (${tokenRes.status}): ${await tokenRes.text()}`);
+  if (!tokenRes.ok) throw new Error(describeMtnFailure(tokenRes.status, await tokenRes.text()));
   const { access_token } = await tokenRes.json();
 
   const payRes = await fetch(`${base}/collection/v1_0/requesttopay`, {
     method: "POST",
     headers: {
+      ...MTN_HEADERS,
       "Authorization": `Bearer ${access_token}`,
       "X-Reference-Id": opts.referenceId,
       "X-Target-Environment": environment === "production" ? "mtnuganda" : "sandbox",
@@ -63,7 +84,7 @@ async function mtnRequestToPay(creds: any, environment: string, opts: { referenc
       payeeNote: opts.payeeNote,
     }),
   });
-  if (payRes.status !== 202) throw new Error(`MTN requesttopay failed (${payRes.status}): ${await payRes.text()}`);
+  if (payRes.status !== 202) throw new Error(describeMtnFailure(payRes.status, await payRes.text()));
   return { accepted: true };
 }
 

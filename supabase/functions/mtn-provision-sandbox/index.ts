@@ -47,6 +47,14 @@ Deno.serve(async (req) => {
     const subscriptionKey = body.subscriptionKey || existing?.credentials?.subscriptionKey;
     if (!subscriptionKey) return json({ error: "Enter your MTN subscription key first" }, 400);
 
+    // MTN's sandbox WAF sometimes rejects requests with a generic block
+    // page instead of a real API response -- observed to correlate with
+    // Deno's fetch() sending no User-Agent, which some WAF rulesets flag
+    // as bot traffic. Same fix as agent-initiate-momo-payment.
+    const mtnHeaders = {
+      "User-Agent": "Mozilla/5.0 (compatible; omni-ware/1.0; +https://omni-ware.example)",
+      "Accept": "application/json",
+    };
     const callbackUrl = `${SUPABASE_URL.replace(/\.supabase\.co\/?$/, ".functions.supabase.co")}/mtn-payment-webhook`;
     const mtnBase = "https://sandbox.momodeveloper.mtn.com";
     const apiUserId = crypto.randomUUID();
@@ -54,6 +62,7 @@ Deno.serve(async (req) => {
     const createUserRes = await fetch(`${mtnBase}/v1_0/apiuser`, {
       method: "POST",
       headers: {
+        ...mtnHeaders,
         "X-Reference-Id": apiUserId,
         "Ocp-Apim-Subscription-Key": subscriptionKey,
         "Content-Type": "application/json",
@@ -66,7 +75,7 @@ Deno.serve(async (req) => {
 
     const apiKeyRes = await fetch(`${mtnBase}/v1_0/apiuser/${apiUserId}/apikey`, {
       method: "POST",
-      headers: { "Ocp-Apim-Subscription-Key": subscriptionKey },
+      headers: { ...mtnHeaders, "Ocp-Apim-Subscription-Key": subscriptionKey },
     });
     if (!apiKeyRes.ok) {
       return json({ error: `MTN rejected the API key creation (${apiKeyRes.status}): ${await apiKeyRes.text()}`, stage: "create_apikey" }, 502);

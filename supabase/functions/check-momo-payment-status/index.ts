@@ -52,22 +52,35 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
   if (updateErr) throw new Error(`saved_quotes update failed: ${updateErr.message}`);
 }
 
+// MTN's sandbox WAF sometimes rejects requests with a generic block page
+// instead of a real API response -- observed to correlate with Deno's
+// fetch() sending no User-Agent, which some WAF rulesets flag as bot
+// traffic. See agent-initiate-momo-payment's identical comment.
+const MTN_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; omni-ware/1.0; +https://omni-ware.example)",
+  "Accept": "application/json",
+};
+function describeMtnFailure(status: number, text: string) {
+  if (/<html/i.test(text)) return `MTN's servers rejected the request (HTTP ${status}) -- looks like a firewall block on MTN's side, not a real API error.`;
+  return `MTN request failed (${status}): ${text}`;
+}
 async function fetchMtnStatus(creds: any, environment: string, referenceId: string) {
   const base = environment === "production" ? "https://proxy.momoapi.mtn.com" : "https://sandbox.momodeveloper.mtn.com";
   const tokenRes = await fetch(`${base}/collection/token/`, {
     method: "POST",
-    headers: { "Ocp-Apim-Subscription-Key": creds.subscriptionKey, "Authorization": "Basic " + btoa(`${creds.apiUser}:${creds.apiKey}`) },
+    headers: { ...MTN_HEADERS, "Ocp-Apim-Subscription-Key": creds.subscriptionKey, "Authorization": "Basic " + btoa(`${creds.apiUser}:${creds.apiKey}`) },
   });
-  if (!tokenRes.ok) throw new Error(`MTN auth failed (${tokenRes.status})`);
+  if (!tokenRes.ok) throw new Error(describeMtnFailure(tokenRes.status, await tokenRes.text()));
   const { access_token } = await tokenRes.json();
   const statusRes = await fetch(`${base}/collection/v1_0/requesttopay/${referenceId}`, {
     headers: {
+      ...MTN_HEADERS,
       "Authorization": `Bearer ${access_token}`,
       "X-Target-Environment": environment === "production" ? "mtnuganda" : "sandbox",
       "Ocp-Apim-Subscription-Key": creds.subscriptionKey,
     },
   });
-  if (!statusRes.ok) throw new Error(`MTN status check failed (${statusRes.status})`);
+  if (!statusRes.ok) throw new Error(describeMtnFailure(statusRes.status, await statusRes.text()));
   const body = await statusRes.json();
   const map: Record<string, string> = { SUCCESSFUL: "successful", FAILED: "failed", PENDING: "pending" };
   return { status: map[body.status] || "pending", raw: body };
