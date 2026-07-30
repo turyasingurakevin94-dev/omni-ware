@@ -179,7 +179,10 @@ Deno.serve(async (req) => {
       if (provider === "mtn") {
         await mtnRequestToPay(providerRow.credentials, providerRow.environment, {
           referenceId: externalReference, amount, phone,
-          payerMessage: `Order #${orderId}`, payeeNote: `Agent payment, order #${orderId}`,
+          // No "#" here -- MTN's sandbox WAF has been observed to block
+          // requesttopay bodies containing it (a common generic-WAF false
+          // positive, treating "#" as a comment/fragment-injection marker).
+          payerMessage: `Order ${orderId}`, payeeNote: `Agent payment order ${orderId}`,
         });
       } else {
         const res = await airtelRequestToPay(providerRow.credentials, providerRow.environment, {
