@@ -525,6 +525,11 @@
   .ag-catalogue-setup .field{margin-bottom:10px;}
   .ag-catalogue-setup .field label{font-size:11.5px;font-weight:700;opacity:.85;display:block;margin-bottom:5px;}
   .ag-catalogue-setup .field input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:none;font-size:13.5px;font-family:inherit;}
+  /* ---- My Solutions: saved bundles on Sell, save-link on Quote ---- */
+  .ag-solution-card{width:150px;flex-shrink:0;background:var(--accent-soft);border:1px solid var(--accent);border-radius:18px;padding:14px 13px;cursor:pointer;}
+  .ag-solution-card .name{font-size:13px;font-weight:800;color:var(--accent-dark);line-height:1.3;margin-bottom:4px;}
+  .ag-solution-card .count{font-size:11px;color:var(--accent-dark);opacity:.8;}
+  .ag-save-solution-link{display:block;text-align:center;font-size:12.5px;font-weight:700;color:var(--accent-dark);padding:12px 4px 2px;cursor:pointer;}
 </style>
 </head>
 <body class="app-loading">
@@ -604,6 +609,11 @@
         <button type="button" class="ag-chip-btn" data-filter="sponsored">Sponsored</button>
         <button type="button" class="ag-chip-btn" data-filter="cluster">My cluster</button>
         <button type="button" class="ag-chip-btn" data-filter="new">New</button>
+      </div>
+
+      <div id="ag_solutionsSection" style="display:none;">
+        <div class="ag-section-title">My Solutions</div>
+        <div class="ag-scroll-row" id="ag_solutionsRow"></div>
       </div>
 
       <div id="ag_orderAgainSection" style="display:none;">
@@ -749,6 +759,7 @@
             </tfoot>
           </table>
         </div>
+        <span class="ag-save-solution-link" id="ag_save_solution_btn">Save these items as a Solution</span>
       </div>
 
       <div class="ag-card">
@@ -1794,17 +1805,20 @@ async function ensureCatalogLoaded(){
   }
 }
 
+let solutionTemplates = [];
 async function ensureBrowseDataLoaded(){
   if(browseDataLoaded) return;
   await ensureCatalogLoaded();
   try{
-    const [promoRes, clusterRes] = await Promise.all([
+    const [promoRes, clusterRes, solutionsRes] = await Promise.all([
       callAgentFn('agent-catalog', { action: 'promotions' }),
       sb.from('agent_clusters').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id),
+      sb.from('solution_templates').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id).order('created_at', { ascending:false }),
     ]);
     if(clusterRes.error) throw clusterRes.error;
     promotions = promoRes.items || [];
     cluster = clusterRes.data || [];
+    if(!solutionsRes.error) solutionTemplates = solutionsRes.data || [];
     // NOT `Number(x)||0` -- that can't tell "the shop set 0 days" apart
     // from "agent-catalog hasn't been redeployed with this field yet",
     // and both collapsing to 0 means every cluster item would silently
@@ -1892,6 +1906,70 @@ function promotedMap(){
 function catalogEntry(productId, variantIdx){
   return catalog.find(it=>it.productId===productId && String(it.variantIdx==null?'':it.variantIdx)===String(variantIdx==null?'':variantIdx));
 }
+
+/* ---- Solutions: an agent's own saved item bundles, reused from Sell ----
+   Loading one back in always re-resolves each item's current price via
+   agent-catalog (respecting today's tiered pricing at the saved
+   quantity) rather than trusting anything stored -- same rule as
+   everywhere else prices flow through this app. */
+async function loadSolutionIntoCart(tpl){
+  const lineItems = Array.isArray(tpl.line_items) ? tpl.line_items : [];
+  if(!lineItems.length){ toast('This solution has no items'); return; }
+  toast('Adding items…');
+  let addedCount = 0;
+  for(const li of lineItems){
+    const entry = catalogEntry(li.productId, li.variantIdx==null?null:Number(li.variantIdx));
+    try{
+      const res = await callAgentFn('agent-catalog', { action:'price', productId: li.productId, variantIdx: li.variantIdx, qty: li.qty });
+      if(res.available){
+        cart.push({
+          productId: li.productId, variantIdx: li.variantIdx==null?null:Number(li.variantIdx),
+          name: entry ? entry.name : li.productId, variantLabel: entry ? entry.variantLabel : '',
+          qty: Number(li.qty)||1, unit: res.unit, packUnit: res.packUnit, packQty: Number(res.packQty)||0,
+          displayQty: Number(li.qty)||1, displayUnit: res.unit,
+          tier: res.tier, floorPrice: res.floorPrice, agentSellPrice: res.floorPrice,
+        });
+        addedCount++;
+      }
+    }catch(err){ /* skip this one item, keep going with the rest */ }
+  }
+  if(!addedCount){ toast('Could not load this solution -- its items may no longer be available'); return; }
+  updateCartBadge();
+  saveQuoteDraft();
+  toast(`Added ${addedCount} item${addedCount===1?'':'s'} to your quote`);
+  switchTab('quote');
+}
+
+function openSaveSolutionModal(){
+  if(!cart.length){ toast('Add items to your quote first'); return; }
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `<div class="ag-overlay-card">
+    <div class="ag-overlay-title">Save as Solution</div>
+    <div class="ag-cost-hint">${cart.length} item${cart.length===1?'':'s'} in this quote</div>
+    <div class="field"><label>Name</label><input type="text" id="ag_solution_name" placeholder="e.g. Cabinet hardware set"></div>
+    <button type="button" class="btn btn-accent btn-block" id="ag_solution_save_btn">Save</button>
+  </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  document.getElementById('ag_solution_save_btn').addEventListener('click', async ()=>{
+    const name = document.getElementById('ag_solution_name').value.trim();
+    if(!name){ toast('Enter a name'); return; }
+    try{
+      const line_items = cart.map(it=>({ productId: it.productId, variantIdx: it.variantIdx, qty: it.qty }));
+      const { data, error } = await sb.from('solution_templates')
+        .insert({ shop_id: currentShopId, agent_id: myAgent.id, name, line_items })
+        .select().single();
+      if(error) throw error;
+      solutionTemplates.unshift(data);
+      document.body.removeChild(el);
+      toast('Solution saved');
+    }catch(err){
+      toast(`Could not save: ${err.message||err}`);
+    }
+  });
+}
+document.getElementById('ag_save_solution_btn').addEventListener('click', openSaveSolutionModal);
 
 // Distinct products this agent has personally sold before, most-recent
 // first -- the "you already know this one" shortcut real ordering apps
@@ -2124,6 +2202,15 @@ function renderBrowseGrid(){
   const discovery = showingDiscoveryExtras();
   const orderAgain = discovery ? orderAgainItems() : [];
   const sponsored = discovery ? sponsoredItems() : [];
+  const solutions = discovery ? solutionTemplates : [];
+
+  document.getElementById('ag_solutionsSection').style.display = solutions.length ? 'block' : 'none';
+  if(solutions.length){
+    document.getElementById('ag_solutionsRow').innerHTML = solutions.map(s=>{
+      const count = Array.isArray(s.line_items) ? s.line_items.length : 0;
+      return `<div class="ag-solution-card" data-solution-id="${esc(s.id)}"><div class="name">${esc(s.name)}</div><div class="count">${count} item${count===1?'':'s'}</div></div>`;
+    }).join('');
+  }
 
   document.getElementById('ag_orderAgainSection').style.display = orderAgain.length ? 'block' : 'none';
   if(orderAgain.length) document.getElementById('ag_orderAgainRow').innerHTML = orderAgain.map(it=>browseCardHTML(it, promoted)).join('');
@@ -2172,6 +2259,12 @@ async function toggleClusterMembership(productId, variantIdx){
 // the Order-again row, and the Sponsored row alike, since all three use
 // the same .ag-grid-card markup.
 document.getElementById('ag_browseView').addEventListener('click', (e)=>{
+  const solutionCard = e.target.closest('[data-solution-id]');
+  if(solutionCard){
+    const tpl = solutionTemplates.find(s=>String(s.id)===solutionCard.dataset.solutionId);
+    if(tpl) loadSolutionIntoCart(tpl);
+    return;
+  }
   const starBtn = e.target.closest('[data-star-pid]');
   if(starBtn){
     const vidx = starBtn.dataset.starVidx === '' ? null : Number(starBtn.dataset.starVidx);
