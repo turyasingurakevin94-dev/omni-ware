@@ -1667,7 +1667,7 @@ async function loadMyClaims(){
     if(error) throw error;
     myClaims = data || [];
   }catch(err){
-    toast(`Could not load claim status: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't load claim status" : `Could not load claim status: ${err.message||err}`);
   }
 }
 
@@ -1699,7 +1699,7 @@ async function submitClaim(monthKey){
     renderClaimCard(monthKey, monthEarnings(monthKey).bonus);
     toast('Claim submitted');
   }catch(err){
-    toast(`Could not submit claim: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't submit this claim" : `Could not submit claim: ${err.message||err}`);
     if(btn) btn.disabled = false;
   }
 }
@@ -3128,7 +3128,11 @@ function openMomoPaymentModal(order){
       <button type="button" class="btn btn-accent btn-block" id="ag_momo_send_btn">Send payment prompt</button>
     </div>`;
   document.body.appendChild(el);
-  const closeModal = ()=>{ if(el.parentNode) document.body.removeChild(el); };
+  // Dismissing early (tap outside) previously left pollStatus() running in
+  // the background for up to 90s of pointless check-momo-payment-status
+  // calls -- polling=false here lets its own `if(!polling) return;` guard
+  // stop it cleanly on the next tick.
+  const closeModal = ()=>{ polling = false; if(el.parentNode) document.body.removeChild(el); };
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) closeModal(); });
   el.querySelectorAll('input[name="ag_momo_provider"]').forEach(r=>{
     r.addEventListener('change', ()=>{
