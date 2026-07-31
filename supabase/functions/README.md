@@ -98,3 +98,77 @@ Database → Webhooks → Create a new webhook:
 This single webhook covers every path that can change `assignedWorkerId` — manual assignment, a worker denying (which clears it, triggering no push), and the app's automatic next-order assignment — since they all just update this one table.
 
 `invite-worker` is called directly from the app (`sb.functions.invoke('invite-worker', ...)`) and needs no webhook.
+
+## 5. MTN Mobile Money + Airtel Money (agent payments)
+
+Lets an agent pay for their order from inside the Agent app via a real
+MTN/Airtel payment prompt, instead of the shop admin confirming cash by
+hand (that manual path, `agentPrepayModal` in index.html, is unchanged
+and still works as a fallback). Every shop needs its own real merchant
+credentials, entered by a shop owner/admin under Sales Agents → Mobile
+Money in index.html — there's nothing to set as an Edge Function secret
+for this one, `shop_payment_providers` holds them per-shop.
+
+1. Sign up for a developer account and get a **sandbox** subscription key /
+   client credentials first:
+   - MTN: https://momodeveloper.mtn.com — subscribe to the "Collections"
+     product to get a **sandbox** subscription key. That's the only thing
+     to get from MTN's portal — there is no portal page for creating an
+     API user/key or setting a callback URL; both only exist as MTN API
+     calls (`POST /v1_0/apiuser` with `providerCallbackHost` in the body,
+     then `POST /v1_0/apiuser/{id}/apikey`). `mtn-provision-apiuser`
+     (below) does this for you from the admin UI — just paste the
+     subscription key in, pick the environment, and click the button, no
+     manual API calls needed. **Going live**: production access is a
+     separate MTN business process — you (or the shop) must already be,
+     or become, an approved MTN Mobile Money merchant in Uganda (business
+     registration + KYC with MTN's merchant services team, not just a
+     developer-portal signup). Once approved, MTN's momodeveloper.mtn.com
+     "Go Live" flow issues a **production** subscription key for the
+     Collections product; paste that in, switch Environment to
+     Production, and click "Auto-generate API user + key" again — it'll
+     attempt the same self-provisioning flow against MTN's live host.
+     This has not been verified against a real MTN merchant account; if
+     MTN's production process turns out to issue the API user/key
+     directly instead, just paste them into the API user / API key
+     fields by hand — the payment code already branches correctly on
+     `environment` either way.
+   - Airtel: https://developers.airtel.africa — register an app for
+     Collections to get a client ID + client secret, and look for a
+     "Callback URL" / "Notification URL" field in the app's settings to
+     paste `airtel-payment-webhook`'s URL into (exact field name/location
+     wasn't verifiable without a live account while building this).
+   Production credentials require each provider's merchant KYC/onboarding
+   process (a business step, not something this repo can shortcut) —
+   develop and test fully against sandbox first.
+2. Deploy the five new functions:
+   ```
+   supabase functions deploy agent-initiate-momo-payment
+   supabase functions deploy check-momo-payment-status
+   supabase functions deploy mtn-payment-webhook
+   supabase functions deploy airtel-payment-webhook
+   supabase functions deploy mtn-provision-apiuser
+   ```
+3. In index.html → Sales Agents → Mobile Money:
+   - MTN: paste the subscription key, click "Auto-generate API user + key
+     (sandbox/production, matching the Environment selector above)" —
+     this calls MTN's API directly and points `providerCallbackHost` at
+     your deployed `mtn-payment-webhook` URL automatically. Community
+     reports say MTN's *sandbox* callbacks often don't fire at all (no
+     real phone to approve the PIN prompt) — `check-momo-payment-status`
+     polling is what actually resolves payments either way, so don't rely
+     on the sandbox webhook working.
+   - Airtel: paste the client ID/secret you registered, and separately
+     register `airtel-payment-webhook`'s URL in the Airtel portal per
+     step 1 above.
+   - Enable each provider once its credentials are saved.
+   Neither provider's exact webhook callback payload shape was verifiable
+   without live sandbox access while building this — `mtn-payment-webhook`
+   and `airtel-payment-webhook` read the reference id and status
+   defensively from the field names each provider's docs describe, but
+   **watch the first real callback and adjust the field lookups if
+   needed**.
+4. Test end to end with a prepay agent order in the Agent app, using
+   each provider's sandbox test MSISDNs (MTN and Airtel both publish
+   numbers in their sandbox docs that auto-approve or auto-reject, for
+   testing both the success and failure paths without a real phone).
