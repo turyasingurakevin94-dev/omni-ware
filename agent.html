@@ -530,6 +530,16 @@
   .ag-solution-card .name{font-size:13px;font-weight:800;color:var(--accent-dark);line-height:1.3;margin-bottom:4px;}
   .ag-solution-card .count{font-size:11px;color:var(--accent-dark);opacity:.8;}
   .ag-save-solution-link{display:block;text-align:center;font-size:12.5px;font-weight:700;color:var(--accent-dark);padding:12px 4px 2px;cursor:pointer;}
+  /* ---- Home: selling streak + achievement badges ---- */
+  .ag-streak-chip{display:none;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--bonus);background:var(--bonus-bg);padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .ag-badge-card{width:118px;flex-shrink:0;border-radius:16px;padding:13px 11px;text-align:center;}
+  .ag-badge-card.unlocked{background:var(--bonus-bg);border:1px solid var(--bonus);}
+  .ag-badge-card.locked{background:var(--panel);border:1px solid var(--line);opacity:.6;}
+  .ag-badge-card .icon{font-size:26px;line-height:1;margin-bottom:6px;}
+  .ag-badge-card .title{font-size:12px;font-weight:800;line-height:1.25;margin-bottom:3px;}
+  .ag-badge-card.unlocked .title{color:var(--bonus);}
+  .ag-badge-card.locked .title{color:var(--ink-soft);}
+  .ag-badge-card .progress{font-size:10.5px;color:var(--ink-soft);}
 </style>
 </head>
 <body class="app-loading">
@@ -546,7 +556,10 @@
     <div id="ag_home_bnaWrap"></div>
 
     <div class="ag-card" id="ag_home_healthCard" style="display:none;">
-      <div class="ag-card-title">Business health</div>
+      <div class="ag-card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Business health</span>
+        <span class="ag-streak-chip" id="ag_home_streakChip"></span>
+      </div>
       <div class="ag-health-row">
         <div class="ag-health-ring" id="ag_home_healthRing"><div class="ag-health-ring-hole"><span id="ag_home_healthScore">--</span></div></div>
         <ul class="ag-health-flags" id="ag_home_healthFlags"></ul>
@@ -561,6 +574,9 @@
 
     <div class="ag-section-title">Opportunities</div>
     <div id="ag_home_opportunitiesWrap"></div>
+
+    <div class="ag-section-title">Achievements</div>
+    <div class="ag-scroll-row" id="ag_achievementsRow"></div>
 
     <div class="ag-quick-actions">
       <button type="button" class="ag-qa-btn" id="ag_home_qa_newquote">
@@ -1280,8 +1296,111 @@ function computeBusinessHealth(){
   return { score, flags };
 }
 
+/* ---- Home: selling streak + achievement badges ----------------------
+   Entirely self-referential (an agent's own history against their own
+   past), computed client-side from data the agent already loads for
+   Home/Earnings -- no new table, no cross-agent visibility. A
+   leaderboard would need a service-role Edge Function to safely expose
+   other agents' figures, which is a real privacy decision on its own
+   and deliberately out of scope here. */
+function weekStart(d){
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (dt.getDay()+6)%7; // days since Monday
+  dt.setDate(dt.getDate()-day);
+  return dt;
+}
+function weekKey(d){ return weekStart(d).toISOString().slice(0,10); }
+
+// Consecutive weeks with at least one completed sale, counted back from
+// today. The current week never breaks the streak just because it
+// hasn't happened yet -- counting starts from last week until today's
+// week has its own completed order.
+function computeSellingStreak(){
+  const dates = myOrders.filter(o=>!o.voided && o.status==='completed' && o.savedAt).map(o=>new Date(o.savedAt));
+  if(!dates.length) return 0;
+  const activeWeeks = new Set(dates.map(weekKey));
+  let cursor = weekStart(new Date());
+  if(!activeWeeks.has(weekKey(cursor))) cursor.setDate(cursor.getDate()-7);
+  let streak = 0;
+  while(activeWeeks.has(weekKey(cursor))){
+    streak++;
+    cursor.setDate(cursor.getDate()-7);
+  }
+  return streak;
+}
+
+function computeAgentStats(){
+  const completed = myOrders.filter(o=>!o.voided && o.status==='completed');
+  const counts = clientOrderCounts();
+  const repeatClients = agentClients.filter(c=>(counts.get(c.id)||[]).filter(o=>!o.voided).length > 1).length;
+  const lifetimeEarnings = completed.reduce((sum,o)=> sum + orderEarnings(o).total, 0);
+  return { completedOrders: completed.length, repeatClients, streakWeeks: computeSellingStreak(), lifetimeEarnings };
+}
+
+const ACHIEVEMENTS = [
+  { id:'first_sale', icon:'🎯', title:'First Sale', desc:'Complete your first order', metric:s=>s.completedOrders, target:1 },
+  { id:'orders_10', icon:'📦', title:'Selling Machine', desc:'Complete 10 orders', metric:s=>s.completedOrders, target:10 },
+  { id:'orders_50', icon:'🏅', title:'Half Century', desc:'Complete 50 orders', metric:s=>s.completedOrders, target:50 },
+  { id:'streak_4', icon:'🔥', title:'Consistent', desc:'4-week selling streak', metric:s=>s.streakWeeks, target:4 },
+  { id:'streak_12', icon:'⚡', title:'Unstoppable', desc:'12-week selling streak', metric:s=>s.streakWeeks, target:12 },
+  { id:'repeat_3', icon:'🤝', title:'Building Trust', desc:'3 repeat customers', metric:s=>s.repeatClients, target:3 },
+  { id:'repeat_10', icon:'⭐', title:'Go-To Agent', desc:'10 repeat customers', metric:s=>s.repeatClients, target:10 },
+  { id:'earn_100k', icon:'💰', title:'First 100K', desc:'UGX 100,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:100000 },
+  { id:'earn_1m', icon:'💎', title:'Millionaire', desc:'UGX 1,000,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:1000000 },
+];
+
+function computeAchievements(){
+  const stats = computeAgentStats();
+  return ACHIEVEMENTS.map(a=>{
+    const current = a.metric(stats);
+    return { ...a, current, unlocked: current >= a.target };
+  });
+}
+
+function seenAchievementIds(){
+  try{ return new Set(JSON.parse(localStorage.getItem(`agentSeenAchievements_${myAgent.id}`)||'[]')); }
+  catch(_e){ return new Set(); }
+}
+function markAchievementsSeen(ids){
+  const seen = seenAchievementIds();
+  ids.forEach(id=>seen.add(id));
+  localStorage.setItem(`agentSeenAchievements_${myAgent.id}`, JSON.stringify([...seen]));
+}
+
+function achievementCardHTML(a){
+  const state = a.unlocked ? 'unlocked' : 'locked';
+  const progress = a.unlocked ? a.desc : `${a.target>=1000 ? Math.round(a.current).toLocaleString('en-UG') : a.current}/${a.target>=1000 ? a.target.toLocaleString('en-UG') : a.target}`;
+  return `<div class="ag-badge-card ${state}">
+    <div class="icon">${a.unlocked ? a.icon : '🔒'}</div>
+    <div class="title">${esc(a.title)}</div>
+    <div class="progress">${esc(progress)}</div>
+  </div>`;
+}
+
+function renderAchievements(){
+  const achievements = computeAchievements();
+  document.getElementById('ag_achievementsRow').innerHTML = achievements.map(achievementCardHTML).join('');
+
+  const seen = seenAchievementIds();
+  const newlyUnlocked = achievements.filter(a=>a.unlocked && !seen.has(a.id));
+  if(newlyUnlocked.length){
+    toast(`🏆 Achievement unlocked: ${newlyUnlocked[0].title}${newlyUnlocked.length>1 ? ` (+${newlyUnlocked.length-1} more)` : ''}`);
+    markAchievementsSeen(achievements.filter(a=>a.unlocked).map(a=>a.id));
+  }
+
+  const streak = computeSellingStreak();
+  const streakChip = document.getElementById('ag_home_streakChip');
+  if(streak > 0){
+    streakChip.style.display = 'inline-flex';
+    streakChip.textContent = `🔥 ${streak}-week streak`;
+  } else {
+    streakChip.style.display = 'none';
+  }
+}
+
 function renderHome(){
   document.getElementById('ag_home_earningsValue').textContent = fmtUGX(monthEarnings(currentMonthKey()).total);
+  renderAchievements();
 
   const dismissed = dismissedOpportunityKeys();
   const all = computeOpportunities().filter(o=> o.key==='draft_quote' || !dismissed.has(o.key));
