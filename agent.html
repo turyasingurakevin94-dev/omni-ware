@@ -1938,7 +1938,7 @@ async function ensureMyCatalogueLoaded(){
     myCatalogue = data || null;
     myCatalogueLoaded = true;
   }catch(err){
-    toast(`Could not load your catalogue: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't load your catalogue" : `Could not load your catalogue: ${err.message||err}`);
   }
 }
 function suggestSlug(name){
@@ -1952,10 +1952,18 @@ function shareCatalogueLink(url){
   else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=> toast('Link copied')).catch(()=> toast(url)); }
   else{ toast(url); }
 }
+// Same rapid-double-tap hazard the Solutions save button had: without a
+// guard, two taps before the first insert resolves fire two inserts.
+// The (shop_id, agent_id) primary key stops that from ever creating two
+// rows, but the second insert would still surface as a confusing "that
+// link is already taken" -- on a link the agent themselves just took.
+let creatingCatalogue = false;
 async function createMyCatalogue(){
+  if(creatingCatalogue) return;
   const input = document.getElementById('ag_catalogue_slug');
   const slug = input.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
   if(!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)){ toast('Enter a link using letters, numbers and dashes (at least 3 characters)'); return; }
+  creatingCatalogue = true;
   try{
     const { data, error } = await sb.from('catalogues').insert({ shop_id: currentShopId, agent_id: myAgent.id, slug }).select().single();
     if(error) throw error;
@@ -1964,7 +1972,9 @@ async function createMyCatalogue(){
     toast('Catalogue created');
   }catch(err){
     if(String(err.code)==='23505'){ toast('That link is already taken -- try a different one'); }
-    else{ toast(`Could not create your catalogue: ${err.message||err}`); }
+    else{ toast(isNetworkError(err) ? "You're offline -- couldn't create your catalogue" : `Could not create your catalogue: ${err.message||err}`); }
+  } finally {
+    creatingCatalogue = false;
   }
 }
 function renderCatalogueBanner(){
@@ -2137,7 +2147,7 @@ async function ensureBonusOpportunitiesLoaded(){
     bonusOpportunities = res.items || [];
     bonusOpportunitiesLoaded = true;
   }catch(err){
-    toast(`Could not load bonus opportunities: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't load bonus opportunities" : `Could not load bonus opportunities: ${err.message||err}`);
   }
 }
 
@@ -2536,8 +2546,18 @@ function renderBrowseGrid(){
   grid.innerHTML = items.map(it=>browseCardHTML(it, promoted)).join('');
 }
 
+// Keyed per item (not a single flag) so tapping one star doesn't block a
+// legitimate rapid tap on a different one -- only guards against the
+// same item's own request still being in flight. The primary key on
+// agent_clusters already stops a real duplicate row from a race, but
+// without this a fast double-tap still surfaces that as a raw "duplicate
+// key" error instead of the toggle just quietly working once.
+const clusterTogglesInFlight = new Set();
 async function toggleClusterMembership(productId, variantIdx){
   const viStr = variantIdx==null ? '' : String(variantIdx);
+  const key = `${productId}::${viStr}`;
+  if(clusterTogglesInFlight.has(key)) return;
+  clusterTogglesInFlight.add(key);
   const already = isInCluster(productId, variantIdx);
   try{
     if(already){
@@ -2558,7 +2578,9 @@ async function toggleClusterMembership(productId, variantIdx){
     }
     renderBrowseGrid();
   }catch(err){
-    toast(`Could not update your cluster: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't update your cluster" : `Could not update your cluster: ${err.message||err}`);
+  } finally {
+    clusterTogglesInFlight.delete(key);
   }
 }
 
@@ -3020,15 +3042,27 @@ function openNewClientPanel(prefillName){
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-  document.getElementById('ag_nc_save_btn').addEventListener('click', async ()=>{
+  const saveClientBtn = document.getElementById('ag_nc_save_btn');
+  saveClientBtn.addEventListener('click', async ()=>{
+    if(saveClientBtn.disabled) return;
     const name = document.getElementById('ag_nc_name').value.trim();
     if(!name){ toast('Enter a name'); return; }
     const phone = document.getElementById('ag_nc_phone').value.trim();
     const location = document.getElementById('ag_nc_location').value.trim();
+    // agent_clients has no unique constraint on name/phone -- nothing but
+    // this guard stops a rapid double-tap from inserting the same new
+    // client twice, same hazard the Solutions save button had.
+    saveClientBtn.disabled = true;
+    saveClientBtn.textContent = 'Saving…';
     const { data: inserted, error } = await sb.from('agent_clients')
       .insert({ shop_id: currentShopId, agent_id: myAgent.id, name, phone: phone||null, location: location||null })
       .select().single();
-    if(error){ toast(`Could not save client: ${error.message}`); return; }
+    if(error){
+      toast(isNetworkError(error) ? "You're offline -- couldn't save this client" : `Could not save client: ${error.message}`);
+      saveClientBtn.disabled = false;
+      saveClientBtn.textContent = 'Save client';
+      return;
+    }
     agentClients.push(inserted);
     document.body.removeChild(el);
     selectClient(inserted);
@@ -3194,7 +3228,7 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
       if(order) openPaymentChoiceModal(order);
     }
   }catch(err){
-    toast(`Could not submit order: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online" : `Could not submit order: ${err.message||err}`);
   }finally{
     btn.disabled = false;
   }

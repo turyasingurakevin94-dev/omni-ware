@@ -147,13 +147,22 @@ function openInquiryModal(product){
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 
-  document.getElementById('inqSendBtn').addEventListener('click', async ()=>{
+  const sendBtn = document.getElementById('inqSendBtn');
+  sendBtn.addEventListener('click', async ()=>{
+    if(sendBtn.disabled) return;
     const name = document.getElementById('inqName').value.trim();
     const phone = document.getElementById('inqPhone').value.trim();
     const message = document.getElementById('inqMessage').value.trim();
     const errEl = document.getElementById('inquireErr');
     errEl.innerHTML = '';
     if(!name || !phone){ errEl.innerHTML = `<div class="err">Enter your name and phone number</div>`; return; }
+    // A public, unauthenticated page with no session to speak of -- a
+    // rapid double-tap here (easy to do on a phone) would otherwise fire
+    // two inserts with nothing on catalogue_inquiries to catch it as a
+    // duplicate, unlike the agent-side tables this same hazard was
+    // already fixed on.
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
     try{
       await callPublicFn({
         action:'inquire', slug,
@@ -171,6 +180,8 @@ function openInquiryModal(product){
       document.getElementById('inqCloseBtn').addEventListener('click', ()=> document.body.removeChild(el));
     }catch(err){
       errEl.innerHTML = `<div class="err">${esc(err.message||String(err))}</div>`;
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send request';
     }
   });
 }
