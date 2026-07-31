@@ -1952,9 +1952,13 @@ function openSaveSolutionModal(){
   </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-  document.getElementById('ag_solution_save_btn').addEventListener('click', async ()=>{
+  const saveBtn = document.getElementById('ag_solution_save_btn');
+  saveBtn.addEventListener('click', async ()=>{
+    if(saveBtn.disabled) return;
     const name = document.getElementById('ag_solution_name').value.trim();
     if(!name){ toast('Enter a name'); return; }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
     try{
       const line_items = cart.map(it=>({ productId: it.productId, variantIdx: it.variantIdx, qty: it.qty }));
       const { data, error } = await sb.from('solution_templates')
@@ -1965,6 +1969,8 @@ function openSaveSolutionModal(){
       document.body.removeChild(el);
       toast('Solution saved');
     }catch(err){
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
       toast(`Could not save: ${err.message||err}`);
     }
   });
