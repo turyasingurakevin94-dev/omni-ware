@@ -95,6 +95,14 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   return {
     tier,
     floorPrice: Math.max(costNum, discounted),
+    // The shop's own markup-rule price, before the agent's personal
+    // discount is applied. Safe to expose (unlike `cost`) -- it's not raw
+    // supplier cost, just the same "our price" number the admin app's own
+    // quote builder already shows. Used client-side as the reference point
+    // for pricing guidance (competitive/premium/likely-to-lose), so an
+    // agent gets a sanity check against the shop's own benchmark instead
+    // of pricing blind.
+    ourPrice,
     cost: costNum,
     unit: priceRow.unit || "",
     packUnit: priceRow.pack_unit || "",
@@ -224,6 +232,7 @@ Deno.serve(async (req) => {
             createdAt: p.created_at,
             available: !!priced,
             floorPrice: priced?.floorPrice ?? null,
+            ourPrice: priced?.ourPrice ?? null,
             tier: priced?.tier ?? "",
             unit: priced?.unit ?? "",
             packUnit: priced?.packUnit ?? "",
@@ -236,7 +245,18 @@ Deno.serve(async (req) => {
     }
 
     if (action === "promotions") {
+      // "live" (default) is what Browse/Sell has always gotten -- only
+      // promotions actually earnable right now, so a star/join button
+      // never shows for something not yet open or already over. "all" is
+      // for Earnings' Bonus Opportunities list, which needs to *show* the
+      // upcoming and recently-ended ones too (with a lifecycle pill), not
+      // just the currently-active ones -- so it also gets starts_at/
+      // ends_at, which "live" callers have never needed since every item
+      // they get back is by definition active today.
+      const scope = body.scope === "all" ? "all" : "live";
       const today = new Date().toISOString().slice(0, 10);
+      const recentCutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+
       const { data: promos, error: promoErr } = await admin
         .from("agent_promotions")
         .select("id, product_id, variant_idx, bonus_type, bonus_value, starts_at, ends_at")
@@ -244,18 +264,26 @@ Deno.serve(async (req) => {
         .eq("active", true);
       if (promoErr) return json({ error: promoErr.message, stage: "promotions_list" }, 500);
 
-      const live = (promos || []).filter((pr) =>
-        (!pr.starts_at || pr.starts_at <= today) && (!pr.ends_at || pr.ends_at >= today)
-      );
-      if (!live.length) return json({ ok: true, items: [] });
+      const filtered = (promos || []).filter((pr) => {
+        const notEnded = !pr.ends_at || pr.ends_at >= today;
+        if (scope === "live") {
+          const started = !pr.starts_at || pr.starts_at <= today;
+          return started && notEnded;
+        }
+        // scope === "all": keep anything not yet ended, plus anything
+        // that ended within the last 30 days so Completed has a little
+        // history instead of items just vanishing the day they end.
+        return notEnded || (pr.ends_at as string) >= recentCutoff;
+      });
+      if (!filtered.length) return json({ ok: true, items: [] });
 
-      const productIds = [...new Set(live.map((pr) => pr.product_id))];
+      const productIds = [...new Set(filtered.map((pr) => pr.product_id))];
       const { data: products, error: productsErr } = await admin
         .from("products").select("id, name, image, category, variants").eq("shop_id", shopId).in("id", productIds);
       if (productsErr) return json({ error: productsErr.message, stage: "promotion_products_lookup" }, 500);
       const byId = new Map<string, any>((products || []).map((p) => [p.id, p]));
 
-      const items = live.map((pr) => {
+      const items = filtered.map((pr) => {
         const p = byId.get(pr.product_id);
         const variantIdx = pr.variant_idx === "" ? null : Number(pr.variant_idx);
         const variantLabel = variantIdx != null && p && Array.isArray(p.variants) && p.variants[variantIdx]
@@ -270,9 +298,24 @@ Deno.serve(async (req) => {
           category: p?.category || "",
           bonusType: pr.bonus_type,
           bonusValue: Number(pr.bonus_value),
+          startsAt: pr.starts_at,
+          endsAt: pr.ends_at,
         };
       });
       return json({ ok: true, items });
+    }
+
+    if (action === "payment_providers") {
+      // shop_payment_providers has no agent-facing RLS policy at all --
+      // its `credentials` column holds live MTN/Airtel API secrets, so an
+      // agent must never be able to select against that table directly.
+      // This hand-picks the one boolean an agent actually needs (is this
+      // provider even usable) the same way "list"/"promotions" above
+      // hand-pick safe fields off products/prices/agent_promotions.
+      const { data: providers, error: providersErr } = await admin
+        .from("shop_payment_providers").select("provider, enabled").eq("shop_id", shopId).eq("enabled", true);
+      if (providersErr) return json({ error: providersErr.message, stage: "payment_providers_list" }, 500);
+      return json({ ok: true, providers: (providers || []).map((p) => p.provider) });
     }
 
     return json({ error: `Unknown action: ${action}` }, 400);
