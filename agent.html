@@ -540,6 +540,13 @@
   .ag-badge-card.unlocked .title{color:var(--bonus);}
   .ag-badge-card.locked .title{color:var(--ink-soft);}
   .ag-badge-card .progress{font-size:10.5px;color:var(--ink-soft);}
+  .ag-lb-you{font-size:13.5px;font-weight:800;margin-bottom:10px;}
+  .ag-lb-list{list-style:none;margin:0;padding:0;}
+  .ag-lb-list li{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;border-top:1px solid var(--line);}
+  .ag-lb-list li:first-child{border-top:none;}
+  .ag-lb-list .rank{width:22px;flex-shrink:0;font-weight:800;color:var(--ink-soft);text-align:center;}
+  .ag-lb-list li.you{font-weight:800;color:var(--accent-dark);}
+  .ag-lb-list li.you .rank{color:var(--accent-dark);}
 </style>
 </head>
 <body class="app-loading">
@@ -577,6 +584,12 @@
 
     <div class="ag-section-title">Achievements</div>
     <div class="ag-scroll-row" id="ag_achievementsRow"></div>
+
+    <div class="ag-card" id="ag_home_leaderboardCard" style="display:none;">
+      <div class="ag-card-title">This month's leaderboard</div>
+      <div class="ag-lb-you" id="ag_lb_youLine"></div>
+      <ul class="ag-lb-list" id="ag_lb_list"></ul>
+    </div>
 
     <div class="ag-quick-actions">
       <button type="button" class="ag-qa-btn" id="ag_home_qa_newquote">
@@ -1139,7 +1152,7 @@ function switchTab(tab){
   lastMainTab = tab;
   localStorage.setItem('agentLastTab', tab);
   window.scrollTo(0, 0);
-  if(tab==='home') renderHome();
+  if(tab==='home'){ renderHome(); ensureLeaderboardLoaded(); }
   if(tab==='sell') openBrowseView();
   if(tab==='customers') renderClientsListScreen();
   if(tab==='quote') renderCartTab();
@@ -1398,9 +1411,34 @@ function renderAchievements(){
   }
 }
 
+// This month's leaderboard: the one Home stat that isn't derivable from
+// data the agent already has (it needs other agents' order totals), so
+// unlike everything else on Home it's a real network call -- fetched
+// once per Home visit via ensureLeaderboardLoaded(), not recomputed from
+// local state. A fetch failure just leaves the card hidden; gamification
+// flavor shouldn't block the rest of Home from working.
+let leaderboard = null;
+async function ensureLeaderboardLoaded(){
+  try{
+    leaderboard = await callAgentFn('agent-leaderboard', {});
+    renderLeaderboard();
+  }catch(_err){ /* card just stays hidden */ }
+}
+function renderLeaderboard(){
+  const card = document.getElementById('ag_home_leaderboardCard');
+  if(!leaderboard || !leaderboard.you || leaderboard.totalAgents < 2){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('ag_lb_youLine').textContent =
+    `You're #${leaderboard.you.rank} of ${leaderboard.totalAgents} this month`;
+  document.getElementById('ag_lb_list').innerHTML = leaderboard.top.map(a=>
+    `<li class="${a.isYou?'you':''}"><span class="rank">#${a.rank}</span><span>${esc(a.isYou ? 'You' : a.displayName)}</span></li>`
+  ).join('');
+}
+
 function renderHome(){
   document.getElementById('ag_home_earningsValue').textContent = fmtUGX(monthEarnings(currentMonthKey()).total);
   renderAchievements();
+  renderLeaderboard();
 
   const dismissed = dismissedOpportunityKeys();
   const all = computeOpportunities().filter(o=> o.key==='draft_quote' || !dismissed.has(o.key));
