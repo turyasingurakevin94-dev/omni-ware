@@ -477,7 +477,12 @@
     width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;
     display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;
     cursor:pointer;box-shadow:0 2px 8px rgba(16,24,32,0.18);
+    transition:top .15s ease;
   }
+  /* The banner above is sticky (in normal flow), but this fab is fixed --
+     it doesn't shift on its own when the banner pushes everything else
+     down, so it needs its own nudge to not sit on top of the banner text. */
+  body.ag-offline .ag-avatar-fab{ top:calc(12px + env(safe-area-inset-top) + 44px); }
   .ag-quote-banner{
     display:none;cursor:pointer;align-items:center;justify-content:space-between;
     background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;
@@ -547,9 +552,17 @@
   .ag-lb-list .rank{width:22px;flex-shrink:0;font-weight:800;color:var(--ink-soft);text-align:center;}
   .ag-lb-list li.you{font-weight:800;color:var(--accent-dark);}
   .ag-lb-list li.you .rank{color:var(--accent-dark);}
+  /* ---- Offline banner: shown app-wide, independent of the active tab ---- */
+  .ag-offline-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:8px;background:var(--bonus-bg);color:var(--bonus);padding:9px 16px;font-size:12.5px;font-weight:700;line-height:1.35;}
+  .ag-offline-banner .icon{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
 </style>
 </head>
 <body class="app-loading">
+
+<div class="ag-offline-banner" id="ag_offlineBanner" style="display:none;">
+  <svg class="icon" viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
+  <span>You're offline &mdash; showing your last saved data. New actions won't go through until you're back online.</span>
+</div>
 
 <button type="button" class="ag-avatar-fab" id="ag_home_avatar_btn">A</button>
 
@@ -1002,6 +1015,72 @@ let currentUser = null, currentShopId = null, myAgent = null;
 let agentClients = [], myOrders = [], catalog = [];
 let cart = [], chosenClient = null;
 
+/* ================= OFFLINE RESILIENCE =================
+   Scope: read-only screens keep working (from a cached snapshot) when
+   connectivity drops, and a dropped connection never dead-ends the app
+   at a hard error screen. Deliberately NOT an offline write queue --
+   every write in this app (submitting an order, saving a solution, ...)
+   flows through server-side price/availability checks that don't exist
+   locally (agent-catalog re-resolves the live floor price on every
+   quote line), so a queued write made offline could only ever be
+   submitted against numbers that might no longer be true by the time
+   it actually reaches the server. That's a materially bigger feature
+   with its own conflict-resolution design, not a natural extension of
+   this one. */
+let isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+let bootedFromCache = false;
+const OFFLINE_CACHE_KEY = 'agentOfflineCache';
+
+// navigator.onLine only reflects "does the OS have a network interface
+// up" -- a phone can say "online" over wifi with no real internet.
+// Browsers surface the useful signal as the shape of the fetch failure
+// itself, so that's what actually gates the offline fallback paths
+// below; the online/offline events just keep the banner honest between
+// attempts.
+function isNetworkError(err){
+  if(typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+  const msg = String((err && err.message) || err || '').toLowerCase();
+  return msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed') || msg.includes('network request failed');
+}
+
+function saveOfflineCache(){
+  try{
+    localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
+      savedAt: new Date().toISOString(),
+      myAgent, currentShopId, agentClients, myOrders, catalog, promotions,
+    }));
+  }catch(_e){ /* storage full/unavailable -- just skip caching this time */ }
+}
+function loadOfflineCache(){
+  try{ return JSON.parse(localStorage.getItem(OFFLINE_CACHE_KEY) || 'null'); }
+  catch(_e){ return null; }
+}
+
+function updateOfflineBanner(){
+  document.getElementById('ag_offlineBanner').style.display = isOffline ? 'flex' : 'none';
+  document.body.classList.toggle('ag-offline', isOffline);
+}
+window.addEventListener('online', async ()=>{
+  isOffline = false;
+  updateOfflineBanner();
+  if(!bootedFromCache) return;
+  // Quietly try to replace the cached snapshot with live data now that
+  // a connection exists again -- best-effort, and simply stays in
+  // degraded mode (to retry on the next reconnect or app action) if
+  // this particular attempt still fails.
+  try{
+    await loadAgentHomeData();
+    browseDataLoaded = false;
+    await ensureCatalogLoaded();
+    saveOfflineCache();
+    bootedFromCache = false;
+    if(lastMainTab === 'home') renderHome();
+    else if(lastMainTab === 'sell') openBrowseView();
+    toast('Back online -- data refreshed');
+  }catch(_e){ /* still offline in practice; leave the banner state as-is */ }
+});
+window.addEventListener('offline', ()=>{ isOffline = true; updateOfflineBanner(); });
+
 // A quote is often built over several minutes while walking a shop floor
 // or standing with a client -- a stray reload (or the OS killing the tab
 // in the background) shouldn't throw away items already added. Every
@@ -1055,8 +1134,31 @@ function restoreQuoteDraft(){
 // worker apps' ensureAuthAndShop(). This looks up the agents table
 // directly by user_id instead.
 async function ensureAgentAuth(){
-  let user = await getAuthedUser();
+  // Calling getUser() directly here (rather than through getAuthedUser(),
+  // which folds every failure into a plain null) is what lets the offline
+  // fallback below tell "not logged in" apart from "couldn't reach the
+  // auth server right now" -- getSession() only reads the session already
+  // persisted in localStorage, so it's the one check that still works
+  // with no connection. A returning agent who's offline with a still-
+  // valid local session and a cached identity from a previous successful
+  // boot can resume straight into the app; a login form would just be a
+  // dead end they could never actually submit.
+  const { data: userData, error: userErr } = await sb.auth.getUser();
+  let user = (!userErr && userData && userData.user) ? userData.user : null;
   if(!user){
+    const cached = loadOfflineCache();
+    if(isNetworkError(userErr) && cached && cached.myAgent){
+      const { data: sessionData } = await sb.auth.getSession();
+      if(sessionData && sessionData.session){
+        currentUser = sessionData.session.user;
+        currentShopId = cached.currentShopId;
+        myAgent = cached.myAgent;
+        isOffline = true;
+        bootedFromCache = true;
+        hideAuthOverlay();
+        return;
+      }
+    }
     await showLoginScreen();
     user = await getAuthedUser();
     if(!user) throw new Error('Sign-in did not complete');
@@ -1066,7 +1168,20 @@ async function ensureAgentAuth(){
   currentUser = user;
 
   const { data: agentRow, error } = await sb.from('agents').select('*').eq('user_id', user.id).maybeSingle();
-  if(error) throw error;
+  if(error){
+    // Same idea one step later: the agents-table lookup itself is what
+    // just failed to reach the network, not an actual "no such agent".
+    const cached = loadOfflineCache();
+    if(isNetworkError(error) && cached && cached.myAgent){
+      currentShopId = cached.currentShopId;
+      myAgent = cached.myAgent;
+      isOffline = true;
+      bootedFromCache = true;
+      hideAuthOverlay();
+      return;
+    }
+    throw error;
+  }
   if(!agentRow){
     throw new Error("This login isn't linked to an agent account. Ask the shop to send you an invite.");
   }
@@ -1957,8 +2072,9 @@ async function ensureCatalogLoaded(){
   try{
     const res = await callAgentFn('agent-catalog', { action: 'list' });
     catalog = (res.items||[]).filter(it=>it.available);
+    saveOfflineCache();
   }catch(err){
-    toast(`Could not load catalog: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't load the catalog" : `Could not load catalog: ${err.message||err}`);
   }
 }
 
@@ -3057,14 +3173,41 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
 });
 
 async function boot(){
+  updateOfflineBanner();
   try{
     await ensureAgentAuth();
-    await loadAgentHomeData();
   }catch(e){
     console.error('Failed to start app:', e);
     const el = ensureAuthOverlay();
     el.innerHTML = `<div style="color:#f66;font-family:inherit;max-width:400px;text-align:center;padding:0 20px;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
     return;
+  }
+  // Always attempted, even if ensureAgentAuth() itself already resumed
+  // from cache above -- that step only restores identity (myAgent/
+  // currentShopId), never the reference-data arrays below, which only
+  // this call (or its own cache fallback) ever populates. A failure here
+  // (unlike a failure in the auth step) doesn't mean this agent has no
+  // way into the app -- it just means the read-only reference data needs
+  // to come from the last cached snapshot instead of a fresh fetch.
+  try{
+    await loadAgentHomeData();
+    saveOfflineCache();
+  }catch(e){
+    console.error('Failed to load home data, falling back to cached snapshot:', e);
+    const cached = loadOfflineCache();
+    if(cached){
+      agentClients = cached.agentClients || [];
+      myOrders = cached.myOrders || [];
+      catalog = cached.catalog || [];
+      promotions = cached.promotions || [];
+      browseDataLoaded = catalog.length > 0;
+      bootedFromCache = true;
+    }
+    isOffline = true;
+    updateOfflineBanner();
+    // No cache at all just means this agent's very first launch had no
+    // connectivity -- the app still boots with empty arrays, and every
+    // screen below already handles an empty state.
   }
   document.getElementById('ag_hero_greeting').textContent = `Hi, ${myAgent.name}`;
   if(!localStorage.getItem('agentTrustBannerSeen')){
