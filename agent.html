@@ -1048,6 +1048,12 @@ function saveOfflineCache(){
     localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
       savedAt: new Date().toISOString(),
       myAgent, currentShopId, agentClients, myOrders, catalog, promotions,
+      // cluster/solutionTemplates/clusterWaitDays are read-only reference
+      // data exactly like the rest of this snapshot -- omitting them would
+      // mean an agent's saved Solutions and cluster picks silently vanish
+      // from Sell while offline, not just go stale, which reads as data
+      // loss rather than a connectivity notice.
+      cluster, solutionTemplates, clusterWaitDays,
     }));
   }catch(_e){ /* storage full/unavailable -- just skip caching this time */ }
 }
@@ -1061,23 +1067,34 @@ function updateOfflineBanner(){
   document.body.classList.toggle('ag-offline', isOffline);
 }
 window.addEventListener('online', async ()=>{
-  isOffline = false;
-  updateOfflineBanner();
-  if(!bootedFromCache) return;
-  // Quietly try to replace the cached snapshot with live data now that
-  // a connection exists again -- best-effort, and simply stays in
-  // degraded mode (to retry on the next reconnect or app action) if
-  // this particular attempt still fails.
+  if(!bootedFromCache){ isOffline = false; updateOfflineBanner(); return; }
+  // The browser's 'online' event only means the OS network interface came
+  // back -- not that Supabase itself is actually reachable (same caveat
+  // isNetworkError() has to work around the other way). So the banner
+  // deliberately stays up through this attempt and only clears once a
+  // real fetch actually succeeds, not just because this event fired;
+  // clearing it early would tell an agent they're back online while the
+  // app is still quietly stuck on stale data.
   try{
     await loadAgentHomeData();
+    // ensureCatalogLoaded() guards on catalog.length, not browseDataLoaded
+    // -- since the cached catalog already has items, clearing only the
+    // wrong flag would make this a no-op and leave Sell's catalog,
+    // cluster picks, and Solutions silently stale after "reconnecting".
+    // Clearing catalog forces ensureBrowseDataLoaded() to actually
+    // re-fetch everything it owns (catalog, promotions, cluster,
+    // solutionTemplates) instead of trusting the stale snapshot.
+    catalog = [];
     browseDataLoaded = false;
-    await ensureCatalogLoaded();
+    await ensureBrowseDataLoaded();
     saveOfflineCache();
     bootedFromCache = false;
+    isOffline = false;
+    updateOfflineBanner();
     if(lastMainTab === 'home') renderHome();
     else if(lastMainTab === 'sell') openBrowseView();
     toast('Back online -- data refreshed');
-  }catch(_e){ /* still offline in practice; leave the banner state as-is */ }
+  }catch(_e){ /* still not actually reachable; leave the banner up and retry on the next reconnect or app action */ }
 });
 window.addEventListener('offline', ()=>{ isOffline = true; updateOfflineBanner(); });
 
@@ -2099,8 +2116,9 @@ async function ensureBrowseDataLoaded(){
     // no visible error.
     clusterWaitDays = promoRes.clusterWaitDays!=null ? Number(promoRes.clusterWaitDays) : null;
     browseDataLoaded = true;
+    saveOfflineCache();
   }catch(err){
-    toast(`Could not load products: ${err.message||err}`);
+    toast(isNetworkError(err) ? "You're offline -- couldn't load products" : `Could not load products: ${err.message||err}`);
   }
 }
 
@@ -2190,6 +2208,7 @@ async function loadSolutionIntoCart(tpl){
   if(!lineItems.length){ toast('This solution has no items'); return; }
   toast('Adding items…');
   let addedCount = 0;
+  let hadNetworkFailure = false;
   for(const li of lineItems){
     const entry = catalogEntry(li.productId, li.variantIdx==null?null:Number(li.variantIdx));
     try{
@@ -2204,9 +2223,18 @@ async function loadSolutionIntoCart(tpl){
         });
         addedCount++;
       }
-    }catch(err){ /* skip this one item, keep going with the rest */ }
+    }catch(err){
+      if(isNetworkError(err)) hadNetworkFailure = true;
+      /* skip this one item, keep going with the rest */
+    }
   }
-  if(!addedCount){ toast('Could not load this solution -- its items may no longer be available'); return; }
+  if(!addedCount){
+    // Every line here needs a live price roundtrip -- a solution simply
+    // can't load at all while offline, so that deserves its own message
+    // rather than reading like every item was discontinued.
+    toast(hadNetworkFailure ? "You're offline -- couldn't load this solution's prices" : 'Could not load this solution -- its items may no longer be available');
+    return;
+  }
   updateCartBadge();
   saveQuoteDraft();
   toast(`Added ${addedCount} item${addedCount===1?'':'s'} to your quote`);
@@ -3192,6 +3220,14 @@ async function boot(){
   try{
     await loadAgentHomeData();
     saveOfflineCache();
+    // A successful fetch here proves connectivity is actually fine now,
+    // even if ensureAgentAuth() above had to resume from cache because an
+    // earlier check was briefly flaky -- without this, the banner could
+    // get stuck reading "offline" forever despite every screen now
+    // holding fully fresh data.
+    isOffline = false;
+    bootedFromCache = false;
+    updateOfflineBanner();
   }catch(e){
     console.error('Failed to load home data, falling back to cached snapshot:', e);
     const cached = loadOfflineCache();
@@ -3200,6 +3236,9 @@ async function boot(){
       myOrders = cached.myOrders || [];
       catalog = cached.catalog || [];
       promotions = cached.promotions || [];
+      cluster = cached.cluster || [];
+      solutionTemplates = cached.solutionTemplates || [];
+      clusterWaitDays = cached.clusterWaitDays != null ? cached.clusterWaitDays : null;
       browseDataLoaded = catalog.length > 0;
       bootedFromCache = true;
     }
