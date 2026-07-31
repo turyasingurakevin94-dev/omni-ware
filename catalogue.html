@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catalogue</title>
+<style>
+  @font-face{
+    font-family:'Fraunces';
+    font-style:normal;
+    font-weight:700 900;
+    font-display:swap;
+    src:url('/fonts/Fraunces-Black.woff2') format('woff2');
+  }
+  :root{
+    --bg:#F5F6F8; --panel:#FFFFFF; --ink:#12151A; --ink-soft:#6B7280; --line:#E9EBEF;
+    --accent:#0EA5A0; --accent-dark:#0B7F7A; --accent-soft:#E1F5F3;
+    --good:#16A34A; --danger:#DC2626; --danger-bg:#FDECEC;
+    --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-money:'Fraunces',ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:480px;margin:0 auto;padding:0 0 40px;}
+  .hero{background:linear-gradient(160deg,var(--accent-dark),var(--accent));color:#fff;padding:34px 20px 26px;border-radius:0 0 22px 22px;}
+  .hero-avatar{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-money);font-size:20px;font-weight:800;margin-bottom:14px;}
+  .hero h1{font-size:21px;font-weight:800;margin:0 0 4px;letter-spacing:-0.01em;}
+  .hero p{margin:0;font-size:13px;opacity:.85;}
+  .actions{padding:18px 18px 6px;display:flex;flex-direction:column;gap:10px;}
+  .btn{all:unset;box-sizing:border-box;display:block;text-align:center;padding:14px;border-radius:13px;font-size:14.5px;font-weight:700;cursor:pointer;}
+  .btn-accent{background:var(--accent);color:#fff;}
+  .btn-line{background:var(--panel);border:1px solid var(--line);color:var(--ink);}
+  .foot-note{text-align:center;font-size:11.5px;color:var(--ink-soft);padding:6px 20px 0;}
+  .pad{padding:20px 18px 0;}
+  .section-title{font-size:14px;font-weight:800;margin:22px 0 10px;}
+  .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;background:var(--panel);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;}
+  .card-thumb{aspect-ratio:1;background:var(--accent-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--accent-dark);font-size:11px;}
+  .card-body{padding:9px 10px 11px;}
+  .card-name{font-size:12.5px;font-weight:700;line-height:1.3;}
+  .card-variant{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+  .empty{padding:30px 10px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .overlay{position:fixed;inset:0;background:rgba(15,20,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
+  .overlay-card{background:var(--panel);border-radius:20px 20px 0 0;padding:22px 20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+  .overlay-title{font-weight:800;font-size:17px;margin-bottom:4px;}
+  .overlay-sub{font-size:13px;color:var(--ink-soft);margin-bottom:16px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field label{font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .field input,.field textarea{padding:12px 13px;border:1px solid var(--line);border-radius:11px;font-size:14.5px;font-family:inherit;background:#FBFCFD;}
+  .field textarea{resize:vertical;min-height:70px;}
+  .success{text-align:center;padding:14px 4px;}
+  .success .icon{width:52px;height:52px;border-radius:50%;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;}
+  .err{color:var(--danger);background:var(--danger-bg);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:500;}
+  .toast.show{opacity:1;}
+  #loadingState,#errorState{padding:60px 20px;text-align:center;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<div id="loadingState" class="wrap">Loading catalogue&hellip;</div>
+<div id="errorState" class="wrap" style="display:none;"></div>
+
+<div id="mainWrap" class="wrap" style="display:none;">
+  <div class="hero">
+    <div class="hero-avatar" id="agentAvatar">A</div>
+    <h1 id="agentName">Agent</h1>
+    <p id="headline">Independent Sales Agent</p>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn btn-accent" id="requestQuoteBtn">Request a Quotation</button>
+    <button type="button" class="btn btn-line" id="browseBtn">Browse Products</button>
+    <button type="button" class="btn btn-line" id="callBtn">Call <span id="callAgentName">Agent</span></button>
+    <button type="button" class="btn btn-line" id="waBtn">WhatsApp <span id="waAgentName">Agent</span></button>
+  </div>
+  <p class="foot-note" id="footNote">All orders are placed through <span id="footAgentName">this agent</span></p>
+
+  <div class="pad" id="browseSection" style="display:none;">
+    <div class="section-title">Products</div>
+    <input type="text" class="search" id="productSearch" placeholder="Search products&hellip;">
+    <div class="grid" id="productGrid"></div>
+    <div class="empty" id="gridEmpty" style="display:none;">No products found.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
+const FN_URL = SUPABASE_URL.replace(/\.supabase\.co\/?$/, '.functions.supabase.co') + '/catalogue-public';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=> el.classList.remove('show'), 2200);
+}
+async function callPublicFn(body){
+  const res = await fetch(FN_URL, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || data.error) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+const params = new URLSearchParams(location.search);
+const slug = params.get('a') || '';
+let catalogueData = null;
+let items = [];
+
+function cleanPhone(p){ return String(p||'').replace(/[^\d+]/g,''); }
+
+function renderProductGrid(list){
+  const grid = document.getElementById('productGrid');
+  const empty = document.getElementById('gridEmpty');
+  if(!list.length){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = list.map((it, i)=> `
+    <div class="card" data-idx="${i}">
+      <div class="card-thumb">${it.image ? `<img src="${esc(it.image)}" alt="" style="width:100%;height:100%;object-fit:cover;">` : 'No photo'}</div>
+      <div class="card-body">
+        <div class="card-name">${esc(it.name)}</div>
+        ${it.variantLabel ? `<div class="card-variant">${esc(it.variantLabel)}</div>` : ''}
+      </div>
+    </div>`).join('');
+  grid.querySelectorAll('.card').forEach(card=>{
+    card.addEventListener('click', ()=> openInquiryModal(list[Number(card.dataset.idx)]));
+  });
+}
+
+function openInquiryModal(product){
+  const el = document.createElement('div');
+  el.className = 'overlay';
+  el.innerHTML = `
+    <div class="overlay-card">
+      <div class="overlay-title">Request a Quotation</div>
+      <div class="overlay-sub">${product ? esc(product.name) + (product.variantLabel ? ' &middot; ' + esc(product.variantLabel) : '') : `${esc(catalogueData.agentName)} will get back to you with pricing`}</div>
+      <div id="inquireErr"></div>
+      <div class="field"><label>Your name</label><input type="text" id="inqName" placeholder="e.g. Grace Nakato"></div>
+      <div class="field"><label>Your phone number</label><input type="tel" id="inqPhone" placeholder="e.g. 0700 000 000"></div>
+      <div class="field"><label>What do you need? (optional)</label><textarea id="inqMessage" placeholder="Quantity, delivery timing, anything else useful"></textarea></div>
+      <button type="button" class="btn btn-accent" id="inqSendBtn">Send request</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+
+  document.getElementById('inqSendBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('inqName').value.trim();
+    const phone = document.getElementById('inqPhone').value.trim();
+    const message = document.getElementById('inqMessage').value.trim();
+    const errEl = document.getElementById('inquireErr');
+    errEl.innerHTML = '';
+    if(!name || !phone){ errEl.innerHTML = `<div class="err">Enter your name and phone number</div>`; return; }
+    try{
+      await callPublicFn({
+        action:'inquire', slug,
+        productId: product ? product.productId : null,
+        variantIdx: product && product.variantIdx!=null ? product.variantIdx : null,
+        customerName: name, customerPhone: phone, message: message || null,
+      });
+      document.querySelector('.overlay-card').innerHTML = `
+        <div class="success">
+          <div class="icon">&check;</div>
+          <div class="overlay-title">Request sent</div>
+          <div class="overlay-sub">${esc(catalogueData.agentName)} will contact you shortly.</div>
+          <button type="button" class="btn btn-line" id="inqCloseBtn" style="margin-top:6px;">Close</button>
+        </div>`;
+      document.getElementById('inqCloseBtn').addEventListener('click', ()=> document.body.removeChild(el));
+    }catch(err){
+      errEl.innerHTML = `<div class="err">${esc(err.message||String(err))}</div>`;
+    }
+  });
+}
+
+async function boot(){
+  if(!slug){
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorState').textContent = 'This catalogue link is missing.';
+    return;
+  }
+  try{
+    const res = await callPublicFn({ action:'get', slug });
+    catalogueData = res;
+    items = res.items || [];
+
+    const initials = (res.agentName||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    document.getElementById('agentAvatar').textContent = initials;
+    document.getElementById('agentName').textContent = res.agentName;
+    document.getElementById('headline').textContent = res.headline || 'Independent Sales Agent';
+    document.getElementById('callAgentName').textContent = res.agentName;
+    document.getElementById('waAgentName').textContent = res.agentName;
+    document.getElementById('footAgentName').textContent = res.agentName;
+
+    if(res.agentPhone){
+      document.getElementById('callBtn').addEventListener('click', ()=>{ location.href = `tel:${cleanPhone(res.agentPhone)}`; });
+      document.getElementById('waBtn').addEventListener('click', ()=>{ window.open(`https://wa.me/${cleanPhone(res.agentPhone).replace(/^\+/,'')}`, '_blank'); });
+    } else {
+      document.getElementById('callBtn').style.display = 'none';
+      document.getElementById('waBtn').style.display = 'none';
+    }
+
+    document.getElementById('requestQuoteBtn').addEventListener('click', ()=> openInquiryModal(null));
+    document.getElementById('browseBtn').addEventListener('click', ()=>{
+      const sec = document.getElementById('browseSection');
+      sec.style.display = sec.style.display==='none' ? 'block' : 'none';
+      if(sec.style.display==='block') renderProductGrid(items);
+    });
+    document.getElementById('productSearch').addEventListener('input', (e)=>{
+      const q = e.target.value.trim().toLowerCase();
+      renderProductGrid(!q ? items : items.filter(it=> it.name.toLowerCase().includes(q)));
+    });
+
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainWrap').style.display = 'block';
+  }catch(err){
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorState').textContent = err.message || 'Could not load this catalogue.';
+  }
+}
+boot();
+</script>
+</body>
+</html>

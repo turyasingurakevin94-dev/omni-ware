@@ -516,6 +516,15 @@
   .ag-price-guidance.competitive{color:var(--good);} .ag-price-guidance.competitive .dot{background:var(--good);}
   .ag-price-guidance.premium{color:var(--bonus);} .ag-price-guidance.premium .dot{background:var(--bonus);}
   .ag-price-guidance.risky{color:var(--danger);} .ag-price-guidance.risky .dot{background:var(--danger);}
+  /* ---- Customers: My Catalogue setup/share banner ---- */
+  .ag-catalogue-card{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:16px;}
+  .ag-catalogue-card .title{font-weight:800;font-size:15px;margin-bottom:3px;}
+  .ag-catalogue-card .sub{font-size:12.5px;opacity:.88;margin-bottom:12px;line-height:1.4;}
+  .ag-catalogue-card .btn{all:unset;display:inline-block;background:rgba(255,255,255,0.2);padding:9px 15px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .ag-catalogue-link{background:rgba(255,255,255,0.16);border-radius:10px;padding:9px 12px;font-size:12px;font-family:var(--font-money);word-break:break-all;margin-bottom:10px;}
+  .ag-catalogue-setup .field{margin-bottom:10px;}
+  .ag-catalogue-setup .field label{font-size:11.5px;font-weight:700;opacity:.85;display:block;margin-bottom:5px;}
+  .ag-catalogue-setup .field input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:none;font-size:13.5px;font-family:inherit;}
 </style>
 </head>
 <body class="app-loading">
@@ -687,6 +696,7 @@
   <!-- CUSTOMERS (main tab) -->
   <div id="ag_clientsListView" class="ag-pad-top" style="display:none;">
     <div class="ag-tab-head"><h1>Customers</h1></div>
+    <div id="ag_catalogueWrap"></div>
     <div id="ag_clientsListWrap"></div>
   </div>
 
@@ -1615,7 +1625,77 @@ function renderAccount(){
   document.getElementById('ag_profile_phone').textContent = myAgent.phone || myAgent.email || '';
   document.getElementById('ag_menu_orders_count').textContent = myOrders.filter(o=>!o.voided).length;
 }
+/* ---- My Catalogue: setup + share banner on the Customers tab ----
+   Agent-side management (create, read) goes straight to the `catalogues`
+   table via its own RLS policy -- no Edge Function needed here, unlike
+   the public page, which has no session to authenticate with at all. ---- */
+let myCatalogue = null, myCatalogueLoaded = false;
+async function ensureMyCatalogueLoaded(){
+  if(myCatalogueLoaded) return;
+  try{
+    const { data, error } = await sb.from('catalogues').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id).maybeSingle();
+    if(error) throw error;
+    myCatalogue = data || null;
+    myCatalogueLoaded = true;
+  }catch(err){
+    toast(`Could not load your catalogue: ${err.message||err}`);
+  }
+}
+function suggestSlug(name){
+  return String(name||'agent').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'agent';
+}
+function catalogueUrl(slug){
+  return `${location.origin}/catalogue.html?a=${encodeURIComponent(slug)}`;
+}
+function shareCatalogueLink(url){
+  if(navigator.share){ navigator.share({ title: 'My product catalogue', url }).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=> toast('Link copied')).catch(()=> toast(url)); }
+  else{ toast(url); }
+}
+async function createMyCatalogue(){
+  const input = document.getElementById('ag_catalogue_slug');
+  const slug = input.value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
+  if(!/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug)){ toast('Enter a link using letters, numbers and dashes (at least 3 characters)'); return; }
+  try{
+    const { data, error } = await sb.from('catalogues').insert({ shop_id: currentShopId, agent_id: myAgent.id, slug }).select().single();
+    if(error) throw error;
+    myCatalogue = data;
+    renderCatalogueBanner();
+    toast('Catalogue created');
+  }catch(err){
+    if(String(err.code)==='23505'){ toast('That link is already taken -- try a different one'); }
+    else{ toast(`Could not create your catalogue: ${err.message||err}`); }
+  }
+}
+function renderCatalogueBanner(){
+  const wrap = document.getElementById('ag_catalogueWrap');
+  if(!myCatalogueLoaded){ wrap.innerHTML = ''; return; }
+  if(myCatalogue){
+    const url = catalogueUrl(myCatalogue.slug);
+    wrap.innerHTML = `<div class="ag-catalogue-card">
+      <div class="title">Your Catalogue</div>
+      <div class="sub">Share this link -- customers can browse and request a quote. No account, no checkout -- every request comes straight to you.</div>
+      <div class="ag-catalogue-link">${esc(url)}</div>
+      <span class="btn" id="ag_catalogue_share_btn">Share link</span>
+    </div>`;
+    document.getElementById('ag_catalogue_share_btn').addEventListener('click', ()=> shareCatalogueLink(url));
+  } else {
+    wrap.innerHTML = `<div class="ag-catalogue-card">
+      <div class="title">Share your Catalogue</div>
+      <div class="sub">Get new customers without cold calls -- a link to a simple product list, with every request routed straight to you.</div>
+      <div class="ag-catalogue-setup">
+        <div class="field"><label>Your link</label><input type="text" id="ag_catalogue_slug" value="${esc(suggestSlug(myAgent.name))}" maxlength="40"></div>
+      </div>
+      <span class="btn" id="ag_catalogue_create_btn">Create my catalogue</span>
+    </div>`;
+    document.getElementById('ag_catalogue_create_btn').addEventListener('click', createMyCatalogue);
+  }
+}
+
 function renderClientsListScreen(){
+  if(myCatalogueLoaded) renderCatalogueBanner();
+  else ensureMyCatalogueLoaded().then(renderCatalogueBanner);
+
   const wrap = document.getElementById('ag_clientsListWrap');
   if(!agentClients.length){ wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`; return; }
   const counts = clientOrderCounts();
