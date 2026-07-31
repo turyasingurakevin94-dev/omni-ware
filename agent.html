@@ -135,7 +135,7 @@
   }
   .ag-wallet-card::after{
     content:'';position:absolute;top:-46px;right:-36px;width:150px;height:150px;
-    border-radius:50%;background:rgba(255,255,255,0.07);
+    border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none;
   }
   .ag-wallet-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.82;}
   .ag-wallet-value{font-family:var(--font-money);font-size:30px;font-weight:700;margin:4px 0 14px;letter-spacing:-0.01em;}
@@ -196,6 +196,45 @@
   .ag-cart-row-price{font-family:var(--font-money);font-weight:800;font-size:13.5px;letter-spacing:-0.01em;white-space:nowrap;}
   .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
+  /* Quote items -- a ledger/receipt table (Qty / Particulars / Rate /
+     Amount) rather than cards, so the on-screen quote already reads like
+     the paper invoice books it's replacing.
+     Every figure here is money or a quantity an agent needs to read
+     exactly, so nothing is ever hidden behind an ellipsis. Column widths
+     are generous enough that realistic values never need more room than
+     the card has -- table-layout:fixed keeps that predictable instead of
+     leaving it to content-based auto-sizing. For a value large enough to
+     not fit even then, the fixed columns hold their width and the
+     content overflows into the .ag-receipt-scroll wrapper's own
+     horizontal scrollbar rather than truncating or spilling past the
+     card -- verified this is how table-layout:fixed + nowrap actually
+     behaves in-browser, not assumed. */
+  .ag-receipt-scroll{overflow-x:auto;}
+  .ag-receipt-table{width:100%;table-layout:fixed;border-collapse:collapse;}
+  .ag-receipt-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);text-align:left;padding:0 6px 8px 0;border-bottom:2px solid var(--line);white-space:nowrap;}
+  .ag-receipt-table td{padding:10px 6px 10px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  .ag-receipt-table tbody tr:last-child td{border-bottom:1px solid var(--line);}
+  .ag-receipt-table th.ag-receipt-qty, .ag-receipt-table td.ag-receipt-qty{width:15%;}
+  .ag-receipt-table th.ag-receipt-rate, .ag-receipt-table td.ag-receipt-rate{width:25%;}
+  .ag-receipt-table th.ag-receipt-amount, .ag-receipt-table td.ag-receipt-amount{width:30%;}
+  .ag-receipt-table th.ag-receipt-remove, .ag-receipt-table td.ag-receipt-remove{width:22px;padding-right:0;}
+  .ag-receipt-qty{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .ag-receipt-name{font-size:13px;font-weight:700;letter-spacing:-0.005em;overflow-wrap:break-word;word-break:break-word;}
+  /* .ag-grid-variant truncates with an ellipsis everywhere else in the
+     app (compact grid cards), but a quote line is exactly where an agent
+     needs to see which variant they're actually charging for -- override
+     it here to wrap and show the whole label instead. */
+  .ag-receipt-table .ag-grid-variant{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;word-break:break-word;max-width:100%;}
+  .ag-receipt-table th.ag-receipt-rate,
+  .ag-receipt-table th.ag-receipt-amount,
+  .ag-receipt-table td.ag-receipt-rate,
+  .ag-receipt-table td.ag-receipt-amount{text-align:right;}
+  .ag-receipt-rate,.ag-receipt-amount{font-family:var(--font-money);font-weight:700;font-size:12px;white-space:nowrap;}
+  .ag-receipt-remove{padding:10px 0 10px 6px;}
+  .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
+  .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;}
+  .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:14px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
+
   .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
@@ -210,11 +249,36 @@
   .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;}
   .ag-overlay-title{font-weight:800;font-size:17px;margin-bottom:14px;letter-spacing:-0.01em;}
   .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
-  .ag-price-guidance{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin:-6px 0 14px;}
-  .ag-price-guidance .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-  .ag-price-guidance.competitive{color:var(--good);} .ag-price-guidance.competitive .dot{background:var(--good);}
-  .ag-price-guidance.premium{color:var(--bonus);} .ag-price-guidance.premium .dot{background:var(--bonus);}
-  .ag-price-guidance.risky{color:var(--danger);} .ag-price-guidance.risky .dot{background:var(--danger);}
+
+  /* Quantity + its unit selector on one line -- picking the item's own
+     pack unit (Ctn, Dzn, ...) instead of its base unit changes what a
+     typed number means, so the two controls have to stay visually
+     joined rather than reading like two unrelated fields. */
+  .ag-qty-unit-row{display:flex;gap:8px;}
+  .ag-qty-unit-row input{flex:1;min-width:0;}
+  .ag-qty-unit-row select{flex-shrink:0;width:auto;font-weight:600;}
+
+  /* Full breakpoint ladder shown once an item's detail panel is open --
+     every row states a quantity range and the price for it, both always
+     in whichever ONE unit is currently selected above, so there's never
+     a moment where two different units are on screen for the price at
+     once. */
+  .ag-tier-ladder{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+  .ag-tier-ladder .ag-tl-head{display:flex;justify-content:space-between;padding:8px 12px;background:#FAFBFC;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--line);}
+  .ag-tl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .ag-tl-row:last-child{border-bottom:none;}
+  .ag-tl-row.earned{background:var(--good-bg);}
+  .ag-tl-qty{display:flex;align-items:center;gap:7px;color:var(--ink);font-weight:600;}
+  .ag-tl-icon{width:19px;height:19px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ag-tl-icon .icon{width:10px;height:10px;}
+  .ag-tl-icon.retail{color:var(--slate);background:var(--slate-soft);}
+  .ag-tl-icon.wholesale{color:#fff;background:var(--rust);}
+  .ag-tl-note{font-size:10px;color:var(--ink-soft);font-weight:500;}
+  .ag-tl-price{font-family:var(--font-money);font-weight:800;color:var(--ink);font-size:12.5px;white-space:nowrap;}
+  .ag-tl-row.earned .ag-tl-price{color:var(--good);}
+  .ag-tl-check{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;color:var(--good);text-transform:uppercase;letter-spacing:.03em;}
+  .ag-tl-check .icon{width:9px;height:9px;}
+  .ag-tl-loading{padding:14px 12px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
 
   .ag-radio-card{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
   .ag-radio-card.selected{border-color:var(--accent);background:var(--accent-soft);}
@@ -288,18 +352,38 @@
   .ag-grid-body{padding:12px 13px 13px;}
   .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;margin-bottom:7px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
+  /* How long a promo (and its bonus) has left -- a plain line under the
+     pill rather than crammed inside it, so a long "min Nunit"-style wrap
+     never happens no matter how the countdown text is worded. */
+  .ag-promo-countdown{font-size:10px;font-weight:700;color:var(--bonus);margin:-3px 0 7px;}
+  .ag-promo-countdown.urgent{color:var(--rust);}
+  /* Tells an agent, right where the bonus is promised, exactly why a
+     cluster item they already starred isn't earning it yet -- distinct
+     color from the amber bonus pill/countdown so it doesn't read as
+     "extra bonus info" but as its own separate, informational status. */
+  .ag-cluster-wait{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--blue);margin:0 0 6px;}
+  .ag-cluster-wait .icon{width:10px;height:10px;}
   .ag-grid-name{font-size:13.5px;font-weight:700;letter-spacing:-0.006em;color:var(--ink);line-height:1.3;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ag-grid-variant{display:inline-block;max-width:100%;font-weight:700;font-size:10.5px;letter-spacing:.01em;color:var(--accent-dark);background:var(--accent-soft);padding:2.5px 7px;border-radius:6px;margin:5px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ag-grid-pack{font-size:10.5px;font-weight:500;color:var(--ink-soft);letter-spacing:.005em;margin-bottom:7px;}
   .ag-grid-price{font-family:var(--font-money);font-size:13.5px;font-weight:800;letter-spacing:-0.01em;color:var(--accent-dark);line-height:1.25;}
   .ag-price-unit{font-family:var(--font-sans);font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
   /* Which pricing tier the shown figure is: retail (buy any amount) vs
-     wholesale (only unlocks once you buy a full pack/carton+) -- without
-     this an agent can't tell the two apart until they've already typed a
-     quantity and watched the price jump. */
-  .ag-price-tier{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
-  .ag-price-tier.retail{color:var(--ink-soft);}
-  .ag-price-tier.wholesale{color:var(--rust);}
+     wholesale (only unlocks once you buy a full pack/carton+) -- a solid
+     badge, not just tinted text, so it reads at a glance instead of
+     blending into the pack-info line right above it. */
+  .ag-price-tier{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 8px;border-radius:20px;margin-bottom:6px;white-space:nowrap;}
+  .ag-price-tier .icon{width:10px;height:10px;}
+  .ag-price-tier.retail{color:var(--slate);background:var(--slate-soft);}
+  .ag-price-tier.wholesale{color:#fff;background:var(--rust);}
+  /* "Buy more, pay less" teaser on a grid card -- always one line, always
+     per the same base unit as the price right above it. Muted rather than
+     colored like the real price (ag-grid-price/ag-item-result-price) --
+     this is supplementary context about a DIFFERENT quantity, not a
+     second price for the one being shown, and styling it just as boldly
+     invited reading it as one. */
+  .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:500;color:var(--ink-soft);margin-top:5px;}
+  .ag-bulk-hint .icon{width:11px;height:11px;flex-shrink:0;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
@@ -326,50 +410,46 @@
   .ag-menu-count{font-size:13px;color:var(--ink-soft);font-weight:600;}
   .ag-menu-chevron{color:var(--ink-soft);width:18px;height:18px;flex-shrink:0;}
 
-  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+  .ag-order-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
   .ag-order-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
   .ag-order-row-client{font-weight:600;font-size:14px;}
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
-  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);}
-  .ag-order-pay-btn{margin-top:9px;display:inline-block;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:9px;}
-  .ag-order-pay-pending{margin-top:9px;display:inline-block;color:var(--bonus);font-size:12.5px;font-weight:700;}
-  .ag-order-progress{font-size:11px;margin:6px 0;}
-  .ag-order-progress .step{color:var(--ink-soft);}
-  .ag-order-progress .step.done{color:var(--good);font-weight:700;}
-  .ag-order-progress .step.current{color:var(--ink);font-weight:800;}
-  .ag-order-progress .sep{color:var(--line);margin:0 3px;}
-  .ag-order-earn-note{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
-  .ag-order-earn-note b{color:var(--good);}
-  .ag-order-earn-note [data-goto-earnings]{color:var(--accent);font-weight:700;cursor:pointer;}
-  .ag-pay-provider-btn{all:unset;display:block;width:100%;box-sizing:border-box;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;font-weight:700;margin-bottom:8px;cursor:pointer;}
-  .ag-pay-status{text-align:center;padding:14px 0;font-size:14px;color:var(--ink-soft);}
-  /* ---- Bonus opportunity lifecycle pill (Earnings tab) ---- */
-  .ag-lc-pill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 9px;border-radius:20px;white-space:nowrap;}
-  .ag-lc-pill.upcoming{background:var(--blue-soft);color:var(--blue);}
-  .ag-lc-pill.active{background:var(--good-bg);color:var(--good);}
-  .ag-lc-pill.ending_soon{background:var(--bonus-bg);color:var(--bonus);}
-  .ag-lc-pill.completed{background:var(--line);color:var(--ink-soft);}
-  /* ---- Home: Best Next Action + opportunity feed + business health ---- */
-  .ag-bna-card{background:var(--accent);color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:14px;}
-  .ag-bna-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.85;display:block;margin-bottom:7px;}
-  .ag-bna-msg{font-size:16px;font-weight:700;line-height:1.35;margin-bottom:11px;}
-  .ag-bna-cta{display:inline-block;background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;}
-  .ag-bna-dismiss{display:inline-block;margin-left:8px;padding:8px 10px;font-size:12.5px;font-weight:700;opacity:.75;}
-  .ag-opp-row{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-left-width:4px;border-left-style:solid;border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;}
-  .ag-opp-row.high{border-left-color:var(--danger);}
-  .ag-opp-row.medium{border-left-color:var(--bonus);}
-  .ag-opp-row.low{border-left-color:var(--accent);}
-  .ag-opp-row-body{flex:1;}
-  .ag-opp-row-reason{font-size:13.5px;line-height:1.4;}
-  .ag-opp-row-value{font-size:12px;color:var(--good);font-weight:700;margin-top:3px;}
-  .ag-opp-row-cta{font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap;align-self:center;}
-  .ag-health-row{display:flex;align-items:center;gap:14px;}
-  .ag-health-ring{position:relative;width:52px;height:52px;border-radius:50%;flex-shrink:0;background:conic-gradient(var(--good) calc(var(--pct, 0) * 1%), var(--line) 0);}
-  .ag-health-ring-hole{position:absolute;inset:5px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
-  .ag-health-flags{list-style:none;margin:0;padding:0;font-size:12.5px;flex:1;}
-  .ag-health-flags li{padding:2px 0;}
-  .ag-health-flags li.ok{color:var(--good);}
-  .ag-health-flags li.warn{color:var(--bonus);}
+  .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ag-order-row-items-link{color:var(--accent);font-weight:700;white-space:nowrap;}
+  /* Ongoing orders: what's happening right now ("Andrew is preparing your
+     order"). Completed orders: whether this order is settled with the shop
+     or still owes a balance. Same slot, different meaning per status, each
+     with its own color so the state reads before the text is even read. */
+  .ag-order-status{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;}
+  .ag-order-status .icon{width:15px;height:15px;flex-shrink:0;}
+  .ag-order-status.waiting{color:var(--ink-soft);}
+  .ag-order-status.preparing{color:var(--accent-dark);}
+  .ag-order-status.delivering{color:var(--blue);}
+  .ag-order-status.pickup{color:var(--rust);}
+  .ag-order-status.settled{color:var(--good);}
+  .ag-order-status.due{color:var(--danger);}
+  .ag-order-status .momo-pay-now-btn{all:unset;cursor:pointer;margin-left:auto;background:var(--accent);color:#fff;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:20px;}
+
+  /* Mobile money payment flow (payment-choice + pay modals). */
+  .momo-choice-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:var(--panel);}
+  /* .btn-accent's own background/color (defined earlier in this stylesheet)
+     loses to the plain .momo-choice-btn rule above at equal specificity,
+     since source order is the tiebreaker -- re-assert it explicitly here
+     so the Mobile Money button doesn't render as white text on a white
+     background (invisible, not just miscolored). */
+  .momo-choice-btn.btn-accent{border-color:transparent;background:var(--accent);color:#fff;}
+  .momo-choice-label{font-size:14.5px;font-weight:700;}
+  .momo-choice-sub{font-size:12px;font-weight:500;opacity:.85;}
+  .momo-choice-btn:not(.btn-accent) .momo-choice-sub{color:var(--ink-soft);}
+  .momo-provider-choice{display:flex;flex-direction:column;gap:8px;}
+  .momo-provider-radio{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .momo-provider-radio.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .momo-flow-status{margin:4px 0 14px;}
+  .momo-flow-waiting,.momo-flow-success,.momo-flow-error{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600;}
+  .momo-flow-waiting{background:#FFF6DE;color:#8A6D1D;}
+  .momo-flow-success{background:#E6F6EE;color:var(--good);}
+  .momo-flow-error{background:#FDECEC;color:var(--danger);}
+  .momo-flow-waiting .icon,.momo-flow-success .icon{width:16px;height:16px;flex-shrink:0;}
 
   /* ---- Bottom tab bar (Earnings / Browse / Account) ---- */
   .ag-tabbar{
@@ -403,6 +483,39 @@
     background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;
     padding:12px 14px;margin-bottom:14px;font-size:13.5px;font-weight:700;color:var(--accent);
   }
+  /* ---- Home: Best Next Action + opportunity feed + business health ---- */
+  .ag-bna-card{background:var(--accent);color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:14px;}
+  .ag-bna-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.85;display:block;margin-bottom:7px;}
+  .ag-bna-msg{font-size:16px;font-weight:700;line-height:1.35;margin-bottom:11px;}
+  .ag-bna-cta{display:inline-block;background:rgba(255,255,255,0.18);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;}
+  .ag-bna-dismiss{display:inline-block;margin-left:8px;padding:8px 10px;font-size:12.5px;font-weight:700;opacity:.75;}
+  .ag-opp-row{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-left-width:4px;border-left-style:solid;border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;}
+  .ag-opp-row.high{border-left-color:var(--danger);}
+  .ag-opp-row.medium{border-left-color:var(--bonus);}
+  .ag-opp-row.low{border-left-color:var(--accent);}
+  .ag-opp-row-body{flex:1;}
+  .ag-opp-row-reason{font-size:13.5px;line-height:1.4;}
+  .ag-opp-row-value{font-size:12px;color:var(--good);font-weight:700;margin-top:3px;}
+  .ag-opp-row-cta{font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap;align-self:center;}
+  .ag-health-row{display:flex;align-items:center;gap:14px;}
+  .ag-health-ring{position:relative;width:52px;height:52px;border-radius:50%;flex-shrink:0;background:conic-gradient(var(--good) calc(var(--pct, 0) * 1%), var(--line) 0);}
+  .ag-health-ring-hole{position:absolute;inset:5px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+  .ag-health-flags{list-style:none;margin:0;padding:0;font-size:12.5px;flex:1;}
+  .ag-health-flags li{padding:2px 0;}
+  .ag-health-flags li.ok{color:var(--good);}
+  .ag-health-flags li.warn{color:var(--bonus);}
+  /* ---- Earnings: Bonus Opportunities lifecycle pill ---- */
+  .ag-lc-pill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .ag-lc-pill.upcoming{background:var(--blue-soft);color:var(--blue);}
+  .ag-lc-pill.active{background:#E6F6EE;color:var(--good);}
+  .ag-lc-pill.ending_soon{background:#FEF3E2;color:var(--bonus);}
+  .ag-lc-pill.completed{background:var(--line);color:var(--ink-soft);}
+  /* ---- Sell: live pricing guidance next to the price field ---- */
+  .ag-price-guidance{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin:-6px 0 14px;}
+  .ag-price-guidance .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .ag-price-guidance.competitive{color:var(--good);} .ag-price-guidance.competitive .dot{background:var(--good);}
+  .ag-price-guidance.premium{color:var(--bonus);} .ag-price-guidance.premium .dot{background:var(--bonus);}
+  .ag-price-guidance.risky{color:var(--danger);} .ag-price-guidance.risky .dot{background:var(--danger);}
 </style>
 </head>
 <body class="app-loading">
@@ -479,8 +592,8 @@
 
       <div class="ag-chips-row" id="ag_browseChips">
         <button type="button" class="ag-chip-btn active" data-filter="all">All</button>
-        <button type="button" class="ag-chip-btn" data-filter="sponsored">Earn a bonus</button>
-        <button type="button" class="ag-chip-btn" data-filter="cluster">My bonus picks</button>
+        <button type="button" class="ag-chip-btn" data-filter="sponsored">Sponsored</button>
+        <button type="button" class="ag-chip-btn" data-filter="cluster">My cluster</button>
         <button type="button" class="ag-chip-btn" data-filter="new">New</button>
       </div>
 
@@ -490,7 +603,7 @@
       </div>
 
       <div id="ag_sponsoredSection" style="display:none;">
-        <div class="ag-section-title">Bonus picks for you</div>
+        <div class="ag-section-title">Sponsored for you</div>
         <div class="ag-scroll-row" id="ag_sponsoredRow"></div>
       </div>
 
@@ -606,7 +719,26 @@
     <div id="ag_cartContent">
       <div class="ag-card">
         <div class="ag-card-title">Items</div>
-        <div id="ag_cartWrap"></div>
+        <div class="ag-receipt-scroll">
+          <table class="ag-receipt-table">
+            <thead>
+              <tr>
+                <th class="ag-receipt-qty">Qty</th>
+                <th>Particulars</th>
+                <th class="ag-receipt-rate">Rate</th>
+                <th class="ag-receipt-amount">Amount</th>
+                <th class="ag-receipt-remove"></th>
+              </tr>
+            </thead>
+            <tbody id="ag_cartWrap"></tbody>
+            <tfoot>
+              <tr class="ag-receipt-total-row">
+                <td colspan="3" class="ag-receipt-total-label">Total</td>
+                <td colspan="2" class="ag-receipt-total-value" id="ag_cartTotalValue">UGX 0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
       <div class="ag-card">
@@ -682,12 +814,24 @@ function toast(msg, duration){
 }
 
 function fmtUGX(n){ return 'UGX ' + Math.round(Number(n)||0).toLocaleString('en-UG'); }
-// Per-unit product price shown while browsing (e.g. "UGX 10,000 /ctn"), with
-// the "/unit" suffix wrapped so it can be de-emphasized -- the amount is
-// what an agent scans for, the unit is confirming detail.
-function fmtPricePerUnit(n, unit){
-  const amount = Math.round(Number(n)||0).toLocaleString('en-UG');
-  return unit ? `UGX ${amount}<span class="ag-price-unit">/${esc(String(unit).toLowerCase())}</span>` : `UGX ${amount}`;
+// Per-unit product price shown while browsing, without a currency prefix --
+// every surface that shows this already repeats it on more than one line
+// (a headline price plus a "buy more" hint), and the layouts involved
+// (2-column grid cards, a compact search-suggestions dropdown) are tight
+// enough that the extra characters push things into an awkward wrap. The
+// unit's shown separately right where it's needed instead.
+function fmtAmount(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
+function fmtAmountPerUnit(n, unit){
+  const amount = fmtAmount(n);
+  return unit ? `${amount}<span class="ag-price-unit">/${esc(String(unit).toLowerCase())}</span>` : amount;
+}
+// Naive plural for a packaging unit (Ctn -> Ctns, pc -> pcs) -- good enough
+// for the short abbreviations actually used as units/pack units in this
+// app; skips units that already end in "s" rather than risk doubling one.
+function pluralizeUnit(unit){
+  const u = String(unit||'').trim();
+  if(!u || /s$/i.test(u)) return u;
+  return u + 's';
 }
 // e.g. "Sold per pkt, and there are 20pkt in a ctn"
 // escapeHtml=false when assigning to a node's textContent (already injection-safe,
@@ -807,7 +951,54 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null, currentShopId = null, myAgent = null;
 let agentClients = [], myOrders = [], catalog = [];
 let cart = [], chosenClient = null;
-let agentAirtelPayments = [];
+
+// A quote is often built over several minutes while walking a shop floor
+// or standing with a client -- a stray reload (or the OS killing the tab
+// in the background) shouldn't throw away items already added. Every
+// mutation below persists the in-progress draft; boot() restores it
+// before the agent ever sees an empty cart. Cleared once the order is
+// actually submitted (resetCartAfterSubmit) since there's nothing left
+// to resume at that point.
+const QUOTE_DRAFT_KEY = 'agentQuoteDraft';
+// Restoring one field at a time (selectClient, dispatching the delivery
+// radio's change event) reuses the same code paths a real edit does --
+// including their saveQuoteDraft() calls. Left unguarded, the first field
+// restored would immediately re-save the draft with every *other* field
+// still at its pre-restore default, clobbering the very draft being read.
+let restoringQuoteDraft = false;
+function saveQuoteDraft(){
+  if(restoringQuoteDraft) return;
+  const deliveryMode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
+  const deliveryAddress = document.getElementById('ag_delivery_address').value;
+  try{
+    localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
+      cart, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
+    }));
+  }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
+}
+function clearQuoteDraft(){
+  try{ localStorage.removeItem(QUOTE_DRAFT_KEY); }catch(_e){}
+}
+function restoreQuoteDraft(){
+  let draft;
+  try{ draft = JSON.parse(localStorage.getItem(QUOTE_DRAFT_KEY) || 'null'); }catch(_e){ draft = null; }
+  if(!draft) return;
+  restoringQuoteDraft = true;
+  try{
+    if(Array.isArray(draft.cart) && draft.cart.length) cart = draft.cart;
+    if(draft.chosenClientId!=null){
+      const client = agentClients.find(c=>String(c.id)===String(draft.chosenClientId));
+      if(client) selectClient(client);
+    }
+    if(draft.deliveryMode==='shop_delivery'){
+      document.getElementById('ag_delivery_shop').checked = true;
+      document.getElementById('ag_delivery_shop').dispatchEvent(new Event('change'));
+    }
+    if(draft.deliveryAddress) document.getElementById('ag_delivery_address').value = draft.deliveryAddress;
+  } finally {
+    restoringQuoteDraft = false;
+  }
+}
 
 // Agents are deliberately NOT shop_members (see 0012_sales_agents.sql) --
 // there's no shop_members row to look up here at all, unlike the admin/
@@ -863,6 +1054,9 @@ function mapOrderRow(q){
     agentClientId: payload.agentClientId || null,
     deliveryMode: payload.deliveryMode || null,
     agentPaymentStatus: payload.agentPaymentStatus || 'unpaid',
+    assignedWorkerId: payload.assignedWorkerId || null,
+    assignedDeliveryId: payload.assignedDeliveryId || null,
+    amountPaid: Number(q.amount_paid) || 0,
   };
 }
 
@@ -878,6 +1072,10 @@ async function loadAgentHomeData(){
 }
 
 /* ================= NAVIGATION ================= */
+// Only these three are real nav-bar tabs. Quote, My clients and Order
+// history are all opened as their own full screens with a back arrow --
+// tasks you dip into, not places you browse, so they don't compete for
+// one of three tab slots.
 // Home / Sell / Customers / Earnings are the four tab-bar slots. Sell's
 // underlying view is still the original product-browse screen (renaming
 // its id would mean touching every reference to it in this file for no
@@ -902,6 +1100,7 @@ function switchTab(tab){
   showOnlyView(TAB_VIEW[tab] || ('ag_'+tab+'View'));
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   lastMainTab = tab;
+  localStorage.setItem('agentLastTab', tab);
   window.scrollTo(0, 0);
   if(tab==='home') renderHome();
   if(tab==='sell') openBrowseView();
@@ -932,20 +1131,13 @@ function updateCartBadge(){
 document.getElementById('ag_browse_quoteBanner').addEventListener('click', ()=> switchTab('quote'));
 document.getElementById('ag_quote_back_btn').addEventListener('click', ()=> switchTab('sell'));
 
-// Deliberately no "opportunity scoring" here yet -- this is the plain
-// version from data already on hand (this month's total, the local
-// unsent cart, ongoing orders). The ranked/AI version replaces this
-// function's body in a later phase without touching who calls it.
-/* ---- Opportunity Engine v1 -- rule-based, computed client-side from
-   data the agent already has read access to. Deliberately no ML, no
-   server-side scoring job yet: every number here is either a stored
-   fact or a plain average, and the reason text always says exactly why
-   an item showed up. Two v3-spec opportunity types are intentionally
-   NOT here -- "quote expiring" and "quote viewed N times" -- because
-   nothing in this schema tracks a sent-quotation state or view counts;
-   an agent-submitted order is already a confirmed order, not a pending
-   proposal, so inventing an expiry for it would just be a fake number.
-   Add those back for real once/if that data actually exists. ---- */
+/* ================= HOME: Opportunity Engine v1 + Business Health =================
+   Rule-based, computed client-side from data the agent already has read
+   access to -- no ML, no server-side scoring job yet. Two v3-spec
+   opportunity types are deliberately NOT here -- "quote expiring" and
+   "quote viewed N times" -- because nothing in this schema tracks a
+   sent-quotation state or view counts; an agent-submitted order is
+   already a confirmed order, not a pending proposal. */
 function computeOpportunities(){
   const today = new Date();
   const items = [];
@@ -960,7 +1152,7 @@ function computeOpportunities(){
   }
 
   if(myAgent.paymentTerm === 'prepay'){
-    myOrders.filter(o=>!o.voided && o.status!=='completed' && o.agentPaymentStatus==='unpaid').forEach(o=>{
+    myOrders.filter(o=>!o.voided && o.status==='draft' && o.agentPaymentStatus!=='paid').forEach(o=>{
       const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
       items.push({
         key: `unpaid_order:${o.id}`, urgency: 'high', value: orderEarnings(o).margin,
@@ -1005,7 +1197,8 @@ function computeOpportunities(){
 // opportunities table yet to write a "dismissed" status into, and most
 // keys self-clear anyway (a reorder_due/dormant_client key embeds the
 // client's last-order date, so it stops matching the moment they order
-// again; unpaid_order stops being generated at all once it's paid).
+// again; unpaid_order stops being generated at all once the payment
+// choice modal marks it paid).
 function dismissedOpportunityKeys(){
   try{ return new Set(JSON.parse(localStorage.getItem(`agentDismissedOpp_${myAgent.id}`)||'[]')); }
   catch(_e){ return new Set(); }
@@ -1141,38 +1334,6 @@ function monthEarnings(monthKey){
 }
 
 const ORDER_STATUS_LABEL = { draft:'Draft', preparing:'Preparing', pending_delivery:'Out for delivery', completed:'Completed' };
-// The real, full set of states an order can be in -- deliberately not
-// extended with "Payment Received"/"Profit Locked"/"Commission Scheduled"/
-// "Paid Out" checkpoints some earlier planning docs sketched. Payment is
-// its own signal (agentPaymentStatus, shown separately) and commission is
-// claimed per-month in Earnings, not per-order -- there's no real
-// per-order "commission scheduled" state to show, so this only shows
-// states that actually exist.
-const ORDER_STEPS = [
-  { key:'draft', label:'Draft' },
-  { key:'preparing', label:'Preparing' },
-  { key:'pending_delivery', label:'Delivery' },
-  { key:'completed', label:'Completed' },
-];
-function orderProgressHTML(o){
-  const currentIdx = ORDER_STEPS.findIndex(s=>s.key===o.status);
-  return `<div class="ag-order-progress">${ORDER_STEPS.map((s,i)=>{
-    const cls = i<currentIdx ? 'done' : i===currentIdx ? 'current' : '';
-    return `<span class="step ${cls}">${esc(s.label)}</span>`;
-  }).join('<span class="sep">&rsaquo;</span>')}</div>`;
-}
-// The honest version of "commission scheduled/paid out" for a single
-// order: commission is claimed once for the whole month, not per order
-// (see agent_commission_claims), so an order's own contribution is best
-// shown as a link into that month's claim rather than inventing per-order
-// checkpoints the data doesn't actually have.
-function orderEarnNoteHTML(o){
-  if(!o.savedAt) return '';
-  const margin = orderEarnings(o).margin;
-  if(!(margin > 0)) return '';
-  const label = new Date(o.savedAt).toLocaleDateString('en-UG', { month:'long', year:'numeric' });
-  return `<div class="ag-order-earn-note">Your margin: <b>${fmtUGX(margin)}</b> &middot; counts toward <span data-goto-earnings="1">${esc(label)} earnings &rarr;</span></div>`;
-}
 
 let earningsViewMonth = currentMonthKey();
 let myClaims = [];
@@ -1290,10 +1451,21 @@ function renderTrendChart(){
 async function openEarningsView(){
   earningsViewMonth = currentMonthKey();
   document.getElementById('ag_wallet_name').textContent = (myAgent.name||'').toUpperCase();
-  renderTrendChart();
-  await Promise.all([loadMyClaims(), ensureBonusOpportunitiesLoaded()]);
-  renderEarnings();
-  renderBonusOpportunities();
+  // Each step wrapped separately so a failure in one (e.g. the claims
+  // fetch) can't leave the rest of the screen looking blank -- previously
+  // an uncaught throw anywhere in here silently aborted the whole
+  // function (switchTab never awaits this), leaving every value at its
+  // unrendered placeholder with no visible sign of why.
+  try{ renderTrendChart(); }catch(err){ console.error('renderTrendChart failed:', err); }
+  await loadMyClaims();
+  await ensureBonusOpportunitiesLoaded();
+  try{ renderBonusOpportunities(); }catch(err){ console.error('renderBonusOpportunities failed:', err); }
+  try{
+    renderEarnings();
+  }catch(err){
+    console.error('renderEarnings failed:', err);
+    toast(`Could not load earnings: ${err.message||err}`);
+  }
 }
 document.getElementById('ag_qa_clients').addEventListener('click', ()=> switchTab('customers'));
 document.getElementById('ag_qa_history').addEventListener('click', ()=> openOrderHistoryScreen('earnings'));
@@ -1330,164 +1502,112 @@ function clientRowHTML(c, orders){
     </div>
   </div>`;
 }
-function latestPendingPayment(orderId){
-  return agentAirtelPayments.find(p=>String(p.quote_id)===String(orderId) && p.status==='pending') || null;
+// Names of whoever's assigned to an in-progress order, resolved via the
+// agent_staff_names RPC (agents have no direct RLS access to `staff` --
+// see 0015_agent_staff_names.sql) and cached here so re-renders (e.g.
+// switching Ongoing/Completed) don't refetch.
+let orderStaffNames = new Map();
+async function ensureOrderStaffNamesLoaded(){
+  const ids = new Set();
+  myOrders.forEach(o=>{
+    if(o.voided || o.status==='completed') return;
+    if(o.assignedWorkerId) ids.add(o.assignedWorkerId);
+    if(o.assignedDeliveryId && o.assignedDeliveryId!=='__agent__') ids.add(o.assignedDeliveryId);
+  });
+  const missing = [...ids].filter(id=>!orderStaffNames.has(id));
+  if(!missing.length) return;
+  try{
+    const { data, error } = await sb.rpc('agent_staff_names', { p_shop_id: currentShopId, p_staff_ids: missing });
+    if(error) throw error;
+    (data||[]).forEach(row=> orderStaffNames.set(row.id, row.name));
+  }catch(err){ /* names just stay generic ("being prepared") if this fails */ }
 }
+
+// What's happening with an ongoing order right now, in the same voice a
+// delivery app uses -- "Andrew is preparing your order" -- so the agent
+// doesn't have to guess or go ask.
+function orderStatusInfo(o){
+  // A prepay order the shop hasn't started preparing yet, because
+  // agentPaymentBlocksPreparing() (shared-worker.js) is holding it in
+  // 'draft' until agentPaymentStatus flips to 'paid' -- surface it as an
+  // action the agent can actually take, not just generic waiting text.
+  if(myAgent.paymentTerm==='prepay' && o.status==='draft' && o.agentPaymentStatus!=='paid'){
+    return { cls:'due', icon:null, text:'Payment needed before we can start preparing this order', payNow:true };
+  }
+  if(o.status==='pending_delivery'){
+    if(o.deliveryMode==='agent_pickup') return { cls:'pickup', icon:ICON_PIN, text:'Ready — come pick up your order' };
+    const name = o.assignedDeliveryId ? orderStaffNames.get(o.assignedDeliveryId) : null;
+    return { cls:'delivering', icon:ICON_TRUCK, text: name ? `${name} is delivering your order` : 'Your order is out for delivery' };
+  }
+  if(o.status==='preparing'){
+    const name = o.assignedWorkerId ? orderStaffNames.get(o.assignedWorkerId) : null;
+    return { cls:'preparing', icon:ICON_CLOCK, text: name ? `${name} is preparing your order` : 'Your order is being prepared' };
+  }
+  return { cls:'waiting', icon:ICON_CLOCK, text:'Order received — not yet started' };
+}
+
+// A completed order's balance is with the SHOP, not the client -- what the
+// client paid the agent is the agent's own business and was never tracked
+// here. sellPrice (not agentSellPrice) is what the shop is actually owed;
+// a prepay agent's balance is settled the moment agentPaymentStatus flips
+// to 'paid' (amountPaid itself is never touched for that path).
+function orderBalanceInfo(o){
+  const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+  const balance = o.agentPaymentStatus==='paid' ? 0 : Math.max(0, shopTotal - (Number(o.amountPaid)||0));
+  return balance<=0
+    ? { cls:'settled', icon:ICON_CHECK, text:'Settled with the shop' }
+    : { cls:'due', icon:null, text:`Balance owed to shop: ${fmtUGX(balance)}` };
+}
+
 function orderRowHTML(o){
   const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
   const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
-  let payHTML = '';
-  if(myAgent.paymentTerm === 'prepay' && o.agentPaymentStatus === 'unpaid' && o.status !== 'completed'){
-    const pending = latestPendingPayment(o.id);
-    payHTML = pending
-      ? `<span class="ag-order-pay-pending" data-check-order="${esc(o.id)}" data-payment-id="${esc(pending.id)}">Payment pending &middot; tap to check</span>`
-      : `<span class="ag-order-pay-btn" data-pay-order="${esc(o.id)}">Pay now</span>`;
-  }
-  return `<div class="ag-order-row">
+  const extra = o.status==='completed' ? orderBalanceInfo(o) : orderStatusInfo(o);
+  const itemCount = (o.items||[]).length;
+  return `<div class="ag-order-row" data-order-id="${esc(o.id)}">
     <div class="ag-order-row-head">
       <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
       <div class="ag-order-row-date">${esc(date)}</div>
     </div>
-    <div class="ag-order-row-split">${esc(ORDER_STATUS_LABEL[o.status] || o.status)} &middot; ${fmtUGX(orderTotal(o))}</div>
-    ${orderProgressHTML(o)}
-    ${orderEarnNoteHTML(o)}
-    ${payHTML}
+    <div class="ag-order-row-split">
+      <span>${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</span>
+      <span class="ag-order-row-items-link">${itemCount} item${itemCount===1?'':'s'} &rsaquo;</span>
+    </div>
+    <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span>${extra.payNow ? `<button type="button" class="momo-pay-now-btn" data-order-id="${esc(o.id)}">Pay now</button>` : ''}</div>
   </div>`;
 }
-
-/* ---- Pay now: real Airtel Money "request to pay" (USSD Push) against
-   airtel-collection-initiate -- the current, actually-configured
-   mechanism (its own AIRTEL_CLIENT_ID/SECRET, own airtel_transactions
-   ledger), not the earlier agent-initiate-momo-payment/
-   shop_payment_providers system this replaced. Airtel-only by design:
-   there's no per-shop provider toggle here, so no provider-choice step.
-   Polling reads airtel_transactions directly (agent-readable via the
-   0018 migration) rather than calling a status-check function, since
-   this flow doesn't have one -- outcome normally arrives via
-   airtel-collection-callback's webhook; polling is the fallback for
-   when that's slow or missed, same role check-momo-payment-status played
-   for the other system. ---- */
-async function loadMyAirtelPayments(){
-  try{
-    const { data, error } = await sb.from('airtel_transactions').select('*').eq('shop_id', currentShopId);
-    if(error) throw error;
-    agentAirtelPayments = data || [];
-  }catch(err){
-    toast(`Could not load payment status: ${err.message||err}`);
-  }
+function orderItemRowHTML(it){
+  const ce = catalogEntry(it.productId, it.variantIdx);
+  const packLabel = packSentence(it.packQty, it.unit, it.packUnit);
+  return `<div class="ag-cart-row">
+    <div class="ag-cart-row-body">
+      <div class="ag-cart-row-name">${esc(it.productName)}</div>
+      ${ce && ce.variantLabel ? `<div class="ag-grid-variant">${esc(ce.variantLabel)}</div>` : ''}
+      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
+      <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
+    </div>
+    <div class="ag-cart-row-price">${fmtUGX((Number(it.agentSellPrice)||0) * (Number(it.qty)||0))}</div>
+  </div>`;
 }
-
-async function openPayNowPanel(orderId){
-  const order = myOrders.find(o=>String(o.id)===String(orderId));
-  if(!order) return;
-
+function openOrderItemsPanel(orderId){
+  const o = myOrders.find(x=>String(x.id)===String(orderId));
+  if(!o) return;
+  const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
   const el = document.createElement('div');
   el.className = 'ag-overlay';
-  el.innerHTML = `<div class="ag-overlay-card">
-    <div class="ag-overlay-title">Pay ${fmtUGX(orderTotal(order))}</div>
-    <div id="ag_pay_step">
-      <div class="field"><label>Airtel Money number</label><input id="ag_pay_phone" type="tel" placeholder="e.g. 0700 000 000" value="${esc(myAgent.phone||'')}"></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_pay_send_btn">Send payment request</button>
-    </div>
-  </div>`;
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title" style="margin-bottom:2px;">${esc(client ? client.name : 'Order')}</div>
+      <div class="ag-cost-hint">${(o.items||[]).length} item${(o.items||[]).length===1?'':'s'}</div>
+      ${(o.items||[]).map(orderItemRowHTML).join('')}
+      <div class="ag-cart-row" style="border-top:2px solid var(--line);margin-top:4px;padding-top:12px;">
+        <div class="ag-cart-row-body"><div class="ag-cart-row-name">Total</div></div>
+        <div class="ag-cart-row-price">${fmtUGX(orderTotal(o))}</div>
+      </div>
+    </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-  const stepEl = el.querySelector('#ag_pay_step');
-
-  document.getElementById('ag_pay_send_btn').addEventListener('click', async ()=>{
-    const phone = document.getElementById('ag_pay_phone').value.trim();
-    if(!phone){ toast('Enter a phone number'); return; }
-    await submitPayNow(order, phone, stepEl);
-  });
 }
-
-async function submitPayNow(order, phone, stepEl){
-  stepEl.innerHTML = `<div class="ag-pay-status">Sending payment request&hellip;</div>`;
-  let res;
-  try{
-    res = await callAgentFn('airtel-collection-initiate', { quoteId: order.id, msisdn: phone });
-  }catch(err){
-    stepEl.innerHTML = `<div class="ag-pay-status">Could not start payment: ${esc(err.message||String(err))}</div>
-      <button type="button" class="btn btn-ghost btn-block" id="ag_pay_close_btn">Close</button>`;
-    document.getElementById('ag_pay_close_btn').addEventListener('click', ()=> stepEl.closest('.ag-overlay').remove());
-    return;
-  }
-  stepEl.innerHTML = `<div class="ag-pay-status">Check your phone and approve the Airtel Money prompt&hellip;<br>We'll keep checking automatically.</div>`;
-  await pollPaymentStatus(res.reference, order, stepEl);
-}
-
-async function pollPaymentStatus(reference, order, stepEl){
-  const maxAttempts = 15; // ~1 minute at 4s apart
-  for(let attempt=0; attempt<maxAttempts; attempt++){
-    await new Promise(r=>setTimeout(r, 4000));
-    if(!document.body.contains(stepEl)) return; // agent closed the panel -- payment still completes server-side (webhook or a later re-check), they'll see it as "pending -- tap to check" next visit
-    let row;
-    try{
-      const { data, error } = await sb.from('airtel_transactions').select('status').eq('shop_id', currentShopId).eq('reference', reference).maybeSingle();
-      if(error) throw error;
-      row = data;
-    }catch(err){
-      continue; // transient error -- just try again next tick
-    }
-    if(!row) continue;
-    if(row.status === 'success'){
-      order.agentPaymentStatus = 'paid';
-      await loadMyAirtelPayments();
-      stepEl.innerHTML = `<div class="ag-pay-status">Payment received. This order can now move ahead.</div>
-        <button type="button" class="btn btn-accent btn-block" id="ag_pay_done_btn">Done</button>`;
-      document.getElementById('ag_pay_done_btn').addEventListener('click', ()=> stepEl.closest('.ag-overlay').remove());
-      renderOrderHistoryScreen();
-      renderHome();
-      return;
-    }
-    if(row.status === 'failed'){
-      stepEl.innerHTML = `<div class="ag-pay-status">The payment wasn't approved. You can try again.</div>
-        <button type="button" class="btn btn-ghost btn-block" id="ag_pay_close_btn">Close</button>`;
-      document.getElementById('ag_pay_close_btn').addEventListener('click', ()=> stepEl.closest('.ag-overlay').remove());
-      await loadMyAirtelPayments();
-      return;
-    }
-  }
-  // Still pending after a minute -- stop polling here rather than forever;
-  // the order row now shows "Payment pending -- tap to check" so the agent
-  // can pick it back up any time.
-  await loadMyAirtelPayments();
-  stepEl.innerHTML = `<div class="ag-pay-status">Still waiting on approval. You can close this and check again from the order later.</div>
-    <button type="button" class="btn btn-ghost btn-block" id="ag_pay_close_btn">Close</button>`;
-  const closeBtn = document.getElementById('ag_pay_close_btn');
-  if(closeBtn) closeBtn.addEventListener('click', ()=> stepEl.closest('.ag-overlay').remove());
-  renderOrderHistoryScreen();
-}
-
-async function recheckPayment(orderId, transactionId){
-  const order = myOrders.find(o=>String(o.id)===String(orderId));
-  if(!order) return;
-  toast('Checking payment status…');
-  try{
-    const { data, error } = await sb.from('airtel_transactions').select('status').eq('shop_id', currentShopId).eq('id', transactionId).maybeSingle();
-    if(error) throw error;
-    if(data?.status === 'success'){
-      order.agentPaymentStatus = 'paid';
-      toast('Payment received');
-    } else if(data?.status === 'failed'){
-      toast('That payment was not approved -- tap Pay now to try again');
-    } else {
-      toast('Still pending -- try again in a moment');
-    }
-  }catch(err){
-    toast(`Could not check payment: ${err.message||err}`);
-  }
-  await loadMyAirtelPayments();
-  renderOrderHistoryScreen();
-  renderHome();
-}
-document.getElementById('ag_orderHistoryListWrap').addEventListener('click', (e)=>{
-  const payBtn = e.target.closest('[data-pay-order]');
-  if(payBtn){ openPayNowPanel(payBtn.dataset.payOrder); return; }
-  const checkBtn = e.target.closest('[data-check-order]');
-  if(checkBtn){ recheckPayment(checkBtn.dataset.checkOrder, checkBtn.dataset.paymentId); return; }
-  if(e.target.closest('[data-goto-earnings]')){ switchTab('earnings'); return; }
-});
 function renderAccount(){
   const initials = (myAgent.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
   document.getElementById('ag_profile_avatar').textContent = initials;
@@ -1518,6 +1638,17 @@ document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
   orderHistorySegment = btn.dataset.seg;
   renderOrderHistoryScreen();
 });
+document.getElementById('ag_orderHistoryListWrap').addEventListener('click', (e)=>{
+  const payBtn = e.target.closest('.momo-pay-now-btn');
+  if(payBtn){
+    const o = myOrders.find(x=>String(x.id)===String(payBtn.dataset.orderId));
+    if(o) openPaymentChoiceModal(o);
+    return;
+  }
+  const row = e.target.closest('.ag-order-row[data-order-id]');
+  if(!row) return;
+  openOrderItemsPanel(row.dataset.orderId);
+});
 
 // Order history is still a genuine sub-screen (reachable from Account's
 // menu, Home's quick actions and Earnings' quick actions) -- remember
@@ -1525,14 +1656,14 @@ document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
 // from instead of always the same place. Clients no longer needs this:
 // Customers is a full tab now, not a screen you dip into and back out of.
 let subScreenReturnTab = 'account';
-async function openOrderHistoryScreen(returnTab){
+function openOrderHistoryScreen(returnTab){
   subScreenReturnTab = returnTab || 'account';
   showOnlyView('ag_orderHistoryListView');
   renderOrderHistoryScreen();
-  if(myAgent.paymentTerm === 'prepay'){
-    await loadMyAirtelPayments();
-    renderOrderHistoryScreen();
-  }
+  // Names arrive after the first paint (a real network call) -- the list
+  // shows generic status text immediately, then re-renders with names
+  // filled in rather than blocking the screen open on it.
+  ensureOrderStaffNamesLoaded().then(renderOrderHistoryScreen);
 }
 document.getElementById('ag_menu_orders').addEventListener('click', ()=> openOrderHistoryScreen('account'));
 document.getElementById('ag_orders_back_btn').addEventListener('click', ()=> switchTab(subScreenReturnTab));
@@ -1540,6 +1671,10 @@ document.getElementById('ag_signout_btn').addEventListener('click', signOutAndRe
 
 /* ================= BROWSE + commission cluster ================= */
 let promotions = [], cluster = [];
+// Shop-configured wait period before a cluster item's bonus goes live --
+// only known once ensureBrowseDataLoaded() has actually fetched it, hence
+// starting null rather than a guessed default (see clusterEligibility()).
+let clusterWaitDays = null;
 let browseDataLoaded = false;
 let browseFilter = 'all';
 let browseCategoryFilter = null;
@@ -1552,6 +1687,23 @@ function isInCluster(productId, variantIdx){
   return cluster.some(c=>c.product_id===productId && String(c.variant_idx||'')===vi);
 }
 
+// Tells an agent, for an item already in their cluster, whether a sale of
+// it right now would actually earn its bonus -- and if not, exactly how
+// many days until it would. Mirrors agent-submit-order's own eligibility
+// check exactly (added_at + clusterWaitDays), but this copy never gates
+// anything itself; it's purely explanatory. Returns null if the item
+// isn't in the cluster at all, or clusterWaitDays hasn't loaded yet.
+function clusterEligibility(productId, variantIdx){
+  if(clusterWaitDays==null) return null;
+  const vi = variantIdx==null ? '' : String(variantIdx);
+  const entry = cluster.find(c=>c.product_id===productId && String(c.variant_idx||'')===vi);
+  if(!entry) return null;
+  const waitMs = clusterWaitDays * 24*60*60*1000;
+  const elapsedMs = Date.now() - new Date(entry.added_at).getTime();
+  if(elapsedMs >= waitMs) return { eligible: true, daysLeft: 0 };
+  return { eligible: false, daysLeft: Math.max(1, Math.ceil((waitMs - elapsedMs) / (24*60*60*1000))) };
+}
+
 async function ensureCatalogLoaded(){
   if(catalog.length) return;
   try{
@@ -1562,26 +1714,36 @@ async function ensureCatalogLoaded(){
   }
 }
 
-// Split out from ensureBrowseDataLoaded so Earnings' Bonus Opportunities
-// section can load the same data without also pulling in the full
-// catalog + cluster membership, which only Sell needs.
-let promotionsLoaded = false;
-async function ensurePromotionsLoaded(){
-  if(promotionsLoaded) return;
+async function ensureBrowseDataLoaded(){
+  if(browseDataLoaded) return;
+  await ensureCatalogLoaded();
   try{
-    const res = await callAgentFn('agent-catalog', { action: 'promotions' });
-    promotions = res.items || [];
-    promotionsLoaded = true;
+    const [promoRes, clusterRes] = await Promise.all([
+      callAgentFn('agent-catalog', { action: 'promotions' }),
+      sb.from('agent_clusters').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id),
+    ]);
+    if(clusterRes.error) throw clusterRes.error;
+    promotions = promoRes.items || [];
+    cluster = clusterRes.data || [];
+    // NOT `Number(x)||0` -- that can't tell "the shop set 0 days" apart
+    // from "agent-catalog hasn't been redeployed with this field yet",
+    // and both collapsing to 0 means every cluster item would silently
+    // look instantly eligible, hiding the wait-period note entirely with
+    // no visible error.
+    clusterWaitDays = promoRes.clusterWaitDays!=null ? Number(promoRes.clusterWaitDays) : null;
+    browseDataLoaded = true;
   }catch(err){
-    toast(`Could not load bonus opportunities: ${err.message||err}`);
+    toast(`Could not load products: ${err.message||err}`);
   }
 }
 
-// Deliberately a separate array from `promotions` above, not a scope
-// toggle on the same one -- Sell's star/join badges must only ever see
-// promotions that are earnable *today*, and reusing one variable for
-// both risks a later change accidentally showing a "join to earn" badge
-// for something that hasn't started yet or already ended.
+/* ---- Earnings: Bonus Opportunities lifecycle -----------------------
+   Deliberately a separate array and fetch from `promotions` above, not
+   a scope toggle on the same one -- Browse's cluster star/join badges
+   must only ever see promotions earnable *today*, and reusing one
+   variable for both risks a later change accidentally showing a "join
+   to earn" badge for something that hasn't started yet or already
+   ended. ---- */
 let bonusOpportunities = [], bonusOpportunitiesLoaded = false;
 async function ensureBonusOpportunitiesLoaded(){
   if(bonusOpportunitiesLoaded) return;
@@ -1594,9 +1756,6 @@ async function ensureBonusOpportunitiesLoaded(){
   }
 }
 
-// Pure presentation, same convention as ORDER_STATUS_LABEL/priceTierLabel
-// -- the server decides what's safe to expose (dates, no supplier info),
-// this decides what those dates mean to show the agent right now.
 function bonusLifecycle(p){
   const today = new Date().toISOString().slice(0, 10);
   if(p.startsAt && p.startsAt > today) return 'upcoming';
@@ -1622,9 +1781,6 @@ function bonusOpportunityCardHTML(p){
     <div class="ag-order-row-split">${sub}</div>
   </div>`;
 }
-// Upcoming/active/ending-soon first (soonest deadline first within that
-// group), completed last -- an agent opening Earnings should see what
-// they can still act on before what's already over.
 const BONUS_LIFECYCLE_ORDER = { ending_soon:0, active:1, upcoming:2, completed:3 };
 function renderBonusOpportunities(){
   const wrap = document.getElementById('ag_bonusOpportunitiesWrap');
@@ -1635,22 +1791,6 @@ function renderBonusOpportunities(){
     return (a.endsAt||'9999').localeCompare(b.endsAt||'9999');
   });
   wrap.innerHTML = sorted.map(bonusOpportunityCardHTML).join('');
-}
-
-async function ensureBrowseDataLoaded(){
-  if(browseDataLoaded) return;
-  await ensureCatalogLoaded();
-  try{
-    const [, clusterRes] = await Promise.all([
-      ensurePromotionsLoaded(),
-      sb.from('agent_clusters').select('*').eq('shop_id', currentShopId).eq('agent_id', myAgent.id),
-    ]);
-    if(clusterRes.error) throw clusterRes.error;
-    cluster = clusterRes.data || [];
-    browseDataLoaded = true;
-  }catch(err){
-    toast(`Could not load products: ${err.message||err}`);
-  }
 }
 
 // Sold at least once, ever, across any non-voided order -- the simplest
@@ -1718,6 +1858,16 @@ function browseItems(){
 
 const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>`;
+// Retail = single tag; wholesale = a stack of boxes -- reinforces the
+// retail/wholesale badge's meaning by shape, not color alone.
+const ICON_TAG = `<svg class="icon" viewBox="0 0 24 24"><path d="M20.59 13.41 12 22l-9-9V4h9l9 9.41a2 2 0 0 1 0 2.83z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>`;
+const ICON_BOXES = `<svg class="icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>`;
+// Order-history status icons: waiting/preparing = clock, delivering =
+// truck, self-pickup = map pin, settled = check.
+const ICON_CLOCK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`;
+const ICON_TRUCK = `<svg class="icon" viewBox="0 0 24 24"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.5V16h-8z"/><circle cx="6.5" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>`;
+const ICON_PIN = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5A7 7 0 1 0 5 9.5C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>`;
+const ICON_CHECK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>`;
 
 // Flat, single-path category icons keyed by keyword match against the
 // shop's own free-text category names -- there's no fixed taxonomy to
@@ -1816,16 +1966,45 @@ function saveRecentSearch(q){
   localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
 }
 
-// Wholesale-tier cards get the min-qty spelled out -- that's the number
-// that actually changes if an agent orders less than they assumed.
-// escapeHtml=false when assigning to a node's textContent (see packSentence).
-function priceTierLabel(tier, packQty, unit, escapeHtml){
-  const e = escapeHtml===false ? (s=>s) : esc;
-  if(tier==='wholesale') return `Wholesale${packQty ? ` · min ${e(packQty)}${e(String(unit||'').toLowerCase())}` : ''}`;
-  if(tier==='retail') return 'Retail price';
+// Kept short and single-line on purpose -- the exact min quantity for
+// wholesale is already spelled out right above in the pack-info line, so
+// repeating it here would just make the badge wrap and lose its pill
+// shape. Returns the full inner HTML of the badge (icon + text), safe to
+// assign via innerHTML anywhere -- the icon reinforces the retail/
+// wholesale meaning by shape, not color alone.
+function priceTierBadgeHTML(tier){
+  if(tier==='wholesale') return `${ICON_BOXES}<span>Bulk</span>`;
+  if(tier==='retail') return `${ICON_TAG}<span>Loose</span>`;
   return '';
 }
 
+// Only ever called with a promo that already passed the backend's
+// "starts_at <= today <= ends_at" filter, so a past-dated result here
+// can't happen -- diff is always >= 0 for anything actually shown.
+// urgent flags the last 2 days, so the countdown itself signals "act now"
+// via color rather than an agent having to parse the number.
+function promoDaysLeftInfo(endsAt){
+  if(!endsAt) return null;
+  const end = new Date(endsAt + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((end - today) / 86400000);
+  const label = diff<=0 ? 'Ends today' : diff===1 ? '1 day left' : `${diff} days left`;
+  return { label, urgent: diff<=1 };
+}
+
+// "Buy more, pay less" is only ever one line: the single cheapest
+// breakpoint this item has (bestTierMinQty/bestTierPrice, already
+// resolved server-side), always stated per the SAME base unit as the
+// headline price shown alongside it -- never a pack unit, so there's
+// never a question of whether a number here is per piece, dozen, or
+// carton. The full ladder (and the option to view it in pack terms)
+// only ever shows up once the item itself is tapped. Shared by the
+// browse grid card and the search-suggestions dropdown so both surfaces
+// tease volume pricing the same way.
+function bulkHintHTML(it){
+  if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
+  return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is for ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} at ${fmtAmount(it.bestTierPrice)} each.</div>`;
+}
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
@@ -1833,21 +2012,25 @@ function browseCardHTML(it, promoted, opts){
   const inCluster = promo && isInCluster(it.productId, it.variantIdx);
   const showReminder = promo && inCluster && !hasSoldItem(it.productId, it.variantIdx);
   const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
-  const packLabel = it.packQty ? `${esc(it.packQty)} ${esc(it.unit||'')} / ${esc(it.packUnit||'pack')}` : (it.unit ? `Per ${esc(it.unit)}` : '');
-  const tierLabel = priceTierLabel(it.tier, it.packQty, it.unit);
+  const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
+  const clusterWait = inCluster ? clusterEligibility(it.productId, it.variantIdx) : null;
+  const packLabel = it.packQty ? `1 ${esc(it.packUnit||'pack')} has ${esc(it.packQty)} ${esc(pluralizeUnit(it.unit))}` : (it.unit ? `Per ${esc(it.unit)}` : '');
   return `<div class="ag-grid-card" data-pid="${esc(it.productId)}" data-vidx="${it.variantIdx==null?'':it.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
-      ${opts.sponsorTag ? `<span class="ag-sponsor-tag">${ICON_STAR}Bonus</span>` : ''}
-      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from bonus picks':'Add to earn its bonus'}">${ICON_STAR}</button>` : ''}
+      ${opts.sponsorTag ? `<span class="ag-sponsor-tag">${ICON_STAR}Sponsored</span>` : ''}
+      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
       ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
+      ${countdown ? `<div class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</div>` : ''}
+      ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      ${tierLabel ? `<div class="ag-price-tier ${esc(it.tier)}">${tierLabel}</div>` : ''}
-      <div class="ag-grid-price">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+      ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
+      <div class="ag-grid-price">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
+      ${bulkHintHTML(it)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
   </div>`;
@@ -1888,18 +2071,20 @@ async function toggleClusterMembership(productId, variantIdx){
         .eq('shop_id', currentShopId).eq('agent_id', myAgent.id).eq('product_id', productId).eq('variant_idx', viStr);
       if(error) throw error;
       cluster = cluster.filter(c=>!(c.product_id===productId && String(c.variant_idx||'')===viStr));
-      toast('Removed from your bonus picks');
+      toast('Removed from your cluster');
     } else {
       const { data: inserted, error } = await sb.from('agent_clusters')
         .insert({ shop_id: currentShopId, agent_id: myAgent.id, product_id: productId, variant_idx: viStr })
         .select().single();
       if(error) throw error;
       cluster.push(inserted);
-      toast('Added -- sell it to start earning the bonus');
+      toast(clusterWaitDays>0
+        ? `Added -- bonus unlocks in ${clusterWaitDays} day${clusterWaitDays===1?'':'s'}`
+        : 'Added -- sell it to start earning the bonus');
     }
     renderBrowseGrid();
   }catch(err){
-    toast(`Could not update your bonus picks: ${err.message||err}`);
+    toast(`Could not update your cluster: ${err.message||err}`);
   }
 }
 
@@ -1955,7 +2140,8 @@ function renderSearchSuggestions(){
       <div class="ag-item-result-body">
         <div class="ag-item-result-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        <div class="ag-item-result-price money">${fmtPricePerUnit(it.floorPrice, it.unit)}</div>
+        <div class="ag-item-result-price money">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
+        ${bulkHintHTML(it)}
       </div>
     </div>`).join('');
   box.classList.add('show');
@@ -2010,45 +2196,123 @@ async function openBrowseView(){
   renderBrowseGrid();
 }
 
+// Finds the breakpoint a given (base-unit) quantity actually earns -- the
+// highest minQty at or below it. Mirrors the server's own tieredUnitPrice()
+// resolution rule; safe to do purely client-side because every tier in
+// `tiers` already carries its final agent-facing floor price, not a raw
+// cost an agent shouldn't be able to derive markup/discount from.
+function tierForQty(tiers, qty){
+  let best = null;
+  (tiers||[]).forEach(t=>{ if(qty>=t.minQty && (!best || t.minQty>=best.minQty)) best = t; });
+  return best || (tiers && tiers[0]) || null;
+}
+// Turns the raw ascending tier ladder into display rows in whichever unit
+// is currently selected -- the item's base unit, or its own pack unit. A
+// breakpoint that doesn't land on a whole pack has no honest way to state
+// itself in pack terms (nobody buys "0.05 of a carton"), so that one row
+// always falls back to the base unit regardless of what's selected, with
+// a short note instead of an invented fraction.
+function buildTierDisplayRows(tiers, unit, packUnit, packQty, viewUnit){
+  return (tiers||[]).map((t, i)=>{
+    const nextMinQty = i+1 < tiers.length ? tiers[i+1].minQty : null;
+    const maxQty = nextMinQty!=null ? nextMinQty - 1 : null;
+    const usePack = viewUnit==='pack' && packQty>0 && t.minQty % packQty === 0;
+    if(usePack){
+      const minPack = t.minQty / packQty;
+      const maxPack = maxQty!=null ? Math.floor(maxQty/packQty) : null;
+      return {
+        minQty: t.minQty, tier: t.tier,
+        qtyLabel: maxPack!=null ? `${minPack} – ${maxPack} ${packUnit}` : `${minPack}+ ${packUnit}`,
+        price: t.unitPrice*packQty, priceUnit: packUnit, note: null
+      };
+    }
+    return {
+      minQty: t.minQty, tier: t.tier,
+      qtyLabel: maxQty!=null ? `${t.minQty} – ${maxQty} ${unit}` : `${t.minQty}+ ${unit}`,
+      price: t.unitPrice, priceUnit: unit,
+      note: (viewUnit==='pack' && packQty>0) ? `below 1 ${packUnit} — priced individually` : null
+    };
+  });
+}
+function tierLadderRowHTML(row, earned){
+  return `<div class="ag-tl-row ${earned?'earned':''}">
+    <div class="ag-tl-qty">
+      <span class="ag-tl-icon ${esc(row.tier||'retail')}">${row.tier==='wholesale'?ICON_BOXES:ICON_TAG}</span>
+      <div>${esc(row.qtyLabel)}${earned?` <span class="ag-tl-check">${ICON_CHECK}Your price</span>`:''}${row.note?`<div class="ag-tl-note">${esc(row.note)}</div>`:''}</div>
+    </div>
+    <span class="ag-tl-price">${fmtUGX(row.price)}<span class="ag-price-unit">/${esc(row.priceUnit)}</span></span>
+  </div>`;
+}
+
 async function openAddItemPanel(item){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
-  const packLabel = packSentence(item.packQty, item.unit, item.packUnit);
+  // Same lookup browseCardHTML uses -- this panel only ever gets a plain
+  // catalog item, not one already carrying its promo/cluster status.
+  const promo = promotedMap().get(`${item.productId}::${item.variantIdx==null?'':item.variantIdx}`);
+  const inCluster = promo && isInCluster(item.productId, item.variantIdx);
+  const clusterWait = inCluster ? clusterEligibility(item.productId, item.variantIdx) : null;
+  const clusterWaitHTML = clusterWait && !clusterWait.eligible
+    ? `<div class="ag-cluster-wait" style="margin-bottom:14px;">${ICON_CLOCK}This sale won't earn its cluster bonus yet -- unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>`
+    : '';
+  const hasPack = Number(item.packQty)>0 && !!item.packUnit;
+  // Defaults to the item's own pack unit (Ctn, Dzn, ...) rather than
+  // pieces -- an agent quoting a client is far more often thinking in
+  // packs than in loose units, and switching to "pc" is one tap away.
+  const qtyUnitOptionsHTML = `<option value="unit">${esc(item.unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" selected>${esc(item.packUnit)} (${esc(item.packQty)} ${esc(item.unit||'')})</option>` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
       ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
-      <div class="ag-grid-pack" id="ag_ai_pack_label" style="margin-bottom:14px;">${packLabel}</div>
-      <div class="field"><label>Quantity${item.unit ? ` (${esc(item.unit)})` : ''}</label><input id="ag_ai_qty" type="number" min="0.01" step="any" value="1"></div>
-      <div class="ag-price-tier ${esc(item.tier||'')}" id="ag_ai_tier_label">${priceTierLabel(item.tier, item.packQty, item.unit)}</div>
-      <div class="ag-cost-hint" id="ag_ai_cost_hint">Your cost: ${fmtUGX(item.floorPrice)}${item.packQty ? ` · buy ${esc(item.packQty)}+ ${esc(item.unit||'')} for a better rate` : ''}</div>
-      <div class="field"><label>Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}"></div>
+      ${clusterWaitHTML}
+      <div class="field">
+        <label>Quantity</label>
+        <div class="ag-qty-unit-row">
+          <input id="ag_ai_qty" type="number" min="0.01" step="any" value="1">
+          <select id="ag_ai_qty_unit">${qtyUnitOptionsHTML}</select>
+        </div>
+      </div>
+      <div id="ag_ai_ladder_wrap"><div class="ag-tl-loading">Loading price breakdown…</div></div>
+      <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}" disabled></div>
       <div class="ag-price-guidance" id="ag_ai_guidance" style="display:none;"><span class="dot"></span><span id="ag_ai_guidance_text"></span></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn" disabled>Loading…</button>
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 
-  let liveFloor = item.floorPrice, liveUnit = item.unit, livePackUnit = item.packUnit, livePackQty = item.packQty, liveTier = item.tier, liveOurPrice = item.ourPrice;
   const qtyEl = document.getElementById('ag_ai_qty');
+  const unitEl = document.getElementById('ag_ai_qty_unit');
   const priceEl = document.getElementById('ag_ai_price');
-  const hintEl = document.getElementById('ag_ai_cost_hint');
-  const packLabelEl = document.getElementById('ag_ai_pack_label');
-  const tierLabelEl = document.getElementById('ag_ai_tier_label');
+  const priceLabelEl = document.getElementById('ag_ai_price_label');
+  const ladderWrap = document.getElementById('ag_ai_ladder_wrap');
+  const addBtn = document.getElementById('ag_ai_add_btn');
   const guidanceEl = document.getElementById('ag_ai_guidance');
   const guidanceTextEl = document.getElementById('ag_ai_guidance_text');
 
-  // Advisory only -- this never blocks or clamps what the agent types, it
-  // just reflects their price against the shop's own "our price" for this
-  // tier, same reasoning as v3's pricing-guidance note: help them avoid an
-  // accidental 10x-over price that costs the sale (and makes the platform
-  // look bad to the customer), without taking away their control over
-  // their own margin.
-  const updateGuidance = ()=>{
+  // Populated once the ladder loads; every further qty/unit change is
+  // resolved against this locally -- no more network round-trips per
+  // keystroke, and the highlight/price update instantly instead of
+  // waiting on a fresh server call each time.
+  let tiers = null, unit = item.unit, packUnit = item.packUnit, packQty = Number(item.packQty)||0;
+  let earnedRow = null;
+  // The retail-tier "our price" from the bootstrap fetch, kept flat
+  // rather than re-derived per tier -- guidance is advisory, not a
+  // precise per-tier figure, and re-fetching per keystroke is exactly
+  // what the tier-ladder rework above was built to avoid.
+  let ourPrice = item.ourPrice || null;
+
+  // Advisory only -- never blocks or clamps what the agent types, it
+  // just reflects their price against the shop's own "our price," so an
+  // accidental 10x-over price doesn't cost the sale (or make the
+  // platform look bad to the customer) without the agent noticing.
+  function updateGuidance(){
     const sell = Number(priceEl.value);
-    if(!(liveOurPrice > 0) || !(sell > 0)){ guidanceEl.style.display = 'none'; return; }
-    const ratio = sell / liveOurPrice;
+    const usingPack = unitEl.value==='pack' && packQty>0;
+    const sellPerBase = usingPack && packQty>0 ? sell/packQty : sell;
+    if(!(ourPrice > 0) || !(sellPerBase > 0)){ guidanceEl.style.display = 'none'; return; }
+    const ratio = sellPerBase / ourPrice;
     let band, text;
     if(ratio <= 1.1){ band = 'competitive'; text = 'Competitive -- likely to win this sale'; }
     else if(ratio <= 1.35){ band = 'premium'; text = 'Premium -- above typical, still reasonable'; }
@@ -2056,42 +2320,95 @@ async function openAddItemPanel(item){
     guidanceEl.className = `ag-price-guidance ${band}`;
     guidanceEl.style.display = 'flex';
     guidanceTextEl.textContent = text;
-  };
+  }
   priceEl.addEventListener('input', updateGuidance);
-  updateGuidance();
 
-  let repricing = false;
-  const reprice = async ()=>{
-    const qty = Number(qtyEl.value);
-    if(!(qty>0) || repricing) return;
-    repricing = true;
-    try{
-      const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty });
-      if(res.available){
-        liveFloor = res.floorPrice; liveUnit = res.unit; livePackUnit = res.packUnit; livePackQty = res.packQty; liveTier = res.tier; liveOurPrice = res.ourPrice;
-        hintEl.textContent = `Your cost: ${fmtUGX(liveFloor)}${livePackQty ? ` · buy ${esc(livePackQty)}+ ${esc(liveUnit||'')} for a better rate` : ''}`;
-        packLabelEl.textContent = packSentence(livePackQty, liveUnit, livePackUnit, false);
-        tierLabelEl.className = `ag-price-tier ${liveTier||''}`;
-        tierLabelEl.textContent = priceTierLabel(liveTier, livePackQty, liveUnit, false);
-        updateGuidance();
-      }
-    }catch(err){ /* keep the last known price rather than blocking on a transient failure */ }
-    repricing = false;
-  };
-  qtyEl.addEventListener('change', reprice);
+  function currentBaseQty(){
+    const raw = Number(qtyEl.value)||0;
+    return unitEl.value==='pack' && packQty>0 ? raw*packQty : raw;
+  }
+  function rerender(){
+    if(!tiers || !tiers.length){ return; }
+    const baseQty = Math.max(0.01, currentBaseQty());
+    earnedRow = tierForQty(tiers, baseQty);
+    if(tiers.length>1){
+      const rows = buildTierDisplayRows(tiers, unit, packUnit, packQty, unitEl.value);
+      ladderWrap.innerHTML = `<div class="ag-tier-ladder">
+        <div class="ag-tl-head"><span>Quantity</span><span>Price</span></div>
+        ${rows.map(r=>tierLadderRowHTML(r, earnedRow && r.minQty===earnedRow.minQty)).join('')}
+      </div>`;
+    } else {
+      ladderWrap.innerHTML = '';
+    }
+    const priceUnit = unitEl.value==='pack' && packQty>0 ? packUnit : unit;
+    const priceValue = unitEl.value==='pack' && packQty>0 ? earnedRow.unitPrice*packQty : earnedRow.unitPrice;
+    priceLabelEl.textContent = `Your price to the client (per ${priceUnit})`;
+    priceEl.value = Math.round(priceValue);
+    priceEl.disabled = false;
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add to quote';
+    updateGuidance();
+  }
 
-  document.getElementById('ag_ai_add_btn').addEventListener('click', ()=>{
-    const qty = Number(qtyEl.value);
-    const agentSellPrice = Number(priceEl.value);
-    if(!(qty>0)){ toast('Enter a quantity'); return; }
-    if(!(agentSellPrice>=0)){ toast('Enter a price'); return; }
+  try{
+    // qty here is only a bootstrap probe -- every quantity's real price
+    // comes from `tiers` below, resolved locally from here on.
+    const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty: 1 });
+    if(res.available && Array.isArray(res.tiers) && res.tiers.length){
+      tiers = res.tiers.slice().sort((a,b)=>a.minQty-b.minQty);
+      unit = res.unit; packUnit = res.packUnit; packQty = Number(res.packQty)||0;
+      ourPrice = res.ourPrice || ourPrice;
+      if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
+      rerender();
+    } else {
+      throw new Error('unavailable');
+    }
+  }catch(err){
+    // Fall back to the single flat price already known from Browse rather
+    // than leaving the panel stuck loading -- same tolerance the old
+    // per-qty reprice() had for a transient failure. Forced to the base
+    // unit regardless of the item's own pack size: that one flat number
+    // is only ever confirmed at the qty=1 (or pack-qty) probe Browse
+    // already did, so extrapolating it into a per-pack figure here would
+    // be a guess, not a real price -- better to show the one number that
+    // actually is real than a wrong one that looks precise.
+    tiers = [{ minQty: 1, unitPrice: item.floorPrice, tier: item.tier }];
+    unit = item.unit; packUnit = item.packUnit; packQty = Number(item.packQty)||0;
+    unitEl.value = 'unit';
+    rerender();
+  }
+
+  qtyEl.addEventListener('change', rerender);
+  unitEl.addEventListener('change', rerender);
+
+  addBtn.addEventListener('click', ()=>{
+    const raw = Number(qtyEl.value)||0;
+    const usingPack = unitEl.value==='pack' && packQty>0;
+    const qty = currentBaseQty();
+    // priceEl shows a per-pack price when a pack unit is selected (see
+    // rerender() above -- earnedRow.unitPrice*packQty), but qty here is
+    // always in base units to match the tier lookup the server repeats
+    // on submit. Storing the pack price against the base-unit qty as-is
+    // was the bug: 10 Ctn at 300,000/Ctn got stored as qty=200 (dzn) at
+    // agentSellPrice=300,000, so every total multiplied by an extra
+    // packQty. agentSellPrice is always kept per BASE unit here; the cart
+    // separately remembers what the agent actually typed (displayQty/
+    // displayUnit) purely so the receipt can show "10 Ctn" instead of
+    // silently converting it to "200 dzn".
+    const enteredPrice = Number(priceEl.value);
+    const agentSellPrice = usingPack ? enteredPrice/packQty : enteredPrice;
+    if(!(raw>0)){ toast('Enter a quantity'); return; }
+    if(!(enteredPrice>=0)){ toast('Enter a price'); return; }
     cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
-      qty, unit: liveUnit, packUnit: livePackUnit, packQty: livePackQty, tier: liveTier,
-      floorPrice: liveFloor, agentSellPrice,
+      qty, unit, packUnit, packQty,
+      displayQty: raw, displayUnit: usingPack ? packUnit : unit,
+      tier: earnedRow ? earnedRow.tier : item.tier,
+      floorPrice: earnedRow ? earnedRow.unitPrice : item.floorPrice, agentSellPrice,
     });
     document.body.removeChild(el);
     updateCartBadge();
+    saveQuoteDraft();
     toast('Added to quote');
   });
 }
@@ -2099,24 +2416,38 @@ async function openAddItemPanel(item){
 /* ================= QUOTE + client + delivery + submit ================= */
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
+  let total = 0;
   wrap.innerHTML = cart.map((it,i)=>{
-    const packLabel = packSentence(it.packQty, it.unit, it.packUnit);
+    // agentSellPrice is always stored per base unit; qty is always base
+    // units too, so the amount is correct regardless of what the agent
+    // actually picked in the panel. displayQty/displayUnit (what they
+    // typed, e.g. "10 Ctn") are shown instead of the base-unit qty/unit
+    // purely for the receipt -- rate is scaled back up to match whichever
+    // unit is being displayed so Rate x Qty still equals Amount.
+    const baseQty = Number(it.qty)||0;
+    const amount = (Number(it.agentSellPrice)||0) * baseQty;
+    total += amount;
+    const displayQty = it.displayQty!=null ? it.displayQty : baseQty;
+    const displayUnit = it.displayUnit || it.unit || '';
+    const rate = displayQty>0 ? amount/displayQty : 0;
     return `
-    <div class="ag-cart-row">
-      <div class="ag-cart-row-body">
-        <div class="ag-cart-row-name">${esc(it.name)}</div>
+    <tr>
+      <td class="ag-receipt-qty">${esc(displayQty)} ${esc(displayUnit)}</td>
+      <td>
+        <div class="ag-receipt-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-        <div class="ag-cart-row-meta">${esc(it.qty)} ${esc(it.unit||'')}</div>
-      </div>
-      <div class="ag-cart-row-price">${fmtUGX(it.agentSellPrice * it.qty)}</div>
-      <button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>`;
+      </td>
+      <td class="ag-receipt-rate">${fmtAmount(rate)}</td>
+      <td class="ag-receipt-amount">${fmtAmount(amount)}</td>
+      <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
+    </tr>`;
   }).join('');
+  document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
   wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
       updateCartBadge();
+      saveQuoteDraft();
       renderCartTab();
     });
   });
@@ -2142,6 +2473,7 @@ function resetCartAfterSubmit(){
   document.getElementById('ag_delivery_address').value = '';
   document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
   updateCartBadge();
+  clearQuoteDraft();
 }
 
 /* ---- Client picking ---- */
@@ -2184,12 +2516,14 @@ function selectClient(client){
   const wrap = document.getElementById('ag_clientChosenWrap');
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
+  saveQuoteDraft();
   document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
     chosenClient = null;
     wrap.style.display = 'none';
     document.getElementById('ag_clientPickWrap').style.display = 'block';
     document.getElementById('ag_client_search').value = '';
     renderClientSuggestions('');
+    saveQuoteDraft();
   });
 }
 
@@ -2221,14 +2555,139 @@ function openNewClientPanel(prefillName){
   });
 }
 
+/* ---- Mobile money payment ----
+   An agent explicitly chooses how they're paying: Cash still falls into
+   today's existing flow untouched (the shop admin confirms receipt by
+   hand, agentPrepayModal in index.html) -- picking it here just closes
+   this prompt with a reminder, no state changes. Mobile Money is the new
+   path: a real MTN/Airtel "request to pay" push to the agent's phone,
+   confirmed automatically once they approve it there. */
+function orderOwedAmount(o){
+  return (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
+}
+function openPaymentChoiceModal(order){
+  const owed = orderOwedAmount(order);
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">How will you pay?</div>
+      <div class="ag-cost-hint">Order #${esc(order.id)} -- ${fmtUGX(owed)} owed to the shop</div>
+      <button type="button" class="btn btn-block momo-choice-btn" id="ag_pay_cash_btn">
+        <span class="momo-choice-label">Cash</span>
+        <span class="momo-choice-sub">Hand cash to the shop -- they'll confirm once received</span>
+      </button>
+      <button type="button" class="btn btn-accent btn-block momo-choice-btn" id="ag_pay_momo_btn" style="margin-top:10px;">
+        <span class="momo-choice-label">Mobile Money</span>
+        <span class="momo-choice-sub">Pay now with MTN or Airtel -- settles instantly</span>
+      </button>
+    </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  document.getElementById('ag_pay_cash_btn').addEventListener('click', ()=>{
+    document.body.removeChild(el);
+    toast("Hand cash to the shop -- they'll mark this order paid once received.");
+  });
+  document.getElementById('ag_pay_momo_btn').addEventListener('click', ()=>{
+    document.body.removeChild(el);
+    openMomoPaymentModal(order);
+  });
+}
+
+function openMomoPaymentModal(order){
+  const owed = orderOwedAmount(order);
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card">
+      <div class="ag-overlay-title">Pay with Mobile Money</div>
+      <div class="ag-cost-hint">Order #${esc(order.id)} -- ${fmtUGX(owed)}</div>
+      <div class="field">
+        <label>Provider</label>
+        <div class="momo-provider-choice">
+          <label class="momo-provider-radio selected"><input type="radio" name="ag_momo_provider" value="mtn" checked> MTN Mobile Money</label>
+          <label class="momo-provider-radio"><input type="radio" name="ag_momo_provider" value="airtel"> Airtel Money</label>
+        </div>
+      </div>
+      <div class="field"><label>Phone number to pay from</label><input type="text" id="ag_momo_phone" value="${esc(myAgent.phone||'')}" placeholder="e.g. 0772123456"></div>
+      <div id="ag_momo_status" class="momo-flow-status" style="display:none;"></div>
+      <button type="button" class="btn btn-accent btn-block" id="ag_momo_send_btn">Send payment prompt</button>
+    </div>`;
+  document.body.appendChild(el);
+  const closeModal = ()=>{ if(el.parentNode) document.body.removeChild(el); };
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) closeModal(); });
+  el.querySelectorAll('input[name="ag_momo_provider"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      el.querySelectorAll('.momo-provider-radio').forEach(l=>l.classList.toggle('selected', l.querySelector('input').checked));
+    });
+  });
+
+  const sendBtn = document.getElementById('ag_momo_send_btn');
+  const statusEl = document.getElementById('ag_momo_status');
+  let polling = false;
+
+  async function pollStatus(paymentId, attemptsLeft){
+    if(!polling) return;
+    try{
+      const res = await callAgentFn('check-momo-payment-status', { paymentId });
+      if(res.status==='successful'){
+        polling = false;
+        statusEl.innerHTML = `<div class="momo-flow-success">${ICON_CHECK}Payment received!</div>`;
+        await loadAgentHomeData();
+        renderOrderHistoryScreen();
+        setTimeout(closeModal, 1400);
+        return;
+      }
+      if(res.status==='failed' || res.status==='cancelled'){
+        polling = false;
+        statusEl.innerHTML = `<div class="momo-flow-error">Payment ${esc(res.status)}. You can try again.</div>`;
+        sendBtn.disabled = false; sendBtn.textContent = 'Send payment prompt';
+        return;
+      }
+    }catch(err){
+      // Transient network error while polling -- keep trying, same
+      // tolerance as everywhere else in this app for a flaky connection.
+    }
+    if(attemptsLeft<=0){
+      polling = false;
+      statusEl.innerHTML = `<div class="momo-flow-error">Still waiting -- if you approved it, this can take a moment. Try checking again.</div>`;
+      sendBtn.disabled = false; sendBtn.textContent = 'Check again';
+      return;
+    }
+    setTimeout(()=>pollStatus(paymentId, attemptsLeft-1), 3000);
+  }
+
+  sendBtn.addEventListener('click', async ()=>{
+    const provider = el.querySelector('input[name="ag_momo_provider"]:checked').value;
+    const phone = document.getElementById('ag_momo_phone').value.trim();
+    if(!phone){ toast('Enter the phone number to pay from'); return; }
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `<div class="momo-flow-waiting">${ICON_CLOCK}Sending payment request…</div>`;
+    try{
+      const res = await callAgentFn('agent-initiate-momo-payment', { orderId: order.id, provider, phone });
+      statusEl.innerHTML = `<div class="momo-flow-waiting">${ICON_CLOCK}Check your phone and approve the payment request.</div>`;
+      sendBtn.textContent = 'Waiting for approval…';
+      polling = true;
+      pollStatus(res.paymentId, 30); // ~90s of polling at 3s intervals
+    }catch(err){
+      statusEl.innerHTML = `<div class="momo-flow-error">Could not send the request: ${esc(err.message||err)}</div>`;
+      sendBtn.disabled = false; sendBtn.textContent = 'Send payment prompt';
+    }
+  });
+}
+
 /* ---- Delivery + submit ---- */
 document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
   r.addEventListener('change', ()=>{
     document.getElementById('ag_delivery_pickup_label').classList.toggle('selected', document.getElementById('ag_delivery_pickup').checked);
     document.getElementById('ag_delivery_shop_label').classList.toggle('selected', document.getElementById('ag_delivery_shop').checked);
     document.getElementById('ag_deliveryAddressWrap').style.display = document.getElementById('ag_delivery_shop').checked ? 'block' : 'none';
+    saveQuoteDraft();
   });
 });
+document.getElementById('ag_delivery_address').addEventListener('input', saveQuoteDraft);
 
 document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
   if(!chosenClient){ toast('Choose or add a client first'); return; }
@@ -2250,6 +2709,10 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
     await loadAgentHomeData();
     resetCartAfterSubmit();
     switchTab('sell');
+    if(myAgent.paymentTerm==='prepay'){
+      const order = myOrders.find(o=>o.id===res.orderId);
+      if(order) openPaymentChoiceModal(order);
+    }
   }catch(err){
     toast(`Could not submit order: ${err.message||err}`);
   }finally{
@@ -2273,8 +2736,10 @@ async function boot(){
     localStorage.setItem('agentTrustBannerSeen', '1');
   }
   document.getElementById('ag_delivery_pickup_label').classList.add('selected');
+  restoreQuoteDraft();
   updateCartBadge();
-  switchTab('home');
+  const savedTab = localStorage.getItem('agentLastTab');
+  switchTab(TABS.includes(savedTab) ? savedTab : 'home');
   document.body.classList.remove('app-loading');
 }
 boot();

@@ -45,11 +45,43 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
   return null;
 }
 
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null): number | null {
+// A fixed wholesale markup is naturally an amount added to the PACK price
+// (e.g. +10,000 on a 300,000/ctn cost -> 310,000/ctn = 15,500/dzn), not the
+// per-unit price -- wholesale is bought and sold by the pack. Percent
+// markups don't need this (they scale identically either way). Mirrors
+// index.html's own suggestedSellingPrice() exactly.
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0): number | null {
   if (basePrice == null) return null;
   const rule = effectiveMarkupRule(product, variantIdx, kind);
   if (!rule) return null;
-  return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
+  if (rule.type === "fixed") {
+    const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
+    return basePrice + fixedPerUnit;
+  }
+  return basePrice * (1 + rule.value / 100);
+}
+
+// One shared tier list (row.tiers) covers both sides of the wholesale/
+// retail curve -- a tier only counts toward "wholesale" if it needs at
+// least a full pack to unlock (the same qty-vs-pack-size line that
+// already decides which of the two applies below), otherwise it counts
+// toward "retail". Nothing declares which side a tier belongs to; its own
+// minQty does. Duplicated verbatim in agent-catalog (see that file's
+// module header for why) and mirrors index.html's own tieredUnitPrice()
+// exactly.
+function tieredUnitPrice(row: any, qty: number, kind: MarkupKind): number | null {
+  const base = row[kind];
+  if (base == null) return null;
+  const packQty = Number(row.pack_qty) || 0;
+  const tiers = (Array.isArray(row.tiers) ? row.tiers : []).filter((t: any) =>
+    kind === "wholesale" ? (packQty > 0 && t.minQty >= packQty) : (packQty === 0 || t.minQty < packQty)
+  );
+  if (!tiers.length) return Number(base);
+  let best = Number(base), bestMinQty = 0;
+  tiers.forEach((t: any) => {
+    if (t.price != null && qty >= t.minQty && t.minQty >= bestMinQty) { best = Number(t.price); bestMinQty = t.minQty; }
+  });
+  return best;
 }
 
 function pickBestPriceRow(rows: any[]): any | null {
@@ -70,10 +102,13 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   const packQty = Number(priceRow.pack_qty) || 0;
   const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
   const variantIdx = priceRow.variant_idx == null || priceRow.variant_idx === "" ? null : Number(priceRow.variant_idx);
-  const cost = tier === "wholesale" ? priceRow.wholesale : priceRow.retail;
-  if (cost == null) return null;
-  const costNum = Number(cost);
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
+  // Which of wholesale/retail applies is still decided purely by qty vs.
+  // pack size above (unchanged) -- but the actual unit price within that
+  // tier now also follows the entry's own volume-pricing ladder, if it
+  // has one, for this same quantity.
+  const costNum = tieredUnitPrice(priceRow, qty, tier);
+  if (costNum == null) return null;
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
   const discounted = ourPrice * (1 - (discountPct || 0) / 100);
   return {
@@ -93,6 +128,17 @@ function resolveDiscountPcts(product: any, presets: any) {
     discountWholesalePct: product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct,
     discountRetailPct: product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct,
   };
+}
+
+// How long an item must have already sat in an agent's cluster before a
+// sale of it can earn the cluster bonus -- closes the obvious hole where
+// an agent stars a high-bonus item right before checkout, sells it, then
+// un-stars it again with no real "cluster building" behind it. Shop-wide,
+// configurable in Presets; 7 days when the shop hasn't set one.
+const DEFAULT_CLUSTER_WAIT_DAYS = 7;
+function resolveClusterWaitDays(presets: any): number {
+  const v = presets?.agentClusterWaitDays;
+  return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
 }
 
 const CORS_HEADERS = {
@@ -169,26 +215,40 @@ Deno.serve(async (req) => {
       { data: priceRows, error: priceErr },
       { data: clusterRows, error: clusterErr },
       { data: promoRows, error: promoErr },
+      { data: suppliers, error: suppliersErr },
     ] = await Promise.all([
       admin.from("products").select("*").eq("shop_id", shopId).in("id", productIds),
       admin.from("prices").select("*").eq("shop_id", shopId).in("product_id", productIds),
-      admin.from("agent_clusters").select("product_id, variant_idx").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
+      admin.from("agent_clusters").select("product_id, variant_idx, added_at").eq("shop_id", shopId).eq("agent_id", agentId).in("product_id", productIds),
       admin.from("agent_promotions").select("product_id, variant_idx, bonus_type, bonus_value, starts_at, ends_at").eq("shop_id", shopId).eq("active", true).in("product_id", productIds),
+      admin.from("suppliers").select("id, name").eq("shop_id", shopId),
     ]);
     if (productsErr) return json({ error: productsErr.message, stage: "products_lookup" }, 500);
     if (priceErr) return json({ error: priceErr.message, stage: "prices_lookup" }, 500);
     if (clusterErr) return json({ error: clusterErr.message, stage: "cluster_lookup" }, 500);
     if (promoErr) return json({ error: promoErr.message, stage: "promo_lookup" }, 500);
+    if (suppliersErr) return json({ error: suppliersErr.message, stage: "suppliers_lookup" }, 500);
     const productsById = new Map<string, any>((products || []).map((p) => [p.id, p]));
+    const supplierNamesById = new Map<string, string>((suppliers || []).map((s) => [s.id, s.name]));
 
-    // Bonus commission is only ever locked in if the item was ALREADY in the
-    // agent's cluster before this order (see 0012_sales_agents.sql) -- there's
-    // nothing to game by adding it to the cluster after the sale. The bonus
-    // itself is computed here, once, as a snapshot: it's based on the real
-    // floor price (what the shop actually sold at), never the agent's own
-    // resale price to their client, so an agent can't inflate their own bonus
-    // just by typing a higher client-facing price.
-    const clusterKeys = new Set((clusterRows || []).map((c) => `${c.product_id}::${c.variant_idx || ""}`));
+    // Bonus commission only ever locks in if the item has been sitting in
+    // the agent's cluster for at least resolveClusterWaitDays() already --
+    // not merely "in the cluster right now" (see 0012_sales_agents.sql for
+    // the original, weaker version of this comment). Otherwise an agent
+    // could star a high-bonus item moments before checkout, collect the
+    // bonus, then un-star it -- no real cluster-building behind it. The
+    // bonus itself is computed here, once, as a snapshot: it's based on
+    // the real floor price (what the shop actually sold at), never the
+    // agent's own resale price to their client, so an agent can't inflate
+    // their own bonus just by typing a higher client-facing price.
+    const clusterWaitDays = resolveClusterWaitDays(presets);
+    const clusterWaitMs = clusterWaitDays * 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+    const eligibleClusterKeys = new Set(
+      (clusterRows || [])
+        .filter((c) => nowMs - new Date(c.added_at).getTime() >= clusterWaitMs)
+        .map((c) => `${c.product_id}::${c.variant_idx || ""}`)
+    );
     const today = todayISO();
     const promoByKey = new Map(
       (promoRows || [])
@@ -212,7 +272,7 @@ Deno.serve(async (req) => {
 
       const key = `${product.id}::${variantIdx == null ? "" : variantIdx}`;
       const promo = promoByKey.get(key);
-      const bonusCommission = promo && clusterKeys.has(key)
+      const bonusCommission = promo && eligibleClusterKeys.has(key)
         ? (promo.bonus_type === "fixed"
           ? Number(promo.bonus_value) * Number(it.qty)
           : (Number(promo.bonus_value) / 100) * priced.floorPrice * Number(it.qty))
@@ -226,7 +286,16 @@ Deno.serve(async (req) => {
         packUnit: priced.packUnit,
         packQty: priced.packQty,
         qty: Number(it.qty),
-        supplierId: null, supplierName: null, // never carried on an agent-originated line -- see module header
+        // The supplier this floor price was actually costed from -- carried
+        // forward (unlike the rest of this line, nothing about supplierId is
+        // agent-facing or trust-sensitive) so the shop can see where to buy
+        // the item from, and so marking the order invoiced auto-generates a
+        // purchase invoice against this supplier the same way it already
+        // does for a staff-built quote. Still just a starting point: an
+        // admin can reassign it to a different supplier from the order's
+        // edit view like any other line item, e.g. if this one's since sold
+        // out or a better price came in after the order was placed.
+        supplierId: best.supplier_id, supplierName: supplierNamesById.get(best.supplier_id) || null,
         price: priced.cost, // the real supplier cost this floor price was computed from
         sellPrice: priced.floorPrice, // what the shop is actually owed for this line
         agentSellPrice: Number(it.agentSellPrice), // the agent's own price to their client -- their business, not the shop's

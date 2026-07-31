@@ -53,11 +53,43 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
   return null;
 }
 
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null): number | null {
+// A fixed wholesale markup is naturally an amount added to the PACK price
+// (e.g. +10,000 on a 300,000/ctn cost -> 310,000/ctn = 15,500/dzn), not the
+// per-unit price -- wholesale is bought and sold by the pack. Percent
+// markups don't need this (they scale identically either way). Mirrors
+// index.html's own suggestedSellingPrice() exactly.
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0): number | null {
   if (basePrice == null) return null;
   const rule = effectiveMarkupRule(product, variantIdx, kind);
   if (!rule) return null;
-  return rule.type === "fixed" ? basePrice + rule.value : basePrice * (1 + rule.value / 100);
+  if (rule.type === "fixed") {
+    const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
+    return basePrice + fixedPerUnit;
+  }
+  return basePrice * (1 + rule.value / 100);
+}
+
+// One shared tier list (row.tiers) covers both sides of the wholesale/
+// retail curve -- a tier only counts toward "wholesale" if it needs at
+// least a full pack to unlock (the same qty-vs-pack-size line that
+// already decides which of the two applies below), otherwise it counts
+// toward "retail". Nothing declares which side a tier belongs to; its own
+// minQty does. Duplicated verbatim in agent-submit-order (see that file's
+// module header for why) and mirrors index.html's own tieredUnitPrice()
+// exactly.
+function tieredUnitPrice(row: any, qty: number, kind: MarkupKind): number | null {
+  const base = row[kind];
+  if (base == null) return null;
+  const packQty = Number(row.pack_qty) || 0;
+  const tiers = (Array.isArray(row.tiers) ? row.tiers : []).filter((t: any) =>
+    kind === "wholesale" ? (packQty > 0 && t.minQty >= packQty) : (packQty === 0 || t.minQty < packQty)
+  );
+  if (!tiers.length) return Number(base);
+  let best = Number(base), bestMinQty = 0;
+  tiers.forEach((t: any) => {
+    if (t.price != null && qty >= t.minQty && t.minQty >= bestMinQty) { best = Number(t.price); bestMinQty = t.minQty; }
+  });
+  return best;
 }
 
 // Cheapest-by-wholesale, tie-broken by retail -- same ranking
@@ -86,28 +118,57 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   const packQty = Number(priceRow.pack_qty) || 0;
   const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
   const variantIdx = priceRow.variant_idx == null || priceRow.variant_idx === "" ? null : Number(priceRow.variant_idx);
-  const cost = tier === "wholesale" ? priceRow.wholesale : priceRow.retail;
-  if (cost == null) return null;
-  const costNum = Number(cost);
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx) ?? costNum;
+  // Which of wholesale/retail applies is still decided purely by qty vs.
+  // pack size above (unchanged) -- but the actual unit price within that
+  // tier now also follows the entry's own volume-pricing ladder, if it
+  // has one, for this same quantity.
+  const costNum = tieredUnitPrice(priceRow, qty, tier);
+  if (costNum == null) return null;
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
   const discounted = ourPrice * (1 - (discountPct || 0) / 100);
   return {
     tier,
     floorPrice: Math.max(costNum, discounted),
-    // The shop's own markup-rule price, before the agent's personal
-    // discount is applied. Safe to expose (unlike `cost`) -- it's not raw
-    // supplier cost, just the same "our price" number the admin app's own
-    // quote builder already shows. Used client-side as the reference point
-    // for pricing guidance (competitive/premium/likely-to-lose), so an
-    // agent gets a sanity check against the shop's own benchmark instead
-    // of pricing blind.
+    // The shop's own markup-rule price for this tier, before the agent's
+    // personal discount -- safe to expose (unlike `cost`), since it's not
+    // raw supplier cost, just the same "our price" figure the admin app's
+    // own quote builder already shows. Used client-side as the reference
+    // point for pricing guidance (competitive/premium/likely-to-lose).
     ourPrice,
     cost: costNum,
     unit: priceRow.unit || "",
     packUnit: priceRow.pack_unit || "",
     packQty,
   };
+}
+
+// A price row saved before the tier-list rework (or one that's only ever
+// had flat wholesale/retail typed, never a tier) has no `tiers` of its
+// own -- synthesize one so the ladder below still reflects its real
+// prices instead of coming back empty. Mirrors index.html's own
+// tiersFromLegacyRow() exactly.
+function effectiveTiers(row: any): { minQty: number; price: number }[] {
+  if (Array.isArray(row.tiers) && row.tiers.length) return row.tiers;
+  const synthesized: { minQty: number; price: number }[] = [];
+  if (row.retail != null) synthesized.push({ minQty: 1, price: Number(row.retail) });
+  if (row.wholesale != null && Number(row.pack_qty) > 0) synthesized.push({ minQty: Number(row.pack_qty), price: Number(row.wholesale) });
+  return synthesized;
+}
+
+// Every quantity breakpoint this price row has, each resolved into the
+// same agent-facing floor price computeFloorPrice() would return for a
+// real order placed at exactly that quantity -- markup and discount
+// already applied, cost never included. Lets the app show the whole
+// price curve at once (so an agent can see what a bigger order would
+// cost before typing it) without exposing anything beyond what a single
+// "price" call already exposes for one quantity at a time.
+function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct: number, discountRetailPct: number) {
+  const tiers = effectiveTiers(priceRow).slice().sort((a, b) => a.minQty - b.minQty);
+  return tiers.map((t) => {
+    const resolved = computeFloorPrice(product, priceRow, t.minQty, discountWholesalePct, discountRetailPct);
+    return resolved ? { minQty: t.minQty, unitPrice: resolved.floorPrice, tier: resolved.tier } : null;
+  }).filter((x): x is { minQty: number; unitPrice: number; tier: MarkupKind } => x != null);
 }
 
 // Resolves the two agent-discount percentages that apply to a product:
@@ -119,6 +180,19 @@ function resolveDiscountPcts(product: any, presets: any) {
     discountWholesalePct: product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct,
     discountRetailPct: product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct,
   };
+}
+
+// Duplicated verbatim from agent-submit-order (see that file's module
+// header for why) -- how many days a cluster item must have already been
+// starred before a sale of it earns its bonus there. Sent to the agent
+// app purely so it can explain, before a sale happens, why a given
+// cluster item's bonus isn't live yet -- this function never gates
+// anything itself here, agent-submit-order's own copy is the only one
+// that actually decides what a real order earns.
+const DEFAULT_CLUSTER_WAIT_DAYS = 7;
+function resolveClusterWaitDays(presets: any): number {
+  const v = presets?.agentClusterWaitDays;
+  return v != null && v !== "" ? Math.max(0, Number(v) || 0) : DEFAULT_CLUSTER_WAIT_DAYS;
 }
 
 Deno.serve(async (req) => {
@@ -178,7 +252,12 @@ Deno.serve(async (req) => {
         const result = computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct);
         if (!result) return json({ ok: true, available: false });
         const { cost, ...safeResult } = result; // cost never leaves this function
-        return json({ ok: true, available: true, ...safeResult });
+        // The full breakpoint ladder travels alongside the single resolved
+        // price for the requested qty -- the app fetches this once when an
+        // item's detail panel opens, then resolves every further qty/unit
+        // change against it locally instead of calling this action again.
+        const tiers = buildFloorPriceLadder(product, best, discountWholesalePct, discountRetailPct);
+        return json({ ok: true, available: true, ...safeResult, tiers });
       }
 
       // action === "list": every product with safe display fields plus a
@@ -218,6 +297,23 @@ Deno.serve(async (req) => {
           if (!priced && best && Number(best.pack_qty) > 0) {
             priced = computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct);
           }
+          // The single cheapest breakpoint this item has, only when it
+          // actually beats the headline price above -- lets Browse tease
+          // "buy more, pay less" with one number instead of shipping the
+          // whole ladder for every item in a list that could be hundreds
+          // long (the add-to-quote panel fetches the full ladder itself,
+          // once, only for the one item an agent has actually opened).
+          let bestTierMinQty: number | null = null, bestTierPrice: number | null = null;
+          if (best) {
+            const ladder = buildFloorPriceLadder(p, best, discountWholesalePct, discountRetailPct);
+            if (ladder.length > 1) {
+              const cheapest = ladder.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a));
+              if (priced && cheapest.unitPrice < priced.floorPrice) {
+                bestTierMinQty = cheapest.minQty;
+                bestTierPrice = cheapest.unitPrice;
+              }
+            }
+          }
           const variantLabel = variantIdx != null && Array.isArray(p.variants) && p.variants[variantIdx]
             ? Object.values(p.variants[variantIdx].combo || {}).join(" / ")
             : "";
@@ -237,6 +333,8 @@ Deno.serve(async (req) => {
             unit: priced?.unit ?? "",
             packUnit: priced?.packUnit ?? "",
             packQty: priced?.packQty ?? 0,
+            bestTierMinQty,
+            bestTierPrice,
           };
         });
       });
@@ -245,14 +343,24 @@ Deno.serve(async (req) => {
     }
 
     if (action === "promotions") {
-      // "live" (default) is what Browse/Sell has always gotten -- only
-      // promotions actually earnable right now, so a star/join button
-      // never shows for something not yet open or already over. "all" is
-      // for Earnings' Bonus Opportunities list, which needs to *show* the
-      // upcoming and recently-ended ones too (with a lifecycle pill), not
-      // just the currently-active ones -- so it also gets starts_at/
-      // ends_at, which "live" callers have never needed since every item
-      // they get back is by definition active today.
+      // clusterWaitDays travels with every response (even an empty one) so
+      // the frontend can explain, for any cluster item, exactly how many
+      // days are left before a sale of it would actually earn its bonus --
+      // agents have no RLS access to app_settings/presets directly (same
+      // reasoning as everywhere else in this file), so this is the only
+      // way that number ever reaches them.
+      const { data: settingsRow, error: settingsErr } = await admin
+        .from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle();
+      if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
+      const clusterWaitDays = resolveClusterWaitDays(settingsRow?.presets || {});
+
+      // "live" (default) is what Browse's cluster badges have always
+      // gotten -- only promotions earnable right now. "all" is for
+      // Earnings' Bonus Opportunities list, which also needs to *show*
+      // upcoming and recently-ended ones (with a lifecycle pill), not
+      // just active ones -- kept as a separate scope rather than changing
+      // what Browse gets, so a badge never implies an item is joinable
+      // before it's actually started.
       const scope = body.scope === "all" ? "all" : "live";
       const today = new Date().toISOString().slice(0, 10);
       const recentCutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -270,12 +378,9 @@ Deno.serve(async (req) => {
           const started = !pr.starts_at || pr.starts_at <= today;
           return started && notEnded;
         }
-        // scope === "all": keep anything not yet ended, plus anything
-        // that ended within the last 30 days so Completed has a little
-        // history instead of items just vanishing the day they end.
         return notEnded || (pr.ends_at as string) >= recentCutoff;
       });
-      if (!filtered.length) return json({ ok: true, items: [] });
+      if (!filtered.length) return json({ ok: true, items: [], clusterWaitDays });
 
       const productIds = [...new Set(filtered.map((pr) => pr.product_id))];
       const { data: products, error: productsErr } = await admin
@@ -298,24 +403,11 @@ Deno.serve(async (req) => {
           category: p?.category || "",
           bonusType: pr.bonus_type,
           bonusValue: Number(pr.bonus_value),
-          startsAt: pr.starts_at,
-          endsAt: pr.ends_at,
+          startsAt: pr.starts_at || null,
+          endsAt: pr.ends_at || null,
         };
       });
-      return json({ ok: true, items });
-    }
-
-    if (action === "payment_providers") {
-      // shop_payment_providers has no agent-facing RLS policy at all --
-      // its `credentials` column holds live MTN/Airtel API secrets, so an
-      // agent must never be able to select against that table directly.
-      // This hand-picks the one boolean an agent actually needs (is this
-      // provider even usable) the same way "list"/"promotions" above
-      // hand-pick safe fields off products/prices/agent_promotions.
-      const { data: providers, error: providersErr } = await admin
-        .from("shop_payment_providers").select("provider, enabled").eq("shop_id", shopId).eq("enabled", true);
-      if (providersErr) return json({ error: providersErr.message, stage: "payment_providers_list" }, 500);
-      return json({ ok: true, providers: (providers || []).map((p) => p.provider) });
+      return json({ ok: true, items, clusterWaitDays });
     }
 
     return json({ error: `Unknown action: ${action}` }, 400);
