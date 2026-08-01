@@ -1331,6 +1331,15 @@ async function ensureAgentAuth(){
     throw new Error(`This login is linked to ${agentRows.length} different shops, so the app can't tell which one to open. Ask the shop to remove the duplicate agent account.`);
   }
   const agentRow = agentRows[0];
+  // A retired agent (0028) still has a row -- their id stays reserved so
+  // it can't be reused -- but current_agent_id() no longer resolves for
+  // them, so every policy is closed and every read would come back empty.
+  // Blocking here is what stops that landing as a fully-loaded app with
+  // no orders, no clients and no earnings: the exact "my data was
+  // deleted" screen this whole line of work exists to prevent.
+  if(agentRow.retired_at){
+    throw new Error("This agent account has been retired, so it can't be used to sign in. Contact the shop if that's not right.");
+  }
   currentShopId = agentRow.shop_id;
   myAgent = { id: agentRow.id, name: agentRow.name, phone: agentRow.phone, email: agentRow.email, paymentTerm: agentRow.payment_term };
   hideAuthOverlay();

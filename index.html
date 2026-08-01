@@ -4030,7 +4030,7 @@ async function loadData(shopId){
   return {
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
-    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, notes:a.notes||'', userId:a.user_id||null})),
+    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
@@ -4119,7 +4119,7 @@ function buildSyncRows(d, shopId){
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
-    agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, payment_term:a.paymentTerm, unavailable:!!a.unavailable, notes:a.notes})),
+    agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
     customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
@@ -8589,16 +8589,22 @@ document.getElementById('st_search').addEventListener('input', e=>renderStaff(e.
 // ever shows an agent their own current term, never lets them change it.
 function agentCardHTML(a){
   const initials = (a.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  return `<div class="supplier-card ${a.unavailable?'staff-card-unavailable':''}">
+  // A retired agent keeps their card on purpose -- it's the only thing
+  // telling an admin why that Agent ID is still taken when they try to
+  // reuse it, which is the whole point of retiring rather than deleting.
+  const retired = !!a.retiredAt;
+  return `<div class="supplier-card ${(a.unavailable||retired)?'staff-card-unavailable':''}">
     <div class="sc-head">
       <div class="sc-avatar">${esc(initials)}</div>
       <div class="sc-title">
         <div class="sc-name">${esc(a.name)}</div>
-        <div class="sc-id">${esc(a.id)}</div>
+        <div class="sc-id">${esc(a.id)}${retired?' &middot; Retired':''}</div>
       </div>
       <div class="sc-actions">
-        <button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable?'Mark active':'Mark inactive'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
-        <button class="pc-icon-btn danger" title="Remove agent" onclick="deleteAgent('${esc(a.id)}')">${ICON_TRASH}</button>
+        ${retired
+          ? `<button class="pc-icon-btn" title="Restore agent" onclick="restoreAgent('${esc(a.id)}')">${ICON_RESTOCK}</button>`
+          : `<button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable?'Mark active':'Mark inactive'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
+             <button class="pc-icon-btn danger" title="Retire agent" onclick="retireAgent('${esc(a.id)}')">${ICON_TRASH}</button>`}
       </div>
     </div>
     <div class="sc-details">
@@ -8607,7 +8613,7 @@ function agentCardHTML(a){
     </div>
     <div class="field" style="margin-top:10px;">
       <label>Payment terms</label>
-      <select class="ag-payment-term-select" data-id="${esc(a.id)}">
+      <select class="ag-payment-term-select" data-id="${esc(a.id)}" ${retired?'disabled':''}>
         <option value="prepay" ${a.paymentTerm==='prepay'?'selected':''}>Pay before we prepare</option>
         <option value="pay_on_delivery" ${a.paymentTerm==='pay_on_delivery'?'selected':''}>Pay on delivery</option>
       </select>
@@ -8616,7 +8622,11 @@ function agentCardHTML(a){
 }
 function renderAgents(filter=''){
   const tokens = searchTokens(filter);
-  let rows = (data.agents||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  // Retired agents sink to the bottom rather than disappearing -- still
+  // findable (and still visibly holding their Agent ID), just out of the
+  // way of the active roster.
+  let rows = (data.agents||[]).slice().sort((a,b)=>
+    (!!a.retiredAt - !!b.retiredAt) || a.name.localeCompare(b.name));
   if(tokens.length){
     rows = rows.filter(a=>matchesAllTokens((a.name+' '+(a.phone||'')+' '+a.id).toLowerCase(), tokens));
   }
@@ -8643,12 +8653,24 @@ function toggleAgentAvailability(id){
   saveData(); renderAgents(document.getElementById('ag_search').value);
   toast(a.unavailable ? `${a.name} marked inactive` : `${a.name} marked active`);
 }
-function deleteAgent(id){
+// Retires rather than deletes. Removing the row outright used to free the
+// agent's id for reuse, and since an order's owner is nothing but
+// (shop_id, agent_id), the next person given that id silently inherited
+// this agent's whole order history. Keeping the row keeps the id taken
+// and the attribution intact; see 0028_retire_agents_instead_of_deleting.
+function retireAgent(id){
   const a = data.agents.find(x=>x.id===id); if(!a) return;
-  if(!confirm(`Remove ${a.name} as an agent? Their private client list will be deleted too. Orders they already submitted will keep showing their name.`)) return;
-  data.agents = data.agents.filter(x=>x.id!==id);
-  saveData(); renderAgents();
-  toast('Agent removed');
+  if(!confirm(`Retire ${a.name} as an agent? They'll lose access immediately and their private client list will be hidden. Orders they already submitted stay on record under their name, and their Agent ID stays reserved so it can never be reused.`)) return;
+  a.retiredAt = new Date().toISOString();
+  saveData(); renderAgents(document.getElementById('ag_search').value);
+  toast(`${a.name} retired`);
+}
+function restoreAgent(id){
+  const a = data.agents.find(x=>x.id===id); if(!a) return;
+  if(!confirm(`Restore ${a.name}? They'll get access back, along with their own clients and order history.`)) return;
+  a.retiredAt = null;
+  saveData(); renderAgents(document.getElementById('ag_search').value);
+  toast(`${a.name} restored`);
 }
 function resetAgentForm(){
   ['ag_id','ag_name','ag_phone','ag_email'].forEach(id=>document.getElementById(id).value='');
@@ -8662,7 +8684,16 @@ document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
   const name = document.getElementById('ag_name').value.trim();
   const email = document.getElementById('ag_email').value.trim();
   if(!id || !name || !email){ toast('Agent ID, name and email are required'); return; }
-  if(data.agents.some(a=>a.id===id)){ toast('That Agent ID already exists'); return; }
+  // Retired agents are still in data.agents, so this now also blocks
+  // reusing a departed agent's id -- which is exactly the point: their
+  // orders are still attributed to it.
+  const clash = data.agents.find(a=>a.id===id);
+  if(clash){
+    toast(clash.retiredAt
+      ? `Agent ID ${id} belongs to ${clash.name}, who is retired. Restore them instead, or pick a different ID.`
+      : 'That Agent ID already exists');
+    return;
+  }
   const phone = document.getElementById('ag_phone').value.trim();
   const paymentTerm = document.getElementById('ag_payment_term').value;
   const btn = document.getElementById('ag_invite_save');
@@ -8671,7 +8702,7 @@ document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
     const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, agentId: id, name, phone, email, paymentTerm } });
     if(error) throw error;
     if(res && res.error) throw new Error(res.error);
-    data.agents.push({ id, name, phone, email, paymentTerm, unavailable:false, userId: (res && res.userId) || null });
+    data.agents.push({ id, name, phone, email, paymentTerm, unavailable:false, retiredAt:null, userId: (res && res.userId) || null });
     saveData();
     closeModal('agentModal'); resetAgentForm(); renderAgents();
     toast(`Invite sent to ${email}`);
