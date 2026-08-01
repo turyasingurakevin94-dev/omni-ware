@@ -40,6 +40,15 @@ const env = {
     cash.txns = cash.txns.filter((x) => !set.has(x.id));
   },
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
+  // Purchase invoice ids come from the database's block allocator now (0034,
+  // see row-id-allocation.test.js). Stubbed with its offline path -- the same
+  // counter this used to increment directly.
+  allocRowId: (name) => {
+    if (name !== 'purchaseInvoice') throw new Error(`unexpected row id kind in this scope: ${name}`);
+    const id = Number(data.nextPurchaseInvoiceId) || 1;
+    data.nextPurchaseInvoiceId = id + 1;
+    return id;
+  },
 };
 
 const FNS = [

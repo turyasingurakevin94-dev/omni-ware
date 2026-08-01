@@ -46,6 +46,17 @@ const env = {
   todayISO: () => '2026-08-01',
   productVariantLabel: (p, v) => (v == null ? p.name : `${p.name} / ${v}`),
   saveData: () => {},
+  // Stock log and cash txn ids come from the database's block allocator now
+  // (0034, see row-id-allocation.test.js). Stubbed with its offline path --
+  // which is exactly the counter these routines used to increment directly --
+  // so the ids here behave the way the app's do without needing a server.
+  allocRowId: (name) => {
+    const counter = { stockLog: 'nextStockLogId', cashTxn: 'nextCashTxnId' }[name];
+    if (!counter) throw new Error(`unexpected row id kind in this scope: ${name}`);
+    const id = Number(data[counter]) || 1;
+    data[counter] = id + 1;
+    return id;
+  },
   // addCashReceipt pokes at the Cash Book tab to decide whether to re-render;
   // returning null from getElementById makes it skip that entirely.
   document: { getElementById: () => null },

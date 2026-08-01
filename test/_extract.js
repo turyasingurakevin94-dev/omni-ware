@@ -27,8 +27,13 @@ function read(rel) {
 // Brace-matches a top-level `function name(...) { ... }` out of a source
 // file. Naive about braces inside strings and comments, which is fine for
 // the small helpers these tests target; anything it can't match throws.
+//
+// The optional `async` has to be part of the match, not just tolerated
+// before it: anchoring on `function` alone would slice from there and drop
+// the keyword, turning an async function into one whose `await`s no longer
+// parse.
 function extractFunction(src, name, where) {
-  const m = new RegExp('function\\s+' + name + '\\s*\\(').exec(src);
+  const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(src);
   if (!m) throw new Error(`could not find ${name}() in ${where}`);
   const open = src.indexOf('{', m.index);
   if (open < 0) throw new Error(`no body for ${name}() in ${where}`);

@@ -4075,7 +4075,13 @@ async function loadData(shopId){
     cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:t.account, type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time})),
     nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
     quote,
-    nextQuoteLineId: (quote.items && quote.items.length) ? Math.max(0,...quote.items.map(i=>i.id||0))+1 : 1,
+    // lineId, not id -- quote items have never had an `id`, so this read
+    // undefined and reset to 1 on every load. The shared draft outlives a
+    // reload, so the next item added took a lineId a line already had, and
+    // renderQuoteItems() wires its handlers by that key: editing the new
+    // line edited the old one, and removing it removed both. Stays a local
+    // counter (it numbers lines inside the draft payload, not DB rows).
+    nextQuoteLineId: (quote.items && quote.items.length) ? Math.max(0,...quote.items.map(i=>i.lineId||0))+1 : 1,
     savedQuotes: (savedQuotesR.data||[]).map(q=>({
       id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
       invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
@@ -6208,7 +6214,7 @@ document.getElementById('q_save_btn').addEventListener('click', ()=>{
     // that has to be updated every time an order grows a field, and isn't;
     // spreading is correct by default instead.
     ...(existing || {}),
-    id: data.quote.savedId || data.nextSavedQuoteId++,
+    id: data.quote.savedId || allocRowId('savedQuote'),
     client: {...data.quote.client},
     date: data.quote.date,
     items: JSON.parse(JSON.stringify(data.quote.items)),
@@ -6540,7 +6546,7 @@ function applyInvoiceDebtCharge(q, desired){
   if(!c){ q.debtCharged = desired; return; }
   c.debt = Math.max(0, (Number(c.debt)||0) + delta);
   if(!c.debtLog) c.debtLog = [];
-  c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type: delta>0?'charge':'payment', amount: Math.abs(delta), note: `Auto-sync — ${invoiceNumberLabel(q)}`});
+  c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type: delta>0?'charge':'payment', amount: Math.abs(delta), note: `Auto-sync — ${invoiceNumberLabel(q)}`});
   q.debtCharged = desired;
   q.customerId = c.id;
 }
@@ -6677,7 +6683,7 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
   if(unapplied>0){
     c.debt = Math.max(0, (Number(c.debt)||0) - unapplied);
     const cashTxnId = addCashReceipt(account, unapplied, category || 'Debt Payment', note || `Payment — ${c.name}`, date);
-    c.debtLog.push({id: data.nextCustomerDebtLogId++, date: date || todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
+    c.debtLog.push({id: allocRowId('debtLog'), date: date || todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
   }
   return applied + unapplied;
 }
@@ -7426,7 +7432,7 @@ function generatePurchaseInvoicesForQuote(q){
   });
   Object.keys(bySupplier).forEach(supplierId=>{
     data.purchaseInvoices.push({
-      id: data.nextPurchaseInvoiceId++,
+      id: allocRowId('purchaseInvoice'),
       quoteId: q.id,
       customerName: (q.client && q.client.name) || '',
       supplierId,
@@ -7459,7 +7465,7 @@ function removePurchaseInvoicesForQuote(quoteId){
 function generatePurchaseInvoiceForRestock(productId, variantIdx, displayName, qty, price, supplierId, priceRow){
   if(!supplierId) return;
   data.purchaseInvoices.push({
-    id: data.nextPurchaseInvoiceId++,
+    id: allocRowId('purchaseInvoice'),
     quoteId: null,
     customerName: '',
     supplierId,
@@ -9446,7 +9452,7 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   if(!c.debtLog) c.debtLog = [];
   if(editingCustomerDebtType==='charge'){
     c.debt = Math.max(0, (Number(c.debt)||0) + amount);
-    c.debtLog.push({id: data.nextCustomerDebtLogId++, date: todayISO(), type:'charge', amount, note, cashTxnId:null});
+    c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type:'charge', amount, note, cashTxnId:null});
   } else {
     const account = document.getElementById('cd_account').value;
     const pickerVisible = document.getElementById('cd_invoice_picker_section').style.display !== 'none';
@@ -10430,6 +10436,97 @@ function fillIssuedId(fieldId, kind, prefix, pad, existing){
   });
 }
 function idIsPending(id){ return !id || id === ID_PENDING; }
+
+/* ---- Numeric row ids, issued in blocks by the database ----------------
+   The companion to issueEntityId() above, for the surrogate ids the user
+   never sees typed: prices, stock log entries, cash transactions, saved
+   quotes, purchase invoices, debt log entries. Same problem it solves --
+   two admins deriving the same "max + 1" and one upsert silently
+   overwriting the other -- but these can't use the same one-id-per-call
+   shape, because they're issued from synchronous code (addCashPayment()
+   runs mid-loop while allocating a supplier payment across invoices).
+
+   So the block is reserved up front and handed out locally. The
+   reservation is atomic (0034_server_side_row_ids), so no two clients ever
+   hold overlapping runs, and every call site stays synchronous.
+
+   data.nextXId stays as the offline fallback -- exactly the counter that
+   shipped before, still monotonic -- so a dropped request degrades to
+   "safe but racy" rather than blocking the shop from taking money. */
+const ROW_ID_KINDS = {
+  price:           {kind:'row:price',            counter:'nextPriceId'},
+  stockLog:        {kind:'row:stock_log',        counter:'nextStockLogId'},
+  cashTxn:         {kind:'row:cash_txn',         counter:'nextCashTxnId'},
+  savedQuote:      {kind:'row:saved_quote',      counter:'nextSavedQuoteId'},
+  purchaseInvoice: {kind:'row:purchase_invoice', counter:'nextPurchaseInvoiceId'},
+  debtLog:         {kind:'row:debt_log',         counter:'nextCustomerDebtLogId'},
+};
+// Small, because saved_quotes and purchase_invoices ids are formatted into
+// the INV-/PINV- document numbers -- every unused id in a block is a gap in
+// that sequence. Topped up before it runs dry so the size doesn't cost
+// throughput.
+const ROW_ID_BLOCK = 10;
+const ROW_ID_REFILL_AT = 3;
+let rowIdBlocks = {};
+const rowIdRefilling = {};
+
+// Blocks belong to one shop. Carrying them across a shop switch would hand
+// shop B ids reserved against shop A's counter, which is exactly the
+// collision this exists to prevent.
+function resetRowIdBlocks(){
+  rowIdBlocks = {};
+  Object.keys(rowIdRefilling).forEach(k=> delete rowIdRefilling[k]);
+}
+
+async function refillRowIdBlocks(names){
+  const want = (names||[]).filter(n=> ROW_ID_KINDS[n] && !rowIdRefilling[n]);
+  if(!want.length || !currentShopId) return;
+  want.forEach(n=> rowIdRefilling[n] = true);
+  try{
+    // The floor is the local counter, so ids handed out during an outage
+    // are never reissued once the connection is back.
+    const floors = {};
+    want.forEach(n=>{
+      floors[ROW_ID_KINDS[n].kind] = Math.max(0, (Number(data[ROW_ID_KINDS[n].counter])||1) - 1);
+    });
+    const { data: got, error } = await sb.rpc('next_row_id_blocks', {
+      p_shop_id: currentShopId,
+      p_kinds: want.map(n=> ROW_ID_KINDS[n].kind),
+      p_count: ROW_ID_BLOCK,
+      p_floors: floors
+    });
+    if(error || !got) throw error || new Error('no block returned');
+    want.forEach(n=>{
+      const first = Number(got[ROW_ID_KINDS[n].kind]);
+      if(!first) return;
+      rowIdBlocks[n] = {next: first, end: first + ROW_ID_BLOCK - 1};
+      const counter = ROW_ID_KINDS[n].counter;
+      if((Number(data[counter])||0) < first) data[counter] = first;
+    });
+  }catch(err){
+    console.warn('Row id blocks unavailable, using local counters:', err && err.message);
+  }finally{
+    want.forEach(n=> delete rowIdRefilling[n]);
+  }
+}
+
+function allocRowId(name){
+  const counter = ROW_ID_KINDS[name].counter;
+  const b = rowIdBlocks[name];
+  if(b && b.next <= b.end){
+    const id = b.next++;
+    // Keep the fallback above whatever the block has issued, so dropping to
+    // it mid-session can't rewind onto an id already used.
+    if((Number(data[counter])||0) <= id) data[counter] = id + 1;
+    if(b.end - b.next + 1 <= ROW_ID_REFILL_AT) refillRowIdBlocks([name]);
+    return id;
+  }
+  refillRowIdBlocks([name]);
+  const id = Number(data[counter])||1;
+  data[counter] = id + 1;
+  return id;
+}
+
 function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
@@ -10784,7 +10881,7 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
   const product = data.products.find(p=>p.id===productId);
   const label = product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId;
   data.stockLog.push({
-    id: data.nextStockLogId++, key, productId, variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
+    id: allocRowId('stockLog'), key, productId, variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
     label, type, delta: after-before, qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString(),
     cost: (type==='restock' && cost!=null && cost!=='') ? Number(cost) : null,
     supplierId: (type==='restock' && supplierId) ? supplierId : null
@@ -11338,7 +11435,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       };
       const keep = dups[0];
       data.prices = data.prices.filter(p=>!dups.includes(p));
-      data.prices.push({...record, id: keep ? keep.id : data.nextPriceId++, outOfStock: keep ? !!keep.outOfStock : false});
+      data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false});
       saved++;
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
@@ -11391,7 +11488,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     const dups = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
     const keep = dups[0];
     data.prices = data.prices.filter(p=>!dups.includes(p));
-    data.prices.push({...record, id: keep ? keep.id : data.nextPriceId++, outOfStock: keep ? !!keep.outOfStock : false});
+    data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false});
   }
   saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
   toast('Price entry saved');
@@ -11606,7 +11703,7 @@ let editingCashTxnColumn = null; // 'in' | 'out'
 // is ever reversed (invoice un-invoiced/deleted, payment deleted, etc).
 function addCashReceipt(account, amount, category, description, date){
   if(!amount || amount<=0) return null;
-  const id = data.nextCashTxnId++;
+  const id = allocRowId('cashTxn');
   data.cashTxns.push({
     id,
     date: date || todayISO(),
@@ -11637,7 +11734,7 @@ function removeCashTxnsByIds(ids){
 // again if the payment is ever reversed).
 function addCashPayment(account, amount, category, description, date){
   if(!amount || amount<=0) return null;
-  const id = data.nextCashTxnId++;
+  const id = allocRowId('cashTxn');
   data.cashTxns.push({
     id,
     date: date || todayISO(),
@@ -12032,7 +12129,7 @@ function saveCashTxn(column){
     const idx = data.cashTxns.findIndex(t=>t.id===editingCashTxnId);
     data.cashTxns[idx] = {...record, id: editingCashTxnId};
   } else {
-    data.cashTxns.push({...record, id: data.nextCashTxnId++});
+    data.cashTxns.push({...record, id: allocRowId('cashTxn')});
   }
   saveData();
   closeModal(column==='in' ? 'cashInModal' : 'cashOutModal');
@@ -13625,6 +13722,12 @@ async function boot(){
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
     initLastSynced(data, currentShopId);
+    // Reserve this session's row id blocks before anything can be created.
+    // Awaited so the first save of the session already uses server-issued
+    // ids rather than falling back; it swallows its own errors, so a failed
+    // allocation degrades to the local counters instead of blocking boot.
+    resetRowIdBlocks();
+    await refillRowIdBlocks(Object.keys(ROW_ID_KINDS));
     if(dedupeLoadedPrices(data)) await saveData();
     await migrateBase64ProductImages(currentShopId);
   } catch(e){
