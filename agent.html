@@ -187,6 +187,7 @@
   .ag-item-result-name{font-size:13.5px;font-weight:700;letter-spacing:-0.005em;}
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
   .ag-item-result-price.money{font-family:var(--font-money);font-size:13px;letter-spacing:-0.01em;color:var(--accent-dark);font-weight:800;}
+  .ag-item-result.active{background:var(--accent-soft);}
 
   .ag-cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
   .ag-cart-row:last-child{border-bottom:none;}
@@ -415,6 +416,7 @@
   .ag-variant-chips{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 6px;}
   .ag-vchip{all:unset;cursor:pointer;font-size:10.5px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);}
   .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ag-vchip-more{border-style:dashed;}
 
   /* ---- Profile card + menu (Account) ---- */
   .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
@@ -2625,6 +2627,53 @@ function selectedVariantFor(group){
   const found = key!=null ? group.variants.find(v=>String(v.variantIdx==null?'':v.variantIdx)===key) : null;
   return found || group.variants[0];
 }
+// Past this many variants, a flat chip row wraps into a wall of pills
+// that pushes the price out of the card -- cap it and let the rest
+// live in the picker sheet instead. The selected chip always stays
+// visible so switching via the sheet doesn't make it vanish again.
+const MAX_INLINE_VCHIPS = 4;
+function vchipHTML(productId, v, selected){
+  return `<button type="button" class="ag-vchip ${v===selected?'active':''}" data-chip-pid="${esc(productId)}" data-chip-vidx="${v.variantIdx==null?'':v.variantIdx}">${esc(v.variantLabel||'—')}</button>`;
+}
+function variantChipsHTML(group, selected){
+  if(group.variants.length <= MAX_INLINE_VCHIPS){
+    return group.variants.map(v=>vchipHTML(group.productId, v, selected)).join('');
+  }
+  const visible = [selected, ...group.variants.filter(v=>v!==selected)].slice(0, MAX_INLINE_VCHIPS - 1);
+  const hidden = group.variants.length - visible.length;
+  return visible.map(v=>vchipHTML(group.productId, v, selected)).join('')
+    + `<button type="button" class="ag-vchip ag-vchip-more" data-more-pid="${esc(group.productId)}">+${hidden} more</button>`;
+}
+// Full list for products with too many variants to fit as chips --
+// picking a row here does exactly what tapping a chip does (updates
+// the selection and patches the card), just from a scrollable list.
+function openVariantPickerSheet(productId){
+  const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
+  if(!group) return;
+  const selected = selectedVariantFor(group);
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `<div class="ag-overlay-card">
+    <div class="ag-overlay-title">${esc(group.name)} — choose an option</div>
+    <div>${group.variants.map(v=>`
+      <div class="ag-item-result ${v===selected?'active':''}" data-vidx="${v.variantIdx==null?'':v.variantIdx}">
+        <div class="ag-item-result-body">
+          <div class="ag-item-result-name">${esc(v.variantLabel||'—')}</div>
+          <div class="ag-item-result-price money">${fmtAmountPerUnit(v.floorPrice, v.unit)}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  el.querySelectorAll('.ag-item-result[data-vidx]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      browseSelectedVariant.set(productId, row.dataset.vidx);
+      document.body.removeChild(el);
+      refreshOneBrowseCard(productId);
+    });
+  });
+}
 function browseGroupCardHTML(group, promoted){
   const selected = selectedVariantFor(group);
   const key = `${selected.productId}::${selected.variantIdx==null?'':selected.variantIdx}`;
@@ -2648,7 +2697,7 @@ function browseGroupCardHTML(group, promoted){
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(group.name)}</div>
       ${hasVariants
-        ? `<div class="ag-variant-chips">${group.variants.map(v=>`<button type="button" class="ag-vchip ${v===selected?'active':''}" data-chip-pid="${esc(group.productId)}" data-chip-vidx="${v.variantIdx==null?'':v.variantIdx}">${esc(v.variantLabel||'—')}</button>`).join('')}</div>`
+        ? `<div class="ag-variant-chips">${variantChipsHTML(group, selected)}</div>`
         : (selected.variantLabel ? `<div class="ag-grid-variant">${esc(selected.variantLabel)}</div>` : '')}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
       ${selected.tier ? `<div class="ag-price-tier ${esc(selected.tier)}">${priceTierBadgeHTML(selected.tier)}</div>` : ''}
@@ -2834,6 +2883,11 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
   if(chipBtn){
     browseSelectedVariant.set(chipBtn.dataset.chipPid, chipBtn.dataset.chipVidx);
     refreshOneBrowseCard(chipBtn.dataset.chipPid);
+    return;
+  }
+  const moreBtn = e.target.closest('[data-more-pid]');
+  if(moreBtn){
+    openVariantPickerSheet(moreBtn.dataset.morePid);
     return;
   }
   const quickBtn = e.target.closest('[data-quickadd-pid]');
