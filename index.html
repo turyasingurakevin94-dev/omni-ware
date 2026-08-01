@@ -792,6 +792,10 @@
     width:28px;height:28px;border-radius:7px;color:var(--ink-soft);border:1px solid var(--line);
   }
   .pc-icon-btn:hover{color:var(--navy);border-color:var(--ink-soft);}
+  /* all:unset above strips the browser's own disabled styling, so a
+     disabled icon button would otherwise look identical to a live one. */
+  .pc-icon-btn[disabled]{opacity:.35;cursor:not-allowed;}
+  .pc-icon-btn[disabled]:hover{color:var(--ink-soft);border-color:var(--line);}
   .pc-icon-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
   .pc-icon-btn-active-danger{color:var(--danger);border-color:var(--danger);}
   .pc-icon-btn .icon{width:14px;height:14px;}
@@ -6252,6 +6256,20 @@ document.getElementById('q_save_btn').addEventListener('click', ()=>{
 function loadSavedQuote(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  // An invoiced order has already moved stock, and each line remembers how
+  // much it took in _stockTaken so un-invoicing can put exactly that back.
+  // Editing the lines breaks that pairing: a removed line takes its
+  // _stockTaken with it and its stock never returns, an added line was
+  // never deducted in the first place, and a changed quantity leaves
+  // _stockTaken describing a deduction that no longer matches. It also
+  // moves the invoice total out from under any payments already recorded
+  // against it. Undoing the invoice first reverses the stock cleanly and
+  // is the only safe way in -- the button is disabled for the same reason,
+  // this guard just makes the rule hold however it's reached.
+  if(q.invoiced){
+    toast('This order is invoiced — undo the invoice first if you need to change it');
+    return;
+  }
   data.quote = {
     client: {...q.client},
     date: q.date,
@@ -6789,7 +6807,7 @@ function renderSavedQuotes(){
           <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div class="sq-card-icons">
-          <button type="button" class="pc-icon-btn sq-edit" data-id="${q.id}" title="Edit quote">${ICON_EDIT}</button>
+          <button type="button" class="pc-icon-btn sq-edit" data-id="${q.id}" ${q.invoiced?'disabled':''} title="${q.invoiced?'Invoiced — undo the invoice first to edit this order':'Edit quote'}">${ICON_EDIT}</button>
           ${q.status==='completed'
             ? `<button type="button" class="pc-icon-btn sq-invoice-btn${q.invoiced?' is-invoiced':''} sq-toggle-invoice" data-id="${q.id}" title="${q.invoiced? `Invoiced — ${esc(invoiceNumberLabel(q))} — click to undo` : 'Convert this completed order into an invoice'}">${q.invoiced
                 ? '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'
