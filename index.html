@@ -6182,27 +6182,44 @@ document.getElementById('q_save_btn').addEventListener('click', ()=>{
   ensureQuote();
   if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
   const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
+  const existing = idxExisting>-1 ? data.savedQuotes[idxExisting] : null;
   const record = {
+    // Spread the existing order FIRST so anything already on it survives by
+    // default, then override only what this form actually edits.
+    //
+    // This used to be an explicit field list, which silently dropped every
+    // field it didn't happen to mention -- originAgentId, agentClientId,
+    // deliveryMode, deliveryAddress, agentPaymentStatus, and the worker
+    // pick-and-pack fields (pickingStatus, pickCursor, pickingAssignedAt,
+    // workerAcceptedAt). Re-saving an agent's order through this form
+    // therefore wiped its payment status AND detached it from its agent
+    // entirely, so the order vanished from that agent's app. A list like
+    // that has to be updated every time an order grows a field, and isn't;
+    // spreading is correct by default instead.
+    ...(existing || {}),
     id: data.quote.savedId || data.nextSavedQuoteId++,
     client: {...data.quote.client},
     date: data.quote.date,
     items: JSON.parse(JSON.stringify(data.quote.items)),
     savedAt: new Date().toISOString(),
-    status: idxExisting>-1 ? data.savedQuotes[idxExisting].status : 'draft',
+    // The rest re-state defaults for a brand-new record, and normalise
+    // types on an existing one (the spread above already carried the
+    // values through).
+    status: existing ? existing.status : 'draft',
     // When this step was entered — powers the Order Tracking board's
     // overdue warning. Only setSavedQuoteStatus() ever advances it;
     // re-saving the quote's own content (this record) must not reset it.
-    stageEnteredAt: idxExisting>-1 ? (data.savedQuotes[idxExisting].stageEnteredAt || Date.now()) : Date.now(),
-    assignedWorkerId: idxExisting>-1 ? (data.savedQuotes[idxExisting].assignedWorkerId||null) : null,
-    assignedDeliveryId: idxExisting>-1 ? (data.savedQuotes[idxExisting].assignedDeliveryId||null) : null,
-    invoiced: idxExisting>-1 ? !!data.savedQuotes[idxExisting].invoiced : false,
-    invoicedAt: idxExisting>-1 ? (data.savedQuotes[idxExisting].invoicedAt||null) : null,
-    invoicedTs: idxExisting>-1 ? (data.savedQuotes[idxExisting].invoicedTs||null) : null,
-    amountPaid: idxExisting>-1 ? (Number(data.savedQuotes[idxExisting].amountPaid)||0) : 0,
-    payments: idxExisting>-1 ? (data.savedQuotes[idxExisting].payments||[]) : [],
-    voided: idxExisting>-1 ? !!data.savedQuotes[idxExisting].voided : false,
-    customerId: idxExisting>-1 ? (data.savedQuotes[idxExisting].customerId||null) : null,
-    debtCharged: idxExisting>-1 ? (Number(data.savedQuotes[idxExisting].debtCharged)||0) : 0
+    stageEnteredAt: existing ? (existing.stageEnteredAt || Date.now()) : Date.now(),
+    assignedWorkerId: existing ? (existing.assignedWorkerId||null) : null,
+    assignedDeliveryId: existing ? (existing.assignedDeliveryId||null) : null,
+    invoiced: existing ? !!existing.invoiced : false,
+    invoicedAt: existing ? (existing.invoicedAt||null) : null,
+    invoicedTs: existing ? (existing.invoicedTs||null) : null,
+    amountPaid: existing ? (Number(existing.amountPaid)||0) : 0,
+    payments: existing ? (existing.payments||[]) : [],
+    voided: existing ? !!existing.voided : false,
+    customerId: existing ? (existing.customerId||null) : null,
+    debtCharged: existing ? (Number(existing.debtCharged)||0) : 0
   };
   const idx = data.savedQuotes.findIndex(q=>q.id===record.id);
   const wasUpdate = idx>-1;
