@@ -2263,8 +2263,21 @@ async function ensureMyCatalogueLoaded(){
     toast(isNetworkError(err) ? "You're offline -- couldn't load your catalogue" : `Could not load your catalogue: ${err.message||err}`);
   }
 }
+// Pre-fills the create-catalogue form, so whatever comes out has to pass
+// the same check the form applies moments later -- otherwise an agent is
+// shown a default their own form rejects, with nothing saying why.
+//
+// Two ways the old version could produce one: the pattern needs at least
+// three characters (first and last must be alphanumeric), so a short name
+// like "Jo" failed outright; and it stripped separators BEFORE slicing to
+// 40, so a cut landing on one put a trailing dash straight back.
 function suggestSlug(name){
-  return String(name||'agent').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'agent';
+  const base = String(name||'').toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-')
+    .slice(0,40)              // length first...
+    .replace(/^-+|-+$/g,'');  // ...then tidy whatever the cut exposed
+  if(base.length >= 3) return base;
+  return base ? `${base}-catalogue` : 'agent';
 }
 function catalogueUrl(slug){
   return `${location.origin}/catalogue.html?a=${encodeURIComponent(slug)}`;
