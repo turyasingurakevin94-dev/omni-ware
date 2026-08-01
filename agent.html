@@ -188,6 +188,9 @@
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
   .ag-item-result-price.money{font-family:var(--font-money);font-size:13px;letter-spacing:-0.01em;color:var(--accent-dark);font-weight:800;}
   .ag-item-result.active{background:var(--accent-soft);}
+  .ag-variant-sheet-list .ag-item-result{padding:12px 6px;}
+  .ag-variant-sheet-list .ag-item-result:not(:last-child){border-bottom:1px solid var(--line);}
+  .ag-variant-sheet-check{color:var(--accent);flex-shrink:0;}
 
   .ag-cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
   .ag-cart-row:last-child{border-bottom:none;}
@@ -2627,10 +2630,51 @@ function selectedVariantFor(group){
   const found = key!=null ? group.variants.find(v=>String(v.variantIdx==null?'':v.variantIdx)===key) : null;
   return found || group.variants[0];
 }
+// Most multi-variant products are really two independent choices stacked
+// into one label ("Gold / 4\"" = Color x Size) -- 3 colors x 3 sizes is 9
+// variants but only 3+3=6 distinct values. Splitting the label back into
+// its axes turns a wall of 9 chips into two short rows, the same shape
+// Amazon/Shopify use for color+size, with no popup needed at all.
+// Only trusted when every variant label splits into exactly two parts
+// (so a stray single-attribute variant can't silently corrupt the grid)
+// and the split actually saves chips over showing them flat.
+function parseVariantAxes(group){
+  if(group.variants.length <= 1) return null;
+  const parts = group.variants.map(v=>(v.variantLabel||'').split(' / ').map(s=>s.trim()));
+  if(parts.some(p=>p.length!==2 || !p[0] || !p[1])) return null;
+  const axis0 = [], axis1 = [];
+  parts.forEach(p=>{
+    if(!axis0.includes(p[0])) axis0.push(p[0]);
+    if(!axis1.includes(p[1])) axis1.push(p[1]);
+  });
+  if(axis0.length + axis1.length >= group.variants.length) return null;
+  return { axis0, axis1 };
+}
+function variantParts(v){ return (v.variantLabel||'').split(' / ').map(s=>s.trim()); }
+// A tapped axis value doesn't always have a variant for the OTHER axis's
+// current value (sparse matrices happen) -- fall back to the first variant
+// that matches the axis actually tapped, so a tap always lands somewhere
+// instead of silently doing nothing.
+function findVariantByAxis(group, axisIdx, value, otherIdx, otherValue){
+  const exact = group.variants.find(v=>{ const p=variantParts(v); return p[axisIdx]===value && p[otherIdx]===otherValue; });
+  if(exact) return exact;
+  return group.variants.find(v=>variantParts(v)[axisIdx]===value);
+}
+function axisChipHTML(productId, axisIdx, value, active){
+  return `<button type="button" class="ag-vchip ${active?'active':''}" data-axis-pid="${esc(productId)}" data-axis-idx="${axisIdx}" data-axis-value="${esc(value)}">${esc(value)}</button>`;
+}
+function axisChipsHTML(group, selected, axes){
+  const parts = variantParts(selected);
+  const row0 = axes.axis0.map(v=>axisChipHTML(group.productId, 0, v, v===parts[0])).join('');
+  const row1 = axes.axis1.map(v=>axisChipHTML(group.productId, 1, v, v===parts[1])).join('');
+  return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div>`;
+}
 // Past this many variants, a flat chip row wraps into a wall of pills
 // that pushes the price out of the card -- cap it and let the rest
-// live in the picker sheet instead. The selected chip always stays
-// visible so switching via the sheet doesn't make it vanish again.
+// live in the picker sheet instead. Only reached when the axis split
+// above doesn't apply (e.g. one free-text attribute with many values).
+// The selected chip always stays visible so opening the sheet and
+// picking something else doesn't make it vanish from the row.
 const MAX_INLINE_VCHIPS = 4;
 function vchipHTML(productId, v, selected){
   return `<button type="button" class="ag-vchip ${v===selected?'active':''}" data-chip-pid="${esc(productId)}" data-chip-vidx="${v.variantIdx==null?'':v.variantIdx}">${esc(v.variantLabel||'—')}</button>`;
@@ -2644,23 +2688,26 @@ function variantChipsHTML(group, selected){
   return visible.map(v=>vchipHTML(group.productId, v, selected)).join('')
     + `<button type="button" class="ag-vchip ag-vchip-more" data-more-pid="${esc(group.productId)}">+${hidden} more</button>`;
 }
-// Full list for products with too many variants to fit as chips --
-// picking a row here does exactly what tapping a chip does (updates
-// the selection and patches the card), just from a scrollable list.
+// Fallback list for the rare product that's neither a clean two-axis grid
+// nor short enough for inline chips. Picking a row here does exactly what
+// tapping a chip does (updates the selection and patches the card).
 function openVariantPickerSheet(productId){
   const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
   if(!group) return;
   const selected = selectedVariantFor(group);
+  const thumb = group.variants.find(v=>v.image);
   const el = document.createElement('div');
   el.className = 'ag-overlay';
   el.innerHTML = `<div class="ag-overlay-card">
-    <div class="ag-overlay-title">${esc(group.name)} — choose an option</div>
-    <div>${group.variants.map(v=>`
+    ${thumb ? `<img class="ag-overlay-thumb" src="${esc(thumb.image)}" alt="">` : ''}
+    <div class="ag-overlay-title">${esc(group.name)}</div>
+    <div class="ag-variant-sheet-list">${group.variants.map(v=>`
       <div class="ag-item-result ${v===selected?'active':''}" data-vidx="${v.variantIdx==null?'':v.variantIdx}">
         <div class="ag-item-result-body">
           <div class="ag-item-result-name">${esc(v.variantLabel||'—')}</div>
           <div class="ag-item-result-price money">${fmtAmountPerUnit(v.floorPrice, v.unit)}</div>
         </div>
+        ${v===selected ? `<span class="ag-variant-sheet-check">${ICON_CHECK}</span>` : ''}
       </div>`).join('')}
     </div>
   </div>`;
@@ -2685,6 +2732,7 @@ function browseGroupCardHTML(group, promoted){
   const clusterWait = inCluster ? clusterEligibility(selected.productId, selected.variantIdx) : null;
   const packLabel = selected.packQty ? `1 ${esc(selected.packUnit||'pack')} has ${esc(selected.packQty)} ${esc(pluralizeUnit(selected.unit))}` : (selected.unit ? `Per ${esc(selected.unit)}` : '');
   const hasVariants = group.variants.length > 1;
+  const axes = hasVariants ? parseVariantAxes(group) : null;
   return `<div class="ag-grid-card" data-pid="${esc(group.productId)}" data-selected-vidx="${selected.variantIdx==null?'':selected.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${selected.image ? `<img class="ag-grid-thumb" src="${esc(selected.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
@@ -2697,7 +2745,7 @@ function browseGroupCardHTML(group, promoted){
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(group.name)}</div>
       ${hasVariants
-        ? `<div class="ag-variant-chips">${variantChipsHTML(group, selected)}</div>`
+        ? (axes ? axisChipsHTML(group, selected, axes) : `<div class="ag-variant-chips">${variantChipsHTML(group, selected)}</div>`)
         : (selected.variantLabel ? `<div class="ag-grid-variant">${esc(selected.variantLabel)}</div>` : '')}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
       ${selected.tier ? `<div class="ag-price-tier ${esc(selected.tier)}">${priceTierBadgeHTML(selected.tier)}</div>` : ''}
@@ -2883,6 +2931,22 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
   if(chipBtn){
     browseSelectedVariant.set(chipBtn.dataset.chipPid, chipBtn.dataset.chipVidx);
     refreshOneBrowseCard(chipBtn.dataset.chipPid);
+    return;
+  }
+  const axisBtn = e.target.closest('[data-axis-pid]');
+  if(axisBtn){
+    const pid = axisBtn.dataset.axisPid;
+    const axisIdx = Number(axisBtn.dataset.axisIdx);
+    const otherIdx = axisIdx===0 ? 1 : 0;
+    const group = groupCatalogItems(browseItems()).find(g=>g.productId===pid);
+    if(group){
+      const currentParts = variantParts(selectedVariantFor(group));
+      const match = findVariantByAxis(group, axisIdx, axisBtn.dataset.axisValue, otherIdx, currentParts[otherIdx]);
+      if(match){
+        browseSelectedVariant.set(pid, match.variantIdx==null?'':String(match.variantIdx));
+        refreshOneBrowseCard(pid);
+      }
+    }
     return;
   }
   const moreBtn = e.target.closest('[data-more-pid]');
