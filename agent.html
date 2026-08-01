@@ -341,7 +341,7 @@
   .ag-subcat-chip.active{background:var(--accent);color:#fff;}
 
   /* ---- Product cards: grid + horizontal scroll variants ---- */
-  .ag-browse-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .ag-browse-grid{display:grid;grid-template-columns:1fr;gap:12px;}
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
   .ag-scroll-row::-webkit-scrollbar{display:none;}
   .ag-scroll-row .ag-grid-card{width:150px;flex-shrink:0;}
@@ -352,6 +352,15 @@
   .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
   .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#C7CDD5;}
   .ag-grid-body{padding:12px 13px 13px;}
+  /* Main grid only (Order Again/Sponsored keep the vertical card above) --
+     one wide row per product: a small square thumb on the left, details
+     in the middle, quick-add as its own tap target on the right, all
+     vertically centered so a short one-variant card and a tall two-axis
+     card still line up the same way. */
+  #ag_browseGrid.ag-browse-grid{grid-template-columns:1fr;}
+  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:12px;padding:12px;}
+  #ag_browseGrid .ag-grid-thumb-wrap{width:88px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
+  #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;}
   .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;margin-bottom:7px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
   /* How long a promo (and its bonus) has left -- a plain line under the
@@ -396,13 +405,14 @@
   .ag-star-btn.active{color:var(--bonus);}
   .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
   .ag-sponsor-tag .icon{width:10px;height:10px;}
-  /* One-tap add of the currently-selected variant at qty 1 -- opposite
-     corner from the cluster star so the two never compete for the same
-     thumb-reach. Tapping the card body (not this button) still opens the
-     full panel for anything past the qty-1 default: a real quantity, a
-     different unit, or the tier ladder. */
+  /* One-tap add of the currently-selected variant at qty 1 -- its own tap
+     target at the right edge of the row, not sharing the thumb with the
+     cluster star (see .ag-star-btn) since the thumb is now a small fixed
+     square rather than the full card width. Tapping the card body (not
+     this button) still opens the full panel for anything past the qty-1
+     default: a real quantity, a different unit, or the tier ladder. */
   .ag-quickadd-btn{
-    all:unset;position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:50%;
+    all:unset;flex-shrink:0;width:32px;height:32px;border-radius:50%;
     background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
     box-shadow:0 3px 8px -2px rgba(14,165,160,.55);
   }
@@ -2746,7 +2756,6 @@ function browseGroupCardHTML(group, promoted){
     <div class="ag-grid-thumb-wrap">
       ${selected.image ? `<img class="ag-grid-thumb" src="${esc(selected.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
-      <button type="button" class="ag-quickadd-btn" data-quickadd-pid="${esc(group.productId)}" title="Add 1 now">${ICON_PLUS}</button>
     </div>
     <div class="ag-grid-body">
       ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
@@ -2762,6 +2771,7 @@ function browseGroupCardHTML(group, promoted){
       ${bulkHintHTML(selected)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
+    <button type="button" class="ag-quickadd-btn" data-quickadd-pid="${esc(group.productId)}" title="Add 1 now">${ICON_PLUS}</button>
   </div>`;
 }
 // Re-renders exactly one card after its chip selection changes, using the
