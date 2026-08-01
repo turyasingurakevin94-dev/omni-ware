@@ -231,6 +231,15 @@
   .ag-receipt-table td.ag-receipt-amount{text-align:right;}
   .ag-receipt-rate,.ag-receipt-amount{font-family:var(--font-money);font-weight:700;font-size:12px;white-space:nowrap;}
   .ag-receipt-remove{padding:10px 0 10px 6px;}
+  /* The rate is the one number on a quote line the agent actually chose --
+     everything else here is read-only. Styled to look like plain text
+     until it's touched, so it doesn't read as a form buried in a receipt. */
+  .ag-rate-input{all:unset;box-sizing:border-box;width:100%;text-align:right;font-family:var(--font-money);font-weight:700;font-size:12px;color:var(--ink);padding:3px 5px;border-radius:6px;}
+  .ag-rate-input:hover{background:var(--accent-soft);}
+  .ag-rate-input:focus{background:var(--accent-soft);box-shadow:0 0 0 1.5px var(--accent);}
+  .ag-rate-input.zero-margin{color:var(--danger);}
+  .ag-margin-flag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:var(--danger);background:var(--danger-bg);padding:2.5px 7px 2.5px 6px;border-radius:20px;margin-top:4px;}
+  .ag-margin-flag .icon{width:10px;height:10px;}
   .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
   .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;}
   .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:14px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
@@ -346,7 +355,7 @@
 
   .ag-grid-card{background:var(--panel);border:1px solid #EEF0F3;border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,32,0.03),0 8px 20px rgba(16,24,32,0.05);transition:border-color .12s,box-shadow .12s;}
   .ag-grid-card:hover{border-color:var(--accent);box-shadow:0 1px 2px rgba(16,24,32,0.03),0 10px 22px rgba(14,165,160,0.12);}
-  .ag-grid-thumb-wrap{position:relative;aspect-ratio:1/1;background:#F1F3F5;}
+  .ag-grid-thumb-wrap{position:relative;aspect-ratio:16/9;background:#F1F3F5;}
   .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
   .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#C7CDD5;}
   .ag-grid-body{padding:12px 13px 13px;}
@@ -383,7 +392,6 @@
      second price for the one being shown, and styling it just as boldly
      invited reading it as one. */
   .ag-bulk-hint{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:500;color:var(--ink-soft);margin-top:5px;}
-  .ag-bulk-hint .icon{width:11px;height:11px;flex-shrink:0;}
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
@@ -2470,6 +2478,7 @@ const ICON_CLOCK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12
 const ICON_TRUCK = `<svg class="icon" viewBox="0 0 24 24"><path d="M2 7h11v9H2z"/><path d="M13 10h4l4 3.5V16h-8z"/><circle cx="6.5" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>`;
 const ICON_PIN = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5A7 7 0 1 0 5 9.5C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>`;
 const ICON_CHECK = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>`;
+const ICON_WARN = `<svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>`;
 
 // Flat, single-path category icons keyed by keyword match against the
 // shop's own free-text category names -- there's no fixed taxonomy to
@@ -2605,7 +2614,9 @@ function promoDaysLeftInfo(endsAt){
 // tease volume pricing the same way.
 function bulkHintHTML(it){
   if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
-  return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is for ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} at ${fmtAmount(it.bestTierPrice)} each.</div>`;
+  const savings = (Number(it.floorPrice)||0) - (Number(it.bestTierPrice)||0);
+  if(!(savings>0)) return '';
+  return `<div class="ag-bulk-hint">🔥 Save ${fmtAmount(savings)} · ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))}</div>`;
 }
 
 /* ---- Main grid: variants merged into one card per product ------------
@@ -3271,14 +3282,20 @@ function renderCart(){
     const displayQty = it.displayQty!=null ? it.displayQty : baseQty;
     const displayUnit = it.displayUnit || it.unit || '';
     const rate = displayQty>0 ? amount/displayQty : 0;
+    // Quick-add pushes straight to the cart at floor price with no chance
+    // to set a margin (see quickAddFromBrowse) -- this is the one place
+    // that gap gets caught, since every line ends up here before it can
+    // be submitted.
+    const noMargin = (Number(it.agentSellPrice)||0) <= (Number(it.floorPrice)||0);
     return `
     <tr>
       <td class="ag-receipt-qty">${esc(displayQty)} ${esc(displayUnit)}</td>
       <td>
         <div class="ag-receipt-name">${esc(it.name)}</div>
         ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
+        <div class="ag-margin-flag" style="display:${noMargin?'inline-flex':'none'};">${ICON_WARN}No margin set</div>
       </td>
-      <td class="ag-receipt-rate">${fmtAmount(rate)}</td>
+      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(rate)}" min="0" step="any"></td>
       <td class="ag-receipt-amount">${fmtAmount(amount)}</td>
       <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
     </tr>`;
@@ -3290,6 +3307,46 @@ function renderCart(){
       updateCartBadge();
       saveQuoteDraft();
       renderCartTab();
+    });
+  });
+  // Live-patches just this row (amount, flag, running total) as the agent
+  // types, rather than re-rendering the whole table -- a full renderCart()
+  // here would recreate this very input mid-keystroke and drop focus.
+  // The actual commit to cart state only happens on change (blur/Enter),
+  // once the agent is done editing.
+  wrap.querySelectorAll('.ag-rate-input').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const idx = Number(input.dataset.idx);
+      const item = cart[idx];
+      if(!item) return;
+      const entered = Number(input.value);
+      if(!(entered>=0)) return;
+      const baseQty = Number(item.qty)||0;
+      const displayQty = item.displayQty!=null ? item.displayQty : baseQty;
+      const previewSellPrice = baseQty>0 ? entered*displayQty/baseQty : entered;
+      const previewAmount = previewSellPrice*baseQty;
+      const rowNoMargin = previewSellPrice <= (Number(item.floorPrice)||0);
+      const row = input.closest('tr');
+      row.querySelector('.ag-receipt-amount').textContent = fmtAmount(previewAmount);
+      input.classList.toggle('zero-margin', rowNoMargin);
+      const flagEl = row.querySelector('.ag-margin-flag');
+      if(flagEl) flagEl.style.display = rowNoMargin ? 'inline-flex' : 'none';
+      let runningTotal = 0;
+      cart.forEach((it2,i2)=>{
+        runningTotal += i2===idx ? previewAmount : (Number(it2.agentSellPrice)||0)*(Number(it2.qty)||0);
+      });
+      document.getElementById('ag_cartTotalValue').textContent = fmtUGX(runningTotal);
+    });
+    input.addEventListener('change', ()=>{
+      const idx = Number(input.dataset.idx);
+      const item = cart[idx];
+      if(!item) return;
+      const entered = Number(input.value);
+      if(!(entered>=0)){ renderCart(); return; }
+      const baseQty = Number(item.qty)||0;
+      const displayQty = item.displayQty!=null ? item.displayQty : baseQty;
+      item.agentSellPrice = baseQty>0 ? entered*displayQty/baseQty : entered;
+      saveQuoteDraft();
     });
   });
 }
