@@ -29,6 +29,32 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Agents type a phone number however they think of it -- 0772123456,
+// +256772123456, 256 772 123 456 -- and the two providers want different
+// shapes of it. MTN wants the international form with no plus; Airtel wants
+// the bare 9 digits. Only MTN's was being handled, and only for a number
+// that already arrived with a +, so an agent entering the local form they
+// actually use sent MTN "0772123456" as an MSISDN: not their line, and not
+// anyone's. Returns null for anything that isn't a Ugandan mobile number,
+// which is a better answer than pushing a request into the void.
+function normaliseUgandaMsisdn(raw: string) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  let local = digits;
+  if (local.startsWith("256")) local = local.slice(3);
+  else if (local.startsWith("0")) local = local.slice(1);
+  if (!/^7\d{8}$/.test(local)) return null;
+  return { local, international: `256${local}` };
+}
+
+// A second push for the same order while the first is still outstanding is
+// almost always a double tap, not a second payment -- and if the agent
+// approves both, both are credited (see mtn-payment-webhook and
+// airtel-collection-callback, which each add to amount_paid). Inside this
+// window the existing request is handed back instead of a new one being
+// raised. Long enough to cover an agent hunting for their phone, short
+// enough that a genuinely abandoned request doesn't block the next attempt.
+const PENDING_REUSE_MS = 3 * 60 * 1000;
+
 // --- MTN MoMo (Collections) -------------------------------------------
 // https://momodeveloper.mtn.com -- Collections product, requesttopay.
 // MTN's sandbox gateway sits behind a WAF that occasionally rejects
@@ -79,7 +105,8 @@ async function mtnRequestToPay(creds: any, environment: string, opts: { referenc
       amount: String(Math.round(opts.amount)),
       currency: environment === "production" ? "UGX" : "EUR", // MTN sandbox only accepts EUR test amounts
       externalId: opts.referenceId,
-      payer: { partyIdType: "MSISDN", partyId: opts.phone.replace(/^\+/, "") },
+      // Already normalised to 256XXXXXXXXX by the caller.
+      payer: { partyIdType: "MSISDN", partyId: opts.phone },
       payerMessage: opts.payerMessage,
       payeeNote: opts.payeeNote,
     }),
@@ -90,9 +117,18 @@ async function mtnRequestToPay(creds: any, environment: string, opts: { referenc
 
 // --- Airtel Money (Collections / Merchant API) -------------------------
 // https://developers.airtel.africa -- Collections, request-to-pay.
+// Airtel issues the live host at merchant onboarding; until one is set here
+// there is no production endpoint to call. Refused outright rather than
+// quietly falling back to UAT: a shop that has flipped itself to production
+// believes it is collecting real money, and a test endpoint that accepts the
+// request and confirms nothing is the worst possible answer.
+const AIRTEL_PRODUCTION_HOST = "";
 async function airtelRequestToPay(creds: any, environment: string, opts: { referenceId: string; amount: number; phone: string }) {
+  if (environment === "production" && !AIRTEL_PRODUCTION_HOST) {
+    throw new Error("Airtel production isn't configured for this shop yet — Airtel issues the live endpoint at merchant onboarding. Switch this provider back to sandbox, or contact Airtel to complete onboarding.");
+  }
   const base = environment === "production"
-    ? "https://openapiuat.airtel.africa" // swap for the production host once a shop goes live -- Airtel issues it at merchant onboarding
+    ? AIRTEL_PRODUCTION_HOST
     : "https://openapiuat.airtel.africa";
   const tokenRes = await fetch(`${base}/auth/oauth2/token`, {
     method: "POST",
@@ -112,7 +148,8 @@ async function airtelRequestToPay(creds: any, environment: string, opts: { refer
     },
     body: JSON.stringify({
       reference: opts.referenceId,
-      subscriber: { country: "UG", currency: "UGX", msisdn: opts.phone.replace(/^\+?256/, "").replace(/^0/, "") },
+      // Already normalised to the bare nine digits by the caller.
+      subscriber: { country: "UG", currency: "UGX", msisdn: opts.phone },
       transaction: { amount: Math.round(opts.amount), country: "UG", currency: "UGX", id: opts.referenceId },
     }),
   });
@@ -162,8 +199,35 @@ Deno.serve(async (req) => {
     if (payload.originAgentId !== agentId) return json({ error: "This order does not belong to you" }, 403);
     if (payload.agentPaymentStatus === "paid") return json({ error: "This order is already paid" }, 400);
 
-    const amount = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
-    if (!(amount > 0)) return json({ error: "Nothing owed on this order" }, 400);
+    // What is still OWED, not the order total. amount_paid was already being
+    // selected here and then ignored, so an order the agent had part-paid --
+    // a short Airtel payment that was banked and credited, or a cash
+    // instalment the admin confirmed -- was pushed for its full value again.
+    // Approving that charged them the part they had already settled a second
+    // time, since both webhooks add to amount_paid rather than replacing it.
+    const orderTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+    const alreadyPaid = Number(order.amount_paid) || 0;
+    const amount = Math.round(orderTotal - alreadyPaid);
+    if (!(amount > 0)) {
+      return json({ error: alreadyPaid > 0 ? "This order is already settled" : "Nothing owed on this order" }, 400);
+    }
+
+    const msisdn = normaliseUgandaMsisdn(phone);
+    if (!msisdn) return json({ error: "That doesn't look like a Ugandan mobile number" }, 400);
+
+    // Reuses an outstanding request rather than raising a second one.
+    const { data: inFlight, error: inFlightErr } = await admin
+      .from("agent_mobile_payments")
+      .select("id, external_reference, created_at, amount")
+      .eq("shop_id", shopId).eq("order_id", orderId).eq("status", "pending")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (inFlightErr) return json({ error: inFlightErr.message, stage: "in_flight_lookup" }, 500);
+    if (inFlight && Date.now() - new Date(inFlight.created_at).getTime() < PENDING_REUSE_MS) {
+      return json({
+        ok: true, paymentId: inFlight.id, externalReference: inFlight.external_reference,
+        reused: true, amount: Number(inFlight.amount),
+      });
+    }
 
     const externalReference = crypto.randomUUID();
     const { data: txnRow, error: insertErr } = await admin
@@ -178,7 +242,7 @@ Deno.serve(async (req) => {
     try {
       if (provider === "mtn") {
         await mtnRequestToPay(providerRow.credentials, providerRow.environment, {
-          referenceId: externalReference, amount, phone,
+          referenceId: externalReference, amount, phone: msisdn.international,
           // No "#" here -- MTN's sandbox WAF has been observed to block
           // requesttopay bodies containing it (a common generic-WAF false
           // positive, treating "#" as a comment/fragment-injection marker).
@@ -186,7 +250,7 @@ Deno.serve(async (req) => {
         });
       } else {
         const res = await airtelRequestToPay(providerRow.credentials, providerRow.environment, {
-          referenceId: externalReference, amount, phone,
+          referenceId: externalReference, amount, phone: msisdn.local,
         });
         if (res.providerTransactionId) {
           await admin.from("agent_mobile_payments").update({ provider_transaction_id: res.providerTransactionId }).eq("id", txnRow.id);

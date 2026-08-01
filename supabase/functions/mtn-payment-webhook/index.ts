@@ -47,9 +47,17 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
   const payments = Array.isArray(payload.payments) ? payload.payments.slice() : [];
   payments.push({ date: now.toISOString().slice(0, 10), amount: txn.amount, note: providerLabel, cashTxnId: cashTxn.id });
   const newAmountPaid = (Number(order.amount_paid) || 0) + Number(txn.amount);
+  // Only release the order once the money actually covers it. A short
+  // payment is still banked and credited above -- it just doesn't unlock
+  // preparing. This matched airtel-collection-callback's behaviour only by
+  // accident of the amount always being the full total; marking paid for
+  // whatever arrived would let a part payment open the order.
+  const orderTotal = (payload.items || []).reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
+  const nextPayload: any = { ...payload, payments };
+  if (newAmountPaid + 0.5 >= orderTotal) nextPayload.agentPaymentStatus = "paid";
   const { error: updateErr } = await admin.from("saved_quotes").update({
     amount_paid: newAmountPaid,
-    payload: { ...payload, payments, agentPaymentStatus: "paid" },
+    payload: nextPayload,
   }).eq("shop_id", txn.shop_id).eq("id", txn.order_id);
   if (updateErr) throw new Error(`saved_quotes update failed: ${updateErr.message}`);
 }
