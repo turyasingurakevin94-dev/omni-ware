@@ -248,7 +248,7 @@
     .ag-overlay{align-items:center;padding:20px;}
     .ag-overlay-card{border-radius:20px;}
   }
-  .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;cursor:zoom-in;}
+  .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;}
   .ag-overlay-title{font-weight:800;font-size:17px;margin-bottom:14px;letter-spacing:-0.01em;}
   /* Full-size view of the product photo -- above the add panel's own
      overlay (z-index 400) so it layers on top rather than replacing it. */
@@ -366,6 +366,10 @@
      when it isn't; the chips, star, and "+" all set their own pointer. */
   #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:12px;padding:12px;cursor:default;}
   #ag_browseGrid .ag-grid-thumb-wrap{width:88px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
+  /* Tapping the photo opens a full-size lightbox (see the click handler)
+     -- only a real photo, never the generic placeholder icon, is
+     actually worth zooming into. */
+  #ag_browseGrid .ag-grid-thumb{cursor:zoom-in;}
   #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;}
   /* Bonus pill + how-long-left countdown read as one fact ("3% bonus,
      30 days left"), not two stacked lines, so they sit in a row together. */
@@ -2932,6 +2936,14 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
     }
     return;
   }
+  // Main grid only -- Order Again/Sponsored's flat cards have no "+" of
+  // their own, so the image there still opens the add panel like the
+  // rest of the card (see the fallback below).
+  const thumbImg = e.target.closest('#ag_browseGrid .ag-grid-thumb');
+  if(thumbImg){
+    openImageLightbox(thumbImg.src);
+    return;
+  }
   const card = e.target.closest('.ag-grid-card');
   if(card){
     // Merged main-grid cards (data-selected-vidx) only open the panel via
@@ -3159,7 +3171,7 @@ async function openAddItemPanel(item){
     (hasPack ? `<option value="pack" selected>${esc(packUnit)} (${esc(packQty)} ${esc(unit||'')})</option>` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
-      ${item.image ? `<img class="ag-overlay-thumb" id="ag_ai_image" src="${esc(item.image)}" alt="">` : ''}
+      ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       ${clusterWaitHTML}
@@ -3177,8 +3189,6 @@ async function openAddItemPanel(item){
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-  const imageEl = document.getElementById('ag_ai_image');
-  if(imageEl) imageEl.addEventListener('click', ()=> openImageLightbox(item.image));
 
   const qtyEl = document.getElementById('ag_ai_qty');
   const unitEl = document.getElementById('ag_ai_qty_unit');
