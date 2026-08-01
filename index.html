@@ -6686,9 +6686,31 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
 // reachable once a quote has reached Step 4 (Completed). Flips the invoiced
 // flag + records/clears the date, AND is the point at which "Our stock"
 // items on the quote actually leave stock (reversed if un-invoiced again).
+// Spells out what un-invoicing is about to destroy, in money terms, so it
+// can be confirmed rather than discovered afterwards. Un-invoicing reverses
+// BOTH sides: the customer's payments to us, and our payments to the
+// suppliers on this order's purchase invoices. That second half is the easy
+// one to miss -- that cash really did leave the till, and reversing it
+// rewrites the Cash Book to say it never did.
+function uninvoiceReversalWarning(q){
+  const parts = [];
+  const custPaid = (q.payments||[]).reduce((s,p)=> s + (Number(p.amount)||0), 0);
+  if(custPaid > 0) parts.push(`${(q.payments||[]).length} customer payment${(q.payments||[]).length===1?'':'s'} totalling ${fmtUGX(Math.round(custPaid))}`);
+  const pis = data.purchaseInvoices.filter(pi=>pi.quoteId===q.id);
+  const supPayments = pis.reduce((n,pi)=> n + (pi.payments||[]).length, 0);
+  const supPaid = pis.reduce((s,pi)=> s + (pi.payments||[]).reduce((t,p)=> t + (Number(p.amount)||0), 0), 0);
+  if(supPaid > 0) parts.push(`${supPayments} supplier payment${supPayments===1?'':'s'} totalling ${fmtUGX(Math.round(supPaid))}`);
+  if(!parts.length) return null;
+  return `Un-invoicing this order will permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
+}
+
 function toggleQuoteInvoiced(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q || q.status!=='completed') return;
+  if(q.invoiced){
+    const warning = uninvoiceReversalWarning(q);
+    if(warning && !confirm(warning)) return;
+  }
   q.invoiced = !q.invoiced;
   q.invoicedAt = q.invoiced ? todayISO() : null;
   q.invoicedTs = q.invoiced ? Date.now() : null;
@@ -6707,7 +6729,11 @@ function toggleQuoteInvoiced(id){
     // against it -- and the Cash Book entries those payments created --
     // are reversed too. Otherwise the Cash Book keeps showing cash in for
     // a payment against an invoice that no longer exists.
-    hadPayments = !!(q.payments && q.payments.length);
+    // Counted across both sides -- supplier payments on this order's purchase
+    // invoices are reversed here too, so a quote with no customer payment but
+    // a paid supplier must still report that money moved.
+    hadPayments = !!(q.payments && q.payments.length)
+      || data.purchaseInvoices.some(pi=> pi.quoteId===q.id && (pi.payments||[]).length);
     removeCashTxnsByIds((q.payments||[]).map(p=>p.cashTxnId));
     q.payments = [];
     q.amountPaid = 0;
@@ -6725,7 +6751,7 @@ function toggleQuoteInvoiced(id){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
   if(q.invoiced) toast(shortfall ? 'Marked as invoiced — stock updated (some items had less on hand than quoted)' : 'Marked as invoiced — stock updated');
-  else toast(hadPayments ? 'Marked as not invoiced — stock, payments and Cash Book entries reversed' : 'Marked as not invoiced — stock restored');
+  else toast(hadPayments ? 'Marked as not invoiced — stock, customer and supplier payments, and their Cash Book entries reversed' : 'Marked as not invoiced — stock restored');
 }
 
 // Keeps the fixed top-right reminder bar in sync with the Saved Quotes
@@ -7348,7 +7374,11 @@ function purchaseInvoiceNumberLabel(pi){ return 'PINV-' + String(pi.id).padStart
 function purchaseInvoiceTotal(pi){
   return (pi.items||[]).reduce((s,it)=> s + (Number(it.qty)||0)*(Number(it.price)||0), 0);
 }
-function purchaseInvoiceBalanceDue(pi){ return purchaseInvoiceTotal(pi) - (Number(pi.amountPaid)||0); }
+// Clamped at 0, exactly like invoiceBalanceDue() on the customer side. An
+// overpaid invoice owes nothing -- it must never report a NEGATIVE balance,
+// because creditorTotalOwed() sums this across all of a supplier's invoices
+// and a negative there would silently cancel out real debt on the others.
+function purchaseInvoiceBalanceDue(pi){ return Math.max(0, purchaseInvoiceTotal(pi) - (Number(pi.amountPaid)||0)); }
 function purchaseInvoicePaymentStatusLabel(pi){
   const paid = Number(pi.amountPaid)||0;
   const total = purchaseInvoiceTotal(pi);
@@ -7703,8 +7733,16 @@ document.getElementById('pip_cancel').addEventListener('click', ()=> closeModalA
 document.getElementById('pip_save').addEventListener('click', ()=>{
   const pi = data.purchaseInvoices.find(x=>x.id===piPaymentId);
   if(!pi) return;
-  const amount = Number(document.getElementById('pip_amount').value)||0;
-  if(amount<=0){ toast('Enter an amount greater than 0'); return; }
+  const amountEntered = Number(document.getElementById('pip_amount').value)||0;
+  if(amountEntered<=0){ toast('Enter an amount greater than 0'); return; }
+  // Capped at what's still owed, the same way a lump-sum supplier payment is
+  // capped in crp_save. Paying more than the invoice is worth would leave
+  // amountPaid above the total, and that surplus used to read as negative
+  // debt on the Creditors list -- quietly cancelling out what's still owed on
+  // this supplier's OTHER invoices.
+  const due = purchaseInvoiceBalanceDue(pi);
+  if(due<=0){ toast('This purchase invoice is already fully paid'); return; }
+  const amount = Math.min(amountEntered, due);
   const note = document.getElementById('pip_note').value.trim();
   const account = document.getElementById('pip_account').value;
   if(!pi.payments) pi.payments = [];
@@ -7718,7 +7756,7 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
-  toast('Payment recorded');
+  toast(amountEntered>due ? `Payment recorded — capped at the ${fmtUGX(Math.round(due))} still owed` : 'Payment recorded');
 });
 
 document.getElementById('pi_doc_search').addEventListener('input', e=>renderPurchaseInvoices(e.target.value));
