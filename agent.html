@@ -395,6 +395,26 @@
   .ag-star-btn.active{color:var(--bonus);}
   .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
   .ag-sponsor-tag .icon{width:10px;height:10px;}
+  /* One-tap add of the currently-selected variant at qty 1 -- opposite
+     corner from the cluster star so the two never compete for the same
+     thumb-reach. Tapping the card body (not this button) still opens the
+     full panel for anything past the qty-1 default: a real quantity, a
+     different unit, or the tier ladder. */
+  .ag-quickadd-btn{
+    all:unset;position:absolute;bottom:8px;right:8px;width:32px;height:32px;border-radius:50%;
+    background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 8px -2px rgba(14,165,160,.55);
+  }
+  .ag-quickadd-btn:hover{background:var(--accent-dark);}
+  .ag-quickadd-btn .icon{width:16px;height:16px;}
+  /* Variants merged into one card (see browseGroupCardHTML) -- these chips
+     replace what used to be a second, near-duplicate grid tile per
+     variant. Selection is per-product and survives re-renders via
+     browseSelectedVariant, but resets naturally whenever the catalog
+     itself reloads. */
+  .ag-variant-chips{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 6px;}
+  .ag-vchip{all:unset;cursor:pointer;font-size:10.5px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);}
+  .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 
   /* ---- Profile card + menu (Account) ---- */
   .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
@@ -2430,6 +2450,7 @@ function browseItems(){
 
 const ICON_PLACEHOLDER = `<svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`;
 const ICON_STAR = `<svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>`;
+const ICON_PLUS = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 // Retail = single tag; wholesale = a stack of boxes -- reinforces the
 // retail/wholesale badge's meaning by shape, not color alone.
 const ICON_TAG = `<svg class="icon" viewBox="0 0 24 24"><path d="M20.59 13.41 12 22l-9-9V4h9l9 9.41a2 2 0 0 1 0 2.83z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>`;
@@ -2577,6 +2598,115 @@ function bulkHintHTML(it){
   if(it.bestTierMinQty==null || it.bestTierPrice==null) return '';
   return `<div class="ag-bulk-hint">${ICON_BOXES}Best price is for ${esc(it.bestTierMinQty)}+ ${esc(pluralizeUnit(it.unit))} at ${fmtAmount(it.bestTierPrice)} each.</div>`;
 }
+
+/* ---- Main grid: variants merged into one card per product ------------
+   catalog is flat -- one entry per (productId, variantIdx) -- so two
+   variants of the same product used to render as two near-identical
+   grid tiles (see the Mulper Hinges Soft/Normal duplication this was
+   built to fix). Grouped here, with a chip row standing in for the
+   second tile. Order Again and Sponsored stay on the old flat
+   browseCardHTML below -- narrower rows where a merged card doesn't
+   obviously help, and not what was actually asked for. ---- */
+function groupCatalogItems(items){
+  const order = [], map = new Map();
+  items.forEach(it=>{
+    if(!map.has(it.productId)){ map.set(it.productId, { productId: it.productId, name: it.name, variants: [] }); order.push(it.productId); }
+    map.get(it.productId).variants.push(it);
+  });
+  return order.map(pid=>map.get(pid));
+}
+// productId -> the variantIdx (stringified, '' for null) last picked via
+// its chip row. Deliberately module-level, not reset on every render, so
+// switching a chip then scrolling/filtering doesn't silently snap back
+// to the first variant.
+let browseSelectedVariant = new Map();
+function selectedVariantFor(group){
+  const key = browseSelectedVariant.get(group.productId);
+  const found = key!=null ? group.variants.find(v=>String(v.variantIdx==null?'':v.variantIdx)===key) : null;
+  return found || group.variants[0];
+}
+function browseGroupCardHTML(group, promoted){
+  const selected = selectedVariantFor(group);
+  const key = `${selected.productId}::${selected.variantIdx==null?'':selected.variantIdx}`;
+  const promo = promoted.get(key);
+  const inCluster = promo && isInCluster(selected.productId, selected.variantIdx);
+  const showReminder = promo && inCluster && !hasSoldItem(selected.productId, selected.variantIdx);
+  const bonusLabel = promo ? (promo.bonusType==='fixed' ? `${fmtUGX(promo.bonusValue)} bonus` : `${promo.bonusValue}% bonus`) : '';
+  const countdown = promo ? promoDaysLeftInfo(promo.endsAt) : null;
+  const clusterWait = inCluster ? clusterEligibility(selected.productId, selected.variantIdx) : null;
+  const packLabel = selected.packQty ? `1 ${esc(selected.packUnit||'pack')} has ${esc(selected.packQty)} ${esc(pluralizeUnit(selected.unit))}` : (selected.unit ? `Per ${esc(selected.unit)}` : '');
+  const hasVariants = group.variants.length > 1;
+  return `<div class="ag-grid-card" data-pid="${esc(group.productId)}" data-selected-vidx="${selected.variantIdx==null?'':selected.variantIdx}">
+    <div class="ag-grid-thumb-wrap">
+      ${selected.image ? `<img class="ag-grid-thumb" src="${esc(selected.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
+      ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
+      <button type="button" class="ag-quickadd-btn" data-quickadd-pid="${esc(group.productId)}" title="Add 1 now">${ICON_PLUS}</button>
+    </div>
+    <div class="ag-grid-body">
+      ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
+      ${countdown ? `<div class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</div>` : ''}
+      ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
+      <div class="ag-grid-name">${esc(group.name)}</div>
+      ${hasVariants
+        ? `<div class="ag-variant-chips">${group.variants.map(v=>`<button type="button" class="ag-vchip ${v===selected?'active':''}" data-chip-pid="${esc(group.productId)}" data-chip-vidx="${v.variantIdx==null?'':v.variantIdx}">${esc(v.variantLabel||'—')}</button>`).join('')}</div>`
+        : (selected.variantLabel ? `<div class="ag-grid-variant">${esc(selected.variantLabel)}</div>` : '')}
+      ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
+      ${selected.tier ? `<div class="ag-price-tier ${esc(selected.tier)}">${priceTierBadgeHTML(selected.tier)}</div>` : ''}
+      <div class="ag-grid-price">${fmtAmountPerUnit(selected.floorPrice, selected.unit)}</div>
+      ${bulkHintHTML(selected)}
+      ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
+    </div>
+  </div>`;
+}
+// Re-renders exactly one card after its chip selection changes, using the
+// same filtered+grouped pipeline as the real render -- never re-derives
+// from the raw catalog, so a card can't reappear with a variant the
+// active search/filter would have excluded.
+function refreshOneBrowseCard(productId){
+  // Scoped to the main grid specifically -- Order Again/Sponsored can
+  // carry a flat card for the same productId (data-pid isn't unique
+  // across the whole view), and an unscoped query would match whichever
+  // one happens to come first in the DOM instead of the merged card a
+  // chip tap actually happened on.
+  const card = document.querySelector(`#ag_browseGrid .ag-grid-card[data-pid="${CSS.escape(String(productId))}"]`);
+  if(!card) return;
+  const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
+  if(!group) return;
+  card.outerHTML = browseGroupCardHTML(group, promotedMap());
+}
+// Same double-submit hazard every other in-flight write in this app
+// guards against, keyed per product so quick-adding two different items
+// back to back is never blocked by the first one's request.
+let browseQuickAddsInFlight = new Set();
+async function quickAddFromBrowse(productId){
+  if(browseQuickAddsInFlight.has(productId)) return;
+  const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
+  const selected = group ? selectedVariantFor(group) : null;
+  if(!selected) return;
+  browseQuickAddsInFlight.add(productId);
+  try{
+    // Same rule as everywhere else a quantity gets added: the flat
+    // catalog's floorPrice is only ever a snapshot from whenever the
+    // list loaded. One tap shouldn't mean one stale price -- re-resolve
+    // it live, same as loadSolutionIntoCart() does for every line.
+    const res = await callAgentFn('agent-catalog', { action:'price', productId: selected.productId, variantIdx: selected.variantIdx, qty:1 });
+    if(!res.available){ toast('This item is no longer available'); return; }
+    cart.push({
+      productId: selected.productId, variantIdx: selected.variantIdx, name: selected.name, variantLabel: selected.variantLabel,
+      qty: 1, unit: res.unit, packUnit: res.packUnit, packQty: Number(res.packQty)||0,
+      displayQty: 1, displayUnit: res.unit,
+      tier: res.tier, floorPrice: res.floorPrice, agentSellPrice: res.floorPrice,
+    });
+    updateCartBadge();
+    saveQuoteDraft();
+    toast(`Added 1 ${res.unit} of ${selected.name}`);
+  }catch(err){
+    toast(isNetworkError(err) ? "You're offline -- couldn't add this item" : `Could not add: ${err.message||err}`);
+  } finally {
+    browseQuickAddsInFlight.delete(productId);
+  }
+}
+
 function browseCardHTML(it, promoted, opts){
   opts = opts || {};
   const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
@@ -2632,15 +2762,18 @@ function renderBrowseGrid(){
   document.getElementById('ag_sponsoredSection').style.display = sponsored.length ? 'block' : 'none';
   if(sponsored.length) document.getElementById('ag_sponsoredRow').innerHTML = sponsored.map(it=>browseCardHTML(it, promoted, {sponsorTag:true})).join('');
 
-  document.getElementById('ag_gridTitle').innerHTML = discovery ? 'All products' : `Results <small>${browseItems().length} item${browseItems().length===1?'':'s'}</small>`;
+  // Counts products, not variant rows -- "2 items" for Mulper Hinges
+  // Soft+Normal used to mean two grid tiles; merged into one card, it
+  // should mean one.
+  const groups = groupCatalogItems(browseItems());
+  document.getElementById('ag_gridTitle').innerHTML = discovery ? 'All products' : `Results <small>${groups.length} item${groups.length===1?'':'s'}</small>`;
 
-  const items = browseItems();
   const grid = document.getElementById('ag_browseGrid');
-  if(!items.length){
+  if(!groups.length){
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">No matching products.</div>`;
     return;
   }
-  grid.innerHTML = items.map(it=>browseCardHTML(it, promoted)).join('');
+  grid.innerHTML = groups.map(g=>browseGroupCardHTML(g, promoted)).join('');
 }
 
 // Keyed per item (not a single flag) so tapping one star doesn't block a
@@ -2697,9 +2830,25 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
     toggleClusterMembership(starBtn.dataset.starPid, vidx);
     return;
   }
+  const chipBtn = e.target.closest('[data-chip-pid]');
+  if(chipBtn){
+    browseSelectedVariant.set(chipBtn.dataset.chipPid, chipBtn.dataset.chipVidx);
+    refreshOneBrowseCard(chipBtn.dataset.chipPid);
+    return;
+  }
+  const quickBtn = e.target.closest('[data-quickadd-pid]');
+  if(quickBtn){
+    quickAddFromBrowse(quickBtn.dataset.quickaddPid);
+    return;
+  }
   const card = e.target.closest('.ag-grid-card');
   if(card){
-    const item = catalogEntry(card.dataset.pid, card.dataset.vidx === '' ? null : Number(card.dataset.vidx));
+    // Merged main-grid cards carry data-selected-vidx (whichever chip is
+    // active); Order Again/Sponsored cards still carry the old flat
+    // data-vidx. Checking selected-vidx first, falling back to vidx,
+    // means one handler serves both card shapes correctly.
+    const vidxRaw = card.dataset.selectedVidx !== undefined ? card.dataset.selectedVidx : card.dataset.vidx;
+    const item = catalogEntry(card.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
     if(item) openAddItemPanel(item);
     return;
   }
