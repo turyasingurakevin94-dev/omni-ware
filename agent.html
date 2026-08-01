@@ -1596,14 +1596,22 @@ function computeOpportunities(){
 // client's last-order date, so it stops matching the moment they order
 // again; unpaid_order stops being generated at all once the payment
 // choice modal marks it paid).
+// Keyed on the auth user id, not the agent id. Agent ids are only unique
+// WITHIN a shop (AG0001 exists in every shop that has agents), so two
+// logins sharing a device would otherwise share each other's dismissals
+// and unlocked achievements -- the same class of cross-agent bleed the
+// offline snapshot had, just with cosmetic state instead of client data.
+function agentLocalKey(prefix){
+  return `${prefix}_${(currentUser && currentUser.id) || (myAgent && myAgent.id) || 'anon'}`;
+}
 function dismissedOpportunityKeys(){
-  try{ return new Set(JSON.parse(localStorage.getItem(`agentDismissedOpp_${myAgent.id}`)||'[]')); }
+  try{ return new Set(JSON.parse(localStorage.getItem(agentLocalKey('agentDismissedOpp'))||'[]')); }
   catch(_e){ return new Set(); }
 }
 function dismissOpportunity(key){
   const keys = dismissedOpportunityKeys();
   keys.add(key);
-  localStorage.setItem(`agentDismissedOpp_${myAgent.id}`, JSON.stringify([...keys]));
+  localStorage.setItem(agentLocalKey('agentDismissedOpp'), JSON.stringify([...keys]));
   renderHome();
 }
 
@@ -1718,13 +1726,13 @@ function computeAchievements(){
 }
 
 function seenAchievementIds(){
-  try{ return new Set(JSON.parse(localStorage.getItem(`agentSeenAchievements_${myAgent.id}`)||'[]')); }
+  try{ return new Set(JSON.parse(localStorage.getItem(agentLocalKey('agentSeenAchievements'))||'[]')); }
   catch(_e){ return new Set(); }
 }
 function markAchievementsSeen(ids){
   const seen = seenAchievementIds();
   ids.forEach(id=>seen.add(id));
-  localStorage.setItem(`agentSeenAchievements_${myAgent.id}`, JSON.stringify([...seen]));
+  localStorage.setItem(agentLocalKey('agentSeenAchievements'), JSON.stringify([...seen]));
 }
 
 function achievementCardHTML(a){
@@ -2169,9 +2177,12 @@ function orderStatusInfo(o){
 
 // A completed order's balance is with the SHOP, not the client -- what the
 // client paid the agent is the agent's own business and was never tracked
-// here. sellPrice (not agentSellPrice) is what the shop is actually owed;
-// a prepay agent's balance is settled the moment agentPaymentStatus flips
-// to 'paid' (amountPaid itself is never touched for that path).
+// here. sellPrice (not agentSellPrice) is what the shop is actually owed.
+// Either signal settles it: agentPaymentStatus flipping to 'paid', or
+// amountPaid covering the total. Both are now written together when a
+// payment is confirmed (2b2f652 for cash, the momo webhooks for the
+// rest) -- the flag alone used to be the only one set, which is exactly
+// what left settled orders reading as unpaid.
 function orderBalanceInfo(o){
   const shopTotal = (o.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0) * (Number(it.qty)||0), 0);
   const balance = o.agentPaymentStatus==='paid' ? 0 : Math.max(0, shopTotal - (Number(o.amountPaid)||0));
@@ -3556,7 +3567,14 @@ function renderCartTab(){
   const hasItems = cart.length > 0;
   document.getElementById('ag_cartEmptyState').style.display = hasItems ? 'none' : 'block';
   document.getElementById('ag_cartContent').style.display = hasItems ? 'block' : 'none';
-  if(hasItems) renderCart();
+  if(!hasItems) return;
+  renderCart();
+  // The client table only ever re-rendered when the toggle was clicked, so
+  // it went stale the moment the cart changed underneath it: leaving the
+  // Quote screen on "Client view", adding an item on Sell and coming back
+  // showed a receipt missing that item, with a total to match. That's the
+  // document the customer is shown, so it has to track the cart too.
+  if(document.getElementById('ag_quoteview_client').style.display !== 'none') renderClientReceiptTable();
 }
 
 /* ---- Downloadable client receipt (canvas -- no PDF library, no
