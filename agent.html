@@ -187,10 +187,6 @@
   .ag-item-result-name{font-size:13.5px;font-weight:700;letter-spacing:-0.005em;}
   .ag-item-result-price{font-size:12px;color:var(--ink-soft);}
   .ag-item-result-price.money{font-family:var(--font-money);font-size:13px;letter-spacing:-0.01em;color:var(--accent-dark);font-weight:800;}
-  .ag-item-result.active{background:var(--accent-soft);}
-  .ag-variant-sheet-list .ag-item-result{padding:12px 6px;}
-  .ag-variant-sheet-list .ag-item-result:not(:last-child){border-bottom:1px solid var(--line);}
-  .ag-variant-sheet-check{color:var(--accent);flex-shrink:0;}
 
   .ag-cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
   .ag-cart-row:last-child{border-bottom:none;}
@@ -416,10 +412,18 @@
      variant. Selection is per-product and survives re-renders via
      browseSelectedVariant, but resets naturally whenever the catalog
      itself reloads. */
-  .ag-variant-chips{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 6px;}
-  .ag-vchip{all:unset;cursor:pointer;font-size:10.5px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);}
+  .ag-variant-chips{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;margin:5px 0 6px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
+  .ag-variant-chips::-webkit-scrollbar{display:none;}
+  /* Fade over the trailing edge signals there's more to scroll to, without
+     a visible scrollbar -- only added when the row actually overflows
+     (see markVariantChipOverflow), so a row that already shows every
+     option doesn't get its last chip needlessly clipped-looking. */
+  .ag-variant-chips.has-overflow{-webkit-mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);}
+  .ag-vchip{all:unset;cursor:pointer;font-size:10.5px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);flex-shrink:0;white-space:nowrap;}
   .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .ag-vchip-more{border-style:dashed;}
+  /* Separates one attribute's row (e.g. Color) from the next (Size) so two
+     stacked scroll strips don't read as a single ambiguous group. */
+  .ag-variant-chips + .ag-variant-chips{border-top:1px solid var(--line);padding-top:6px;margin-top:-1px;}
 
   /* ---- Profile card + menu (Account) ---- */
   .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
@@ -2669,56 +2673,24 @@ function axisChipsHTML(group, selected, axes){
   const row1 = axes.axis1.map(v=>axisChipHTML(group.productId, 1, v, v===parts[1])).join('');
   return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div>`;
 }
-// Past this many variants, a flat chip row wraps into a wall of pills
-// that pushes the price out of the card -- cap it and let the rest
-// live in the picker sheet instead. Only reached when the axis split
-// above doesn't apply (e.g. one free-text attribute with many values).
-// The selected chip always stays visible so opening the sheet and
-// picking something else doesn't make it vanish from the row.
-const MAX_INLINE_VCHIPS = 4;
+// Each attribute is its own horizontally-scrolling strip rather than a
+// row that wraps or gets capped with a "+N more" -- no popup needed,
+// the card's height never grows no matter how many options a product
+// has. markVariantChipOverflow() below decides which rows actually
+// need the "there's more" fade.
 function vchipHTML(productId, v, selected){
   return `<button type="button" class="ag-vchip ${v===selected?'active':''}" data-chip-pid="${esc(productId)}" data-chip-vidx="${v.variantIdx==null?'':v.variantIdx}">${esc(v.variantLabel||'—')}</button>`;
 }
 function variantChipsHTML(group, selected){
-  if(group.variants.length <= MAX_INLINE_VCHIPS){
-    return group.variants.map(v=>vchipHTML(group.productId, v, selected)).join('');
-  }
-  const visible = [selected, ...group.variants.filter(v=>v!==selected)].slice(0, MAX_INLINE_VCHIPS - 1);
-  const hidden = group.variants.length - visible.length;
-  return visible.map(v=>vchipHTML(group.productId, v, selected)).join('')
-    + `<button type="button" class="ag-vchip ag-vchip-more" data-more-pid="${esc(group.productId)}">+${hidden} more</button>`;
+  return group.variants.map(v=>vchipHTML(group.productId, v, selected)).join('');
 }
-// Fallback list for the rare product that's neither a clean two-axis grid
-// nor short enough for inline chips. Picking a row here does exactly what
-// tapping a chip does (updates the selection and patches the card).
-function openVariantPickerSheet(productId){
-  const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
-  if(!group) return;
-  const selected = selectedVariantFor(group);
-  const thumb = group.variants.find(v=>v.image);
-  const el = document.createElement('div');
-  el.className = 'ag-overlay';
-  el.innerHTML = `<div class="ag-overlay-card">
-    ${thumb ? `<img class="ag-overlay-thumb" src="${esc(thumb.image)}" alt="">` : ''}
-    <div class="ag-overlay-title">${esc(group.name)}</div>
-    <div class="ag-variant-sheet-list">${group.variants.map(v=>`
-      <div class="ag-item-result ${v===selected?'active':''}" data-vidx="${v.variantIdx==null?'':v.variantIdx}">
-        <div class="ag-item-result-body">
-          <div class="ag-item-result-name">${esc(v.variantLabel||'—')}</div>
-          <div class="ag-item-result-price money">${fmtAmountPerUnit(v.floorPrice, v.unit)}</div>
-        </div>
-        ${v===selected ? `<span class="ag-variant-sheet-check">${ICON_CHECK}</span>` : ''}
-      </div>`).join('')}
-    </div>
-  </div>`;
-  document.body.appendChild(el);
-  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
-  el.querySelectorAll('.ag-item-result[data-vidx]').forEach(row=>{
-    row.addEventListener('click', ()=>{
-      browseSelectedVariant.set(productId, row.dataset.vidx);
-      document.body.removeChild(el);
-      refreshOneBrowseCard(productId);
-    });
+// A scrollable row gives no visual hint it's scrollable once the
+// native scrollbar is hidden -- this adds a fade over the trailing
+// edge, but only on rows that actually overflow, so a row that
+// already shows all its chips doesn't get a fade clipping nothing.
+function markVariantChipOverflow(scopeEl){
+  scopeEl.querySelectorAll('.ag-variant-chips').forEach(row=>{
+    row.classList.toggle('has-overflow', row.scrollWidth > row.clientWidth + 1);
   });
 }
 function browseGroupCardHTML(group, promoted){
@@ -2770,6 +2742,8 @@ function refreshOneBrowseCard(productId){
   const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
   if(!group) return;
   card.outerHTML = browseGroupCardHTML(group, promotedMap());
+  const newCard = document.querySelector(`#ag_browseGrid .ag-grid-card[data-pid="${CSS.escape(String(productId))}"]`);
+  if(newCard) markVariantChipOverflow(newCard);
 }
 // Same double-submit hazard every other in-flight write in this app
 // guards against, keyed per product so quick-adding two different items
@@ -2871,6 +2845,7 @@ function renderBrowseGrid(){
     return;
   }
   grid.innerHTML = groups.map(g=>browseGroupCardHTML(g, promoted)).join('');
+  markVariantChipOverflow(grid);
 }
 
 // Keyed per item (not a single flag) so tapping one star doesn't block a
@@ -2947,11 +2922,6 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
         refreshOneBrowseCard(pid);
       }
     }
-    return;
-  }
-  const moreBtn = e.target.closest('[data-more-pid]');
-  if(moreBtn){
-    openVariantPickerSheet(moreBtn.dataset.morePid);
     return;
   }
   const quickBtn = e.target.closest('[data-quickadd-pid]');
