@@ -8377,7 +8377,7 @@ function editSupplier(id){
 function resetSupplierForm(){
   editingSupplierId = null;
   ['s_id','s_name','s_phone','s_location','s_notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('s_id').value = nextEntityId('supplier', 'S', 3, data.suppliers);
+  fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
 }
 function deleteSupplier(id){
@@ -8393,6 +8393,7 @@ document.getElementById('s_save').addEventListener('click', ()=>{
   const id = document.getElementById('s_id').value.trim();
   const name = document.getElementById('s_name').value.trim();
   if(!name){ toast('Supplier name is required'); return; }
+  if(!editingSupplierId && idIsPending(id)){ toast('Still issuing a Supplier ID — try again in a moment'); return; }
   // Defensive only -- the id comes from nextEntityId() now, so a clash here
   // would mean the counter itself is wrong rather than a mistyped entry.
   if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast(`Could not issue a new Supplier ID (${id} is taken). Reload and try again.`); return; }
@@ -8535,7 +8536,7 @@ function resetStaffForm(){
   editingStaffId = null;
   ['st_id','st_name','st_phone','st_notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('st_role').value = 'worker';
-  document.getElementById('st_id').value = nextEntityId('staff', 'ST', 3, data.staff);
+  fillIssuedId('st_id', 'staff', 'ST', 3, data.staff);
   document.getElementById('staffFormTitle').textContent = 'Add staff';
 }
 // Grants a staff member an app login (via a Supabase invite email) and
@@ -8566,6 +8567,7 @@ document.getElementById('st_save').addEventListener('click', ()=>{
   const id = document.getElementById('st_id').value.trim();
   const name = document.getElementById('st_name').value.trim();
   if(!name){ toast('Staff name is required'); return; }
+  if(!editingStaffId && idIsPending(id)){ toast('Still issuing a Staff ID — try again in a moment'); return; }
   if(!editingStaffId && data.staff.some(s=>s.id===id)){ toast(`Could not issue a new Staff ID (${id} is taken). Reload and try again.`); return; }
   const record = {
     id, name,
@@ -9207,7 +9209,7 @@ function editCustomer(id){
 function resetCustomerForm(){
   editingCustomerId = null;
   ['c_id','c_name','c_phone','c_location','c_debt','c_notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('c_id').value = nextEntityId('customer', 'C', 3, data.customers);
+  fillIssuedId('c_id', 'customer', 'C', 3, data.customers);
   document.getElementById('customerFormTitle').textContent = 'Add customer';
 }
 function deleteCustomer(id){
@@ -9221,6 +9223,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
   const id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
   if(!name){ toast('Customer name is required'); return; }
+  if(!editingCustomerId && idIsPending(id)){ toast('Still issuing a Customer ID — try again in a moment'); return; }
   if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast(`Could not issue a new Customer ID (${id} is taken). Reload and try again.`); return; }
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
@@ -10265,6 +10268,58 @@ function nextEntityId(kind, prefix, pad, existing){
   data.idCounters[kind] = n;
   return prefix + String(n).padStart(pad, '0');
 }
+// Asks the database to issue the id (0032_server_side_entity_ids), passing
+// the highest local id as a floor so the allocator can never land on or
+// below something this client already knows about.
+//
+// Falls back to the local counter when the call fails. That's deliberate:
+// the local path is exactly what shipped in 59b8ef4 and is still
+// monotonic, so a flaky connection degrades to "safe but racy" rather than
+// blocking the admin from adding a product at all. The race it reopens
+// needs two admins acting in the same second; being unable to work needs
+// only one dropped request.
+async function issueEntityId(kind, prefix, pad, existing){
+  const rx = new RegExp('^' + prefix + '(\\d+)$');
+  let floor = 0;
+  (existing||[]).forEach(r=>{
+    const m = rx.exec(String((r && r.id) || ''));
+    if(m) floor = Math.max(floor, Number(m[1]));
+  });
+  floor = Math.max(floor, Number((data.idCounters||{})[kind]) || 0);
+  try{
+    const { data: id, error } = await sb.rpc('next_entity_id', {
+      p_shop_id: currentShopId, p_kind: kind, p_prefix: prefix, p_pad: pad, p_floor: floor
+    });
+    if(!error && id){
+      // Keep the local counter in step, so a later offline fallback starts
+      // above whatever the server has already handed out.
+      if(!data.idCounters) data.idCounters = {};
+      const m = rx.exec(String(id));
+      if(m) data.idCounters[kind] = Math.max(Number(data.idCounters[kind])||0, Number(m[1]));
+      return id;
+    }
+    console.warn('next_entity_id unavailable, using local counter:', error && error.message);
+  }catch(err){
+    console.warn('next_entity_id failed, using local counter:', err && err.message);
+  }
+  return nextEntityId(kind, prefix, pad, existing);
+}
+// Shown while the allocator round-trips. The save handlers reject it, so a
+// fast typist can't commit a record before its id has actually been issued.
+const ID_PENDING = 'Generating…';
+function fillIssuedId(fieldId, kind, prefix, pad, existing){
+  const el = document.getElementById(fieldId);
+  el.value = ID_PENDING;
+  const token = (fillIssuedId._token = (fillIssuedId._token || 0) + 1);
+  issueEntityId(kind, prefix, pad, existing).then(id=>{
+    // A later open supersedes this one -- without the token, a slow first
+    // response could land in a form that's since been reset for a different
+    // record and overwrite its (correct) id.
+    if(token !== fillIssuedId._token) return;
+    if(el.value === ID_PENDING) el.value = id;
+  });
+}
+function idIsPending(id){ return !id || id === ID_PENDING; }
 function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
@@ -10382,7 +10437,7 @@ function resetProductForm(){
   refreshPresetDatalists();
   document.getElementById('p_wholesale_markup_type').value = 'percent';
   document.getElementById('p_retail_markup_type').value = 'percent';
-  document.getElementById('p_id').value = generateNextProductId();
+  fillIssuedId('p_id', 'product', 'P', 3, data.products);
   document.getElementById('p_id_hint').style.display = '';
   document.getElementById('productFormTitle').textContent = 'Add product';
   originalProductImage = null;
@@ -10481,6 +10536,7 @@ document.getElementById('p_save').addEventListener('click', ()=>{
   const id = document.getElementById('p_id').value.trim();
   const name = document.getElementById('p_name').value.trim();
   if(!name){ toast('Product name is required'); return; }
+  if(!editingProductId && idIsPending(id)){ toast('Still issuing a Product ID — try again in a moment'); return; }
   if(!editingProductId && data.products.some(p=>p.id===id)){ toast(`Could not issue a new Product ID (${id} is taken). Reload and try again.`); return; }
   const type = document.getElementById('p_type_variable').checked ? 'variable' : 'simple';
   const variantAttributes = type==='variable' ? draftVariantAttrs
