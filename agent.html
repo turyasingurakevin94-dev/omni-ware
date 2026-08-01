@@ -605,7 +605,7 @@
 
 <div class="ag-offline-banner" id="ag_offlineBanner" style="display:none;">
   <svg class="icon" viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
-  <span>You're offline &mdash; showing your last saved data. New actions won't go through until you're back online.</span>
+  <span id="ag_offlineBannerText">You're offline &mdash; showing your last saved data. New actions won't go through until you're back online.</span>
 </div>
 
 <button type="button" class="ag-avatar-fab" id="ag_home_avatar_btn">A</button>
@@ -1102,6 +1102,12 @@ let cart = [], chosenClient = null;
    this one. */
 let isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
 let bootedFromCache = false;
+// Set when a read came back empty but the last good snapshot had rows.
+// That's almost always an expired/mid-refresh token or an RLS mismatch
+// rather than a genuinely emptied account, so it's tracked separately
+// from isOffline -- the two need different banner wording, and this one
+// must never be reported as a clean successful load.
+let dataLooksSuspect = false;
 const OFFLINE_CACHE_KEY = 'agentOfflineCache';
 
 // navigator.onLine only reflects "does the OS have a network interface
@@ -1116,8 +1122,26 @@ function isNetworkError(err){
   return msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed') || msg.includes('network request failed');
 }
 
+// GUARD 1 -- the cache is the only copy of an agent's data that survives a
+// bad read, so it must never be overwritten by one. A snapshot that lost
+// every row of something the stored snapshot still has is far more likely
+// a silently-empty response (expired JWT, RLS mismatch, wrong shop_id --
+// all of which PostgREST returns as a perfectly ordinary `data: []`) than
+// a real account reset. Writing that over the good copy is what turned a
+// momentary auth blip into what looked like permanent data loss.
+function wouldWipeCachedData(prev){
+  if(!prev) return false;
+  const wipes = (fresh, stored) => (stored||[]).length > 0 && (fresh||[]).length === 0;
+  return wipes(myOrders, prev.myOrders)
+    || wipes(agentClients, prev.agentClients)
+    || wipes(catalog, prev.catalog);
+}
 function saveOfflineCache(){
   try{
+    if(wouldWipeCachedData(loadOfflineCache())){
+      console.warn('Skipped offline-cache write: the fresh snapshot is empty where the stored one has rows.');
+      return;
+    }
     localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
       savedAt: new Date().toISOString(),
       myAgent, currentShopId, agentClients, myOrders, catalog, promotions,
@@ -1136,8 +1160,16 @@ function loadOfflineCache(){
 }
 
 function updateOfflineBanner(){
-  document.getElementById('ag_offlineBanner').style.display = isOffline ? 'flex' : 'none';
-  document.body.classList.toggle('ag-offline', isOffline);
+  const show = isOffline || dataLooksSuspect;
+  document.getElementById('ag_offlineBanner').style.display = show ? 'flex' : 'none';
+  document.body.classList.toggle('ag-offline', show);
+  // Two different problems, two different messages -- telling an agent
+  // they're offline when they aren't just sends them to check their wifi.
+  if(show){
+    document.getElementById('ag_offlineBannerText').textContent = (dataLooksSuspect && !isOffline)
+      ? "Couldn't confirm your latest orders just now -- showing your last saved data. Reopen the app in a moment to retry."
+      : "You're offline -- showing your last saved data. New actions won't go through until you're back online.";
+  }
 }
 window.addEventListener('online', async ()=>{
   if(!bootedFromCache){ isOffline = false; updateOfflineBanner(); return; }
@@ -1161,6 +1193,13 @@ window.addEventListener('online', async ()=>{
     browseDataLoaded = false;
     await ensureBrowseDataLoaded();
     saveOfflineCache();
+    // Same rule as boot()'s GUARD 3 -- reconnecting doesn't make a
+    // suspect read trustworthy, so "data refreshed" is only claimed when
+    // the rows actually came back.
+    if(dataLooksSuspect){
+      updateOfflineBanner();
+      return;
+    }
     bootedFromCache = false;
     isOffline = false;
     updateOfflineBanner();
@@ -1315,15 +1354,50 @@ function mapOrderRow(q){
   };
 }
 
-async function loadAgentHomeData(){
+async function fetchAgentHomeRows(){
   const [{ data: clientsData, error: clientsErr }, { data: ordersData, error: ordersErr }] = await Promise.all([
     sb.from('agent_clients').select('*').eq('shop_id', currentShopId).order('name'),
     sb.from('saved_quotes').select('*').eq('shop_id', currentShopId),
   ]);
   if(clientsErr) throw clientsErr;
   if(ordersErr) throw ordersErr;
-  agentClients = clientsData || [];
-  myOrders = (ordersData || []).map(mapOrderRow);
+  return { clients: clientsData || [], orders: ordersData || [] };
+}
+// GUARD 2 -- an RLS denial and an expired/mid-refresh token both come back
+// from PostgREST as an ordinary empty result set, indistinguishable from
+// "this agent genuinely has no orders yet". Believing that on the first
+// try is what made a token blip look like every order had been deleted.
+// When a read comes back empty but the last good snapshot had rows, force
+// a token refresh and ask once more; only a second empty answer on a
+// provably fresh session is treated as real.
+function readLostRows(rows, cached){
+  if(!cached) return false;
+  const lost = (fresh, stored) => (stored||[]).length > 0 && (fresh||[]).length === 0;
+  return lost(rows.orders, cached.myOrders) || lost(rows.clients, cached.agentClients);
+}
+async function loadAgentHomeData(){
+  const cached = loadOfflineCache();
+  let rows = await fetchAgentHomeRows();
+  if(readLostRows(rows, cached)){
+    try{
+      const { data: refreshed, error: refreshErr } = await sb.auth.refreshSession();
+      if(!refreshErr && refreshed && refreshed.session) rows = await fetchAgentHomeRows();
+    }catch(_e){ /* refresh unavailable -- fall through to the cache below */ }
+  }
+  if(readLostRows(rows, cached)){
+    // Still empty after a clean refresh. Keep showing the last known-good
+    // data rather than a convincing-looking empty account, and let the
+    // banner say so -- silently rendering "no orders" is the exact
+    // failure this whole guard exists to prevent.
+    console.warn('Read returned no rows where the cached snapshot has them -- keeping cached data.');
+    dataLooksSuspect = true;
+    agentClients = cached.agentClients || [];
+    myOrders = cached.myOrders || [];
+    return;
+  }
+  dataLooksSuspect = false;
+  agentClients = rows.clients;
+  myOrders = rows.orders.map(mapOrderRow);
 }
 
 /* ================= NAVIGATION ================= */
@@ -3859,13 +3933,17 @@ async function boot(){
   try{
     await loadAgentHomeData();
     saveOfflineCache();
-    // A successful fetch here proves connectivity is actually fine now,
-    // even if ensureAgentAuth() above had to resume from cache because an
-    // earlier check was briefly flaky -- without this, the banner could
-    // get stuck reading "offline" forever despite every screen now
-    // holding fully fresh data.
-    isOffline = false;
-    bootedFromCache = false;
+    // GUARD 3 -- a fetch that came back without errors still isn't proof
+    // the data is real (see loadAgentHomeData). Only a load that wasn't
+    // flagged suspect may clear these flags; otherwise the agent is
+    // looking at cached rows and the banner has to keep saying so
+    // instead of reporting a clean, fully-fresh load.
+    if(!dataLooksSuspect){
+      isOffline = false;
+      bootedFromCache = false;
+    } else {
+      bootedFromCache = true;
+    }
     updateOfflineBanner();
   }catch(e){
     console.error('Failed to load home data, falling back to cached snapshot:', e);
