@@ -638,6 +638,7 @@
     </div>
 
     <div class="ag-pad">
+      <div id="ag_sell_clientWrap" style="margin-bottom:12px;"></div>
       <div class="ag-quote-banner" id="ag_browse_quoteBanner">
         <span><b id="ag_browse_quoteBannerCount">0</b> item(s) in your quote</span>
         <span>View quote &rarr;</span>
@@ -1609,9 +1610,105 @@ function renderHome(){
   document.getElementById('ag_home_healthFlags').innerHTML = health.flags.map(f=>`<li class="${f.ok?'ok':'warn'}">${f.ok?'✔':'⚠'} ${f.text}</li>`).join('');
 }
 document.getElementById('ag_home_earnings_link').addEventListener('click', ()=> switchTab('earnings'));
-document.getElementById('ag_home_qa_newquote').addEventListener('click', ()=> switchTab('sell'));
+document.getElementById('ag_home_qa_newquote').addEventListener('click', openNewQuoteClientSheet);
 document.getElementById('ag_home_qa_customers').addEventListener('click', ()=> switchTab('customers'));
 document.getElementById('ag_home_qa_orders').addEventListener('click', ()=> openOrderHistoryScreen('home'));
+
+/* ---- New Quote: client comes first -----------------------------------
+   Every quote is fundamentally "for someone" before it's a list of
+   products, but the old New Quote action just opened Sell with no
+   client attached -- the one real first decision was silently deferred
+   to the Quote screen's own picker, at the very end. This asks it up
+   front instead, then reuses that same existing picker's selectClient()
+   so nothing downstream has to know or care where the client came from.
+   Never a hard gate: Skip is always one tap away, since an agent mid-
+   call before a customer's given their name has nothing to pick yet. */
+function relativeDayLabel(dateStr){
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if(days<=0) return 'Ordered today';
+  if(days===1) return 'Ordered yesterday';
+  return `Ordered ${days} days ago`;
+}
+function newQuoteRecentClients(limit){
+  const counts = clientOrderCounts();
+  const withDates = agentClients.map(c=>{
+    const orders = (counts.get(c.id)||[]).filter(o=>!o.voided);
+    let lastDate = null;
+    orders.forEach(o=>{ if(o.savedAt && (!lastDate || o.savedAt > lastDate)) lastDate = o.savedAt; });
+    return { client:c, lastDate };
+  }).filter(x=>x.lastDate);
+  withDates.sort((a,b)=> b.lastDate.localeCompare(a.lastDate));
+  return withDates.slice(0, limit);
+}
+function newQuoteClientRowHTML(client, hint){
+  return `<div class="ag-item-result" data-id="${esc(client.id)}">
+    <div class="ag-list-item-avatar">${esc(clientInitials(client.name))}</div>
+    <div class="ag-item-result-body">
+      <div class="ag-item-result-name">${esc(client.name)}</div>
+      <div class="ag-item-result-price">${esc(hint)}</div>
+    </div>
+  </div>`;
+}
+function newQuoteSheetListHTML(query){
+  const q = query.trim().toLowerCase();
+  if(q){
+    const matches = agentClients.filter(c=>(c.name||'').toLowerCase().includes(q));
+    let html = matches.map(c=>newQuoteClientRowHTML(c, c.phone||'No phone on file')).join('');
+    if(!matches.some(c=>(c.name||'').toLowerCase()===q)){
+      html += `<div class="ag-item-result" id="ag_nq_add_new">
+        <div class="ag-list-item-avatar">+</div>
+        <div class="ag-item-result-body"><div class="ag-item-result-name">Add "${esc(query.trim())}" as a new client</div></div>
+      </div>`;
+    }
+    return html;
+  }
+  const recents = newQuoteRecentClients(4);
+  if(!recents.length) return '';
+  return `<div class="ag-section-title" style="margin:14px 0 8px;">Recent</div>` +
+    recents.map(x=>newQuoteClientRowHTML(x.client, relativeDayLabel(x.lastDate))).join('');
+}
+function openNewQuoteClientSheet(){
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `<div class="ag-overlay-card">
+    <div class="ag-overlay-title">Who's this quote for?</div>
+    <input type="text" id="ag_nq_search" placeholder="Type a name or search" style="width:100%;box-sizing:border-box;padding:11px 13px;border-radius:10px;border:1px solid var(--line);font-size:14px;margin-bottom:2px;">
+    <div id="ag_nq_list"></div>
+    <div class="ag-save-solution-link" id="ag_nq_skip">Skip for now — add later</div>
+  </div>`;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+
+  const listEl = document.getElementById('ag_nq_list');
+  function refreshList(query){
+    listEl.innerHTML = newQuoteSheetListHTML(query);
+    listEl.querySelectorAll('.ag-item-result[data-id]').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const client = agentClients.find(c=>String(c.id)===row.dataset.id);
+        if(!client) return;
+        document.body.removeChild(el);
+        selectClient(client);
+        switchTab('sell');
+        toast(`Quote started for ${client.name}`);
+      });
+    });
+    const addNew = document.getElementById('ag_nq_add_new');
+    if(addNew) addNew.addEventListener('click', ()=>{
+      const typed = document.getElementById('ag_nq_search').value.trim();
+      document.body.removeChild(el);
+      openNewClientPanel(typed, ()=> switchTab('sell'));
+    });
+  }
+  refreshList('');
+  const searchEl = document.getElementById('ag_nq_search');
+  searchEl.addEventListener('input', ()=> refreshList(searchEl.value));
+  searchEl.focus();
+
+  document.getElementById('ag_nq_skip').addEventListener('click', ()=>{
+    document.body.removeChild(el);
+    switchTab('sell');
+  });
+}
 
 /* ================= EARNINGS ================= */
 function currentMonthKey(){
@@ -2693,6 +2790,7 @@ document.getElementById('ag_browse_search').addEventListener('blur', (e)=>{
 });
 
 async function openBrowseView(){
+  renderSellClientChip();
   document.getElementById('ag_browseGrid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Loading…</div>';
   await ensureBrowseDataLoaded();
   renderBrowseGrid();
@@ -2976,11 +3074,27 @@ function resetCartAfterSubmit(){
   document.getElementById('ag_deliveryAddressWrap').style.display = 'none';
   updateCartBadge();
   clearQuoteDraft();
+  renderSellClientChip();
 }
 
 /* ---- Client picking ---- */
 function clientInitials(name){
   return (name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+// Same chosenClient the Quote screen's own picker reads -- this is
+// purely a second, always-visible place to see and change it, on the
+// screen an agent actually lands on first. Recognition over recall: no
+// need to remember whether a client was set, just glance at the top.
+function renderSellClientChip(){
+  const wrap = document.getElementById('ag_sell_clientWrap');
+  if(!wrap) return;
+  if(chosenClient){
+    wrap.innerHTML = `<div class="ag-chip"><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`;
+    document.getElementById('ag_sell_client_change').addEventListener('click', openNewQuoteClientSheet);
+  } else {
+    wrap.innerHTML = `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
+    document.getElementById('ag_sell_client_add').addEventListener('click', openNewQuoteClientSheet);
+  }
 }
 function renderClientSuggestions(query){
   const box = document.getElementById('ag_client_suggestions');
@@ -3019,6 +3133,7 @@ function selectClient(client){
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
   saveQuoteDraft();
+  renderSellClientChip();
   document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
     chosenClient = null;
     wrap.style.display = 'none';
@@ -3026,10 +3141,11 @@ function selectClient(client){
     document.getElementById('ag_client_search').value = '';
     renderClientSuggestions('');
     saveQuoteDraft();
+    renderSellClientChip();
   });
 }
 
-function openNewClientPanel(prefillName){
+function openNewClientPanel(prefillName, onDone){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
   el.innerHTML = `
@@ -3066,6 +3182,7 @@ function openNewClientPanel(prefillName){
     agentClients.push(inserted);
     document.body.removeChild(el);
     selectClient(inserted);
+    if(onDone) onDone(inserted);
   });
 }
 
