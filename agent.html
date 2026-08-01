@@ -358,15 +358,18 @@
      vertically centered so a short one-variant card and a tall two-axis
      card still line up the same way. */
   #ag_browseGrid.ag-browse-grid{grid-template-columns:1fr;}
-  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:12px;padding:12px;}
+  /* Only the "+" opens the panel now (see the click handler) -- default
+     cursor here so the rest of the row doesn't look clickable on desktop
+     when it isn't; the chips, star, and "+" all set their own pointer. */
+  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:12px;padding:12px;cursor:default;}
   #ag_browseGrid .ag-grid-thumb-wrap{width:88px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
   #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;}
-  .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;margin-bottom:7px;}
+  /* Bonus pill + how-long-left countdown read as one fact ("3% bonus,
+     30 days left"), not two stacked lines, so they sit in a row together. */
+  .ag-promo-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+  .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;}
   .ag-bonus-pill .icon{width:10px;height:10px;}
-  /* How long a promo (and its bonus) has left -- a plain line under the
-     pill rather than crammed inside it, so a long "min Nunit"-style wrap
-     never happens no matter how the countdown text is worded. */
-  .ag-promo-countdown{font-size:10px;font-weight:700;color:var(--bonus);margin:-3px 0 7px;}
+  .ag-promo-countdown{font-size:10px;font-weight:700;color:var(--bonus);white-space:nowrap;}
   .ag-promo-countdown.urgent{color:var(--rust);}
   /* Tells an agent, right where the bonus is promised, exactly why a
      cluster item they already starred isn't earning it yet -- distinct
@@ -377,16 +380,8 @@
   .ag-grid-name{font-size:13.5px;font-weight:700;letter-spacing:-0.006em;color:var(--ink);line-height:1.3;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .ag-grid-variant{display:inline-block;max-width:100%;font-weight:700;font-size:10.5px;letter-spacing:.01em;color:var(--accent-dark);background:var(--accent-soft);padding:2.5px 7px;border-radius:6px;margin:5px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ag-grid-pack{font-size:10.5px;font-weight:500;color:var(--ink-soft);letter-spacing:.005em;margin-bottom:7px;}
-  .ag-grid-price{font-family:var(--font-money);font-size:13.5px;font-weight:800;letter-spacing:-0.01em;color:var(--accent-dark);line-height:1.25;}
-  .ag-price-unit{font-family:var(--font-sans);font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
-  /* Which pricing tier the shown figure is: retail (buy any amount) vs
-     wholesale (only unlocks once you buy a full pack/carton+) -- a solid
-     badge, not just tinted text, so it reads at a glance instead of
-     blending into the pack-info line right above it. */
-  .ag-price-tier{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 8px;border-radius:20px;margin-bottom:6px;white-space:nowrap;}
-  .ag-price-tier .icon{width:10px;height:10px;}
-  .ag-price-tier.retail{color:var(--slate);background:var(--slate-soft);}
-  .ag-price-tier.wholesale{color:#fff;background:var(--rust);}
+  .ag-grid-price{font-family:var(--font-money);font-size:17px;font-weight:800;letter-spacing:-0.015em;color:var(--accent-dark);line-height:1.2;}
+  .ag-price-unit{font-family:var(--font-sans);font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:0;margin-left:1px;}
   /* "Buy more, pay less" teaser on a grid card -- always one line, always
      per the same base unit as the price right above it. Muted rather than
      colored like the real price (ag-grid-price/ag-item-result-price) --
@@ -397,7 +392,7 @@
   .ag-grid-reminder{font-size:10.5px;color:var(--danger);font-weight:700;margin-top:5px;}
 
   .ag-star-btn{
-    all:unset;position:absolute;top:8px;right:8px;width:29px;height:29px;border-radius:50%;
+    all:unset;cursor:pointer;position:absolute;top:8px;right:8px;width:29px;height:29px;border-radius:50%;
     background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;
     color:#C4C9D1;box-shadow:0 1px 4px rgba(0,0,0,0.18);
   }
@@ -413,7 +408,7 @@
      .ag-star-btn), since the thumb is now a small fixed square rather
      than the full card width. */
   .ag-quickadd-btn{
-    all:unset;flex-shrink:0;width:32px;height:32px;border-radius:50%;
+    all:unset;cursor:pointer;flex-shrink:0;width:32px;height:32px;border-radius:50%;
     background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
     box-shadow:0 3px 8px -2px rgba(14,165,160,.55);
   }
@@ -2610,18 +2605,6 @@ function saveRecentSearch(q){
   localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
 }
 
-// Kept short and single-line on purpose -- the exact min quantity for
-// wholesale is already spelled out right above in the pack-info line, so
-// repeating it here would just make the badge wrap and lose its pill
-// shape. Returns the full inner HTML of the badge (icon + text), safe to
-// assign via innerHTML anywhere -- the icon reinforces the retail/
-// wholesale meaning by shape, not color alone.
-function priceTierBadgeHTML(tier){
-  if(tier==='wholesale') return `${ICON_BOXES}<span>Bulk</span>`;
-  if(tier==='retail') return `${ICON_TAG}<span>Loose</span>`;
-  return '';
-}
-
 // Only ever called with a promo that already passed the backend's
 // "starts_at <= today <= ends_at" filter, so a past-dated result here
 // can't happen -- diff is always >= 0 for anything actually shown.
@@ -2759,15 +2742,13 @@ function browseGroupCardHTML(group, promoted){
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
-      ${countdown ? `<div class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</div>` : ''}
+      ${promo ? `<div class="ag-promo-row"><span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>${countdown ? `<span class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</span>` : ''}</div>` : ''}
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(group.name)}</div>
       ${hasVariants
         ? (axes ? axisChipsHTML(group, selected, axes) : `<div class="ag-variant-chips">${variantChipsHTML(group, selected)}</div>`)
         : (selected.variantLabel ? `<div class="ag-grid-variant">${esc(selected.variantLabel)}</div>` : '')}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      ${selected.tier ? `<div class="ag-price-tier ${esc(selected.tier)}">${priceTierBadgeHTML(selected.tier)}</div>` : ''}
       <div class="ag-grid-price">${fmtAmountPerUnit(selected.floorPrice, selected.unit)}</div>
       ${bulkHintHTML(selected)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
@@ -2811,13 +2792,11 @@ function browseCardHTML(it, promoted, opts){
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${promo ? `<span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>` : ''}
-      ${countdown ? `<div class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</div>` : ''}
+      ${promo ? `<div class="ag-promo-row"><span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>${countdown ? `<span class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</span>` : ''}</div>` : ''}
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
       ${packLabel ? `<div class="ag-grid-pack">${packLabel}</div>` : ''}
-      ${it.tier ? `<div class="ag-price-tier ${esc(it.tier)}">${priceTierBadgeHTML(it.tier)}</div>` : ''}
       <div class="ag-grid-price">${fmtAmountPerUnit(it.floorPrice, it.unit)}</div>
       ${bulkHintHTML(it)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
@@ -2940,18 +2919,26 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
     }
     return;
   }
+  const quickBtn = e.target.closest('.ag-quickadd-btn');
+  if(quickBtn){
+    const qCard = quickBtn.closest('.ag-grid-card');
+    if(qCard){
+      const vidxRaw = qCard.dataset.selectedVidx !== undefined ? qCard.dataset.selectedVidx : qCard.dataset.vidx;
+      const item = catalogEntry(qCard.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
+      if(item) openAddItemPanel(item);
+    }
+    return;
+  }
   const card = e.target.closest('.ag-grid-card');
   if(card){
-    // Merged main-grid cards carry data-selected-vidx (whichever chip is
-    // active); Order Again/Sponsored cards still carry the old flat
-    // data-vidx. Checking selected-vidx first, falling back to vidx,
-    // means one handler serves both card shapes correctly. The "+"
-    // button (no data-quickadd handling of its own anymore) is just
-    // another tap target inside this same card, so it opens the same
-    // panel as tapping anywhere else on the row -- qty, the tier
-    // ladder, and the price the agent actually wants to charge, rather
-    // than silently committing floor price with no chance to set one.
-    const vidxRaw = card.dataset.selectedVidx !== undefined ? card.dataset.selectedVidx : card.dataset.vidx;
+    // Merged main-grid cards (data-selected-vidx) only open the panel via
+    // the "+" button above -- tapping a chip, the price, or empty space
+    // on the row does nothing, so browsing/scrolling never accidentally
+    // launches it. Order Again/Sponsored's flat cards (data-vidx, no "+"
+    // of their own) keep the whole card as their tap target, same as
+    // before.
+    if(card.dataset.selectedVidx !== undefined) return;
+    const vidxRaw = card.dataset.vidx;
     const item = catalogEntry(card.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
     if(item) openAddItemPanel(item);
     return;
