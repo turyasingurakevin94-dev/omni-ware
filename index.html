@@ -874,6 +874,18 @@
   .cb-progress-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin-bottom:26px;}
   .cb-step h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 6px 0;color:var(--ink);letter-spacing:0.2px;}
   .cb-step-hint{margin:0 0 18px 0;color:var(--ink-soft);font-size:13.5px;}
+  .cb-carried-note{margin-top:10px;color:var(--ink-soft);font-size:12.5px;line-height:1.5;}
+  .cb-carried-first{color:var(--ink-faint);font-style:italic;}
+  /* A broken chain is the one thing this screen must not let past quietly:
+     the day-level variance below only ever measures a day against its own
+     opening figure, so a wrong opening reconciles perfectly. */
+  .cb-chain-break{
+    display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:12px 14px;
+    border:1px solid var(--danger);border-left-width:4px;border-radius:10px;
+    background:rgba(192,57,43,.06);font-size:13px;line-height:1.5;
+  }
+  .cb-chain-break b{color:var(--danger);}
+  .cb-chain-break .cb-chain-fix{align-self:flex-start;margin-top:6px;}
   .cb-step-field{max-width:320px;}
   .cb-step-field input{font-size:21px;font-family:'IBM Plex Mono',monospace;padding:13px 14px;font-weight:600;}
   .cb-wizard-nav{justify-content:space-between;margin-top:28px;}
@@ -2867,16 +2879,19 @@
           <h2>Starting cash balance</h2>
           <p class="cb-step-hint">How much physical cash do you have on hand right now?</p>
           <div class="field cb-step-field"><label>Cash (UGX)</label><input type="number" id="cb_wiz_cash" min="0" placeholder="e.g. 150000"></div>
+          <div class="cb-carried-note" id="cb_wiz_cash_carried"></div>
         </div>
         <div class="cb-step" id="cbStep3" style="display:none;">
           <h2>Starting mobile money balance</h2>
           <p class="cb-step-hint">Enter the mobile money balance you're opening with.</p>
           <div class="field cb-step-field"><label>Mobile Money (UGX)</label><input type="number" id="cb_wiz_momo" min="0" placeholder="e.g. 80000"></div>
+          <div class="cb-carried-note" id="cb_wiz_momo_carried"></div>
         </div>
         <div class="cb-step" id="cbStep4" style="display:none;">
           <h2>Starting bank balance</h2>
           <p class="cb-step-hint">Enter the bank balance you're opening with.</p>
           <div class="field cb-step-field"><label>Bank (UGX)</label><input type="number" id="cb_wiz_bank" min="0" placeholder="e.g. 500000"></div>
+          <div class="cb-carried-note" id="cb_wiz_bank_carried"></div>
         </div>
 
         <div class="btn-row cb-wizard-nav">
@@ -11909,9 +11924,62 @@ function addCashPayment(account, amount, category, description, date){
   return id;
 }
 
+/* ---- Carrying the balance forward ----
+   A cash book is a continuous chain: a day opens holding exactly what the
+   previous one ended holding. Every opening balance here was typed by hand
+   into the wizard and defaulted to zero, so the chain was only ever as good
+   as somebody re-entering it correctly each morning -- and nothing compared
+   the two. Money could leave the books overnight with no entry anywhere,
+   and the day would still reconcile perfectly, because the variance check
+   only ever measured a day against its own opening figure. */
+
+// The day this one follows: the most recent date that actually has a cash
+// book behind it, not literally yesterday. Shops don't trade every day, and
+// a closed Sunday must not reset the chain to zero.
+function previousCashDate(date){
+  const dates = new Set(Object.keys(data.cashDays||{}));
+  (data.cashTxns||[]).forEach(t=>{ if(t.date) dates.add(t.date); });
+  let best = null;
+  dates.forEach(d=>{ if(d < date && (best===null || d > best)) best = d; });
+  return best;
+}
+
+// Read-only: never creates a record for the day it is asked about, which is
+// what keeps this from recursing back through every day in the book.
+function cbClosingFor(date, account){
+  const rec = (data.cashDays||{})[date];
+  const opening = (rec && rec.opening && Number(rec.opening[account])) || 0;
+  const {totalReceipts, totalPayments, totalExpenses} = cbAccountTotals(date, account);
+  return opening + totalReceipts - totalPayments - totalExpenses;
+}
+
+// What a day SHOULD open with. A counted figure beats a calculated one: if
+// someone physically counted the drawer at close, that is the money actually
+// there to open with, and the gap against what was calculated is already
+// recorded on that day as its variance. Null when there is no earlier day --
+// the very first day of the book genuinely does start from a count.
+function carriedOpening(date){
+  const prev = previousCashDate(date);
+  if(!prev) return null;
+  const prevRec = (data.cashDays||{})[prev] || {};
+  const values = {}, counted = {};
+  ACCOUNTS.forEach(a=>{
+    const actual = prevRec.actual ? prevRec.actual[a.key] : null;
+    const wasCounted = actual !== null && actual !== undefined && actual !== '';
+    counted[a.key] = wasCounted;
+    values[a.key] = wasCounted ? Number(actual) : cbClosingFor(prev, a.key);
+  });
+  return {from: prev, values, counted};
+}
+
 function getDayRecord(date){
   if(!data.cashDays[date]){
-    data.cashDays[date] = {opening:{cash:0,momo:0,bank:0}, actual:{cash:null,momo:null,bank:null}, openingSet:false};
+    const carried = carriedOpening(date);
+    data.cashDays[date] = {
+      opening: carried ? {...carried.values} : {cash:0,momo:0,bank:0},
+      actual:{cash:null,momo:null,bank:null},
+      openingSet:false
+    };
   }
   if(data.cashDays[date].openingSet === undefined) data.cashDays[date].openingSet = false;
   return data.cashDays[date];
@@ -11937,12 +12005,31 @@ function showCbWizard(resetSteps){
   document.getElementById('cbMain').style.display = 'none';
   if(resetSteps){
     cbWizStep = 0;
-    const rec = getDayRecord(currentCbDate());
-    document.getElementById('cb_wiz_cash').value = rec.opening.cash || '';
-    document.getElementById('cb_wiz_momo').value = rec.opening.momo || '';
-    document.getElementById('cb_wiz_bank').value = rec.opening.bank || '';
+    fillCbWizardFromRecord();
     renderCbWizardStep();
   }
+}
+
+// Pre-fills the three amounts and says where each came from. An opening
+// balance that was never confirmed shows the carried figure rather than the
+// stored zero -- that stored zero is only there because the record had to be
+// created before anyone had said anything about the day.
+function fillCbWizardFromRecord(){
+  const date = currentCbDate();
+  const rec = getDayRecord(date);
+  const carried = carriedOpening(date);
+  ACCOUNTS.forEach(a=>{
+    const useCarried = carried && !rec.openingSet;
+    const value = useCarried ? carried.values[a.key] : rec.opening[a.key];
+    document.getElementById(`cb_wiz_${a.key}`).value = value || '';
+    const note = document.getElementById(`cb_wiz_${a.key}_carried`);
+    if(!note) return;
+    if(!carried){
+      note.innerHTML = `<span class="cb-carried-first">Nothing on file before this date — this is where the book starts.</span>`;
+      return;
+    }
+    note.innerHTML = `Carried forward from <b>${esc(carried.from)}</b>, which ${carried.counted[a.key] ? 'was counted at' : 'calculated out at'} <b>${fmtUGX(Math.round(carried.values[a.key]))}</b>. Change it only if the money on hand really differs.`;
+  });
 }
 function renderCbWizardStep(){
   CB_WIZ_STEPS.forEach((id,i)=>{ document.getElementById(id).style.display = (i===cbWizStep) ? 'block' : 'none'; });
@@ -11952,12 +12039,7 @@ function renderCbWizardStep(){
   document.getElementById('cb_wiz_back').style.visibility = cbWizStep===0 ? 'hidden' : 'visible';
   document.getElementById('cb_wiz_next').textContent = cbWizStep===CB_WIZ_STEPS.length-1 ? 'Finish & open the books' : 'Next';
 }
-document.getElementById('cb_wiz_date').addEventListener('change', ()=>{
-  const rec = getDayRecord(currentCbDate());
-  document.getElementById('cb_wiz_cash').value = rec.opening.cash || '';
-  document.getElementById('cb_wiz_momo').value = rec.opening.momo || '';
-  document.getElementById('cb_wiz_bank').value = rec.opening.bank || '';
-});
+document.getElementById('cb_wiz_date').addEventListener('change', fillCbWizardFromRecord);
 document.getElementById('cb_wiz_next').addEventListener('click', ()=>{
   if(cbWizStep===0 && !document.getElementById('cb_wiz_date').value){ toast('Select a date to continue'); return; }
   if(cbWizStep < CB_WIZ_STEPS.length-1){ cbWizStep++; renderCbWizardStep(); }
@@ -12342,6 +12424,30 @@ function cbAccountTotals(date, account){
   return {totalReceipts, totalPayments, totalExpenses};
 }
 
+// Money that appeared or vanished between the close of one day and the open
+// of the next. The per-account variance in the table below cannot show this:
+// it measures a day against its OWN opening figure, so a day opened with the
+// wrong number reconciles perfectly against that wrong number. This is the
+// only place the two days are compared to each other.
+function cbChainBreakHTML(date, rec){
+  const carried = carriedOpening(date);
+  if(!carried) return '';
+  const gaps = ACCOUNTS.map(a=>({
+    a, expected: carried.values[a.key], actual: Number(rec.opening[a.key])||0
+  })).filter(g=> Math.round(g.expected) !== Math.round(g.actual));
+  if(!gaps.length) return '';
+  const lines = gaps.map(g=>{
+    const diff = g.actual - g.expected;
+    return `<div><b>${esc(g.a.label)}</b>: ${esc(carried.from)} left ${fmtUGX(Math.round(g.expected))}, but this day was opened with ${fmtUGX(Math.round(g.actual))} — ${diff>0?'an extra':'a shortfall of'} ${fmtUGX(Math.abs(Math.round(diff)))}.</div>`;
+  }).join('');
+  return `<div class="cb-chain-break">
+    <div><b>This day doesn't start where ${esc(carried.from)} ended.</b></div>
+    ${lines}
+    <div>Either record the movement as a transaction, or correct the opening balance.</div>
+    <button type="button" class="btn btn-ghost cb-chain-fix" id="cb_chain_fix">Use what ${esc(carried.from)} left</button>
+  </div>`;
+}
+
 function renderCbSummary(){
   const date = currentCbDate();
   const rec = getDayRecord(date);
@@ -12362,7 +12468,7 @@ function renderCbSummary(){
     return {a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml};
   });
 
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="cb-summary-table"><thead><tr>
+  wrap.innerHTML = `${cbChainBreakHTML(date, rec)}<div class="an-scroll pi-table-wrap"><table class="cb-summary-table"><thead><tr>
     <th>Account</th><th>Opening</th><th>Receipts</th><th>Payments</th><th>Expenses</th><th>Calculated Closing</th><th>Actual Counted</th><th>Variance</th>
   </tr></thead><tbody>
   ${cardsHtml.map(({a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml})=>`<tr>
@@ -12403,6 +12509,20 @@ function renderCbSummary(){
       saveData();
       renderCbSummary();
     });
+  });
+
+  const fixBtn = document.getElementById('cb_chain_fix');
+  if(fixBtn) fixBtn.addEventListener('click', ()=>{
+    const d = currentCbDate();
+    const carried = carriedOpening(d);
+    if(!carried) return;
+    const rec2 = getDayRecord(d);
+    ACCOUNTS.forEach(a=>{ rec2.opening[a.key] = carried.values[a.key]; });
+    rec2.openingSet = true;
+    saveData();
+    renderCbDayHeader();
+    renderCbSummary();
+    toast(`Opening balances set to what ${carried.from} left`);
   });
 }
 
