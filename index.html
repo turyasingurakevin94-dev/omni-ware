@@ -6874,7 +6874,13 @@ document.getElementById('sq_print_selected_btn').addEventListener('click', ()=>{
 });
 
 /* ================= INVOICES ================= */
-function invoiceBalanceDue(q){ return savedQuoteTotal(q) - (Number(q.amountPaid)||0); }
+// invoiceBalanceDue() is defined once, above, alongside the debt-sync
+// helpers that depend on it. A second, UNCLAMPED copy used to live here
+// and -- being later in the same scope -- silently won, so an overpaid
+// invoice reported a negative balance. invoiceDebtDesired() passed that
+// straight to applyInvoiceDebtCharge(), which logged a phantom "payment"
+// on the customer's debt ledger for money never received and stored a
+// negative debtCharged that then inflated the next sync's delta.
 function invoicePaymentStatusLabel(q){
   const paid = Number(q.amountPaid)||0;
   const total = savedQuoteTotal(q);
