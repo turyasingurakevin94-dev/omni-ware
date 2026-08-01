@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
   if (status === "success" && existing.quote_id) {
     const { data: quote, error: quoteErr } = await admin
       .from("saved_quotes")
-      .select("payload")
+      .select("payload, amount_paid")
       .eq("id", existing.quote_id)
       .eq("shop_id", existing.shop_id)
       .maybeSingle();
@@ -111,31 +111,78 @@ Deno.serve(async (req) => {
       return json({ ok: true, warning: "transaction recorded but order lookup failed" });
     }
     if (quote) {
-      // This settles what the AGENT owes the SHOP for this order -- the
-      // same money flow promptAgentPrepayment()/agentPrepayConfirm handles
-      // manually in index.html by flipping agentPaymentStatus once staff
-      // confirm cash received. It is unrelated to amount_paid/payments[],
-      // which track the order's own end-customer invoice, so those are
-      // deliberately left untouched here.
+      // This settles what the AGENT owes the SHOP for this order.
+      //
+      // A previous version of this set agentPaymentStatus alone, on the
+      // reasoning that amount_paid/payments[] track "the order's own
+      // end-customer invoice" and were therefore unrelated. That was wrong,
+      // and caused the same bug as the cash path did: agent-submit-order
+      // writes the AGENT's own name as client_name, so the invoice's
+      // customer IS the agent, and amount_paid is exactly what settles it.
+      // agentPaymentStatus is read by one function only
+      // (agentPaymentBlocksPreparing), which gates the preparing step --
+      // every screen reporting on money reads amount_paid. Setting just the
+      // flag left the invoice "unsettled", charged the agent as a debtor
+      // for an order they'd paid, and kept the money out of the Cash Book.
+      //
+      // So record it the way airtel-payment-webhook and
+      // check-momo-payment-status already do: receipt, payments entry,
+      // amount_paid.
       const quotePayload = quote.payload || {};
       const items = quotePayload.items || [];
       const owed = items.reduce((s: number, it: any) => s + (Number(it.sellPrice) || 0) * (Number(it.qty) || 0), 0);
       const amount = Number(existing.amount) || 0;
 
-      if (amount >= owed) {
-        quotePayload.agentPaymentStatus = "paid";
-        quotePayload.agentPaymentTxnRef = txn.airtel_money_id || txn.id;
+      if (amount > 0) {
+        const providerLabel = "Airtel Money";
+        const now = new Date();
+        const agentId = quotePayload.originAgentId || null;
+        const { data: agentRow } = agentId
+          ? await admin.from("agents").select("name").eq("shop_id", existing.shop_id).eq("id", agentId).maybeSingle()
+          : { data: null };
+
+        const { data: cashTxn, error: cashErr } = await admin.from("cash_txns").insert({
+          shop_id: existing.shop_id,
+          date: now.toISOString().slice(0, 10),
+          account: providerLabel,
+          type: "receipt",
+          category: "Mobile Money",
+          amount,
+          description: `${providerLabel} payment from ${agentRow?.name || agentId || "agent"} -- order #${existing.quote_id}`,
+          time: now.toTimeString().slice(0, 8),
+        }).select().single();
+        if (cashErr) {
+          console.error("airtel-collection-callback: cash_txns insert failed", cashErr);
+          return json({ ok: true, warning: "transaction recorded but cash book entry failed" });
+        }
+
+        const payments = Array.isArray(quotePayload.payments) ? quotePayload.payments.slice() : [];
+        payments.push({ date: now.toISOString().slice(0, 10), amount, note: providerLabel, cashTxnId: cashTxn.id });
+        const nextPayload: any = { ...quotePayload, payments };
+
+        // A short payment is still money received, so it's still banked and
+        // credited above -- it just doesn't release the order. Previously a
+        // short payment recorded nothing at all and the cash vanished.
+        if (amount >= owed) {
+          nextPayload.agentPaymentStatus = "paid";
+          nextPayload.agentPaymentTxnRef = txn.airtel_money_id || txn.id;
+        } else {
+          console.error("airtel-collection-callback: paid amount short of what's owed, not marking paid", {
+            quoteId: existing.quote_id,
+            amount,
+            owed,
+          });
+        }
+
         const { error: quoteUpdateErr } = await admin
           .from("saved_quotes")
-          .update({ payload: quotePayload })
-          .eq("id", existing.quote_id);
+          .update({
+            amount_paid: (Number(quote.amount_paid) || 0) + amount,
+            payload: nextPayload,
+          })
+          .eq("id", existing.quote_id)
+          .eq("shop_id", existing.shop_id);
         if (quoteUpdateErr) console.error("airtel-collection-callback: quote update failed", quoteUpdateErr);
-      } else {
-        console.error("airtel-collection-callback: paid amount short of what's owed, not marking paid", {
-          quoteId: existing.quote_id,
-          amount,
-          owed,
-        });
       }
     }
   }
