@@ -21,86 +21,39 @@
  *
  * Run: node test/tier-pricing-parity.test.js   (or: npm test)
  */
-const fs = require('fs');
-const path = require('path');
+const { read, extractFunction, stripTypes, compileScope, createReporter } = require('./_extract');
 
-const ROOT = path.join(__dirname, '..');
-let failures = 0;
-const fail = (m) => { failures++; console.error('not ok - ' + m); };
-const pass = (m) => console.log('ok     - ' + m);
+const t = createReporter('tier-pricing parity');
+const fail = (m) => t.fail(m);
+const pass = (m) => t.pass(m);
 
 /* ---------- pulling the real implementations out of the app files ------ */
-
-function read(rel) {
-  const p = path.join(ROOT, rel);
-  if (!fs.existsSync(p)) throw new Error(`missing source file: ${rel}`);
-  return fs.readFileSync(p, 'utf8');
-}
-
-// Brace-matches a top-level `function name(...) { ... }` out of a source
-// file. Naive about braces inside strings/comments, which is fine for the
-// small numeric helpers below -- and any failure to extract throws rather
-// than silently yielding nothing, so this can't quietly pass.
-function extractFunction(src, name, where) {
-  const m = new RegExp('function\\s+' + name + '\\s*\\(').exec(src);
-  if (!m) throw new Error(`could not find ${name}() in ${where}`);
-  const open = src.indexOf('{', m.index);
-  if (open < 0) throw new Error(`no body for ${name}() in ${where}`);
-  let depth = 0;
-  for (let i = open; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}' && --depth === 0) return src.slice(m.index, i + 1);
-  }
-  throw new Error(`unbalanced braces in ${name}() in ${where}`);
-}
-
-// Just enough TypeScript removal for these helpers: parameter and return
-// annotations, and `as` casts. Deliberately narrow -- if an implementation
-// grows syntax this doesn't handle, evaluation throws and the test fails
-// loudly rather than skipping the comparison.
-function stripTypes(src) {
-  return src
-    .replace(/\)\s*:\s*[^{]+\{/, ') {')
-    .replace(/\(\s*([A-Za-z_$][\w$]*)\s*:\s*[^),]+\)\s*=>/g, '($1) =>')
-    .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)])/g, '$1$2')
-    .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]|.]*/g, '');
-}
-
-function compile(src, name, where, extraSrc) {
-  const body = `${extraSrc || ''}\n${stripTypes(src)}\nreturn ${name};`;
-  let fn;
-  try {
-    fn = new Function(body)();
-  } catch (e) {
-    throw new Error(`could not evaluate ${name}() from ${where}: ${e.message}`);
-  }
-  if (typeof fn !== 'function') throw new Error(`${name}() from ${where} did not compile to a function`);
-  return fn;
-}
 
 const adminSrc = read('index.html');
 const agentSrc = read('agent.html');
 const catalogSrc = read('supabase/functions/agent-catalog/index.ts');
 const submitSrc = read('supabase/functions/agent-submit-order/index.ts');
 
-// index.html splits the rule across two functions, so tiersForKind() has to
-// come along with it.
-const adminTiered = compile(
-  extractFunction(adminSrc, 'tieredUnitPrice', 'index.html'),
-  'tieredUnitPrice', 'index.html',
-  extractFunction(adminSrc, 'tiersForKind', 'index.html'),
+// typescript:true only for the edge functions -- stripping types is unsafe
+// on plain JavaScript (see the note on stripTypes in _extract.js).
+const { tieredUnitPrice: adminTiered } = compileScope(
+  // index.html splits the rule across two functions, so tiersForKind() has
+  // to come along with it.
+  [extractFunction(adminSrc, 'tiersForKind', 'index.html'),
+   extractFunction(adminSrc, 'tieredUnitPrice', 'index.html')],
+  {}, ['tieredUnitPrice'],
 );
-const catalogTiered = compile(
-  extractFunction(catalogSrc, 'tieredUnitPrice', 'agent-catalog'),
-  'tieredUnitPrice', 'agent-catalog',
+const { tieredUnitPrice: catalogTiered } = compileScope(
+  [extractFunction(catalogSrc, 'tieredUnitPrice', 'agent-catalog')],
+  {}, ['tieredUnitPrice'], { typescript: true },
 );
-const submitTiered = compile(
-  extractFunction(submitSrc, 'tieredUnitPrice', 'agent-submit-order'),
-  'tieredUnitPrice', 'agent-submit-order',
+const { tieredUnitPrice: submitTiered } = compileScope(
+  [extractFunction(submitSrc, 'tieredUnitPrice', 'agent-submit-order')],
+  {}, ['tieredUnitPrice'], { typescript: true },
 );
-const tierForQty = compile(
-  extractFunction(agentSrc, 'tierForQty', 'agent.html'),
-  'tierForQty', 'agent.html',
+const { tierForQty } = compileScope(
+  [extractFunction(agentSrc, 'tierForQty', 'agent.html')],
+  {}, ['tierForQty'],
 );
 
 /* ---------- the shared matrix ----------------------------------------- */
@@ -232,5 +185,4 @@ if (catFloor.join('\n') === subFloor.join('\n')) {
 }
 
 /* ---------------------------------------------------------------------- */
-console.log(failures ? `\n${failures} check(s) failed.` : '\nAll tier-pricing parity checks passed.');
-process.exit(failures ? 1 : 0);
+process.exit(t.done() ? 1 : 0);
