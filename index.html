@@ -4896,6 +4896,20 @@ function deriveWholesaleRetail(tiers, packQty){
     retail: retailTier ? retailTier.price : null
   };
 }
+// Points on the ladder where buying MORE costs more per unit. Almost always
+// a typo -- two figures entered against the wrong quantities -- and nothing
+// downstream would catch it: tierForQty just picks the highest breakpoint
+// the quantity reaches, so an inverted rung quietly charges bulk buyers
+// extra and drags the supplier's ranking around. Returned rather than
+// blocked, because a supplier genuinely can price that way.
+function invertedTierPairs(tiers){
+  const sorted = (tiers||[]).slice().sort((a,b)=>a.minQty-b.minQty);
+  const bad = [];
+  for(let i=1;i<sorted.length;i++){
+    if(sorted[i].price > sorted[i-1].price) bad.push([sorted[i-1], sorted[i]]);
+  }
+  return bad;
+}
 function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null, packQty=0){
   if(basePrice==null) return null;
   const s = suggestedSellingPrice(product, basePrice, kind, variantIdx, packQty);
@@ -11019,6 +11033,9 @@ let prTiers = [];
 // ladder above" or an array meaning "this variant has its own ladder
 // instead". Index-aligned with the selected product's variants array.
 let prBulkVariantOverrides = [];
+// The packing values renderPrBulkVariants() pre-filled, so a bulk save can
+// tell a deliberate change from an untouched pre-fill. See the note there.
+let prBulkPackPrefill = null;
 // Keeps the "at qty ___ [per pc / per ctn]" and "charge ___ [per pc / per
 // ctn]" unit dropdowns in sync with whatever unit/pack unit/pack qty are
 // currently typed in the Packing section -- the pack option only appears
@@ -11084,6 +11101,13 @@ function addPrTier(){
   prTiers.sort((a,b)=>a.minQty-b.minQty);
   qtyInput.value = ''; priceInput.value = '';
   renderPrTiers();
+  // Flagged here, while the two figures just typed are still on screen and
+  // easy to swap back -- not blocked, since a supplier can price this way.
+  const bad = invertedTierPairs(prTiers);
+  if(bad.length){
+    const [lo, hi] = bad[bad.length-1];
+    toast(`Check this — ${hi.minQty}+ costs ${fmtUGX(hi.price)} each but ${lo.minQty}+ only costs ${fmtUGX(lo.price)}, so buying more costs more`, 6000);
+  }
 }
 document.getElementById('pr_tier_add').addEventListener('click', addPrTier);
 ['pr_unit','pr_pack_unit','pr_pack_qty'].forEach(id=>{
@@ -11164,6 +11188,7 @@ function selectPrProduct(id, variantIdx=null){
   // selected, so neither path is left showing another entry's stale list.
   prTiers = [];
   prBulkVariantOverrides = [];
+  prBulkPackPrefill = null;
   setPrBulkMode(!!(hasVariants && variantIdx==null));
   hidePrSuggestions();
 }
@@ -11187,6 +11212,18 @@ function renderPrBulkVariants(){
   document.getElementById('pr_unit').value = packSample ? (packSample.unit||'') : '';
   document.getElementById('pr_pack_unit').value = packSample ? (packSample.packUnit||'') : '';
   document.getElementById('pr_pack_qty').value = packSample && packSample.packQty ? packSample.packQty : '';
+  // Remembered so the save can tell "the admin typed a new pack size" from
+  // "these fields are just showing one variant's". Without that, a bulk
+  // save wrote the SAMPLE variant's packing onto every variant -- and
+  // packQty is what splits a tier ladder into wholesale vs retail, so a
+  // variant packed differently from the sample silently lost its wholesale
+  // price (deriveWholesaleRetail finds no tier at or above the new pack
+  // size and returns null). Nothing about that is visible on the form.
+  prBulkPackPrefill = {
+    unit: document.getElementById('pr_unit').value,
+    packUnit: document.getElementById('pr_pack_unit').value,
+    packQty: document.getElementById('pr_pack_qty').value
+  };
   // Same best-effort convenience as the packing fields above: if this
   // supplier already has a shared tier ladder on file for the product
   // (from an earlier bulk save), show it pre-filled rather than blank --
@@ -11457,6 +11494,7 @@ function resetPriceForm(){
   document.getElementById('pr_variant_hint').style.display = 'none';
   prTiers = [];
   prBulkVariantOverrides = [];
+  prBulkPackPrefill = null;
   setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_date').value = todayISO();
@@ -11495,7 +11533,17 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     const unit = document.getElementById('pr_unit').value.trim();
     const packUnit = document.getElementById('pr_pack_unit').value.trim();
     const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
-    let saved = 0, cleared = 0;
+    // These fields are pre-filled from ONE variant's row, so writing them
+    // to every variant would flatten any variant packed differently -- and
+    // since packQty decides which tiers count as wholesale, a variant whose
+    // pack size grew loses its wholesale price entirely. Only apply them
+    // where the admin actually typed something; otherwise each variant
+    // keeps its own packing.
+    const packEdited = !prBulkPackPrefill
+      || document.getElementById('pr_unit').value !== prBulkPackPrefill.unit
+      || document.getElementById('pr_pack_unit').value !== prBulkPackPrefill.packUnit
+      || document.getElementById('pr_pack_qty').value !== prBulkPackPrefill.packQty;
+    let saved = 0, cleared = 0, keptOwnPacking = 0, lostWholesale = 0;
     product.variants.forEach((v,i)=>{
       // A variant with its own override ladder uses that; everything else
       // follows the shared one entered above.
@@ -11513,21 +11561,36 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         if(dups.length){ data.prices = data.prices.filter(p=>!dups.includes(p)); cleared++; }
         return;
       }
-      const derived = deriveWholesaleRetail(effectiveTiers, packQty);
+      const keep = dups[0];
+      // An untouched packing form leaves this variant's own packing alone;
+      // only a deliberate edit is applied across the board.
+      const own = (!packEdited && keep) ? keep : null;
+      if(own && (Number(own.packQty)||0) !== packQty) keptOwnPacking++;
+      const rowUnit    = own ? (own.unit||'')     : unit;
+      const rowPackUnit= own ? (own.packUnit||'') : packUnit;
+      const rowPackQty = own ? (Number(own.packQty)||0) : packQty;
+      // Derived against the packing this row actually ends up with -- using
+      // the shared figure here is what silently dropped a variant's
+      // wholesale price.
+      const derived = deriveWholesaleRetail(effectiveTiers, rowPackQty);
+      // Raising the pack size past every rung on a ladder leaves that row
+      // with no wholesale rate at all. Legitimate -- the admin said this is
+      // how it's packed and there's no price on file for that much -- but
+      // nothing on screen would otherwise show a bulk rate had just gone.
+      if(keep && keep.wholesale != null && derived.wholesale == null) lostWholesale++;
       const record = {
         productId, variantIdx:i, supplierId,
         wholesale: derived.wholesale, retail: derived.retail,
-        date, unit, packUnit, packQty, priceSource:'manual',
+        date, unit: rowUnit, packUnit: rowPackUnit, packQty: rowPackQty, priceSource:'manual',
         tiers: effectiveTiers.map(t=>({...t}))
       };
-      const keep = dups[0];
       data.prices = data.prices.filter(p=>!dups.includes(p));
       data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false});
       saved++;
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
     saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
-    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}`);
+    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}${keptOwnPacking?` · ${keptOwnPacking} kept their own pack size`:''}${lostWholesale?` · ${lostWholesale} lost their bulk rate (no price set at ${packQty}+)`:''}`, lostWholesale?6000:undefined);
     return;
   }
 
@@ -11562,7 +11625,14 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     // the edit also changed product/variant/supplier to match some OTHER
     // entry already on file, that other one is now a duplicate of this
     // same edited row and gets folded away rather than left stranded.
-    const wasOutOfStock = !!data.prices.find(p=>p.id===editingPriceId).outOfStock;
+    // Guarded rather than assumed. Not currently reachable -- the poll
+    // skips while a modal is open, so data.prices can't change underneath
+    // this form -- but that invariant lives in pollForUpdatesNow(), not
+    // here, and the unguarded read would have been a silent TypeError:
+    // no toast, no error, the admin's retyped ladder simply lost.
+    const editingRow = data.prices.find(p=>p.id===editingPriceId);
+    if(!editingRow){ toast('That price entry no longer exists — it may have been deleted elsewhere'); return; }
+    const wasOutOfStock = !!editingRow.outOfStock;
     const otherDups = data.prices.filter(p=>p.id!==editingPriceId && p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
     if(otherDups.length) data.prices = data.prices.filter(p=>!otherDups.includes(p));
     data.prices[data.prices.findIndex(p=>p.id===editingPriceId)] = {...record, id: editingPriceId, outOfStock: wasOutOfStock};
