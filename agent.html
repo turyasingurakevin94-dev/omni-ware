@@ -423,7 +423,7 @@
   .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   /* Separates one attribute's row (e.g. Color) from the next (Size) so two
      stacked scroll strips don't read as a single ambiguous group. */
-  .ag-variant-chips + .ag-variant-chips{border-top:1px solid var(--line);padding-top:6px;margin-top:-1px;}
+  .ag-variant-chips + .ag-variant-chips{border-top:1px dotted var(--line);padding-top:6px;margin-top:-1px;}
 
   /* ---- Profile card + menu (Account) ---- */
   .ag-profile-card{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:22px;}
@@ -2671,7 +2671,11 @@ function axisChipsHTML(group, selected, axes){
   const parts = variantParts(selected);
   const row0 = axes.axis0.map(v=>axisChipHTML(group.productId, 0, v, v===parts[0])).join('');
   const row1 = axes.axis1.map(v=>axisChipHTML(group.productId, 1, v, v===parts[1])).join('');
-  return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div>`;
+  // Two rows of chips don't by themselves say "both of these combine into
+  // one choice" -- spelling out the resolved pair here (same pill style
+  // single-variant cards already use for their one variant label) makes
+  // the combined selection legible without having to scan both rows.
+  return `<div class="ag-variant-chips">${row0}</div><div class="ag-variant-chips">${row1}</div><div class="ag-grid-variant">${esc(selected.variantLabel||'—')}</div>`;
 }
 // Each attribute is its own horizontally-scrolling strip rather than a
 // row that wraps or gets capped with a "+N more" -- no popup needed,
