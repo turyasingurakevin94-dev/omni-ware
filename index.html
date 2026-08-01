@@ -6332,6 +6332,25 @@ document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
   closeModal('agentPrepayModal');
   if(!q) return;
   q.agentPaymentStatus = 'paid';
+  // agentPaymentStatus alone only unblocks the preparing step -- it's the
+  // single thing agentPaymentBlocksPreparing() reads. Everything that
+  // reports on money reads amountPaid instead: invoicePaymentStatusLabel()
+  // called the invoice "unsettled", invoiceBalanceDue() still showed the
+  // full total, and syncInvoiceDebtCharge() charged the agent as a debtor
+  // for an order they'd already settled -- while the cash itself never
+  // reached the Cash Book at all.
+  //
+  // So record it as a real payment, exactly as the mobile-money path does
+  // (mtn-payment-webhook): Cash Book receipt, payments entry, amountPaid.
+  const owed = Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0));
+  if(owed > 0){
+    const agent = data.agents.find(a=>a.id===q.originAgentId);
+    if(!q.payments) q.payments = [];
+    const cashTxnId = addCashReceipt('cash', owed, 'Agent Payment',
+      `Cash payment from ${agent ? agent.name : (q.originAgentId || 'agent')} — order #${q.id}`);
+    q.payments.push({ date: todayISO(), amount: owed, note: 'Cash', cashTxnId });
+    q.amountPaid = (Number(q.amountPaid)||0) + owed;
+  }
   saveData();
   stepSavedQuoteStatus(q.id, 1); // re-attempt now that payment is recorded
 });
