@@ -1481,6 +1481,12 @@
   .a5-table th{background:#eee;}
   .a5-total-row{display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-top:6mm;border-top:1px solid #000;padding-top:4mm;}
   .a5-foot{font-size:11px;margin-top:10mm;text-align:center;}
+  /* A voided document must be unmistakable on paper. Printed, it is
+     otherwise identical to a live one -- the strikethrough that marks it on
+     screen doesn't exist here, so a cancelled invoice could be handed over
+     and acted on. Bordered rather than coloured so it survives a black and
+     white printer. */
+  .a5-voided{border:2px solid #000;padding:2mm 3mm;margin-bottom:4mm;text-align:center;font-size:13px;font-weight:700;letter-spacing:1px;}
 
   /* Markup rule cell */
   .markup-cell{display:flex;flex-direction:column;gap:3px;font-size:12.5px;}
@@ -7029,7 +7035,10 @@ function renderInvoices(filter=''){
     const total = savedQuoteTotal(q);
     const paid = Number(q.amountPaid)||0;
     const due = total - paid;
-    totalAmt += total; totalPaid += paid; totalDue += due;
+    // Same rule as the Purchase Invoices totals: a voided invoice shows its
+    // own figures but isn't money anyone owes, and the Debtors list already
+    // leaves it out.
+    if(!q.voided){ totalAmt += total; totalPaid += paid; totalDue += due; }
     const status = invoicePaymentStatusLabel(q);
     const notesLabel = (q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '';
     const actionsHtml = `<button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
@@ -7342,6 +7351,7 @@ function buildQuoteA5HTML(q){
       <div class="a5-shop">PRICE BOOK</div>
       <div class="a5-sub">${esc(docLabel)}</div>
     </div>
+    ${q.voided ? '<div class="a5-voided">VOIDED — THIS INVOICE HAS BEEN CANCELLED</div>' : ''}
     <div class="a5-meta">
       <div>Date: ${esc(q.date || todayISO())}</div>
       ${q.client && q.client.name? `<div>Client: ${esc(q.client.name)}</div>` : ''}
@@ -7565,7 +7575,12 @@ function renderPurchaseInvoices(filter=''){
     const total = purchaseInvoiceTotal(pi);
     const paid = Number(pi.amountPaid)||0;
     const due = total - paid;
-    totalAmt += total; totalPaid += paid; totalDue += due;
+    // A voided row still shows its own figures (struck through), but must
+    // not count towards the totals -- a cancelled purchase isn't money owed,
+    // and the Creditors list already excludes them, so counting them here
+    // made the two disagree. Only reachable with "Hide voided" unchecked,
+    // which is exactly when someone is reviewing what was cancelled.
+    if(!pi.voided){ totalAmt += total; totalPaid += paid; totalDue += due; }
     const status = purchaseInvoicePaymentStatusLabel(pi);
     const collectionPct = purchaseInvoiceCollectionPct(pi);
     const isRestock = collectionPct===null;
@@ -7877,6 +7892,7 @@ function buildPurchaseInvoiceA5HTML(pi){
       <div class="a5-shop">PRICE BOOK</div>
       <div class="a5-sub">Purchase invoice — ${esc(pi.supplierName||'')}</div>
     </div>
+    ${pi.voided ? '<div class="a5-voided">VOIDED — THIS PURCHASE INVOICE HAS BEEN CANCELLED</div>' : ''}
     <div class="a5-meta">
       <div>Date: ${esc(pi.date || todayISO())}</div>
       <div>Doc No: ${esc(purchaseInvoiceNumberLabel(pi))}</div>

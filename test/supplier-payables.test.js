@@ -265,6 +265,58 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
     'the reversal notice counts supplier payments too, not just customer payments');
 }
 
+/* ---------- 9. a voided document doesn't count, and says so ----------- */
+/*
+ * Voiding excludes an invoice from the Creditors/Debtors lists but leaves
+ * it on its own tab, where the totals row was still adding it in -- so the
+ * two disagreed about what the shop owed. And the printed A5 carried no
+ * marking at all: on screen a voided invoice is struck through, on paper it
+ * was indistinguishable from a live one and could be handed over and acted
+ * on. Both halves are checked on both sides, because the buy and sell
+ * documents shared the bug and a fix to one only would leave them
+ * inconsistent.
+ */
+{
+  const totalsBlock = (fnName, guard) => {
+    const src = extractFunction(adminSrc, fnName, 'index.html');
+    return new RegExp(guard).test(src);
+  };
+  t.check(totalsBlock('renderPurchaseInvoices', 'if\\(!pi\\.voided\\)\\{ totalAmt \\+= total'),
+    'the Purchase Invoices totals row skips voided invoices');
+  t.check(totalsBlock('renderInvoices', 'if\\(!q\\.voided\\)\\{ totalAmt \\+= total'),
+    'the Invoices totals row skips voided invoices');
+}
+{
+  // Run the real builder rather than matching source, so the marking has to
+  // actually reach the page.
+  const build = compileScope(
+    [extractFunction(adminSrc, 'buildPurchaseInvoiceA5HTML', 'index.html')],
+    Object.assign({}, env, {
+      esc: (s) => String(s == null ? '' : s),
+      quoteItemPackingLabel: () => '',
+      purchaseInvoiceNumberLabel: fn.purchaseInvoiceNumberLabel,
+      purchaseInvoiceTotal: fn.purchaseInvoiceTotal,
+    }),
+    ['buildPurchaseInvoiceA5HTML'],
+  ).buildPurchaseInvoiceA5HTML;
+
+  const live = build(inv(1, 'S1', 500000, 0));
+  const dead = build(inv(1, 'S1', 500000, 0, { voided: true }));
+  t.check(/VOIDED/.test(dead) && /a5-voided/.test(dead),
+    'a voided purchase invoice prints marked as cancelled');
+  t.check(!/VOIDED/.test(live),
+    'a live purchase invoice carries no such marking');
+  t.check(/PINV-0001/.test(dead) && /500000/.test(dead),
+    'the voided copy still shows its number and figures, so it can be identified');
+}
+{
+  // The CSS has to survive a black and white printer -- a colour-only cue
+  // would vanish on the machines these are actually printed on.
+  const css = /\.a5-voided\{([^}]+)\}/.exec(adminSrc);
+  t.check(css && /border:/.test(css[1]) && /font-weight:\s*700/.test(css[1]),
+    'the voided banner is bordered and bold rather than relying on colour');
+}
+
 process.exit(t.done() ? 1 : 0);
 
 })();
