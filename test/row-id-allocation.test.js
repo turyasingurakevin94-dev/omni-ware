@@ -63,18 +63,28 @@ function makeClient(server, seedCounters) {
     extractDeclaration(adminSrc, 'ROW_ID_REFILL_AT', 'index.html'),
     extractDeclaration(adminSrc, 'rowIdBlocks', 'index.html'),
     extractDeclaration(adminSrc, 'rowIdRefilling', 'index.html'),
+    extractDeclaration(adminSrc, 'ROW_ID_BLOCK_KINDS', 'index.html'),
+    extractFunction(adminSrc, 'localRowId', 'index.html'),
+    extractFunction(adminSrc, 'noteIssuedRowId', 'index.html'),
+    extractFunction(adminSrc, 'rowIdFloor', 'index.html'),
     extractFunction(adminSrc, 'resetRowIdBlocks', 'index.html'),
     extractFunction(adminSrc, 'refillRowIdBlocks', 'index.html'),
     extractFunction(adminSrc, 'allocRowId', 'index.html'),
+    extractFunction(adminSrc, 'issueRowId', 'index.html'),
     'function __kinds(){ return Object.keys(ROW_ID_KINDS); }',
+    'function __blockKinds(){ return ROW_ID_BLOCK_KINDS.slice(); }',
+    'function __denseKinds(){ return Object.keys(ROW_ID_KINDS).filter(n=> ROW_ID_KINDS[n].dense); }',
     'function __blockSize(){ return ROW_ID_BLOCK; }',
-  ], env, ['resetRowIdBlocks', 'refillRowIdBlocks', 'allocRowId', '__kinds', '__blockSize']);
+  ], env, ['resetRowIdBlocks', 'refillRowIdBlocks', 'allocRowId', 'issueRowId',
+           '__kinds', '__blockKinds', '__denseKinds', '__blockSize']);
   return Object.assign(scope, { data });
 }
 
 const server = makeServer();
 const probe = makeClient(server);
 const KINDS = probe.__kinds();
+const BLOCK_KINDS = probe.__blockKinds();
+const DENSE_KINDS = probe.__denseKinds();
 const BLOCK = probe.__blockSize();
 
 (async () => {
@@ -133,11 +143,11 @@ const BLOCK = probe.__blockSize();
     const shared = makeServer();
     const a = makeClient(shared);
     const b = makeClient(shared);
-    await a.refillRowIdBlocks(KINDS);
-    await b.refillRowIdBlocks(KINDS);
-    const clashes = KINDS.filter((k) => a.allocRowId(k) === b.allocRowId(k));
+    await a.refillRowIdBlocks(BLOCK_KINDS);
+    await b.refillRowIdBlocks(BLOCK_KINDS);
+    const clashes = BLOCK_KINDS.filter((k) => a.allocRowId(k) === b.allocRowId(k));
     t.check(clashes.length === 0,
-      clashes.length ? `these kinds collided across clients: ${clashes.join(', ')}` : `all ${KINDS.length} kinds allocate independently per client`);
+      clashes.length ? `these kinds collided across clients: ${clashes.join(', ')}` : `all ${BLOCK_KINDS.length} block-allocated kinds allocate independently per client`);
   }
 
   /* ---------- 3. a floor stops an id being reissued -------------------- */
@@ -187,13 +197,13 @@ const BLOCK = probe.__blockSize();
   /* ---------- 5. blocks do not survive a shop switch ------------------- */
   {
     const c = makeClient(makeServer());
-    await c.refillRowIdBlocks(['savedQuote']);
-    const before = c.allocRowId('savedQuote');
+    await c.refillRowIdBlocks(['stockLog']);
+    const before = c.allocRowId('stockLog');
     c.resetRowIdBlocks();
     // With the block dropped, allocation must fall through to the local
     // counter rather than keep spending ids reserved against another shop.
-    c.data.nextSavedQuoteId = 900;
-    const after = c.allocRowId('savedQuote');
+    c.data.nextStockLogId = 900;
+    const after = c.allocRowId('stockLog');
     t.check(after === 900 && before !== 900,
       `resetRowIdBlocks drops the reserved run so it can't be spent in another shop (before ${before}, after ${after})`);
   }
@@ -210,7 +220,85 @@ const BLOCK = probe.__blockSize();
       `a block nearing exhaustion reserves the next one in the background (${first} -> ${shared.counters['row:price']})`);
   }
 
-  /* ---------- 7. nothing still allocates from a bare local counter ----- */
+  /* ---------- 7. document numbers stay dense --------------------------- */
+  /*
+   * saved_quotes and purchase_invoices ids ARE the INV-/PINV- numbers on
+   * paperwork handed to customers and suppliers. A block left part-used
+   * shows up there as a skipped invoice number, so these two are fetched
+   * one at a time at the moment of creation instead.
+   */
+  {
+    t.check(DENSE_KINDS.slice().sort().join(',') === 'purchaseInvoice,savedQuote',
+      `the document-numbered collections are exactly the dense ones (${DENSE_KINDS.join(', ')})`);
+    t.check(BLOCK_KINDS.length + DENSE_KINDS.length === KINDS.length,
+      'every kind is either block-allocated or dense, never neither or both');
+  }
+  {
+    const c = makeClient(makeServer());
+    const ids = [];
+    for (let i = 0; i < 12; i++) ids.push(await c.issueRowId('savedQuote'));
+    const gaps = ids.filter((v, i) => i > 0 && v !== ids[i - 1] + 1);
+    t.check(gaps.length === 0,
+      gaps.length
+        ? `the INV- sequence skipped at ${gaps.join(', ')}`
+        : `12 quotes saved in a row take 12 consecutive numbers (${ids[0]}..${ids[ids.length - 1]})`);
+  }
+  {
+    // Across a restart, which is exactly where a block allocator leaks its
+    // unused remainder into the sequence.
+    const shared = makeServer();
+    const a = await makeClient(shared).issueRowId('purchaseInvoice');
+    const b = await makeClient(shared).issueRowId('purchaseInvoice');
+    t.check(b === a + 1,
+      `a new session continues the PINV- sequence rather than skipping (${a} -> ${b})`);
+  }
+  {
+    // Density must not cost the property this whole change exists for.
+    const shared = makeServer();
+    const a = makeClient(shared), b = makeClient(shared);
+    const got = [];
+    for (let i = 0; i < 6; i++) { got.push(await a.issueRowId('savedQuote')); got.push(await b.issueRowId('savedQuote')); }
+    t.check(new Set(got).size === got.length,
+      `two clients numbering quotes at once never share a number (${got.join(',')})`);
+  }
+  {
+    const dead = { rpc: () => Promise.resolve({ data: null, error: { message: 'offline' } }) };
+    const c = makeClient(dead, { nextSavedQuoteId: 31 });
+    const ids = [await c.issueRowId('savedQuote'), await c.issueRowId('savedQuote')];
+    t.check(ids.join(',') === '31,32',
+      `with no server a quote still gets a number (got ${ids.join(',')})`);
+  }
+  {
+    // Both ways a dense kind could slip back into block allocation.
+    const c = makeClient(makeServer());
+    let threw = false;
+    try { c.allocRowId('savedQuote'); } catch (_e) { threw = true; }
+    t.check(threw, 'block-allocating a document-numbered id is refused, not silently gapped');
+
+    const shared = makeServer();
+    const c2 = makeClient(shared);
+    await c2.refillRowIdBlocks(KINDS);   // asked for everything, dense included
+    t.check(!shared.counters['row:saved_quote'] && !shared.counters['row:purchase_invoice'],
+      'refilling never reserves a run for a document-numbered kind, even when asked to');
+  }
+  {
+    t.check(/await refillRowIdBlocks\(ROW_ID_BLOCK_KINDS\)/.test(adminSrc),
+      'boot reserves blocks only for the kinds that use them');
+    // An unawaited issueRowId() would put a Promise in the id field, which
+    // then syncs as null and detaches the record from everything.
+    const calls = adminSrc.split(/\r?\n/).map((line, i) => ({ line, n: i + 1 }))
+      // Anchored on a quoted argument so prose mentioning `issueRowId()` --
+      // the guard in allocRowId names it in its error message -- isn't read
+      // as a call site. Quote-agnostic, so swapping ' for " can't hide one.
+      .filter((c) => /\bissueRowId\s*\(\s*['"]/.test(c.line));
+    const unawaited = calls.filter((c) => !/await\s+issueRowId\s*\(/.test(c.line));
+    t.check(calls.length >= 3 && unawaited.length === 0,
+      unawaited.length
+        ? `issueRowId is called without await at: ${unawaited.map((c) => c.n).join(', ')}`
+        : `all ${calls.length} issueRowId call sites are awaited`);
+  }
+
+  /* ---------- 8. nothing still allocates from a bare local counter ----- */
   {
     const stragglers = [];
     adminSrc.split(/\r?\n/).forEach((line, i) => {
@@ -222,7 +310,7 @@ const BLOCK = probe.__blockSize();
     t.check(stragglers.length === 0,
       stragglers.length
         ? `these ids still come from a client-side counter: ${stragglers.join('; ')}`
-        : 'every database-backed id is allocated through allocRowId()');
+        : 'every database-backed id goes through allocRowId() or issueRowId()');
   }
 
   /* ---------- 8. client and migration agree on the kinds --------------- */

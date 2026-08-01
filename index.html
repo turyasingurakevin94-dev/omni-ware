@@ -6195,11 +6195,15 @@ function buildSalesGroupQuoteMessage(items, client){
   ].join('\n');
 }
 
-document.getElementById('q_save_btn').addEventListener('click', ()=>{
+document.getElementById('q_save_btn').addEventListener('click', async ()=>{
   ensureQuote();
   if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
   const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
   const existing = idxExisting>-1 ? data.savedQuotes[idxExisting] : null;
+  // Issued before the record is built, and only for a genuinely new quote --
+  // this id becomes the INV- number, so it's fetched one at a time to keep
+  // that sequence dense (see issueRowId).
+  const quoteId = data.quote.savedId || await issueRowId('savedQuote');
   const record = {
     // Spread the existing order FIRST so anything already on it survives by
     // default, then override only what this form actually edits.
@@ -6214,7 +6218,7 @@ document.getElementById('q_save_btn').addEventListener('click', ()=>{
     // that has to be updated every time an order grows a field, and isn't;
     // spreading is correct by default instead.
     ...(existing || {}),
-    id: data.quote.savedId || allocRowId('savedQuote'),
+    id: quoteId,
     client: {...data.quote.client},
     date: data.quote.date,
     items: JSON.parse(JSON.stringify(data.quote.items)),
@@ -6710,13 +6714,21 @@ function uninvoiceReversalWarning(q){
   return `Un-invoicing this order will permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
 }
 
-function toggleQuoteInvoiced(id){
+// Guarded because issuing the PINV- numbers is now awaited, so this is no
+// longer atomic: a second click landing during that round trip would find
+// the flag already flipped and start reversing what the first is still
+// halfway through writing.
+const togglingInvoiced = new Set();
+async function toggleQuoteInvoiced(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q || q.status!=='completed') return;
+  if(togglingInvoiced.has(id)) return;
   if(q.invoiced){
     const warning = uninvoiceReversalWarning(q);
     if(warning && !confirm(warning)) return;
   }
+  togglingInvoiced.add(id);
+  try{
   q.invoiced = !q.invoiced;
   q.invoicedAt = q.invoiced ? todayISO() : null;
   q.invoicedTs = q.invoiced ? Date.now() : null;
@@ -6727,7 +6739,7 @@ function toggleQuoteInvoiced(id){
     // One purchase invoice per supplier used on this quote's line items —
     // items sourced from "Our stock" don't need one, since nothing is being
     // bought in for them.
-    generatePurchaseInvoicesForQuote(q);
+    await generatePurchaseInvoicesForQuote(q);
   }
   else {
     reverseQuoteStockDeduction(q);
@@ -6758,6 +6770,9 @@ function toggleQuoteInvoiced(id){
   }
   if(q.invoiced) toast(shortfall ? 'Marked as invoiced — stock updated (some items had less on hand than quoted)' : 'Marked as invoiced — stock updated');
   else toast(hadPayments ? 'Marked as not invoiced — stock, customer and supplier payments, and their Cash Book entries reversed' : 'Marked as not invoiced — stock restored');
+  } finally {
+    togglingInvoiced.delete(id);
+  }
 }
 
 // Keeps the fixed top-right reminder bar in sync with the Saved Quotes
@@ -7418,7 +7433,10 @@ function purchaseInvoiceSupplierPaidPct(pi){
 // Groups an invoiced quote's items by supplier and creates one purchase
 // invoice per supplier group. Clears out any purchase invoices already on
 // file for this quote first, so re-invoicing never leaves duplicates.
-function generatePurchaseInvoicesForQuote(q){
+// Async because each PINV- number is issued one at a time to keep that
+// sequence dense (see issueRowId) -- a supplier's copy of a purchase
+// invoice carries this number, so it can't skip.
+async function generatePurchaseInvoicesForQuote(q){
   removePurchaseInvoicesForQuote(q.id);
   const bySupplier = {};
   (q.items||[]).forEach(it=>{
@@ -7430,9 +7448,11 @@ function generatePurchaseInvoicesForQuote(q){
       qty: it.qty, price: it.price
     });
   });
-  Object.keys(bySupplier).forEach(supplierId=>{
+  // Sequential rather than Promise.all: the numbers should follow the order
+  // the suppliers appear on the order, and racing them would interleave.
+  for(const supplierId of Object.keys(bySupplier)){
     data.purchaseInvoices.push({
-      id: allocRowId('purchaseInvoice'),
+      id: await issueRowId('purchaseInvoice'),
       quoteId: q.id,
       customerName: (q.client && q.client.name) || '',
       supplierId,
@@ -7443,7 +7463,7 @@ function generatePurchaseInvoicesForQuote(q){
       payments: [],
       voided: false
     });
-  });
+  }
 }
 
 // Removes any purchase invoices generated for a given quote (used when the
@@ -7462,10 +7482,10 @@ function removePurchaseInvoicesForQuote(quoteId){
 // One purchase invoice per restock event (quoteId left null so it's easy to
 // tell apart from order-driven ones); skipped entirely when no supplier was
 // chosen, since there's nobody to bill.
-function generatePurchaseInvoiceForRestock(productId, variantIdx, displayName, qty, price, supplierId, priceRow){
+async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayName, qty, price, supplierId, priceRow){
   if(!supplierId) return;
   data.purchaseInvoices.push({
-    id: allocRowId('purchaseInvoice'),
+    id: await issueRowId('purchaseInvoice'),
     quoteId: null,
     customerName: '',
     supplierId,
@@ -10437,34 +10457,42 @@ function fillIssuedId(fieldId, kind, prefix, pad, existing){
 }
 function idIsPending(id){ return !id || id === ID_PENDING; }
 
-/* ---- Numeric row ids, issued in blocks by the database ----------------
+/* ---- Numeric row ids, issued by the database --------------------------
    The companion to issueEntityId() above, for the surrogate ids the user
    never sees typed: prices, stock log entries, cash transactions, saved
    quotes, purchase invoices, debt log entries. Same problem it solves --
    two admins deriving the same "max + 1" and one upsert silently
-   overwriting the other -- but these can't use the same one-id-per-call
-   shape, because they're issued from synchronous code (addCashPayment()
-   runs mid-loop while allocating a supplier payment across invoices).
+   overwriting the other.
 
-   So the block is reserved up front and handed out locally. The
-   reservation is atomic (0034_server_side_row_ids), so no two clients ever
-   hold overlapping runs, and every call site stays synchronous.
+   Two shapes, because the collections differ in what they need:
 
-   data.nextXId stays as the offline fallback -- exactly the counter that
-   shipped before, still monotonic -- so a dropped request degrades to
-   "safe but racy" rather than blocking the shop from taking money. */
+   BLOCK (allocRowId) -- a contiguous run reserved up front and handed out
+   locally, so the call site stays synchronous. Needed because these are
+   issued from synchronous code: addCashPayment() runs mid-loop while
+   spreading a supplier payment across invoices, and awaiting there would
+   ripple through every caller. The cost is gaps, which for an internal
+   surrogate key is free.
+
+   DENSE (issueRowId) -- one id, fetched at the moment of creation. Slower
+   and forces its callers to be async, but saved_quotes and
+   purchase_invoices ids ARE the INV-/PINV- document numbers the shop
+   quotes to customers and suppliers, and any part-used block would show up
+   there as a skipped invoice number.
+
+   Both are atomic (0034_server_side_row_ids), so no two clients can come
+   away with the same id. data.nextXId stays as the offline fallback for
+   both -- exactly the counter that shipped before, still monotonic -- so a
+   dropped request degrades to "safe but racy" rather than blocking the
+   shop from taking money. */
 const ROW_ID_KINDS = {
   price:           {kind:'row:price',            counter:'nextPriceId'},
   stockLog:        {kind:'row:stock_log',        counter:'nextStockLogId'},
   cashTxn:         {kind:'row:cash_txn',         counter:'nextCashTxnId'},
-  savedQuote:      {kind:'row:saved_quote',      counter:'nextSavedQuoteId'},
-  purchaseInvoice: {kind:'row:purchase_invoice', counter:'nextPurchaseInvoiceId'},
   debtLog:         {kind:'row:debt_log',         counter:'nextCustomerDebtLogId'},
+  savedQuote:      {kind:'row:saved_quote',      counter:'nextSavedQuoteId',      dense:true},
+  purchaseInvoice: {kind:'row:purchase_invoice', counter:'nextPurchaseInvoiceId', dense:true},
 };
-// Small, because saved_quotes and purchase_invoices ids are formatted into
-// the INV-/PINV- document numbers -- every unused id in a block is a gap in
-// that sequence. Topped up before it runs dry so the size doesn't cost
-// throughput.
+const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
 const ROW_ID_REFILL_AT = 3;
 let rowIdBlocks = {};
@@ -10478,17 +10506,38 @@ function resetRowIdBlocks(){
   Object.keys(rowIdRefilling).forEach(k=> delete rowIdRefilling[k]);
 }
 
+// The shared offline path: the counter that shipped before all of this,
+// still monotonic. Both allocators end here when the database can't be
+// reached.
+function localRowId(name){
+  const counter = ROW_ID_KINDS[name].counter;
+  const id = Number(data[counter])||1;
+  data[counter] = id + 1;
+  return id;
+}
+// Keeps the local counter above anything the database has issued, so
+// falling back mid-session can't rewind onto an id already used.
+function noteIssuedRowId(name, id){
+  const counter = ROW_ID_KINDS[name].counter;
+  if((Number(data[counter])||0) <= id) data[counter] = id + 1;
+}
+function rowIdFloor(name){
+  return Math.max(0, (Number(data[ROW_ID_KINDS[name].counter])||1) - 1);
+}
+
 async function refillRowIdBlocks(names){
-  const want = (names||[]).filter(n=> ROW_ID_KINDS[n] && !rowIdRefilling[n]);
+  // Dense kinds are excluded rather than merely unused: reserving a block
+  // for one would advance the shared counter past ids nothing goes on to
+  // claim, which is the gap in the invoice sequence this all exists to
+  // avoid.
+  const want = (names||[]).filter(n=> ROW_ID_KINDS[n] && !ROW_ID_KINDS[n].dense && !rowIdRefilling[n]);
   if(!want.length || !currentShopId) return;
   want.forEach(n=> rowIdRefilling[n] = true);
   try{
     // The floor is the local counter, so ids handed out during an outage
     // are never reissued once the connection is back.
     const floors = {};
-    want.forEach(n=>{
-      floors[ROW_ID_KINDS[n].kind] = Math.max(0, (Number(data[ROW_ID_KINDS[n].counter])||1) - 1);
-    });
+    want.forEach(n=>{ floors[ROW_ID_KINDS[n].kind] = rowIdFloor(n); });
     const { data: got, error } = await sb.rpc('next_row_id_blocks', {
       p_shop_id: currentShopId,
       p_kinds: want.map(n=> ROW_ID_KINDS[n].kind),
@@ -10511,20 +10560,42 @@ async function refillRowIdBlocks(names){
 }
 
 function allocRowId(name){
-  const counter = ROW_ID_KINDS[name].counter;
+  // A dense kind reaching here would be a bug, not a fallback: it would
+  // start reserving blocks and putting gaps in the invoice sequence. Fail
+  // loudly rather than quietly renumber the shop's paperwork.
+  if(ROW_ID_KINDS[name].dense) throw new Error(`${name} ids must be issued one at a time — use issueRowId()`);
   const b = rowIdBlocks[name];
   if(b && b.next <= b.end){
     const id = b.next++;
-    // Keep the fallback above whatever the block has issued, so dropping to
-    // it mid-session can't rewind onto an id already used.
-    if((Number(data[counter])||0) <= id) data[counter] = id + 1;
+    noteIssuedRowId(name, id);
     if(b.end - b.next + 1 <= ROW_ID_REFILL_AT) refillRowIdBlocks([name]);
     return id;
   }
   refillRowIdBlocks([name]);
-  const id = Number(data[counter])||1;
-  data[counter] = id + 1;
-  return id;
+  return localRowId(name);
+}
+
+// One id, issued now. For saved quotes and purchase invoices, whose ids
+// become the INV-/PINV- numbers on the shop's paperwork -- nothing is
+// reserved ahead of use, so the sequence stays dense.
+async function issueRowId(name){
+  const kind = ROW_ID_KINDS[name].kind;
+  if(currentShopId){
+    try{
+      const { data: got, error } = await sb.rpc('next_row_id_blocks', {
+        p_shop_id: currentShopId,
+        p_kinds: [kind],
+        p_count: 1,
+        p_floors: {[kind]: rowIdFloor(name)}
+      });
+      if(error || !got) throw error || new Error('no id returned');
+      const id = Number(got[kind]);
+      if(id){ noteIssuedRowId(name, id); return id; }
+    }catch(err){
+      console.warn('Row id allocation unavailable, using local counter:', err && err.message);
+    }
+  }
+  return localRowId(name);
 }
 
 function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
@@ -13240,7 +13311,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   qtyInput.addEventListener('change', handleQtyChange);
   qtyUnitSel.addEventListener('change', handleQtyChange);
 
-  document.getElementById('inv_purchase_save_btn').addEventListener('click', ()=>{
+  document.getElementById('inv_purchase_save_btn').addEventListener('click', async ()=>{
     const q = invPurchaseQtyValue(qtyInput.value, qtyUnitSel.value, packQty);
     if(q<=0){ toast('Enter a quantity greater than 0'); return; }
     const priceRaw = document.getElementById('inv_purchase_price').value;
@@ -13254,7 +13325,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     // instead of letting it go stale.
     syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price);
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
-    generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
+    await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     saveData();
     closeModal('invModal');
     renderInventory();
@@ -13727,7 +13798,7 @@ async function boot(){
     // ids rather than falling back; it swallows its own errors, so a failed
     // allocation degrades to the local counters instead of blocking boot.
     resetRowIdBlocks();
-    await refillRowIdBlocks(Object.keys(ROW_ID_KINDS));
+    await refillRowIdBlocks(ROW_ID_BLOCK_KINDS);
     if(dedupeLoadedPrices(data)) await saveData();
     await migrateBase64ProductImages(currentShopId);
   } catch(e){

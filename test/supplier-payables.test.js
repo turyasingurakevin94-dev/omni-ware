@@ -40,10 +40,11 @@ const env = {
     cash.txns = cash.txns.filter((x) => !set.has(x.id));
   },
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
-  // Purchase invoice ids come from the database's block allocator now (0034,
-  // see row-id-allocation.test.js). Stubbed with its offline path -- the same
-  // counter this used to increment directly.
-  allocRowId: (name) => {
+  // PINV- numbers come from the database one at a time now (0034, see
+  // row-id-allocation.test.js). Stubbed with its offline path -- the same
+  // counter this used to increment directly -- and async, because that is
+  // what makes the generators below async.
+  issueRowId: async (name) => {
     if (name !== 'purchaseInvoice') throw new Error(`unexpected row id kind in this scope: ${name}`);
     const id = Number(data.nextPurchaseInvoiceId) || 1;
     data.nextPurchaseInvoiceId = id + 1;
@@ -178,6 +179,10 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
     'buy side and sell side both clamp an overpaid balance to zero');
 }
 
+/* Generating purchase invoices is async from here on -- each PINV- number
+   is fetched one at a time to keep that sequence dense. */
+(async () => {
+
 /* ---------- 6. generating invoices off a quote ------------------------ */
 {
   data.suppliers = [{ id: 'S1', name: 'Kampala Steel' }, { id: 'S2', name: 'Mukono Cement' }];
@@ -192,7 +197,7 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
       { productId: 'P4', supplierId: '__stock__', qty: 3, price: 5000, sellPrice: 9000, productName: 'Nails' },
     ],
   };
-  fn.generatePurchaseInvoicesForQuote(q);
+  await fn.generatePurchaseInvoicesForQuote(q);
   t.check(data.purchaseInvoices.length === 2,
     `one purchase invoice per supplier, and none for our own stock (got ${data.purchaseInvoices.length})`);
   const s1 = data.purchaseInvoices.find((pi) => pi.supplierId === 'S1');
@@ -202,7 +207,7 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
     'generated invoices start unpaid and linked back to the order');
 
   // Re-invoicing must not double up.
-  fn.generatePurchaseInvoicesForQuote(q);
+  await fn.generatePurchaseInvoicesForQuote(q);
   t.check(data.purchaseInvoices.length === 2, 're-invoicing the same order replaces its purchase invoices rather than duplicating them');
 }
 
@@ -261,3 +266,5 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
 }
 
 process.exit(t.done() ? 1 : 0);
+
+})();
