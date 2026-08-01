@@ -248,8 +248,12 @@
     .ag-overlay{align-items:center;padding:20px;}
     .ag-overlay-card{border-radius:20px;}
   }
-  .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;}
+  .ag-overlay-thumb{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;margin-bottom:14px;background:#F3F4F6;cursor:zoom-in;}
   .ag-overlay-title{font-weight:800;font-size:17px;margin-bottom:14px;letter-spacing:-0.01em;}
+  /* Full-size view of the product photo -- above the add panel's own
+     overlay (z-index 400) so it layers on top rather than replacing it. */
+  .ag-lightbox{position:fixed;inset:0;background:rgba(10,12,16,0.92);display:flex;align-items:center;justify-content:center;z-index:600;padding:24px;cursor:zoom-out;}
+  .ag-lightbox img{max-width:100%;max-height:100%;border-radius:12px;object-fit:contain;}
   .ag-cost-hint{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;}
 
   /* Quantity + its unit selector on one line -- picking the item's own
@@ -280,7 +284,6 @@
   .ag-tl-row.earned .ag-tl-price{color:var(--good);}
   .ag-tl-check{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;color:var(--good);text-transform:uppercase;letter-spacing:.03em;}
   .ag-tl-check .icon{width:9px;height:9px;}
-  .ag-tl-loading{padding:14px 12px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
 
   .ag-radio-card{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:500;}
   .ag-radio-card.selected{border-color:var(--accent);background:var(--accent-soft);}
@@ -3078,13 +3081,66 @@ function tierLadderRowHTML(row, earned){
   return `<div class="ag-tl-row ${earned?'earned':''}">
     <div class="ag-tl-qty">
       <span class="ag-tl-icon ${esc(row.tier||'retail')}">${row.tier==='wholesale'?ICON_BOXES:ICON_TAG}</span>
-      <div>${esc(row.qtyLabel)}${earned?` <span class="ag-tl-check">${ICON_CHECK}Your price</span>`:''}${row.note?`<div class="ag-tl-note">${esc(row.note)}</div>`:''}</div>
+      <div>${esc(row.qtyLabel)}${earned?` <span class="ag-tl-check">${ICON_CHECK}Cost</span>`:''}${row.note?`<div class="ag-tl-note">${esc(row.note)}</div>`:''}</div>
     </div>
     <span class="ag-tl-price">${fmtUGX(row.price)}<span class="ag-price-unit">/${esc(row.priceUnit)}</span></span>
   </div>`;
 }
 
+// Full-size view of the product photo, dismissed by tapping anywhere on
+// it -- same pattern as every other overlay in this app, just without a
+// card wrapper since the image itself is the entire content.
+function openImageLightbox(src){
+  const el = document.createElement('div');
+  el.className = 'ag-lightbox';
+  el.innerHTML = `<img src="${esc(src)}" alt="">`;
+  document.body.appendChild(el);
+  el.addEventListener('click', ()=> document.body.removeChild(el));
+}
+
+// Guards against a second tap (on the same or a different item) while the
+// first is still waiting on its price fetch -- there's no overlay on
+// screen yet at that point to naturally absorb the extra taps the way
+// there would be once the panel is actually showing.
+let addPanelOpening = false;
 async function openAddItemPanel(item){
+  if(addPanelOpening) return;
+  addPanelOpening = true;
+  // Resolved before the panel ever appears, so quantity, the tier
+  // ladder, the price field, and the Add button all show up populated
+  // on the very first paint instead of a disabled/"Loading…" skeleton
+  // that pops fields in a moment later.
+  let tiers, unit = item.unit, packUnit = item.packUnit, packQty = Number(item.packQty)||0;
+  // The retail-tier "our price" from the bootstrap fetch, kept flat
+  // rather than re-derived per tier -- guidance is advisory, not a
+  // precise per-tier figure, and re-fetching per keystroke is exactly
+  // what the tier-ladder rework above was built to avoid.
+  let ourPrice = item.ourPrice || null;
+  try{
+    // qty here is only a bootstrap probe -- every quantity's real price
+    // comes from `tiers` below, resolved locally from here on.
+    const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty: 1 });
+    if(res.available && Array.isArray(res.tiers) && res.tiers.length){
+      tiers = res.tiers.slice().sort((a,b)=>a.minQty-b.minQty);
+      unit = res.unit; packUnit = res.packUnit; packQty = Number(res.packQty)||0;
+      ourPrice = res.ourPrice || ourPrice;
+    } else {
+      throw new Error('unavailable');
+    }
+  }catch(err){
+    // Fall back to the single flat price already known from Browse rather
+    // than leaving the panel unable to open at all. Forced to the base
+    // unit regardless of the item's own pack size: that one flat number
+    // is only ever confirmed at the qty=1 (or pack-qty) probe Browse
+    // already did, so extrapolating it into a per-pack figure here would
+    // be a guess, not a real price -- better to show the one number that
+    // actually is real than a wrong one that looks precise.
+    tiers = [{ minQty: 1, unitPrice: item.floorPrice, tier: item.tier }];
+    unit = item.unit; packUnit = item.packUnit; packQty = Number(item.packQty)||0;
+  } finally {
+    addPanelOpening = false;
+  }
+
   const el = document.createElement('div');
   el.className = 'ag-overlay';
   // Same lookup browseCardHTML uses -- this panel only ever gets a plain
@@ -3095,15 +3151,15 @@ async function openAddItemPanel(item){
   const clusterWaitHTML = clusterWait && !clusterWait.eligible
     ? `<div class="ag-cluster-wait" style="margin-bottom:14px;">${ICON_CLOCK}This sale won't earn its cluster bonus yet -- unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>`
     : '';
-  const hasPack = Number(item.packQty)>0 && !!item.packUnit;
+  const hasPack = packQty>0 && !!packUnit;
   // Defaults to the item's own pack unit (Ctn, Dzn, ...) rather than
   // pieces -- an agent quoting a client is far more often thinking in
   // packs than in loose units, and switching to "pc" is one tap away.
-  const qtyUnitOptionsHTML = `<option value="unit">${esc(item.unit||'unit')}</option>` +
-    (hasPack ? `<option value="pack" selected>${esc(item.packUnit)} (${esc(item.packQty)} ${esc(item.unit||'')})</option>` : '');
+  const qtyUnitOptionsHTML = `<option value="unit">${esc(unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" selected>${esc(packUnit)} (${esc(packQty)} ${esc(unit||'')})</option>` : '');
   el.innerHTML = `
     <div class="ag-overlay-card">
-      ${item.image ? `<img class="ag-overlay-thumb" src="${esc(item.image)}" alt="">` : ''}
+      ${item.image ? `<img class="ag-overlay-thumb" id="ag_ai_image" src="${esc(item.image)}" alt="">` : ''}
       <div class="ag-overlay-title" style="margin-bottom:${item.variantLabel?'2px':'14px'};">${esc(item.name)}</div>
       ${item.variantLabel ? `<div class="ag-grid-variant" style="margin-bottom:14px;">${esc(item.variantLabel)}</div>` : ''}
       ${clusterWaitHTML}
@@ -3114,13 +3170,15 @@ async function openAddItemPanel(item){
           <select id="ag_ai_qty_unit">${qtyUnitOptionsHTML}</select>
         </div>
       </div>
-      <div id="ag_ai_ladder_wrap"><div class="ag-tl-loading">Loading price breakdown…</div></div>
-      <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any" value="${Math.round(item.floorPrice)}" disabled></div>
+      <div id="ag_ai_ladder_wrap"></div>
+      <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any"></div>
       <div class="ag-price-guidance" id="ag_ai_guidance" style="display:none;"><span class="dot"></span><span id="ag_ai_guidance_text"></span></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn" disabled>Loading…</button>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
+  const imageEl = document.getElementById('ag_ai_image');
+  if(imageEl) imageEl.addEventListener('click', ()=> openImageLightbox(item.image));
 
   const qtyEl = document.getElementById('ag_ai_qty');
   const unitEl = document.getElementById('ag_ai_qty_unit');
@@ -3130,18 +3188,7 @@ async function openAddItemPanel(item){
   const addBtn = document.getElementById('ag_ai_add_btn');
   const guidanceEl = document.getElementById('ag_ai_guidance');
   const guidanceTextEl = document.getElementById('ag_ai_guidance_text');
-
-  // Populated once the ladder loads; every further qty/unit change is
-  // resolved against this locally -- no more network round-trips per
-  // keystroke, and the highlight/price update instantly instead of
-  // waiting on a fresh server call each time.
-  let tiers = null, unit = item.unit, packUnit = item.packUnit, packQty = Number(item.packQty)||0;
   let earnedRow = null;
-  // The retail-tier "our price" from the bootstrap fetch, kept flat
-  // rather than re-derived per tier -- guidance is advisory, not a
-  // precise per-tier figure, and re-fetching per keystroke is exactly
-  // what the tier-ladder rework above was built to avoid.
-  let ourPrice = item.ourPrice || null;
 
   // Advisory only -- never blocks or clamps what the agent types, it
   // just reflects their price against the shop's own "our price," so an
@@ -3184,39 +3231,10 @@ async function openAddItemPanel(item){
     const priceValue = unitEl.value==='pack' && packQty>0 ? earnedRow.unitPrice*packQty : earnedRow.unitPrice;
     priceLabelEl.textContent = `Your price to the client (per ${priceUnit})`;
     priceEl.value = Math.round(priceValue);
-    priceEl.disabled = false;
-    addBtn.disabled = false;
-    addBtn.textContent = 'Add to quote';
     updateGuidance();
   }
-
-  try{
-    // qty here is only a bootstrap probe -- every quantity's real price
-    // comes from `tiers` below, resolved locally from here on.
-    const res = await callAgentFn('agent-catalog', { action: 'price', productId: item.productId, variantIdx: item.variantIdx, qty: 1 });
-    if(res.available && Array.isArray(res.tiers) && res.tiers.length){
-      tiers = res.tiers.slice().sort((a,b)=>a.minQty-b.minQty);
-      unit = res.unit; packUnit = res.packUnit; packQty = Number(res.packQty)||0;
-      ourPrice = res.ourPrice || ourPrice;
-      if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
-      rerender();
-    } else {
-      throw new Error('unavailable');
-    }
-  }catch(err){
-    // Fall back to the single flat price already known from Browse rather
-    // than leaving the panel stuck loading -- same tolerance the old
-    // per-qty reprice() had for a transient failure. Forced to the base
-    // unit regardless of the item's own pack size: that one flat number
-    // is only ever confirmed at the qty=1 (or pack-qty) probe Browse
-    // already did, so extrapolating it into a per-pack figure here would
-    // be a guess, not a real price -- better to show the one number that
-    // actually is real than a wrong one that looks precise.
-    tiers = [{ minQty: 1, unitPrice: item.floorPrice, tier: item.tier }];
-    unit = item.unit; packUnit = item.packUnit; packQty = Number(item.packQty)||0;
-    unitEl.value = 'unit';
-    rerender();
-  }
+  if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
+  rerender();
 
   qtyEl.addEventListener('change', rerender);
   unitEl.addEventListener('change', rerender);
