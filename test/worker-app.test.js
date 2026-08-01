@@ -193,7 +193,92 @@ const sharedJs = read('shared-worker.js');
       });
     }
 
-    /* ---------- 8. the APK is built from the copy that ships ----------- */
+    /* ---------- 8. the background refresh ------------------------------ */
+    /*
+     * Added because merging on save only stopped stale data DESTROYING
+     * anything -- the worker was still looking at a screen that could be
+     * hours old, with cancelled or reassigned orders still sitting on it.
+     *
+     * It runs on a worker's phone for a whole shift, so the conditions it
+     * declines to run under matter as much as the refresh itself.
+     */
+    {
+      const refresh = extractFunction(workerHtml, 'refreshWorkerData', 'worker.html');
+
+      const iLoad = refresh.indexOf('await loadWorkerData(');
+      const iBuild = refresh.indexOf('const freshSynced =');
+      const iData = refresh.indexOf('data = fresh');
+      const iSynced = refresh.indexOf('lastSynced = freshSynced');
+      t.check(iLoad > -1 && iBuild > iLoad && iData > iBuild && iSynced > iBuild,
+        'the refresh builds the new snapshot before assigning either half');
+      t.check(!/\bdata = await loadWorkerData\(/.test(refresh),
+        'the refresh never assigns data straight from the load ahead of the snapshot');
+
+      // Every guard is a reason NOT to spend the worker's battery or data,
+      // or not to yank the screen out from under them.
+      const guards = [
+        [/workerSaveInFlight/, 'it holds off while a save is in flight, so lastSynced is not swapped mid-diff'],
+        [/document\.visibilityState === 'hidden'/, 'it does nothing while the app is backgrounded'],
+        [/wv-assign-overlay/, 'it holds off while the delivery picker is open'],
+        [/lastWorkerInteractionAt < WORKER_QUIET_MS/, 'it holds off just after a touch, so a re-render cannot snap the carousel away mid-scroll'],
+        [/workerRefreshing/, 'it will not overlap with itself'],
+      ];
+      guards.forEach(([re, msg]) => t.check(re.test(refresh), msg));
+
+      // The quiet window has to be escapable, or a worker scrolling steadily
+      // would never see an update.
+      t.check(/const force = !!\(opts && opts\.force\)/.test(refresh) && /if\(!force\)\{/.test(refresh),
+        'a forced refresh bypasses the quiet-period guards');
+
+      // renderWorkerView has to run even when the load threw, or the
+      // "Requested X ago" labels freeze the moment the signal drops.
+      const iCatch = refresh.indexOf('}catch(err){');
+      const iRender = refresh.lastIndexOf('renderWorkerView()');
+      const iFinally = refresh.indexOf('}finally{');
+      t.check(iCatch > -1 && iFinally > iCatch && iRender > iFinally,
+        'the screen redraws after a failed refresh too, so the elapsed labels keep moving offline');
+    }
+    {
+      const start = extractFunction(workerHtml, 'startWorkerPolling', 'worker.html');
+      t.check(/setInterval\(refreshWorkerData, WORKER_POLL_MS\)/.test(start),
+        'polling is on an interval rather than a chain that a single throw would end');
+      t.check(/visibilitychange/.test(start) && /=== 'visible'\) refreshWorkerData\(\)/.test(start),
+        'coming back to the foreground refreshes straight away instead of waiting out the interval');
+
+      const ms = extractDeclaration(workerHtml, 'WORKER_POLL_MS', 'worker.html');
+      const value = Number((/=\s*(\d+)/.exec(ms) || [])[1]);
+      t.check(value >= 30000,
+        `the interval is gentle enough for a phone on mobile data (${value}ms)`);
+    }
+    {
+      // The old bare re-render loop must be gone, not left running alongside.
+      const boot = extractFunction(workerHtml, 'boot', 'worker.html');
+      // Comments stripped first: the note in boot() explaining what this
+      // replaced names the old call, and scanning that as code reports it
+      // still running when it isn't.
+      const code = workerHtml.split(/\r?\n/).map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+      t.check(/startWorkerPolling\(\)/.test(boot) && !/setInterval\(renderWorkerView/.test(code),
+        'boot starts the refresh, and the old render-only interval is not still running beside it');
+    }
+    {
+      // saveData has to actually set the flag the refresh checks, in a
+      // finally -- an early return leaving it stuck true would silently
+      // stop every future refresh.
+      const save = extractFunction(workerHtml, 'saveData', 'worker.html');
+      t.check(/workerSaveInFlight = true;/.test(save) && /finally\s*\{[\s\S]*workerSaveInFlight = false;/.test(save),
+        'the in-flight flag is cleared in a finally, so an early return cannot wedge the refresh off');
+    }
+    {
+      // The notification path does its own load; it has the same ordering
+      // hazard and the same catch-and-carry-on shape.
+      const route = extractFunction(sharedJs, 'routeNotificationAction', 'shared-worker.js');
+      const iBuild = route.indexOf('const freshSynced =');
+      const iData = route.indexOf('data = fresh');
+      t.check(iBuild > -1 && iData > iBuild,
+        'a notification tap also builds the snapshot before assigning data');
+    }
+
+    /* ---------- 9. the APK is built from the copy that ships ----------- */
     /*
      * capacitor.config.json points webDir at worker-www, so that copy IS the
      * shipped app. It had drifted behind the root files by two merged

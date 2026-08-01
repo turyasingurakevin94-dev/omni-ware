@@ -376,37 +376,111 @@ async function mergeOntoServerRows(shopId, rows){
 async function saveData(){
   const shopId = currentShopId;
   if(!data.savedQuotes) data.savedQuotes = [];
-  const rows = buildWorkerSyncRows(data, shopId);
+  // Held for the whole call so a background refresh can't swap `lastSynced`
+  // out from under the diff this save is still committing against.
+  workerSaveInFlight = true;
+  try{
+    const rows = buildWorkerSyncRows(data, shopId);
 
-  // Same comparison addDiffOps() uses to decide what to send, so only the
-  // rows actually about to move get re-read.
-  const prev = (lastSynced && lastSynced.savedQuotes) || {};
-  const changed = rows.savedQuotes.filter(r=> JSON.stringify(r) !== JSON.stringify(prev[String(r.id)]));
-  if(changed.length){
-    try{
-      const merged = await mergeOntoServerRows(shopId, changed);
-      const mergedById = new Map(merged.map(r=>[String(r.id), r]));
-      rows.savedQuotes = rows.savedQuotes.map(r=> mergedById.get(String(r.id)) || r);
-    }catch(err){
-      // Better to send nothing than to send a stale row wholesale.
-      console.error('Could not re-read orders before saving:', err);
-      toast('Sync failed — check your connection and try again', 5000);
-      return;
+    // Same comparison addDiffOps() uses to decide what to send, so only the
+    // rows actually about to move get re-read.
+    const prev = (lastSynced && lastSynced.savedQuotes) || {};
+    const changed = rows.savedQuotes.filter(r=> JSON.stringify(r) !== JSON.stringify(prev[String(r.id)]));
+    if(changed.length){
+      try{
+        const merged = await mergeOntoServerRows(shopId, changed);
+        const mergedById = new Map(merged.map(r=>[String(r.id), r]));
+        rows.savedQuotes = rows.savedQuotes.map(r=> mergedById.get(String(r.id)) || r);
+      }catch(err){
+        // Better to send nothing than to send a stale row wholesale.
+        console.error('Could not re-read orders before saving:', err);
+        toast('Sync failed — check your connection and try again', 5000);
+        return;
+      }
     }
+
+    const ops = [];
+    addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
+    if(!ops.length) return;
+
+    const results = await Promise.all(ops.map(op=> op.run()));
+    results.forEach((r, i)=>{ if(!(r && r.error)) ops[i].commit(); });
+
+    const failed = results.find(r=> r && r.error);
+    if(failed){
+      console.error('saveData failed:', failed.error);
+      toast('Sync failed — a change may not have been saved (' + failed.error.message + ')', 5000);
+    }
+  } finally {
+    workerSaveInFlight = false;
   }
+}
 
-  const ops = [];
-  addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
-  if(!ops.length) return;
+/* ---------------- Background refresh ----------------
+   This app used to load once and never look again, which is why a save
+   merges onto the server's row (see saveData above). That kept stale data
+   from destroying anything, but the worker was still LOOKING at a screen
+   that could be hours old: an order cancelled, reassigned, or already
+   delivered still sat there waiting to be picked.
 
-  const results = await Promise.all(ops.map(op=> op.run()));
-  results.forEach((r, i)=>{ if(!(r && r.error)) ops[i].commit(); });
+   Deliberately quieter than the admin app's 30s -- this runs on a worker's
+   phone for a whole shift, on their data. Nothing happens while the app is
+   backgrounded, and returning to the foreground refreshes straight away
+   rather than waiting out the interval, which is when a worker actually
+   wants to see what changed. */
+const WORKER_POLL_MS = 60000;
+// How long after a touch to leave the screen alone. A refresh re-renders,
+// and re-rendering the carousel snaps it back to the focused card -- so a
+// tick that lands under a moving thumb is worse than no tick at all.
+const WORKER_QUIET_MS = 4000;
+let lastWorkerInteractionAt = 0;
+let workerRefreshing = false;
+let workerSaveInFlight = false;
 
-  const failed = results.find(r=> r && r.error);
-  if(failed){
-    console.error('saveData failed:', failed.error);
-    toast('Sync failed — a change may not have been saved (' + failed.error.message + ')', 5000);
+['pointerdown','touchstart','input','scroll'].forEach(evt=>{
+  document.addEventListener(evt, ()=>{ lastWorkerInteractionAt = Date.now(); }, true);
+});
+
+async function refreshWorkerData(opts){
+  const force = !!(opts && opts.force);
+  // A refresh mid-save would swap `lastSynced` out from under the diff that
+  // save is still committing against.
+  if(workerRefreshing || workerSaveInFlight || !currentShopId) return;
+  if(!force){
+    if(document.visibilityState === 'hidden') return;
+    // The delivery picker is a decision in the middle of a flow; re-rendering
+    // underneath it would replace the order it is asking about.
+    if(document.querySelector('.wv-assign-overlay')) return;
+    if(Date.now() - lastWorkerInteractionAt < WORKER_QUIET_MS) return;
   }
+  workerRefreshing = true;
+  try{
+    // Both built before either is assigned. addDiffOps derives its deletes
+    // from lastSynced, so `data` and `lastSynced` describing different
+    // states is not a stale render -- it is a delete instruction. Same
+    // reason the admin app's poll is ordered this way.
+    const fresh = await loadWorkerData(currentShopId);
+    const freshSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(fresh, currentShopId).savedQuotes, 'id') };
+    data = fresh;
+    lastSynced = freshSynced;
+    // An admin can edit staff too -- being marked unavailable, or having the
+    // login relinked, should show up here without a restart.
+    myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
+  }catch(err){
+    console.error('Background refresh failed:', err);
+  }finally{
+    workerRefreshing = false;
+  }
+  // Outside the try: even on a failed refresh the screen still redraws, so
+  // "Requested X ago" stays honest with no signal.
+  renderWorkerView();
+}
+
+function startWorkerPolling(){
+  setInterval(refreshWorkerData, WORKER_POLL_MS);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') refreshWorkerData();
+  });
 }
 
 document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
@@ -448,9 +522,10 @@ async function boot(){
   // no repaint afterwards that would let it retroactively center itself.
   document.body.classList.remove('app-loading');
   renderWorkerView();
-  // Keeps "Requested X ago" accurate as time passes, not just frozen at
-  // whatever it read the moment the pending list last happened to render.
-  setInterval(renderWorkerView, 60000);
+  // Replaces the old bare setInterval(renderWorkerView) -- the refresh
+  // re-renders too, so this keeps "Requested X ago" accurate as before AND
+  // the orders themselves current.
+  startWorkerPolling();
 }
 boot();
 </script>

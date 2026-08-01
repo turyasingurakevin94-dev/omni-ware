@@ -653,6 +653,10 @@ function promptAssignDelivery(orderId){
     }
     const q = data.savedQuotes.find(x=>x.id===orderId);
     const el = document.createElement('div');
+    // Classed so the background refresh can see it and hold off -- this is a
+    // decision mid-flow, and re-rendering underneath it would replace the
+    // order it's asking about.
+    el.className = 'wv-assign-overlay';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
     el.innerHTML = `
       <div style="background:var(--panel);border-radius:14px;padding:20px;width:340px;max-width:100%;max-height:80vh;overflow-y:auto;">
@@ -858,8 +862,16 @@ async function routeNotificationAction(orderId, action){
   // of showing nothing new until some other refresh happens to occur.
   if(typeof loadWorkerData === 'function' && currentShopId){
     try{
-      data = await loadWorkerData(currentShopId);
-      lastSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(data, currentShopId).savedQuotes, 'id') };
+      // Built before either is assigned, for the same reason as everywhere
+      // else: addDiffOps derives its deletes from lastSynced, so leaving
+      // `data` fresh and `lastSynced` stale is a delete instruction, not a
+      // stale render. This catch only logs, so a throw in between would
+      // have left exactly that state and carried on.
+      const fresh = await loadWorkerData(currentShopId);
+      const freshSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(fresh, currentShopId).savedQuotes, 'id') };
+      data = fresh;
+      lastSynced = freshSynced;
+      if(currentUser) myStaff = data.staff.find(s=>s.userId===currentUser.id) || myStaff;
     }catch(err){
       console.error('Failed to refresh after notification tap:', err);
     }
