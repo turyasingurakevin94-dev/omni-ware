@@ -1076,6 +1076,10 @@ function showSetPasswordScreen(){
 }
 
 async function signOutAndReload(){
+  // Drop the snapshot on the way out. Ownership is checked on every read
+  // anyway, but leaving one agent's clients and orders sitting in a shared
+  // device's storage after they've signed out serves no purpose.
+  clearOfflineCache();
   await sb.auth.signOut();
   location.reload();
 }
@@ -1138,12 +1142,17 @@ function wouldWipeCachedData(prev){
 }
 function saveOfflineCache(){
   try{
-    if(wouldWipeCachedData(loadOfflineCache())){
+    // The wipe-guard protects OUR OWN cached rows from being replaced by an
+    // empty read. A snapshot belonging to a different login gets no such
+    // protection -- it must be overwritten, or the previous agent's data
+    // would outlive their session on this device.
+    if(wouldWipeCachedData(ownCachedSnapshot())){
       console.warn('Skipped offline-cache write: the fresh snapshot is empty where the stored one has rows.');
       return;
     }
     localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
       savedAt: new Date().toISOString(),
+      userId: currentUser && currentUser.id,
       myAgent, currentShopId, agentClients, myOrders, catalog, promotions,
       // cluster/solutionTemplates/clusterWaitDays are read-only reference
       // data exactly like the rest of this snapshot -- omitting them would
@@ -1157,6 +1166,32 @@ function saveOfflineCache(){
 function loadOfflineCache(){
   try{ return JSON.parse(localStorage.getItem(OFFLINE_CACHE_KEY) || 'null'); }
   catch(_e){ return null; }
+}
+// The snapshot ONLY if it belongs to the login currently signed in.
+//
+// The cache lives under one key per browser, not one per agent, so a
+// second agent signing into the same device inherits whatever the first
+// one left behind. That was survivable while a fresh empty read simply
+// overwrote it -- but the guards added to stop orders vanishing made it
+// stick: saveOfflineCache() now refuses to overwrite rows with nothing,
+// and loadAgentHomeData() restores from cache when a read comes back
+// empty. A brand-new agent with no clients of their own therefore gets
+// shown the previous agent's roster. An agent's client list is private
+// to them by design (0012_sales_agents.sql), so that's a data leak
+// between agents, not a staleness bug.
+//
+// Ownership is keyed on the auth user id rather than the agent id: it's
+// the one identifier that exists before the agents row is looked up, so
+// the same check works on the offline-resume path in ensureAgentAuth().
+function cacheBelongsTo(cached, userId){
+  return !!(cached && userId && cached.userId && String(cached.userId) === String(userId));
+}
+function ownCachedSnapshot(){
+  const cached = loadOfflineCache();
+  return cacheBelongsTo(cached, currentUser && currentUser.id) ? cached : null;
+}
+function clearOfflineCache(){
+  try{ localStorage.removeItem(OFFLINE_CACHE_KEY); }catch(_e){}
 }
 
 function updateOfflineBanner(){
@@ -1276,8 +1311,12 @@ async function ensureAgentAuth(){
   let user = (!userErr && userData && userData.user) ? userData.user : null;
   if(!user){
     const cached = loadOfflineCache();
-    if(isNetworkError(userErr) && cached && cached.myAgent){
-      const { data: sessionData } = await sb.auth.getSession();
+    const { data: sessionData } = await sb.auth.getSession();
+    const sessionUserId = sessionData && sessionData.session && sessionData.session.user && sessionData.session.user.id;
+    // Only resume from a snapshot this very login left behind. Without the
+    // check, an offline boot on a shared device would restore whoever used
+    // the app here last -- their identity, their clients, their orders.
+    if(isNetworkError(userErr) && cached && cached.myAgent && cacheBelongsTo(cached, sessionUserId)){
       if(sessionData && sessionData.session){
         currentUser = sessionData.session.user;
         currentShopId = cached.currentShopId;
@@ -1314,7 +1353,7 @@ async function ensureAgentAuth(){
     // Same idea one step later: the agents-table lookup itself is what
     // just failed to reach the network, not an actual "no such agent".
     const cached = loadOfflineCache();
-    if(isNetworkError(error) && cached && cached.myAgent){
+    if(isNetworkError(error) && cached && cached.myAgent && cacheBelongsTo(cached, user.id)){
       currentShopId = cached.currentShopId;
       myAgent = cached.myAgent;
       isOffline = true;
@@ -1402,7 +1441,10 @@ function readLostRows(rows, cached){
   return lost(rows.orders, cached.myOrders) || lost(rows.clients, cached.agentClients);
 }
 async function loadAgentHomeData(){
-  const cached = loadOfflineCache();
+  // Own snapshot only -- restoring "lost" rows from a cache belonging to a
+  // different agent is how a new agent ended up holding someone else's
+  // client roster.
+  const cached = ownCachedSnapshot();
   let rows = await fetchAgentHomeRows();
   if(readLostRows(rows, cached)){
     try{
@@ -3973,7 +4015,7 @@ async function boot(){
     updateOfflineBanner();
   }catch(e){
     console.error('Failed to load home data, falling back to cached snapshot:', e);
-    const cached = loadOfflineCache();
+    const cached = ownCachedSnapshot();
     if(cached){
       agentClients = cached.agentClients || [];
       myOrders = cached.myOrders || [];
