@@ -3150,7 +3150,6 @@
     <div class="modal-body">
       <p class="preset-hint">Sends a login invite by email and adds them to your agent roster in one step -- they'll land straight in the standalone Agent app.</p>
       <div class="form-grid">
-        <div class="field"><label>Agent ID</label><input id="ag_id" placeholder="e.g. AG001"></div>
         <div class="field"><label>Agent name</label><input id="ag_name" placeholder="e.g. Peter Ochieng"></div>
         <div class="field"><label>Contact phone</label><input id="ag_phone" placeholder="e.g. 0700 000 000"></div>
         <div class="field"><label>Email (for their login invite)</label><input id="ag_email" type="email" placeholder="e.g. peter@example.com"></div>
@@ -8673,39 +8672,35 @@ function restoreAgent(id){
   toast(`${a.name} restored`);
 }
 function resetAgentForm(){
-  ['ag_id','ag_name','ag_phone','ag_email'].forEach(id=>document.getElementById(id).value='');
+  ['ag_name','ag_phone','ag_email'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ag_payment_term').value = 'prepay';
 }
 document.getElementById('ag_invite_btn').addEventListener('click', ()=>{ resetAgentForm(); openModal('agentModal'); });
 document.getElementById('ag_cancel').addEventListener('click', ()=>closeModalAndReset('agentModal', resetAgentForm));
 document.getElementById('agentModalClose').addEventListener('click', ()=>closeModalAndReset('agentModal', resetAgentForm));
 document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
-  const id = document.getElementById('ag_id').value.trim();
   const name = document.getElementById('ag_name').value.trim();
   const email = document.getElementById('ag_email').value.trim();
-  if(!id || !name || !email){ toast('Agent ID, name and email are required'); return; }
-  // Retired agents are still in data.agents, so this now also blocks
-  // reusing a departed agent's id -- which is exactly the point: their
-  // orders are still attributed to it.
-  const clash = data.agents.find(a=>a.id===id);
-  if(clash){
-    toast(clash.retiredAt
-      ? `Agent ID ${id} belongs to ${clash.name}, who is retired. Restore them instead, or pick a different ID.`
-      : 'That Agent ID already exists');
-    return;
-  }
+  if(!name || !email){ toast('Agent name and email are required'); return; }
   const phone = document.getElementById('ag_phone').value.trim();
   const paymentTerm = document.getElementById('ag_payment_term').value;
   const btn = document.getElementById('ag_invite_save');
   btn.disabled = true;
   try{
-    const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, agentId: id, name, phone, email, paymentTerm } });
+    // The Agent ID comes back from invite-agent, which lets the database
+    // issue it (0029). Nothing here picks or validates one any more: a
+    // typed id was how an agent's order history could end up attached to
+    // someone else, and the duplicate check it needed was only ever as
+    // good as whatever happened to be loaded locally.
+    const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, name, phone, email, paymentTerm } });
     if(error) throw error;
     if(res && res.error) throw new Error(res.error);
+    const id = res && res.agentId;
+    if(!id) throw new Error('The server did not return an Agent ID');
     data.agents.push({ id, name, phone, email, paymentTerm, unavailable:false, retiredAt:null, userId: (res && res.userId) || null });
     saveData();
     closeModal('agentModal'); resetAgentForm(); renderAgents();
-    toast(`Invite sent to ${email}`);
+    toast(`Invite sent to ${email} — Agent ID ${id}`);
   }catch(err){
     toast(`Could not send invite: ${err.message||err}`);
   }finally{

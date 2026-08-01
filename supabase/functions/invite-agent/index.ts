@@ -41,14 +41,18 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   try {
-    let shopId: string, agentId: string, name: string, phone: string | undefined, email: string, paymentTerm: string | undefined;
+    // agentId is deliberately NOT accepted from the caller any more. The id
+    // is issued by the database (0029_agent_identity_rebuild) and returned
+    // below, because a caller-chosen id is what allowed one agent's order
+    // history to be handed to another by re-typing or re-using a value.
+    let shopId: string, name: string, phone: string | undefined, email: string, paymentTerm: string | undefined;
     try {
-      ({ shopId, agentId, name, phone, email, paymentTerm } = await req.json());
+      ({ shopId, name, phone, email, paymentTerm } = await req.json());
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
-    if (!shopId || !agentId || !name || !email) {
-      return json({ error: "shopId, agentId, name and email are required" }, 400);
+    if (!shopId || !name || !email) {
+      return json({ error: "shopId, name and email are required" }, 400);
     }
     if (paymentTerm && paymentTerm !== "prepay" && paymentTerm !== "pay_on_delivery") {
       return json({ error: "paymentTerm must be 'prepay' or 'pay_on_delivery'" }, 400);
@@ -71,14 +75,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    const { data: existingAgent } = await admin
-      .from("agents")
-      .select("id")
-      .eq("shop_id", shopId)
-      .eq("id", agentId)
-      .maybeSingle();
-    if (existingAgent) return json({ error: "An agent with this id already exists" }, 409);
-
     // inviteUserByEmail creates the auth user (sends the invite email) if
     // the address is new; if it already belongs to an existing user
     // (e.g. they're also a customer or already an agent at another shop),
@@ -98,18 +94,35 @@ Deno.serve(async (req) => {
       userId = invited.user!.id;
     }
 
-    const { error: insertErr } = await admin.from("agents").insert({
+    // One login is one agent row (agents_user_unique, 0029), so a person who
+    // is already an agent -- here or at another shop, active or retired --
+    // must be restored rather than added again. Adding them again is what
+    // used to strand their existing orders under an id nobody was using.
+    const { data: existingAgent } = await admin
+      .from("agents")
+      .select("id, shop_id, name, retired_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existingAgent) {
+      return json({
+        error: existingAgent.retired_at
+          ? `${existingAgent.name} is already an agent (${existingAgent.id}) but retired. Restore them instead of inviting again, so their order history stays attached.`
+          : `${email} is already an agent (${existingAgent.id})${existingAgent.shop_id !== shopId ? " at another shop" : ""}.`,
+      }, 409);
+    }
+
+    // id is omitted on purpose -- the column default assigns it (0029).
+    const { data: inserted, error: insertErr } = await admin.from("agents").insert({
       shop_id: shopId,
-      id: agentId,
       user_id: userId,
       name,
       phone: phone || null,
       email,
       payment_term: paymentTerm || "prepay",
-    });
+    }).select("id").single();
     if (insertErr) return json({ error: insertErr.message, stage: "agents_insert" }, 500);
 
-    return json({ ok: true, userId });
+    return json({ ok: true, userId, agentId: inserted.id });
   } catch (err) {
     console.error("invite-agent: uncaught error", err);
     return json({ error: String(err && (err as Error).message || err), stage: "uncaught" }, 500);
