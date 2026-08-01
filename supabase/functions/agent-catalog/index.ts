@@ -164,10 +164,32 @@ function effectiveTiers(row: any): { minQty: number; price: number }[] {
 // cost before typing it) without exposing anything beyond what a single
 // "price" call already exposes for one quantity at a time.
 function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct: number, discountRetailPct: number) {
-  const tiers = effectiveTiers(priceRow).slice().sort((a, b) => a.minQty - b.minQty);
-  return tiers.map((t) => {
-    const resolved = computeFloorPrice(product, priceRow, t.minQty, discountWholesalePct, discountRetailPct);
-    return resolved ? { minQty: t.minQty, unitPrice: resolved.floorPrice, tier: resolved.tier } : null;
+  // qty 1 is always a rung, even when no tier starts there.
+  //
+  // A row whose breakpoints begin above 1 (say tiers at 10 and 50) charges
+  // its flat wholesale/retail figure for anything below the first one --
+  // tieredUnitPrice() returns `base` when no tier's minQty is cleared. But
+  // effectiveTiers() only ever lists the tiers themselves, so that
+  // below-the-first-breakpoint price had no rung describing it, and the
+  // ladder simply started at 10.
+  //
+  // The app then resolved a smaller quantity against that ladder with
+  // tierForQty(), which falls back to the lowest rung when nothing
+  // matches -- so an order of 5 was shown the qty-10 volume price while
+  // agent-submit-order went on to charge the flat one. The agent quoted
+  // their customer below the shop's actual floor and saw a margin that
+  // wasn't there.
+  //
+  // Adding the rung makes the ladder describe the whole curve, so
+  // tierForQty() always finds a real match and its fallback stops being
+  // reachable. Deduped, so rows whose tiers already start at 1 (every row
+  // that goes through effectiveTiers()' legacy synthesis) are unchanged.
+  const minQtys = Array.from(
+    new Set<number>([1, ...effectiveTiers(priceRow).map((t) => Number(t.minQty))]),
+  ).filter((q) => q > 0).sort((a, b) => a - b);
+  return minQtys.map((minQty) => {
+    const resolved = computeFloorPrice(product, priceRow, minQty, discountWholesalePct, discountRetailPct);
+    return resolved ? { minQty, unitPrice: resolved.floorPrice, tier: resolved.tier } : null;
   }).filter((x): x is { minQty: number; unitPrice: number; tier: MarkupKind } => x != null);
 }
 
