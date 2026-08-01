@@ -1296,7 +1296,20 @@ async function ensureAgentAuth(){
   }
   currentUser = user;
 
-  const { data: agentRow, error } = await sb.from('agents').select('*').eq('user_id', user.id).maybeSingle();
+  // Deliberately not maybeSingle(): agents are rostered per shop, by hand,
+  // and nothing stops the same login being invited into two of them. The
+  // moment that happens maybeSingle() rejects with a raw PostgREST error
+  // ("JSON object requested, multiple (or no) rows returned"), which
+  // reaches the agent as an unexplained failure to start with no hint of
+  // the cause. Selecting the rows instead lets each case say what actually
+  // went wrong.
+  //
+  // Note this deliberately does NOT quietly pick one of them: currentShopId
+  // scopes every subsequent read in the app, so landing on the wrong shop
+  // would show the agent an empty, fully-successful-looking account -- the
+  // exact "my data was deleted" failure the offline-cache guards were added
+  // to stop. Better to refuse to start and say why.
+  const { data: agentRows, error } = await sb.from('agents').select('*').eq('user_id', user.id);
   if(error){
     // Same idea one step later: the agents-table lookup itself is what
     // just failed to reach the network, not an actual "no such agent".
@@ -1311,9 +1324,13 @@ async function ensureAgentAuth(){
     }
     throw error;
   }
-  if(!agentRow){
+  if(!agentRows || !agentRows.length){
     throw new Error("This login isn't linked to an agent account. Ask the shop to send you an invite.");
   }
+  if(agentRows.length > 1){
+    throw new Error(`This login is linked to ${agentRows.length} different shops, so the app can't tell which one to open. Ask the shop to remove the duplicate agent account.`);
+  }
+  const agentRow = agentRows[0];
   currentShopId = agentRow.shop_id;
   myAgent = { id: agentRow.id, name: agentRow.name, phone: agentRow.phone, email: agentRow.email, paymentTerm: agentRow.payment_term };
   hideAuthOverlay();
