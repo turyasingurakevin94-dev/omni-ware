@@ -196,35 +196,24 @@
   .ag-cart-row-price{font-family:var(--font-money);font-weight:800;font-size:13.5px;letter-spacing:-0.01em;white-space:nowrap;}
   .ag-cart-remove{all:unset;cursor:pointer;color:var(--danger);padding:4px;display:flex;}
 
-  /* Quote items -- a ledger/receipt table (Qty / Particulars / Rate /
-     Amount) rather than cards, so the on-screen quote already reads like
-     the paper invoice books it's replacing.
-     Every figure here is money or a quantity an agent needs to read
-     exactly, so nothing is ever hidden behind an ellipsis. Column widths
-     are generous enough that realistic values never need more room than
-     the card has -- table-layout:fixed keeps that predictable instead of
-     leaving it to content-based auto-sizing. For a value large enough to
-     not fit even then, the fixed columns hold their width and the
-     content overflows into the .ag-receipt-scroll wrapper's own
-     horizontal scrollbar rather than truncating or spilling past the
-     card -- verified this is how table-layout:fixed + nowrap actually
-     behaves in-browser, not assumed. */
+  /* Quote items -- a ledger/receipt table (Qty / Particulars / Rate)
+     rather than cards, so the on-screen quote already reads like the
+     paper invoice books it's replacing. Every row stays on one line --
+     no column is ever allowed to wrap -- and the table sizes to its own
+     content instead of a fixed percentage split; a name+variant too long
+     for the card just pushes the table wider than .ag-receipt-scroll,
+     which scrolls horizontally instead of the row wrapping. */
   .ag-receipt-scroll{overflow-x:auto;}
-  .ag-receipt-table{width:100%;table-layout:fixed;border-collapse:collapse;}
-  .ag-receipt-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);text-align:left;padding:0 6px 8px 0;border-bottom:2px solid var(--line);white-space:nowrap;}
-  .ag-receipt-table td{padding:10px 6px 10px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  .ag-receipt-table{border-collapse:collapse;}
+  .ag-receipt-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);text-align:left;padding:0 14px 8px 0;border-bottom:2px solid var(--line);white-space:nowrap;}
+  .ag-receipt-table td{padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap;}
   .ag-receipt-table tbody tr:last-child td{border-bottom:1px solid var(--line);}
-  .ag-receipt-table th.ag-receipt-qty, .ag-receipt-table td.ag-receipt-qty{width:15%;}
-  .ag-receipt-table th.ag-receipt-rate, .ag-receipt-table td.ag-receipt-rate{width:25%;}
-  .ag-receipt-table th.ag-receipt-amount, .ag-receipt-table td.ag-receipt-amount{width:30%;}
-  .ag-receipt-table th.ag-receipt-remove, .ag-receipt-table td.ag-receipt-remove{width:22px;padding-right:0;}
-  .ag-receipt-qty{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
-  .ag-receipt-name{font-size:13px;font-weight:700;letter-spacing:-0.005em;overflow-wrap:break-word;word-break:break-word;}
-  /* .ag-grid-variant truncates with an ellipsis everywhere else in the
-     app (compact grid cards), but a quote line is exactly where an agent
-     needs to see which variant they're actually charging for -- override
-     it here to wrap and show the whole label instead. */
-  .ag-receipt-table .ag-grid-variant{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;word-break:break-word;max-width:100%;}
+  .ag-receipt-table th.ag-receipt-remove, .ag-receipt-table td.ag-receipt-remove{padding-right:0;}
+  .ag-receipt-qty{font-size:11.5px;color:var(--ink-soft);}
+  .ag-receipt-name{font-size:13px;font-weight:700;letter-spacing:-0.005em;}
+  /* Inline next to the name rather than the block-level pill it is
+     everywhere else, specifically so Particulars stays one line. */
+  .ag-receipt-table .ag-grid-variant{display:inline-block;margin:0 0 0 6px;vertical-align:middle;}
   .ag-receipt-table th.ag-receipt-rate,
   .ag-receipt-table th.ag-receipt-amount,
   .ag-receipt-table td.ag-receipt-rate,
@@ -234,15 +223,25 @@
   /* The rate is the one number on a quote line the agent actually chose --
      everything else here is read-only. Styled to look like plain text
      until it's touched, so it doesn't read as a form buried in a receipt. */
-  .ag-rate-input{all:unset;box-sizing:border-box;width:100%;text-align:right;font-family:var(--font-money);font-weight:700;font-size:12px;color:var(--ink);padding:3px 5px;border-radius:6px;}
+  .ag-rate-input{all:unset;box-sizing:border-box;width:84px;text-align:right;font-family:var(--font-money);font-weight:700;font-size:12px;color:var(--ink);padding:3px 5px;border-radius:6px;}
   .ag-rate-input:hover{background:var(--accent-soft);}
   .ag-rate-input:focus{background:var(--accent-soft);box-shadow:0 0 0 1.5px var(--accent);}
   .ag-rate-input.zero-margin{color:var(--danger);}
-  .ag-margin-flag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:var(--danger);background:var(--danger-bg);padding:2.5px 7px 2.5px 6px;border-radius:20px;margin-top:4px;}
+  .ag-margin-flag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;color:var(--danger);background:var(--danger-bg);padding:2.5px 7px 2.5px 6px;border-radius:20px;margin-left:6px;}
   .ag-margin-flag .icon{width:10px;height:10px;}
   .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
   .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;}
   .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:14px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
+
+  /* "Your view" (editable, has margin) vs "Client view" (what actually
+     gets downloaded -- an Amount column back, no profit anywhere). */
+  .ag-view-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:14px;}
+  .ag-view-toggle button{all:unset;flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer;color:var(--ink-soft);}
+  .ag-view-toggle button.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .ag-quote-summary{display:flex;gap:22px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+  .ag-quote-stat .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:3px;}
+  .ag-quote-stat .val{font-family:var(--font-money);font-size:15px;font-weight:800;color:var(--accent-dark);}
+  .ag-quote-stat.profit .val{color:var(--good);}
 
   .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
@@ -819,26 +818,54 @@
     <div id="ag_cartContent">
       <div class="ag-card">
         <div class="ag-card-title">Items</div>
-        <div class="ag-receipt-scroll">
-          <table class="ag-receipt-table">
-            <thead>
-              <tr>
-                <th class="ag-receipt-qty">Qty</th>
-                <th>Particulars</th>
-                <th class="ag-receipt-rate">Rate</th>
-                <th class="ag-receipt-amount">Amount</th>
-                <th class="ag-receipt-remove"></th>
-              </tr>
-            </thead>
-            <tbody id="ag_cartWrap"></tbody>
-            <tfoot>
-              <tr class="ag-receipt-total-row">
-                <td colspan="3" class="ag-receipt-total-label">Total</td>
-                <td colspan="2" class="ag-receipt-total-value" id="ag_cartTotalValue">UGX 0</td>
-              </tr>
-            </tfoot>
-          </table>
+        <div class="ag-view-toggle">
+          <button type="button" class="active" id="ag_quoteview_yours_btn" data-view="yours">Your view</button>
+          <button type="button" id="ag_quoteview_client_btn" data-view="client">Client view</button>
         </div>
+
+        <div id="ag_quoteview_yours">
+          <div class="ag-receipt-scroll">
+            <table class="ag-receipt-table">
+              <thead>
+                <tr>
+                  <th class="ag-receipt-qty">Qty</th>
+                  <th>Particulars</th>
+                  <th class="ag-receipt-rate">Rate</th>
+                  <th class="ag-receipt-remove"></th>
+                </tr>
+              </thead>
+              <tbody id="ag_cartWrap"></tbody>
+            </table>
+          </div>
+          <div class="ag-quote-summary">
+            <div class="ag-quote-stat"><div class="lbl">Total</div><div class="val" id="ag_cartTotalValue">UGX 0</div></div>
+            <div class="ag-quote-stat profit"><div class="lbl">Your profit</div><div class="val" id="ag_cartProfitValue">UGX 0</div></div>
+          </div>
+        </div>
+
+        <div id="ag_quoteview_client" style="display:none;">
+          <div class="ag-receipt-scroll">
+            <table class="ag-receipt-table">
+              <thead>
+                <tr>
+                  <th class="ag-receipt-qty">Qty</th>
+                  <th>Particulars</th>
+                  <th class="ag-receipt-rate">Rate</th>
+                  <th class="ag-receipt-amount">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="ag_cartClientWrap"></tbody>
+              <tfoot>
+                <tr class="ag-receipt-total-row">
+                  <td colspan="3" class="ag-receipt-total-label">Total</td>
+                  <td class="ag-receipt-total-value" id="ag_cartClientTotalValue">UGX 0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <button type="button" class="btn btn-accent btn-block" id="ag_download_receipt_btn" style="margin-top:14px;">Download receipt</button>
+        </div>
+
         <span class="ag-save-solution-link" id="ag_save_solution_btn">Save these items as a Solution</span>
       </div>
 
@@ -3266,41 +3293,45 @@ async function openAddItemPanel(item){
 }
 
 /* ================= QUOTE + client + delivery + submit ================= */
+// Shared by renderCart(), the live-typing patch, and the client-view/
+// download render -- one place computes rate/amount/profit per line so
+// the three surfaces can never quietly disagree with each other.
+function cartLineFigures(it){
+  const baseQty = Number(it.qty)||0;
+  const agentSellPrice = Number(it.agentSellPrice)||0;
+  const floorPrice = Number(it.floorPrice)||0;
+  const amount = agentSellPrice * baseQty;
+  const displayQty = it.displayQty!=null ? it.displayQty : baseQty;
+  const displayUnit = it.displayUnit || it.unit || '';
+  const rate = displayQty>0 ? amount/displayQty : 0;
+  const profit = (agentSellPrice - floorPrice) * baseQty;
+  const noMargin = agentSellPrice <= floorPrice;
+  return { baseQty, amount, displayQty, displayUnit, rate, profit, noMargin };
+}
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
-  let total = 0;
+  let total = 0, profit = 0;
   wrap.innerHTML = cart.map((it,i)=>{
-    // agentSellPrice is always stored per base unit; qty is always base
-    // units too, so the amount is correct regardless of what the agent
-    // actually picked in the panel. displayQty/displayUnit (what they
-    // typed, e.g. "10 Ctn") are shown instead of the base-unit qty/unit
-    // purely for the receipt -- rate is scaled back up to match whichever
-    // unit is being displayed so Rate x Qty still equals Amount.
-    const baseQty = Number(it.qty)||0;
-    const amount = (Number(it.agentSellPrice)||0) * baseQty;
-    total += amount;
-    const displayQty = it.displayQty!=null ? it.displayQty : baseQty;
-    const displayUnit = it.displayUnit || it.unit || '';
-    const rate = displayQty>0 ? amount/displayQty : 0;
+    const f = cartLineFigures(it);
+    total += f.amount;
+    profit += f.profit;
     // Quick-add pushes straight to the cart at floor price with no chance
     // to set a margin (see quickAddFromBrowse) -- this is the one place
     // that gap gets caught, since every line ends up here before it can
     // be submitted.
-    const noMargin = (Number(it.agentSellPrice)||0) <= (Number(it.floorPrice)||0);
     return `
     <tr>
-      <td class="ag-receipt-qty">${esc(displayQty)} ${esc(displayUnit)}</td>
+      <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
       <td>
-        <div class="ag-receipt-name">${esc(it.name)}</div>
-        ${it.variantLabel ? `<div class="ag-grid-variant">${esc(it.variantLabel)}</div>` : ''}
-        <div class="ag-margin-flag" style="display:${noMargin?'inline-flex':'none'};">${ICON_WARN}No margin set</div>
+        <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+        ${f.noMargin ? `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>` : ''}
       </td>
-      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(rate)}" min="0" step="any"></td>
-      <td class="ag-receipt-amount">${fmtAmount(amount)}</td>
+      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any"></td>
       <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
     </tr>`;
   }).join('');
   document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
+  document.getElementById('ag_cartProfitValue').textContent = fmtUGX(profit);
   wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cart.splice(Number(btn.dataset.idx), 1);
@@ -3309,11 +3340,11 @@ function renderCart(){
       renderCartTab();
     });
   });
-  // Live-patches just this row (amount, flag, running total) as the agent
-  // types, rather than re-rendering the whole table -- a full renderCart()
-  // here would recreate this very input mid-keystroke and drop focus.
-  // The actual commit to cart state only happens on change (blur/Enter),
-  // once the agent is done editing.
+  // Live-patches the flag, total, and profit as the agent types, rather
+  // than re-rendering the whole table -- a full renderCart() here would
+  // recreate this very input mid-keystroke and drop focus. The actual
+  // commit to cart state only happens on change (blur/Enter), once the
+  // agent is done editing.
   wrap.querySelectorAll('.ag-rate-input').forEach(input=>{
     input.addEventListener('input', ()=>{
       const idx = Number(input.dataset.idx);
@@ -3324,18 +3355,28 @@ function renderCart(){
       const baseQty = Number(item.qty)||0;
       const displayQty = item.displayQty!=null ? item.displayQty : baseQty;
       const previewSellPrice = baseQty>0 ? entered*displayQty/baseQty : entered;
-      const previewAmount = previewSellPrice*baseQty;
       const rowNoMargin = previewSellPrice <= (Number(item.floorPrice)||0);
-      const row = input.closest('tr');
-      row.querySelector('.ag-receipt-amount').textContent = fmtAmount(previewAmount);
       input.classList.toggle('zero-margin', rowNoMargin);
+      const row = input.closest('tr');
       const flagEl = row.querySelector('.ag-margin-flag');
-      if(flagEl) flagEl.style.display = rowNoMargin ? 'inline-flex' : 'none';
-      let runningTotal = 0;
+      if(rowNoMargin && !flagEl){
+        row.children[1].insertAdjacentHTML('beforeend', `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>`);
+      } else if(!rowNoMargin && flagEl){
+        flagEl.remove();
+      }
+      let runningTotal = 0, runningProfit = 0;
       cart.forEach((it2,i2)=>{
-        runningTotal += i2===idx ? previewAmount : (Number(it2.agentSellPrice)||0)*(Number(it2.qty)||0);
+        if(i2===idx){
+          runningTotal += previewSellPrice*baseQty;
+          runningProfit += (previewSellPrice - (Number(item.floorPrice)||0))*baseQty;
+        } else {
+          const f2 = cartLineFigures(it2);
+          runningTotal += f2.amount;
+          runningProfit += f2.profit;
+        }
       });
       document.getElementById('ag_cartTotalValue').textContent = fmtUGX(runningTotal);
+      document.getElementById('ag_cartProfitValue').textContent = fmtUGX(runningProfit);
     });
     input.addEventListener('change', ()=>{
       const idx = Number(input.dataset.idx);
@@ -3350,12 +3391,167 @@ function renderCart(){
     });
   });
 }
+// The document a client actually sees -- Amount column back (standard
+// invoice convention an agent's editing view doesn't need), no profit,
+// no floor price, nothing about margin. Rendered fresh every time the
+// toggle switches here, never reused from the "Your view" DOM, so
+// there's no path for a profit figure to leak in by accident.
+function renderClientReceiptTable(){
+  const wrap = document.getElementById('ag_cartClientWrap');
+  let total = 0;
+  wrap.innerHTML = cart.map(it=>{
+    const f = cartLineFigures(it);
+    total += f.amount;
+    return `
+    <tr>
+      <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
+      <td><span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}</td>
+      <td class="ag-receipt-rate">${fmtAmount(f.rate)}</td>
+      <td class="ag-receipt-amount">${fmtAmount(f.amount)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ag_cartClientTotalValue').textContent = fmtUGX(total);
+}
+document.querySelectorAll('.ag-view-toggle [data-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const view = btn.dataset.view;
+    document.querySelectorAll('.ag-view-toggle [data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+    document.getElementById('ag_quoteview_yours').style.display = view==='yours' ? 'block' : 'none';
+    document.getElementById('ag_quoteview_client').style.display = view==='client' ? 'block' : 'none';
+    if(view==='client') renderClientReceiptTable();
+  });
+});
 function renderCartTab(){
   const hasItems = cart.length > 0;
   document.getElementById('ag_cartEmptyState').style.display = hasItems ? 'none' : 'block';
   document.getElementById('ag_cartContent').style.display = hasItems ? 'block' : 'none';
   if(hasItems) renderCart();
 }
+
+/* ---- Downloadable client receipt (canvas -- no PDF library, no
+   external dependency; PNG is also the friendliest format for sharing
+   straight into WhatsApp). Drawn from cart + chosenClient directly, in
+   its own render pass -- never from the DOM -- so profit/floor price
+   have no path onto it. ---- */
+function drawReceiptCanvas(){
+  const rowH = 40, headerH = 122, footerH = 90;
+  const w = 640, h = headerH + cart.length*rowH + 70 + footerH;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0,0,w,h);
+
+  ctx.fillStyle = '#12151A';
+  ctx.font = '700 22px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  ctx.fillText(myAgent.name || 'Omni-Ware', 32, 48);
+  ctx.fillStyle = '#6B7280';
+  ctx.font = '600 13px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  ctx.fillText('Quotation', 32, 68);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#6B7280';
+  ctx.font = '600 12px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  const today = new Date().toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' });
+  ctx.fillText(today, w-32, 48);
+  ctx.fillText(`For: ${chosenClient ? chosenClient.name : 'Client'}`, w-32, 68);
+  ctx.textAlign = 'left';
+
+  ctx.strokeStyle = '#E9EBEF';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(32,90); ctx.lineTo(w-32,90); ctx.stroke();
+
+  let y = 122;
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font = '700 11px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  ctx.fillText('QTY', 32, y);
+  ctx.fillText('ITEM', 110, y);
+  ctx.textAlign = 'right';
+  ctx.fillText('RATE', w-190, y);
+  ctx.fillText('AMOUNT', w-32, y);
+  ctx.textAlign = 'left';
+  y += 14;
+  ctx.beginPath(); ctx.moveTo(32,y); ctx.lineTo(w-32,y); ctx.stroke();
+
+  let total = 0;
+  cart.forEach(it=>{
+    const f = cartLineFigures(it);
+    total += f.amount;
+    y += rowH;
+    ctx.fillStyle = '#12151A';
+    ctx.font = '600 13px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+    ctx.fillText(`${f.displayQty} ${f.displayUnit}`, 32, y);
+    ctx.font = '700 13.5px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+    ctx.fillText(it.name, 110, y);
+    if(it.variantLabel){
+      ctx.font = '500 11.5px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+      ctx.fillStyle = '#0B7F7A';
+      ctx.fillText(it.variantLabel, 110, y+16);
+    }
+    ctx.fillStyle = '#12151A';
+    ctx.font = '700 13px ui-monospace, "SF Mono", "Cascadia Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtAmount(f.rate), w-190, y);
+    ctx.fillText(fmtAmount(f.amount), w-32, y);
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = '#F1F3F5';
+    ctx.beginPath(); ctx.moveTo(32,y+22); ctx.lineTo(w-32,y+22); ctx.stroke();
+  });
+
+  y += 50;
+  ctx.strokeStyle = '#12151A';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(32,y); ctx.lineTo(w-32,y); ctx.stroke();
+  y += 30;
+  ctx.fillStyle = '#12151A';
+  ctx.font = '800 14px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  ctx.fillText('TOTAL', 32, y);
+  ctx.textAlign = 'right';
+  ctx.font = '800 18px ui-monospace, "SF Mono", "Cascadia Mono", monospace';
+  ctx.fillStyle = '#0B7F7A';
+  ctx.fillText('UGX ' + fmtAmount(total), w-32, y);
+  ctx.textAlign = 'left';
+
+  y += 44;
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font = '500 11.5px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  ctx.fillText('Thank you for your business.', 32, y);
+
+  return canvas;
+}
+function receiptFileName(){
+  const clientPart = chosenClient ? chosenClient.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') : 'client';
+  return `quote-${clientPart || 'client'}.png`;
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+document.getElementById('ag_download_receipt_btn').addEventListener('click', ()=>{
+  if(!cart.length) return;
+  const canvas = drawReceiptCanvas();
+  const filename = receiptFileName();
+  canvas.toBlob(async blob=>{
+    const file = new File([blob], filename, { type: 'image/png' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{
+        await navigator.share({ files: [file], title: 'Quotation', text: chosenClient ? `Here is your quote, ${chosenClient.name}` : 'Here is your quote' });
+        return;
+      }catch(err){
+        if(err && err.name === 'AbortError') return;
+        // Fall through to a plain download if sharing itself failed.
+      }
+    }
+    downloadBlob(blob, filename);
+    toast('Receipt downloaded');
+  }, 'image/png');
+});
 document.getElementById('ag_cart_browse_btn').addEventListener('click', ()=> switchTab('sell'));
 
 function resetCartAfterSubmit(){
@@ -3373,6 +3569,7 @@ function resetCartAfterSubmit(){
   updateCartBadge();
   clearQuoteDraft();
   renderSellClientChip();
+  document.getElementById('ag_quoteview_yours_btn').click();
 }
 
 /* ---- Client picking ---- */
