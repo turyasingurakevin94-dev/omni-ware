@@ -3046,7 +3046,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="field"><label>Supplier ID</label><input id="s_id" placeholder="e.g. S005"></div>
+        <div class="field"><label>Supplier ID</label><input id="s_id" disabled><div class="field-hint">Generated automatically</div></div>
         <div class="field"><label>Supplier name</label><input id="s_name" placeholder="e.g. Katwe Iron Works"></div>
         <div class="field"><label>Contact phone</label><input id="s_phone" placeholder="e.g. 0700 000 000"></div>
         <div class="field"><label>Location</label><input id="s_location" placeholder="e.g. Katwe"></div>
@@ -3093,7 +3093,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="field"><label>Customer ID</label><input id="c_id" placeholder="e.g. C005"></div>
+        <div class="field"><label>Customer ID</label><input id="c_id" disabled><div class="field-hint">Generated automatically</div></div>
         <div class="field"><label>Customer name</label><input id="c_name" placeholder="e.g. Sarah Namono"></div>
         <div class="field"><label>Contact phone</label><input id="c_phone" placeholder="e.g. 0700 000 000"></div>
         <div class="field"><label>Location</label><input id="c_location" placeholder="e.g. Ntinda"></div>
@@ -3119,7 +3119,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="field"><label>Staff ID</label><input id="st_id" placeholder="e.g. ST005"></div>
+        <div class="field"><label>Staff ID</label><input id="st_id" disabled><div class="field-hint">Generated automatically</div></div>
         <div class="field"><label>Staff name</label><input id="st_name" placeholder="e.g. Musa Kato"></div>
         <div class="field"><label>Contact phone</label><input id="st_phone" placeholder="e.g. 0700 000 000"></div>
         <div class="field"><label>Role</label>
@@ -3419,7 +3419,7 @@
         </div>
         <div class="section-label-row form-section-label">Basics</div>
         <div class="form-grid">
-          <div class="field"><label>Product ID</label><input id="p_id" placeholder="e.g. P007"><div class="field-hint" id="p_id_hint">Auto-generated — edit to use your own</div></div>
+          <div class="field"><label>Product ID</label><input id="p_id" disabled><div class="field-hint" id="p_id_hint">Generated automatically</div></div>
           <div class="field"><label>Product name</label><input id="p_name" placeholder="e.g. Wheelbarrow, heavy duty"></div>
           <div class="field"><label>Category</label><input id="p_category" list="dl_categories" placeholder="e.g. Tools"></div>
           <div class="field"><label>Sub-category</label><input id="p_subcategory" list="dl_subcategories" placeholder="e.g. Hand Tools"></div>
@@ -4097,6 +4097,9 @@ async function loadData(shopId){
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
+    // Highest id ever issued per entity type. Persisted rather than derived
+    // so it survives deletions -- see nextEntityId().
+    idCounters: presets.idCounters || {},
     seeded: true
   };
 }
@@ -4177,7 +4180,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays},
+      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, idCounters:d.idCounters||{}},
       quote_draft: d.quote
     }
   };
@@ -8374,7 +8377,7 @@ function editSupplier(id){
 function resetSupplierForm(){
   editingSupplierId = null;
   ['s_id','s_name','s_phone','s_location','s_notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('s_id').disabled = false;
+  document.getElementById('s_id').value = nextEntityId('supplier', 'S', 3, data.suppliers);
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
 }
 function deleteSupplier(id){
@@ -8389,8 +8392,10 @@ document.getElementById('s_add_btn').addEventListener('click', ()=>{ resetSuppli
 document.getElementById('s_save').addEventListener('click', ()=>{
   const id = document.getElementById('s_id').value.trim();
   const name = document.getElementById('s_name').value.trim();
-  if(!id || !name){ toast('Supplier ID and name are required'); return; }
-  if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast('That Supplier ID already exists'); return; }
+  if(!name){ toast('Supplier name is required'); return; }
+  // Defensive only -- the id comes from nextEntityId() now, so a clash here
+  // would mean the counter itself is wrong rather than a mistyped entry.
+  if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast(`Could not issue a new Supplier ID (${id} is taken). Reload and try again.`); return; }
   // Commission rate is managed from the commission modal, not this form --
   // carry whatever's already on file forward so saving here doesn't wipe it.
   const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
@@ -8530,7 +8535,7 @@ function resetStaffForm(){
   editingStaffId = null;
   ['st_id','st_name','st_phone','st_notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('st_role').value = 'worker';
-  document.getElementById('st_id').disabled = false;
+  document.getElementById('st_id').value = nextEntityId('staff', 'ST', 3, data.staff);
   document.getElementById('staffFormTitle').textContent = 'Add staff';
 }
 // Grants a staff member an app login (via a Supabase invite email) and
@@ -8560,8 +8565,8 @@ document.getElementById('st_add_btn').addEventListener('click', ()=>{ resetStaff
 document.getElementById('st_save').addEventListener('click', ()=>{
   const id = document.getElementById('st_id').value.trim();
   const name = document.getElementById('st_name').value.trim();
-  if(!id || !name){ toast('Staff ID and name are required'); return; }
-  if(!editingStaffId && data.staff.some(s=>s.id===id)){ toast('That Staff ID already exists'); return; }
+  if(!name){ toast('Staff name is required'); return; }
+  if(!editingStaffId && data.staff.some(s=>s.id===id)){ toast(`Could not issue a new Staff ID (${id} is taken). Reload and try again.`); return; }
   const record = {
     id, name,
     phone: document.getElementById('st_phone').value.trim(),
@@ -9202,7 +9207,7 @@ function editCustomer(id){
 function resetCustomerForm(){
   editingCustomerId = null;
   ['c_id','c_name','c_phone','c_location','c_debt','c_notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('c_id').disabled = false;
+  document.getElementById('c_id').value = nextEntityId('customer', 'C', 3, data.customers);
   document.getElementById('customerFormTitle').textContent = 'Add customer';
 }
 function deleteCustomer(id){
@@ -9215,8 +9220,8 @@ document.getElementById('c_add_btn').addEventListener('click', ()=>{ resetCustom
 document.getElementById('c_save').addEventListener('click', ()=>{
   const id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
-  if(!id || !name){ toast('Customer ID and name are required'); return; }
-  if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast('That Customer ID already exists'); return; }
+  if(!name){ toast('Customer name is required'); return; }
+  if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast(`Could not issue a new Customer ID (${id} is taken). Reload and try again.`); return; }
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
     data.customers[idx] = {
@@ -10234,17 +10239,33 @@ function cancelProductForm(){
 // Suggests the next free "Pnnn" id after whatever's already in use, so
 // adding a product doesn't require typing one -- just editing it if the
 // shop wants a different scheme (e.g. their own SKU) instead.
-function generateNextProductId(){
-  let n = 1;
-  data.products.forEach(p=>{
-    const m = /^P(\d+)$/.exec(p.id);
-    if(m) n = Math.max(n, Number(m[1])+1);
+// Issues the next id for an entity type, and never reissues one.
+//
+// The obvious implementation -- max(existing) + 1, which is what this used
+// to do for products -- frees an id the moment its record is deleted. The
+// next record created then silently inherits everything still pointing at
+// the old one: a product id carries its prices, stock, order lines and
+// cluster entries; a customer id carries their debt history; a supplier id
+// carries their invoices. That is the same failure that made an agent
+// inherit a departed colleague's orders, and it does not announce itself.
+//
+// So the counter is persisted (in app_settings presets) and only ever moves
+// forward. max() against the existing rows as well, so a record sitting
+// above the counter -- legacy data, or an id created before this existed --
+// can't collide either.
+function nextEntityId(kind, prefix, pad, existing){
+  if(!data.idCounters) data.idCounters = {};
+  const rx = new RegExp('^' + prefix + '(\\d+)$');
+  let highest = 0;
+  (existing||[]).forEach(r=>{
+    const m = rx.exec(String((r && r.id) || ''));
+    if(m) highest = Math.max(highest, Number(m[1]));
   });
-  let id = 'P' + String(n).padStart(3,'0');
-  const used = new Set(data.products.map(p=>p.id));
-  while(used.has(id)){ n++; id = 'P' + String(n).padStart(3,'0'); }
-  return id;
+  const n = Math.max(Number(data.idCounters[kind]) || 0, highest) + 1;
+  data.idCounters[kind] = n;
+  return prefix + String(n).padStart(pad, '0');
 }
+function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
   editingProductId = id;
@@ -10361,7 +10382,6 @@ function resetProductForm(){
   refreshPresetDatalists();
   document.getElementById('p_wholesale_markup_type').value = 'percent';
   document.getElementById('p_retail_markup_type').value = 'percent';
-  document.getElementById('p_id').disabled = false;
   document.getElementById('p_id').value = generateNextProductId();
   document.getElementById('p_id_hint').style.display = '';
   document.getElementById('productFormTitle').textContent = 'Add product';
@@ -10460,8 +10480,8 @@ document.getElementById('p_add_btn').addEventListener('click', ()=>{ resetProduc
 document.getElementById('p_save').addEventListener('click', ()=>{
   const id = document.getElementById('p_id').value.trim();
   const name = document.getElementById('p_name').value.trim();
-  if(!id || !name){ toast('Product ID and name are required'); return; }
-  if(!editingProductId && data.products.some(p=>p.id===id)){ toast('That Product ID already exists'); return; }
+  if(!name){ toast('Product name is required'); return; }
+  if(!editingProductId && data.products.some(p=>p.id===id)){ toast(`Could not issue a new Product ID (${id} is taken). Reload and try again.`); return; }
   const type = document.getElementById('p_type_variable').checked ? 'variable' : 'simple';
   const variantAttributes = type==='variable' ? draftVariantAttrs
     .map(a=>({name:a.name.trim(), values:a.values.split(',').map(v=>v.trim()).filter(Boolean)}))
