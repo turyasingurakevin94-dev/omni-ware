@@ -405,12 +405,13 @@
   .ag-star-btn.active{color:var(--bonus);}
   .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
   .ag-sponsor-tag .icon{width:10px;height:10px;}
-  /* One-tap add of the currently-selected variant at qty 1 -- its own tap
-     target at the right edge of the row, not sharing the thumb with the
-     cluster star (see .ag-star-btn) since the thumb is now a small fixed
-     square rather than the full card width. Tapping the card body (not
-     this button) still opens the full panel for anything past the qty-1
-     default: a real quantity, a different unit, or the tier ladder. */
+  /* Opens the same add panel as tapping the card body -- an explicit,
+     unambiguous "add" affordance at the right edge of the row rather
+     than a distinct instant-add behavior (that used to commit floor
+     price straight to the cart with no chance to set a margin). Its own
+     tap target, not sharing the thumb with the cluster star (see
+     .ag-star-btn), since the thumb is now a small fixed square rather
+     than the full card width. */
   .ag-quickadd-btn{
     all:unset;flex-shrink:0;width:32px;height:32px;border-radius:50%;
     background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
@@ -2771,7 +2772,7 @@ function browseGroupCardHTML(group, promoted){
       ${bulkHintHTML(selected)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
-    <button type="button" class="ag-quickadd-btn" data-quickadd-pid="${esc(group.productId)}" title="Add 1 now">${ICON_PLUS}</button>
+    <button type="button" class="ag-quickadd-btn" title="Add to quote">${ICON_PLUS}</button>
   </div>`;
 }
 // Re-renders exactly one card after its chip selection changes, using the
@@ -2791,38 +2792,6 @@ function refreshOneBrowseCard(productId){
   card.outerHTML = browseGroupCardHTML(group, promotedMap());
   const newCard = document.querySelector(`#ag_browseGrid .ag-grid-card[data-pid="${CSS.escape(String(productId))}"]`);
   if(newCard) markVariantChipOverflow(newCard);
-}
-// Same double-submit hazard every other in-flight write in this app
-// guards against, keyed per product so quick-adding two different items
-// back to back is never blocked by the first one's request.
-let browseQuickAddsInFlight = new Set();
-async function quickAddFromBrowse(productId){
-  if(browseQuickAddsInFlight.has(productId)) return;
-  const group = groupCatalogItems(browseItems()).find(g=>g.productId===productId);
-  const selected = group ? selectedVariantFor(group) : null;
-  if(!selected) return;
-  browseQuickAddsInFlight.add(productId);
-  try{
-    // Same rule as everywhere else a quantity gets added: the flat
-    // catalog's floorPrice is only ever a snapshot from whenever the
-    // list loaded. One tap shouldn't mean one stale price -- re-resolve
-    // it live, same as loadSolutionIntoCart() does for every line.
-    const res = await callAgentFn('agent-catalog', { action:'price', productId: selected.productId, variantIdx: selected.variantIdx, qty:1 });
-    if(!res.available){ toast('This item is no longer available'); return; }
-    cart.push({
-      productId: selected.productId, variantIdx: selected.variantIdx, name: selected.name, variantLabel: selected.variantLabel,
-      qty: 1, unit: res.unit, packUnit: res.packUnit, packQty: Number(res.packQty)||0,
-      displayQty: 1, displayUnit: res.unit,
-      tier: res.tier, floorPrice: res.floorPrice, agentSellPrice: res.floorPrice,
-    });
-    updateCartBadge();
-    saveQuoteDraft();
-    toast(`Added 1 ${res.unit} of ${selected.name}`);
-  }catch(err){
-    toast(isNetworkError(err) ? "You're offline -- couldn't add this item" : `Could not add: ${err.message||err}`);
-  } finally {
-    browseQuickAddsInFlight.delete(productId);
-  }
 }
 
 function browseCardHTML(it, promoted, opts){
@@ -2971,17 +2940,17 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
     }
     return;
   }
-  const quickBtn = e.target.closest('[data-quickadd-pid]');
-  if(quickBtn){
-    quickAddFromBrowse(quickBtn.dataset.quickaddPid);
-    return;
-  }
   const card = e.target.closest('.ag-grid-card');
   if(card){
     // Merged main-grid cards carry data-selected-vidx (whichever chip is
     // active); Order Again/Sponsored cards still carry the old flat
     // data-vidx. Checking selected-vidx first, falling back to vidx,
-    // means one handler serves both card shapes correctly.
+    // means one handler serves both card shapes correctly. The "+"
+    // button (no data-quickadd handling of its own anymore) is just
+    // another tap target inside this same card, so it opens the same
+    // panel as tapping anywhere else on the row -- qty, the tier
+    // ladder, and the price the agent actually wants to charge, rather
+    // than silently committing floor price with no chance to set one.
     const vidxRaw = card.dataset.selectedVidx !== undefined ? card.dataset.selectedVidx : card.dataset.vidx;
     const item = catalogEntry(card.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
     if(item) openAddItemPanel(item);
@@ -3320,10 +3289,10 @@ function renderCart(){
     const f = cartLineFigures(it);
     total += f.amount;
     profit += f.profit;
-    // Quick-add pushes straight to the cart at floor price with no chance
-    // to set a margin (see quickAddFromBrowse) -- this is the one place
-    // that gap gets caught, since every line ends up here before it can
-    // be submitted.
+    // The add panel's price field defaults to floor price too -- an
+    // agent can still add an item without ever changing it. This is the
+    // one place that gets caught, since every line ends up here before
+    // it can be submitted.
     return `
     <tr>
       <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
