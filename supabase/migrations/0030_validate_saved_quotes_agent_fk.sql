@@ -1,0 +1,14 @@
+-- Completes 0027.
+--
+-- The foreign key from saved_quotes.agent_id to agents(shop_id, id) was
+-- added NOT VALID there, deliberately: at the time one order pointed at an
+-- agent id whose row had already been deleted, and a validating constraint
+-- would have rejected the entire migration rather than applying and
+-- protecting everything from that point on.
+--
+-- 0029 removed that order along with the shop it belonged to, and every
+-- remaining order is admin-raised with a null agent_id, so there is
+-- nothing left here to reject. Validating now extends the constraint back
+-- over existing rows: from here an order cannot reference an agent who
+-- doesn't exist, historically or in future.
+alter table saved_quotes validate constraint saved_quotes_agent_fk;
