@@ -6403,6 +6403,11 @@ function stepSavedQuoteStatus(id, dir){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
   const idx = SQ_STATUS_ORDER.indexOf(q.status);
+  // A status that isn't in the sequence has no next or previous step.
+  // Without this, indexOf()'s -1 plus a forward step lands on 0 and
+  // silently resets the order to 'draft' -- stepping backward already
+  // bailed out, so only one direction was ever wrong.
+  if(idx < 0) return;
   const nextIdx = idx + dir;
   if(nextIdx < 0 || nextIdx >= SQ_STATUS_ORDER.length) return;
   const toStatus = SQ_STATUS_ORDER[nextIdx];

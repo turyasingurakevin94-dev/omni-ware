@@ -40,6 +40,22 @@ function extractFunction(src, name, where) {
   throw new Error(`unbalanced braces in ${name}() in ${where}`);
 }
 
+// Pulls a top-level `const NAME = <literal>;` out of a source file, so a
+// test can assert against the app's real constants instead of a hand-copied
+// set that would quietly stop matching.
+function extractDeclaration(src, name, where) {
+  const m = new RegExp('(?:const|let|var)\\s+' + name + '\\s*=').exec(src);
+  if (!m) throw new Error(`could not find declaration ${name} in ${where}`);
+  let depth = 0;
+  for (let i = m.index; i < src.length; i++) {
+    const c = src[i];
+    if (c === '{' || c === '[' || c === '(') depth++;
+    else if (c === '}' || c === ']' || c === ')') depth--;
+    else if (c === ';' && depth === 0) return src.slice(m.index, i + 1);
+  }
+  throw new Error(`unterminated declaration ${name} in ${where}`);
+}
+
 // Just enough TypeScript removal for the small numeric helpers in the edge
 // functions: parameter and return annotations, and `as` casts. Deliberately
 // narrow -- anything it doesn't handle makes evaluation throw, which fails
@@ -103,4 +119,4 @@ function createReporter(title) {
   };
 }
 
-module.exports = { ROOT, read, extractFunction, stripTypes, compileScope, createReporter };
+module.exports = { ROOT, read, extractFunction, extractDeclaration, stripTypes, compileScope, createReporter };
