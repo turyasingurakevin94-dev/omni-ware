@@ -177,6 +177,7 @@
   .wv-carousel-badge .icon{width:13px;height:13px;stroke-width:3;}
   .wv-carousel-body{padding:11px 16px 10px;}
   .wv-carousel-name{font-size:14.5px;font-weight:600;text-align:center;}
+  .wv-carousel-variant{font-size:12.5px;font-weight:700;color:var(--accent-deep);text-align:center;margin-top:3px;}
   .wv-carousel-qty-label{font-size:10px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;text-align:center;margin-top:5px;}
   .wv-carousel-qty{font-family:'Manrope',sans-serif;font-weight:800;font-size:21px;color:var(--ink);text-align:center;margin-top:1px;letter-spacing:-.2px;}
   .wv-carousel-source{border-top:1.5px dotted var(--line);background:var(--accent-tint);text-align:center;padding:7px 16px 8px;}
@@ -318,10 +319,82 @@ function buildWorkerSyncRows(d, shopId){
   };
 }
 
+// The only parts of an order this app is allowed to write. Everything else
+// on the row -- money, client, the items themselves -- belongs to the admin
+// app, and this one has no business sending its own idea of them back.
+const WORKER_OWNED_KEYS = [
+  'assignedWorkerId', 'assignedDeliveryId',
+  'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt',
+  'stageEnteredAt'
+];
+
+// Pick state lives on the items, so it has to be merged onto the SERVER's
+// items rather than replacing them. If the counts differ the admin has
+// edited the order since this app loaded -- their version wins and the pick
+// state is dropped, because matching by index across an edit would attach
+// "picked" to whatever item happens to now sit at that position.
+function mergePickState(serverItems, localItems){
+  if(!Array.isArray(serverItems)) return localItems;
+  if(!Array.isArray(localItems) || serverItems.length !== localItems.length) return serverItems;
+  return serverItems.map((it, i)=>({
+    ...it,
+    pickStatus: localItems[i].pickStatus,
+    pickedQty: localItems[i].pickedQty
+  }));
+}
+
+// This app loads once at boot and never refreshes on its own, so `data` can
+// be hours old by the time a pick is finished. Sending the whole row back
+// would overwrite everything the admin has done to it since -- a payment
+// recorded at 10am is gone the moment an 8am snapshot saves at 11am, and
+// nothing anywhere would report it.
+//
+// So a save re-reads the rows it is about to touch and lays only the fields
+// above onto the server's current version. A read-modify-write is the wrong
+// shape in general, but the alternative here is a client that silently
+// reverts the shop's books to whenever its user last opened the app.
+async function mergeOntoServerRows(shopId, rows){
+  const { data: current, error } = await sb.from('saved_quotes')
+    .select('*').eq('shop_id', shopId).in('id', rows.map(r=>r.id));
+  if(error) throw error;
+  const byId = new Map((current||[]).map(r=>[String(r.id), r]));
+  return rows.map(local=>{
+    const server = byId.get(String(local.id));
+    if(!server) return local;   // not on the server at all -- nothing to preserve
+    const serverPayload = server.payload || {};
+    const localPayload = local.payload || {};
+    const payload = {...serverPayload};
+    WORKER_OWNED_KEYS.forEach(k=>{ payload[k] = localPayload[k]; });
+    payload.items = mergePickState(serverPayload.items, localPayload.items);
+    // status is worker-owned only in the one direction this app moves it
+    // (preparing -> pending_delivery, in finishPreparingOrder). Anywhere
+    // else the server's is authoritative.
+    return {...server, status: local.status, payload};
+  });
+}
+
 async function saveData(){
   const shopId = currentShopId;
   if(!data.savedQuotes) data.savedQuotes = [];
   const rows = buildWorkerSyncRows(data, shopId);
+
+  // Same comparison addDiffOps() uses to decide what to send, so only the
+  // rows actually about to move get re-read.
+  const prev = (lastSynced && lastSynced.savedQuotes) || {};
+  const changed = rows.savedQuotes.filter(r=> JSON.stringify(r) !== JSON.stringify(prev[String(r.id)]));
+  if(changed.length){
+    try{
+      const merged = await mergeOntoServerRows(shopId, changed);
+      const mergedById = new Map(merged.map(r=>[String(r.id), r]));
+      rows.savedQuotes = rows.savedQuotes.map(r=> mergedById.get(String(r.id)) || r);
+    }catch(err){
+      // Better to send nothing than to send a stale row wholesale.
+      console.error('Could not re-read orders before saving:', err);
+      toast('Sync failed — check your connection and try again', 5000);
+      return;
+    }
+  }
+
   const ops = [];
   addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
   if(!ops.length) return;

@@ -399,8 +399,19 @@ function renderWorkerPendingList(pending){
   });
 }
 
+// Only ever acts on an order actually assigned to whoever is signed in.
+// Both of these can be reached from a notification tap, and a notification
+// outlives the assignment it was sent for -- an order reassigned to someone
+// else while the first worker's phone still shows the old alert would
+// otherwise let that tap take it over, or hand it back, out from under the
+// worker now holding it.
+function orderIsMine(q){
+  return !!(q && myStaff && q.assignedWorkerId === myStaff.id);
+}
+
 function acceptOrderAssignment(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!orderIsMine(q)){ toast('That order has already been passed to someone else'); return; }
   if(!q || q.pickingStatus!=='awaiting_accept') return;
   q.pickingStatus = 'in_progress';
   q.workerAcceptedAt = Date.now();
@@ -419,7 +430,7 @@ function refreshAdminOrderBoardIfOpen(){
 
 function denyOrderAssignment(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
-  if(!q) return;
+  if(!orderIsMine(q)){ toast('That order has already been passed to someone else'); return; }
   q.assignedWorkerId = null;
   q.pickingStatus = null;
   saveData();
@@ -701,24 +712,47 @@ function agentPaymentBlocksPreparing(q){
 async function finishPreparingOrder(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
+  // This app loads once and never refreshes on its own, so its copy of an
+  // order can be hours behind. Without this, finishing a pick on an order
+  // an admin had since moved on (delivered, completed) would drag it back
+  // to pending_delivery -- a status regression driven entirely by a stale
+  // screen, and invisible to whoever had already moved it.
+  if(q.status !== 'preparing' && q.status !== 'draft'){
+    toast('This order has already moved on — refresh to see where it is now', 5000);
+    return;
+  }
   const items = q.items||[];
   if(items.length && items.some(row=>row.pickStatus!=='done')) return; // guard: button is disabled otherwise
   q.pickingStatus = 'done';
-  saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
+  // Awaited: this function saves twice, and a save now re-reads the row
+  // before writing it. Left unawaited the two overlap, and whichever upsert
+  // lands last wins -- so the first save's older snapshot could land after
+  // the second's and quietly undo the status move below.
+  await saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
 
   let deliveryStaffId;
   if(q.deliveryMode==='agent_pickup'){
     deliveryStaffId = '__agent__';
   } else {
     deliveryStaffId = await promptAssignDelivery(orderId);
-    if(!deliveryStaffId){ renderWorkerView(); return; }
+    if(!deliveryStaffId){
+      // Backing out has to leave the order somewhere this app can still
+      // show it. 'done' is neither awaiting_accept nor in_progress, so both
+      // lists skipped it -- the worker was left staring at an empty screen
+      // while still holding an order that was blocked on them, with no way
+      // back to it.
+      q.pickingStatus = 'in_progress';
+      await saveData();
+      renderWorkerView();
+      return;
+    }
   }
 
   q.assignedDeliveryId = deliveryStaffId;
   q.status = 'pending_delivery';
   q.stageEnteredAt = Date.now();
   const workerId = q.assignedWorkerId;
-  saveData();
+  await saveData();
   if(workerId) autoAssignNextOrder(workerId);
   refreshAdminOrderBoardIfOpen();
   renderWorkerView();

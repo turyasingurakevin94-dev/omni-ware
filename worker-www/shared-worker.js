@@ -66,8 +66,23 @@ function quoteAgedOffBoard(q){
   return !!(q.invoiced && q.invoicedTs && (Date.now() - q.invoicedTs) >= SQ_BOARD_HIDE_AFTER_MS);
 }
 
-function ipStageThumbHTML(product){
-  if(product.image) return `<img class="q-stage-thumb img-zoomable" src="${product.image}" alt="${esc(product.name)}">`;
+// Which photo actually represents a product (and, for a variable product,
+// one specific variant of it): that variant's own photo if it has one,
+// else the product's own photo, else this product's category's shared
+// default, else nothing (callers fall back to a placeholder icon).
+// Shared by both host apps -- worker.html's slimmer product fetch simply
+// never populates `.variants`/`.category`, so those branches just no-op
+// there and it degrades to today's plain `.image` lookup.
+function resolveProductImage(p, variantIdx){
+  if(!p) return null;
+  if(variantIdx!=null && Array.isArray(p.variants) && p.variants[variantIdx] && p.variants[variantIdx].image) return p.variants[variantIdx].image;
+  if(p.image) return p.image;
+  const cat = p.category && data.presetCategories ? data.presetCategories.find(c=>c.name===p.category) : null;
+  return (cat && cat.image) || null;
+}
+function ipStageThumbHTML(product, variantIdx){
+  const src = resolveProductImage(product, variantIdx);
+  if(src) return `<img class="q-stage-thumb img-zoomable" src="${src}" alt="${esc(product.name)}">`;
   return `<div class="q-stage-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
 
@@ -384,8 +399,19 @@ function renderWorkerPendingList(pending){
   });
 }
 
+// Only ever acts on an order actually assigned to whoever is signed in.
+// Both of these can be reached from a notification tap, and a notification
+// outlives the assignment it was sent for -- an order reassigned to someone
+// else while the first worker's phone still shows the old alert would
+// otherwise let that tap take it over, or hand it back, out from under the
+// worker now holding it.
+function orderIsMine(q){
+  return !!(q && myStaff && q.assignedWorkerId === myStaff.id);
+}
+
 function acceptOrderAssignment(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!orderIsMine(q)){ toast('That order has already been passed to someone else'); return; }
   if(!q || q.pickingStatus!=='awaiting_accept') return;
   q.pickingStatus = 'in_progress';
   q.workerAcceptedAt = Date.now();
@@ -404,7 +430,7 @@ function refreshAdminOrderBoardIfOpen(){
 
 function denyOrderAssignment(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
-  if(!q) return;
+  if(!orderIsMine(q)){ toast('That order has already been passed to someone else'); return; }
   q.assignedWorkerId = null;
   q.pickingStatus = null;
   saveData();
@@ -429,6 +455,16 @@ function pickItemSourceLabel(it){
   const sup = (data.suppliers||[]).find(s=>s.id===it.supplierId);
   if(!sup) return it.supplierName || 'Supplier';
   return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
+}
+
+// Same combo-values-joined format used everywhere else a variant is shown
+// (productVariantLabel() in index.html, agent-catalog's variantLabel) --
+// without this a worker sees only the base product name and has to guess
+// which variant (color, size, ...) the order actually needs.
+function pickItemVariantLabel(it, product){
+  if(it.variantIdx==null || it.variantIdx==='' || !product || !Array.isArray(product.variants)) return '';
+  const v = product.variants[it.variantIdx];
+  return v ? Object.values(v.combo||{}).join(' / ') : '';
 }
 
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
@@ -466,12 +502,14 @@ function renderWorkerPickStepper(q){
     const isDone = it.pickStatus==='done';
     const qty = it.qty!=null ? it.qty : '';
     const unit = it.packUnit || it.unit || '';
+    const variant = pickItemVariantLabel(it, product);
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
         <div class="wv-carousel-photo">${ipStageThumbHTML(product||{})}</div>
         <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
         <div class="wv-carousel-body">
           <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
+          ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
           <div class="wv-carousel-qty-label">Pack</div>
           <div class="wv-carousel-qty">${esc(qty)} ${esc(unit)}</div>
         </div>
@@ -674,24 +712,47 @@ function agentPaymentBlocksPreparing(q){
 async function finishPreparingOrder(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
+  // This app loads once and never refreshes on its own, so its copy of an
+  // order can be hours behind. Without this, finishing a pick on an order
+  // an admin had since moved on (delivered, completed) would drag it back
+  // to pending_delivery -- a status regression driven entirely by a stale
+  // screen, and invisible to whoever had already moved it.
+  if(q.status !== 'preparing' && q.status !== 'draft'){
+    toast('This order has already moved on — refresh to see where it is now', 5000);
+    return;
+  }
   const items = q.items||[];
   if(items.length && items.some(row=>row.pickStatus!=='done')) return; // guard: button is disabled otherwise
   q.pickingStatus = 'done';
-  saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
+  // Awaited: this function saves twice, and a save now re-reads the row
+  // before writing it. Left unawaited the two overlap, and whichever upsert
+  // lands last wins -- so the first save's older snapshot could land after
+  // the second's and quietly undo the status move below.
+  await saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
 
   let deliveryStaffId;
   if(q.deliveryMode==='agent_pickup'){
     deliveryStaffId = '__agent__';
   } else {
     deliveryStaffId = await promptAssignDelivery(orderId);
-    if(!deliveryStaffId){ renderWorkerView(); return; }
+    if(!deliveryStaffId){
+      // Backing out has to leave the order somewhere this app can still
+      // show it. 'done' is neither awaiting_accept nor in_progress, so both
+      // lists skipped it -- the worker was left staring at an empty screen
+      // while still holding an order that was blocked on them, with no way
+      // back to it.
+      q.pickingStatus = 'in_progress';
+      await saveData();
+      renderWorkerView();
+      return;
+    }
   }
 
   q.assignedDeliveryId = deliveryStaffId;
   q.status = 'pending_delivery';
   q.stageEnteredAt = Date.now();
   const workerId = q.assignedWorkerId;
-  saveData();
+  await saveData();
   if(workerId) autoAssignNextOrder(workerId);
   refreshAdminOrderBoardIfOpen();
   renderWorkerView();
