@@ -4194,9 +4194,13 @@ function buildSyncRows(d, shopId){
 // after opening the app diffs against what's actually on the server
 // instead of an empty snapshot (which would otherwise re-upload
 // everything unchanged on the very next saveData()).
-function initLastSynced(d, shopId){
+// Split from initLastSynced() so the snapshot can be built BEFORE anything
+// is assigned. addDiffOps() derives its deletes from lastSynced, so `data`
+// and `lastSynced` describing different states is not a stale-render bug --
+// it's a delete instruction. See pollForUpdatesNow().
+function buildLastSynced(d, shopId){
   const rows = buildSyncRows(d, shopId);
-  lastSynced = {
+  return {
     suppliers: keyRowsById(rows.suppliers, 'id'),
     staff: keyRowsById(rows.staff, 'id'),
     agents: keyRowsById(rows.agents, 'id'),
@@ -4214,6 +4218,9 @@ function initLastSynced(d, shopId){
     supplierCommissions: keyRowsById(rows.supplierCommissions, 'id'),
     settings: cloneJSON(rows.settings)
   };
+}
+function initLastSynced(d, shopId){
+  lastSynced = buildLastSynced(d, shopId);
 }
 
 // A now-fixed loadData() bug (variant_idx is a text column, so it always
@@ -13643,8 +13650,20 @@ async function pollForUpdatesNow(){
   if(document.querySelector('.modal-overlay.show')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
   try{
-    data = await loadData(currentShopId);
-    initLastSynced(data, currentShopId);
+    // Both are built before either is assigned, so a throw anywhere in here
+    // leaves the existing pair intact.
+    //
+    // Assigning `data` first was a live hazard: unlike boot(), which shows
+    // an error screen and returns out of the app, this catch only logs and
+    // lets the app carry on. A throw between the two assignments therefore
+    // left `data` fresh and `lastSynced` stale -- and addDiffOps() reads
+    // its deletes from lastSynced, so the very next save would diff a full
+    // snapshot against whatever had just loaded and delete the difference.
+    // If the refresh came back empty, that is every row in the shop.
+    const fresh = await loadData(currentShopId);
+    const freshSynced = buildLastSynced(fresh, currentShopId);
+    data = fresh;
+    lastSynced = freshSynced;
     goToTab(currentActiveTab);
   } catch(err){
     console.error('Background refresh failed:', err);
