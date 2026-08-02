@@ -505,6 +505,20 @@ function denyOrderAssignment(orderId){
   toast('Order declined — it\'s back in the unassigned pool');
 }
 
+// Throws away a pick in progress: the ticks, the cursor, and the timestamps
+// that go with them. Deliberately leaves assignedWorkerId alone -- whether the
+// order stays with that worker or goes back in the pool is the caller's call,
+// and the two backward steps across Being Prepared want different answers.
+function resetPickingProgress(q){
+  if(!q) return;
+  q.pickingStatus = null;
+  q.pickCursor = 0;
+  q.pickingAssignedAt = null;
+  q.workerAcceptedAt = null;
+  // acceptOrderAssignment fills a missing pickStatus back in as 'pending'.
+  (q.items||[]).forEach(it=>{ it.pickStatus = null; it.pickedQty = null; });
+}
+
 function timeOfDayGreeting(){
   const h = new Date().getHours();
   if(h < 12) return 'Good morning';

@@ -6659,6 +6659,24 @@ function stepSavedQuoteStatus(id, dir){
     // it back. Re-entering the step forward again will prompt afresh.
     const leavingRole = STAGE_ASSIGNMENT_ROLE[q.status];
     if(leavingRole) q[STAGE_ASSIGNMENT_FIELD[leavingRole]] = null;
+    // The pick belongs to the stage, not to the order, so stepping across
+    // Being Prepared in either direction has to retire it the same way. Left
+    // behind, those ticks read as this stage's work already done: an order
+    // sent back and handed to somebody else opened on their device with every
+    // item already "Picked" and "Mark as finished" live from the first tap,
+    // so a pick could be signed off without anyone walking to a shelf.
+    if(q.status==='preparing' || toStatus==='preparing'){
+      resetPickingProgress(q); // shared-worker.js
+      // Sent back for a re-pick, the worker keeps the order but has to be
+      // offered it again. A cleared pickingStatus is neither awaiting_accept
+      // nor in_progress, and their app lists only those two -- so it would
+      // sit assigned to them and invisible on their screen, while the board
+      // went on reading "being prepared by" them.
+      if(toStatus==='preparing' && q.assignedWorkerId){
+        q.pickingStatus = 'awaiting_accept';
+        q.pickingAssignedAt = Date.now();
+      }
+    }
   }
   setSavedQuoteStatus(id, toStatus);
 }

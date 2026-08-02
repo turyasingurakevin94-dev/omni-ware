@@ -57,6 +57,9 @@ const scope = compileScope(
     extractDeclaration(workerSrc, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
     extractFunction(workerSrc, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
     extractFunction(workerSrc, 'quoteAgedOffBoard', 'shared-worker.js'),
+    // Stepping backward across Being Prepared retires the pick with the
+    // assignment -- see test/worker-pick-reset.test.js.
+    extractFunction(workerSrc, 'resetPickingProgress', 'shared-worker.js'),
     extractFunction(adminSrc, 'setSavedQuoteStatus', 'index.html'),
     extractFunction(adminSrc, 'stepSavedQuoteStatus', 'index.html'),
   ],
