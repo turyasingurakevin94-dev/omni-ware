@@ -25,7 +25,6 @@ const t = createReporter('momo initiation');
 const initSrc = read('supabase/functions/agent-initiate-momo-payment/index.ts');
 const mtnHook = read('supabase/functions/mtn-payment-webhook/index.ts');
 const statusFn = read('supabase/functions/check-momo-payment-status/index.ts');
-const airtelCb = read('supabase/functions/airtel-collection-callback/index.ts');
 
 // Every deployed Edge Function directory that has an index.ts, so checks
 // below can search for a pattern instead of trusting a hand-written list.
@@ -121,10 +120,11 @@ const { normaliseUgandaMsisdn } = compileScope(
 
 /* ---------- 4. a payment only releases an order once it covers it ----- */
 /*
- * Three functions apply a successful payment. Only airtel-collection-callback
- * checked whether the money covered the order; the other two marked it paid
- * for any amount at all, which matters the moment a partial payment is
- * possible -- which is exactly what asking for the balance makes possible.
+ * Three functions apply a successful payment, and all three marked an order
+ * paid for any amount at all -- which matters the moment a partial payment
+ * is possible, and asking for the balance is exactly what makes it possible.
+ * (The rule was first written correctly in airtel-collection-callback, since
+ * retired with the duplicate Airtel path.)
  */
 {
   const covers = (newPaid, total) => newPaid + 0.5 >= total;
@@ -153,12 +153,9 @@ const { normaliseUgandaMsisdn } = compileScope(
     t.check(!/payload: \{ \.\.\.payload, payments, agentPaymentStatus: "paid" \}/.test(src),
       `${name} no longer marks an order paid for whatever arrived`);
   });
-  t.check(/if \(amount >= owed\)/.test(airtelCb),
-    'airtel-collection-callback still holds the same rule it always did');
-
   // They all bank the money regardless -- a short payment is still money
   // received, and the earlier bug was it vanishing entirely.
-  carriers.concat([['airtel-collection-callback', airtelCb]]).forEach(([name, src]) => {
+  carriers.forEach(([name, src]) => {
     t.check(/from\("cash_txns"\)\s*\.insert|from\("cash_txns"\)\.insert/.test(src.replace(/\n\s*/g, '')),
       `${name} banks the money before deciding whether it releases the order`);
   });
@@ -191,62 +188,74 @@ const { normaliseUgandaMsisdn } = compileScope(
     'identity is established before anything is written');
 }
 
-/* ---------- 7. the second Airtel path ---------------------------------- */
+/* ---------- 7. the duplicate Airtel path stays retired ---------------- */
 /*
- * airtel-collection-initiate is a parallel Airtel implementation on its own
- * ledger table (airtel_transactions), and no client calls it -- the agent
- * app goes through agent-initiate-momo-payment for both providers. It is
- * still deployed and ACTIVE though, so any signed-in agent can reach it,
- * and it carried the exact three bugs that were fixed in its twin: the
- * amount came from the request body, the owed figure was the order total
- * with amount_paid never fetched, and nothing stopped a second push.
+ * There were two Airtel implementations on two ledger tables. The agent app
+ * only ever called agent-initiate-momo-payment; airtel-collection-initiate
+ * and airtel-collection-callback were a parallel path on airtel_transactions
+ * that nothing invoked, but stayed deployed and reachable, and carried the
+ * amount/duplicate/msisdn bugs their twin had already been fixed for. The
+ * README still described them as live, which is what kept them looking real.
  *
- * These checks hold it level with the twin for as long as it exists. If the
- * path is retired, delete this block with it.
+ * They are gone. This holds that: no retired function comes back, no client
+ * reaches for one, and the docs do not advertise them again.
  */
 {
-  const airtelInit = read('supabase/functions/airtel-collection-initiate/index.ts');
-  const code = airtelInit.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  const gone = ['airtel-collection-initiate', 'airtel-collection-callback'];
+  const dirs = fnDirs();
+  gone.forEach(name => {
+    t.check(!dirs.includes(name), `${name} is not back in supabase/functions`);
+  });
 
-  t.check(!/\bamount\b[^\n]*\}\s*=\s*body/.test(code),
-    'the request body amount is not destructured, so it cannot be spent by accident');
-  t.check(/Number\(amount\)\s*>\s*0\s*\?/.test(code) === false,
-    'the pushed amount is no longer whatever the caller asked for');
-  t.check(/select\("payload, amount_paid"\)/.test(code),
-    'amount_paid is fetched so the balance can be worked out');
-  t.check(/amountOwed\(quote\.payload\)\s*-\s*alreadyPaid/.test(code),
-    'and the push is for the balance, not the order total');
+  ['agent.html', 'index.html', 'worker.html', 'shared-worker.js', 'catalogue.html'].forEach(f => {
+    const src = read(f).split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+    const hit = gone.filter(n => src.includes(n));
+    t.check(hit.length === 0, `${f} does not call a retired Airtel function${hit.length ? ` (${hit.join(', ')})` : ''}`);
+  });
 
-  t.check(/function normaliseUgandaMsisdn/.test(code) && /normaliseUgandaMsisdn\(rawMsisdn\)/.test(code),
-    'the msisdn goes through the same normaliser as the twin');
-  t.check(!/replace\(\/\^\\\+\?256\/, ""\)/.test(code),
-    'the old prefix-only strip, which left a local 0 in place, is gone');
+  // The README may still NAME them -- it explains the retirement, and that
+  // history is worth keeping. What it must not do is tell anyone to deploy
+  // one or point a provider at one.
+  const readme = read('supabase/functions/README.md');
+  gone.forEach(name => {
+    t.check(!new RegExp(`functions deploy ${name}`).test(readme),
+      `README does not tell anyone to deploy ${name}`);
+    t.check(!new RegExp(`functions\\.supabase\\.co/${name}`).test(readme),
+      `README does not give ${name} as a callback URL`);
+  });
+  t.check(/functions\.supabase\.co\/airtel-payment-webhook/.test(readme),
+    'and it gives the surviving webhook as the Airtel callback URL instead');
 
-  t.check(/from\("airtel_transactions"\)[\s\S]{0,220}?\.eq\("status", "pending"\)/.test(code)
-    && /PENDING_REUSE_MS/.test(code),
-    'a second push inside the reuse window hands back the outstanding request');
-  t.check(code.includes('in_flight_lookup') && code.indexOf('in_flight_lookup') < code.indexOf('crypto.randomUUID'),
-    'the duplicate check runs before a new reference is minted');
+  // One Airtel initiator, and it is the shared one. Matched on the merchant
+  // payments endpoint specifically -- that is the call that RAISES a charge.
+  // check-momo-payment-status also talks to Airtel, on /standard/v1/payments
+  // to read a result back, which is not the same thing.
+  const initiators = dirs.filter(n => n !== 'agent-initiate-momo-payment'
+    && /merchant\/v\d\/payments/.test(read(`supabase/functions/${n}/index.ts`)));
+  t.check(initiators.length === 0,
+    `agent-initiate-momo-payment is the only function that raises an Airtel payment${initiators.length ? ` (also: ${initiators.join(', ')})` : ''}`);
+  t.check(dirs.includes('airtel-payment-webhook'),
+    'airtel-payment-webhook is the surviving Airtel callback -- its URL is the one for the portal');
 }
 {
-  // The normaliser is the twin's, so the local form an agent types is the
-  // case that has to work. Extraction is guarded: when the function is
-  // absent this has to say so as a failed check, not die with a stack
-  // trace and take every check after it down as well.
-  let n = null, extractErr = null;
-  try {
-    ({ normaliseUgandaMsisdn: n } = compileScope(
-      [extractFunction(read('supabase/functions/airtel-collection-initiate/index.ts'), 'normaliseUgandaMsisdn', 'airtel-collection-initiate')],
-      {}, ['normaliseUgandaMsisdn'], { typescript: true },
-    ));
-  } catch (e) { extractErr = e; }
-  t.check(typeof n === 'function',
-    `airtel-collection-initiate defines normaliseUgandaMsisdn${extractErr ? ` (${extractErr.message})` : ''}`);
-  const call = v => { try { return n(v); } catch { return undefined; } };
-  t.check(call('0772123456')?.local === '772123456', 'a local 0772... loses its zero');
-  t.check(call('+256772123456')?.local === '772123456', 'an international +256 form normalises the same');
-  t.check(call('256772123456')?.local === '772123456', 'and a bare 256 form too');
-  t.check(call('0712345') === null, 'a number that is too short is refused, not truncated');
+  /*
+   * The retired callback was the only function that ever verified a callback
+   * signature. Retiring it without carrying that across would have deleted
+   * the one thing standing between "make the webhook reachable" and "anyone
+   * with a reference can mark an order paid".
+   */
+  const hook = read('supabase/functions/airtel-payment-webhook/index.ts');
+  t.check(/AIRTEL_CALLBACK_HMAC_KEY/.test(hook) && /async function computeHmac/.test(hook),
+    'the HMAC verification survived the retirement');
+  t.check(/const rawBody = await req\.text\(\);/.test(hook) && !/await req\.json\(\)/.test(hook),
+    'the body is read as raw bytes, because the hash is over exactly what was sent');
+  t.check(hook.indexOf('computeHmac(rawBody') < hook.indexOf('agent_mobile_payments'),
+    'the signature is checked before any payment row is touched');
+  t.check(/if \(computed !== body\.hash\)[\s\S]{0,160}403/.test(hook),
+    'a mismatched signature is refused outright');
+  t.check(/if \(CALLBACK_HMAC_KEY\)/.test(hook),
+    'and it stays dormant while the key is unset, so behaviour is unchanged until it is configured');
 }
+
 
 process.exit(t.done() ? 1 : 0);

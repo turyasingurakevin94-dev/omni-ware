@@ -40,18 +40,37 @@ confirm cash received) — not a general customer-facing checkout. It's meant
 to be called from the standalone Agent app, authenticated as the agent
 (agents are deliberately not `shop_members`, see `0012_sales_agents.sql`).
 
-- `airtel-collection-initiate` — called from the agent app
-  (`sb.functions.invoke('airtel-collection-initiate', { shopId, quoteId,
-  msisdn?, amount?, reference? }, ...)`). `quoteId` must be one of the
-  calling agent's own orders; `msisdn` defaults to the agent's own phone on
-  file and `amount` defaults to the order's full outstanding balance if not
-  given. Fetches an OAuth2 token, creates the `airtel_transactions` ledger
-  row (see `0016_airtel_transactions.sql`), then sends the USSD Push
-  request. Always returns `status: "pending"` on success — the agent still
-  has to approve on their phone.
-- `airtel-collection-callback` — Airtel posts the final outcome here. Only
-  updates the matching `airtel_transactions` row and, if the paid amount
-  covers what's owed, sets that order's `agentPaymentStatus` to `"paid"`.
+Both providers go through **one** pair of functions. There used to be a
+second, Airtel-only pair (`airtel-collection-initiate` /
+`airtel-collection-callback`) on its own `airtel_transactions` ledger; no
+client ever called it, and it was retired — this README describing it as
+"called from the agent app" is most of why it survived as long as it did.
+
+- `agent-initiate-momo-payment` — called from the agent app
+  (`sb.functions.invoke('agent-initiate-momo-payment', { shopId, orderId,
+  provider, phone }, ...)`), for both MTN and Airtel. `orderId` must be one
+  of the calling agent's own orders. The amount is **computed server-side**
+  as the order total less `amount_paid` — never taken from the request. A
+  second push for the same order inside `PENDING_REUSE_MS` hands back the
+  outstanding request rather than raising another. Returns
+  `status: "pending"` on success — the agent still has to approve on their
+  phone.
+- `check-momo-payment-status` — polled by the agent app after initiating.
+  This is what actually resolves payments today (see the webhook note
+  below), so it is not optional.
+- `mtn-payment-webhook` / `airtel-payment-webhook` — where each provider
+  posts the final outcome. Both credit the payment and bank it to
+  `cash_txns`, and both release the order (`agentPaymentStatus: "paid"`)
+  only once the money covers the total; a short payment is still banked.
+
+> **These two webhooks are currently unreachable.** Both are deployed with
+> `verify_jwt=true`, so a provider callback gets `401` before the function
+> body runs. Payments resolve only via the polling above. Making them
+> reachable is a two-step job in this order: set
+> `AIRTEL_CALLBACK_HMAC_KEY` (and an equivalent for MTN) so the body is
+> authenticated, *then* redeploy with `--no-verify-jwt`. Flipping the flag
+> first would let anyone holding a payment reference mark an order paid
+> with no money behind it.
 
 Required secrets (from the app's **Keys** section in the Airtel Developer
 Portal — never commit these):
@@ -66,11 +85,12 @@ gone live in the portal:
 supabase secrets set AIRTEL_ENV="production"
 ```
 
-Once `airtel-collection-callback` is deployed, set its URL in the portal's
-**Security** tab → **Add Callback URL**, product **Collection-APIs**, event
-**Transaction**:
+Set the callback URL in the portal's **Security** tab → **Add Callback
+URL**, product **Collection-APIs**, event **Transaction**. This must be
+`airtel-payment-webhook` — the retired `airtel-collection-callback` read a
+different table and would find nothing:
 ```
-https://hgywjaifdmgrcnwxstxg.functions.supabase.co/airtel-collection-callback
+https://hgywjaifdmgrcnwxstxg.functions.supabase.co/airtel-payment-webhook
 ```
 If you turn on **Callback Authentication** there, copy the private key it
 shows you and set it as a secret; leave it unset while that toggle is off:
@@ -83,8 +103,10 @@ supabase secrets set AIRTEL_CALLBACK_HMAC_KEY="<key from the portal>"
 ```
 supabase functions deploy invite-worker
 supabase functions deploy notify-worker
-supabase functions deploy airtel-collection-initiate
-supabase functions deploy airtel-collection-callback
+supabase functions deploy agent-initiate-momo-payment
+supabase functions deploy check-momo-payment-status
+supabase functions deploy mtn-payment-webhook
+supabase functions deploy airtel-payment-webhook
 ```
 
 ## 4. Wire the Database Webhook (Dashboard, one-time)

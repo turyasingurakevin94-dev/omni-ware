@@ -2,19 +2,43 @@
 // -- register this function's deployed URL as the callback URL in the
 // Airtel Money developer portal for each shop's merchant credentials.
 //
-// Public endpoint, same reasoning as mtn-payment-webhook: no Supabase JWT
-// check, only proof the referenced payment actually exists and is still
-// pending. Airtel's exact payload field names, like MTN's, aren't pinned
-// down without a live sandbox callback to observe -- verify against a
-// real delivery and adjust before production. check-momo-payment-status's
-// polling is the safety net regardless.
+// Written as a public endpoint -- but it is currently DEPLOYED with
+// verify_jwt=true, so Airtel's callback is rejected with 401 before this
+// file runs and nothing is ever delivered here. Payments resolve only
+// because the agent app polls check-momo-payment-status. Before turning
+// verify_jwt off, set AIRTEL_CALLBACK_HMAC_KEY (below): without it this
+// marks a payment successful from an unauthenticated request body.
+//
+// Airtel's exact payload field names, like MTN's, aren't pinned down
+// without a live sandbox callback to observe -- verify against a real
+// delivery and adjust before production.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Carried over from the retired airtel-collection-callback, which was the
+// only function that ever verified a callback signature. Dormant while
+// unset, exactly as it was there: set it when "Callback Authentication" is
+// switched on in the portal's Security tab.
+const CALLBACK_HMAC_KEY = Deno.env.get("AIRTEL_CALLBACK_HMAC_KEY");
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
+// Docs: "hash the callback request with the private key ... using
+// HmacSHA256, output text format in Base64". The request is hashed as the
+// exact raw bytes Airtel sent, so this must run before JSON.parse.
+async function computeHmac(rawBody: string, key: string): Promise<string> {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(rawBody));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
 }
 
 // Duplicated from check-momo-payment-status -- see that file's comment
@@ -56,8 +80,19 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   try {
+    // Raw bytes first -- the HMAC is over exactly what Airtel sent, so this
+    // cannot go through req.json().
+    const rawBody = await req.text();
     let body: any;
-    try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
+    try { body = JSON.parse(rawBody); } catch { return json({ error: "Invalid JSON body" }, 400); }
+
+    if (CALLBACK_HMAC_KEY) {
+      const computed = await computeHmac(rawBody, CALLBACK_HMAC_KEY);
+      if (computed !== body.hash) {
+        console.error("airtel-payment-webhook: hash mismatch", { reference: body?.transaction?.id });
+        return json({ error: "Signature mismatch" }, 403);
+      }
+    }
 
     const txnBody = body.transaction || body.data?.transaction || {};
     const providerTransactionId = txnBody.id || txnBody.airtel_money_id || null;
