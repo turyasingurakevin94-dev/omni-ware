@@ -150,7 +150,46 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and it is appended after the named aisles, never ahead of one');
 }
 
-/* ---------- 7. the state machine ------------------------------------ */
+/* ---------- 7. the three card shapes -------------------------------- */
+/*
+ * Each surface on this screen shows a product at a different size, and
+ * each size answers a different question. Pinned because they are exactly
+ * the numbers that drift back toward one another.
+ */
+{
+  const rule = (sel) => {
+    const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(src);
+    return m ? m[1] : '';
+  };
+
+  // Category tile: the icon, not an art block. A full-width panel per tile
+  // pushed the shelves below the fold on a six-aisle shop.
+  const icon = rule('.ag-cat-icon');
+  t.check(/width:52px/.test(icon) && /height:52px/.test(icon),
+    'a category tile carries a 52px icon badge, not a full-width image');
+  t.check(!/aspect-ratio:1\.15/.test(icon), 'the tall art block is gone');
+  t.check(/align-items:center/.test(rule('.ag-cat-item')),
+    'so the tile lays out sideways -- icon beside the label, not above it');
+
+  // Shelf card: wide and 16:9. Wider than a phone-third on purpose, so the
+  // next card peeks past the edge and the shelf reads as scrollable.
+  const shelfCard = rule('.ag-scroll-row .ag-grid-card');
+  t.check(/width:210px/.test(shelfCard), 'an Order-again / Sponsored card is 210 wide');
+  t.check(/aspect-ratio:16\/9/.test(rule('.ag-scroll-row .ag-grid-thumb-wrap')),
+    'with a 16:9 image rather than a square crop');
+
+  // In-category row: one wide row, image left, big enough to tell two
+  // variants of the same fitting apart.
+  const row = rule('#ag_browseGrid .ag-grid-card');
+  t.check(/display:flex/.test(row) && /min-height:140px/.test(row),
+    'a category row is a wide row about 140 tall');
+  t.check(/width:116px/.test(rule('#ag_browseGrid .ag-grid-thumb-wrap')),
+    'with a 116px image on the left');
+  t.check(/grid-template-columns:1fr/.test(rule('#ag_browseGrid.ag-browse-grid')),
+    'one per row, not a two-up grid');
+}
+
+/* ---------- 8. the state machine ------------------------------------ */
 /*
  * The three positions this screen can be in, as plain logic.
  */

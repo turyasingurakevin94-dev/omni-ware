@@ -409,19 +409,26 @@
   .ag-cat-head{display:flex;align-items:baseline;gap:8px;margin:2px 0 10px;}
   .ag-cat-head b{font-size:15px;font-weight:800;letter-spacing:-.02em;}
   .ag-cat-head .all{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent);}
+  /* The icon rather than a full-width art block. A 144px-tall panel per
+     tile pushed the shelves below the fold for a shop with six aisles,
+     and the icon was already carrying the meaning inside it -- the block
+     was just background. A 52px badge beside the label says the same
+     thing in a third of the height. */
   .ag-cat-item{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:7px;min-width:0;
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:11px;min-width:0;
+    min-height:44px;padding:8px;border-radius:12px;background:var(--panel);border:1px solid var(--line);
   }
-  .ag-cat-item:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
+  .ag-cat-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .ag-cat-item.active{border-color:var(--ink);}
   .ag-cat-icon{
-    width:100%;aspect-ratio:1.15;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    width:52px;height:52px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
     transition:transform .12s;
   }
-  .ag-cat-icon .icon{width:34px;height:34px;}
-  .ag-cat-item:active .ag-cat-icon{transform:scale(0.97);}
-  .ag-cat-item.active .ag-cat-icon{outline:2.5px solid var(--ink);outline-offset:2px;}
-  .ag-cat-label{font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;}
-  .ag-cat-count{font-size:11.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-top:-4px;}
+  .ag-cat-icon .icon{width:23px;height:23px;}
+  .ag-cat-item:active .ag-cat-icon{transform:scale(0.92);}
+  .ag-cat-text{display:flex;flex-direction:column;min-width:0;}
+  .ag-cat-label{font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ag-cat-count{font-size:11.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
 
   /* ---- Subcategory chips: a second horizontally-scrolling row under the
      category icons, appearing once a category with subcategories is
@@ -435,16 +442,16 @@
   .ag-browse-grid{display:grid;grid-template-columns:1fr;gap:12px;}
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
   .ag-scroll-row::-webkit-scrollbar{display:none;}
-  /* Shelf cards: narrower and squarer than the old 150px card, so three
-     fit on a phone and a shelf reads as a shelf rather than as a second
-     grid that happens to scroll. The photo carries the flag, because the
-     reason to push this item is the reason to look at it. */
+  /* Shelf cards on Order again and Sponsored: 210 wide with a 16:9 image,
+     landing around 270 tall. Wider than a phone-third on purpose -- the
+     next card peeks past the edge, which is what says a shelf scrolls.
+     A square crop wasted height on products that are mostly wide. */
   .ag-scroll-row .ag-grid-card{
-    width:132px;flex-shrink:0;border:none;box-shadow:none;background:transparent;border-radius:0;
+    width:210px;flex-shrink:0;border:none;box-shadow:none;background:transparent;border-radius:0;
   }
   .ag-scroll-row .ag-grid-card:hover{border:none;box-shadow:none;}
-  .ag-scroll-row .ag-grid-thumb-wrap{aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--slate-soft);}
-  .ag-scroll-row .ag-grid-body{padding:7px 1px 0;}
+  .ag-scroll-row .ag-grid-thumb-wrap{aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:var(--slate-soft);}
+  .ag-scroll-row .ag-grid-body{padding:8px 1px 0;}
   .ag-shelf-flag{
     position:absolute;top:6px;left:6px;z-index:2;
     font-size:11px;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:.02em;color:#fff;
@@ -468,8 +475,12 @@
   /* Only the "+" opens the panel now (see the click handler) -- default
      cursor here so the rest of the row doesn't look clickable on desktop
      when it isn't; the chips, star, and "+" all set their own pointer. */
-  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:12px;padding:12px;cursor:default;}
-  #ag_browseGrid .ag-grid-thumb-wrap{width:88px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
+  /* Inside a category: one wide row per product, image left. The row runs
+     the full column (434 at the app's widest) and stands about 140 tall,
+     which gives the photo 116 square instead of 88 -- enough to tell two
+     variants of the same fitting apart, which an 88px thumb could not. */
+  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:14px;padding:12px;cursor:default;min-height:140px;}
+  #ag_browseGrid .ag-grid-thumb-wrap{width:116px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
   /* Tapping the photo opens a full-size lightbox (see the click handler)
      -- only a real photo, never the generic placeholder icon, is
      actually worth zooming into. */
@@ -3091,8 +3102,10 @@ function renderCategoryStrip(){
     const n = countFor(c);
     return `<button type="button" class="ag-cat-item ${browseCategoryFilter===c?'active':''}" data-cat="${esc(c)}">
       <span class="ag-cat-icon" style="background:${pal.bg};color:${pal.fg};">${categoryIconSVG(c)}</span>
-      <span class="ag-cat-label">${esc(c)}</span>
-      <span class="ag-cat-count">${n} item${n===1?'':'s'}</span>
+      <span class="ag-cat-text">
+        <span class="ag-cat-label">${esc(c)}</span>
+        <span class="ag-cat-count">${n} item${n===1?'':'s'}</span>
+      </span>
     </button>`;
   }).join('')}</div>`;
   document.getElementById('ag_catStrip').addEventListener('click', (e)=>{
