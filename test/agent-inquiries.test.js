@@ -25,16 +25,28 @@ const els = {};
 const el = (id) => (els[id] = els[id] || { id, innerHTML: '' });
 const catalog = [];
 const myInquiries = [];
-const scope = compileScope(
-  ['inquiryAgoLabel', 'inquiryProductLabel', 'renderInquiries']
-    .map((n) => extractFunction(src, n, 'agent.html')),
-  {
-    document: { getElementById: el },
-    catalog, myInquiries,
-    esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+// Buttons wired by renderInquiries land here so a click can be replayed.
+const wired = [];
+const NAMES = ['inquiryAgoLabel', 'inquiryProductLabel', 'inquiriesForDisplay', 'renderInquiries', 'toggleInquiryHandled'];
+const env = {
+  document: {
+    getElementById: (id) => Object.assign(el(id), {
+      // renderInquiries queries the markup it just wrote to attach handlers.
+      querySelectorAll: () => {
+        wired.length = 0;
+        const ids = [...String(el(id).innerHTML).matchAll(/class="ag-inquiry-done" data-inq="([^"]*)"/g)].map((m) => m[1]);
+        return ids.map((v) => ({ dataset: { inq: v }, addEventListener: (_e, fn) => wired.push({ inq: v, fn }) }));
+      },
+    }),
   },
-  ['inquiryAgoLabel', 'inquiryProductLabel', 'renderInquiries'],
-);
+  catalog, myInquiries,
+  currentShopId: 'shop-1',
+  toast: (m) => { env.__toast = m; },
+  saveOfflineCache: () => { env.__cached = (env.__cached || 0) + 1; },
+  esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+  sb: { from: () => ({ update: (v) => { env.__update = v; return { eq: () => ({ eq: () => Promise.resolve({ error: env.__err || null }) }) }; } }) },
+};
+const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'agent.html')), env, NAMES);
 const setInquiries = (rows) => { myInquiries.length = 0; rows.forEach((r) => myInquiries.push(r)); };
 const setCatalog = (rows) => { catalog.length = 0; rows.forEach((r) => catalog.push(r)); };
 const render = () => { scope.renderInquiries(); return el('ag_inquiriesWrap').innerHTML; };
@@ -159,6 +171,12 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     'and the offline path restores them, so they do not vanish when the signal does');
   t.check(/myAgent, currentShopId, agentClients, myOrders, myInquiries, catalog/.test(src),
     'because the offline snapshot carries them');
+  const guard = extractFunction(src, 'wouldWipeCachedData', 'agent.html');
+  t.check(/wipes\(myInquiries, prev\.myInquiries\)/.test(guard),
+    'and an empty read cannot overwrite cached requests — they are never deleted, so empty-where-stored-has-rows is always a blip');
+  const lost = extractFunction(src, 'readLostRows', 'agent.html');
+  t.check(!/inquir/i.test(lost),
+    'but their absence never escalates to the whole-screen warning, since their load is non-fatal by design');
 }
 {
   const screen = extractFunction(src, 'renderClientsListScreen', 'agent.html');
@@ -171,4 +189,104 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
     'directly under the catalogue card that promised them, and above the client list');
 }
 
-process.exit(t.done() ? 1 : 0);
+/* ---------- 6. outstanding vs handled --------------------------------- */
+/*
+ * "Handled", not "read". A read flag set by looking at the screen clears
+ * itself the moment the agent opens Customers for any other reason, so a
+ * request glanced at on the bus and one actually called back would look
+ * identical -- which is the distinction worth keeping.
+ */
+{
+  setCatalog([]);
+  setInquiries([
+    { id: 1, customer_name: 'Old handled', customer_phone: '07', message: 'a', created_at: ago(10), handled_at: ago(5) },
+    { id: 2, customer_name: 'Newest open', customer_phone: '07', message: 'b', created_at: ago(1) },
+    { id: 3, customer_name: 'Older open', customer_phone: '07', message: 'c', created_at: ago(100) },
+  ]);
+  const { open, done, list } = scope.inquiriesForDisplay();
+  t.check(open.length === 2 && done.length === 1, 'outstanding and handled are counted apart');
+  t.check(list.map((r) => r.id).join(',') === '2,3,1',
+    `outstanding first and newest first within each, handled last (${list.map((r) => r.id).join(',')})`);
+}
+{
+  const html = render();
+  t.check(/ag-inquiry-count">2</.test(html),
+    'the heading carries the number still needing a call, not the total');
+  t.check((html.match(/ag-inquiry-card handled/g) || []).length === 1,
+    'a handled request is marked as such rather than removed');
+  t.check(/>Done</.test(html) && /<button[^>]*>Undo</.test(html),
+    'each offers the action that applies to it — Done when open, Undo when handled');
+}
+{
+  setInquiries([{ id: 1, customer_name: 'A', customer_phone: '07', message: 'm', created_at: ago(1), handled_at: ago(1) }]);
+  const html = render();
+  t.check(!/ag-inquiry-count/.test(html),
+    'with nothing outstanding the heading carries no count at all, rather than a zero');
+}
+{
+  // Handled ones are the first to fall off the cap, so a long tail of
+  // finished work can never push a live request out of sight.
+  const rows = [];
+  for (let i = 0; i < 30; i++) rows.push({ id: 100 + i, customer_name: 'done' + i, customer_phone: '07', message: 'm', created_at: ago(500 + i), handled_at: ago(1) });
+  rows.push({ id: 1, customer_name: 'live', customer_phone: '07', message: 'm', created_at: ago(999) });
+  setInquiries(rows);
+  const shown = scope.inquiriesForDisplay().list;
+  t.check(shown.length === 20 && shown[0].id === 1,
+    `the outstanding one survives 30 handled ones and leads the list (${shown.length} shown, first ${shown[0].id})`);
+}
+
+/* ---------- 7. marking one is applied, and undone if refused ---------- */
+{
+  setInquiries([{ id: 7, customer_name: 'Grace', customer_phone: '07', message: 'm', created_at: ago(5) }]);
+  render();
+  env.__err = null; env.__update = null; env.__cached = 0;
+
+  return (async () => {
+    await scope.toggleInquiryHandled(7);
+    t.check(!!myInquiries[0].handled_at, 'marking a request Done sets it handled');
+    t.check(env.__update && typeof env.__update.handled_at === 'string',
+      'and writes a timestamp, not just a flag, so when it happened is on record');
+    t.check(env.__cached === 1, 'the offline snapshot is updated too, so it survives a reload');
+
+    await scope.toggleInquiryHandled(7);
+    t.check(myInquiries[0].handled_at === null && env.__update.handled_at === null,
+      'and Undo puts it back to outstanding');
+
+    // A refused write must not leave the screen claiming something the
+    // server never accepted.
+    env.__err = { message: 'offline' };
+    env.__cached = 0;
+    await scope.toggleInquiryHandled(7);
+    t.check(myInquiries[0].handled_at === null,
+      'a refused write is rolled back rather than left showing as done');
+    t.check(/Could not save/.test(env.__toast || ''), 'and the agent is told');
+    t.check(env.__cached === 0, 'with nothing written to the offline snapshot either');
+
+    // Clicking a button the render wired must reach the same path.
+    env.__err = null;
+    setInquiries([{ id: 9, customer_name: 'B', customer_phone: '07', message: 'm', created_at: ago(2) }]);
+    render();
+    t.check(wired.length === 1 && wired[0].inq === '9',
+      `the rendered Done button is wired to its own request (${wired.length} wired)`);
+    await wired[0].fn();
+    t.check(!!myInquiries[0].handled_at, 'and clicking it marks that request handled');
+
+    /* ---------- 8. the agent may mark, and only mark ------------------ */
+    const mig = read('supabase/migrations/0039_inquiry_handled_state.sql');
+    t.check(/add column handled_at timestamptz/.test(mig),
+      'the state is a nullable timestamp, so "never handled" is simply absent');
+    t.check(/create policy "agent handles own inquiries" on catalogue_inquiries\s+for update/.test(mig),
+      'the agent may update their own requests');
+    // Comments stripped: the migration explains itself by contrast with
+    // agent_clients' `for all`, and scanning that as SQL reports a policy
+    // this file exists to argue against.
+    const migSql = mig.split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join('\n');
+    t.check(!/for all|for delete|for insert/.test(migSql),
+      'and only update — inserts belong to the public form, and there is no reason to delete a record of what a customer asked');
+    t.check(/using \(agent_id = current_agent_id\(shop_id\)\)/.test(mig)
+      && /with check \(agent_id = current_agent_id\(shop_id\)\)/.test(mig),
+      'scoped to their own on both sides, so one agent cannot clear another\'s');
+
+    process.exit(t.done() ? 1 : 0);
+  })();
+}

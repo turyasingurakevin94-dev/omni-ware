@@ -581,7 +581,21 @@
     display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:60px;padding:0 16px;border-radius:9px;}
   .ag-inquiry-msg{margin-top:8px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
   .ag-inquiry-msg.muted{color:var(--ink-soft);font-style:italic;}
-  .ag-inquiry-phone{margin-top:6px;font-size:12.5px;color:var(--ink-soft);font-family:var(--font-money);}
+  .ag-inquiry-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;}
+  .ag-inquiry-phone{font-size:12.5px;color:var(--ink-soft);font-family:var(--font-money);}
+  /* How many still need a call. On the heading rather than the tab bar:
+     the agent is already on this screen when it matters, and a nav badge
+     would nag from everywhere else. */
+  .ag-inquiry-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;
+    margin-left:6px;border-radius:11px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;vertical-align:middle;}
+  /* Handled requests stay put rather than vanishing -- a mis-tap on Done
+     would otherwise lose a lead outright -- but recede so the outstanding
+     ones above them read as the work. */
+  .ag-inquiry-card.handled{border-left-color:var(--line);opacity:.6;}
+  .ag-inquiry-done{all:unset;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+    min-height:44px;min-width:64px;padding:0 14px;border-radius:9px;border:1px solid var(--line);
+    color:var(--ink-soft);font-size:12.5px;font-weight:700;}
+  .ag-inquiry-done:hover{border-color:var(--ink-soft);color:var(--ink);}
   .ag-catalogue-card{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:16px;}
   .ag-catalogue-card .title{font-weight:800;font-size:15px;margin-bottom:3px;}
   .ag-catalogue-card .sub{font-size:12.5px;opacity:.88;margin-bottom:12px;line-height:1.4;}
@@ -1155,7 +1169,13 @@ function wouldWipeCachedData(prev){
   const wipes = (fresh, stored) => (stored||[]).length > 0 && (fresh||[]).length === 0;
   return wipes(myOrders, prev.myOrders)
     || wipes(agentClients, prev.agentClients)
-    || wipes(catalog, prev.catalog);
+    || wipes(catalog, prev.catalog)
+    // Requests are never deleted, so an empty read where the snapshot has
+    // rows can only be a blip. Guarded here but deliberately NOT in
+    // readLostRows: their load is non-fatal by design, and escalating a
+    // secondary dataset's hiccup into the whole-screen "showing your last
+    // saved data" warning would contradict that.
+    || wipes(myInquiries, prev.myInquiries);
 }
 function saveOfflineCache(){
   try{
@@ -2410,30 +2430,72 @@ function inquiryProductLabel(inq){
   if(!p) return '';
   return p.name + (p.variantLabel ? ' · ' + p.variantLabel : '');
 }
+// Outstanding first, newest first within each. Handled ones stay on the
+// list rather than disappearing -- a mis-tap on Done would otherwise lose
+// a lead with no way back -- but they sit below, dimmed, and are the first
+// to fall off the cap.
+function inquiriesForDisplay(){
+  const rows = (myInquiries||[]).slice();
+  const byNewest = (a,b)=> String(b.created_at||'').localeCompare(String(a.created_at||''));
+  const open = rows.filter(r=>!r.handled_at).sort(byNewest);
+  const done = rows.filter(r=>r.handled_at).sort(byNewest);
+  return { open, done, list: open.concat(done).slice(0, 20) };
+}
+
 function renderInquiries(){
   const wrap = document.getElementById('ag_inquiriesWrap');
   if(!wrap) return;
-  const list = (myInquiries||[]).slice(0, 20);
+  const { open, list } = inquiriesForDisplay();
   if(!list.length){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = `
-    <div class="ag-section-title">Requests from your catalogue</div>
+    <div class="ag-section-title">Requests from your catalogue${open.length? ` <span class="ag-inquiry-count">${open.length}</span>` : ''}</div>
     ${list.map(inq=>{
       const product = inquiryProductLabel(inq);
       const phone = String(inq.customer_phone||'').replace(/[^\d+]/g,'');
-      return `<div class="ag-inquiry-card">
+      const handled = !!inq.handled_at;
+      return `<div class="ag-inquiry-card${handled?' handled':''}" data-inq="${esc(inq.id)}">
         <div class="ag-inquiry-top">
           <div class="ag-inquiry-who">
             <div class="ag-inquiry-name">${esc(inq.customer_name||'Someone')}</div>
-            <div class="ag-inquiry-meta">${esc(inquiryAgoLabel(inq.created_at))}${product? ' · '+esc(product) : ''}</div>
+            <div class="ag-inquiry-meta">${esc(inquiryAgoLabel(inq.created_at))}${product? ' · '+esc(product) : ''}${handled? ' · done' : ''}</div>
           </div>
           ${phone? `<a class="ag-inquiry-call" href="tel:${esc(phone)}" aria-label="Call ${esc(inq.customer_name||'')}">Call</a>` : ''}
         </div>
         ${inq.message
           ? `<div class="ag-inquiry-msg">${esc(inq.message)}</div>`
           : `<div class="ag-inquiry-msg muted">No details given — just asked to be contacted.</div>`}
-        ${phone? `<div class="ag-inquiry-phone">${esc(inq.customer_phone)}</div>` : ''}
+        <div class="ag-inquiry-foot">
+          ${phone? `<span class="ag-inquiry-phone">${esc(inq.customer_phone)}</span>` : '<span></span>'}
+          <button type="button" class="ag-inquiry-done" data-inq="${esc(inq.id)}">${handled? 'Undo' : 'Done'}</button>
+        </div>
       </div>`;
     }).join('')}`;
+  wrap.querySelectorAll('.ag-inquiry-done').forEach(btn=>{
+    btn.addEventListener('click', ()=> toggleInquiryHandled(Number(btn.dataset.inq)));
+  });
+}
+
+// Flips a request between outstanding and handled. Applied locally first so
+// the list responds immediately -- this is a phone, often on a bad
+// connection -- and put back if the write is refused, rather than leaving
+// the screen claiming something the server never accepted.
+async function toggleInquiryHandled(id){
+  const inq = (myInquiries||[]).find(x=>x.id===id);
+  if(!inq) return;
+  const previous = inq.handled_at || null;
+  const next = previous ? null : new Date().toISOString();
+  inq.handled_at = next;
+  renderInquiries();
+  const { error } = await sb.from('catalogue_inquiries')
+    .update({ handled_at: next })
+    .eq('shop_id', currentShopId).eq('id', id);
+  if(error){
+    inq.handled_at = previous;
+    renderInquiries();
+    toast('Could not save that — check your connection');
+    return;
+  }
+  saveOfflineCache();
 }
 
 function renderClientsListScreen(){
