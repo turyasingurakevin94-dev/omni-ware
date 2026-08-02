@@ -22,7 +22,7 @@
  *
  * Run: node test/worker-pick-card.test.js   (or: npm test)
  */
-const { read, createReporter } = require('./_extract');
+const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('worker pick card');
 const js = read('shared-worker.js');
@@ -195,32 +195,77 @@ const code = strip(js);
  *     Cabinet Hinge — Brass
  *     Brass
  */
+/*
+ * ...but splitting them means the card only says the variant if the
+ * variants column reached it, and this app is fed by two different hosts.
+ * The standalone one selected 'id, name, image', so pickItemVariantLabel
+ * had nothing to resolve against and returned '' -- and a brass hinge read
+ * as plain "Cabinet Hinge", with nothing on the card naming the finish at
+ * all. Saying it twice is untidy; not saying it sends someone to the wrong
+ * shelf. So the heading falls back to the stored name, which always carries
+ * the variant, whenever the variant cannot be named any other way.
+ */
 {
   const sw = read('shared-worker.js');
-  t.check(/<div class="wv-carousel-name">\$\{esc\(\(product && product\.name\) \|\| it\.productName \|\| 'Item'\)\}<\/div>/.test(sw),
-    'the card names the product, leaving the variant to the line below it');
+  t.check(/const canNameVariant = it\.variantIdx==null \|\| it\.variantIdx==='' \|\| !!variant;/.test(sw),
+    'the card works out whether the variant can be named at all');
+  t.check(/const heading = \(!canNameVariant && it\.productName\)\s*\r?\n?\s*\? it\.productName/.test(sw),
+    'and keeps the stored name as the heading when it cannot');
+  t.check(/<div class="wv-carousel-name">\$\{esc\(heading\)\}<\/div>/.test(sw),
+    'which is what the heading renders from');
   t.check(/\$\{variant \? `<div class="wv-carousel-variant">\$\{esc\(variant\)\}<\/div>` : ''\}/.test(sw),
-    'which still renders, and only when there is one');
-  t.check(!/<div class="wv-carousel-name">\$\{esc\(it\.productName\|\|'Item'\)\}/.test(sw),
-    'the stored name is no longer printed as the heading');
+    'the variant line still renders, and only when there is one');
 
-  // What the two together produce, stated over the real shapes.
-  const products = [{ id: 'P900', name: 'Cabinet Hinge', variants: [{ combo: { Finish: 'Brass' } }, { combo: { Finish: 'Steel' } }] }];
-  const heading = (it) => {
-    const p = products.find(x => x.id === it.productId);
-    return (p && p.name) || it.productName || 'Item';
+  // The rule itself, over every shape the two hosts produce. Built from the
+  // real pickItemVariantLabel rather than a second copy of its logic --
+  // hand-copying it here is what let the heading change slip past.
+  const label = compileScope(
+    [extractFunction(sw, 'pickItemVariantLabel', 'shared-worker.js')], {}, ['pickItemVariantLabel'],
+  ).pickItemVariantLabel;
+  const card = (it, product) => {
+    const variant = label(it, product);
+    const canNameVariant = it.variantIdx == null || it.variantIdx === '' || !!variant;
+    const heading = (!canNameVariant && it.productName)
+      ? it.productName
+      : ((product && product.name) || it.productName || 'Item');
+    return `${heading}${variant ? ` / ${variant}` : ''}`;
   };
+
+  const HINGE = { id: 'P900', name: 'Cabinet Hinge', variants: [{ combo: { Finish: 'Brass' } }, { combo: { Finish: 'Steel' } }] };
+  const BARE = { id: 'P900', name: 'Cabinet Hinge' };            // no variants column
   const adminLine = { productId: 'P900', variantIdx: 0, productName: 'Cabinet Hinge — Brass' };
   const agentLine = { productId: 'P900', variantIdx: 1, productName: 'Cabinet Hinge — Steel' };
-  t.check(heading(adminLine) === 'Cabinet Hinge', 'an admin-built line heads with the product');
-  t.check(heading(agentLine) === 'Cabinet Hinge', 'and so does an agent-submitted one');
-  t.check(!heading(adminLine).includes('Brass') && !heading(agentLine).includes('Steel'),
-    'neither heading repeats what the variant line is about to say');
 
-  // The one case where the stored name is all there is.
-  t.check(heading({ productId: 'GONE', variantIdx: 0, productName: 'Deleted Thing — Red' }) === 'Deleted Thing — Red',
-    'a product deleted out from under an order still on the board keeps the name the line remembers');
-  t.check(heading({ productId: 'GONE' }) === 'Item', 'and a line with neither still says something');
+  t.check(card(adminLine, HINGE) === 'Cabinet Hinge / Brass',
+    'an admin-built line heads with the product and names the variant once');
+  t.check(card(agentLine, HINGE) === 'Cabinet Hinge / Steel',
+    'and so does an agent-submitted one');
+
+  // The case the standalone app was actually in.
+  t.check(card(adminLine, BARE) === 'Cabinet Hinge — Brass',
+    'with no variants to resolve against, the heading still names the finish');
+  t.check(card(adminLine, { id: 'P900', name: 'Cabinet Hinge', variants: [] }) === 'Cabinet Hinge — Brass',
+    'and the same for an empty variants array');
+  t.check(card({ ...adminLine, variantIdx: 7 }, HINGE) === 'Cabinet Hinge — Brass',
+    'and for a variant index that is not there any more');
+
+  // Everything that was already right.
+  t.check(card({ productId: 'P900', variantIdx: null, productName: 'Cement' }, { id: 'P900', name: 'Cement' }) === 'Cement',
+    'a product with no variant is named once and plainly');
+  t.check(card({ productId: 'GONE', variantIdx: 0, productName: 'Deleted Thing — Red' }, null) === 'Deleted Thing — Red',
+    'a product deleted out from under an order keeps the name the line remembers');
+  t.check(card({ productId: 'GONE' }, null) === 'Item', 'and a line with neither still says something');
+
+  // The property that matters, over all of it: a picker is never shown a
+  // card that fails to say which one to take.
+  const EVERY = [[adminLine, HINGE], [agentLine, HINGE], [adminLine, BARE],
+    [adminLine, { id: 'P900', name: 'Cabinet Hinge', variants: [] }],
+    [{ ...adminLine, variantIdx: 7 }, HINGE], [adminLine, null]];
+  const silent = EVERY.filter(([it, p]) => !/Brass|Steel/.test(card(it, p)));
+  t.check(silent.length === 0,
+    silent.length
+      ? `${silent.length} shape(s) show a variable item without naming its variant`
+      : `every shape of a variable line names its variant somewhere on the card (${EVERY.length} checked)`);
 }
 
 /* ---------- 8. the APK copy carries all of it ------------------------ */

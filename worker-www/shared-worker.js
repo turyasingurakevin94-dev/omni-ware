@@ -619,12 +619,26 @@ function renderWorkerPickStepper(q){
     //
     // Falls back to the stored name, which is all there is once a product
     // has been deleted out from under an order still on the board.
+    //
+    // ...and also whenever the variant cannot be resolved but the line says
+    // it has one. Both writers bake the variant into productName, so that
+    // string always carries it; product.name never does. Splitting them
+    // means the card only says the variant if the variants column reached
+    // it, and this app is fed by two different hosts: the standalone one
+    // selected 'id, name, image' and so showed a brass hinge as plain
+    // "Cabinet Hinge", with the variant line empty and nothing else naming
+    // it. Saying it twice is untidy; not saying it at all sends someone to
+    // the wrong shelf, so this leans that way when it cannot tell.
+    const canNameVariant = it.variantIdx==null || it.variantIdx==='' || !!variant;
+    const heading = (!canNameVariant && it.productName)
+      ? it.productName
+      : ((product && product.name) || it.productName || 'Item');
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
         <div class="wv-carousel-photo">${photo}</div>
         <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
         <div class="wv-carousel-body">
-          <div class="wv-carousel-name">${esc((product && product.name) || it.productName || 'Item')}</div>
+          <div class="wv-carousel-name">${esc(heading)}</div>
           ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
           <div class="wv-carousel-qty-label">${esc(qtyLabel)}</div>
           <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
