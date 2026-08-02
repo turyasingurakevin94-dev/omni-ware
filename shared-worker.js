@@ -733,12 +733,21 @@ function savedAgoLabel(iso){
 // to deliver sits in Pending Delivery -- checked independently of their
 // primary role since a worker can be doing either. Mirrors the same
 // per-step visibility rule the order cards themselves use.
+//
+// Voided counts as not being on it. Cancelling an order sets the flag and
+// nothing else -- the status and the assignment both stay -- so without
+// this a cancelled order went on reporting the person as busy: "Preparing
+// for Moses — since 3 hours ago", to an admin picking someone for a
+// delivery and on the Staff tab, while that worker's own screen showed
+// them nothing to do. Every other reader of "is this order still live"
+// (myWorkerOrders, autoAssignNextOrder) already excludes voided.
 function staffActiveOrders(s){
-  const asWorker = data.savedQuotes
-    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing' && !quoteAgedOffBoard(q))
+  const live = data.savedQuotes.filter(q=>!q.voided && !quoteAgedOffBoard(q));
+  const asWorker = live
+    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing')
     .map(q=>({order:q, capacity:'worker'}));
-  const asDelivery = data.savedQuotes
-    .filter(q=>q.assignedDeliveryId===s.id && q.status==='pending_delivery' && !quoteAgedOffBoard(q))
+  const asDelivery = live
+    .filter(q=>q.assignedDeliveryId===s.id && q.status==='pending_delivery')
     .map(q=>({order:q, capacity:'delivery'}));
   return [...asWorker, ...asDelivery];
 }
