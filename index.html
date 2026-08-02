@@ -1001,6 +1001,24 @@
     box-shadow:0 8px 24px rgba(20,30,40,0.14);padding:6px;
   }
   .q-client-ac-list{max-height:220px;overflow-y:auto;}
+  /* Links along the order lifecycle. An order, its invoice and the
+     purchase invoice it raises are one object across three tabs; these are
+     the only way to walk between them. Underlined rather than buttoned,
+     because they navigate rather than act. */
+  .lifecycle-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 8px;}
+  .lifecycle-links .lc-label{
+    font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);
+  }
+  .lc-link{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;
+    font-size:12px;font-weight:700;color:var(--accent);border-bottom:1px solid currentColor;
+    padding:1px 0;
+  }
+  .lc-link:hover{color:var(--ow-oxide-deep);}
+  .lc-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  .lc-link.voided{color:var(--ink-soft);text-decoration:line-through;border-bottom-color:transparent;}
+  .lc-link .lc-sup{font-size:11px;font-weight:600;color:var(--ink-soft);border:none;}
+  .lc-none{font-size:12px;color:var(--ink-soft);}
   .q-client-ac-item{
     display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:7px;cursor:pointer;
   }
@@ -7319,6 +7337,7 @@ function renderInvoices(filter=''){
         <div>${esc(q.invoicedAt || q.date || '')} · ${esc(q.client.name || 'Unnamed client')}</div>
         ${notesLabel ? `<div>${esc(notesLabel)}</div>` : ''}
       </div>
+      ${orderPurchaseInvoiceLinksHTML(q)}
       <div class="sc-stats">
         <div class="sc-stat"><b>${fmtUGX(Math.round(total))}</b><span>Total</span></div>
         <div class="sc-stat"><b>${fmtUGX(Math.round(paid))}</b><span>Paid</span></div>
@@ -7384,6 +7403,11 @@ function renderInvoices(filter=''){
     const key = th.dataset.key;
     if(INV_SORT_STATE.key===key) INV_SORT_STATE.dir *= -1; else { INV_SORT_STATE.key = key; INV_SORT_STATE.dir = -1; }
     renderInvoices(document.getElementById('inv_doc_search').value);
+  }));
+  // Follow this order forward to the purchase invoice it raised.
+  wrap.querySelectorAll('[data-pi]').forEach(btn=>btn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    revealPurchaseInvoice(Number(btn.dataset.pi));
   }));
   wrap.querySelectorAll('.inv-doc-print').forEach(btn=>btn.addEventListener('click', ()=>{
     const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
@@ -7663,6 +7687,58 @@ function printQuotesA5(quotes){
    automatically since a restock itself can't be un-done, but can be voided
    by hand like any other purchase invoice. */
 function purchaseInvoiceNumberLabel(pi){ return 'PINV-' + String(pi.id).padStart(4,'0'); }
+
+/* ---- Walking the order's lifecycle ---------------------------------
+ * An order, the invoice it becomes and the purchase invoice it generates
+ * against a supplier are one thing moving through the business. The data
+ * has always known that -- purchase invoices carry quoteId, and
+ * purchaseInvoiceCollectionPct() already reads across the link to work out
+ * how much of the order has been collected.
+ *
+ * The screens did not. `switchTab('purchase-invoices')` and its opposite
+ * appeared nowhere in this file: to get from an order to the purchase
+ * invoice it raised you had to memorise a number, change tab and search
+ * for it yourself. Three tabs named after tables, one object.
+ */
+function purchaseInvoicesForOrder(q){
+  if(!q) return [];
+  return data.purchaseInvoices.filter(pi=>pi.quoteId===q.id);
+}
+function orderForPurchaseInvoice(pi){
+  if(!pi || pi.quoteId==null) return null;
+  return data.savedQuotes.find(x=>x.id===pi.quoteId) || null;
+}
+// Both reveals work by filling the destination tab's own search box before
+// switching -- goToTab() re-renders each list from that box, so this uses
+// the machinery already there rather than inventing row anchors.
+function revealOrderFor(piId){
+  const pi = data.purchaseInvoices.find(x=>x.id===piId);
+  const q = orderForPurchaseInvoice(pi);
+  if(!q){ toast('That purchase invoice is not linked to an order'); return; }
+  const box = document.getElementById('inv_doc_search');
+  if(box) box.value = invoiceNumberLabel(q);
+  goToTab('invoices');
+  toast(`Showing ${invoiceNumberLabel(q)}`);
+}
+function revealPurchaseInvoice(piId){
+  const pi = data.purchaseInvoices.find(x=>x.id===piId);
+  if(!pi){ toast('That purchase invoice no longer exists'); return; }
+  const box = document.getElementById('pi_doc_search');
+  if(box) box.value = purchaseInvoiceNumberLabel(pi);
+  goToTab('purchase-invoices');
+  toast(`Showing ${purchaseInvoiceNumberLabel(pi)}`);
+}
+// What an order raised, as a line you can follow. Voided ones are named
+// rather than hidden -- a supplier invoice that was cancelled is part of
+// this order's history and hiding it makes the totals look unexplained.
+function orderPurchaseInvoiceLinksHTML(q){
+  const pis = purchaseInvoicesForOrder(q);
+  if(!pis.length) return '';
+  return `<div class="lifecycle-links">
+    <span class="lc-label">Raised</span>
+    ${pis.map(pi=>`<button type="button" class="lc-link${pi.voided?' voided':''}" data-pi="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}${pi.voided?' (voided)':''} <span class="lc-sup">${esc(pi.supplierName||'supplier')}</span></button>`).join('')}
+  </div>`;
+}
 function purchaseInvoiceTotal(pi){
   return (pi.items||[]).reduce((s,it)=> s + (Number(it.qty)||0)*(Number(it.price)||0), 0);
 }
@@ -7846,7 +7922,14 @@ function renderPurchaseInvoices(filter=''){
     const collectionPct = purchaseInvoiceCollectionPct(pi);
     const isRestock = collectionPct===null;
     const barPct = isRestock ? purchaseInvoiceSupplierPaidPct(pi) : collectionPct;
-    const fromOrderLabel = pi.customerName ? `Order for ${pi.customerName}` : (pi.quoteId ? '' : 'Stock restock');
+    // Named the CUSTOMER, not the order, and was not clickable -- and when
+    // customerName happened to be empty it rendered nothing at all despite
+    // the invoice being linked to a real order. Now it names the order and
+    // goes there.
+    const linkedOrder = orderForPurchaseInvoice(pi);
+    const fromOrderLabel = linkedOrder
+      ? `<button type="button" class="lc-link" data-order-pi="${pi.id}">${esc(invoiceNumberLabel(linkedOrder))} <span class="lc-sup">${esc(pi.customerName || linkedOrder.client && linkedOrder.client.name || 'order')}</span></button>`
+      : (pi.quoteId ? '' : '<span class="lc-none">Stock restock</span>');
     const actionsHtml = `<button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
       <button type="button" class="pc-icon-btn pi-doc-pay" data-id="${pi.id}" title="Record payment to supplier"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
       <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${pi.voided?'Unvoid purchase invoice':'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
@@ -7866,7 +7949,7 @@ function renderPurchaseInvoices(filter=''){
       </div>
       <div class="pi-card-meta">
         <div>${esc(pi.date || '')} · ${esc(pi.supplierName || 'Unknown supplier')}</div>
-        ${fromOrderLabel ? `<div>${esc(fromOrderLabel)}</div>` : ''}
+        ${fromOrderLabel ? `<div>${fromOrderLabel}</div>` : ''}
       </div>
       <div class="sc-stats">
         <div class="sc-stat"><b>${fmtUGX(Math.round(total))}</b><span>Total</span></div>
@@ -7885,7 +7968,7 @@ function renderPurchaseInvoices(filter=''){
       <td>${esc(pi.date || '')}</td>
       <td><button type="button" class="inv-doc-link pi-doc-view" data-id="${pi.id}">${esc(purchaseInvoiceNumberLabel(pi))}</button></td>
       <td>${esc(pi.supplierName || 'Unknown supplier')}</td>
-      <td>${esc(fromOrderLabel)}</td>
+      <td>${fromOrderLabel}</td>
       <td class="price">${fmtUGX(Math.round(total))}</td>
       <td class="price">${fmtUGX(Math.round(paid))}</td>
       <td class="price">${fmtUGX(Math.round(due))}</td>
@@ -7944,6 +8027,11 @@ function renderPurchaseInvoices(filter=''){
   wrap.querySelectorAll('.pi-doc-view').forEach(btn=>btn.addEventListener('click', ()=>{
     const pi = data.purchaseInvoices.find(x=>x.id===Number(btn.dataset.id));
     if(pi) printPurchaseInvoicesA5([pi]);
+  }));
+  // Follow this purchase invoice back to the order that raised it.
+  wrap.querySelectorAll('[data-order-pi]').forEach(btn=>btn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    revealOrderFor(Number(btn.dataset.orderPi));
   }));
   wrap.querySelectorAll('.pi-doc-pay').forEach(btn=>btn.addEventListener('click', ()=>{
     openPiPaymentModal(Number(btn.dataset.id));
