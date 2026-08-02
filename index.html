@@ -6511,9 +6511,26 @@ function setSavedQuoteStatus(id, status){
 // agentPaymentBlocksPreparing() lives in shared-worker.js -- also needed
 // there, for autoAssignNextOrder()'s own draft-order eligibility check.
 let pendingPrepayOrderId = null;
+// What this order still needs before it can be prepared.
+//
+// The prompt and the confirm handler used to work this out separately, and
+// differently. The prompt totalled the lines itself from raw it.sellPrice
+// and ignored amountPaid entirely; the handler used savedQuoteTotal() minus
+// what had already been paid. So an agent whose mobile-money payment landed
+// short -- which the payment path explicitly banks and credits without
+// unlocking the order -- was shown the FULL order value to collect in cash
+// while the system went on to record only the remainder. One expression
+// now, used by both.
+// Deliberately invoiceBalanceDue() rather than a second copy of its
+// arithmetic: what an agent still owes on their order IS that order's
+// balance due, and writing the sum out again here is exactly how the
+// prompt and the handler came to disagree in the first place.
+function agentPrepayOutstanding(q){
+  return invoiceBalanceDue(q);
+}
 function promptAgentPrepayment(q){
   const agent = data.agents.find(a=>a.id===q.originAgentId);
-  const owed = (q.items||[]).reduce((s,it)=> s + (Number(it.sellPrice)||0)*(Number(it.qty)||0), 0);
+  const owed = agentPrepayOutstanding(q);
   document.getElementById('agentPrepayText').textContent = `${agent ? agent.name : 'This agent'} pays before you start preparing their orders — ${fmtUGX(owed)} owed for this one. Confirm you've received it to continue.`;
   pendingPrepayOrderId = q.id;
   openModal('agentPrepayModal');
@@ -6533,7 +6550,7 @@ document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
   //
   // So record it as a real payment, exactly as the mobile-money path does
   // (mtn-payment-webhook): Cash Book receipt, payments entry, amountPaid.
-  const owed = Math.max(0, savedQuoteTotal(q) - (Number(q.amountPaid)||0));
+  const owed = agentPrepayOutstanding(q);
   if(owed > 0){
     const agent = data.agents.find(a=>a.id===q.originAgentId);
     if(!q.payments) q.payments = [];
