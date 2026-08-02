@@ -270,6 +270,8 @@
   .ag-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-soft);border-radius:12px;padding:11px 13px;min-height:44px;}
   .ag-chip-name{font-weight:600;font-size:14px;}
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
+      .ag-basket-waiting{color:var(--accent);font-weight:700;}
+  .ag-chip-others{font-size:11px;font-weight:650;color:var(--accent);margin-top:2px;}
   .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
   .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
@@ -1182,6 +1184,48 @@ let currentUser = null, currentShopId = null, myAgent = null;
 let agentClients = [], myOrders = [], catalog = [], myInquiries = [];
 let cart = [], chosenClient = null;
 
+/* ---- One basket per client, not one basket -------------------------
+ * An agent works several shops in a morning and often quotes the same one
+ * across repeat visits. The app modelled that as a single cart with a
+ * single chosen client -- an e-commerce checkout, when the job is a quote
+ * in progress per customer.
+ *
+ * That was not only the wrong metaphor, it produced wrong orders. Tapping
+ * "Change" cleared the client and KEPT the items, so a basket built for
+ * Namuli Hardware silently became Mukasa Stores' order. Nothing warned,
+ * nothing cleared.
+ *
+ * `cart` stays the active basket, so the 50-odd places that read it are
+ * untouched. `carts` holds one per client behind it and they are swapped
+ * on selection. Nothing bleeds between customers, and a basket survives
+ * being left to go and serve someone else.
+ */
+let carts = Object.create(null);
+const cartKey = (client) => client ? String(client.id) : null;
+// Park the active basket against whoever it belongs to.
+function stashActiveCart(){
+  const k = cartKey(chosenClient);
+  if(k) carts[k] = cart;
+}
+// Make this client's basket the active one, creating an empty one if they
+// have never been quoted before. The array is stored by reference, so
+// every later cart.push() lands in the right client's basket.
+function activateCartFor(client){
+  const k = cartKey(client);
+  if(!k){ cart = []; return; }
+  if(!carts[k]) carts[k] = [];
+  cart = carts[k];
+}
+function clientsWithBaskets(){
+  return Object.keys(carts).filter(k => (carts[k]||[]).length > 0);
+}
+// Baskets waiting on OTHER clients -- what makes it safe to leave one and
+// come back, and the only reason an agent would know they exist.
+function otherBasketCount(){
+  const active = cartKey(chosenClient);
+  return clientsWithBaskets().filter(k => k !== active).length;
+}
+
 /* ================= OFFLINE RESILIENCE =================
    Scope: read-only screens keep working (from a cached snapshot) when
    connectivity drops, and a dropped connection never dead-ends the app
@@ -1364,8 +1408,11 @@ function saveQuoteDraft(){
   const deliveryMode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
   const deliveryAddress = document.getElementById('ag_delivery_address').value;
   try{
+    // Park the active basket first, or whatever is in hand is written
+    // under the previous client's key and lost on reload.
+    stashActiveCart();
     localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
-      cart, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
+      carts, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
     }));
   }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
 }
@@ -1378,10 +1425,27 @@ function restoreQuoteDraft(){
   if(!draft) return;
   restoringQuoteDraft = true;
   try{
-    if(Array.isArray(draft.cart) && draft.cart.length) cart = draft.cart;
+    if(draft.carts && typeof draft.carts === 'object'){
+      Object.keys(draft.carts).forEach(k=>{
+        if(Array.isArray(draft.carts[k]) && draft.carts[k].length) carts[k] = draft.carts[k];
+      });
+    }
     if(draft.chosenClientId!=null){
       const client = agentClients.find(c=>String(c.id)===String(draft.chosenClientId));
-      if(client) selectClient(client);
+      if(client){
+        // A draft written before baskets were per-client holds a single
+        // `cart`. It belonged to whoever was chosen at the time, so it is
+        // adopted into that client's basket rather than dropped -- an
+        // agent mid-quote when the app updates does not lose their work.
+        if(Array.isArray(draft.cart) && draft.cart.length && !carts[String(client.id)]){
+          carts[String(client.id)] = draft.cart;
+        }
+        selectClient(client);
+      }
+    } else if(Array.isArray(draft.cart) && draft.cart.length){
+      // Legacy draft with items but no client. There is no basket to put
+      // them in, so they stay in hand exactly as before.
+      cart = draft.cart;
     }
     if(draft.deliveryMode==='shop_delivery'){
       document.getElementById('ag_delivery_shop').checked = true;
@@ -4036,6 +4100,10 @@ document.getElementById('ag_download_receipt_btn').addEventListener('click', ()=
 document.getElementById('ag_cart_browse_btn').addEventListener('click', ()=> switchTab('sell'));
 
 function resetCartAfterSubmit(){
+  // Only THIS client's basket is finished. Anyone else the agent has a
+  // quote in progress for still has theirs.
+  const k = cartKey(chosenClient);
+  if(k) delete carts[k];
   cart = [];
   chosenClient = null;
   document.getElementById('ag_client_search').value = '';
@@ -4064,11 +4132,18 @@ function clientInitials(name){
 function renderSellClientChip(){
   const wrap = document.getElementById('ag_sell_clientWrap');
   if(!wrap) return;
+  // A basket left with another client is only useful if the agent knows it
+  // is there. Stated as a fact on the chip rather than a badge somewhere
+  // else, because this is the control that switches between them.
+  const others = otherBasketCount();
+  const otherNote = others
+    ? `<div class="ag-chip-others">${others} other quote${others===1?'':'s'} in progress</div>`
+    : '';
   if(chosenClient){
-    wrap.innerHTML = `<div class="ag-chip"><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`;
+    wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div>${otherNote}</div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`;
     document.getElementById('ag_sell_client_change').addEventListener('click', openNewQuoteClientSheet);
   } else {
-    wrap.innerHTML = `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
+    wrap.innerHTML = `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div>${otherNote}</div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
     document.getElementById('ag_sell_client_add').addEventListener('click', openNewQuoteClientSheet);
   }
 }
@@ -4080,7 +4155,9 @@ function renderClientSuggestions(query){
     <div class="ag-list-item-avatar">${esc(clientInitials(c.name))}</div>
     <div class="ag-item-result-body">
       <div class="ag-item-result-name">${esc(c.name)}</div>
-      <div class="ag-item-result-price">${esc(c.phone||'No phone on file')}</div>
+      <div class="ag-item-result-price">${(carts[String(c.id)]||[]).length
+        ? `<span class="ag-basket-waiting">${(carts[String(c.id)]||[]).length} item${(carts[String(c.id)]||[]).length===1?'':'s'} waiting</span>`
+        : esc(c.phone||'No phone on file')}</div>
     </div>
   </div>`).join('');
   if(q && !matches.some(c=>(c.name||'').toLowerCase()===q)){
@@ -4103,7 +4180,13 @@ document.getElementById('ag_client_search').addEventListener('focus', e=>renderC
 
 function selectClient(client){
   if(!client) return;
+  // Park whatever is in hand against the client it was built for BEFORE
+  // switching, or it follows the agent to the next customer.
+  if(cartKey(chosenClient) !== cartKey(client)) stashActiveCart();
   chosenClient = client;
+  activateCartFor(client);
+  updateCartBadge();
+  renderCart();
   document.getElementById('ag_clientPickWrap').style.display = 'none';
   const wrap = document.getElementById('ag_clientChosenWrap');
   wrap.style.display = 'block';
@@ -4111,13 +4194,20 @@ function selectClient(client){
   saveQuoteDraft();
   renderSellClientChip();
   document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
+    // Keep the basket -- against the client it was built for, not in hand.
+    // This is the step that used to carry one customer's items into the
+    // next customer's order.
+    stashActiveCart();
     chosenClient = null;
+    cart = [];
     wrap.style.display = 'none';
     document.getElementById('ag_clientPickWrap').style.display = 'block';
     document.getElementById('ag_client_search').value = '';
     renderClientSuggestions('');
     saveQuoteDraft();
     renderSellClientChip();
+    updateCartBadge();
+    renderCart();
   });
 }
 
