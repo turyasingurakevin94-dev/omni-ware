@@ -121,6 +121,26 @@ Database → Webhooks → Create a new webhook:
 - Events: `Update`
 - Type: `HTTP Request` → the deployed URL of `notify-worker` (`https://<project-ref>.functions.supabase.co/notify-worker`)
 - Method: `POST`, include the default `Authorization: Bearer <anon-or-service-role>` header the Dashboard offers
+- **HTTP Headers**: add `x-webhook-secret` with the value you set below
+
+> `notify-worker` is deployed `verify_jwt=false`, because a Database Webhook
+> cannot present a Supabase JWT. That left it accepting a POST from anyone:
+> the notification text was built from `record.client_name` in the request
+> body, so a crafted request could put arbitrary words on a worker's phone.
+>
+> Two things changed. The function now re-reads the order from the database
+> and builds the notification from that row, so the body only says *which*
+> row changed — a forged event is answered with `order not found` before it
+> touches anything. That holds with no configuration. The shared secret
+> closes the door properly, and is **dormant until you set it**:
+>
+> ```
+> supabase secrets set NOTIFY_WORKER_SECRET="<a long random string>"
+> ```
+>
+> Set it, then add the same value as an `x-webhook-secret` header on the
+> webhook above. Until both are in place the function logs a warning on
+> every request saying it is open.
 
 This single webhook covers every path that can change `assignedWorkerId` — manual assignment, a worker denying (which clears it, triggering no push), and the app's automatic next-order assignment — since they all just update this one table.
 

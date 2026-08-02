@@ -14,6 +14,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
+// This function is deployed verify_jwt=false because the Database Webhook
+// that drives it cannot present a Supabase JWT -- which left it accepting
+// requests from anyone. Set NOTIFY_WORKER_SECRET and add a matching
+// `x-webhook-secret` header to the webhook (Dashboard -> Database ->
+// Webhooks -> the saved_quotes hook -> HTTP Headers) to close it. Dormant
+// while unset so notifications keep working until that is done; the
+// re-read below is what limits the damage in the meantime.
+const NOTIFY_WORKER_SECRET = Deno.env.get("NOTIFY_WORKER_SECRET");
 
 let firebaseServiceAccount: { project_id: string; client_email: string; private_key: string } | null = null;
 if (FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -118,6 +126,15 @@ async function sendFcmNotification(
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
+  if (NOTIFY_WORKER_SECRET) {
+    if ((req.headers.get("x-webhook-secret") || "") !== NOTIFY_WORKER_SECRET) {
+      console.warn("notify-worker: rejected a request with a bad or missing webhook secret");
+      return json({ error: "Bad or missing webhook secret" }, 401);
+    }
+  } else {
+    console.warn("notify-worker: NOTIFY_WORKER_SECRET is not set -- this endpoint accepts requests from anyone");
+  }
+
   const payload = await req.json().catch(() => null);
   console.log("notify-worker: payload received", {
     table: payload?.table,
@@ -138,15 +155,40 @@ Deno.serve(async (req) => {
     return json({ ok: true, skipped: "assignedWorkerId unchanged or cleared" });
   }
 
+  // Re-read the order FIRST. The request body identifies WHICH row changed
+  // and nothing else -- this endpoint is deployed verify_jwt=false and had
+  // no authentication of any kind, so a crafted POST could previously put
+  // arbitrary text on a worker's phone (the body was built straight from
+  // record.client_name) and any id at all behind the notification tap.
+  // Everything below is anchored to this row, including which shop's
+  // subscriptions get looked up, so a forged event is turned away before it
+  // can probe anything.
+  const { data: order, error: orderErr } = await admin
+    .from("saved_quotes")
+    .select("id, shop_id, client_name, payload")
+    .eq("shop_id", record.shop_id)
+    .eq("id", record.id)
+    .maybeSingle();
+  if (orderErr) return json({ error: orderErr.message, stage: "order_reread" }, 500);
+  if (!order) return json({ ok: true, skipped: "order not found" });
+
+  // Confirm the assignment the payload claims is the one actually on the
+  // row, so a forged or stale event cannot summon a notification for an
+  // assignment that never happened or has already moved on.
+  const assignedNow = order.payload?.assignedWorkerId ?? null;
+  if (assignedNow == null || String(assignedNow) !== String(newWorkerId)) {
+    return json({ ok: true, skipped: "assignment does not match the stored order" });
+  }
+
   const { data: subs, error: subErr } = await admin
     .from("push_subscriptions")
     .select("id, fcm_token")
-    .eq("shop_id", record.shop_id)
-    .eq("staff_id", newWorkerId)
+    .eq("shop_id", order.shop_id)
+    .eq("staff_id", assignedNow)
     .not("fcm_token", "is", null);
   console.log("notify-worker: subscription lookup", {
-    shopId: record.shop_id,
-    staffId: newWorkerId,
+    shopId: order.shop_id,
+    staffId: assignedNow,
     subCount: subs?.length,
     subErr,
   });
@@ -158,8 +200,8 @@ Deno.serve(async (req) => {
   }
   const fsa = firebaseServiceAccount;
 
-  const itemCount = Array.isArray(record.payload?.items) ? record.payload.items.length : 0;
-  const clientName = record.client_name || "a client";
+  const itemCount = Array.isArray(order.payload?.items) ? order.payload.items.length : 0;
+  const clientName = order.client_name || "a client";
   const title = "New order to prepare";
   const body = `${clientName} — ${itemCount} item${itemCount === 1 ? "" : "s"}`;
 
@@ -173,8 +215,10 @@ Deno.serve(async (req) => {
 
   const results = await Promise.allSettled(
     subs.map((sub) =>
-      sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token as string, title, body, record.id)
-        .then(async (resp) => {
+      // order.id, not record.id -- the id the device opens on tap comes
+      // from the row that was read back, not from the request body.
+      sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token as string, title, body, order.id)
+        .then(async (resp: Response) => {
           if (!resp.ok) {
             const errBody = await resp.json().catch(() => ({}));
             console.error("notify-worker: FCM send failed", { status: resp.status, errBody });
