@@ -860,18 +860,27 @@ async function finishPreparingOrder(orderId){
   renderWorkerView();
 }
 
-// Opportunistic, non-exclusive auto-assign: whenever a worker finishes an
-// order they may already be holding others (assignment has never enforced
-// one-at-a-time), so this just hands them the oldest unassigned order
-// still needing preparation, if one exists -- skipping any agent order
+// Opportunistic auto-assign: whenever a worker finishes an order they may
+// already have others assigned to them (being handed an order has never been
+// exclusive -- only accepting one is), so this just hands them the unassigned
+// order that has been waiting longest and still needs preparation, if one
+// exists -- skipping any agent order
 // that's still waiting on its required prepayment, since that one isn't
 // actually ready to be worked on yet.
 function autoAssignNextOrder(workerId){
   const staff = data.staff.find(s=>s.id===workerId);
   if(!staff || staff.unavailable) return;
+  // How long the order has actually been waiting, which is not savedAt --
+  // that is rewritten on every save, so this sorted by least-recently-edited
+  // and an order went to the back of the queue each time anyone touched it.
+  // A five-hour-old order with a corrected line lost its place to one taken
+  // an hour ago, and one being repeatedly amended could keep losing it.
+  // stageEnteredAt is the field the board's own overdue warning treats as
+  // "waiting since", and re-saving a quote deliberately does not reset it.
+  const waitingSince = (q)=> q.stageEnteredAt || new Date(q.savedAt||0).getTime() || 0;
   const next = data.savedQuotes
     .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing') && !agentPaymentBlocksPreparing(q))
-    .sort((a,b)=> new Date(a.savedAt||0) - new Date(b.savedAt||0))[0];
+    .sort((a,b)=> waitingSince(a) - waitingSince(b))[0];
   if(!next) return;
   next.assignedWorkerId = workerId;
   next.pickingStatus = 'awaiting_accept';
