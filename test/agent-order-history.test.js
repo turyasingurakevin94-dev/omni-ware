@@ -58,7 +58,16 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // orderDate's own body is the one legitimate reader for an order; the
   // `cached` and `payload` savedAt are a different thing entirely (when the
   // offline snapshot was written, and the raw row it was mapped from).
-  const outsideHelper = code.replace(extractFunction(src, 'orderDate', 'agent.html'), '');
+  //
+  // extractFunction hands back the text as it sits in the file, CRLF and
+  // all, while `code` above has been normalised to LF. So on any working
+  // copy checked out with CRLF -- which is every fresh clone on Windows --
+  // this replace() matched nothing, leaving orderDate's own fallback in the
+  // swept text and reporting it as a violation. It passed when written only
+  // because this file happened to be LF at that moment; a `git revert`
+  // rewriting the file was enough to flip it.
+  const lf = (s) => s.split(/\r?\n/).join('\n');
+  const outsideHelper = code.replace(lf(extractFunction(src, 'orderDate', 'agent.html')), '');
   const readers = [...outsideHelper.matchAll(/\b([A-Za-z_]\w*)\.savedAt\b/g)]
     .map(m => m[1]).filter(n => !/^(cached|payload)$/.test(n));
   t.check(readers.length === 0,
