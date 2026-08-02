@@ -641,6 +641,27 @@
      order"). Completed orders: whether this order is settled with the shop
      or still owes a balance. Same slot, different meaning per status, each
      with its own color so the state reads before the text is even read. */
+  .ag-seg-count{margin-left:6px;font-size:11.5px;font-weight:700;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .ag-seg-btn.active .ag-seg-count{color:rgba(255,255,255,0.72);}
+
+  /* The plain-ground twin of .ag-search-bar, which is styled for the dark
+     hero on Sell (white fill, white focus ring) and would disappear here. */
+  .ag-filter-bar{position:relative;margin-bottom:14px;}
+  .ag-filter-bar input{width:100%;box-sizing:border-box;padding:12px 40px 12px 40px;border:1px solid var(--line);border-radius:13px;font-size:14px;background:var(--panel);font-family:inherit;color:var(--ink);}
+  .ag-filter-bar input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .ag-filter-bar .ag-search-icon{left:13px;}
+
+  /* Ongoing groups by who is being waited on; completed groups by when.
+     A flat list repeated the full date on every row and buried the two
+     orders actually waiting on the agent among the ones that are not. */
+  .ag-hist-group{display:flex;align-items:baseline;gap:7px;font-size:12px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--ink-soft);margin:18px 0 8px;}
+  .ag-hist-group:first-child{margin-top:2px;}
+  .ag-hist-group.needs{color:var(--accent);}
+  .ag-hist-group-n{font-size:11.5px;font-weight:700;color:var(--ink-faint);letter-spacing:0;}
+
+  .ag-order-row-total{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ag-order-earned{font-size:12px;color:var(--ink-faint);margin-top:3px;font-variant-numeric:tabular-nums;}
+
   .ag-order-status{display:flex;align-items:center;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;}
   .ag-order-status .icon{width:15px;height:15px;flex-shrink:0;}
   .ag-order-status.waiting{color:var(--ink-soft);}
@@ -1091,8 +1112,15 @@
       <h1 style="font-size:20px;font-weight:800;margin:0;">Order history</h1>
     </div>
     <div class="ag-seg-tabs" id="ag_orderHistorySeg">
-      <button type="button" class="ag-seg-btn active" data-seg="ongoing">Ongoing</button>
-      <button type="button" class="ag-seg-btn" data-seg="completed">Completed</button>
+      <button type="button" class="ag-seg-btn active" data-seg="ongoing">Ongoing <span class="ag-seg-count" id="ag_seg_ongoing_count"></span></button>
+      <button type="button" class="ag-seg-btn" data-seg="completed">Completed <span class="ag-seg-count" id="ag_seg_completed_count"></span></button>
+    </div>
+    <!-- Completed is unbounded -- it only grows. Scrolling was the only way
+         to find last month's order for a particular client. -->
+    <div class="ag-filter-bar">
+      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <input type="text" id="ag_orderSearch" placeholder="Search by client or product" autocomplete="off">
+      <button type="button" class="ag-search-clear" id="ag_orderSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div id="ag_orderHistoryListWrap"></div>
   </div>
@@ -1978,14 +2006,20 @@ function computeOpportunities(){
 
   const counts = clientOrderCounts();
   agentClients.forEach(c=>{
-    const orders = (counts.get(c.id)||[]).filter(o=>!o.voided && o.savedAt).slice().sort((a,b)=>(a.savedAt||'').localeCompare(b.savedAt||''));
+    // Keyed on the order's own date throughout. savedAt is rewritten on
+    // every save, so editing a six-month-old order used to drag it to the
+    // front of this client's history -- shrinking the average gap and
+    // resetting "it's been N days" to nearly zero, on the figures that
+    // decide whether they get chased.
+    const orders = (counts.get(c.id)||[]).filter(o=>!o.voided && orderDate(o)).slice()
+      .sort((a,b)=> String(orderDate(a)).localeCompare(String(orderDate(b))));
     if(orders.length < 2) return; // no cadence to learn a pattern from yet
-    const dates = orders.map(o=>new Date(o.savedAt));
+    const dates = orders.map(o=>new Date(orderDate(o)+'T00:00:00'));
     let gapSum = 0;
     for(let i=1;i<dates.length;i++) gapSum += (dates[i]-dates[i-1]) / 86400000;
     const avgGapDays = gapSum / (dates.length - 1);
     const lastDate = dates[dates.length-1];
-    const lastDateKey = orders[orders.length-1].savedAt.slice(0,10);
+    const lastDateKey = orderDate(orders[orders.length-1]);
     const daysSince = (today - lastDate) / 86400000;
     const avgMargin = orders.reduce((s,o)=>s+orderEarnings(o).margin,0) / orders.length;
     if(daysSince >= avgGapDays && daysSince < 60){
@@ -2062,7 +2096,7 @@ function computeBusinessHealth(){
   const repeatRate = agentClients.length ? repeatClients / agentClients.length : null;
 
   const recentCutoff = new Date(Date.now() - 30*86400000);
-  const recentOrders = orders.filter(o=>o.savedAt && new Date(o.savedAt) >= recentCutoff);
+  const recentOrders = orders.filter(o=>orderDate(o) && new Date(orderDate(o)+'T00:00:00') >= recentCutoff);
   const completionRate = recentOrders.length ? recentOrders.filter(o=>o.status==='completed').length / recentOrders.length : null;
 
   const openCount = computeOpportunities().filter(o=>o.key !== 'draft_quote' && !dismissedOpportunityKeys().has(o.key)).length;
@@ -2101,7 +2135,7 @@ function weekKey(d){ return weekStart(d).toISOString().slice(0,10); }
 // hasn't happened yet -- counting starts from last week until today's
 // week has its own completed order.
 function computeSellingStreak(){
-  const dates = myOrders.filter(o=>!o.voided && o.status==='completed' && o.savedAt).map(o=>new Date(o.savedAt));
+  const dates = myOrders.filter(o=>!o.voided && o.status==='completed' && orderDate(o)).map(o=>new Date(orderDate(o)+'T00:00:00'));
   if(!dates.length) return 0;
   const activeWeeks = new Set(dates.map(weekKey));
   let cursor = weekStart(new Date());
@@ -2328,7 +2362,7 @@ function newQuoteRecentClients(limit){
   const withDates = agentClients.map(c=>{
     const orders = (counts.get(c.id)||[]).filter(o=>!o.voided);
     let lastDate = null;
-    orders.forEach(o=>{ if(o.savedAt && (!lastDate || o.savedAt > lastDate)) lastDate = o.savedAt; });
+    orders.forEach(o=>{ const d = orderDate(o); if(d && (!lastDate || d > lastDate)) lastDate = d; });
     return { client:c, lastDate };
   }).filter(x=>x.lastDate);
   withDates.sort((a,b)=> b.lastDate.localeCompare(a.lastDate));
@@ -2531,11 +2565,16 @@ function renderEarnings(){
     wrap.innerHTML = `<div class="empty">No orders in ${esc(monthLabel(monthKey))}.</div>`;
     return;
   }
-  const sorted = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
+  // Ordered and dated on the order's own date, like the history screen.
+  // monthEarnings already selects the month by `date`, but the row showed
+  // and sorted on savedAt -- which is rewritten on every save, so a July
+  // order edited in August appeared as "2 Aug" under "Orders in July 2026".
+  const sorted = orders.slice().sort((a,b)=> String(orderDate(b)||'').localeCompare(String(orderDate(a)||'')));
   wrap.innerHTML = sorted.map(o=>{
     const e = orderEarnings(o);
     const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
-    const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short' }) : '';
+    const d = orderDate(o);
+    const date = d ? new Date(d+'T00:00:00').toLocaleDateString('en-UG', { day:'numeric', month:'short' }) : '';
     // A bonus only counts once the order is completed -- monthEarnings
     // applies exactly that rule to the total in the wallet above. The row
     // used to print the bonus on any order regardless of status, so in any
@@ -2653,6 +2692,23 @@ function clientOrderCounts(){
   });
   return m;
 }
+// Day granularity, because an order carries a date and not a time. Feeding
+// a date-only value to inquiryAgoLabel produced "13 hours ago" for an order
+// placed today -- a precision the record does not have, measured from
+// midnight rather than from when anything happened.
+function daysAgoLabel(dateStr){
+  if(!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr+'T00:00:00');
+  if(isNaN(d)) return '';
+  const days = Math.round((today - d) / 86400000);
+  if(days <= 0) return 'Today';
+  if(days === 1) return 'Yesterday';
+  if(days < 30) return `${days} days ago`;
+  const months = Math.round(days/30);
+  return months < 12 ? `${months} month${months===1?'':'s'} ago` : 'Over a year ago';
+}
+
 // A client's record at a glance, from orders already loaded.
 //
 // Voided orders are excluded throughout. The row used to count them --
@@ -2661,7 +2717,7 @@ function clientOrderCounts(){
 // while every other screen in the app already discounted it.
 function clientStats(orders){
   const live = (orders||[]).filter(o=>!o.voided);
-  const dates = live.map(o=>o.savedAt).filter(Boolean).sort();
+  const dates = live.map(orderDate).filter(Boolean).sort();
   return {
     count: live.length,
     spent: live.reduce((s,o)=> s + orderTotal(o), 0),
@@ -2677,7 +2733,7 @@ function clientRowHTML(c, orders){
   // Compacted, because three figures plus a date will not fit across a
   // phone at full length. Exact amounts live on the orders themselves.
   const stats = s.count
-    ? [`${s.count} order${s.count===1?'':'s'}`, `${fmtCompactUGX(s.spent)} bought`, esc(inquiryAgoLabel(s.lastAt))].filter(Boolean).join(' · ')
+    ? [`${s.count} order${s.count===1?'':'s'}`, `${fmtCompactUGX(s.spent)} bought`, esc(daysAgoLabel(s.lastAt))].filter(Boolean).join(' · ')
     : 'No orders yet';
   // The number stays on screen as well as behind the Call button -- an
   // agent saving a contact or sending a WhatsApp needs to read it, and a
@@ -2755,20 +2811,38 @@ function orderBalanceInfo(o){
     : { cls:'due', icon:null, text:`Balance owed to shop: ${fmtUGX(balance)}` };
 }
 
+// When the order actually happened.
+//
+// The row used to show payload.savedAt, which is rewritten on every save --
+// so an order placed in June but touched in July displayed, sorted and
+// grouped as July while Earnings still counted it in June. Two screens
+// disagreeing about the same order. `date` is set once at creation, which
+// is why earnings and the claim already key on it.
+function orderDate(o){
+  return (o && o.date) || (o && o.savedAt ? String(o.savedAt).slice(0,10) : null);
+}
 function orderRowHTML(o){
   const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
-  const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short', year:'numeric' }) : '';
+  const d = orderDate(o);
+  // Day and month only -- the group header above carries the period, and
+  // the year with it whenever it is not this one.
+  const date = d ? new Date(d+'T00:00:00').toLocaleDateString('en-UG', { day:'numeric', month:'short' }) : '';
   const extra = o.status==='completed' ? orderBalanceInfo(o) : orderStatusInfo(o);
   const itemCount = (o.items||[]).length;
+  const e = orderEarnings(o);
+  // Same completed-only rule as the wallet: a bonus is not earned until the
+  // order is finished.
+  const earned = e.margin + (o.status==='completed' ? e.bonus : 0);
   return `<div class="ag-order-row" data-order-id="${esc(o.id)}">
     <div class="ag-order-row-head">
       <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
-      <div class="ag-order-row-date">${esc(date)}</div>
+      <div class="ag-order-row-total">${fmtUGX(orderTotal(o))}</div>
     </div>
     <div class="ag-order-row-split">
-      <span>${esc(ORDER_STATUS_LABEL[o.status] || o.status)} · ${fmtUGX(orderTotal(o))}</span>
+      <span>${esc(date)}</span>
       <span class="ag-order-row-items-link">${itemCount} item${itemCount===1?'':'s'} &rsaquo;</span>
     </div>
+    ${earned ? `<div class="ag-order-earned">${fmtUGX(earned)} yours</div>` : ''}
     <div class="ag-order-status ${extra.cls}">${extra.icon||''}<span>${esc(extra.text)}</span>${extra.payNow ? `<button type="button" class="momo-pay-now-btn" data-order-id="${esc(o.id)}">Pay now</button>` : ''}</div>
   </div>`;
 }
@@ -3073,14 +3147,91 @@ function renderClientsListScreen(){
   wrap.innerHTML = agentClients.map(c=>clientRowHTML(c, counts.get(c.id)||[])).join('');
 }
 let orderHistorySegment = 'ongoing';
+
+// The two ongoing states waiting on the AGENT rather than on the shop: an
+// unpaid prepay order, and stock standing ready to be collected. Preparing
+// and out-for-delivery need nothing from them. Both conditions are the ones
+// orderStatusInfo() already uses, so the grouping cannot drift from what
+// each row's own status strip says.
+function orderNeedsAgent(o){
+  if(myAgent.paymentTerm==='prepay' && o.status==='draft' && o.agentPaymentStatus!=='paid') return true;
+  return o.status==='pending_delivery' && o.deliveryMode==='agent_pickup';
+}
+// Coarse buckets, because the question is "roughly when", and a group per
+// day would be as long as the list it is meant to organise.
+function orderPeriodLabel(o){
+  const d = orderDate(o);
+  if(!d) return 'Undated';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dt = new Date(d+'T00:00:00');
+  if(isNaN(dt)) return 'Undated';
+  const days = Math.round((today - dt)/86400000);
+  if(days <= 0) return 'Today';
+  if(days === 1) return 'Yesterday';
+  if(days < 7) return 'Earlier this week';
+  // The year appears only when it is not the current one, so "March" does
+  // not have to be read as "March of some year".
+  return dt.getFullYear() === today.getFullYear()
+    ? dt.toLocaleDateString('en-UG', { month:'long' })
+    : dt.toLocaleDateString('en-UG', { month:'long', year:'numeric' });
+}
+function orderMatchesQuery(o, q){
+  if(!q) return true;
+  const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
+  const hay = [client ? client.name : '', ...(o.items||[]).map(it=>it.productName||'')].join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
 function renderOrderHistoryScreen(){
   const wrap = document.getElementById('ag_orderHistoryListWrap');
-  let orders = myOrders.filter(o=>!o.voided);
-  orders = orders.filter(o=> orderHistorySegment==='ongoing' ? o.status!=='completed' : o.status==='completed');
-  orders = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
-  if(!orders.length){ wrap.innerHTML = `<div class="empty">No ${orderHistorySegment} orders.</div>`; return; }
-  wrap.innerHTML = orders.map(orderRowHTML).join('');
+  const live = myOrders.filter(o=>!o.voided);
+  const inSegment = live.filter(o=> orderHistorySegment==='ongoing' ? o.status!=='completed' : o.status==='completed');
+  // Counts come off the whole segment, not the filtered view -- a tab
+  // labelled "Completed 2" while a search is running would be a lie about
+  // how many completed orders exist.
+  document.getElementById('ag_seg_ongoing_count').textContent = live.filter(o=>o.status!=='completed').length || '';
+  document.getElementById('ag_seg_completed_count').textContent = live.filter(o=>o.status==='completed').length || '';
+
+  const q = document.getElementById('ag_orderSearch').value.trim().toLowerCase();
+  document.getElementById('ag_orderSearch_clear').classList.toggle('show', q.length > 0);
+  const orders = inSegment.filter(o=>orderMatchesQuery(o, q))
+    .sort((a,b)=> String(orderDate(b)||'').localeCompare(String(orderDate(a)||'')));
+
+  if(!orders.length){
+    wrap.innerHTML = `<div class="empty">${q
+      ? `No ${esc(orderHistorySegment)} orders match &ldquo;${esc(q)}&rdquo;.`
+      : `No ${esc(orderHistorySegment)} orders.`}</div>`;
+    return;
+  }
+
+  const groups = new Map();
+  orders.forEach(o=>{
+    const key = orderHistorySegment==='ongoing'
+      ? (orderNeedsAgent(o) ? 'Needs you' : 'With the shop')
+      : orderPeriodLabel(o);
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  });
+  // Completed groups are already in order, because the list they were
+  // built from is sorted by date. Ongoing is not -- what needs the agent
+  // goes first whatever its date.
+  const keys = [...groups.keys()];
+  if(orderHistorySegment==='ongoing'){
+    keys.sort((a,b)=> (a==='Needs you'?0:1) - (b==='Needs you'?0:1));
+  }
+  wrap.innerHTML = keys.map(k=>
+    // The space before the span is load-bearing: the gap separates these
+    // visually, but without it the text node reads "Needs you3" to a screen
+    // reader and to a copy-paste. flex-gap-spacing.test.js caught this.
+    `<div class="ag-hist-group${k==='Needs you'?' needs':''}">${esc(k)} <span class="ag-hist-group-n">${groups.get(k).length}</span></div>`
+    + groups.get(k).map(orderRowHTML).join('')
+  ).join('');
 }
+document.getElementById('ag_orderSearch').addEventListener('input', renderOrderHistoryScreen);
+document.getElementById('ag_orderSearch_clear').addEventListener('click', ()=>{
+  document.getElementById('ag_orderSearch').value = '';
+  renderOrderHistoryScreen();
+});
 document.getElementById('ag_orderHistorySeg').addEventListener('click', (e)=>{
   const btn = e.target.closest('.ag-seg-btn');
   if(!btn) return;
@@ -3110,6 +3261,16 @@ let subScreenReturnTab = 'account';
 function openOrderHistoryScreen(returnTab){
   subScreenReturnTab = returnTab || 'account';
   showOnlyView('ag_orderHistoryListView');
+  // A query left over from the last visit would silently hide most of the
+  // list on this one, with the reason scrolled off the top of the screen.
+  // The segment resets with it: every route into this screen is someone
+  // arriving to see what is happening now, and landing them in Completed
+  // because that is where they finished last time answers a question they
+  // are not asking.
+  document.getElementById('ag_orderSearch').value = '';
+  orderHistorySegment = 'ongoing';
+  document.querySelectorAll('#ag_orderHistorySeg .ag-seg-btn').forEach(b=>
+    b.classList.toggle('active', b.dataset.seg === 'ongoing'));
   renderOrderHistoryScreen();
   // Names arrive after the first paint (a real network call) -- the list
   // shows generic status text immediately, then re-renders with names
@@ -3379,7 +3540,8 @@ document.getElementById('ag_save_solution_btn').addEventListener('click', openSa
 function orderAgainItems(){
   const seen = new Set();
   const out = [];
-  myOrders.filter(o=>!o.voided).slice().sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||'')).forEach(o=>{
+  myOrders.filter(o=>!o.voided).slice()
+    .sort((a,b)=> String(orderDate(b)||'').localeCompare(String(orderDate(a)||''))).forEach(o=>{
     (o.items||[]).forEach(it=>{
       const key = `${it.productId}::${it.variantIdx==null?'':it.variantIdx}`;
       if(seen.has(key)) return;

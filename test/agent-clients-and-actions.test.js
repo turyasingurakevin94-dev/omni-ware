@@ -78,17 +78,19 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 3. what a client row now says --------------------------- */
 {
-  let f = null;
+  let f = null, err = null;
   try { ({ clientStats: f } = compileScope(
+    // orderDate too: the last-order date reads the order's own date now,
+    // not payload.savedAt, which is rewritten on every save.
     [extractFunction(src, 'orderTotal', 'agent.html'), extractFunction(src, 'orderEarnings', 'agent.html'),
-     extractFunction(src, 'clientStats', 'agent.html')],
+     extractFunction(src, 'orderDate', 'agent.html'), extractFunction(src, 'clientStats', 'agent.html')],
     {}, ['clientStats'],
-  )); } catch (e) { /* reported below */ }
-  t.check(typeof f === 'function', 'clientStats compiles');
+  )); } catch (e) { err = e; }
+  t.check(typeof f === 'function', `clientStats compiles${err ? ` (${err.message})` : ''}`);
 
   if (f) {
-    const mk = (status, sell, agentSell, qty, bonus, voided) => ({
-      status, voided: !!voided, savedAt: '2026-07-0' + qty + 'T09:00:00Z',
+    const mk = (status, sell, agentSell, qty, bonus, voided, date) => ({
+      status, voided: !!voided, date: date || null, savedAt: '2026-07-0' + qty + 'T09:00:00Z',
       items: [{ sellPrice: sell, agentSellPrice: agentSell, qty, bonusCommission: bonus }],
     });
     const orders = [
@@ -100,12 +102,40 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     t.check(s.count === 2, `a voided order is not an order this client placed (${s.count} of 3)`);
     t.check(s.spent === 3600, `spend counts the live orders only (${s.spent})`);
     t.check(s.earned === 500, `and earnings apply the completed-only rule the wallet uses (${s.earned})`);
-    t.check(s.lastAt === '2026-07-02T09:00:00Z',
+    t.check(s.lastAt === '2026-07-02',
       'the last-order date is the latest LIVE order, not the voided one that came after');
+
+    // And it is the order's own date, not when the record was last written.
+    // An old order edited today used to make a dormant client look active.
+    const edited = f([mk('completed', 1000, 1200, 1, 0, false, '2026-01-15')]);
+    t.check(edited.lastAt === '2026-01-15',
+      'an order placed in January but saved again in July still last ordered in January');
     const none = f([]);
     t.check(none.count === 0 && none.spent === 0 && none.earned === 0 && none.lastAt === null,
       'a client with no orders produces zeroes, not NaN');
     t.check(f(null).count === 0, 'and a missing list does not throw');
+  }
+
+  // Day granularity. An order carries a date and no time, so measuring in
+  // hours from midnight reported "13 hours ago" for one placed today.
+  {
+    let g = null;
+    try { ({ daysAgoLabel: g } = compileScope([extractFunction(src, 'daysAgoLabel', 'agent.html')], {}, ['daysAgoLabel'])); }
+    catch (e) { /* reported below */ }
+    t.check(typeof g === 'function', 'daysAgoLabel compiles');
+    if (g) {
+      const at = (days) => {
+        const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - days);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+      t.check(g(at(0)) === 'Today', 'an order placed today says Today, not a count of hours since midnight');
+      t.check(g(at(1)) === 'Yesterday', 'and yesterday says Yesterday');
+      t.check(g(at(18)) === '18 days ago', 'within the month it counts days, which is what dormancy is judged on');
+      t.check(g(at(75)) === '3 months ago', 'past that it rounds to months');
+      t.check(g(at(500)) === 'Over a year ago', 'and stops pretending to be precise');
+      t.check(g('') === '' && g(null) === '' && g('not a date') === '', 'a missing or unparseable date renders nothing');
+    }
+    t.check(/esc\(daysAgoLabel\(s\.lastAt\)\)/.test(code), 'and the client row uses it');
   }
 
   t.check(/No orders yet/.test(code), 'a client with no orders says so rather than showing "0 orders"');

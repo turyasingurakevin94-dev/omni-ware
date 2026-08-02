@@ -35,6 +35,33 @@ const t = createReporter('flex gap spacing');
 const FILES = ['index.html', 'agent.html', 'worker.html', 'catalogue.html', 'shared-worker.js'];
 
 // Classes whose rule sets both display:flex (or inline-flex) and a gap.
+// Classes that put a horizontal margin on THEMSELVES.
+//
+// Added after the rule walked past "Ongoing4" on the order-history tabs.
+// The parent was display:flex with no gap; the separation came from a
+// margin-left on the count span instead. Same defect, same invisible-on-
+// screen symptom, different CSS property -- so keying only on the parent's
+// gap was checking one spelling of the mistake.
+//
+// Narrower than it looks: it still requires the `${value}<span>` adjacency,
+// and a span holding only punctuation is still excused. What it adds is a
+// second answer to "is CSS doing separation the text does not have".
+// A 1px margin is optical kerning, not separation: .ag-price-unit sets one
+// so that "4,200/bag" breathes by a hair, and that pair genuinely wants no
+// space. Only a margin big enough to read as a gap counts.
+const MARGIN_READS_AS_A_GAP = 4;
+function marginSeparatedClasses(css) {
+  const out = new Set();
+  for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+    const decl = /(^|[;\s])margin-(left|right):\s*([\d.]+)px/.exec(m[2]);
+    if (!decl || Number(decl[3]) < MARGIN_READS_AS_A_GAP) continue;
+    for (const sel of m[1].split(',')) {
+      for (const cls of sel.matchAll(/\.([A-Za-z][\w-]*)/g)) out.add(cls[1]);
+    }
+  }
+  return out;
+}
+
 function flexGapClasses(css) {
   const out = new Set();
   for (const m of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
@@ -62,8 +89,20 @@ function flexGapClasses(css) {
 //     `${a}<span>/</span>${b}` reads "4,200/3,900", which is correct.
 const LOOKS_LIKE_MARKUP = /icon|svg|html|\bICON_/i;
 const PUNCTUATION_ONLY = /^[\s/|·•,;:.\-–—]*$/;
+// Arrows and the like are decoration, not a unit. A sorted column header
+// renders `${esc(c.label)}<span class="sort-arrow">${dir===1?'▲':'▼'}</span>`
+// -- the span interpolates, so the punctuation test above never sees the
+// glyph, and every sorted table in the admin got reported. (Its real defect
+// is a missing aria-hidden, which is a different rule than this one.)
+const DECORATION_ONLY = /^[\s/|·•,;:.\-–—▲▼◀▶←→↑↓✓✗×]*$/;
+// Everything the span will actually render as text: the parts outside any
+// interpolation, plus the string literals inside them.
+function spanLiteralText(spanInner) {
+  const literals = [...spanInner.matchAll(/'([^']*)'|"([^"]*)"/g)].map(m => m[1] ?? m[2]).join('');
+  return literals + spanInner.replace(/\$\{[^}]*\}/g, '');
+}
 
-function unspacedUnits(src, flexClasses) {
+function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
   const hits = [];
   // The `<span` does not always sit directly against the value's closing
   // brace. The worker card wraps it in a conditional that opens its own
@@ -81,25 +120,37 @@ function unspacedUnits(src, flexClasses) {
   // Either way there is no whitespace anywhere between the value and the
   // span, which is the whole point. So: the value, then any run of further
   // interpolations, then the span.
-  const re = /class="([^"]*)"[^>]*>\$\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}(?:\$\{[^{}]*\}|\$\{[^`{}]*`)*<span\b[^>]*>([\s\S]{0,60}?)<\/span>/g;
+  const re = /class="([^"]*)"[^>]*>\$\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}(?:\$\{[^{}]*\}|\$\{[^`{}]*`)*<span\b([^>]*)>([\s\S]{0,60}?)<\/span>/g;
   for (const m of src.matchAll(re)) {
-    const [, classAttr, interpolation, spanInner] = m;
+    const [, classAttr, interpolation, spanAttrs, spanInner] = m;
     // A class attribute is often part-interpolated:
     //   class="cat-chip${c.name===activeCategory?' on':''}"
     // Splitting that on whitespace yields "cat-chip${c.name===activeCategory?'"
     // and never matches anything. Interpolations become separators.
+    const classes = (attr) => (attr.match(/class="([^"]*)"/) || ['', ''])[1]
+      .replace(/\$\{[^}]*\}/g, ' ').split(/\s+/).filter(Boolean);
     const parent = classAttr
       .replace(/\$\{[^}]*\}/g, ' ')
       .split(/\s+/).filter(Boolean)
       .find(c => flexClasses.has(c));
-    if (!parent) continue;
+    // Either the parent's gap or the span's own margin is doing the
+    // separating. Both leave the text node with nothing between the value
+    // and its unit.
+    const margined = classes(spanAttrs).find(c => marginClasses.has(c));
+    if (!parent && !margined) continue;
     if (LOOKS_LIKE_MARKUP.test(interpolation)) continue;
     // A span that interpolates something is carrying a value, so it is a
     // unit and not a separator. Only a span whose entire content is
     // literal punctuation gets excused.
     const carriesAValue = /\$\{/.test(spanInner);
     if (!carriesAValue && PUNCTUATION_ONLY.test(spanInner)) continue;
-    hits.push({ parent, snippet: src.slice(m.index, m.index + 90).replace(/\s+/g, ' ') });
+    // An interpolating span whose every literal character is decoration is
+    // a separator too. Guarded on there BEING literal characters -- `${n}`
+    // has none, and a vacuous "all of nothing is punctuation" would excuse
+    // exactly the bare-count case this rule exists for.
+    const literal = spanLiteralText(spanInner);
+    if (carriesAValue && literal.trim() && DECORATION_ONLY.test(literal)) continue;
+    hits.push({ parent: parent || margined, snippet: src.slice(m.index, m.index + 90).replace(/\s+/g, ' ') });
   }
 
   return hits;
@@ -185,15 +236,66 @@ function unspacedUnits(src, flexClasses) {
   t.check(nested.length === 1, 'an interpolation containing braces is still seen');
 }
 
+/* ---------- 2b. the margin spelling of the same mistake -------------- */
+/*
+ * "Ongoing4" on the order-history tabs, as it shipped into the working
+ * file. The parent was display:flex with NO gap; a margin-left on the count
+ * span did the separating instead, so the gap-only rule walked straight
+ * past it.
+ */
+{
+  const CSS = '.ag-seg-btn{display:flex;align-items:center;justify-content:center;}'
+    + '.ag-seg-count{margin-left:6px;font-size:11.5px;}';
+  const flex = flexGapClasses(CSS);
+  const margins = marginSeparatedClasses(CSS);
+  const shipped = '<button class="ag-seg-btn" data-seg="ongoing">${label}<span class="ag-seg-count">${n}</span></button>';
+
+  t.check(flex.size === 0, 'the parent has no gap, so the original rule had nothing to key on');
+  t.check(unspacedUnits(shipped, flex).length === 0, 'and indeed it caught nothing');
+  t.check(unspacedUnits(shipped, flex, margins).length === 1,
+    'the margin signal catches it');
+  t.check(unspacedUnits(shipped.replace('<span', ' <span'), flex, margins).length === 0,
+    'and clears once the space is added');
+
+  // Still no wolf-crying: a margin does not make punctuation a unit, and a
+  // span with no margin of its own is left alone.
+  t.check(unspacedUnits('<div class="x">${a}<span class="ag-seg-count">/</span>${b}</div>', flex, margins).length === 0,
+    'a punctuation-only span is still a separator, margin or not');
+  t.check(unspacedUnits('<div class="x">${a}<span class="plain">u</span></div>', flex, margins).length === 0,
+    'and a span with no margin of its own is not this bug');
+  t.check(unspacedUnits('<div class="x">${a}<span class="zero">u</span></div>',
+    flex, marginSeparatedClasses('.zero{margin-left:0;}')).length === 0,
+    'nor is a zero margin, which separates nothing');
+
+  // The two real false positives the margin signal produced on its first
+  // run, both from the shipped files. Kept as cases because each cost a
+  // round to diagnose and either would have made the rule not worth having.
+  const kerning = marginSeparatedClasses('.ag-price-unit{font-size:12px;margin-left:1px;}');
+  t.check(kerning.size === 0,
+    'a 1px margin is kerning, not a gap -- "UGX 4,200/bag" wants no space and must not be reported');
+  t.check(unspacedUnits('<div class="ag-tl-price">${fmtUGX(row.price)}<span class="ag-price-unit">/${esc(row.priceUnit)}</span></div>',
+    flex, kerning).length === 0, 'so the price/unit pair passes');
+
+  const arrows = marginSeparatedClasses('.sort-arrow{margin-left:4px;font-size:9px;}');
+  t.check(arrows.has('sort-arrow'), 'a 4px margin does count as a gap');
+  t.check(unspacedUnits('<th class="sortable" data-key="${c.key}">${esc(c.label)}<span class="sort-arrow">${sort.dir===1?\'▲\':\'▼\'}</span></th>',
+    flex, arrows).length === 0,
+    'but a span whose only literals are arrows is decoration, not a unit -- every sorted admin table was being reported');
+  t.check(unspacedUnits('<div class="x">${label}<span class="sort-arrow">${n}</span></div>', flex, arrows).length === 1,
+    'while the same span carrying a bare number is still caught, so the decoration excuse is not a hole');
+}
+
 /* ---------- 3. the apps are clean ------------------------------------ */
 {
   const css = FILES.map(f => read(f)).join('\n');
   const flexClasses = flexGapClasses(css);
+  const marginClasses = marginSeparatedClasses(css);
   t.check(flexClasses.size > 10, `the stylesheets yield flex-gap classes to check against (${flexClasses.size})`);
+  t.check(marginClasses.size > 10, `and margin-separated ones (${marginClasses.size})`);
 
   let total = 0;
   FILES.forEach(f => {
-    const hits = unspacedUnits(read(f), flexClasses);
+    const hits = unspacedUnits(read(f), flexClasses, marginClasses);
     total += hits.length;
     t.check(hits.length === 0,
       hits.length
