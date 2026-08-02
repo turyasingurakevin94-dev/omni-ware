@@ -36,9 +36,17 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and no amount rides along with them');
 
   // The row builder may only read those three fields.
-  const rowFn = /const row = \(a\)=>[\s\S]*?\n  \};/.exec(code) || /const row = \(a\)=>[\s\S]*?<\/li>`;/.exec(code);
+  //
+  // Bounded at the </li> that actually ends it. The first version of this
+  // also allowed "up to the next `\n  };`" as a fallback, and since the
+  // builder does not end that way, that alternative ran on through
+  // unrelated code until it hit one -- eventually swallowing an fmtUGX
+  // belonging to a different function and reporting a leak that was not
+  // there. A regex that can match past its subject is not a check.
+  const rowFn = /const row = \(a\)=>[\s\S]*?<\/li>`;/.exec(code);
   const rowSrc = rowFn ? rowFn[0] : '';
-  t.check(rowSrc.length > 0, 'the row builder is found');
+  t.check(rowSrc.length > 0 && rowSrc.length < 400,
+    `the row builder is found, and only the row builder (${rowSrc.length} chars)`);
   t.check(!/amount|fmtUGX|completedOrders/.test(rowSrc),
     'a leaderboard row renders no money at all');
 }
