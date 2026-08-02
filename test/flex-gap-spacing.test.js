@@ -176,6 +176,24 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
  * So this covers the interpolation form only. Catching the literal form
  * needs a real DOM parse of the rendered output rather than a text scan,
  * which is a different tool than this suite currently has.
+ *
+ * SECOND KNOWN GAP: the value inside a span of its own.
+ *
+ *   <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel
+ *     ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+ *
+ * which reads "Roofing sheetGauge 30" on the quotation a customer is
+ * handed, separated only by a 6px margin-left. The pattern below steps
+ * over interpolations sitting between the value and the span, but not over
+ * a closing tag, so it walks past this one.
+ *
+ * Widening it to step over `</\w+>` would also make it match two adjacent
+ * sibling spans -- which section 2 currently excuses on the grounds that
+ * they are "already separate text nodes". That excuse is wrong (textContent
+ * concatenates them identically), but reversing it is a judgement about
+ * four files' worth of markup rather than a regex tweak, and this rule has
+ * already cost two rounds of false positives. Recorded rather than guessed
+ * at, and the two live instances are pinned in section 4 instead.
  */
 
 /* ---------- 1. the rule catches the three real cases ----------------- */
@@ -303,6 +321,35 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
         : `${f} separates every value from its unit`);
   });
   t.check(total === 0, `no unspaced value/unit pair anywhere (${total})`);
+}
+
+/* ---------- 4. the two the rule cannot see, pinned by hand ----------- */
+/*
+ * Both quote tables put a product name in one span and its variant in the
+ * next, separated by .ag-grid-variant's 6px margin-left and nothing else,
+ * so the text read "Roofing sheetGauge 30" -- on the agent's editing view
+ * and on the receipt a customer is shown and can download.
+ *
+ * The sweep above cannot reach this shape (see SECOND KNOWN GAP), so it is
+ * asserted directly against the two call sites. Checked as markup rather
+ * than behaviour because there is no DOM here; the rendered output was
+ * verified in the browser.
+ */
+{
+  const agent = read('agent.html');
+  const hits = [...agent.matchAll(/<span class="ag-receipt-name">\$\{esc\(it\.name\)\}<\/span>\$\{it\.variantLabel \? (.)/g)]
+    .map(m => m[1]);
+  t.check(hits.length === 2, `both receipt tables are found (${hits.length})`);
+  t.check(hits.every(c => c === '`'), 'each opens its conditional with a template literal, as expected');
+
+  const spaced = [...agent.matchAll(/<\/span>\$\{it\.variantLabel \? ` <span class="ag-grid-variant">/g)].length;
+  t.check(spaced === 2,
+    `both put a real space between the product name and its variant (${spaced} of ${hits.length})`);
+
+  // And the margin that hid it is still there, which is why the space has
+  // to be: remove the margin and this would be a different conversation.
+  t.check(/\.ag-receipt-table \.ag-grid-variant\{[^}]*margin:0 0 0 6px/.test(agent),
+    'the variant is still separated visually by a margin, with nothing in the text to match it');
 }
 
 process.exit(t.done() ? 1 : 0);
