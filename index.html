@@ -11314,20 +11314,41 @@ function addStockLot(productId, variantIdx, qty, cost){
   if(!data.stockLots[key]) data.stockLots[key] = [];
   data.stockLots[key].push({qty, cost: (cost==null || cost==='' || isNaN(cost)) ? null : Number(cost)});
 }
+// Returns the lots it actually took, oldest first, so a reversal can put
+// those same units back at those same costs. Without that record the only
+// thing a reversal knows is a quantity, and the cost the shop paid is gone.
 function consumeStockLots(productId, variantIdx, qty){
-  if(qty<=0) return;
+  if(qty<=0) return [];
   if(!data.stockLots) data.stockLots = {};
   const key = stockKey(productId, variantIdx);
   const lots = data.stockLots[key] || [];
+  const taken = [];
   let remaining = qty;
   while(remaining>0 && lots.length>0){
     const lot = lots[0];
     const take = Math.min(lot.qty, remaining);
+    taken.push({qty: take, cost: lot.cost});
     lot.qty -= take;
     remaining -= take;
     if(lot.qty<=0) lots.shift();
   }
   data.stockLots[key] = lots;
+  return taken;
+}
+// Puts consumed lots back where they came from: at the FRONT, in their
+// original order. They were taken off the front, so that is where they
+// belong -- appending them would leave newer stock costing out ahead of
+// older, which is the opposite of the FIFO rule the rest of this follows.
+function restoreStockLots(productId, variantIdx, lots){
+  if(!Array.isArray(lots) || !lots.length) return false;
+  if(!data.stockLots) data.stockLots = {};
+  const key = stockKey(productId, variantIdx);
+  const clean = lots
+    .map(l=>({qty: Number(l && l.qty)||0, cost: (l && l.cost!=null && !isNaN(l.cost)) ? Number(l.cost) : null}))
+    .filter(l=>l.qty>0);
+  if(!clean.length) return false;
+  data.stockLots[key] = clean.concat(data.stockLots[key] || []);
+  return true;
 }
 // FIFO unit cost of the stock currently on hand: the cost of the oldest
 // remaining lot that has a known cost (lots added without a price, e.g. via
@@ -11342,14 +11363,31 @@ function getFIFOUnitCost(productId, variantIdx){
 // zero) and records it in the movement log. Also keeps the FIFO cost lots in
 // sync: increases add a new lot (with a cost if one is known), decreases
 // consume from the oldest lots first. Returns the resulting quantity.
-function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplierId){
+// opts carries the two halves of a reversal:
+//   onConsumed(lots)  -- a decrease reports the lots it took, so the caller
+//                        can remember them against whatever caused it
+//   restoreLots       -- an increase puts those exact lots back instead of
+//                        pushing a fresh one
+// Omitting both keeps the original behaviour, which is what a plain
+// restock or a stock-count correction wants.
+function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplierId, opts){
   const key = stockKey(productId, variantIdx);
   const before = Number(data.stock[key]) || 0;
   const after = Math.max(0, before + delta);
   data.stock[key] = after;
   const actualChange = after - before;
-  if(actualChange>0) addStockLot(productId, variantIdx, actualChange, cost);
-  else if(actualChange<0) consumeStockLots(productId, variantIdx, -actualChange);
+  if(actualChange>0){
+    // restoreStockLots reports false when it was given nothing usable --
+    // an order invoiced before lots were recorded has no list to restore,
+    // and must still fall back to adding a plain lot rather than silently
+    // returning stock with no lot behind it at all.
+    if(!(opts && restoreStockLots(productId, variantIdx, opts.restoreLots))){
+      addStockLot(productId, variantIdx, actualChange, cost);
+    }
+  } else if(actualChange<0){
+    const taken = consumeStockLots(productId, variantIdx, -actualChange);
+    if(opts && typeof opts.onConsumed === 'function') opts.onConsumed(taken);
+  }
   const product = data.products.find(p=>p.id===productId);
   const label = product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId;
   data.stockLog.push({
@@ -11374,15 +11412,23 @@ function applyQuoteStockDeduction(q){
     const take = Math.min(have, want);
     if(take < want) shortfall = true;
     it._stockTaken = take;
-    if(take>0) applyStockDelta(it.productId, it.variantIdx, -take, 'sale', `Quote for ${q.client.name || 'Unnamed client'}`);
+    // The lots as well as the quantity. Un-invoicing used to add the units
+    // back as one fresh lot with no cost on it, so a sale that cleared an
+    // item's last stock and was then un-invoiced left the shop holding
+    // goods it no longer knew the price of -- getFIFOUnitCost went null and
+    // every margin figure downstream lost its cost side.
+    if(take>0) applyStockDelta(it.productId, it.variantIdx, -take, 'sale', `Quote for ${q.client.name || 'Unnamed client'}`,
+      null, null, { onConsumed: lots => { it._stockLots = lots; } });
   });
   return shortfall;
 }
 function reverseQuoteStockDeduction(q){
   q.items.forEach(it=>{
     if(it.supplierId!=='__stock__' || !it._stockTaken) return;
-    applyStockDelta(it.productId, it.variantIdx, it._stockTaken, 'reversal', 'Reversed — quote un-invoiced');
+    applyStockDelta(it.productId, it.variantIdx, it._stockTaken, 'reversal', 'Reversed — quote un-invoiced',
+      null, null, { restoreLots: it._stockLots });
     delete it._stockTaken;
+    delete it._stockLots;
   });
 }
 

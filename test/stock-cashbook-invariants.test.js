@@ -66,7 +66,10 @@ const env = {
 };
 
 const NAMES = [
-  'stockKey', 'addStockLot', 'consumeStockLots', 'getFIFOUnitCost',
+  // restoreStockLots is applyStockDelta's other half now: a reversal puts
+  // the lots a sale consumed back at the front, instead of adding one
+  // fresh lot with no cost on the back. See admin-stock-lots.test.js.
+  'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
   'applyStockDelta', 'getStockQty',
   'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
   'addCashReceipt', 'addCashPayment', 'removeCashTxnsByIds',
