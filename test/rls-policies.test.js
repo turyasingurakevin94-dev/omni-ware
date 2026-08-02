@@ -108,6 +108,33 @@ const sql = files.map((f) => fs.readFileSync(path.join(MIG, f), 'utf8')).join('\
     `no for-all agent policy survives on saved_quotes (${forAll} created, ${stillLive} net)`);
 }
 
+/* ---------- 4b. an agent cannot edit their own trust settings --------- */
+/*
+ * agents carries a for-all policy for ADMINS and a select-only one for the
+ * agent themselves. There is deliberately no update policy for the agent:
+ * payment_term is what decides whether their orders can be prepared before
+ * they have paid, so an agent able to write it could flip themselves to
+ * postpay and order on credit indefinitely.
+ *
+ * Verified live -- an update comes back 0 rows while the same session
+ * updates agent_clients fine -- but nothing in the schema states it, since
+ * it is the ABSENCE of a policy. This is what would notice one appearing.
+ */
+{
+  const onAgents = [...sql.matchAll(/create policy "([^"]+)" on agents\s+for (all|select|insert|update|delete)/g)]
+    .map((m) => ({ name: m[1], cmd: m[2] }));
+  const dropped = new Set([...sql.matchAll(/drop policy (?:if exists )?"([^"]+)" on agents/g)].map((m) => m[1]));
+  const live = onAgents.filter((p) => !dropped.has(p.name));
+
+  const writable = live.filter((p) => p.cmd === 'all' || p.cmd === 'update' || p.cmd === 'insert');
+  t.check(writable.length > 0 && writable.every((p) => /admin/i.test(p.name)),
+    writable.length
+      ? `only admins may write to agents (${writable.map((p) => `${p.name}[${p.cmd}]`).join(', ')})`
+      : 'expected at least an admin write policy on agents');
+  t.check(live.some((p) => p.cmd === 'select' && /agent views own row/.test(p.name)),
+    'an agent can still read their own row, which is how the app shows them their payment term');
+}
+
 /* ---------- 5. agents are not shop members ---------------------------- */
 /*
  * The whole agent model rests on this. shop_members carries a blanket
