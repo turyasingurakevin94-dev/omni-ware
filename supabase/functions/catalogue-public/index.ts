@@ -71,11 +71,17 @@ Deno.serve(async (req) => {
       const items = (products || []).flatMap((p: any) => {
         const variantCount = Array.isArray(p.variants) ? p.variants.length : 0;
         if (variantCount === 0) return [{ productId: p.id, variantIdx: null, name: p.name, image: p.image || null, category: p.category || "" }];
+        // v.image, not p.image. The admin stores a photo per variant and
+        // this read sent the parent product's for every one of them, so a
+        // customer browsing colours or finishes saw the same picture
+        // repeated -- or, where the photos live only on the variants,
+        // nothing at all. Falls back to the product's, so a variant with
+        // no photo of its own is still illustrated.
         return p.variants.map((v: any, i: number) => ({
           productId: p.id, variantIdx: i,
           name: p.name,
           variantLabel: Object.values(v.combo || {}).join(" / "),
-          image: p.image || null, category: p.category || "",
+          image: v.image || p.image || null, category: p.category || "",
         }));
       });
 

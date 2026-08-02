@@ -42,6 +42,24 @@ function json(body: unknown, status = 200) {
 type MarkupKind = "wholesale" | "retail";
 type MarkupRule = { type: string; value: number } | null;
 
+// The photo for one row of the catalogue.
+//
+// A variant carries its own image: the admin has written
+// {sku, combo, image} into products.variants since variants existed, shows
+// a per-variant preview while editing, and deletes those files with the
+// product. Every read path here ignored it and sent products.image for
+// every row -- so a variable product showed one picture repeated across
+// all its variants, and a product whose photos live only on the variants
+// (the normal case for colours and finishes) showed the placeholder on
+// every one of them.
+//
+// Falls back to the product's image, so a variant without its own photo is
+// still illustrated rather than blank.
+function itemImage(product: any, variantIdx: number | null): string | null {
+  const v = variantIdx != null && Array.isArray(product?.variants) ? product.variants[variantIdx] : null;
+  return (v && v.image) || product?.image || null;
+}
+
 function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind): MarkupRule {
   if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
     const v = product.variants[variantIdx];
@@ -346,7 +364,7 @@ Deno.serve(async (req) => {
             variantLabel,
             category: p.category,
             subcategory: p.subcategory,
-            image: p.image,
+            image: itemImage(p, variantIdx),
             createdAt: p.created_at,
             available: !!priced,
             floorPrice: priced?.floorPrice ?? null,
@@ -421,7 +439,7 @@ Deno.serve(async (req) => {
           variantIdx,
           name: p?.name || "Item",
           variantLabel,
-          image: p?.image || null,
+          image: itemImage(p, variantIdx),
           category: p?.category || "",
           bonusType: pr.bonus_type,
           bonusValue: Number(pr.bonus_value),
