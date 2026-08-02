@@ -35,7 +35,27 @@ function read(rel) {
 function extractFunction(src, name, where) {
   const m = new RegExp('(?:async\\s+)?function\\s+' + name + '\\s*\\(').exec(src);
   if (!m) throw new Error(`could not find ${name}() in ${where}`);
-  const open = src.indexOf('{', m.index);
+
+  // Find the brace that opens the BODY, not simply the first one after the
+  // name. A TypeScript return annotation can carry braces of its own --
+  // `): Promise<{ user: any; error: any }> {` -- and taking the first `{`
+  // lands inside that type, so the extract ends at the type's closing brace
+  // and nothing downstream can parse what comes back.
+  const lparen = src.indexOf('(', m.index);
+  let pdepth = 0, rparen = -1;
+  for (let i = lparen; i < src.length; i++) {
+    if (src[i] === '(') pdepth++;
+    else if (src[i] === ')' && --pdepth === 0) { rparen = i; break; }
+  }
+  if (rparen < 0) throw new Error(`unbalanced parentheses in ${name}() in ${where}`);
+
+  let angle = 0, open = -1;
+  for (let i = rparen + 1; i < src.length; i++) {
+    const c = src[i];
+    if (c === '<') angle++;
+    else if (c === '>') { if (angle > 0) angle--; }
+    else if (c === '{' && angle === 0) { open = i; break; }
+  }
   if (open < 0) throw new Error(`no body for ${name}() in ${where}`);
   let depth = 0;
   for (let i = open; i < src.length; i++) {
@@ -75,7 +95,11 @@ function extractDeclaration(src, name, where) {
 // targets always is, so a match can no longer span statements.
 function stripTypes(src) {
   return src
-    .replace(/\)\s*:\s*[^{\n]+\{/, ') {')
+    // Return annotation. Anchored to the brace that ends the line rather
+    // than the first one seen, or a type that contains braces of its own
+    // (`: Promise<{ user: any }>`) chops the signature in half and leaves
+    // the remainder as a stray block.
+    .replace(/\)\s*:\s*[^\n]+?\s*\{\s*$/m, ') {')
     .replace(/\(\s*([A-Za-z_$][\w$]*)\s*:\s*[^),\n]+\)\s*=>/g, '($1) =>')
     .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)])/g, '$1$2')
     .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]|.]*/g, '');

@@ -34,6 +34,30 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// listUsers() is paginated, and calling it bare reads only the first page --
+// the client sends no page size, so the server picks one. The old fallback
+// searched that single page and gave up, so once this project had more auth
+// users than fit on it, re-inviting an address that already existed failed
+// with "invite_no_existing_match" while the user sat on page two. It fails
+// for the exact people most likely to be re-invited: long-standing ones.
+//
+// MAX_PAGES is a bound, not an expectation -- it stops a malformed response
+// spinning here forever. The same helper is in invite-agent.
+const LIST_PER_PAGE = 200;
+const LIST_MAX_PAGES = 50;
+async function findUserByEmail(admin: any, email: string): Promise<{ user: any; error: any }> {
+  const want = String(email || "").toLowerCase();
+  for (let page = 1; page <= LIST_MAX_PAGES; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: LIST_PER_PAGE });
+    if (error) return { user: null, error };
+    const users = (data && data.users) || [];
+    const hit = users.find((u: any) => (u.email || "").toLowerCase() === want);
+    if (hit) return { user: hit, error: null };
+    if (users.length < LIST_PER_PAGE) return { user: null, error: null }; // last page
+  }
+  return { user: null, error: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -55,7 +79,9 @@ Deno.serve(async (req) => {
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
-    console.log("invite-worker: parsed body", { shopId, staffId, email });
+    // The invitee's address is personal data and these logs are retained;
+    // enough to trace a failed invite, not the whole address.
+    console.log("invite-worker: parsed body", { shopId, staffId, emailDomain: String(email || "").split("@")[1] || null });
     if (!shopId || !staffId || !email) {
       return json({ error: "shopId, staffId and email are required" }, 400);
     }
@@ -102,10 +128,9 @@ Deno.serve(async (req) => {
       inviteErr: inviteErr ? { message: inviteErr.message, status: inviteErr.status, name: inviteErr.name } : null,
     });
     if (inviteErr) {
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers();
-      console.log("invite-worker: listUsers fallback", { count: list?.users?.length, listErr });
+      const { user: existing, error: listErr } = await findUserByEmail(admin, email);
+      console.log("invite-worker: existing-user lookup", { found: !!existing, listErr });
       if (listErr) return json({ error: inviteErr.message, stage: "invite_and_list_fallback" }, 500);
-      const existing = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
       if (!existing) return json({ error: inviteErr.message, stage: "invite_no_existing_match" }, 500);
       userId = existing.id;
     } else {

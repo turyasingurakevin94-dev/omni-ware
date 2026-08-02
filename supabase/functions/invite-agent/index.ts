@@ -34,6 +34,24 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// See the matching note in invite-worker: listUsers() is paginated and a
+// bare call reads one page, so re-inviting an address that already existed
+// failed once the project outgrew that page. Kept identical to that copy.
+const LIST_PER_PAGE = 200;
+const LIST_MAX_PAGES = 50;
+async function findUserByEmail(admin: any, email: string): Promise<{ user: any; error: any }> {
+  const want = String(email || "").toLowerCase();
+  for (let page = 1; page <= LIST_MAX_PAGES; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: LIST_PER_PAGE });
+    if (error) return { user: null, error };
+    const users = (data && data.users) || [];
+    const hit = users.find((u: any) => (u.email || "").toLowerCase() === want);
+    if (hit) return { user: hit, error: null };
+    if (users.length < LIST_PER_PAGE) return { user: null, error: null }; // last page
+  }
+  return { user: null, error: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -85,9 +103,8 @@ Deno.serve(async (req) => {
       redirectTo: AGENT_APP_URL,
     });
     if (inviteErr) {
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers();
+      const { user: existing, error: listErr } = await findUserByEmail(admin, email);
       if (listErr) return json({ error: inviteErr.message, stage: "invite_and_list_fallback" }, 500);
-      const existing = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
       if (!existing) return json({ error: inviteErr.message, stage: "invite_no_existing_match" }, 500);
       userId = existing.id;
     } else {
