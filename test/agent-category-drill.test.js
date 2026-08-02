@@ -57,8 +57,15 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   // the same thing twice and makes the header the longest line on screen.
   t.check(!/ag-crumb-sub/.test(code),
     'and does not repeat the subcategory, which its own chip already shows');
-  t.check(/class="ag-crumb-n">\$\{groups\.length\} item\$\{groups\.length===1\?'':'s'\}/.test(code),
-    'and how many items are in it');
+  // How many are in the CATEGORY -- not how many survived the subcategory
+  // chip and the search box as well. It counted groups.length, the fully
+  // filtered set, and printed it under the category's name: "Building 0
+  // items" while Building held three, "Furniture 1 item" while standing in
+  // Furniture > Runners. The lit chip is what says you have narrowed.
+  t.check(/class="ag-crumb-n">\$\{catCount\} item\$\{catCount===1\?'':'s'\}/.test(code),
+    'and how many items are in the category it names');
+  t.check(/const catCount = inCategory\s*\n?\s*\? groupCatalogItems\(catalog\.filter\(it=>itemCategory\(it\)===browseCategoryFilter\)\)\.length/.test(code),
+    'counted through itemCategory and grouped, so it agrees with the tile that was tapped to get here');
 
   // The count moved, so it must not also remain on the title.
   t.check(/\(discovery \|\| inCategory\)\s*\?\s*''\s*:\s*`Results/.test(code),
@@ -212,6 +219,44 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const searching = view(null, null, 'nails', 'all');
   t.check(!searching.shelves && searching.strip && !searching.crumb,
     'a search is not a category -- the shelves go, but the strip stays and no section header appears');
+}
+
+/* ---------- 9. a search leaves the aisle ---------------------------- */
+/*
+ * The search box lives in the hero, at the very top of the screen and
+ * outside the category section entirely, so it reads as searching the
+ * catalogue. It did not: it ANDed itself with whatever category was open,
+ * invisibly. Typing "hinge" inside Building > Cement found nothing and
+ * reported "Nothing in Cement yet" -- which was false, Cement held two
+ * products, and the identical search from the hub found the hinge at once.
+ *
+ * So a query now clears the category, and the two states cannot co-occur.
+ */
+{
+  t.check(/if\(document\.getElementById\('ag_browse_search'\)\.value\.trim\(\) && browseCategoryFilter\)\{\s*browseCategoryFilter = null;\s*browseSubcategoryFilter = null;\s*renderSubcategoryChips\(\);/.test(code),
+    'typing a search drops the category and the subcategory with it');
+
+  // The message must not depend on that staying true.
+  t.check(/const searching = document\.getElementById\('ag_browse_search'\)\.value\.trim\(\);/.test(code),
+    'and the empty state asks whether a search is running BEFORE it blames the aisle');
+  const emptyBlock = (/if\(!groups\.length\)\{[\s\S]*?return;\s*\}/.exec(code) || [''])[0];
+  t.check(emptyBlock.indexOf('No products match that search') < emptyBlock.indexOf('Nothing in'),
+    'so a fruitless search can never report the category as empty');
+
+  // The three states, as plain logic.
+  const view = (cat, q) => {
+    const catAfter = q ? null : cat;
+    return { cat: catAfter, crumb: !!catAfter, strip: !catAfter, scope: catAfter ? 'aisle' : 'everything' };
+  };
+  t.check(view('Building', 'hinge').scope === 'everything',
+    'a search from inside an aisle searches everything');
+  t.check(view('Building', 'hinge').crumb === false && view('Building', 'hinge').strip === true,
+    'and the screen returns to looking like a search, not like an aisle');
+  t.check(view('Building', '').scope === 'aisle', 'while no query leaves you where you were');
+
+  // The placeholder that used to flash before the first render.
+  t.check(/<div class="ag-section-title" id="ag_gridTitle"><\/div>/.test(src),
+    'the grid title starts empty -- it read "All products", a list this screen no longer has');
 }
 
 /* ---------- 9. a product card opens the product ---------------------- */

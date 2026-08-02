@@ -1008,7 +1008,10 @@
         <div class="ag-scroll-row" id="ag_volumeRow"></div>
       </div>
 
-      <div class="ag-section-title" id="ag_gridTitle">All products</div>
+      <!-- Filled by renderBrowseGrid, and only while a search is running.
+           It read "All products" here, which is a list this screen no
+           longer has -- it flashed on the way in and then emptied. -->
+      <div class="ag-section-title" id="ag_gridTitle"></div>
       <div class="ag-browse-grid" id="ag_browseGrid"></div>
     </div>
   </div>
@@ -4102,6 +4105,17 @@ function renderBrowseGrid(){
   document.getElementById('ag_catStripWrap').style.display = inCategory ? 'none' : '';
   document.getElementById('ag_browseChips').style.display = inCategory ? 'none' : '';
   const crumb = document.getElementById('ag_catCrumb');
+  // The crumb names the CATEGORY, so its count is the category's own --
+  // counted the same way the tiles are, through itemCategory, so Other
+  // agrees with its tile. It used to show groups.length, which is whatever
+  // survived the subcategory chip and the search as well: "Building 0
+  // items" while Building held three, and "Furniture 1 item" while
+  // standing in Furniture > Runners. The lit chip is what says you have
+  // narrowed; the crumb should not silently restate the narrowing as the
+  // size of the aisle.
+  const catCount = inCategory
+    ? groupCatalogItems(catalog.filter(it=>itemCategory(it)===browseCategoryFilter)).length
+    : 0;
   if(inCategory){
     // The subcategory is NOT repeated here. Its chip is already sitting
     // highlighted directly below, so "Furniture / Cabinet hinges" above a
@@ -4111,7 +4125,7 @@ function renderBrowseGrid(){
         <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <span class="ag-crumb-here">${esc(browseCategoryFilter)}</span>
-      <span class="ag-crumb-n">${groups.length} item${groups.length===1?'':'s'}</span>`;
+      <span class="ag-crumb-n">${catCount} item${catCount===1?'':'s'}</span>`;
     crumb.style.display = 'flex';
     document.getElementById('ag_catBack').addEventListener('click', ()=>{
       browseCategoryFilter = null;
@@ -4142,9 +4156,15 @@ function renderBrowseGrid(){
   // an agent comes back to Sell.
   if(discovery){ grid.innerHTML = ''; return; }
   if(!groups.length){
-    grid.innerHTML = browseCategoryFilter
-      ? `<div class="empty" style="grid-column:1/-1;">Nothing in ${esc(browseSubcategoryFilter || browseCategoryFilter)} yet.</div>`
-      : `<div class="empty" style="grid-column:1/-1;">No products match that search. Try a category instead.</div>`;
+    // The query is checked FIRST. Keying on the category meant a search
+    // that found nothing reported the aisle as empty -- "Nothing in Cement
+    // yet" when Cement held two products and the search was what had
+    // emptied it. A search now clears the category so the two cannot
+    // co-occur, but the message must not depend on that staying true.
+    const searching = document.getElementById('ag_browse_search').value.trim();
+    grid.innerHTML = searching
+      ? `<div class="empty" style="grid-column:1/-1;">No products match that search. Try a category instead.</div>`
+      : `<div class="empty" style="grid-column:1/-1;">Nothing in ${esc(browseSubcategoryFilter || browseCategoryFilter)} yet.</div>`;
     return;
   }
   grid.innerHTML = groups.map(g=>browseGroupCardHTML(g, promoted)).join('');
@@ -4308,6 +4328,19 @@ function updateSearchClearBtn(){
   document.getElementById('ag_browse_search_clear').classList.toggle('show', hasQuery);
 }
 document.getElementById('ag_browse_search').addEventListener('input', ()=>{
+  // A search leaves whatever aisle you were in and looks at everything.
+  //
+  // It used to AND itself with the category, invisibly: the box lives in
+  // the hero at the very top of the screen, outside the category section
+  // entirely, so it reads as searching the catalogue -- but typing "hinge"
+  // inside Building/Cement found nothing and said "Nothing in Cement yet",
+  // which was not true. Cement had two products. The search had emptied it,
+  // and the identical search from the hub found the hinge at once.
+  if(document.getElementById('ag_browse_search').value.trim() && browseCategoryFilter){
+    browseCategoryFilter = null;
+    browseSubcategoryFilter = null;
+    renderSubcategoryChips();
+  }
   updateHeroCompact();
   updateSearchClearBtn();
   renderBrowseGrid();
