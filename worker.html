@@ -540,7 +540,13 @@ async function saveData(){
     }
 
     const ops = [];
-    addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
+    // This app has no way to remove an order -- nothing here ever takes one
+    // out of data.savedQuotes -- so a delete could only ever come from `data`
+    // and `lastSynced` drifting apart, and it would take the shop's whole
+    // order history with it. Three places assign the two together in the
+    // right order to prevent exactly that (boot, the background refresh, a
+    // notification tap); this makes a fourth getting it wrong survivable.
+    addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes, {neverDelete:true});
     if(!ops.length) return;
 
     const results = await Promise.all(ops.map(op=> op.run()));

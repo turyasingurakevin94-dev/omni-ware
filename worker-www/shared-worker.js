@@ -35,7 +35,11 @@ function keyRowsById(rows, field){
 // actually changed. Each op carries its own commit(), so lastSynced only
 // advances for the parts of the write that actually succeeded -- a part
 // that fails gets re-diffed (and retried) on the next save call.
-function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows){
+// opts.neverDelete is for a caller that has no way to remove a row at all.
+// A delete there is not an instruction, it is the symptom of `data` and
+// `lastSynced` having drifted apart -- and the diff turns that into "delete
+// everything the snapshot still remembers".
+function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
   const prev = lastSynced[collectionKey] || (lastSynced[collectionKey] = {});
   const currById = {};
   rows.forEach(r=> currById[String(r[idField])] = r);
@@ -51,6 +55,15 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows){
     });
   }
   if(toDeleteValues.length){
+    if(opts && opts.neverDelete){
+      // Deliberately does not touch `prev`. Leaving lastSynced alone means
+      // the next refresh -- which rebuilds both together -- puts them back
+      // in step on its own, and until it does this keeps saying so on every
+      // save rather than going quiet about a shop's orders being one bug
+      // away from deletion.
+      console.error(`Refusing to delete ${toDeleteValues.length} ${tableName} row(s): this app never removes them, so data and lastSynced have drifted`, toDeleteValues);
+      return;
+    }
     ops.push({
       run: ()=> sb.from(tableName).delete().eq('shop_id', shopId).in(idField, toDeleteValues),
       commit: ()=> removedKeys.forEach(k=> delete prev[k])
