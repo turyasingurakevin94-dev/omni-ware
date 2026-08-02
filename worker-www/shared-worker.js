@@ -459,6 +459,26 @@ function acceptOrderAssignment(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!orderIsMine(q)){ toast('That order has already been passed to someone else'); return; }
   if(!q || q.pickingStatus!=='awaiting_accept') return;
+  // One pick at a time.
+  //
+  // renderWorkerView shows a single active order -- mine.find(... ===
+  // 'in_progress') -- so accepting a second while one was still open left
+  // it in_progress and displayed nowhere: gone from the pending list
+  // because it is no longer awaiting_accept, and not the card on screen
+  // because find() returns the other one. The order sat blocked on a
+  // worker who could not see it, while the admin's board went on showing
+  // it as being prepared by them.
+  //
+  // Same stranding the finish back-out already guards against ("both lists
+  // skipped it"), reached from the other end. The app's model is one open
+  // pick anyway -- the hero says "Now picking" in the singular, and
+  // autoAssignNextOrder only hands over the next order once this one is
+  // finished.
+  const open = myWorkerOrders().find(x=>x.pickingStatus==='in_progress');
+  if(open){
+    toast(`Finish ${open.client.name || 'the order you have open'} first — you can only pick one order at a time`, 5000);
+    return;
+  }
   q.pickingStatus = 'in_progress';
   q.workerAcceptedAt = Date.now();
   q.pickCursor = 0;

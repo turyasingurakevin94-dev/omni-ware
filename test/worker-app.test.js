@@ -226,6 +226,52 @@ const sharedJs = read('shared-worker.js');
       });
     }
 
+    /* ---------- 7b. one open pick at a time ---------------------------- */
+    /*
+     * renderWorkerView shows a SINGLE active order -- mine.find(... ===
+     * 'in_progress'). Accepting a second while one was still open left it
+     * in_progress and displayed nowhere: gone from the pending list because
+     * it is no longer awaiting_accept, and not the card on screen because
+     * find() returns the other one. It sat blocked on a worker who could
+     * not see it, while the admin's board went on showing it as being
+     * prepared by them.
+     *
+     * The same stranding the finish back-out path already guards against
+     * ("both lists skipped it"), reached from the other end.
+     */
+    {
+      const fn = extractFunction(sharedJs, 'acceptOrderAssignment', 'shared-worker.js');
+      t.check(/const open = myWorkerOrders\(\)\.find\(x=>x\.pickingStatus==='in_progress'\);/.test(fn),
+        'accepting checks whether this worker already has one open');
+      t.check(/if\(open\)\{[\s\S]{0,200}?return;\s*\}/.test(fn), 'and refuses if so');
+      t.check(/you can only pick one order at a time/.test(fn), 'saying why');
+      t.check(/Finish \$\{open\.client\.name \|\| 'the order you have open'\}/.test(fn),
+        'and naming the one to finish, since that is the action being asked for');
+
+      // The check has to come before the mutation, or the second order is
+      // already in_progress by the time it is refused.
+      const iGuard = fn.indexOf("const open = myWorkerOrders()");
+      const iSet = fn.indexOf("q.pickingStatus = 'in_progress'");
+      t.check(iGuard > -1 && iSet > -1 && iGuard < iSet, 'before anything is changed');
+
+      // Scoped to this worker: myWorkerOrders() already filters on
+      // assignedWorkerId, so another picker being mid-order is not my
+      // problem.
+      t.check(/return data\.savedQuotes\.filter\(q=>q\.assignedWorkerId===myStaff\.id/.test(
+        extractFunction(sharedJs, 'myWorkerOrders', 'shared-worker.js')),
+        'and only to my own orders -- another worker mid-pick does not block me');
+
+      // The states, as the view resolves them.
+      const active = (orders) => orders.find(o => o.pickingStatus === 'in_progress');
+      const pending = (orders) => orders.filter(o => o.pickingStatus === 'awaiting_accept');
+      const both = [{ id: 1, pickingStatus: 'in_progress' }, { id: 2, pickingStatus: 'in_progress' }];
+      t.check(active(both).id === 1 && pending(both).length === 0,
+        'with two in progress the view shows the first and the second appears in neither list');
+      const guarded = [{ id: 1, pickingStatus: 'in_progress' }, { id: 2, pickingStatus: 'awaiting_accept' }];
+      t.check(active(guarded).id === 1 && pending(guarded).length === 1,
+        'while refusing leaves the second where the worker can still see and take it');
+    }
+
     /* ---------- 8. the background refresh ------------------------------ */
     /*
      * Added because merging on save only stopped stale data DESTROYING
