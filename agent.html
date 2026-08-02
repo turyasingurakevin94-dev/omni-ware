@@ -178,7 +178,25 @@
   .ag-qa-icon .icon{width:19px;height:19px;}
   .ag-qa-label{font-size:11.5px;font-weight:700;color:var(--ink);text-align:center;}
 
-  .ag-trend-months{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--ink-soft);font-weight:600;}
+  /* Six months as columns you can tap. The bars carry their own figures,
+     because a shape with no numbers on it cannot answer "how much" -- and
+     "how much" is the only question this screen exists for. */
+  .ag-trend-card{padding:16px 10px 12px;}
+  .ag-trend-cols{display:flex;align-items:flex-end;gap:2px;}
+  .ag-trend-col{all:unset;box-sizing:border-box;flex:1;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;padding:2px 0 4px;border-radius:12px;transition:background .12s;}
+  .ag-trend-col:hover{background:var(--bg);}
+  .ag-trend-col:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .ag-trend-val{font-size:11px;font-weight:700;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ag-trend-track{width:100%;height:88px;display:flex;align-items:flex-end;justify-content:center;}
+  .ag-trend-bar{width:60%;max-width:34px;border-radius:6px 6px 3px 3px;background:var(--line);transition:background .12s;}
+  .ag-trend-m{font-size:11px;font-weight:700;color:var(--ink-soft);}
+  /* The selected month is the one the rest of the screen is showing, so it
+     is the only column carrying the accent -- the others stay neutral
+     rather than competing for it. */
+  .ag-trend-col.sel .ag-trend-bar{background:var(--accent);}
+  .ag-trend-col.sel .ag-trend-val,
+  .ag-trend-col.sel .ag-trend-m{color:var(--ink);}
+  .ag-trend-empty{font-size:12px;color:var(--ink-soft);text-align:center;padding:6px 0 2px;}
 
   .ag-seg-tabs{display:flex;background:var(--bg);border-radius:13px;padding:4px;margin-bottom:14px;}
   .ag-seg-btn{all:unset;box-sizing:border-box;flex:1;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;}
@@ -483,7 +501,7 @@
      the full column (434 at the app's widest) and stands about 140 tall,
      which gives the photo 116 square instead of 88 -- enough to tell two
      variants of the same fitting apart, which an 88px thumb could not. */
-  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:14px;padding:12px;cursor:default;min-height:140px;}
+  #ag_browseGrid .ag-grid-card{display:flex;align-items:center;gap:14px;padding:12px;cursor:pointer;min-height:140px;}
   #ag_browseGrid .ag-grid-thumb-wrap{width:116px;flex-shrink:0;aspect-ratio:1/1;border-radius:14px;overflow:hidden;}
   /* Tapping the photo opens a full-size lightbox (see the click handler)
      -- only a real photo, never the generic placeholder icon, is
@@ -561,6 +579,12 @@
   .ag-order-row-client{font-weight:600;font-size:14px;}
   .ag-order-row-date{font-size:12px;color:var(--ink-soft);}
   .ag-order-row-split{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  /* What the order earned, as a figure rather than a clause. It was
+     "Your margin: 38,000 · Bonus: 4,000" in soft grey the same size as
+     the date -- three numbers of equal weight, none of them the answer. */
+  .ag-earn-amt{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ag-earn-split{white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .ag-earn-pending{white-space:nowrap;color:var(--ink-faint);}
   .ag-order-row-items-link{color:var(--accent);font-weight:700;white-space:nowrap;}
   /* Ongoing orders: what's happening right now ("Andrew is preparing your
      order"). Completed orders: whether this order is settled with the shop
@@ -925,6 +949,17 @@
       </div>
     </div>
 
+    <!-- The chart sits directly under the wallet because it now drives it:
+         tapping a month loads that month above and below. Everything from
+         here to the order list is about the selected month; the bonus
+         opportunities below are not month-scoped, so they come after. -->
+    <div class="ag-section-title">Last 6 months</div>
+    <div class="ag-card ag-trend-card" id="ag_trendCardWrap"></div>
+
+    <div id="ag_claimWrap"></div>
+    <div class="ag-section-title" id="ag_earningsOrdersTitle">Orders that month</div>
+    <div id="ag_earningsOrdersWrap"></div>
+
     <div class="ag-section-title">Bonus opportunities</div>
     <div id="ag_bonusOpportunitiesWrap"></div>
 
@@ -938,13 +973,6 @@
         <span class="ag-qa-label">Order history</span>
       </button>
     </div>
-
-    <div class="ag-section-title">Last 6 months</div>
-    <div class="ag-card" id="ag_trendCardWrap"></div>
-
-    <div id="ag_claimWrap"></div>
-    <div class="ag-section-title">Orders that month</div>
-    <div id="ag_earningsOrdersWrap"></div>
   </div>
 
   <!-- ACCOUNT -->
@@ -2394,11 +2422,17 @@ function renderEarnings(){
   document.getElementById('ag_earningsTotalValue').textContent = fmtUGX(total);
   document.getElementById('ag_earningsMarginValue').textContent = fmtUGX(margin);
   document.getElementById('ag_earningsBonusValue').textContent = fmtUGX(bonus);
+  // The chart marks whichever month is selected, so it has to follow the
+  // month nav instead of being drawn once when the screen opens.
+  renderTrendChart();
   renderClaimCard(monthKey, bonus);
+  // "Orders that month" made you look back up at the wallet to find out
+  // which month that was.
+  document.getElementById('ag_earningsOrdersTitle').textContent = `Orders in ${monthLabel(monthKey)}`;
 
   const wrap = document.getElementById('ag_earningsOrdersWrap');
   if(!orders.length){
-    wrap.innerHTML = `<div class="empty">No orders that month.</div>`;
+    wrap.innerHTML = `<div class="empty">No orders in ${esc(monthLabel(monthKey))}.</div>`;
     return;
   }
   const sorted = orders.slice().sort((a,b)=> (b.savedAt||'').localeCompare(a.savedAt||''));
@@ -2406,39 +2440,78 @@ function renderEarnings(){
     const e = orderEarnings(o);
     const client = agentClients.find(c=>String(c.id)===String(o.agentClientId));
     const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('en-UG', { day:'numeric', month:'short' }) : '';
+    // A bonus only counts once the order is completed -- monthEarnings
+    // applies exactly that rule to the total in the wallet above. The row
+    // used to print the bonus on any order regardless of status, so in any
+    // month holding a pending order the rows added up to more than the
+    // figure they sat under.
+    const counted = o.status === 'completed';
+    const earned = e.margin + (counted ? e.bonus : 0);
     return `<div class="ag-order-row">
       <div class="ag-order-row-head">
         <div class="ag-order-row-client">${esc(client ? client.name : 'Client')}</div>
-        <div class="ag-order-row-date">${esc(date)} · ${esc(ORDER_STATUS_LABEL[o.status] || o.status)}</div>
+        <div class="ag-earn-amt">${fmtUGX(earned)}</div>
       </div>
-      <div class="ag-order-row-split">Your margin: ${fmtUGX(e.margin)}${e.bonus ? ` · Bonus: ${fmtUGX(e.bonus)}` : ''}</div>
+      <div class="ag-order-row-split">
+        <span>${esc(date)} · ${esc(ORDER_STATUS_LABEL[o.status] || o.status)}</span>
+        ${counted && e.bonus
+          ? `<span class="ag-earn-split">${fmtUGX(e.margin)} + ${fmtUGX(e.bonus)} bonus</span>`
+          : (e.bonus ? `<span class="ag-earn-pending">+ ${fmtUGX(e.bonus)} bonus when completed</span>` : '')}
+      </div>
     </div>`;
   }).join('');
 }
-// A stable "last 6 months" overview, anchored to now -- deliberately not
-// re-rendered on prev/next (that's a separate drill-down below it into
-// whichever single month is being inspected).
+// A compact figure for the chart columns -- six exact UGX amounts will not
+// fit across a phone. The exact number for whichever month is selected sits
+// in the wallet card directly above, so this trades precision for being
+// able to compare six months at a glance.
+function fmtCompactUGX(n){
+  const v = Math.round(Number(n)||0);
+  if(v < 1000) return String(v);
+  const k = v/1000;
+  if(k < 999.5) return Math.round(k) + 'k';
+  const m = v/1000000;
+  return (m < 9.95 ? m.toFixed(1).replace(/\.0$/,'') : String(Math.round(m))) + 'M';
+}
+
+// The last six months, and this screen's month picker: tapping a column
+// loads that month into the wallet above and the order list below. The six
+// months stay anchored to today -- only the marker moves -- so the shape of
+// your half-year does not shift under you while you page through it.
+//
+// It was a 64px sparkline: no figures, no scale, and no marker for the
+// month being inspected. Paging to April changed every other thing on the
+// screen and left the chart showing the same six anonymous months.
+const TREND_MONTHS = 6;
 function renderTrendChart(){
   const months = [];
-  for(let i=5;i>=0;i--) months.push(shiftMonth(currentMonthKey(), -i));
+  for(let i=TREND_MONTHS-1;i>=0;i--) months.push(shiftMonth(currentMonthKey(), -i));
   const totals = months.map(m=>monthEarnings(m).total);
-  const max = Math.max(1, ...totals);
-  const w = 300, h = 64, pad = 4;
-  const stepX = (w - pad*2) / (months.length - 1);
-  const pts = totals.map((t,i)=> [pad + i*stepX, h - pad - (t/max)*(h-pad*2)]);
-  const line = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-  const area = line + ` L${pts[pts.length-1][0].toFixed(1)},${h-pad} L${pts[0][0].toFixed(1)},${h-pad} Z`;
-  document.getElementById('ag_trendCardWrap').innerHTML = `
-    <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:64px;display:block;" preserveAspectRatio="none">
-      <defs><linearGradient id="agSparkFill" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" style="stop-color:var(--accent);stop-opacity:0.32"/>
-        <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0"/>
-      </linearGradient></defs>
-      <path d="${area}" fill="url(#agSparkFill)"/>
-      <path d="${line}" fill="none" style="stroke:var(--accent);" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div class="ag-trend-months">${months.map(m=>`<span>${esc(monthLabel(m).split(' ')[0].slice(0,3))}</span>`).join('')}</div>`;
+  const max = Math.max(...totals);
+  const cols = months.map((m,i)=>{
+    const t = totals[i];
+    // A month you earned nothing in still gets a visible stub. A column of
+    // no height reads as missing data rather than as a bad month.
+    const pct = max > 0 ? Math.max((t/max)*100, 3) : 3;
+    const sel = m === earningsViewMonth;
+    return `<button type="button" class="ag-trend-col${sel?' sel':''}" data-trend-month="${esc(m)}" aria-pressed="${sel}" aria-label="${esc(monthLabel(m))}, ${esc(fmtUGX(t))}">
+      <span class="ag-trend-val">${esc(fmtCompactUGX(t))}</span>
+      <span class="ag-trend-track"><span class="ag-trend-bar" style="height:${pct.toFixed(1)}%;"></span></span>
+      <span class="ag-trend-m">${esc(monthLabel(m).split(' ')[0].slice(0,3))}</span>
+    </button>`;
+  }).join('');
+  // Paging back past the window leaves no column marked, which would read
+  // as the chart having lost track of you.
+  const outside = months.includes(earningsViewMonth) ? '' :
+    `<div class="ag-trend-empty">Showing ${esc(monthLabel(earningsViewMonth))}, before this window</div>`;
+  document.getElementById('ag_trendCardWrap').innerHTML = `<div class="ag-trend-cols">${cols}</div>${outside}`;
 }
+document.getElementById('ag_trendCardWrap').addEventListener('click', (e)=>{
+  const col = e.target.closest('[data-trend-month]');
+  if(!col) return;
+  earningsViewMonth = col.dataset.trendMonth;
+  renderEarnings();
+});
 
 async function openEarningsView(){
   earningsViewMonth = currentMonthKey();
@@ -3698,14 +3771,15 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
   }
   const card = e.target.closest('.ag-grid-card');
   if(card){
-    // Merged main-grid cards (data-selected-vidx) only open the panel via
-    // the "+" button above -- tapping a chip, the price, or empty space
-    // on the row does nothing, so browsing/scrolling never accidentally
-    // launches it. Order Again/Sponsored's flat cards (data-vidx, no "+"
-    // of their own) keep the whole card as their tap target, same as
-    // before.
-    if(card.dataset.selectedVidx !== undefined) return;
-    const vidxRaw = card.dataset.vidx;
+    // The whole card opens the add panel. Everything on it that must NOT
+    // open the panel -- variant chips, the axis buttons, the cluster star,
+    // the image -- is handled above and has already returned by here.
+    //
+    // Merged main-grid cards used to be sent away at this point, because
+    // they opened the panel through a "+" button on the thumbnail instead.
+    // That button was removed and this guard was not, which left every
+    // in-category product inert: tapping one did nothing at all.
+    const vidxRaw = card.dataset.selectedVidx !== undefined ? card.dataset.selectedVidx : card.dataset.vidx;
     const item = catalogEntry(card.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
     if(item) openAddItemPanel(item);
     return;

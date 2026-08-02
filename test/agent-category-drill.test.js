@@ -214,4 +214,36 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'a search is not a category -- the shelves go, but the strip stays and no section header appears');
 }
 
+/* ---------- 9. a product card opens the product ---------------------- */
+/*
+ * Merged main-grid cards used to open the add panel only through a "+"
+ * button on the thumbnail, and the handler returned early for anything
+ * carrying data-selected-vidx so that browsing never launched the panel by
+ * accident. The "+" was then removed. The guard was not, which left every
+ * in-category product completely inert -- tapping one did nothing at all.
+ *
+ * The whole card is the target now. The things that must NOT open it --
+ * variant chips, the axis buttons, the cluster star, the image -- are all
+ * handled earlier in the same delegated listener and return before
+ * reaching the card branch, so this is ordering, not luck.
+ */
+{
+  t.check(!/if\(card\.dataset\.selectedVidx !== undefined\) return;/.test(code),
+    'the guard that made in-category cards inert is gone');
+  t.check(/const vidxRaw = card\.dataset\.selectedVidx !== undefined \? card\.dataset\.selectedVidx : card\.dataset\.vidx;/.test(code),
+    'a merged card opens the variant it is currently showing, not its first one');
+  t.check(/#ag_browseGrid \.ag-grid-card\{[^}]*cursor:pointer/.test(src),
+    'and it looks tappable, since it now is');
+
+  // Ordering: every early return must come before the card branch.
+  const listener = (/const card = e\.target\.closest\('\.ag-grid-card'\);/.exec(code) || {}).index;
+  t.check(typeof listener === 'number', 'the card branch is found');
+  ['data-star-pid', 'data-chip-pid', 'data-axis-pid', 'ag-grid-thumb'].forEach(sel => {
+    const at = code.indexOf(`closest('[${sel}]')`) >= 0
+      ? code.indexOf(`closest('[${sel}]')`)
+      : code.indexOf(`closest('#ag_browseGrid .${sel}')`);
+    t.check(at > 0 && at < listener, `${sel} is handled before the card branch, so it never opens the panel`);
+  });
+}
+
 process.exit(t.done() ? 1 : 0);
