@@ -874,8 +874,11 @@
   .cb-progress-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin-bottom:26px;}
   .cb-step h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 6px 0;color:var(--ink);letter-spacing:0.2px;}
   .cb-step-hint{margin:0 0 18px 0;color:var(--ink-soft);font-size:13.5px;}
+  /* Muted and non-interactive: this sits where a delete button would be,
+     so it must not read as something you can press. */
+  .debt-log-locked{display:inline-flex;align-items:center;color:var(--ink-soft);opacity:.7;cursor:default;padding:0 2px;}
   .cb-carried-note{margin-top:10px;color:var(--ink-soft);font-size:12.5px;line-height:1.5;}
-  .cb-carried-first{color:var(--ink-faint);font-style:italic;}
+  .cb-carried-first{color:var(--ink-soft);opacity:.8;font-style:italic;}
   /* A broken chain is the one thing this screen must not let past quietly:
      the day-level variance below only ever measures a day against its own
      opening figure, so a wrong opening reconciles perfectly. */
@@ -4458,6 +4461,9 @@ function agingDaysLabel(days){
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
+// Shown instead of a delete button on a ledger entry that mirrors an
+// invoice -- the row is a derived record, so the invoice is where it changes.
+const ICON_LOCK = '<svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const ICON_NO_STOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m4.9 4.9 14.2 14.2"/></svg>';
 const ICON_RESTOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/></svg>';
 const ICON_PURCHASE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>';
@@ -6630,9 +6636,22 @@ function applyInvoiceDebtCharge(q, desired){
   if(!c){ q.debtCharged = desired; return; }
   c.debt = Math.max(0, (Number(c.debt)||0) + delta);
   if(!c.debtLog) c.debtLog = [];
-  c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type: delta>0?'charge':'payment', amount: Math.abs(delta), note: `Auto-sync — ${invoiceNumberLabel(q)}`});
+  // quoteId marks this entry as belonging to the invoice rather than to the
+  // person reading it. It is derived from q.debtCharged, so deleting it by
+  // hand desynchronises the two permanently: the debt drops, the baseline
+  // does not, and every later sync computes a delta of zero and corrects
+  // nothing. See debtLogIsInvoiceOwned().
+  c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type: delta>0?'charge':'payment', amount: Math.abs(delta), note: `Auto-sync — ${invoiceNumberLabel(q)}`, quoteId: q.id});
   q.debtCharged = desired;
   q.customerId = c.id;
+}
+// An entry the invoice owns, not the user. Legacy rows predate the quoteId
+// tag, so the note they were written with is the fallback -- applied only
+// as a fallback, since a person can type anything into a manual note.
+function debtLogIsInvoiceOwned(l){
+  if(!l) return false;
+  if(l.quoteId != null) return true;
+  return /^Auto-sync — INV-/.test(String(l.note||''));
 }
 function syncInvoiceDebtCharge(q){
   applyInvoiceDebtCharge(q, invoiceDebtDesired(q));
@@ -9460,13 +9479,19 @@ document.getElementById('c_save').addEventListener('click', ()=>{
       notes: document.getElementById('c_notes').value.trim(),
     };
   } else {
+    // An opening balance is a real charge and has to appear in the ledger,
+    // or the customer starts life with a debt nothing accounts for and the
+    // two can never be reconciled again.
+    const openingDebt = Number(document.getElementById('c_debt').value)||0;
     data.customers.push({
       id, name,
       phone: document.getElementById('c_phone').value.trim(),
       location: document.getElementById('c_location').value.trim(),
-      debt: Number(document.getElementById('c_debt').value)||0,
+      debt: openingDebt,
       notes: document.getElementById('c_notes').value.trim(),
-      debtLog: []
+      debtLog: openingDebt > 0
+        ? [{id: allocRowId('debtLog'), date: todayISO(), type:'charge', amount: openingDebt, note:'Opening balance', cashTxnId:null}]
+        : []
     });
   }
   saveData(); closeModal('customerModal'); resetCustomerForm(); renderCustomers(document.getElementById('c_search').value);
@@ -9478,10 +9503,46 @@ document.getElementById('c_search').addEventListener('input', e=>renderCustomers
 
 // Debt adjustment modal — "+ Charge" adds to the balance (goods sold on
 // credit), "Payment" subtracts from it (money received against the debt).
+/* ---- Reconciling the debt total against its own ledger ----
+   c.debt is a stored running total, mutated in several places; debtLog is
+   the ledger that is supposed to explain it. Nothing forces the two to
+   agree, and every mutation is clamped with Math.max(0, ...), which
+   silently absorbs anything that would go negative -- so a reversal
+   larger than the balance, or a hand-deleted entry, leaves a gap with
+   nothing anywhere to show for it.
+
+   Creditors have no equivalent problem because they are DERIVED live from
+   the purchase invoices rather than stored. This is the next best thing
+   for the customer side: ask, rather than wait to be told. */
+function customerLedgerTotal(c){
+  return (c.debtLog||[]).reduce((s,l)=>
+    s + (l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0)), 0);
+}
+// Positive means the stored total is HIGHER than the ledger explains,
+// negative means lower. Rounded, so a fractional shilling is not a finding.
+function customerDebtDrift(c){
+  return Math.round((Number(c.debt)||0) - customerLedgerTotal(c));
+}
+function customersWithDebtDrift(){
+  return (data.customers||[])
+    .map(c=>({c, drift: customerDebtDrift(c)}))
+    .filter(x=> x.drift !== 0);
+}
+
 function customerDebtHistoryHTML(c){
   const log = (c.debtLog||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id-a.id)).slice(0,8);
   if(!log.length) return '<div class="cc-history-empty">No activity recorded yet.</div>';
-  return log.map(l=>`<div class="cc-history-row"><span>${esc(l.date)} — ${esc(l.note||(l.type==='charge'?'Charge':'Payment'))}</span><span class="amt ${l.type}">${l.type==='charge'?'+':'−'}${fmtUGX(l.amount)}</span><button type="button" class="q-remove-icon debt-log-del" data-id="${l.id}" title="Remove this entry">${ICON_TRASH}</button></div>`).join('');
+  return log.map(l=>{
+    // An invoice-owned entry has no delete button: it mirrors that
+    // invoice's balance, so removing it here would drop the debt while
+    // leaving the invoice's own baseline untouched, and no later sync
+    // would ever put it back. Changing the invoice is the way to change it.
+    const owned = debtLogIsInvoiceOwned(l);
+    const action = owned
+      ? `<span class="debt-log-locked" title="This entry follows ${esc(l.note||'an invoice')} — void or settle that invoice to change it">${ICON_LOCK}</span>`
+      : `<button type="button" class="q-remove-icon debt-log-del" data-id="${l.id}" title="Remove this entry">${ICON_TRASH}</button>`;
+    return `<div class="cc-history-row"><span>${esc(l.date)} — ${esc(l.note||(l.type==='charge'?'Charge':'Payment'))}</span><span class="amt ${l.type}">${l.type==='charge'?'+':'−'}${fmtUGX(l.amount)}</span>${action}</div>`;
+  }).join('');
 }
 // Reverses a single debt log entry (charge or payment): undoes its effect
 // on the customer's debt balance and, if it was a payment, removes the
@@ -9490,6 +9551,13 @@ function customerDebtHistoryHTML(c){
 function deleteCustomerDebtLog(customerId, logId){
   const c = data.customers.find(x=>x.id===customerId); if(!c) return;
   const idx = (c.debtLog||[]).findIndex(l=>l.id===logId); if(idx<0) return;
+  // The button is hidden for these, but the gate belongs here rather than
+  // in the markup -- a stale rendered row would otherwise still be able to
+  // fire this and desynchronise the invoice's baseline for good.
+  if(debtLogIsInvoiceOwned(c.debtLog[idx])){
+    toast('That entry follows an invoice — void or settle the invoice to change it', 4000);
+    return;
+  }
   if(!confirm('Remove this entry? Its matching Cash Book entry (if any) will be removed too.')) return;
   const [removed] = c.debtLog.splice(idx, 1);
   const delta = removed.type==='charge' ? -removed.amount : removed.amount;
@@ -9633,14 +9701,34 @@ function debRowsForList(filter=''){
   });
   return rows;
 }
+// Shown above the debtors table when a stored total no longer matches the
+// ledger meant to explain it. Not filtered by the search box: a drifted
+// balance is worth seeing whether or not that customer matches what was
+// typed, and it is the whole list's credibility at stake, not one row's.
+function debtDriftBannerHTML(){
+  const drifted = customersWithDebtDrift();
+  if(!drifted.length) return '';
+  const net = drifted.reduce((s,x)=>s+x.drift, 0);
+  const lines = drifted.slice(0,5).map(({c, drift})=>
+    `<div><b>${esc(c.name||'Unnamed customer')}</b>: shows ${fmtUGX(Math.round(Number(c.debt)||0))}, but their history adds up to ${fmtUGX(Math.round(customerLedgerTotal(c)))} — ${drift>0?'overstated':'understated'} by ${fmtUGX(Math.abs(drift))}.</div>`
+  ).join('');
+  return `<div class="cb-chain-break">
+    <div><b>${drifted.length} customer${drifted.length===1?'’s balance does':'s’ balances do'} not match their own history.</b></div>
+    ${lines}
+    ${drifted.length>5 ? `<div>…and ${drifted.length-5} more.</div>` : ''}
+    <div>Net effect on the total below: ${net>0?'overstated':'understated'} by ${fmtUGX(Math.abs(net))}. Open the customer and check their debt history against the charges and payments listed.</div>
+  </div>`;
+}
+
 function renderDebtorsList(filter=''){
   const wrap = document.getElementById('deb_tableWrap');
   const rows = debRowsForList(filter);
   debLastRows = rows;
+  const driftBanner = debtDriftBannerHTML();
   if(rows.length===0){
-    wrap.innerHTML = data.customers.length===0
+    wrap.innerHTML = driftBanner + (data.customers.length===0
       ? '<div class="empty">No customers yet — add one in the Customers tab.</div>'
-      : '<div class="empty">No debtors match this filter.</div>';
+      : '<div class="empty">No debtors match this filter.</div>');
     return;
   }
   const sortArrow = (key)=> DEB_SORT_STATE.key===key ? `<span class="sort-arrow">${DEB_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
@@ -9662,7 +9750,7 @@ function renderDebtorsList(filter=''){
         <div class="sc-stat"><b>${esc(agingDaysLabel(r.ageDays))}</b><span>Overdue by</span></div>
       </div>
     </div>`).join('');
-  wrap.innerHTML = `<div class="pi-table-wrap"><table>
+  wrap.innerHTML = driftBanner + `<div class="pi-table-wrap"><table>
     <thead><tr>
       <th>No.</th>
       <th class="sortable${DEB_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Customer name${sortArrow('name')}</th>
