@@ -31,6 +31,28 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+// How long two identical submissions are treated as one. Short on purpose
+// -- see the note at the dedupe lookup.
+const SUBMIT_DEDUPE_MS = 90 * 1000;
+
+// The same order described the same way, independent of the order items
+// happen to sit in the array. Built only from the four fields the agent
+// actually chooses: everything else on a stored line -- supplier, cost,
+// floor price, bonus -- is derived server-side and would legitimately
+// differ between two runs if a price moved in between, which must not stop
+// a genuine re-send being recognised.
+function orderFingerprint(agentClientId: any, items: any): string {
+  const lines = (Array.isArray(items) ? items : [])
+    .map((it: any) => [
+      String(it?.productId ?? ""),
+      String(it?.variantIdx ?? ""),
+      String(Number(it?.qty) || 0),
+      String(Number(it?.agentSellPrice) || 0),
+    ].join("|"))
+    .sort();
+  return `${String(agentClientId ?? "")}#${lines.join(";")}`;
+}
+
 type MarkupKind = "wholesale" | "retail";
 type MarkupRule = { type: string; value: number } | null;
 
@@ -208,6 +230,35 @@ Deno.serve(async (req) => {
     if (!agent) return json({ error: "Agent not found" }, 404);
     if (!client || client.agent_id !== agentId) return json({ error: "That client doesn't belong to this agent" }, 403);
     const presets = settingsRow?.presets || {};
+
+    // A submit that lands server-side while the agent's connection drops
+    // looks like a failure to them: agent.html re-enables its button in a
+    // finally block, they tap again, and the shop gets two identical orders
+    // to prepare and invoice. The button guard only covers a double tap on
+    // a working connection.
+    //
+    // So an identical order from the same agent to the same client inside a
+    // short window is treated as that same submission arriving twice, and
+    // the original is handed back. Deliberately short: an agent who really
+    // does want to place the same order twice waits a moment rather than
+    // losing the second one. `duplicate` says which happened.
+    const fingerprint = orderFingerprint(agentClientId, items);
+    const cutoff = new Date(Date.now() - SUBMIT_DEDUPE_MS).toISOString();
+    const { data: recent, error: recentErr } = await admin
+      .from("saved_quotes")
+      .select("id, payload")
+      .eq("shop_id", shopId)
+      .eq("agent_id", agentId)
+      .eq("voided", false)
+      .gte("payload->>savedAt", cutoff);
+    if (recentErr) return json({ error: recentErr.message, stage: "dedupe_lookup" }, 500);
+    const alreadyIn = (recent || []).find((q: any) =>
+      orderFingerprint(q.payload?.agentClientId, q.payload?.items) === fingerprint
+    );
+    if (alreadyIn) {
+      console.log("agent-submit-order: duplicate submission returned existing order", { orderId: alreadyIn.id });
+      return json({ ok: true, orderId: alreadyIn.id, duplicate: true });
+    }
 
     const productIds = [...new Set(items.map((it: any) => String(it.productId)))];
     const [
