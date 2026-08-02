@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * mtn-provision-apiuser / mtn-provision-sandbox -- the one-time setup that
+ * mtn-provision-apiuser -- the one-time setup that
  * creates an MTN MoMo API user and key, and the ONLY place MTN's callback
  * destination is ever registered.
  *
- * Both registered a full URL as `providerCallbackHost`:
+ * It, and the since-retired mtn-provision-sandbox alongside it, registered
+ * a full URL as `providerCallbackHost`:
  *
  *   providerCallbackHost: "https://<ref>.functions.supabase.co/mtn-payment-webhook"
  *
@@ -31,8 +32,17 @@ const t = createReporter('mtn provision');
 
 const FILES = [
   ['mtn-provision-apiuser', read('supabase/functions/mtn-provision-apiuser/index.ts')],
-  ['mtn-provision-sandbox', read('supabase/functions/mtn-provision-sandbox/index.ts')],
 ];
+
+// Every function directory, so the retirement check below searches rather
+// than trusting a name.
+function fnDirs() {
+  const fs = require('fs'), path = require('path');
+  const root = path.join(__dirname, '..', 'supabase', 'functions');
+  return fs.readdirSync(root, { withFileTypes: true })
+    .filter(d => d.isDirectory() && fs.existsSync(path.join(root, d.name, 'index.ts')))
+    .map(d => d.name).sort();
+}
 
 /* ---------- 1. a host is registered, not a URL ------------------------ */
 FILES.forEach(([name, src]) => {
@@ -73,12 +83,41 @@ FILES.forEach(([name, src]) => {
   t.check(slashed.callbackHost === real.callbackHost,
     'a trailing slash on SUPABASE_URL makes no difference');
 
-  // Both files must derive it the same way, or one shop gets provisioned
-  // against a host the other would not recognise.
-  const lines = FILES.map(([, src]) =>
-    (/const callbackHost = .*/.exec(src.replace(/\r/g, '')) || [''])[0].trim());
-  t.check(lines[0] && lines[0] === lines[1],
-    'both provisioning functions derive the host identically');
+  // Whatever provisioning functions exist must derive it the same way, or
+  // one shop gets provisioned against a host another would not recognise.
+  const derivations = fnDirs()
+    .filter(n => /provision/.test(n))
+    .map(n => [n, (/const callbackHost = .*/.exec(read(`supabase/functions/${n}/index.ts`).replace(/\r/g, '')) || [''])[0].trim()]);
+  t.check(derivations.length > 0 && derivations.every(([, line]) => line && line === derivations[0][1]),
+    `every provisioning function derives the host identically (${derivations.map(d => d[0]).join(', ')})`);
+}
+
+/* ---------- 2b. the sandbox-only duplicate stays retired -------------- */
+/*
+ * mtn-provision-sandbox was mtn-provision-apiuser with `environment`
+ * hardcoded to "sandbox" -- and apiuser already defaults to sandbox unless
+ * the body says "production", so it was a strict subset with no caller of
+ * its own. It carried its own copy of the callback-host bug, which is the
+ * cost of keeping two of these.
+ */
+{
+  t.check(!fnDirs().includes('mtn-provision-sandbox'),
+    'mtn-provision-sandbox is not back in supabase/functions');
+
+  const provisioners = fnDirs().filter(n => /provision/.test(n));
+  t.check(provisioners.length === 1 && provisioners[0] === 'mtn-provision-apiuser',
+    `mtn-provision-apiuser is the only provisioning function (${provisioners.join(', ') || 'none'})`);
+
+  ['index.html', 'agent.html', 'worker.html', 'shared-worker.js', 'catalogue.html'].forEach(f => {
+    const src = read(f).split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+    t.check(!src.includes('mtn-provision-sandbox'),
+      `${f} does not call the retired provisioning function`);
+  });
+
+  // The survivor must still be able to do what the retired one did.
+  const apiuser = read('supabase/functions/mtn-provision-apiuser/index.ts');
+  t.check(/body\.environment === "production" \? "production" : "sandbox"/.test(apiuser),
+    'and it still defaults to sandbox, which is all the retired one ever did');
 }
 
 /* ---------- 3. X-Callback-Url is deliberately absent ------------------ */
