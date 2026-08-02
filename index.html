@@ -3965,7 +3965,7 @@ function seedData(){
     ],
     presetUnits: ['Bag','Sheet','Kg','Litre','Roll','Length (3m)','Pack','Ctn','Bundle','Tin','Piece','Pair','Box','Metre'],
     presetIncomeCategories: ['Sales Revenue','Debt Collection','Loan Received','Owner Investment','Other Income'],
-    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Rent','Utilities','Transport','Salaries & Wages','Other Expense'],
+    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Other Expense'],
     presetAttributes: [
       {name:'Color', values:['Red','White','Blue','Black','Green','Grey']},
       {name:'Size', values:['Small','Medium','Large']},
@@ -9163,6 +9163,12 @@ function claimMonthLabel(monthKey){
   const [y, m] = monthKey.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('en-UG', { month:'long', year:'numeric' });
 }
+// Falls back to the id rather than going blank, so a claim for an agent
+// since retired still says who it was for on the Cash Book entry.
+function agentNameById(id){
+  const a = (data.agents||[]).find(x=>x.id===id);
+  return a ? a.name : String(id||'');
+}
 function claimCardHTML(c){
   const agent = data.agents.find(a=>a.id===c.agent_id);
   const paidDate = c.paid_at ? new Date(c.paid_at).toLocaleDateString() : '';
@@ -9200,14 +9206,63 @@ async function renderCommissionClaims(){
   });
   wrap.innerHTML = `<div class="price-grid">${sorted.map(claimCardHTML).join('')}</div>`;
 }
+// Which account the money came out of. Built at call time rather than as
+// markup, since this is the only place that asks -- resolves to an account
+// key, or null if the person backs out.
+function promptCashAccount(title, subtitle){
+  return new Promise((resolve)=>{
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
+    el.innerHTML = `
+      <div style="background:var(--panel);border-radius:14px;padding:20px;width:320px;max-width:100%;">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${esc(title)}</div>
+        <div style="color:var(--ink-soft);font-size:13px;margin-bottom:14px;">${esc(subtitle||'')}</div>
+        <div id="cashAcctList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>`;
+    el.querySelector('#cashAcctList').innerHTML = ACCOUNTS.map(a=>
+      `<button type="button" class="btn btn-ghost" style="display:block;width:100%;text-align:left;padding:10px 12px;" data-acct="${esc(a.key)}">${esc(a.label)}</button>`
+    ).join('');
+    const finish = (v)=>{ document.body.removeChild(el); resolve(v); };
+    el.querySelectorAll('button[data-acct]').forEach(b=> b.addEventListener('click', ()=> finish(b.dataset.acct)));
+    el.addEventListener('mousedown', (e)=>{ if(e.target===el) finish(null); });
+    document.body.appendChild(el);
+  });
+}
+
 async function markClaimPaid(id){
   const c = commissionClaims.find(x=>x.id===id); if(!c) return;
   if(!confirm(`Mark ${fmtUGX(c.bonus_amount)} for ${claimMonthLabel(c.month)} as paid? Make sure you've actually settled it with the agent first.`)) return;
-  const { error } = await sb.from('agent_commission_claims').update({ status:'paid', paid_at: new Date().toISOString() }).eq('shop_id', currentShopId).eq('id', id);
-  if(error){ toast('Could not update: '+error.message); return; }
-  c.status = 'paid'; c.paid_at = new Date().toISOString();
+  // This is real money leaving the till. It used to flip a status and
+  // nothing else, so the Cash Book, the day's closing balance and every
+  // profit figure built on them stayed exactly as if the payout had never
+  // happened. Asked before the write, so backing out here changes nothing.
+  const account = await promptCashAccount('Where did the money come from?',
+    `Recording ${fmtUGX(c.bonus_amount)} paid to ${agentNameById(c.agent_id)} in the Cash Book.`);
+  if(!account) return;
+
+  const amount = Number(c.bonus_amount)||0;
+  const cashTxnId = addCashPayment(account, amount, 'Agent Commission',
+    `Bonus commission — ${agentNameById(c.agent_id)} — ${claimMonthLabel(c.month)}`);
+  const paidAt = new Date().toISOString();
+  const { error } = await sb.from('agent_commission_claims')
+    .update({ status:'paid', paid_at: paidAt, cash_txn_id: cashTxnId })
+    .eq('shop_id', currentShopId).eq('id', id);
+  if(error){
+    // The claim did not move, so the Cash Book entry describes a payout
+    // that is still outstanding. Take it back out rather than leave the
+    // books claiming money left that the shop still owes.
+    removeCashTxnsByIds([cashTxnId]);
+    saveData();
+    toast('Could not update: '+error.message);
+    return;
+  }
+  c.status = 'paid'; c.paid_at = paidAt; c.cash_txn_id = cashTxnId;
+  saveData();
   renderCommissionClaims();
-  toast('Marked as paid');
+  if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
+    renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+  }
+  toast('Marked as paid — recorded in the Cash Book');
 }
 
 /* ---- Mobile money providers (shop_payment_providers) ----

@@ -1409,6 +1409,10 @@ function mapOrderRow(q){
   return {
     id: q.id, status: q.status, voided: !!q.voided,
     items: payload.items || [],
+    // The order's own date, set once at creation. payload.savedAt is
+    // rewritten on every save, so it moves an order between months --
+    // which is why earnings and the claim both key on this instead.
+    date: q.date || null,
     savedAt: payload.savedAt || null,
     agentClientId: payload.agentClientId || null,
     deliveryMode: payload.deliveryMode || null,
@@ -1952,12 +1956,27 @@ function orderEarnings(o){
   return { margin, bonus, total: margin + bonus };
 }
 
+// Margin and bonus are different money and do not qualify the same way.
+//
+// Margin is the agent's own, collected straight from their client and
+// never touching the shop's books, so an order still out for delivery
+// counts -- that is what they are owed by their customer.
+//
+// The bonus is the SHOP's money, paid out on a claim, and the shop only
+// owes it on a sale that actually completed. Counting it earlier meant the
+// claim button offered a figure that included drafts and in-flight orders,
+// which agent-claim-commission would then decline to pay -- the agent
+// seeing one number and receiving a smaller one, with no way to tell why.
+//
+// Both keyed on the order's date rather than payload.savedAt, which is
+// rewritten on every save and so silently moved orders between months.
 function monthEarnings(monthKey){
   let margin = 0, bonus = 0;
-  const orders = myOrders.filter(o=>!o.voided && o.savedAt && o.savedAt.startsWith(monthKey));
+  const orders = myOrders.filter(o=>!o.voided && o.date && String(o.date).startsWith(monthKey));
   orders.forEach(o=>{
     const e = orderEarnings(o);
-    margin += e.margin; bonus += e.bonus;
+    margin += e.margin;
+    if(o.status === 'completed') bonus += e.bonus;
   });
   return { margin, bonus, total: margin + bonus, orders };
 }

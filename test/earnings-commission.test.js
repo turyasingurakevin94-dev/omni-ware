@@ -93,25 +93,46 @@ if (!disagreements) t.pass(`orderEarnings total identical in agent.html and agen
 
 /* ---------- 3. monthEarnings scopes to the right orders ---------------- */
 /*
- * The month total has to exclude voided orders and orders from other
- * months, and must not depend on order status -- an agent's bonus is earned
- * when the sale is made, and the Earnings screen shows every non-voided
- * order for the month with its status alongside.
+ * Voided orders and other months are excluded, and the two figures qualify
+ * DIFFERENTLY, which this used to get wrong:
+ *
+ *   margin -- the agent's own money, collected straight from their client
+ *             and never touching the shop's books. An order still out for
+ *             delivery counts; their customer owes them either way.
+ *
+ *   bonus  -- the SHOP's money, paid out on a claim, and only owed on a
+ *             sale that completed. Counting it earlier made the claim
+ *             button offer a figure agent-claim-commission would decline
+ *             to pay.
+ *
+ * Both keyed on the order's own date. payload.savedAt is rewritten by every
+ * save, so it moved orders between months -- and since a claim is a fixed
+ * snapshot, a month already claimed would pay again from the new month.
  */
 setOrders([
-  { savedAt: '2026-07-04T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 100)] },
-  { savedAt: '2026-07-20T10:00:00Z', voided: false, status: 'draft',     items: [item(1200, 1000, 1, 200)] },
-  { savedAt: '2026-07-28T10:00:00Z', voided: true,  status: 'completed', items: [item(9999, 1000, 9, 9999)] }, // voided
-  { savedAt: '2026-06-30T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 400)] }, // prior month
-  { savedAt: '2026-08-01T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 800)] }, // next month
-  { savedAt: null,                   voided: false, status: 'completed', items: [item(1200, 1000, 1, 1600)] }, // undated
+  { date: '2026-07-04', savedAt: '2026-07-04T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 100)] },
+  { date: '2026-07-20', savedAt: '2026-07-20T10:00:00Z', voided: false, status: 'draft',     items: [item(1200, 1000, 1, 200)] },
+  { date: '2026-07-28', savedAt: '2026-07-28T10:00:00Z', voided: true,  status: 'completed', items: [item(9999, 1000, 9, 9999)] }, // voided
+  { date: '2026-06-30', savedAt: '2026-06-30T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 400)] }, // prior month
+  { date: '2026-08-01', savedAt: '2026-08-01T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 800)] }, // next month
+  { date: null, savedAt: null,                   voided: false, status: 'completed', items: [item(1200, 1000, 1, 1600)] }, // undated
 ]);
 {
   const july = agent.monthEarnings('2026-07');
-  t.check(july.bonus === 300, `month bonus counts only that month's unvoided orders (got ${july.bonus}, expected 300)`);
-  t.check(july.margin === 400, `month margin likewise (got ${july.margin}, expected 400)`);
+  // 100 from the completed order only. The July draft carries 200 of bonus
+  // and contributes none of it — that is the whole point.
+  t.check(july.bonus === 100, `month bonus counts only completed orders (got ${july.bonus}, expected 100)`);
+  // 200 + 200: margin from BOTH July orders, the draft included.
+  t.check(july.margin === 400, `month margin counts every unvoided order for the month (got ${july.margin}, expected 400)`);
   t.check(july.orders.length === 2, `month order list matches (got ${july.orders.length}, expected 2)`);
   t.check(agent.monthEarnings('2026-09').total === 0, 'a month with no orders earns nothing');
+  // An order dated July but re-saved in August stays July's. Run on its own
+  // fixture, then the shared one is put back for the checks below.
+  const shared = myOrders.slice();
+  setOrders([{ date: '2026-07-04', savedAt: '2026-08-15T10:00:00Z', voided: false, status: 'completed', items: [item(1200, 1000, 1, 100)] }]);
+  t.check(agent.monthEarnings('2026-07').bonus === 100 && agent.monthEarnings('2026-08').bonus === 0,
+    'a July order re-saved in August is still July\'s, so it cannot be claimed twice');
+  setOrders(shared);
 }
 
 /* ---------- 4. shown bonus == the amount the server would pay ---------- */
@@ -130,20 +151,37 @@ function serverClaimAmount(orders, month) {
   let bonusAmount = 0;
   for (const row of orders || []) {
     const payload = row.payload || {};
-    if (!payload.savedAt || !String(payload.savedAt).startsWith(month)) continue;
+    if (!row.date || !String(row.date).startsWith(month)) continue;
     for (const it of payload.items || []) bonusAmount += Number(it.bonusCommission) || 0;
   }
   return bonusAmount;
 }
 {
-  // The server reads rows straight from the table (payload-shaped, already
-  // filtered to voided=false), so present the same orders that way.
-  const asRows = myOrders.filter((o) => !o.voided)
-    .map((o) => ({ payload: { savedAt: o.savedAt, items: o.items } }));
+  // The server reads rows straight from the table, already filtered by the
+  // query to voided=false AND status=completed, so present the same set.
+  const asRows = myOrders.filter((o) => !o.voided && o.status === 'completed')
+    .map((o) => ({ date: o.date, payload: { items: o.items } }));
   const shown = agent.monthEarnings('2026-07').bonus;
   const paid = serverClaimAmount(asRows, '2026-07');
   t.check(shown === paid,
     `the bonus shown on the claim button equals what the server would pay (shown ${shown}, server ${paid})`);
+}
+{
+  // The property behind that equality, stated directly: an order that has
+  // not completed contributes nothing to the claimable bonus, however much
+  // bonus its items carry. This is what the claim query's status filter
+  // buys, and the agent screen has to agree or the button overstates.
+  const draftOnly = myOrders.filter((o) => !o.voided && o.status !== 'completed');
+  const carried = draftOnly.reduce((s, o) =>
+    s + (o.items || []).reduce((n, it) => n + (Number(it.bonusCommission) || 0), 0), 0);
+  t.check(draftOnly.length > 0 && carried > 0,
+    `the fixture has unfinished orders carrying bonus to test with (${draftOnly.length} orders, ${carried} bonus)`);
+  const shownForThose = draftOnly.reduce((s, o) => s + agent.orderEarnings(o).bonus, 0);
+  t.check(shownForThose === carried,
+    'orderEarnings still reports what those orders would be worth');
+  t.check(agent.monthEarnings('2026-07').bonus === serverClaimAmount(
+    myOrders.filter((o) => !o.voided && o.status === 'completed').map((o) => ({ date: o.date, payload: { items: o.items } })), '2026-07'),
+    'but the month total counts none of it, because the shop only owes bonus on a completed sale');
 }
 
 /* ---------- 5. the server's claim rule still looks like the mirror ----- */
@@ -157,10 +195,15 @@ function serverClaimAmount(orders, month) {
   if (!m) {
     t.fail('could not find the claim summation in agent-claim-commission (has it been restructured?)');
   } else {
-    const body = m[1];
+    // Comments stripped: the loop carries a note about why payload.savedAt
+    // was abandoned, and matching that would report the old basis still in
+    // use in the very place it was removed from.
+    const body = m[1].split(/\r?\n/).map((l) => l.replace(/\/\/.*$/, '')).join('\n');
     const has = (s) => body.includes(s);
-    t.check(has('payload.savedAt') && has('.startsWith(month)') && has('Number(it.bonusCommission) || 0'),
+    t.check(has('row.date') && has('.startsWith(month)') && has('Number(it.bonusCommission) || 0'),
       'the server still sums bonusCommission over that month\'s orders, as mirrored above');
+    t.check(!has('payload.savedAt'),
+      'and no longer keys the month on a timestamp that every save rewrites');
   }
 }
 {
@@ -168,11 +211,16 @@ function serverClaimAmount(orders, month) {
   // is what stops a cancelled order still paying a bonus.
   t.check(/\.eq\("voided",\s*false\)/.test(claimSrc),
     'the claim query still excludes voided orders');
-  // Neither side filters on status, and they must agree about that: if the
-  // server started paying only for completed orders, the button would keep
-  // offering the larger figure.
-  t.check(!/\.eq\("status"/.test(claimSrc),
-    'the claim query still ignores order status, matching what the agent is shown');
+  // This previously asserted the OPPOSITE -- that neither side filtered on
+  // status -- on the reasoning that the two agreed and so were consistent.
+  // They were consistent and both wrong: agent-submit-order creates orders
+  // at 'draft', so a bonus was claimable on an order that was submitted and
+  // never prepared, delivered or paid for. The fix moved both sides to
+  // completed-only rather than leaving them agreeing on the wrong rule.
+  t.check(/\.eq\("status", "completed"\)/.test(claimSrc),
+    'the claim query pays only for completed orders');
+  t.check(/o\.status === 'completed'/.test(agentSrc),
+    'and the agent screen only counts bonus on those, so the button cannot overstate what will be paid');
 }
 
 /* ---------- 6. a claimed month can't be double-paid ------------------- */

@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
     const [{ data: agents, error: agentsErr }, { data: orders, error: ordersErr }] = await Promise.all([
       admin.from("agents").select("id, name").eq("shop_id", shopId),
-      admin.from("saved_quotes").select("payload").eq("shop_id", shopId).eq("status", "completed").eq("voided", false),
+      admin.from("saved_quotes").select("date, agent_id, payload").eq("shop_id", shopId).eq("status", "completed").eq("voided", false),
     ]);
     if (agentsErr) return json({ error: agentsErr.message, stage: "agents" }, 500);
     if (ordersErr) return json({ error: ordersErr.message, stage: "orders" }, 500);
@@ -86,9 +86,15 @@ Deno.serve(async (req) => {
     const totals = new Map<string, { amount: number; completedOrders: number }>();
     for (const row of orders || []) {
       const payload = row.payload || {};
-      const savedAt: string | null = payload.savedAt || null;
-      const agentId: string | null = payload.originAgentId || null;
-      if (!agentId || !savedAt || !savedAt.startsWith(monthKey)) continue;
+      // Same basis as agent-claim-commission, deliberately: this is what
+      // the agent sees as earned and that has to be the same set of orders
+      // the payout is computed from. The order's own date rather than
+      // payload.savedAt, which is rewritten on every save and so moved
+      // orders between months; and the FK'd agent_id rather than the
+      // payload field, which is what the order policy matches on.
+      const orderDate: string | null = row.date || null;
+      const agentId: string | null = row.agent_id || null;
+      if (!agentId || !orderDate || !String(orderDate).startsWith(monthKey)) continue;
       const entry = totals.get(agentId) || { amount: 0, completedOrders: 0 };
       entry.amount += orderEarnings(payload.items || []);
       entry.completedOrders += 1;

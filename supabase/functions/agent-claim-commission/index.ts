@@ -69,18 +69,34 @@ Deno.serve(async (req) => {
     if (existingErr) return json({ error: existingErr.message, stage: "existing_lookup" }, 500);
     if (existing) return json({ ok: true, claim: existing });
 
+    // status = completed, matching agent-leaderboard, which is what the
+    // agent's own Earnings screen shows them. Without it this counted every
+    // non-voided order including DRAFTS -- so an order submitted and never
+    // prepared, delivered or paid for still earned the agent a payout, and
+    // one the shop's own screens never showed as earned.
+    //
+    // agent_id, not payload->>'originAgentId': the FK'd column is the one
+    // 0027 introduced and 0035 made the sole basis of the order policy, and
+    // it is the indexed one. The JSONB read was the last place still
+    // trusting a field the payload carries.
     const { data: orders, error: ordersErr } = await admin
       .from("saved_quotes")
-      .select("payload")
+      .select("date, payload")
       .eq("shop_id", shopId)
       .eq("voided", false)
-      .eq("payload->>originAgentId", agentId);
+      .eq("status", "completed")
+      .eq("agent_id", agentId);
     if (ordersErr) return json({ error: ordersErr.message, stage: "orders_lookup" }, 500);
 
     let bonusAmount = 0;
     for (const row of orders || []) {
       const payload = row.payload || {};
-      if (!payload.savedAt || !String(payload.savedAt).startsWith(month)) continue;
+      // The order's own date, not payload.savedAt. savedAt is rewritten on
+      // every save, so re-opening a July order in August moved it out of
+      // July and into August -- and since a claim is a fixed snapshot, a
+      // month already claimed would have paid it once and August would pay
+      // it again. date is set at creation and never rewritten.
+      if (!row.date || !String(row.date).startsWith(month)) continue;
       for (const it of payload.items || []) {
         bonusAmount += Number(it.bonusCommission) || 0;
       }
