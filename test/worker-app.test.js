@@ -44,6 +44,12 @@ const sharedJs = read('shared-worker.js');
                   customerId: 'C001', debtCharged: 0,
                   items: [{ productName: 'Rebar', qty: 2, pickStatus: 'pending' }],
                   assignedWorkerId: 'ST1', pickingStatus: 'in_progress', pickCursor: 0,
+                  // The agent attribution. None of these appear in the
+                  // payload the worker app builds, so they only survive by
+                  // coming back off the server.
+                  originAgentId: 'AG0003', agentClientId: 17,
+                  deliveryMode: 'agent_pickup', deliveryAddress: null,
+                  agentPaymentStatus: 'paid',
                 },
               })),
               error: null,
@@ -71,10 +77,37 @@ const sharedJs = read('shared-worker.js');
 
     t.check(merged.amount_paid === 500000,
       `a payment taken after this app loaded survives the save (amount_paid ${merged.amount_paid})`);
-    t.check(merged.payload.payments.length === 1 && merged.payload.payments[0].amount === 500000,
-      'the payment record itself survives too, not just the total');
+    // Read defensively: if the merge stops carrying the server's payload
+    // through, this is the first assertion to touch it, and reading straight
+    // through would abort the run with a stack trace instead of naming the
+    // invariant that broke.
+    const pay = (merged.payload || {}).payments;
+    t.check(Array.isArray(pay) && pay.length === 1 && pay[0].amount === 500000,
+      Array.isArray(pay)
+        ? 'the payment record itself survives too, not just the total'
+        : 'the merged payload carries no payments array at all — the server payload is not coming through');
     t.check(merged.payload.customerId === 'C001',
       'fields this app never touches come back from the server, not from its snapshot');
+
+    // Named individually because these are the ones that actually got
+    // destroyed. buildWorkerSyncRows still builds its payload from an
+    // explicit list that omits all five, so before the merge every worker
+    // touch on an agent's order stripped them -- and originAgentId is what
+    // the RLS policy matches on, so losing it detached the order from its
+    // agent entirely and the agent's app simply stopped showing it. Three
+    // real orders totalling UGX 1.9m were found in that state.
+    const AGENT_FIELDS = ['originAgentId', 'agentClientId', 'deliveryMode', 'deliveryAddress', 'agentPaymentStatus'];
+    const carried = await scope.mergeOntoServerRows('shop-1', [{
+      id: 12, shop_id: 'shop-1', status: 'pending_delivery', amount_paid: 0,
+      payload: { items: [], pickingStatus: 'done' },   // exactly what the worker sends: none of them
+    }]);
+    const lost = AGENT_FIELDS.filter((k) => carried[0].payload[k] === undefined);
+    t.check(lost.length === 0,
+      lost.length
+        ? `a worker save still strips these from an agent's order: ${lost.join(', ')}`
+        : `an agent order keeps all ${AGENT_FIELDS.length} of its agent fields through a worker save`);
+    t.check(carried[0].payload.originAgentId === 'AG0003',
+      'originAgentId in particular survives — it is what the order policy matches on');
 
     t.check(merged.payload.pickingStatus === 'done' && merged.payload.assignedDeliveryId === 'ST2'
       && merged.payload.workerAcceptedAt === 111,
