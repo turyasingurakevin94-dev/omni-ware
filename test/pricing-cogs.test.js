@@ -111,6 +111,73 @@ const row = (extra) => Object.assign({
     'and so is the zero fallback for uncosted stock');
 }
 
+/* ---------- 4b. suppliers are ranked for the quantity being bought ---- */
+/*
+ * The cards said "cheapest" while sorting on the flat wholesale figure. A
+ * supplier cheap by the carton outranked one cheaper for the single unit
+ * actually being bought, and anyone with no wholesale price at all sat
+ * behind every supplier who had one, however expensive they were.
+ */
+{
+  // A: cheap by the carton, dear loose. B: no carton price, moderate loose.
+  const A = { supplierId: 'A', wholesale: 15000, retail: 40000, packQty: 12, tiers: [] };
+  const B = { supplierId: 'B', wholesale: null, retail: 25000, packQty: 12, tiers: [] };
+  const rank = (rows, qty) => rows
+    .map((r) => ({ id: r.supplierId, price: fn.purchasePriceAtQty(r, qty) }))
+    .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
+    .map((r) => r.id);
+
+  t.check(rank([A, B], 1).join(',') === 'B,A',
+    `buying one, the supplier who is actually cheaper for one comes first (${rank([A, B], 1).join(',')})`);
+  t.check(rank([A, B], 12).join(',') === 'A,B',
+    `buying a carton, the carton price wins (${rank([A, B], 12).join(',')})`);
+
+  // The old comparator, for contrast: wholesale first with null as Infinity.
+  const oldRank = [A, B].slice().sort((a, b) => {
+    const aw = a.wholesale != null ? a.wholesale : Infinity;
+    const bw = b.wholesale != null ? b.wholesale : Infinity;
+    return aw - bw;
+  }).map((r) => r.supplierId);
+  t.check(oldRank.join(',') === 'A,B',
+    'the old flat sort put A first at every quantity, including one unit at 40,000 against B at 25,000');
+}
+{
+  // A volume tier has to be able to change the order as the quantity crosses it.
+  const A = { supplierId: 'A', wholesale: 15000, retail: 30000, packQty: 12, tiers: [] };
+  const B = { supplierId: 'B', wholesale: 16000, retail: 30000, packQty: 12, tiers: [{ minQty: 24, price: 11000 }] };
+  const rank = (qty) => [A, B]
+    .map((r) => ({ id: r.supplierId, price: fn.purchasePriceAtQty(r, qty) }))
+    .sort((a, b) => a.price - b.price).map((r) => r.id);
+  t.check(rank(12).join(',') === 'A,B' && rank(24).join(',') === 'B,A',
+    `a steeper tier overtakes once the quantity reaches it (12: ${rank(12).join(',')}, 24: ${rank(24).join(',')})`);
+}
+{
+  const stage = extractFunction(src, 'renderIpStage', 'index.html');
+  const iRankStart = stage.indexOf('const ranked = staticRanked');
+  t.check(/const ranked = staticRanked\s*\n\s*\.map\(r=>\(\{\.\.\.r, purchasePrice: purchasePriceAtQty\(r, qty\)\}\)\)/.test(stage),
+    'the quote screen works out what each supplier charges for this quantity');
+  // Computing it is not the same as sorting on it -- the comparator has to
+  // actually read purchasePrice, or the flat figure can quietly drive the
+  // order while the quantity-aware number sits there unused.
+  const sortBody = /\.sort\(\(a,b\)=>\{([\s\S]*?)\}\);/.exec(stage.slice(iRankStart));
+  t.check(sortBody && /a\.purchasePrice/.test(sortBody[1]) && /b\.purchasePrice/.test(sortBody[1])
+    && !/a\.wholesale/.test(sortBody[1]),
+    'and sorts on that figure rather than on the flat wholesale one');
+  // Order matters: the ranking cannot be built before there is a quantity.
+  const iQty = stage.indexOf('const qty = ipComputeQty');
+  const iRank = stage.indexOf('const ranked = staticRanked');
+  const iTop3 = stage.indexOf('const top3 = ranked.slice');
+  t.check(iQty > -1 && iRank > iQty && iTop3 > iRank,
+    'the quantity is settled first, then the ranking, then the cards');
+  // ...and the things that must be decided before a quantity exists still are.
+  t.check(/const contextRow = staticRanked\.find/.test(stage) && /const packQty = contextRow/.test(stage),
+    'packing context still comes from the flat list, since the quantity may be typed in packs');
+  t.check(stage.indexOf('const contextRow') < iQty,
+    'that context is established before the quantity is read');
+  t.check(/const top3 = ranked\.slice\(0, 3\)/.test(stage) && !/const top3 = staticRanked/.test(stage),
+    'the cards are drawn from the quantity-aware ranking, not the flat one');
+}
+
 /* ---------- 5. FIFO costing itself ------------------------------------ */
 {
   data.stockLots = {};

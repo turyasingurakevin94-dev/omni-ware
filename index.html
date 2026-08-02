@@ -5516,33 +5516,36 @@ function renderIpStage(){
   if(!product){ ipShowSearchView(); return; }
   const variantIdx = ipVariantIdx;
   const displayName = productVariantLabel(product, variantIdx);
-  const ranked = rankedPriceRows(ipProductId, variantIdx);
+  // Flat cheapest-first, used only for what has to be decided BEFORE a
+  // quantity exists: which supplier is selected by default, and whose
+  // packing the quantity is typed in. The real ranking happens below, once
+  // there is a quantity to rank for.
+  const staticRanked = rankedPriceRows(ipProductId, variantIdx);
   const stockQty = getStockQty(ipProductId, variantIdx);
 
   const backBtn = `<button class="ip-back" id="ip_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to search</button>`;
 
-  if(ranked.length===0 && data.suppliers.length===0 && stockQty===0){
+  if(staticRanked.length===0 && data.suppliers.length===0 && stockQty===0){
     wrap.innerHTML = `${backBtn}<div class="q-stage"><div class="q-empty-hint">No suppliers on file at all yet — add one in the Suppliers tab first.</div></div>`;
     wrap.querySelector('#ip_back_btn').addEventListener('click', ipShowSearchView);
     return;
   }
 
-  const top3 = ranked.slice(0, 3);
   // Once staff picks a supplier it should stick through re-renders (price-card
   // clicks, etc.) rather than snapping back to a default — only fall back to
   // a default when nothing at all is currently selected. Default to "Our
   // stock" whenever there's inventory on hand, since that's how a sale off
   // the shelf should be recorded; only fall back to the cheapest supplier
   // when there's nothing in stock to sell.
-  if(!ipSelectedSupplierId || (ipSelectedSupplierId!=='__stock__' && !ranked.some(r=>r.supplierId===ipSelectedSupplierId))){
-    ipSelectedSupplierId = stockQty>0 ? '__stock__' : (top3.length ? top3[0].supplierId : (ranked[0]?ranked[0].supplierId:null));
+  if(!ipSelectedSupplierId || (ipSelectedSupplierId!=='__stock__' && !staticRanked.some(r=>r.supplierId===ipSelectedSupplierId))){
+    ipSelectedSupplierId = stockQty>0 ? '__stock__' : (staticRanked[0] ? staticRanked[0].supplierId : null);
   }
-  const selectedRow = ranked.find(r=>r.supplierId===ipSelectedSupplierId) || null;
-  // Recommended prices and packaging info reference the selected supplier's
-  // price row when one is chosen, falling back to the cheapest known row
-  // (still useful context even while "Our stock" is selected).
-  const refRow = selectedRow || ranked[0] || null;
-  const unit = refRow ? (refRow.unit || '') : '';
+  // Packing context has to be settled before a quantity can be read at all
+  // (the quantity may be typed in packs), so it comes from the flat list.
+  // Which row that is only matters when nothing is selected, and packing is
+  // a property of the item rather than the supplier, so any row will do.
+  const contextRow = staticRanked.find(r=>r.supplierId===ipSelectedSupplierId) || staticRanked[0] || null;
+  const unit = contextRow ? (contextRow.unit || '') : '';
   const stockCost = getFIFOUnitCost(ipProductId, variantIdx);
   // Quantity is picked in the Qty row right below the header, so it has to
   // persist across re-renders rather than reset to 1 -- see ipQtyRaw's
@@ -5553,11 +5556,34 @@ function renderIpStage(){
   // only makes sense while this row's own packQty backs it up, so falls
   // back to the base unit the moment that stops being true (e.g. after
   // switching to a supplier/stock with no pack info).
-  const packQty = refRow ? Number(refRow.packQty)||0 : 0;
-  const packUnit = refRow ? (refRow.packUnit||'') : '';
+  const packQty = contextRow ? Number(contextRow.packQty)||0 : 0;
+  const packUnit = contextRow ? (contextRow.packUnit||'') : '';
   const hasPack = packQty>0 && !!packUnit;
   if(ipQtyUnitMode==='pack' && !hasPack) ipQtyUnitMode = 'unit';
   const qty = ipComputeQty(ipQtyRaw, ipQtyUnitMode, packQty);
+
+  // Now that there IS a quantity, rank suppliers by what each would actually
+  // charge for it -- their own volume tiers included -- rather than by their
+  // flat wholesale figure. Sorting on wholesale alone put a supplier who is
+  // cheap by the carton above one who is cheaper for the single unit being
+  // bought, and labelled them "cheapest" while doing it. It also buried any
+  // supplier with no wholesale price at all behind every supplier who had
+  // one, however expensive. This is the same ranking Inventory > Purchase
+  // already uses, for the same reason.
+  const ranked = staticRanked
+    .map(r=>({...r, purchasePrice: purchasePriceAtQty(r, qty)}))
+    .sort((a,b)=>{
+      const ap = a.purchasePrice!=null ? a.purchasePrice : Infinity;
+      const bp = b.purchasePrice!=null ? b.purchasePrice : Infinity;
+      return ap-bp;
+    });
+  const top3 = ranked.slice(0, 3);
+  const selectedRow = ranked.find(r=>r.supplierId===ipSelectedSupplierId) || null;
+  // Prices and the recorded cost reference the selected supplier's row when
+  // one is chosen, falling back to whoever is cheapest AT THIS QUANTITY
+  // (still useful context even while "Our stock" is selected, and it is what
+  // replacing the stock would actually cost).
+  const refRow = selectedRow || ranked[0] || null;
 
   // When "Our stock" is selected, base the recommended prices on what we
   // actually paid for the stock on hand (+ the item's stock-only markup
@@ -5604,11 +5630,10 @@ function renderIpStage(){
   </label>` : '';
 
   const rankLabels = ['BEST', '2ND', '3RD'];
-  // Ranking itself (top3/ranked ordering) still sorts by each supplier's
-  // flat qty-1 price -- only the prices shown on the cards follow the
-  // quantity currently typed. A supplier with a steeper volume tier could
-  // in principle overtake another at higher quantities without swapping
-  // rank order here; re-sorting live by qty is a further enhancement.
+  // Both the order and the prices follow the quantity currently typed, so a
+  // supplier with a steeper volume tier overtakes the others the moment the
+  // quantity reaches it -- the ranking changes under the typing, which is
+  // the point of ranking for a quantity at all.
   const cardsHtml = top3.map((r,i)=>{
     const sel = r.supplierId===ipSelectedSupplierId;
     return `<label class="q-supplier-card ${i===0?'best':''} ${sel?'selected':''}">
@@ -5628,7 +5653,9 @@ function renderIpStage(){
   const pricedIds = new Set(ranked.map(r=>r.supplierId));
   const unpriced = data.suppliers.filter(s=>!pricedIds.has(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
   const otherSupplierEntries = [
-    ...otherPriced.map(r=>({id:r.supplierId, label:`${r.sname} — ${fmtUGX(r.wholesale!=null?r.wholesale:r.retail)}`})),
+    // Priced at this quantity too, so the dropdown can't quote a figure the
+    // cards above have already moved past.
+    ...otherPriced.map(r=>({id:r.supplierId, label:`${r.sname} — ${fmtUGX(r.purchasePrice!=null ? Math.round(r.purchasePrice) : (r.wholesale!=null?r.wholesale:r.retail))}`})),
     ...unpriced.map(s=>({id:s.id, label:`${s.name} — no price on file`}))
   ];
 
