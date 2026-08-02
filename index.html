@@ -2867,10 +2867,16 @@
       <div class="panel">
         <div class="panel-head-row">
           <h2 style="margin-bottom:0;">All products</h2>
-          <button class="btn btn-accent btn-icon" id="p_add_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Add product
-          </button>
+          <div class="btn-row" style="margin-top:0;">
+            <button class="btn btn-ghost btn-icon" id="p_print_btn" title="Print the products currently listed">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+              Print list
+            </button>
+            <button class="btn btn-accent btn-icon" id="p_add_btn">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add product
+            </button>
+          </div>
         </div>
         <div class="p-toolbar">
           <div class="search-bar p-toolbar-search"><input id="p_search" placeholder="Search products..."></div>
@@ -10825,18 +10831,19 @@ function variantCardHTML(p, v, idx, tokens=[]){
       </div>
     </div>`;
 }
-function renderProducts(filter='', categoryFilter='', supplierFilter=''){
-  populateProductFilterDropdowns(categoryFilter, supplierFilter);
-  const wrap = document.getElementById('productsTableWrap');
+// The catalog flattened to one row per sellable thing, under the filters
+// currently applied: a simple product is one row, a variable product one row
+// per variant, so e.g. "M12" matches that variant and not its siblings.
+// Matching requires every typed word to appear somewhere in the entry, in
+// any order, so "black plug" finds a "Black Wall Plug".
+//
+// Shared by the card grid and the printed list. Printing used to mean a
+// second copy of this walk, which is how two views of one thing drift into
+// showing different sets -- the fault behind several bugs already fixed in
+// this file.
+function productRowsForList(filter='', categoryFilter='', supplierFilter=''){
   const tokens = searchTokens(filter);
-
-  // Flatten catalog into searchable entries: simple products stay whole,
-  // variable products become one entry per variant so e.g. "M12" only
-  // matches the M12 variant, not its siblings. Matching requires every
-  // typed word to appear somewhere in the entry (in any order), so
-  // "black plug" finds a "Black Wall Plug" even though that's not a
-  // substring of the name.
-  const cards = [];
+  const rows = [];
   data.products.forEach(p=>{
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
     const matchesSupplier = !supplierFilter || data.prices.some(pr=>pr.productId===p.id && pr.supplierId===supplierFilter);
@@ -10844,21 +10851,101 @@ function renderProducts(filter='', categoryFilter='', supplierFilter=''){
 
     if(p.type==='variable'){
       if(!p.variants || p.variants.length===0){
-        if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)) cards.push(variableEmptyCardHTML(p, tokens));
+        if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)){
+          rows.push({ p, v:null, idx:null, kind:'variable-empty' });
+        }
         return;
       }
       p.variants.forEach((v,idx)=>{
         const haystack = (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
-        if(!tokens.length || matchesAllTokens(haystack, tokens)) cards.push(variantCardHTML(p, v, idx, tokens));
+        if(!tokens.length || matchesAllTokens(haystack, tokens)) rows.push({ p, v, idx, kind:'variant' });
       });
     } else {
-      if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)) cards.push(simpleCardHTML(p, tokens));
+      if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)){
+        rows.push({ p, v:null, idx:null, kind:'simple' });
+      }
     }
   });
+  return rows;
+}
+function renderProducts(filter='', categoryFilter='', supplierFilter=''){
+  populateProductFilterDropdowns(categoryFilter, supplierFilter);
+  const wrap = document.getElementById('productsTableWrap');
+  const tokens = searchTokens(filter);
+  const cards = productRowsForList(filter, categoryFilter, supplierFilter).map(r=>
+    r.kind==='variant' ? variantCardHTML(r.p, r.v, r.idx, tokens)
+    : r.kind==='variable-empty' ? variableEmptyCardHTML(r.p, tokens)
+    : simpleCardHTML(r.p, tokens));
 
   if(cards.length===0){ wrap.innerHTML = '<div class="empty">No products match your filters.</div>'; return; }
   wrap.innerHTML = `<div class="product-grid">${cards.join('')}</div>`;
 }
+// Prints exactly what the screen is listing, filters and all.
+//
+// A filtered list printed without saying so is a partial catalog that looks
+// like the whole one -- so the header names whichever filters are on, and
+// says plainly when none are.
+document.getElementById('p_print_btn').addEventListener('click', ()=>{
+  const filter = document.getElementById('p_search').value;
+  const categoryFilter = document.getElementById('p_category_filter').value;
+  const supplierFilter = document.getElementById('p_supplier_filter').value;
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter);
+  if(rows.length===0){ toast('No products match your filters'); return; }
+
+  const applied = [];
+  if(filter.trim()) applied.push(`matching “${filter.trim()}”`);
+  if(categoryFilter) applied.push(`in ${categoryFilter}`);
+  if(supplierFilter) applied.push(`priced by ${supplierName(supplierFilter)}`);
+  const scope = applied.length
+    ? `${rows.length} product${rows.length===1?'':'s'} ${applied.join(', ')}`
+    : `All ${rows.length} product${rows.length===1?'':'s'}`;
+
+  // Stock is on here because a printed product list is read away from the
+  // screen -- walking the shelves is most of what it is for.
+  const rowsHtml = rows.map((r,i)=>{
+    const variant = r.kind==='variant' ? variantLabel(r.v.combo)
+      : (r.kind==='variable-empty' ? 'no variants set up' : '');
+    const sku = r.kind==='variant' ? (r.v.sku||'') : '';
+    const qty = r.kind==='variable-empty' ? '' : getStockQty(r.p.id, r.idx);
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${esc(r.p.id)}</td>
+      <td>${esc(r.p.name)}</td>
+      <td>${esc(variant)}</td>
+      <td>${esc(sku)}</td>
+      <td>${esc(r.p.category||'')}</td>
+      <td>${esc(r.p.subcategory||'')}</td>
+      <td class="num">${qty===''?'':esc(qty)}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  if(!win){ toast('Your browser blocked the print window — allow pop-ups for this site'); return; }
+  win.document.write(`<html><head><title>Products</title><style>
+    body{font-family:Arial,sans-serif;padding:16px;color:#1B2430;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}
+    th{background:#eee;}
+    td.num,th.num{text-align:right;}
+    h1{font-size:16px;margin-bottom:2px;}
+    .sub{font-size:12px;color:#555;margin:0 0 12px;}
+    tr{page-break-inside:avoid;}
+    thead{display:table-header-group;}
+  </style></head><body>
+    <h1>Products</h1>
+    <p class="sub">${esc(scope)} &middot; ${esc(todayISO())}</p>
+    <table><thead><tr>
+      <th>No.</th><th>ID</th><th>Product</th><th>Variant</th><th>SKU</th>
+      <th>Category</th><th>Subcategory</th><th class="num">In stock</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+    </table>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+});
+
 function setProductType(type){
   const isVariable = type==='variable';
   document.getElementById('p_type_simple').checked = !isVariable;
