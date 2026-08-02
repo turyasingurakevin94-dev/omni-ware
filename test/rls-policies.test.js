@@ -81,14 +81,23 @@ const sql = files.map((f) => fs.readFileSync(path.join(MIG, f), 'utf8')).join('\
  * controls is what made the original policy worth replacing.
  */
 {
-  const pol = /create policy "agents read their own orders" on saved_quotes([\s\S]*?);/.exec(sql);
-  t.check(pol, 'the agent policy on saved_quotes is present');
-  if (pol) {
-    t.check(/for select/.test(pol[1]),
-      'it grants select only — an agent cannot write an order row directly');
-    t.check(/agent_id = current_agent_id\(shop_id\)/.test(pol[1]),
-      'and matches on the FK\'d column, not on payload JSON the client controls');
-  }
+  // The LAST definition wins: 0027 wrote this policy and 0035 narrowed it.
+  // Matching the first would check a version the database no longer has --
+  // the same trap agent_staff_names sets two sections down.
+  const defs = [...sql.matchAll(/create policy "agents read their own orders" on saved_quotes([\s\S]*?);/g)];
+  t.check(defs.length >= 1, `found the live agent policy on saved_quotes (${defs.length} versions in history)`);
+  const pol = defs.length ? defs[defs.length - 1][1] : '';
+  t.check(/for select/.test(pol),
+    'it grants select only — an agent cannot write an order row directly');
+  t.check(/agent_id = current_agent_id\(shop_id\)/.test(pol),
+    'and matches on the FK\'d column, not on payload JSON the client controls');
+  // 0027 kept a fallback for rows its backfill might have missed. The
+  // backfill, the lockstep trigger and 0030's validated FK between them
+  // mean no such row can exist -- and the fallback was the very
+  // client-controlled JSONB read 0027 set out to remove, on the one branch
+  // that cannot use the index.
+  t.check(!/payload->>'originAgentId'/.test(pol),
+    'and no longer falls back to reading originAgentId out of the payload');
   t.check(/drop policy "agents manage their own orders" on saved_quotes/.test(sql),
     'the old for-all policy was dropped rather than left alongside it');
   // Two permissive policies OR together, so leaving the old one would have
@@ -131,6 +140,8 @@ const sql = files.map((f) => fs.readFileSync(path.join(MIG, f), 'utf8')).join('\
     'it is scoped to the shop asked about');
   t.check(/current_agent_id\(p_shop_id\)/.test(body),
     'and only returns names attached to an order the CALLER\'s own agent id owns');
+  t.check(!/payload->>'originAgentId'/.test(body),
+    'and reaches those orders through the FK\'d column alone, like the policy');
 }
 
 /* ---------- 7. product images are deliberately public ----------------- */
