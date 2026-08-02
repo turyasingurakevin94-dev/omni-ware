@@ -28,6 +28,14 @@ function json(body: unknown, status = 200) {
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
+// Ceilings on the inquiry form, counted over a rolling window. See the note
+// where they are applied: this is the one endpoint that writes with no
+// session, and every unseen phone number becomes a row in an agent's real
+// client list.
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+const MAX_PER_PHONE = 3;
+const MAX_PER_CATALOGUE = 60;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -85,8 +93,44 @@ Deno.serve(async (req) => {
       const customerPhone = String(body.customerPhone || "").trim().slice(0, 40);
       const message = body.message ? String(body.message).trim().slice(0, 500) : null;
       const productId = body.productId ? String(body.productId).slice(0, 120) : null;
-      const variantIdx = body.variantIdx != null ? String(body.variantIdx).slice(0, 20) : null;
+      // A variant index or nothing. It was taking any string at all, so an
+      // inquiry could carry arbitrary text in a field the agent's side will
+      // read back as a position in an array.
+      const rawVariant = body.variantIdx != null ? String(body.variantIdx).trim() : "";
+      const variantIdx = /^\d{1,6}$/.test(rawVariant) ? rawVariant : null;
       if (!customerName || !customerPhone) return json({ error: "Name and phone are required" }, 400);
+
+      // Rate limits. This is the only endpoint in the system that WRITES
+      // with no session at all -- the link is public by design and meant to
+      // be shared -- and each call with an unseen phone number creates a
+      // real row in the agent's client list. Unbounded, that is a loop away
+      // from burying an agent's customers under thousands of invented ones,
+      // with no way for them to tell which are real.
+      //
+      // Two ceilings, because they stop different things: one customer
+      // hammering the form, and a script walking through phone numbers.
+      const since = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
+      const countSince = async (extra: (q: any) => any) => {
+        const { count } = await extra(
+          admin.from("catalogue_inquiries")
+            .select("id", { count: "exact", head: true })
+            .eq("shop_id", catalogue.shop_id)
+            .eq("agent_id", catalogue.agent_id)
+            .gte("created_at", since),
+        );
+        return count || 0;
+      };
+
+      if (await countSince((q: any) => q.eq("customer_phone", customerPhone)) >= MAX_PER_PHONE) {
+        return json({ error: `You've already sent ${agent.name} a few requests — they'll be in touch shortly.` }, 429);
+      }
+      // Deliberately generous: an agent genuinely fielding this many
+      // inquiries an hour is extraordinary, and the cost of the cap is that
+      // a flood can crowd out real customers for the rest of the window.
+      // Unbounded flooding is the worse of the two.
+      if (await countSince((q: any) => q) >= MAX_PER_CATALOGUE) {
+        return json({ error: "This catalogue is getting a lot of requests just now. Please try again in a little while." }, 429);
+      }
 
       // A catalogue inquiry becomes a real lead the agent can immediately
       // call back -- not a form they have to remember to copy into their

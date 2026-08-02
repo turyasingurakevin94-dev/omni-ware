@@ -17,7 +17,7 @@
  *
  * Run: node test/catalogue-inquiry.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('catalogue/inquiry');
 const agentSrc = read('agent.html');
@@ -149,6 +149,58 @@ const { suggestSlug } = compileScope(
   const notFound = (pubSrc.match(/This catalogue link isn't valid/g) || []).length;
   t.check(notFound >= 2,
     `a missing catalogue and a missing agent give the same generic answer (${notFound} uses), so the link can't be used to probe`);
+}
+
+/* ---------- 7. the one endpoint that writes with no session ----------- */
+/*
+ * `inquire` is unauthenticated by design -- the link is meant to be shared
+ * with strangers -- and every unseen phone number becomes a real row in the
+ * agent's client list. Unbounded, that is one loop away from burying an
+ * agent's actual customers under thousands of invented ones, with no way
+ * for them to tell which are which.
+ */
+{
+  const consts = ['RATE_WINDOW_MS', 'MAX_PER_PHONE', 'MAX_PER_CATALOGUE']
+    .map((n) => ({ n, src: extractDeclaration(pubSrc, n, 'catalogue-public') }));
+  const val = (n) => {
+    const d = consts.find((c) => c.n === n);
+    return d ? Function(`return ${/=\s*([^;]+);/.exec(d.src)[1]}`)() : null;
+  };
+  t.check(consts.every((c) => c.src), 'the inquiry form has declared ceilings');
+  t.check(val('MAX_PER_PHONE') > 0 && val('MAX_PER_PHONE') <= 10,
+    `one caller cannot submit endlessly (${val('MAX_PER_PHONE')} per window)`);
+  t.check(val('MAX_PER_CATALOGUE') > val('MAX_PER_PHONE'),
+    `and the whole-catalogue ceiling sits above the per-caller one (${val('MAX_PER_CATALOGUE')})`);
+  t.check(val('RATE_WINDOW_MS') >= 5 * 60 * 1000,
+    `over a window long enough to mean something (${val('RATE_WINDOW_MS') / 60000} minutes)`);
+}
+{
+  const inq = /if \(action === "inquire"\) \{([\s\S]*?)return json\(\{ ok: true/.exec(pubSrc);
+  const block = inq ? inq[1] : '';
+  t.check(/MAX_PER_PHONE/.test(block) && /MAX_PER_CATALOGUE/.test(block),
+    'both ceilings are actually applied on the inquiry path');
+  t.check(/, 429\)/.test(block),
+    'and a refusal says "too many", not "bad request" or "server error"');
+  // Order matters: the row must not be created and THEN counted.
+  const iLimit = Math.max(block.indexOf('MAX_PER_PHONE'), block.indexOf('MAX_PER_CATALOGUE'));
+  const iInsert = block.indexOf('.from("agent_clients")');
+  t.check(iLimit > -1 && iInsert > iLimit,
+    'the limits are checked before anything is written, so a refused inquiry leaves no client behind');
+  t.check(/\.gte\("created_at", since\)/.test(block),
+    'counted over a rolling window rather than for all time, so an agent is not silenced forever by one bad afternoon');
+  t.check(/\.eq\("agent_id", catalogue\.agent_id\)/.test(block),
+    'and scoped to this catalogue, so one agent being flooded cannot mute another');
+}
+{
+  // variantIdx was taking any string and storing it in a field the agent
+  // side reads back as a position in an array.
+  const ok = (v) => /^\d{1,6}$/.test(String(v).trim());
+  t.check(ok('0') && ok('12') && ok('999999'),
+    'a real variant index is accepted');
+  t.check(!ok('') && !ok('abc') && !ok('-1') && !ok('1.5') && !ok('<script>') && !ok('1234567'),
+    'blank, text, negative, fractional, markup and absurdly long are not');
+  t.check(/\/\^\\d\{1,6\}\$\/\.test\(rawVariant\)/.test(pubSrc),
+    'and that is the rule the function applies');
 }
 
 process.exit(t.done() ? 1 : 0);
