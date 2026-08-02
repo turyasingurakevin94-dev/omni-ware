@@ -30,12 +30,18 @@
     --ow-slateblue-soft:#E8EFF6;
     --ow-ink-900:#14171B;
     --ow-ink-600:#59626B;
+    /* The third ink step. Four rules already asked for --ink-faint and this
+       file never defined it -- only the worker app did -- so every one of
+       them silently inherited full ink and the thing meant to recede did
+       not. Held at 4.73:1 on paper, so "quieter" still clears AA. */
+    --ow-ink-400:#6B7480;
     --ow-rule:#CFD5DA;
 
     --bg: var(--ow-steel-050);
     --panel: var(--ow-paper);
     --ink: var(--ow-ink-900);
     --ink-soft: var(--ow-ink-600);
+    --ink-faint: var(--ow-ink-400);
     --line: var(--ow-rule);
     --accent: var(--ow-oxide);
     --accent-dark: var(--ow-oxide-deep);
@@ -96,6 +102,7 @@
   .btn-accent:hover{background:var(--accent-dark);}
   .btn-ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line);}
   .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-danger{background:var(--danger);color:#fff;}
   .btn-block{width:100%;}
   .btn[disabled]{opacity:.5;cursor:default;}
 
@@ -565,6 +572,40 @@
   .ag-profile-avatar{width:54px;height:54px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;flex-shrink:0;}
   .ag-profile-name{font-weight:800;font-size:16.5px;letter-spacing:-0.01em;}
   .ag-profile-phone{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .ag-profile-contact{font-size:13px;color:var(--ink-soft);margin-top:3px;display:flex;flex-direction:column;gap:1px;}
+
+  /* How this agent settles with the shop. It governs every order they
+     place and the app never stated it -- you found out by hitting a draft
+     that would not move. Given its own card rather than a menu row,
+     because it is a fact to read, not a place to go. */
+  .ag-term-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:6px;display:flex;gap:13px;align-items:flex-start;}
+  .ag-term-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-soft);color:var(--accent);}
+  .ag-term-icon .icon{width:19px;height:19px;}
+  .ag-term-title{font-weight:800;font-size:14.5px;letter-spacing:-0.005em;}
+  .ag-term-detail{font-size:13px;color:var(--ink-soft);margin-top:4px;line-height:1.45;}
+  /* payment_term is a trust setting only an admin can change
+     (0012_sales_agents.sql), so this card offers no way to edit it and
+     says as much rather than looking like a broken control. */
+  .ag-term-note{font-size:12px;color:var(--ink-faint);margin-top:7px;}
+
+  .ag-stat-row{display:flex;gap:10px;margin-bottom:6px;}
+  .ag-stat-cell{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 12px;text-align:center;}
+  .ag-stat-val{font-size:19px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
+  .ag-stat-lbl{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:3px;}
+
+  .ag-sync-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:6px;font-size:13px;color:var(--ink-soft);line-height:1.45;}
+  .ag-sync-card b{color:var(--ink);font-weight:700;}
+  /* Amber, matching the offline banner at the top of the app -- that is
+     already this surface's established "working from a saved copy" colour,
+     and a second one would just mean the same thing twice.
+     The border and ground carry the signal; the text stays ink. Amber TEXT
+     on amber ground measures 3.57:1, which fails AA at this size, and
+     coloured-on-coloured is the weakest way to say it regardless. */
+  .ag-sync-card.warn{border-color:var(--bonus);background:var(--bonus-bg);}
+
+  .ag-confirm-msg{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:16px;}
+  .ag-confirm-actions{display:flex;gap:10px;}
+  .ag-confirm-actions .btn{flex:1;text-align:center;}
 
   .ag-menu-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px;cursor:pointer;}
   .ag-menu-row:hover{border-color:var(--accent);}
@@ -792,7 +833,12 @@
      not drawn, but it is not pretended away either. */
   .ag-lb-gap{display:flex;align-items:center;gap:11px;padding:3px 10px;color:var(--ink-faint);font-size:13px;letter-spacing:.14em;}
   /* ---- Offline banner: shown app-wide, independent of the active tab ---- */
-  .ag-offline-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:8px;background:var(--bonus-bg);color:var(--bonus);padding:9px 16px;font-size:12.5px;font-weight:700;line-height:1.35;}
+  /* Ink on the amber ground, not amber on it. Amber text here measured
+     3.57:1, and 12.5px bold is nowhere near the 18.66px that would let it
+     off at 3:1 -- so the one banner whose whole job is to be read while
+     something is wrong was the least readable thing on screen. */
+  .ag-offline-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:8px;background:var(--bonus-bg);color:var(--ink);padding:9px 16px;font-size:12.5px;font-weight:700;line-height:1.35;}
+  .ag-offline-banner .icon{color:var(--bonus);}
   .ag-offline-banner .icon{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
 </style>
 </head>
@@ -984,18 +1030,35 @@
 
     <div class="ag-profile-card">
       <div class="ag-profile-avatar" id="ag_profile_avatar">A</div>
-      <div>
+      <div style="min-width:0;">
         <div class="ag-profile-name" id="ag_profile_name">Agent</div>
-        <div class="ag-profile-phone" id="ag_profile_phone"></div>
+        <div class="ag-profile-contact" id="ag_profile_contact"></div>
       </div>
     </div>
 
+    <!-- The term that governs every order this agent places. It decides
+         whether a draft moves once submitted, and the app never said which
+         one they were on -- you discovered it by hitting a draft that
+         would not budge. -->
+    <div class="ag-section-title">How you settle with the shop</div>
+    <div class="ag-term-card" id="ag_termCard"></div>
+
+    <div class="ag-section-title">Since you started</div>
+    <div class="ag-stat-row" id="ag_lifetimeStats"></div>
+
+    <div class="ag-section-title">Shortcuts</div>
     <div class="ag-menu-row" id="ag_menu_orders">
       <span class="ag-menu-icon" style="background:var(--blue-soft);color:var(--blue);"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
       <span class="ag-menu-label">Order history</span>
       <span class="ag-menu-count" id="ag_menu_orders_count">0</span>
       <svg class="icon ag-menu-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
     </div>
+
+    <!-- Signing out wipes the local snapshot, so "when was this last
+         saved" stops being trivia the moment you are standing in a shop
+         with no signal. -->
+    <div class="ag-section-title">Your data on this phone</div>
+    <div class="ag-sync-card" id="ag_syncCard"></div>
 
     <div class="ag-menu-row" id="ag_signout_btn" style="margin-top:20px;">
       <span class="ag-menu-icon" style="background:var(--danger-bg);color:var(--danger);"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></span>
@@ -2676,12 +2739,81 @@ function openOrderItemsPanel(orderId){
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 }
+// The two settlement terms an agents row can hold
+// (0012_sales_agents.sql). Written from the agent's side: what it means
+// for an order they are about to place, not what the column is called.
+const PAYMENT_TERM_COPY = {
+  prepay: {
+    icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    title: 'You pay before the order is prepared',
+    detail: 'A draft sits waiting until you have paid the shop for it. What your own client pays you, and when, is between you and them.',
+  },
+  pay_on_delivery: {
+    icon: '<svg class="icon" viewBox="0 0 24 24"><path d="M1 3h13v13H1z"/><path d="M14 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>',
+    title: 'You pay on delivery',
+    detail: 'The shop prepares your order straight away. You settle for it when it reaches your client.',
+  },
+};
+function renderPaymentTerm(){
+  const term = PAYMENT_TERM_COPY[myAgent.paymentTerm];
+  const card = document.getElementById('ag_termCard');
+  // An unrecognised term must not be guessed at -- inventing "you pay on
+  // delivery" for an agent who prepays would be worse than saying nothing.
+  if(!term){
+    card.innerHTML = `<div class="ag-term-detail">Ask the shop how your orders are settled.</div>`;
+    return;
+  }
+  card.innerHTML = `
+    <span class="ag-term-icon">${term.icon}</span>
+    <div style="min-width:0;">
+      <div class="ag-term-title">${esc(term.title)}</div>
+      <div class="ag-term-detail">${esc(term.detail)}</div>
+      <div class="ag-term-note">Only the shop can change this.</div>
+    </div>`;
+}
+
+// What the snapshot in this browser holds, and how old it is. It is the
+// only copy of this data when there is no signal, and signing out deletes
+// it, so both facts belong on the screen that offers the button.
+function renderSyncCard(){
+  const card = document.getElementById('ag_syncCard');
+  const cached = ownCachedSnapshot();
+  // inquiryAgoLabel is general-purpose despite its name -- it is the app's
+  // only elapsed-time helper and is unit-tested as such.
+  const when = cached && cached.savedAt ? inquiryAgoLabel(cached.savedAt) : '';
+  const stale = isOffline || dataLooksSuspect;
+  card.classList.toggle('warn', stale);
+  if(!cached){
+    card.innerHTML = `Nothing is saved on this phone yet. You will need a connection to use the app.`;
+    return;
+  }
+  const counts = `<b>${myOrders.filter(o=>!o.voided).length}</b> order${myOrders.filter(o=>!o.voided).length===1?'':'s'} and <b>${agentClients.length}</b> client${agentClients.length===1?'':'s'}`;
+  card.innerHTML = stale
+    ? `Working from the copy saved on this phone${when?` <b>${esc(when)}</b>`:''} — ${counts}. It will catch up once you are back online.`
+    : `Saved on this phone${when?` <b>${esc(when)}</b>`:''} — ${counts}, ready to use without a signal.`;
+}
+
 function renderAccount(){
   const initials = (myAgent.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
   document.getElementById('ag_profile_avatar').textContent = initials;
   document.getElementById('ag_profile_name').textContent = myAgent.name;
-  document.getElementById('ag_profile_phone').textContent = myAgent.phone || myAgent.email || '';
+  // Phone and email were collapsed to `phone || email`, which showed one
+  // unlabelled string and hid the other entirely -- so an agent could not
+  // check which email the shop had for them.
+  document.getElementById('ag_profile_contact').innerHTML =
+    [myAgent.phone, myAgent.email].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join('')
+    || `<span>No phone or email on file</span>`;
   document.getElementById('ag_menu_orders_count').textContent = myOrders.filter(o=>!o.voided).length;
+  renderPaymentTerm();
+  // Lifetime figures, already computed for the Home achievements -- no new
+  // query, and the same completed-only rule the wallet uses.
+  const s = computeAgentStats();
+  document.getElementById('ag_lifetimeStats').innerHTML = [
+    [s.completedOrders, s.completedOrders===1?'order done':'orders done'],
+    [agentClients.length, agentClients.length===1?'client':'clients'],
+    [fmtCompactUGX(s.lifetimeEarnings), 'earned'],
+  ].map(([v,l])=>`<div class="ag-stat-cell"><div class="ag-stat-val">${esc(v)}</div><div class="ag-stat-lbl">${esc(l)}</div></div>`).join('');
+  renderSyncCard();
 }
 /* ---- My Catalogue: setup + share banner on the Customers tab ----
    Agent-side management (create, read) goes straight to the `catalogues`
@@ -2919,9 +3051,35 @@ function openOrderHistoryScreen(returnTab){
   // filled in rather than blocking the screen open on it.
   ensureOrderStaffNamesLoaded().then(renderOrderHistoryScreen);
 }
+// Sign out deletes the snapshot this device is holding, and signing back
+// in needs a connection. Tapped by accident with no signal, that leaves an
+// agent standing in a customer's shop with no clients, no prices and no way
+// back in -- from a row that looked exactly like "Order history" one line
+// above it. Offline, the warning says so specifically.
+function confirmSignOut(){
+  const offline = isOffline;
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `<div class="ag-overlay-card">
+    <div class="ag-overlay-title">Sign out?</div>
+    <div class="ag-confirm-msg">${offline
+      ? `<b>You are offline.</b> Signing out now clears the copy saved on this phone, and signing back in needs a connection — you would not be able to use the app until you have one.`
+      : `This clears the orders and clients saved on this phone. You will need a connection to sign back in.`}</div>
+    <div class="ag-confirm-actions">
+      <button type="button" class="btn btn-ghost" id="ag_signout_cancel">Stay signed in</button>
+      <button type="button" class="btn btn-danger" id="ag_signout_confirm">Sign out</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  const close = ()=>{ if(el.parentNode) document.body.removeChild(el); };
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) close(); });
+  document.getElementById('ag_signout_cancel').addEventListener('click', close);
+  document.getElementById('ag_signout_confirm').addEventListener('click', ()=>{ close(); signOutAndReload(); });
+}
+
 document.getElementById('ag_menu_orders').addEventListener('click', ()=> openOrderHistoryScreen('account'));
 document.getElementById('ag_orders_back_btn').addEventListener('click', ()=> switchTab(subScreenReturnTab));
-document.getElementById('ag_signout_btn').addEventListener('click', signOutAndReload);
+document.getElementById('ag_signout_btn').addEventListener('click', confirmSignOut);
 
 /* ================= BROWSE + commission cluster ================= */
 let promotions = [], cluster = [];
