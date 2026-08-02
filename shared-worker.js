@@ -393,7 +393,7 @@ function renderWorkerView(){
         </div>`;
     }
   }
-  renderWorkerPendingList(pending);
+  renderWorkerPendingList(pending, !!active);
   renderWorkerPickStepper(active);
 }
 
@@ -413,9 +413,18 @@ function timeAgoLabel(ts){
   return `Requested ${days} day${days===1?'':'s'} ago`;
 }
 
-function renderWorkerPendingList(pending){
+function renderWorkerPendingList(pending, hasActive){
   const wrap = document.getElementById('wv_pendingWrap');
-  if(!pending.length){ wrap.innerHTML=''; return; }
+  if(!pending.length){
+    // With a pick open the carousel fills the screen and an empty pending
+    // list needs no comment. With nothing open it left the page blank below
+    // the title, which reads as a screen that failed to load rather than a
+    // shop with no work waiting -- and this app loads once and never
+    // refreshes itself, so a worker had no way to tell the two apart or any
+    // reason to think waiting would help.
+    wrap.innerHTML = hasActive ? '' : `<div class="empty">Nothing to pick right now. New orders appear here as soon as they're assigned to you.</div>`;
+    return;
+  }
   wrap.innerHTML = pending.map(q=>{
     const name = q.client.name || 'Unnamed client';
     const initial = (name.trim().charAt(0) || '?').toUpperCase();
