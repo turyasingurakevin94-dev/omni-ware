@@ -52,6 +52,22 @@
   .pad{padding:20px 18px 0;}
   .section-title{font-size:14px;font-weight:800;margin:22px 0 10px;}
   .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;font-family:inherit;background:var(--panel);}
+  /* The shop's aisles. Scrolls sideways rather than wrapping, so the grid
+     below stays where the eye left it when a customer changes their mind. */
+  .cat-filter{display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .cat-filter::-webkit-scrollbar{display:none;}
+  .cat-chip{
+    all:unset;box-sizing:border-box;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;
+    min-height:44px;padding:0 14px;border-radius:22px;background:var(--panel);border:1px solid var(--line);
+    font-size:13px;font-weight:700;color:var(--ink);
+  }
+  .cat-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .cat-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .cat-n{font-size:11.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  /* Opaque, not an alpha of white. A translucent colour cannot be checked
+     for contrast without compositing it first, and a figure nobody can
+     verify is worse than a slightly less delicate one. */
+  .cat-chip.on .cat-n{color:#F6DCD7;}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;}
   .card-thumb{aspect-ratio:1;background:var(--accent-soft) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--accent-dark);font-size:11px;}
@@ -98,8 +114,12 @@
   <div class="pad" id="browseSection" style="display:none;">
     <div class="section-title">Products</div>
     <input type="text" class="search" id="productSearch" placeholder="Search products&hellip;">
+    <div class="cat-filter" id="categoryFilter"></div>
     <div class="grid" id="productGrid"></div>
-    <div class="empty" id="gridEmpty" style="display:none;">No products found.</div>
+    <!-- Filled by renderProductGrid, which knows whether an aisle, a
+         search or neither is responsible and says which. Empty here so
+         the generic message cannot flash before that runs. -->
+    <div class="empty" id="gridEmpty" style="display:none;"></div>
   </div>
 </div>
 
@@ -127,13 +147,82 @@ const params = new URLSearchParams(location.search);
 const slug = params.get('a') || '';
 let catalogueData = null;
 let items = [];
+let activeCategory = '';   // '' means every aisle
+
+// The shop's own aisles, in the order a hardware shop would list them --
+// most stocked first, since that is what most people came for. Anything
+// the shop never categorised falls into "Other" rather than vanishing.
+function catalogueCategories(){
+  const counts = new Map();
+  items.forEach(it=>{
+    const c = (it.category || '').trim() || 'Other';
+    counts.set(c, (counts.get(c) || 0) + 1);
+  });
+  // Busiest first, but "Other" always last however much is in it. It is
+  // not an aisle the shop chose -- it is the absence of one -- and ranking
+  // it above a named category reads as though it were a real department.
+  return [...counts.entries()]
+    .sort((a,b)=>{
+      if((a[0]==='Other') !== (b[0]==='Other')) return a[0]==='Other' ? 1 : -1;
+      return b[1] - a[1] || a[0].localeCompare(b[0]);
+    })
+    .map(([name, count])=>({ name, count }));
+}
+function renderCategoryFilter(){
+  const wrap = document.getElementById('categoryFilter');
+  if(!wrap) return;
+  const cats = catalogueCategories();
+  // One aisle is not a choice, so it is not offered as one.
+  if(cats.length < 2){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  wrap.innerHTML = [{ name:'', label:'All', count: items.length }]
+    .concat(cats.map(c=>({ name:c.name, label:c.name, count:c.count })))
+    // A real space before the count, not only the flex gap: the gap
+    // separates them on screen but leaves the text reading "Roofing3",
+    // which is what a screen reader announces. Whitespace-only nodes
+    // collapse in a flex container, so it costs nothing visually.
+    .map(c=>`<button type="button" class="cat-chip${c.name===activeCategory?' on':''}" data-cat="${esc(c.name)}">${esc(c.label)} <span class="cat-n">${c.count}</span></button>`)
+    .join('');
+  wrap.querySelectorAll('.cat-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeCategory = btn.dataset.cat;
+      renderCategoryFilter();
+      applyProductFilter();
+    });
+  });
+}
+// Category and search narrow together, so picking an aisle and then typing
+// searches within it rather than starting over.
+function applyProductFilter(){
+  const q = (document.getElementById('productSearch').value || '').trim().toLowerCase();
+  const inCategory = !activeCategory
+    ? items
+    : items.filter(it=> ((it.category || '').trim() || 'Other') === activeCategory);
+  renderProductGrid(!q ? inCategory : inCategory.filter(it=>
+    (it.name || '').toLowerCase().includes(q) || (it.variantLabel || '').toLowerCase().includes(q)
+  ));
+}
 
 function cleanPhone(p){ return String(p||'').replace(/[^\d+]/g,''); }
 
 function renderProductGrid(list){
   const grid = document.getElementById('productGrid');
   const empty = document.getElementById('gridEmpty');
-  if(!list.length){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  if(!list.length){
+    grid.innerHTML = '';
+    // An empty result now has two possible causes, and the way out differs.
+    // Saying which one it is beats "No products found" at either.
+    const q = (document.getElementById('productSearch').value || '').trim();
+    empty.innerHTML = activeCategory
+      ? (q
+        ? `Nothing in ${esc(activeCategory)} matches &ldquo;${esc(q)}&rdquo;. Try All, or ask for it below.`
+        : `Nothing listed under ${esc(activeCategory)} yet. Try another aisle, or ask for it below.`)
+      : (q
+        ? `Nothing matches &ldquo;${esc(q)}&rdquo;. Ask for it below and ${esc((catalogueData && catalogueData.agentName) || 'your agent')} will find out.`
+        : 'No products listed yet.');
+    empty.style.display = 'block';
+    return;
+  }
   empty.style.display = 'none';
   grid.innerHTML = list.map((it, i)=> `
     <div class="card" data-idx="${i}">
@@ -237,10 +326,13 @@ async function boot(){
       sec.style.display = sec.style.display==='none' ? 'block' : 'none';
       if(sec.style.display==='block') renderProductGrid(items);
     });
-    document.getElementById('productSearch').addEventListener('input', (e)=>{
-      const q = e.target.value.trim().toLowerCase();
-      renderProductGrid(!q ? items : items.filter(it=> it.name.toLowerCase().includes(q)));
-    });
+    // Browsing by category, from data the page was already being sent and
+    // throwing away. A search box alone asks the customer to know the word
+    // for the thing -- mabati or iron sheets or roofing -- which is exactly
+    // what someone browsing a hardware shop does not have. Categories are
+    // the shop's own words for its aisles.
+    renderCategoryFilter();
+    document.getElementById('productSearch').addEventListener('input', applyProductFilter);
 
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('mainWrap').style.display = 'block';
