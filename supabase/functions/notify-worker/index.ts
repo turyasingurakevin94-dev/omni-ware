@@ -151,8 +151,26 @@ Deno.serve(async (req) => {
   const newWorkerId = record.payload?.assignedWorkerId ?? null;
   const oldWorkerId = oldRecord.payload?.assignedWorkerId ?? null;
 
-  if (!newWorkerId || newWorkerId === oldWorkerId) {
-    return json({ ok: true, skipped: "assignedWorkerId unchanged or cleared" });
+  // What means "this worker has to do something" is the order being put in
+  // front of them, which is pickingStatus going to 'awaiting_accept'. Every
+  // writer that hands an order over sets it: the admin's assign dialog,
+  // autoAssignNextOrder, and the backward step that sends an order back to
+  // be picked again.
+  //
+  // Keying on assignedWorkerId changing missed that last one. It re-offers
+  // the order to the SAME worker -- they keep it, they just have to accept
+  // and pick it again -- so the id is unchanged and no notification was
+  // sent. The order reappeared on their device silently, and they found out
+  // whenever they next happened to look.
+  //
+  // A changed id still counts on its own, so a path that hands an order over
+  // without setting pickingStatus would not go silent.
+  const newPicking = record.payload?.pickingStatus ?? null;
+  const oldPicking = oldRecord.payload?.pickingStatus ?? null;
+  const handedOver = newWorkerId !== oldWorkerId;
+  const offeredAgain = newPicking === "awaiting_accept" && oldPicking !== "awaiting_accept";
+  if (!newWorkerId || !(handedOver || offeredAgain)) {
+    return json({ ok: true, skipped: "no new assignment to announce" });
   }
 
   // Re-read the order FIRST. The request body identifies WHICH row changed
@@ -178,6 +196,18 @@ Deno.serve(async (req) => {
   const assignedNow = order.payload?.assignedWorkerId ?? null;
   if (assignedNow == null || String(assignedNow) !== String(newWorkerId)) {
     return json({ ok: true, skipped: "assignment does not match the stored order" });
+  }
+
+  // ...and that the order is still sitting there waiting to be accepted.
+  // Anchored to the row for the same reason as the line above, and it also
+  // keeps the notification honest about what the app can show: the worker
+  // view lists orders awaiting acceptance and orders in progress, nothing
+  // else, so a push for an order in any other state would open on a screen
+  // that does not have it. Covers a worker who accepted in the moment
+  // between the update and this read, too -- they already have it.
+  const pickingNow = order.payload?.pickingStatus ?? null;
+  if (pickingNow !== "awaiting_accept") {
+    return json({ ok: true, skipped: "order is not awaiting acceptance" });
   }
 
   const { data: subs, error: subErr } = await admin

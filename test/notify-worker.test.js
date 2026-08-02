@@ -123,17 +123,53 @@ const code = src.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
  * this comparison does real work and an ordinary edit to an already
  * assigned order does not re-notify.
  */
+/*
+ * Keying on the id alone was not enough. What means "this worker has to do
+ * something" is the order being put in front of them -- pickingStatus going
+ * to 'awaiting_accept' -- and one of the three writers that does it re-offers
+ * the order to the SAME worker: the backward step that sends an order back
+ * to be picked again. The id is unchanged there, so no push was sent and the
+ * order reappeared on their device in silence.
+ *
+ * A changed id still counts on its own, so a handover that somehow did not
+ * set pickingStatus would not go quiet either.
+ */
 {
   t.check(/if \(!payload \|\| payload\.table !== "saved_quotes" \|\| payload\.type !== "UPDATE"\)/.test(code),
     'only saved_quotes updates are considered');
-  t.check(/if \(!newWorkerId \|\| newWorkerId === oldWorkerId\)/.test(code),
-    'an unchanged or cleared assignment is skipped');
+  t.check(/const offeredAgain = newPicking === "awaiting_accept" && oldPicking !== "awaiting_accept";/.test(code),
+    'an order newly put in front of a worker counts, however it got there');
+  t.check(/const handedOver = newWorkerId !== oldWorkerId;/.test(code),
+    'and so does a changed assignment on its own');
+  t.check(/if \(!newWorkerId \|\| !\(handedOver \|\| offeredAgain\)\)/.test(code),
+    'either one announces; neither is skipped');
+  t.check(/if \(pickingNow !== "awaiting_accept"\)/.test(code),
+    'and the stored row must still be awaiting acceptance before anything is sent');
 
-  const changed = (oldId, newId) => !(!newId || newId === oldId);
-  t.check(changed(null, 5) === true, 'a first assignment notifies');
-  t.check(changed(5, 5) === false, 'saving an already-assigned order does not');
-  t.check(changed(5, 6) === true, 'a reassignment notifies the new worker');
-  t.check(changed(5, null) === false, 'clearing an assignment notifies nobody');
+  // The decision itself, over every path an order takes to a worker. Mirrors
+  // the source above; the regexes are what tie the two together.
+  const announces = (oldW, oldP, newW, newP, storedP) => {
+    const handedOver = newW !== oldW;
+    const offeredAgain = newP === 'awaiting_accept' && oldP !== 'awaiting_accept';
+    if (!newW || !(handedOver || offeredAgain)) return false;
+    return (storedP === undefined ? newP : storedP) === 'awaiting_accept';
+  };
+  const AA = 'awaiting_accept';
+
+  t.check(announces(null, null, 'ST1', AA) === true, 'the admin assigning an unassigned order notifies');
+  t.check(announces('ST1', 'done', 'ST1', AA) === true,
+    'and so does sending it back to the same worker to be picked again');
+  t.check(announces('ST1', AA, 'ST2', AA) === true, 'handing it to a different worker notifies them');
+
+  t.check(announces('ST1', AA, 'ST1', 'in_progress') === false, 'accepting it notifies nobody');
+  t.check(announces('ST1', 'in_progress', 'ST1', 'in_progress') === false, 'nor does ticking an item');
+  t.check(announces('ST1', 'in_progress', 'ST1', 'done') === false, 'nor finishing the pick');
+  t.check(announces('ST1', AA, null, null) === false, 'nor declining it');
+
+  // Anchored to the row, so a forged or stale event cannot summon one.
+  t.check(announces(null, null, 'ST1', AA, 'in_progress') === false,
+    'an event for an order the worker has already accepted is dropped');
+  t.check(announces(null, null, 'ST1', AA, 'done') === false, 'and one already finished');
 }
 
 /* ---------- 5. dead tokens are cleaned up ----------------------------- */
