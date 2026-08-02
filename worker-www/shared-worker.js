@@ -200,15 +200,22 @@ function showSetPasswordScreen(){
       el.querySelector('#setpw_pw1').type = t;
       el.querySelector('#setpw_pw2').type = t;
     });
-    el.querySelector('#setpw_save_btn').addEventListener('click', async ()=>{
+    const saveBtn = el.querySelector('#setpw_save_btn');
+    saveBtn.addEventListener('click', async ()=>{
       errEl.textContent = '';
       const pw1 = el.querySelector('#setpw_pw1').value;
       const pw2 = el.querySelector('#setpw_pw2').value;
       if(pw1.length < 6){ errEl.textContent = 'Password must be at least 6 characters'; return; }
       if(pw1 !== pw2){ errEl.textContent = 'Passwords do not match'; return; }
-      const { error } = await sb.auth.updateUser({ password: pw1 });
-      if(error){ errEl.textContent = error.message; return; }
-      resolve();
+      saveBtn.disabled = true;
+      try{
+        const { error } = await sb.auth.updateUser({ password: pw1 });
+        if(error){ saveBtn.disabled = false; errEl.textContent = error.message; return; }
+        resolve();
+      }catch(e){
+        saveBtn.disabled = false;
+        errEl.textContent = (e && e.message) || String(e);
+      }
     });
   });
 }
@@ -219,6 +226,25 @@ function showSetPasswordScreen(){
 // than the worker app's main path. seedData() (the full default price
 // book) only exists in the admin app; the worker app has nothing sensible
 // to seed, so it just starts that shop with an empty savedQuotes list.
+// A shop row whose shop_members row never landed is stranded for good: the
+// picker reads shop_members so it never appears, and "owners can delete
+// shop" needs an owner membership row that does not exist, so nobody --
+// including its creator -- can remove it. Only 0004's `created_by =
+// auth.uid()` branch on the shops select policy makes it visible at all.
+//
+// So the second attempt reuses the first one's shop instead of stranding
+// another. Matched on name: adopting a shop the user called something else
+// would silently rename what they asked for. An orphan under a different
+// name is left alone.
+async function adoptHalfCreatedShop(name){
+  // Only reached from showCreateShopScreen, which only runs when this user
+  // has no shop_members rows at all -- so every shop they created is one
+  // they are not a member of.
+  const { data: mine, error } = await sb.from('shops').select('id, name').eq('created_by', currentUser.id);
+  if(error || !Array.isArray(mine)) return null;
+  return mine.find(s=>s.name === name) || null;
+}
+
 function showCreateShopScreen(){
   return new Promise((resolve)=>{
     const el = ensureAuthOverlay();
@@ -231,18 +257,35 @@ function showCreateShopScreen(){
         <button id="shop_create_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Create shop</button>
       </div>`;
     const errEl = el.querySelector('#shop_error');
-    el.querySelector('#shop_create_btn').addEventListener('click', async ()=>{
+    const btn = el.querySelector('#shop_create_btn');
+    btn.addEventListener('click', async ()=>{
       errEl.textContent = '';
       const name = el.querySelector('#shop_name').value.trim();
       if(!name){ errEl.textContent = 'Enter a shop name'; return; }
-      const { data: shop, error: shopErr } = await sb.from('shops').insert({name, created_by: currentUser.id}).select().single();
-      if(shopErr){ errEl.textContent = shopErr.message; return; }
-      const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
-      if(memberErr){ errEl.textContent = memberErr.message; return; }
-      currentShopId = shop.id;
-      data = (typeof seedData === 'function') ? seedData() : { savedQuotes: [] };
-      await saveData();
-      resolve(shop.id);
+      // Creating a shop is two writes that cannot be made atomic from the
+      // client, and a half-finished one cannot be cleaned up afterwards, so
+      // a second click must not start a second attempt.
+      btn.disabled = true;
+      const fail = (msg)=>{ btn.disabled = false; errEl.textContent = msg; };
+      try{
+        let shop = await adoptHalfCreatedShop(name);
+        if(!shop){
+          const { data: created, error: shopErr } = await sb.from('shops').insert({name, created_by: currentUser.id}).select().single();
+          if(shopErr){ fail(shopErr.message); return; }
+          shop = created;
+        }
+        const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
+        if(memberErr){ fail(memberErr.message); return; }
+        currentShopId = shop.id;
+        data = (typeof seedData === 'function') ? seedData() : { savedQuotes: [] };
+        await saveData();
+        resolve(shop.id);
+      }catch(e){
+        // saveData() and the lookup above can both throw. Without this the
+        // promise never settles: the overlay stays up, the button stays
+        // dead, and boot() never reaches its own error handler.
+        fail((e && e.message) || String(e));
+      }
     });
   });
 }
@@ -250,7 +293,10 @@ function showCreateShopScreen(){
 function showShopPicker(memberships){
   return new Promise((resolve)=>{
     const el = ensureAuthOverlay();
-    const options = memberships.map(m=>`<option value="${m.shop_id}">${(m.shops && m.shops.name) || m.shop_id}</option>`).join('');
+    // Shop names are free text typed by whoever created the shop, and this
+    // list is the one place they are rendered. Unescaped, a shop you were
+    // invited to could inject markup into your own picker.
+    const options = memberships.map(m=>`<option value="${esc(m.shop_id)}">${esc((m.shops && m.shops.name) || m.shop_id)}</option>`).join('');
     el.innerHTML = `
       <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
         <h2 style="margin:0 0 16px;font-size:18px;">Choose a shop</h2>
