@@ -16,7 +16,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { createReporter } = require('./_extract');
+const { createReporter, extractFunction } = require('./_extract');
 
 const t = createReporter('RLS');
 const MIG = path.join(__dirname, '..', 'supabase', 'migrations');
@@ -169,6 +169,67 @@ const sql = files.map((f) => fs.readFileSync(path.join(MIG, f), 'utf8')).join('\
     'and only returns names attached to an order the CALLER\'s own agent id owns');
   t.check(!/payload->>'originAgentId'/.test(body),
     'and reaches those orders through the FK\'d column alone, like the policy');
+}
+
+/* ---------- 6b. the detached-order health check ----------------------- */
+/*
+ * The second definer function that returns rows rather than a boolean, so
+ * it gets the same scrutiny as agent_staff_names: a missing condition here
+ * hands one shop's order and payment data to another.
+ *
+ * It exists because the failure it looks for is invisible from the only
+ * screen that would notice. Both write paths that caused it are fixed, so
+ * it should always return nothing -- which is precisely why it has to be
+ * asked rather than waited for.
+ */
+{
+  const fnSrc = /create or replace function detached_agent_orders\(([\s\S]*?)\$\$;/.exec(sql);
+  t.check(fnSrc, 'the detached-order check exists');
+  const body = fnSrc ? fnSrc[1] : '';
+  t.check(/security definer/.test(body),
+    'it is definer, so it can see the payment rows that prove ownership');
+  t.check(/is_shop_member\(p_shop_id\)/.test(body),
+    'and checks membership itself, since definer bypasses RLS');
+  t.check(/q\.shop_id = p_shop_id/.test(body) && /p\.shop_id  = q\.shop_id/.test(body),
+    'both sides of the join are pinned to the shop asked about');
+  t.check(/stable/.test(body) && !/\b(insert|update|delete)\b/i.test(body),
+    'it only reads — a health check must never repair anything on its own');
+  // Keyed on payment evidence, not on "looks unattributed": an ordinary
+  // walk-in order is unattributed too and always will be.
+  t.check(/p\.status   = 'successful'/.test(body) && /agent_mobile_payments/.test(body),
+    'it keys on a successful payment, which is what distinguishes a detached order from a walk-in');
+  t.check(/revoke all on function detached_agent_orders\(uuid\) from public/.test(sql),
+    'and is not callable by an anonymous visitor');
+}
+{
+  // Admins could not read agent_mobile_payments at all -- 0022 gave it one
+  // policy, for agents. The admin app has a Mobile Money screen that reads
+  // this table, so it had always been blank.
+  const pols = [...sql.matchAll(/create policy "([^"]+)" on agent_mobile_payments\s+for (all|select|insert|update|delete)([\s\S]{0,90})/g)]
+    .map((m) => ({ name: m[1], cmd: m[2], body: m[3] }));
+  t.check(pols.some((p) => p.cmd === 'select' && /is_shop_member/.test(p.body)),
+    'a shop member can read the agent mobile payments their own shop collected');
+  t.check(!pols.some((p) => p.cmd === 'all' || p.cmd === 'insert' || p.cmd === 'update'),
+    'but nobody writes them from a client — only the service role creates or resolves a payment');
+}
+{
+  // The check is worthless if the dashboard never asks.
+  const admin = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  t.check(/async function checkDetachedAgentOrders\(/.test(admin)
+    && /checkDetachedAgentOrders\(threatCardHTML\)/.test(admin),
+    'the Threat Monitor actually runs the check');
+  const fnBody = extractFunction(admin, 'checkDetachedAgentOrders', 'index.html');
+  // Scoped to the catch block itself. Matching "a return exists somewhere
+  // after the catch" passes on any function with a later return, which is
+  // most of them -- what matters is that the handler writes nothing to the
+  // page and leaves.
+  const catchBlock = /\}catch\(err\)\{([\s\S]*?)\n  \}/.exec(fnBody);
+  t.check(catchBlock, 'the check handles its own failure');
+  const handler = catchBlock ? catchBlock[1] : '';
+  t.check(/return;/.test(handler) && !/insertAdjacentHTML|innerHTML|list\b/.test(handler),
+    'a check that cannot run stays quiet rather than putting an unactionable red card on the dashboard');
+  t.check(/if\(!rows\.length\) return;/.test(fnBody),
+    'and adds nothing at all when there is nothing wrong');
 }
 
 /* ---------- 7. product images are deliberately public ----------------- */

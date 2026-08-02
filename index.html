@@ -13879,6 +13879,45 @@ function dashQuadrantSVG(items){
   </svg>`;
 }
 
+// Standing check for the failure 0036 had to repair by hand: an agent
+// order whose originAgentId was stripped, which detaches it from its
+// agent completely. It looks perfectly normal from in here -- same as
+// any walk-in order -- and vanishes only from the agent's own app, so
+// nobody with access to this screen would ever notice it unaided. It
+// went undetected for about ten days.
+//
+// Both write paths that caused it are fixed, so this should always find
+// nothing. Flagged crit when it doesn't, because the money is real and
+// the agent cannot see it: three such orders were worth UGX 1.9m.
+async function checkDetachedAgentOrders(cardHTML){
+  const list = document.getElementById('dash_threatList');
+  if(!list || !currentShopId) return;
+  let rows;
+  try{
+    const { data, error } = await sb.rpc('detached_agent_orders', { p_shop_id: currentShopId });
+    if(error) throw error;
+    rows = data || [];
+  }catch(err){
+    // Silent: a health check that cannot run is not itself a business
+    // risk, and a red card saying "the check failed" on the owner's
+    // dashboard would be noise they can do nothing about.
+    console.warn('Detached-agent-order check unavailable:', err && err.message);
+    return;
+  }
+  if(!rows.length) return;
+  const total = rows.reduce((s,r)=> s + (Number(r.amount)||0), 0);
+  const ids = rows.map(r=>'#'+r.order_id).join(', ');
+  const card = cardHTML({
+    level: 'crit',
+    title: 'Agent orders detached from their agent',
+    body: `${rows.length} paid order${rows.length===1?'':'s'} (${esc(ids)}) worth ${fmtUGX(Math.round(total))} `
+        + `lost their agent link, so the agent who sold them cannot see them and earns nothing from them. `
+        + `They look normal from here — that is why this is checked rather than spotted.`
+  });
+  const empty = list.querySelector('.threat-empty');
+  if(empty) list.innerHTML = card; else list.insertAdjacentHTML('afterbegin', card);
+}
+
 function renderDashboard(){
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
@@ -13946,6 +13985,7 @@ function renderDashboard(){
   document.getElementById('dash_cashbridge').innerHTML = dashGroupedBarSVG(bridge, 'var(--good)', 'var(--danger)') +
     `<div class="cashbridge-legend"><span><i style="background:var(--good);"></i>Cash In</span><span><i style="background:var(--danger);"></i>Cash Out</span></div>`;
 
+
   // Threat monitor
   const threats = [];
   dashSupplierPriceInflation().forEach(f=>{
@@ -13971,11 +14011,20 @@ function renderDashboard(){
     .forEach(r=>{
       threats.push({level:'warn', title:'Demand concentration risk', body:`<b>${esc(r.name)}</b>: ${r.concentration.toFixed(0)}% of this window's volume came from a single customer, <b>${esc(r.topBuyerName)}</b>.`});
     });
-  document.getElementById('dash_threatList').innerHTML = threats.length ? threats.map(t=>`
+  const threatCardHTML = t=>`
     <div class="threat-card ${t.level}">
       <div class="threat-card-head"><strong>${esc(t.title)}</strong><span class="threat-pill ${t.level}">${t.level}</span></div>
       <div class="threat-card-body">${t.body}</div>
-    </div>`).join('') : `<div class="threat-empty">No active risk flags right now.</div>`;
+    </div>`;
+  document.getElementById('dash_threatList').innerHTML = threats.length
+    ? threats.map(threatCardHTML).join('')
+    : `<div class="threat-empty">No active risk flags right now.</div>`;
+  // Asks the database separately, because this is the one flag that cannot
+  // be worked out from what the admin app loads: a detached order is
+  // indistinguishable from an ordinary walk-in order here, and only the
+  // payment rows can tell them apart. Appended when it answers rather than
+  // holding up the rest of the dashboard.
+  checkDetachedAgentOrders(threatCardHTML);
 
   // Demand trajectory
   const trend = dashDemandTrendData();
