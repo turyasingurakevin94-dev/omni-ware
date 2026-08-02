@@ -7,26 +7,56 @@
 <link rel="manifest" href="/manifest-agent.json">
 <style>
   :root{
-    --bg: #F5F6F8;
-    --panel: #FFFFFF;
-    --ink: #12151A;
-    --ink-soft: #6B7280;
-    --line: #E9EBEF;
-    --accent: #0EA5A0;
-    --accent-dark: #0B7F7A;
-    --accent-soft: #E1F5F3;
-    --blue: #2563EB;
-    --blue-soft: #EAF1FE;
-    --rust: #DC5F3C;
-    --rust-soft: #FBEAE4;
-    --slate: #475569;
-    --slate-soft: #EBEDF1;
-    --good: #16A34A;
-    --good-bg: #E9F7EF;
-    --danger: #DC2626;
-    --danger-bg: #FDECEC;
-    --bonus: #B45309;
-    --bonus-bg: #FEF3E2;
+    /* Shared Omni-ware palette -- see index.html's :root for the full
+       rationale. Aliases below keep every existing token name working.
+
+       This surface is used standing up, outdoors, in direct sun, so its
+       ground is a shade darker than paper and its text sits at full ink
+       rather than the soft grey a desk app can afford. */
+    --ow-steel-100:#DCE0E4;
+    --ow-steel-050:#E9EBED;
+    --ow-paper:#FFFFFF;
+    --ow-oxide:#B23A26;
+    --ow-oxide-deep:#8E2C1C;
+    --ow-oxide-light:#C9573F;
+    --ow-oxide-soft:#F6E7E3;
+    --ow-verdigris:#1C6B58;
+    --ow-verdigris-soft:#E2EFEB;
+    --ow-amber:#B0700A;
+    --ow-amber-soft:#FBEFD9;
+    --ow-crimson:#7F1D1A;
+    --ow-crimson-soft:#F7E4E2;
+    --ow-slateblue:#2A5B8C;
+    --ow-slateblue-soft:#E8EFF6;
+    --ow-ink-900:#14171B;
+    --ow-ink-600:#59626B;
+    --ow-rule:#CFD5DA;
+
+    --bg: var(--ow-steel-050);
+    --panel: var(--ow-paper);
+    --ink: var(--ow-ink-900);
+    --ink-soft: var(--ow-ink-600);
+    --line: var(--ow-rule);
+    --accent: var(--ow-oxide);
+    --accent-dark: var(--ow-oxide-deep);
+    --accent-soft: var(--ow-oxide-soft);
+    /* Informational, deliberately kept a separate hue from the accent so
+       "this is a link/info" never reads as "this is the action". */
+    --blue: var(--ow-slateblue);
+    --blue-soft: var(--ow-slateblue-soft);
+    /* rust and accent were distinct before (orange vs teal) and stay
+       distinct now -- collapsing them would silently erase whatever
+       state the two were encoding apart. */
+    --rust: var(--ow-oxide-light);
+    --rust-soft: var(--ow-oxide-soft);
+    --slate: var(--ow-ink-600);
+    --slate-soft: var(--ow-steel-100);
+    --good: var(--ow-verdigris);
+    --good-bg: var(--ow-verdigris-soft);
+    --danger: var(--ow-crimson);
+    --danger-bg: var(--ow-crimson-soft);
+    --bonus: var(--ow-amber);
+    --bonus-bg: var(--ow-amber-soft);
     --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     --font-money: ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
     /* Soft/elevated look for Home: shadow does the separating instead of
@@ -557,7 +587,7 @@
   .ag-lc-pill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 9px;border-radius:20px;white-space:nowrap;}
   .ag-lc-pill.upcoming{background:var(--blue-soft);color:var(--blue);}
   .ag-lc-pill.active{background:#E6F6EE;color:var(--good);}
-  .ag-lc-pill.ending_soon{background:#FEF3E2;color:var(--bonus);}
+  .ag-lc-pill.ending_soon{background:var(--bonus-bg);color:var(--bonus);}
   .ag-lc-pill.completed{background:var(--line);color:var(--ink-soft);}
   /* ---- Sell: live pricing guidance next to the price field ---- */
   .ag-price-guidance{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin:-6px 0 14px;}
@@ -1038,7 +1068,7 @@ function showLoginScreen(){
         <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
         <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
         <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="auth_signin_btn" style="width:100%;padding:11px;margin-bottom:8px;border-radius:8px;border:none;background:#2563EB;color:#fff;cursor:pointer;font-weight:600;">Sign in</button>
+        <button id="auth_signin_btn" style="width:100%;padding:11px;margin-bottom:8px;border-radius:8px;border:none;background:#B23A26;color:#fff;cursor:pointer;font-weight:600;">Sign in</button>
         <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#8DAEF2;cursor:pointer;font-size:13px;">Forgot password?</button>
       </div>`;
     const statusEl = el.querySelector('#auth_status');
@@ -1085,7 +1115,7 @@ function showSetPasswordScreen(){
           Show password
         </label>
         <div id="setpw_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="setpw_save_btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:#2563EB;color:#fff;cursor:pointer;font-weight:600;">Save password</button>
+        <button id="setpw_save_btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:#B23A26;color:#fff;cursor:pointer;font-weight:600;">Save password</button>
       </div>`;
     const errEl = el.querySelector('#setpw_error');
     el.querySelector('#setpw_show').addEventListener('change', (e)=>{
@@ -3831,7 +3861,7 @@ function drawReceiptCanvas(){
     ctx.fillText(it.name, 110, y);
     if(it.variantLabel){
       ctx.font = '500 11.5px -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
-      ctx.fillStyle = '#0B7F7A';
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-dark').trim() || '#8E2C1C';
       ctx.fillText(it.variantLabel, 110, y+16);
     }
     ctx.fillStyle = '#12151A';
@@ -3854,7 +3884,7 @@ function drawReceiptCanvas(){
   ctx.fillText('TOTAL', 32, y);
   ctx.textAlign = 'right';
   ctx.font = '800 18px ui-monospace, "SF Mono", "Cascadia Mono", monospace';
-  ctx.fillStyle = '#0B7F7A';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-dark').trim() || '#8E2C1C';
   ctx.fillText('UGX ' + fmtAmount(total), w-32, y);
   ctx.textAlign = 'left';
 
