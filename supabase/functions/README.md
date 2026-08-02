@@ -88,17 +88,25 @@ row for that shop (`provider = 'airtel'`, `enabled = true`), along with the
 `environment` that selects sandbox or production. A shop with no enabled row
 is refused before any provider is called.
 
-The `AIRTEL_CLIENT_ID`, `AIRTEL_CLIENT_SECRET` and `AIRTEL_ENV` secrets
-belonged to the retired `airtel-collection-initiate` and are now read by
-nothing. They can be removed:
-```
-supabase secrets unset AIRTEL_CLIENT_ID AIRTEL_CLIENT_SECRET AIRTEL_ENV
-```
-Worth knowing before you do: the four rows left in `airtel_transactions`
-were all `invalid_client` from Airtel's OAuth2 endpoint — those env
-credentials were being rejected. That says nothing about the credentials in
-`shop_payment_providers`, which are a different set entirely and are what
-the live path actually uses.
+There used to be `AIRTEL_CLIENT_ID` and `AIRTEL_CLIENT_SECRET` secrets,
+belonging to the retired `airtel-collection-initiate`. They have been
+removed, along with `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` /
+`VAPID_SUBJECT` from the retired Web Push delivery. Nothing read any of
+them. (`AIRTEL_ENV` was never set at all — the retired function ran on its
+`"sandbox"` default, which is why it used the sandbox host.)
+
+Do not reinstate the Airtel pair as a way of configuring Airtel: those
+credentials were the ones failing `invalid_client`, and the live path does
+not read environment variables for Airtel at all.
+
+The secrets that remain, and what reads them:
+
+| secret | read by |
+| --- | --- |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | `notify-worker`, for FCM |
+| `NOTIFY_WORKER_SECRET` | `notify-worker`, to authenticate the webhook |
+| `AIRTEL_CALLBACK_HMAC_KEY` *(optional, unset)* | `airtel-payment-webhook` |
+| `SUPABASE_*` | provided automatically to every function |
 
 Set the callback URL in the portal's **Security** tab → **Add Callback
 URL**, product **Collection-APIs**, event **Transaction**. This must be
