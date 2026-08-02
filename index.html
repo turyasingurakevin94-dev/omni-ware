@@ -5492,6 +5492,24 @@ function ipSelectProduct(id, variantIdx=null){
   renderIpStage();
 }
 
+// The cost actually incurred by one quote line. Shared by the popup's
+// preview and the value written onto the line, which were two copies of the
+// same expression and could only ever drift apart.
+//
+// Two things were wrong with that expression. It picked the WHOLESALE rate
+// whenever the supplier had one, regardless of quantity -- so a single unit
+// from a supplier priced 15,000 by the carton and 30,000 loose was costed at
+// 15,000, halving the recorded cost and doubling the reported margin. And
+// selling off the shelf with no cost on file recorded zero, which reads as
+// pure profit. purchasePriceAtQty() is the rule the Inventory > Purchase
+// screen already ranks by: whichever side this quantity actually earns.
+function ipLineBuyPrice(supplierId, refRow, qty, stockCost){
+  if(supplierId === '__stock__' && stockCost != null) return Math.round(stockCost);
+  // For our own stock with no cost on file, refRow is the cheapest supplier
+  // row -- what it would cost to put the unit back on the shelf.
+  return refRow ? Math.round(purchasePriceAtQty(refRow, qty)) : 0;
+}
+
 function renderIpStage(){
   const wrap = document.getElementById('ip_stage_view');
   const product = data.products.find(x=>x.id===ipProductId);
@@ -5577,7 +5595,11 @@ function renderIpStage(){
         <span class="q-sc-rank stock">OUR STOCK</span>
         <span class="q-sc-name">${stockQty} in stock</span>
       </div>
-      <div class="q-sc-prices">${stockCost!=null ? `Bought at ${fmtUGX(stockCost)} each` : 'Straight from the shelf — no supplier order needed'}</div>
+      <div class="q-sc-prices">${stockCost!=null
+        ? `Bought at ${fmtUGX(stockCost)} each`
+        : (refRow
+            ? `No purchase cost on file — costed at ${fmtUGX(ipLineBuyPrice('__stock__', refRow, qty, null))} to replace`
+            : 'No purchase cost on file, and no supplier price to estimate one from')}</div>
     </div>
   </label>` : '';
 
@@ -5613,9 +5635,7 @@ function renderIpStage(){
   // Buy @ is recorded automatically as the actual cost we'd pay (stock
   // cost, or the supplier's raw quoted price at this quantity) — it isn't
   // a field in this popup, only editable later from the quote table.
-  const buyStart = ipSelectedSupplierId==='__stock__'
-    ? (stockCost!=null ? Math.round(stockCost) : 0)
-    : (refRow ? Math.round(tieredUnitPrice(refRow, qty, refRow.wholesale!=null ? 'wholesale' : 'retail')) : 0);
+  const buyStart = ipLineBuyPrice(ipSelectedSupplierId, refRow, qty, stockCost);
   // The popup's one price field is "Price each" — it's the sell price
   // charged to the client. Defaults to whichever card is highlighted
   // (effectiveRecType, above) -- the natural wholesale/retail rate for
@@ -5763,9 +5783,7 @@ function renderIpStage(){
     const supplierId = ipSelectedSupplierId;
     if(!supplierId){ toast('Choose a supplier first'); return; }
     const overStock = supplierId==='__stock__' && qty > stockQty;
-    const buyPrice = supplierId==='__stock__'
-      ? (stockCost!=null ? Math.round(stockCost) : 0)
-      : (refRow ? Math.round(tieredUnitPrice(refRow, qty, refRow.wholesale!=null ? 'wholesale' : 'retail')) : 0);
+    const buyPrice = ipLineBuyPrice(supplierId, refRow, qty, stockCost);
     ensureQuote();
     data.quote.items.push({
       lineId: data.nextQuoteLineId++,
@@ -10940,10 +10958,6 @@ function supplierName(id){ if(id==='__stock__') return 'Our stock'; const s = da
 /* ---------------- Inventory / stock ---------------- */
 function stockKey(productId, variantIdx){ return (variantIdx==null || variantIdx==='') ? productId : `${productId}::${variantIdx}`; }
 function getStockQty(productId, variantIdx){ return Number(data.stock[stockKey(productId, variantIdx)]) || 0; }
-// Our-stock purchase cost — a running weighted-average unit cost for the
-// stock currently on hand, updated whenever a Purchase (restock) is saved
-// with a price. Used so "Our stock" recommends prices off what we actually
-// paid, not off whichever supplier happens to be cheapest today.
 // Our-stock purchase cost — tracked as FIFO lots per stock item. Each lot is
 // {qty, cost} in the order it was purchased; a purchase pushes a new lot
 // onto the end, and any reduction in stock (sale, correction, damage, etc.)
