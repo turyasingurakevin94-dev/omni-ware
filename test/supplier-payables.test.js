@@ -40,6 +40,10 @@ const env = {
     cash.txns = cash.txns.filter((x) => !set.has(x.id));
   },
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
+  // Present so that a change which wrongly reaches for esc() in the
+  // confirm-dialog text fails on the check that says so, rather than
+  // throwing ReferenceError first and reporting nothing at all.
+  esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
   // PINV- numbers come from the database one at a time now (0034, see
   // row-id-allocation.test.js). Stubbed with its offline path -- the same
   // counter this used to increment directly -- and async, because that is
@@ -57,7 +61,7 @@ const FNS = [
   'purchaseInvoicePaymentStatusLabel', 'supplierName',
   'creditorOutstandingInvoices', 'creditorTotalOwed',
   'allocateCreditorPayment', 'generatePurchaseInvoicesForQuote',
-  'removePurchaseInvoicesForQuote', 'uninvoiceReversalWarning',
+  'removePurchaseInvoicesForQuote', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning',
   'savedQuoteTotal', 'invoiceBalanceDue',
 ];
 const fn = compileScope(FNS.map((n) => extractFunction(adminSrc, n, 'index.html')), env, FNS);
@@ -249,6 +253,56 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
   data.purchaseInvoices = [inv(1, 'S1', 500000, 0, { quoteId: 77 })];
   t.check(fn.uninvoiceReversalWarning({ id: 77, payments: [] }) === null,
     'nothing is asked when un-invoicing destroys no money');
+}
+/* ---------- deleting says what un-invoicing says, and more ----------- */
+/*
+ * Deleting undoes everything un-invoicing does AND removes the order, yet
+ * asked only "Delete this saved quote? This cannot be undone." -- naming no
+ * figure at all. Three real orders carrying UGX 1,965,500 of payments were
+ * deleted behind that prompt.
+ */
+{
+  data.purchaseInvoices = [];
+  seed(inv(1, 'S1', 500000, 300000, { quoteId: 77, payments: [{ amount: 300000, cashTxnId: 1 }] }));
+  const q = { id: 77, client: { name: 'Kato Construction' }, payments: [{ amount: 120000, cashTxnId: 9 }], debtCharged: 80000 };
+
+  const del = fn.deleteQuoteWarning(q);
+  t.check(/120000/.test(del) && /300000/.test(del),
+    'deleting names the customer and supplier payments it will remove');
+  t.check(/80000/.test(del) && /Kato Construction/.test(del),
+    'and the debt it writes off, with whose it was — applyInvoiceDebtCharge(q, 0) clears it silently otherwise');
+  t.check(/Deleting this order/.test(del),
+    'worded for deletion rather than borrowed verbatim from un-invoicing');
+
+  // Both paths describe the same underlying loss.
+  const un = fn.uninvoiceReversalWarning(q);
+  const figures = (s) => (String(s).match(/[\d,]{4,}/g) || []).join('|');
+  t.check(figures(un) === figures(del),
+    `un-invoicing and deleting quote the same figures (${figures(un)} vs ${figures(del)})`);
+
+  // Nothing to lose still asks, just without a list.
+  const bare = fn.deleteQuoteWarning({ id: 99, client: {}, payments: [], debtCharged: 0 });
+  t.check(/^Delete this saved quote/.test(bare) && !/permanently remove/.test(bare),
+    'an order carrying nothing gets the plain question, not an empty threat');
+  t.check(typeof fn.deleteQuoteWarning(undefined) === 'string',
+    'and a quote that cannot be found still produces a question rather than throwing');
+}
+{
+  // The order matters: it has to look the quote up BEFORE asking, or it
+  // cannot describe what it is about to delete.
+  const del = extractFunction(adminSrc, 'deleteSavedQuote', 'index.html');
+  const iFind = del.indexOf('data.savedQuotes.find');
+  const iConfirm = del.indexOf('confirm(deleteQuoteWarning(q))');
+  t.check(iFind > -1 && iConfirm > iFind,
+    'the order is found before the question is asked');
+  t.check(!/confirm\('Delete this saved quote\? This cannot be undone\.'\)/.test(del),
+    'and the old figure-free prompt is gone');
+}
+{
+  // These strings go into confirm(), which is plain text.
+  const parts = extractFunction(adminSrc, 'orderReversalParts', 'index.html');
+  t.check(!/esc\(/.test(parts),
+    "nothing in the dialog is HTML-escaped — a customer called \"O'Brien & Sons\" must not read as O&#39;Brien &amp; Sons");
 }
 {
   const toggle = extractFunction(adminSrc, 'toggleQuoteInvoiced', 'index.html');

@@ -6390,8 +6390,9 @@ function loadSavedQuote(id){
 }
 
 function deleteSavedQuote(id){
-  if(!confirm('Delete this saved quote? This cannot be undone.')) return;
+  // Found before asking, so the question can name what is about to go.
   const q = data.savedQuotes.find(x=>x.id===id);
+  if(!confirm(deleteQuoteWarning(q))) return;
   if(q){
     applyInvoiceDebtCharge(q, 0);
     // Deleting an invoice should undo everything it did: any payments
@@ -6805,7 +6806,11 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
 // suppliers on this order's purchase invoices. That second half is the easy
 // one to miss -- that cash really did leave the till, and reversing it
 // rewrites the Cash Book to say it never did.
-function uninvoiceReversalWarning(q){
+// Everything an order is carrying that reversing it would destroy. Shared
+// by un-invoicing and deleting, because they undo the same things --
+// deleting simply also removes the order itself, and used to say the least
+// about it: "This cannot be undone", naming no figure at all.
+function orderReversalParts(q){
   const parts = [];
   const custPaid = (q.payments||[]).reduce((s,p)=> s + (Number(p.amount)||0), 0);
   if(custPaid > 0) parts.push(`${(q.payments||[]).length} customer payment${(q.payments||[]).length===1?'':'s'} totalling ${fmtUGX(Math.round(custPaid))}`);
@@ -6813,8 +6818,27 @@ function uninvoiceReversalWarning(q){
   const supPayments = pis.reduce((n,pi)=> n + (pi.payments||[]).length, 0);
   const supPaid = pis.reduce((s,pi)=> s + (pi.payments||[]).reduce((t,p)=> t + (Number(p.amount)||0), 0), 0);
   if(supPaid > 0) parts.push(`${supPayments} supplier payment${supPayments===1?'':'s'} totalling ${fmtUGX(Math.round(supPaid))}`);
+  // Deleting also clears whatever the customer still owes on this invoice
+  // (applyInvoiceDebtCharge(q, 0)), which is money written off rather than
+  // collected -- and nothing said so.
+  const owed = Number(q.debtCharged)||0;
+  // Not escaped: these lines go into confirm(), which renders plain text.
+  // Escaping here would show a customer called "O'Brien & Sons" as
+  // "O&#39;Brien &amp; Sons" in the dialog.
+  if(owed > 0) parts.push(`${fmtUGX(Math.round(owed))} still owed by ${(q.client && q.client.name) || 'the customer'}`);
+  return parts;
+}
+function uninvoiceReversalWarning(q){
+  const parts = orderReversalParts(q);
   if(!parts.length) return null;
   return `Un-invoicing this order will permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
+}
+// Deleting undoes all of the above AND removes the order, so it names the
+// same figures. An order carrying nothing still asks, just without a list.
+function deleteQuoteWarning(q){
+  const parts = q ? orderReversalParts(q) : [];
+  if(!parts.length) return 'Delete this saved quote? This cannot be undone.';
+  return `Deleting this order will also permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
 }
 
 // Guarded because issuing the PINV- numbers is now awaited, so this is no
