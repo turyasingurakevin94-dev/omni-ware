@@ -713,15 +713,36 @@
   .ag-solution-card .count{font-size:11px;color:var(--accent-dark);opacity:.8;}
   .ag-save-solution-link{display:block;text-align:center;font-size:12.5px;font-weight:700;color:var(--accent-dark);padding:12px 4px 2px;cursor:pointer;}
   /* ---- Home: selling streak + achievement badges ---- */
-  .ag-streak-chip{display:none;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--bonus);background:var(--bonus-bg);padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 1px 2px rgba(180,83,9,0.12);}
-  .ag-badge-card{width:120px;flex-shrink:0;border-radius:18px;padding:14px 12px;text-align:center;box-shadow:var(--shadow-soft);}
-  .ag-badge-card.unlocked{background:var(--bonus-bg);border:1px solid rgba(180,83,9,0.14);}
-  .ag-badge-card.locked{background:var(--panel);border:1px solid rgba(16,24,32,0.04);opacity:.65;box-shadow:none;}
-  .ag-badge-card .icon{font-size:26px;line-height:1;margin-bottom:6px;}
-  .ag-badge-card .title{font-size:12px;font-weight:800;line-height:1.25;margin-bottom:3px;}
-  .ag-badge-card.unlocked .title{color:var(--bonus);}
+  .ag-streak-chip svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .ag-streak-chip{display:none;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--bonus);background:var(--bonus-bg);padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 1px 2px rgba(180,83,9,0.12);}
+  /* Achievements. The old card was an emoji over a padlock over "3/10":
+     a sticker sheet in a business tool, and a locked one said only that
+     you had not got there. Now the ring IS the information -- how far
+     along you are -- and the mark inside it is the app-s own icon rather
+     than a novelty glyph. */
+  .ag-badge-card{
+    width:120px;flex-shrink:0;border-radius:14px;padding:14px 10px 13px;text-align:center;
+    background:var(--panel);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .ag-badge-ring{position:relative;width:48px;height:48px;margin-bottom:8px;}
+  .ag-badge-ring svg{width:48px;height:48px;transform:rotate(-90deg);}
+  .ag-badge-ring circle{fill:none;stroke-width:3;}
+  .ag-badge-ring .track{stroke:var(--slate-soft);}
+  .ag-badge-ring .fill{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .5s ease;}
+  .ag-badge-icon{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-soft);
+  }
+  .ag-badge-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  /* Unlocked reads as complete rather than as decorated: a full ring and
+     the mark in the accent. No confetti, no trophy. */
+  .ag-badge-card.unlocked{border-color:var(--accent);}
+  .ag-badge-card.unlocked .ag-badge-icon{color:var(--accent);}
+  .ag-badge-card.locked .fill{stroke:var(--ink-faint);}
+  .ag-badge-card .title{font-size:12px;font-weight:750;line-height:1.25;color:var(--ink);}
   .ag-badge-card.locked .title{color:var(--ink-soft);}
-  .ag-badge-card .progress{font-size:11px;color:var(--ink-soft);}
+  .ag-badge-card .progress{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
   .ag-lb-you{font-size:13.5px;font-weight:800;margin-bottom:10px;}
   .ag-lb-list{list-style:none;margin:0;padding:0;}
   .ag-lb-list li{display:flex;align-items:center;gap:10px;padding:9px 10px;font-size:13px;border-radius:12px;}
@@ -1960,16 +1981,26 @@ function computeAgentStats(){
   return { completedOrders: completed.length, repeatClients, streakWeeks: computeSellingStreak(), lifetimeEarnings };
 }
 
+// One icon per METRIC FAMILY, not per achievement. Nine unrelated glyphs
+// read as a sticker sheet; four repeated marks read as a scale you are
+// climbing -- which is what these are.
+const ACHIEVEMENT_ICONS = {
+  orders: '<svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>',
+  streak: '<svg viewBox="0 0 24 24"><path d="M13 2L4.5 13H11l-1 9 8.5-11H12l1-9z"/></svg>',
+  clients: '<svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3.5"/><path d="M22 20v-1.5a4 4 0 0 0-3-3.87"/><path d="M16 3.5a4 4 0 0 1 0 7"/></svg>',
+  earnings: '<svg viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+};
+
 const ACHIEVEMENTS = [
-  { id:'first_sale', icon:'🎯', title:'First Sale', desc:'Complete your first order', metric:s=>s.completedOrders, target:1 },
-  { id:'orders_10', icon:'📦', title:'Selling Machine', desc:'Complete 10 orders', metric:s=>s.completedOrders, target:10 },
-  { id:'orders_50', icon:'🏅', title:'Half Century', desc:'Complete 50 orders', metric:s=>s.completedOrders, target:50 },
-  { id:'streak_4', icon:'🔥', title:'Consistent', desc:'4-week selling streak', metric:s=>s.streakWeeks, target:4 },
-  { id:'streak_12', icon:'⚡', title:'Unstoppable', desc:'12-week selling streak', metric:s=>s.streakWeeks, target:12 },
-  { id:'repeat_3', icon:'🤝', title:'Building Trust', desc:'3 repeat customers', metric:s=>s.repeatClients, target:3 },
-  { id:'repeat_10', icon:'⭐', title:'Go-To Agent', desc:'10 repeat customers', metric:s=>s.repeatClients, target:10 },
-  { id:'earn_100k', icon:'💰', title:'First 100K', desc:'UGX 100,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:100000 },
-  { id:'earn_1m', icon:'💎', title:'Millionaire', desc:'UGX 1,000,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:1000000 },
+  { id:'first_sale', family:'orders', title:'First Sale', desc:'Complete your first order', metric:s=>s.completedOrders, target:1 },
+  { id:'orders_10', family:'orders', title:'Selling Machine', desc:'Complete 10 orders', metric:s=>s.completedOrders, target:10 },
+  { id:'orders_50', family:'orders', title:'Half Century', desc:'Complete 50 orders', metric:s=>s.completedOrders, target:50 },
+  { id:'streak_4', family:'streak', title:'Consistent', desc:'4-week selling streak', metric:s=>s.streakWeeks, target:4 },
+  { id:'streak_12', family:'streak', title:'Unstoppable', desc:'12-week selling streak', metric:s=>s.streakWeeks, target:12 },
+  { id:'repeat_3', family:'clients', title:'Building Trust', desc:'3 repeat customers', metric:s=>s.repeatClients, target:3 },
+  { id:'repeat_10', family:'clients', title:'Go-To Agent', desc:'10 repeat customers', metric:s=>s.repeatClients, target:10 },
+  { id:'earn_100k', family:'earnings', title:'First 100K', desc:'UGX 100,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:100000 },
+  { id:'earn_1m', family:'earnings', title:'Millionaire', desc:'UGX 1,000,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:1000000 },
 ];
 
 function computeAchievements(){
@@ -1990,13 +2021,32 @@ function markAchievementsSeen(ids){
   localStorage.setItem(agentLocalKey('agentSeenAchievements'), JSON.stringify([...seen]));
 }
 
+// A ring, not a padlock. The old card showed an emoji and the bare text
+// "3/10": a locked one told you nothing about how close you were, and a
+// padlock told you only that you had failed so far. The ring carries the
+// progress, so a locked card is the useful one -- it shows the distance
+// left rather than a shut door.
+const ACH_RING_R = 21;
+const ACH_RING_C = 2 * Math.PI * ACH_RING_R;
 function achievementCardHTML(a){
+  const pct = Math.max(0, Math.min(1, a.target > 0 ? a.current / a.target : 0));
   const state = a.unlocked ? 'unlocked' : 'locked';
-  const progress = a.unlocked ? a.desc : `${a.target>=1000 ? Math.round(a.current).toLocaleString('en-UG') : a.current}/${a.target>=1000 ? a.target.toLocaleString('en-UG') : a.target}`;
+  // Big figures read better rounded and grouped; small counts do not need it.
+  const fmtN = (n)=> a.target >= 1000 ? Math.round(n).toLocaleString('en-US') : String(n);
+  const caption = a.unlocked ? a.desc : `${fmtN(Math.min(a.current, a.target))} of ${fmtN(a.target)}`;
+  const icon = ACHIEVEMENT_ICONS[a.family] || ACHIEVEMENT_ICONS.orders;
   return `<div class="ag-badge-card ${state}">
-    <div class="icon">${a.unlocked ? a.icon : '🔒'}</div>
+    <div class="ag-badge-ring">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <circle class="track" cx="24" cy="24" r="${ACH_RING_R}"></circle>
+        <circle class="fill" cx="24" cy="24" r="${ACH_RING_R}"
+          stroke-dasharray="${ACH_RING_C.toFixed(1)}"
+          stroke-dashoffset="${(ACH_RING_C * (1 - pct)).toFixed(1)}"></circle>
+      </svg>
+      <span class="ag-badge-icon">${icon}</span>
+    </div>
     <div class="title">${esc(a.title)}</div>
-    <div class="progress">${esc(progress)}</div>
+    <div class="progress">${esc(caption)}</div>
   </div>`;
 }
 
@@ -2007,7 +2057,12 @@ function renderAchievements(){
   const seen = seenAchievementIds();
   const newlyUnlocked = achievements.filter(a=>a.unlocked && !seen.has(a.id));
   if(newlyUnlocked.length){
-    toast(`🏆 Achievement unlocked: ${newlyUnlocked[0].title}${newlyUnlocked.length>1 ? ` (+${newlyUnlocked.length-1} more)` : ''}`);
+    // No trophy. The achievement is the news; an emoji in front of it is
+    // the app congratulating itself, and this one fires while an agent is
+    // mid-order.
+    toast(newlyUnlocked.length > 1
+      ? `${newlyUnlocked[0].title} unlocked, and ${newlyUnlocked.length-1} more`
+      : `${newlyUnlocked[0].title} unlocked`);
     markAchievementsSeen(achievements.filter(a=>a.unlocked).map(a=>a.id));
   }
 
@@ -2015,7 +2070,10 @@ function renderAchievements(){
   const streakChip = document.getElementById('ag_home_streakChip');
   if(streak > 0){
     streakChip.style.display = 'inline-flex';
-    streakChip.textContent = `🔥 ${streak}-week streak`;
+    // The same streak mark the achievement ring uses, rather than a flame
+    // emoji -- one icon language across the app, and it renders the same
+    // on every handset instead of following each vendor's emoji font.
+    streakChip.innerHTML = `${ACHIEVEMENT_ICONS.streak}<span>${esc(streak)}-week streak</span>`;
   } else {
     streakChip.style.display = 'none';
   }
