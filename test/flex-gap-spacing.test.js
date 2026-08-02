@@ -176,6 +176,24 @@ function unspacedUnits(src, flexClasses, marginClasses = new Set()) {
  * So this covers the interpolation form only. Catching the literal form
  * needs a real DOM parse of the rendered output rather than a text scan,
  * which is a different tool than this suite currently has.
+ *
+ * SECOND KNOWN GAP: the value inside a span of its own.
+ *
+ *   <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel
+ *     ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+ *
+ * which read "Roofing sheetGauge 30" on the quotation a customer is shown,
+ * separated only by a 6px margin-left. The pattern below steps over
+ * interpolations between the value and the span, but not over a closing
+ * tag, so it walked past this one.
+ *
+ * Widening it to step over `</\w+>` would also make it match two adjacent
+ * sibling spans -- which section 2 currently excuses on the grounds that
+ * they are "already separate text nodes". That excuse is wrong (textContent
+ * concatenates them exactly the same way), but reversing it is a judgement
+ * about four files' worth of markup, not a regex tweak, and this rule has
+ * already cost two rounds of false positives today. Recorded rather than
+ * guessed at.
  */
 
 /* ---------- 1. the rule catches the three real cases ----------------- */
