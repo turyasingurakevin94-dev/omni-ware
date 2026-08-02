@@ -49,13 +49,24 @@ function extractFunction(src, name, where) {
   }
   if (rparen < 0) throw new Error(`unbalanced parentheses in ${name}() in ${where}`);
 
-  let angle = 0, open = -1;
+  // A return type can also be a bare object literal -- `): { a: number }[] {`
+  // -- which has no angle brackets to skip, so prefer the brace that ENDS
+  // its line. Every function body in these files opens that way, while a
+  // type's brace is always followed by more of the type. Falls back to the
+  // first brace if nothing on the line qualifies, so an inline
+  // `function f() { return 1; }` still works.
+  let angle = 0, open = -1, firstBrace = -1;
   for (let i = rparen + 1; i < src.length; i++) {
     const c = src[i];
     if (c === '<') angle++;
     else if (c === '>') { if (angle > 0) angle--; }
-    else if (c === '{' && angle === 0) { open = i; break; }
+    else if (c === '{' && angle === 0) {
+      if (firstBrace < 0) firstBrace = i;
+      const rest = src.slice(i + 1);
+      if (/^[ \t]*\r?\n/.test(rest)) { open = i; break; }
+    }
   }
+  if (open < 0) open = firstBrace;
   if (open < 0) throw new Error(`no body for ${name}() in ${where}`);
   let depth = 0;
   for (let i = open; i < src.length; i++) {
@@ -94,15 +105,34 @@ function extractDeclaration(src, name, where) {
 // something else. The `[^{\n]` keeps it on one line, which the annotation it
 // targets always is, so a match can no longer span statements.
 function stripTypes(src) {
-  return src
+  // The multi-parameter rule below cannot tell `(a: number, b: number)` from
+  // an object literal's `{ cost: costNum, }` -- both are "identifier colon
+  // value" after a comma. Applied to a whole function it rewrote
+  // `cost: costNum,` to `cost,`, which compiles and then throws at runtime
+  // with `cost is not defined`. So it is confined to the signature: split at
+  // the brace that opens the body, and only the head sees it.
+  const bodyStart = /\)[^\n]*\{[ \t]*\r?\n/.exec(src);
+  const cut = bodyStart ? bodyStart.index + bodyStart[0].length : src.length;
+  const head = src.slice(0, cut)
+    .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)])/g, '$1$2');
+
+  return (head + src.slice(cut))
     // Return annotation. Anchored to the brace that ends the line rather
     // than the first one seen, or a type that contains braces of its own
     // (`: Promise<{ user: any }>`) chops the signature in half and leaves
     // the remainder as a stray block.
     .replace(/\)\s*:\s*[^\n]+?\s*\{\s*$/m, ') {')
     .replace(/\(\s*([A-Za-z_$][\w$]*)\s*:\s*[^),\n]+\)\s*=>/g, '($1) =>')
-    .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)])/g, '$1$2')
-    .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]|.]*/g, '');
+    .replace(/\s+as\s+[A-Za-z_$][\w$<>\[\]|.]*/g, '')
+    // Typed declarations: `const tier: MarkupKind = ...`. Left in place,
+    // the annotation reads as a label and the line fails to parse with
+    // "Missing initializer in const declaration". Bounded to a single line
+    // and stopping at the `=`, so an object literal on the right is safe.
+    // `;` is NOT excluded: an inline object type carries its own
+    // (`const t: { a: number; b: number }[] = []`), and excluding it left
+    // exactly those declarations unstripped. Bounded by the newline and by
+    // stopping at the first `=`, which no type annotation contains.
+    .replace(/\b(const|let|var)\s+([A-Za-z_$][\w$]*)\s*:\s*[^=\n]+=/g, '$1 $2 =');
 }
 
 /*
