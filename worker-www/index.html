@@ -385,7 +385,12 @@ async function loadWorkerData(shopId){
     sb.from('staff').select('*').eq('shop_id', shopId),
     sb.from('agents').select('id, payment_term').eq('shop_id', shopId),
     sb.from('suppliers').select('*').eq('shop_id', shopId),
-    sb.from('products').select('id, name, image').eq('shop_id', shopId),
+    // variants comes along for the photos: a pick card shows the variant's
+    // own image where there is one, and without this column resolveProductImage
+    // has nothing to look in and every finish of a product shows the same
+    // generic picture. Still far short of the admin's product select -- no
+    // pricing, markups or stock, none of which this app has any use for.
+    sb.from('products').select('id, name, image, variants').eq('shop_id', shopId),
     sb.from('saved_quotes').select('*').eq('shop_id', shopId),
   ]);
   [staffR, agentsR, suppliersR, productsR, savedQuotesR].forEach(r=>{ if(r.error) throw r.error; });
@@ -394,7 +399,7 @@ async function loadWorkerData(shopId){
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, paymentTerm:a.payment_term||'prepay'})),
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
-    products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null})),
+    products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null, variants:p.variants||[]})),
     savedQuotes: (savedQuotesR.data||[]).map(q=>({
       id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
       invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,

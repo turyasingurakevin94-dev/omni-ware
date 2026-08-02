@@ -15,8 +15,10 @@
  * normal case for colours, gauges and finishes, because there is no single
  * photo of "the product" -- every variant showed the placeholder instead.
  *
- * Three sites: the agent's catalogue, the agent's promotions shelf, and the
- * public catalogue a customer is handed a link to.
+ * Four sites: the agent's catalogue, the agent's promotions shelf, the
+ * public catalogue a customer is handed a link to, and -- found later, and
+ * the one where it matters most -- the worker's pick card, where somebody
+ * is standing at a shelf choosing between the brass one and the chrome one.
  *
  * Run: node test/variant-images.test.js   (or: npm test)
  */
@@ -117,6 +119,55 @@ const admin = read('index.html');
     'the card shows the row\'s image');
   t.check(/: `<div class="ag-grid-thumb-placeholder">\$\{ICON_PLACEHOLDER\}<\/div>`/.test(agentApp),
     'and the placeholder only when there is none -- which is what every variant was getting');
+}
+
+/* ---------- 5. the worker's pick card ------------------------------- */
+/*
+ * A fourth site, and the one where it matters most. The pick card is a
+ * full-bleed photo carousel, built for someone standing at a shelf deciding
+ * which of two similar things to take, and the photo is the largest thing
+ * on it. It showed the generic product photo for every variant.
+ *
+ * Two independent reasons, both needed:
+ *   - the card called ipStageThumbHTML(product) with no variant index,
+ *     alone among every caller of it; and
+ *   - the standalone app's product fetch never selected the variants
+ *     column, so there was nothing to resolve against even if it had.
+ */
+{
+  const sharedJs = read('shared-worker.js');
+  const workerHtml = read('worker.html');
+  const sharedCode = strip(sharedJs);
+
+  t.check(/ipStageThumbHTML\(product\|\|\{\}, it\.variantIdx\)/.test(sharedCode),
+    'the pick card asks for the photo of the variant on the line');
+  t.check(!/ipStageThumbHTML\(product\|\|\{\}\)/.test(sharedCode),
+    'and no longer asks for the product photo regardless of variant');
+  t.check(/select\('id, name, image, variants'\)/.test(workerHtml),
+    'the standalone worker app loads the variants column it needs to resolve one');
+  t.check(/variants:p\.variants\|\|\[\]/.test(workerHtml),
+    'and carries it through into the product it builds');
+
+  // The resolver's own fallback chain, on the four shapes a pick card meets.
+  const scope = compileScope([
+    extractFunction(sharedJs, 'resolveProductImage', 'shared-worker.js'),
+  ], {}, ['resolveProductImage']);
+  const hinge = {
+    name: 'Cabinet Hinge', image: 'generic.jpg',
+    variants: [{ combo: ['Brass'], image: 'brass.jpg' }, { combo: ['Chrome'] }],
+  };
+  t.check(scope.resolveProductImage(hinge, 0) === 'brass.jpg',
+    "a variant with its own photo shows it");
+  t.check(scope.resolveProductImage(hinge, 1) === 'generic.jpg',
+    'one without falls back to the product photo rather than a placeholder');
+  t.check(scope.resolveProductImage({ name: 'Cement', image: 'cement.jpg', variants: [] }, null) === 'cement.jpg',
+    'a product with no variants is unaffected');
+  t.check(scope.resolveProductImage({ name: 'Sand', image: null, variants: [] }, null) == null,
+    'and one with no photo anywhere still gets the placeholder');
+
+  // A worker app that never loaded the column must not start throwing.
+  t.check(scope.resolveProductImage({ name: 'Old', image: 'old.jpg' }, 2) === 'old.jpg',
+    'a product row with no variants array at all is handled, not thrown on');
 }
 
 process.exit(t.done() ? 1 : 0);

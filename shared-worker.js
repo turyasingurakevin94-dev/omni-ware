@@ -597,6 +597,15 @@ function renderWorkerPickStepper(q){
     // in packs at all.
     const qtyLabel = it.packUnit ? 'Pack' : 'Quantity';
     const variant = pickItemVariantLabel(it, product);
+    // The variant's own photo, not the product's. Every other caller of
+    // ipStageThumbHTML passes the index; this one did not, so a picker
+    // deciding between the brass hinge and the chrome one got the same
+    // generic photo on both cards. This is the screen where that matters
+    // most -- a full-bleed photo carousel, built for someone identifying
+    // goods on a shelf, where the photo is the largest thing on the card.
+    // resolveProductImage falls back to the product's own photo when a
+    // variant has none of its own.
+    const photo = ipStageThumbHTML(product||{}, it.variantIdx);
     // The PRODUCT's name, not the line's stored one. Both writers of an
     // order line bake the variant into productName -- the admin's quote
     // builder via productVariantLabel(), and agent-submit-order the same
@@ -612,7 +621,7 @@ function renderWorkerPickStepper(q){
     // has been deleted out from under an order still on the board.
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
-        <div class="wv-carousel-photo">${ipStageThumbHTML(product||{})}</div>
+        <div class="wv-carousel-photo">${photo}</div>
         <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
         <div class="wv-carousel-body">
           <div class="wv-carousel-name">${esc((product && product.name) || it.productName || 'Item')}</div>
