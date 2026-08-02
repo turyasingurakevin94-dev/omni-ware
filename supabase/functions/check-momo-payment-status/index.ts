@@ -131,12 +131,19 @@ Deno.serve(async (req) => {
     if (!txn) return json({ error: "Payment not found" }, 404);
 
     // Caller must be either the agent who owns this payment, or a shop admin
-    // (the ledger's "Re-check" button calls this too).
-    const [{ data: agentId }, { data: isAdmin }] = await Promise.all([
-      callerClient.rpc("current_agent_id", { p_shop_id: shopId }),
-      callerClient.rpc("is_shop_admin", { p_shop_id: shopId }),
-    ]);
-    if (!(agentId && agentId === txn.agent_id) && !isAdmin) return json({ error: "Not authorized to view this payment" }, 403);
+    // (the ledger's "Re-check" button calls this too) -- or one of the
+    // provider webhooks, which run server-side on the service-role key and
+    // have no auth.uid() for those RPCs to key on. A webhook cannot decide
+    // anything by saying so; all it can do is ask us to run this check,
+    // and the answer still comes from the provider below.
+    const isServiceRole = authHeader === `Bearer ${SERVICE_ROLE_KEY}`;
+    if (!isServiceRole) {
+      const [{ data: agentId }, { data: isAdmin }] = await Promise.all([
+        callerClient.rpc("current_agent_id", { p_shop_id: shopId }),
+        callerClient.rpc("is_shop_admin", { p_shop_id: shopId }),
+      ]);
+      if (!(agentId && agentId === txn.agent_id) && !isAdmin) return json({ error: "Not authorized to view this payment" }, 403);
+    }
 
     if (txn.status !== "pending") return json({ ok: true, status: txn.status });
 

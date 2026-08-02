@@ -91,10 +91,23 @@ async function mtnRequestToPay(creds: any, environment: string, opts: { referenc
   if (!tokenRes.ok) throw new Error(describeMtnFailure(tokenRes.status, await tokenRes.text()));
   const { access_token } = await tokenRes.json();
 
+  // Ask MTN to call us back, but ONLY when this shop was provisioned with
+  // the callback host we would be naming. MTN rejects requesttopay with
+  // INVALID_CALLBACK_URL_HOST if X-Callback-Url is not on the same domain
+  // as the registered providerCallbackHost, so sending one against a shop
+  // provisioned before the host fix would break payments that work fine
+  // today on polling. Those shops simply get no header until someone
+  // re-provisions them, exactly as before.
+  const ourCallbackHost = new URL(SUPABASE_URL.replace(/\.supabase\.co\/?$/, ".functions.supabase.co")).host;
+  const callbackHeader: Record<string, string> = creds.callbackHost === ourCallbackHost
+    ? { "X-Callback-Url": `https://${ourCallbackHost}/mtn-payment-webhook` }
+    : {};
+
   const payRes = await fetch(`${base}/collection/v1_0/requesttopay`, {
     method: "POST",
     headers: {
       ...MTN_HEADERS,
+      ...callbackHeader,
       "Authorization": `Bearer ${access_token}`,
       "X-Reference-Id": opts.referenceId,
       "X-Target-Environment": environment === "production" ? "mtnuganda" : "sandbox",

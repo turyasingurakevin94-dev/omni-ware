@@ -63,14 +63,24 @@ client ever called it, and it was retired — this README describing it as
   `cash_txns`, and both release the order (`agentPaymentStatus: "paid"`)
   only once the money covers the total; a short payment is still banked.
 
-> **These two webhooks are currently unreachable.** Both are deployed with
-> `verify_jwt=true`, so a provider callback gets `401` before the function
-> body runs. Payments resolve only via the polling above. Making them
-> reachable is a two-step job in this order: set
-> `AIRTEL_CALLBACK_HMAC_KEY` (and an equivalent for MTN) so the body is
-> authenticated, *then* redeploy with `--no-verify-jwt`. Flipping the flag
-> first would let anyone holding a payment reference mark an order paid
-> with no money behind it.
+Both webhooks are deployed `--no-verify-jwt`, because a provider cannot
+present a Supabase JWT. **Neither trusts what it is sent.** A callback is
+taken as saying one thing only — *which* payment to look at. The webhook
+resolves the reference to a still-pending `agent_mobile_payments` row and
+hands off to `check-momo-payment-status` on the service-role key, which
+asks the provider's own API with that shop's credentials and applies the
+answer. A forged callback can do no more than cause a question we already
+had the right to ask.
+
+That is what makes them safe to expose. MTN does not sign its callbacks —
+there is no HMAC or signature header in their API — so no signature check
+was ever available to make the old "read the status from the body" design
+safe. Airtel *does* offer signing; set `AIRTEL_CALLBACK_HMAC_KEY` from the
+portal's Security tab for a second lock, which is optional and dormant
+while unset.
+
+`applyMomoPaymentToOrder` now exists once, in `check-momo-payment-status`.
+It used to exist three times, and one copy missed a fix for weeks.
 
 **Airtel credentials are per shop, in the database — not secrets.**
 `agent-initiate-momo-payment` reads them from the `shop_payment_providers`

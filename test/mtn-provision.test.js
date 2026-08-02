@@ -120,19 +120,45 @@ FILES.forEach(([name, src]) => {
     'and it still defaults to sandbox, which is all the retired one ever did');
 }
 
-/* ---------- 3. X-Callback-Url is deliberately absent ------------------ */
+/* ---------- 3. X-Callback-Url is sent only when it is safe to --------- */
 /*
- * Pinned so adding it is a decision rather than an accident. It only
- * becomes correct once a shop has been re-provisioned with a valid host
- * AND mtn-payment-webhook is actually reachable -- it is deployed
- * verify_jwt=true today and answers a provider callback with 401.
+ * MTN rejects requesttopay with INVALID_CALLBACK_URL_HOST when
+ * X-Callback-Url is not on the same domain as the registered
+ * providerCallbackHost. Shops provisioned before the host fix have a
+ * registration that names a URL rather than a host, so sending a header at
+ * them would break payments that work fine today on polling.
+ *
+ * So provisioning records which host it registered, and initiation sends
+ * the header only when that matches the host it would name. A stale shop
+ * silently keeps its current behaviour until someone re-provisions it.
  */
 {
   const initiate = read('supabase/functions/agent-initiate-momo-payment/index.ts');
-  t.check(!/X-Callback-Url/i.test(initiate),
-    'agent-initiate-momo-payment does not yet send X-Callback-Url');
+  // Note the lookbehind. A plain /\/\/.*$/ strips from the "//" inside
+  // "https://", which silently truncates any line containing a URL -- and
+  // the line under test here is exactly such a line.
+  const strip = (s) => s.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  const code = strip(initiate);
+
+  t.check(/creds\.callbackHost === ourCallbackHost/.test(code),
+    'the header is gated on the shop having been provisioned with this host');
+  t.check(/\? \{ "X-Callback-Url": `https:\/\/\$\{ourCallbackHost\}\/mtn-payment-webhook` \}\s*:\s*\{\}/.test(code),
+    'and it is simply omitted otherwise, rather than sent with a guess');
+  t.check(/\.\.\.callbackHeader,/.test(code),
+    'the header is spread into the requesttopay call');
+
+  const provision = read('supabase/functions/mtn-provision-apiuser/index.ts');
+  t.check(/apiKey, callbackHost \}/.test(provision),
+    'provisioning records the host it registered, which is what that gate reads');
+
+  // The gate must compare like with like: both sides derived the same way.
+  const derived = (/const ourCallbackHost = (.*);/.exec(code) || [])[1];
+  const provDerived = (/const callbackHost = (.*);/.exec(strip(provision)) || [])[1];
+  t.check(!!derived && derived === provDerived,
+    'initiation and provisioning derive the host with the same expression');
+
   t.check(/check-momo-payment-status/.test(read('agent.html')),
-    'and the agent app polls for the result, which is what actually resolves payments');
+    'and the agent app still polls, which remains the safety net');
 }
 
 /* ---------- 4. authorization ------------------------------------------ */

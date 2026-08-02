@@ -145,8 +145,14 @@ const { normaliseUgandaMsisdn } = compileScope(
   const carriers = fnDirs()
     .map(name => [name, read(`supabase/functions/${name}/index.ts`)])
     .filter(([, src]) => /function applyMomoPaymentToOrder/.test(src));
-  t.check(carriers.length >= 3,
-    `every copy of applyMomoPaymentToOrder is found by search, not by name (found ${carriers.length}: ${carriers.map(c => c[0]).join(', ')})`);
+
+  // There is now exactly ONE. The webhooks stopped interpreting callbacks
+  // and became thin triggers that ask check-momo-payment-status for an
+  // authoritative answer, which took two copies out of existence rather
+  // than keeping them in step. Still discovered by search, so a copy
+  // reappearing anywhere fails here.
+  t.check(carriers.length === 1 && carriers[0][0] === 'check-momo-payment-status',
+    `applyMomoPaymentToOrder exists once, in the poller (found ${carriers.length}: ${carriers.map(c => c[0]).join(', ') || 'none'})`);
   carriers.forEach(([name, src]) => {
     t.check(/if \(newAmountPaid \+ 0\.5 >= orderTotal\) nextPayload\.agentPaymentStatus = "paid";/.test(src),
       `${name} only marks an order paid once the money covers it`);
@@ -249,7 +255,11 @@ const { normaliseUgandaMsisdn } = compileScope(
     'the HMAC verification survived the retirement');
   t.check(/const rawBody = await req\.text\(\);/.test(hook) && !/await req\.json\(\)/.test(hook),
     'the body is read as raw bytes, because the hash is over exactly what was sent');
-  t.check(hook.indexOf('computeHmac(rawBody') < hook.indexOf('agent_mobile_payments'),
+  // Comments stripped: the header prose names agent_mobile_payments while
+  // explaining the design, and an index comparison against raw source finds
+  // that sentence rather than the query.
+  const hookCode = hook.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+  t.check(hookCode.indexOf('computeHmac(rawBody') < hookCode.indexOf('from("agent_mobile_payments")'),
     'the signature is checked before any payment row is touched');
   t.check(/if \(computed !== body\.hash\)[\s\S]{0,160}403/.test(hook),
     'a mismatched signature is refused outright');

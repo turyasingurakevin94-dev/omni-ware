@@ -98,7 +98,13 @@ Deno.serve(async (req) => {
     }
     const { apiKey } = await apiKeyRes.json();
 
-    const credentials = { ...(existing?.credentials || {}), subscriptionKey, apiUser: apiUserId, apiKey };
+    // Record WHICH host was registered with MTN. agent-initiate-momo-payment
+    // only sends an X-Callback-Url when this matches the host it would send,
+    // because MTN rejects the payment call outright with
+    // INVALID_CALLBACK_URL_HOST if the two disagree. Shops provisioned
+    // before the host fix have no callbackHost here, so they keep working
+    // on polling until someone re-provisions them.
+    const credentials = { ...(existing?.credentials || {}), subscriptionKey, apiUser: apiUserId, apiKey, callbackHost };
     const { data: saved, error: upsertErr } = await admin
       .from("shop_payment_providers")
       .upsert({ shop_id: shopId, provider: "mtn", environment, credentials, updated_at: new Date().toISOString() }, { onConflict: "shop_id,provider" })
