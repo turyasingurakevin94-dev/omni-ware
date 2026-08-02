@@ -30,7 +30,18 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
   const providerLabel = txn.provider === "mtn" ? "MTN MoMo" : "Airtel Money";
   const now = new Date();
   const { data: cashTxn, error: cashErr } = await admin.from("cash_txns").insert({
-    shop_id: txn.shop_id, date: now.toISOString().slice(0, 10), account: providerLabel,
+    // "momo", not providerLabel. The Cash Book keys every total off three
+    // account ids -- cash, momo, bank (ACCOUNTS in index.html) -- and
+    // filters on an exact match. Writing "MTN MoMo" here filed the receipt
+    // under an account that does not exist: the row still appeared in the
+    // day's transaction list, so it looked recorded, but it counted toward
+    // no account's receipts and no closing balance. Every agent mobile-money
+    // payment ever taken was missing from the MoMo balance, which would
+    // show as a permanent unexplained surplus against a counted float.
+    //
+    // Which provider it was is not lost: it is the category, the
+    // description, and the note on the order's own payments entry.
+    shop_id: txn.shop_id, date: now.toISOString().slice(0, 10), account: "momo",
     type: "receipt", category: "Mobile Money",
     amount: txn.amount,
     description: `${providerLabel} payment from ${agentRow?.name || txn.agent_id} -- order #${txn.order_id}`,

@@ -4183,7 +4183,7 @@ async function loadData(shopId){
     stockLog: (stockLogR.data||[]).map(l=>({id:l.id, key:l.key, productId:l.product_id, variantIdx:l.variant_idx, label:l.label, type:l.type, delta:Number(l.delta)||0, qtyAfter:Number(l.qty_after)||0, note:l.note||'', date:l.date, at:l.at})),
     nextStockLogId: (stockLogR.data||[]).length ? Math.max(0,...stockLogR.data.map(l=>l.id||0))+1 : 1,
     cashDays,
-    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:t.account, type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time})),
+    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time})),
     nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
     quote,
     // lineId, not id -- quote items have never had an `id`, so this read
@@ -12293,6 +12293,28 @@ const ACCOUNTS = [
   {key:'momo', label:'Mobile Money'},
   {key:'bank', label:'Bank'},
 ];
+// Every cash total filters on an exact account id, so a row carrying
+// anything else is invisible to all of them -- it still appears in the
+// day's transaction list, which is what made it look recorded.
+//
+// check-momo-payment-status used to write the provider's display name
+// ("MTN MoMo", "Airtel Money") as the account. That is fixed at the
+// source, but rows written before it are already in the database and no
+// migration is going to reach every shop, so they are mapped here on the
+// way in. An id already in ACCOUNTS is passed through untouched.
+const CASH_ACCOUNT_KEYS = new Set(ACCOUNTS.map(a=>a.key));
+function normaliseCashAccount(account){
+  const raw = String(account==null ? '' : account).trim();
+  if(CASH_ACCOUNT_KEYS.has(raw)) return raw;
+  const lower = raw.toLowerCase();
+  if(/momo|mobile money|airtel|mtn/.test(lower)) return 'momo';
+  if(/bank/.test(lower)) return 'bank';
+  if(/cash/.test(lower)) return 'cash';
+  // Anything genuinely unrecognised falls to cash rather than vanishing:
+  // a balance that is wrong in a named account is visible and fixable, one
+  // that is absent from every account is neither.
+  return 'cash';
+}
 let editingCashTxnId = null;
 let editingCashTxnColumn = null; // 'in' | 'out'
 
