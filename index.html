@@ -7379,15 +7379,26 @@ function renderInvoices(filter=''){
   });
 }
 
-function toggleInvoiceVoided(id){
-  const q = data.savedQuotes.find(x=>x.id===id);
-  if(!q) return;
-  q.voided = !q.voided;
-  syncInvoiceDebtCharge(q);
+// Voiding an invoice is never just a flag. invoiceDebtDesired() returns 0
+// for a voided invoice, so the customer's debt has to be re-synced or they
+// go on owing for a sale that has been cancelled -- and the two screens
+// that show that balance have to be redrawn.
+//
+// The single toggle did all of this. The bulk Void/Unvoid actions in the
+// Invoices dropdown set q.voided and stopped there, so voiding two
+// invoices at once left the customer owing for both, while voiding the
+// same two one at a time cleared them. One function now, for all three.
+function setInvoicesVoided(quotes, voided){
+  quotes.forEach(q=>{ q.voided = voided; syncInvoiceDebtCharge(q); });
   saveData();
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+}
+function toggleInvoiceVoided(id){
+  const q = data.savedQuotes.find(x=>x.id===id);
+  if(!q) return;
+  setInvoicesVoided([q], !q.voided);
   toast(q.voided ? 'Invoice voided' : 'Invoice unvoided');
 }
 
@@ -7508,18 +7519,14 @@ document.getElementById('inv_doc_print_selected_btn').addEventListener('click', 
 document.getElementById('inv_doc_void_selected_btn').addEventListener('click', ()=>{
   const quotes = invSelectedQuotes();
   if(quotes.length===0){ toast('Select at least one invoice to void'); return; }
-  quotes.forEach(q=>q.voided = true);
-  saveData();
-  renderInvoices(document.getElementById('inv_doc_search').value);
+  setInvoicesVoided(quotes, true);
   toast(`Voided ${quotes.length} invoice${quotes.length===1?'':'s'}`);
   document.getElementById('inv_bulk_dd_menu').classList.remove('show');
 });
 document.getElementById('inv_doc_unvoid_selected_btn').addEventListener('click', ()=>{
   const quotes = invSelectedQuotes();
   if(quotes.length===0){ toast('Select at least one invoice to unvoid'); return; }
-  quotes.forEach(q=>q.voided = false);
-  saveData();
-  renderInvoices(document.getElementById('inv_doc_search').value);
+  setInvoicesVoided(quotes, false);
   toast(`Unvoided ${quotes.length} invoice${quotes.length===1?'':'s'}`);
   document.getElementById('inv_bulk_dd_menu').classList.remove('show');
 });
