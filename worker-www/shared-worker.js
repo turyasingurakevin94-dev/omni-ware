@@ -548,6 +548,11 @@ function renderWorkerPickStepper(q){
     const isDone = it.pickStatus==='done';
     const qty = it.qty!=null ? it.qty : '';
     const unit = it.packUnit || it.unit || '';
+    // The label followed the fallback above, not the outcome: an item with
+    // no packUnit falls back to its base unit and was still announced as
+    // "Pack", so a card read "Pack / 3 pc" for something that is not sold
+    // in packs at all.
+    const qtyLabel = it.packUnit ? 'Pack' : 'Quantity';
     const variant = pickItemVariantLabel(it, product);
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
@@ -556,8 +561,8 @@ function renderWorkerPickStepper(q){
         <div class="wv-carousel-body">
           <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
           ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
-          <div class="wv-carousel-qty-label">Pack</div>
-          <div class="wv-carousel-qty">${esc(qty)} ${esc(unit)}</div>
+          <div class="wv-carousel-qty-label">${esc(qtyLabel)}</div>
+          <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
         </div>
         <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
       </div>
