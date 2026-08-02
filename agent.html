@@ -743,13 +743,30 @@
   .ag-badge-card .title{font-size:12px;font-weight:750;line-height:1.25;color:var(--ink);}
   .ag-badge-card.locked .title{color:var(--ink-soft);}
   .ag-badge-card .progress{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
-  .ag-lb-you{font-size:13.5px;font-weight:800;margin-bottom:10px;}
-  .ag-lb-list{list-style:none;margin:0;padding:0;}
-  .ag-lb-list li{display:flex;align-items:center;gap:10px;padding:9px 10px;font-size:13px;border-radius:12px;}
+  /* The leaderboard shows ORDER only -- rank, name, and whether it is you.
+     agent-leaderboard deliberately omits every other agent-s amount, so no
+     bar, no figure, nothing that would turn a ranking into a payslip
+     anyone else can read. Your own numbers are yours and are shown. */
+  .ag-lb-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
+  .ag-lb-rank-big{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;}
+  .ag-lb-of{font-size:12.5px;color:var(--ink-soft);font-weight:650;}
+  .ag-lb-mine{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;font-variant-numeric:tabular-nums;}
+  .ag-lb-mine b{color:var(--ink);font-weight:750;}
+  .ag-lb-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px;}
+  .ag-lb-list li{display:flex;align-items:center;gap:11px;padding:9px 10px;font-size:13px;border-radius:9px;}
   .ag-lb-list li.you{font-weight:800;color:var(--accent-dark);background:var(--accent-soft);}
-  .ag-lb-list .rank{width:22px;flex-shrink:0;font-weight:800;color:var(--ink-soft);text-align:center;}
-  .ag-lb-list li.you .rank{color:var(--accent-dark);}
-  .ag-lb-list li.you .rank{color:var(--accent-dark);}
+  .ag-lb-list .rank{
+    width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11.5px;font-weight:800;color:var(--ink-soft);background:var(--slate-soft);font-variant-numeric:tabular-nums;
+  }
+  /* The top three carry weight without medals. A podium of emoji is the
+     thing that made the achievements row look like a game. */
+  .ag-lb-list li.podium .rank{background:var(--ink);color:var(--panel);}
+  .ag-lb-list li.you .rank{background:var(--accent);color:#fff;}
+  .ag-lb-list .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Shown when you are outside the top five: the run of ranks between is
+     not drawn, but it is not pretended away either. */
+  .ag-lb-gap{display:flex;align-items:center;gap:11px;padding:3px 10px;color:var(--ink-faint);font-size:13px;letter-spacing:.14em;}
   /* ---- Offline banner: shown app-wide, independent of the active tab ---- */
   .ag-offline-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:8px;background:var(--bonus-bg);color:var(--bonus);padding:9px 16px;font-size:12.5px;font-weight:700;line-height:1.35;}
   .ag-offline-banner .icon{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
@@ -2096,11 +2113,29 @@ function renderLeaderboard(){
   const card = document.getElementById('ag_home_leaderboardCard');
   if(!leaderboard || !leaderboard.you || leaderboard.totalAgents < 2){ card.style.display = 'none'; return; }
   card.style.display = 'block';
-  document.getElementById('ag_lb_youLine').textContent =
-    `You're #${leaderboard.you.rank} of ${leaderboard.totalAgents} this month`;
-  document.getElementById('ag_lb_list').innerHTML = leaderboard.top.map(a=>
-    `<li class="${a.isYou?'you':''}"><span class="rank">#${a.rank}</span><span>${esc(a.isYou ? 'You' : a.displayName)}</span></li>`
-  ).join('');
+  // Your standing, with the figures behind it. amount and completedOrders
+  // were already in the response and were being thrown away, so a rank
+  // arrived with nothing to explain it.
+  const you = leaderboard.you;
+  document.getElementById('ag_lb_youLine').innerHTML = `
+    <div class="ag-lb-head">
+      <span class="ag-lb-rank-big">#${esc(you.rank)}</span>
+      <span class="ag-lb-of">of ${esc(leaderboard.totalAgents)} this month</span>
+    </div>
+    <div class="ag-lb-mine"><b>${esc(fmtUGX(you.amount||0))}</b> from ${esc(you.completedOrders||0)} completed order${(you.completedOrders||0)===1?'':'s'}</div>`;
+
+  const row = (a)=> `<li class="${a.isYou?'you':''}${a.rank<=3 && !a.isYou?' podium':''}">
+      <span class="rank">${esc(a.rank)}</span>
+      <span class="nm">${esc(a.isYou ? 'You' : a.displayName)}</span>
+    </li>`;
+  // If you are outside the top five your own row is appended, because a
+  // board that does not contain you is a board about other people. The
+  // ranks in between are marked as skipped rather than quietly closed up.
+  const inTop = leaderboard.top.some(a=>a.isYou);
+  const tail = inTop ? '' :
+    `<li class="ag-lb-gap" aria-hidden="true">&middot; &middot; &middot;</li>` +
+    row({ rank: you.rank, isYou: true, displayName: 'You' });
+  document.getElementById('ag_lb_list').innerHTML = leaderboard.top.map(row).join('') + tail;
 }
 
 function renderHome(){
