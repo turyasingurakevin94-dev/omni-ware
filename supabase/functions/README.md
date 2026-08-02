@@ -72,18 +72,23 @@ client ever called it, and it was retired — this README describing it as
 > first would let anyone holding a payment reference mark an order paid
 > with no money behind it.
 
-Required secrets (from the app's **Keys** section in the Airtel Developer
-Portal — never commit these):
+**Airtel credentials are per shop, in the database — not secrets.**
+`agent-initiate-momo-payment` reads them from the `shop_payment_providers`
+row for that shop (`provider = 'airtel'`, `enabled = true`), along with the
+`environment` that selects sandbox or production. A shop with no enabled row
+is refused before any provider is called.
+
+The `AIRTEL_CLIENT_ID`, `AIRTEL_CLIENT_SECRET` and `AIRTEL_ENV` secrets
+belonged to the retired `airtel-collection-initiate` and are now read by
+nothing. They can be removed:
 ```
-supabase secrets set AIRTEL_CLIENT_ID="<client_id>"
-supabase secrets set AIRTEL_CLIENT_SECRET="<client_secret>"
+supabase secrets unset AIRTEL_CLIENT_ID AIRTEL_CLIENT_SECRET AIRTEL_ENV
 ```
-`AIRTEL_ENV` defaults to `sandbox` (uses the `/simulate/...` paths the
-Postman collection showed). Set it to `production` only once the app has
-gone live in the portal:
-```
-supabase secrets set AIRTEL_ENV="production"
-```
+Worth knowing before you do: the four rows left in `airtel_transactions`
+were all `invalid_client` from Airtel's OAuth2 endpoint — those env
+credentials were being rejected. That says nothing about the credentials in
+`shop_payment_providers`, which are a different set entirely and are what
+the live path actually uses.
 
 Set the callback URL in the portal's **Security** tab → **Add Callback
 URL**, product **Collection-APIs**, event **Transaction**. This must be
