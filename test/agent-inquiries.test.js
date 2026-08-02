@@ -287,6 +287,44 @@ const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
       && /with check \(agent_id = current_agent_id\(shop_id\)\)/.test(mig),
       'scoped to their own on both sides, so one agent cannot clear another\'s');
 
+    /* ---------- 9. the guard must be escapable ---------------------- */
+    /*
+     * GUARD 2 keeps cached data when a read comes back empty where the
+     * snapshot has rows, because a stale token looks exactly like that.
+     * Its own comment says the escape hatch is a PROVABLY FRESH session --
+     * force a token refresh, and believe a second empty answer.
+     *
+     * The code never checked whether that refresh succeeded, so there was
+     * no escape at all. A shop deleting an agent's orders left every later
+     * load looking like a blip: the app served the pre-deletion snapshot
+     * forever, kept showing orders that no longer existed, and -- because
+     * that branch returns before the fresh rows are assigned -- could never
+     * show anything new either. A catalogue request that arrived after the
+     * deletion was unreachable no matter how many times the agent
+     * refreshed. Found in production, on exactly that sequence.
+     */
+    const load = extractFunction(src, 'loadAgentHomeData', 'agent.html');
+    t.check(/let sessionProvenFresh = false;/.test(load)
+      && /sessionProvenFresh = true;/.test(load),
+      'the load records whether it managed to renew the token');
+    const iSet = load.indexOf('sessionProvenFresh = true;');
+    const iRetry = load.indexOf('rows = await fetchAgentHomeRows();', iSet);
+    t.check(iSet > -1 && iRetry > iSet,
+      'and only counts it fresh once the renewal has actually succeeded, before re-reading');
+    t.check(/if\(readLostRows\(rows, cached\) && !sessionProvenFresh\)\{/.test(load),
+      'so an empty answer on a renewed token is believed rather than treated as a blip forever');
+    t.check(/if\(sessionProvenFresh\) saveOfflineCache\(true\);/.test(load),
+      'and the stale snapshot is overwritten, so the deleted rows cannot come back offline');
+
+    const save = extractFunction(src, 'saveOfflineCache', 'agent.html');
+    t.check(/function saveOfflineCache\(trusted\)/.test(save)
+      && /if\(!trusted && wouldWipeCachedData/.test(save),
+      'the wipe-guard is bypassed only for a caller that has proven the snapshot real');
+    // Every other caller must keep the guard.
+    const untrusted = (src.match(/saveOfflineCache\(\)/g) || []).length;
+    t.check(untrusted >= 5,
+      `every other call still goes through the guard (${untrusted} of them)`);
+
     process.exit(t.done() ? 1 : 0);
   })();
 }

@@ -1177,13 +1177,17 @@ function wouldWipeCachedData(prev){
     // saved data" warning would contradict that.
     || wipes(myInquiries, prev.myInquiries);
 }
-function saveOfflineCache(){
+// `trusted` means the caller has already established that this snapshot is
+// real rather than a blip -- currently only loadAgentHomeData, after a read
+// that came back on a token it had just renewed. Everywhere else keeps the
+// guard, because everywhere else an empty read is unexplained.
+function saveOfflineCache(trusted){
   try{
     // The wipe-guard protects OUR OWN cached rows from being replaced by an
     // empty read. A snapshot belonging to a different login gets no such
     // protection -- it must be overwritten, or the previous agent's data
     // would outlive their session on this device.
-    if(wouldWipeCachedData(ownCachedSnapshot())){
+    if(!trusted && wouldWipeCachedData(ownCachedSnapshot())){
       console.warn('Skipped offline-cache write: the fresh snapshot is empty where the stored one has rows.');
       return;
     }
@@ -1498,18 +1502,31 @@ async function loadAgentHomeData(){
   // client roster.
   const cached = ownCachedSnapshot();
   let rows = await fetchAgentHomeRows();
+  // Whether the token was successfully renewed before the second attempt.
+  // This is the whole difference between "empty because the session was
+  // stale" and "empty because the rows are actually gone", and not tracking
+  // it is what let this guard trap an agent forever: a shop legitimately
+  // deleting all of an agent's orders left every subsequent load looking
+  // exactly like a blip, so the app served the pre-deletion snapshot from
+  // cache on every refresh, with no way out. Orders that no longer existed
+  // kept showing, and anything genuinely new -- a catalogue request that
+  // arrived afterwards -- could never appear, because this branch returns
+  // before the fresh rows are assigned.
+  let sessionProvenFresh = false;
   if(readLostRows(rows, cached)){
     try{
       const { data: refreshed, error: refreshErr } = await sb.auth.refreshSession();
-      if(!refreshErr && refreshed && refreshed.session) rows = await fetchAgentHomeRows();
+      if(!refreshErr && refreshed && refreshed.session){
+        sessionProvenFresh = true;
+        rows = await fetchAgentHomeRows();
+      }
     }catch(_e){ /* refresh unavailable -- fall through to the cache below */ }
   }
-  if(readLostRows(rows, cached)){
-    // Still empty after a clean refresh. Keep showing the last known-good
-    // data rather than a convincing-looking empty account, and let the
-    // banner say so -- silently rendering "no orders" is the exact
-    // failure this whole guard exists to prevent.
-    console.warn('Read returned no rows where the cached snapshot has them -- keeping cached data.');
+  if(readLostRows(rows, cached) && !sessionProvenFresh){
+    // Empty, and we could NOT prove the session was good -- so the empty
+    // is unexplained. Keep showing the last known-good data rather than a
+    // convincing-looking empty account, and let the banner say so.
+    console.warn('Read returned no rows where the cached snapshot has them, on a session we could not renew -- keeping cached data.');
     dataLooksSuspect = true;
     agentClients = cached.agentClients || [];
     myOrders = cached.myOrders || [];
@@ -1520,6 +1537,11 @@ async function loadAgentHomeData(){
   agentClients = rows.clients;
   myOrders = rows.orders.map(mapOrderRow);
   myInquiries = rows.inquiries;
+  // Trusted because it came back on a token we had just renewed. Without
+  // saying so, wouldWipeCachedData would refuse to write a snapshot that
+  // empties something -- leaving the stale rows on the device to reappear
+  // the next time the app opened offline.
+  if(sessionProvenFresh) saveOfflineCache(true);
 }
 
 /* ================= NAVIGATION ================= */
