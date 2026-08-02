@@ -6973,6 +6973,19 @@ async function toggleQuoteInvoiced(id){
     removeCashTxnsByIds((q.payments||[]).map(p=>p.cashTxnId));
     q.payments = [];
     q.amountPaid = 0;
+    // A prepay agent's payment lives in this same payments array, so it has
+    // just been reversed along with everything else. agentPaymentStatus is
+    // what unblocks preparing and is read separately
+    // (agentPaymentBlocksPreparing, shared-worker.js) -- left at 'paid' it
+    // said the agent had settled while the order recorded no payment, held
+    // no amountPaid, and had no Cash Book entry: money the shop is
+    // physically holding, with nothing anywhere to show for it.
+    //
+    // Reset together with the record that justified it, so stepping the
+    // order forward asks for the payment again and books it again. The
+    // shopkeeper confirms cash they already have rather than the till
+    // quietly running 500,000 ahead of the book.
+    if(q.agentPaymentStatus === 'paid') q.agentPaymentStatus = 'unpaid';
     // The purchase invoices generated for this quote no longer apply either.
     removePurchaseInvoicesForQuote(q.id);
   }
