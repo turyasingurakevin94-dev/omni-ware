@@ -299,6 +299,35 @@
      in whichever ONE unit is currently selected above, so there's never
      a moment where two different units are on screen for the price at
      once. */
+  /* Price ladder -- the shape of the volume curve, above the table that
+     spells it out. The table already answered "what does each band cost";
+     this answers "where am I on the curve, and how far is the next drop",
+     which is the question an agent standing in front of a customer is
+     actually asking. Bars descend left to right because price does. */
+  .ag-lad{margin-bottom:12px;display:flex;flex-direction:column;gap:8px;}
+  .ag-lad-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .ag-lad-head .l{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .ag-lad-head .now{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .ag-lad-bars{display:flex;gap:3px;align-items:flex-end;height:56px;border-bottom:2px solid var(--ink);}
+  .ag-lad-bars .b{
+    flex:1;background:var(--slate-soft);border:1px solid var(--line);border-bottom:none;
+    border-radius:4px 4px 0 0;min-width:0;transition:background .15s ease,border-color .15s ease;
+  }
+  .ag-lad-bars .b.on{background:var(--accent);border-color:var(--accent);}
+  /* The rung one step up: outlined rather than filled, so it reads as
+     "available" instead of "reached". */
+  .ag-lad-bars .b.next{background:transparent;border:1px dashed var(--accent);border-bottom:none;}
+  .ag-lad-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .ag-lad-scale span{flex:1;text-align:center;}
+  .ag-lad-scale span:first-child{text-align:left;}
+  .ag-lad-scale span:last-child{text-align:right;}
+  .ag-lad-nudge{
+    background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+    padding:8px 11px;font-size:12px;line-height:1.45;color:var(--ink);
+  }
+  .ag-lad-nudge b{font-weight:800;font-variant-numeric:tabular-nums;}
+  .ag-lad-nudge.best{background:var(--good-bg);border-left-color:var(--good);}
+
   .ag-tier-ladder{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px;}
   .ag-tier-ladder .ag-tl-head{display:flex;justify-content:space-between;padding:8px 12px;background:#FAFBFC;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--line);}
   .ag-tl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
@@ -3479,6 +3508,78 @@ function tierLadderRowHTML(row, earned){
   </div>`;
 }
 
+// The gap to the next breakpoint, said in whatever unit the agent is
+// currently typing in. Same honesty rule as buildTierDisplayRows(): a gap
+// is only stated in packs when it lands on a whole number of them, because
+// "buy 2.6 more cartons" is not a thing anyone can do.
+function tierGapLabel(gapBaseQty, unit, packUnit, packQty, viewUnit){
+  if(viewUnit==='pack' && packQty>0 && gapBaseQty % packQty === 0){
+    const packs = gapBaseQty/packQty;
+    return `${packs} more ${packUnit}`;
+  }
+  return `${gapBaseQty} more ${unit}`;
+}
+
+// The volume curve as a shape. Bars descend left to right because price
+// does; the filled one is where this quantity sits and the dashed one is
+// the next drop, so the distance to it is something an agent can see
+// rather than work out.
+//
+// Heights are relative to the price range on this item, not absolute --
+// a ladder that falls 4,500 -> 3,700 and one that falls 90,000 -> 74,000
+// have the same shape and should read the same.
+function tierLadderChartHTML(tiers, earnedRow, baseQty, unit, packUnit, packQty, viewUnit){
+  if(!Array.isArray(tiers) || tiers.length < 2) return '';
+  const prices = tiers.map(t=>Number(t.unitPrice)||0);
+  const hi = Math.max(...prices), lo = Math.min(...prices);
+  const span = hi - lo;
+
+  const earnedMin = earnedRow ? earnedRow.minQty : tiers[0].minQty;
+  const nextTier = tiers.find(t=>t.minQty > baseQty) || null;
+
+  const bars = tiers.map(t=>{
+    // 44%..100% of the track, so the cheapest rung is still a visible bar
+    // rather than a sliver, and a flat ladder doesn't collapse to nothing.
+    const h = span > 0 ? 44 + Math.round(((Number(t.unitPrice)-lo)/span)*56) : 100;
+    let cls = 'b';
+    if(t.minQty === earnedMin) cls += ' on';
+    else if(nextTier && t.minQty === nextTier.minQty) cls += ' next';
+    return `<span class="${cls}" style="height:${h}%"></span>`;
+  }).join('');
+
+  const scale = tiers.map(t=>`<span>${t.minQty}</span>`).join('');
+
+  let nudge = '';
+  if(nextTier && earnedRow){
+    const drop = Number(earnedRow.unitPrice) - Number(nextTier.unitPrice);
+    const gap = nextTier.minQty - Math.ceil(baseQty);
+    // Only worth saying when the next rung is genuinely cheaper. A ladder
+    // that doesn't fall has nothing to advertise, and inventing a saving
+    // an agent then can't deliver is worse than staying quiet.
+    if(drop > 0 && gap > 0){
+      const worth = Math.round(drop * nextTier.minQty);
+      nudge = `<div class="ag-lad-nudge">
+        <b>${esc(tierGapLabel(gap, unit, packUnit, packQty, viewUnit))}</b>
+        reaches ${nextTier.minQty} and drops the floor to
+        <b>${esc(fmtUGX(nextTier.unitPrice))}</b> — worth
+        <b>${esc(fmtUGX(worth))}</b> on this line.
+      </div>`;
+    }
+  } else if(earnedRow && earnedMin === tiers[tiers.length-1].minQty){
+    nudge = `<div class="ag-lad-nudge best">Best price on this item. No breakpoint above ${tiers[tiers.length-1].minQty} ${esc(unit)}.</div>`;
+  }
+
+  return `<div class="ag-lad">
+    <div class="ag-lad-head">
+      <span class="l">Price ladder</span>
+      <span class="now">${esc(fmtUGX(earnedRow ? earnedRow.unitPrice : tiers[0].unitPrice))}/${esc(unit)}</span>
+    </div>
+    <div class="ag-lad-bars" aria-hidden="true">${bars}</div>
+    <div class="ag-lad-scale" aria-hidden="true">${scale}</div>
+    ${nudge}
+  </div>`;
+}
+
 // Full-size view of the product photo, dismissed by tapping anywhere on
 // it -- same pattern as every other overlay in this app, just without a
 // card wrapper since the image itself is the entire content.
@@ -3610,7 +3711,11 @@ async function openAddItemPanel(item){
     earnedRow = tierForQty(tiers, baseQty);
     if(tiers.length>1){
       const rows = buildTierDisplayRows(tiers, unit, packUnit, packQty, unitEl.value);
-      ladderWrap.innerHTML = `<div class="ag-tier-ladder">
+      // Chart first, then the table. The chart answers "where am I and
+      // what's next"; the table answers "what does each band cost". They
+      // are different questions and the first one is asked more often.
+      ladderWrap.innerHTML = tierLadderChartHTML(tiers, earnedRow, baseQty, unit, packUnit, packQty, unitEl.value)
+      + `<div class="ag-tier-ladder">
         <div class="ag-tl-head"><span>Quantity</span><span>Price</span></div>
         ${rows.map(r=>tierLadderRowHTML(r, earnedRow && r.minQty===earnedRow.minQty)).join('')}
       </div>`;
