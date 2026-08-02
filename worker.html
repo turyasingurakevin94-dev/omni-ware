@@ -259,6 +259,14 @@
      palette landed, which made "press this" and "already picked"
      indistinguishable at a glance. */
   .wv-carousel-badge.done{background:var(--good);color:#0C1A16;}
+  /* A third state, and it needs its own colour rather than a shade of one
+     of the other two. Green would say the line is settled when it is not;
+     the accent would say there is something left to press. Amber is the
+     palette's "attention, not alarm", and this badge carries digits ("3 of
+     5") rather than a word, so it also needs to be legible small. Dark ink
+     on it for the same reason --accent-ink is dark: white on a bright
+     colour over a dark ground does not clear AA. */
+  .wv-carousel-badge.short{background:var(--amber);color:var(--accent-ink);font-variant-numeric:tabular-nums;}
   .wv-carousel-badge .icon{width:13px;height:13px;stroke-width:3;}
   .wv-carousel-body{padding:11px 16px 10px;}
   .wv-carousel-name{font-size:14.5px;font-weight:600;text-align:center;}
@@ -283,10 +291,52 @@
   .wv-carousel-source{border-top:1.5px dotted var(--line);background:var(--bg);text-align:center;padding:8px 16px 9px;}
   .wv-carousel-source-label{font-size:9.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;}
   .wv-carousel-source-value{font-size:13.5px;font-weight:800;color:var(--ink);margin-top:1px;}
+  /* Recording a short pick is a deliberate, secondary act -- the common
+     case is still one tap on the badge -- so this sits at the foot of the
+     card as a full-width bar rather than competing with it. Full width
+     because it is the only control here that is not aimed at: the badge is
+     a target, this is a floor you cannot miss. */
+  .wv-carousel-short{
+    all:unset;box-sizing:border-box;display:block;width:100%;min-height:44px;
+    border-top:1.5px dotted var(--line);background:transparent;cursor:pointer;
+    font:700 12px inherit;color:var(--amber);text-align:center;padding:12px 16px;
+  }
+  .wv-carousel-short:hover{background:var(--amber-tint);}
   .wv-carousel-dots{display:flex;justify-content:center;gap:6px;margin:9px 0 0;}
   .wv-carousel-dot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:all .2s ease;}
   .wv-carousel-dot.focused{background:var(--accent);width:18px;border-radius:4px;}
   .wv-mark-btn{width:auto;padding:10px 26px;font-size:13.5px;display:block;margin:12px auto 0;}
+  /* Finishing an order that is going out incomplete should not look
+     identical to finishing one that is not. Same button, same place, the
+     colour of the thing it is reporting. */
+  .wv-mark-btn.is-short{background:var(--amber);color:var(--accent-ink);}
+  .wv-mark-btn.is-short:hover{background:var(--amber);filter:brightness(1.08);}
+  /* The picked-quantity sheet. Every control on it clears 44px: it is used
+     at the shelf, one-handed, by someone who has not put anything down. */
+  .wv-qty-sheet{background:var(--panel);border-radius:16px;padding:20px;width:320px;max-width:100%;box-shadow:var(--shadow-hero);}
+  .wv-qty-title{font-size:16px;font-weight:700;text-align:center;}
+  .wv-qty-sub{font-size:13px;color:var(--ink-soft);text-align:center;margin-top:4px;}
+  .wv-qty-stepper{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 14px;}
+  .wv-qty-step{
+    all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    width:56px;height:56px;border-radius:50%;background:var(--ow-night-800);
+    border:1.5px solid var(--line);color:var(--ink);font:700 26px inherit;cursor:pointer;
+  }
+  .wv-qty-step:disabled{opacity:.35;cursor:default;}
+  /* Tabular so the number does not jump sideways as it steps through the
+     widths of different digits -- the one thing on this sheet being read. */
+  .wv-qty-value{
+    font-family:'Manrope',sans-serif;font-weight:800;font-size:44px;line-height:1;
+    color:var(--ink);min-width:72px;text-align:center;font-variant-numeric:tabular-nums;
+  }
+  .wv-qty-none{
+    all:unset;box-sizing:border-box;display:block;width:100%;min-height:44px;
+    border:1.5px solid var(--line);border-radius:10px;background:transparent;cursor:pointer;
+    font:700 13px inherit;color:var(--amber);text-align:center;padding:12px;
+  }
+  .wv-qty-none:hover{background:var(--amber-tint);}
+  .wv-qty-actions{display:flex;gap:8px;margin-top:14px;}
+  .wv-qty-actions .btn{flex:1;min-height:44px;justify-content:center;}
 </style>
 </head>
 <body class="app-loading">
