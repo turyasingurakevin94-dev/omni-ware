@@ -228,6 +228,15 @@
   .ag-list-item-name{font-weight:600;font-size:14px;}
   .ag-list-item-meta{font-size:12px;color:var(--ink-soft);}
   .ag-list-item-earned{font-size:12px;color:var(--ink-faint);margin-top:1px;}
+  /* An action that belongs to a section rather than to the page. Quiet
+     enough not to compete with the primary button on whatever screen it
+     lands on, still a 44px target. */
+  .ag-section-action{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+    min-height:44px;padding:0 12px;margin:-10px -10px -10px 0;border-radius:11px;
+    font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent);}
+  .ag-section-action:hover{background:var(--accent-soft);}
+  .ag-section-action:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .ag-section-action .icon{width:15px;height:15px;}
   /* Calling a client is the action this list exists to support -- an agent
      standing in front of a customer reaches for it far more often than
      anything else here. Icon-only so it never squeezes the name, and 44px
@@ -1132,6 +1141,23 @@
     <div class="ag-tab-head"><h1>Customers</h1></div>
     <div id="ag_catalogueWrap"></div>
     <div id="ag_inquiriesWrap"></div>
+
+    <!-- The list had no heading of its own: it just began, under whatever
+         the catalogue banner and the requests above it had left. -->
+    <div class="ag-section-title">
+      <span>Your clients <span class="ag-seg-count" id="ag_clientsCount"></span></span>
+      <button type="button" class="ag-section-action" id="ag_addClientBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add
+      </button>
+    </div>
+    <!-- Hidden until the list is long enough to need it -- a search box
+         above three names is furniture. -->
+    <div class="ag-filter-bar" id="ag_clientSearchWrap" style="display:none;">
+      <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <input type="text" id="ag_clientListSearch" placeholder="Search by name or phone" autocomplete="off">
+      <button type="button" class="ag-search-clear" id="ag_clientListSearch_clear" title="Clear search"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
     <div id="ag_clientsListWrap"></div>
   </div>
 
@@ -1954,7 +1980,10 @@ function switchTab(tab){
   window.scrollTo(0, 0);
   if(tab==='home'){ renderHome(); ensureLeaderboardLoaded(); }
   if(tab==='sell') openBrowseView();
-  if(tab==='customers') renderClientsListScreen();
+  // Arriving at the tab clears any query left from the last visit, which
+  // would otherwise hide most of the list with the reason scrolled off
+  // the top -- same rule as the order-history screen.
+  if(tab==='customers'){ document.getElementById('ag_clientListSearch').value = ''; renderClientsListScreen(); }
   if(tab==='quote') renderCartTab();
   if(tab==='account') renderAccount();
   if(tab==='earnings') openEarningsView();
@@ -3158,16 +3187,67 @@ async function toggleInquiryHandled(id){
   saveOfflineCache();
 }
 
+// Search a client the way an agent would look for one: by name, or by the
+// number they have in their phone.
+function clientMatchesQuery(c, q){
+  if(!q) return true;
+  return `${c.name||''} ${c.phone||''} ${c.location||''}`.toLowerCase().includes(q);
+}
+// Only shown once the list is long enough for scrolling to be the problem
+// it solves.
+const CLIENT_SEARCH_MIN = 8;
+
 function renderClientsListScreen(){
   if(myCatalogueLoaded) renderCatalogueBanner();
   else ensureMyCatalogueLoaded().then(renderCatalogueBanner);
   renderInquiries();
 
   const wrap = document.getElementById('ag_clientsListWrap');
-  if(!agentClients.length){ wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`; return; }
+  const searchWrap = document.getElementById('ag_clientSearchWrap');
+  const input = document.getElementById('ag_clientListSearch');
+  document.getElementById('ag_clientsCount').textContent = agentClients.length || '';
+  searchWrap.style.display = agentClients.length >= CLIENT_SEARCH_MIN ? 'block' : 'none';
+
+  if(!agentClients.length){
+    // It used to send an agent to the quote screen to add a client, which
+    // was the only way. There is a button directly above this line now.
+    wrap.innerHTML = `<div class="empty">No clients yet -- add the first one above, or one gets saved the next time you build a quote.</div>`;
+    return;
+  }
+
+  const q = input.value.trim().toLowerCase();
+  document.getElementById('ag_clientListSearch_clear').classList.toggle('show', q.length > 0);
   const counts = clientOrderCounts();
-  wrap.innerHTML = agentClients.map(c=>clientRowHTML(c, counts.get(c.id)||[])).join('');
+  // Most recently active first. The list came back from PostgREST ordered
+  // by name, which answers "where is X in the alphabet" -- a question that
+  // only comes up when you are hunting for someone, and hunting is what
+  // the search box is for. Who you dealt with last week is the more useful
+  // default, and a client who has never ordered sorts to the end rather
+  // than into the middle on an empty date.
+  const rows = agentClients
+    .filter(c=>clientMatchesQuery(c, q))
+    .map(c=>({ c, orders: counts.get(c.id)||[] }))
+    .sort((a,b)=> String(clientStats(b.orders).lastAt||'').localeCompare(String(clientStats(a.orders).lastAt||''))
+      || String(a.c.name||'').localeCompare(String(b.c.name||'')));
+
+  if(!rows.length){
+    wrap.innerHTML = `<div class="empty">No client matches &ldquo;${esc(q)}&rdquo;.</div>`;
+    return;
+  }
+  wrap.innerHTML = rows.map(r=>clientRowHTML(r.c, r.orders)).join('');
 }
+document.getElementById('ag_clientListSearch').addEventListener('input', renderClientsListScreen);
+document.getElementById('ag_clientListSearch_clear').addEventListener('click', ()=>{
+  document.getElementById('ag_clientListSearch').value = '';
+  renderClientsListScreen();
+});
+document.getElementById('ag_addClientBtn').addEventListener('click', ()=>{
+  openNewClientPanel('', ()=>{
+    document.getElementById('ag_clientListSearch').value = '';
+    renderClientsListScreen();
+    toast('Client saved');
+  }, { makeActive: false });
+});
 let orderHistorySegment = 'ongoing';
 
 // The two ongoing states waiting on the AGENT rather than on the shop: an
@@ -5042,7 +5122,12 @@ function selectClient(client){
   });
 }
 
-function openNewClientPanel(prefillName, onDone){
+// makeActive:false adds a client without making them the one the quote in
+// hand is for. Both existing callers are mid-quote and do want that; the
+// Customers tab does not -- saving a contact you just met should not park
+// the basket you are building for someone else and swap the Sell screen
+// over to an empty one.
+function openNewClientPanel(prefillName, onDone, { makeActive = true } = {}){
   const el = document.createElement('div');
   el.className = 'ag-overlay';
   el.innerHTML = `
@@ -5078,7 +5163,7 @@ function openNewClientPanel(prefillName, onDone){
     }
     agentClients.push(inserted);
     document.body.removeChild(el);
-    selectClient(inserted);
+    if(makeActive) selectClient(inserted);
     if(onDone) onDone(inserted);
   });
 }
