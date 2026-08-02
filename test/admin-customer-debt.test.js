@@ -177,6 +177,61 @@ if (fns) {
     'logging what the balance moved by, so paying 5,000 against a 1,000 debt does not write a 5,000 payment');
   t.check(/const cashTxnId = addCashReceipt\(account, unapplied, category \|\| 'Debt Payment'/.test(code),
     'while the cash receipt stays at the amount actually handed over -- the cash book records cash, not debt');
+
+  // The third place the same fault lived, found from a real shop's drift
+  // banner. Removing an entry takes its full amount out of the history
+  // while the balance is clamped, so deleting an 800,000 charge from a
+  // 200,000 balance left the two 600,000 apart. It cannot be trimmed to
+  // fit the way the other two were -- the entry is being removed, not
+  // written -- so it is refused, as this function already does for an
+  // invoice-owned entry.
+  t.check(/const before = Number\(c\.debt\)\|\|0;\s*\n\s*if\(before \+ delta < -0\.000001\)\{/.test(code),
+    'deleting a ledger entry checks the balance can absorb it');
+  t.check(/leaving their history unexplainable/.test(code),
+    'and says why it will not, rather than doing half of it');
+  t.check(/  c\.debt = before \+ delta;/.test(code),
+    'so the balance change is applied whole, with no clamp left to diverge from the history');
+  t.check(!/c\.debt = Math\.max\(0, \(Number\(c\.debt\)\|\|0\) \+ delta\);/.test(code),
+    'the clamped form is gone from this path');
+
+  // The arithmetic, stated independently.
+  const canAbsorb = (balance, entry) => {
+    const delta = entry.type === 'charge' ? -entry.amount : entry.amount;
+    return balance + delta >= 0;
+  };
+  t.check(canAbsorb(800000, { type: 'charge', amount: 800000 }) === true,
+    'a charge can be removed when the balance still carries it');
+  t.check(canAbsorb(200000, { type: 'charge', amount: 800000 }) === false,
+    'and cannot when it does not -- the case that was silently half-applied');
+  t.check(canAbsorb(0, { type: 'payment', amount: 500 }) === true,
+    'removing a payment raises the balance, so it is always absorbable');
+}
+
+/* ---------- 7. repairing a history that already drifted ------------- */
+/*
+ * The fixes above stop new drift; they do not repair what earlier versions
+ * left behind. A real shop's Debtors List showed three customers adrift by
+ * 2,021,700 in total, and there was no way to close it: adding a charge or
+ * a payment moves the balance AND the history by the same amount, so the
+ * gap survives every tool the screen offered.
+ */
+{
+  t.check(/function explainDebtDrift\(\)/.test(code), 'the drift banner can now write the missing entry');
+  t.check(/const drifted = customersWithDebtDrift\(\);/.test(code), 'for exactly the customers that are adrift');
+  t.check(/type: drift>0 \? 'charge' : 'payment',\s*\n\s*amount: Math\.abs\(drift\),/.test(code),
+    'in the direction and size that closes the gap');
+  t.check(/note: 'Balance correction — history did not add up to the balance shown'/.test(code),
+    'labelled, so a year from now the history says where the figure came from');
+  t.check(/cashTxnId: null,/.test(code),
+    'and with no Cash Book entry -- nothing happened to the money, only to the record of it');
+  t.check(!/c\.debt =/.test((/function explainDebtDrift[\s\S]*?\n\}/.exec(code) || [''])[0]),
+    'no balance is touched: the balance is the figure being explained, not the one being changed');
+  t.check(/if\(!confirm\(msg\)\) return;/.test(code), 'and it asks first, naming the total');
+
+  // Reachable from both render paths -- drift can sit on a customer the
+  // current filter hides.
+  t.check((code.match(/wireDebtDriftFix\(wrap\);/g) || []).length === 2,
+    'wired from the empty list as well as the populated one');
 }
 
 process.exit(t.done() ? 1 : 0);

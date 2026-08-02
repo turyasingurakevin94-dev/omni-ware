@@ -9872,10 +9872,30 @@ function deleteCustomerDebtLog(customerId, logId){
     toast('That entry follows an invoice — void or settle the invoice to change it', 4000);
     return;
   }
+  // Refused when the balance cannot absorb it.
+  //
+  // Removing an entry takes its full amount out of the history, but the
+  // balance is clamped at zero -- so deleting an 800,000 charge from a
+  // customer whose balance is only 200,000 dropped the history by 800,000
+  // and the balance by 200,000, leaving the two 600,000 apart with nothing
+  // to explain it. Same fault as applyInvoiceDebtCharge and
+  // recordCustomerPayment had; this is the third place it lived.
+  //
+  // Here the amount cannot simply be trimmed to what fits: the entry is
+  // being removed, not written, so a partial removal would still leave the
+  // history saying something the balance does not. Refusing is what keeps
+  // the two answerable to each other -- and it is what this function
+  // already does for an invoice-owned entry.
+  const entry = c.debtLog[idx];
+  const delta = entry.type==='charge' ? -(Number(entry.amount)||0) : (Number(entry.amount)||0);
+  const before = Number(c.debt)||0;
+  if(before + delta < -0.000001){
+    toast(`Removing this would take ${fmtUGX(Math.abs(delta))} off a balance of ${fmtUGX(before)}, leaving their history unexplainable. Record a payment or a charge instead.`, 6000);
+    return;
+  }
   if(!confirm('Remove this entry? Its matching Cash Book entry (if any) will be removed too.')) return;
   const [removed] = c.debtLog.splice(idx, 1);
-  const delta = removed.type==='charge' ? -removed.amount : removed.amount;
-  c.debt = Math.max(0, (Number(c.debt)||0) + delta);
+  c.debt = before + delta;
   if(removed.type==='payment') removeCashTxnsByIds([removed.cashTxnId]);
   saveData();
   document.getElementById('customerDebtHistory').innerHTML = customerDebtHistoryHTML(c);
@@ -10031,9 +10051,51 @@ function debtDriftBannerHTML(){
     ${lines}
     ${drifted.length>5 ? `<div>…and ${drifted.length-5} more.</div>` : ''}
     <div>Net effect on the total below: ${net>0?'overstated':'understated'} by ${fmtUGX(Math.abs(net))}. Open the customer and check their debt history against the charges and payments listed.</div>
+    <div style="margin-top:8px;">If the balance is the figure you trust, this writes the missing entry into each history so the two agree. It changes no balance and moves no cash — it only records what the history was already missing.</div>
+    <button type="button" class="btn btn-ghost cb-chain-fix" id="deb_drift_fix">Explain ${drifted.length===1?'this balance':'these balances'} in the history</button>
   </div>`;
 }
 
+// Writes the entry each drifted history was missing, so a customer's own
+// record adds up to the balance beside their name.
+//
+// The BALANCE is treated as the truth here: it is the figure the shop acts
+// on, chases, and has usually reconciled against money that really changed
+// hands. The history is what came up short. Nothing is applied silently --
+// the correction goes in as a dated, labelled entry, so a year from now the
+// history says where the number came from instead of simply agreeing.
+//
+// No balance moves, and no Cash Book entry is created: nothing happened to
+// the money, only to the record of it.
+function explainDebtDrift(){
+  const drifted = customersWithDebtDrift();
+  if(!drifted.length){ toast('Every balance already matches its history'); return; }
+  const net = drifted.reduce((s,x)=>s+x.drift, 0);
+  const msg = `Write a correcting entry into ${drifted.length} customer${drifted.length===1?"'s":"s'"} history `
+    + `so it adds up to the balance already shown?\n\n`
+    + `No balance changes and no money moves — this only records what each history was missing `
+    + `(${fmtUGX(Math.abs(net))} in total).\n\nThis cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  drifted.forEach(({c, drift})=>{
+    if(!c.debtLog) c.debtLog = [];
+    c.debtLog.push({
+      id: allocRowId('debtLog'),
+      date: todayISO(),
+      type: drift>0 ? 'charge' : 'payment',
+      amount: Math.abs(drift),
+      note: 'Balance correction — history did not add up to the balance shown',
+      cashTxnId: null,
+    });
+  });
+  saveData();
+  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  toast(`Corrected ${drifted.length} customer${drifted.length===1?'':'s'} — balances unchanged`);
+}
+function wireDebtDriftFix(wrap){
+  const btn = wrap.querySelector('#deb_drift_fix');
+  if(btn) btn.addEventListener('click', explainDebtDrift);
+}
 function renderDebtorsList(filter=''){
   const wrap = document.getElementById('deb_tableWrap');
   const rows = debRowsForList(filter);
@@ -10043,6 +10105,9 @@ function renderDebtorsList(filter=''){
     wrap.innerHTML = driftBanner + (data.customers.length===0
       ? '<div class="empty">No customers yet — add one in the Customers tab.</div>'
       : '<div class="empty">No debtors match this filter.</div>');
+    // Drift can exist on a customer the current filter hides, so the fix
+    // has to be reachable from this path too, not just the populated one.
+    wireDebtDriftFix(wrap);
     return;
   }
   const sortArrow = (key)=> DEB_SORT_STATE.key===key ? `<span class="sort-arrow">${DEB_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
@@ -10105,6 +10170,7 @@ function renderDebtorsList(filter=''){
   wrap.querySelectorAll('.deb-receive').forEach(btn=>btn.addEventListener('click', ()=>{
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
+  wireDebtDriftFix(wrap);
 }
 document.getElementById('deb_hide_no_debt').addEventListener('change', ()=>renderDebtorsList(document.getElementById('deb_search').value));
 document.getElementById('deb_search').addEventListener('input', e=>renderDebtorsList(e.target.value));
