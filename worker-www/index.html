@@ -34,29 +34,67 @@
     --ow-ink-400:#8A939C;
     --ow-rule:#CFD5DA;
 
-    --bg: var(--ow-steel-050);
-    --panel: var(--ow-paper);
-    --ink: var(--ow-ink-900);
-    --ink-soft: var(--ow-ink-600);
-    --ink-faint: var(--ow-ink-400);
-    --line: var(--ow-rule);
-    --accent: var(--ow-oxide);
-    --accent-deep: var(--ow-oxide-deep);
-    /* Here this genuinely IS text sitting on the accent, unlike the
-       same-named token in index.html. */
-    --accent-ink: #FFFFFF;
-    --accent-tint: var(--ow-oxide-soft);
-    --amber: var(--ow-amber);
-    --amber-tint: var(--ow-amber-soft);
-    --good: var(--ow-verdigris);
-    --good-bg: var(--ow-verdigris-soft);
-    --danger: var(--ow-crimson);
-    --navy: var(--ow-ink-900);
-    /* Shadows are cast in ink, not in the accent. The previous pair were
-       tinted with the old green (rgba(10,107,86)), so every raised card
-       carried a green cast that no longer belongs to anything. */
-    --shadow-card: 0 1px 2px rgba(20,23,27,.05), 0 8px 20px rgba(20,23,27,.07);
-    --shadow-hero: 0 10px 24px rgba(142,44,28,.26);
+    /* This surface runs dark, and not as a style choice.
+       A warehouse is lit from above and often half open to the sky; a
+       white screen at arm's length washes out, and the picker cannot stop
+       and shade it because both hands are occupied. Dark ground also
+       costs far less battery on the OLED phones this ships to as an APK,
+       across a full shift.
+
+       Only the aliases move. Every rule in this file already reads
+       through them, which is what makes flipping the whole app a
+       twenty-line change rather than a rewrite. */
+    --ow-night-950:#101317;   /* ground */
+    --ow-night-900:#181C21;   /* raised card */
+    --ow-night-800:#212730;   /* input / inset */
+    --ow-night-line:#2C333B;
+    --ow-night-ink:#ECEFF2;
+    --ow-night-ink-soft:#9BA5AF;
+    /* Lifted from #6D7883, which measured 3.8:1 on a raised card. It sets
+       10px uppercase labels, so it is small text and owes the full 4.5. */
+    --ow-night-ink-faint:#98A2AD;
+    /* Oxide is lifted on a dark ground -- #B23A26 against #101317 is a
+       muddy 3:1. This keeps the same hue and clears AA. */
+    --ow-oxide-bright:#DC5C43;
+    --ow-verdigris-bright:#3FA184;
+
+    --bg: var(--ow-night-950);
+    --panel: var(--ow-night-900);
+    --ink: var(--ow-night-ink);
+    --ink-soft: var(--ow-night-ink-soft);
+    --ink-faint: var(--ow-night-ink-faint);
+    --line: var(--ow-night-line);
+    --accent: var(--ow-oxide-bright);
+    /* On a light ground "deep" meant darker, and that worked for both jobs
+       this token does: a hover state and a text colour (.wv-eyebrow,
+       .wv-carousel-variant). On a dark ground the two part company --
+       emphasis is LIGHTER here, and the darker oxide as text on #101317 is
+       an unreadable 2.8:1. So deep lifts instead of sinks. */
+    --accent-deep: #EC8068;
+    /* Text sitting ON the accent, unlike the same-named token in
+       index.html. It was white, which is the reflex -- and measured
+       3.71:1 on the lifted oxide, a fail for 13.5px button text. A bright
+       accent on a dark ground wants DARK ink, not white; this reads 5.7.
+       The reflex is only correct when the accent is dark. */
+    --accent-ink: #17110F;
+    /* The tints are now inks laid over the dark ground rather than pale
+       washes, which would glow. */
+    --accent-tint: #2A1A16;
+    --amber: #D9A03A;
+    --amber-tint: #2A2113;
+    --good: var(--ow-verdigris-bright);
+    --good-bg: #14261F;
+    --danger: #E4695B;
+    /* --navy was the darkest thing in a light app. On a dark ground the
+       thing that must stand OUT is light, so this becomes the raised
+       surface -- it is only used by the toast. */
+    --navy: var(--ow-night-800);
+    /* A drop shadow separates nothing on a dark ground -- dark on dark is
+       invisible. What reads instead is a hairline of light along the top
+       edge, the way a raised surface actually catches a ceiling lamp. The
+       soft drop stays underneath for depth. */
+    --shadow-card: 0 0 0 1px rgba(255,255,255,.06), 0 8px 22px rgba(0,0,0,.45);
+    --shadow-hero: 0 10px 26px rgba(0,0,0,.5);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -114,10 +152,10 @@
   .lightbox-close:hover{background:rgba(255,255,255,0.22);}
   .lightbox-close .icon{width:18px;height:18px;}
 
-  .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
+  .q-stage-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:var(--ow-night-800);}
   .q-stage-thumb-placeholder{
     width:44px;height:44px;border-radius:9px;flex-shrink:0;border:1px dashed var(--line);
-    background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+    background:var(--ow-night-800);color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .q-stage-thumb-placeholder .icon{width:19px;height:19px;}
 
@@ -141,20 +179,26 @@
      a worker the at-a-glance "where am I on this order" the plain title
      never did. It's still just innerHTML swapped inside the same #wv_
      activeHeader mount point, so the header stays positionally stable. */
+  /* Was a filled accent gradient. On a light ground that read as a
+     balance card; on a dark one it is a slab of glare in the corner of
+     the eye all shift, and its 10.5px label could not clear AA on that
+     fill at any alpha worth using. It is now a raised card like the rest,
+     and the accent is spent on the progress fill -- the part that
+     actually moves and the only thing here worth looking at twice. */
   .wv-hero{
-    background:linear-gradient(155deg, var(--accent) 0%, var(--accent-deep) 100%);
-    border-radius:18px;padding:13px 16px 12px;color:#fff;box-shadow:var(--shadow-hero);
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;padding:13px 16px 12px;color:var(--ink);box-shadow:var(--shadow-card);
     margin:0 0 10px;
   }
   /* White alphas rather than a tinted literal: these sit on the accent
      gradient, so they follow the accent wherever it goes instead of
      needing to be re-picked. The previous mint literals were left over
      from the green accent and would read as a clash on any other hue. */
-  .wv-hero-label{margin:0 0 2px;font-size:10.5px;font-weight:700;color:rgba(255,255,255,.76);text-transform:uppercase;letter-spacing:.07em;}
+  .wv-hero-label{margin:0 0 2px;font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em;}
   .wv-hero-name{font-family:'Manrope',sans-serif;font-size:18px;font-weight:800;letter-spacing:-.2px;}
-  .wv-hero-progress-label{margin-top:8px;font-size:12px;font-weight:600;color:rgba(255,255,255,.84);}
-  .wv-hero-track{height:5px;border-radius:99px;background:rgba(255,255,255,.24);margin-top:5px;overflow:hidden;}
-  .wv-hero-fill{height:100%;border-radius:99px;background:#fff;transition:width .35s ease;}
+  .wv-hero-progress-label{margin-top:8px;font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .wv-hero-track{height:5px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:5px;overflow:hidden;}
+  .wv-hero-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .35s ease;}
   .wv-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;}
   .wv-card{background:var(--panel);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow-card);}
   .wv-card-title{font-weight:700;margin-bottom:4px;}
@@ -209,12 +253,12 @@
   /* 44px minimum. This is pressed with one hand, often a dirty one, by
      someone who has not stopped walking. */
   .wv-carousel-badge{min-height:44px;min-width:78px;justify-content:center;}
-  .wv-carousel-badge.pending{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+  .wv-carousel-badge.pending{background:var(--ow-night-800);color:var(--ink);border:1.5px solid rgba(255,255,255,.18);}
   /* Done is verdigris, not the accent. Oxide is what you press; green is
      what is finished. Those were the same colour here before the shared
      palette landed, which made "press this" and "already picked"
      indistinguishable at a glance. */
-  .wv-carousel-badge.done{background:var(--good);color:#fff;}
+  .wv-carousel-badge.done{background:var(--good);color:#0C1A16;}
   .wv-carousel-badge .icon{width:13px;height:13px;stroke-width:3;}
   .wv-carousel-body{padding:11px 16px 10px;}
   .wv-carousel-name{font-size:14.5px;font-weight:600;text-align:center;}

@@ -117,7 +117,70 @@ const code = strip(js);
     'and the bay reads in ink, which is more legible than the tint it replaced');
 }
 
-/* ---------- 7. the APK copy carries all of it ------------------------ */
+/* ---------- 7. the dark ground stays readable ------------------------ */
+/*
+ * This surface runs dark for glare and battery, which changes what is
+ * legible in ways that are not obvious by eye. Measuring found three AA
+ * failures that reading the CSS did not:
+ *
+ *   - white on the lifted oxide was 3.71 for 13.5px button text. A bright
+ *     accent on a dark ground wants DARK ink; white is only the right
+ *     reflex when the accent itself is dark.
+ *   - white on the lifted verdigris was 3.16 on the done badge.
+ *   - --ink-faint was 3.80, and it sets 10px uppercase labels.
+ *
+ * So the ratios are asserted rather than trusted. A colour tweak that
+ * looks fine and fails here is exactly the regression this catches.
+ */
+{
+  const root = /:root\{([\s\S]*?)\n  \}/.exec(css);
+  const decls = {};
+  (root ? root[1] : '').split(/\r?\n/).forEach(l => {
+    const m = /^\s*(--[\w-]+)\s*:\s*([^;]+);/.exec(l.replace(/\/\*[\s\S]*?\*\//g, ''));
+    if (m) decls[m[1]] = m[2].trim();
+  });
+  const resolve = (name, depth = 0) => {
+    let v = decls[name];
+    if (!v || depth > 6) return null;
+    const ref = /^var\((--[\w-]+)\)$/.exec(v);
+    return ref ? resolve(ref[1], depth + 1) : (/^#[0-9a-f]{6}$/i.test(v) ? v : null);
+  };
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const cr = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+
+  const bg = resolve('--bg'), panel = resolve('--panel'), ink = resolve('--ink');
+  const soft = resolve('--ink-soft'), faint = resolve('--ink-faint');
+  const accent = resolve('--accent'), accentInk = resolve('--accent-ink'), deep = resolve('--accent-deep');
+
+  t.check(bg && lum(bg) < 0.05, `the ground is dark (${bg})`);
+  t.check(panel && lum(panel) > lum(bg), `and the card sits above it (${panel})`);
+
+  const AA = 4.5;
+  [
+    ['body text on the ground', ink, bg],
+    ['secondary text on a card', soft, panel],
+    ['the 10px labels on a card', faint, panel],
+    ['accent-deep used as text', deep, panel],
+    ['button text on the accent', accentInk, accent],
+  ].forEach(([what, fg, bgc]) => {
+    const ok = fg && bgc && cr(fg, bgc) >= AA;
+    t.check(ok, `${what} clears AA (${fg && bgc ? cr(fg, bgc).toFixed(2) : 'unresolved'}:1)`);
+  });
+
+  // The specific reflex that was wrong: white on this accent does NOT pass,
+  // which is why --accent-ink is dark. If someone "corrects" it back to
+  // white, this fails loudly.
+  t.check(accent && cr('#FFFFFF', accent) < AA,
+    'white on the lifted accent would fail, which is why the ink is dark');
+  t.check(accentInk && lum(accentInk) < 0.05,
+    'and --accent-ink is a dark ink, not white');
+}
+
+/* ---------- 8. the APK copy carries all of it ------------------------ */
 /*
  * worker-www/ is what the Android build ships. A change that lands only in
  * the repo root reaches nobody holding a phone.
