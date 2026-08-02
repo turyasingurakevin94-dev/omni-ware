@@ -723,6 +723,11 @@
   }
   /* ---- Persistent avatar button (opens Account; Account is no longer
      a tab-bar slot now that Home/Sell/Customers/Earnings fill all four) ---- */
+  /* The disc stays 34px -- it is a persistent overlay and a bigger one
+     starts covering content. The TAP TARGET is extended to 44 by an
+     invisible ring instead, so the one control present on every screen
+     stops being the smallest thing to hit on any of them. */
+  .ag-avatar-fab::after{content:'';position:absolute;inset:-5px;border-radius:50%;}
   .ag-avatar-fab{
     all:unset;position:fixed;top:calc(12px + env(safe-area-inset-top));right:14px;z-index:250;
     width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;
@@ -889,7 +894,10 @@
   <span id="ag_offlineBannerText">You're offline &mdash; showing your last saved data. New actions won't go through until you're back online.</span>
 </div>
 
-<button type="button" class="ag-avatar-fab" id="ag_home_avatar_btn">A</button>
+<!-- Fixed, so it sits over every screen, not just Home. Its letter was
+     hardcoded "A" and nothing ever replaced it: every agent saw someone
+     else's initial for the life of the app. -->
+<button type="button" class="ag-avatar-fab" id="ag_home_avatar_btn" aria-label="Your account">A</button>
 
 <div class="agent-shell">
 <div class="agent-view-wrap">
@@ -930,17 +938,22 @@
     </div>
 
     <div class="ag-quick-actions">
+      <!-- The labels were bare text. .ag-qa-label was never applied, so
+           these three rendered at 16px/400 while the identical component on
+           Earnings rendered at 11.5px/700 -- and "Orders" named a screen
+           whose own heading, and whose button over there, both say "Order
+           history". -->
       <button type="button" class="ag-qa-btn" id="ag_home_qa_newquote">
         <span class="ag-qa-icon"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        New quote
+        <span class="ag-qa-label">New quote</span>
       </button>
       <button type="button" class="ag-qa-btn" id="ag_home_qa_customers">
         <span class="ag-qa-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
-        Customers
+        <span class="ag-qa-label">Customers</span>
       </button>
       <button type="button" class="ag-qa-btn" id="ag_home_qa_orders">
         <span class="ag-qa-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h9l3 3v17H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></span>
-        Orders
+        <span class="ag-qa-label">Order history</span>
       </button>
     </div>
   </div>
@@ -1955,6 +1968,9 @@ function showOnlyView(id){
 
 function switchTab(tab){
   showOnlyView(TAB_VIEW[tab] || ('ag_'+tab+'View'));
+  // The button floats over every screen, so this is the one choke point
+  // that is guaranteed to run whichever screen an agent lands on first.
+  document.getElementById('ag_home_avatar_btn').textContent = agentInitials();
   document.querySelectorAll('.ag-navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   lastMainTab = tab;
   localStorage.setItem('agentLastTab', tab);
@@ -2188,26 +2204,37 @@ function computeAgentStats(){
   return { completedOrders: completed.length, repeatClients, streakWeeks: computeSellingStreak(), lifetimeEarnings };
 }
 
-// One icon per METRIC FAMILY, not per achievement. Nine unrelated glyphs
-// read as a sticker sheet; four repeated marks read as a scale you are
-// climbing -- which is what these are.
+// One icon per achievement, each saying what that particular one is for:
+// a single carton for the first sale, a stack for ten, a medal for fifty.
+// They stay in one drawing language -- 24-unit box, no fill, the same
+// stroke the rest of the app uses -- so nine different marks still read as
+// one set rather than a sticker sheet.
 const ACHIEVEMENT_ICONS = {
-  orders: '<svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>',
-  streak: '<svg viewBox="0 0 24 24"><path d="M13 2L4.5 13H11l-1 9 8.5-11H12l1-9z"/></svg>',
-  clients: '<svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="9" cy="7" r="3.5"/><path d="M22 20v-1.5a4 4 0 0 0-3-3.87"/><path d="M16 3.5a4 4 0 0 1 0 7"/></svg>',
-  earnings: '<svg viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  // Orders: one box, then many, then a medal for the milestone.
+  first_sale: '<svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v8l9 4 9-4V8"/></svg>',
+  orders_10: '<svg viewBox="0 0 24 24"><path d="M12 3l8 4-8 4-8-4 8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>',
+  orders_50: '<svg viewBox="0 0 24 24"><circle cx="12" cy="15" r="6"/><path d="M8.6 9.6L6 2h12l-2.6 7.6"/></svg>',
+  // Streak: weeks ticked off, then a flame once it is a run.
+  streak_4: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M9 15.5l2 2 4-4"/></svg>',
+  streak_12: '<svg viewBox="0 0 24 24"><path d="M12 2c1 4 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.5 2.2 2 2.2 2 .2 0-2-1-3 1-5z"/></svg>',
+  // Repeat customers: one who came back, then a roomful.
+  repeat_3: '<svg viewBox="0 0 24 24"><path d="M13 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="7.5" cy="7" r="3.5"/><path d="M16 11.5l2.2 2.2L22.5 9.5"/></svg>',
+  repeat_10: '<svg viewBox="0 0 24 24"><path d="M15 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20"/><circle cx="8.5" cy="7" r="3.5"/><path d="M22 20v-1.5a4 4 0 0 0-3-3.87"/><path d="M16 3.5a4 4 0 0 1 0 7"/></svg>',
+  // Earnings: a note, then a stack of them.
+  earn_100k: '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M5.5 12h.01M18.5 12h.01"/></svg>',
+  earn_1m: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg>',
 };
 
 const ACHIEVEMENTS = [
-  { id:'first_sale', family:'orders', title:'First Sale', desc:'Complete your first order', metric:s=>s.completedOrders, target:1 },
-  { id:'orders_10', family:'orders', title:'Selling Machine', desc:'Complete 10 orders', metric:s=>s.completedOrders, target:10 },
-  { id:'orders_50', family:'orders', title:'Half Century', desc:'Complete 50 orders', metric:s=>s.completedOrders, target:50 },
-  { id:'streak_4', family:'streak', title:'Consistent', desc:'4-week selling streak', metric:s=>s.streakWeeks, target:4 },
-  { id:'streak_12', family:'streak', title:'Unstoppable', desc:'12-week selling streak', metric:s=>s.streakWeeks, target:12 },
-  { id:'repeat_3', family:'clients', title:'Building Trust', desc:'3 repeat customers', metric:s=>s.repeatClients, target:3 },
-  { id:'repeat_10', family:'clients', title:'Go-To Agent', desc:'10 repeat customers', metric:s=>s.repeatClients, target:10 },
-  { id:'earn_100k', family:'earnings', title:'First 100K', desc:'UGX 100,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:100000 },
-  { id:'earn_1m', family:'earnings', title:'Millionaire', desc:'UGX 1,000,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:1000000 },
+  { id:'first_sale', title:'First Sale', desc:'Complete your first order', metric:s=>s.completedOrders, target:1 },
+  { id:'orders_10', title:'Selling Machine', desc:'Complete 10 orders', metric:s=>s.completedOrders, target:10 },
+  { id:'orders_50', title:'Half Century', desc:'Complete 50 orders', metric:s=>s.completedOrders, target:50 },
+  { id:'streak_4', title:'Consistent', desc:'4-week selling streak', metric:s=>s.streakWeeks, target:4 },
+  { id:'streak_12', title:'Unstoppable', desc:'12-week selling streak', metric:s=>s.streakWeeks, target:12 },
+  { id:'repeat_3', title:'Building Trust', desc:'3 repeat customers', metric:s=>s.repeatClients, target:3 },
+  { id:'repeat_10', title:'Go-To Agent', desc:'10 repeat customers', metric:s=>s.repeatClients, target:10 },
+  { id:'earn_100k', title:'First 100K', desc:'UGX 100,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:100000 },
+  { id:'earn_1m', title:'Millionaire', desc:'UGX 1,000,000 lifetime earnings', metric:s=>s.lifetimeEarnings, target:1000000 },
 ];
 
 function computeAchievements(){
@@ -2241,7 +2268,9 @@ function achievementCardHTML(a){
   // Big figures read better rounded and grouped; small counts do not need it.
   const fmtN = (n)=> a.target >= 1000 ? Math.round(n).toLocaleString('en-US') : String(n);
   const caption = a.unlocked ? a.desc : `${fmtN(Math.min(a.current, a.target))} of ${fmtN(a.target)}`;
-  const icon = ACHIEVEMENT_ICONS[a.family] || ACHIEVEMENT_ICONS.orders;
+  // Falls back to the first-sale carton rather than throwing, so adding an
+  // achievement without an icon shows a card instead of an empty ring.
+  const icon = ACHIEVEMENT_ICONS[a.id] || ACHIEVEMENT_ICONS.first_sale;
   return `<div class="ag-badge-card ${state}">
     <div class="ag-badge-ring">
       <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -2280,7 +2309,7 @@ function renderAchievements(){
     // The same streak mark the achievement ring uses, rather than a flame
     // emoji -- one icon language across the app, and it renders the same
     // on every handset instead of following each vendor's emoji font.
-    streakChip.innerHTML = `${ACHIEVEMENT_ICONS.streak}<span>${esc(streak)}-week streak</span>`;
+    streakChip.innerHTML = `${ACHIEVEMENT_ICONS.streak_12}<span>${esc(streak)}-week streak</span>`;
   } else {
     streakChip.style.display = 'none';
   }
@@ -2964,8 +2993,13 @@ function renderSyncCard(){
     : `Saved on this phone${when?` <b>${esc(when)}</b>`:''} — ${counts}, ready to use without a signal.`;
 }
 
+// Shared by the Account card and the floating account button, so the two
+// can never show different initials for the same person.
+function agentInitials(){
+  return ((myAgent && myAgent.name) || '?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
 function renderAccount(){
-  const initials = (myAgent.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const initials = agentInitials();
   document.getElementById('ag_profile_avatar').textContent = initials;
   document.getElementById('ag_profile_name').textContent = myAgent.name;
   // Phone and email were collapsed to `phone || email`, which showed one
