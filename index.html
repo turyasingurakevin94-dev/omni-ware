@@ -6687,14 +6687,28 @@ function applyInvoiceDebtCharge(q, desired){
   if(delta===0){ q.debtCharged = desired; return; }
   const c = resolveInvoiceCustomer(q);
   if(!c){ q.debtCharged = desired; return; }
-  c.debt = Math.max(0, (Number(c.debt)||0) + delta);
+  // Log what actually happened to the balance, not what was intended.
+  //
+  // Debt is clamped at zero -- a customer cannot owe less than nothing --
+  // but the log entry used to record the full delta regardless. So the
+  // ordinary sequence of invoice, customer pays cash, then void the
+  // invoice because the order was wrong wrote a SECOND payment of the full
+  // amount against a balance that had no room to move: the balance stayed
+  // at 0 and the history went to -3,000. The drift banner then told the
+  // shopkeeper to open that customer and check a discrepancy this function
+  // had just created.
+  const before = Number(c.debt)||0;
+  const after = Math.max(0, before + delta);
+  const applied = after - before;
+  c.debt = after;
   if(!c.debtLog) c.debtLog = [];
+  if(applied === 0){ q.debtCharged = desired; q.customerId = c.id; return; }
   // quoteId marks this entry as belonging to the invoice rather than to the
   // person reading it. It is derived from q.debtCharged, so deleting it by
   // hand desynchronises the two permanently: the debt drops, the baseline
   // does not, and every later sync computes a delta of zero and corrects
   // nothing. See debtLogIsInvoiceOwned().
-  c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type: delta>0?'charge':'payment', amount: Math.abs(delta), note: `Auto-sync — ${invoiceNumberLabel(q)}`, quoteId: q.id});
+  c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type: applied>0?'charge':'payment', amount: Math.abs(applied), note: `Auto-sync — ${invoiceNumberLabel(q)}`, quoteId: q.id});
   q.debtCharged = desired;
   q.customerId = c.id;
 }
@@ -6837,9 +6851,21 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
   const applied = applyCustomerPaymentAllocations(selections, account, note, category, date);
   const unapplied = Math.max(0, amount - applied);
   if(unapplied>0){
-    c.debt = Math.max(0, (Number(c.debt)||0) - unapplied);
+    // Same rule as applyInvoiceDebtCharge: the balance is clamped at zero,
+    // so the ledger entry records what the balance actually moved by, not
+    // what was handed over. Paying 5,000 against a 1,000 debt used to log a
+    // 5,000 payment against a balance that could only fall by 1,000,
+    // leaving the customer's history 4,000 adrift from their balance.
+    //
+    // The cash receipt stays at the full amount -- that money really did
+    // come in, and the cash book is a record of cash, not of debt.
+    const before = Number(c.debt)||0;
+    const after = Math.max(0, before - unapplied);
     const cashTxnId = addCashReceipt(account, unapplied, category || 'Debt Payment', note || `Payment — ${c.name}`, date);
-    c.debtLog.push({id: allocRowId('debtLog'), date: date || todayISO(), type:'payment', amount: unapplied, note, cashTxnId});
+    c.debt = after;
+    if(before !== after){
+      c.debtLog.push({id: allocRowId('debtLog'), date: date || todayISO(), type:'payment', amount: before - after, note, cashTxnId});
+    }
   }
   return applied + unapplied;
 }
