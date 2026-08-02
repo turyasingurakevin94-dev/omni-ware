@@ -4445,11 +4445,15 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 // there's no date to measure from. Pairs with agingDaysLabel() below --
 // used by the Debtors/Creditors lists to show + sort by how long a balance
 // has been outstanding.
+// UTC on both sides, for the same reason as anShiftDate above: stored
+// dates come from todayISO(), which is UTC, so measuring them against
+// LOCAL midnight put this a day out for the first few hours of every day
+// in any timezone ahead of Greenwich.
 function daysSinceDate(dateStr){
   if(!dateStr) return -1;
-  const d = new Date(dateStr+'T00:00:00');
+  const d = new Date(dateStr+'T00:00:00Z');
   if(isNaN(d.getTime())) return -1;
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(todayISO()+'T00:00:00Z');
   return Math.max(0, Math.round((today-d)/86400000));
 }
 function agingDaysLabel(days){
@@ -8072,9 +8076,27 @@ const AN_COLUMNS = {
   ]
 };
 
+// Shifts a YYYY-MM-DD date by whole days. Entirely in UTC, matching
+// todayISO(), which is where every stored date comes from.
+//
+// It used to parse `iso+'T00:00:00'` -- LOCAL midnight -- and then
+// serialise with toISOString(), which is UTC. Anywhere ahead of UTC that
+// lands on the previous day: in Africa/Kampala (UTC+3), local midnight is
+// 21:00 UTC the day before, so anShiftDate(x, 0) returned YESTERDAY. Not a
+// rounding nicety -- it silently moved every date range in the app:
+//
+//   - "Last 7 days" spanned 8, on every analytics, invoice, purchase
+//     invoice, cash book and dashboard screen (24 call sites).
+//   - The dashboard's previous-period comparison chains two shifts
+//     (prevTo = shift(from,-1), prevFrom = shift(prevTo, ...)), so the
+//     drift compounded and the growth percentages compared windows of
+//     different lengths, offset from each other.
+//
+// The bug needed a machine east of Greenwich to show up at all, which is
+// every machine this app runs on.
 function anShiftDate(iso, days){
-  const d = new Date(iso+'T00:00:00');
-  d.setDate(d.getDate()+days);
+  const d = new Date(iso+'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate()+days);
   return d.toISOString().slice(0,10);
 }
 function anGetDateRange(){
@@ -13765,17 +13787,23 @@ function dashCashBalanceAllTime(){
   return bal;
 }
 function dashMonthlyBurn(){
-  // Average monthly cash outflow (payments + expenses) over the last 90 days
-  // (or however much history exists), used as a rough "burn rate". This is
-  // always a trailing 90-day window regardless of the dashboard's selected
-  // range, so it's computed independently here.
+  // Average monthly cash outflow (payments + expenses), used as a rough
+  // "burn rate" and divided into the cash balance to give runway. A
+  // trailing 90-day window regardless of the dashboard's selected range,
+  // so it's computed independently here.
   const today = todayISO();
   const from = anShiftDate(today,-89), to = today;
   const rows = dashCashTxnsInRange(from, to);
   const out = rows.filter(t=>t.type==='payment'||t.type==='out'||t.type==='expense').reduce((s,t)=>s+(Number(t.amount)||0),0);
-  const spanDays = Math.max(1, daysSinceDate(from));
-  const months = Math.max(spanDays/30, 1/30);
-  return out / months;
+  // Divided by the history that actually EXISTS, not by a flat three
+  // months. A shop ten days old was having ten days of spending divided by
+  // three months, understating burn ninefold and so overstating runway by
+  // the same -- 3.0 months of cover reported where there were 0.3. The
+  // window is right; assuming it is full is what was wrong.
+  const firstOut = rows.reduce((min,t)=> (!min || (t.date||'') < min) ? (t.date||min) : min, null);
+  const effectiveFrom = (firstOut && firstOut > from) ? firstOut : from;
+  const spanDays = Math.max(1, daysSinceDate(effectiveFrom) + 1);
+  return out / Math.max(spanDays/30, 1/30);
 }
 function dashTotalDebtors(){ return data.customers.reduce((s,c)=>s+(Number(c.debt)||0),0); }
 function dashTotalCreditors(){ return data.suppliers.reduce((s,sup)=>s+creditorTotalOwed(sup.id),0); }
@@ -13792,7 +13820,16 @@ function dashInventoryHealth(){
     const qty = getStockQty(p.id, variantIdx);
     if(qty<=0) return;
     const key = stockKey(p.id, variantIdx);
-    const unitCost = getFIFOUnitCost(p.id, variantIdx) || 0;
+    // Stock whose cost was never recorded -- entered by a count, or
+    // returned by an un-invoice -- has no FIFO cost, and valuing it at zero
+    // understated the shop's inventory by however much of it that is. Same
+    // trap as the quote line's buy price: falls back to what replacing the
+    // unit would cost today, from the cheapest supplier on file.
+    const known = getFIFOUnitCost(p.id, variantIdx);
+    const fallbackRow = known==null ? rankedPriceRows(p.id, variantIdx)[0] : null;
+    const unitCost = known!=null
+      ? known
+      : (fallbackRow ? purchasePriceAtQty(fallbackRow, qty) : 0);
     const value = qty*unitCost;
     if(recentSaleKeys.has(key)){ fastValue += value; fastQty += qty; }
     else { deadValue += value; deadQty += qty; }
@@ -13800,24 +13837,54 @@ function dashInventoryHealth(){
   const totalValue = fastValue+deadValue;
   return {fastValue, deadValue, totalValue, fastQty, deadQty, ratio: totalValue>0 ? (fastValue/totalValue*100) : 100};
 }
+// What the shop is paying for an item over time, from the purchase invoices
+// -- the only record of it there is.
+//
+// This used to read data.prices, which cannot answer the question. That
+// table holds exactly ONE current row per product+variant+supplier (a save
+// replaces the previous one), so sorting a product's rows by date and
+// comparing first to last compares two DIFFERENT suppliers, or two
+// different variants, and reports the difference between them as a price
+// rise. Two suppliers quoting different markups raised "wholesale up 50%";
+// a large variant next to a small one raised "up 150%" -- both as crit
+// cards saying margin was being squeezed, when nothing had changed and
+// both figures were current.
+//
+// Purchase invoices are the genuine series: one line per actual purchase,
+// dated, with the price paid. Comparing a supplier's earliest to their
+// latest for the SAME item is a true statement about a real change.
+//
+// The retail side has no history at all -- prices.retail is only ever the
+// current figure -- so the old "vs retail" half of this simply cannot be
+// computed, and claiming it was is what made the card confident as well as
+// wrong. It now reports only the cost rise, which is real.
+const DASH_COST_RISE_PCT = 5;
 function dashSupplierPriceInflation(){
-  // For each product, compare its earliest vs latest wholesale price entry
-  // (across suppliers, by date) against the same trend on the retail side --
-  // when wholesale is climbing faster than retail, margin is being eroded.
+  const series = new Map();   // product|variant|supplier -> [{date, price, name, supplierName}]
+  (data.purchaseInvoices||[]).forEach(pi=>{
+    if(pi.voided) return;
+    (pi.items||[]).forEach(it=>{
+      const price = Number(it.price)||0;
+      if(!(price>0)) return;
+      const key = `${it.productId}|${it.variantIdx==null?'':it.variantIdx}|${pi.supplierId}`;
+      if(!series.has(key)) series.set(key, []);
+      series.get(key).push({date: pi.date||'', price, name: it.productName||'', supplierName: pi.supplierName||''});
+    });
+  });
+
   const flags = [];
-  data.products.forEach(p=>{
-    const rows = data.prices.filter(pr=>pr.productId===p.id).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-    if(rows.length<2) return;
+  series.forEach(rows=>{
+    rows.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
     const first = rows[0], last = rows[rows.length-1];
-    if(!first.wholesale || !last.wholesale) return;
-    const wGrowth = (last.wholesale-first.wholesale)/first.wholesale*100;
-    const rGrowth = first.retail ? (last.retail-first.retail)/first.retail*100 : 0;
-    const squeeze = wGrowth - rGrowth;
-    if(wGrowth>3 && squeeze>2){
-      flags.push({name:p.name, wGrowth, rGrowth, squeeze});
+    // Two purchases on different days, or there is no trend to report --
+    // a single purchase, or several on one day, says nothing about change.
+    if(rows.length<2 || !first.date || !last.date || first.date===last.date) return;
+    const growth = (last.price-first.price)/first.price*100;
+    if(growth > DASH_COST_RISE_PCT){
+      flags.push({name:last.name, supplierName:last.supplierName, first:first.price, last:last.price, growth, since:first.date});
     }
   });
-  return flags.sort((a,b)=>b.squeeze-a.squeeze).slice(0,3);
+  return flags.sort((a,b)=>b.growth-a.growth).slice(0,3);
 }
 // Flags regular customers who've gone quiet: compares the gap since their
 // last order against their OWN historical average gap between orders, so
@@ -14132,7 +14199,7 @@ function renderDashboard(){
   // Threat monitor
   const threats = [];
   dashSupplierPriceInflation().forEach(f=>{
-    threats.push({level:'crit', title:'Supplier price inflation', body:`<b>${esc(f.name)}</b>: wholesale cost up ${f.wGrowth.toFixed(1)}% vs retail up only ${f.rGrowth.toFixed(1)}% — margin is being squeezed.`});
+    threats.push({level:'crit', title:'Supplier cost rising', body:`<b>${esc(f.name)}</b> from ${esc(f.supplierName||'this supplier')} cost ${fmtUGX(Math.round(f.first))} on ${esc(f.since)} and ${fmtUGX(Math.round(f.last))} now — up ${f.growth.toFixed(1)}%. Check your selling price still covers it.`});
   });
   dashDebtorExposure().forEach(d=>{
     threats.push({level:'warn', title:'Debtor exposure', body:`<b>${esc(d.name)}</b> owes ${fmtUGX(d.debt)}${d.ageDays>0?`, outstanding ${d.ageDays} days`:''}.`});
