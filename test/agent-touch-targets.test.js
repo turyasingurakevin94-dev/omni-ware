@@ -36,7 +36,9 @@ const styleBlock = (/<style>([\s\S]*?)<\/style>/.exec(src) || ['', ''])[1];
     ['.ag-month-nav-btn', 'the month arrows'],
     ['.ag-seg-btn', 'the segment tabs'],
     ['.ag-view-toggle button', 'the grid/list toggle'],
-    ['.ag-recent-chip', 'the recent-client chips'],
+    // .ag-recent-chip is gone with the recent-search row. It was labelled
+    // "recent-client chips" here, which it never was -- it held previous
+    // search terms.
     ['.ag-chip', 'the client chip'],
   ];
   CONTROLS.forEach(([sel, what]) => {

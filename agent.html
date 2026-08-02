@@ -377,9 +377,6 @@
   #ag_client_suggestions .ag-item-result{border-radius:0;padding:11px 12px;}
   #ag_client_suggestions .ag-item-result:not(:last-child){border-bottom:1px solid var(--line);}
 
-  .ag-recent-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px;}
-  .ag-recent-chip{all:unset;box-sizing:border-box;cursor:pointer;padding:7px 14px;border-radius:22px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink);min-height:44px;display:inline-flex;align-items:center;}
-  .ag-recent-chip:hover{border-color:var(--accent);}
 
   .ag-chips-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:6px;scrollbar-width:none;}
   .ag-chips-row::-webkit-scrollbar{display:none;}
@@ -823,7 +820,6 @@
         <span><b id="ag_browse_quoteBannerCount">0</b> item(s) in your quote</span>
         <span>View quote &rarr;</span>
       </div>
-      <div id="ag_recentSearchesWrap"></div>
       <div id="ag_catStripWrap"></div>
       <!-- Shown only inside a category. Carries the way back, which the
            filter-on-the-hub version never had. -->
@@ -2771,8 +2767,6 @@ let browseDataLoaded = false;
 let browseFilter = 'all';
 let browseCategoryFilter = null;
 let browseSubcategoryFilter = null;
-let recentSearches = [];
-try{ recentSearches = JSON.parse(localStorage.getItem('agentRecentSearches')||'[]'); }catch(_e){ recentSearches = []; }
 
 function isInCluster(productId, variantIdx){
   const vi = variantIdx==null ? '' : String(variantIdx);
@@ -3205,26 +3199,6 @@ function renderSubcategoryChips(){
   });
 }
 
-function renderRecentSearches(){
-  const wrap = document.getElementById('ag_recentSearchesWrap');
-  const q = document.getElementById('ag_browse_search').value.trim();
-  if(q || !recentSearches.length){ wrap.innerHTML = ''; return; }
-  wrap.innerHTML = `<div class="ag-recent-row">${recentSearches.map(s=>`<button type="button" class="ag-recent-chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>`;
-  wrap.querySelectorAll('.ag-recent-chip').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      document.getElementById('ag_browse_search').value = chip.dataset.q;
-      updateHeroCompact();
-      updateSearchClearBtn();
-      renderBrowseGrid();
-    });
-  });
-}
-function saveRecentSearch(q){
-  q = q.trim();
-  if(!q) return;
-  recentSearches = [q, ...recentSearches.filter(x=>x.toLowerCase()!==q.toLowerCase())].slice(0, 5);
-  localStorage.setItem('agentRecentSearches', JSON.stringify(recentSearches));
-}
 
 // Only ever called with a promo that already passed the backend's
 // "starts_at <= today <= ends_at" filter, so a past-dated result here
@@ -3423,7 +3397,6 @@ function browseCardHTML(it, promoted, opts){
 
 function renderBrowseGrid(){
   const promoted = promotedMap();
-  renderRecentSearches();
   renderCategoryStrip();
 
   const discovery = showingDiscoveryExtras();
@@ -3725,8 +3698,7 @@ document.getElementById('ag_browse_search').addEventListener('focus', ()=>{
   document.getElementById('ag_searchBarWrap').scrollIntoView({ behavior:'smooth', block:'start' });
   renderSearchSuggestions();
 });
-document.getElementById('ag_browse_search').addEventListener('blur', (e)=>{
-  saveRecentSearch(e.target.value);
+document.getElementById('ag_browse_search').addEventListener('blur', ()=>{
   updateHeroCompact();
 });
 
