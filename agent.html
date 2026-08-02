@@ -3004,7 +3004,10 @@ function showingDiscoveryExtras(){
 function browseItems(){
   const q = document.getElementById('ag_browse_search').value.trim().toLowerCase();
   let items = catalog.slice();
-  if(browseCategoryFilter) items = items.filter(it=>it.category===browseCategoryFilter);
+  // Compared through itemCategory(), so selecting Other returns the
+  // uncategorised items rather than looking for a category literally
+  // named "Other" and finding none.
+  if(browseCategoryFilter) items = items.filter(it=>itemCategory(it)===browseCategoryFilter);
   if(browseSubcategoryFilter) items = items.filter(it=>it.subcategory===browseSubcategoryFilter);
   if(browseFilter==='sponsored'){
     const promoted = promotedMap();
@@ -3061,12 +3064,27 @@ const CAT_PALETTE = [
   { bg: 'var(--slate-soft)', fg: 'var(--slate)' },
 ];
 
+// The aisle an item belongs to. A product with no category, or one whose
+// category is only whitespace, is not homeless -- it is in Other. This
+// matters more since the All-products list went: without an Other tile an
+// uncategorised product could not be reached at all except by searching
+// for it by name, which is exactly the knowledge a browsing agent lacks.
+const AGENT_OTHER_CATEGORY = 'Other';
+function itemCategory(it){
+  return (it && it.category || '').trim() || AGENT_OTHER_CATEGORY;
+}
+
 function renderCategoryStrip(){
   const wrap = document.getElementById('ag_catStripWrap');
-  const cats = [...new Set(catalog.map(it=>it.category).filter(Boolean))].slice(0, 10);
+  // Named aisles first, in the shop's own order; Other last however much
+  // falls into it, because it is not an aisle anyone chose. Same rule as
+  // the public catalogue.
+  const named = [...new Set(catalog.map(it=>(it.category||'').trim()).filter(Boolean))].slice(0, 10);
+  const hasOther = catalog.some(it=>!(it.category||'').trim());
+  const cats = hasOther ? named.concat(AGENT_OTHER_CATEGORY) : named;
   if(!cats.length){ wrap.innerHTML = ''; return; }
   // How much is in each aisle, so a tile is a decision rather than a guess.
-  const countFor = (c)=> catalog.filter(it=>it.category===c).length;
+  const countFor = (c)=> catalog.filter(it=>itemCategory(it)===c).length;
   wrap.innerHTML = `<div class="ag-cat-head"><b>Browse</b> <span class="all">All ${catalog.length} &rarr;</span></div>
     <div class="ag-cat-grid" id="ag_catStrip">${cats.map((c,i)=>{
     const pal = CAT_PALETTE[i % CAT_PALETTE.length];
@@ -3102,7 +3120,9 @@ function renderCategoryStrip(){
 function renderSubcategoryChips(){
   const wrap = document.getElementById('ag_subcatChipsWrap');
   if(!browseCategoryFilter){ wrap.innerHTML = ''; return; }
-  const subs = [...new Set(catalog.filter(it=>it.category===browseCategoryFilter).map(it=>it.subcategory).filter(Boolean))];
+  // Through itemCategory() too, or opening Other would show the
+  // subcategories of nothing.
+  const subs = [...new Set(catalog.filter(it=>itemCategory(it)===browseCategoryFilter).map(it=>it.subcategory).filter(Boolean))];
   if(!subs.length){ wrap.innerHTML = ''; return; }
   const allChip = `<button type="button" class="ag-subcat-chip ${!browseSubcategoryFilter?'active':''}" data-sub="">All ${esc(browseCategoryFilter)}</button>`;
   const subChips = subs.map(s=>`<button type="button" class="ag-subcat-chip ${browseSubcategoryFilter===s?'active':''}" data-sub="${esc(s)}">${esc(s)}</button>`).join('');

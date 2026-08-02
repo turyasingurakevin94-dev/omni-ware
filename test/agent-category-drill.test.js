@@ -100,7 +100,57 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and a search that finds nothing points back at the aisles');
 }
 
-/* ---------- 6. the state machine ------------------------------------ */
+/* ---------- 6. nothing is stranded ---------------------------------- */
+/*
+ * With no All-products list, a product whose category is blank would be
+ * unreachable except by searching for it by name -- which is exactly the
+ * knowledge a browsing agent does not have. Every product belongs to a
+ * tile, and the leftovers belong to Other.
+ */
+{
+  const { extractFunction, compileScope } = require('./_extract');
+  let itemCategory = null;
+  try {
+    ({ itemCategory } = compileScope(
+      ["const AGENT_OTHER_CATEGORY = 'Other';", extractFunction(src, 'itemCategory', 'agent.html')],
+      {}, ['itemCategory'],
+    ));
+  } catch (e) { /* reported below */ }
+  t.check(typeof itemCategory === 'function', 'agent.html defines itemCategory');
+
+  if (itemCategory) {
+    t.check(itemCategory({ category: 'Roofing' }) === 'Roofing', 'a named category is itself');
+    t.check(itemCategory({ category: '' }) === 'Other', 'an empty category is Other');
+    t.check(itemCategory({ category: '   ' }) === 'Other', 'so is a whitespace-only one');
+    t.check(itemCategory({}) === 'Other', 'and so is a missing one');
+    t.check(itemCategory({ category: ' Roofing ' }) === 'Roofing', 'and a padded name is trimmed, not made Other');
+
+    // The property that matters: every product lands somewhere.
+    const cat = [{ category: 'Roofing' }, { category: '' }, {}, { category: '  ' }, { category: 'Building' }];
+    const buckets = {};
+    cat.forEach(it => { const k = itemCategory(it); buckets[k] = (buckets[k] || 0) + 1; });
+    const total = Object.values(buckets).reduce((a, b) => a + b, 0);
+    t.check(total === cat.length, `every product is reachable through exactly one tile (${total} of ${cat.length})`);
+    t.check(buckets.Other === 3, 'and the three uncategorised ones share Other');
+  }
+
+  // Selecting Other must return the uncategorised items, not hunt for a
+  // category literally named "Other" and find none.
+  t.check(/items = items\.filter\(it=>itemCategory\(it\)===browseCategoryFilter\)/.test(code),
+    'the category filter compares through itemCategory');
+  t.check(/catalog\.filter\(it=>itemCategory\(it\)===browseCategoryFilter\)\.map\(it=>it\.subcategory\)/.test(code),
+    'and so does the subcategory list, or opening Other would show the subcategories of nothing');
+  t.check(/const countFor = \(c\)=> catalog\.filter\(it=>itemCategory\(it\)===c\)\.length;/.test(code),
+    'and the tile count, so Other states how much it holds');
+
+  // Other is built last, and only when something is actually in it.
+  t.check(/const hasOther = catalog\.some\(it=>!\(it\.category\|\|''\)\.trim\(\)\);/.test(code),
+    'Other appears only when there is something uncategorised');
+  t.check(/hasOther \? named\.concat\(AGENT_OTHER_CATEGORY\) : named/.test(code),
+    'and it is appended after the named aisles, never ahead of one');
+}
+
+/* ---------- 7. the state machine ------------------------------------ */
 /*
  * The three positions this screen can be in, as plain logic.
  */
