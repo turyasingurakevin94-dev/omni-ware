@@ -47,10 +47,16 @@ const inDays = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0,
 if (f) {
   /* ---------- 1. what a bonus flag says ---------------------------- */
   {
-    t.check(f.bonusFlagLabel({ bonusType: 'fixed', bonusValue: 900 }) === '+UGX 900',
-      'a fixed bonus shows the money');
-    t.check(f.bonusFlagLabel({ bonusType: 'percent', bonusValue: 5 }) === '+5%',
-      'and a percentage shows the rate');
+    // No currency on the badge -- a corner has room for the number, and
+    // every figure in this app is UGX. The % stays, because without it
+    // "+3" and "+900" are the same kind of thing and one of them is three
+    // shillings.
+    t.check(f.bonusFlagLabel({ bonusType: 'fixed', bonusValue: 900 }) === '+900',
+      'a fixed bonus is just the number');
+    t.check(f.bonusFlagLabel({ bonusType: 'fixed', bonusValue: 12500 }) === '+12,500',
+      'grouped, so a four-figure bonus is still readable at badge size');
+    t.check(f.bonusFlagLabel({ bonusType: 'percent', bonusValue: 3 }) === '+3%',
+      'and a percentage keeps its sign, or it cannot be told from money');
     t.check(f.bonusFlagLabel(null) === '', 'no promotion, no flag');
   }
 

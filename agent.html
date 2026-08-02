@@ -493,13 +493,16 @@
      actually worth zooming into. */
   #ag_browseGrid .ag-grid-thumb{cursor:zoom-in;}
   #ag_browseGrid .ag-grid-body{padding:0;flex:1;min-width:0;}
-  /* Bonus pill + how-long-left countdown read as one fact ("3% bonus,
-     30 days left"), not two stacked lines, so they sit in a row together. */
-  .ag-promo-row{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
-  .ag-bonus-pill{display:inline-flex;align-items:center;gap:3px;background:var(--bonus-bg);color:var(--bonus);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3.5px 8px 3.5px 6px;border-radius:20px;}
-  .ag-bonus-pill .icon{width:10px;height:10px;}
-  .ag-promo-countdown{font-size:11px;font-weight:700;color:var(--bonus);white-space:nowrap;}
-  .ag-promo-countdown.urgent{color:var(--rust);}
+  /* The bonus is a corner badge on the photo now: "+3%" or "+900".
+     The pill said "3% BONUS  29 DAYS LEFT" in the card body, which is
+     three facts and two lines for something an agent only needs to spot.
+     A promotion that is genuinely about to end still says so, on the
+     shelf note where it is actionable. */
+  .ag-bonus-badge{
+    position:absolute;top:8px;left:8px;z-index:2;
+    background:var(--bonus);color:#fff;font-size:11px;font-weight:800;
+    padding:3px 7px;border-radius:5px;letter-spacing:.02em;
+  }
   /* Tells an agent, right where the bonus is promised, exactly why a
      cluster item they already starred isn't earning it yet -- distinct
      color from the amber bonus pill/countdown so it doesn't read as
@@ -529,20 +532,6 @@
   .ag-star-btn.active{color:var(--bonus);}
   .ag-sponsor-tag{position:absolute;top:8px;left:8px;background:rgba(18,21,26,0.78);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:3px;}
   .ag-sponsor-tag .icon{width:10px;height:10px;}
-  /* Opens the same add panel as tapping the card body -- an explicit,
-     unambiguous "add" affordance at the right edge of the row rather
-     than a distinct instant-add behavior (that used to commit floor
-     price straight to the cart with no chance to set a margin). Its own
-     tap target, not sharing the thumb with the cluster star (see
-     .ag-star-btn), since the thumb is now a small fixed square rather
-     than the full card width. */
-  .ag-quickadd-btn{
-    all:unset;cursor:pointer;flex-shrink:0;width:32px;height:32px;border-radius:50%;
-    background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 3px 8px -2px rgba(178,58,38,.55);
-  }
-  .ag-quickadd-btn:hover{background:var(--accent-dark);}
-  .ag-quickadd-btn .icon{width:16px;height:16px;}
   /* Variants merged into one card (see browseGroupCardHTML) -- these chips
      replace what used to be a second, near-duplicate grid tile per
      variant. Selection is per-product and survives re-renders via
@@ -550,11 +539,6 @@
      itself reloads. */
   .ag-variant-chips{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;margin:5px 0 6px;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
   .ag-variant-chips::-webkit-scrollbar{display:none;}
-  /* Fade over the trailing edge signals there's more to scroll to, without
-     a visible scrollbar -- only added when the row actually overflows
-     (see markVariantChipOverflow), so a row that already shows every
-     option doesn't get its last chip needlessly clipped-looking. */
-  .ag-variant-chips.has-overflow{-webkit-mask-image:linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);mask-image:linear-gradient(to right, #000 calc(100% - 10px), transparent 100%);}
   .ag-vchip{all:unset;cursor:pointer;font-size:11px;font-weight:700;padding:3.5px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);flex-shrink:0;white-space:nowrap;}
   .ag-vchip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   /* Separates one attribute's row (e.g. Color) from the next (Size) so two
@@ -3037,7 +3021,9 @@ function sponsoredItems(){
 // Short enough to sit on a card corner. The number IS the reason to look.
 function bonusFlagLabel(promo){
   if(!promo) return '';
-  return promo.bonusType==='fixed' ? `+${fmtUGX(promo.bonusValue)}` : `+${promo.bonusValue}%`;
+  // The % stays on a percentage. Without it "+3" and "+900" are the same
+  // kind of thing, and one of them is three shillings.
+  return promo.bonusType==='fixed' ? `+${Math.round(Number(promo.bonusValue)||0).toLocaleString('en-US')}` : `+${promo.bonusValue}%`;
 }
 // Only flagged when it genuinely ends soon. A promotion with a month left
 // is not urgent, and marking everything urgent teaches an agent to ignore
@@ -3350,15 +3336,10 @@ function vchipHTML(productId, v, selected){
 function variantChipsHTML(group, selected){
   return group.variants.map(v=>vchipHTML(group.productId, v, selected)).join('');
 }
-// A scrollable row gives no visual hint it's scrollable once the
-// native scrollbar is hidden -- this adds a fade over the trailing
-// edge, but only on rows that actually overflow, so a row that
-// already shows all its chips doesn't get a fade clipping nothing.
-function markVariantChipOverflow(scopeEl){
-  scopeEl.querySelectorAll('.ag-variant-chips').forEach(row=>{
-    row.classList.toggle('has-overflow', row.scrollWidth > row.clientWidth + 1);
-  });
-}
+// The chip row still scrolls; it simply no longer wears a fade over its
+// trailing edge. On a variable product with several axes that mask was
+// covering the last chip -- the very thing it was hinting at.
+function markVariantChipOverflow(){}
 function browseGroupCardHTML(group, promoted){
   const selected = selectedVariantFor(group);
   const key = `${selected.productId}::${selected.variantIdx==null?'':selected.variantIdx}`;
@@ -3374,10 +3355,10 @@ function browseGroupCardHTML(group, promoted){
   return `<div class="ag-grid-card" data-pid="${esc(group.productId)}" data-selected-vidx="${selected.variantIdx==null?'':selected.variantIdx}">
     <div class="ag-grid-thumb-wrap">
       ${selected.image ? `<img class="ag-grid-thumb" src="${esc(selected.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
+      ${promo ? `<span class="ag-bonus-badge">${esc(bonusFlagLabel(promo))}</span>` : ''}
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(selected.productId)}" data-star-vidx="${selected.variantIdx==null?'':selected.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${promo ? `<div class="ag-promo-row"><span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>${countdown ? `<span class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</span>` : ''}</div>` : ''}
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(group.name)}</div>
       ${hasVariants
@@ -3388,7 +3369,6 @@ function browseGroupCardHTML(group, promoted){
       ${bulkHintHTML(selected)}
       ${showReminder ? `<div class="ag-grid-reminder">Not sold yet</div>` : ''}
     </div>
-    <button type="button" class="ag-quickadd-btn" title="Add to quote">${ICON_PLUS}</button>
   </div>`;
 }
 // Re-renders exactly one card after its chip selection changes, using the
@@ -3424,11 +3404,11 @@ function browseCardHTML(it, promoted, opts){
     <div class="ag-grid-thumb-wrap">
       ${it.image ? `<img class="ag-grid-thumb" src="${esc(it.image)}" alt="">` : `<div class="ag-grid-thumb-placeholder">${ICON_PLACEHOLDER}</div>`}
       ${opts.shelfFlag && opts.shelfFlag.text ? `<span class="ag-shelf-flag ${esc(opts.shelfFlag.cls)}">${esc(opts.shelfFlag.text)}</span>` : ''}
+      ${promo && !opts.shelfFlag ? `<span class="ag-bonus-badge">${esc(bonusFlagLabel(promo))}</span>` : ''}
       ${opts.sponsorTag && !opts.shelfFlag ? `<span class="ag-sponsor-tag">${ICON_STAR}Sponsored</span>` : ''}
       ${promo ? `<button type="button" class="ag-star-btn ${inCluster?'active':''}" data-star-pid="${esc(it.productId)}" data-star-vidx="${it.variantIdx==null?'':it.variantIdx}" title="${inCluster?'Remove from your cluster':'Add to your cluster to earn its bonus'}">${ICON_STAR}</button>` : ''}
     </div>
     <div class="ag-grid-body">
-      ${promo ? `<div class="ag-promo-row"><span class="ag-bonus-pill">${ICON_STAR}${esc(bonusLabel)}</span>${countdown ? `<span class="ag-promo-countdown ${countdown.urgent?'urgent':''}">${esc(countdown.label)}</span>` : ''}</div>` : ''}
       ${clusterWait && !clusterWait.eligible ? `<div class="ag-cluster-wait">${ICON_CLOCK}Bonus unlocks in ${clusterWait.daysLeft} day${clusterWait.daysLeft===1?'':'s'}</div>` : ''}
       <div class="ag-grid-name">${esc(it.name)}</div>
       ${opts.shelfNote ? `<div class="ag-shelf-note">${esc(opts.shelfNote)}</div>` : ''}
@@ -3639,16 +3619,6 @@ document.getElementById('ag_browseView').addEventListener('click', (e)=>{
         browseSelectedVariant.set(pid, match.variantIdx==null?'':String(match.variantIdx));
         refreshOneBrowseCard(pid);
       }
-    }
-    return;
-  }
-  const quickBtn = e.target.closest('.ag-quickadd-btn');
-  if(quickBtn){
-    const qCard = quickBtn.closest('.ag-grid-card');
-    if(qCard){
-      const vidxRaw = qCard.dataset.selectedVidx !== undefined ? qCard.dataset.selectedVidx : qCard.dataset.vidx;
-      const item = catalogEntry(qCard.dataset.pid, vidxRaw === '' ? null : Number(vidxRaw));
-      if(item) openAddItemPanel(item);
     }
     return;
   }
