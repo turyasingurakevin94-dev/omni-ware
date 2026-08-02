@@ -6462,13 +6462,30 @@ function loadSavedQuote(id){
     toast('This order is invoiced — undo the invoice first if you need to change it');
     return;
   }
+  // Every per-line control in the editor is keyed on lineId -- the remove
+  // button, the quantity, the price, the supplier picker all resolve their
+  // row through it (renderQuoteItems wires off data-line).
+  //
+  // Only the admin's own quote builder issues one. agent-submit-order
+  // writes a line without it, so an agent's order loaded here gave every
+  // row data-line="undefined": one key shared by all of them. Removing a
+  // line removed nothing and changing a quantity changed nothing -- the
+  // editor rendered fully and did not work at all.
+  //
+  // Renumbered on the way in rather than patched where missing, so a
+  // duplicate carried in from anywhere else cannot do the same thing. The
+  // id only identifies a row while it is being edited; nothing outside
+  // this screen looks a line up by it.
+  const items = JSON.parse(JSON.stringify(q.items));
+  let nextLineId = Math.max(Number(data.nextQuoteLineId) || 1, 1);
+  items.forEach(it=>{ it.lineId = nextLineId++; });
   data.quote = {
     client: {...q.client},
     date: q.date,
-    items: JSON.parse(JSON.stringify(q.items)),
+    items,
     savedId: q.id
   };
-  data.nextQuoteLineId = Math.max(data.nextQuoteLineId||1, ...q.items.map(i=>(i.lineId||0)+1), 1);
+  data.nextQuoteLineId = nextLineId;
   saveData();
   renderQuoteAll();
   toast('Quote loaded for editing');
