@@ -49,6 +49,9 @@ function reset() {
     suppliers: [{ id: 'S1', name: 'Kirinya' }],
     customers: [{ id: 'C1', name: 'Nakato', debt: 0, debtLog: [] }],
     savedQuotes: [], purchaseInvoices: [],
+    // deleteSavedQuote clears the in-progress draft if it is the one being
+    // deleted, so the draft has to exist for it to look at.
+    quote: { client: { name: '', phone: '' }, date: '2026-08-01', items: [], savedId: null },
   });
 }
 reset();
@@ -75,6 +78,12 @@ const env = {
   document: { getElementById: (id) => (String(id).startsWith('tab-') ? null : { value: '' }) },
   renderCbTransactions: () => {}, renderCbSummary: () => {}, renderCbTriggers: () => {},
   renderInvoices: () => {}, renderCustomers: () => {}, renderDebtorsList: () => {},
+  renderSavedQuotes: () => {}, renderPurchaseInvoices: () => {},
+  // deleteSavedQuote asks before it acts. Always saying yes is the harsher
+  // path -- it is the one that actually performs the reversal.
+  confirm: () => true,
+  toast: () => {},
+  fmtUGX: (n) => `${Math.round(n)} UGX`,
 };
 
 const NAMES = [
@@ -85,6 +94,7 @@ const NAMES = [
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'customerLedgerTotal', 'customerDebtDrift', 'customerOutstandingInvoices',
   'applyCustomerPaymentAllocations', 'recordCustomerPayment', 'setInvoicesVoided',
+  'orderReversalParts', 'deleteQuoteWarning', 'removePurchaseInvoicesForQuote', 'deleteSavedQuote',
 ];
 let fns = null, err = null;
 try { fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')), env, NAMES); }
@@ -101,6 +111,10 @@ if (fns) {
   const ACCOUNTS = new Set(['cash', 'momo', 'bank']);
 
   /* ---------- the invariants ---------------------------------------- */
+  // How much stock was added with no price attached -- the ceiling I8
+  // measures unpriced stock against. Reset with the state.
+  let uncostedQty = 0;
+
   function violations() {
     const bad = [];
     data.customers.forEach(c => {
@@ -113,15 +127,23 @@ if (fns) {
       if (Math.abs(qty - lotQty) > 0.000001) bad.push(`I3 ${k}: stock ${qty} vs lots ${lotQty}`);
       if (qty < 0) bad.push(`I4 ${k}: ${qty}`);
     });
-    // I8. Every operation in this sequence that ADDS stock carries a cost:
-    // restock passes one, and a reversal restores the lots the sale took.
-    // So a lot with no cost on it means a cost was dropped somewhere --
-    // which is exactly what un-invoicing used to do.
+    // I8. A restock carries its purchase price, and a reversal restores the
+    // lots a sale consumed -- so neither may create stock whose cost is
+    // unknown. A stock count that FINDS units genuinely has no price to
+    // record and legitimately does, so the bound is what those added.
+    //
+    // Measured in QUANTITY, not lots. Selling part of a lot and undoing it
+    // splits one lot into two, both carrying the same null, so a count of
+    // lots grows without any new uncosted stock existing -- this test
+    // reported exactly that against a correct app before the measure was
+    // changed. Quantity survives the split; the number of lots does not.
+    let nullCostQty = 0;
     Object.keys(data.stockLots).forEach(k => {
-      (data.stockLots[k] || []).forEach((l, i) => {
-        if (l.cost == null) bad.push(`I8 ${k} lot ${i}: ${l.qty} units with no cost`);
-      });
+      (data.stockLots[k] || []).forEach(l => { if (l.cost == null) nullCostQty += Number(l.qty) || 0; });
     });
+    if (nullCostQty > uncostedQty + 0.000001) {
+      bad.push(`I8 ${nullCostQty} units priced at nothing, from ${uncostedQty} added without a price`);
+    }
     data.customers.forEach(c => {
       (c.debtLog || []).forEach(l => {
         if (!(Number(l.amount) > 0)) bad.push(`I9 ${c.name}: ledger entry of ${l.amount}`);
@@ -146,6 +168,13 @@ if (fns) {
   const OPS = {
     restock: (r) => applyStockDelta('P1', null, 1 + r(20), 'restock', '', 5000 + r(5000) * 100, 'S1'),
     correct: (r) => applyStockDelta('P1', null, -(1 + r(8)), 'correction', 'count'),
+    // A stock count that finds MORE than the book says. It carries no
+    // price, so it is the one legitimate source of a null-cost lot.
+    correctUp: (r) => { const n = 1 + r(6); uncostedQty += n; applyStockDelta('P1', null, n, 'correction', 'count'); },
+    deleteQuote: (r) => {
+      if (!data.savedQuotes.length) return;
+      fns.deleteSavedQuote(data.savedQuotes[r(data.savedQuotes.length)].id);
+    },
     addQuote: () => { if (data.savedQuotes.length < 4) data.savedQuotes.push(mkQuote(data.savedQuotes.length + 1)); },
     invoice: (r) => {
       const q = data.savedQuotes.find(x => !x.invoiced); if (!q) return;
@@ -179,6 +208,7 @@ if (fns) {
     let failure = null, steps = 0;
     for (let run = 0; run < 300 && !failure; run++) {
       reset();
+      uncostedQty = 0;
       const trace = [];
       for (let i = 0; i < 12; i++) {
         const name = OP_NAMES[rnd(OP_NAMES.length)];
@@ -227,7 +257,7 @@ if (fns) {
     data.savedQuotes = [Object.assign(mkQuote(1), { voided: true, debtCharged: 900 })];
     t.check(violations().some(v => v.startsWith('I7')), 'I7 fires on a voided invoice still charging');
 
-    reset();
+    reset(); uncostedQty = 0;
     data.stock.P1 = 10; data.stockLots.P1 = [{ qty: 10, cost: null }];
     t.check(violations().some(v => v.startsWith('I8')),
       'I8 fires on stock whose cost has been dropped -- the state un-invoicing used to leave');
@@ -240,3 +270,4 @@ if (fns) {
 }
 
 process.exit(t.done() ? 1 : 0);
+
