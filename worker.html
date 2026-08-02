@@ -381,25 +381,34 @@ let lastSynced = {};
 // unassigned one). Stock, cash, customers, prices and purchase invoices
 // are all admin-only concerns this app never touches.
 async function loadWorkerData(shopId){
-  const [staffR, agentsR, suppliersR, productsR, savedQuotesR] = await Promise.all([
+  const [staffR, agentsR, suppliersR, productsR, savedQuotesR, settingsR] = await Promise.all([
     sb.from('staff').select('*').eq('shop_id', shopId),
     sb.from('agents').select('id, payment_term').eq('shop_id', shopId),
     sb.from('suppliers').select('*').eq('shop_id', shopId),
-    // variants comes along for the photos: a pick card shows the variant's
-    // own image where there is one, and without this column resolveProductImage
-    // has nothing to look in and every finish of a product shows the same
-    // generic picture. Still far short of the admin's product select -- no
-    // pricing, markups or stock, none of which this app has any use for.
-    sb.from('products').select('id, name, image, variants').eq('shop_id', shopId),
+    // variants and category are both here for the photos. resolveProductImage
+    // looks at the variant's own image, then the product's, then the shared
+    // one on its category -- and without these columns it could only ever
+    // reach the middle step, so every finish of a product showed the same
+    // generic picture and anything unphotographed showed a placeholder icon.
+    // Still far short of the admin's product select -- no pricing, markups
+    // or stock, none of which this app has any use for.
+    sb.from('products').select('id, name, image, variants, category').eq('shop_id', shopId),
     sb.from('saved_quotes').select('*').eq('shop_id', shopId),
+    // Where the category photos live. Same is_shop_member policy as every
+    // table above, and maybeSingle so a shop that has never saved settings
+    // reads as null rather than an error.
+    sb.from('app_settings').select('presets').eq('shop_id', shopId).maybeSingle(),
   ]);
-  [staffR, agentsR, suppliersR, productsR, savedQuotesR].forEach(r=>{ if(r.error) throw r.error; });
+  [staffR, agentsR, suppliersR, productsR, savedQuotesR, settingsR].forEach(r=>{ if(r.error) throw r.error; });
 
   return {
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, paymentTerm:a.payment_term||'prepay'})),
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes})),
-    products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null, variants:p.variants||[]})),
+    products: (productsR.data||[]).map(p=>({id:p.id, name:p.name, image:p.image||null, variants:p.variants||[], category:p.category||null})),
+    // resolveProductImage guards on this being present, so an empty list
+    // just means it stops at the product's own photo, exactly as before.
+    presetCategories: ((settingsR.data && settingsR.data.presets) || {}).categories || [],
     savedQuotes: (savedQuotesR.data||[]).map(q=>({
       id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
       invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,

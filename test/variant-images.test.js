@@ -143,31 +143,49 @@ const admin = read('index.html');
     'the pick card asks for the photo of the variant on the line');
   t.check(!/ipStageThumbHTML\(product\|\|\{\}\)/.test(sharedCode),
     'and no longer asks for the product photo regardless of variant');
-  t.check(/select\('id, name, image, variants'\)/.test(workerHtml),
-    'the standalone worker app loads the variants column it needs to resolve one');
+  t.check(/select\('id, name, image, variants, category'\)/.test(workerHtml),
+    'the standalone worker app loads the columns it needs to resolve one');
   t.check(/variants:p\.variants\|\|\[\]/.test(workerHtml),
-    'and carries it through into the product it builds');
+    'and carries variants through into the product it builds');
+  t.check(/category:p\.category\|\|null/.test(workerHtml),
+    'and the category the shared photo hangs off');
+  t.check(/from\('app_settings'\)\.select\('presets'\)[\s\S]{0,80}maybeSingle\(\)/.test(workerHtml),
+    'and reads the presets row the category photos live in, tolerating its absence');
+  t.check(/presetCategories: \(\(settingsR\.data && settingsR\.data\.presets\) \|\| \{\}\)\.categories \|\| \[\]/.test(workerHtml),
+    'landing them where resolveProductImage looks');
+  t.check(/settingsR\]\.forEach\(r=>\{ if\(r\.error\) throw r\.error; \}\)/.test(workerHtml),
+    'and the new query is error-checked with the rest');
 
-  // The resolver's own fallback chain, on the four shapes a pick card meets.
+  // The resolver's whole fallback chain, on the shapes a pick card meets.
+  const presetCategories = [{ name: 'Cement', image: 'cat-cement.jpg' }, { name: 'Paint' }];
   const scope = compileScope([
     extractFunction(sharedJs, 'resolveProductImage', 'shared-worker.js'),
-  ], {}, ['resolveProductImage']);
+  ], { data: { presetCategories } }, ['resolveProductImage']);
+  const img = (p, vi) => scope.resolveProductImage(p, vi);
   const hinge = {
-    name: 'Cabinet Hinge', image: 'generic.jpg',
+    name: 'Cabinet Hinge', image: 'generic.jpg', category: 'Cement',
     variants: [{ combo: ['Brass'], image: 'brass.jpg' }, { combo: ['Chrome'] }],
   };
-  t.check(scope.resolveProductImage(hinge, 0) === 'brass.jpg',
-    "a variant with its own photo shows it");
-  t.check(scope.resolveProductImage(hinge, 1) === 'generic.jpg',
-    'one without falls back to the product photo rather than a placeholder');
-  t.check(scope.resolveProductImage({ name: 'Cement', image: 'cement.jpg', variants: [] }, null) === 'cement.jpg',
-    'a product with no variants is unaffected');
-  t.check(scope.resolveProductImage({ name: 'Sand', image: null, variants: [] }, null) == null,
-    'and one with no photo anywhere still gets the placeholder');
+  t.check(img(hinge, 0) === 'brass.jpg', "a variant with its own photo shows it");
+  t.check(img(hinge, 1) === 'generic.jpg',
+    'one without falls back to the product photo, not past it to the category');
+  t.check(img({ name: 'Bag of cement', image: null, category: 'Cement', variants: [] }, null) === 'cat-cement.jpg',
+    "a product with no photo of its own falls back to its category's");
+  t.check(img({ name: 'Brush', image: null, category: 'Paint', variants: [] }, null) == null,
+    'a category with no photo either gets the placeholder');
+  t.check(img({ name: 'Odd', image: null, category: 'Gone', variants: [] }, null) == null,
+    'and so does a category that is not in the list');
+  t.check(img({ name: 'Sand', image: null, category: null, variants: [] }, null) == null,
+    'and a product with no category at all');
 
-  // A worker app that never loaded the column must not start throwing.
-  t.check(scope.resolveProductImage({ name: 'Old', image: 'old.jpg' }, 2) === 'old.jpg',
+  // Rows shaped the way the worker app used to build them must not throw.
+  t.check(img({ name: 'Old', image: 'old.jpg' }, 2) === 'old.jpg',
     'a product row with no variants array at all is handled, not thrown on');
+  const bare = compileScope([
+    extractFunction(sharedJs, 'resolveProductImage', 'shared-worker.js'),
+  ], { data: {} }, ['resolveProductImage']);
+  t.check(bare.resolveProductImage({ name: 'Cement', image: null, category: 'Cement' }, null) == null,
+    'and with no presetCategories loaded it stops quietly rather than throwing');
 }
 
 process.exit(t.done() ? 1 : 0);
