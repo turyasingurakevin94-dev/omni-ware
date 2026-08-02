@@ -151,7 +151,7 @@
     border-radius:22px;
     padding:18px 20px 16px;
     color:#fff;
-    box-shadow:0 14px 28px rgba(14,165,160,0.28);
+    box-shadow:0 14px 28px rgba(178,58,38,0.28);
     margin-bottom:16px;
     position:relative;
     overflow:hidden;
@@ -401,15 +401,27 @@
   .ag-crumb-sub{font-weight:650;color:var(--ink-soft);}
   .ag-crumb-sub::before{content:"/";margin:0 5px;color:var(--line);font-weight:400;}
   .ag-crumb-n{margin-left:auto;flex-shrink:0;font-size:12px;font-weight:650;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
-  .ag-cat-strip{display:flex;gap:16px;overflow-x:auto;padding:4px 0 6px;margin-bottom:6px;scrollbar-width:none;}
-  .ag-cat-strip::-webkit-scrollbar{display:none;}
-  .ag-cat-item{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;width:64px;}
-  .ag-cat-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .12s;}
-  .ag-cat-icon .icon{width:22px;height:22px;}
-  .ag-cat-item:active .ag-cat-icon{transform:scale(0.92);}
+  /* Categories as a two-column tile grid rather than a row of small
+     circles you had to scroll sideways through. A tile is a destination:
+     large enough to be the thing you tap first on arriving, and it states
+     how much is inside so an agent knows before committing. */
+  .ag-cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;}
+  .ag-cat-head{display:flex;align-items:baseline;gap:8px;margin:2px 0 10px;}
+  .ag-cat-head b{font-size:15px;font-weight:800;letter-spacing:-.02em;}
+  .ag-cat-head .all{margin-left:auto;font-size:12px;font-weight:700;color:var(--accent);}
+  .ag-cat-item{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:7px;min-width:0;
+  }
+  .ag-cat-item:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
+  .ag-cat-icon{
+    width:100%;aspect-ratio:1.15;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s;
+  }
+  .ag-cat-icon .icon{width:34px;height:34px;}
+  .ag-cat-item:active .ag-cat-icon{transform:scale(0.97);}
   .ag-cat-item.active .ag-cat-icon{outline:2.5px solid var(--ink);outline-offset:2px;}
-  .ag-cat-label{font-size:11px;font-weight:600;color:var(--ink-soft);text-align:center;line-height:1.25;}
-  .ag-cat-item.active .ag-cat-label{color:var(--ink);}
+  .ag-cat-label{font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;}
+  .ag-cat-count{font-size:11.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-top:-4px;}
 
   /* ---- Subcategory chips: a second horizontally-scrolling row under the
      category icons, appearing once a category with subcategories is
@@ -423,10 +435,26 @@
   .ag-browse-grid{display:grid;grid-template-columns:1fr;gap:12px;}
   .ag-scroll-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:4px;scrollbar-width:none;}
   .ag-scroll-row::-webkit-scrollbar{display:none;}
-  .ag-scroll-row .ag-grid-card{width:150px;flex-shrink:0;}
+  /* Shelf cards: narrower and squarer than the old 150px card, so three
+     fit on a phone and a shelf reads as a shelf rather than as a second
+     grid that happens to scroll. The photo carries the flag, because the
+     reason to push this item is the reason to look at it. */
+  .ag-scroll-row .ag-grid-card{
+    width:132px;flex-shrink:0;border:none;box-shadow:none;background:transparent;border-radius:0;
+  }
+  .ag-scroll-row .ag-grid-card:hover{border:none;box-shadow:none;}
+  .ag-scroll-row .ag-grid-thumb-wrap{aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--slate-soft);}
+  .ag-scroll-row .ag-grid-body{padding:7px 1px 0;}
+  .ag-shelf-flag{
+    position:absolute;top:6px;left:6px;z-index:2;
+    font-size:11px;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:.02em;color:#fff;
+  }
+  .ag-shelf-flag.bonus{background:var(--bonus);}
+  .ag-shelf-flag.deal{background:var(--accent);}
+  .ag-shelf-flag.ready{background:var(--good);}
 
   .ag-grid-card{background:var(--panel);border:1px solid #EEF0F3;border-radius:18px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,32,0.03),0 8px 20px rgba(16,24,32,0.05);transition:border-color .12s,box-shadow .12s;}
-  .ag-grid-card:hover{border-color:var(--accent);box-shadow:0 1px 2px rgba(16,24,32,0.03),0 10px 22px rgba(14,165,160,0.12);}
+  .ag-grid-card:hover{border-color:var(--accent);box-shadow:0 1px 2px rgba(16,24,32,0.03),0 10px 22px rgba(178,58,38,0.13);}
   .ag-grid-thumb-wrap{position:relative;aspect-ratio:16/9;background:#F1F3F5;}
   .ag-grid-thumb{width:100%;height:100%;object-fit:cover;display:block;}
   .ag-grid-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#C7CDD5;}
@@ -493,7 +521,7 @@
   .ag-quickadd-btn{
     all:unset;cursor:pointer;flex-shrink:0;width:32px;height:32px;border-radius:50%;
     background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 3px 8px -2px rgba(14,165,160,.55);
+    box-shadow:0 3px 8px -2px rgba(178,58,38,.55);
   }
   .ag-quickadd-btn:hover{background:var(--accent-dark);}
   .ag-quickadd-btn .icon{width:16px;height:16px;}
@@ -3037,11 +3065,16 @@ function renderCategoryStrip(){
   const wrap = document.getElementById('ag_catStripWrap');
   const cats = [...new Set(catalog.map(it=>it.category).filter(Boolean))].slice(0, 10);
   if(!cats.length){ wrap.innerHTML = ''; return; }
-  wrap.innerHTML = `<div class="ag-cat-strip" id="ag_catStrip">${cats.map((c,i)=>{
+  // How much is in each aisle, so a tile is a decision rather than a guess.
+  const countFor = (c)=> catalog.filter(it=>it.category===c).length;
+  wrap.innerHTML = `<div class="ag-cat-head"><b>Browse</b> <span class="all">All ${catalog.length} &rarr;</span></div>
+    <div class="ag-cat-grid" id="ag_catStrip">${cats.map((c,i)=>{
     const pal = CAT_PALETTE[i % CAT_PALETTE.length];
+    const n = countFor(c);
     return `<button type="button" class="ag-cat-item ${browseCategoryFilter===c?'active':''}" data-cat="${esc(c)}">
       <span class="ag-cat-icon" style="background:${pal.bg};color:${pal.fg};">${categoryIconSVG(c)}</span>
       <span class="ag-cat-label">${esc(c)}</span>
+      <span class="ag-cat-count">${n} item${n===1?'':'s'}</span>
     </button>`;
   }).join('')}</div>`;
   document.getElementById('ag_catStrip').addEventListener('click', (e)=>{

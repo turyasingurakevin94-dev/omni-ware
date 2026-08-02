@@ -101,8 +101,31 @@ function unspacedUnits(src, flexClasses) {
     if (!carriesAValue && PUNCTUATION_ONLY.test(spanInner)) continue;
     hits.push({ parent, snippet: src.slice(m.index, m.index + 90).replace(/\s+/g, ' ') });
   }
+
   return hits;
 }
+
+/*
+ * KNOWN GAP, stated rather than hidden.
+ *
+ * The same fault occurs with a LITERAL where this rule expects an
+ * interpolation:
+ *
+ *   <div class="ag-cat-head"><b>Browse</b><span class="all">All 7</span>
+ *
+ * which reads "BrowseAll 7". That shipped in the category header while I
+ * was writing this very file, and the rule walked past it.
+ *
+ * I tried to extend the pattern to any two abutting children and it
+ * returned 24 hits in index.html, nearly all false: <b> and <span> nested
+ * inside an inner <div> are not siblings of the flex gap, and a regex
+ * cannot see that they are a level down. A rule reporting 24 false alarms
+ * is one you switch off, which is worse than a narrow rule that is right.
+ *
+ * So this covers the interpolation form only. Catching the literal form
+ * needs a real DOM parse of the rendered output rather than a text scan,
+ * which is a different tool than this suite currently has.
+ */
 
 /* ---------- 1. the rule catches the three real cases ----------------- */
 /*
