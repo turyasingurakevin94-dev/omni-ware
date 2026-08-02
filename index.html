@@ -5105,8 +5105,11 @@ function closeClientAcDropdown(){
 // broken down per item instead of a single order count. Sorted by how
 // often it's been ordered, then most recent.
 function customerPurchaseHistory(nameLower){
+  // Voided orders excluded: "what they usually buy" built partly from
+  // cancelled sales tells the rep this client is a regular for something
+  // they never actually took.
   const orders = data.savedQuotes.filter(q=>
-    ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
+    !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
   );
   const map = new Map();
   orders.forEach(q=>{
@@ -5172,8 +5175,11 @@ function renderClientHistoryBox(){
   if(!name){ box.classList.remove('show'); box.innerHTML=''; renderClientUsualBuys(''); return; }
   const nameLower = name.toLowerCase();
   const customer = data.customers.find(c=>(c.name||'').trim().toLowerCase()===nameLower);
+  // Same rule: a cancelled order is not an order this client placed, and
+  // this count sits directly beside their debt standing as a measure of
+  // how established the relationship is.
   const priorOrders = data.savedQuotes.filter(q=>
-    ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
+    !q.voided && ((q.client&&q.client.name)||'').trim().toLowerCase()===nameLower && q.id!==data.quote.savedId
   ).length;
   renderClientUsualBuys(nameLower);
   if(!customer && priorOrders===0){ box.classList.remove('show'); box.innerHTML=''; return; }
@@ -8252,6 +8258,14 @@ function anGetDateRange(){
 function anInvoicesInRange(from, to){
   return data.savedQuotes.filter(q=>{
     if(!(q.status==='completed' && q.invoiced)) return false;
+    // A voided invoice is a cancelled sale. It was counted here as revenue:
+    // in the KPIs, and in the by-item, by-customer and by-document tables.
+    // Every other surface already treats it as not having happened --
+    // invoiceBalanceDue() returns 0 for one, the debtor lookup skips it,
+    // the Invoices tab excludes it from its own totals, and the purchase
+    // side's panInvoicesInRange() has always dropped it. This was the one
+    // money screen that disagreed with all of them.
+    if(q.voided) return false;
     const d = q.invoicedAt || q.date || '';
     if(from && d < from) return false;
     if(to && d > to) return false;
