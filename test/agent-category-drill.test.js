@@ -40,8 +40,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'the category strip hides once you are inside a category');
   t.check(/getElementById\('ag_browseChips'\)\.style\.display = inCategory \? 'none' : ''/.test(code),
     'and so do the discovery filter chips');
-  t.check(/getElementById\('ag_gridTitle'\)\.style\.display =\s*\(inCategory \? 'none' : ''\)/.test(code),
-    'the grid title stands down too, since the section header now says it');
+  t.check(/getElementById\('ag_gridTitle'\)\.style\.display = \(discovery \|\| inCategory\) \? 'none' : ''/.test(code),
+    'the grid title stands down inside a category, since the section header says it');
 
   // The shelves were already handled, and must stay that way.
   t.check(/return !q && browseFilter==='all' && !browseCategoryFilter && !browseSubcategoryFilter;/.test(code),
@@ -58,7 +58,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and how many items are in it');
 
   // The count moved, so it must not also remain on the title.
-  t.check(/inCategory \? '' : `Results/.test(code),
+  t.check(/\(discovery \|\| inCategory\)\s*\?\s*''\s*:\s*`Results/.test(code),
     'the title no longer repeats the count inside a category');
 }
 
@@ -78,7 +78,29 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'going back clears the subcategory as well as the category');
 }
 
-/* ---------- 5. the state machine ------------------------------------ */
+/* ---------- 5. nothing is reachable without choosing --------------- */
+/*
+ * There is no "All products" list. Dumping the catalogue under the tiles
+ * made the tiles decoration: an agent could scroll past them into
+ * everything, so picking an aisle never had a point. A product is reached
+ * through its category, or by searching for it.
+ */
+{
+  t.check(/getElementById\('ag_browseGrid'\)\.style\.display = discovery \? 'none' : ''/.test(code),
+    'the grid is hidden on the hub');
+  t.check(/if\(discovery\)\{ grid\.innerHTML = ''; return; \}/.test(code),
+    'and not even built there, since that is the whole catalogue on a mid-range phone');
+  t.check(!/'All products'/.test(code),
+    'the All products title is gone');
+
+  // The two ways in, and the two dead ends, say different things.
+  t.check(/Nothing in \$\{esc\(browseSubcategoryFilter \|\| browseCategoryFilter\)\} yet\./.test(code),
+    'an empty aisle names itself');
+  t.check(/No products match that search\. Try a category instead\./.test(code),
+    'and a search that finds nothing points back at the aisles');
+}
+
+/* ---------- 6. the state machine ------------------------------------ */
 /*
  * The three positions this screen can be in, as plain logic.
  */

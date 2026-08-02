@@ -3389,16 +3389,28 @@ function renderBrowseGrid(){
     crumb.innerHTML = '';
     crumb.style.display = 'none';
   }
-  // The count now lives in the crumb, so the title does not repeat it.
-  document.getElementById('ag_gridTitle').innerHTML = discovery
-    ? 'All products'
-    : (inCategory ? '' : `Results <small>${groups.length} item${groups.length===1?'':'s'}</small>`);
-  document.getElementById('ag_gridTitle').style.display =
-    (inCategory ? 'none' : '');
+  // There is no "All products" list any more. Dumping the whole catalogue
+  // under the tiles made the tiles decoration -- an agent could scroll
+  // past them into everything, so choosing an aisle never had a point. A
+  // product is reached through its category, or by searching for it.
+  //
+  // The count lives in the crumb inside a category, so the title only has
+  // something to say when a search is running.
+  document.getElementById('ag_gridTitle').innerHTML = (discovery || inCategory)
+    ? ''
+    : `Results <small>${groups.length} item${groups.length===1?'':'s'}</small>`;
+  document.getElementById('ag_gridTitle').style.display = (discovery || inCategory) ? 'none' : '';
+  document.getElementById('ag_browseGrid').style.display = discovery ? 'none' : '';
 
   const grid = document.getElementById('ag_browseGrid');
+  // On the hub the grid is not shown, so building it is work thrown away
+  // -- and it is the whole catalogue, on a mid-range Android, every time
+  // an agent comes back to Sell.
+  if(discovery){ grid.innerHTML = ''; return; }
   if(!groups.length){
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">No matching products.</div>`;
+    grid.innerHTML = browseCategoryFilter
+      ? `<div class="empty" style="grid-column:1/-1;">Nothing in ${esc(browseSubcategoryFilter || browseCategoryFilter)} yet.</div>`
+      : `<div class="empty" style="grid-column:1/-1;">No products match that search. Try a category instead.</div>`;
     return;
   }
   grid.innerHTML = groups.map(g=>browseGroupCardHTML(g, promoted)).join('');
