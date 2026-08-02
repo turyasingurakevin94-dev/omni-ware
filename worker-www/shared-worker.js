@@ -821,13 +821,14 @@ function agentPaymentBlocksPreparing(q){
 // no shop delivery staff to assign -- using the same '__agent__' sentinel
 // the admin board's own stepSavedQuoteStatus() uses for the same case.
 async function finishPreparingOrder(orderId){
-  const q = data.savedQuotes.find(x=>x.id===orderId);
+  let q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
-  // This app loads once and never refreshes on its own, so its copy of an
-  // order can be hours behind. Without this, finishing a pick on an order
-  // an admin had since moved on (delivered, completed) would drag it back
-  // to pending_delivery -- a status regression driven entirely by a stale
-  // screen, and invisible to whoever had already moved it.
+  // This app's copy of an order can be behind -- the poll skips a hidden
+  // app, the quiet period after a touch, and any refresh that failed.
+  // Without this, finishing a pick on an order an admin had since moved on
+  // (delivered, completed) would drag it back to pending_delivery -- a
+  // status regression driven entirely by a stale screen, and invisible to
+  // whoever had already moved it.
   if(q.status !== 'preparing' && q.status !== 'draft'){
     toast('This order has already moved on — refresh to see where it is now', 5000);
     return;
@@ -841,11 +842,31 @@ async function finishPreparingOrder(orderId){
   // the second's and quietly undo the status move below.
   await saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
 
+  // A background refresh replaces `data` wholesale, so every await from here
+  // on can outlive the order object captured above -- and writes to a
+  // replaced snapshot go nowhere at all. The worker's finish and the
+  // delivery person they had just chosen were both dropped in silence: the
+  // order stayed sitting in Being Prepared with nothing to say why, and the
+  // pick they had already completed came back needing doing again.
+  //
+  // The standalone app holds refreshes off while the picker is up, by
+  // looking for its overlay. The admin app hosts this same view and looks
+  // for a different overlay class, so there it did not hold off at all.
+  // Re-resolving against whatever `data` is now makes that not matter from
+  // this side, whichever app is hosting and however the guards change.
+  const reresolve = ()=>{
+    q = data.savedQuotes.find(x=>x.id===orderId);
+    if(!q) toast('This order is no longer here — refresh to see where it went', 5000);
+    return q;
+  };
+  if(!reresolve()){ renderWorkerView(); return; }
+
   let deliveryStaffId;
   if(q.deliveryMode==='agent_pickup'){
     deliveryStaffId = '__agent__';
   } else {
     deliveryStaffId = await promptAssignDelivery(orderId);
+    if(!reresolve()){ renderWorkerView(); return; }
     if(!deliveryStaffId){
       // Backing out has to leave the order somewhere this app can still
       // show it. 'done' is neither awaiting_accept nor in_progress, so both

@@ -14894,6 +14894,13 @@ document.addEventListener('input', ()=>{ lastUserInputAt = Date.now(); }, true);
 // an amount, etc.).
 async function pollForUpdatesNow(){
   if(document.querySelector('.modal-overlay.show')) return;
+  // The Worker tab's delivery picker is built at call time by
+  // promptAssignDelivery() (shared-worker.js) rather than from markup here,
+  // so it carries its own class and none of this app's. It is classed
+  // precisely so a background refresh can see it and hold off -- the
+  // standalone worker app does; this one was looking only for its own
+  // modals and refreshed straight through the decision it was asking about.
+  if(document.querySelector('.wv-assign-overlay')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
   try{
     // Both are built before either is assigned, so a throw anywhere in here
