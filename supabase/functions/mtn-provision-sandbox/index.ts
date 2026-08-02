@@ -55,7 +55,11 @@ Deno.serve(async (req) => {
       "User-Agent": "Mozilla/5.0 (compatible; omni-ware/1.0; +https://omni-ware.example)",
       "Accept": "application/json",
     };
-    const callbackUrl = `${SUPABASE_URL.replace(/\.supabase\.co\/?$/, ".functions.supabase.co")}/mtn-payment-webhook`;
+    // See the matching note in mtn-provision-apiuser: providerCallbackHost
+    // is a HOST, not a URL, and a mismatch only surfaces later as
+    // INVALID_CALLBACK_URL_HOST on the payment call, never here.
+    const callbackHost = new URL(SUPABASE_URL.replace(/\.supabase\.co\/?$/, ".functions.supabase.co")).host;
+    const callbackUrl = `https://${callbackHost}/mtn-payment-webhook`;
     const mtnBase = "https://sandbox.momodeveloper.mtn.com";
     const apiUserId = crypto.randomUUID();
 
@@ -67,7 +71,7 @@ Deno.serve(async (req) => {
         "Ocp-Apim-Subscription-Key": subscriptionKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ providerCallbackHost: callbackUrl }),
+      body: JSON.stringify({ providerCallbackHost: callbackHost }),
     });
     if (createUserRes.status !== 201) {
       return json({ error: `MTN rejected the API user creation (${createUserRes.status}): ${await createUserRes.text()}`, stage: "create_apiuser" }, 502);
