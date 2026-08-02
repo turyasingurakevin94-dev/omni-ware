@@ -566,6 +566,22 @@
   .ag-price-guidance.premium{color:var(--bonus);} .ag-price-guidance.premium .dot{background:var(--bonus);}
   .ag-price-guidance.risky{color:var(--danger);} .ag-price-guidance.risky .dot{background:var(--danger);}
   /* ---- Customers: My Catalogue setup/share banner ---- */
+  /* A catalogue request. Sits directly under the catalogue card, which is
+     where the promise "every request comes straight to you" is made, and
+     deliberately plainer than it -- the card is an invitation to share, these
+     are work waiting to be done. */
+  .ag-inquiry-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;padding:12px 13px;margin-bottom:10px;}
+  .ag-inquiry-top{display:flex;align-items:flex-start;gap:10px;}
+  .ag-inquiry-who{flex:1;min-width:0;}
+  .ag-inquiry-name{font-weight:700;font-size:14.5px;}
+  .ag-inquiry-meta{font-size:12px;color:var(--ink-soft);margin-top:1px;}
+  /* The one action worth taking from here. Sized for a thumb, since this is
+     read on a phone with a customer waiting. */
+  .ag-inquiry-call{all:unset;flex-shrink:0;cursor:pointer;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;
+    display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:60px;padding:0 16px;border-radius:9px;}
+  .ag-inquiry-msg{margin-top:8px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+  .ag-inquiry-msg.muted{color:var(--ink-soft);font-style:italic;}
+  .ag-inquiry-phone{margin-top:6px;font-size:12.5px;color:var(--ink-soft);font-family:var(--font-money);}
   .ag-catalogue-card{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;border-radius:16px;padding:16px 17px;margin-bottom:16px;}
   .ag-catalogue-card .title{font-weight:800;font-size:15px;margin-bottom:3px;}
   .ag-catalogue-card .sub{font-size:12.5px;opacity:.88;margin-bottom:12px;line-height:1.4;}
@@ -794,6 +810,7 @@
   <div id="ag_clientsListView" class="ag-pad-top" style="display:none;">
     <div class="ag-tab-head"><h1>Customers</h1></div>
     <div id="ag_catalogueWrap"></div>
+    <div id="ag_inquiriesWrap"></div>
     <div id="ag_clientsListWrap"></div>
   </div>
 
@@ -1089,7 +1106,7 @@ const SUPABASE_URL = 'https://hgywjaifdmgrcnwxstxg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_KsUIBYzuZRdoPsqP4T2ULw__AsCEhzV';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null, currentShopId = null, myAgent = null;
-let agentClients = [], myOrders = [], catalog = [];
+let agentClients = [], myOrders = [], catalog = [], myInquiries = [];
 let cart = [], chosenClient = null;
 
 /* ================= OFFLINE RESILIENCE =================
@@ -1153,7 +1170,7 @@ function saveOfflineCache(){
     localStorage.setItem(OFFLINE_CACHE_KEY, JSON.stringify({
       savedAt: new Date().toISOString(),
       userId: currentUser && currentUser.id,
-      myAgent, currentShopId, agentClients, myOrders, catalog, promotions,
+      myAgent, currentShopId, agentClients, myOrders, myInquiries, catalog, promotions,
       // cluster/solutionTemplates/clusterWaitDays are read-only reference
       // data exactly like the rest of this snapshot -- omitting them would
       // mean an agent's saved Solutions and cluster picks silently vanish
@@ -1424,13 +1441,24 @@ function mapOrderRow(q){
 }
 
 async function fetchAgentHomeRows(){
-  const [{ data: clientsData, error: clientsErr }, { data: ordersData, error: ordersErr }] = await Promise.all([
+  const [{ data: clientsData, error: clientsErr }, { data: ordersData, error: ordersErr },
+         { data: inquiriesData, error: inquiriesErr }] = await Promise.all([
     sb.from('agent_clients').select('*').eq('shop_id', currentShopId).order('name'),
     sb.from('saved_quotes').select('*').eq('shop_id', currentShopId),
+    // Catalogue requests. 0025 created the policy for these and nothing ever
+    // read them: a customer filled in "what do you need?" on the public page
+    // and it went straight into a table no screen looked at. The agent got a
+    // name and a phone number with no idea what was wanted.
+    sb.from('catalogue_inquiries').select('*').eq('shop_id', currentShopId)
+      .order('created_at', { ascending: false }).limit(50),
   ]);
   if(clientsErr) throw clientsErr;
   if(ordersErr) throw ordersErr;
-  return { clients: clientsData || [], orders: ordersData || [] };
+  // Deliberately NOT fatal. Requests are a bonus on top of the client list;
+  // failing the whole screen over them would turn a missing extra into a
+  // dead app.
+  if(inquiriesErr) console.warn('Could not load catalogue requests:', inquiriesErr.message);
+  return { clients: clientsData || [], orders: ordersData || [], inquiries: inquiriesData || [] };
 }
 // GUARD 2 -- an RLS denial and an expired/mid-refresh token both come back
 // from PostgREST as an ordinary empty result set, indistinguishable from
@@ -1465,11 +1493,13 @@ async function loadAgentHomeData(){
     dataLooksSuspect = true;
     agentClients = cached.agentClients || [];
     myOrders = cached.myOrders || [];
+    myInquiries = cached.myInquiries || [];
     return;
   }
   dataLooksSuspect = false;
   agentClients = rows.clients;
   myOrders = rows.orders.map(mapOrderRow);
+  myInquiries = rows.inquiries;
 }
 
 /* ================= NAVIGATION ================= */
@@ -2356,9 +2386,60 @@ function renderCatalogueBanner(){
   }
 }
 
+// "X asked about Y, 2 hours ago" -- coarse on purpose. The only decision it
+// supports is whether to call now, and nobody makes that on minutes.
+function inquiryAgoLabel(iso){
+  if(!iso) return '';
+  const mins = Math.floor((Date.now() - new Date(iso).getTime())/60000);
+  if(isNaN(mins) || mins < 0) return '';
+  if(mins < 1) return 'just now';
+  if(mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs} hour${hrs===1?'':'s'} ago`;
+  const days = Math.floor(hrs/24);
+  if(days < 30) return `${days} day${days===1?'':'s'} ago`;
+  return new Date(iso).toLocaleDateString();
+}
+// The product the request was about, if it can still be named. The inquiry
+// stores an id, not a name, and the catalogue may not be loaded on this
+// screen -- so this is a bonus line, never a blank one.
+function inquiryProductLabel(inq){
+  if(!inq.product_id) return '';
+  const p = (catalog||[]).find(x=> x.productId===inq.product_id
+    && String(x.variantIdx==null?'':x.variantIdx) === String(inq.variant_idx==null?'':inq.variant_idx));
+  if(!p) return '';
+  return p.name + (p.variantLabel ? ' · ' + p.variantLabel : '');
+}
+function renderInquiries(){
+  const wrap = document.getElementById('ag_inquiriesWrap');
+  if(!wrap) return;
+  const list = (myInquiries||[]).slice(0, 20);
+  if(!list.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="ag-section-title">Requests from your catalogue</div>
+    ${list.map(inq=>{
+      const product = inquiryProductLabel(inq);
+      const phone = String(inq.customer_phone||'').replace(/[^\d+]/g,'');
+      return `<div class="ag-inquiry-card">
+        <div class="ag-inquiry-top">
+          <div class="ag-inquiry-who">
+            <div class="ag-inquiry-name">${esc(inq.customer_name||'Someone')}</div>
+            <div class="ag-inquiry-meta">${esc(inquiryAgoLabel(inq.created_at))}${product? ' · '+esc(product) : ''}</div>
+          </div>
+          ${phone? `<a class="ag-inquiry-call" href="tel:${esc(phone)}" aria-label="Call ${esc(inq.customer_name||'')}">Call</a>` : ''}
+        </div>
+        ${inq.message
+          ? `<div class="ag-inquiry-msg">${esc(inq.message)}</div>`
+          : `<div class="ag-inquiry-msg muted">No details given — just asked to be contacted.</div>`}
+        ${phone? `<div class="ag-inquiry-phone">${esc(inq.customer_phone)}</div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
 function renderClientsListScreen(){
   if(myCatalogueLoaded) renderCatalogueBanner();
   else ensureMyCatalogueLoaded().then(renderCatalogueBanner);
+  renderInquiries();
 
   const wrap = document.getElementById('ag_clientsListWrap');
   if(!agentClients.length){ wrap.innerHTML = `<div class="empty">No clients yet -- add one when you build your first quote.</div>`; return; }
