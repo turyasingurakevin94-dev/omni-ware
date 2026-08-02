@@ -108,7 +108,7 @@
   .sidebar-scroll::-webkit-scrollbar{display:none;}
   .brand{display:flex;align-items:center;gap:11px;padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:14px;overflow:hidden;}
   .brand-mark{
-    width:34px;height:34px;border-radius:9px;background:var(--accent);color:#2A1B00;
+    width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;
     display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;
     font-size:13px;flex-shrink:0;letter-spacing:0;
   }
@@ -127,7 +127,7 @@
   nav button .nav-icon{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   nav button .nav-label{overflow:hidden;text-overflow:ellipsis;}
   nav button:hover{background:rgba(255,255,255,0.07);color:#fff;}
-  nav button.active{background:var(--accent);color:#2A1B00;font-weight:700;}
+  nav button.active{background:var(--accent);color:#fff;font-weight:700;}
   /* Nav item with hover submenu (e.g. "Quotes" -> Add New Quote / Saved Quote).
      Positioned as position:fixed and placed via JS (see Tabs script) so it isn't
      clipped by the sidebar's overflow-y:auto (which forces overflow-x to clip too). */
@@ -142,7 +142,7 @@
   }
   .nav-submenu.show{display:flex;flex-direction:column;gap:2px;}
   .nav-submenu button{padding:9px 11px;font-size:13px;}
-  .nav-item.active > .nav-parent-btn{background:var(--accent);color:#2A1B00;font-weight:700;}
+  .nav-item.active > .nav-parent-btn{background:var(--accent);color:#fff;font-weight:700;}
 
   .nav-section-label{
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
@@ -235,8 +235,8 @@
   }
   .btn-primary{background:var(--navy);color:#fff;}
   .btn-primary:hover{background:#2A3648;}
-  .btn-accent{background:var(--accent);color:#2A1B00;}
-  .btn-accent:hover{background:#e69c2a;}
+  .btn-accent{background:var(--accent);color:#fff;}
+  .btn-accent:hover{background:var(--ow-oxide-deep);}
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
   .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
   .btn-ghost.danger:hover{border-color:var(--danger);color:var(--danger);}
@@ -258,8 +258,8 @@
   .qp-tbtn span{font-size:10px;font-weight:700;letter-spacing:0.2px;white-space:nowrap;}
   .qp-tbtn:hover{border-color:var(--ink-soft);color:var(--ink);background:#F7F9FB;}
   .qp-tbtn.qp-tbtn-danger:hover{border-color:var(--danger);color:var(--danger);}
-  .qp-tbtn.qp-tbtn-accent{background:var(--accent);border-color:var(--accent);color:#2A1B00;}
-  .qp-tbtn.qp-tbtn-accent:hover{background:#e69c2a;border-color:#e69c2a;color:#2A1B00;}
+  .qp-tbtn.qp-tbtn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .qp-tbtn.qp-tbtn-accent:hover{background:var(--ow-oxide-deep);border-color:var(--ow-oxide-deep);color:#fff;}
   /* Save is the main thing a rep does on this screen, so it gets the
      strongest visual weight of the group. */
   .qp-tbtn.qp-tbtn-primary{background:var(--navy);border-color:var(--navy);color:#fff;}
@@ -1002,20 +1002,48 @@
   }
   .q-client-ac-list{max-height:220px;overflow-y:auto;}
   .q-client-ac-item{
-    display:flex;flex-direction:column;gap:1px;padding:7px 9px;border-radius:7px;cursor:pointer;
+    display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:7px;cursor:pointer;
   }
+  .q-client-ac-item .q-ac-text{display:flex;flex-direction:column;gap:1px;min-width:0;}
   .q-client-ac-item:hover, .q-client-ac-item.active{background:#F5F7F8;}
   .q-client-ac-item .q-ac-name{font-size:12.5px;font-weight:600;color:var(--ink);}
   .q-client-ac-item .q-ac-sub{font-size:11px;color:var(--ink-soft);}
+  /* What they owe, while you are still choosing. Banded by the age of the
+     oldest unpaid invoice, because the figure alone does not separate
+     ordinary credit from a debt that has stopped moving. */
+  .q-client-ac-item .q-ac-owed{
+    margin-left:auto;flex-shrink:0;font-size:11px;font-weight:700;
+    font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:5px;white-space:nowrap;
+  }
+  .q-ac-owed.open{background:var(--ow-steel-100);color:var(--ink-soft);}
+  .q-ac-owed.late{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .q-ac-owed.severe{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+
+  /* The same standing, once a client is chosen and the quote is being
+     built. Its own block rather than a clause in a subtitle. */
+  .q-debt-standing{
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+    padding:7px 10px;border-radius:8px;margin-top:6px;
+  }
+  .q-debt-standing .qds-amt{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .q-debt-standing .qds-age{font-size:11.5px;font-weight:600;}
+  .q-debt-standing.open{background:var(--ow-steel-100);color:var(--ink);}
+  .q-debt-standing.open .qds-age{color:var(--ink-soft);}
+  .q-debt-standing.late{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .q-debt-standing.severe{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .q-client-line{
+    display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;
+    background:#F3F5F7;
+  }
   .q-client-ac-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px 10px;color:var(--ink-soft);}
   .q-client-ac-empty .icon{width:34px;height:34px;color:var(--line);}
   .q-client-ac-empty span{font-size:12.5px;}
   .q-client-ac-add{
     all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;
-    width:100%;margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--accent);color:#2A1B00;
+    width:100%;margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--accent);color:#fff;
     font-size:12.5px;font-weight:700;cursor:pointer;
   }
-  .q-client-ac-add:hover{background:#e69c2a;}
+  .q-client-ac-add:hover{background:var(--ow-oxide-deep);}
   .q-client-ac-add kbd{
     font:700 10px/1 'Inter',sans-serif;background:rgba(0,0,0,0.12);border-radius:4px;padding:2px 5px;
   }
@@ -1111,9 +1139,12 @@
 
   /* Client history panel shown under the client name field once a known
      client is typed/selected — previous order count + any outstanding debt */
+  /* Two stacked facts now, not one line: how often they have bought, and
+     where they stand. The container carries no chrome of its own so each
+     block reads as itself. */
   .q-client-history{
-    display:none;align-items:center;gap:8px;margin-top:6px;padding:6px 10px;border-radius:7px;
-    background:#F3F5F7;font-size:12px;color:var(--ink-soft);
+    display:none;flex-direction:column;align-items:stretch;margin-top:6px;
+    font-size:12px;color:var(--ink-soft);
   }
   .q-client-history.show{display:flex;}
   .q-client-history .icon{width:13px;height:13px;flex-shrink:0;}
@@ -1136,9 +1167,9 @@
   .q-usual-chip-meta{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
   .q-usual-chip-add{
     all:unset;flex-shrink:0;cursor:pointer;width:22px;height:22px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;background:var(--accent);color:#2A1B00;
+    display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;
   }
-  .q-usual-chip-add:hover{background:#e69c2a;}
+  .q-usual-chip-add:hover{background:var(--ow-oxide-deep);}
   .q-usual-chip-add .icon{width:14px;height:14px;stroke-width:2.5;}
 
   /* Financial summary bar above the quote action buttons */
@@ -1297,7 +1328,7 @@
     background:#EEF1F3;color:var(--ink-soft);
   }
   .q-sc-rank.best{background:var(--good);color:#fff;}
-  .q-sc-rank.stock{background:var(--accent);color:#2A1B00;}
+  .q-sc-rank.stock{background:var(--accent);color:#fff;}
   .q-supplier-card.stock-card{border-color:#EBC26F;background:#FFFBF2;}
   .q-supplier-card.stock-card.selected{border-color:var(--accent);background:#FFF6E4;box-shadow:0 0 0 1px var(--accent);}
   .q-sc-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px;}
@@ -1453,7 +1484,7 @@
   .sq-stage-arrow:disabled{opacity:0.3;cursor:default;}
   .sq-card-icons{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;}
   .sq-invoice-btn{border-color:var(--accent);color:#b97a12;}
-  .sq-invoice-btn:hover{background:var(--accent);color:#2A1B00;border-color:var(--accent);}
+  .sq-invoice-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
   .sq-invoice-btn.is-invoiced{border-color:var(--good);color:var(--good);background:var(--good-bg);}
   .sq-invoice-btn.is-invoiced:hover{background:var(--good);color:#fff;}
   .sq-card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
@@ -1609,7 +1640,7 @@
     transition:background .12s ease,color .12s ease;
   }
   .info-tip::before{content:"i";}
-  .info-tip:hover, .info-tip:focus-visible{background:var(--accent);color:#2A1B00;outline:none;}
+  .info-tip:hover, .info-tip:focus-visible{background:var(--accent);color:#fff;outline:none;}
   .info-tip .tip-bubble{
     position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%) translateY(4px);
     width:max-content;max-width:270px;background:var(--navy);color:#EDF0F2;font:500 12px/1.45 'Inter',sans-serif;
@@ -1678,7 +1709,7 @@
     all:unset;display:none;box-sizing:border-box;position:fixed;
     right:16px;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 14px);
     width:52px;height:52px;border-radius:50%;z-index:91;cursor:pointer;
-    background:var(--accent);color:#2A1B00;
+    background:var(--accent);color:#fff;
     box-shadow:0 6px 16px rgba(242,169,60,0.45);
   }
   .mobile-fab .icon{width:22px;height:22px;}
@@ -5127,11 +5158,21 @@ function renderClientAcDropdown(){
 
   let html = '';
   if(matches.length){
-    html += `<div class="q-client-ac-list">${matches.slice(0,8).map(c=>`
-      <div class="q-client-ac-item" data-id="${esc(c.id)}">
-        <span class="q-ac-name">${esc(c.name)}</span>
-        ${c.phone? `<span class="q-ac-sub">${esc(c.phone)}</span>` : ''}
-      </div>`).join('')}</div>`;
+    // The debt shows in the LIST, not only after choosing. Whether this is
+    // the customer to raise an order for is exactly the question being
+    // answered while looking at these rows, and answering it afterwards
+    // means backing out of a half-built quote.
+    html += `<div class="q-client-ac-list">${matches.slice(0,8).map(c=>{
+      const st = customerDebtStanding(c);
+      const band = debtStandingBand(st);
+      return `<div class="q-client-ac-item" data-id="${esc(c.id)}">
+        <span class="q-ac-text">
+          <span class="q-ac-name">${esc(c.name)}</span>
+          ${c.phone? `<span class="q-ac-sub">${esc(c.phone)}</span>` : ''}
+        </span>
+        ${band ? `<span class="q-ac-owed ${band}">${esc(fmtUGX(st.owed))}${st.oldestDays!=null?` &middot; ${st.oldestDays}d`:''}</span>` : ''}
+      </div>`;
+    }).join('')}</div>`;
   } else {
     html += `<div class="q-client-ac-empty">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 14l9-5.5"/><path d="M3 8.5v9A1.5 1.5 0 0 0 4.5 19h15a1.5 1.5 0 0 0 1.5-1.5v-9"/><path d="M3 8.5 11 4a2 2 0 0 1 2 0l8 4.5"/></svg>
@@ -5234,11 +5275,64 @@ function renderClientHistoryBox(){
   ).length;
   renderClientUsualBuys(nameLower);
   if(!customer && priorOrders===0){ box.classList.remove('show'); box.innerHTML=''; return; }
-  const debt = customer ? Number(customer.debt)||0 : 0;
-  const parts = [`<b>${priorOrders}</b> previous order${priorOrders===1?'':'s'}`];
-  if(debt>0) parts.push(`<span class="owed">owes ${fmtUGX(debt)}</span>`);
-  box.innerHTML = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg><span>${parts.join(' &middot; ')}</span>`;
+  // What they owe is no longer one item in a dot-separated list beside the
+  // order count. A balance is a decision input at the moment stock is
+  // about to go out of the door, so it gets its own block and carries the
+  // age that makes it mean something.
+  const standing = customerDebtStanding(customer);
+  box.innerHTML = `<div class="q-client-line">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      <span><b>${priorOrders}</b> previous order${priorOrders===1?'':'s'}</span>
+    </div>${debtStandingHTML(standing)}`;
   box.classList.add('show');
+}
+// How long this customer's OLDEST unpaid invoice has been unpaid, and how
+// many are open. A balance on its own does not tell you anything: 200,000
+// three days old is a normal trading position, 1,340,000 at forty-seven
+// days is a conversation to have before you hand over more stock. The
+// quote screen showed only the figure, as one item in a dot-separated
+// list next to the order count, which is where a number goes to be
+// ignored.
+//
+// customerOutstandingInvoices() already returns them oldest first, so the
+// age is simply the head of that list. Nothing new is computed or stored.
+function customerDebtStanding(customer){
+  if(!customer) return null;
+  const owed = Number(customer.debt)||0;
+  if(!(owed>0)) return null;
+  const open = customerOutstandingInvoices(customer.id);
+  const oldest = open.length ? open[0] : null;
+  const since = oldest ? (oldest.invoicedAt || oldest.date || null) : null;
+  return {
+    owed,
+    openCount: open.length,
+    oldestDays: since ? daysSinceDate(since) : null,
+    oldestLabel: oldest ? invoiceNumberLabel(oldest) : null,
+  };
+}
+// Three bands, chosen against how this shop actually trades rather than
+// arbitrarily: inside a month is ordinary credit, 30-60 days is late, past
+// 60 is the pool the dashboard already flags. An unknown age never
+// escalates -- it is missing information, not evidence of a problem.
+function debtStandingBand(standing){
+  if(!standing) return null;
+  const d = standing.oldestDays;
+  if(d == null) return 'open';
+  if(d >= 60) return 'severe';
+  if(d >= 30) return 'late';
+  return 'open';
+}
+function debtStandingHTML(standing){
+  const band = debtStandingBand(standing);
+  if(!band) return '';
+  const age = standing.oldestDays == null
+    ? 'age unknown'
+    : `${standing.oldestDays} day${standing.oldestDays===1?'':'s'} old`;
+  const count = standing.openCount > 1 ? ` &middot; ${standing.openCount} unpaid invoices` : '';
+  return `<div class="q-debt-standing ${band}">
+    <span class="qds-amt">Owes ${esc(fmtUGX(standing.owed))}</span>
+    <span class="qds-age">${esc(age)}${count}</span>
+  </div>`;
 }
 function selectClientFromCustomer(id){
   const c = data.customers.find(x=>x.id===id); if(!c) return;
