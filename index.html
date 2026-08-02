@@ -8824,6 +8824,18 @@ function resetSupplierForm(){
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
 }
 function deleteSupplier(id){
+  // Refused while money is still owed to them.
+  //
+  // The Creditors List is built by mapping data.suppliers, so deleting a
+  // supplier does not clear the debt -- it hides it. The purchase invoices
+  // stay on file with their balances intact, pointing at a supplier that no
+  // longer exists, and the list they used to appear in simply totals less.
+  // Same shape as deleteCustomerDebtLog(): refuse, and say what to do.
+  const owed = creditorTotalOwed(id);
+  if(owed > 0.5){
+    toast(`You still owe this supplier ${fmtUGX(Math.round(owed))}. Settle or void their purchase invoices first — deleting them now would only hide it.`, 6000);
+    return;
+  }
   if(!confirm('Delete this supplier? Price entries referencing it will remain but show a blank supplier.')) return;
   data.suppliers = data.suppliers.filter(s=>s.id!==id);
   saveData(); renderSuppliers();
@@ -9711,6 +9723,18 @@ function resetCustomerForm(){
   document.getElementById('customerFormTitle').textContent = 'Add customer';
 }
 function deleteCustomer(id){
+  // Refused while they still owe, for the same reason as deleteSupplier():
+  // the Debtors List maps data.customers, so this hides the balance rather
+  // than clearing it, and any invoices in their name keep their balance due.
+  const c = data.customers.find(x=>x.id===id);
+  const owed = c ? Math.round(Number(c.debt)||0) : 0;
+  const openInvoices = customerOutstandingInvoices(id).length;
+  if(owed > 0 || openInvoices > 0){
+    toast(owed > 0
+      ? `${c && c.name ? c.name : 'This customer'} still owes ${fmtUGX(owed)}. Settle or write it off first — deleting them now would only hide it.`
+      : `${c && c.name ? c.name : 'This customer'} has ${openInvoices} unsettled invoice${openInvoices===1?'':'s'}. Settle or void ${openInvoices===1?'it':'them'} first.`, 6000);
+    return;
+  }
   if(!confirm('Delete this customer? Their debt history will be removed too.')) return;
   data.customers = data.customers.filter(c=>c.id!==id);
   saveData(); renderCustomers(document.getElementById('c_search').value);
