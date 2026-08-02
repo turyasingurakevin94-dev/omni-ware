@@ -24,8 +24,13 @@ const sharedJs = read('shared-worker.js');
 
 /* ---------- 1. a save writes only what this app owns ------------------ */
 {
+  // Where the SERVER has the order right now. 'preparing' for every case
+  // below except section 5, which is about the server having moved on.
+  let serverStatus = 'preparing';
+
   const scope = compileScope([
     extractDeclaration(workerHtml, 'WORKER_OWNED_KEYS', 'worker.html'),
+    extractDeclaration(workerHtml, 'WORKER_STATUS_MOVES', 'worker.html'),
     extractFunction(workerHtml, 'mergePickState', 'worker.html'),
     extractFunction(workerHtml, 'mergeOntoServerRows', 'worker.html'),
     'function __ownedKeys(){ return WORKER_OWNED_KEYS.slice(); }',
@@ -38,7 +43,7 @@ const sharedJs = read('shared-worker.js');
               // What the server holds NOW -- an admin took a 500,000
               // payment after this worker's app last loaded.
               data: ids.map((id) => ({
-                id, shop_id: 'shop-1', status: 'preparing', amount_paid: 500000, invoiced: false,
+                id, shop_id: 'shop-1', status: serverStatus, amount_paid: 500000, invoiced: false,
                 payload: {
                   client: { name: 'Achen' }, payments: [{ amount: 500000, cashTxnId: 7 }],
                   customerId: 'C001', debtCharged: 0,
@@ -179,6 +184,43 @@ const sharedJs = read('shared-worker.js');
         'finishing a pick checks the order is still being prepared before moving it');
       t.check(iGuard < fin.indexOf("q.pickingStatus = 'done'"),
         'the check happens before anything is mutated, so a stale finish changes nothing');
+
+      // That guard reads the LOCAL status, which is the stale one -- it can
+      // only catch a worker acting on a screen they can see is out of date.
+      // The save is where a snapshot hours old actually meets the truth, and
+      // it took local.status outright, so an order the admin had completed
+      // at 11 was back to unfinished work the next time that phone saved
+      // anything about it. The rule was already written in the comment
+      // above the line; it just wasn't the code.
+      const merge = async (server, localStatus) => {
+        serverStatus = server;
+        const [row] = await scope.mergeOntoServerRows('shop-1', [{
+          id: 12, shop_id: 'shop-1', status: localStatus, amount_paid: 0,
+          payload: { items: [{ productName: 'Rebar', qty: 2, pickStatus: 'done' }], pickingStatus: 'done' },
+        }]);
+        return row.status;
+      };
+
+      const CASES = [
+        // [server has, this app sends, must end up]  -- the real moves
+        ['preparing', 'pending_delivery', 'pending_delivery', 'a finished pick still moves the order on'],
+        ['draft', 'preparing', 'preparing', 'taking on the next order still promotes it'],
+        ['draft', 'pending_delivery', 'pending_delivery', "finishing a draft pick still lands, as that function's own guard allows"],
+        // ...and the stale ones
+        ['completed', 'preparing', 'completed', 'an order completed since this app loaded is not reopened'],
+        ['completed', 'pending_delivery', 'completed', 'nor by a finish this app had already sent once'],
+        ['pending_delivery', 'preparing', 'pending_delivery', 'an order already out for delivery is not pulled back to being prepared'],
+        // ...and the no-ops
+        ['preparing', 'preparing', 'preparing', 'a save that moves nothing leaves the status alone'],
+        ['completed', 'completed', 'completed', 'including at the end of the line'],
+      ];
+      let bad = 0;
+      for (const [server, sent, want, label] of CASES) {
+        const got = await merge(server, sent);
+        if (got !== want) { bad++; t.fail(`${label} — server ${server} + app sending ${sent} gave ${got}, wanted ${want}`); }
+      }
+      if (!bad) t.pass(`the server's status wins unless this app is making a move it actually makes (${CASES.length} cases)`);
+      serverStatus = 'preparing';
     }
 
     /* ---------- 6. backing out of delivery leaves the order visible ---- */

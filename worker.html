@@ -428,6 +428,16 @@ const WORKER_OWNED_KEYS = [
   'stageEnteredAt'
 ];
 
+// The only status moves this app makes, keyed by where the order has to be
+// for the move to mean anything: finishPreparingOrder sends a pick it has
+// just completed to pending_delivery (its own guard admits draft as well as
+// preparing), and autoAssignNextOrder promotes the draft it takes on next.
+// Anything else arriving from here is not a move, it is a stale snapshot.
+const WORKER_STATUS_MOVES = {
+  preparing: ['pending_delivery'],
+  draft: ['preparing', 'pending_delivery'],
+};
+
 // Pick state lives on the items, so it has to be merged onto the SERVER's
 // items rather than replacing them. If the counts differ the admin has
 // edited the order since this app loaded -- their version wins and the pick
@@ -443,11 +453,16 @@ function mergePickState(serverItems, localItems){
   }));
 }
 
-// This app loads once at boot and never refreshes on its own, so `data` can
-// be hours old by the time a pick is finished. Sending the whole row back
-// would overwrite everything the admin has done to it since -- a payment
-// recorded at 10am is gone the moment an 8am snapshot saves at 11am, and
-// nothing anywhere would report it.
+// `data` here is a snapshot, and it can be old. startWorkerPolling refreshes
+// it every WORKER_POLL_MS, but deliberately not while the app is hidden, not
+// within the quiet period after a touch, not while the delivery picker is
+// open, and not at all when the refresh itself fails -- which offline, in a
+// stockroom, means indefinitely. Every one of those gaps is a moment a
+// worker is tapping, and therefore saving.
+//
+// Sending the whole row back would overwrite everything the admin has done
+// to it since -- a payment recorded at 10am is gone the moment an 8am
+// snapshot saves at 11am, and nothing anywhere would report it.
 //
 // So a save re-reads the rows it is about to touch and lays only the fields
 // above onto the server's current version. A read-modify-write is the wrong
@@ -466,10 +481,21 @@ async function mergeOntoServerRows(shopId, rows){
     const payload = {...serverPayload};
     WORKER_OWNED_KEYS.forEach(k=>{ payload[k] = localPayload[k]; });
     payload.items = mergePickState(serverPayload.items, localPayload.items);
-    // status is worker-owned only in the one direction this app moves it
-    // (preparing -> pending_delivery, in finishPreparingOrder). Anywhere
-    // else the server's is authoritative.
-    return {...server, status: local.status, payload};
+    // status is worker-owned only in the directions this app moves it;
+    // anywhere else the server's is authoritative. That was the stated rule
+    // but not the code, which took local.status outright.
+    //
+    // So a "still preparing" that only means the poll has not come round yet
+    // was written back as fact. An order the admin completed while the
+    // worker was tapping -- each tap holding the next refresh off -- was
+    // reopened as unfinished work on the board by that worker's next save,
+    // with nothing to show why it had reappeared.
+    //
+    // Judged against the SERVER's status, so a real move is still written
+    // through and a stale one no longer drags the order backward.
+    const moves = WORKER_STATUS_MOVES[server.status] || [];
+    const status = moves.includes(local.status) ? local.status : server.status;
+    return {...server, status, payload};
   });
 }
 
