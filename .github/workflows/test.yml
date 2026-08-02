@@ -1,0 +1,34 @@
+name: Tests
+
+# Every push and every PR, on all branches. Deliberately no `paths:` filter:
+# these tests read the app HTML, the shared worker, the edge functions AND
+# the migrations, and several assert that two of those agree with each other
+# -- so almost any change can break them, and a filter would mostly serve to
+# hide the ones that did.
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 20 rather than whatever is newest: matches the APK workflow, and
+      # pinning an LTS is what catches syntax that happens to run on a very
+      # recent local Node but would not run for everyone else.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No `npm ci` on purpose. The suite requires nothing but `fs` and
+      # `path`; the dependencies in package.json are Capacitor's, for the
+      # APK build. Installing them here would add a minute to every run and
+      # give the tests a way to fail for reasons that have nothing to do
+      # with the code under test.
+      - name: Run tests
+        run: npm test

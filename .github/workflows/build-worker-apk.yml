@@ -34,6 +34,15 @@ jobs:
         with:
           node-version: '20'
 
+      # Before the install, since the suite needs no dependencies -- so a
+      # failure here costs seconds rather than a whole toolchain setup.
+      # The APK ships worker-www/, and one of these checks is that it still
+      # matches the root files it is copied from; building a drifted or
+      # unparseable app and handing someone the artifact is the outcome
+      # worth preventing.
+      - name: Run tests
+        run: npm test
+
       - name: Install npm dependencies
         run: npm ci
 
