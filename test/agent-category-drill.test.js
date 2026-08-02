@@ -50,10 +50,13 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 /* ---------- 3. it says where you are, and how much is here ---------- */
 {
-  t.check(/class="ag-crumb-here">\$\{esc\(browseCategoryFilter\)\}\$\{sub\}/.test(code),
+  t.check(/class="ag-crumb-here">\$\{esc\(browseCategoryFilter\)\}<\/span>/.test(code),
     'the section names the category');
-  t.check(/browseSubcategoryFilter \? ` <span class="ag-crumb-sub">/.test(code),
-    'and the subcategory when one is chosen, with a real space before it');
+  // And NOT the subcategory. Its chip sits highlighted directly below, so
+  // "Furniture / Cabinet hinges" above a lit "Cabinet hinges" chip says
+  // the same thing twice and makes the header the longest line on screen.
+  t.check(!/ag-crumb-sub/.test(code),
+    'and does not repeat the subcategory, which its own chip already shows');
   t.check(/class="ag-crumb-n">\$\{groups\.length\} item\$\{groups\.length===1\?'':'s'\}/.test(code),
     'and how many items are in it');
 
