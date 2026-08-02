@@ -180,6 +180,49 @@ const code = strip(js);
     'and --accent-ink is a dark ink, not white');
 }
 
+/* ---------- 7b. the variant appears once ---------------------------- */
+/*
+ * Both writers of an order line bake the variant into productName -- the
+ * admin's quote builder through productVariantLabel(), and
+ * agent-submit-order the same way -- because every surface in the admin
+ * prints that string and none of them resolve the variant themselves.
+ *
+ * This card is the exception: pickItemVariantLabel() resolves it, on its
+ * own line under the name. Printing the stored name as well gave every
+ * variable item its variant twice, on the one screen where a picker is
+ * deciding which of two similar things to take off the shelf:
+ *
+ *     Cabinet Hinge — Brass
+ *     Brass
+ */
+{
+  const sw = read('shared-worker.js');
+  t.check(/<div class="wv-carousel-name">\$\{esc\(\(product && product\.name\) \|\| it\.productName \|\| 'Item'\)\}<\/div>/.test(sw),
+    'the card names the product, leaving the variant to the line below it');
+  t.check(/\$\{variant \? `<div class="wv-carousel-variant">\$\{esc\(variant\)\}<\/div>` : ''\}/.test(sw),
+    'which still renders, and only when there is one');
+  t.check(!/<div class="wv-carousel-name">\$\{esc\(it\.productName\|\|'Item'\)\}/.test(sw),
+    'the stored name is no longer printed as the heading');
+
+  // What the two together produce, stated over the real shapes.
+  const products = [{ id: 'P900', name: 'Cabinet Hinge', variants: [{ combo: { Finish: 'Brass' } }, { combo: { Finish: 'Steel' } }] }];
+  const heading = (it) => {
+    const p = products.find(x => x.id === it.productId);
+    return (p && p.name) || it.productName || 'Item';
+  };
+  const adminLine = { productId: 'P900', variantIdx: 0, productName: 'Cabinet Hinge — Brass' };
+  const agentLine = { productId: 'P900', variantIdx: 1, productName: 'Cabinet Hinge — Steel' };
+  t.check(heading(adminLine) === 'Cabinet Hinge', 'an admin-built line heads with the product');
+  t.check(heading(agentLine) === 'Cabinet Hinge', 'and so does an agent-submitted one');
+  t.check(!heading(adminLine).includes('Brass') && !heading(agentLine).includes('Steel'),
+    'neither heading repeats what the variant line is about to say');
+
+  // The one case where the stored name is all there is.
+  t.check(heading({ productId: 'GONE', variantIdx: 0, productName: 'Deleted Thing — Red' }) === 'Deleted Thing — Red',
+    'a product deleted out from under an order still on the board keeps the name the line remembers');
+  t.check(heading({ productId: 'GONE' }) === 'Item', 'and a line with neither still says something');
+}
+
 /* ---------- 8. the APK copy carries all of it ------------------------ */
 /*
  * worker-www/ is what the Android build ships. A change that lands only in

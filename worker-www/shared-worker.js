@@ -554,12 +554,25 @@ function renderWorkerPickStepper(q){
     // in packs at all.
     const qtyLabel = it.packUnit ? 'Pack' : 'Quantity';
     const variant = pickItemVariantLabel(it, product);
+    // The PRODUCT's name, not the line's stored one. Both writers of an
+    // order line bake the variant into productName -- the admin's quote
+    // builder via productVariantLabel(), and agent-submit-order the same
+    // way -- because every surface in the admin prints that string and
+    // none of them resolve the variant. This card is the exception: it
+    // resolves the variant itself, one line down. Printing the stored name
+    // as well gave every variable item its variant twice:
+    //
+    //     Cabinet Hinge — Brass
+    //     Brass
+    //
+    // Falls back to the stored name, which is all there is once a product
+    // has been deleted out from under an order still on the board.
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
         <div class="wv-carousel-photo">${ipStageThumbHTML(product||{})}</div>
         <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
         <div class="wv-carousel-body">
-          <div class="wv-carousel-name">${esc(it.productName||'Item')}</div>
+          <div class="wv-carousel-name">${esc((product && product.name) || it.productName || 'Item')}</div>
           ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
           <div class="wv-carousel-qty-label">${esc(qtyLabel)}</div>
           <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
