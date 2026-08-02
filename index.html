@@ -5303,6 +5303,37 @@ document.getElementById('q_date').addEventListener('change', (e)=>{ ensureQuote(
 // typing a variant word (e.g. "black") surfaces that specific variant as
 // its own result, and clicking it keeps the variant in view rather than
 // collapsing back to the bare parent product name.
+// What an order line should be called on screen and on paper.
+//
+// Every surface that shows a line -- the tracking board, the order edit
+// view, the A5 invoice a customer is handed, the WhatsApp share, the
+// supplier receipt, the purchase invoice generated from the order, and the
+// search haystacks -- prints it.productName. Not one of them resolves the
+// variant from it.variantIdx.
+//
+// The admin's own quote builder bakes the variant into that name.
+// agent-submit-order wrote the bare product name, so a variable item
+// ordered by an agent arrived saying only "Cabinet Hinge", with nothing
+// anywhere to say which finish -- through to what the shop picks and what
+// the customer is invoiced for.
+//
+// Fixed at the writer. This repairs the orders already in the database,
+// and leaves a name that already carries its variant alone.
+function itemDisplayName(it){
+  const name = String((it && it.productName) || '');
+  if(!it || it.variantIdx == null || it.variantIdx === '') return name;
+  const p = data.products.find(x=>x.id===it.productId);
+  const v = p && Array.isArray(p.variants) ? p.variants[it.variantIdx] : null;
+  if(!v) return name;
+  const label = variantLabel(v.combo || {});
+  if(!label || name.includes(label)) return name;
+  return `${name} — ${label}`;
+}
+// Applied once on load, over the two collections whose lines are printed.
+function backfillOrderVariantNames(){
+  (data.savedQuotes||[]).forEach(q=>{ (q.items||[]).forEach(it=>{ it.productName = itemDisplayName(it); }); });
+  (data.purchaseInvoices||[]).forEach(pi=>{ (pi.items||[]).forEach(it=>{ it.productName = itemDisplayName(it); }); });
+}
 function productVariantLabel(p, variantIdx){
   if(variantIdx==null || variantIdx==='' || !p.variants) return p.name;
   const v = p.variants[variantIdx];
@@ -14756,6 +14787,10 @@ async function boot(){
   try{
     await ensureAuthAndShop();
     data = await loadData(currentShopId);
+    // Before initLastSynced, so repairing a name reads as the state we
+    // loaded rather than as an edit -- otherwise every order on the books
+    // would upsert itself on boot.
+    backfillOrderVariantNames();
     initLastSynced(data, currentShopId);
     // Reserve this session's row id blocks before anything can be created.
     // Awaited so the first save of the session already uses server-issued

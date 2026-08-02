@@ -329,10 +329,24 @@ Deno.serve(async (req) => {
           : (Number(promo.bonus_value) / 100) * priced.floorPrice * Number(it.qty))
         : 0;
 
+      // The variant belongs IN the name, matching what the admin's own
+      // quote builder stores (productVariantLabel, index.html).
+      //
+      // Every admin surface -- the tracking board, the order edit view, the
+      // customer's A5 invoice, the WhatsApp share, the supplier receipt and
+      // the purchase invoice generated from the order -- prints
+      // productName and none of them look the variant up from variantIdx.
+      // Writing the bare product name here meant a variable item ordered by
+      // an agent arrived with no indication of WHICH variant, all the way
+      // through to the paperwork the customer and the supplier are handed.
+      const variantCombo = variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]
+        ? Object.values(product.variants[variantIdx].combo || {}).join(" / ")
+        : "";
+
       lineItems.push({
         productId: product.id,
         variantIdx,
-        productName: product.name,
+        productName: variantCombo ? `${product.name} — ${variantCombo}` : product.name,
         unit: priced.unit,
         packUnit: priced.packUnit,
         packQty: priced.packQty,
