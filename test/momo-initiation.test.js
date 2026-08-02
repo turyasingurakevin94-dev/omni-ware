@@ -27,6 +27,16 @@ const mtnHook = read('supabase/functions/mtn-payment-webhook/index.ts');
 const statusFn = read('supabase/functions/check-momo-payment-status/index.ts');
 const airtelCb = read('supabase/functions/airtel-collection-callback/index.ts');
 
+// Every deployed Edge Function directory that has an index.ts, so checks
+// below can search for a pattern instead of trusting a hand-written list.
+function fnDirs() {
+  const fs = require('fs'), path = require('path');
+  const root = path.join(__dirname, '..', 'supabase', 'functions');
+  return fs.readdirSync(root, { withFileTypes: true })
+    .filter(d => d.isDirectory() && fs.existsSync(path.join(root, d.name, 'index.ts')))
+    .map(d => d.name).sort();
+}
+
 /* ---------- 1. phone numbers ------------------------------------------ */
 /*
  * Agents type these however they think of them, and the two providers want
@@ -124,7 +134,20 @@ const { normaliseUgandaMsisdn } = compileScope(
   t.check(covers(600000, 500000) === true, 'an overpayment still releases it');
 }
 {
-  [['mtn-payment-webhook', mtnHook], ['check-momo-payment-status', statusFn]].forEach(([name, src]) => {
+  /*
+   * This used to name the two functions it knew about. A third copy of
+   * applyMomoPaymentToOrder lived in airtel-payment-webhook and was never
+   * on the list, so it kept marking orders paid for whatever arrived and
+   * the suite stayed green. Enumerating the copies is what hid the bug, so
+   * this now DISCOVERS every copy: a fourth one cannot opt out by not
+   * being mentioned here.
+   */
+  const carriers = fnDirs()
+    .map(name => [name, read(`supabase/functions/${name}/index.ts`)])
+    .filter(([, src]) => /function applyMomoPaymentToOrder/.test(src));
+  t.check(carriers.length >= 3,
+    `every copy of applyMomoPaymentToOrder is found by search, not by name (found ${carriers.length}: ${carriers.map(c => c[0]).join(', ')})`);
+  carriers.forEach(([name, src]) => {
     t.check(/if \(newAmountPaid \+ 0\.5 >= orderTotal\) nextPayload\.agentPaymentStatus = "paid";/.test(src),
       `${name} only marks an order paid once the money covers it`);
     t.check(!/payload: \{ \.\.\.payload, payments, agentPaymentStatus: "paid" \}/.test(src),
@@ -132,11 +155,10 @@ const { normaliseUgandaMsisdn } = compileScope(
   });
   t.check(/if \(amount >= owed\)/.test(airtelCb),
     'airtel-collection-callback still holds the same rule it always did');
-}
-{
-  // All three bank the money regardless -- a short payment is still money
+
+  // They all bank the money regardless -- a short payment is still money
   // received, and the earlier bug was it vanishing entirely.
-  [['mtn-payment-webhook', mtnHook], ['check-momo-payment-status', statusFn], ['airtel-collection-callback', airtelCb]].forEach(([name, src]) => {
+  carriers.concat([['airtel-collection-callback', airtelCb]]).forEach(([name, src]) => {
     t.check(/from\("cash_txns"\)\s*\.insert|from\("cash_txns"\)\.insert/.test(src.replace(/\n\s*/g, '')),
       `${name} banks the money before deciding whether it releases the order`);
   });
@@ -167,6 +189,64 @@ const { normaliseUgandaMsisdn } = compileScope(
     'the agent identity comes from the database, not from the request');
   t.check(initSrc.indexOf('current_agent_id') < initSrc.indexOf('agent_mobile_payments'),
     'identity is established before anything is written');
+}
+
+/* ---------- 7. the second Airtel path ---------------------------------- */
+/*
+ * airtel-collection-initiate is a parallel Airtel implementation on its own
+ * ledger table (airtel_transactions), and no client calls it -- the agent
+ * app goes through agent-initiate-momo-payment for both providers. It is
+ * still deployed and ACTIVE though, so any signed-in agent can reach it,
+ * and it carried the exact three bugs that were fixed in its twin: the
+ * amount came from the request body, the owed figure was the order total
+ * with amount_paid never fetched, and nothing stopped a second push.
+ *
+ * These checks hold it level with the twin for as long as it exists. If the
+ * path is retired, delete this block with it.
+ */
+{
+  const airtelInit = read('supabase/functions/airtel-collection-initiate/index.ts');
+  const code = airtelInit.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
+
+  t.check(!/\bamount\b[^\n]*\}\s*=\s*body/.test(code),
+    'the request body amount is not destructured, so it cannot be spent by accident');
+  t.check(/Number\(amount\)\s*>\s*0\s*\?/.test(code) === false,
+    'the pushed amount is no longer whatever the caller asked for');
+  t.check(/select\("payload, amount_paid"\)/.test(code),
+    'amount_paid is fetched so the balance can be worked out');
+  t.check(/amountOwed\(quote\.payload\)\s*-\s*alreadyPaid/.test(code),
+    'and the push is for the balance, not the order total');
+
+  t.check(/function normaliseUgandaMsisdn/.test(code) && /normaliseUgandaMsisdn\(rawMsisdn\)/.test(code),
+    'the msisdn goes through the same normaliser as the twin');
+  t.check(!/replace\(\/\^\\\+\?256\/, ""\)/.test(code),
+    'the old prefix-only strip, which left a local 0 in place, is gone');
+
+  t.check(/from\("airtel_transactions"\)[\s\S]{0,220}?\.eq\("status", "pending"\)/.test(code)
+    && /PENDING_REUSE_MS/.test(code),
+    'a second push inside the reuse window hands back the outstanding request');
+  t.check(code.includes('in_flight_lookup') && code.indexOf('in_flight_lookup') < code.indexOf('crypto.randomUUID'),
+    'the duplicate check runs before a new reference is minted');
+}
+{
+  // The normaliser is the twin's, so the local form an agent types is the
+  // case that has to work. Extraction is guarded: when the function is
+  // absent this has to say so as a failed check, not die with a stack
+  // trace and take every check after it down as well.
+  let n = null, extractErr = null;
+  try {
+    ({ normaliseUgandaMsisdn: n } = compileScope(
+      [extractFunction(read('supabase/functions/airtel-collection-initiate/index.ts'), 'normaliseUgandaMsisdn', 'airtel-collection-initiate')],
+      {}, ['normaliseUgandaMsisdn'], { typescript: true },
+    ));
+  } catch (e) { extractErr = e; }
+  t.check(typeof n === 'function',
+    `airtel-collection-initiate defines normaliseUgandaMsisdn${extractErr ? ` (${extractErr.message})` : ''}`);
+  const call = v => { try { return n(v); } catch { return undefined; } };
+  t.check(call('0772123456')?.local === '772123456', 'a local 0772... loses its zero');
+  t.check(call('+256772123456')?.local === '772123456', 'an international +256 form normalises the same');
+  t.check(call('256772123456')?.local === '772123456', 'and a bare 256 form too');
+  t.check(call('0712345') === null, 'a number that is too short is refused, not truncated');
 }
 
 process.exit(t.done() ? 1 : 0);

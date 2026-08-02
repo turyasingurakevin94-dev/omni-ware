@@ -32,6 +32,19 @@ const PAYMENTS_PATH = IS_SANDBOX ? "/simulate/merchant/v2/payments/" : "/merchan
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// Same window as agent-initiate-momo-payment's guard.
+const PENDING_REUSE_MS = 3 * 60 * 1000;
+
+// Kept identical to agent-initiate-momo-payment's copy.
+function normaliseUgandaMsisdn(raw: string) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  let local = digits;
+  if (local.startsWith("256")) local = local.slice(3);
+  else if (local.startsWith("0")) local = local.slice(1);
+  if (!/^7\d{8}$/.test(local)) return null;
+  return { local, international: `256${local}` };
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -92,7 +105,9 @@ Deno.serve(async (req) => {
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
-    const { shopId, quoteId, msisdn, amount, reference } = body;
+    // `amount` is deliberately NOT read from the body -- it is computed from
+    // the order below. Callers may still send it; it is ignored.
+    const { shopId, quoteId, msisdn, reference } = body;
     if (!shopId || !quoteId) {
       return json({ error: "shopId and quoteId are required" }, 400);
     }
@@ -117,7 +132,7 @@ Deno.serve(async (req) => {
 
     const { data: quote, error: quoteErr } = await admin
       .from("saved_quotes")
-      .select("payload")
+      .select("payload, amount_paid")
       .eq("id", quoteId)
       .eq("shop_id", shopId)
       .maybeSingle();
@@ -129,15 +144,40 @@ Deno.serve(async (req) => {
       return json({ error: "This order is already paid" }, 409);
     }
 
-    const owed = amountOwed(quote.payload);
-    const payAmount = Number(amount) > 0 ? Number(amount) : owed;
-    if (!(payAmount > 0)) return json({ error: "Nothing owed on this order" }, 400);
+    // What is still OWED, computed here -- never the `amount` in the request
+    // body. A caller could name any figure, and the callback adds whatever
+    // arrives to amount_paid. This mirrors agent-initiate-momo-payment.
+    const alreadyPaid = Number(quote.amount_paid) || 0;
+    const payAmount = Math.round(amountOwed(quote.payload) - alreadyPaid);
+    if (!(payAmount > 0)) {
+      return json({ error: alreadyPaid > 0 ? "This order is already settled" : "Nothing owed on this order" }, 400);
+    }
 
     const rawMsisdn = msisdn || agent?.phone;
     if (!rawMsisdn) return json({ error: "No msisdn on file for this agent -- pass one explicitly" }, 400);
-    // Airtel's docs: "Do not send country code in msisdn."
-    const cleanMsisdn = String(rawMsisdn).replace(/^\+?256/, "").replace(/\D/g, "");
-    if (!cleanMsisdn) return json({ error: "Invalid msisdn" }, 400);
+    // Airtel's docs: "Do not send country code in msisdn." The old strip only
+    // handled a leading +256/256, so the local "0772..." an agent actually
+    // types kept its zero and went out as a number nobody owns.
+    const normalised = normaliseUgandaMsisdn(rawMsisdn);
+    if (!normalised) return json({ error: "That doesn't look like a Ugandan mobile number" }, 400);
+    const cleanMsisdn = normalised.local;
+
+    // A second push while the first is still outstanding is a double tap,
+    // not a second payment -- and the callback credits both if both are
+    // approved. Hand back the outstanding one instead.
+    const { data: inFlight, error: inFlightErr } = await admin
+      .from("airtel_transactions")
+      .select("reference, created_at, amount")
+      .eq("shop_id", shopId).eq("quote_id", quoteId).eq("status", "pending")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (inFlightErr) return json({ error: inFlightErr.message, stage: "in_flight_lookup" }, 500);
+    if (inFlight && Date.now() - new Date(inFlight.created_at).getTime() < PENDING_REUSE_MS) {
+      return json({
+        ok: true, reference: inFlight.reference, status: "pending",
+        reused: true, amount: Number(inFlight.amount),
+        message: "A payment request is already awaiting approval on this order",
+      });
+    }
 
     const txnRef = crypto.randomUUID().replace(/-/g, "");
     const { error: insertErr } = await admin.from("airtel_transactions").insert({
