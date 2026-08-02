@@ -668,36 +668,6 @@
   .ag-hist-group.needs{color:var(--accent);}
   .ag-hist-group-n{font-size:11.5px;font-weight:700;color:var(--ink-faint);letter-spacing:0;}
 
-  /* A quote line, as an editable row rather than a table row. Quantity is a
-     control here: changing it has to re-resolve the tier ladder, so it
-     opens the same panel the item was added through instead of being a
-     bare input that would quietly leave the floor price behind. */
-  .ag-qline{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px 13px;margin-bottom:9px;}
-  .ag-qline-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
-  .ag-qline-name{font-weight:700;font-size:14px;line-height:1.3;min-width:0;}
-  .ag-qline-variant{display:block;font-weight:500;font-size:12.5px;color:var(--ink-soft);margin-top:1px;}
-  .ag-qline-remove{all:unset;box-sizing:border-box;flex-shrink:0;cursor:pointer;width:44px;height:44px;margin:-11px -11px 0 0;
-    display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:var(--ink-faint);}
-  .ag-qline-remove:hover{background:var(--danger-bg);color:var(--danger);}
-  .ag-qline-remove:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;}
-  .ag-qline-remove .icon{width:16px;height:16px;}
-  .ag-qline-controls{display:flex;align-items:center;gap:8px;margin-top:9px;}
-  .ag-qline-qty{all:unset;box-sizing:border-box;cursor:pointer;min-height:44px;display:inline-flex;align-items:baseline;gap:4px;
-    padding:0 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);white-space:nowrap;}
-  .ag-qline-qty:hover{border-color:var(--accent);}
-  .ag-qline-qty:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-  .ag-qline-qty .n{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;}
-  .ag-qline-qty .u{font-size:12.5px;color:var(--ink-soft);font-weight:600;}
-  .ag-qline-times{color:var(--ink-faint);font-size:13px;flex-shrink:0;}
-  .ag-qline-rate{flex:1;min-width:0;position:relative;}
-  .ag-qline-rate input{width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:11px;
-    font-size:15px;font-weight:700;font-family:inherit;color:var(--ink);background:var(--panel);text-align:right;}
-  .ag-qline-rate input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-  .ag-qline-rate input.zero-margin{border-color:var(--danger);}
-  .ag-qline-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line);}
-  .ag-qline-amount{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;}
-  .ag-qline-profit{font-size:12.5px;font-weight:700;color:var(--good);font-variant-numeric:tabular-nums;}
-
   .ag-order-row-total{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .ag-order-earned{font-size:12px;color:var(--ink-faint);margin-top:3px;font-variant-numeric:tabular-nums;}
 
@@ -1202,12 +1172,20 @@
           <button type="button" id="ag_quoteview_client_btn" data-view="client">Client view</button>
         </div>
 
-        <!-- Your view is the working editor; Client view below is the
-             document. They were both receipt tables, which is how quantity
-             ended up as static text in a table cell with no way to change
-             it short of removing the line and adding it again. -->
         <div id="ag_quoteview_yours">
-          <div id="ag_cartWrap"></div>
+          <div class="ag-receipt-scroll">
+            <table class="ag-receipt-table">
+              <thead>
+                <tr>
+                  <th class="ag-receipt-qty">Qty</th>
+                  <th>Particulars</th>
+                  <th class="ag-receipt-rate">Rate</th>
+                  <th class="ag-receipt-remove"></th>
+                </tr>
+              </thead>
+              <tbody id="ag_cartWrap"></tbody>
+            </table>
+          </div>
           <div class="ag-quote-summary">
             <div class="ag-quote-stat"><div class="lbl">Total</div><div class="val" id="ag_cartTotalValue">UGX 0</div></div>
             <div class="ag-quote-stat profit"><div class="lbl">Your profit</div><div class="val" id="ag_cartProfitValue">UGX 0</div></div>
@@ -4500,14 +4478,9 @@ function openImageLightbox(src){
 // screen yet at that point to naturally absorb the extra taps the way
 // there would be once the panel is actually showing.
 let addPanelOpening = false;
-// editIndex re-opens the panel on an existing quote line instead of adding
-// a new one. It is the same panel deliberately: it is the only place that
-// re-resolves the tier ladder for a quantity, and quantity is exactly what
-// an agent comes back to change.
-async function openAddItemPanel(item, editIndex){
+async function openAddItemPanel(item){
   if(addPanelOpening) return;
   addPanelOpening = true;
-  const editing = Number.isInteger(editIndex) ? cart[editIndex] : null;
   // Resolved before the panel ever appears, so quantity, the tier
   // ladder, the price field, and the Add button all show up populated
   // on the very first paint instead of a disabled/"Loading…" skeleton
@@ -4575,7 +4548,7 @@ async function openAddItemPanel(item, editIndex){
       <div id="ag_ai_ladder_wrap"></div>
       <div class="field"><label id="ag_ai_price_label">Your price to the client</label><input id="ag_ai_price" type="number" min="0" step="any"></div>
       <div class="ag-price-guidance" id="ag_ai_guidance" style="display:none;"><span class="dot"></span><span id="ag_ai_guidance_text"></span></div>
-      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">${editing ? 'Update this line' : 'Add to quote'}</button>
+      <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
     </div>`;
   document.body.appendChild(el);
   el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
@@ -4589,18 +4562,6 @@ async function openAddItemPanel(item, editIndex){
   const guidanceEl = document.getElementById('ag_ai_guidance');
   const guidanceTextEl = document.getElementById('ag_ai_guidance_text');
   let earnedRow = null;
-  // What the agent is adding on top of the shop's floor, per base unit.
-  //
-  // Only ever set when reopening an existing line, and it is what makes
-  // editing a quantity safe: the tier moves, so the floor moves, and the
-  // price field is re-based on the NEW floor while keeping the margin the
-  // agent had already decided on. Resetting to the tier price instead --
-  // which is right when adding, where there is no prior intent -- meant
-  // going from 10 bags to 25 silently dropped their 8,000/bag and lit the
-  // "No margin set" warning on a line they had priced perfectly well.
-  let markupPerBase = editing
-    ? (Number(editing.agentSellPrice)||0) - (Number(editing.floorPrice)||0)
-    : null;
 
   // Advisory only -- never blocks or clamps what the agent types, it
   // just reflects their price against the shop's own "our price," so an
@@ -4620,17 +4581,7 @@ async function openAddItemPanel(item, editIndex){
     guidanceEl.style.display = 'flex';
     guidanceTextEl.textContent = text;
   }
-  priceEl.addEventListener('input', ()=>{
-    // Typing a new price while editing re-states the margin, so a later
-    // quantity change carries THAT intent forward rather than the one the
-    // line was opened with.
-    if(markupPerBase != null && earnedRow){
-      const usingPack = unitEl.value==='pack' && packQty>0;
-      const typed = Number(priceEl.value)||0;
-      markupPerBase = (usingPack && packQty>0 ? typed/packQty : typed) - earnedRow.unitPrice;
-    }
-    updateGuidance();
-  });
+  priceEl.addEventListener('input', updateGuidance);
 
   function currentBaseQty(){
     const raw = Number(qtyEl.value)||0;
@@ -4653,24 +4604,13 @@ async function openAddItemPanel(item, editIndex){
     } else {
       ladderWrap.innerHTML = '';
     }
-    const usingPack = unitEl.value==='pack' && packQty>0;
-    const priceUnit = usingPack ? packUnit : unit;
+    const priceUnit = unitEl.value==='pack' && packQty>0 ? packUnit : unit;
+    const priceValue = unitEl.value==='pack' && packQty>0 ? earnedRow.unitPrice*packQty : earnedRow.unitPrice;
     priceLabelEl.textContent = `Your price to the client (per ${priceUnit})`;
-    // Adding starts at the tier price. Editing starts at the floor plus the
-    // margin the agent already set -- which on the first render reproduces
-    // their price exactly, and after a quantity change re-prices it against
-    // the tier they have moved into.
-    const perBase = markupPerBase != null
-      ? Math.max(0, earnedRow.unitPrice + markupPerBase)
-      : earnedRow.unitPrice;
-    priceEl.value = Math.round(usingPack ? perBase*packQty : perBase);
+    priceEl.value = Math.round(priceValue);
     updateGuidance();
   }
   if(unitEl.value==='pack' && !(packQty>0)) unitEl.value = 'unit';
-  if(editing){
-    qtyEl.value = editing.displayQty != null ? editing.displayQty : (Number(editing.qty)||1);
-    unitEl.value = (packQty>0 && editing.displayUnit && editing.displayUnit===packUnit) ? 'pack' : 'unit';
-  }
   rerender();
 
   qtyEl.addEventListener('change', rerender);
@@ -4694,21 +4634,17 @@ async function openAddItemPanel(item, editIndex){
     const agentSellPrice = usingPack ? enteredPrice/packQty : enteredPrice;
     if(!(raw>0)){ toast('Enter a quantity'); return; }
     if(!(enteredPrice>=0)){ toast('Enter a price'); return; }
-    const line = {
+    cart.push({
       productId: item.productId, variantIdx: item.variantIdx, name: item.name, variantLabel: item.variantLabel,
       qty, unit, packUnit, packQty,
       displayQty: raw, displayUnit: usingPack ? packUnit : unit,
       tier: earnedRow ? earnedRow.tier : item.tier,
       floorPrice: earnedRow ? earnedRow.unitPrice : item.floorPrice, agentSellPrice,
-    };
-    // Replaced in place, so an edited line keeps its position in the quote
-    // rather than jumping to the bottom of a list the agent is reading.
-    if(editing) cart[editIndex] = line; else cart.push(line);
+    });
     document.body.removeChild(el);
     updateCartBadge();
     saveQuoteDraft();
-    if(editing) renderCartTab();
-    toast(editing ? 'Line updated' : 'Added to quote');
+    toast('Added to quote');
   });
 }
 
@@ -4740,25 +4676,15 @@ function renderCart(){
     // one place that gets caught, since every line ends up here before
     // it can be submitted.
     return `
-    <div class="ag-qline">
-      <div class="ag-qline-head">
-        <div class="ag-qline-name">${esc(it.name)}${it.variantLabel ? ` <span class="ag-qline-variant">${esc(it.variantLabel)}</span>` : ''}</div>
-        <button type="button" class="ag-qline-remove ag-cart-remove" data-idx="${i}" aria-label="Remove ${esc(it.name)} from the quote"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      </div>
-      <div class="ag-qline-controls">
-        <button type="button" class="ag-qline-qty" data-edit="${i}" aria-label="Change quantity of ${esc(it.name)}">
-          <span class="n">${esc(f.displayQty)}</span> <span class="u">${esc(f.displayUnit)}</span>
-        </button>
-        <span class="ag-qline-times" aria-hidden="true">&times;</span>
-        <span class="ag-qline-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any" aria-label="Your price per ${esc(f.displayUnit)} for ${esc(it.name)}"></span>
-      </div>
-      <div class="ag-qline-foot">
-        <span class="ag-qline-amount">${fmtUGX(f.amount)}</span>
-        ${f.noMargin
-          ? `<span class="ag-margin-flag">${ICON_WARN} No margin set</span>`
-          : `<span class="ag-qline-profit">${fmtUGX(f.profit)} yours</span>`}
-      </div>
-    </div>`;
+    <tr>
+      <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
+      <td>
+        <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
+        ${f.noMargin ? `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>` : ''}
+      </td>
+      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any"></td>
+      <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
+    </tr>`;
   }).join('');
   document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
   document.getElementById('ag_cartProfitValue').textContent = fmtUGX(profit);
@@ -4768,21 +4694,6 @@ function renderCart(){
       updateCartBadge();
       saveQuoteDraft();
       renderCartTab();
-    });
-  });
-  // Quantity reopens the add panel on this line rather than being an input
-  // of its own. Changing how many moves the tier, and the tier sets the
-  // floor price -- an inline number field would leave the line quoting
-  // against the floor for a quantity it no longer has, which is the one
-  // rule every other price path in this app already follows.
-  wrap.querySelectorAll('[data-edit]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const idx = Number(btn.dataset.edit);
-      const line = cart[idx];
-      if(!line) return;
-      const entry = catalogEntry(line.productId, line.variantIdx);
-      if(!entry){ toast('That product is no longer in the catalogue'); return; }
-      openAddItemPanel(entry, idx);
     });
   });
   // Live-patches the flag, total, and profit as the agent types, rather
@@ -4802,17 +4713,13 @@ function renderCart(){
       const previewSellPrice = baseQty>0 ? entered*displayQty/baseQty : entered;
       const rowNoMargin = previewSellPrice <= (Number(item.floorPrice)||0);
       input.classList.toggle('zero-margin', rowNoMargin);
-      // The line's own amount and margin move as the agent types, not just
-      // the totals at the bottom -- on a multi-line quote the figure being
-      // changed is the one they are looking at.
-      const line = input.closest('.ag-qline');
-      const foot = line.querySelector('.ag-qline-foot');
-      foot.querySelector('.ag-qline-amount').textContent = fmtUGX(previewSellPrice*baseQty);
-      const tail = foot.querySelector('.ag-margin-flag, .ag-qline-profit');
-      const tailHTML = rowNoMargin
-        ? `<span class="ag-margin-flag">${ICON_WARN} No margin set</span>`
-        : `<span class="ag-qline-profit">${fmtUGX((previewSellPrice - (Number(item.floorPrice)||0))*baseQty)} yours</span>`;
-      if(tail) tail.outerHTML = tailHTML; else foot.insertAdjacentHTML('beforeend', tailHTML);
+      const row = input.closest('tr');
+      const flagEl = row.querySelector('.ag-margin-flag');
+      if(rowNoMargin && !flagEl){
+        row.children[1].insertAdjacentHTML('beforeend', `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>`);
+      } else if(!rowNoMargin && flagEl){
+        flagEl.remove();
+      }
       let runningTotal = 0, runningProfit = 0;
       cart.forEach((it2,i2)=>{
         if(i2===idx){
@@ -4854,7 +4761,7 @@ function renderClientReceiptTable(){
     return `
     <tr>
       <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
-      <td><span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}</td>
+      <td><span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? `<span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}</td>
       <td class="ag-receipt-rate">${fmtAmount(f.rate)}</td>
       <td class="ag-receipt-amount">${fmtAmount(f.amount)}</td>
     </tr>`;
