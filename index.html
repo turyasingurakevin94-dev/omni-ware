@@ -875,6 +875,35 @@
   /* The buttons inside are their own targets and say so. */
   .customer-card button{cursor:pointer;}
 
+  /* ---- A repayment is due ---- */
+  .ld-intro{font-size:13px;color:var(--ink-soft);line-height:1.45;margin:0 0 14px;}
+  .ld-clear{font-size:14px;color:var(--good);margin:0;}
+  .ld-row{display:flex;align-items:center;gap:14px;padding:13px 14px;border:1px solid var(--line);
+    border-radius:10px;margin-bottom:10px;background:var(--panel);}
+  .ld-row.late{border-color:var(--ow-crimson-soft);background:var(--ow-crimson-soft);}
+  .ld-main{flex:1;min-width:0;}
+  .ld-lender{font-weight:700;font-size:14.5px;}
+  .ld-note{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4;}
+  .ld-row.late .ld-note{color:var(--danger);}
+  .ld-act{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;}
+  .ld-amount{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;
+    font-variant-numeric:tabular-nums;white-space:nowrap;}
+  @media (max-width:560px){
+    .ld-row{flex-direction:column;align-items:stretch;}
+    .ld-act{flex-direction:row;align-items:center;justify-content:space-between;}
+  }
+  .ln-due-banner{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:11px;
+    width:100%;margin-top:12px;padding:12px 15px;border-radius:10px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);border:1px solid #EBD8AE;
+  }
+  .ln-due-banner.late{background:var(--ow-crimson-soft);color:var(--danger);border-color:#EAC7C1;}
+  .ln-due-banner:hover{filter:brightness(0.97);}
+  .ln-due-banner:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .ln-due-text{font-size:13.5px;flex:1;min-width:0;}
+  .ln-due-cta{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;
+    background:rgba(255,255,255,0.6);border-radius:20px;padding:5px 12px;white-space:nowrap;}
+
   /* ---- What is on an order ---- */
   .op-steps{display:flex;list-style:none;margin:0 0 16px;padding:0;gap:6px;}
   .op-step{flex:1;min-width:0;display:flex;align-items:center;gap:8px;
@@ -4294,6 +4323,22 @@
   </div>
 </div>
 
+<!-- A REPAYMENT IS DUE -->
+<div class="modal-overlay" id="loanDueModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="loanDueTitle">A loan repayment is due</h2>
+      <button class="modal-close" id="loanDueClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="loanDueBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="loanDueSnooze">Remind me tomorrow</button>
+    </div>
+  </div>
+</div>
+
 <!-- WHAT IS ACTUALLY ON AN ORDER -->
 <div class="modal-overlay" id="orderPreviewModal">
   <div class="modal modal-wide">
@@ -7041,6 +7086,8 @@ document.getElementById('shortfallPlanClose').addEventListener('click', ()=>clos
 document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
 document.getElementById('customerStatsClose').addEventListener('click', ()=>closeModal('customerStatsModal'));
 document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
+document.getElementById('loanDueClose').addEventListener('click', ()=>closeModal('loanDueModal'));
+document.getElementById('loanDueSnooze').addEventListener('click', snoozeLoanDue);
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
@@ -18070,6 +18117,86 @@ const safeRatio = (num, den)=> (den > 0 || den < 0) ? num/den : null;
 
 // Instalments falling due in the next twelve months -- the part of the
 // borrowing that belongs with the payables rather than below them.
+/* ================= IS A REPAYMENT DUE =================================
+
+   A loan schedule that nobody looks at is a schedule nobody follows. The
+   agreement knows exactly what it wants and when, and the shop finds out
+   it was late when the lender rings.
+
+   CUMULATIVE, NOT PER-INSTALMENT. What matters is how much the agreement
+   has asked for by now against how much has actually been handed over.
+   Counting whole missed instalments gets both ends wrong: a shop that
+   paid a lump sum covering three months would read as three payments
+   behind, and one that has quietly underpaid every month for a year
+   would read as perfectly up to date.
+
+   An instalment belongs to a month, so it is DUE during that month and
+   OVERDUE once the month has passed. That is the only convention the
+   schedule can support -- its rows carry a month, not a day -- and
+   inventing a day of the month would be inventing a fact the loan does
+   not record. */
+function loanDuePosition(loan, asOfISO){
+  const asOf = asOfISO || todayISO();
+  const nowMonth = String(asOf).slice(0,7);
+  const rows = loanSchedule(loan);
+
+  const past = rows.filter(r=> r.month < nowMonth);
+  let askedBefore = 0, askedByNow = 0, thisMonth = 0, next = null;
+  rows.forEach(r=>{
+    if(r.month < nowMonth){ askedBefore += r.payment; askedByNow += r.payment; }
+    else if(r.month === nowMonth){ askedByNow += r.payment; thisMonth += r.payment; }
+    else if(!next){ next = r; }
+  });
+
+  const paid = loanRepayments(loan)
+    .filter(rp=> !rp.date || String(rp.date) <= asOf)
+    .reduce((s,rp)=> s + Math.max(0, Number(rp.amount)||0), 0);
+
+  const applied = loanApplied(loan, asOf);
+  // What it would take to close the loan today: the balance plus interest
+  // that has accrued since the last payment and has not been settled.
+  const payoff = Math.max(0, applied.balance + applied.accruedUnpaid);
+  const settled = payoff < 1;
+
+  const overdue = Math.max(0, askedBefore - paid);
+  // Capped at the payoff so a reminder can never ask for more than the
+  // loan is worth -- rounding across a long schedule otherwise leaves a
+  // few shillings being demanded on a loan that is already clear.
+  const dueNow = Math.min(Math.max(0, askedByNow - paid), payoff);
+
+  const status = settled ? 'settled'
+    : overdue > 0 ? 'overdue'
+    : dueNow > 0 ? 'due'
+    : 'upcoming';
+
+  return {
+    status, dueNow, overdue, thisMonth, paid, payoff,
+    // How many past instalments the money handed over does not reach.
+    // Walked cumulatively for the same reason the amounts are: a lump
+    // sum covering three months leaves none of them uncovered. Reported
+    // for the wording only -- every figure above stands without it.
+    monthsBehind: (()=>{
+      let acc = 0, behind = 0;
+      past.forEach(r=>{ acc += r.payment; if(acc - paid > 0.5) behind++; });
+      return behind;
+    })(),
+    next: next ? { month: next.month, payment: next.payment } : null,
+    month: nowMonth,
+  };
+}
+
+// Every loan wanting money right now, worst first. Overdue outranks
+// merely due, and within each the bigger sum comes first -- the order
+// somebody would work down the list in.
+function loansNeedingPayment(asOfISO){
+  return (data.loans||[])
+    .map(loan=> ({ loan, due: loanDuePosition(loan, asOfISO) }))
+    .filter(x=> x.due.status === 'overdue' || x.due.status === 'due')
+    .sort((a,b)=>
+      (a.due.status === b.due.status ? 0 : (a.due.status === 'overdue' ? -1 : 1))
+      || b.due.dueNow - a.due.dueNow);
+}
+
 function loansDueWithin(months, asOfISO){
   const asOf = asOfISO || todayISO();
   // Built from the year and month alone, never by adding months to the
@@ -18460,7 +18587,25 @@ function renderLoans(){
       <div class="sc-stat"><b>${owing.length}</b><span>Loan${owing.length===1?'':'s'} running</span></div>
       <div class="sc-stat"><b>${fmtUGX(Math.round(interestThisYear))}</b><span>Interest paid this year</span></div>
       <div class="sc-stat ${arrears>0?'bad':''}"><b>${fmtUGX(Math.round(arrears))}</b><span>Behind schedule</span></div>
-    </div>` : '';
+    </div>
+    ${(()=>{
+      /* The reminder is shown once a day and can be dismissed. That must
+         not be the only way to reach it -- a shopkeeper who closed it
+         this morning and has the money this afternoon needs a way back
+         in that does not involve waiting for tomorrow. */
+      const list = loansNeedingPayment();
+      if(!list.length) return '';
+      const late = list.filter(x=> x.due.status === 'overdue').length;
+      const total = list.reduce((s,x)=> s + x.due.dueNow, 0);
+      return `<button type="button" class="ln-due-banner ${late?'late':''}" id="ln_due_banner">
+        ${ICON_WALLET}
+        <span class="ln-due-text">${late
+          ? `${late} repayment${late===1?'':'s'} overdue`
+          : `${list.length} repayment${list.length===1?'':'s'} due this month`}
+          — <b>${fmtUGX(Math.round(total))}</b></span>
+        <span class="ln-due-cta">Pay now</span>
+      </button>`;
+    })()}` : '';
 
   const wrap = document.getElementById('ln_tableWrap');
   if(!loans.length){
@@ -18497,6 +18642,13 @@ function renderLoans(){
   wrap.querySelectorAll('.ln-perf').forEach(b=>b.addEventListener('click', ()=>openLoanPerformance(Number(b.dataset.id))));
   wrap.querySelectorAll('.ln-edit').forEach(b=>b.addEventListener('click', ()=>openLoanForm(Number(b.dataset.id))));
   wrap.querySelectorAll('.ln-delete').forEach(b=>b.addEventListener('click', ()=>deleteLoan(Number(b.dataset.id))));
+  const dueBanner = document.getElementById('ln_due_banner');
+  // Opens the same panel the daily reminder does, snoozed or not: asking
+  // for it is not the same as being interrupted by it.
+  if(dueBanner) dueBanner.addEventListener('click', ()=>{
+    renderLoanDueModal();
+    openModal('loanDueModal');
+  });
 }
 function openLoanPerformance(id){
   const l = (data.loans||[]).find(x=>x.id===id);
@@ -18577,6 +18729,107 @@ function openLoanPerformance(id){
   });
   openModal('loanPerfModal');
 }
+/* ---- Being reminded, and being able to act on the reminder ----------
+
+   A reminder that only tells you something is due sends you off to find
+   the screen that can do anything about it. This one carries the button:
+   accept, choose which account it came from, and the repayment and its
+   cash-book entry are both written from here.
+
+   Snoozed by DATE rather than by a flag, so "remind me tomorrow" cannot
+   turn into "never remind me again" -- the next day it is back. */
+const LOAN_DUE_SNOOZE_KEY = 'owLoanDueSnoozedThrough';
+/* The stored date is the last day suppressed, so the comparison is >=
+   and not >. With >, snoozing wrote today and then compared today > today
+   -- false -- and the reminder reopened the moment anything called it
+   again. "Remind me tomorrow" has to mean the rest of today is quiet. */
+function loanDueSnoozed(asOfISO){
+  const through = lsGet(LOAN_DUE_SNOOZE_KEY);
+  return !!through && String(through) >= String(asOfISO || todayISO());
+}
+function snoozeLoanDue(){
+  // Today is the last day suppressed; tomorrow the reminder is back.
+  lsSet(LOAN_DUE_SNOOZE_KEY, todayISO());
+  closeModal('loanDueModal');
+}
+
+function loanDueRowHTML({loan, due}){
+  const late = due.status === 'overdue';
+  return `<div class="ld-row ${late ? 'late' : ''}">
+    <div class="ld-main">
+      <div class="ld-lender">${esc(loan.lender)}</div>
+      <div class="ld-note">${late
+        ? `Behind by ${fmtUGX(Math.round(due.overdue))}${due.monthsBehind ? ` across ${due.monthsBehind} month${due.monthsBehind===1?'':'s'}` : ''}, and this month's instalment is on top of it.`
+        : `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
+    </div>
+    <div class="ld-act">
+      <div class="ld-amount">${fmtUGX(Math.round(due.dueNow))}</div>
+      <button type="button" class="btn btn-accent ld-pay" data-id="${loan.id}" data-amount="${Math.round(due.dueNow)}">Pay now</button>
+    </div>
+  </div>`;
+}
+
+function renderLoanDueModal(){
+  const list = loansNeedingPayment();
+  const body = document.getElementById('loanDueBody');
+  if(!list.length){
+    body.innerHTML = '<p class="ld-clear">Nothing is due. Every loan is up to date.</p>';
+    return list;
+  }
+  const overdue = list.filter(x=> x.due.status === 'overdue').length;
+  document.getElementById('loanDueTitle').textContent =
+    overdue ? `${overdue} loan repayment${overdue===1?'':'s'} overdue` : 'A loan repayment is due';
+  body.innerHTML = `
+    <p class="ld-intro">Recording a payment here writes it against the loan and into the Cash Book in one step.</p>
+    ${list.map(loanDueRowHTML).join('')}`;
+  body.querySelectorAll('.ld-pay').forEach(btn=>{
+    btn.addEventListener('click', ()=> payLoanFromReminder(Number(btn.dataset.id), Number(btn.dataset.amount)));
+  });
+  return list;
+}
+
+/* Accepting the reminder. The amount is offered, not imposed -- a shop
+   that can only manage part of it this week should be able to record
+   what it actually paid rather than be forced into all-or-nothing. */
+async function payLoanFromReminder(loanId, suggested){
+  const loan = (data.loans||[]).find(l=> l.id === loanId);
+  if(!loan) return;
+  const typed = prompt(`How much are you paying ${loan.lender}?`, String(suggested||''));
+  if(typed === null) return;
+  const amount = Math.round(Number(typed)||0);
+  if(!(amount > 0)){ toast('Enter what was paid'); return; }
+
+  const account = await promptCashAccount('Where is the money coming from?',
+    `Recording ${fmtUGX(amount)} to ${loan.lender} against the loan and in the Cash Book.`);
+  if(!account) return;
+
+  const date = todayISO();
+  // Same category the cash book classifies as financing rather than a
+  // running cost, so a repayment made from here reaches the statements
+  // identically to one recorded on the loan's own screen.
+  const cashTxnId = addCashPayment(account, amount, 'Loan Repayment', `${loan.lender} — repayment`, date);
+  if(!Array.isArray(loan.repayments)) loan.repayments = [];
+  loan.repayments.push({ date, amount, note:'', cashTxnId });
+  saveData();
+  renderLoans();
+
+  // Re-read rather than assume it is settled: a part payment leaves the
+  // loan still due, and the reminder should say so instead of closing on
+  // a payment that did not cover it.
+  const left = renderLoanDueModal();
+  toast(`${fmtUGX(amount)} recorded against ${loan.lender}`);
+  if(!left.length) closeModal('loanDueModal');
+}
+
+// Shown once a day at most, and never over an empty list.
+function maybeRemindLoanDue(){
+  if(!(data.loans||[]).length) return;
+  if(loanDueSnoozed()) return;
+  if(!loansNeedingPayment().length) return;
+  renderLoanDueModal();
+  openModal('loanDueModal');
+}
+
 let editingLoanId = null;
 function readLoanForm(){
   return {
@@ -19629,6 +19882,10 @@ async function boot(){
   // normal admin) is already in place -- avoids ever flashing the wrong
   // one first, on every refresh.
   document.body.classList.remove('app-loading');
+  // After the shell is up, so the reminder lands on a screen rather than
+  // over a blank page. A repayment that is due does not stop being due
+  // because somebody was heading for another tab.
+  maybeRemindLoanDue();
   // handlePendingNotificationRoute() (the cold-start ?orderId=&action= URL
   // handler) no longer exists -- Web Push was retired in favor of native
   // FCM push, which delivers a notification tap straight into
