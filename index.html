@@ -62,6 +62,10 @@
        would make those unreadable. worker.html's same-named token means
        the opposite, which is why these are aliased per file. */
     --accent-ink: var(--ow-amber-ink);
+    /* Caution text on a panel. Same name and same meaning in worker.html,
+       so shared-worker.js can use it and get a readable colour whichever
+       host is styling it -- see the note there. */
+    --warn-ink: var(--ow-amber-ink);
     --good: var(--ow-verdigris);
     --good-bg: var(--ow-verdigris-soft);
     --danger: var(--ow-crimson);
@@ -1492,6 +1496,24 @@
   @keyframes sq-box-sort{0%,100%{transform:translateY(0) rotate(0deg);}25%{transform:translateY(-2px) rotate(-6deg);}75%{transform:translateY(-2px) rotate(6deg);}}
   @keyframes sq-moto-ride{0%,100%{transform:translateX(0) translateY(0);}50%{transform:translateX(2.5px) translateY(-1px);}}
   .sq-assignee-name{font-weight:700;color:var(--ink);}
+  /* An order in Being Prepared that nobody is on -- a worker declined it, or
+     it was sent back. It read as an ordinary card before, with the assignee
+     row simply absent, so the one order actually waiting on a decision
+     looked like the ones already being worked on. */
+  .sq-unassigned .icon{width:14px;height:14px;flex-shrink:0;color:var(--warn-ink);}
+  .sq-unassigned .sq-assignee-name{color:var(--warn-ink);}
+  .sq-assign-btn{
+    all:unset;box-sizing:border-box;cursor:pointer;margin-left:auto;position:relative;
+    font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+    background:var(--accent);color:#fff;
+  }
+  /* The pill measures 19px tall, and this board has a mobile step-switcher,
+     so it is tapped on phones. A min-height would put a 44px pill in a dense
+     card row; an invisible ring gives the finger the same 44px without
+     changing what the eye sees. */
+  .sq-assign-btn::after{content:"";position:absolute;inset:-13px -6px;}
+  .sq-assign-btn:hover{background:var(--accent-deep);}
+  .sq-assign-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .sq-card-actions-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px;}
   .sq-stage-arrow{
     all:unset;box-sizing:border-box;flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
@@ -7160,6 +7182,7 @@ function renderSavedQuotes(){
             <div class="sq-meta-row">• ${q.items.length} item${q.items.length===1?'':'s'}</div>
             <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
             ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
+            ${(q.status==='preparing' && !q.assignedWorkerId) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">Nobody assigned</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
           </div>
         </div>
@@ -7228,6 +7251,16 @@ function renderSavedQuotes(){
     wrap.querySelector('.sq-board').dataset.activeStep = sqActiveMobileStep;
   }));
 
+  // Re-assigning an order nobody is on. A worker declining one clears the
+  // assignment but leaves it in Being Prepared, and until now the board had
+  // no way to put it back on somebody: the forward arrow from here asks for
+  // a DELIVERY person, so the obvious move pushed an unpicked order out for
+  // delivery. The only route was stepping back to Draft and forward again.
+  //
+  // Same modal the first assignment goes through. Passing the status it is
+  // already in means setSavedQuoteStatus leaves stageEnteredAt alone, so
+  // re-assigning does not reset how long the order has been waiting.
+  wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
   wrap.querySelectorAll('.sq-edit').forEach(btn=>btn.addEventListener('click', ()=>loadSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-delete').forEach(btn=>btn.addEventListener('click', ()=>deleteSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-stage-prev').forEach(btn=>btn.addEventListener('click', ()=>{

@@ -849,13 +849,19 @@ function promptAssignDelivery(orderId){
     el.querySelector('#wvAssignList').innerHTML = candidates.map(s=>{
       const activeOrders = staffActiveOrders(s);
       const busy = activeOrders.length>0;
+      // The busy line is coloured --warn-ink, not --accent-ink. This file is
+      // styled by whichever host is running it, so it can only use tokens
+      // that mean the same thing in both -- and --accent-ink does not. It is
+      // amber warning ink in the admin app, and the near-black that sits ON
+      // the accent button in the worker app. There it measured 1.09:1
+      // against the panel: the line was rendered, and could not be read.
       const statusLine = busy
         ? activeOrders.map(({order:o, capacity})=>`${capacity==='worker'?'Preparing':'Delivering'} for ${esc(o.client.name||'Unnamed client')} — since ${esc(savedAgoLabel(o.stageEnteredAt))}`).join('<br>')
         : 'Idle';
       return `
         <button type="button" class="btn btn-ghost" style="display:block;width:100%;text-align:left;padding:10px 12px;" data-id="${esc(s.id)}">
           <div style="font-weight:700;">${esc(s.name)}${s.phone ? ` <span style="font-weight:400;color:var(--ink-soft);">— ${esc(s.phone)}</span>` : ''}</div>
-          <div style="font-size:12px;margin-top:2px;color:${busy?'var(--accent-ink)':'var(--good)'};">${statusLine}</div>
+          <div style="font-size:12px;margin-top:2px;color:${busy?'var(--warn-ink)':'var(--good)'};">${statusLine}</div>
         </button>`;
     }).join('');
     const finish = (id)=>{ document.body.removeChild(el); resolve(id); };
