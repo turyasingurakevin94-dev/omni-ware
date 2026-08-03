@@ -124,6 +124,69 @@ const status = () => data.savedQuotes[0].status;
     'a refused step leaves stageEnteredAt alone');
 }
 
+/* ---------- 2b. moving an order on ends the pick ---------------------- */
+/*
+ * The picking state used to stay 'in_progress' while the order sat in
+ * Pending Delivery, so the worker's app went on showing it as their active
+ * pick. They could tick the last item, press "Mark as finished", and be told
+ * the order had already moved on -- true, and finishPreparingOrder is right
+ * to refuse it. But there was no way past: holding an order they could not
+ * finish, they could not accept another either, and the toast's advice to
+ * refresh changed nothing, because the order really was in that state. An
+ * admin nudging the board forward one stage stopped a picker for the shift.
+ *
+ * 'done' rather than cleared. Moving it on IS the claim that the picking is
+ * over, and it leaves the same state finishPreparingOrder does. The backward
+ * move is the opposite claim, and resets instead (section 6b below).
+ */
+{
+  const pick = () => data.savedQuotes[0].pickingStatus;
+
+  reset(mkQuote({ status: 'preparing', pickingStatus: 'in_progress', assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(pick() === 'done', 'a pick in progress is ended when the order moves on');
+
+  reset(mkQuote({ status: 'preparing', pickingStatus: 'awaiting_accept', assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(pick() === 'done', 'and so is one still waiting to be accepted');
+
+  // Two states it must not invent or overwrite.
+  reset(mkQuote({ status: 'preparing', pickingStatus: null, assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(pick() === null, 'an order nobody was picking is not given a finished pick');
+
+  reset(mkQuote({ status: 'preparing', pickingStatus: 'done', assignedWorkerId: 'ST1' }));
+  const before = pick();
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(pick() === before, 'and one already finished is left alone');
+
+  // Only forwards, and only out of Being Prepared.
+  reset(mkQuote({ status: 'preparing', pickingStatus: 'in_progress', assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'draft');
+  t.check(pick() === 'in_progress',
+    'moving BACK does not end the pick here -- stepSavedQuoteStatus resets it instead');
+
+  reset(mkQuote({ status: 'draft', pickingStatus: 'awaiting_accept', assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'preparing');
+  t.check(pick() === 'awaiting_accept',
+    'and taking a draft INTO Being Prepared leaves the pick it is about to start');
+
+  // The destination being later is not enough on its own -- the order has to
+  // be leaving Being Prepared. A draft sent straight past it never had a
+  // pick to finish, so there is nothing to declare over.
+  reset(mkQuote({ status: 'draft', pickingStatus: 'awaiting_accept', assignedWorkerId: 'ST1' }));
+  setSavedQuoteStatus(1, 'pending_delivery');
+  t.check(pick() === 'awaiting_accept',
+    'a stage later than Being Prepared does not end a pick the order never started');
+
+  // The state it lands on is the one the worker app treats as finished, so
+  // the order stops being listed by either of the two lists it renders.
+  const mine = extractFunction(workerSrc, 'renderWorkerView', 'shared-worker.js');
+  t.check(/pickingStatus==='awaiting_accept'/.test(mine) && /pickingStatus==='in_progress'/.test(mine)
+    && !/pickingStatus==='done'/.test(mine),
+    "'done' is neither of the two states that app lists, which is what frees the picker");
+}
+
 /* ---------- 3. prepay gate ------------------------------------------- */
 const PREPAY = [{ id: 'AG1', paymentTerm: 'prepay' }];
 const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];

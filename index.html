@@ -6652,6 +6652,29 @@ function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
+  // Moving an order ON out of Being Prepared ends the pick, whoever moved it
+  // and for whatever reason. Here rather than in stepSavedQuoteStatus,
+  // because this is the one place a status actually changes.
+  //
+  // Without it the picking state stayed 'in_progress' while the order sat in
+  // Pending Delivery, and the worker's app went on showing it as their
+  // active pick. They could tick the last item, tap "Mark as finished", and
+  // be told the order had already moved on -- which is true, and which
+  // finishPreparingOrder is right to refuse. But there was no way past it:
+  // holding an order they could not finish, they could not accept another
+  // one either, and the toast's advice to refresh changed nothing because
+  // the order really was in that state. The admin pushing the board forward
+  // one stage stopped a picker for the rest of the shift.
+  //
+  // 'done' rather than cleared: moving it on IS the claim that the picking
+  // is over, and it is the same state finishPreparingOrder leaves behind.
+  // The backward move is the opposite claim and resets instead -- see
+  // stepSavedQuoteStatus.
+  const stageOrder = SQ_STATUS_ORDER.indexOf(status);
+  if(q.status==='preparing' && stageOrder > SQ_STATUS_ORDER.indexOf('preparing')
+     && q.pickingStatus && q.pickingStatus!=='done'){
+    q.pickingStatus = 'done';
+  }
   if(q.status!==status) q.stageEnteredAt = Date.now();
   q.status = status;
   saveData();
