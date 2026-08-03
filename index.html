@@ -209,7 +209,13 @@
      force `main` itself wider than the viewport even though that table's
      own .an-scroll{overflow-x:auto} wrapper is supposed to absorb the
      overflow internally. */
-  main{flex:1;min-width:0;padding:68px 40px 32px;max-width:1180px;margin-left:var(--sidebar-w);transition:margin-left .18s ease;}
+  /* No max-width: `main` fills whatever the sidebar leaves, so a wide
+     monitor gets wider panels/boards/tables instead of a 1180px column
+     with dead space down the right-hand side. Padding steps up on the
+     biggest screens so content doesn't sit flush against the edges. */
+  main{flex:1;min-width:0;padding:68px 40px 32px;margin-left:var(--sidebar-w);transition:margin-left .18s ease;}
+  @media (min-width:1600px){ main{padding:68px 56px 40px;} }
+  @media (min-width:2000px){ main{padding:68px 72px 48px;} }
   .page-head{margin-bottom:24px;}
   .page-head h1{
     font-family:'Archivo Black',sans-serif;font-size:24px;margin:0 0 6px 0;color:var(--ink);
