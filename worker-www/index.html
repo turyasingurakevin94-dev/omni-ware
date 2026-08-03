@@ -436,6 +436,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="shared-worker.js"></script>
 <script>
+// Which of the two apps sharing shared-worker.js this is. Read by
+// authAppRole() at call time, and the only thing deciding which sign-in
+// screen a person sees. A worker's has no "create account": they are
+// invited to a shop that already exists, and an account made here would
+// belong to no shop at all.
+var OW_APP_ROLE = 'worker';
+
 // Supabase appends #...&type=invite (or type=recovery) to the redirect URL
 // for invite/reset emails -- read once, before createClient() consumes the
 // hash to establish the session, so ensureAuthAndShop() can tell a brand

@@ -101,13 +101,24 @@ function ipStageThumbHTML(product, variantIdx){
 
 /* ---------------- Auth + shop membership bootstrap ---------------- */
 
+/* The overlay every auth step draws into.
+
+   The default look is re-applied on every call, not just on creation.
+   showLoginScreen paints its own ground over it, and the steps that can
+   follow a sign-in -- set a password, create a shop, pick a shop -- reuse
+   this same element. Without the reset, whichever of those came next
+   inherited the login screen's layout and its own inline styles landed on
+   top of it, half applied. */
 function ensureAuthOverlay(){
   let el = document.getElementById('authOverlay');
-  if(el) return el;
-  el = document.createElement('div');
-  el.id = 'authOverlay';
-  el.style.cssText = 'position:fixed;inset:0;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;';
-  document.body.appendChild(el);
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'authOverlay';
+    document.body.appendChild(el);
+  }
+  el.className = '';
+  el.removeAttribute('data-role');
+  el.style.cssText = 'position:fixed;inset:0;background:#14171B;color:#DCE0E4;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:system-ui,-apple-system,sans-serif;';
   return el;
 }
 function hideAuthOverlay(){
@@ -129,37 +140,309 @@ async function getAuthedUser(){
   return data.user;
 }
 
+/* ---------------- The sign-in screens ----------------
+
+   Two apps load this file and they are two different jobs, so they get
+   two different doors.
+
+   Everything below is written in literal hex and ships its own <style>.
+   It cannot read the host's design tokens: --ow-steel-950 exists in
+   index.html and not in worker.html, and a var() that resolves to
+   nothing takes its whole declaration with it -- which is how the admin
+   board's Assign button once turned white-on-white. A sign-in screen is
+   the one surface with no app behind it to fall back on, so it depends
+   on nothing but itself.
+
+   The display face is the one the host already loads -- Archivo Black in
+   the admin app, Manrope in the worker app. Naming both in one stack
+   means each app's door is set in that app's own voice and neither pays
+   for a font it does not already have.
+
+   The look comes from the yard rather than from software: mabati, the
+   corrugated iron every hardware shop in Kampala sells and is roofed
+   with. Pressed into the ground as light-mid-shadow-mid bands so it
+   reads as sheet metal rather than as stripes. */
+function authAppRole(){
+  // Declared by the host below this file in load order, so it is read at
+  // call time rather than parse time. Admin is the safe default: it is
+  // the only app that can legitimately create an account.
+  return (typeof OW_APP_ROLE !== 'undefined' && OW_APP_ROLE === 'worker') ? 'worker' : 'admin';
+}
+function injectAuthStyles(){
+  if(document.getElementById('owAuthStyles')) return;
+  const s = document.createElement('style');
+  s.id = 'owAuthStyles';
+  s.textContent = `
+  #authOverlay.ow-auth{padding:0;display:block;overflow-y:auto;}
+  .ow-auth *{box-sizing:border-box;}
+  .ow-auth .oa-shell{min-height:100%;display:flex;}
+  .ow-auth .oa-form{display:flex;flex-direction:column;}
+  .ow-auth label{
+    display:block;font-size:11px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;margin:0 0 6px;
+  }
+  .ow-auth input{
+    width:100%;font-family:inherit;font-size:16px;border-radius:9px;
+    border:1px solid;outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  .ow-auth input::placeholder{opacity:.55;}
+  .ow-auth .oa-field + .oa-field{margin-top:14px;}
+  .ow-auth button{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;width:100%;
+    border-radius:9px;font-family:inherit;font-weight:700;
+    transition:background .15s,color .15s,opacity .15s;
+  }
+  .ow-auth button:disabled{opacity:.55;cursor:default;}
+  .ow-auth .oa-status{
+    min-height:18px;font-size:13px;line-height:1.4;margin:14px 0 0;
+  }
+  .ow-auth .oa-status:empty{margin:0;min-height:0;}
+  .ow-auth .oa-ghost{background:transparent;font-weight:600;font-size:13.5px;}
+
+  /* ---- admin: the yard at first light ---------------------------- */
+  .ow-auth[data-role="admin"]{
+    background:#14171B;color:#DCE0E4;
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  .ow-auth[data-role="admin"] .oa-shell{align-items:stretch;}
+  .ow-auth[data-role="admin"] .oa-side{
+    flex:1 1 46%;display:flex;flex-direction:column;justify-content:space-between;
+    padding:48px 44px;position:relative;overflow:hidden;
+    background:#101317;border-right:1px solid #22272E;
+  }
+  /* Mabati. Vertical, low contrast, behind everything. */
+  .ow-auth[data-role="admin"] .oa-side::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,
+      rgba(255,255,255,.050) 0px, rgba(255,255,255,.012) 9px,
+      rgba(0,0,0,.16) 20px, rgba(0,0,0,.055) 27px,
+      rgba(255,255,255,.050) 36px);
+  }
+  .ow-auth[data-role="admin"] .oa-side > *{position:relative;}
+  .ow-auth[data-role="admin"] .oa-mark{
+    display:inline-flex;align-items:center;gap:11px;
+  }
+  .ow-auth[data-role="admin"] .oa-mark i{
+    width:34px;height:34px;border-radius:9px;background:#B23A26;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-style:normal;
+    font-family:'Archivo Black','Manrope',system-ui,sans-serif;font-size:13px;
+  }
+  .ow-auth[data-role="admin"] .oa-mark span{
+    font-family:'Archivo Black','Manrope',system-ui,sans-serif;
+    font-size:17px;letter-spacing:.3px;color:#fff;
+  }
+  .ow-auth[data-role="admin"] .oa-pitch{
+    font-family:'Archivo Black','Manrope',system-ui,sans-serif;
+    font-size:clamp(30px,4.2vw,46px);line-height:1.04;color:#fff;
+    margin:0;letter-spacing:-.4px;text-wrap:balance;
+  }
+  .ow-auth[data-role="admin"] .oa-pitch em{font-style:normal;color:#C9573F;}
+  .ow-auth[data-role="admin"] .oa-sub{
+    margin:16px 0 0;font-size:14px;line-height:1.6;color:#8A939C;max-width:34ch;
+  }
+  .ow-auth[data-role="admin"] .oa-foot{font-size:11.5px;color:#5D666F;letter-spacing:.02em;}
+  .ow-auth[data-role="admin"] .oa-main{
+    flex:1 1 54%;display:flex;align-items:center;justify-content:center;padding:40px 32px;
+  }
+  .ow-auth[data-role="admin"] .oa-card{
+    width:100%;max-width:380px;background:#1B1F25;border:1px solid #2A3038;
+    border-radius:14px;padding:30px 30px 26px;
+    box-shadow:0 24px 60px rgba(0,0,0,.45);position:relative;
+  }
+  /* Primer on a cut edge. */
+  .ow-auth[data-role="admin"] .oa-card::before{
+    content:'';position:absolute;left:22px;right:22px;top:-1px;height:3px;
+    background:#B23A26;border-radius:0 0 3px 3px;
+  }
+  .ow-auth[data-role="admin"] h1{
+    margin:0 0 4px;font-size:19px;font-weight:700;color:#fff;letter-spacing:-.2px;
+  }
+  .ow-auth[data-role="admin"] .oa-hint{margin:0 0 22px;font-size:13px;color:#8A939C;}
+  .ow-auth[data-role="admin"] label{color:#8A939C;}
+  .ow-auth[data-role="admin"] input{
+    padding:12px 13px;background:#12151A;border-color:#333A43;color:#F2F4F6;
+  }
+  .ow-auth[data-role="admin"] input:focus{border-color:#B23A26;box-shadow:0 0 0 3px rgba(178,58,38,.22);}
+  .ow-auth[data-role="admin"] .oa-primary{
+    background:#B23A26;color:#fff;padding:13px;margin-top:20px;font-size:14.5px;
+  }
+  .ow-auth[data-role="admin"] .oa-primary:hover:not(:disabled){background:#C9573F;}
+  .ow-auth[data-role="admin"] .oa-secondary{
+    background:transparent;color:#DCE0E4;padding:12px;margin-top:9px;
+    font-size:14px;box-shadow:inset 0 0 0 1px #333A43;
+  }
+  .ow-auth[data-role="admin"] .oa-secondary:hover:not(:disabled){background:#22272E;}
+  .ow-auth[data-role="admin"] .oa-ghost{color:#8A939C;padding:11px;margin-top:4px;}
+  .ow-auth[data-role="admin"] .oa-ghost:hover{color:#DCE0E4;}
+  @media (max-width:820px){
+    .ow-auth[data-role="admin"] .oa-shell{flex-direction:column;}
+    .ow-auth[data-role="admin"] .oa-side{
+      flex:0 0 auto;padding:30px 26px 26px;border-right:0;border-bottom:1px solid #22272E;
+    }
+    .ow-auth[data-role="admin"] .oa-pitch{font-size:27px;margin-top:22px;}
+    .ow-auth[data-role="admin"] .oa-sub{font-size:13.5px;margin-top:10px;}
+    .ow-auth[data-role="admin"] .oa-foot{display:none;}
+    .ow-auth[data-role="admin"] .oa-main{padding:26px 20px 40px;}
+  }
+
+  /* ---- worker: painted steel, read in the sun -------------------- */
+  /* Light on purpose. This is a phone held at arm's length in a yard at
+     midday, where a dark screen is a mirror. */
+  .ow-auth[data-role="worker"]{
+    background:#E9EBED;color:#14171B;
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  .ow-auth[data-role="worker"] .oa-shell{flex-direction:column;}
+  .ow-auth[data-role="worker"] .oa-band{
+    background:#B23A26;color:#fff;padding:30px 24px 34px;position:relative;overflow:hidden;
+  }
+  .ow-auth[data-role="worker"] .oa-band::before{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,
+      rgba(255,255,255,.10) 0px, rgba(255,255,255,.025) 9px,
+      rgba(0,0,0,.13) 20px, rgba(0,0,0,.04) 27px,
+      rgba(255,255,255,.10) 36px);
+  }
+  .ow-auth[data-role="worker"] .oa-band > *{position:relative;}
+  .ow-auth[data-role="worker"] .oa-mark{
+    font-family:'Manrope','Archivo Black',system-ui,sans-serif;
+    font-weight:800;font-size:13px;letter-spacing:.16em;text-transform:uppercase;
+    opacity:.85;margin:0 0 10px;
+  }
+  .ow-auth[data-role="worker"] .oa-pitch{
+    font-family:'Manrope','Archivo Black',system-ui,sans-serif;
+    font-weight:800;font-size:clamp(26px,7.4vw,34px);line-height:1.1;
+    margin:0;letter-spacing:-.3px;
+  }
+  .ow-auth[data-role="worker"] .oa-main{
+    flex:1;display:flex;justify-content:center;padding:26px 22px 40px;
+  }
+  .ow-auth[data-role="worker"] .oa-card{width:100%;max-width:420px;}
+  .ow-auth[data-role="worker"] .oa-hint{
+    margin:0 0 22px;font-size:14.5px;line-height:1.55;color:#59626B;
+  }
+  .ow-auth[data-role="worker"] label{color:#59626B;font-size:12px;}
+  .ow-auth[data-role="worker"] input{
+    padding:16px 15px;background:#fff;border-color:#CFD5DA;color:#14171B;
+    font-size:17px;min-height:56px;
+  }
+  .ow-auth[data-role="worker"] input:focus{border-color:#B23A26;box-shadow:0 0 0 3px rgba(178,58,38,.18);}
+  .ow-auth[data-role="worker"] .oa-primary{
+    background:#B23A26;color:#fff;min-height:56px;margin-top:24px;font-size:17px;
+  }
+  .ow-auth[data-role="worker"] .oa-primary:active:not(:disabled){background:#8E2C1C;}
+  .ow-auth[data-role="worker"] .oa-ghost{
+    color:#59626B;min-height:48px;margin-top:10px;font-size:14.5px;
+  }
+  .ow-auth[data-role="worker"] .oa-help{
+    margin:26px 0 0;padding-top:18px;border-top:1px solid #D7DBDF;
+    font-size:13px;line-height:1.6;color:#59626B;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .ow-auth *{transition:none !important;}
+  }`;
+  document.head.appendChild(s);
+}
+
 function showLoginScreen(){
   return new Promise((resolve)=>{
+    const role = authAppRole();
+    injectAuthStyles();
     const el = ensureAuthOverlay();
-    el.innerHTML = `
-      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;">
-        <h2 style="margin:0 0 16px;font-size:18px;">Sign in</h2>
-        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="auth_signin_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Sign in</button>
-        <button id="auth_signup_btn" style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Create account</button>
-        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#8ab4e0;cursor:pointer;font-size:13px;">Forgot password?</button>
+    el.className = 'ow-auth';
+    el.setAttribute('data-role', role);
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;';
+
+    /* Only the admin app offers "Create account", and that is a fix
+       rather than a trim. A worker reaching this screen was invited to a
+       shop that already exists; creating an account here makes a login
+       attached to no shop at all, which lands them on the dead-end
+       no-shop screen with nothing to do. The button was an invitation to
+       get stuck. */
+    const isAdmin = role === 'admin';
+    el.innerHTML = isAdmin ? `
+      <div class="oa-shell">
+        <aside class="oa-side">
+          <div class="oa-mark"><i>OW</i><span>Omni-ware</span></div>
+          <div>
+            <h2 class="oa-pitch">Every bag, every shilling, <em>one board.</em></h2>
+            <p class="oa-sub">Stock, prices, orders, the cash book and the people who move it — the whole shop, in one place.</p>
+          </div>
+          <div class="oa-foot">Hardware shop management · Uganda</div>
+        </aside>
+        <main class="oa-main">
+          <div class="oa-card">
+            <h1>Sign in</h1>
+            <p class="oa-hint">Use the email your shop is registered to.</p>
+            <div class="oa-form">
+              <div class="oa-field">
+                <label for="auth_email">Email</label>
+                <input id="auth_email" type="email" autocomplete="username" placeholder="you@example.com">
+              </div>
+              <div class="oa-field">
+                <label for="auth_password">Password</label>
+                <input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
+              </div>
+              <div class="oa-status" id="auth_status" role="status" aria-live="polite"></div>
+              <button id="auth_signin_btn" class="oa-primary">Sign in</button>
+              <button id="auth_signup_btn" class="oa-secondary">Create a new shop</button>
+              <button id="auth_forgot_btn" type="button" class="oa-ghost">Forgot password?</button>
+            </div>
+          </div>
+        </main>
+      </div>` : `
+      <div class="oa-shell">
+        <header class="oa-band">
+          <p class="oa-mark">Omni-ware</p>
+          <h2 class="oa-pitch">Sign in to pick and pack.</h2>
+        </header>
+        <main class="oa-main">
+          <div class="oa-card">
+            <p class="oa-hint">Today's orders, what to pull off the shelf, and where each one is going.</p>
+            <div class="oa-form">
+              <div class="oa-field">
+                <label for="auth_email">Email</label>
+                <input id="auth_email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com">
+              </div>
+              <div class="oa-field">
+                <label for="auth_password">Password</label>
+                <input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
+              </div>
+              <div class="oa-status" id="auth_status" role="status" aria-live="polite"></div>
+              <button id="auth_signin_btn" class="oa-primary">Sign in</button>
+              <button id="auth_forgot_btn" type="button" class="oa-ghost">Forgot password?</button>
+            </div>
+            <p class="oa-help">No account yet? Your manager adds you from the shop's Staff tab, and you'll get an email invite.</p>
+          </div>
+        </main>
       </div>`;
+    // The worker screen has no signup button; every reference below is
+    // guarded so one markup can drive both without a null blowing up the
+    // only screen standing between a person and their work.
+    const signupBtn = el.querySelector('#auth_signup_btn');
+    const signinBtn = el.querySelector('#auth_signin_btn');
     const statusEl = el.querySelector('#auth_status');
     const setStatus = (msg, kind)=>{
       statusEl.textContent = msg;
-      statusEl.style.color = kind==='ok' ? '#3A9A5C' : kind==='busy' ? '#aaa' : '#f66';
+      statusEl.style.color = kind==='ok' ? '#1C6B58' : kind==='busy' ? '#8A939C' : '#C9573F';
+    };
+    const busy = (on)=>{
+      signinBtn.disabled = on;
+      if(signupBtn) signupBtn.disabled = on;
     };
     const doAuth = async (mode)=>{
       const email = el.querySelector('#auth_email').value.trim();
       const password = el.querySelector('#auth_password').value;
       if(!email || !password){ setStatus('Enter an email and password', 'err'); return; }
-      const signinBtn = el.querySelector('#auth_signin_btn');
-      const signupBtn = el.querySelector('#auth_signup_btn');
-      signinBtn.disabled = true; signupBtn.disabled = true;
+      busy(true);
       setStatus(mode==='signup' ? 'Creating account…' : 'Signing in…', 'busy');
       const { error } = mode==='signup'
         ? await sb.auth.signUp({email, password})
         : await sb.auth.signInWithPassword({email, password});
       if(error){
-        signinBtn.disabled = false; signupBtn.disabled = false;
+        busy(false);
         setStatus(error.message, 'err');
         return;
       }
@@ -167,7 +450,7 @@ function showLoginScreen(){
       // success -- a signUp() on a project with email confirmation ON
       // returns no error but also no usable session yet.
       const user = await getAuthedUser();
-      signinBtn.disabled = false; signupBtn.disabled = false;
+      busy(false);
       if(!user){
         setStatus('Check your email to confirm your account, then sign in.', 'err');
         return;
@@ -175,8 +458,15 @@ function showLoginScreen(){
       setStatus('Signed in — loading your shop…', 'ok');
       resolve();
     };
-    el.querySelector('#auth_signin_btn').addEventListener('click', ()=>doAuth('signin'));
-    el.querySelector('#auth_signup_btn').addEventListener('click', ()=>doAuth('signup'));
+    signinBtn.addEventListener('click', ()=>doAuth('signin'));
+    if(signupBtn) signupBtn.addEventListener('click', ()=>doAuth('signup'));
+    // Enter submits from either field. On a phone the keyboard's own "go"
+    // key is the obvious way to finish, and it did nothing.
+    ['auth_email','auth_password'].forEach(id=>{
+      el.querySelector('#'+id).addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){ e.preventDefault(); doAuth('signin'); }
+      });
+    });
     el.querySelector('#auth_forgot_btn').addEventListener('click', async ()=>{
       const email = (el.querySelector('#auth_email').value||'').trim();
       if(!email){ setStatus('Enter your email above first, then tap "Forgot password?"', 'err'); return; }
@@ -184,6 +474,7 @@ function showLoginScreen(){
       const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
       setStatus(error ? error.message : 'Check your email for a password reset link.', error ? 'err' : 'ok');
     });
+    el.querySelector('#auth_email').focus();
   });
 }
 

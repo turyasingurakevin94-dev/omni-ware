@@ -1352,13 +1352,20 @@ function packSentence(packQty, unit, packUnit, escapeHtml){
   return unit ? `Sold per ${e(unit)}` : '';
 }
 
+// The default look is re-applied on every call, not just on creation.
+// showLoginScreen paints its own ground over it, and the screens that can
+// follow -- set a password, the fatal-error notice -- reuse this element;
+// without the reset they inherited the sign-in screen's layout with their
+// own inline styles landing half-applied on top.
 function ensureAuthOverlay(){
   let el = document.getElementById('authOverlay');
-  if(el) return el;
-  el = document.createElement('div');
-  el.id = 'authOverlay';
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'authOverlay';
+    document.body.appendChild(el);
+  }
+  el.className = '';
   el.style.cssText = 'position:fixed;inset:0;background:#12151A;color:#eee;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;';
-  document.body.appendChild(el);
   return el;
 }
 function hideAuthOverlay(){
@@ -1372,23 +1379,136 @@ async function getAuthedUser(){
   return data.user;
 }
 
+/* The agent's door.
+
+   A different app from the admin and worker pair -- it shares no code
+   with them -- and a different person: someone standing in front of their
+   own customer with their own phone, whose earnings this app exists to
+   track. So this one is oxide-forward where the others are steel: the
+   sheet is the ground here, not the trim.
+
+   Corrugated iron again, the material every hardware shop in Kampala
+   sells and is roofed with, but raked over on a diagonal rather than
+   standing upright -- a sheet leaning against a wall rather than nailed
+   to a roof.
+
+   No webfont. This app deliberately loads none: it is used in the field
+   on whatever connection there is, and a sign-in screen that waits on a
+   font from Google is a sign-in screen that hangs. The system stack is
+   the choice, not the fallback. */
+function injectAgentAuthStyles(){
+  if(document.getElementById('agAuthStyles')) return;
+  const s = document.createElement('style');
+  s.id = 'agAuthStyles';
+  s.textContent = `
+  #authOverlay.ag-auth{
+    padding:0;display:block;overflow-y:auto;background:#8E2C1C;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  .ag-auth *{box-sizing:border-box;}
+  .ag-auth .aa-shell{
+    min-height:100%;display:flex;flex-direction:column;justify-content:center;
+    padding:32px 20px 40px;position:relative;overflow:hidden;
+  }
+  .ag-auth .aa-shell::before{
+    content:'';position:absolute;inset:-20%;pointer-events:none;
+    background:repeating-linear-gradient(102deg,
+      rgba(255,255,255,.085) 0px, rgba(255,255,255,.02) 10px,
+      rgba(0,0,0,.17) 22px, rgba(0,0,0,.05) 30px,
+      rgba(255,255,255,.085) 40px);
+  }
+  .ag-auth .aa-shell > *{position:relative;}
+  .ag-auth .aa-head{max-width:420px;margin:0 auto 22px;width:100%;color:#fff;}
+  .ag-auth .aa-mark{
+    display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.18em;
+    text-transform:uppercase;color:rgba(255,255,255,.72);margin:0 0 12px;
+  }
+  .ag-auth .aa-pitch{
+    margin:0;font-size:clamp(27px,7.6vw,34px);line-height:1.08;
+    font-weight:800;letter-spacing:-.5px;text-wrap:balance;
+  }
+  .ag-auth .aa-sub{
+    margin:11px 0 0;font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.8);
+  }
+  .ag-auth .aa-card{
+    width:100%;max-width:420px;margin:0 auto;background:#fff;color:#14171B;
+    border-radius:16px;padding:24px 22px 20px;
+    box-shadow:0 20px 50px rgba(0,0,0,.30);
+  }
+  .ag-auth label{
+    display:block;font-size:11.5px;font-weight:700;letter-spacing:.07em;
+    text-transform:uppercase;color:#59626B;margin:0 0 6px;
+  }
+  .ag-auth .aa-field + .aa-field{margin-top:14px;}
+  .ag-auth input{
+    width:100%;font-family:inherit;font-size:16.5px;padding:14px 14px;min-height:52px;
+    border-radius:10px;border:1px solid #D6DBDF;background:#FBFCFD;color:#14171B;
+    outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  .ag-auth input:focus{border-color:#B23A26;box-shadow:0 0 0 3px rgba(178,58,38,.16);}
+  .ag-auth input::placeholder{color:#9AA3AB;}
+  .ag-auth button{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;width:100%;border-radius:10px;font-family:inherit;
+    font-weight:700;transition:background .15s,color .15s,opacity .15s;
+  }
+  .ag-auth button:disabled{opacity:.55;cursor:default;}
+  .ag-auth .aa-primary{
+    background:#B23A26;color:#fff;min-height:52px;margin-top:20px;font-size:16px;
+  }
+  .ag-auth .aa-primary:active:not(:disabled){background:#8E2C1C;}
+  .ag-auth .aa-ghost{
+    background:transparent;color:#59626B;min-height:46px;margin-top:8px;
+    font-size:14px;font-weight:600;
+  }
+  .ag-auth .aa-status{min-height:18px;font-size:13px;line-height:1.4;margin:14px 0 0;}
+  .ag-auth .aa-status:empty{margin:0;min-height:0;}
+  .ag-auth .aa-help{
+    max-width:420px;margin:18px auto 0;width:100%;
+    font-size:12.5px;line-height:1.6;color:rgba(255,255,255,.75);text-align:center;
+  }
+  @media (prefers-reduced-motion:reduce){ .ag-auth *{transition:none !important;} }`;
+  document.head.appendChild(s);
+}
+
 function showLoginScreen(){
   return new Promise((resolve)=>{
+    injectAgentAuthStyles();
     const el = ensureAuthOverlay();
+    el.className = 'ag-auth';
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;';
     el.innerHTML = `
-      <div style="background:#1c1f26;padding:32px;border-radius:14px;width:320px;max-width:90vw;">
-        <h2 style="margin:0 0 16px;font-size:18px;">Sign in</h2>
-        <input id="auth_email" type="email" placeholder="Email" style="width:100%;padding:10px;margin-bottom:8px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
-        <input id="auth_password" type="password" placeholder="Password" style="width:100%;padding:10px;margin-bottom:12px;border-radius:8px;border:1px solid #3a3f4a;background:#12151A;color:#eee;box-sizing:border-box;">
-        <div id="auth_status" style="font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="auth_signin_btn" style="width:100%;padding:11px;margin-bottom:8px;border-radius:8px;border:none;background:#B23A26;color:#fff;cursor:pointer;font-weight:600;">Sign in</button>
-        <button id="auth_forgot_btn" type="button" style="width:100%;padding:6px;border:none;background:transparent;color:#8DAEF2;cursor:pointer;font-size:13px;">Forgot password?</button>
+      <div class="aa-shell">
+        <div class="aa-head">
+          <p class="aa-mark">Omni-ware · Agent</p>
+          <h2 class="aa-pitch">Your customers. Your prices. Your cut.</h2>
+          <p class="aa-sub">Quote from the live price book, send the order straight through, and watch what you have earned.</p>
+        </div>
+        <div class="aa-card">
+          <div class="aa-field">
+            <label for="auth_email">Email</label>
+            <input id="auth_email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com">
+          </div>
+          <div class="aa-field">
+            <label for="auth_password">Password</label>
+            <input id="auth_password" type="password" autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <div class="aa-status" id="auth_status" role="status" aria-live="polite"></div>
+          <button id="auth_signin_btn" class="aa-primary">Sign in</button>
+          <button id="auth_forgot_btn" type="button" class="aa-ghost">Forgot password?</button>
+        </div>
+        <p class="aa-help">Agents are invited by the shop. If you have no account yet, ask them to send you one.</p>
       </div>`;
     const statusEl = el.querySelector('#auth_status');
     const setStatus = (msg, kind)=>{
       statusEl.textContent = msg;
-      statusEl.style.color = kind==='ok' ? '#3A9A5C' : kind==='busy' ? '#aaa' : '#f66';
+      statusEl.style.color = kind==='ok' ? '#1C6B58' : kind==='busy' ? '#8A939C' : '#B23A26';
     };
+    ['auth_email','auth_password'].forEach(id=>{
+      el.querySelector('#'+id).addEventListener('keydown', (e)=>{
+        if(e.key==='Enter'){ e.preventDefault(); el.querySelector('#auth_signin_btn').click(); }
+      });
+    });
     el.querySelector('#auth_signin_btn').addEventListener('click', async ()=>{
       const email = el.querySelector('#auth_email').value.trim();
       const password = el.querySelector('#auth_password').value;
