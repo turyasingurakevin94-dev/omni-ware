@@ -29,7 +29,10 @@ const t = createReporter('admin cash to buy ui');
 const src = read('index.html');
 const sharedJs = read('shared-worker.js');
 
-const data = { savedQuotes: [], suppliers: [], products: [], prices: [] };
+const data = {
+  savedQuotes: [], suppliers: [], products: [], prices: [],
+  cashTxns: [], cashDays: {},
+};
 const modal = {};
 
 // The icons are stubbed as identifiable markup rather than the real paths:
@@ -51,6 +54,17 @@ const scope = compileScope([
   extractFunction(src, 'beingPreparedOrders', 'index.html'),
   extractFunction(src, 'buyingListRuns', 'index.html'),
   extractFunction(src, 'quoteClientName', 'index.html'),
+  // The cash position the buying list now opens with. Real Cash Book
+  // arithmetic, so this file cannot drift from the Cash Book screen.
+  extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+  extractFunction(src, 'cbAccountTotals', 'index.html'),
+  extractFunction(src, 'cbClosingFor', 'index.html'),
+  extractFunction(src, 'previousCashDate', 'index.html'),
+  extractFunction(src, 'carriedOpening', 'index.html'),
+  extractFunction(src, 'cashOnHandFor', 'index.html'),
+  extractFunction(src, 'cashOnHandByAccount', 'index.html'),
+  extractFunction(src, 'cashPositionForBuying', 'index.html'),
+  extractFunction(src, 'cashPositionHTML', 'index.html'),
   extractFunction(src, 'cashToBuyBannerHTML', 'index.html'),
   extractFunction(src, 'orderMetaRowHTML', 'index.html'),
   extractFunction(src, 'orderCashStripHTML', 'index.html'),
@@ -67,9 +81,23 @@ const scope = compileScope([
   ICON_WARN: '<svg data-i="warn"></svg>', ICON_CLOCK: '<svg data-i="clock"></svg>',
   ICON_ITEMS: '<svg data-i="items"></svg>', ICON_MONEY: '<svg data-i="money"></svg>',
   ICON_SHELF: '<svg data-i="shelf"></svg>', ICON_PURCHASE: '<svg data-i="purchase"></svg>',
+  ICON_CASH: '<svg data-i="cash"></svg>', ICON_MOMO: '<svg data-i="momo"></svg>',
+  ICON_BANK: '<svg data-i="bank"></svg>', ICON_CHECK: '<svg data-i="check"></svg>',
+  ICON_PLAN: '<svg data-i="plan"></svg>',
+  todayISO: () => '2026-08-03',
   openModal: (id) => { modal.opened = id; },
-  document: { getElementById: () => ({ set innerHTML(v) { modal.html = v; } }) },
+  // The plan modal is this file's neighbour, exercised in full by
+  // admin-shortfall-plan.test.js. Here it is only the thing the button
+  // opens, so it is stubbed rather than dragging its scope in.
+  openShortfallPlan: () => { modal.planOpened = true; },
+  document: {
+    getElementById: () => ({
+      set innerHTML(v) { modal.html = v; },
+      addEventListener(_e, fn) { modal.planWiring = fn; },
+    }),
+  },
 }, ['cashToBuyBannerHTML', 'orderMetaRowHTML', 'orderCashStripHTML', 'openBuyingList',
+  'cashOnHandFor', 'cashOnHandByAccount', 'cashPositionForBuying', 'cashPositionHTML',
   'orderPurchaseLines', 'orderCashToBuy', 'orderUnpricedLines', 'beingPreparedOrders',
   'buyingListRuns', 'orderLineIsBoughtIn', 'quoteClientName']);
 
