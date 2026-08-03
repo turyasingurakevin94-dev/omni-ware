@@ -6140,14 +6140,73 @@ function pendingDeliveryOrders(){
    the last day that was closed (carriedOpening), which is the same rule
    the Cash Book uses to propose today's opening. Without that, this read
    zero every morning until somebody opened the book. */
-function cashOnHandFor(account){
-  const today = todayISO();
-  const rec = (data.cashDays||{})[today];
-  if(rec && rec.openingSet) return cbClosingFor(today, account);
-  const carried = carriedOpening(today);
-  const opening = carried ? (Number(carried.values[account])||0) : 0;
-  const { totalReceipts, totalPayments, totalExpenses } = cbAccountTotals(today, account);
-  return opening + totalReceipts - totalPayments - totalExpenses;
+/* The last figure in the book that can be trusted as a starting point,
+   and the date from which movements still have to be added to it.
+
+   Two kinds of anchor. A counted close wins on the day it happened,
+   because somebody physically looked:
+
+     counted close   the money actually there that evening, so everything
+                     AFTER that day still applies.
+     set opening     what the day started with, so that day's own
+                     movements still apply.
+
+   TODAY'S COUNT IS DELIBERATELY NOT AN ANCHOR. The end-of-day count is a
+   correction, and these figures are meant to say where the book stands
+   right now, at whatever hour it is asked. It would also break the
+   reconciliation check on the statements, which compares the books
+   against the count -- fed the count, it would be comparing a number
+   with itself and could never fail. */
+function cashAnchorFor(account, asOfISO){
+  const days = data.cashDays || {};
+  const dates = new Set(Object.keys(days));
+  (data.cashTxns||[]).forEach(t=>{ if(t.date) dates.add(t.date); });
+  const set = (v)=> v !== null && v !== undefined && v !== '';
+  const sorted = [...dates].filter(d=> d <= asOfISO).sort();
+  for(let i = sorted.length - 1; i >= 0; i--){
+    const d = sorted[i], rec = days[d];
+    if(!rec) continue;
+    if(d < asOfISO && rec.actual && set(rec.actual[account])){
+      return { value: Number(rec.actual[account])||0, from: d, inclusive: false };
+    }
+    if(rec.openingSet && rec.opening && set(rec.opening[account])){
+      return { value: Number(rec.opening[account])||0, from: d, inclusive: true };
+    }
+  }
+  return null;
+}
+
+/* What the shop holds right now, per account.
+
+   This used to hand the question to carriedOpening, which looks back
+   exactly ONE day and no further. That was fine for the Cash Book screen,
+   where the previous day is always a real record, and wrong everywhere
+   else: a shop that opened its book once and then simply kept trading had
+   a "previous day" that existed only because a transaction fell on it,
+   with no opening of its own. cbClosingFor read that missing opening as
+   zero, so every shilling before it was discarded.
+
+   A shop opening with 1,000,000 on the 1st and trading through the 4th
+   reported MINUS 50,000, and mobile money reported nothing at all. The
+   figure was only ever right if every single day had been formally opened
+   -- which is to say it waited on the daily reconciliation to tell the
+   truth, when the reconciliation is an end-of-day correction and the
+   balance sheet is asked at all hours.
+
+   Anchored and summed instead: the last trustworthy figure, plus every
+   movement since. No day in between has to have been opened or closed. */
+function cashOnHandFor(account, asOfISO){
+  const asOf = asOfISO || todayISO();
+  const anchor = cashAnchorFor(account, asOf);
+  let balance = anchor ? anchor.value : 0;
+  (data.cashTxns||[]).forEach(t=>{
+    if(t.account !== account || !t.date || t.date > asOf) return;
+    // Inclusive of the anchor day for an opening, exclusive for a count:
+    // an opening is the start of that day and a count is the end of it.
+    if(anchor && (anchor.inclusive ? t.date < anchor.from : t.date <= anchor.from)) return;
+    balance += cashIsMoneyIn(t) ? (Number(t.amount)||0) : -(Number(t.amount)||0);
+  });
+  return balance;
 }
 function cashOnHandByAccount(){
   const byAccount = ACCOUNTS.map(a=>({ key:a.key, label:a.label, amount: Math.round(cashOnHandFor(a.key)) }));
@@ -17831,7 +17890,8 @@ function stBalanceSheet({bs}){
     <p class="st-read">${bs.assets>0
       ? `${Math.round(bs.liabilities/bs.assets*100)}% of what the shop owns is financed by what it owes.`
       : 'There is nothing on the books yet.'}
-      As at today only: cash, debtors and stock are live balances rather than history, so a sheet dated to a past month would be today's figures under an old heading.</p>
+      As at today only: cash, debtors and stock are live balances rather than history, so a sheet dated to a past month would be today's figures under an old heading.
+      Cash and mobile money are where the book stands this minute — the last figure counted or opened, plus everything that has moved since. Counting the drawer at close corrects them; it is not what they wait for.</p>
   </section>`;
 }
 

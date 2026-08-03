@@ -42,6 +42,7 @@ const scope = compileScope([
   extractFunction(src, 'cbClosingFor', 'index.html'),
   extractFunction(src, 'previousCashDate', 'index.html'),
   extractFunction(src, 'carriedOpening', 'index.html'),
+  extractFunction(src, 'cashAnchorFor', 'index.html'),
   extractFunction(src, 'cashOnHandFor', 'index.html'),
   extractFunction(src, 'cashOnHandByAccount', 'index.html'),
   extractFunction(src, 'cashIsMoneyOut', 'index.html'),
