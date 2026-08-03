@@ -462,6 +462,34 @@ function timeAgoLabel(ts){
 
 function renderWorkerPendingList(pending, hasActive){
   const wrap = document.getElementById('wv_pendingWrap');
+  wrap.classList.toggle('is-upnext', !!(hasActive && pending.length));
+  // Mid-pick, a waiting order is news, not a decision.
+  //
+  // It used to render its full card -- avatar, item count, Deny and Accept
+  // -- wedged between the "Now picking" header and the card being worked
+  // on, splitting the one flow on the screen in half. And the Accept on it
+  // could not work: one open pick at a time has been the rule since
+  // 0f31c2c, so pressing it earned a toast telling the worker to finish
+  // what they were holding. A button that exists to be refused, sitting
+  // over the thing it is refusing on behalf of.
+  //
+  // So it collapses to a strip, and the CSS moves it below the pick card --
+  // out of the middle of the flow and into the place that matches what it
+  // says. The full card, with both its actions, comes back the moment the
+  // current pick is finished, which is when the decision is actually
+  // theirs to make.
+  if(hasActive && pending.length){
+    const next = pending[0];
+    const more = pending.length - 1;
+    const count = (next.items||[]).length;
+    wrap.innerHTML = `
+      <div class="wv-upnext" role="status">
+        <span class="wv-upnext-label">Up next</span>
+        <span class="wv-upnext-name">${esc(next.client.name || 'Unnamed client')}</span>
+        <span class="wv-upnext-meta">${count} item${count===1?'':'s'}${more>0 ? ` · +${more} more waiting` : ''}</span>
+      </div>`;
+    return;
+  }
   if(!pending.length){
     // With a pick open the carousel fills the screen and an empty pending
     // list needs no comment. With nothing open it left the page blank below

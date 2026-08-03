@@ -226,6 +226,30 @@
   .wv-card-sub{color:var(--ink-soft);font-size:13px;margin-bottom:12px;}
   .wv-actions{display:flex;gap:10px;}
   .wv-actions .btn{flex:1;}
+  /* The pending list sits above the pick card in the markup, which is right
+     when there is nothing being picked -- it IS the screen then. With a pick
+     open it belongs after it, so the "Now picking" header and the card it
+     describes stay together. Ordered rather than moved, so both wraps keep
+     their ids and neither render function has to know about the other. */
+  .wv-body{display:flex;flex-direction:column;}
+  #wv_enablePushWrap{order:0;}
+  #wv_pendingWrap{order:1;}
+  #wv_activeWrap{order:2;}
+  #wv_pendingWrap.is-upnext{order:3;}
+  /* Quiet on purpose: it is the only thing on this screen that is not
+     asking to be acted on. No avatar, no buttons -- a line telling a picker
+     what is coming so the queue is not a surprise when they finish. */
+  .wv-upnext{
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+    margin-top:12px;padding:10px 13px;border-radius:12px;
+    background:var(--panel);border:1px dashed var(--line);
+  }
+  .wv-upnext-label{
+    font-size:9.5px;font-weight:700;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.07em;flex-shrink:0;
+  }
+  .wv-upnext-name{font-size:13.5px;font-weight:700;color:var(--ink-soft);min-width:0;overflow-wrap:anywhere;}
+  .wv-upnext-meta{font-size:11.5px;color:var(--ink-faint);margin-left:auto;flex-shrink:0;}
   /* Pending-order cards: an initial avatar + item-count pill give a worker
      more to scan at a glance than a bare name/subtitle ever did. */
   .wv-pending-card{background:var(--panel);border-radius:18px;padding:13px 14px;margin-bottom:10px;box-shadow:var(--shadow-card);}

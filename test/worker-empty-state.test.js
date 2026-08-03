@@ -23,10 +23,16 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('worker empty state');
 const sharedJs = read('shared-worker.js');
 
-// One fake element; the function only ever sets innerHTML and walks it.
+// One fake element; the function sets innerHTML, walks it, and toggles the
+// class the stylesheet uses to move the wrap below the pick card.
+const classes = new Set();
 const wrap = {
   innerHTML: '',
   querySelectorAll: () => [],
+  classList: {
+    toggle: (cls, on) => { if (on) classes.add(cls); else classes.delete(cls); },
+    contains: (cls) => classes.has(cls),
+  },
 };
 
 const scope = compileScope([
@@ -46,8 +52,10 @@ const render = (pending, hasActive) => {
   return wrap.innerHTML;
 };
 
-const pendingOrder = (id, name) => ({
-  id, client: { name }, items: [{ productId: 'P001', qty: 1 }],
+const pendingOrder = (id, name, lines) => ({
+  id,
+  client: { name },
+  items: Array.from({ length: lines || 1 }, () => ({ productId: 'P001', qty: 1 })),
   pickingAssignedAt: Date.now() - 120000,
 });
 
@@ -65,15 +73,60 @@ const pendingOrder = (id, name) => ({
   t.check(html === '', 'with a pick open the carousel is the content; no empty state on top of it');
 }
 
-/* ---------- 3. a real pending order still wins either way ------------- */
+/* ---------- 3. with nothing open, a pending order gets its full card -- */
 {
-  const withActive = render([pendingOrder(1, 'Moses')], true);
-  const without = render([pendingOrder(1, 'Moses')], false);
-  [['with a pick open', withActive], ['with nothing open', without]].forEach(([label, html]) => {
-    t.check(/wv-pending-card/.test(html), `a pending order renders its card ${label}`);
-    t.check(/Moses/.test(html), `and names the client ${label}`);
-    t.check(!/Nothing to pick right now/.test(html), `and no empty state ${label}`);
-  });
+  const html = render([pendingOrder(1, 'Moses')], false);
+  t.check(/wv-pending-card/.test(html), 'a pending order renders its card');
+  t.check(/Moses/.test(html), 'and names the client');
+  t.check(/wv-deny-btn/.test(html) && /wv-accept-btn/.test(html), 'with both actions on it');
+  t.check(!/Nothing to pick right now/.test(html), 'and no empty state');
+  t.check(!wrap.classList.contains('is-upnext'), 'and the wrap keeps its place above the pick card');
+}
+
+/* ---------- 3b. mid-pick it is news, not a decision ------------------- */
+/*
+ * The full card used to render here too, wedged between the "Now picking"
+ * header and the card being worked on -- splitting the one flow on the
+ * screen in half. And its Accept could not work: one open pick at a time
+ * has been the rule since 0f31c2c, so pressing it earned a toast telling
+ * the worker to finish what they were already holding. A button that
+ * existed to be refused, sitting on top of the thing it was refusing for.
+ */
+{
+  const html = render([pendingOrder(1, 'Sarah', 2)], true);
+  t.check(/wv-upnext/.test(html), 'a waiting order collapses to a strip while a pick is open');
+  t.check(/Up next/.test(html) && /Sarah/.test(html), 'saying what is coming and whose it is');
+  t.check(!/wv-deny-btn/.test(html) && !/wv-accept-btn/.test(html),
+    'with neither action, because neither is theirs to take yet');
+  t.check(!/wv-pending-card/.test(html), 'and no card competing with the one being picked');
+  t.check(wrap.classList.contains('is-upnext'),
+    'the wrap is flagged, which is what moves it below the pick card');
+
+  // More than one waiting still reads as one line.
+  const many = render([pendingOrder(1, 'Sarah', 2), pendingOrder(2, 'Peter'), pendingOrder(3, 'Joan')], true);
+  t.check(/\+2 more waiting/.test(many), 'others behind it are counted rather than listed');
+  t.check((many.match(/wv-upnext"/g) || []).length === 1, 'as a single strip');
+
+  // ...and the moment the pick is done, the decision is theirs again.
+  const after = render([pendingOrder(1, 'Sarah', 2)], false);
+  t.check(/wv-deny-btn/.test(after) && /wv-accept-btn/.test(after),
+    'finishing brings the full card and both actions back');
+  t.check(!wrap.classList.contains('is-upnext'), 'and the wrap returns above the pick card');
+}
+
+/* ---------- 3c. the stylesheet is what moves it ----------------------- */
+{
+  const css = read('worker.html');
+  t.check(/\.wv-body\{display:flex;flex-direction:column;\}/.test(css),
+    'the body is a column, so its children can be ordered');
+  const order = (sel) => {
+    const m = new RegExp(`${sel.replace(/[#.]/g, '\\$&')}\\{order:(\\d+);\\}`).exec(css);
+    return m ? Number(m[1]) : null;
+  };
+  t.check(order('#wv_pendingWrap') < order('#wv_activeWrap'),
+    'pending sits above the pick card by default');
+  t.check(order('#wv_pendingWrap.is-upnext') > order('#wv_activeWrap'),
+    'and below it once it is only announcing what is next');
 }
 
 /* ---------- 4. several pending orders all render ---------------------- */
