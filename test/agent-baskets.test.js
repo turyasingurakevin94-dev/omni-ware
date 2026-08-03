@@ -110,6 +110,15 @@ if (s) {
     s.pick({ id: 'c3', name: 'Empty' });
     t.check(!s.clientsWithBaskets().includes('c3'),
       'a client with an empty basket is not listed as having one');
+
+    // Nor once the agent moves on from it. Selecting a client is how you
+    // look at one, so an agent browsing three customers leaves empty
+    // baskets behind each time; otherBasketCount is what the chip actually
+    // reads, and counting those would tell them they have quotes waiting
+    // that do not exist.
+    s.pick(MUKASA);
+    t.check(s.otherBasketCount() === 0,
+      `switching away from empty baskets does not turn them into quotes in progress (got ${s.otherBasketCount()})`);
   }
 }
 
