@@ -40,10 +40,25 @@ function displayName(fullName: string): string {
   return `${parts[0]} ${parts[1][0].toUpperCase()}.`;
 }
 
+// Must stay identical to agent.html's orderEarnings -- the rank an agent
+// is shown here and the earnings they are shown there are the same money,
+// and earnings-commission.test.js holds the two to the same answer.
+//
+// A line the agent never priced earns them nothing. It does not cost them
+// the full shop price, which is what coercing the absent price to 0 did:
+// the shop adding a line to an agent's order pushed that agent DOWN the
+// league table by its whole value. See the note in agent.html.
+function agentLinePriced(it: any): boolean {
+  return !!it && it.agentSellPrice !== null && it.agentSellPrice !== undefined
+    && it.agentSellPrice !== "" && Number.isFinite(Number(it.agentSellPrice));
+}
+
 function orderEarnings(items: any[]): number {
   let total = 0;
   for (const it of items || []) {
-    total += ((Number(it.agentSellPrice) || 0) - (Number(it.sellPrice) || 0)) * (Number(it.qty) || 0);
+    if (agentLinePriced(it)) {
+      total += (Number(it.agentSellPrice) - (Number(it.sellPrice) || 0)) * (Number(it.qty) || 0);
+    }
     total += Number(it.bonusCommission) || 0;
   }
   return total;
