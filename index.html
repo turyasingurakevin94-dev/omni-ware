@@ -6757,7 +6757,15 @@ const STAGE_ASSIGNMENT_FIELD = { worker: 'assignedWorkerId', delivery: 'assigned
 function orderNeedsWorker(q){
   if(!q || q.status!=='preparing') return false;
   if(!q.assignedWorkerId) return true;
-  return !(data.staff||[]).some(s=>s.id===q.assignedWorkerId);
+  if(!(data.staff||[]).some(s=>s.id===q.assignedWorkerId)) return true;
+  // Assigned to somebody real, but in a picking state their app does not
+  // list. It shows orders awaiting acceptance and orders in progress, and
+  // nothing else -- so 'done' sitting in Being Prepared is on nobody's
+  // screen. finishPreparingOrder persists exactly that for as long as its
+  // delivery picker is open (it saves 'done' before asking, and puts it back
+  // to 'in_progress' only if the worker backs out), so an app killed at that
+  // moment leaves the order there for good.
+  return !['awaiting_accept','in_progress'].includes(q.pickingStatus);
 }
 // The same question one stage on. Less dire than a missing picker -- the
 // order is still visible and can be stepped to Completed -- but the only way
@@ -6819,8 +6827,20 @@ function stepSavedQuoteStatus(id, dir){
       // sit assigned to them and invisible on their screen, while the board
       // went on reading "being prepared by" them.
       if(toStatus==='preparing' && q.assignedWorkerId){
-        q.pickingStatus = 'awaiting_accept';
-        q.pickingAssignedAt = Date.now();
+        // ...if they are still here. An order that reached Pending Delivery
+        // keeps the worker who picked it as the record of who did, and
+        // deleting a staff member deliberately leaves that alone. Sending
+        // one back then re-offered the re-pick to somebody who had left:
+        // 'awaiting_accept' naming a worker no app can resolve, which reads
+        // as an order waiting on a person rather than one waiting for
+        // anybody. Clearing it says the true thing, and is what the board's
+        // Assign button already keys on.
+        if((data.staff||[]).some(s=>s.id===q.assignedWorkerId)){
+          q.pickingStatus = 'awaiting_accept';
+          q.pickingAssignedAt = Date.now();
+        } else {
+          q.assignedWorkerId = null;
+        }
       }
     }
   }

@@ -127,8 +127,14 @@ const shared = read('shared-worker.js');
   const needs = extractFunction(admin, 'orderNeedsWorker', 'index.html');
   t.check(/if\(!q\.assignedWorkerId\) return true;/.test(needs),
     'an order with nobody assigned needs a worker');
-  t.check(/return !\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedWorkerId\);/.test(needs),
+  t.check(/if\(!\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedWorkerId\)\) return true;/.test(needs),
     'and so does one assigned to somebody who is no longer on staff');
+  // Assigned to somebody real is not enough: the picking state has to be one
+  // their app actually lists, or the order is on nobody's screen. 'done'
+  // sitting in Being Prepared is exactly that, and finishPreparingOrder
+  // persists it for as long as its delivery picker is open.
+  t.check(/return !\['awaiting_accept','in_progress'\]\.includes\(q\.pickingStatus\);/.test(needs),
+    'and so does one whose picking state no worker app renders');
   t.check(/if\(!q \|\| q\.status!=='preparing'\) return false;/.test(needs),
     'only while it is at Being Prepared, since that is the stage a picker is needed for');
 

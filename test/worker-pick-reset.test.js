@@ -33,7 +33,10 @@ const sharedJs = read('shared-worker.js');
 // compileScope binds bare identifiers at compile time, so the fixture object
 // has to exist before the sources are compiled -- only its contents may be
 // swapped between cases.
-const data = { savedQuotes: [] };
+// Staff matter here: a re-pick is only re-offered to the assigned worker if
+// they are still on staff, or the order would sit awaiting acceptance by
+// somebody no app can resolve. Section 8 covers the other side of that.
+const data = { savedQuotes: [], staff: [{ id: 'ST1', name: 'Emma', role: 'worker' }] };
 const seen = { assignPrompted: false };
 
 const scope = compileScope([
@@ -176,6 +179,25 @@ const allPicks = (q, v) => q.items.every((it) => it.pickStatus === v);
   let threw = false;
   try { scope.resetPickingProgress(null); scope.resetPickingProgress({}); } catch (e) { threw = true; }
   t.check(!threw, 'and tolerates a missing order, or one with no items');
+}
+
+/* ---------- 8. ...but not to somebody who has left -------------------- */
+{
+  // An order that reached Pending Delivery keeps the worker who picked it as
+  // the record of who did, and deleting a staff member deliberately leaves
+  // that alone. Sending one back then re-offered the re-pick to somebody
+  // gone: 'awaiting_accept' naming a worker no app can resolve, which reads
+  // as an order waiting on a person rather than one waiting for anybody.
+  //
+  // Found by test/worker-lifecycle-property.test.js, from a random sequence
+  // no hand-written case here had thought to try.
+  const q = load({ status: 'pending_delivery', assignedWorkerId: 'ST_GONE', assignedDeliveryId: 'ST9', pickingStatus: 'done' });
+  scope.stepSavedQuoteStatus(900, -1);
+
+  t.check(q.status === 'preparing', 'the order still comes back to be picked');
+  t.check(q.assignedWorkerId === null, 'but not in the name of somebody no longer on staff');
+  t.check(q.pickingStatus === null,
+    'and it is not left awaiting acceptance by them -- the board offers it to anybody instead');
 }
 
 process.exit(t.done() ? 1 : 0);
