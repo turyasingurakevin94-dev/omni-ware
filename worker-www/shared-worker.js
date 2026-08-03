@@ -1103,67 +1103,15 @@ function staffActiveOrders(s){
   return [...asWorker, ...asDelivery];
 }
 
-// A minimal, DOM-independent version of the admin board's assign-staff
-// modal -- built at call time instead of relying on markup that only
-// exists in the admin app (#assignStaffModal), so it works the same in
-// the standalone worker app. Resolves the picked staff id, or null if
-// there's nobody eligible or the worker backs out (tapping the backdrop),
-// in which case the order simply stays in Being Prepared and an admin can
-// still assign delivery from Order Tracking as always.
-function promptAssignDelivery(orderId){
-  return new Promise((resolve)=>{
-    const candidates = (data.staff||[]).filter(s=>staffEligibleForRole(s, 'delivery') && !s.unavailable);
-    if(!candidates.length){
-      toast(`Add a ${STAFF_ROLE_LABELS.delivery} in the Staff tab first`);
-      resolve(null);
-      return;
-    }
-    const q = data.savedQuotes.find(x=>x.id===orderId);
-    const el = document.createElement('div');
-    // Classed so the background refresh can see it and hold off -- this is a
-    // decision mid-flow, and re-rendering underneath it would replace the
-    // order it's asking about.
-    el.className = 'wv-assign-overlay';
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
-    el.innerHTML = `
-      <div style="background:var(--panel);border-radius:14px;padding:20px;width:340px;max-width:100%;max-height:80vh;overflow-y:auto;">
-        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">Who's delivering this?</div>
-        <div style="color:var(--ink-soft);font-size:13px;margin-bottom:14px;">Choose who's taking "${esc(q ? (q.client.name||'this order') : 'this order')}" out for delivery.</div>
-        <div id="wvAssignList" style="display:flex;flex-direction:column;gap:8px;"></div>
-      </div>`;
-    // Explicit display:block on each row -- the shared .btn class does
-    // `all:unset` (needed so it doesn't inherit default <button> chrome),
-    // which also resets display to its initial value (inline) unless a
-    // flex/grid parent blockifies it for free. These rows have neither, so
-    // width:100% would otherwise be silently ignored and every candidate's
-    // name would run together instead of stacking -- exactly what caused
-    // the reported overlap.
-    el.querySelector('#wvAssignList').innerHTML = candidates.map(s=>{
-      const activeOrders = staffActiveOrders(s);
-      const busy = activeOrders.length>0;
-      // The busy line is coloured --warn-ink, not --accent-ink. This file is
-      // styled by whichever host is running it, so it can only use tokens
-      // that mean the same thing in both -- and --accent-ink does not. It is
-      // amber warning ink in the admin app, and the near-black that sits ON
-      // the accent button in the worker app. There it measured 1.09:1
-      // against the panel: the line was rendered, and could not be read.
-      const statusLine = busy
-        ? activeOrders.map(({order:o, capacity})=>`${capacity==='worker'?'Preparing':'Delivering'} for ${esc(o.client.name||'Unnamed client')} — since ${esc(savedAgoLabel(o.stageEnteredAt))}`).join('<br>')
-        : 'Idle';
-      return `
-        <button type="button" class="btn btn-ghost" style="display:block;width:100%;text-align:left;padding:10px 12px;" data-id="${esc(s.id)}">
-          <div style="font-weight:700;">${esc(s.name)}${s.phone ? ` <span style="font-weight:400;color:var(--ink-soft);">— ${esc(s.phone)}</span>` : ''}</div>
-          <div style="font-size:12px;margin-top:2px;color:${busy?'var(--warn-ink)':'var(--good)'};">${statusLine}</div>
-        </button>`;
-    }).join('');
-    const finish = (id)=>{ document.body.removeChild(el); resolve(id); };
-    el.querySelectorAll('button[data-id]').forEach(btn=>{
-      btn.addEventListener('click', ()=>finish(btn.dataset.id));
-    });
-    el.addEventListener('mousedown', (e)=>{ if(e.target===el) finish(null); });
-    document.body.appendChild(el);
-  });
-}
+// The worker's delivery picker used to live here. Choosing a driver is
+// the admin's call now (see finishPreparingOrder), so it is gone rather
+// than left unreferenced -- the admin's own assign-staff modal
+// (openAssignStaffModal, index.html) is the one place that decision is
+// made, and a second implementation of it sitting unused is how the two
+// drift apart.
+//
+// staffEligibleForRole and STAFF_ROLE_LABELS above are NOT dead with it:
+// the admin's modal reads both from this file.
 
 // An agent's own payment term gates whether their draft order can even
 // start being prepared -- "pay before we prepare" (set per-agent in the
@@ -1178,16 +1126,21 @@ function agentPaymentBlocksPreparing(q){
   return !!(agent && agent.paymentTerm==='prepay' && q.agentPaymentStatus!=='paid');
 }
 
-// Mirrors the admin board's own step-forward pipeline (preparing ->
-// pending_delivery requires picking a delivery person first) instead of
-// just forcing the status forward -- skipping that gate meant orders a
-// worker finished never got a delivery person assigned, and never got a
-// second chance to since the status had already moved past it. An agent
-// order set to pick up themselves skips that picker entirely -- there's
-// no shop delivery staff to assign -- using the same '__agent__' sentinel
-// the admin board's own stepSavedQuoteStatus() uses for the same case.
+// A worker says the order is picked and packed. That is the whole of
+// what they are reporting, and it is all this does.
+//
+// It used to also make them choose a driver, mirroring the admin board's
+// step-forward gate. That put the decision on the person with the least
+// information: a worker on the shop floor cannot see who is already out,
+// who is nearest the customer, or what else is going on the same run. It
+// also gave them a way to strand their own work -- backing out of the
+// picker left a finished pick that had to be un-finished to escape.
+//
+// The order now arrives in Pending Delivery unassigned, and the admin
+// board asks for the driver (orderNeedsDelivery / "Nobody delivering",
+// index.html).
 async function finishPreparingOrder(orderId){
-  let q = data.savedQuotes.find(x=>x.id===orderId);
+  const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
   // This app's copy of an order can be behind -- the poll skips a hidden
   // app, the quiet period after a touch, and any refresh that failed.
@@ -1201,52 +1154,37 @@ async function finishPreparingOrder(orderId){
   }
   const items = q.items||[];
   if(items.length && items.some(row=>!itemPickAnswered(row))) return; // guard: button is hidden otherwise
-  q.pickingStatus = 'done';
-  // Awaited: this function saves twice, and a save now re-reads the row
-  // before writing it. Left unawaited the two overlap, and whichever upsert
-  // lands last wins -- so the first save's older snapshot could land after
-  // the second's and quietly undo the status move below.
-  await saveData(); // persist the finished pick state even if delivery assignment below is skipped or cancelled
-
-  // A background refresh replaces `data` wholesale, so every await from here
-  // on can outlive the order object captured above -- and writes to a
-  // replaced snapshot go nowhere at all. The worker's finish and the
-  // delivery person they had just chosen were both dropped in silence: the
-  // order stayed sitting in Being Prepared with nothing to say why, and the
-  // pick they had already completed came back needing doing again.
+  // Who delivers it is the admin's call, not the worker's -- the admin is
+  // the one running the operation and the only one who can see every
+  // driver's whole day. A worker finishing a pick knows the order is
+  // ready; they do not know who is already out, who is closest, or what
+  // else is going out on the same run.
   //
-  // The standalone app holds refreshes off while the picker is up, by
-  // looking for its overlay. The admin app hosts this same view and looks
-  // for a different overlay class, so there it did not hold off at all.
-  // Re-resolving against whatever `data` is now makes that not matter from
-  // this side, whichever app is hosting and however the guards change.
-  const reresolve = ()=>{
-    q = data.savedQuotes.find(x=>x.id===orderId);
-    if(!q) toast('This order is no longer here — refresh to see where it went', 5000);
-    return q;
-  };
-  if(!reresolve()){ renderWorkerView(); return; }
-
-  let deliveryStaffId;
-  if(q.deliveryMode==='agent_pickup'){
-    deliveryStaffId = '__agent__';
-  } else {
-    deliveryStaffId = await promptAssignDelivery(orderId);
-    if(!reresolve()){ renderWorkerView(); return; }
-    if(!deliveryStaffId){
-      // Backing out has to leave the order somewhere this app can still
-      // show it. 'done' is neither awaiting_accept nor in_progress, so both
-      // lists skipped it -- the worker was left staring at an empty screen
-      // while still holding an order that was blocked on them, with no way
-      // back to it.
-      q.pickingStatus = 'in_progress';
-      await saveData();
-      renderWorkerView();
-      return;
-    }
-  }
-
-  q.assignedDeliveryId = deliveryStaffId;
+  // So the order moves to Pending Delivery with nobody on it, and the
+  // admin board asks: orderNeedsDelivery() is already true for exactly
+  // this shape, and the card already carries "Nobody delivering" with an
+  // Assign button (index.html). Nothing is stranded by arriving
+  // unassigned -- that state was always reachable anyway, by a driver
+  // being deleted or an order being stepped back.
+  //
+  // The one case that assigns itself: an agent collecting their own order.
+  // There is no driver to choose, and leaving it null would put a
+  // "Nobody delivering" alarm on every self-pickup order for the rest of
+  // its life. '__agent__' is the same sentinel the admin's own
+  // stepSavedQuoteStatus() uses, and orderNeedsDelivery() reads it as
+  // settled rather than missing.
+  //
+  // One write, and no await anywhere before it. This used to save the
+  // finished pick first and move the status afterwards, because the
+  // picker sat between them -- which left a window where the order was
+  // 'done' but still in Being Prepared. renderWorkerView builds its lists
+  // from awaiting_accept and in_progress only, so an order caught in that
+  // window was on nobody's screen at all: the worker who had just
+  // finished it could not see it, and no admin knew to look. The window
+  // was as long as the worker took to choose a driver. With the picker
+  // gone there is nothing to do between the two, so there are not two.
+  q.pickingStatus = 'done';
+  q.assignedDeliveryId = q.deliveryMode==='agent_pickup' ? '__agent__' : null;
   q.status = 'pending_delivery';
   q.stageEnteredAt = Date.now();
   const workerId = q.assignedWorkerId;

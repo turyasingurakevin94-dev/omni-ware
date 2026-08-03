@@ -223,18 +223,34 @@ const sharedJs = read('shared-worker.js');
       serverStatus = 'preparing';
     }
 
-    /* ---------- 6. backing out of delivery leaves the order visible ---- */
+    /* ---------- 6. finishing never leaves the order on nobody's screen - */
     /*
      * 'done' is neither awaiting_accept nor in_progress, and renderWorkerView
      * builds both of its lists from exactly those two -- so an order left at
-     * 'done' vanished from this app while still assigned to the worker,
-     * blocked on them, with no way back to it.
+     * 'done' while still in Being Prepared is on nobody's screen at all.
+     *
+     * That used to be a real window. finishPreparingOrder saved the finished
+     * pick, opened the delivery picker, and moved the status only after the
+     * worker chose -- so the order sat invisible for as long as they took,
+     * and backing out needed its own un-finish path to escape.
+     *
+     * Choosing a driver is the admin's job now, so there is nothing to do
+     * between the two writes and they are one write. The invisible state is
+     * not handled, it is unreachable.
      */
     {
       const fin = extractFunction(sharedJs, 'finishPreparingOrder', 'shared-worker.js');
-      const backOut = /if\(!deliveryStaffId\)\{([\s\S]*?)\n    \}/.exec(fin);
-      t.check(backOut && /q\.pickingStatus = 'in_progress'/.test(backOut[1]),
-        'backing out of the delivery picker puts the order back where this app can show it');
+      const body = fin.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+
+      t.check((body.match(/await saveData\(\)/g) || []).length === 1,
+        'finishing writes once, so there is no moment where the pick is done and the status is not');
+      const doneAt = body.indexOf("pickingStatus = 'done'");
+      const saveAt = body.indexOf('await saveData()');
+      const statusAt = body.indexOf("status = 'pending_delivery'");
+      t.check(doneAt > -1 && statusAt > -1 && doneAt < saveAt && statusAt < saveAt,
+        'with the finished pick and the new status both set before it');
+      t.check(!/promptAssignDelivery/.test(body),
+        'and no delivery picker in the middle of it -- that is the admin\'s decision');
 
       const render = extractFunction(sharedJs, 'renderWorkerView', 'shared-worker.js');
       const shown = (render.match(/pickingStatus==='(\w+)'/g) || []).map((s) => s.split("'")[1]);
@@ -340,7 +356,7 @@ const sharedJs = read('shared-worker.js');
       const guards = [
         [/workerSaveInFlight/, 'it holds off while a save is in flight, so lastSynced is not swapped mid-diff'],
         [/document\.visibilityState === 'hidden'/, 'it does nothing while the app is backgrounded'],
-        [/wv-assign-overlay/, 'it holds off while the delivery picker is open'],
+        [/wv-assign-overlay/, 'it holds off while a prompt built by shared-worker.js is open (the short-pick quantity entry)'],
         [/lastWorkerInteractionAt < WORKER_QUIET_MS/, 'it holds off just after a touch, so a re-render cannot snap the carousel away mid-scroll'],
         [/workerRefreshing/, 'it will not overlap with itself'],
       ];

@@ -45,8 +45,24 @@ const isHex = (v) => /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(v || '');
 const used = [...new Set([...shared.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m) => m[1]))].sort();
 
 /* ---------- 1. every token exists in both hosts ----------------------- */
+/*
+ * The shared file inlined exactly four colours, all of them inside the
+ * worker's delivery picker. Choosing a driver is the admin's job now and
+ * that picker is gone, taking the last inline colour with it: every
+ * colour this file produces now arrives through a class the host styles,
+ * which is the shape that cannot mean two different things in two hosts.
+ *
+ * So there is nothing to measure today, and this says so rather than
+ * quietly passing a loop over an empty list -- a check that reports green
+ * while checking nothing is worse than no check. The machinery below is
+ * kept and runs for real the moment an inline var() comes back.
+ */
 {
-  t.check(used.length >= 3, `the shared file uses colour tokens (${used.length}: ${used.join(', ')})`);
+  if (used.length === 0) {
+    t.pass('the shared file inlines no colours at all, so neither host can style it two ways');
+  } else {
+    t.pass(`the shared file inlines ${used.length} colour token(s): ${used.join(', ')}`);
+  }
   const missing = [];
   used.forEach((tok) => {
     Object.entries(hosts).forEach(([name, src]) => {
@@ -61,8 +77,11 @@ const used = [...new Set([...shared.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m)
 
 /* ---------- 2. and reads as text on that host's own panel ------------- */
 {
-  // The shared file only ever paints these onto a panel -- the pending card,
-  // the pick card, the delivery picker rows. So that is the pairing to check.
+  // The shared file only ever paints these onto a panel -- the pending card
+  // and the pick card. So that is the pairing to check. Empty while the file
+  // inlines no colours; section 1 is what states that, and section 3 keeps
+  // measuring --warn-ink itself so the contract does not go unmeasured
+  // just because nothing is currently spending it.
   const fails = [];
   const measured = [];
   Object.entries(hosts).forEach(([name, src]) => {
@@ -78,7 +97,8 @@ const used = [...new Set([...shared.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m)
       if (r < 4.5) fails.push(`${tok} on ${name}'s panel is ${r.toFixed(2)}:1`);
     });
   });
-  t.check(measured.length > 0, `contrast measured for ${measured.length} token/host pairs`);
+  if (!used.length) t.pass('no inline colour to measure on a panel — see above');
+  else t.check(measured.length > 0, `contrast measured for ${measured.length} token/host pairs`);
   t.check(fails.length === 0,
     fails.length
       ? `unreadable as text on a panel: ${fails.join('; ')}`
@@ -92,7 +112,16 @@ const used = [...new Set([...shared.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m)
   const code = shared.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   t.check(!/var\(--accent-ink\)/.test(code),
     'shared-worker.js does not reach for --accent-ink, which means two different things');
-  t.check(/var\(--warn-ink\)/.test(code), 'it uses --warn-ink for caution text');
+  // --warn-ink is the replacement, and both hosts still define it even
+  // though the shared file no longer has caution text of its own to
+  // colour. That definition IS the contract: the next piece of shared
+  // code that needs a warning colour has one that means the same thing on
+  // both sides, instead of reaching for --accent-ink again and shipping
+  // text at 1.09:1 that renders and cannot be read.
+  Object.keys(hosts).forEach((name) => {
+    t.check(resolve(hosts[name], '--warn-ink', 0) !== null,
+      `${name} still defines --warn-ink for shared code to use`);
+  });
 
   const w = resolve(hosts['worker.html'], '--warn-ink', 0);
   const a = resolve(hosts['index.html'], '--warn-ink', 0);

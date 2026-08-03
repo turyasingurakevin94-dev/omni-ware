@@ -196,7 +196,6 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
   ], {
     data,
     saveData: async () => {},
-    promptAssignDelivery: async () => 'ST9',
     autoAssignNextOrder: () => {},
     refreshAdminOrderBoardIfOpen: () => {},
     renderWorkerView: () => {},
@@ -216,8 +215,8 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
     await scope.finishPreparingOrder(700);
     t.check(q.status === 'pending_delivery' && q.pickingStatus === 'done',
       'a short order finishes and moves on, instead of sitting on the worker forever');
-    t.check(q.assignedDeliveryId === 'ST9',
-      'and still goes through the delivery-assignment gate on its way');
+    t.check(q.assignedDeliveryId === null,
+      'arriving with no driver on it, because choosing one is the admin\'s job (orderNeedsDelivery asks)');
 
     const stillPicking = {
       id: 701, status: 'preparing', assignedWorkerId: 'ST1', client: { name: 'Achen' },

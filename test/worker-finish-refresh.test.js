@@ -1,27 +1,31 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Finishing a pick has to survive a refresh landing in the middle of it.
+ * Finishing a pick, and the window that used to sit inside it.
  *
- * finishPreparingOrder awaits twice -- a save, then the delivery picker,
- * which sits open for as long as the worker takes to choose. A background
- * refresh assigns `data` a whole new object, so the order captured at the
- * top of the function belongs to a snapshot nothing saves any more. Writes
- * to it went nowhere:
+ * finishPreparingOrder used to await twice -- a save, then the delivery
+ * picker, which stayed open for as long as the worker took to choose. A
+ * background refresh assigns `data` a whole new object, so the order
+ * captured at the top belonged to a snapshot nothing saved any more:
  *
  *     q.assignedDeliveryId = deliveryStaffId;   // into the discarded copy
  *     q.status = 'pending_delivery';            // into the discarded copy
  *     await saveData();                         // saves the new one, unchanged
  *
  * The worker tapped "Mark as finished", chose a delivery person, and the
- * order stayed sitting in Being Prepared. The pick they had just completed
- * came back needing doing again, and nothing anywhere said why.
+ * order stayed in Being Prepared. The pick came back needing doing again.
  *
- * The standalone worker app holds refreshes off while the picker is up, by
- * looking for its overlay class. The admin app hosts the same view and
- * looked only for its own '.modal-overlay.show', so there the refresh ran
- * straight through the decision it was asking about. Both halves are fixed;
- * this file covers the one that does not depend on which app is hosting.
+ * Worse, the order was 'done' but still in Being Prepared for the whole of
+ * that window, and renderWorkerView builds its lists from awaiting_accept
+ * and in_progress only -- so it was on nobody's screen at all while it sat
+ * there, and backing out of the picker needed its own un-finish path to
+ * escape.
+ *
+ * Choosing a driver is the admin's job now. With nothing to do between the
+ * two writes there are not two: every field is set, then one save. The
+ * window is not defended against, it does not exist -- which is what this
+ * file checks, because "there is no window" is a claim that rots quietly
+ * the moment somebody puts an await back.
  *
  * Run: node test/worker-finish-refresh.test.js   (or: npm test)
  */
@@ -32,6 +36,7 @@ const sharedJs = read('shared-worker.js');
 const indexHtml = read('index.html');
 
 const seen = { toasts: [], saves: 0, autoAssigned: null };
+let onSave = null;
 
 const order = (over) => Object.assign({
   id: 900,
@@ -39,28 +44,19 @@ const order = (over) => Object.assign({
   status: 'preparing',
   assignedWorkerId: 'ST1',
   assignedDeliveryId: null,
-  pickingStatus: 'done',
+  pickingStatus: 'in_progress',
   deliveryMode: 'shop_delivery',
   stageEnteredAt: 111,
   items: [{ productId: 'P001', qty: 5, pickStatus: 'done', pickedQty: 5 }],
-}, over || {});
-
-// What the picker does while it is open, and what happens during a save.
-// Both are awaits a refresh can land in. Set per case.
-let onPicker = async () => 'ST9';
-let onSave = null;
+}, over);
 
 const scope = compileScope([
-  // finishPreparingOrder gates on every line being ANSWERED, not on every
-  // line being 'done' -- a recorded shortfall finishes too. See
-  // test/worker-short-pick.test.js.
   extractDeclaration(sharedJs, 'PICK_ANSWERED', 'shared-worker.js'),
   extractFunction(sharedJs, 'itemPickAnswered', 'shared-worker.js'),
   extractFunction(sharedJs, 'finishPreparingOrder', 'shared-worker.js'),
   // Lets a case replace `data` the way a background refresh does -- from
   // inside the compiled scope, which is the only place the binding lives.
   'function __setData(d){ data = d; }',
-  'function __getData(){ return data; }',
 ], {
   data: { savedQuotes: [order()] },
   saveData: async () => { seen.saves++; if (onSave) onSave(seen.saves); },
@@ -68,8 +64,7 @@ const scope = compileScope([
   renderWorkerView: () => {},
   refreshAdminOrderBoardIfOpen: () => {},
   autoAssignNextOrder: (id) => { seen.autoAssigned = id; },
-  promptAssignDelivery: () => onPicker(),
-}, ['finishPreparingOrder', '__setData', '__getData']);
+}, ['finishPreparingOrder', '__setData']);
 
 const load = (over) => {
   seen.toasts = []; seen.saves = 0; seen.autoAssigned = null;
@@ -78,123 +73,111 @@ const load = (over) => {
   scope.__setData(fresh);
   return fresh.savedQuotes[0];
 };
-// A refresh: a brand-new object graph, as loadWorkerData returns.
-const refreshTo = (over) => {
-  const fresh = { savedQuotes: [order(over)] };
-  scope.__setData(fresh);
-  return fresh.savedQuotes[0];
-};
 
 (async () => {
 
-/* ---------- 1. a refresh mid-picker does not swallow the finish ------- */
+/* ---------- 1. there is no window to land in -------------------------- */
+/*
+ * Structural, because that is what the claim actually is. Driving it can
+ * only fail to find a window; it cannot show there is none.
+ */
 {
-  load();
-  let live = null;
-  onPicker = async () => { live = refreshTo(); return 'ST9'; };
-  await scope.finishPreparingOrder(900);
+  const fin = extractFunction(sharedJs, 'finishPreparingOrder', 'shared-worker.js');
+  const body = fin.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-  t.check(live.status === 'pending_delivery', 'the finish lands on the order the app is actually holding');
-  t.check(live.assignedDeliveryId === 'ST9', 'and so does the delivery person the worker chose');
-  t.check(live.pickingStatus === 'done', 'the completed pick is not lost back to being unfinished');
-  t.check(seen.autoAssigned === 'ST1', 'the worker is still handed their next order');
+  const awaits = (body.match(/await\s/g) || []).length;
+  t.check(awaits === 1, `finishing awaits exactly once (found ${awaits})`);
+  t.check((body.match(/await saveData\(\)/g) || []).length === 1, 'and that one await is the save');
+
+  const saveAt = body.indexOf('await saveData()');
+  ["pickingStatus = 'done'", "status = 'pending_delivery'", 'assignedDeliveryId =', 'stageEnteredAt ='].forEach((frag) => {
+    const at = body.indexOf(frag);
+    t.check(at > -1 && at < saveAt, `\`${frag}\` is set before the save, not after it`);
+  });
+
+  t.check(!/promptAssignDelivery/.test(body),
+    "no delivery picker sits in the middle of it -- choosing a driver is the admin's job");
+  t.check(!/reresolve/.test(body),
+    'and nothing needs re-resolving against a replaced snapshot, because nothing can replace it mid-flow');
+  t.check(!/promptAssignDelivery/.test(sharedJs),
+    'the picker is gone from the file rather than left sitting there unused, where it would drift from the admin\'s own');
 }
 
-/* ---------- 1b. ...nor one landing during the save before it ---------- */
-{
-  // The other await. The pick state is saved before the picker opens, and a
-  // refresh can land in that gap just as easily.
-  load();
-  let live = null;
-  onSave = (n) => { if (n === 1) live = refreshTo(); };
-  onPicker = async () => 'ST9';
-  await scope.finishPreparingOrder(900);
-
-  t.check(live.status === 'pending_delivery', 'a refresh during the first save does not swallow the finish either');
-  t.check(live.assignedDeliveryId === 'ST9', 'the delivery person still lands on the live order');
-}
-
-/* ---------- 2. backing out after a refresh still leaves it visible ---- */
-{
-  load();
-  let live = null;
-  onPicker = async () => { live = refreshTo(); return null; };
-  await scope.finishPreparingOrder(900);
-
-  t.check(live.pickingStatus === 'in_progress',
-    'backing out puts the live order back where the worker can still see it');
-  t.check(live.status === 'preparing', 'and leaves it in Being Prepared');
-  t.check(seen.autoAssigned === null, 'nobody is handed a next order on a back-out');
-}
-
-/* ---------- 3. the order disappearing is said out loud ---------------- */
-{
-  load();
-  onPicker = async () => { scope.__setData({ savedQuotes: [] }); return 'ST9'; };
-  let threw = false;
-  try { await scope.finishPreparingOrder(900); } catch (e) { threw = true; }
-
-  t.check(!threw, 'an order that has gone entirely does not throw');
-  t.check(/no longer here/.test(seen.toasts.join(' ')),
-    'the worker is told rather than left tapping a button that does nothing');
-  t.check(seen.autoAssigned === null, 'and nothing is assigned off the back of it');
-}
-
-/* ---------- 4. with no refresh at all, nothing changes ---------------- */
+/* ---------- 2. the ordinary finish ------------------------------------ */
 {
   const q = load();
-  onPicker = async () => 'ST9';
   await scope.finishPreparingOrder(900);
 
-  t.check(q.status === 'pending_delivery' && q.assignedDeliveryId === 'ST9',
-    'the ordinary path is untouched');
-  t.check(q.stageEnteredAt !== 111, 'the stage stamp moves with the order');
-  t.check(seen.saves === 2, 'and it still saves exactly twice');
+  t.check(q.status === 'pending_delivery', 'the order moves to Pending Delivery');
+  t.check(q.pickingStatus === 'done', 'the pick is recorded as finished');
+  t.check(q.assignedDeliveryId === null,
+    'with no driver on it -- the admin board is what asks, via orderNeedsDelivery');
+  t.check(q.stageEnteredAt !== 111, 'the stage stamp moves with it');
+  t.check(seen.saves === 1, 'and it saves exactly once');
+  t.check(seen.autoAssigned === 'ST1', 'the worker is handed their next order');
 }
 
-/* ---------- 5. an agent collecting their own order skips the picker --- */
+/* ---------- 3. a refresh during the save cannot undo it --------------- */
+{
+  // The one remaining await. By the time it runs every field is already set
+  // and on its way, so a refresh landing here replaces what the app holds
+  // without touching what was sent.
+  const q = load();
+  onSave = () => { scope.__setData({ savedQuotes: [order()] }); };
+  await scope.finishPreparingOrder(900);
+
+  t.check(q.status === 'pending_delivery' && q.pickingStatus === 'done',
+    'the finish was applied before the save, so a refresh during it changes nothing about what was written');
+  t.check(seen.saves === 1, 'and does not cause a second save');
+}
+
+/* ---------- 4. an agent collecting their own order -------------------- */
 {
   const q = load({ deliveryMode: 'agent_pickup' });
-  let pickerOpened = false;
-  onPicker = async () => { pickerOpened = true; return 'ST9'; };
   await scope.finishPreparingOrder(900);
 
-  t.check(!pickerOpened, 'no delivery picker for an order the agent collects themselves');
-  t.check(q.assignedDeliveryId === '__agent__', 'it uses the agent sentinel');
+  t.check(q.assignedDeliveryId === '__agent__',
+    'a self-pickup order is settled with the agent sentinel, not left looking undelivered');
   t.check(q.status === 'pending_delivery', 'and still moves on');
-}
-{
-  // ...which is the one path with no picker to re-resolve after, so the save
-  // before it is the only await left and the only chance to notice.
-  load({ deliveryMode: 'agent_pickup' });
-  let live = null;
-  onSave = (n) => { if (n === 1) live = refreshTo({ deliveryMode: 'agent_pickup' }); };
-  await scope.finishPreparingOrder(900);
 
-  t.check(live.status === 'pending_delivery',
-    'a refresh during the save still does not swallow an agent-pickup finish');
-  t.check(live.assignedDeliveryId === '__agent__', 'and the sentinel lands on the live order');
+  // Which matters because of how the admin board reads it: without the
+  // sentinel every self-pickup order would carry a "Nobody delivering"
+  // alarm for the rest of its life, and an alarm that is always on is one
+  // nobody reads.
+  const needs = extractFunction(indexHtml, 'orderNeedsDelivery', 'index.html');
+  t.check(/assignedDeliveryId==='__agent__'\) return false/.test(needs),
+    'the admin board reads the sentinel as settled rather than missing');
+  t.check(/if\(!q\.assignedDeliveryId\) return true/.test(needs),
+    'while a shop-delivery order with nobody on it is exactly what it asks about');
 }
 
-/* ---------- 6. the guards before the picker still hold ---------------- */
+/* ---------- 5. the guards before it still hold ------------------------ */
 {
   const moved = load({ status: 'completed' });
-  onPicker = async () => 'ST9';
   await scope.finishPreparingOrder(900);
   t.check(moved.status === 'completed', 'an order that has already moved on is not dragged back');
+  t.check(/already moved on/.test(seen.toasts.join(' ')), 'and the worker is told why nothing happened');
 
   const unpicked = load({ items: [{ productId: 'P001', qty: 5, pickStatus: 'pending' }] });
   await scope.finishPreparingOrder(900);
   t.check(unpicked.status === 'preparing', 'an order with an unpicked item cannot be finished');
+
+  load();
+  scope.__setData({ savedQuotes: [] });
+  let threw = false;
+  try { await scope.finishPreparingOrder(900); } catch (e) { threw = true; }
+  t.check(!threw, 'an order that is gone entirely does not throw');
+  t.check(seen.autoAssigned === null, 'and nothing is assigned off the back of it');
 }
 
-/* ---------- 7. the admin app holds off while the picker is up --------- */
+/* ---------- 6. the refresh hold-off is still load-bearing ------------- */
 {
-  // The other half of the fix. promptAssignDelivery classes its overlay so a
-  // refresh can see it; the standalone app looks for that class, and the
-  // admin app hosting the same view now does too.
-  t.check(/el\.className = 'wv-assign-overlay';/.test(sharedJs),
-    'the delivery picker still carries the class the guards look for');
+  // The picker is gone, but the class it shared with the short-pick
+  // quantity prompt is not -- that prompt is still a decision built at call
+  // time by shared-worker.js, and a refresh through it would replace the
+  // order it is asking about.
+  t.check(/el\.className = 'wv-assign-overlay wv-qty-overlay';/.test(sharedJs),
+    'the short-pick quantity prompt still carries the class the guards look for');
   t.check(/document\.querySelector\('\.wv-assign-overlay'\)/.test(indexHtml),
     "the admin app's background poll holds off for it");
   t.check(/document\.querySelector\('\.wv-assign-overlay'\)/.test(read('worker.html')),
