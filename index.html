@@ -1662,6 +1662,19 @@
     .dr-nav{display:none;}
   }
 
+  /* The asset register. */
+  .fa-summary{margin-bottom:16px;}
+  .fa-name{font-weight:700;color:var(--ink);}
+  .fa-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .fa-sub.good{color:var(--good);} .fa-sub.bad{color:var(--ow-crimson);}
+  .fa-tag{
+    display:inline-block;margin-left:7px;padding:1px 6px;border-radius:99px;
+    background:var(--ow-steel-100);color:var(--ink-soft);
+    font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:1px;
+  }
+  tr.fa-gone td{opacity:.6;}
+  .fa-rule{border:0;border-top:1px solid var(--line);margin:18px 0 14px;}
+
   /* Cash position. Sits between the total and the supplier runs because it
      is the question you ask after seeing the total and before setting off. */
   .bl-cash{
@@ -2359,6 +2372,7 @@
       <div class="mms-group-label">Reports</div>
       <button type="button" class="mms-item" data-tab="analytics-sales">Sales Analytics</button>
       <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase Analytics</button>
+      <button type="button" class="mms-item" data-tab="assets">Assets</button>
       <button type="button" class="mms-item" data-tab="analytics-debtors">Debtors List</button>
       <button type="button" class="mms-item" data-tab="analytics-creditors">Creditors List</button>
     </div>
@@ -2445,6 +2459,10 @@
       <button data-tab="cashbook" title="Cash Book (press C)">
         <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12.3h3.5v2.9H16a1.45 1.45 0 0 1 0-2.9z"/><path d="M3 9.5h18"/></svg>
         <span class="nav-label">Cash book</span>
+      </button>
+      <button data-tab="assets" title="What the shop owns and uses">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-5h6v5"/><path d="M5 14h14"/></svg>
+        <span class="nav-label">Assets</span>
       </button>
       <button data-tab="analytics-debtors" title="Who owes you">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -3305,6 +3323,23 @@
       </div>
     </section>
 
+    <!-- FIXED ASSETS -->
+    <section id="tab-assets" style="display:none;">
+      <div class="page-head">
+        <h1>Assets</h1>
+        <p>The things the shop owns and uses — a van, shelving, a laptop. Not stock: these are bought to be used, and lose value a little at a time as depreciation rather than all at once when they are paid for.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Register</h2>
+          <button class="btn btn-accent" id="fa_add_btn">Add an asset</button>
+        </div>
+        <div id="fa_summary"></div>
+        <div id="fa_tableWrap"></div>
+      </div>
+    </section>
+
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
       <div class="page-head">
@@ -3668,6 +3703,69 @@
       </button>
     </div>
     <div class="modal-body" id="buyingListBody"></div>
+  </div>
+</div>
+
+<!-- ADD / EDIT A FIXED ASSET -->
+<div class="modal-overlay" id="assetModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="assetModalTitle">Add an asset</h2>
+      <button class="modal-close" id="assetModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>What is it <span class="req">required</span></label><input id="fa_name" placeholder="e.g. Delivery van"></div>
+        <div class="field"><label>Category</label><input id="fa_category" placeholder="e.g. Vehicles"></div>
+        <div class="field"><label>What it cost <span class="req">required</span></label><input id="fa_cost" type="number" min="0" step="any" placeholder="0">
+          <div class="field-hint">Everything to get it working — delivery and fitting too, not just the invoice.</div>
+        </div>
+        <div class="field"><label>Date acquired <span class="req">required</span></label><input id="fa_acquired" type="date"></div>
+        <div class="field"><label>How it loses value</label>
+          <select id="fa_method">
+            <option value="straight_line">Straight line — the same each month</option>
+            <option value="reducing_balance">Reducing balance — heavier early</option>
+          </select>
+        </div>
+        <div class="field" id="fa_life_field"><label>Useful life (months)</label><input id="fa_life" type="number" min="1" step="1" placeholder="e.g. 60">
+          <div class="field-hint">60 is five years.</div>
+        </div>
+        <div class="field" id="fa_rate_field" style="display:none;"><label>Rate (% a year)</label><input id="fa_rate" type="number" min="0" step="any" placeholder="e.g. 25"></div>
+        <div class="field"><label>Worth at the end</label><input id="fa_salvage" type="number" min="0" step="any" placeholder="0">
+          <div class="field-hint">Depreciation never takes it below this.</div>
+        </div>
+        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="fa_notes" placeholder="optional"></div>
+      </div>
+      <div id="fa_disposal_block" style="display:none;">
+        <hr class="fa-rule">
+        <div class="form-grid">
+          <div class="field"><label>Date sold or scrapped</label><input id="fa_disposed" type="date">
+            <div class="field-hint">Depreciation stops here. Leave blank while the shop still has it.</div>
+          </div>
+          <div class="field"><label>What it fetched</label><input id="fa_proceeds" type="number" min="0" step="any" placeholder="0"></div>
+        </div>
+      </div>
+      <p class="preset-hint" id="fa_preview"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="fa_cancel">Cancel</button>
+      <button class="btn btn-accent" id="fa_save">Save asset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONE ASSET'S DEPRECIATION SCHEDULE -->
+<div class="modal-overlay" id="assetScheduleModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="assetScheduleTitle">Depreciation schedule</h2>
+      <button class="modal-close" id="assetScheduleClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="assetScheduleBody"></div>
   </div>
 </div>
 
@@ -4478,6 +4576,8 @@ function seedData(){
     savedQuotes: [],
     nextSavedQuoteId: 1,
     purchaseInvoices: [],
+    fixedAssets: [],
+    nextFixedAssetId: 1,
     nextPurchaseInvoiceId: 1,
     presetCategories: [
       {name:'Cement', subcategories:[]},
@@ -4554,15 +4654,15 @@ async function loadData(shopId){
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
-    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR
+    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
     sel('saved_quotes'), sel('purchase_invoices'),
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
-    sel('agents'), sel('supplier_commissions')
+    sel('agents'), sel('supplier_commissions'), sel('fixed_assets')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -4652,6 +4752,21 @@ async function loadData(shopId){
     nextPurchaseInvoiceId: (purchaseInvoicesR.data||[]).length ? Math.max(0,...purchaseInvoicesR.data.map(pi=>pi.id||0))+1 : 1,
     supplierCommissions: (supplierCommissionsR.data||[]).map(c=>({id:c.id, supplierId:c.supplier_id, period:c.period, amount:Number(c.amount)||0, notes:c.notes||''})),
     nextSupplierCommissionId: (supplierCommissionsR.data||[]).length ? Math.max(0,...supplierCommissionsR.data.map(c=>c.id||0))+1 : 1,
+    // life_months and rate_pct stay null rather than becoming 0: which one
+    // applies depends on the method, and "not applicable" reading as
+    // "zero" would make a straight-line asset depreciate over no months.
+    fixedAssets: (fixedAssetsR.data||[]).map(a=>({
+      id:a.id, name:a.name||'', category:a.category||'',
+      cost:Number(a.cost)||0, acquiredOn:a.acquired_on,
+      method:a.method||'straight_line',
+      lifeMonths: a.life_months==null ? null : Number(a.life_months),
+      ratePct: a.rate_pct==null ? null : Number(a.rate_pct),
+      salvage:Number(a.salvage)||0,
+      disposedOn:a.disposed_on||null,
+      disposalProceeds: a.disposal_proceeds==null ? null : Number(a.disposal_proceeds),
+      notes:a.notes||'', cashTxnId:a.cash_txn_id||null
+    })),
+    nextFixedAssetId: (fixedAssetsR.data||[]).length ? Math.max(0,...fixedAssetsR.data.map(a=>a.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
     presetLocations: presets.locations || seed.presetLocations,
@@ -4747,6 +4862,15 @@ function buildSyncRows(d, shopId){
     })),
     supplierCommissions: d.supplierCommissions.map(c=>({
       id:c.id, shop_id:shopId, supplier_id:c.supplierId, period:c.period, amount:c.amount, notes:c.notes||null
+    })),
+    fixedAssets: (d.fixedAssets||[]).map(a=>({
+      id:a.id, shop_id:shopId, name:a.name, category:a.category||null,
+      cost:a.cost, acquired_on:a.acquiredOn, method:a.method,
+      life_months: a.lifeMonths==null ? null : a.lifeMonths,
+      rate_pct: a.ratePct==null ? null : a.ratePct,
+      salvage:a.salvage||0, disposed_on:a.disposedOn||null,
+      disposal_proceeds: a.disposalProceeds==null ? null : a.disposalProceeds,
+      notes:a.notes||null, cash_txn_id:a.cashTxnId||null
     })),
     settings: {
       shop_id: shopId,
@@ -4861,7 +4985,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -4882,6 +5006,7 @@ async function saveData(){
   addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes);
   addDiffOps(ops, 'purchaseInvoices', 'purchase_invoices', 'id', shopId, rows.purchaseInvoices);
   addDiffOps(ops, 'supplierCommissions', 'supplier_commissions', 'id', shopId, rows.supplierCommissions);
+  addDiffOps(ops, 'fixedAssets', 'fixed_assets', 'id', shopId, rows.fixedAssets);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -5211,6 +5336,7 @@ function goToTab(tab){
   if(tab==='prices') refreshPriceDropdowns();
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
+  if(tab==='assets') renderFixedAssets();
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
@@ -12961,6 +13087,9 @@ const ROW_ID_KINDS = {
   debtLog:         {kind:'row:debt_log',         counter:'nextCustomerDebtLogId'},
   savedQuote:      {kind:'row:saved_quote',      counter:'nextSavedQuoteId',      dense:true},
   purchaseInvoice: {kind:'row:purchase_invoice', counter:'nextPurchaseInvoiceId', dense:true},
+  // Not dense: an asset id is never printed on paper, so a gap in the
+  // sequence costs nothing and blocks are safe.
+  fixedAsset:      {kind:'row:fixed_asset',      counter:'nextFixedAssetId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
@@ -16147,6 +16276,340 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
 
 /* ================= Init ================= */
 /* ================= EXECUTIVE DASHBOARD ================= */
+
+/* ================= FIXED ASSETS AND DEPRECIATION =================
+
+   Stock is bought to be sold and leaves the accounts through COGS. These
+   are bought to be USED, and leave a little at a time over years. Before
+   this, a van was one large payment in the cash book and then nothing --
+   a month that looked catastrophic, followed by years that looked better
+   than they were, and no asset anywhere on the books.
+
+   Everything below is arithmetic on a stored asset and a date. Nothing
+   is accumulated into a running balance, so a schedule cannot drift out
+   of step with the register: ask again and it recomputes.
+
+   Conventions, chosen once and applied everywhere:
+
+     whole months     an asset bought on the 3rd and one bought on the
+                      28th both take a full month's charge for that
+                      month. Daily proration is more precise and, for a
+                      shop deciding what a van is worth, precision nobody
+                      uses is just noise.
+     from acquisition the month it was acquired is charged; the month it
+                      was disposed of is not. So a thing owned for one
+                      month is charged once, not twice or never.
+     never below salvage
+                      both methods stop there. Reducing balance would
+                      otherwise approach zero forever and straight line
+                      would sail past it.
+*/
+const DEPRECIATION_METHODS = {
+  straight_line: 'Straight line',
+  reducing_balance: 'Reducing balance',
+};
+// Months from one YYYY-MM-DD to another, counting whole calendar months
+// and ignoring the day. Both ends parsed as UTC so a timezone cannot
+// shift a month boundary -- the same reason todayISO is UTC.
+function monthsBetween(fromISO, toISO){
+  const a = new Date(String(fromISO)+'T00:00:00Z'), b = new Date(String(toISO)+'T00:00:00Z');
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return 0;
+  return (b.getUTCFullYear()-a.getUTCFullYear())*12 + (b.getUTCMonth()-a.getUTCMonth());
+}
+function assetIsDisposed(asset, asOfISO){
+  return !!(asset && asset.disposedOn && String(asset.disposedOn) <= String(asOfISO));
+}
+/* How many months this asset has been charged for by the end of `asOfISO`.
+
+   Zero before it was acquired -- an asset bought next month is not
+   depreciating today, and a negative count would silently ADD value. */
+function assetMonthsCharged(asset, asOfISO){
+  if(!asset || !asset.acquiredOn) return 0;
+  const end = assetIsDisposed(asset, asOfISO)
+    // The disposal month is not charged, so the last charged month is the
+    // one before it.
+    ? String(asset.disposedOn)
+    : String(asOfISO);
+  const months = monthsBetween(asset.acquiredOn, end) + (assetIsDisposed(asset, asOfISO) ? 0 : 1);
+  return Math.max(0, months);
+}
+// What one month takes off, given what is left. Split out because both
+// the schedule and the period total need exactly this and must not
+// disagree about it.
+function assetMonthlyCharge(asset, openingNBV){
+  const cost = Number(asset.cost)||0;
+  const salvage = Math.max(0, Number(asset.salvage)||0);
+  const floorAt = Math.min(salvage, cost);
+  const room = Math.max(0, openingNBV - floorAt);
+  if(room <= 0) return 0;
+  let charge;
+  if(asset.method === 'reducing_balance'){
+    const rate = Math.max(0, Number(asset.ratePct)||0) / 100 / 12;
+    charge = openingNBV * rate;
+  } else {
+    const months = Math.max(1, Math.round(Number(asset.lifeMonths)||0));
+    charge = (cost - floorAt) / months;
+  }
+  // The last month of a life, or of a reducing balance approaching
+  // salvage, takes only what is left. Without this an asset ends up worth
+  // less than its residual value, which is not a thing that can happen.
+  return Math.min(charge, room);
+}
+/* The month-by-month schedule: opening book value, the charge, closing.
+
+   Capped rather than open-ended. Reducing balance never quite reaches
+   salvage, so without a stop it would generate rows forever; and a
+   straight-line asset is finished when its life is up. The cap is
+   generous enough for a 40-year building. */
+const DEPRECIATION_MAX_MONTHS = 40*12;
+function assetSchedule(asset, untilISO){
+  const rows = [];
+  if(!asset || !asset.acquiredOn) return rows;
+  const cost = Number(asset.cost)||0;
+  const salvage = Math.min(Math.max(0, Number(asset.salvage)||0), cost);
+  const limit = untilISO ? assetMonthsCharged(asset, untilISO) : DEPRECIATION_MAX_MONTHS;
+  let nbv = cost;
+  const start = new Date(String(asset.acquiredOn)+'T00:00:00Z');
+  for(let i=0; i<Math.min(limit, DEPRECIATION_MAX_MONTHS); i++){
+    const charge = assetMonthlyCharge(asset, nbv);
+    if(charge <= 0) break;
+    const m = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i, 1));
+    rows.push({
+      month: m.toISOString().slice(0,7),
+      opening: nbv,
+      charge,
+      closing: nbv - charge,
+    });
+    nbv -= charge;
+    if(nbv <= salvage + 1e-9) break;
+  }
+  return rows;
+}
+// Book value at a date: cost less everything charged up to it.
+function assetNBVAt(asset, asOfISO){
+  const cost = Number(asset.cost)||0;
+  const rows = assetSchedule(asset, asOfISO);
+  const charged = rows.reduce((s,r)=> s + r.charge, 0);
+  return cost - charged;
+}
+function assetAccumulatedAt(asset, asOfISO){
+  return (Number(asset.cost)||0) - assetNBVAt(asset, asOfISO);
+}
+// The depreciation charge falling inside a period -- the P&L line. Summed
+// from the same schedule the register shows, so the statement and the
+// asset card can never disagree.
+function assetChargeBetween(asset, fromISO, toISO){
+  const fromMonth = String(fromISO).slice(0,7), toMonth = String(toISO).slice(0,7);
+  return assetSchedule(asset, toISO)
+    .filter(r=> r.month >= fromMonth && r.month <= toMonth)
+    .reduce((s,r)=> s + r.charge, 0);
+}
+function liveFixedAssets(){ return (data.fixedAssets||[]); }
+function depreciationForPeriod(fromISO, toISO){
+  return liveFixedAssets().reduce((s,a)=> s + assetChargeBetween(a, fromISO, toISO), 0);
+}
+// What the balance sheet carries: everything still owned, at book value.
+function fixedAssetsNBVAt(asOfISO){
+  return liveFixedAssets()
+    .filter(a=> !assetIsDisposed(a, asOfISO) && String(a.acquiredOn||'') <= String(asOfISO))
+    .reduce((s,a)=> s + assetNBVAt(a, asOfISO), 0);
+}
+/* Selling a thing for more or less than the books say it is worth.
+
+   Not a trading profit and not part of gross margin -- it is the
+   correction for having guessed the life wrong, and belongs on its own
+   line. Null when the asset has not been disposed of, so a caller cannot
+   mistake "not sold" for "sold for nothing". */
+function assetDisposalResult(asset){
+  if(!asset || !asset.disposedOn) return null;
+  const proceeds = Number(asset.disposalProceeds)||0;
+  const book = assetNBVAt(asset, asset.disposedOn);
+  return { proceeds, book, gain: proceeds - book };
+}
+
+/* ---- The register on screen ---- */
+function assetMethodLabel(a){
+  if(a.method === 'reducing_balance') return `Reducing balance · ${Number(a.ratePct)||0}% a year`;
+  const m = Math.max(1, Math.round(Number(a.lifeMonths)||0));
+  const years = m/12;
+  return `Straight line · ${m} months${years>=1 && Number.isInteger(years) ? ` (${years} yr${years===1?'':'s'})` : ''}`;
+}
+function renderFixedAssets(){
+  const today = todayISO();
+  const assets = (data.fixedAssets||[]).slice()
+    .sort((a,b)=> String(b.acquiredOn||'').localeCompare(String(a.acquiredOn||'')));
+  const held = assets.filter(a=> !assetIsDisposed(a, today));
+  const cost = held.reduce((s,a)=> s + (Number(a.cost)||0), 0);
+  const nbv = fixedAssetsNBVAt(today);
+  const yearStart = today.slice(0,4)+'-01-01';
+
+  document.getElementById('fa_summary').innerHTML = assets.length ? `
+    <div class="sc-stats fa-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(cost))}</b><span>What they cost</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(cost-nbv))}</b><span>Written off so far</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(nbv))}</b><span>Worth on the books</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(depreciationForPeriod(yearStart, today)))}</b><span>Charge this year</span></div>
+    </div>` : '';
+
+  const wrap = document.getElementById('fa_tableWrap');
+  if(!assets.length){
+    wrap.innerHTML = '<div class="empty">Nothing here yet. Add the van, the shelving, the laptop — anything the shop bought to use rather than to sell.</div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="pi-table-wrap"><table>
+    <thead><tr>
+      <th>Asset</th><th>Acquired</th><th>How it depreciates</th>
+      <th class="r">Cost</th><th class="r">Written off</th><th class="r">Book value</th><th></th>
+    </tr></thead>
+    <tbody>${assets.map(a=>{
+      const gone = assetIsDisposed(a, today);
+      const d = gone ? assetDisposalResult(a) : null;
+      return `<tr class="${gone?'fa-gone':''}">
+        <td>
+          <div class="fa-name">${esc(a.name)}${gone?'<span class="fa-tag">sold</span>':''}</div>
+          ${a.category ? `<div class="fa-sub">${esc(a.category)}</div>` : ''}
+          ${d ? `<div class="fa-sub ${d.gain>=0?'good':'bad'}">${d.gain>=0?'Gain':'Loss'} on sale ${fmtUGX(Math.abs(Math.round(d.gain)))}</div>` : ''}
+        </td>
+        <td>${esc(a.acquiredOn||'')}</td>
+        <td class="fa-sub">${esc(assetMethodLabel(a))}</td>
+        <td class="r num">${fmtUGX(Math.round(Number(a.cost)||0))}</td>
+        <td class="r num">${fmtUGX(Math.round(assetAccumulatedAt(a, gone ? a.disposedOn : today)))}</td>
+        <td class="r num">${gone ? '—' : fmtUGX(Math.round(assetNBVAt(a, today)))}</td>
+        <td class="r">
+          <button type="button" class="pc-icon-btn fa-schedule" data-id="${a.id}" title="Depreciation schedule">${ICON_ITEMS}</button>
+          <button type="button" class="pc-icon-btn fa-edit" data-id="${a.id}" title="Edit">${ICON_EDIT}</button>
+          <button type="button" class="pc-icon-btn danger fa-delete" data-id="${a.id}" title="Remove">${ICON_TRASH}</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+
+  wrap.querySelectorAll('.fa-schedule').forEach(b=>b.addEventListener('click', ()=>openAssetSchedule(Number(b.dataset.id))));
+  wrap.querySelectorAll('.fa-edit').forEach(b=>b.addEventListener('click', ()=>openAssetForm(Number(b.dataset.id))));
+  wrap.querySelectorAll('.fa-delete').forEach(b=>b.addEventListener('click', ()=>deleteFixedAsset(Number(b.dataset.id))));
+}
+function openAssetSchedule(id){
+  const a = (data.fixedAssets||[]).find(x=>x.id===id);
+  if(!a) return;
+  const rows = assetSchedule(a);
+  document.getElementById('assetScheduleTitle').textContent = a.name || 'Depreciation schedule';
+  document.getElementById('assetScheduleBody').innerHTML = `
+    <div class="bl-top">
+      <span class="bl-top-label">${esc(assetMethodLabel(a))} · from ${esc(a.acquiredOn||'')}</span>
+      <span class="bl-top-fig">${fmtUGX(Math.round(Number(a.cost)||0))}</span>
+    </div>
+    ${rows.length ? `<div class="dr-lines"><table>
+      <thead><tr><th>Month</th><th class="r">Opening</th><th class="r">Charge</th><th class="r">Closing</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${esc(r.month)}</td>
+        <td class="r num">${fmtUGX(Math.round(r.opening))}</td>
+        <td class="r num">${fmtUGX(Math.round(r.charge))}</td>
+        <td class="r num">${fmtUGX(Math.round(r.closing))}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <p class="sp-foot">${rows.length} month${rows.length===1?'':'s'} to ${Number(a.salvage)>0 ? `its residual value of ${fmtUGX(Math.round(Number(a.salvage)||0))}` : 'nil'}.</p>`
+    : '<p class="preset-hint">Nothing to depreciate — check the life or rate on this asset.</p>'}`;
+  openModal('assetScheduleModal');
+}
+
+let editingAssetId = null;
+function assetFormMethodChanged(){
+  const m = document.getElementById('fa_method').value;
+  document.getElementById('fa_life_field').style.display = m==='reducing_balance' ? 'none' : '';
+  document.getElementById('fa_rate_field').style.display = m==='reducing_balance' ? '' : 'none';
+  updateAssetPreview();
+}
+// Says what the entered numbers actually mean before they are saved, so a
+// life typed in years instead of months is obvious rather than discovered
+// a year later.
+function updateAssetPreview(){
+  const a = readAssetForm();
+  const el = document.getElementById('fa_preview');
+  if(!(Number(a.cost)>0) || !a.acquiredOn){ el.textContent = ''; return; }
+  const rows = assetSchedule(a);
+  if(!rows.length){ el.textContent = 'That would not depreciate at all — check the life or the rate.'; return; }
+  el.textContent = `About ${fmtUGX(Math.round(rows[0].charge))} in the first month, `
+    + `${rows.length} month${rows.length===1?'':'s'} in all, ending at `
+    + `${fmtUGX(Math.round(rows[rows.length-1].closing))}.`;
+}
+function readAssetForm(){
+  const method = document.getElementById('fa_method').value;
+  const num = (id)=>{ const v = document.getElementById(id).value; return v==='' ? null : Number(v); };
+  return {
+    id: editingAssetId,
+    name: document.getElementById('fa_name').value.trim(),
+    category: document.getElementById('fa_category').value.trim(),
+    cost: Number(document.getElementById('fa_cost').value)||0,
+    acquiredOn: document.getElementById('fa_acquired').value,
+    method,
+    lifeMonths: method==='reducing_balance' ? null : (num('fa_life') || 0),
+    ratePct: method==='reducing_balance' ? (num('fa_rate') || 0) : null,
+    salvage: Number(document.getElementById('fa_salvage').value)||0,
+    disposedOn: document.getElementById('fa_disposed').value || null,
+    disposalProceeds: document.getElementById('fa_proceeds').value==='' ? null : Number(document.getElementById('fa_proceeds').value),
+    notes: document.getElementById('fa_notes').value.trim(),
+  };
+}
+function openAssetForm(id){
+  editingAssetId = id==null ? null : id;
+  const a = id==null ? null : (data.fixedAssets||[]).find(x=>x.id===id);
+  const set = (el,v)=>{ document.getElementById(el).value = v==null ? '' : v; };
+  set('fa_name', a?a.name:''); set('fa_category', a?a.category:'');
+  set('fa_cost', a?a.cost:''); set('fa_acquired', a?a.acquiredOn:todayISO());
+  document.getElementById('fa_method').value = a ? a.method : 'straight_line';
+  set('fa_life', a?a.lifeMonths:60); set('fa_rate', a?a.ratePct:'');
+  set('fa_salvage', a?a.salvage:''); set('fa_notes', a?a.notes:'');
+  set('fa_disposed', a?a.disposedOn:''); set('fa_proceeds', a?a.disposalProceeds:'');
+  // Disposal is only offered on something that exists: there is no sense
+  // in recording the sale of an asset in the same breath as buying it.
+  document.getElementById('fa_disposal_block').style.display = a ? '' : 'none';
+  document.getElementById('assetModalTitle').textContent = a ? 'Edit asset' : 'Add an asset';
+  assetFormMethodChanged();
+  openModal('assetModal');
+}
+function deleteFixedAsset(id){
+  const a = (data.fixedAssets||[]).find(x=>x.id===id);
+  if(!a) return;
+  // Removed, not written off: deleting takes the asset out of the books
+  // entirely, including the depreciation already charged against past
+  // months. Selling it is what an owner usually means, and that is the
+  // disposal date on the edit screen.
+  if(!confirm(`Remove "${a.name}" from the register?\n\nThis erases it and every month of depreciation it has been charged. If you sold or scrapped it, close it with a disposal date instead — that keeps the history.`)) return;
+  data.fixedAssets = (data.fixedAssets||[]).filter(x=>x.id!==id);
+  saveData(); renderFixedAssets();
+  toast('Asset removed');
+}
+document.getElementById('fa_add_btn').addEventListener('click', ()=>openAssetForm(null));
+document.getElementById('fa_cancel').addEventListener('click', ()=>closeModal('assetModal'));
+document.getElementById('assetModalClose').addEventListener('click', ()=>closeModal('assetModal'));
+document.getElementById('assetScheduleClose').addEventListener('click', ()=>closeModal('assetScheduleModal'));
+document.getElementById('fa_method').addEventListener('change', assetFormMethodChanged);
+['fa_cost','fa_acquired','fa_life','fa_rate','fa_salvage'].forEach(id=>
+  document.getElementById(id).addEventListener('input', updateAssetPreview));
+document.getElementById('fa_save').addEventListener('click', ()=>{
+  const a = readAssetForm();
+  if(!a.name){ toast('Give the asset a name'); return; }
+  if(!(a.cost > 0)){ toast('Enter what it cost'); return; }
+  if(!a.acquiredOn){ toast('Enter the date it was acquired'); return; }
+  if(a.method==='reducing_balance' ? !(a.ratePct > 0) : !(a.lifeMonths > 0)){
+    toast(a.method==='reducing_balance' ? 'Enter a depreciation rate' : 'Enter a useful life in months');
+    return;
+  }
+  if(a.salvage > a.cost){ toast('What it is worth at the end cannot exceed what it cost'); return; }
+  if(a.disposedOn && a.disposedOn < a.acquiredOn){ toast('It cannot have been sold before it was acquired'); return; }
+  if(!data.fixedAssets) data.fixedAssets = [];
+  if(editingAssetId == null){
+    a.id = allocRowId('fixedAsset');
+    data.fixedAssets.push(a);
+  } else {
+    const i = data.fixedAssets.findIndex(x=>x.id===editingAssetId);
+    if(i>=0) data.fixedAssets[i] = {...data.fixedAssets[i], ...a};
+  }
+  saveData();
+  closeModal('assetModal');
+  editingAssetId = null;
+  renderFixedAssets();
+  toast('Asset saved');
+});
 
 /* What a cash-book entry MEANS to the accounts.
 

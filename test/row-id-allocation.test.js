@@ -19,7 +19,9 @@
  *
  * Run: node test/row-id-allocation.test.js   (or: npm test)
  */
-const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
+const fs = require('fs');
+const path = require('path');
+const { ROOT, read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('row id allocation');
 const adminSrc = read('index.html');
@@ -313,20 +315,36 @@ const BLOCK = probe.__blockSize();
         : 'every database-backed id goes through allocRowId() or issueRowId()');
   }
 
-  /* ---------- 8. client and migration agree on the kinds --------------- */
+  /* ---------- 8. client and migrations agree on the kinds -------------- */
   /*
-   * A kind the client asks for but the migration never seeded would start
+   * A kind the client asks for but no migration ever seeded would start
    * from 0 and hand out ids that already exist.
+   *
+   * Swept across every migration, not just 0034. 0034 seeded the kinds
+   * that existed when it was written; a table added later brings its own
+   * counter in its own migration, which is where it belongs -- the seed
+   * has to run when the table appears, not be retrofitted into a file
+   * that has already been applied everywhere.
    */
   {
     const declared = extractDeclaration(adminSrc, 'ROW_ID_KINDS', 'index.html');
     const clientKinds = (declared.match(/'row:[a-z_]+'/g) || []).map((s) => s.slice(1, -1));
-    const seeded = (migSrc.match(/'row:[a-z_]+'/g) || []).map((s) => s.slice(1, -1));
-    const unseeded = clientKinds.filter((k) => !seeded.includes(k));
-    t.check(clientKinds.length === KINDS.length && unseeded.length === 0,
+    const migDir = path.join(ROOT, 'supabase/migrations');
+    const allMigrations = fs.readdirSync(migDir)
+      .filter((f) => f.endsWith('.sql'))
+      .map((f) => fs.readFileSync(path.join(migDir, f), 'utf8'))
+      .join('\n');
+    const seeded = new Set(
+      [...allMigrations.matchAll(/insert into entity_id_counters[\s\S]{0,400}?'(row:[a-z_]+)'/g)]
+        .map((m) => m[1]),
+    );
+    const unseeded = clientKinds.filter((k) => !seeded.has(k));
+    t.check(unseeded.length === 0,
       unseeded.length
-        ? `these kinds are requested by the client but never seeded in 0034: ${unseeded.join(', ')}`
-        : `all ${clientKinds.length} kinds the client allocates are seeded from existing rows in 0034`);
+        ? `these kinds are requested by the client but no migration seeds a counter for them: ${unseeded.join(', ')}`
+        : `all ${clientKinds.length} kinds the client allocates have a counter seeded by a migration`);
+    t.check(clientKinds.length >= KINDS.length,
+      `and the client declares at least the ${KINDS.length} kinds this file exercises (${clientKinds.length})`);
   }
   {
     // The allocator is the only way in -- the counter table has RLS on with
