@@ -136,14 +136,14 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
   ]);
   t.check(/wv_finish_btn/.test(short),
     'an order with a recorded shortfall can be finished -- this is the stranding, and it is gone');
-  t.check(/1 item short/.test(short),
+  t.check(/1 item Short/.test(short),
     'and the button says so, because finishing one that is going out incomplete should not look identical to finishing one that is not');
 
   const twoShort = render([
     { qty: 5, pickStatus: 'short', pickedQty: 3 },
     { qty: 4, pickStatus: 'short', pickedQty: 0 },
   ]);
-  t.check(/2 items short/.test(twoShort), 'pluralised over the count of short lines');
+  t.check(/2 items Short/.test(twoShort), 'pluralised over the count of short lines');
 
   const clean = render([{ qty: 2, pickStatus: 'done', pickedQty: 2 }]);
   t.check(/wv_finish_btn/.test(clean) && /Mark as finished/.test(clean) && !/short/.test(clean),
@@ -448,11 +448,27 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         'and so does the styling for the short badge and the quantity sheet');
       // 44px, like every other control on this screen: it is pressed at the
       // shelf, one-handed, by someone who has not put anything down.
+      // Either min-height or an outright height counts -- the short-pick
+      // control is a square icon button in the corner now, so it sets both
+      // dimensions rather than filling the width.
+      const box = (cls) => {
+        const rule = new RegExp(`\\.${cls}\\{([^}]*)\\}`).exec(css);
+        if (!rule) return null;
+        const dim = (p) => {
+          const m = new RegExp(`(?:^|;)\\s*(?:min-)?${p}:(\\d+)px`).exec(rule[1]);
+          return m ? Number(m[1]) : null;
+        };
+        return { h: dim('height'), w: dim('width') };
+      };
       [['wv-carousel-short', 'the short-pick control'],
        ['wv-qty-none', 'the "none on the shelf" button']].forEach(([cls, what]) => {
-        const m = new RegExp(`\\.${cls}\\{[^}]*min-height:(\\d+)px`).exec(css);
-        t.check(m && Number(m[1]) >= 44, `${what} clears the 44px minimum (${m ? m[1] : 'not set'}px)`);
+        const b = box(cls);
+        t.check(b && b.h >= 44, `${what} clears the 44px minimum (${b && b.h ? b.h : 'not set'}px tall)`);
       });
+      // An icon carries no text to widen it, so it owes the width too.
+      const shortBox = box('wv-carousel-short');
+      t.check(shortBox && shortBox.w >= 44,
+        `and the icon-only one is wide enough to hit as well (${shortBox && shortBox.w ? shortBox.w : 'not set'}px)`);
       const step = /\.wv-qty-step\{[^}]*height:(\d+)px/.exec(css);
       t.check(step && Number(step[1]) >= 44, `and the − / + keys do too (${step ? step[1] : 'not set'}px)`);
     }

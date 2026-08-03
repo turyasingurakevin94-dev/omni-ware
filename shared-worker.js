@@ -661,6 +661,11 @@ function pickItemVariantLabel(it, product){
 }
 
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+// A carton with a minus on it: fewer in the box than the order asks for.
+// Deliberately not a warning triangle -- the admin board already uses one of
+// those for a shortfall needing a decision, and this is the picker simply
+// recording what is on the shelf, which is not yet a problem.
+const ICON_SHORT_PICK = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="M9 12h6"/></svg>';
 
 // scrollIntoView({inline:'center'}) doesn't reliably land a card dead-center
 // once scroll-snap-type is in play -- it's snap-aware, not purely geometric,
@@ -758,7 +763,7 @@ function renderWorkerPickStepper(q){
           <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
         </div>
         <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
-        <button type="button" class="wv-carousel-short" data-act="short">${isShort ? 'Change the number found' : 'Couldn’t find them all?'}</button>
+        <button type="button" class="wv-carousel-short" data-act="short" aria-label="${isShort ? 'Change the number found' : 'Record that you could not find them all'}" title="${isShort ? 'Change the number found' : 'Couldn’t find them all?'}">${ICON_SHORT_PICK}</button>
       </div>
     </div>`;
   }).join('');
@@ -943,7 +948,7 @@ function renderWorkerFinishButton(q){
   // Named on the button, because finishing an order that is going out
   // incomplete should not look identical to finishing one that is not.
   const label = shortCount
-    ? `Finish — ${shortCount} item${shortCount===1?'':'s'} short`
+    ? `Finish — ${shortCount} item${shortCount===1?'':'s'} Short`
     : 'Mark as finished';
   el.innerHTML = allAnswered ? `<button type="button" class="btn btn-accent wv-mark-btn${shortCount?' is-short':''}" id="wv_finish_btn" style="margin-top:6px;">${label}</button>` : '';
   if(allAnswered) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
