@@ -1674,6 +1674,7 @@
   }
   tr.fa-gone td{opacity:.6;}
   .fa-sub.warn{color:var(--ow-amber-ink);}
+  .fa-neg{color:var(--ow-crimson);}
   .sc-stat.bad b{color:var(--ow-crimson);}
   /* A flat rate is not the rate it says on the paper, and that is the one
      thing on this screen worth interrupting for. */
@@ -3763,6 +3764,9 @@
         </div>
         <div class="field"><label>Term (months) <span class="req">required</span></label><input id="ln_term" type="number" min="1" step="1" placeholder="e.g. 12"></div>
         <div class="field"><label>Date taken <span class="req">required</span></label><input id="ln_started" type="date"></div>
+        <div class="field"><label>Deducted before you got it</label><input id="ln_fees" type="number" min="0" step="any" placeholder="0">
+          <div class="field-hint">Insurance, arrangement and paperwork fees the lender took out of the money. You still owe the full amount above.</div>
+        </div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="ln_notes" placeholder="optional"></div>
       </div>
       <p class="preset-hint" id="ln_preview"></p>
@@ -3816,6 +3820,10 @@
         <div class="field" id="fa_rate_field" style="display:none;"><label>Rate (% a year)</label><input id="fa_rate" type="number" min="0" step="any" placeholder="e.g. 25"></div>
         <div class="field"><label>Worth at the end</label><input id="fa_salvage" type="number" min="0" step="any" placeholder="0">
           <div class="field-hint">Depreciation never takes it below this.</div>
+        </div>
+        <div class="field"><label>Bought with</label>
+          <select id="fa_loan"><option value="">Paid for outright</option></select>
+          <div class="field-hint">If a loan paid for it, saying so lets the books show what it is worth against what is still owed on it.</div>
         </div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="fa_notes" placeholder="optional"></div>
       </div>
@@ -4847,13 +4855,13 @@ async function loadData(shopId){
       salvage:Number(a.salvage)||0,
       disposedOn:a.disposed_on||null,
       disposalProceeds: a.disposal_proceeds==null ? null : Number(a.disposal_proceeds),
-      notes:a.notes||'', cashTxnId:a.cash_txn_id||null
+      notes:a.notes||'', cashTxnId:a.cash_txn_id||null, loanId:a.loan_id==null?null:Number(a.loan_id)
     })),
     nextFixedAssetId: (fixedAssetsR.data||[]).length ? Math.max(0,...fixedAssetsR.data.map(a=>a.id||0))+1 : 1,
     loans: (loansR.data||[]).map(l=>({
       id:l.id, lender:l.lender||'', principal:Number(l.principal)||0,
       ratePct:Number(l.rate_pct)||0, method:l.method||'reducing_balance',
-      termMonths:Number(l.term_months)||12, startedOn:l.started_on,
+      termMonths:Number(l.term_months)||12, startedOn:l.started_on, fees:Number(l.fees)||0,
       closedOn:l.closed_on||null, notes:l.notes||'', cashTxnId:l.cash_txn_id||null,
       repayments: (l.payload && Array.isArray(l.payload.repayments)) ? l.payload.repayments : []
     })),
@@ -4961,11 +4969,11 @@ function buildSyncRows(d, shopId){
       rate_pct: a.ratePct==null ? null : a.ratePct,
       salvage:a.salvage||0, disposed_on:a.disposedOn||null,
       disposal_proceeds: a.disposalProceeds==null ? null : a.disposalProceeds,
-      notes:a.notes||null, cash_txn_id:a.cashTxnId||null
+      notes:a.notes||null, cash_txn_id:a.cashTxnId||null, loan_id:a.loanId==null?null:a.loanId
     })),
     loans: (d.loans||[]).map(l=>({
       id:l.id, shop_id:shopId, lender:l.lender, principal:l.principal,
-      rate_pct:l.ratePct, method:l.method, term_months:l.termMonths,
+      rate_pct:l.ratePct, method:l.method, term_months:l.termMonths, fees:l.fees||0,
       started_on:l.startedOn, closed_on:l.closedOn||null,
       notes:l.notes||null, cash_txn_id:l.cashTxnId||null,
       payload:{ repayments: l.repayments||[] }
@@ -16636,6 +16644,105 @@ function loanEffectiveRate(loan){
   return ((lo + hi) / 2) * 12 * 100;
 }
 
+/* ---- What the loan actually put in your hands ---- */
+
+/* A lender charges for insurance and paperwork and takes it out of the
+   money before handing it over: apply for 20,000,000, receive
+   19,400,000, owe 20,000,000.
+
+   principal stays the full 20,000,000 -- that is the liability, and the
+   lender charges interest on all of it regardless of what arrived. The
+   fee is held separately and the net is derived, so no third number can
+   drift out of step with the other two. */
+function loanFees(loan){ return Math.max(0, Number(loan.fees)||0); }
+function loanNetAdvanced(loan){ return Math.max(0, loanPrincipal(loan) - loanFees(loan)); }
+
+/* What the borrowing really costs, once the fee is counted.
+
+   loanEffectiveRate answers "what is this rate worth" on the principal.
+   This answers the question a borrower actually has: money that cost
+   20,000,000 of interest but only ever delivered 19,400,000 is dearer
+   than the agreement says. Same bisection, discounting the same
+   repayments against the smaller sum that turned up. */
+function loanTrueCostRate(loan){
+  const net = loanNetAdvanced(loan), n = loanMonths(loan);
+  const pay = loanScheduledPayment(loan);
+  if(net <= 0 || pay <= 0) return 0;
+  if(pay * n <= net) return 0;
+  const owed = (mr)=> mr === 0
+    ? pay * n - net
+    : pay * (1 - Math.pow(1 + mr, -n)) / mr - net;
+  let lo = 0, hi = 1;
+  for(let i=0; i<100; i++){
+    const mid = (lo + hi) / 2;
+    if(owed(mid) > 0) lo = mid; else hi = mid;
+  }
+  return ((lo + hi) / 2) * 12 * 100;
+}
+/* The fee as a cost of the period it was charged in.
+
+   Expensed when the loan was drawn rather than spread over the term.
+   Spreading it is more correct, and it would be the only accrual in an
+   otherwise cash-basis P&L -- a lone exception is worse than a
+   consistent simplification. Stated here so phase 4 does not have to
+   rediscover the decision. */
+function loanFeesForPeriod(fromISO, toISO){
+  return liveLoans()
+    .filter(l=> String(l.startedOn||'') >= String(fromISO) && String(l.startedOn||'') <= String(toISO))
+    .reduce((s,l)=> s + loanFees(l), 0);
+}
+
+/* ---- An asset bought on credit ---- */
+
+/* Two schedules that belong side by side: what the thing is worth, and
+   what is still owed on it.
+
+   A van depreciating over five years against a loan repaid over three
+   spends its early life worth less than the debt against it. That is
+   ordinary, and it is also the single fact a financed asset can tell an
+   owner that neither schedule shows alone -- so `equity` is the column
+   this exists for, and it is signed, because negative is the answer
+   worth seeing. */
+function assetFinancingSchedule(asset, loan, untilISO){
+  if(!asset || !loan) return [];
+  const dep = assetSchedule(asset, untilISO);
+  const rep = loanSchedule(loan);
+  // Every month either schedule has something to say about, so a loan
+  // that outlives the depreciation and an asset that outlives the loan
+  // both keep reporting rather than stopping at the shorter one.
+  const months = [...new Set(dep.map(r=>r.month).concat(rep.map(r=>r.month)))].sort();
+  /* Both sides are the AGREEMENT, deliberately.
+
+     loanOutstanding answers what is owed given the repayments actually
+     made, which is the right answer for today and the wrong one for a
+     projection: a loan with nothing yet repaid reported the full
+     principal in all sixty months, against an asset depreciating away
+     beneath it, and the table said the shop would still owe 20,000,000
+     in 2030. Depreciation is a projection, so the loan side has to be one
+     too or the two columns are not comparable.
+
+     After the last instalment the agreed balance is nil, which is what
+     lets an asset outliving its loan show the debt clearing. */
+  const closingByMonth = new Map(rep.map(r=>[r.month, r.closing]));
+  const lastMonth = rep.length ? rep[rep.length-1].month : null;
+  const owedIn = (month)=>{
+    if(closingByMonth.has(month)) return closingByMonth.get(month);
+    if(lastMonth && month > lastMonth) return 0;
+    return loanPrincipal(loan);      // before the first instalment falls due
+  };
+  return months.map(month=>{
+    const nbv = assetNBVAt(asset, month + '-28');
+    const owed = owedIn(month);
+    return { month, nbv, owed, equity: nbv - owed };
+  });
+}
+function assetFinancingLoan(asset){
+  // The loanId half is a fast path rather than a guard: without it the
+  // lookup below simply finds nothing and returns null anyway.
+  if(!asset || asset.loanId == null) return null;
+  return (data.loans||[]).find(l=> l.id === asset.loanId) || null;
+}
+
 /* ---- What actually happened ---- */
 function loanRepayments(loan){
   return (Array.isArray(loan.repayments) ? loan.repayments : [])
@@ -16804,6 +16911,7 @@ function openLoanPerformance(id){
       <div class="sc-stat"><b>${fmtUGX(Math.round(p.totalInterest))}</b><span>Interest over the whole term</span></div>
       <div class="sc-stat ${p.behind>1?'bad':'good'}"><b>${p.behind>1 ? fmtUGX(Math.round(p.behind)) : 'On track'}</b><span>${p.behind>1?'Behind schedule':'Against the agreement'}</span></div>
     </div>
+    ${loanFees(l) > 0 ? `<p class="ln-callout">${ICON_WARN}<span>The lender kept <b>${fmtUGX(Math.round(loanFees(l)))}</b> for insurance and paperwork, so <b>${fmtUGX(Math.round(loanNetAdvanced(l)))}</b> actually reached you while you repay against the full ${fmtUGX(Math.round(Number(l.principal)||0))}. That makes the money cost about <b>${loanTrueCostRate(l).toFixed(1)}%</b> a year rather than ${stated}%.</span></p>` : ''}
     ${l.method==='flat' ? `<p class="ln-callout">${ICON_WARN}<span>This is quoted at <b>${stated}% flat</b>, which costs about <b>${p.effectiveRatePct.toFixed(1)}%</b> a year in real terms. Flat interest is charged on the whole ${fmtUGX(Math.round(Number(l.principal)||0))} for the entire term, including the part you have already paid back.</span></p>` : ''}
     <p class="sp-lead">${p.instalmentsDue} of ${p.instalments} instalments due by today. The agreement asks for ${fmtUGX(Math.round(p.scheduledByNow))} by now; ${fmtUGX(Math.round(p.paidByNow))} has been paid.</p>
 
@@ -16860,6 +16968,7 @@ function readLoanForm(){
     method: document.getElementById('ln_method').value,
     termMonths: Math.round(Number(document.getElementById('ln_term').value)||0),
     startedOn: document.getElementById('ln_started').value,
+    fees: Number(document.getElementById('ln_fees').value)||0,
     notes: document.getElementById('ln_notes').value.trim(),
   };
 }
@@ -16872,9 +16981,14 @@ function updateLoanPreview(){
   const pay = loanScheduledPayment(l);
   const interest = loanTotalInterest(l);
   const eff = loanEffectiveRate(l);
+  const fees = loanFees(l);
   el.textContent = `${fmtUGX(Math.round(pay))} a month for ${l.termMonths} months. `
     + `Interest over the term ${fmtUGX(Math.round(interest))}`
-    + (l.method==='flat' ? ` — that is about ${eff.toFixed(1)}% a year in real terms, not ${l.ratePct}%.` : '.');
+    + (l.method==='flat' ? ` — about ${eff.toFixed(1)}% a year in real terms, not ${l.ratePct}%.` : '.')
+    + (fees > 0
+      ? ` You receive ${fmtUGX(Math.round(loanNetAdvanced(l)))} but repay against ${fmtUGX(Math.round(l.principal))}, `
+        + `so the money really costs about ${loanTrueCostRate(l).toFixed(1)}% a year.`
+      : '');
 }
 function openLoanForm(id){
   editingLoanId = id==null ? null : id;
@@ -17008,8 +17122,46 @@ function openAssetSchedule(id){
       </tr>`).join('')}</tbody>
     </table></div>
     <p class="sp-foot">${rows.length} month${rows.length===1?'':'s'} to ${Number(a.salvage)>0 ? `its residual value of ${fmtUGX(Math.round(Number(a.salvage)||0))}` : 'nil'}.</p>`
-    : '<p class="preset-hint">Nothing to depreciate — check the life or rate on this asset.</p>'}`;
+    : '<p class="preset-hint">Nothing to depreciate — check the life or rate on this asset.</p>'}
+    ${assetFinancingHTML(a)}`;
   openModal('assetScheduleModal');
+}
+
+/* What the thing is worth against what is still owed on it.
+
+   Neither schedule says this alone. A van depreciating over five years
+   against a loan repaid over three is worth less than its debt for the
+   first stretch of its life -- ordinary, and worth knowing before it is
+   sold or written off, because that gap has to come from somewhere. */
+function assetFinancingHTML(a){
+  const loan = assetFinancingLoan(a);
+  if(!loan) return '';
+  const rows = assetFinancingSchedule(a, loan);
+  if(!rows.length) return '';
+  const today = todayISO();
+  const nbv = assetNBVAt(a, today);
+  const owed = loanOutstanding(loan, today);
+  const equity = nbv - owed;
+  const under = rows.filter(r=>r.equity < 0);
+  return `<section class="dr-rest">
+    <h4>${ICON_MONEY}Bought with the ${esc(loan.lender)} loan</h4>
+    <div class="sc-stats fa-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(nbv))}</b><span>What it is worth</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(owed))}</b><span>Still owed on it</span></div>
+      <div class="sc-stat ${equity<0?'bad':''}"><b>${fmtUGX(Math.round(Math.abs(equity)))}</b><span>${equity<0?'Owed over its value':'Yours, free of the loan'}</span></div>
+    </div>
+    ${under.length ? `<p class="ln-callout">${ICON_WARN}<span>On the agreed repayments this is worth less than is owed on it for ${under.length} month${under.length===1?'':'s'}, through to <b>${esc(under[under.length-1].month)}</b>. Ordinary when a thing is depreciated over longer than it is financed — but selling it in that window would not clear the debt.</span></p>` : ''}
+    <p class="sp-lead">The figures above are where things stand today. The table below is the plan: what it will be worth each month against what the agreement says will still be owed. Repayments you record on the loan change the first, not the second.</p>
+    <div class="dr-lines"><table>
+      <thead><tr><th>Month</th><th class="r">Worth</th><th class="r">Owed (agreed)</th><th class="r">Difference</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${esc(r.month)}</td>
+        <td class="r num">${fmtUGX(Math.round(r.nbv))}</td>
+        <td class="r num">${fmtUGX(Math.round(r.owed))}</td>
+        <td class="r num ${r.equity<0?'fa-neg':''}">${fmtUGX(Math.round(r.equity))}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </section>`;
 }
 
 let editingAssetId = null;
@@ -17048,6 +17200,7 @@ function readAssetForm(){
     disposedOn: document.getElementById('fa_disposed').value || null,
     disposalProceeds: document.getElementById('fa_proceeds').value==='' ? null : Number(document.getElementById('fa_proceeds').value),
     notes: document.getElementById('fa_notes').value.trim(),
+    loanId: document.getElementById('fa_loan').value === '' ? null : Number(document.getElementById('fa_loan').value),
   };
 }
 function openAssetForm(id){
@@ -17060,6 +17213,12 @@ function openAssetForm(id){
   set('fa_life', a?a.lifeMonths:60); set('fa_rate', a?a.ratePct:'');
   set('fa_salvage', a?a.salvage:''); set('fa_notes', a?a.notes:'');
   set('fa_disposed', a?a.disposedOn:''); set('fa_proceeds', a?a.disposalProceeds:'');
+  // Rebuilt each time it opens: a loan recorded since the page loaded has
+  // to be selectable without a reload.
+  const loanSel = document.getElementById('fa_loan');
+  loanSel.innerHTML = '<option value="">Paid for outright</option>'
+    + (data.loans||[]).map(l=>`<option value="${l.id}">${esc(l.lender)} — ${fmtUGX(Math.round(Number(l.principal)||0))}</option>`).join('');
+  loanSel.value = (a && a.loanId != null) ? String(a.loanId) : '';
   // Disposal is only offered on something that exists: there is no sense
   // in recording the sale of an asset in the same breath as buying it.
   document.getElementById('fa_disposal_block').style.display = a ? '' : 'none';

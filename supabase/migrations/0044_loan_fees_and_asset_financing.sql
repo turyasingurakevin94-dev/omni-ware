@@ -1,0 +1,35 @@
+-- Two things a real loan has that 0043 could not hold.
+--
+-- FEES DEDUCTED AT DRAWDOWN
+--
+-- A lender charges for insurance and paperwork and takes it out of the
+-- money before handing it over: apply for 20,000,000, receive 19,400,000,
+-- owe 20,000,000. The loan row could only record one number, so whichever
+-- was entered the books were wrong -- 20m made the cash overstated by
+-- 600,000, and 19.4m understated both the liability and every interest
+-- figure computed from it, because the lender charges interest on the
+-- full 20m regardless.
+--
+-- Stored as the fee, with the net advanced derived from it, so the two
+-- can never disagree about a third number.
+--
+-- It also makes the borrowing cost more than the rate says: interest is
+-- paid on 20m while only 19.4m ever arrived. loanTrueCostRate works that
+-- out, the same way loanEffectiveRate exposes what a flat rate really
+-- costs.
+alter table loans add column if not exists fees numeric not null default 0;
+
+-- WHAT THE LOAN BOUGHT
+--
+-- A van bought on credit is two records that belong together: an asset
+-- losing value on one schedule and a debt being repaid on another. Held
+-- apart, nothing can answer the question that matters on a financed
+-- asset -- whether it is worth less than is still owed on it, which is
+-- ordinary on a vehicle depreciating over five years against a loan
+-- repaid over three.
+--
+-- Nullable, and no foreign key on purpose: most assets are bought
+-- outright, and deleting a settled loan should not take the asset with
+-- it. A link to a loan that no longer exists reads as "bought outright",
+-- which is the safe way for it to fail.
+alter table fixed_assets add column if not exists loan_id bigint;
