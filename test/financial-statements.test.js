@@ -341,6 +341,28 @@ const reset = () => {
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   t.check(/if\(tab==='statements'\) renderStatements\(\);/.test(code), 'the tab renders the statements');
   t.check(/id="tab-statements"/.test(code) && /id="st_body"/.test(code), 'and the section exists to render into');
+  // One page per document. Three statements and thirteen ratios on a
+  // single scroll is a report nobody reads to the bottom.
+  ['overview', 'pl', 'bs', 'cf', 'ratios'].forEach((tab)=>{
+    t.check(new RegExp(`data-stab="${tab}"`).test(code), `there is a ${tab} view to switch to`);
+  });
+  t.check(/stActiveTab === 'pl'\s+\? stProfitAndLoss/.test(code),
+    'and the body renders one of them rather than all of them at once');
+
+  // -0 is what negating zero gives, and toLocaleString prints it. On a
+  // statement it reads as a figure somebody worked out.
+  t.check(/function stZero\(n\)\{ return Math\.round\(n\) \|\| 0; \}/.test(code),
+    'a negated zero prints as 0, not -0');
+  t.check(/fmtUGX\(stZero\(value\)\)/.test(code) && /fmtUGX\(stZero\(prior\)\)/.test(code),
+    'on both the figure and its comparison, every expense line being a negated value');
+
+  // A percentage change measured from a loss is arithmetic without
+  // meaning: -300,000 to 800,000 is not "up 367%".
+  t.check(/if\(before < 0 \|\| now < 0\)\{/.test(code),
+    'a change that straddles zero says its direction rather than inventing a percentage');
+  t.check(/from a loss/.test(code) && /into a loss/.test(code),
+    'and names which way it crossed');
+
   t.check(/balanceSheetToday/.test(code) && !/balanceSheetAt\(/.test(code),
     'the balance sheet is offered for today only -- cash, debtors and stock are current balances, so a sheet dated last March would be today\'s figures under last March\'s heading');
 }
