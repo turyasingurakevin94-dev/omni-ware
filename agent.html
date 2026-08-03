@@ -1446,6 +1446,9 @@ async function signOutAndReload(){
   // anyway, but leaving one agent's clients and orders sitting in a shared
   // device's storage after they've signed out serves no purpose.
   clearOfflineCache();
+  // Same for the quote draft, which holds baskets and a customer's typed
+  // delivery address. Also checked on read, also no reason to leave behind.
+  clearQuoteDraft();
   await sb.auth.signOut();
   location.reload();
 }
@@ -1686,6 +1689,7 @@ function saveQuoteDraft(){
     // under the previous client's key and lost on reload.
     stashActiveCart();
     localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
+      userId: currentUser && currentUser.id,
       carts, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
     }));
   }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
@@ -1693,10 +1697,30 @@ function saveQuoteDraft(){
 function clearQuoteDraft(){
   try{ localStorage.removeItem(QUOTE_DRAFT_KEY); }catch(_e){}
 }
+// The same rule cacheBelongsTo() applies to the offline snapshot, and for
+// the same reason: agents share phones, and an agent's clients are private
+// to them by design (0012_sales_agents.sql). The draft holds baskets, the
+// chosen client and a typed delivery address, so restoring one that isn't
+// yours puts another agent's client roster and a customer's home address
+// on your screen.
+//
+// A draft written before this stamp existed cannot be shown to belong to
+// anybody, so it is dropped rather than handed to whoever opens the app
+// next. That costs at most one in-progress quote, once, when this ships --
+// set against handing one agent's work to another. Unlike the offline
+// snapshot this is unsaved work that exists nowhere else, which is an
+// argument for keeping it, not for guessing whose it is.
+function draftBelongsTo(draft, userId){
+  return !!(draft && userId && draft.userId && String(draft.userId) === String(userId));
+}
 function restoreQuoteDraft(){
   let draft;
   try{ draft = JSON.parse(localStorage.getItem(QUOTE_DRAFT_KEY) || 'null'); }catch(_e){ draft = null; }
   if(!draft) return;
+  // Dropped, not merely ignored: left in place it would be re-saved under
+  // this login's own stamp the moment they touch a basket, laundering the
+  // previous agent's work into theirs.
+  if(!draftBelongsTo(draft, currentUser && currentUser.id)){ clearQuoteDraft(); return; }
   restoringQuoteDraft = true;
   try{
     if(draft.carts && typeof draft.carts === 'object'){
