@@ -690,7 +690,14 @@ function renderWorkerPickStepper(q){
   if(!q){ wrap.innerHTML=''; return; }
   const items = q.items||[];
   if(!items.length){
-    wrap.innerHTML = `<div class="wv-card"><div class="wv-card-sub">No items on this order.</div></div>`;
+    // Still renders the finish wrap. Returning without one was what stranded
+    // a picker on an order with nothing to pick: the message went up, no
+    // button could ever follow it, and since one open pick became the rule
+    // they could not take on anything else either -- stuck until an admin
+    // stepped the order back. There is nothing to carousel through here, so
+    // the wrap is written directly rather than as part of the card template.
+    wrap.innerHTML = `<div class="wv-card"><div class="wv-card-sub">No items on this order.</div></div><div id="wv_finishWrap"></div>`;
+    renderWorkerFinishButton(q);
     return;
   }
   const cursor = Math.min(Math.max(q.pickCursor||0, 0), items.length-1);
@@ -961,7 +968,19 @@ function renderWorkerFinishButton(q){
   // left a picker holding an order they could not complete and could not
   // put down: the shortfall is recorded on the order and settled by the
   // admin before it can be invoiced, which is where that decision belongs.
-  const allAnswered = items.length>0 && items.every(itemPickAnswered);
+  //
+  // No `items.length > 0`. An order with no lines answers vacuously, and
+  // requiring one meant an empty order could be accepted and then never
+  // finished -- the stepper says "No items on this order", no button ever
+  // appeared, and since one open pick became the rule the worker could not
+  // take on anything else either. Stuck on an order with nothing to pick,
+  // needing an admin to step it back.
+  //
+  // finishPreparingOrder's own guard has always allowed it -- `items.length
+  // && items.some(...)` short-circuits on an empty array -- so the function
+  // would complete such an order the moment anything called it. This is the
+  // button agreeing with the function it calls.
+  const allAnswered = items.every(itemPickAnswered);
   const shortCount = pickShortfallLines(q).length;
   // Named on the button, because finishing an order that is going out
   // incomplete should not look identical to finishing one that is not.

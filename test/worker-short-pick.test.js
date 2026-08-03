@@ -151,7 +151,34 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
 
   t.check(render([{ qty: 2, pickStatus: 'pending' }]) === '',
     'an item nobody has answered for still blocks the finish -- unanswered is not the same as short');
-  t.check(render([]) === '', 'and an empty order renders no button, as before');
+
+  // An order with no lines answers vacuously, and used to render no button
+  // at all. Accepting one left the picker holding an order with nothing to
+  // pick and no way to put it down -- and since one open pick became the
+  // rule (0f31c2c), no way to take on anything else either. Only an admin
+  // stepping it back got them out.
+  //
+  // finishPreparingOrder's own guard has always allowed it: `items.length &&
+  // items.some(...)` short-circuits on an empty array, so the function would
+  // have completed such an order the moment anything called it. The button
+  // was the half that disagreed.
+  const empty = render([]);
+  t.check(/wv_finish_btn/.test(empty) && /Mark as finished/.test(empty),
+    'an order with no lines can be finished, rather than stranding whoever accepted it');
+
+  const fin = extractFunction(read('shared-worker.js'), 'finishPreparingOrder', 'shared-worker.js');
+  t.check(/if\(items\.length && items\.some\(row=>!itemPickAnswered\(row\)\)\) return;/.test(fin),
+    'and the function it calls agrees, as it always did');
+
+  // The gate is only half of it: the stepper returns early for an empty
+  // order, so it has to put the wrap on the page and call this itself or
+  // the button has nowhere to render.
+  const stepper = extractFunction(read('shared-worker.js'), 'renderWorkerPickStepper', 'shared-worker.js');
+  const emptyBranch = stepper.slice(stepper.indexOf('if(!items.length)'), stepper.indexOf('const cursor'));
+  t.check(/id="wv_finishWrap"/.test(emptyBranch),
+    'the empty-order branch renders somewhere for the button to go');
+  t.check(/renderWorkerFinishButton\(q\);/.test(emptyBranch),
+    'and asks for it, rather than returning before the call at the foot of the function');
 }
 
 /* ---------- 3. finishing actually goes through ------------------------ */
