@@ -350,6 +350,9 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
       quoteItemPackingLabel: () => '',
       purchaseInvoiceNumberLabel: fn.purchaseInvoiceNumberLabel,
       purchaseInvoiceTotal: fn.purchaseInvoiceTotal,
+      // The letterhead. A supplier's copy carries the shop's own name, not
+      // the product's -- see printedShopName() in index.html.
+      printedShopName: () => 'Kabowa Hardware',
     }),
     ['buildPurchaseInvoiceA5HTML'],
   ).buildPurchaseInvoiceA5HTML;
@@ -362,6 +365,8 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
     'a live purchase invoice carries no such marking');
   t.check(/PINV-0001/.test(dead) && /500000/.test(dead),
     'the voided copy still shows its number and figures, so it can be identified');
+  t.check(/Kabowa Hardware/.test(live) && !/PRICE BOOK/i.test(live),
+    'and it is headed with the shop\'s own name -- a supplier has no reason to care what software the shop runs');
 }
 {
   // The CSS has to survive a black and white printer -- a colour-only cue

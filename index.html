@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Price Book — Hardware Price Comparison</title>
+<title>Omni-Ware — Hardware shop management</title>
 <link rel="manifest" href="/manifest.json">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
@@ -2378,10 +2378,10 @@
   <aside class="sidebar" id="sidebar">
    <div class="sidebar-scroll">
     <div class="brand">
-      <div class="brand-mark">PB</div>
+      <div class="brand-mark">OW</div>
       <div class="brand-text">
-        <div class="tag">PRICE BOOK</div>
-        <div class="sub">Kampala hardware sourcing</div>
+        <div class="tag">OMNI-WARE</div>
+        <div class="sub">Hardware shop management</div>
       </div>
     </div>
     <nav>
@@ -4419,7 +4419,7 @@ async function migrateBase64ProductImages(shopId){
 }
 
 // Small local-only UI prefs (e.g. sidebar collapsed state) still use plain
-// localStorage -- these never held price-book data and aren't part of the
+// localStorage -- these never held shop data and aren't part of the
 // Supabase migration.
 function lsGet(key){ try{ return localStorage.getItem(key); } catch(e){ return null; } }
 function lsSet(key, val){ try{ localStorage.setItem(key, val); } catch(e){} }
@@ -4904,6 +4904,14 @@ async function saveData(){
 // authAppRole() at call time (this file's script runs after that one), and
 // the only thing deciding which sign-in screen a person sees.
 var OW_APP_ROLE = 'admin';
+
+// The shop's own name, set by ensureAuthAndShop (shared-worker.js) from
+// the membership row it already reads. Heads every printed document,
+// where the shop's name belongs rather than the product's.
+let currentShopName = null;
+// Falls back to the product only when there is genuinely no shop name --
+// a document with a blank letterhead is worse than one with ours.
+function printedShopName(){ return currentShopName || 'Omni-Ware'; }
 
 let data = null;
 let myStaff = null;
@@ -7543,7 +7551,7 @@ document.getElementById('q_print_btn').addEventListener('click', ()=>{
 
   printArea.innerHTML = `<div class="a5-page">
     <div class="a5-head">
-      <div class="a5-shop">PRICE BOOK</div>
+      <div class="a5-shop">${esc(printedShopName())}</div>
       <div class="a5-sub">Buying reference — where to source, and at what price</div>
     </div>
     <div class="a5-meta">
@@ -7606,7 +7614,7 @@ document.getElementById('q_print_quote_btn').addEventListener('click', ()=>{
 
   printArea.innerHTML = `<div class="a5-page">
     <div class="a5-head">
-      <div class="a5-shop">PRICE BOOK</div>
+      <div class="a5-shop">${esc(printedShopName())}</div>
       <div class="a5-sub">Quotation</div>
     </div>
     <div class="a5-meta">
@@ -9307,7 +9315,7 @@ function buildQuoteA5HTML(q){
   const docLabel = q.invoiced ? `Invoice ${invoiceNumberLabel(q)}` : 'Quotation';
   return `<div class="a5-page">
     <div class="a5-head">
-      <div class="a5-shop">PRICE BOOK</div>
+      <div class="a5-shop">${esc(printedShopName())}</div>
       <div class="a5-sub">${esc(docLabel)}</div>
     </div>
     ${q.voided ? '<div class="a5-voided">VOIDED — THIS INVOICE HAS BEEN CANCELLED</div>' : ''}
@@ -9912,7 +9920,7 @@ function buildPurchaseInvoiceA5HTML(pi){
   const grand = purchaseInvoiceTotal(pi);
   return `<div class="a5-page">
     <div class="a5-head">
-      <div class="a5-shop">PRICE BOOK</div>
+      <div class="a5-shop">${esc(printedShopName())}</div>
       <div class="a5-sub">Purchase invoice — ${esc(pi.supplierName||'')}</div>
     </div>
     ${pi.voided ? '<div class="a5-voided">VOIDED — THIS PURCHASE INVOICE HAS BEEN CANCELLED</div>' : ''}
@@ -15533,7 +15541,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `price-book-backup-${todayISO()}.json`;
+  a.href = url; a.download = `omni-ware-backup-${todayISO()}.json`;
   a.click();
   URL.revokeObjectURL(url);
   toast('Backup downloaded');
@@ -15619,7 +15627,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
       saveData();
       renderAll();
       toast('Backup restored');
-    }catch(err){ toast('Could not read that file — is it a Price Book backup?'); }
+    }catch(err){ toast('Could not read that file — is it an Omni-Ware backup?'); }
   };
   reader.readAsText(file);
   e.target.value = '';

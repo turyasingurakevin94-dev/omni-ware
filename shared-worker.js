@@ -365,7 +365,7 @@ function showLoginScreen(){
     el.innerHTML = isAdmin ? `
       <div class="oa-shell">
         <aside class="oa-side">
-          <div class="oa-mark"><i>OW</i><span>Omni-ware</span></div>
+          <div class="oa-mark"><i>OW</i><span>Omni-Ware</span></div>
           <div>
             <h2 class="oa-pitch">Every bag, every shilling, <em>one board.</em></h2>
             <p class="oa-sub">Stock, prices, orders, the cash book and the people who move it — the whole shop, in one place.</p>
@@ -395,7 +395,7 @@ function showLoginScreen(){
       </div>` : `
       <div class="oa-shell">
         <header class="oa-band">
-          <p class="oa-mark">Omni-ware</p>
+          <p class="oa-mark">Omni-Ware</p>
           <h2 class="oa-pitch">Sign in to pick and pack.</h2>
         </header>
         <main class="oa-main">
@@ -581,6 +581,7 @@ function showCreateShopScreen(){
         const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
         if(memberErr){ fail(memberErr.message); return; }
         currentShopId = shop.id;
+        currentShopName = shop.name || name;
         data = (typeof seedData === 'function') ? seedData() : { savedQuotes: [] };
         await saveData();
         resolve(shop.id);
@@ -632,6 +633,11 @@ async function ensureAuthAndShop(){
 
   const { data: memberships, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
   if(error) throw error;
+  // The shop's own name was already being fetched here and only used to
+  // label the picker. It is what belongs at the top of a quotation or an
+  // invoice -- a customer has no reason to care what software the shop
+  // runs, and those documents were headed with the product's name.
+  const shopNameOf = (m)=> (m && m.shops && m.shops.name) || null;
 
   if(!memberships.length){
     // "Create your shop" is the admin app's answer, and it is the wrong one
@@ -650,9 +656,12 @@ async function ensureAuthAndShop(){
   } else if(memberships.length === 1){
     currentShopId = memberships[0].shop_id;
     currentMemberRole = memberships[0].role;
+    currentShopName = shopNameOf(memberships[0]);
   } else {
     currentShopId = await showShopPicker(memberships);
-    currentMemberRole = (memberships.find(m=>m.shop_id===currentShopId)||{}).role || null;
+    const chosen = memberships.find(m=>m.shop_id===currentShopId);
+    currentMemberRole = (chosen||{}).role || null;
+    currentShopName = shopNameOf(chosen);
   }
   hideAuthOverlay();
 }
