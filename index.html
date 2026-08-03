@@ -10064,21 +10064,69 @@ function anInvoicesInRange(from, to){
     return true;
   });
 }
+/* What a line actually cost us.
+
+   The shop has been recording this all along and reading it back for one
+   thing only. Invoicing a quote consumes FIFO stock lots and stashes
+   exactly what it took on the line as `_stockLots` -- {qty, cost} per lot
+   -- so that un-invoicing can put those same lots back. Every profit
+   figure in the app meanwhile costed the sale at `it.price`, which for a
+   shelf line is a quote-time ESTIMATE: quoteSuggestedPrice reaches for
+   getFIFOUnitCost, and that returns the cost of the NEXT lot, i.e. what
+   it would cost to replace the unit, not what the unit sold actually
+   cost. The two agree only while the buying price has not moved.
+
+   Three cases, and only one of them is an estimate:
+
+     bought in     the line was ordered from a supplier for this sale, so
+                   `it.price` is what we paid. Actual, not a guess.
+     off the shelf the lots say what those exact units cost. Actual.
+     short         stock ran out mid-sale, so the lots cover fewer units
+                   than were sold. The remainder never came off a shelf
+                   and its cost is genuinely unknown; it falls back to the
+                   estimate and is COUNTED, so a statement can say how
+                   much of its cost figure is not evidence.
+
+   estimatedQty is that count. Reported rather than hidden: a cost figure
+   that quietly mixes measurement and guesswork is worse than one that
+   says which is which. */
+function invoiceLineCost(it){
+  const qty = Number(it.qty)||0;
+  const unit = Number(it.price)||0;
+  if(it.supplierId !== '__stock__'){
+    return { cost: qty*unit, estimatedQty: 0 };
+  }
+  const lots = Array.isArray(it._stockLots) ? it._stockLots : [];
+  let lotQty = 0, lotCost = 0;
+  lots.forEach(l=>{
+    const lq = Number(l.qty)||0;
+    lotQty += lq;
+    lotCost += lq * (Number(l.cost)||0);
+  });
+  // Never more than was sold: a reversal that failed halfway could leave
+  // lots recording more than the line, and costing 12 units against a sale
+  // of 10 would understate profit with no way to see why.
+  const covered = Math.min(lotQty, qty);
+  const gap = qty - covered;
+  const perLot = lotQty>0 ? lotCost/lotQty : 0;
+  return { cost: covered*perLot + gap*unit, estimatedQty: gap };
+}
 function anInvoiceTotals(q){
-  let sales=0, cost=0, qty=0;
+  let sales=0, cost=0, qty=0, estimatedQty=0;
   (q.items||[]).forEach(it=>{
     const iqty = Number(it.qty)||0;
     const sell = quoteItemSellPrice(it);
-    const buy = Number(it.price)||0;
-    sales += iqty*sell; cost += iqty*buy; qty += iqty;
+    const c = invoiceLineCost(it);
+    sales += iqty*sell; cost += c.cost; qty += iqty; estimatedQty += c.estimatedQty;
   });
-  return {sales, cost, qty, profit: sales-cost, margin: sales>0 ? (sales-cost)/sales*100 : 0};
+  return {sales, cost, qty, estimatedQty, profit: sales-cost, margin: sales>0 ? (sales-cost)/sales*100 : 0};
 }
 function anOverallTotals(invoices){
-  const totals = {sales:0, cost:0, qty:0, count:invoices.length};
+  const totals = {sales:0, cost:0, qty:0, estimatedQty:0, count:invoices.length};
   invoices.forEach(q=>{
     const t = anInvoiceTotals(q);
     totals.sales += t.sales; totals.cost += t.cost; totals.qty += t.qty;
+    totals.estimatedQty += t.estimatedQty;
   });
   totals.profit = totals.sales - totals.cost;
   totals.margin = totals.sales>0 ? totals.profit/totals.sales*100 : 0;
@@ -10102,7 +10150,8 @@ function anRowsByItem(invoices){
       const key = (it.productId||'?') + '::' + (it.variantIdx==null ? '' : it.variantIdx);
       const iqty = Number(it.qty)||0;
       const sell = quoteItemSellPrice(it);
-      const buy = Number(it.price)||0;
+      // Same costing as every other profit figure -- see invoiceLineCost.
+      const lineCost = invoiceLineCost(it).cost;
       const product = data.products.find(p=>p.id===it.productId);
       if(!map.has(key)){
         map.set(key, {
@@ -10113,7 +10162,7 @@ function anRowsByItem(invoices){
         });
       }
       const row = map.get(key);
-      row.sales += iqty*sell; row.qty += iqty; row.cost += iqty*buy;
+      row.sales += iqty*sell; row.qty += iqty; row.cost += lineCost;
     });
   });
   return [...map.values()].map(r=>({...r, profit: r.sales-r.cost, margin: r.sales>0 ? (r.sales-r.cost)/r.sales*100 : 0}));
@@ -16099,7 +16148,59 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
 /* ================= Init ================= */
 /* ================= EXECUTIVE DASHBOARD ================= */
 
-const DASH_OPEX_CATEGORIES = ['Rent','Utilities','Transport','Salaries & Wages','Other Expense'];
+/* What a cash-book entry MEANS to the accounts.
+
+   Money moving is not the same as money earned or spent, and the cash
+   book records movement. Four of its categories are movements that no
+   income statement may treat as profit or loss:
+
+     Loan Received      borrowing. A liability, not revenue -- it has to
+                        be paid back.
+     Owner Investment   equity. The owner's own money, not something the
+                        shop earned.
+     Debt Collection    a receipt against a receivable. The revenue was
+                        recognised when the invoice was raised; counting
+                        the cash again would book the same sale twice.
+     Stock Purchase     inventory. It becomes a cost when the goods are
+                        SOLD, through COGS -- counting the purchase as
+                        well would charge for it twice.
+     Supplier Payment   settles a payable, for goods already costed.
+
+   Everything else going out is an operating expense. Stated that way
+   round on purpose. It used to be a whitelist -- Rent, Utilities,
+   Transport, Salaries, Other Expense -- which silently dropped anything
+   not on it: agent commission payouts, and every category a shopkeeper
+   adds themselves. A shop that started recording Fuel found its profit
+   unchanged, because nothing was counting it.
+
+   Agent commission also fell through a second hole: addCashPayment
+   writes type 'payment', and the filter only looked at type 'expense'.
+   It is a real cost -- the shop's own money paid to an agent, counted
+   nowhere else, since an agent order books the shop's floor price as the
+   sale and the agent's own markup never touches these books. */
+const CASH_NOT_OPEX = {
+  'Stock Purchase': 'inventory — costed through COGS when sold',
+  'Supplier Payment': 'settles a payable already costed',
+};
+const CASH_NOT_REVENUE = {
+  'Loan Received': 'borrowing — a liability, not income',
+  'Owner Investment': 'equity — the owner\'s money, not earnings',
+  'Debt Collection': 'settles a receivable — the sale was already booked',
+};
+const cashHas = (map, cat)=> Object.prototype.hasOwnProperty.call(map, String(cat==null?'':cat));
+function cashIsMoneyOut(t){ return t.type==='payment' || t.type==='expense' || t.type==='out'; }
+function cashIsMoneyIn(t){ return t.type==='receipt' || t.type==='in'; }
+// The operating cost of running the shop, as opposed to buying its stock
+// or settling what it already owes.
+function cashIsOperatingExpense(t){
+  return cashIsMoneyOut(t) && !cashHas(CASH_NOT_OPEX, t.category);
+}
+// Cash that represents something the shop earned. Not what the income
+// statement uses for revenue -- that comes from invoices -- but what a
+// cash-flow statement needs to keep financing and equity out of trading.
+function cashIsTradingIncome(t){
+  return cashIsMoneyIn(t) && !cashHas(CASH_NOT_REVENUE, t.category);
+}
 function dashPct(n){ return (n>=0?'+':'') + n.toFixed(1) + '%'; }
 function dashFmtShort(n){
   const sign = n<0 ? '-' : '';
@@ -16127,14 +16228,21 @@ function dashRangeSpanDays(from, to){ return Math.max(1, daysSinceDate(from) - d
 function dashCashTxnsInRange(from, to){
   return data.cashTxns.filter(t=> t.date>=from && t.date<=to);
 }
+/* What the shop is actually holding, across all three accounts.
+
+   This used to sum data.cashTxns and nothing else, which is the shop's
+   net MOVEMENT rather than its position: a book opened with 1,000,000 in
+   the drawer reported 70,000 after a day's trading instead of 1,070,000.
+   Every opening balance was missing, and the runway figure underneath it
+   divided that wrong number by the monthly burn.
+
+   cashOnHandByAccount is the Cash Book's own arithmetic -- opening plus
+   receipts less payments and expenses, per account, carried from the last
+   counted close when today has not been opened yet. One definition of
+   cash for the whole app, so the dashboard and the Cash Book screen
+   cannot disagree about how much money there is. */
 function dashCashBalanceAllTime(){
-  let bal = 0;
-  data.cashTxns.forEach(t=>{
-    const amt = Number(t.amount)||0;
-    if(t.type==='receipt' || t.type==='in') bal += amt;
-    else bal -= amt; // payment or expense
-  });
-  return bal;
+  return cashOnHandByAccount().total;
 }
 function dashMonthlyBurn(){
   // Average monthly cash outflow (payments + expenses), used as a rough
@@ -16489,8 +16597,8 @@ function renderDashboard(){
   const curTotals = anOverallTotals(curInvoices);
   const prevTotals = anOverallTotals(prevInvoices);
 
-  const curOpex = dashCashTxnsInRange(from,to).filter(t=>t.type==='expense' && DASH_OPEX_CATEGORIES.includes(t.category)).reduce((s,t)=>s+(Number(t.amount)||0),0);
-  const prevOpex = dashCashTxnsInRange(prevFrom,prevTo).filter(t=>t.type==='expense' && DASH_OPEX_CATEGORIES.includes(t.category)).reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const curOpex = dashCashTxnsInRange(from,to).filter(cashIsOperatingExpense).reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const prevOpex = dashCashTxnsInRange(prevFrom,prevTo).filter(cashIsOperatingExpense).reduce((s,t)=>s+(Number(t.amount)||0),0);
   const netProfit = curTotals.profit - curOpex;
   const prevNetProfit = prevTotals.profit - prevOpex;
   const netMargin = curTotals.sales>0 ? netProfit/curTotals.sales*100 : 0;
