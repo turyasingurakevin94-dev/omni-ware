@@ -1,22 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The admin sidebar, grouped by the job being done.
+ * The admin navigation: a top bar holding the map, a rail holding the day.
  *
- * Twenty destinations were filed under "Main", "Records" and "System".
- * "Records" held Customers, Staff, Sales Agents, Suppliers, Purchase
- * invoices AND the Cash Book -- a drawer, not a category. Six of the
- * twenty were additionally hidden behind hover flyouts.
+ * Twenty destinations in one vertical column had two costs. Finding
+ * anything meant reading past everything. And -- the reason this was
+ * urgent rather than untidy -- .sidebar-scroll is a column flex
+ * container, so once the list outgrew the viewport every child with the
+ * default flex-shrink:1 was squeezed. .brand is 34px of logo inside
+ * overflow:hidden; it was crushed to 18px and the mark was CLIPPED, navy
+ * showing through where the shop's own logo should have been.
  *
- * Two regroupings carry real meaning rather than tidiness:
+ * So the logo moved to a bar with room for it, the top bar took the whole
+ * map, and the sidebar kept the six screens a shop opens every day.
  *
- *   - Debtors and Creditors came out of Analytics. Who owes you money is
- *     something you act on, not something you analyse, and it belongs
- *     beside the cash book. They are named for the question now.
- *   - Purchase invoices sit with Suppliers and Compare Prices, because
- *     buying stock is one job spread across three screens.
+ * Two things this must not become:
  *
- * The flyouts are gone with them. Nothing hides.
+ *   a flyout again   the hover submenus were removed from this app for
+ *                    hiding six destinations. A click-menu whose HEADING
+ *                    is permanently on screen is a different thing, and
+ *                    the difference is the heading. Checked below.
+ *   a place to lose  every destination that existed before must still be
+ *   things           reachable, and the rail's items must also appear in
+ *                    the top bar -- otherwise collapsing the rail would
+ *                    strand them.
  *
  * Run: node test/admin-nav.test.js   (or: npm test)
  */
@@ -24,89 +31,163 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('admin nav');
 const src = read('index.html');
-// Anchored inside the sidebar, not on the first `<nav>` in the file. There
-// are three, and the first is a literal `<nav>` written inside a CSS
-// comment -- the same prose-matching-as-code trap that has caught several
-// checks in this suite.
-const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
-const nav = (/<nav>([\s\S]*?)<\/nav>/.exec(sidebar) || ['', ''])[1];
 
-/* ---------- 1. nothing was lost in the move ------------------------- */
+// Anchored on the elements themselves, not on the first `<nav>` in the
+// file. There are several, and one is a literal `<nav>` written inside a
+// CSS comment -- the same prose-matching-as-code trap that has caught
+// other checks in this suite.
+const topbar = (/<header class="topbar"[\s\S]*?<\/header>/.exec(src) || [''])[0];
+const sidebar = (/<aside class="sidebar"[\s\S]*?<\/aside>/.exec(src) || [''])[0];
+const rail = (/<nav>([\s\S]*?)<\/nav>/.exec(sidebar) || ['', ''])[1];
+
+const tabsIn = (s) => [...s.matchAll(/data-tab="([a-z-]+)"/g)].map((m) => m[1]);
+
+/* ---------- 1. nothing was lost ------------------------------------- */
 {
   const EVERY_TAB = [
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents',
     'compare', 'suppliers', 'purchase-invoices',
     'cashbook', 'analytics-debtors', 'analytics-creditors',
+    'statements', 'assets', 'loans',
     'products', 'prices', 'inventory',
     'analytics-sales', 'analytics-purchase',
     'staff', 'worker', 'presets',
   ];
-  const present = [...nav.matchAll(/data-tab="([a-z-]+)"/g)].map(m => m[1]);
-  const missing = EVERY_TAB.filter(x => !present.includes(x));
-  t.check(missing.length === 0, `every destination survived the regroup${missing.length ? ` (missing ${missing.join(', ')})` : ` (${present.length})`}`);
-  t.check(new Set(present).size === present.length, 'and none is listed twice');
+  const present = tabsIn(topbar);
+  const missing = EVERY_TAB.filter((x) => !present.includes(x));
+  t.check(missing.length === 0,
+    `the top bar is the complete map${missing.length ? ` (missing ${missing.join(', ')})` : ` (${present.length} destinations)`}`);
+  t.check(new Set(present).size === present.length, 'and none of it is listed twice');
 
-  // The three non-tab actions have no data-tab and used to rely on the
-  // flyout closing itself; they must still be in the nav.
-  ['exportBtn', 'importBtn', 'clearBtn'].forEach(id => {
-    t.check(new RegExp(`id="${id}"`).test(nav), `${id} still has a home in the nav`);
+  // The three non-tab actions are actions, not destinations, and keep the
+  // ids their handlers bind to. Renaming them in the move would throw on
+  // boot at getElementById(...).addEventListener, which no check that
+  // only counted destinations would notice.
+  ['exportBtn', 'importBtn', 'clearBtn'].forEach((id) => {
+    t.check(new RegExp(`id="${id}"`).test(topbar), `${id} kept its id, so its handler still finds it`);
   });
+  t.check(/id="importFile"/.test(src), 'and the hidden file input the import opens still exists');
 }
 
-/* ---------- 2. grouped by job ---------------------------------------- */
+/* ---------- 2. grouped by job, headings always visible --------------- */
 {
-  const labels = [...nav.matchAll(/nav-section-label">([^<]+)</g)].map(m => m[1].trim());
-  t.check(!labels.includes('Main') && !labels.includes('Records') && !labels.includes('System'),
-    'the drawer headings are gone');
-  ['Selling', 'Buying', 'Money', 'Price book', 'Insight'].forEach(g => {
-    t.check(labels.includes(g), `"${g}" is a section`);
+  const headings = [...topbar.matchAll(/class="tb-top"[^>]*>\s*([A-Za-z ]+?)\s*</g)].map((m) => m[1].trim());
+  ['Dashboard', 'Sell', 'Buy', 'Money', 'Price book', 'Insight', 'Setup'].forEach((h) => {
+    t.check(headings.includes(h), `"${h}" is a heading on the bar itself`);
   });
 
-  // Which section a destination sits under, by reading the nav in order.
-  const order = [...nav.matchAll(/nav-section-label">([^<]+)<|data-tab="([a-z-]+)"/g)];
-  const sectionOf = {};
-  let cur = '(top)';
-  order.forEach(m => { if (m[1]) cur = m[1].trim(); else sectionOf[m[2]] = cur; });
+  // Which group a destination sits under, by reading the bar in order.
+  const order = [...topbar.matchAll(/data-menu="([a-z]+)"|data-tab="([a-z-]+)"/g)];
+  const groupOf = {};
+  let cur = '(bar)';
+  order.forEach((m) => { if (m[1]) cur = m[1]; else groupOf[m[2]] = cur; });
 
-  t.check(sectionOf['dashboard'] === '(top)', 'the dashboard sits above the sections, as the landing screen');
+  t.check(groupOf['dashboard'] === '(bar)',
+    'the dashboard is on the bar itself, not inside a menu -- it is where a day starts');
 
-  // The two moves that are the point of the exercise.
-  t.check(sectionOf['analytics-debtors'] === 'Money' && sectionOf['analytics-creditors'] === 'Money',
-    'who owes you and who you owe are filed under Money, not Analytics');
-  t.check(sectionOf['cashbook'] === 'Money', 'beside the cash book');
-  t.check(sectionOf['purchase-invoices'] === 'Buying' && sectionOf['suppliers'] === 'Buying'
-    && sectionOf['compare'] === 'Buying',
-    'buying stock is one section: compare, suppliers, purchase invoices');
-
-  t.check(sectionOf['quote'] === 'Selling' && sectionOf['invoices'] === 'Selling'
-    && sectionOf['customers'] === 'Selling' && sectionOf['agents'] === 'Selling',
-    'and selling holds the quote, the invoice, the customer and the agent');
-  t.check(sectionOf['products'] === 'Price book' && sectionOf['prices'] === 'Price book'
-    && sectionOf['inventory'] === 'Price book',
+  // The groupings that carry meaning rather than tidiness.
+  t.check(groupOf['analytics-debtors'] === 'money' && groupOf['analytics-creditors'] === 'money',
+    'who owes you and who you owe are money, not analytics -- they are acted on, not studied');
+  t.check(groupOf['cashbook'] === 'money' && groupOf['statements'] === 'money'
+    && groupOf['assets'] === 'money' && groupOf['loans'] === 'money',
+    'and they sit with the cash book, the statements, what the shop owns and what it owes');
+  t.check(groupOf['compare'] === 'buy' && groupOf['suppliers'] === 'buy'
+    && groupOf['purchase-invoices'] === 'buy',
+    'buying stock is one job across three screens');
+  t.check(groupOf['quote'] === 'sell' && groupOf['invoices'] === 'sell'
+    && groupOf['customers'] === 'sell' && groupOf['agents'] === 'sell',
+    'selling holds the quote, the invoice, the customer and the agent');
+  t.check(groupOf['products'] === 'pricebook' && groupOf['prices'] === 'pricebook'
+    && groupOf['inventory'] === 'pricebook',
     'what you sell and what it costs sit together');
 }
 
-/* ---------- 3. nothing hides ----------------------------------------- */
+/* ---------- 3. the rail is the day, and strands nothing -------------- */
 {
-  t.check(!/nav-submenu/.test(nav), 'no destination is behind a flyout');
-  t.check(!/nav-parent-btn/.test(nav), 'and there are no parent buttons left to open one');
+  const railTabs = tabsIn(rail);
+  const barTabs = tabsIn(topbar);
 
-  // The machinery that drove them, and every reference to it, must be gone
-  // -- a leftover getElementById would return null and throw on boot,
-  // which no source-parsing check would notice.
-  const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(railTabs.length <= 8,
+    `the rail is short enough not to need scrolling (${railTabs.length} items)`);
+  // The bug that started this: a rail long enough to overflow squeezed
+  // the brand block to nothing. Nothing about the fix works if the rail
+  // grows back.
+  ['dashboard', 'quote', 'quote-saved', 'cashbook'].forEach((x) => {
+    t.check(railTabs.includes(x), `${x} is on the rail -- it is opened every day`);
+  });
+
+  const stranded = railTabs.filter((x) => !barTabs.includes(x));
+  t.check(stranded.length === 0,
+    `everything on the rail is also in the top bar, so collapsing the rail loses nothing${stranded.length ? ` (stranded: ${stranded.join(', ')})` : ''}`);
+
+  t.check(!/nav-section-label/.test(rail),
+    'and it is short enough to need no section headings of its own');
+}
+
+/* ---------- 4. the logo is out of the squeeze ------------------------ */
+{
+  t.check(/<header class="topbar"[\s\S]*?class="brand"/.test(topbar),
+    'the brand sits in the top bar');
+  t.check(!/class="brand"/.test(sidebar),
+    'and no longer in the flex column that crushed it');
+
+  // Belt and braces on the mechanism itself: the top bar is also a flex
+  // container, so the same shrink applies if the row ever runs out of
+  // width. Pinned in CSS rather than left to the row never being full.
+  const brandRule = (/\.topbar \.brand\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/flex-shrink:\s*0/.test(brandRule),
+    'the brand cannot be shrunk by its container -- the exact failure that clipped it before');
+  t.check(!/overflow:\s*hidden/.test(brandRule),
+    'and nothing clips it even if something does squeeze it');
+}
+
+/* ---------- 5. nothing hides ----------------------------------------- */
+{
+  t.check(!/nav-submenu/.test(topbar) && !/nav-submenu/.test(sidebar),
+    'the old hover flyouts are not back');
+  t.check(/tb-group/.test(topbar) && /class="tb-top"/.test(topbar),
+    'the menus open from a heading that is on screen whether they are open or not');
+
+  // A menu that opened on hover would reappear under a pointer merely
+  // crossing the bar. Pinned as a source check because the difference
+  // between :hover and a click listener is the whole design decision.
+  t.check(!/\.tb-group:hover\s*>?\s*\.tb-menu/.test(src),
+    'and they open on a click, not on a pointer passing over them');
+
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   ['quotesNavItem', 'analyticsNavItem', 'supplierNavItem', 'productsNavItem', 'settingsNavItem', 'wireNavFlyout']
-    .forEach(ref => {
+    .forEach((ref) => {
       t.check(!new RegExp(`\\b${ref}\\b`).test(code), `${ref} is not referenced anywhere`);
     });
 }
 
-/* ---------- 4. the labels name the question, not the table ----------- */
+/* ---------- 6. the labels name the question, not the table ----------- */
 {
-  t.check(/nav-label">Who owes you</.test(nav), 'the debtors list is named for what it answers');
-  t.check(/nav-label">Who you owe</.test(nav), 'and so is the creditors list');
-  t.check(!/nav-label">Debtors List</.test(nav) && !/nav-label">Creditors List</.test(nav),
+  t.check(/nav-label">Who owes you</.test(topbar), 'the debtors list is named for what it answers');
+  t.check(/nav-label">Who you owe</.test(topbar), 'and so is the creditors list');
+  t.check(!/nav-label">Debtors List</.test(topbar) && !/nav-label">Creditors List</.test(topbar),
     'the table-shaped names are gone');
+}
+
+/* ---------- 7. every button the JS reaches for is really there ------- */
+{
+  // Rearranging markup breaks navigation by removing an id, and the
+  // failure is a throw on boot rather than anything visible in a diff.
+  ['workerNavItem', 'workerTopbarItem', 'mmsWorkerViewBtn', 'adminSignoutBtn', 'tbSignoutBtn', 'orderStatusBar']
+    .forEach((id) => {
+      t.check(new RegExp(`id="${id}"`).test(src), `#${id} exists in the markup`);
+      // Not every one is fetched by a literal getElementById: the two
+      // order-status widgets are looped over by id, so match the name
+      // anywhere it is quoted in the script rather than one call shape.
+      t.check(new RegExp(`getElementById\\('${id}'\\)|'${id}'`).test(src),
+        `and the script reaches for #${id}`);
+    });
+
+  // Worker view is revealed in three places now. Missing one leaves a
+  // worker-enabled shop with the destination hidden in that surface only.
+  const reveal = (/workerNavItem'\)\.style\.display[\s\S]{0,320}?mmsWorkerViewBtn'\)\.style\.display/.exec(src) || [''])[0];
+  t.check(/workerTopbarItem'\)\.style\.display/.test(reveal),
+    'and the top bar is revealed alongside the rail and the phone sheet');
 }
 
 process.exit(t.done() ? 1 : 0);
