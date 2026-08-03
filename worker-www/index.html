@@ -749,7 +749,18 @@ async function boot(){
     return;
   }
   myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
-  if(myStaff){
+  // Notifications are the one optional thing this function does, and they sat
+  // between the orders being loaded and the screen being drawn -- outside the
+  // catch above, which has already been passed by here.
+  //
+  // So a throw in this block took the whole app with it: the loading class
+  // was never removed, nothing rendered, polling never started, and no error
+  // was shown either. A worker stared at a loading screen with their orders
+  // sitting in memory behind it, because a lookup about notifications failed
+  // on a bad connection.
+  //
+  // Failing here costs notifications. It must not cost the pick screen.
+  if(myStaff) try{
     const { data: existingSub } = await sb.from('push_subscriptions').select('id').eq('staff_id', myStaff.id).eq('user_id', currentUser.id).limit(1).maybeSingle();
     hasPushSubscription = !!existingSub;
     if(isNativeApp()){
@@ -765,6 +776,8 @@ async function boot(){
       // already returns granted) but keeps the stored token current.
       if(hasPushSubscription) enableNativePush();
     }
+  }catch(err){
+    console.error('Could not set up notifications:', err);
   }
   // Remove the loading class before rendering, not after -- the carousel's
   // initial scrollIntoView() (centering the focused card) is a no-op on an
