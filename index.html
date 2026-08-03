@@ -185,7 +185,31 @@
   .topbar .osb-item + .osb-item{border-left-color:rgba(255,255,255,0.14);}
   .topbar .osb-label{color:#9AA7B4;}
   .topbar .osb-count{color:#fff;}
-  @media (max-width:1320px){ .topbar .order-status-bar{display:none;} }
+  /* This used to be `max-width:1320px { display:none }`, and 1320 is
+     exactly what the widget needs WITH its labels -- so it appeared only
+     on screens wider than most, and vanished at 100% zoom on an ordinary
+     laptop. Zooming out was the only way to see it, which is backwards:
+     the counts are the one thing on this bar you want at a glance.
+
+     It sheds width instead of disappearing now. The label goes first --
+     the dot carries the stage and the number carries the news, and every
+     item names itself in a title so the colours never have to be learnt.
+     Then the padding closes up, on the counts and the menu headings
+     together, because both are competing for the same row. */
+  /* gap is restated because the widget's own narrow-screen rule closes it
+     to 0 at 1180px. That was written for the phone copy, where the items
+     are tiny; here it leaves the dot touching its number. */
+  @media (max-width:1400px){ .topbar .osb-label{display:none;} .topbar .osb-item{gap:6px;} }
+  @media (max-width:1120px){
+    .topbar .osb-item{padding:0 8px;}
+    .topbar-nav button.tb-top{padding:8px 8px;}
+    .topbar .brand .tag{font-size:14px;}
+    .topbar .brand{margin-right:10px;}
+  }
+  /* Below this the brand wordmark goes too, leaving the mark itself. The
+     bar is hidden entirely under 820px, where the phone's own copy of
+     these counts takes over inside the mobile topbar. */
+  @media (max-width:960px){ .topbar .brand-text{display:none;} }
 
   /* Sidebar */
   .sidebar{
@@ -9335,9 +9359,14 @@ function updateOrderStatusBar(){
   const quotes = data.savedQuotes.filter(q=>!quoteAgedOffBoard(q));
   const html = SQ_STATUS_ORDER.map(status=>{
     const count = quotes.filter(q=>q.status===status).length;
-    return `<div class="osb-item">
+    // The stage is named on the item itself, not just in the label. On a
+    // narrower screen the labels are dropped to keep the counts visible,
+    // and four coloured dots with no way to find out what they mean would
+    // be a worse answer than the widget simply not being there.
+    const name = esc(ORDER_STATUS_SHORT_LABELS[status]);
+    return `<div class="osb-item" title="${name}: ${count}">
       <span class="osb-dot" style="background:${SQ_STATUSES[status].color};"></span>
-      <span class="osb-label">${esc(ORDER_STATUS_SHORT_LABELS[status])}</span>
+      <span class="osb-label">${name}</span>
       <span class="osb-count">${count}</span>
     </div>`;
   }).join('');

@@ -190,4 +190,41 @@ const tabsIn = (s) => [...s.matchAll(/data-tab="([a-z-]+)"/g)].map((m) => m[1]);
     'and the top bar is revealed alongside the rail and the phone sheet');
 }
 
+/* ---------- 8. the counts survive a normal screen -------------------- */
+{
+  /* The order counts were hidden below 1320px -- which is exactly the
+     width the widget needs WITH its labels. So the rule fired precisely
+     when the thing would not have fitted, and the widget was invisible on
+     every ordinary laptop at 100% zoom. Zooming OUT was the only way to
+     see it, which is backwards for the one figure on the bar that is
+     meant to be caught at a glance.
+
+     The fix is that it sheds width instead of disappearing, so what is
+     pinned here is the absence of a desktop-width hide, not a number. Any
+     future `display:none` above the phone breakpoint brings the bug back
+     whatever threshold it picks. */
+  const MOBILE_BREAKPOINT = 820;
+  const blocks = [...src.matchAll(/@media\s*\(max-width:\s*(\d+)px\)\s*\{([\s\S]*?)\n\s*\}/g)];
+  const offenders = blocks.filter(([, px, body]) =>
+    Number(px) > MOBILE_BREAKPOINT
+    && /\.topbar\s+\.order-status-bar\s*\{[^}]*display:\s*none/.test(body));
+  t.check(offenders.length === 0,
+    `nothing hides the order counts on a desktop screen${offenders.length ? ` (hidden at ${offenders.map((o) => o[1]).join('px, ')}px)` : ''}`);
+
+  // What it is allowed to shed, and the order it sheds in: the label
+  // first, because the dot carries the stage and the number carries the
+  // news. Dropping the count instead would leave a widget that says
+  // nothing.
+  t.check(/@media \(max-width:1400px\)\{[^}]*\.topbar \.osb-label\{display:none;\}/.test(src),
+    'the labels are what give way first, well before the row runs out of room');
+  t.check(!/\.topbar \.osb-count\{[^}]*display:\s*none/.test(src),
+    'and the counts themselves are never dropped');
+
+  // Without labels the stages are four coloured dots. Each item names
+  // itself so the colours never have to be learnt.
+  const render = (/function updateOrderStatusBar\(\)[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/title="\$\{name\}: \$\{count\}"/.test(render),
+    'each count names its own stage, so the widget still reads when the labels are gone');
+}
+
 process.exit(t.done() ? 1 : 0);
