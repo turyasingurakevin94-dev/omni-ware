@@ -1566,47 +1566,93 @@
     display:block;margin-top:7px;font-size:11px;color:var(--ink-soft);
   }
 
-  /* One destination and everything going to it. */
-  .dr-run{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
-  .dr-run:last-of-type{border-bottom:0;}
-  .dr-run-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
-  .dr-run-head .icon{width:16px;height:16px;color:var(--ow-verdigris);flex-shrink:0;}
-  .dr-run-name{font-size:14.5px;font-weight:700;color:var(--ink);}
-  .dr-run-count{
-    font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
-    color:var(--ow-verdigris);background:var(--ow-verdigris-soft);padding:2px 7px;border-radius:99px;
+  /* One card per place, slid through sideways. A cluster is a trip, and
+     trips get compared with each other -- so they sit side by side and one
+     gesture moves between them, rather than stacking into a document. */
+  .dr-carousel{position:relative;margin:14px 0 6px;}
+  .dr-track{
+    display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding:2px 2px 10px;scroll-behavior:smooth;
+    scrollbar-width:thin;
   }
-  .dr-run-total{
-    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;
+  .dr-track:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
+  .dr-card{
+    flex:0 0 clamp(230px, 72%, 290px);scroll-snap-align:start;
+    display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;box-shadow:0 1px 2px rgba(20,30,40,0.05);
+  }
+  .dr-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dr-card.collected{background:var(--ow-verdigris-soft);border-color:#BFD9D1;}
+  .dr-card.unknown{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
+  .dr-card-head{display:flex;align-items:center;gap:7px;min-width:0;}
+  .dr-card-head .icon{width:15px;height:15px;color:var(--ow-verdigris);flex-shrink:0;}
+  .dr-card.unknown .dr-card-head .icon{color:var(--ow-crimson);}
+  .dr-card-rank{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
+    color:var(--ink-soft);background:var(--ow-steel-050);
+    padding:1px 6px;border-radius:99px;flex-shrink:0;
+  }
+  .dr-card-name{
+    font-size:14px;font-weight:700;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .dr-card-figs{
+    display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    margin:7px 0 0;padding-bottom:8px;border-bottom:1px solid var(--ow-rule-soft);
+  }
+  .dr-card-count{
+    font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--ow-verdigris);
+  }
+  .dr-card.unknown .dr-card-count{color:var(--ow-crimson);}
+  .dr-card-total{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
-  .dr-run-note{
-    display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ow-amber-ink);margin:0 0 7px;
+  .dr-card-note{
+    display:flex;align-items:flex-start;gap:5px;margin:8px 0 0;
+    font-size:11px;line-height:1.4;color:var(--ow-amber-ink);
   }
-  .dr-run-note.split{color:var(--ink-soft);}
-  .dr-run-note .icon{width:13px;height:13px;flex-shrink:0;}
-  .dr-lines{width:100%;overflow-x:auto;}
-  .dr-lines table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
-  .dr-lines col.who{width:44%;} .dr-lines col.driver{width:34%;} .dr-lines col.value{width:22%;}
-  .dr-lines td{padding:6px 0;border-top:1px solid var(--ow-rule-soft);vertical-align:top;}
-  .dr-lines tbody tr:first-child td{border-top:0;}
-  .dr-lines td.r{text-align:right;padding-left:6px;}
-  .dr-order-name{font-weight:700;color:var(--ink);}
-  .dr-order-sub{font-size:11.5px;color:var(--ow-ink-400);margin-top:1px;}
-  .dr-driver{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);}
-  .dr-driver .icon{width:14px;height:14px;flex-shrink:0;}
+  .dr-card-note.split{color:var(--ink-soft);}
+  .dr-card-note.quiet{color:var(--ink-soft);}
+  .dr-card-note .icon{width:12px;height:12px;flex-shrink:0;margin-top:1px;}
+  .dr-orders{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;}
+  .dr-order{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:7px 0;border-top:1px solid var(--ow-rule-soft);
+  }
+  .dr-order:first-child{border-top:0;}
+  .dr-order-main{min-width:0;}
+  .dr-order-name{
+    font-size:12.5px;font-weight:700;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .dr-order-sub{font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .dr-order-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
+  .dr-order-value{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .dr-driver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink-soft);}
+  .dr-driver .icon{width:12px;height:12px;flex-shrink:0;}
   .dr-driver.none{color:var(--ow-crimson);}
-  .dr-rest{padding:16px 0 2px;border-top:1px solid var(--line);margin-top:6px;}
-  .dr-rest h4{display:flex;align-items:center;gap:7px;margin:0 0 5px;font-size:13.5px;font-weight:700;color:var(--ink);}
-  .dr-rest h4 .icon{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
-  .dr-singles{display:flex;flex-direction:column;gap:1px;margin-top:8px;}
-  .dr-single{
-    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-    padding:6px 0;border-top:1px solid var(--ow-rule-soft);font-size:12.5px;
+  .dr-nav{
+    all:unset;cursor:pointer;position:absolute;top:calc(50% - 22px);z-index:2;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--ink);
+    box-shadow:0 2px 8px rgba(20,30,40,0.16);
   }
-  .dr-single:first-child{border-top:0;}
-  .dr-single span{color:var(--ink-soft);}
-  .dr-single b{color:var(--ink);}
+  .dr-nav.prev{left:-6px;} .dr-nav.next{right:-6px;}
+  .dr-nav .icon{width:16px;height:16px;}
+  .dr-nav:hover{background:var(--ow-steel-050);}
+  .dr-nav:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dr-nav:disabled{opacity:0.3;cursor:default;box-shadow:none;}
+  .dr-hint{margin:2px 0 0;font-size:11.5px;color:var(--ow-ink-400);}
+  @media (max-width:520px){
+    .dr-card{flex-basis:86%;}
+    .dr-nav{display:none;}
+  }
 
   /* Cash position. Sits between the total and the supplier runs because it
      is the question you ask after seeing the total and before setting off. */
@@ -5765,38 +5811,37 @@ function openShortfallPlan(){
   openModal('shortfallPlanModal');
 }
 
-/* Over the Pending Delivery column: what is going the same way.
+/* Over the Pending Delivery column: where today's deliveries are going.
 
-   The column lists orders. A driver planning a morning needs the other
-   reading of the same list -- three of these are in Ntinda, so they are
-   one trip. Only runs of two or more are named here, because a run of one
-   is just an order and the column already shows those; the count of what
-   is left over says so rather than hiding it.
+   The column lists orders. This is the other reading of the same list --
+   by place rather than by order -- which is how a driver's morning is
+   actually planned.
 
-   Nothing to group renders nothing. A banner announcing one destination
-   with one order in it is noise on every quiet day. */
+   Every destination counts, including one with a single order on it. A
+   place with one delivery today is still a place somebody has to drive
+   to, and it is the same place that had three yesterday; leaving it out
+   made the screen answer a narrower question than the one being asked.
+   The runs are ordered so the ones worth combining lead.
+
+   Nothing to deliver anywhere renders nothing -- a board of self-pickups
+   has no journey in it to plan. */
 function deliveryRunsBannerHTML(group){
   const orders = (group||[]).filter(q=>!q.voided && !quoteAgedOffBoard(q));
   const { runs, unknown } = deliveryRuns(orders);
-  const shared = runs.filter(r=>r.orders.length > 1);
-  if(!shared.length) return '';
-  const shown = shared.slice(0, 3);
-  const rest = shared.length - shown.length;
-  const singles = runs.length - shared.length;
-  const together = shared.reduce((s,r)=> s + r.orders.length, 0);
-  return `<button type="button" class="sq-cash sq-runs" id="sq_runs_banner" title="Open the delivery runs">
+  if(!runs.length && !unknown.length) return '';
+  const shown = runs.slice(0, 3);
+  const rest = runs.length - shown.length;
+  const going = runs.reduce((s,r)=> s + r.orders.length, 0);
+  return `<button type="button" class="sq-cash sq-runs" id="sq_runs_banner" title="Open the delivery clusters">
     <span class="sq-cash-top">
       ${ICON_ROUTE}
-      <span class="sq-cash-label">Going the same way</span>
-      <span class="sq-cash-fig">${together} order${together===1?'':'s'}</span>
+      <span class="sq-cash-label">${runs.length} place${runs.length===1?'':'s'} to reach</span>
+      <span class="sq-cash-fig">${going} order${going===1?'':'s'}</span>
     </span>
-    <span class="sq-cash-runs">${shown.map(r=>`
+    ${shown.length ? `<span class="sq-cash-runs">${shown.map(r=>`
       <span class="sq-cash-run">${ICON_PIN}${esc(r.label)} <b>${r.orders.length}</b></span>`).join('')}
-      ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>
-    ${(singles || unknown.length) ? `<span class="sq-cash-note">${
-      [singles ? `${singles} going somewhere of its own` : '',
-       unknown.length ? `${unknown.length} with no address yet` : ''].filter(Boolean).join(' · ')
-    }</span>` : ''}
+      ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>` : ''}
+    ${unknown.length ? `<span class="sq-cash-note">${unknown.length} with no address yet</span>` : ''}
   </button>`;
 }
 
@@ -5806,68 +5851,132 @@ function deliveryRunsBannerHTML(group){
    makes a trip worth combining. The orders with nowhere to group come
    last and are named rather than dropped: an order with no location is
    not a tidy zero, it is one somebody has to chase an address for. */
+/* One card per place, side by side, slid through left to right.
+
+   Stacked vertically this was a scroll through a document. A cluster is a
+   trip, and trips are compared with each other -- how many drops, who is
+   already on it, what is still unassigned -- so they sit next to each
+   other and one gesture moves between them.
+
+   Every destination gets a card, a single order included. The two states
+   that are not places -- being collected, and no address yet -- ride at
+   the end of the same track, so one sweep accounts for the whole column
+   rather than leaving a tail nobody scrolls to. */
 function openDeliveryRuns(){
   const orders = pendingDeliveryOrders();
   const { runs, collected, unknown } = deliveryRuns(orders);
-  const shared = runs.filter(r=>r.orders.length > 1);
-  const singles = runs.filter(r=>r.orders.length === 1);
 
   const orderRow = (q)=>{
     const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : '';
-    return `<tr>
-      <td>
+    return `<li class="dr-order">
+      <div class="dr-order-main">
         <div class="dr-order-name">${esc(quoteClientName(q))}</div>
         <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}</div>
-      </td>
-      <td>${driver
-        ? `<span class="dr-driver">${ICON_TRUCK}${esc(driver)}</span>`
-        : `<span class="dr-driver none" title="Nobody is delivering this order">${ICON_WARN}Nobody yet</span>`}</td>
-      <td class="r num">${fmtUGX(savedQuoteTotal(q))}</td>
-    </tr>`;
-  };
-  const runBlock = (r)=>`
-    <div class="dr-run">
-      <div class="dr-run-head">
-        ${ICON_PIN}
-        <span class="dr-run-name">${esc(r.label)}</span>
-        <span class="dr-run-count">${r.orders.length} order${r.orders.length===1?'':'s'}</span>
-        <span class="dr-run-total">${fmtUGX(r.value)}</span>
       </div>
-      ${r.unassigned ? `<div class="dr-run-note">${ICON_WARN}${r.unassigned} of these ${r.unassigned===1?'has':'have'} nobody delivering yet — one driver could take the whole run</div>` : ''}
-      ${r.drivers.length > 1 ? `<div class="dr-run-note split">${ICON_TRUCK}Split across ${r.drivers.length} drivers, for one destination</div>` : ''}
-      <div class="dr-lines"><table>
-        <colgroup><col class="who"><col class="driver"><col class="value"></colgroup>
-        <tbody>${r.orders.map(orderRow).join('')}</tbody>
-      </table></div>
-    </div>`;
+      <div class="dr-order-side">
+        <span class="dr-order-value">${fmtUGX(savedQuoteTotal(q))}</span>
+        ${driver
+          ? `<span class="dr-driver">${ICON_TRUCK}${esc(driver)}</span>`
+          : `<span class="dr-driver none" title="Nobody is delivering this order">${ICON_WARN}Nobody yet</span>`}
+      </div>
+    </li>`;
+  };
+
+  const placeCard = (r, i)=>`
+    <article class="dr-card" tabindex="0" aria-label="${esc(r.label)}, ${r.orders.length} order${r.orders.length===1?'':'s'}">
+      <header class="dr-card-head">
+        <span class="dr-card-rank">${i+1}</span>
+        ${ICON_PIN}
+        <span class="dr-card-name" title="${esc(r.label)}">${esc(r.label)}</span>
+      </header>
+      <div class="dr-card-figs">
+        <span class="dr-card-count">${r.orders.length} order${r.orders.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(r.value)}</span>
+      </div>
+      ${r.unassigned ? `<p class="dr-card-note">${ICON_WARN}${r.unassigned} with nobody on ${r.unassigned===1?'it':'them'}${r.orders.length>1 ? ' — one driver could take the whole run' : ''}</p>` : ''}
+      ${r.drivers.length > 1 ? `<p class="dr-card-note split">${ICON_TRUCK}Split across ${r.drivers.length} drivers, for one place</p>` : ''}
+      <ul class="dr-orders">${r.orders.map(orderRow).join('')}</ul>
+    </article>`;
+
+  const asideCard = (kind, icon, title, note, rows)=>`
+    <article class="dr-card ${kind}" tabindex="0" aria-label="${esc(title)}, ${rows.length}">
+      <header class="dr-card-head">
+        ${icon}
+        <span class="dr-card-name">${esc(title)}</span>
+      </header>
+      <div class="dr-card-figs">
+        <span class="dr-card-count">${rows.length} order${rows.length===1?'':'s'}</span>
+        <span class="dr-card-total">${fmtUGX(rows.reduce((s,q)=>s+savedQuoteTotal(q),0))}</span>
+      </div>
+      <p class="dr-card-note quiet">${esc(note)}</p>
+      <ul class="dr-orders">${rows.map(orderRow).join('')}</ul>
+    </article>`;
+
+  const cards = runs.map(placeCard)
+    .concat(collected.length ? [asideCard('collected', ICON_STORE, 'Being collected',
+      'The agent is picking these up. Nothing to drive, and nothing missing.', collected)] : [])
+    .concat(unknown.length ? [asideCard('unknown', ICON_WARN, 'No address yet',
+      'A shop order takes its location from the customer record; an agent order takes the address the agent typed.', unknown)] : []);
 
   document.getElementById('deliveryRunsBody').innerHTML = `
     <div class="bl-top">
       <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} waiting to go out</span>
-      <span class="bl-top-fig">${shared.length} run${shared.length===1?'':'s'}</span>
+      <span class="bl-top-fig">${runs.length} place${runs.length===1?'':'s'}</span>
     </div>
-    ${shared.length
-      ? shared.map(runBlock).join('')
-      : `<p class="preset-hint">Nothing on this board is going the same way as anything else today.</p>`}
-    ${singles.length ? `<section class="dr-rest">
-      <h4>${ICON_PIN}One of a kind</h4>
-      <p class="sp-lead">A destination with a single order on it. Still worth seeing — it is where the next one may be going too.</p>
-      <div class="dr-singles">${singles.map(r=>`
-        <div class="dr-single"><span>${esc(r.label)}</span><b>${esc(quoteClientName(r.orders[0]))}</b></div>`).join('')}</div>
-    </section>` : ''}
-    ${collected.length ? `<section class="dr-rest">
-      <h4>${ICON_STORE}Being collected</h4>
-      <p class="sp-lead">Nobody is driving these anywhere — the agent is picking them up. Nothing to plan, and nothing missing.</p>
-      <div class="dr-singles">${collected.map(q=>`
-        <div class="dr-single"><span>${esc(invoiceNumberLabel(q))}</span><b>${esc(quoteClientName(q))}</b></div>`).join('')}</div>
-    </section>` : ''}
-    ${unknown.length ? `<section class="dr-rest">
-      <h4>${ICON_WARN}No address yet</h4>
-      <p class="sp-lead">These cannot be grouped or planned around until somebody has an address for them. A shop order takes its
-        location from the customer record; an agent order takes the address the agent typed.</p>
-      <div class="dr-singles">${unknown.map(q=>`
-        <div class="dr-single"><span>${esc(invoiceNumberLabel(q))}</span><b>${esc(quoteClientName(q))}</b></div>`).join('')}</div>
-    </section>` : ''}`;
+    ${cards.length ? `
+    <div class="dr-carousel">
+      <button type="button" class="dr-nav prev" id="dr_prev" aria-label="Previous place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="dr-track" id="dr_track" tabindex="0" role="group" aria-label="Delivery clusters, scroll sideways">
+        ${cards.join('')}
+      </div>
+      <button type="button" class="dr-nav next" id="dr_next" aria-label="Next place">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the fullest runs come first' : ''}.</p>`
+    : `<p class="preset-hint">Nothing is waiting to go out.</p>`}`;
+
+  // Wired after the body is written, since it is replaced on every open.
+  // Scrolls by a whole card so a tap lands on a cluster rather than
+  // halfway between two.
+  const track = document.getElementById('dr_track');
+  if(track){
+    const step = ()=>{
+      const card = track.querySelector('.dr-card');
+      // The gap is part of the stride; without it every tap drifts a few
+      // pixels short and by the fourth one a card is half off the edge.
+      const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 0;
+      return card ? card.getBoundingClientRect().width + gap : track.clientWidth;
+    };
+    // Aimed at a card index rather than nudged by a card's width. A drag or
+    // a trackpad flick leaves the track a few pixels off a boundary, and a
+    // purely relative scroll carries that error forward until a card sits
+    // half off the edge. Rounding to the nearest card first means every tap
+    // lands flush however the track was last moved.
+    //
+    // scrollBy rather than scrollTo: with scroll-snap-type on this track,
+    // scrollTo is overridden by the snap engine and goes nowhere.
+    const nav = (dir)=>{
+      const s = step();
+      if(!s) return;
+      const target = (Math.round(track.scrollLeft / s) + dir) * s;
+      track.scrollBy({ left: target - track.scrollLeft, behavior: 'smooth' });
+    };
+    document.getElementById('dr_prev').addEventListener('click', ()=>nav(-1));
+    document.getElementById('dr_next').addEventListener('click', ()=>nav(1));
+    // Both ends are dead ends, and a control that does nothing should look
+    // like it. Recomputed on scroll rather than counted, so it stays right
+    // however the track is moved -- button, wheel, drag or keyboard.
+    const syncEnds = ()=>{
+      const max = track.scrollWidth - track.clientWidth;
+      document.getElementById('dr_prev').disabled = track.scrollLeft <= 1;
+      document.getElementById('dr_next').disabled = track.scrollLeft >= max - 1;
+    };
+    track.addEventListener('scroll', syncEnds);
+    syncEnds();
+  }
   openModal('deliveryRunsModal');
 }
 

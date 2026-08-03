@@ -204,37 +204,204 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     { id: 'k1', name: 'A', location: 'Ntinda' }, { id: 'k2', name: 'B', location: 'Ntinda' },
     { id: 'k3', name: 'C', location: 'Nakawa' }];
 
-  const alone = [order({ id: 1, customerId: 'k1' }), order({ id: 3, customerId: 'k3' })];
-  t.check(scope.deliveryRunsBannerHTML(alone) === '',
-    'nothing going the same way renders no banner at all, rather than one announcing a run of one');
-  t.check(scope.deliveryRunsBannerHTML([]) === '', 'an empty column renders none');
-  t.check(scope.deliveryRunsBannerHTML(undefined) === '', 'and neither does a column that has not loaded');
-
-  const together = alone.concat([order({ id: 2, customerId: 'k2' }), order({ id: 9, client: { name: 'Wilson' } })]);
-  const html = scope.deliveryRunsBannerHTML(together);
-  t.check(/Ntinda/.test(html) && /Going the same way/.test(html), 'two for one place raises the banner');
-  t.check(/2 orders<\/span>/.test(html.replace(/\s+/g, ' ')) || /2 orders/.test(html),
-    'counting only the orders that actually share a destination');
-  t.check(/1 going somewhere of its own/.test(html),
-    'and saying what is left over rather than quietly omitting it');
-  t.check(/1 with no address yet/.test(html), 'including the one nobody has an address for');
-
-  // A cancelled order in the column is not going anywhere. Checked on the
-  // FIGURE, not the number of run chips -- a voided order joining an
-  // existing run leaves the chip count identical and only the count wrong,
-  // which is exactly the way this would slip through unnoticed.
   const figure = (h) => (h.match(/([\d]+) orders?<\/span>/) || [])[1];
-  const withVoid = together.concat([order({ id: 10, customerId: 'k1', voided: true })]);
-  t.check(figure(html) === '2', `the banner counts the two that share Ntinda (got ${figure(html)})`);
-  t.check(figure(scope.deliveryRunsBannerHTML(withVoid)) === '2',
-    `and a cancelled order joins neither the run nor the count (got ${figure(scope.deliveryRunsBannerHTML(withVoid))})`);
+  const places = (h) => (h.match(/([\d]+) places? to reach/) || [])[1];
 
-  const aged = together.concat([order({ id: 11, customerId: 'k1', invoiced: true, invoicedTs: Date.now() - 3 * 24 * 3600 * 1000 })]);
-  t.check(figure(scope.deliveryRunsBannerHTML(aged)) === '2',
+  t.check(scope.deliveryRunsBannerHTML([]) === '', 'an empty column renders no banner');
+  t.check(scope.deliveryRunsBannerHTML(undefined) === '', 'and neither does a column that has not loaded');
+  t.check(scope.deliveryRunsBannerHTML([order({ id: 1, deliveryMode: 'agent_pickup' })]) === '',
+    'nor a board of self-pickups, which has no journey in it to plan');
+
+  // Every destination counts, a single order included: a place with one
+  // delivery today is still a place somebody has to drive to.
+  const lone = scope.deliveryRunsBannerHTML([order({ id: 1, customerId: 'k1' })]);
+  t.check(lone !== '', 'one order to one place still raises the banner');
+  t.check(places(lone) === '1' && figure(lone) === '1', `saying one place, one order (${places(lone)}/${figure(lone)})`);
+
+  const mixed = [order({ id: 1, customerId: 'k1' }), order({ id: 2, customerId: 'k2' }),
+    order({ id: 3, customerId: 'k3' }), order({ id: 9, client: { name: 'Wilson' } })];
+  const html = scope.deliveryRunsBannerHTML(mixed);
+  t.check(places(html) === '2', `two Ntinda and one Nakawa is two places (got ${places(html)})`);
+  t.check(figure(html) === '3', `and three orders going to them (got ${figure(html)})`);
+  t.check(/Ntinda/.test(html) && /Nakawa/.test(html), 'both named on the banner');
+  t.check(/1 with no address yet/.test(html),
+    'with the one nobody has an address for counted separately, since it is going nowhere yet');
+
+  // Checked on the FIGURE, not the number of chips -- a voided order
+  // joining an existing place leaves the chip count identical and only the
+  // count wrong, which is exactly how this would slip through.
+  const withVoid = mixed.concat([order({ id: 10, customerId: 'k1', voided: true })]);
+  t.check(figure(scope.deliveryRunsBannerHTML(withVoid)) === '3',
+    `a cancelled order joins neither a place nor the count (got ${figure(scope.deliveryRunsBannerHTML(withVoid))})`);
+
+  const aged = mixed.concat([order({ id: 11, customerId: 'k1', invoiced: true, invoicedTs: Date.now() - 3 * 24 * 3600 * 1000 })]);
+  t.check(figure(scope.deliveryRunsBannerHTML(aged)) === '3',
     'nor does one long since aged off the board');
+
+  // The banner is a glance; the carousel is the document. Past three
+  // chips it stops being either, so the rest are counted instead.
+  reset();
+  data.customers = ['Ntinda', 'Nakawa', 'Bwaise', 'Gayaza', 'Kisenyi']
+    .map((location, i) => ({ id: 'p' + i, name: 'C' + i, location }));
+  const many = data.customers.map((c, i) => order({ id: i + 1, customerId: c.id }));
+  const manyHtml = scope.deliveryRunsBannerHTML(many);
+  const chips = (manyHtml.match(/class="sq-cash-run"/g) || []).length;
+  t.check(chips === 3, `at most three places are named on the column (got ${chips})`);
+  t.check(/\+2 more/.test(manyHtml),
+    'and the rest are counted rather than dropped, so the glance is not quietly incomplete');
+  t.check(places(manyHtml) === '5' && figure(manyHtml) === '5',
+    'while the headline still covers every one of them');
 }
 
-/* ---------- 8. wired onto the right column ---------------------------- */
+/* ---------- 8. every place gets a card, in one sideways track --------- */
+{
+  reset();
+  data.customers = [
+    { id: 'k1', name: 'A', location: 'Ntinda' }, { id: 'k2', name: 'B', location: 'Ntinda' },
+    { id: 'k3', name: 'C', location: 'Nakawa' }];
+  data.savedQuotes = [
+    order({ id: 1, customerId: 'k1' }), order({ id: 2, customerId: 'k2' }),
+    order({ id: 3, customerId: 'k3' }),
+    order({ id: 4, deliveryMode: 'agent_pickup', client: { name: 'Collected' } }),
+    order({ id: 5, client: { name: 'Wilson' } })];
+
+  const body = {};
+  const runs = compileScope([
+    extractFunction(src, 'openDeliveryRuns', 'index.html'),
+  ], {
+    pendingDeliveryOrders: scope.pendingDeliveryOrders,
+    deliveryRuns: scope.deliveryRuns,
+    savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
+    quoteClientName: (q) => (q && q.client && q.client.name) || 'Unnamed client',
+    invoiceNumberLabel: (q) => 'INV-' + String(q.id).padStart(4, '0'),
+    deliveryAssigneeLabel: (q) => (q.assignedDeliveryId === '__agent__' ? 'Agent pickup' : String(q.assignedDeliveryId)),
+    esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+    ICON_PIN: '<svg data-i="pin"></svg>', ICON_WARN: '<svg data-i="warn"></svg>',
+    ICON_TRUCK: '<svg data-i="truck"></svg>', ICON_STORE: '<svg data-i="store"></svg>',
+    openModal: (id) => { body.opened = id; },
+    // The track is absent, so the wiring block is skipped -- this section is
+    // about what gets rendered. The controls are covered structurally below.
+    document: { getElementById: (id) => (id === 'deliveryRunsBody'
+      ? { set innerHTML(v) { body.html = v; } }
+      : null) },
+  }, ['openDeliveryRuns']);
+
+  runs.openDeliveryRuns();
+  const html = body.html;
+  // Bounded: dr-card-head, dr-card-name and friends all start the same way.
+  const cards = (html.match(/class="dr-card[ "]/g) || []).length;
+
+  t.check(body.opened === 'deliveryRunsModal', 'it opens its own modal');
+  t.check(cards === 4,
+    `one card per place plus the two that are not places (got ${cards}: Ntinda, Nakawa, collected, no-address)`);
+  t.check(/Nakawa/.test(html),
+    'a place with a single order gets a card of its own -- it is still somewhere somebody has to drive to');
+  t.check(html.indexOf('Ntinda') < html.indexOf('Nakawa'),
+    'with the fullest run first, since that is the one worth planning around');
+  t.check(/dr-card collected/.test(html) && /dr-card unknown/.test(html),
+    'and the two non-places ride at the end of the same track rather than in a tail nobody scrolls to');
+  t.check(html.indexOf('dr-card collected') > html.indexOf('Nakawa'),
+    'after every real destination');
+
+  t.check(/class="dr-track"/.test(html) && /dr-nav prev/.test(html) && /dr-nav next/.test(html),
+    'in a sideways track with a control at each end');
+  t.check(/2 places<\/span>/.test(html.replace(/\s+/g, ' ')) || /2 place/.test(html),
+    'headed by how many places there are to reach');
+
+  // The per-card figures an admin plans from.
+  t.check(/2 with nobody on them/.test(html),
+    'a run says how many of it still have nobody driving');
+  t.check(/one driver could take the whole run/.test(html),
+    'and why that matters when the run has more than one drop');
+
+  // Names come from customer records and agent-typed addresses, so they are
+  // whatever somebody typed.
+  reset();
+  data.customers = [{ id: 'k1', name: 'X', location: '<img src=x onerror=alert(1)>' }];
+  data.savedQuotes = [order({ id: 1, customerId: 'k1' })];
+  runs.openDeliveryRuns();
+  t.check(!/<img src=x/.test(body.html) && /&lt;img/.test(body.html),
+    'a location is escaped into the card, being a string somebody typed');
+}
+
+/* ---------- 9. the slider lands on a card, however it was left -------- */
+/*
+ * A drag or a trackpad flick leaves the track a few pixels off a boundary
+ * -- it really does; the live track rests at 2 rather than 0 because of
+ * its own padding. A purely relative scroll carries that error forward
+ * until a card sits half off the edge, so the nav aims at a card index
+ * instead of nudging by a card's width.
+ */
+{
+  reset();
+  data.customers = ['Ntinda', 'Nakawa', 'Bwaise', 'Gayaza', 'Kisenyi']
+    .map((location, i) => ({ id: 'k' + i, name: 'C' + i, location }));
+  data.savedQuotes = data.customers.map((c, i) => order({ id: i + 1, customerId: c.id }));
+
+  const CARD = 290, GAP = 12, STRIDE = CARD + GAP;
+  const handlers = {};
+  const track = {
+    scrollLeft: 0, clientWidth: 700, scrollWidth: STRIDE * 5,
+    querySelector: () => ({ getBoundingClientRect: () => ({ width: CARD }) }),
+    addEventListener: (type, fn) => { handlers.scroll = fn; },
+    scrollBy({ left }) {
+      const max = this.scrollWidth - this.clientWidth;
+      this.scrollLeft = Math.max(0, Math.min(max, this.scrollLeft + left));
+      if (handlers.scroll) handlers.scroll();
+    },
+  };
+  const buttons = { dr_prev: { disabled: false }, dr_next: { disabled: false } };
+  Object.keys(buttons).forEach((id) => { buttons[id].addEventListener = (type, fn) => { handlers[id] = fn; }; });
+
+  const runs = compileScope([extractFunction(src, 'openDeliveryRuns', 'index.html')], {
+    pendingDeliveryOrders: scope.pendingDeliveryOrders,
+    deliveryRuns: scope.deliveryRuns,
+    savedQuoteTotal: () => 1000,
+    quoteClientName: (q) => (q.client && q.client.name) || '',
+    invoiceNumberLabel: (q) => 'INV-' + q.id,
+    deliveryAssigneeLabel: () => 'Someone',
+    esc: (s) => String(s == null ? '' : s),
+    fmtUGX: (n) => String(n),
+    ICON_PIN: '', ICON_WARN: '', ICON_TRUCK: '', ICON_STORE: '',
+    openModal: () => {},
+    getComputedStyle: () => ({ columnGap: GAP + 'px', gap: GAP + 'px' }),
+    document: {
+      getElementById: (id) => (id === 'deliveryRunsBody' ? { set innerHTML(v) {} }
+        : id === 'dr_track' ? track : buttons[id] || null),
+    },
+  }, ['openDeliveryRuns']);
+
+  runs.openDeliveryRuns();
+  t.check(typeof handlers.dr_next === 'function' && typeof handlers.dr_prev === 'function',
+    'both controls are wired when the track is there');
+  t.check(buttons.dr_prev.disabled === true,
+    'and the one that would go nowhere starts disabled, since a control that does nothing should look like it');
+
+  handlers.dr_next();
+  t.check(track.scrollLeft === STRIDE, `one tap moves exactly one card (got ${track.scrollLeft}, expected ${STRIDE})`);
+  t.check(buttons.dr_prev.disabled === false, 'which re-enables going back');
+
+  // Knocked off a boundary, as a drag leaves it.
+  track.scrollLeft = STRIDE + 7;
+  handlers.dr_next();
+  t.check(track.scrollLeft === STRIDE * 2,
+    `a tap after a drag lands flush on the next card rather than carrying the drift (got ${track.scrollLeft}, expected ${STRIDE * 2})`);
+
+  track.scrollLeft = STRIDE * 2 - 7;
+  handlers.dr_prev();
+  t.check(track.scrollLeft === STRIDE,
+    `and going back rounds the same way (got ${track.scrollLeft}, expected ${STRIDE})`);
+
+  // Both ends are dead ends.
+  for (let i = 0; i < 10; i++) handlers.dr_next();
+  t.check(track.scrollLeft === track.scrollWidth - track.clientWidth, 'it stops at the last card');
+  t.check(buttons.dr_next.disabled === true, 'and says so');
+  handlers.dr_prev();
+  t.check(buttons.dr_next.disabled === false, 'coming back off the end re-enables it');
+}
+
+/* ---------- 10. wired onto the right column --------------------------- */
 {
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   t.check(/\$\{status==='pending_delivery' \? deliveryRunsBannerHTML\(group\) : ''\}/.test(code),
