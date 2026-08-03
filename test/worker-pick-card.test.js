@@ -268,6 +268,41 @@ const code = strip(js);
       : `every shape of a variable line names its variant somewhere on the card (${EVERY.length} checked)`);
 }
 
+/* ---------- 7c. looking at the photo is not picking the item ---------- */
+/*
+ * The card's photo carries .img-zoomable, and worker.html opens a lightbox
+ * from a document-level listener on it. While the whole focused card was
+ * the toggle, tapping the photo TO LOOK AT IT also marked the line picked --
+ * the same reported bug as 0769797, reached by the one gesture a picker has
+ * most reason to make: the photo is there to be examined.
+ *
+ * The two handlers coexist. The card's now claims only its two controls, so
+ * the photo tap reaches the lightbox and nothing else.
+ */
+{
+  const host = read('worker.html');
+  t.check(/const zoomEl = e\.target\.closest\('\.img-zoomable'\);/.test(host),
+    'the lightbox opens from its own document-level listener');
+  t.check(/class="q-stage-thumb img-zoomable"/.test(read('shared-worker.js')),
+    "and the pick card's photo is marked zoomable");
+
+  // The card handler must not claim it. Both controls are matched by
+  // closest(); the photo is neither.
+  const sw = read('shared-worker.js');
+  const handler = sw.slice(sw.indexOf("querySelectorAll('.wv-carousel-card-inner')"), sw.indexOf('scrollend'));
+  t.check(!/img-zoomable|carousel-photo/.test(handler),
+    'the card handler does not mention the photo at all');
+  t.check(!/else toggleItemPickedAt/.test(handler),
+    'and has no catch-all branch that would take it anyway');
+
+  // Only a real photo is zoomable -- an unphotographed line renders a
+  // placeholder div, which carries no such class and opens nothing.
+  t.check(/<div class="q-stage-thumb-placeholder">/.test(sw),
+    'a line with no photo renders a placeholder');
+  const ph = sw.slice(sw.indexOf('q-stage-thumb-placeholder'), sw.indexOf('q-stage-thumb-placeholder') + 200);
+  t.check(!/img-zoomable/.test(ph), 'which is not zoomable, so tapping it opens nothing');
+}
+
 /* ---------- 8. the APK copy carries all of it ------------------------ */
 /*
  * worker-www/ is what the Android build ships. A change that lands only in
