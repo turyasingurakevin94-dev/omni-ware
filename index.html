@@ -1496,6 +1496,102 @@
   @keyframes sq-box-sort{0%,100%{transform:translateY(0) rotate(0deg);}25%{transform:translateY(-2px) rotate(-6deg);}75%{transform:translateY(-2px) rotate(6deg);}}
   @keyframes sq-moto-ride{0%,100%{transform:translateX(0) translateY(0);}50%{transform:translateX(2.5px) translateY(-1px);}}
   .sq-assignee-name{font-weight:700;color:var(--ink);}
+  /* The card's meta row: icons, not bullets. Wraps rather than truncating --
+     a narrow column is the normal case on this board, and a clipped total
+     is worse than a second line. */
+  .sq-meta{display:flex;flex-wrap:wrap;gap:4px 13px;margin-top:5px;}
+  .sq-meta span{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-soft);}
+  .sq-meta .icon{width:14px;height:14px;flex-shrink:0;}
+  .sq-meta .stocked{color:var(--ow-verdigris);}
+  /* This order's share of the buying. Amber for the same reason the
+     late-payment pills are amber: money that needs attention, with nothing
+     yet wrong. */
+  .sq-cash-line{
+    display:flex;align-items:center;gap:6px;margin-top:7px;padding:6px 9px;border-radius:7px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);font-size:11.5px;font-weight:600;
+  }
+  .sq-cash-line .icon{width:14px;height:14px;flex-shrink:0;}
+  .sq-cash-line b{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums;}
+  .sq-cash-line.gap{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  /* The step's figure, above the cards. A button because it opens the
+     buying list -- what looks pressable has to be pressable. */
+  .sq-cash{
+    all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;
+    background:var(--ow-amber-soft);border-radius:12px;padding:11px 13px;margin:0 0 10px;
+  }
+  .sq-cash:hover{background:#F7E6C6;}
+  .sq-cash:focus-visible{outline:2px solid var(--ow-amber);outline-offset:2px;}
+  .sq-cash-top{display:flex;align-items:center;gap:7px;}
+  .sq-cash-top .icon{width:17px;height:17px;color:var(--ow-amber-ink);flex-shrink:0;}
+  .sq-cash-label{font-size:11.5px;font-weight:700;color:var(--ow-amber-ink);}
+  .sq-cash-fig{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;
+    color:var(--ow-amber-ink);font-variant-numeric:tabular-nums;
+  }
+  .sq-cash-runs{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  .sq-cash-run{
+    display:inline-flex;align-items:center;gap:5px;background:var(--panel);border-radius:999px;
+    padding:3px 9px;font-size:11px;color:var(--ink-soft);
+  }
+  .sq-cash-run .icon{width:12px;height:12px;flex-shrink:0;}
+  .sq-cash-run b{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .sq-cash-run.more{color:var(--ow-ink-400);}
+  .sq-cash-gap{
+    display:flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;color:var(--ow-crimson);
+  }
+  .sq-cash-gap .icon{width:13px;height:13px;flex-shrink:0;}
+  /* The buying list. Wider than a decision modal because it is a working
+     document -- read standing up, in a shop, against what is on the shelf. */
+  .modal-wide{max-width:680px;width:100%;}
+  .bl-top{display:flex;align-items:baseline;gap:10px;padding:0 0 12px;border-bottom:1px solid var(--line);}
+  .bl-top-label{font-size:12.5px;color:var(--ink-soft);}
+  .bl-top-fig{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .bl-run{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .bl-run:last-of-type{border-bottom:0;}
+  .bl-run-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;}
+  .bl-run-head .icon{width:16px;height:16px;color:var(--ink-soft);flex-shrink:0;align-self:center;}
+  .bl-run-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .bl-run-loc{font-size:11.5px;color:var(--ow-ink-400);}
+  .bl-run-total{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .bl-lines{width:100%;overflow-x:auto;}
+  /* Fixed, with declared widths: auto layout sizes each run's table from its
+     own contents, so a long "quoted on ..." note in one run pushed its
+     figures into each other and left the columns landing in different places
+     from the run below it. */
+  .bl-lines table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+  .bl-lines col.item{width:46%;}
+  .bl-lines col.qty{width:16%;}
+  .bl-lines col.unit{width:18%;}
+  .bl-lines col.cost{width:20%;}
+  .bl-lines td.r,.bl-lines th.r{padding-left:6px;}
+  .bl-lines th{
+    text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--ow-ink-400);padding:0 0 5px;
+  }
+  .bl-lines th.r,.bl-lines td.r{text-align:right;}
+  .bl-lines td{padding:6px 0;border-top:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .bl-lines tbody tr:first-child td{border-top:0;}
+  .bl-item{font-weight:700;color:var(--ink);}
+  .bl-for{font-size:11.5px;color:var(--ow-ink-400);}
+  .bl-moved{
+    display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ow-amber-ink);margin-top:1px;
+  }
+  .bl-moved .icon{width:12px;height:12px;flex-shrink:0;transform:rotate(90deg);}
+  .bl-lines td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .bl-lines td.num.soft{color:var(--ink-soft);}
+  .bl-gap{
+    display:flex;gap:9px;margin-top:14px;padding:11px 13px;border-radius:9px;
+    background:var(--ow-crimson-soft);color:var(--ow-crimson);font-size:12.5px;
+  }
+  .bl-gap .icon{width:16px;height:16px;flex-shrink:0;}
+  .bl-gap-list{margin-top:3px;font-weight:400;}
+  .bl-gap-note{margin-top:5px;font-size:11.5px;opacity:.85;font-weight:400;}
   /* An order in Being Prepared that nobody is on -- a worker declined it, or
      it was sent back. It read as an ordinary card before, with the assignee
      row simply absent, so the one order actually waiting on a decision
@@ -3352,6 +3448,19 @@
   </div>
 </div>
 
+<!-- BUYING LIST -->
+<div class="modal-overlay" id="buyingListModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Buying list</h2>
+      <button class="modal-close" id="buyingListClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="buyingListBody"></div>
+  </div>
+</div>
+
 <!-- AGENT PREPAYMENT GATE MODAL -->
 <div class="modal-overlay" id="agentPrepayModal">
   <div class="modal">
@@ -4660,6 +4769,16 @@ const ICON_ADJUST = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 6a
 const ICON_PRICE_RULE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
 const ICON_INFO = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg>';
 const ICON_WARN = '<svg class="icon" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
+/* The order card's meta row and the cash figures. Icons rather than words
+   because the card is scanned, not read: a picker or an admin wants the
+   shape of an order at a glance, and four labelled rows of prose is not a
+   glance. Each is paired with a title so the meaning is never only visual. */
+const ICON_CLOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICON_ITEMS = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>';
+const ICON_MONEY = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 2v20l3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2Z"/><path d="M9 8h6M9 12h6"/></svg>';
+const ICON_WALLET = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 7h13a2 2 0 0 1 2 2v1"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h6"/><path d="M3 7V6a2 2 0 0 1 2-2h9"/></svg>';
+const ICON_SHELF = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M3 13h18M9 21v-8h6v8"/></svg>';
+const ICON_STORE = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M10 21v-6h4v6"/></svg>';
 // Small self-contained "motion" icons for the Order Tracking board's
 // assignee rows -- animated via CSS rather than embedding actual GIFs, so
 // there's no external file to fetch/host, consistent with every other
@@ -5024,6 +5143,139 @@ function buyingListRuns(orders){
   });
   return Object.values(bySupplier).sort((a,b)=> b.total - a.total);
 }
+
+// The step's figure, above the Being Prepared cards, because it is about all
+// of them at once. The runs underneath are the same money regrouped by who
+// to go to; three at most, since past that it stops being a glance and the
+// buying list is one tap away.
+//
+// Nothing to buy renders nothing. An empty banner reading zero is noise on
+// every board whose orders all come off the shelf.
+function cashToBuyBannerHTML(group){
+  const orders = (group||[]).filter(q=>!q.voided && !quoteAgedOffBoard(q));
+  const total = orders.reduce((s,q)=> s + orderCashToBuy(q), 0);
+  const unpriced = orders.reduce((s,q)=> s + orderUnpricedLines(q).length, 0);
+  if(!total && !unpriced) return '';
+  const runs = buyingListRuns(orders);
+  const shown = runs.slice(0, 3);
+  const rest = runs.length - shown.length;
+  return `<button type="button" class="sq-cash" id="sq_cash_banner" title="Open the buying list">
+    <span class="sq-cash-top">
+      ${ICON_WALLET}
+      <span class="sq-cash-label">Cash to buy in</span>
+      <span class="sq-cash-fig">${fmtUGX(total)}</span>
+    </span>
+    ${shown.length ? `<span class="sq-cash-runs">${shown.map(r=>`
+      <span class="sq-cash-run">${ICON_STORE}${esc(supplierName(r.supplierId))} <b>${fmtUGX(r.total)}</b></span>`).join('')}
+      ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>` : ''}
+    ${unpriced ? `<span class="sq-cash-gap">${ICON_WARN}${unpriced} line${unpriced===1?'':'s'} with no supplier price — not counted</span>` : ''}
+  </button>`;
+}
+
+// How long it has been sitting, how many lines, what the client pays, and
+// how much of it is already on our shelf -- one row, four icons.
+//
+// This was three bulleted sentences. The card is scanned rather than read:
+// what an admin wants from it is the shape of an order at a glance, and
+// prose is not a glance. Every icon carries a title, so nothing here is
+// only available to someone who can guess the pictogram.
+function orderMetaRowHTML(q){
+  const items = (q.items||[]).length;
+  const fromStock = (q.items||[]).filter(it=>!orderLineIsBoughtIn(it)).length;
+  return `<div class="sq-meta">
+    <span title="In this step for">${ICON_CLOCK}${esc(savedAgoLabel(q.stageEnteredAt || q.savedAt))}</span>
+    <span title="${items} line${items===1?'':'s'}">${ICON_ITEMS}${items}</span>
+    <span title="What the client pays">${ICON_MONEY}${fmtUGX(savedQuoteTotal(q))}</span>
+    ${fromStock ? `<span class="stocked" title="${fromStock} line${fromStock===1?'':'s'} already on our shelf">${ICON_SHELF}${fromStock} from stock</span>` : ''}
+  </div>`;
+}
+
+// This order's share of the step's cash, and only while it is the question
+// being asked -- an order that has moved on has already been bought for.
+function orderCashStripHTML(q){
+  if(q.status !== 'preparing' || q.voided) return '';
+  const lines = orderPurchaseLines(q);
+  if(!lines.length) return '';
+  const priced = lines.filter(l=>l.lineCost!=null);
+  const unpriced = lines.length - priced.length;
+  const total = priced.reduce((s,l)=>s+l.lineCost, 0);
+  const suppliers = new Set(priced.map(l=>String(l.best.supplierId))).size;
+  if(!priced.length){
+    return `<div class="sq-cash-line gap" title="No supplier price on file for these lines">
+      ${ICON_WARN}<span>${unpriced} line${unpriced===1?'':'s'} with no price on file</span></div>`;
+  }
+  return `<div class="sq-cash-line" title="Priced at today's cheapest supplier">
+    ${ICON_WALLET}<span>To buy · ${priced.length} line${priced.length===1?'':'s'} · ${suppliers} supplier${suppliers===1?'':'s'}${unpriced?` · ${unpriced} unpriced`:''}</span>
+    <b>${fmtUGX(total)}</b></div>`;
+}
+
+// Every other place in this file that reads a client name off an order goes
+// through `q.client && q.client.name` -- the file's standing judgment that
+// the object is not guaranteed. Here the whole modal body is one template,
+// so a missing client would blank the entire buying list rather than one
+// row, which is why this is a named helper rather than an inline guard.
+function quoteClientName(q){
+  return (q && q.client && q.client.name) || 'Unnamed client';
+}
+
+/* The buying list: every line the board needs bought, grouped by whoever is
+   cheapest for it today, because that is the trip you actually make.
+
+   Deliberately not grouped by the supplier each line was quoted on. Those
+   are what the order was priced against, possibly days ago; where today's
+   cheapest is somebody else the line moves and says so, with what it saves.
+   The order itself is untouched -- this is about the buying, not the sale. */
+function openBuyingList(){
+  const orders = beingPreparedOrders();
+  const runs = buyingListRuns(orders);
+  const total = runs.reduce((s,r)=>s+r.total, 0);
+  const unpriced = [];
+  orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpriced.push({order:q, line:l})));
+
+  const runHTML = (r)=>{
+    const sup = data.suppliers.find(s=>s.id===r.supplierId);
+    return `<div class="bl-run">
+      <div class="bl-run-head">
+        ${ICON_STORE}
+        <span class="bl-run-name">${esc(supplierName(r.supplierId))}</span>
+        ${sup && sup.location ? `<span class="bl-run-loc">${esc(sup.location)}</span>` : ''}
+        <span class="bl-run-total">${fmtUGX(r.total)}</span>
+      </div>
+      <div class="bl-lines"><table>
+        <colgroup><col class="item"><col class="qty"><col class="unit"><col class="cost"></colgroup>
+        <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Cost</th></tr></thead>
+        <tbody>${r.lines.map(l=>{
+          const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
+          return `<tr>
+            <td><div class="bl-item">${esc(l.it.productName || 'Item')}</div>
+              ${l.movedFrom
+                ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
+                : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}</td>
+            <td class="r num">${esc(l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</td>
+            <td class="r num soft">${fmtUGX(l.unitCost)}</td>
+            <td class="r num">${fmtUGX(l.lineCost)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+  };
+
+  document.getElementById('buyingListBody').innerHTML = `
+    <div class="bl-top">
+      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} being prepared</span>
+      <span class="bl-top-fig">${fmtUGX(total)}</span>
+    </div>
+    ${runs.length ? runs.map(runHTML).join('') : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
+    ${unpriced.length ? `<div class="bl-gap">
+      ${ICON_WARN}
+      <div><b>${unpriced.length} line${unpriced.length===1?'':'s'} with no supplier price on file</b>
+        <div class="bl-gap-list">${unpriced.map(u=>`${esc(u.line.it.productName||'Item')} — ${esc(quoteClientName(u.order))}`).join('<br>')}</div>
+        <div class="bl-gap-note">Not counted in the total above. Add a price in Compare Prices and it will appear here.</div>
+      </div>
+    </div>` : ''}`;
+  openModal('buyingListModal');
+}
+document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
@@ -7570,9 +7822,8 @@ function renderSavedQuotes(){
           <div class="sq-client">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}</div>
           ${location ? `<div class="sq-location-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(location)}</span></div>` : ''}
           <div class="sq-card-meta-rows">
-            <div class="sq-meta-row">• Saved ${esc(savedAgoLabel(q.savedAt))}</div>
-            <div class="sq-meta-row">• ${q.items.length} item${q.items.length===1?'':'s'}</div>
-            <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
+            ${orderMetaRowHTML(q)}
+            ${orderCashStripHTML(q)}
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && !orderNeedsDelivery(q)) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
@@ -7628,6 +7879,7 @@ function renderSavedQuotes(){
           <span class="sq-col-title">${esc(SQ_STATUSES[status].label)}</span>
           <span class="sq-col-count">${group.length}</span>
         </div>
+        ${status==='preparing' ? cashToBuyBannerHTML(group) : ''}
         <div class="sq-col-body">
           ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}
         </div>
@@ -7654,6 +7906,8 @@ function renderSavedQuotes(){
   // Same modal the first assignment goes through. Passing the status it is
   // already in means setSavedQuoteStatus leaves stageEnteredAt alone, so
   // re-assigning does not reset how long the order has been waiting.
+  const cashBanner = wrap.querySelector('#sq_cash_banner');
+  if(cashBanner) cashBanner.addEventListener('click', openBuyingList);
   wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
   // Same, one stage on. Passing the status it is already in again, so
   // setSavedQuoteStatus leaves stageEnteredAt alone and naming a new driver
