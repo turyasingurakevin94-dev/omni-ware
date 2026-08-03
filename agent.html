@@ -5335,25 +5335,54 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
 
   const btn = document.getElementById('ag_submit_btn');
   btn.disabled = true;
+  // Only the submit call itself decides whether the order was placed.
+  //
+  // Everything that used to follow it lived inside the same try, so a
+  // failure in the post-success housekeeping -- reloading the agent's
+  // orders, which is a second network round trip -- was reported as the
+  // submission failing. On a phone dropping off the network right after
+  // the POST, which is the condition this app is written for, the agent
+  // was told "this order can't submit until you're back online" about an
+  // order the server had already created, with their basket still sitting
+  // in front of them. The obvious next move is to send it again.
+  //
+  // agent-submit-order does dedupe an identical re-send inside a short
+  // window, so this mostly produced a false alarm rather than a double
+  // order -- but an agent who retried after that window got a real one,
+  // and either way they were lied to about what happened.
+  let res;
   try{
-    const res = await callAgentFn('agent-submit-order', {
+    res = await callAgentFn('agent-submit-order', {
       agentClientId: chosenClient.id,
       items: cart.map(it=>({ productId: it.productId, variantIdx: it.variantIdx, qty: it.qty, agentSellPrice: it.agentSellPrice })),
       deliveryMode,
       deliveryAddress: deliveryMode==='shop_delivery' ? deliveryAddress : undefined,
     });
-    toast('Order submitted');
+  }catch(err){
+    toast(isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online" : `Could not submit order: ${err.message||err}`);
+    return;
+  }finally{
+    btn.disabled = false;
+  }
+
+  // The order exists from here on. The basket is cleared before the reload
+  // rather than after it, so the one thing that would invite a re-send
+  // cannot survive a failure below.
+  toast('Order submitted');
+  resetCartAfterSubmit();
+  switchTab('sell');
+  try{
     await loadAgentHomeData();
-    resetCartAfterSubmit();
-    switchTab('sell');
     if(myAgent.paymentTerm==='prepay'){
       const order = myOrders.find(o=>o.id===res.orderId);
       if(order) openPaymentChoiceModal(order);
     }
   }catch(err){
-    toast(isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online" : `Could not submit order: ${err.message||err}`);
-  }finally{
-    btn.disabled = false;
+    // The order is placed and the shop has it; only this refresh failed.
+    // Prepay agents lose the payment prompt here and pay from the order
+    // screen instead, which is why this says the order is waiting rather
+    // than just that the refresh broke.
+    toast("Order submitted -- couldn't refresh your orders just now. It's waiting for you under Orders.", 5000);
   }
 });
 
