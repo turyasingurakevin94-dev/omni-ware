@@ -5819,6 +5819,36 @@ function purchasePriceSlotAtQty(row, qty){
   return { kind, tier: applies.reduce((best,t)=> t.minQty>=best.minQty ? t : best) };
 }
 
+/* Every quantity at which this row's price actually changes, in order.
+
+   Sampled through purchasePriceAtQty rather than read off the tiers, so
+   the curve is the one quotes will really see -- pack breaks and the
+   fallback between wholesale and retail included. */
+function purchasePricePoints(row){
+  const qtys = new Set([1]);
+  const packQty = Number(row.packQty)||0;
+  if(packQty > 0) qtys.add(packQty);
+  (Array.isArray(row.tiers) ? row.tiers : []).forEach(t=>{
+    const n = Number(t.minQty);
+    if(n > 0) qtys.add(n);
+  });
+  return [...qtys].sort((a,b)=>a-b)
+    .map(q=>({ qty:q, price: purchasePriceAtQty(row, q) }))
+    .filter(p=> p.price != null);
+}
+
+/* The smallest-quantity bargain that a newly entered price now undercuts
+   -- or rather, that now undercuts IT. Buying more should not cost more
+   each, so if some smaller quantity on file is cheaper per unit than what
+   was just typed for a larger one, the price book has been left saying
+   something odd. Returns the cheapest such point, which is the one that
+   makes the contradiction clearest. */
+function cheaperSmallerQuantity(row, qty, price){
+  return purchasePricePoints(row)
+    .filter(p=> p.qty < qty && p.price < price)
+    .sort((a,b)=> a.price - b.price)[0] || null;
+}
+
 /* A price paid is a fact about this supplier, so the price book learns it
    rather than making someone go and retype it in Compare Prices.
 
@@ -5857,6 +5887,20 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price,
     }
     priceRow.date = todayISO();
     priceRow.priceSource = 'purchase';
+
+    /* Saved either way, then said out loud if it reads oddly.
+
+       Not blocked: the supplier may genuinely have put the bulk rate up,
+       and the person typing knows what they were quoted. But it is far
+       more often a slip -- a per-pack figure typed where a per-unit one
+       belongs, or a price meant for a different line -- and this row
+       feeds margins, the cheapest-supplier ranking and the cash-to-buy
+       total, so an inversion nobody notices is expensive and invisible
+       at once. Telling them costs nothing and overrules nobody. */
+    const cheaper = cheaperSmallerQuantity(priceRow, atQty, Number(price));
+    if(cheaper && typeof toast === 'function'){
+      toast(`Saved — but ${fmtUGX(price)} for ${atQty} is more than the ${fmtUGX(cheaper.price)} already on file for ${cheaper.qty}. Buying more now costs more each.`, 7000);
+    }
   }
   // An actual purchase from this supplier is proof they have it -- clear
   // any stale "out of stock" flag rather than making someone remember to.

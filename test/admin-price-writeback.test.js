@@ -34,15 +34,23 @@ const t = createReporter('admin price write-back');
 const src = read('index.html');
 
 const data = { prices: [] };
+const told = [];
 const scope = compileScope([
   extractFunction(src, 'tiersForKind', 'index.html'),
   extractFunction(src, 'tieredUnitPrice', 'index.html'),
   extractFunction(src, 'purchasePriceAtQty', 'index.html'),
   extractFunction(src, 'deriveWholesaleRetail', 'index.html'),
   extractFunction(src, 'purchasePriceSlotAtQty', 'index.html'),
+  extractFunction(src, 'purchasePricePoints', 'index.html'),
+  extractFunction(src, 'cheaperSmallerQuantity', 'index.html'),
   extractFunction(src, 'syncPriceRegistryFromPurchase', 'index.html'),
-], { data, todayISO: () => '2026-08-03' },
-['purchasePriceAtQty', 'purchasePriceSlotAtQty', 'syncPriceRegistryFromPurchase', 'tiersForKind']);
+], {
+  data,
+  todayISO: () => '2026-08-03',
+  toast: (m) => { told.push(String(m)); },
+  fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
+}, ['purchasePriceAtQty', 'purchasePriceSlotAtQty', 'syncPriceRegistryFromPurchase',
+  'tiersForKind', 'purchasePricePoints', 'cheaperSmallerQuantity']);
 
 // Roto sells cement at 34,000 a bag, or 32,500 once you take ten.
 const tiered = () => {
@@ -70,7 +78,11 @@ const flat = () => {
   }];
   return data.prices[0];
 };
-const sync = (price, qty) => scope.syncPriceRegistryFromPurchase('P1', null, 'S1', price, qty);
+const sync = (price, qty) => {
+  told.length = 0;
+  return scope.syncPriceRegistryFromPurchase('P1', null, 'S1', price, qty);
+};
+const warned = () => told.some((m) => /Buying more now costs more each/.test(m));
 
 /* ---------- 1. the bug, in the words it was reported in --------------- */
 {
@@ -202,7 +214,81 @@ const sync = (price, qty) => scope.syncPriceRegistryFromPurchase('P1', null, 'S1
   t.check(data.prices.length === 1, 'a supplier with no row for this product is left alone rather than invented');
 }
 
-/* ---------- 7. both callers say at what quantity ---------------------- */
+/* ---------- 7. buying more that costs more is said out loud ----------- */
+/*
+ * Recorded, never blocked. The supplier may genuinely have put the bulk
+ * rate up and the person typing knows what they were quoted -- but it is
+ * far more often a slip, and this row feeds margins, the cheapest-supplier
+ * ranking and the cash-to-buy total, so an inversion nobody notices is
+ * expensive and invisible at the same time.
+ */
+{
+  // 35,000 for fifty, against 34,000 already on file for one.
+  let row = tiered();
+  sync(35000, 50);
+  t.check(warned(), `a bulk price above a smaller-quantity price warns (${JSON.stringify(told)})`);
+  t.check(scope.purchasePriceAtQty(row, 50) === 35000,
+    'and is still saved, because the person typing may be right');
+  t.check(/35,000 for 50/.test(told[0]) && /34,000 already on file for 1/.test(told[0]),
+    'naming both figures and both quantities, so the contradiction is checkable rather than just asserted');
+
+  // The ordinary case must stay silent, or the warning is noise.
+  row = tiered();
+  sync(32000, 50);
+  t.check(!warned(), `a bulk price BELOW the single price says nothing (${JSON.stringify(told)})`);
+
+  row = tiered();
+  sync(35000, 1);
+  t.check(!warned(), 'and raising the single-unit price is just a price rise, not an inversion');
+
+  row = tiered();
+  sync(32500, 10);
+  t.check(told.length === 0, 'a price that did not change warns about nothing at all');
+
+  // Equal is not inverted: a supplier who offers no bulk discount is
+  // ordinary, and warning about it would train the warning away.
+  row = tiered();
+  sync(34000, 50);
+  t.check(!warned(), 'matching the smaller-quantity price exactly is not a contradiction');
+
+  // The pack-break shape, where the two sides are different fields.
+  row = packed();               // singles 3,000, pack of 12 at 2,600
+  sync(3500, 24);
+  t.check(warned(), 'the same check holds across a pack break, not just across tiers');
+  row = packed();
+  sync(2400, 24);
+  t.check(!warned(), 'a better pack price stays quiet');
+
+  // A row with nothing smaller on file has nothing to contradict.
+  row = flat();
+  sync(99000, 50);
+  t.check(!warned(), 'a row with a single price point cannot be inverted against itself');
+
+  // A pack break is a price point in its own right even with no tier
+  // written at it: on this row the price changes at twelve because that is
+  // where wholesale takes over from retail, and the curve has to say so.
+  const points = scope.purchasePricePoints(packed()).map((p) => `${p.qty}:${p.price}`);
+  t.check(JSON.stringify(points) === '["1:3000","12:2600"]',
+    `the pack break is a price point of its own (${JSON.stringify(points)})`);
+
+  // Tiers on both sides of the break, all consistent with
+  // deriveWholesaleRetail: singles 3,000, twelve 2,600, sixty 2,400.
+  data.prices = [{
+    id: 1, productId: 'P1', variantIdx: null, supplierId: 'S1',
+    wholesale: 2600, retail: 3000, packQty: 12,
+    tiers: [{ minQty: 12, price: 2600 }, { minQty: 60, price: 2400 }], outOfStock: false,
+  }];
+  row = data.prices[0];
+  sync(2700, 100);
+  t.check(warned(),
+    `2,700 for a hundred is dearer than the 2,600 already on file for twelve (${JSON.stringify(told)})`);
+  t.check(/2,600 already on file for 12/.test(told[0] || ''),
+    'and it names the cheapest thing the new price undercuts, not merely the nearest');
+  t.check(row.wholesale === 2600,
+    "while the row's headline pack price is untouched, since the tier that moved was not the lowest");
+}
+
+/* ---------- 8. both callers say at what quantity ---------------------- */
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const calls = [...code.matchAll(/syncPriceRegistryFromPurchase\(([^;]*?)\);/g)].map(m => m[1]);
