@@ -192,7 +192,7 @@ const asset = (over) => Object.assign({
   t.check(/sel\('fixed_assets'\)/.test(code), 'and loaded with it');
   t.check(/fixedAsset:\s*\{kind:'row:fixed_asset'/.test(code),
     'with its own id kind, so two admins adding an asset at once cannot collide');
-  t.check(/'supplierCommissions','fixedAssets'\]/.test(code),
+  t.check(/'supplierCommissions','fixedAssets'/.test(code),
     'and it is guarded against being absent, like every other collection');
 
   const mig = read('supabase/migrations/0042_fixed_assets.sql');

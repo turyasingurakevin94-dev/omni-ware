@@ -1673,6 +1673,19 @@
     font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:1px;
   }
   tr.fa-gone td{opacity:.6;}
+  .fa-sub.warn{color:var(--ow-amber-ink);}
+  .sc-stat.bad b{color:var(--ow-crimson);}
+  /* A flat rate is not the rate it says on the paper, and that is the one
+     thing on this screen worth interrupting for. */
+  .ln-callout{
+    display:flex;align-items:flex-start;gap:9px;margin:14px 0 4px;padding:12px 13px;
+    background:var(--ow-amber-soft);border:1px solid #E4CFA6;border-radius:10px;
+    font-size:12.5px;line-height:1.55;color:var(--ow-amber-ink);
+  }
+  .ln-callout .icon{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
+  .ln-addpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .ln-addpay input{flex:1 1 130px;min-width:0;}
+  .ln-addpay .btn{flex:0 0 auto;}
   .fa-rule{border:0;border-top:1px solid var(--line);margin:18px 0 14px;}
 
   /* Cash position. Sits between the total and the supplier runs because it
@@ -2373,6 +2386,7 @@
       <button type="button" class="mms-item" data-tab="analytics-sales">Sales Analytics</button>
       <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase Analytics</button>
       <button type="button" class="mms-item" data-tab="assets">Assets</button>
+      <button type="button" class="mms-item" data-tab="loans">Loans</button>
       <button type="button" class="mms-item" data-tab="analytics-debtors">Debtors List</button>
       <button type="button" class="mms-item" data-tab="analytics-creditors">Creditors List</button>
     </div>
@@ -2463,6 +2477,10 @@
       <button data-tab="assets" title="What the shop owns and uses">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-5h6v5"/><path d="M5 14h14"/></svg>
         <span class="nav-label">Assets</span>
+      </button>
+      <button data-tab="loans" title="Money the shop has borrowed">
+        <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M2 11h20"/><path d="M6 15h4"/></svg>
+        <span class="nav-label">Loans</span>
       </button>
       <button data-tab="analytics-debtors" title="Who owes you">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -3340,6 +3358,23 @@
       </div>
     </section>
 
+    <!-- LOANS -->
+    <section id="tab-loans" style="display:none;">
+      <div class="page-head">
+        <h1>Loans</h1>
+        <p>Money the shop has borrowed, what it is really costing, and whether the repayments are keeping up with the agreement.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Borrowing</h2>
+          <button class="btn btn-accent" id="ln_add_btn">Record a loan</button>
+        </div>
+        <div id="ln_summary"></div>
+        <div id="ln_tableWrap"></div>
+      </div>
+    </section>
+
     <!-- CASH BOOK -->
     <section id="tab-cashbook" style="display:none;">
       <div class="page-head">
@@ -3703,6 +3738,52 @@
       </button>
     </div>
     <div class="modal-body" id="buyingListBody"></div>
+  </div>
+</div>
+
+<!-- RECORD / EDIT A LOAN -->
+<div class="modal-overlay" id="loanModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="loanModalTitle">Record a loan</h2>
+      <button class="modal-close" id="loanModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Who lent it <span class="req">required</span></label><input id="ln_lender" placeholder="e.g. Centenary Bank"></div>
+        <div class="field"><label>How much <span class="req">required</span></label><input id="ln_principal" type="number" min="0" step="any" placeholder="0"></div>
+        <div class="field"><label>Rate (% a year) <span class="req">required</span></label><input id="ln_rate" type="number" min="0" step="any" placeholder="e.g. 24"></div>
+        <div class="field"><label>How the interest works</label>
+          <select id="ln_method">
+            <option value="reducing_balance">Reducing balance — on what is still owed</option>
+            <option value="flat">Flat rate — on the original amount</option>
+          </select>
+        </div>
+        <div class="field"><label>Term (months) <span class="req">required</span></label><input id="ln_term" type="number" min="1" step="1" placeholder="e.g. 12"></div>
+        <div class="field"><label>Date taken <span class="req">required</span></label><input id="ln_started" type="date"></div>
+        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="ln_notes" placeholder="optional"></div>
+      </div>
+      <p class="preset-hint" id="ln_preview"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="ln_cancel">Cancel</button>
+      <button class="btn btn-accent" id="ln_save">Save loan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONE LOAN: HOW IT IS PERFORMING -->
+<div class="modal-overlay" id="loanPerfModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="loanPerfTitle">Loan</h2>
+      <button class="modal-close" id="loanPerfClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="loanPerfBody"></div>
   </div>
 </div>
 
@@ -4578,6 +4659,8 @@ function seedData(){
     purchaseInvoices: [],
     fixedAssets: [],
     nextFixedAssetId: 1,
+    loans: [],
+    nextLoanId: 1,
     nextPurchaseInvoiceId: 1,
     presetCategories: [
       {name:'Cement', subcategories:[]},
@@ -4654,15 +4737,15 @@ async function loadData(shopId){
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
-    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR
+    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
     sel('saved_quotes'), sel('purchase_invoices'),
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
-    sel('agents'), sel('supplier_commissions'), sel('fixed_assets')
+    sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -4767,6 +4850,14 @@ async function loadData(shopId){
       notes:a.notes||'', cashTxnId:a.cash_txn_id||null
     })),
     nextFixedAssetId: (fixedAssetsR.data||[]).length ? Math.max(0,...fixedAssetsR.data.map(a=>a.id||0))+1 : 1,
+    loans: (loansR.data||[]).map(l=>({
+      id:l.id, lender:l.lender||'', principal:Number(l.principal)||0,
+      ratePct:Number(l.rate_pct)||0, method:l.method||'reducing_balance',
+      termMonths:Number(l.term_months)||12, startedOn:l.started_on,
+      closedOn:l.closed_on||null, notes:l.notes||'', cashTxnId:l.cash_txn_id||null,
+      repayments: (l.payload && Array.isArray(l.payload.repayments)) ? l.payload.repayments : []
+    })),
+    nextLoanId: (loansR.data||[]).length ? Math.max(0,...loansR.data.map(l=>l.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
     presetLocations: presets.locations || seed.presetLocations,
@@ -4871,6 +4962,13 @@ function buildSyncRows(d, shopId){
       salvage:a.salvage||0, disposed_on:a.disposedOn||null,
       disposal_proceeds: a.disposalProceeds==null ? null : a.disposalProceeds,
       notes:a.notes||null, cash_txn_id:a.cashTxnId||null
+    })),
+    loans: (d.loans||[]).map(l=>({
+      id:l.id, shop_id:shopId, lender:l.lender, principal:l.principal,
+      rate_pct:l.ratePct, method:l.method, term_months:l.termMonths,
+      started_on:l.startedOn, closed_on:l.closedOn||null,
+      notes:l.notes||null, cash_txn_id:l.cashTxnId||null,
+      payload:{ repayments: l.repayments||[] }
     })),
     settings: {
       shop_id: shopId,
@@ -4985,7 +5083,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -5007,6 +5105,7 @@ async function saveData(){
   addDiffOps(ops, 'purchaseInvoices', 'purchase_invoices', 'id', shopId, rows.purchaseInvoices);
   addDiffOps(ops, 'supplierCommissions', 'supplier_commissions', 'id', shopId, rows.supplierCommissions);
   addDiffOps(ops, 'fixedAssets', 'fixed_assets', 'id', shopId, rows.fixedAssets);
+  addDiffOps(ops, 'loans', 'loans', 'id', shopId, rows.loans);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -5337,6 +5436,7 @@ function goToTab(tab){
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
+  if(tab==='loans') renderLoans();
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
@@ -13090,6 +13190,7 @@ const ROW_ID_KINDS = {
   // Not dense: an asset id is never printed on paper, so a gap in the
   // sequence costs nothing and blocks are safe.
   fixedAsset:      {kind:'row:fixed_asset',      counter:'nextFixedAssetId'},
+  loan:            {kind:'row:loan',             counter:'nextLoanId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
@@ -16426,6 +16527,406 @@ function assetDisposalResult(asset){
   const book = assetNBVAt(asset, asset.disposedOn);
   return { proceeds, book, gain: proceeds - book };
 }
+
+/* ================= LOANS =================
+
+   A loan used to be a cash-book receipt categorised "Loan Received" and
+   nothing else: an inflow that looked like income, no liability, and no
+   record that any of it had to go back. Phase 1 stopped it counting as
+   revenue. This is where it becomes something the shop owes.
+
+   Two kinds, because both are ordinary here and they are not the same
+   loan at the same rate:
+
+     reducing_balance  interest each month on what is still owed.
+     flat              interest for the whole term computed once on the
+                       ORIGINAL principal, then split evenly. "12% flat"
+                       over a year is nearer 22% in effect, because you go
+                       on paying interest on money you have already given
+                       back. loanEffectiveRate works that out, because the
+                       number on the paperwork is not the number the shop
+                       is paying.
+
+   The schedule is what was AGREED. What actually happened is the
+   repayments list, and the two are deliberately separate -- comparing
+   them is the whole of loanPerformance, and a shop that has fallen behind
+   should find that out here rather than from the lender. */
+const LOAN_METHODS = { reducing_balance: 'Reducing balance', flat: 'Flat rate' };
+function loanMonths(loan){ return Math.max(1, Math.round(Number(loan.termMonths)||0)); }
+function loanPrincipal(loan){ return Math.max(0, Number(loan.principal)||0); }
+// The instalment the agreement calls for.
+function loanScheduledPayment(loan){
+  const P = loanPrincipal(loan), n = loanMonths(loan);
+  const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
+  if(loan.method === 'flat'){
+    // Interest on the original sum for the whole term, then split evenly.
+    return (P + P * annual * (n/12)) / n;
+  }
+  const r = annual / 12;
+  if(r === 0) return P / n;
+  // Standard amortisation. A rate of zero is handled above because this
+  // divides by (1 - 1) otherwise.
+  return P * r / (1 - Math.pow(1 + r, -n));
+}
+/* The agreed schedule, month by month.
+
+   Both methods produce the same shape so everything downstream reads one
+   thing. For a flat loan the "interest" column is the evenly-split charge
+   rather than interest on the outstanding balance -- that is what a flat
+   loan actually charges, and showing it any other way would flatter it. */
+function loanSchedule(loan){
+  const rows = [];
+  const P = loanPrincipal(loan), n = loanMonths(loan);
+  if(P <= 0) return rows;
+  const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
+  const pay = loanScheduledPayment(loan);
+  const start = new Date(String(loan.startedOn||'')+'T00:00:00Z');
+  if(isNaN(start.getTime())) return rows;
+  const flatInterest = loan.method === 'flat' ? (P * annual * (n/12)) / n : null;
+  let bal = P;
+  for(let i=0; i<n; i++){
+    const interest = loan.method === 'flat' ? flatInterest : bal * (annual/12);
+    // The last instalment clears whatever is left rather than leaving a
+    // few shillings behind from rounding. Belt and braces rather than
+    // load-bearing: the annuity is self-correcting, and across every
+    // awkward principal, rate and term tried it changes no figure anyone
+    // sees. Kept because the cost is one comparison and the failure it
+    // guards against -- a loan that never quite closes -- is the kind
+    // somebody would have to reconcile by hand.
+    const principal = (i === n-1) ? bal : Math.min(bal, pay - interest);
+    const m = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i+1, 1));
+    rows.push({
+      month: m.toISOString().slice(0,7),
+      opening: bal,
+      payment: principal + interest,
+      interest,
+      principal,
+      closing: bal - principal,
+    });
+    bal -= principal;
+    if(bal <= 1e-9) break;
+  }
+  return rows;
+}
+// What the whole thing costs, over and above what was borrowed.
+function loanTotalInterest(loan){
+  return loanSchedule(loan).reduce((s,r)=> s + r.interest, 0);
+}
+/* What the shop is really paying, whatever the paperwork says.
+
+   For a reducing-balance loan this lands back on the stated rate. For a
+   flat one it is roughly double it, which is the point of showing it.
+   Solved by bisection rather than algebraically: there is no closed form
+   for the rate given a payment, and a hundred halvings is exact to far
+   more places than a percentage needs. */
+function loanEffectiveRate(loan){
+  const P = loanPrincipal(loan), n = loanMonths(loan);
+  const pay = loanScheduledPayment(loan);
+  if(P <= 0 || pay <= 0) return 0;
+  if(pay * n <= P) return 0;
+  const owed = (monthlyRate)=>{
+    if(monthlyRate === 0) return pay * n - P;
+    return pay * (1 - Math.pow(1 + monthlyRate, -n)) / monthlyRate - P;
+  };
+  let lo = 0, hi = 1;                    // 0% to 1200% a year, monthly
+  for(let i=0; i<100; i++){
+    const mid = (lo + hi) / 2;
+    if(owed(mid) > 0) lo = mid; else hi = mid;
+  }
+  return ((lo + hi) / 2) * 12 * 100;
+}
+
+/* ---- What actually happened ---- */
+function loanRepayments(loan){
+  return (Array.isArray(loan.repayments) ? loan.repayments : [])
+    .slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
+}
+/* Applies the repayments actually made, oldest first, interest before
+   principal.
+
+   Interest-first is not a preference, it is how a loan works: a payment
+   covers what the money has cost since the last one, and only what is
+   left over reduces the debt. Applying it the other way round would show
+   the shop paying the loan off faster than it is. */
+function loanApplied(loan, asOfISO){
+  const P = loanPrincipal(loan);
+  const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
+  const n = loanMonths(loan);
+  // A flat loan's interest is fixed at the outset, so it accrues evenly
+  // rather than on the balance.
+  const flatPerMonth = loan.method === 'flat' ? (P * annual * (n/12)) / n : null;
+  let balance = P, interestPaid = 0, principalPaid = 0, accrued = 0;
+  let lastISO = String(loan.startedOn||'');
+  loanRepayments(loan).forEach(rp=>{
+    const when = String(rp.date||'');
+    if(asOfISO && when > String(asOfISO)) return;
+    const months = Math.max(0, monthsBetween(lastISO, when));
+    accrued += loan.method === 'flat'
+      ? flatPerMonth * months
+      : balance * (annual/12) * months;
+    lastISO = when;
+    let amt = Math.max(0, Number(rp.amount)||0);
+    const toInterest = Math.min(amt, accrued);
+    accrued -= toInterest; amt -= toInterest; interestPaid += toInterest;
+    const toPrincipal = Math.min(amt, balance);
+    balance -= toPrincipal; principalPaid += toPrincipal;
+  });
+  return { balance, interestPaid, principalPaid, accruedUnpaid: accrued };
+}
+function loanOutstanding(loan, asOfISO){ return loanApplied(loan, asOfISO).balance; }
+// Interest actually paid inside a period -- the P&L line, on the same
+// cash basis phase 1 settled on for operating costs.
+function loanInterestPaidBetween(loan, fromISO, toISO){
+  const before = loanApplied(loan, dayBeforeISO(fromISO)).interestPaid;
+  const upTo = loanApplied(loan, toISO).interestPaid;
+  return Math.max(0, upTo - before);
+}
+function dayBeforeISO(iso){
+  const d = new Date(String(iso)+'T00:00:00Z');
+  if(isNaN(d.getTime())) return iso;
+  d.setUTCDate(d.getUTCDate()-1);
+  return d.toISOString().slice(0,10);
+}
+function liveLoans(){ return (data.loans||[]); }
+// What the balance sheet carries as a liability.
+function loansOutstandingAt(asOfISO){
+  return liveLoans()
+    .filter(l=> String(l.startedOn||'') <= String(asOfISO))
+    .reduce((s,l)=> s + loanOutstanding(l, asOfISO), 0);
+}
+function loanInterestForPeriod(fromISO, toISO){
+  return liveLoans().reduce((s,l)=> s + loanInterestPaidBetween(l, fromISO, toISO), 0);
+}
+/* Agreed against actual: is the shop keeping up?
+
+   `behind` is the figure worth acting on -- what should have been paid by
+   now, less what has been. Positive means arrears. Reported as a number
+   rather than a flag so it can be shown in shillings, which is what a
+   shopkeeper can do something about. */
+function loanPerformance(loan, asOfISO){
+  const asOf = asOfISO || todayISO();
+  const sched = loanSchedule(loan);
+  const dueMonth = String(asOf).slice(0,7);
+  const dueRows = sched.filter(r=> r.month <= dueMonth);
+  const scheduledByNow = dueRows.reduce((s,r)=> s + r.payment, 0);
+  const applied = loanApplied(loan, asOf);
+  const paidByNow = loanRepayments(loan)
+    .filter(rp=> String(rp.date||'') <= asOf)
+    .reduce((s,rp)=> s + (Math.max(0, Number(rp.amount)||0)), 0);
+  const totalPayable = sched.reduce((s,r)=> s + r.payment, 0);
+  return {
+    scheduledByNow, paidByNow,
+    behind: scheduledByNow - paidByNow,
+    instalmentsDue: dueRows.length,
+    instalments: sched.length,
+    outstanding: applied.balance,
+    interestPaid: applied.interestPaid,
+    principalPaid: applied.principalPaid,
+    totalPayable,
+    totalInterest: loanTotalInterest(loan),
+    effectiveRatePct: loanEffectiveRate(loan),
+    settled: applied.balance <= 1e-6,
+    progressPct: loanPrincipal(loan)>0 ? Math.min(100, applied.principalPaid/loanPrincipal(loan)*100) : 0,
+  };
+}
+
+/* ---- Loans on screen ---- */
+function loanMethodLabel(l){
+  return l.method==='flat' ? `Flat ${Number(l.ratePct)||0}%` : `Reducing ${Number(l.ratePct)||0}%`;
+}
+function renderLoans(){
+  const today = todayISO();
+  const loans = (data.loans||[]).slice()
+    .sort((a,b)=> String(b.startedOn||'').localeCompare(String(a.startedOn||'')));
+  const perf = loans.map(l=>({ l, p: loanPerformance(l, today) }));
+  const owing = perf.filter(x=> !x.p.settled);
+  const outstanding = owing.reduce((s,x)=> s + x.p.outstanding, 0);
+  const arrears = owing.reduce((s,x)=> s + Math.max(0, x.p.behind), 0);
+  const interestThisYear = loanInterestForPeriod(today.slice(0,4)+'-01-01', today);
+
+  document.getElementById('ln_summary').innerHTML = loans.length ? `
+    <div class="sc-stats fa-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(outstanding))}</b><span>Still owed</span></div>
+      <div class="sc-stat"><b>${owing.length}</b><span>Loan${owing.length===1?'':'s'} running</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(interestThisYear))}</b><span>Interest paid this year</span></div>
+      <div class="sc-stat ${arrears>0?'bad':''}"><b>${fmtUGX(Math.round(arrears))}</b><span>Behind schedule</span></div>
+    </div>` : '';
+
+  const wrap = document.getElementById('ln_tableWrap');
+  if(!loans.length){
+    wrap.innerHTML = '<div class="empty">No borrowing recorded. Adding a loan here is what turns it from a cash receipt into something the books know has to go back.</div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="pi-table-wrap"><table>
+    <thead><tr>
+      <th>Lender</th><th>Taken</th><th>Terms</th>
+      <th class="r">Borrowed</th><th class="r">Still owed</th><th class="r">Keeping up?</th><th></th>
+    </tr></thead>
+    <tbody>${perf.map(({l,p})=>`
+      <tr class="${p.settled?'fa-gone':''}">
+        <td>
+          <div class="fa-name">${esc(l.lender)}${p.settled?'<span class="fa-tag">settled</span>':''}</div>
+          ${l.method==='flat' ? `<div class="fa-sub warn">${Number(l.ratePct)||0}% flat is about ${p.effectiveRatePct.toFixed(0)}% in real terms</div>` : ''}
+        </td>
+        <td>${esc(l.startedOn||'')}</td>
+        <td class="fa-sub">${esc(loanMethodLabel(l))} · ${p.instalments} month${p.instalments===1?'':'s'}</td>
+        <td class="r num">${fmtUGX(Math.round(Number(l.principal)||0))}</td>
+        <td class="r num">${p.settled ? '—' : fmtUGX(Math.round(p.outstanding))}</td>
+        <td class="r">${p.settled
+          ? '<span class="fa-sub good">Paid off</span>'
+          : (p.behind > 1
+            ? `<span class="fa-sub bad">${fmtUGX(Math.round(p.behind))} behind</span>`
+            : '<span class="fa-sub good">On track</span>')}</td>
+        <td class="r">
+          <button type="button" class="pc-icon-btn ln-perf" data-id="${l.id}" title="How it is performing">${ICON_ITEMS}</button>
+          <button type="button" class="pc-icon-btn ln-edit" data-id="${l.id}" title="Edit">${ICON_EDIT}</button>
+          <button type="button" class="pc-icon-btn danger ln-delete" data-id="${l.id}" title="Remove">${ICON_TRASH}</button>
+        </td>
+      </tr>`).join('')}</tbody></table></div>`;
+
+  wrap.querySelectorAll('.ln-perf').forEach(b=>b.addEventListener('click', ()=>openLoanPerformance(Number(b.dataset.id))));
+  wrap.querySelectorAll('.ln-edit').forEach(b=>b.addEventListener('click', ()=>openLoanForm(Number(b.dataset.id))));
+  wrap.querySelectorAll('.ln-delete').forEach(b=>b.addEventListener('click', ()=>deleteLoan(Number(b.dataset.id))));
+}
+function openLoanPerformance(id){
+  const l = (data.loans||[]).find(x=>x.id===id);
+  if(!l) return;
+  const today = todayISO();
+  const p = loanPerformance(l, today);
+  const sched = loanSchedule(l);
+  const paid = loanRepayments(l);
+  const stated = Number(l.ratePct)||0;
+  document.getElementById('loanPerfTitle').textContent = l.lender || 'Loan';
+  document.getElementById('loanPerfBody').innerHTML = `
+    <div class="sc-stats fa-summary">
+      <div class="sc-stat"><b>${fmtUGX(Math.round(p.outstanding))}</b><span>Still owed</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(p.interestPaid))}</b><span>Interest paid</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(p.totalInterest))}</b><span>Interest over the whole term</span></div>
+      <div class="sc-stat ${p.behind>1?'bad':'good'}"><b>${p.behind>1 ? fmtUGX(Math.round(p.behind)) : 'On track'}</b><span>${p.behind>1?'Behind schedule':'Against the agreement'}</span></div>
+    </div>
+    ${l.method==='flat' ? `<p class="ln-callout">${ICON_WARN}<span>This is quoted at <b>${stated}% flat</b>, which costs about <b>${p.effectiveRatePct.toFixed(1)}%</b> a year in real terms. Flat interest is charged on the whole ${fmtUGX(Math.round(Number(l.principal)||0))} for the entire term, including the part you have already paid back.</span></p>` : ''}
+    <p class="sp-lead">${p.instalmentsDue} of ${p.instalments} instalments due by today. The agreement asks for ${fmtUGX(Math.round(p.scheduledByNow))} by now; ${fmtUGX(Math.round(p.paidByNow))} has been paid.</p>
+
+    <section class="dr-rest">
+      <h4>${ICON_MONEY}Repayments made</h4>
+      ${paid.length ? `<div class="dr-singles">${paid.map(rp=>`
+        <div class="dr-single"><span>${esc(rp.date||'')}${rp.note?` · ${esc(rp.note)}`:''}</span><b>${fmtUGX(Math.round(Number(rp.amount)||0))}</b></div>`).join('')}</div>`
+        : '<p class="preset-hint">Nothing recorded against this loan yet.</p>'}
+      <div class="ln-addpay">
+        <input type="date" id="ln_pay_date" value="${esc(today)}">
+        <input type="number" id="ln_pay_amount" min="0" step="any" placeholder="Amount paid">
+        <button type="button" class="btn btn-accent" id="ln_pay_add" data-id="${l.id}">Record repayment</button>
+      </div>
+    </section>
+
+    <section class="dr-rest">
+      <h4>${ICON_ITEMS}The agreement, month by month</h4>
+      <div class="dr-lines"><table>
+        <thead><tr><th>Month</th><th class="r">Opening</th><th class="r">Payment</th><th class="r">Interest</th><th class="r">Principal</th><th class="r">Closing</th></tr></thead>
+        <tbody>${sched.map(r=>`<tr>
+          <td>${esc(r.month)}</td>
+          <td class="r num">${fmtUGX(Math.round(r.opening))}</td>
+          <td class="r num">${fmtUGX(Math.round(r.payment))}</td>
+          <td class="r num">${fmtUGX(Math.round(r.interest))}</td>
+          <td class="r num">${fmtUGX(Math.round(r.principal))}</td>
+          <td class="r num">${fmtUGX(Math.round(r.closing))}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </section>`;
+  const btn = document.getElementById('ln_pay_add');
+  if(btn) btn.addEventListener('click', ()=>{
+    const amount = Number(document.getElementById('ln_pay_amount').value)||0;
+    const date = document.getElementById('ln_pay_date').value;
+    if(!(amount>0)){ toast('Enter what was paid'); return; }
+    if(!date){ toast('Enter the date it was paid'); return; }
+    const loan = (data.loans||[]).find(x=>x.id===id);
+    if(!loan) return;
+    if(!Array.isArray(loan.repayments)) loan.repayments = [];
+    loan.repayments.push({ date, amount, note:'' });
+    saveData();
+    renderLoans();
+    openLoanPerformance(id);
+    toast('Repayment recorded');
+  });
+  openModal('loanPerfModal');
+}
+let editingLoanId = null;
+function readLoanForm(){
+  return {
+    id: editingLoanId,
+    lender: document.getElementById('ln_lender').value.trim(),
+    principal: Number(document.getElementById('ln_principal').value)||0,
+    ratePct: Number(document.getElementById('ln_rate').value)||0,
+    method: document.getElementById('ln_method').value,
+    termMonths: Math.round(Number(document.getElementById('ln_term').value)||0),
+    startedOn: document.getElementById('ln_started').value,
+    notes: document.getElementById('ln_notes').value.trim(),
+  };
+}
+// Says what the agreement actually costs before it is saved -- the point
+// at which a flat rate stops looking like the number on the paperwork.
+function updateLoanPreview(){
+  const l = readLoanForm();
+  const el = document.getElementById('ln_preview');
+  if(!(l.principal>0) || !(l.termMonths>0)){ el.textContent = ''; return; }
+  const pay = loanScheduledPayment(l);
+  const interest = loanTotalInterest(l);
+  const eff = loanEffectiveRate(l);
+  el.textContent = `${fmtUGX(Math.round(pay))} a month for ${l.termMonths} months. `
+    + `Interest over the term ${fmtUGX(Math.round(interest))}`
+    + (l.method==='flat' ? ` — that is about ${eff.toFixed(1)}% a year in real terms, not ${l.ratePct}%.` : '.');
+}
+function openLoanForm(id){
+  editingLoanId = id==null ? null : id;
+  const l = id==null ? null : (data.loans||[]).find(x=>x.id===id);
+  const set=(el,v)=>{ document.getElementById(el).value = v==null ? '' : v; };
+  set('ln_lender', l?l.lender:''); set('ln_principal', l?l.principal:'');
+  set('ln_rate', l?l.ratePct:''); set('ln_term', l?l.termMonths:12);
+  set('ln_started', l?l.startedOn:todayISO()); set('ln_notes', l?l.notes:'');
+  document.getElementById('ln_method').value = l ? l.method : 'reducing_balance';
+  document.getElementById('loanModalTitle').textContent = l ? 'Edit loan' : 'Record a loan';
+  updateLoanPreview();
+  openModal('loanModal');
+}
+function deleteLoan(id){
+  const l = (data.loans||[]).find(x=>x.id===id);
+  if(!l) return;
+  if(!confirm(`Remove the ${fmtUGX(Math.round(Number(l.principal)||0))} loan from ${l.lender}?\n\nThis erases it and every repayment recorded against it.`)) return;
+  data.loans = (data.loans||[]).filter(x=>x.id!==id);
+  saveData(); renderLoans();
+  toast('Loan removed');
+}
+document.getElementById('ln_add_btn').addEventListener('click', ()=>openLoanForm(null));
+document.getElementById('ln_cancel').addEventListener('click', ()=>closeModal('loanModal'));
+document.getElementById('loanModalClose').addEventListener('click', ()=>closeModal('loanModal'));
+document.getElementById('loanPerfClose').addEventListener('click', ()=>closeModal('loanPerfModal'));
+['ln_principal','ln_rate','ln_term'].forEach(id=>
+  document.getElementById(id).addEventListener('input', updateLoanPreview));
+document.getElementById('ln_method').addEventListener('change', updateLoanPreview);
+document.getElementById('ln_save').addEventListener('click', ()=>{
+  const l = readLoanForm();
+  if(!l.lender){ toast('Say who lent it'); return; }
+  if(!(l.principal > 0)){ toast('Enter how much was borrowed'); return; }
+  if(!(l.termMonths > 0)){ toast('Enter the term in months'); return; }
+  if(!l.startedOn){ toast('Enter the date it was taken'); return; }
+  if(l.ratePct < 0){ toast('A rate cannot be negative'); return; }
+  if(!data.loans) data.loans = [];
+  if(editingLoanId == null){
+    l.id = allocRowId('loan');
+    l.repayments = [];
+    data.loans.push(l);
+  } else {
+    const i = data.loans.findIndex(x=>x.id===editingLoanId);
+    // Repayments are kept: editing the terms of a loan must not erase the
+    // record of what has already been paid against it.
+    if(i>=0) data.loans[i] = {...data.loans[i], ...l};
+  }
+  saveData();
+  closeModal('loanModal');
+  editingLoanId = null;
+  renderLoans();
+  toast('Loan saved');
+});
 
 /* ---- The register on screen ---- */
 function assetMethodLabel(a){
