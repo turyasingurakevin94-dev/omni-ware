@@ -25,7 +25,7 @@
  *
  * Run: node test/worker-finish-refresh.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('worker finish refresh');
 const sharedJs = read('shared-worker.js');
@@ -51,6 +51,11 @@ let onPicker = async () => 'ST9';
 let onSave = null;
 
 const scope = compileScope([
+  // finishPreparingOrder gates on every line being ANSWERED, not on every
+  // line being 'done' -- a recorded shortfall finishes too. See
+  // test/worker-short-pick.test.js.
+  extractDeclaration(sharedJs, 'PICK_ANSWERED', 'shared-worker.js'),
+  extractFunction(sharedJs, 'itemPickAnswered', 'shared-worker.js'),
   extractFunction(sharedJs, 'finishPreparingOrder', 'shared-worker.js'),
   // Lets a case replace `data` the way a background refresh does -- from
   // inside the compiled scope, which is the only place the binding lives.

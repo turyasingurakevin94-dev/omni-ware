@@ -418,13 +418,17 @@ function renderWorkerView(){
     activeHeader.style.display = active ? '' : 'none';
     if(active){
       const items = active.items||[];
-      const doneCount = items.filter(it=>it.pickStatus==='done').length;
-      const pct = items.length ? Math.round(doneCount/items.length*100) : 0;
+      // Answered, not done: an item recorded as short has been walked to and
+      // dealt with, and counting it as outstanding would leave the bar stuck
+      // below full on an order that is finished and ready to go out.
+      const answered = items.filter(itemPickAnswered).length;
+      const shortCount = pickShortfallLines(active).length;
+      const pct = items.length ? Math.round(answered/items.length*100) : 0;
       activeHeader.innerHTML = `
         <div class="wv-hero">
           <p class="wv-hero-label">Now picking</p>
           <p class="wv-hero-name">${esc(active.client.name||'Unnamed client')}</p>
-          <p class="wv-hero-progress-label">${doneCount} of ${items.length} picked</p>
+          <p class="wv-hero-progress-label">${answered} of ${items.length} picked${shortCount ? ` · ${shortCount} short` : ''}</p>
           <div class="wv-hero-track"><div class="wv-hero-fill" style="width:${pct}%;"></div></div>
         </div>`;
     }
@@ -560,8 +564,72 @@ function resetPickingProgress(q){
   q.pickCursor = 0;
   q.pickingAssignedAt = null;
   q.workerAcceptedAt = null;
+  // The admin's decision about a shortfall belongs to the pick that reported
+  // it. Left behind, a fresh pick that comes up short again would arrive
+  // already settled -- and settled in favour of billing the full quantity,
+  // which is the one outcome that must never happen by default.
+  q.pickShortfallAckAt = null;
   // acceptOrderAssignment fills a missing pickStatus back in as 'pending'.
   (q.items||[]).forEach(it=>{ it.pickStatus = null; it.pickedQty = null; });
+}
+
+/* ---- What a pick actually resolved to --------------------------------
+   A picker at the shelf finding fewer than the order asks for is a normal
+   event in a hardware shop, not an error. Two item states count as
+   ANSWERED:
+
+     'done'    the full ordered quantity was found
+     'short'   a number was recorded and it was less -- 0 included, meaning
+               nothing on the shelf at all
+
+   Everything gates on "answered" rather than "done". An order with a
+   genuine shortfall still has to be finishable: leaving it unanswered kept
+   "Mark as finished" hidden, so the order stayed in_progress on that worker
+   -- and since 0f31c2c made one open pick the rule, they could not accept
+   any other order either. The only way out was an admin stepping the order
+   back to Draft, and nothing told them it was needed.
+
+   pickedQty is the field that carries the number. It was written from the
+   first version of this screen and read by nothing until now, so these are
+   deliberately defensive about what may be sitting in rows saved since. */
+const PICK_ANSWERED = ['done','short'];
+function itemPickAnswered(it){ return !!it && PICK_ANSWERED.indexOf(it.pickStatus) > -1; }
+function itemOrderedQty(it){ return Math.max(0, Number(it && it.qty) || 0); }
+// What came off the shelf, or null while the item is still unanswered.
+//
+// A 'done' item is the full quantity BY DEFINITION rather than by whatever
+// pickedQty happens to hold. Every order picked before this field was read
+// carries ticks with nothing behind them -- resetPickingProgress nulls
+// pickedQty and acceptOrderAssignment does not refill it -- and reading
+// those as zero would report a shop-wide shortfall that never happened.
+function itemPickedQty(it){
+  if(!itemPickAnswered(it)) return null;
+  if(it.pickStatus==='done') return itemOrderedQty(it);
+  const n = Number(it.pickedQty);
+  if(!isFinite(n) || n<0) return 0;
+  return Math.min(itemOrderedQty(it), n);
+}
+// Every line that came up short, carrying both numbers. The worker's finish
+// button, the admin's board card and the invoice gate all report from this
+// one shape, so none of them can arrive at a different answer about the
+// same order.
+function pickShortfallLines(q){
+  return ((q && q.items)||[]).map((it, idx)=>({
+    it, idx, ordered: itemOrderedQty(it), picked: itemPickedQty(it)
+  })).filter(row=> row.picked!=null && row.picked < row.ordered);
+}
+// A shortfall nobody has decided about yet.
+//
+// Deciding is the admin's, not the picker's: either the order is amended to
+// what actually left the shop, or they record that the full quantity went
+// out anyway (topped up off another shelf, a miscount corrected at the
+// counter). Until one of those happens the order must not be invoiced,
+// because the invoice total and the stock deduction are both built from
+// qty -- so billing it as it stands charges the customer for goods that
+// never left the shop, and takes stock the shelf never had.
+function orderHasPickShortfall(q){
+  if(!q || q.pickShortfallAckAt) return false;
+  return pickShortfallLines(q).length > 0;
 }
 
 function timeOfDayGreeting(){
@@ -624,7 +692,10 @@ function renderWorkerPickStepper(q){
 
   const cardsHTML = items.map((it, i)=>{
     const product = (data.products||[]).find(p=>p.id===it.productId);
-    const isDone = it.pickStatus==='done';
+    const answered = itemPickAnswered(it);
+    const picked = itemPickedQty(it);
+    const isShort = answered && picked < itemOrderedQty(it);
+    const isDone = answered && !isShort;
     const qty = it.qty!=null ? it.qty : '';
     const unit = it.packUnit || it.unit || '';
     // The label followed the fallback above, not the outcome: an item with
@@ -669,10 +740,17 @@ function renderWorkerPickStepper(q){
     const heading = (!canNameVariant && it.productName)
       ? it.productName
       : ((product && product.name) || it.productName || 'Item');
+    // The badge carries all three states. A short pick reads as the two
+    // numbers rather than a word -- "3 of 5" is what the picker has to
+    // check against the bags in their hand, and it is the same figure the
+    // admin's board and the invoice gate will report later.
+    const badgeClass = isShort ? 'short' : (isDone ? 'done' : 'pending');
+    const badgeLabel = isShort ? `${picked} of ${itemOrderedQty(it)}`
+      : (isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick');
     return `<div class="wv-carousel-card ${i===cursor?'focused':''}" data-idx="${i}">
       <div class="wv-carousel-card-inner" data-idx="${i}">
         <div class="wv-carousel-photo">${photo}</div>
-        <button type="button" class="wv-carousel-badge ${isDone?'done':'pending'}">${isDone ? ICON_CHECK_SMALL+'Picked' : 'Pick'}</button>
+        <button type="button" class="wv-carousel-badge ${badgeClass}">${badgeLabel}</button>
         <div class="wv-carousel-body">
           <div class="wv-carousel-name">${esc(heading)}</div>
           ${variant ? `<div class="wv-carousel-variant">${esc(variant)}</div>` : ''}
@@ -680,6 +758,7 @@ function renderWorkerPickStepper(q){
           <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
         </div>
         <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
+        <button type="button" class="wv-carousel-short" data-act="short">${isShort ? 'Change the number found' : 'Couldn’t find them all?'}</button>
       </div>
     </div>`;
   }).join('');
@@ -697,11 +776,19 @@ function renderWorkerPickStepper(q){
   // -- tapping the "Pick"/"Picked" badge button (or anywhere else on a
   // focused card) toggles it; the badge button click bubbles up here
   // rather than needing its own separate handler.
+  //
+  // The short-pick control is the one part of the card that must NOT be
+  // swallowed by that gesture, so it is claimed by data-act before the
+  // toggle. Checked with closest() rather than against the button itself,
+  // or a tap that lands on something inside it falls through to the toggle
+  // and records a full pick -- the exact claim it exists to avoid making.
   carousel.querySelectorAll('.wv-carousel-card-inner').forEach(inner=>{
-    inner.addEventListener('click', ()=>{
+    inner.addEventListener('click', (e)=>{
       const card = inner.closest('.wv-carousel-card');
-      if(card.classList.contains('focused')) toggleItemPickedAt(q.id, Number(inner.dataset.idx));
-      else centerCarouselCard(carousel, card, true);
+      const idx = Number(inner.dataset.idx);
+      if(!card.classList.contains('focused')){ centerCarouselCard(carousel, card, true); return; }
+      if(e.target.closest('[data-act="short"]')) promptPickedQty(q.id, idx);
+      else toggleItemPickedAt(q.id, idx);
     });
   });
   // Update focus once scrolling actually settles, not continuously while
@@ -735,25 +822,131 @@ function updateCarouselFocus(carousel, q){
   q.pickCursor = closest;
 }
 
+// The one-tap path, for the case that needs no thought: everything the
+// order asked for was on the shelf. Tapping an already-answered card --
+// short as well as done -- puts it back to unanswered, so a number entered
+// by mistake is undone the same way a tick always was.
 function toggleItemPickedAt(orderId, idx){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
   const it = (q.items||[])[idx];
   if(!it) return;
-  if(it.pickStatus==='done'){ it.pickStatus='pending'; it.pickedQty=null; }
-  else { it.pickStatus='done'; it.pickedQty=it.qty; }
+  if(itemPickAnswered(it)){ it.pickStatus='pending'; it.pickedQty=null; }
+  else { it.pickStatus='done'; it.pickedQty=itemOrderedQty(it); }
   q.pickCursor = idx;
   saveData();
   renderWorkerView(); // a deliberate tap, not mid-scroll -- safe to fully re-render
+}
+
+// Records what was actually found. Clamped to the ordered quantity at the
+// point of writing rather than trusted from the caller: this is the number
+// the invoice and the stock deduction are about to be reconciled against,
+// and a picked count above what was ordered would have the shop billing for
+// goods nobody asked for. Reaching the full quantity is plain 'done' -- the
+// same state the badge tap produces -- so an item corrected back up to its
+// full count leaves no trace of a shortfall for the admin to settle.
+function setItemPickedQty(orderId, idx, picked){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  const it = (q.items||[])[idx];
+  if(!it) return;
+  const ordered = itemOrderedQty(it);
+  const n = Math.min(ordered, Math.max(0, Math.floor(Number(picked)||0)));
+  it.pickedQty = n;
+  it.pickStatus = n>=ordered ? 'done' : 'short';
+  q.pickCursor = idx;
+  saveData();
+  renderWorkerView();
+}
+
+// "Three of the five bags are on the shelf."
+//
+// Deliberately a stepper rather than a text input: this is a phone held in
+// one hand in a warehouse, and the quantities are small. A number field
+// would raise the keyboard over the very number it is asking about, and
+// nothing here needs typing that two taps cannot do.
+function promptPickedQty(orderId, idx){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  const it = (q.items||[])[idx];
+  if(!it) return;
+  const product = (data.products||[]).find(p=>p.id===it.productId);
+  const name = (product && product.name) || it.productName || 'this item';
+  const ordered = itemOrderedQty(it);
+  const unit = it.packUnit || it.unit || '';
+  const start = itemPickedQty(it);
+  // Opens on the full quantity for an unanswered item -- the number they
+  // are about to reduce -- and on whatever was recorded when re-opened.
+  let n = start==null ? ordered : start;
+
+  const el = document.createElement('div');
+  // Carries the same class the background refresh watches for: this is a
+  // decision in the middle of a flow, and re-rendering underneath it would
+  // replace the card it is asking about. The second class is only for its
+  // own styling.
+  el.className = 'wv-assign-overlay wv-qty-overlay';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
+  el.innerHTML = `
+    <div class="wv-qty-sheet">
+      <div class="wv-qty-title">How many did you find?</div>
+      <div class="wv-qty-sub">${esc(name)} — ${ordered}${unit ? ` ${esc(unit)}` : ''} ordered</div>
+      <div class="wv-qty-stepper">
+        <button type="button" class="wv-qty-step" data-step="-1" aria-label="One fewer">−</button>
+        <div class="wv-qty-value" id="wvQtyValue">0</div>
+        <button type="button" class="wv-qty-step" data-step="1" aria-label="One more">+</button>
+      </div>
+      <button type="button" class="wv-qty-none" id="wvQtyNone">None — nothing on the shelf</button>
+      <div class="wv-qty-actions">
+        <button type="button" class="btn btn-ghost" id="wvQtyCancel">Cancel</button>
+        <button type="button" class="btn btn-accent" id="wvQtySave">Save</button>
+      </div>
+    </div>`;
+
+  const valueEl = el.querySelector('#wvQtyValue');
+  const paint = ()=>{
+    valueEl.textContent = String(n);
+    el.querySelectorAll('.wv-qty-step').forEach(btn=>{
+      const step = Number(btn.dataset.step);
+      btn.disabled = (step<0 && n<=0) || (step>0 && n>=ordered);
+    });
+  };
+  el.querySelectorAll('.wv-qty-step').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      n = Math.min(ordered, Math.max(0, n + Number(btn.dataset.step)));
+      paint();
+    });
+  });
+  el.querySelector('#wvQtyNone').addEventListener('click', ()=>{ n = 0; paint(); });
+  const close = ()=>{ if(el.parentNode) document.body.removeChild(el); };
+  el.querySelector('#wvQtyCancel').addEventListener('click', close);
+  el.querySelector('#wvQtySave').addEventListener('click', ()=>{
+    close();
+    setItemPickedQty(orderId, idx, n);
+  });
+  // Backing out by tapping the backdrop leaves the item exactly as it was,
+  // same as Cancel -- nothing is recorded until Save.
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el) close(); });
+  paint();
+  document.body.appendChild(el);
 }
 
 function renderWorkerFinishButton(q){
   const el = document.getElementById('wv_finishWrap');
   if(!el) return;
   const items = q.items||[];
-  const allDone = items.length>0 && items.every(row=>row.pickStatus==='done');
-  el.innerHTML = allDone ? `<button type="button" class="btn btn-accent wv-mark-btn" id="wv_finish_btn" style="margin-top:6px;">Mark as finished</button>` : '';
-  if(allDone) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
+  // Every item ANSWERED, not every item found. Gating on all-done was what
+  // left a picker holding an order they could not complete and could not
+  // put down: the shortfall is recorded on the order and settled by the
+  // admin before it can be invoiced, which is where that decision belongs.
+  const allAnswered = items.length>0 && items.every(itemPickAnswered);
+  const shortCount = pickShortfallLines(q).length;
+  // Named on the button, because finishing an order that is going out
+  // incomplete should not look identical to finishing one that is not.
+  const label = shortCount
+    ? `Finish — ${shortCount} item${shortCount===1?'':'s'} short`
+    : 'Mark as finished';
+  el.innerHTML = allAnswered ? `<button type="button" class="btn btn-accent wv-mark-btn${shortCount?' is-short':''}" id="wv_finish_btn" style="margin-top:6px;">${label}</button>` : '';
+  if(allAnswered) document.getElementById('wv_finish_btn').addEventListener('click', ()=>finishPreparingOrder(q.id));
 }
 
 // Workers can also be picked as the delivery person for an order (many
@@ -908,7 +1101,7 @@ async function finishPreparingOrder(orderId){
     return;
   }
   const items = q.items||[];
-  if(items.length && items.some(row=>row.pickStatus!=='done')) return; // guard: button is disabled otherwise
+  if(items.length && items.some(row=>!itemPickAnswered(row))) return; // guard: button is hidden otherwise
   q.pickingStatus = 'done';
   // Awaited: this function saves twice, and a save now re-reads the row
   // before writing it. Left unawaited the two overlap, and whichever upsert

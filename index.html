@@ -1519,6 +1519,34 @@
      text on a white card meant the button vanished under the cursor. */
   .sq-assign-btn:hover{background:var(--ow-oxide-deep);}
   .sq-assign-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* A short pick is the one thing on this card that needs a decision
+     rather than a glance, so it is a button and not another meta row --
+     the flag and the way to settle it are the same object. Amber for the
+     same reason the late-payment pills are: something needs attention, and
+     nothing has gone wrong yet. It stops the order being invoiced until
+     it is settled, so it is deliberately hard to read past. */
+  .sq-short-flag{
+    all:unset;box-sizing:border-box;display:flex;align-items:center;gap:5px;width:100%;
+    margin-top:5px;padding:5px 8px;border-radius:6px;cursor:pointer;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+    font-size:11.5px;font-weight:700;line-height:1.3;
+  }
+  .sq-short-flag:hover{filter:brightness(0.97);}
+  .sq-short-flag .icon{width:13px;height:13px;flex-shrink:0;stroke-width:2.4;}
+  /* The lines themselves, in the reconciliation modal. */
+  .ps-lines{display:flex;flex-direction:column;gap:4px;margin:10px 0;}
+  .ps-line{
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    padding:7px 10px;border-radius:6px;background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+  }
+  .ps-line-name{font-size:12.5px;font-weight:700;min-width:0;overflow-wrap:anywhere;}
+  .ps-line-nums{font-family:'IBM Plex Mono',monospace;font-size:12px;flex-shrink:0;}
+  .ps-line-nums b{font-size:14px;}
+  /* Three buttons rather than the usual two, because "not now" and "it went
+     out in full anyway" are genuinely different answers and collapsing them
+     would make one of them the X in the corner. .modal-foot does not wrap,
+     and three labels this long overflow a phone, so wrap here only. */
+  #pickShortModal .modal-foot{flex-wrap:wrap;}
   .sq-card-actions-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px;}
   .sq-stage-arrow{
     all:unset;box-sizing:border-box;flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
@@ -3335,6 +3363,29 @@
   </div>
 </div>
 
+<!-- SHORT PICK RECONCILIATION MODAL -->
+<div class="modal-overlay" id="pickShortModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>This order was picked short</h2>
+      <button class="modal-close" id="pickShortModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint" id="pickShortHint"></p>
+      <div class="ps-lines" id="pickShortLines"></div>
+      <p class="preset-hint" id="pickShortTotals"></p>
+      <p class="preset-hint">The invoice and the stock deduction are both built from the ordered quantities, so this has to be settled before the order can be invoiced.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="pickShortCancel">Not now</button>
+      <button class="btn btn-ghost" id="pickShortKeep">Supplied in full anyway</button>
+      <button class="btn btn-accent" id="pickShortAmend">Bill for what was picked</button>
+    </div>
+  </div>
+</div>
+
 <!-- SUPPLIER-FUNDED PROMOTION MODAL -->
 <div class="modal-overlay" id="promoModal">
   <div class="modal modal-wide">
@@ -4319,6 +4370,11 @@ function buildSyncRows(d, shopId){
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
       payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
+        // The admin's decision about a short pick. Admin-owned on purpose:
+        // it is not in WORKER_OWNED_KEYS (worker.html), so a worker save
+        // merging onto the server row leaves whatever was decided here
+        // alone rather than reverting it from its own stale snapshot.
+        pickShortfallAckAt:q.pickShortfallAckAt||null,
         // Agent-originated orders only -- undefined/absent for a normal
         // order, preserved here rather than dropped so an admin re-saving
         // this quote (advancing its status, editing an item, etc.) never
@@ -4644,7 +4700,7 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
   if(e.target.id==='imgLightbox') closeImageLightbox();
 });
 
-['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal','agentPrepayModal','promoModal'].forEach(id=>{
+['supplierModal','productModal','priceModal','itemPickerModal','invModal','stockRuleModal','staffModal','assignStaffModal','agentModal','agentPrepayModal','pickShortModal','promoModal'].forEach(id=>{
   document.getElementById(id).addEventListener('mousedown', (e)=>{
     if(e.target.id===id){
       if(id==='supplierModal') closeModalAndReset(id, resetSupplierForm);
@@ -4657,6 +4713,9 @@ document.getElementById('imgLightbox').addEventListener('mousedown', (e)=>{
       if(id==='assignStaffModal') closeAssignStaffModal();
       if(id==='agentModal') closeModalAndReset(id, resetAgentForm);
       if(id==='agentPrepayModal') closeModal(id);
+      // Dismissing settles nothing -- the flag stays on the card and the
+      // invoice gate still holds. Closing this is "not now", never "fine".
+      if(id==='pickShortModal') closeModal(id);
       if(id==='promoModal') closeModalAndReset(id, resetPromotionForm);
     }
   });
@@ -4672,6 +4731,7 @@ document.addEventListener('keydown', (e)=>{
   if(document.getElementById('staffModal').classList.contains('show')) closeModalAndReset('staffModal', resetStaffForm);
   if(document.getElementById('agentModal').classList.contains('show')) closeModalAndReset('agentModal', resetAgentForm);
   if(document.getElementById('agentPrepayModal').classList.contains('show')) closeModal('agentPrepayModal');
+  if(document.getElementById('pickShortModal').classList.contains('show')) closeModal('pickShortModal');
   if(document.getElementById('promoModal').classList.contains('show')) closeModalAndReset('promoModal', resetPromotionForm);
   if(document.getElementById('assignStaffModal').classList.contains('show')) closeAssignStaffModal();
   if(document.getElementById('piPaymentModal').classList.contains('show')) closeModalAndReset('piPaymentModal', resetPiPaymentForm);
@@ -7040,6 +7100,14 @@ async function toggleQuoteInvoiced(id){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q || q.status!=='completed') return;
   if(togglingInvoiced.has(id)) return;
+  // A pick that came up short has to be settled before any money moves.
+  // Both halves of what happens next are built from qty and neither reads
+  // pickedQty: applyQuoteStockDeduction() takes qty off the shelf, and
+  // savedQuoteTotal() bills for qty. Invoicing an unsettled shortfall would
+  // therefore charge the customer for goods that never left the shop and
+  // deduct stock that was never there -- silently, with the board showing
+  // the order as cleanly prepared. The last gate before that is here.
+  if(!q.invoiced && orderHasPickShortfall(q)){ openPickShortfallModal(id, true); return; }
   if(q.invoiced){
     const warning = uninvoiceReversalWarning(q);
     if(warning && !confirm(warning)) return;
@@ -7104,6 +7172,129 @@ async function toggleQuoteInvoiced(id){
     togglingInvoiced.delete(id);
   }
 }
+
+/* ---- Short picks: what the shop does about one ------------------------
+   The worker records what was actually on the shelf (setItemPickedQty in
+   shared-worker.js). Recording it is all they can do -- the worker app is
+   deliberately not allowed to write item quantities (WORKER_OWNED_KEYS in
+   worker.html), because it saves from a snapshot that can be hours old and
+   would otherwise revert whatever the admin has done to the order since.
+
+   So the decision lands here, and there are only two honest answers:
+
+     amend    the customer gets, and is billed for, what actually went out
+     keep     the full quantity went out anyway -- topped up off another
+              shelf, or a miscount corrected at the counter
+
+   Both are recorded. Neither happens by default, and the invoice gate
+   above will not let the order past until one of them has. ---- */
+
+// One line for the board card. Names the numbers on the common single-line
+// case, because that is usually the whole story and saves opening anything.
+function pickShortfallLabel(q){
+  const lines = pickShortfallLines(q);
+  if(!lines.length) return '';
+  if(lines.length===1){
+    const l = lines[0];
+    return l.picked===0
+      ? `Picked short — none of the ${l.ordered} found`
+      : `Picked short — ${l.picked} of ${l.ordered} found`;
+  }
+  return `Picked short — ${lines.length} items`;
+}
+
+// Brings the order's own quantities down to what actually left the shop.
+//
+// Everything downstream is built from qty -- the invoice total, the stock
+// deduction, the purchase invoices, the customer's debt -- so once qty is
+// the truth all of them are right at once, with no second set of numbers
+// to keep in step with the first. That is the whole reason this amends the
+// order rather than teaching each of those to read pickedQty instead.
+//
+// A line where nothing was found stays on the order at 0 rather than being
+// removed: it costs nothing in either money or stock, and it is the only
+// record the customer's copy carries that the item was ordered and could
+// not be supplied.
+//
+// Touches nothing but the order's own lines. The debt side is the caller's,
+// deliberately: openPickShortfallModal runs this over a throwaway CLONE to
+// price the choice it is offering, and applying a debt charge from inside
+// here would post that preview to a real customer's ledger.
+//
+// No flag to clear either -- pickedQty now equals qty on every line, so the
+// shortfall is gone by derivation and cannot be left stale.
+function amendOrderToPickedQuantities(q){
+  pickShortfallLines(q).forEach(({it, picked})=>{ it.qty = picked; });
+}
+
+let pendingShortOrderId = null;
+// Whether we got here from the invoice button, so keeping the quantities
+// can carry straight on into invoicing. Amending cannot: it just moved the
+// total, and that is worth a look before it is billed.
+let pendingShortWasInvoicing = false;
+function openPickShortfallModal(orderId, fromInvoice){
+  const q = data.savedQuotes.find(x=>x.id===orderId);
+  if(!q) return;
+  const lines = pickShortfallLines(q);
+  if(!lines.length) return;
+  pendingShortOrderId = orderId;
+  pendingShortWasInvoicing = !!fromInvoice;
+  document.getElementById('pickShortHint').textContent =
+    `${staffName(q.assignedWorkerId) || 'The picker'} recorded less on the shelf than "${q.client.name||'this order'}" asks for.`;
+  document.getElementById('pickShortLines').innerHTML = lines.map(l=>`
+    <div class="ps-line">
+      <span class="ps-line-name">${esc(l.it.productName || 'Item')}</span>
+      <span class="ps-line-nums"><b>${l.picked}</b> of ${l.ordered}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</span>
+    </div>`).join('');
+  // Both totals, because the gap between them IS the decision. Priced by
+  // running the real amendment over a throwaway copy rather than by
+  // re-deriving the arithmetic here: savedQuoteTotal() resolves a line with
+  // no sellPrice through the product's markup rules, and a second copy of
+  // that would be one more thing to drift out of step with what the button
+  // actually does.
+  const asPicked = cloneJSON(q);
+  amendOrderToPickedQuantities(asPicked);
+  document.getElementById('pickShortTotals').textContent =
+    `Billing what was picked makes this order ${fmtUGX(savedQuoteTotal(asPicked))}, down from ${fmtUGX(savedQuoteTotal(q))}.`;
+  openModal('pickShortModal');
+}
+document.getElementById('pickShortAmend').addEventListener('click', ()=>{
+  const q = data.savedQuotes.find(x=>x.id===pendingShortOrderId);
+  closeModal('pickShortModal');
+  pendingShortWasInvoicing = false;
+  if(!q) return;
+  amendOrderToPickedQuantities(q);
+  // The order is worth less than it was, so what the customer owes has to
+  // follow it down -- same call every other path that moves an order's
+  // total makes.
+  syncInvoiceDebtCharge(q);
+  saveData();
+  renderSavedQuotes();
+  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  toast(`Order amended to what was picked — now ${fmtUGX(savedQuoteTotal(q))}. Invoice it when you're ready.`, 6000);
+});
+document.getElementById('pickShortKeep').addEventListener('click', ()=>{
+  const q = data.savedQuotes.find(x=>x.id===pendingShortOrderId);
+  const resume = pendingShortWasInvoicing;
+  closeModal('pickShortModal');
+  pendingShortWasInvoicing = false;
+  if(!q) return;
+  // Recorded rather than merely dismissed: the pick still says three of
+  // five, and without this the flag would be back on the card the moment
+  // the board re-renders. resetPickingProgress() clears it again if the
+  // order is ever sent back for a re-pick, so the next pick's shortfall is
+  // never pre-settled by a decision made about a previous one.
+  q.pickShortfallAckAt = Date.now();
+  saveData();
+  renderSavedQuotes();
+  // Nothing about the money changed, so the click that got us here still
+  // stands.
+  if(resume) toggleQuoteInvoiced(q.id);
+  else toast('Recorded as supplied in full — the ordered quantities stand');
+});
+document.getElementById('pickShortCancel').addEventListener('click', ()=>closeModal('pickShortModal'));
+document.getElementById('pickShortModalClose').addEventListener('click', ()=>closeModal('pickShortModal'));
 
 // Keeps the fixed top-right reminder bar in sync with the Saved Quotes
 // board -- same status grouping and same "aged off the board" rule (an
@@ -7189,6 +7380,7 @@ function renderSavedQuotes(){
             ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${(q.status==='preparing' && !q.assignedWorkerId) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">Nobody assigned</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
+            ${orderHasPickShortfall(q) ? `<button type="button" class="sq-short-flag" data-id="${q.id}" title="The picker found less than this order asks for — click to settle it">${ICON_WARN}<span>${esc(pickShortfallLabel(q))}</span></button>` : ''}
           </div>
         </div>
       </div>
@@ -7266,6 +7458,7 @@ function renderSavedQuotes(){
   // already in means setSavedQuoteStatus leaves stageEnteredAt alone, so
   // re-assigning does not reset how long the order has been waiting.
   wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
+  wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
   wrap.querySelectorAll('.sq-edit').forEach(btn=>btn.addEventListener('click', ()=>loadSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-delete').forEach(btn=>btn.addEventListener('click', ()=>deleteSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-stage-prev').forEach(btn=>btn.addEventListener('click', ()=>{
