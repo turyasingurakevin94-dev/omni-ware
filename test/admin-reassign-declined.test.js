@@ -103,7 +103,9 @@ const shared = read('shared-worker.js');
  */
 {
   const del = extractFunction(admin, 'deleteStaff', 'index.html');
-  t.check(/q\.assignedWorkerId===id && q\.status==='preparing' && !q\.voided/.test(del),
+  t.check(/const live = \(data\.savedQuotes\|\|\[\]\)\.filter\(q=>!q\.voided\);/.test(del),
+    'a cancelled order is nobody\'s work, so it is excluded once for both halves');
+  t.check(/const picking = live\.filter\(q=>q\.assignedWorkerId===id && q\.status==='preparing'\);/.test(del),
     'deleting a staff member finds the orders they are actively preparing');
   t.check(/q\.assignedWorkerId = null;/.test(del) && /resetPickingProgress\(q\)/.test(del),
     'and lets go of both the assignment and the pick');
@@ -136,6 +138,43 @@ const shared = read('shared-worker.js');
     'and the "being prepared by" row is its exact opposite, so never both');
   t.check(/Assigned to someone no longer on staff/.test(admin),
     'and says which of the two it is');
+}
+
+/* ---------- 4d. and the same one stage on ----------------------------- */
+/*
+ * A driver can leave too. Less dire than a missing picker -- the order is
+ * still visible and can be stepped to Completed -- but the only way to name
+ * a new one was stepping it back to Being Prepared, which retires the
+ * delivery assignment AND throws away the finished pick, so the whole order
+ * is picked again to correct somebody's name.
+ */
+{
+  const needs = extractFunction(admin, 'orderNeedsDelivery', 'index.html');
+  t.check(/if\(!q \|\| q\.status!=='pending_delivery'\) return false;/.test(needs),
+    'only asked of an order out for delivery');
+  t.check(/if\(!q\.assignedDeliveryId\) return true;/.test(needs), 'nobody named needs one');
+  t.check(/if\(q\.assignedDeliveryId==='__agent__'\) return false;/.test(needs),
+    "an agent collecting their own order is not a driver who can go missing");
+  t.check(/return !\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedDeliveryId\);/.test(needs),
+    'and a driver no longer on staff needs replacing');
+
+  t.check(/\$\{orderNeedsDelivery\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
+    'the card offers a way to name one');
+  t.check(/\$\{\(q\.status==='pending_delivery' && !orderNeedsDelivery\(q\)\) \? `<div class="sq-assignee-row"/.test(admin),
+    'and the "being delivered by" row is its exact opposite');
+  t.check(/openAssignStaffModal\(Number\(btn\.dataset\.id\), 'pending_delivery', 'delivery'\)/.test(admin),
+    'wired to the delivery picker for the stage it is already in');
+
+  // Both halves released, but not the same way.
+  const del = extractFunction(admin, 'deleteStaff', 'index.html');
+  t.check(/const delivering = live\.filter\(q=>q\.assignedDeliveryId===id && q\.status==='pending_delivery'\);/.test(del),
+    'deleting a staff member also finds what they are out delivering');
+  t.check(/delivering\.forEach\(q=>\{ q\.assignedDeliveryId = null; \}\);/.test(del),
+    'and releases only the assignment');
+  t.check(!/delivering\.forEach[\s\S]{0,80}resetPickingProgress/.test(del),
+    'leaving the finished pick alone -- a driver leaving is no reason to pick the order again');
+  t.check(/const releasing = picking\.concat\(delivering\);/.test(del),
+    'and both are counted in what the confirmation promises');
 }
 
 /* ---------- 5. the affordance is reachable with a finger -------------- */

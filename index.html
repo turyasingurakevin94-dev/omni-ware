@@ -6736,6 +6736,18 @@ function orderNeedsWorker(q){
   if(!q.assignedWorkerId) return true;
   return !(data.staff||[]).some(s=>s.id===q.assignedWorkerId);
 }
+// The same question one stage on. Less dire than a missing picker -- the
+// order is still visible and can be stepped to Completed -- but the only way
+// to name a new driver was stepping it back to Being Prepared, which throws
+// away a finished pick to correct somebody's name.
+function orderNeedsDelivery(q){
+  if(!q || q.status!=='pending_delivery') return false;
+  if(!q.assignedDeliveryId) return true;
+  // The agent is collecting it themselves. Not a staff member, so not
+  // somebody who can stop being one.
+  if(q.assignedDeliveryId==='__agent__') return false;
+  return !(data.staff||[]).some(s=>s.id===q.assignedDeliveryId);
+}
 
 function stepSavedQuoteStatus(id, dir){
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -7429,7 +7441,8 @@ function renderSavedQuotes(){
             <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
-            ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
+            ${(q.status==='pending_delivery' && !orderNeedsDelivery(q)) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
+            ${orderNeedsDelivery(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is delivering this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedDeliveryId ? 'Assigned to someone no longer on staff' : 'Nobody delivering'}</span><button type="button" class="sq-assign-delivery-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${orderHasPickShortfall(q) ? `<button type="button" class="sq-short-flag" data-id="${q.id}" title="The picker found less than this order asks for — click to settle it">${ICON_WARN}<span>${esc(pickShortfallLabel(q))}</span></button>` : ''}
           </div>
         </div>
@@ -7508,6 +7521,10 @@ function renderSavedQuotes(){
   // already in means setSavedQuoteStatus leaves stageEnteredAt alone, so
   // re-assigning does not reset how long the order has been waiting.
   wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
+  // Same, one stage on. Passing the status it is already in again, so
+  // setSavedQuoteStatus leaves stageEnteredAt alone and naming a new driver
+  // does not reset how long the order has been waiting to go out.
+  wrap.querySelectorAll('.sq-assign-delivery-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'pending_delivery', 'delivery')));
   wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
   wrap.querySelectorAll('.sq-edit').forEach(btn=>btn.addEventListener('click', ()=>loadSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-delete').forEach(btn=>btn.addEventListener('click', ()=>deleteSavedQuote(Number(btn.dataset.id))));
@@ -9414,15 +9431,25 @@ function deleteStaff(id){
   // what the warning has always promised -- that is the record of who
   // prepared it, and staffName() already renders a departed member
   // gracefully.
-  const releasing = (data.savedQuotes||[]).filter(q=>q.assignedWorkerId===id && q.status==='preparing' && !q.voided);
+  const live = (data.savedQuotes||[]).filter(q=>!q.voided);
+  const picking = live.filter(q=>q.assignedWorkerId===id && q.status==='preparing');
+  // The same for a driver holding an order out for delivery. Less dire --
+  // that order is still visible and can be stepped to Completed -- but the
+  // only way to name a new one was stepping it back to Being Prepared,
+  // which throws away a finished pick to correct somebody's name.
+  const delivering = live.filter(q=>q.assignedDeliveryId===id && q.status==='pending_delivery');
+  const releasing = picking.concat(delivering);
   const msg = releasing.length
-    ? `Delete this staff member? ${releasing.length} order${releasing.length===1?'':'s'} they are preparing will go back to the board for someone else. Orders they have already finished keep their name.`
+    ? `Delete this staff member? ${releasing.length} order${releasing.length===1?'':'s'} they are working on will go back to the board for someone else. Orders they have already finished keep their name.`
     : 'Delete this staff member? Orders they have already finished will keep showing their name.';
   if(!confirm(msg)) return;
-  releasing.forEach(q=>{
+  picking.forEach(q=>{
     q.assignedWorkerId = null;
     resetPickingProgress(q); // shared-worker.js -- the pick goes with the picker
   });
+  // Only the assignment: the pick is done and stays done, or the order would
+  // go back for a re-pick because its driver left.
+  delivering.forEach(q=>{ q.assignedDeliveryId = null; });
   data.staff = data.staff.filter(s=>s.id!==id);
   saveData(); renderStaff();
   refreshAdminOrderBoardIfOpen();
