@@ -875,6 +875,50 @@
   /* The buttons inside are their own targets and say so. */
   .customer-card button{cursor:pointer;}
 
+  /* ---- What is on an order ---- */
+  .op-steps{display:flex;list-style:none;margin:0 0 16px;padding:0;gap:6px;}
+  .op-step{flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+    padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);}
+  .op-step-dot{width:21px;height:21px;border-radius:50%;flex-shrink:0;display:flex;
+    align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    background:var(--ow-rule-soft);color:var(--ink-soft);}
+  .op-step-label{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .op-step-since{font-size:11px;color:var(--ink-soft);margin-left:auto;white-space:nowrap;}
+  .op-step.done .op-step-dot{background:var(--good);color:#fff;}
+  .op-step.done{opacity:0.72;}
+  .op-step.now{border-color:var(--op-accent);box-shadow:inset 0 0 0 1px var(--op-accent);}
+  .op-step.now .op-step-dot{background:var(--op-accent);color:#fff;}
+  .op-step.todo{opacity:0.55;}
+  @media (max-width:820px){
+    .op-steps{flex-wrap:wrap;}
+    .op-step{flex:1 1 46%;}
+    .op-step-since{display:none;}
+  }
+  .op-facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .op-fact{font-size:12.5px;color:var(--ink-soft);background:var(--bg);
+    border:1px solid var(--line);border-radius:20px;padding:4px 11px;}
+  .op-fact.agent{color:var(--accent);border-color:var(--ow-oxide-soft);background:var(--ow-oxide-soft);}
+  .op-warn{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.45;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);border-radius:9px;
+    padding:10px 12px;margin:0 0 12px;}
+  .op-warn svg{flex-shrink:0;margin-top:1px;}
+  .op-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .op-table th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:0.6px;
+    text-transform:uppercase;color:var(--ink-soft);padding:0 8px 6px 0;border-bottom:1px solid var(--line);}
+  .op-table td{padding:8px 8px 8px 0;border-bottom:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .op-table tfoot td{border-bottom:none;border-top:2px solid var(--line);font-weight:600;
+    color:var(--ink-soft);padding-top:9px;}
+  .op-table .r{text-align:right;padding-right:0;}
+  .op-table .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .op-table tr.op-short{background:var(--ow-amber-soft);}
+  .op-short-num{color:var(--ow-amber-ink);}
+  .op-dim{color:var(--ink-soft);font-size:11.5px;}
+  .op-src{font-size:12.5px;}
+  .op-src.stock{color:var(--good);}
+  .op-read{font-size:13.5px;line-height:1.5;margin:14px 0 0;color:var(--ink-soft);}
+  .sq-card{cursor:pointer;}
+  .sq-card button, .sq-card input{cursor:pointer;}
+
   /* ---- One customer's history ---- */
   .cs-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px;}
   @media (max-width:820px){ .cs-stats{grid-template-columns:repeat(2,minmax(0,1fr));} }
@@ -4250,6 +4294,19 @@
   </div>
 </div>
 
+<!-- WHAT IS ACTUALLY ON AN ORDER -->
+<div class="modal-overlay" id="orderPreviewModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="orderPreviewTitle">Order</h2>
+      <button class="modal-close" id="orderPreviewClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="orderPreviewBody"></div>
+  </div>
+</div>
+
 <!-- ONE CUSTOMER, EVERYTHING KNOWN ABOUT THEM -->
 <div class="modal-overlay" id="customerStatsModal">
   <div class="modal modal-wide">
@@ -6430,10 +6487,148 @@ function orderMetaRowHTML(q){
   const fromStock = (q.items||[]).filter(it=>!orderLineIsBoughtIn(it)).length;
   return `<div class="sq-meta">
     <span title="In this step for">${ICON_CLOCK}${esc(savedAgoLabel(q.stageEnteredAt || q.savedAt))}</span>
-    <span title="${items} line${items===1?'':'s'}">${ICON_ITEMS}${items}</span>
+    <span title="${items} line${items===1?'':'s'} — open the order to see what they are">${ICON_ITEMS}${items}</span>
     <span title="What the client pays">${ICON_MONEY}${fmtUGX(savedQuoteTotal(q))}</span>
     ${fromStock ? `<span class="stocked" title="${fromStock} line${fromStock===1?'':'s'} already on our shelf">${ICON_SHELF}${fromStock} from stock</span>` : ''}
   </div>`;
+}
+
+/* ================= LOOKING INSIDE AN ORDER ============================
+
+   The board card said "7" behind an items icon. Seven of what is the
+   question anybody actually has about an order moving through the steps
+   -- whether it is worth chasing, what the picker is being sent for,
+   what the driver is carrying, and whether the shop even has it.
+
+   One line per item, with everything that is true about it at this
+   moment: what was ordered, what the picker has actually found so far,
+   what the client pays, and where it is coming from. */
+function orderPreviewLines(q){
+  return (((q && q.items) || [])).map(it=>{
+    const qty = Number(it.qty) || 0;
+    const sell = quoteItemSellPrice(it);
+    const fromStock = !orderLineIsBoughtIn(it);
+    // null while nobody has picked this line yet, which is a different
+    // thing from having picked none of it -- 0 means the shelf was empty.
+    const picked = typeof itemPickedQty === 'function' ? itemPickedQty(it) : null;
+    const buyUnit = Number(it.price) || 0;
+    return {
+      name: it.productName || 'Item',
+      unit: it.unit || '',
+      qty, sell, lineTotal: qty * sell,
+      picked, short: picked != null && picked < qty,
+      fromStock,
+      source: fromStock ? 'From stock' : supplierName(it.supplierId),
+      buyCost: fromStock ? null : buyUnit * qty,
+      unpriced: !fromStock && !(buyUnit > 0),
+    };
+  });
+}
+
+function orderPreviewSummary(q){
+  const lines = orderPreviewLines(q);
+  return {
+    lines,
+    total: lines.reduce((s,l)=> s + l.lineTotal, 0),
+    fromStock: lines.filter(l=> l.fromStock).length,
+    toBuy: lines.filter(l=> !l.fromStock).length,
+    /* Only counted where there is a price. A line with none is reported
+       as a gap rather than silently costed at nothing.
+
+       `!l.unpriced` is EQUIVALENT here for every valid price and is kept
+       anyway -- a mutation run removing it changes no test, and that is
+       the honest reason to record why rather than contrive a fixture.
+       unpriced means buyUnit <= 0, so a line it excludes contributes
+       exactly 0 to this sum. What it does protect against is a NEGATIVE
+       price surviving into the data, which would not add nothing: it
+       would quietly reduce the cash the shop thinks it needs. */
+    buyTotal: lines.filter(l=> !l.fromStock && !l.unpriced).reduce((s,l)=> s + l.buyCost, 0),
+    unpriced: lines.filter(l=> l.unpriced).length,
+    shortLines: lines.filter(l=> l.short).length,
+    // Picking has started once ANY line carries a picked figure.
+    picking: lines.some(l=> l.picked != null),
+  };
+}
+
+/* Where the order has got to, as four steps rather than one label.
+
+   The card already says which step it is in. What it cannot say is which
+   ones are behind it and which are still to come, and that is the shape
+   of the question when somebody asks "where is this order". */
+function orderPreviewStepsHTML(q){
+  const at = SQ_STATUS_ORDER.indexOf(q.status);
+  return `<ol class="op-steps">${SQ_STATUS_ORDER.map((s,i)=>{
+    const state = i < at ? 'done' : (i === at ? 'now' : 'todo');
+    return `<li class="op-step ${state}" style="--op-accent:${SQ_STATUSES[s].color};">
+      <span class="op-step-dot">${i < at ? '✓' : i+1}</span>
+      <span class="op-step-label">${esc(ORDER_STATUS_SHORT_LABELS[s])}</span>
+      ${i === at ? `<span class="op-step-since">${esc(savedAgoLabel(q.stageEnteredAt || q.savedAt))}</span>` : ''}
+    </li>`;
+  }).join('')}</ol>`;
+}
+
+function orderPreviewHTML(q){
+  const s = orderPreviewSummary(q);
+  const plural = (n, one, many)=> n === 1 ? one : many;
+  const who = [];
+  if(q.status === 'preparing' && q.assignedWorkerId) who.push(`Being prepared by <b>${esc(staffName(q.assignedWorkerId))}</b>`);
+  if(q.status === 'pending_delivery' && !orderNeedsDelivery(q)) who.push(`Going out with <b>${esc(deliveryAssigneeLabel(q))}</b>`);
+  if(q.invoiced) who.push(`Invoiced — <b>${esc(invoiceNumberLabel(q))}</b>`);
+
+  const location = orderCustomerLocation(q);
+
+  return `
+    ${orderPreviewStepsHTML(q)}
+
+    <div class="op-facts">
+      ${location ? `<span class="op-fact">${esc(location)}</span>` : ''}
+      ${q.client && q.client.phone ? `<span class="op-fact">${esc(q.client.phone)}</span>` : ''}
+      ${q.originAgentId ? `<span class="op-fact agent">Agent order — the name is the agent's, not the end client's</span>` : ''}
+      ${who.length ? `<span class="op-fact">${who.join(' · ')}</span>` : ''}
+    </div>
+
+    ${s.shortLines ? `<p class="op-warn">${ICON_WARN} The picker found less than asked for on ${s.shortLines} ${plural(s.shortLines,'line','lines')}. Until that is settled the order cannot be invoiced — the total and the stock deduction are both built from the ordered quantity.</p>` : ''}
+    ${s.unpriced ? `<p class="op-warn">${ICON_WARN} ${s.unpriced} ${plural(s.unpriced,'line has','lines have')} no supplier price on file, so ${plural(s.unpriced,'it is','they are')} not in the cash-to-buy figure below.</p>` : ''}
+
+    <table class="op-table">
+      <thead><tr>
+        <th>Item</th>
+        <th class="r">Ordered</th>
+        ${s.picking ? '<th class="r">Picked</th>' : ''}
+        <th>Coming from</th>
+        <th class="r">Line total</th>
+      </tr></thead>
+      <tbody>${s.lines.map(l=>`<tr class="${l.short ? 'op-short' : ''}">
+        <td>${esc(l.name)}</td>
+        <td class="r num">${l.qty}${l.unit ? ` ${esc(l.unit)}` : ''}</td>
+        ${s.picking ? `<td class="r num">${l.picked == null
+          ? '<span class="op-dim">not yet</span>'
+          : `${l.short ? `<b class="op-short-num">${l.picked}</b>` : l.picked}`}</td>` : ''}
+        <td>${l.fromStock
+          ? '<span class="op-src stock">From stock</span>'
+          : `<span class="op-src buy">${esc(l.source)}</span>${l.unpriced ? ' <span class="op-dim">no price on file</span>' : ''}`}</td>
+        <td class="r num">${fmtUGX(Math.round(l.lineTotal))}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr>
+        <td>${s.lines.length} ${plural(s.lines.length,'line','lines')}</td>
+        <td class="r"></td>
+        ${s.picking ? '<td class="r"></td>' : ''}
+        <td>${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} to buy` : ''}</td>
+        <td class="r num"><b>${fmtUGX(Math.round(s.total))}</b></td>
+      </tr></tfoot>
+    </table>
+
+    <p class="op-read">The client pays <b>${fmtUGX(Math.round(s.total))}</b>${
+      s.toBuy ? `, and ${fmtUGX(Math.round(s.buyTotal))} of that has to be spent buying the ${s.toBuy} ${plural(s.toBuy,'line','lines')} not already on the shelf${s.unpriced ? ` (excluding the ${s.unpriced} with no price)` : ''}.` : ' — everything on it is already on the shelf.'}</p>`;
+}
+
+function openOrderPreview(orderId){
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(orderId));
+  if(!q) return;
+  document.getElementById('orderPreviewTitle').textContent =
+    `${(q.client && q.client.name) || 'Unnamed client'} — ${ORDER_STATUS_SHORT_LABELS[q.status] || ''}`;
+  document.getElementById('orderPreviewBody').innerHTML = orderPreviewHTML(q);
+  openModal('orderPreviewModal');
 }
 
 // This order's share of the step's cash, and only while it is the question
@@ -6845,6 +7040,7 @@ document.getElementById('buyingListClose').addEventListener('click', ()=>closeMo
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
 document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
 document.getElementById('customerStatsClose').addEventListener('click', ()=>closeModal('customerStatsModal'));
+document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
@@ -9665,6 +9861,9 @@ function renderSavedQuotes(){
           <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div class="sq-card-icons">
+          <button type="button" class="pc-icon-btn sq-preview" data-id="${q.id}" title="See what is on this order">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
           <button type="button" class="pc-icon-btn sq-edit" data-id="${q.id}" ${q.invoiced?'disabled':''} title="${q.invoiced?'Invoiced — undo the invoice first to edit this order':'Edit quote'}">${ICON_EDIT}</button>
           ${q.status==='completed'
             ? `<button type="button" class="pc-icon-btn sq-invoice-btn${q.invoiced?' is-invoiced':''} sq-toggle-invoice" data-id="${q.id}" title="${q.invoiced? `Invoiced — ${esc(invoiceNumberLabel(q))} — click to undo` : 'Convert this completed order into an invoice'}">${q.invoiced
@@ -9745,6 +9944,17 @@ function renderSavedQuotes(){
   // does not reset how long the order has been waiting to go out.
   wrap.querySelectorAll('.sq-assign-delivery-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'pending_delivery', 'delivery')));
   wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
+  wrap.querySelectorAll('.sq-preview').forEach(btn=>btn.addEventListener('click', ()=>openOrderPreview(btn.dataset.id)));
+  /* The eye is the discoverable way in; the card body is the convenient
+     one. Anything the card already does -- the select checkbox, the two
+     stage arrows, edit, delete, assign, the shortfall flag -- keeps doing
+     only its own job, so this ignores clicks that landed on a control. */
+  wrap.querySelectorAll('.sq-card').forEach(card=>{
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('button, input, label, a')) return;
+      openOrderPreview(card.dataset.id);
+    });
+  });
   wrap.querySelectorAll('.sq-edit').forEach(btn=>btn.addEventListener('click', ()=>loadSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-delete').forEach(btn=>btn.addEventListener('click', ()=>deleteSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-stage-prev').forEach(btn=>btn.addEventListener('click', ()=>{

@@ -275,7 +275,11 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
 
   t.check(!/from stock/.test(scope.orderMetaRowHTML(order({ items: [line()] }))),
     'nothing off the shelf means no stock chip, rather than a chip reading zero');
-  t.check(/1 line"/.test(scope.orderMetaRowHTML(order({ items: [line()] }))),
+  // Matched on what follows the word rather than on the closing quote:
+  // the title now goes on to say the order can be opened to see the lines,
+  // and pinning the punctuation after "line" made this fail for a reason
+  // that had nothing to do with pluralisation.
+  t.check(/title="1 line[^s]/.test(scope.orderMetaRowHTML(order({ items: [line()] }))),
     'and one line is "1 line", not "1 lines"');
 }
 
