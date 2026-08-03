@@ -66,7 +66,9 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   let f = null;
   try {
     ({ clientStats: f } = compileScope(
-      [extractFunction(src, 'orderTotal', 'agent.html'), extractFunction(src, 'orderEarnings', 'agent.html'),
+      [extractFunction(src, 'orderTotal', 'agent.html'),
+        extractFunction(src, 'agentLinePriced', 'agent.html'),
+        extractFunction(src, 'orderEarnings', 'agent.html'),
        extractFunction(src, 'orderDate', 'agent.html'), extractFunction(src, 'clientStats', 'agent.html')],
       {}, ['clientStats'],
     ));

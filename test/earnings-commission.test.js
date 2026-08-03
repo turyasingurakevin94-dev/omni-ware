@@ -35,12 +35,14 @@ const myOrders = [];
 const setOrders = (rows) => { myOrders.length = 0; rows.forEach((r) => myOrders.push(r)); };
 
 const agent = compileScope(
-  [extractFunction(agentSrc, 'orderEarnings', 'agent.html'),
+  [extractFunction(agentSrc, 'agentLinePriced', 'agent.html'),
+   extractFunction(agentSrc, 'orderEarnings', 'agent.html'),
    extractFunction(agentSrc, 'monthEarnings', 'agent.html')],
   { myOrders }, ['orderEarnings', 'monthEarnings'],
 );
 const board = compileScope(
-  [extractFunction(boardSrc, 'orderEarnings', 'agent-leaderboard')],
+  [extractFunction(boardSrc, 'agentLinePriced', 'agent-leaderboard'),
+   extractFunction(boardSrc, 'orderEarnings', 'agent-leaderboard')],
   {}, ['orderEarnings'], { typescript: true },
 );
 
@@ -66,6 +68,15 @@ const ORDERS = [
   { name: 'missing fields',             items: [{ qty: 3 }, { agentSellPrice: 500 }, {}] },
   { name: 'null bonus',                 items: [item(1200, 1000, 2, null)] },
   { name: 'numeric strings',            items: [item('1200', '1000', '3', '500')] },
+  // A line the shop added to an agent's order after the fact: the admin's
+  // item picker writes sellPrice and has no agentSellPrice to write. The
+  // shape matters because sellPrice is PRESENT and the agent price is not
+  // -- the 'missing fields' case above has neither, so it could never see
+  // this. Both sides must agree here too, or the earnings screen and the
+  // league table tell an agent two different stories.
+  { name: 'a line the shop added',      items: [item(1200, 1000, 3, 0), { sellPrice: 12000, qty: 5 }] },
+  { name: 'agent price absent, shop price present', items: [{ sellPrice: 12000, qty: 5 }] },
+  { name: 'agent price non-numeric',    items: [item('abc', 1000, 2, 0)] },
 ];
 
 let disagreements = 0;
@@ -89,6 +100,53 @@ if (!disagreements) t.pass(`orderEarnings total identical in agent.html and agen
   const expectedBonus = 500 + 250;
   t.check(e.margin === expectedMargin && e.bonus === expectedBonus && e.total === expectedMargin + expectedBonus,
     `margin and bonus are summed independently (margin ${e.margin}/${expectedMargin}, bonus ${e.bonus}/${expectedBonus})`);
+}
+
+/* ---------- 2b. a line the agent never priced earns them nothing ------- */
+/*
+ * An agent's order can grow a line after they submitted it: the admin
+ * opens it and adds one through the item picker, which writes sellPrice
+ * and has no agentSellPrice to write.
+ *
+ * Coercing that absent price to 0 made the line's margin
+ * (0 - sellPrice) * qty -- so the shop adding a 60,000 line took 60,000
+ * off the agent's earnings, and off their leaderboard total through the
+ * identical formula. The agent was charged, in commission, the full shop
+ * value of a line they never priced and never agreed to.
+ *
+ * The distinction that has to survive: selling BELOW the shop price is a
+ * real choice an agent can make, and stays negative.
+ */
+{
+  const priced = { agentSellPrice: 34000, sellPrice: 32000, qty: 40, bonusCommission: 0 };
+  const shopAdded = { sellPrice: 12000, qty: 5 };
+
+  const alone = agent.orderEarnings({ items: [priced] }).margin;
+  const withAdded = agent.orderEarnings({ items: [priced, shopAdded] }).margin;
+  t.check(alone === withAdded,
+    `a line the shop adds does not change what the agent earns (${alone} -> ${withAdded})`);
+  t.check(agent.orderEarnings({ items: [shopAdded] }).margin === 0,
+    'on its own it earns nothing, rather than costing the whole shop price');
+  t.check(board.orderEarnings([priced, shopAdded]) === board.orderEarnings([priced]),
+    'and the leaderboard agrees, so it cannot push an agent down the table either');
+
+  const below = agent.orderEarnings({ items: [{ agentSellPrice: 900, sellPrice: 1000, qty: 4 }] }).margin;
+  t.check(below === -400,
+    `an agent who priced BELOW the shop still carries that loss (got ${below}, expected -400)`);
+
+  // A bonus is the shop's money and is owed on the line regardless of what
+  // the agent charged for it, so it is counted either way.
+  t.check(agent.orderEarnings({ items: [{ sellPrice: 12000, qty: 5, bonusCommission: 750 }] }).bonus === 750,
+    'a bonus on an unpriced line is still the shop\'s to pay');
+
+  [undefined, null, '', 'abc', {}].forEach((v) => {
+    const m = agent.orderEarnings({ items: [{ agentSellPrice: v, sellPrice: 1000, qty: 2 }] }).margin;
+    t.check(m === 0, `agentSellPrice=${JSON.stringify(v)} earns nothing rather than -2000 (got ${m})`);
+  });
+  t.check(agent.orderEarnings({ items: [{ agentSellPrice: '1200', sellPrice: '1000', qty: '3' }] }).margin === 600,
+    'while a numeric string is still a price, since that is how it arrives from a form');
+  t.check(agent.orderEarnings({ items: [{ agentSellPrice: 0, sellPrice: 1000, qty: 2 }] }).margin === -2000,
+    'and an explicit zero is a price the agent set -- giving it away is not the same as not pricing it');
 }
 
 /* ---------- 3. monthEarnings scopes to the right orders ---------------- */

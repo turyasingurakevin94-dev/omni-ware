@@ -2534,10 +2534,32 @@ function currentMonthKey(){
 // entirely their own business, and a supplier-funded bonus that only
 // exists for items that were already in their cluster at sale time.
 // Voided orders never happened as far as either stream is concerned.
+// Whether this line carries a price the agent actually set.
+//
+// The admin's item picker writes sellPrice and has no agentSellPrice to
+// write (index.html, "data.quote.items.push"), so a line the shop adds to
+// an agent's order after the fact arrives without one. Coercing that
+// absence to 0 made the line's margin (0 - sellPrice) * qty: the agent's
+// earnings FELL by the full shop value of a line they never priced and
+// never agreed to -- on their own earnings screen and, through the same
+// formula in agent-leaderboard, on their public rank.
+//
+// Selling below the shop price is a real thing an agent can choose to do
+// and stays negative. Not having priced a line at all is not the same
+// thing, and must not be counted as the worst possible sale.
+//
+// Non-numeric fails the same way it fails absence, which also keeps NaN
+// out of a total that feeds a league table.
+function agentLinePriced(it){
+  return !!it && it.agentSellPrice !== null && it.agentSellPrice !== undefined
+    && it.agentSellPrice !== '' && Number.isFinite(Number(it.agentSellPrice));
+}
 function orderEarnings(o){
   let margin = 0, bonus = 0;
   (o.items||[]).forEach(it=>{
-    margin += ((Number(it.agentSellPrice)||0) - (Number(it.sellPrice)||0)) * (Number(it.qty)||0);
+    if(agentLinePriced(it)){
+      margin += (Number(it.agentSellPrice) - (Number(it.sellPrice)||0)) * (Number(it.qty)||0);
+    }
     bonus += Number(it.bonusCommission)||0;
   });
   return { margin, bonus, total: margin + bonus };

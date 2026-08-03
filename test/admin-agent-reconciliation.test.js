@@ -44,7 +44,7 @@ try {
 } catch (e) { adminErr = e; }
 try {
   agent = compileScope(
-    ['orderTotal', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
+    ['orderTotal', 'agentLinePriced', 'orderEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
     {}, ['orderTotal', 'orderEarnings'],
   );
 } catch (e) { agentErr = e; }
@@ -200,7 +200,7 @@ if (admin && agent) {
   let monthEarnings = null, meErr = null;
   try {
     ({ monthEarnings } = compileScope(
-      ['orderEarnings', 'monthEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
+      ['agentLinePriced', 'orderEarnings', 'monthEarnings'].map(n => extractFunction(agentSrc, n, 'agent.html')),
       { myOrders: rows }, ['monthEarnings'],
     ));
   } catch (e) { meErr = e; }
