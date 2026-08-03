@@ -1675,6 +1675,39 @@
   tr.fa-gone td{opacity:.6;}
   .fa-sub.warn{color:var(--ow-amber-ink);}
   .fa-neg{color:var(--ow-crimson);}
+
+  /* Statements. Three columns on a desk, stacked on a phone. */
+  .st-period{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .st-period .btn{padding:7px 12px;font-size:12.5px;}
+  .st-period input{width:auto;min-width:132px;}
+  .st-to{font-size:12px;color:var(--ink-soft);}
+  .st-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;}
+  .st-card{border:1px solid var(--line);border-radius:12px;padding:16px 16px 14px;background:var(--panel);}
+  .st-card h3{margin:0;font-size:15px;font-weight:700;color:var(--ink);}
+  .st-sub{margin:3px 0 12px;font-size:11.5px;color:var(--ow-ink-400);}
+  .st-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .st-table td{padding:5px 0;color:var(--ink-soft);}
+  .st-table td.r{text-align:right;}
+  .st-table td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .st-table tr.st-total td{border-top:1px solid var(--line);font-weight:700;color:var(--ink);padding-top:7px;}
+  .st-table tr.st-grand td{
+    border-top:2px solid var(--ink);font-weight:700;color:var(--ink);
+    padding-top:8px;font-size:13.5px;
+  }
+  .st-table tr.st-spacer td{padding:5px 0;}
+  .st-note{margin:12px 0 0;font-size:11.5px;line-height:1.55;color:var(--ow-ink-400);}
+  /* The reconciliation notes are the point, not a footnote: with no
+     general ledger they stand in for a trial balance. */
+  .st-checks{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
+  .st-checks h3{margin:0 0 12px;font-size:14px;font-weight:700;color:var(--ink);}
+  .st-check{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-top:1px solid var(--ow-rule-soft);}
+  .st-check:first-of-type{border-top:0;}
+  .st-check .icon{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
+  .st-check.ok .icon{color:var(--good);}
+  .st-check.bad .icon{color:var(--ow-amber-ink);}
+  .st-check.note .icon{color:var(--ow-ink-400);}
+  .st-check b{display:block;font-size:12.5px;color:var(--ink);}
+  .st-check span{display:block;font-size:12px;line-height:1.55;color:var(--ink-soft);margin-top:2px;}
   .sc-stat.bad b{color:var(--ow-crimson);}
   /* A flat rate is not the rate it says on the paper, and that is the one
      thing on this screen worth interrupting for. */
@@ -2388,6 +2421,7 @@
       <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase Analytics</button>
       <button type="button" class="mms-item" data-tab="assets">Assets</button>
       <button type="button" class="mms-item" data-tab="loans">Loans</button>
+      <button type="button" class="mms-item" data-tab="statements">Statements</button>
       <button type="button" class="mms-item" data-tab="analytics-debtors">Debtors List</button>
       <button type="button" class="mms-item" data-tab="analytics-creditors">Creditors List</button>
     </div>
@@ -2478,6 +2512,10 @@
       <button data-tab="assets" title="What the shop owns and uses">
         <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-5h6v5"/><path d="M5 14h14"/></svg>
         <span class="nav-label">Assets</span>
+      </button>
+      <button data-tab="statements" title="Profit, position and cash flow">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 12h6M9 16h6"/></svg>
+        <span class="nav-label">Statements</span>
       </button>
       <button data-tab="loans" title="Money the shop has borrowed">
         <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M2 11h20"/><path d="M6 15h4"/></svg>
@@ -3356,6 +3394,26 @@
         </div>
         <div id="fa_summary"></div>
         <div id="fa_tableWrap"></div>
+      </div>
+    </section>
+
+    <!-- FINANCIAL STATEMENTS -->
+    <section id="tab-statements" style="display:none;">
+      <div class="page-head">
+        <h1>Statements</h1>
+        <p>What the shop earned, what it is worth, and where the money went — built from the same records the rest of the app uses, so they are never out of date.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Period</h2>
+          <div class="st-period">
+            <button type="button" class="btn btn-ghost st-preset" data-preset="month">This month</button>
+            <button type="button" class="btn btn-ghost st-preset" data-preset="quarter">This quarter</button>
+            <button type="button" class="btn btn-ghost st-preset" data-preset="year">This year</button>
+            <input type="date" id="st_from"><span class="st-to">to</span><input type="date" id="st_to">
+          </div>
+        </div>
+        <div id="st_body"></div>
       </div>
     </section>
 
@@ -5445,6 +5503,7 @@ function goToTab(tab){
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
+  if(tab==='statements') renderStatements();
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
@@ -16837,6 +16896,328 @@ function loanPerformance(loan, asOfISO){
   };
 }
 
+/* ================= FINANCIAL STATEMENTS =================
+
+   Assembled from the subledgers rather than posted to a general ledger,
+   which is the architecture chosen for phase 1. Everything below is
+   derived on read, so the statements are never stale and there is no
+   posting step to forget.
+
+   The cost of that choice is stated on the face of the balance sheet
+   rather than buried: with no double entry, equity is what is left when
+   liabilities are taken from assets, so the sheet BALANCES BY
+   CONSTRUCTION and cannot catch an error the way a trial balance would.
+   What can be checked is checked, and shown -- the reconciliation notes
+   at the bottom of each statement are the substitute, and they are the
+   reason to trust or distrust the numbers above them. */
+
+// Stock at what it actually cost, from the same FIFO lots COGS is drawn
+// from. Stock whose cost was never recorded -- entered by a count, or
+// returned by an un-invoice -- is counted separately rather than valued
+// at a guess.
+function inventoryValue(){
+  let value = 0, uncostedQty = 0;
+  const lots = data.stockLots || {};
+  Object.keys(lots).forEach(k=>{
+    (lots[k]||[]).forEach(l=>{
+      const q = Number(l.qty)||0;
+      if(l.cost == null) uncostedQty += q; else value += q * (Number(l.cost)||0);
+    });
+  });
+  return { value, uncostedQty };
+}
+
+/* Trading for a period.
+
+   Revenue and cost of sales come from invoices, so both sit on the same
+   accrual footing -- a sale is earned when it is invoiced, not when it is
+   paid for. Operating costs come from the cash book, so they land when
+   they were paid. That mixture is deliberate and was settled in phase 1:
+   the alternative needs a prepayments subledger this app does not have,
+   and a lone accrual among cash entries is worse than a consistent
+   simplification. It is named on the statement so nobody has to guess. */
+function incomeStatement(fromISO, toISO){
+  const invoices = anInvoicesInRange(fromISO, toISO);
+  const trade = anOverallTotals(invoices);
+  const cash = dashCashTxnsInRange(fromISO, toISO);
+
+  const opexRows = {};
+  cash.filter(cashIsOperatingExpense).forEach(t=>{
+    const k = t.category || 'Uncategorised';
+    opexRows[k] = (opexRows[k]||0) + (Number(t.amount)||0);
+  });
+  const opex = Object.values(opexRows).reduce((s,v)=>s+v, 0);
+
+  const depreciation = depreciationForPeriod(fromISO, toISO);
+  const interest = loanInterestForPeriod(fromISO, toISO);
+  const loanFeesCharged = loanFeesForPeriod(fromISO, toISO);
+
+  // Selling a thing for more or less than the books said it was worth is
+  // a correction for having guessed its life wrong, not trading -- so it
+  // sits below operating profit on its own line.
+  const disposals = liveFixedAssets()
+    .filter(a=> a.disposedOn && a.disposedOn >= fromISO && a.disposedOn <= toISO)
+    .map(a=>({ asset:a, ...assetDisposalResult(a) }));
+  const disposalGain = disposals.reduce((s,d)=> s + d.gain, 0);
+
+  const grossProfit = trade.sales - trade.cost;
+  const operatingProfit = grossProfit - opex - depreciation;
+  const netProfit = operatingProfit + disposalGain - interest - loanFeesCharged;
+
+  return {
+    from: fromISO, to: toISO,
+    revenue: trade.sales, costOfSales: trade.cost, grossProfit,
+    grossMarginPct: trade.sales>0 ? grossProfit/trade.sales*100 : 0,
+    opexRows, opex, depreciation, operatingProfit,
+    disposals, disposalGain, interest, loanFees: loanFeesCharged,
+    netProfit,
+    netMarginPct: trade.sales>0 ? netProfit/trade.sales*100 : 0,
+    invoiceCount: invoices.length,
+    // How much of the cost figure above is estimate rather than evidence.
+    estimatedCostUnits: trade.estimatedQty,
+  };
+}
+
+/* Where the shop stands, as at today.
+
+   Deliberately not offered for an arbitrary past date. Cash, what
+   customers owe and what is on the shelf are all CURRENT balances in this
+   data model -- a stored number, not a replayable history -- so a sheet
+   dated last March would be today's figures under last March's heading.
+   That is worse than not offering it. Fixed assets and loans can be
+   stated at any date, but a balance sheet is only ever as good as its
+   weakest line. */
+function balanceSheetToday(){
+  const asOf = todayISO();
+  const cash = cashOnHandByAccount();
+  const receivables = dashTotalDebtors();
+  const inv = inventoryValue();
+  const fixed = fixedAssetsNBVAt(asOf);
+  const assets = cash.total + receivables + inv.value + fixed;
+
+  const payables = dashTotalCreditors();
+  const loans = loansOutstandingAt(asOf);
+  const liabilities = payables + loans;
+
+  // Owner money in and out, from the cash book. What is left of equity
+  // after it is retained earnings -- and it is a PLUG, not a computed
+  // figure, because nothing here posts a double entry.
+  const ownerIn = (data.cashTxns||[])
+    .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment')
+    .reduce((s,t)=> s + (Number(t.amount)||0), 0);
+  const equity = assets - liabilities;
+
+  return {
+    asOf,
+    cashAccounts: cash.byAccount, cash: cash.total,
+    receivables, inventory: inv.value, inventoryUncostedQty: inv.uncostedQty,
+    fixedAssets: fixed, assets,
+    payables, loans, liabilities,
+    ownerCapital: ownerIn, retainedEarnings: equity - ownerIn, equity,
+  };
+}
+
+/* Where the money went.
+
+   Built from the cash book alone, so it reconciles to something countable
+   -- which is the one statement here that CAN be checked against reality,
+   and the reason the check is shown. */
+function cashFlowStatement(fromISO, toISO){
+  const rows = dashCashTxnsInRange(fromISO, toISO);
+  const sum = (f)=> rows.filter(f).reduce((s,t)=> s + (Number(t.amount)||0), 0);
+
+  const tradingIn = sum(cashIsTradingIncome);
+  const operatingOut = sum(cashIsOperatingExpense);
+  // Named rather than "everything that is not a running cost": that set
+  // also holds Loan Repayment, which is financing, and folding it in here
+  // reported a repayment as money spent on stock.
+  const stockOut = sum(t=> cashIsMoneyOut(t)
+    && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'));
+  const debtCollected = sum(t=> cashIsMoneyIn(t) && t.category === 'Debt Collection');
+  const operating = tradingIn + debtCollected - operatingOut - stockOut;
+
+  const borrowed = sum(t=> cashIsMoneyIn(t) && t.category === 'Loan Received');
+  const ownerIn = sum(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment');
+  const repaid = sum(t=> cashIsMoneyOut(t) && t.category === 'Loan Repayment');
+  const financing = borrowed + ownerIn - repaid;
+
+  const netMovement = rows.reduce((s,t)=> s + (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0), 0);
+  return {
+    from: fromISO, to: toISO,
+    tradingIn, debtCollected, operatingOut, stockOut, operating,
+    borrowed, ownerIn, repaid, financing,
+    netMovement,
+    // Investing is not broken out: an asset purchase is recorded in the
+    // cash book under whatever category the shopkeeper chose, and
+    // guessing which payments were capital would be inventing a fact.
+    // Named here so its absence is a decision rather than an oversight.
+    //
+    // This should always be zero as the categories stand -- every
+    // movement belongs to one of the sections above. It is a tripwire
+    // rather than a figure: a category added or reclassified later could
+    // fall between them, and a cash-flow statement that does not add up
+    // should say so rather than quietly lose the difference.
+    unclassified: netMovement - (operating + financing),
+  };
+}
+
+/* What can be checked, checked.
+
+   With no general ledger the balance sheet balances by construction, so
+   it proves nothing. These are the things that CAN disagree, and showing
+   them is what makes the statements worth trusting. */
+function statementChecks(is, bs, cf){
+  const checks = [];
+  const day = (data.cashDays||{})[bs.asOf];
+  const counted = day && day.actual
+    ? ACCOUNTS.reduce((s,a)=>{
+        const v = day.actual[a.key];
+        return s + ((v===null || v===undefined || v==='') ? 0 : Number(v));
+      }, 0)
+    : null;
+  const anyCounted = day && day.actual && ACCOUNTS.some(a=>{
+    const v = day.actual[a.key];
+    return !(v===null || v===undefined || v==='');
+  });
+  if(anyCounted){
+    const diff = bs.cash - counted;
+    checks.push({
+      ok: Math.abs(diff) < 1,
+      label: 'Cash on the books against what was counted today',
+      detail: Math.abs(diff) < 1
+        ? 'They agree.'
+        : `The books say ${fmtUGX(Math.round(bs.cash))}, the count says ${fmtUGX(Math.round(counted))} — a difference of ${fmtUGX(Math.round(Math.abs(diff)))}.`,
+    });
+  } else {
+    checks.push({ ok: null, label: 'Cash against a physical count',
+      detail: 'Nothing counted today, so the cash figure is unverified. Close the day in the Cash Book to check it.' });
+  }
+  if(is.estimatedCostUnits > 0){
+    checks.push({ ok: false, label: 'Cost of sales resting on estimates',
+      detail: `${is.estimatedCostUnits} unit${is.estimatedCostUnits===1?'':'s'} sold in this period had no recorded purchase cost, so their cost is the quoted estimate rather than what was actually paid.` });
+  }
+  if(bs.inventoryUncostedQty > 0){
+    checks.push({ ok: false, label: 'Stock with no cost on file',
+      detail: `${bs.inventoryUncostedQty} unit${bs.inventoryUncostedQty===1?'':'s'} on the shelf were never given a purchase cost, so they are valued at nothing. Stock is understated by whatever they cost.` });
+  }
+  if(Math.abs(cf.unclassified) >= 1){
+    checks.push({ ok: false, label: 'Cash movement not accounted for above',
+      detail: `${fmtUGX(Math.round(Math.abs(cf.unclassified)))} moved without falling into trading, buying or financing — most likely a repayment or a category nothing knows how to place.` });
+  }
+  checks.push({ ok: null, label: 'The balance sheet balances by construction',
+    detail: 'Equity is what is left after liabilities are taken from assets, so this sheet cannot fail to balance and a balancing sheet is not evidence of anything. The checks above are what stand in for a trial balance.' });
+  return checks;
+}
+
+/* ---- Statements on screen ---- */
+function stDefaultRange(preset){
+  const today = todayISO();
+  const [y,m] = today.split('-').map(Number);
+  if(preset==='year') return { from:`${y}-01-01`, to:today };
+  if(preset==='quarter'){
+    const qStart = Math.floor((m-1)/3)*3 + 1;
+    return { from:`${y}-${String(qStart).padStart(2,'0')}-01`, to:today };
+  }
+  return { from:`${y}-${String(m).padStart(2,'0')}-01`, to:today };
+}
+const stRow = (label, value, cls)=>
+  `<tr class="${cls||''}"><td>${esc(label)}</td><td class="r num">${fmtUGX(Math.round(value))}</td></tr>`;
+function renderStatements(){
+  const fromEl = document.getElementById('st_from'), toEl = document.getElementById('st_to');
+  if(!fromEl.value || !toEl.value){
+    const d = stDefaultRange('month');
+    fromEl.value = d.from; toEl.value = d.to;
+  }
+  const from = fromEl.value, to = toEl.value;
+  if(from > to){
+    document.getElementById('st_body').innerHTML = '<div class="empty">The start of the period is after its end.</div>';
+    return;
+  }
+  const is = incomeStatement(from, to);
+  const bs = balanceSheetToday();
+  const cf = cashFlowStatement(from, to);
+  const checks = statementChecks(is, bs, cf);
+
+  document.getElementById('st_body').innerHTML = `
+    <div class="st-grid">
+      <section class="st-card">
+        <h3>Profit and loss</h3>
+        <p class="st-sub">${esc(from)} to ${esc(to)} · ${is.invoiceCount} invoice${is.invoiceCount===1?'':'s'}</p>
+        <table class="st-table">
+          ${stRow('Revenue', is.revenue)}
+          ${stRow('Cost of sales', -is.costOfSales)}
+          ${stRow('Gross profit', is.grossProfit, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${Object.keys(is.opexRows).sort().map(k=>stRow(k, -is.opexRows[k])).join('')}
+          ${is.depreciation ? stRow('Depreciation', -is.depreciation) : ''}
+          ${stRow('Operating profit', is.operatingProfit, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${is.disposalGain ? stRow(is.disposalGain>=0?'Gain on assets sold':'Loss on assets sold', is.disposalGain) : ''}
+          ${is.interest ? stRow('Loan interest', -is.interest) : ''}
+          ${is.loanFees ? stRow('Loan arrangement fees', -is.loanFees) : ''}
+          ${stRow('Net profit', is.netProfit, 'st-grand')}
+        </table>
+        <p class="st-note">${is.grossMarginPct.toFixed(1)}% gross margin, ${is.netMarginPct.toFixed(1)}% net. Sales counted when invoiced; costs when paid.</p>
+      </section>
+
+      <section class="st-card">
+        <h3>Balance sheet</h3>
+        <p class="st-sub">As at ${esc(bs.asOf)} — today only, see the note below</p>
+        <table class="st-table">
+          ${bs.cashAccounts.map(a=>stRow(a.label, a.amount)).join('')}
+          ${stRow('Owed by customers', bs.receivables)}
+          ${stRow('Stock on the shelf', bs.inventory)}
+          ${stRow('Equipment and vehicles', bs.fixedAssets)}
+          ${stRow('Total assets', bs.assets, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${stRow('Owed to suppliers', bs.payables)}
+          ${stRow('Loans outstanding', bs.loans)}
+          ${stRow('Total liabilities', bs.liabilities, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${stRow("Owner's money put in", bs.ownerCapital)}
+          ${stRow('Retained earnings', bs.retainedEarnings)}
+          ${stRow('Net worth of the business', bs.equity, 'st-grand')}
+        </table>
+      </section>
+
+      <section class="st-card">
+        <h3>Cash flow</h3>
+        <p class="st-sub">${esc(from)} to ${esc(to)}</p>
+        <table class="st-table">
+          ${stRow('Received from sales', cf.tradingIn)}
+          ${stRow('Collected from debtors', cf.debtCollected)}
+          ${stRow('Spent on stock and suppliers', -cf.stockOut)}
+          ${stRow('Running costs paid', -cf.operatingOut)}
+          ${stRow('From trading', cf.operating, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${cf.borrowed ? stRow('Borrowed', cf.borrowed) : ''}
+          ${cf.ownerIn ? stRow('Put in by the owner', cf.ownerIn) : ''}
+          ${cf.repaid ? stRow('Loan repayments', -cf.repaid) : ''}
+          ${stRow('From financing', cf.financing, 'st-total')}
+          <tr class="st-spacer"><td colspan="2"></td></tr>
+          ${Math.abs(cf.unclassified)>=1 ? stRow('Not classified', cf.unclassified) : ''}
+          ${stRow('Money in the till moved by', cf.netMovement, 'st-grand')}
+        </table>
+      </section>
+    </div>
+
+    <section class="st-checks">
+      <h3>What these numbers rest on</h3>
+      ${checks.map(c=>`<div class="st-check ${c.ok===true?'ok':(c.ok===false?'bad':'note')}">
+        ${c.ok===true?ICON_CHECK:(c.ok===false?ICON_WARN:ICON_ITEMS)}
+        <div><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></div>
+      </div>`).join('')}
+    </section>`;
+}
+document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', ()=>{
+  const d = stDefaultRange(b.dataset.preset);
+  document.getElementById('st_from').value = d.from;
+  document.getElementById('st_to').value = d.to;
+  renderStatements();
+}));
+['st_from','st_to'].forEach(id=>
+  document.getElementById(id).addEventListener('change', renderStatements));
+
 /* ---- Loans on screen ---- */
 function loanMethodLabel(l){
   return l.method==='flat' ? `Flat ${Number(l.ratePct)||0}%` : `Reducing ${Number(l.ratePct)||0}%`;
@@ -17304,6 +17685,11 @@ document.getElementById('fa_save').addEventListener('click', ()=>{
 const CASH_NOT_OPEX = {
   'Stock Purchase': 'inventory — costed through COGS when sold',
   'Supplier Payment': 'settles a payable already costed',
+  // Repaying a loan is not a cost. The principal settles a liability the
+  // shop already has, and the interest is charged from the loan's own
+  // record -- counting the payment here would expense the principal, which
+  // was never an expense, and charge the interest twice.
+  'Loan Repayment': 'settles borrowing — interest comes from the loan itself',
 };
 const CASH_NOT_REVENUE = {
   'Loan Received': 'borrowing — a liability, not income',
