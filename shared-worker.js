@@ -428,7 +428,7 @@ function renderWorkerView(){
         <div class="wv-hero">
           <p class="wv-hero-label">Now picking</p>
           <p class="wv-hero-name">${esc(active.client.name||'Unnamed client')}</p>
-          <p class="wv-hero-progress-label">${answered} of ${items.length} picked${shortCount ? ` · ${shortCount} short` : ''}</p>
+          <p class="wv-hero-progress-label">${answered} of ${items.length} picked${shortCount ? ` · ${shortCount} Short` : ''}</p>
           <div class="wv-hero-track"><div class="wv-hero-fill" style="width:${pct}%;"></div></div>
         </div>`;
     }
