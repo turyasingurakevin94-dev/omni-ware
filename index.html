@@ -1542,6 +1542,14 @@
   .ps-line-name{font-size:12.5px;font-weight:700;min-width:0;overflow-wrap:anywhere;}
   .ps-line-nums{font-family:'IBM Plex Mono',monospace;font-size:12px;flex-shrink:0;}
   .ps-line-nums b{font-size:14px;}
+  /* Money the shop would be holding that is not its own. Oxide rather than
+     the amber the shortfall itself uses -- the shortfall is a decision to
+     make, this is a consequence to take away and act on. */
+  .ps-credit{
+    margin:10px 0 0;padding:9px 11px;border-radius:6px;
+    background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);
+    font-size:12px;font-weight:600;line-height:1.45;
+  }
   /* Three buttons rather than the usual two, because "not now" and "it went
      out in full anyway" are genuinely different answers and collapsing them
      would make one of them the X in the corner. .modal-foot does not wrap,
@@ -3376,6 +3384,7 @@
       <p class="preset-hint" id="pickShortHint"></p>
       <div class="ps-lines" id="pickShortLines"></div>
       <p class="preset-hint" id="pickShortTotals"></p>
+      <p class="ps-credit" id="pickShortCredit" style="display:none;"></p>
       <p class="preset-hint">The invoice and the stock deduction are both built from the ordered quantities, so this has to be settled before the order can be invoiced.</p>
     </div>
     <div class="modal-foot">
@@ -7254,8 +7263,34 @@ function openPickShortfallModal(orderId, fromInvoice){
   // actually does.
   const asPicked = cloneJSON(q);
   amendOrderToPickedQuantities(asPicked);
+  const amendedTotal = savedQuoteTotal(asPicked);
   document.getElementById('pickShortTotals').textContent =
-    `Billing what was picked makes this order ${fmtUGX(savedQuoteTotal(asPicked))}, down from ${fmtUGX(savedQuoteTotal(q))}.`;
+    `Billing what was picked makes this order ${fmtUGX(amendedTotal)}, down from ${fmtUGX(savedQuoteTotal(q))}.`;
+
+  // Money already taken that the amended order no longer accounts for.
+  //
+  // invoiceBalanceDue() is Math.max(0, total - paid), so once the total
+  // drops below what has been paid the difference stops existing everywhere
+  // downstream -- the order shows nothing due, the customer shows no debt,
+  // and the agent's prepayment reads as settled. Nothing is wrong with that
+  // clamp; a customer does not owe a negative amount. But it means the app
+  // has no way to say the money is theirs, and this button is the one place
+  // that routinely creates it: a prepay agent pays for five bags and three
+  // leave the shop.
+  //
+  // So it is said here, before the button is pressed, while "supplied in
+  // full anyway" is still on screen -- which is the right answer whenever
+  // the goods actually went out and only the count was wrong.
+  const paid = Number(q.amountPaid) || 0;
+  const owed = paid - amendedTotal;
+  const creditEl = document.getElementById('pickShortCredit');
+  if(owed > 0){
+    creditEl.textContent = `${q.client.name || 'This customer'} has already paid ${fmtUGX(paid)}. Amending leaves them ${fmtUGX(owed)} in credit, which this app does not track — you would need to refund it or carry it against their next order.`;
+    creditEl.style.display = '';
+  } else {
+    creditEl.textContent = '';
+    creditEl.style.display = 'none';
+  }
   openModal('pickShortModal');
 }
 document.getElementById('pickShortAmend').addEventListener('click', ()=>{

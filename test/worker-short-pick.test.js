@@ -521,6 +521,54 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         'short is its own colour, not a shade of done or of the button');
     }
 
+    /* ---------- 12. money already taken that the order no longer wants -- */
+    /*
+     * "Bill for what was picked" moves the total down. If the customer has
+     * already paid more than that, the difference is theirs -- and
+     * invoiceBalanceDue() is Math.max(0, total - paid), so from that moment
+     * it stops existing everywhere downstream: nothing due on the order, no
+     * debt on the customer, and a prepay agent's prepayment reads as
+     * settled. The clamp is right (nobody owes a negative amount) but it
+     * leaves the app unable to say the money is owed back.
+     *
+     * A prepay agent is the routine case: they pay for five bags before the
+     * pick starts and three leave the shop. So it is said at the decision,
+     * while "Supplied in full anyway" -- the right answer whenever the goods
+     * did go out and only the count was wrong -- is still on screen.
+     */
+    {
+      const admin = read('index.html');
+
+      t.check(/<p class="ps-credit" id="pickShortCredit" style="display:none;"><\/p>/.test(admin),
+        'the modal has somewhere to say it, hidden until there is something to say');
+      t.check(/const owed = paid - amendedTotal;/.test(admin),
+        'which is what has been paid less what the amended order comes to');
+      // Scoped to the line it guards. `if(owed > 0){` on its own also matches
+      // the agent-prepayment path further up the file, so the bare pattern
+      // passes even with this one's guard removed.
+      t.check(/if\(owed > 0\)\{\s*[\r\n]+\s*creditEl\.textContent =/.test(admin),
+        'and it only appears when that is money the shop would be holding');
+      t.check(/creditEl\.style\.display = 'none';/.test(admin),
+        'and is hidden again otherwise, rather than left over from a previous order');
+
+      // The clamp this is compensating for, so the reason stays pinned to
+      // the thing that causes it.
+      t.check(/function invoiceBalanceDue\(q\)\{\s*return Math\.max\(0, savedQuoteTotal\(q\) - \(Number\(q\.amountPaid\)\|\|0\)\);/.test(admin),
+        'invoiceBalanceDue still clamps at zero, which is why nothing downstream reports it');
+
+      // The boundary, over the four shapes an order arrives in.
+      const owedBy = (paid, amendedTotal) => Math.max(0, paid - amendedTotal);
+      t.check(owedBy(10000, 6000) === 4000, 'a prepaid order amended downward leaves a credit');
+      t.check(owedBy(4000, 6000) === 0, 'one still part-paid leaves none -- they owe the balance');
+      t.check(owedBy(6000, 6000) === 0, 'paying exactly the amended total leaves none');
+      t.check(owedBy(0, 6000) === 0, 'and an unpaid order leaves none');
+
+      // Oxide, not the amber the shortfall itself uses: the shortfall is a
+      // decision to take, this is a consequence to carry away.
+      t.check(/\.ps-credit\{[^}]*background:var\(--ow-oxide-soft\);color:var\(--ow-oxide-deep\);/.test(admin),
+        'and it is coloured apart from the shortfall lines above it');
+    }
+
     process.exit(t.done() ? 1 : 0);
   })();
 }
