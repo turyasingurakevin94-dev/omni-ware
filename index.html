@@ -6722,6 +6722,21 @@ document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>c
 const STAGE_ASSIGNMENT_ROLE = { preparing: 'worker', pending_delivery: 'delivery' };
 const STAGE_ASSIGNMENT_FIELD = { worker: 'assignedWorkerId', delivery: 'assignedDeliveryId' };
 
+// An order in Being Prepared with nobody who can actually pick it.
+//
+// Either nobody is assigned -- a worker declined it, or it was sent back --
+// or the person assigned no longer exists. deleteStaff now releases the
+// orders it would strand, but shops carry rows from before it did, and those
+// need a way out too: assignedWorkerId pointing at a deleted staff member is
+// invisible to every worker's app and skipped by autoAssignNextOrder, so
+// without this the board would show it as being prepared by "(removed
+// staff)" and offer nothing to do about it.
+function orderNeedsWorker(q){
+  if(!q || q.status!=='preparing') return false;
+  if(!q.assignedWorkerId) return true;
+  return !(data.staff||[]).some(s=>s.id===q.assignedWorkerId);
+}
+
 function stepSavedQuoteStatus(id, dir){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q) return;
@@ -7412,8 +7427,8 @@ function renderSavedQuotes(){
             <div class="sq-meta-row">• Saved ${esc(savedAgoLabel(q.savedAt))}</div>
             <div class="sq-meta-row">• ${q.items.length} item${q.items.length===1?'':'s'}</div>
             <div class="sq-meta-row">• ${fmtUGX(savedQuoteTotal(q))}</div>
-            ${(q.status==='preparing' && q.assignedWorkerId) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
-            ${(q.status==='preparing' && !q.assignedWorkerId) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">Nobody assigned</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
+            ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
+            ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && q.assignedDeliveryId) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
             ${orderHasPickShortfall(q) ? `<button type="button" class="sq-short-flag" data-id="${q.id}" title="The picker found less than this order asks for — click to settle it">${ICON_WARN}<span>${esc(pickShortfallLabel(q))}</span></button>` : ''}
           </div>
@@ -9387,10 +9402,33 @@ async function sendLoginInvite(id){
   }
 }
 function deleteStaff(id){
-  if(!confirm('Delete this staff member? Orders already assigned to them will keep showing their name.')) return;
+  // An order they are still preparing has to be let go of, or it is stranded
+  // for good: assignedWorkerId keeps pointing at somebody who no longer
+  // exists, so no worker's app can see it (myWorkerOrders matches on staff
+  // id), autoAssignNextOrder skips it as already assigned, and the board's
+  // Assign button does not appear because the order still "has" a worker.
+  // The card reads "being prepared by (removed staff)" and nothing on any
+  // screen can move it.
+  //
+  // Only the live ones. A completed order keeps its assignment, which is
+  // what the warning has always promised -- that is the record of who
+  // prepared it, and staffName() already renders a departed member
+  // gracefully.
+  const releasing = (data.savedQuotes||[]).filter(q=>q.assignedWorkerId===id && q.status==='preparing' && !q.voided);
+  const msg = releasing.length
+    ? `Delete this staff member? ${releasing.length} order${releasing.length===1?'':'s'} they are preparing will go back to the board for someone else. Orders they have already finished keep their name.`
+    : 'Delete this staff member? Orders they have already finished will keep showing their name.';
+  if(!confirm(msg)) return;
+  releasing.forEach(q=>{
+    q.assignedWorkerId = null;
+    resetPickingProgress(q); // shared-worker.js -- the pick goes with the picker
+  });
   data.staff = data.staff.filter(s=>s.id!==id);
   saveData(); renderStaff();
-  toast('Staff member deleted');
+  refreshAdminOrderBoardIfOpen();
+  toast(releasing.length
+    ? `Staff member deleted — ${releasing.length} order${releasing.length===1?'':'s'} released for reassignment`
+    : 'Staff member deleted');
 }
 document.getElementById('st_add_btn').addEventListener('click', ()=>{ resetStaffForm(); openModal('staffModal'); });
 document.getElementById('st_save').addEventListener('click', ()=>{

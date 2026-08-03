@@ -29,17 +29,19 @@ const shared = read('shared-worker.js');
 
 /* ---------- 1. the card says when nobody is on it --------------------- */
 {
-  t.check(/\$\{\(q\.status==='preparing' && !q\.assignedWorkerId\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
-    'an order in Being Prepared with no worker draws its own row');
-  t.check(/<span class="sq-assignee-name">Nobody assigned<\/span>/.test(admin),
-    'and says so in words');
+  t.check(/orderNeedsWorker\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
+    'an order in Being Prepared with nobody who can pick it draws its own row');
+  t.check(/'Assigned to someone no longer on staff' : 'Nobody assigned'/.test(admin),
+    'and says which of the two it is');
   t.check(/class="sq-assign-btn" data-id="\$\{q\.id\}"/.test(admin),
     'with a button to put it on somebody');
 
-  // The two rows are mutually exclusive: one assignee line, never both.
-  const assigned = /\(q\.status==='preparing' && q\.assignedWorkerId\)/.test(admin);
-  const unassigned = /\(q\.status==='preparing' && !q\.assignedWorkerId\)/.test(admin);
-  t.check(assigned && unassigned, 'the assigned and unassigned rows are conditioned on opposites');
+  // The two rows are exact opposites: one assignee line, never both, never
+  // neither. Conditioned on the same predicate rather than on two
+  // expressions that have to be kept in step by hand.
+  t.check(/\(q\.status==='preparing' && !orderNeedsWorker\(q\)\)/.test(admin)
+    && /\$\{orderNeedsWorker\(q\) \?/.test(admin),
+    'the assigned and unassigned rows are conditioned on opposites');
 }
 
 /* ---------- 2. the button opens the assignment the first one uses ----- */
@@ -86,6 +88,54 @@ const shared = read('shared-worker.js');
     'declining clears both the worker and the picking status');
   t.check(!/q\.status/.test(deny),
     'and leaves the order in Being Prepared, which is why the board needs to show it');
+}
+
+/* ---------- 4b. deleting the worker holding an order ------------------ */
+/*
+ * The other way an order ends up with nobody picking it, and the worse one.
+ * Declining leaves assignedWorkerId null, which the board can see. Deleting
+ * the staff member left it pointing at somebody who no longer exists, and
+ * that is invisible from every direction: myWorkerOrders matches on staff
+ * id so no worker's app shows it, autoAssignNextOrder skips it as already
+ * assigned, and the Assign button did not appear because the order still
+ * "had" a worker. The card read "being prepared by (removed staff)" and
+ * nothing on any screen could move it.
+ */
+{
+  const del = extractFunction(admin, 'deleteStaff', 'index.html');
+  t.check(/q\.assignedWorkerId===id && q\.status==='preparing' && !q\.voided/.test(del),
+    'deleting a staff member finds the orders they are actively preparing');
+  t.check(/q\.assignedWorkerId = null;/.test(del) && /resetPickingProgress\(q\)/.test(del),
+    'and lets go of both the assignment and the pick');
+  t.check(/Orders they have already finished keep their name|already finished will keep showing their name/.test(del),
+    'while a finished order keeps its assignment, which is the record of who prepared it');
+  // Scoped to 'preparing': a completed order is history, not work in hand.
+  t.check(!/q\.status!=='completed'/.test(del),
+    'scoped by the stage it is in rather than by excluding one');
+
+  // The count is named before the click, not discovered after it.
+  t.check(/const releasing = /.test(del) && /releasing\.length/.test(del),
+    'and the confirmation says how many orders it is about to release');
+}
+
+/* ---------- 4c. and rows already stranded by the old behaviour -------- */
+{
+  // Shops carry orders assigned to staff deleted before the fix above, so
+  // the board has to offer a way out of a state it can no longer create.
+  const needs = extractFunction(admin, 'orderNeedsWorker', 'index.html');
+  t.check(/if\(!q\.assignedWorkerId\) return true;/.test(needs),
+    'an order with nobody assigned needs a worker');
+  t.check(/return !\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedWorkerId\);/.test(needs),
+    'and so does one assigned to somebody who is no longer on staff');
+  t.check(/if\(!q \|\| q\.status!=='preparing'\) return false;/.test(needs),
+    'only while it is at Being Prepared, since that is the stage a picker is needed for');
+
+  t.check(/\$\{orderNeedsWorker\(q\) \? `<div class="sq-assignee-row sq-unassigned"/.test(admin),
+    'the card asks that question rather than only whether the field is empty');
+  t.check(/\$\{\(q\.status==='preparing' && !orderNeedsWorker\(q\)\) \? `<div class="sq-assignee-row"/.test(admin),
+    'and the "being prepared by" row is its exact opposite, so never both');
+  t.check(/Assigned to someone no longer on staff/.test(admin),
+    'and says which of the two it is');
 }
 
 /* ---------- 5. the affordance is reachable with a finger -------------- */
