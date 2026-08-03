@@ -31,7 +31,7 @@ const sharedJs = read('shared-worker.js');
 
 // Real source, with the client and the page stubbed so the order of calls can
 // be observed without a browser or a network.
-function build(token, deleteError) {
+function build(token, deleteError, confirmAnswer) {
   const seen = [];
   const sb = {
     from: (table) => ({
@@ -44,13 +44,16 @@ function build(token, deleteError) {
     }),
     auth: { signOut: () => { seen.push({ step: 'signOut' }); return Promise.resolve({}); } },
   };
-  const scope = (new Function('sb', 'location', 'console', 'myPushToken', `
+  const scope = (new Function('sb', 'location', 'console', 'confirm', 'myPushToken', `
     ${extractFunction(sharedJs, 'signOutAndReload', 'shared-worker.js')}
     return { signOutAndReload };
   `))(sb, { reload: () => seen.push({ step: 'reload' }) },
     // Serialised, not join()ed -- the second argument is the error object,
     // and join() would flatten it to "[object Object]" and assert nothing.
     { error: (...a) => seen.push({ step: 'logged', text: a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') }) },
+    // Signing out asks first. Answered yes unless a case says otherwise, so
+    // every assertion below is about what happens once it is confirmed.
+    (msg) => { seen.push({ step: 'asked', text: msg }); return confirmAnswer !== false; },
     token);
   return { seen, run: scope.signOutAndReload };
 }
@@ -97,6 +100,32 @@ function build(token, deleteError) {
     'a delete that fails is logged');
   t.check(seen.some((s) => s.step === 'signOut'), 'and the sign-out goes ahead regardless');
   t.check(seen.some((s) => s.step === 'reload'), 'as does the reload');
+}
+
+/* ---------- 3b. it asks before ending the session --------------------- */
+{
+  // The button is a 34px disc in the top corner of a screen used one-handed
+  // at a shelf, and it was given a 44px hit ring so deliberate taps land --
+  // which makes accidental ones easier too. Signing back in needs a password
+  // the worker may not have on them, and this now takes their push
+  // subscription with it, so the next order would not reach their phone.
+  const { seen, run } = build('TOKEN-abc', null, false);
+  await run();
+
+  const asked = seen.find((s) => s.step === 'asked');
+  t.check(!!asked, 'signing out asks first');
+  t.check(!!asked && /sign out/i.test(asked.text), 'in words about signing out');
+  t.check(!seen.some((s) => s.step === 'signOut'), 'and answering no leaves the session alone');
+  t.check(!seen.some((s) => s.step === 'delete'),
+    'with the push subscription still in place, so orders keep reaching the phone');
+  t.check(!seen.some((s) => s.step === 'reload'), 'and nothing reloads');
+
+  // Asked BEFORE anything is torn down, not after the subscription is gone.
+  const { seen: yes, run: runYes } = build('TOKEN-abc');
+  await runYes();
+  const iAsk = yes.findIndex((s) => s.step === 'asked');
+  const iDel = yes.findIndex((s) => s.step === 'delete');
+  t.check(iAsk === 0 && iAsk < iDel, 'and it asks before removing anything');
 }
 
 /* ---------- 4. the token is captured where it arrives ----------------- */

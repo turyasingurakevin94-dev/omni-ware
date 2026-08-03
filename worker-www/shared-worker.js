@@ -361,6 +361,13 @@ async function ensureAuthAndShop(){
 let myPushToken = null;
 
 async function signOutAndReload(){
+  // Asked, because this is a one-tap end to the session sitting in the top
+  // corner of a screen used one-handed at a shelf. Signing back in needs a
+  // password the worker may not be carrying, and it now takes their push
+  // subscription with it, so the next order would not reach their phone
+  // either. Nothing else on this screen costs that much to touch by
+  // mistake.
+  if(!confirm('Sign out of Omni-ware on this device?')) return;
   // Before the sign-out, not after: the row's policy is user_id =
   // auth.uid(), and there is no auth.uid() once signed out.
   //
