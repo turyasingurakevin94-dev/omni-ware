@@ -297,6 +297,14 @@
   .ag-rate-input.zero-margin{color:var(--danger);}
   .ag-margin-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--danger);background:var(--danger-bg);padding:2.5px 7px 2.5px 6px;border-radius:20px;margin-left:6px;}
   .ag-margin-flag .icon{width:10px;height:10px;}
+  /* Zero margin is a choice; below the floor is money out of the agent's
+     own pocket. Same family of colour so it still reads as one kind of
+     warning, filled rather than tinted so the heavier one is the one seen
+     first in a cart of several lines. */
+  .ag-margin-flag.loss{color:#fff;background:var(--danger);}
+  .ag-rate-input.below-floor{color:#fff;background:var(--danger);}
+  .ag-rate-input.below-floor:hover,
+  .ag-rate-input.below-floor:focus{background:var(--danger);box-shadow:0 0 0 1.5px var(--danger);}
   .ag-receipt-total-row td{border-bottom:none;border-top:2px solid var(--ink);padding-top:12px;}
   .ag-receipt-total-label{text-align:right;text-transform:uppercase;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);white-space:nowrap;}
   .ag-receipt-total-value{text-align:right;font-family:var(--font-money);font-size:14px;font-weight:800;color:var(--accent-dark);white-space:nowrap;}
@@ -4757,7 +4765,15 @@ async function openAddItemPanel(item){
     document.body.removeChild(el);
     updateCartBadge();
     saveQuoteDraft();
-    toast('Added to quote');
+    // Adding is the moment this happens by accident: the price field is
+    // pre-filled with the earned tier price, so a figure typed over it is
+    // easy to get wrong -- and once the sheet closes the line is one row
+    // among several. The chip in the cart says it persistently; this says
+    // it once, at the moment it can still be a surprise.
+    const added = cart[cart.length-1];
+    const addedMargin = cartLineMargin(added.agentSellPrice, added.floorPrice, added.qty);
+    toast(addedMargin.level==='ok' ? 'Added to quote' : `Added — ${addedMargin.detail}`,
+      addedMargin.level==='ok' ? undefined : 7000);
   });
 }
 
@@ -4765,6 +4781,46 @@ async function openAddItemPanel(item){
 // Shared by renderCart(), the live-typing patch, and the client-view/
 // download render -- one place computes rate/amount/profit per line so
 // the three surfaces can never quietly disagree with each other.
+/* What a line's price means against the floor -- what the shop charges
+   the agent for it, at the tier this quantity earned.
+
+   Two different things used to be one. `noMargin` was
+   `agentSellPrice <= floorPrice`, so selling AT the floor and selling
+   BELOW it both read "No margin set":
+
+     at the floor   zero margin, and a real choice -- selling at cost to
+                    win a customer or clear a slow line. The agent keeps
+                    nothing, and knows it.
+     below it       a LOSS. The agent owes the shop the floor whatever
+                    they charge their client, so the difference comes
+                    out of their own pocket.
+
+   The second is the one worth interrupting for, and it was hidden behind
+   the wording of the first. Computed here alone, because the same rule
+   was also written out by hand in renderCart's markup and again in the
+   live-typing patch, and three copies of a rule is how they drift. */
+function cartLineMargin(sellPerBase, floorPrice, baseQty){
+  const sell = Number(sellPerBase)||0;
+  const floor = Number(floorPrice)||0;
+  const qty = Number(baseQty)||0;
+  if(sell > floor) return { level:'ok', label:'', detail:'' };
+  if(sell === floor){
+    return {
+      level:'none', label:'No margin set',
+      detail:`You are charging exactly the ${fmtUGX(floor)} the shop charges you, so you keep nothing on this line.`,
+    };
+  }
+  const short = (floor - sell) * qty;
+  return {
+    level:'loss', label:`At a loss — ${fmtUGX(short)}`,
+    detail:`You owe the shop ${fmtUGX(floor)} for each one whatever you charge, so charging ${fmtUGX(sell)} costs you ${fmtUGX(short)} on this line.`,
+  };
+}
+// The chip shown against a line. Empty when the line is making money.
+function cartMarginFlagHTML(margin){
+  if(margin.level==='ok') return '';
+  return `<span class="ag-margin-flag${margin.level==='loss'?' loss':''}" title="${esc(margin.detail)}">${ICON_WARN}${esc(margin.label)}</span>`;
+}
 function cartLineFigures(it){
   const baseQty = Number(it.qty)||0;
   const agentSellPrice = Number(it.agentSellPrice)||0;
@@ -4774,8 +4830,12 @@ function cartLineFigures(it){
   const displayUnit = it.displayUnit || it.unit || '';
   const rate = displayQty>0 ? amount/displayQty : 0;
   const profit = (agentSellPrice - floorPrice) * baseQty;
-  const noMargin = agentSellPrice <= floorPrice;
-  return { baseQty, amount, displayQty, displayUnit, rate, profit, noMargin };
+  const margin = cartLineMargin(agentSellPrice, floorPrice, baseQty);
+  // Kept: half a dozen callers read it, and "not making money on this
+  // line" is still exactly what they want. `margin.level` is what tells
+  // the two kinds apart.
+  const noMargin = margin.level !== 'ok';
+  return { baseQty, amount, displayQty, displayUnit, rate, profit, noMargin, margin };
 }
 function renderCart(){
   const wrap = document.getElementById('ag_cartWrap');
@@ -4793,9 +4853,9 @@ function renderCart(){
       <td class="ag-receipt-qty">${esc(f.displayQty)} ${esc(f.displayUnit)}</td>
       <td>
         <span class="ag-receipt-name">${esc(it.name)}</span>${it.variantLabel ? ` <span class="ag-grid-variant">${esc(it.variantLabel)}</span>` : ''}
-        ${f.noMargin ? `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>` : ''}
+        ${cartMarginFlagHTML(f.margin)}
       </td>
-      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any"></td>
+      <td class="ag-receipt-rate"><input type="number" class="ag-rate-input ${f.noMargin?'zero-margin':''}${f.margin.level==='loss'?' below-floor':''}" data-idx="${i}" value="${Math.round(f.rate)}" min="0" step="any"></td>
       <td class="ag-receipt-remove"><button type="button" class="ag-cart-remove" data-idx="${i}" title="Remove"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
     </tr>`;
   }).join('');
@@ -4824,15 +4884,17 @@ function renderCart(){
       const baseQty = Number(item.qty)||0;
       const displayQty = item.displayQty!=null ? item.displayQty : baseQty;
       const previewSellPrice = baseQty>0 ? entered*displayQty/baseQty : entered;
-      const rowNoMargin = previewSellPrice <= (Number(item.floorPrice)||0);
-      input.classList.toggle('zero-margin', rowNoMargin);
+      // Through the same helper the rendered row used, so what appears
+      // while typing cannot say something different from what lands when
+      // the field is committed.
+      const rowMargin = cartLineMargin(previewSellPrice, item.floorPrice, baseQty);
+      input.classList.toggle('zero-margin', rowMargin.level!=='ok');
+      input.classList.toggle('below-floor', rowMargin.level==='loss');
       const row = input.closest('tr');
       const flagEl = row.querySelector('.ag-margin-flag');
-      if(rowNoMargin && !flagEl){
-        row.children[1].insertAdjacentHTML('beforeend', `<span class="ag-margin-flag">${ICON_WARN}No margin set</span>`);
-      } else if(!rowNoMargin && flagEl){
-        flagEl.remove();
-      }
+      if(flagEl) flagEl.remove();
+      const flagHTML = cartMarginFlagHTML(rowMargin);
+      if(flagHTML) row.children[1].insertAdjacentHTML('beforeend', flagHTML);
       let runningTotal = 0, runningProfit = 0;
       cart.forEach((it2,i2)=>{
         if(i2===idx){
