@@ -343,6 +343,17 @@ async function ensureAuthAndShop(){
   if(error) throw error;
 
   if(!memberships.length){
+    // "Create your shop" is the admin app's answer, and it is the wrong one
+    // in a picker's hands. A worker reaches here when their membership is
+    // missing -- an invite not yet processed, an admin removing them, a
+    // personal account signed in by mistake -- and creating a shop would
+    // make them the owner of an empty one, cut off from the orders they
+    // were trying to reach, with a junk shop left behind. What they need is
+    // an invite, which only their admin can send.
+    //
+    // So the host answers this, not the shared file. A host that offers no
+    // opinion gets the original behaviour.
+    if(typeof showNoShopScreen === 'function'){ await showNoShopScreen(); return; }
     currentShopId = await showCreateShopScreen();
     currentMemberRole = 'owner';
   } else if(memberships.length === 1){

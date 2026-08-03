@@ -475,6 +475,33 @@ let myStaff = null;
 let hasPushSubscription = false;
 let lastSynced = {};
 
+// What this app does instead of offering to create a shop.
+//
+// ensureAuthAndShop is shared, and its answer to "you belong to no shop" is
+// the admin app's: a Create your shop form. In a picker's hands that is
+// wrong -- they get here because their membership is missing, and creating
+// one would make them owner of an empty shop, cut off from the orders they
+// were trying to reach. What they need is an invite, which only their admin
+// can send.
+//
+// Deliberately never resolves. There is nothing to load and nothing to
+// render, so boot stops here with the message on screen -- the same shape as
+// showLoginScreen, which only resolves once there is a session.
+function showNoShopScreen(){
+  return new Promise(()=>{
+    const el = ensureAuthOverlay();
+    el.innerHTML = `
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;text-align:center;">
+        <h2 style="margin:0 0 8px;font-size:18px;">No shop yet</h2>
+        <p style="margin:0 0 18px;font-size:13px;color:#aaa;line-height:1.5;">This login isn't attached to a shop. Ask an admin to send you a worker invite from the Staff tab, then open the link on this device.</p>
+        <button id="noshop_signout_btn" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Sign out</button>
+      </div>`;
+    // A way out, since this is a dead end otherwise -- most often reached by
+    // signing in with the wrong account.
+    document.getElementById('noshop_signout_btn').addEventListener('click', signOutAndReload);
+  });
+}
+
 // This app only ever needs a slice of the shop's data: every staff row
 // (to resolve myStaff, and to list delivery-eligible candidates when
 // finishing an order -- see promptAssignDelivery() in shared-worker.js),
