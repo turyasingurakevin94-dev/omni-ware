@@ -355,7 +355,30 @@ async function ensureAuthAndShop(){
   hideAuthOverlay();
 }
 
+// This device's FCM token, once the OS has handed it over. Set by the
+// registration listener below; null in the admin app and anywhere that is
+// not the native build, which is why the sign-out below has to check.
+let myPushToken = null;
+
 async function signOutAndReload(){
+  // Before the sign-out, not after: the row's policy is user_id =
+  // auth.uid(), and there is no auth.uid() once signed out.
+  //
+  // Left behind, the row keeps pointing this device at the worker who just
+  // signed out. The phone goes on buzzing for their orders and putting a
+  // customer's name on the lock screen of a device nobody is signed in to.
+  // The other ways a subscription ends were already covered -- a different
+  // worker signing in here replaces the row, since it is keyed on the
+  // token, and removing a staff member cascades -- so signing out was the
+  // one way to leave one stranded.
+  //
+  // Scoped to this device's token so a worker with a second phone keeps
+  // notifications there. A failure is logged and ignored: signing out has
+  // to work regardless.
+  if(myPushToken){
+    const { error } = await sb.from('push_subscriptions').delete().eq('fcm_token', myPushToken);
+    if(error) console.error("Could not remove this device's push subscription:", error);
+  }
   await sb.auth.signOut();
   location.reload();
 }
@@ -1006,6 +1029,8 @@ function registerNativePushListeners(){
     // subscribed) to keep the stored token current after a reinstall --
     // only toast on a genuine first-time opt-in, not that silent refresh.
     const wasAlreadySubscribed = hasPushSubscription;
+    // Kept so signing out can remove this device's row and no other.
+    myPushToken = token.value;
     const { error } = await sb.from('push_subscriptions').upsert({
       shop_id: currentShopId, staff_id: myStaff.id, user_id: currentUser.id,
       fcm_token: token.value
