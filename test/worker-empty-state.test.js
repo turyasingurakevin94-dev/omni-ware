@@ -127,6 +127,32 @@ const pendingOrder = (id, name, lines) => ({
     'pending sits above the pick card by default');
   t.check(order('#wv_pendingWrap.is-upnext') > order('#wv_activeWrap'),
     'and below it once it is only announcing what is next');
+
+  // The notifications prompt made the same interruption from the other
+  // direction: a setup task that shows on every render until it is done --
+  // which on the Android build is every worker's state until they tap it
+  // once -- sitting between the "Now picking" header and the card being
+  // worked on.
+  t.check(order('#wv_enablePushWrap') < order('#wv_pendingWrap'),
+    'the notifications prompt is at the top when there is nothing being picked');
+  t.check(order('#wv_enablePushWrap.is-deferred') > order('#wv_activeWrap'),
+    'and below the work once there is');
+  t.check(order('#wv_enablePushWrap.is-deferred') > order('#wv_pendingWrap.is-upnext'),
+    'behind even the up-next strip, being the least urgent thing on the screen');
+
+  const shared = read('shared-worker.js');
+  t.check(/pushWrap\.classList\.toggle\('is-deferred', !!active\);/.test(shared),
+    'and it is deferred exactly when a pick is open');
+  // Moved, not hidden. Whether it shows still turns on those two things and
+  // nothing else -- turning notifications on is how the next order reaches
+  // the phone at all, so a pick in progress is no reason to stop asking.
+  t.check(/pushWrap\.style\.display = \(isNativeApp\(\) && !hasPushSubscription\) \? '' : 'none';/.test(shared),
+    'and it is still shown while picking, only further down');
+  // Read after `active` is worked out, or the flag would always be stale by
+  // one render -- it used to be set before the orders were even looked at.
+  const view = shared.slice(shared.indexOf('function renderWorkerView'), shared.indexOf('function timeAgoLabel'));
+  t.check(view.indexOf('const active =') < view.indexOf("classList.toggle('is-deferred'"),
+    'worked out after the active pick is known, not before');
 }
 
 /* ---------- 4. several pending orders all render ---------------------- */

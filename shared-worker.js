@@ -409,10 +409,21 @@ function renderWorkerView(){
   }
   const greetingEl = document.getElementById('wv_greeting');
   if(greetingEl) greetingEl.textContent = `${timeOfDayGreeting()}, ${(myStaff.name||'').split(' ')[0] || 'there'}`;
-  document.getElementById('wv_enablePushWrap').style.display = (isNativeApp() && !hasPushSubscription) ? '' : 'none';
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
+  // The notifications prompt is a setup task, and it shows on every render
+  // until it is done -- which on the Android build is every worker's state
+  // until they tap it once. It sat at the top of the body, so mid-pick it
+  // wedged itself between the "Now picking" header and the card being
+  // worked on: the same interruption the waiting-order card made, from a
+  // banner that has nothing to do with the shelf they are standing at.
+  //
+  // Still shown, because turning notifications on matters -- just after the
+  // work rather than through it, the same way the up-next strip is.
+  const pushWrap = document.getElementById('wv_enablePushWrap');
+  pushWrap.style.display = (isNativeApp() && !hasPushSubscription) ? '' : 'none';
+  pushWrap.classList.toggle('is-deferred', !!active);
   // Client name + progress live in the persistent header, not inside the
   // scrolling carousel -- swapping which of these two shows (rather than
   // having them scroll past as part of the carousel content) keeps that
