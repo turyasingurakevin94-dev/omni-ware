@@ -693,6 +693,44 @@ let workerSaveInFlight = false;
   document.addEventListener(evt, ()=>{ lastWorkerInteractionAt = Date.now(); }, true);
 });
 
+// Work this app has done that has not reached the server yet.
+//
+// Only the fields it owns. A whole-row comparison against lastSynced looks
+// like the obvious thing and is wrong: saveData commits the MERGED row -- the
+// server's columns with this app's fields laid on -- so once an admin takes a
+// payment, lastSynced carries the new amount_paid while local `data` still
+// holds the old one, and the rows never match again. Guarding on that would
+// have stopped this app refreshing for good, which is worse than the problem
+// it is here to solve.
+//
+// So: the status, the picking fields, and the pick state on the lines. That
+// is precisely what buildWorkerSyncRows sends and what mergePickState lays
+// down, and nothing else this app is allowed to write.
+function hasUnsavedWork(){
+  if(!currentShopId || !data || !data.savedQuotes) return false;
+  const prev = (lastSynced && lastSynced.savedQuotes) || {};
+  return data.savedQuotes.some(q=>{
+    const was = prev[String(q.id)];
+    if(!was) return true;                       // never sent at all
+    const wp = was.payload || {};
+    if(was.status !== q.status) return true;
+    // Both sides normalised: buildWorkerSyncRows writes `q.workerAcceptedAt
+    // || null`, while the order in memory simply has no such property until
+    // something sets one. Comparing null against undefined made every row
+    // look permanently unsaved -- which would have held every refresh off
+    // for good, the exact failure this guard exists to avoid causing.
+    if(WORKER_OWNED_KEYS.some(k=> JSON.stringify(wp[k] ?? null) !== JSON.stringify(q[k] ?? null))) return true;
+    const mine = q.items || [], theirs = wp.items || [];
+    // A different line count means the admin edited the order, and
+    // mergePickState drops this app's pick state for it anyway -- there is
+    // nothing here worth holding a refresh for.
+    if(mine.length !== theirs.length) return false;
+    return mine.some((it, i)=>
+      (it.pickStatus ?? null) !== (theirs[i].pickStatus ?? null)
+      || (it.pickedQty ?? null) !== (theirs[i].pickedQty ?? null));
+  });
+}
+
 async function refreshWorkerData(opts){
   const force = !!(opts && opts.force);
   // A refresh mid-save would swap `lastSynced` out from under the diff that
@@ -707,6 +745,23 @@ async function refreshWorkerData(opts){
   }
   workerRefreshing = true;
   try{
+    // Work that has not reached the server yet must survive this.
+    //
+    // A refresh replaces `data` wholesale, so anything uncommitted is gone.
+    // A save that failed -- the ordinary outcome on a warehouse connection
+    // -- leaves the tick on screen and a toast that fades in five seconds,
+    // and the next successful poll then quietly put the item back to
+    // unpicked. The worker had already taken the goods off the shelf.
+    //
+    // saveData only advances lastSynced for the parts that actually landed,
+    // so anything still differing from it is exactly what would be lost.
+    // Retry it and leave the refresh for the next cycle: if it lands there
+    // is nothing left to protect, and if it does not, the local work is
+    // worth more than a minute of staleness.
+    if(hasUnsavedWork()){
+      await saveData();
+      if(hasUnsavedWork()) return;
+    }
     // Both built before either is assigned. addDiffOps derives its deletes
     // from lastSynced, so `data` and `lastSynced` describing different
     // states is not a stale render -- it is a delete instruction. Same
