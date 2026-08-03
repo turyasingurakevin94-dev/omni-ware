@@ -3929,6 +3929,15 @@
         <div class="field"><label>Deducted before you got it</label><input id="ln_fees" type="number" min="0" step="any" placeholder="0">
           <div class="field-hint">Insurance, arrangement and paperwork fees the lender took out of the money. You still owe the full amount above.</div>
         </div>
+        <div class="field" id="ln_cash_field"><label>Received into</label>
+          <select id="ln_cash_account">
+            <option value="">Already drawn — do not touch the cash book</option>
+            <option value="bank">Bank</option>
+            <option value="momo">Mobile Money</option>
+            <option value="cash">Cash</option>
+          </select>
+          <div class="field-hint">Records what actually reached you — the amount after any fee the lender kept.</div>
+        </div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="ln_notes" placeholder="optional"></div>
       </div>
       <p class="preset-hint" id="ln_preview"></p>
@@ -3982,6 +3991,15 @@
         <div class="field" id="fa_rate_field" style="display:none;"><label>Rate (% a year)</label><input id="fa_rate" type="number" min="0" step="any" placeholder="e.g. 25"></div>
         <div class="field"><label>Worth at the end</label><input id="fa_salvage" type="number" min="0" step="any" placeholder="0">
           <div class="field-hint">Depreciation never takes it below this.</div>
+        </div>
+        <div class="field" id="fa_cash_field"><label>Paid from</label>
+          <select id="fa_cash_account">
+            <option value="">Already owned — do not touch the cash book</option>
+            <option value="cash">Cash</option>
+            <option value="momo">Mobile Money</option>
+            <option value="bank">Bank</option>
+          </select>
+          <div class="field-hint">Records the money leaving, so the cash book and this register agree. Choose the first option for something bought before you started using this app.</div>
         </div>
         <div class="field"><label>Bought with</label>
           <select id="fa_loan"><option value="">Paid for outright</option></select>
@@ -5017,7 +5035,9 @@ async function loadData(shopId){
       salvage:Number(a.salvage)||0,
       disposedOn:a.disposed_on||null,
       disposalProceeds: a.disposal_proceeds==null ? null : Number(a.disposal_proceeds),
-      notes:a.notes||'', cashTxnId:a.cash_txn_id||null, loanId:a.loan_id==null?null:Number(a.loan_id)
+      notes:a.notes||'', cashTxnId:a.cash_txn_id||null,
+      disposalCashTxnId:a.disposal_cash_txn_id||null,
+      loanId:a.loan_id==null?null:Number(a.loan_id)
     })),
     nextFixedAssetId: (fixedAssetsR.data||[]).length ? Math.max(0,...fixedAssetsR.data.map(a=>a.id||0))+1 : 1,
     loans: (loansR.data||[]).map(l=>({
@@ -5131,7 +5151,9 @@ function buildSyncRows(d, shopId){
       rate_pct: a.ratePct==null ? null : a.ratePct,
       salvage:a.salvage||0, disposed_on:a.disposedOn||null,
       disposal_proceeds: a.disposalProceeds==null ? null : a.disposalProceeds,
-      notes:a.notes||null, cash_txn_id:a.cashTxnId||null, loan_id:a.loanId==null?null:a.loanId
+      notes:a.notes||null, cash_txn_id:a.cashTxnId||null,
+      disposal_cash_txn_id:a.disposalCashTxnId||null,
+      loan_id:a.loanId==null?null:a.loanId
     })),
     loans: (d.loans||[]).map(l=>({
       id:l.id, shop_id:shopId, lender:l.lender, principal:l.principal,
@@ -16820,6 +16842,21 @@ function loanEffectiveRate(loan){
 function loanFees(loan){ return Math.max(0, Number(loan.fees)||0); }
 function loanNetAdvanced(loan){ return Math.max(0, loanPrincipal(loan) - loanFees(loan)); }
 
+/* Every cash-book entry this loan put there: the drawing, and one for each
+   repayment made against it. Deleting the loan has to take them with it,
+   or the cash book keeps insisting money moved for an agreement the books
+   no longer contain.
+
+   Entries can be absent -- a loan drawn before the shop started using the
+   app, or a repayment the owner chose not to put through the cash book --
+   so an id that was never written is skipped rather than assumed. */
+function loanCashTxnIds(loan){
+  if(!loan) return [];
+  const ids = [loan.cashTxnId];
+  (loan.repayments||[]).forEach(r=> ids.push(r && r.cashTxnId));
+  return ids.filter(id=> id !== undefined && id !== null);
+}
+
 /* What the borrowing really costs, once the fee is counted.
 
    loanEffectiveRate answers "what is this rate worth" on the principal.
@@ -17145,23 +17182,28 @@ function cashFlowStatement(fromISO, toISO){
   const repaid = sum(t=> cashIsMoneyOut(t) && t.category === 'Loan Repayment');
   const financing = borrowed + ownerIn - repaid;
 
+  // Buying equipment is investing, not trading. The asset register writes
+  // this category itself when an asset is added, so it is a fact the app
+  // knows rather than a guess about which payments were capital -- which
+  // is what kept this section out of the statement before the register
+  // existed.
+  const equipmentOut = sum(t=> cashIsMoneyOut(t) && t.category === 'Equipment purchase');
+  const assetSaleIn = sum(t=> cashIsMoneyIn(t) && t.category === 'Asset Sale');
+  const investing = assetSaleIn - equipmentOut;
+
   const netMovement = rows.reduce((s,t)=> s + (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0), 0);
   return {
     from: fromISO, to: toISO,
     tradingIn, debtCollected, operatingOut, stockOut, operating,
+    equipmentOut, assetSaleIn, investing,
     borrowed, ownerIn, repaid, financing,
     netMovement,
-    // Investing is not broken out: an asset purchase is recorded in the
-    // cash book under whatever category the shopkeeper chose, and
-    // guessing which payments were capital would be inventing a fact.
-    // Named here so its absence is a decision rather than an oversight.
-    //
-    // This should always be zero as the categories stand -- every
-    // movement belongs to one of the sections above. It is a tripwire
-    // rather than a figure: a category added or reclassified later could
-    // fall between them, and a cash-flow statement that does not add up
-    // should say so rather than quietly lose the difference.
-    unclassified: netMovement - (operating + financing),
+    // Should always be zero as the categories stand -- every movement
+    // belongs to one of the three sections above. It is a tripwire rather
+    // than a figure: a category added or reclassified later could fall
+    // between them, and a cash-flow statement that does not add up should
+    // say so rather than quietly lose the difference.
+    unclassified: netMovement - (operating + investing + financing),
   };
 }
 
@@ -17584,6 +17626,11 @@ function stCashFlow({from, to, cf, prevCf}){
       ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut)}
       ${stLine('From trading', cf.operating, prevCf.operating, {cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
+      <tr class="st-section"><td colspan="3">Investing</td></tr>
+      ${stLine('Equipment bought', -cf.equipmentOut, -prevCf.equipmentOut, {hint:'from the asset register'})}
+      ${stLine('Equipment sold', cf.assetSaleIn, prevCf.assetSaleIn)}
+      ${stLine('From investing', cf.investing, prevCf.investing, {cls:'st-total'})}
+      <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">Financing</td></tr>
       ${stLine('Borrowed', cf.borrowed, prevCf.borrowed)}
       ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn)}
@@ -17596,7 +17643,7 @@ function stCashFlow({from, to, cf, prevCf}){
     <p class="st-read">${cf.operating < 0 && cf.financing > 0
       ? 'Trading consumed cash this period and borrowing covered it — worth watching if it repeats.'
       : (cf.operating > 0 ? 'Trading produced cash this period.' : 'Trading neither produced nor consumed cash.')}
-      Buying equipment is not shown separately: it is recorded under whichever category it was paid from, and guessing which payments were capital would be inventing a fact.</p>
+      Equipment shows separately because the asset register records the payment itself — anything bought before you started using this app, or paid for outside it, will not appear here.</p>
   </section>`;
 }
 
@@ -17701,6 +17748,12 @@ function openLoanPerformance(id){
       <div class="ln-addpay">
         <input type="date" id="ln_pay_date" value="${esc(today)}">
         <input type="number" id="ln_pay_amount" min="0" step="any" placeholder="Amount paid">
+        <select id="ln_pay_account">
+          <option value="bank">Paid from bank</option>
+          <option value="momo">Paid from mobile money</option>
+          <option value="cash">Paid in cash</option>
+          <option value="">Do not touch the cash book</option>
+        </select>
         <button type="button" class="btn btn-accent" id="ln_pay_add" data-id="${l.id}">Record repayment</button>
       </div>
     </section>
@@ -17728,11 +17781,21 @@ function openLoanPerformance(id){
     const loan = (data.loans||[]).find(x=>x.id===id);
     if(!loan) return;
     if(!Array.isArray(loan.repayments)) loan.repayments = [];
-    loan.repayments.push({ date, amount, note:'' });
+    /* Paying a loan is money leaving. The category matters as much as the
+       entry: 'Loan Repayment' is one of the categories cashIsOperatingExpense
+       excludes, because a repayment settles borrowing rather than costing
+       the month anything -- the interest inside it is charged from the
+       loan's own schedule, and counting the payment as an expense too
+       would charge it twice. */
+    const account = document.getElementById('ln_pay_account').value;
+    const cashTxnId = account
+      ? addCashPayment(account, amount, 'Loan Repayment', `${loan.lender} — repayment`, date)
+      : null;
+    loan.repayments.push({ date, amount, note:'', cashTxnId });
     saveData();
     renderLoans();
     openLoanPerformance(id);
-    toast('Repayment recorded');
+    toast(account ? 'Repayment recorded' : 'Repayment recorded — cash book untouched');
   });
   openModal('loanPerfModal');
 }
@@ -17776,6 +17839,10 @@ function openLoanForm(id){
   set('ln_rate', l?l.ratePct:''); set('ln_term', l?l.termMonths:12);
   set('ln_started', l?l.startedOn:todayISO()); set('ln_notes', l?l.notes:'');
   document.getElementById('ln_method').value = l ? l.method : 'reducing_balance';
+  // Only a new loan draws money. Editing the terms of one already recorded
+  // must not write a second receipt for cash that arrived once.
+  document.getElementById('ln_cash_account').value = '';
+  document.getElementById('ln_cash_field').style.display = l ? 'none' : '';
   document.getElementById('loanModalTitle').textContent = l ? 'Edit loan' : 'Record a loan';
   updateLoanPreview();
   openModal('loanModal');
@@ -17783,7 +17850,10 @@ function openLoanForm(id){
 function deleteLoan(id){
   const l = (data.loans||[]).find(x=>x.id===id);
   if(!l) return;
-  if(!confirm(`Remove the ${fmtUGX(Math.round(Number(l.principal)||0))} loan from ${l.lender}?\n\nThis erases it and every repayment recorded against it.`)) return;
+  const cashIds = loanCashTxnIds(l);
+  if(!confirm(`Remove the ${fmtUGX(Math.round(Number(l.principal)||0))} loan from ${l.lender}?\n\nThis erases it and every repayment recorded against it.`
+    + (cashIds.length ? `\n\nThe ${cashIds.length} matching cash book ${cashIds.length===1?'entry goes':'entries go'} too.` : ''))) return;
+  removeCashTxnsByIds(cashIds);
   data.loans = (data.loans||[]).filter(x=>x.id!==id);
   saveData(); renderLoans();
   toast('Loan removed');
@@ -17803,9 +17873,26 @@ document.getElementById('ln_save').addEventListener('click', ()=>{
   if(!l.startedOn){ toast('Enter the date it was taken'); return; }
   if(l.ratePct < 0){ toast('A rate cannot be negative'); return; }
   if(!data.loans) data.loans = [];
+  // Captured before the save clears it, so the toast below can tell a new
+  // loan that skipped the cash book from an edit that never touches it.
+  const editingLoanWasNew = editingLoanId == null;
   if(editingLoanId == null){
     l.id = allocRowId('loan');
     l.repayments = [];
+    /* Drawing a loan is money arriving, and the amount that arrives is the
+       NET -- what the lender handed over after keeping its fee. The fee is
+       already a cost of the month through loanFeesForPeriod, so recording
+       the gross here would both overstate the cash and charge the fee
+       twice.
+
+       Without this the liability appeared and the cash did not, so the
+       balance sheet showed a shop 20,000,000 POORER for having borrowed
+       20,000,000. */
+    const account = document.getElementById('ln_cash_account').value;
+    if(account){
+      l.cashTxnId = addCashReceipt(account, loanNetAdvanced(l), 'Loan Received',
+        `${l.lender}${loanFees(l) ? ` — ${fmtUGX(Math.round(loanFees(l)))} kept in fees` : ''}`, l.startedOn);
+    }
     data.loans.push(l);
   } else {
     const i = data.loans.findIndex(x=>x.id===editingLoanId);
@@ -17817,7 +17904,7 @@ document.getElementById('ln_save').addEventListener('click', ()=>{
   closeModal('loanModal');
   editingLoanId = null;
   renderLoans();
-  toast('Loan saved');
+  toast(editingLoanWasNew && !l.cashTxnId ? 'Loan saved — cash book untouched' : 'Loan saved');
 });
 
 /* ---- The register on screen ---- */
@@ -18000,9 +18087,20 @@ function openAssetForm(id){
   // Disposal is only offered on something that exists: there is no sense
   // in recording the sale of an asset in the same breath as buying it.
   document.getElementById('fa_disposal_block').style.display = a ? '' : 'none';
+  // Only a new asset spends money. Editing one already on the register must
+  // not write a second payment for cash that left once.
+  document.getElementById('fa_cash_account').value = '';
+  document.getElementById('fa_cash_field').style.display = a ? 'none' : '';
   document.getElementById('assetModalTitle').textContent = a ? 'Edit asset' : 'Add an asset';
   assetFormMethodChanged();
   openModal('assetModal');
+}
+/* Both entries an asset can have put in the cash book: what was paid for
+   it, and what came back when it was sold. Either can be absent -- an
+   asset the shop already owned, or one still in use. */
+function assetCashTxnIds(asset){
+  if(!asset) return [];
+  return [asset.cashTxnId, asset.disposalCashTxnId].filter(id=> id !== undefined && id !== null);
 }
 function deleteFixedAsset(id){
   const a = (data.fixedAssets||[]).find(x=>x.id===id);
@@ -18011,7 +18109,9 @@ function deleteFixedAsset(id){
   // entirely, including the depreciation already charged against past
   // months. Selling it is what an owner usually means, and that is the
   // disposal date on the edit screen.
-  if(!confirm(`Remove "${a.name}" from the register?\n\nThis erases it and every month of depreciation it has been charged. If you sold or scrapped it, close it with a disposal date instead — that keeps the history.`)) return;
+  if(!confirm(`Remove "${a.name}" from the register?\n\nThis erases it and every month of depreciation it has been charged. If you sold or scrapped it, close it with a disposal date instead — that keeps the history.`
+    + (assetCashTxnIds(a).length ? `\n\nThe ${assetCashTxnIds(a).length} matching cash book ${assetCashTxnIds(a).length===1?'entry goes':'entries go'} too.` : ''))) return;
+  removeCashTxnsByIds(assetCashTxnIds(a));
   data.fixedAssets = (data.fixedAssets||[]).filter(x=>x.id!==id);
   saveData(); renderFixedAssets();
   toast('Asset removed');
@@ -18023,7 +18123,7 @@ document.getElementById('assetScheduleClose').addEventListener('click', ()=>clos
 document.getElementById('fa_method').addEventListener('change', assetFormMethodChanged);
 ['fa_cost','fa_acquired','fa_life','fa_rate','fa_salvage'].forEach(id=>
   document.getElementById(id).addEventListener('input', updateAssetPreview));
-document.getElementById('fa_save').addEventListener('click', ()=>{
+document.getElementById('fa_save').addEventListener('click', async ()=>{
   const a = readAssetForm();
   if(!a.name){ toast('Give the asset a name'); return; }
   if(!(a.cost > 0)){ toast('Enter what it cost'); return; }
@@ -18035,18 +18135,47 @@ document.getElementById('fa_save').addEventListener('click', ()=>{
   if(a.salvage > a.cost){ toast('What it is worth at the end cannot exceed what it cost'); return; }
   if(a.disposedOn && a.disposedOn < a.acquiredOn){ toast('It cannot have been sold before it was acquired'); return; }
   if(!data.fixedAssets) data.fixedAssets = [];
+  // Captured before the save clears it, so the toast below can tell a new
+  // asset that skipped the cash book from an edit that never touches it.
+  const editingAssetWasNew = editingAssetId == null;
   if(editingAssetId == null){
     a.id = allocRowId('fixedAsset');
+    /* Buying a thing is money leaving. Without this the register gained an
+       asset and the cash book lost nothing, so the balance sheet showed a
+       shop 20,000,000 richer for having spent 20,000,000 -- assets up,
+       cash unmoved, equity up by the whole purchase.
+
+       Every other money-moving flow in this app already does exactly this
+       (invoice payments, debt payments, stock purchases, agent
+       commissions): write the entry, keep its id, so removing the record
+       can remove the entry too. */
+    const account = document.getElementById('fa_cash_account').value;
+    if(account){
+      a.cashTxnId = addCashPayment(account, a.cost, 'Equipment purchase',
+        `${a.name}${a.category ? ' — ' + a.category : ''}`, a.acquiredOn);
+    }
     data.fixedAssets.push(a);
   } else {
     const i = data.fixedAssets.findIndex(x=>x.id===editingAssetId);
+    /* Selling it brings money in, and this is the only screen that records
+       a sale. Guarded on there being no entry yet, so re-opening a disposed
+       asset to fix a typo does not bank the proceeds a second time. */
+    const before = i>=0 ? data.fixedAssets[i] : null;
+    if(before && before.disposalCashTxnId == null && a.disposedOn && Number(a.disposalProceeds) > 0){
+      const account = await promptCashAccount('Where did the money go?',
+        `Recording ${fmtUGX(Math.round(Number(a.disposalProceeds)))} from selling ${a.name} in the Cash Book.`);
+      if(account){
+        a.disposalCashTxnId = addCashReceipt(account, Number(a.disposalProceeds), 'Asset Sale',
+          `Sold ${a.name}`, a.disposedOn);
+      }
+    }
     if(i>=0) data.fixedAssets[i] = {...data.fixedAssets[i], ...a};
   }
   saveData();
   closeModal('assetModal');
   editingAssetId = null;
   renderFixedAssets();
-  toast('Asset saved');
+  toast(editingAssetWasNew && !a.cashTxnId ? 'Asset saved — cash book untouched' : 'Asset saved');
 });
 
 /* What a cash-book entry MEANS to the accounts.
@@ -18087,11 +18216,20 @@ const CASH_NOT_OPEX = {
   // record -- counting the payment here would expense the principal, which
   // was never an expense, and charge the interest twice.
   'Loan Repayment': 'settles borrowing — interest comes from the loan itself',
+  // Buying a van is not a cost of the month it was bought in. The cost
+  // reaches the income statement one month at a time as depreciation, from
+  // the asset register -- expensing the cash here as well would charge the
+  // whole van now AND charge it again over its life.
+  'Equipment purchase': 'capital — reaches the accounts as depreciation',
 };
 const CASH_NOT_REVENUE = {
   'Loan Received': 'borrowing — a liability, not income',
   'Owner Investment': 'equity — the owner\'s money, not earnings',
   'Debt Collection': 'settles a receivable — the sale was already booked',
+  // Selling the van is not a sale. The money is investing coming back, and
+  // whether it was a good sale is the asset register's answer -- proceeds
+  // against written-down value -- not the size of the cheque.
+  'Asset Sale': 'investing returning — the gain or loss comes from the register',
 };
 const cashHas = (map, cat)=> Object.prototype.hasOwnProperty.call(map, String(cat==null?'':cat));
 function cashIsMoneyOut(t){ return t.type==='payment' || t.type==='expense' || t.type==='out'; }

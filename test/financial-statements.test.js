@@ -261,8 +261,33 @@ const reset = () => {
   const isRepaid = scope.incomeStatement('2026-08-01', TODAY);
   t.check(!Object.keys(isRepaid.opexRows).includes('Loan Repayment'),
     'nor does it appear as a running cost on the profit and loss');
-  t.check(Math.abs(cf2.netMovement - (cf2.operating + cf2.financing + cf2.unclassified)) < 0.01,
+  t.check(Math.abs(cf2.netMovement - (cf2.operating + cf2.investing + cf2.financing + cf2.unclassified)) < 0.01,
     'the three sections plus what is unclassified always reconstruct the total');
+
+  /* Investing exists because the asset register writes the category
+     itself. Before it did, there was no honest way to tell a payment for a
+     van from a payment for rent, and the statement said so rather than
+     guessing. Now it is a fact the app recorded.
+
+     Two things have to hold at once, and they are separate failures: the
+     purchase belongs to investing, and it must NOT be a running cost --
+     expensing the van here would charge it in full this month and then
+     charge it again, month by month, as depreciation. */
+  data.cashTxns.push(txn({ id: 7, type: 'payment', category: 'Equipment purchase', amount: 4000000 }));
+  data.cashTxns.push(txn({ id: 8, type: 'receipt', category: 'Asset Sale', amount: 1500000 }));
+  const cf3 = scope.cashFlowStatement('2026-08-01', TODAY);
+  t.check(cf3.equipmentOut === 4000000 && cf3.assetSaleIn === 1500000,
+    'buying and selling equipment are separate lines, not a single net figure');
+  t.check(cf3.investing === 1500000 - 4000000, 'and investing is what the two of them came to');
+  t.check(cf3.operating === cf2.operating,
+    'buying a van does not touch trading -- it is not a running cost and never was');
+  t.check(cf3.tradingIn === cf2.tradingIn,
+    'nor do the proceeds of selling one count as money earned from customers');
+  const isCapital = scope.incomeStatement('2026-08-01', TODAY);
+  t.check(!Object.keys(isCapital.opexRows).includes('Equipment purchase'),
+    'the van is absent from the profit and loss, which sees it one month at a time as depreciation');
+  t.check(Math.abs(cf3.unclassified) < 0.01,
+    'and the new categories fall inside a section rather than between them');
 
   /* `unclassified` should always be zero as the categories stand: every
      movement out is stock, a supplier, a repayment or a running cost, and
@@ -274,10 +299,10 @@ const reset = () => {
      Asserted as zero across every shape above rather than by contriving
      a leftover, because contriving one would mean asserting behaviour
      the classification cannot currently produce. */
-  [cf, cf2].forEach((c, i)=>{
+  [cf, cf2, cf3].forEach((c, i)=>{
     t.check(Math.abs(c.unclassified) < 0.01,
       `every movement falls into a section, so nothing is left over (case ${i + 1})`);
-    t.check(Math.abs(c.netMovement - (c.operating + c.financing + c.unclassified)) < 0.01,
+    t.check(Math.abs(c.netMovement - (c.operating + c.investing + c.financing + c.unclassified)) < 0.01,
       `and the sections reconstruct the total exactly (case ${i + 1})`);
   });
 }
