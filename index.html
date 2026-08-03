@@ -5918,13 +5918,54 @@ function quoteItemSellPrice(it){
   const product = data.products.find(x=>x.id===it.productId);
   if(!product) return buy;
   const variantIdx = it.variantIdx==null ? null : it.variantIdx;
+  /* Which markup this quantity actually earns.
+
+     The same qty-vs-pack-size line the item picker already uses to choose
+     a side (naturalRecType) and that purchasePriceAtQty uses on the buying
+     side. This hard-coded 'retail', so a shop with a wholesale markup on
+     file never saw it applied to a quote line however many were being
+     sold -- and a FIXED wholesale markup, which is quoted per pack and
+     divided by packQty, was added whole to every single unit instead.
+
+     packQty is passed for the same reason: suggestedSellingPrice needs it
+     to spread a fixed wholesale markup across the pack. */
+  const packQty = Number(it.packQty)||0;
+  const qty = Number(it.qty)||0;
+  const kind = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
   // A line sourced from our own stock uses the stock-only markup rule
   // (falling back to the product's default rule when none is set) —
   // every other line always uses the default rule.
   const sugg = it.supplierId==='__stock__'
-    ? quoteSuggestedStockPrice(product, buy, 'retail', variantIdx)
-    : quoteSuggestedPrice(product, buy, 'retail', variantIdx);
+    ? quoteSuggestedStockPrice(product, buy, kind, variantIdx, packQty)
+    : quoteSuggestedPrice(product, buy, kind, variantIdx, packQty);
   return sugg!=null ? sugg : buy;
+}
+
+/* Selling a line for less than it costs to buy.
+
+   Saved either way, and often deliberate: a loss-leader, clearing stock
+   that is not moving, or a goodwill line on a big order are all real
+   decisions and none of them are the app's to refuse. The quote already
+   shows total profit, but a total cannot say WHICH line went under -- one
+   below-cost line inside an order that is comfortably profitable overall
+   is exactly the one nobody notices.
+
+   Empty is not a decision: clearing the field falls back to the markup,
+   which is what the reset control is for, so it says nothing.
+
+   A bare clause rather than a finished sentence, because the item picker
+   has its own warning to deliver at the same moment and two toasts in a
+   row means the second one wins and the first is never read. */
+function sellBelowCostClause(it){
+  if(!it || it.sellPrice==null || it.sellPrice==='') return '';
+  const sell = Number(it.sellPrice)||0;
+  const buy = Number(it.price)||0;
+  if(!(sell < buy)) return '';
+  const each = buy - sell;
+  const qty = Number(it.qty)||0;
+  const unit = it.unit ? ` per ${String(it.unit).toLowerCase()}` : ' each';
+  return `${fmtUGX(sell)} is below the ${fmtUGX(buy)} this line costs to buy:`
+    + ` ${fmtUGX(each)} lost${unit}${qty>1 ? `, ${fmtUGX(each*qty)} over ${qty}` : ''}`;
 }
 
 // Resolves which markup rule actually applies for a product/variant + kind
@@ -6854,7 +6895,14 @@ function renderIpStage(){
     saveData();
     closeModal('itemPickerModal');
     renderQuoteItems();
-    toast(overStock ? `Added — but only ${stockQty} in stock (you quoted ${qty})` : 'Item added to quote');
+    // Both warnings in one message. Raised separately they would be two
+    // toasts in a row, and only the second would ever be read.
+    const warnings = [];
+    if(overStock) warnings.push(`only ${stockQty} in stock (you quoted ${qty})`);
+    const belowCost = sellBelowCostClause(data.quote.items[data.quote.items.length-1]);
+    if(belowCost) warnings.push(belowCost);
+    toast(warnings.length ? `Added — but ${warnings.join('; and ')}.` : 'Item added to quote',
+      warnings.length ? 7000 : undefined);
   });
 }
 
@@ -6993,6 +7041,9 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
       item.sellPrice = Number(e.target.value) || 0;
+      // Never blocked, only said. See sellBelowCostClause.
+      const below = sellBelowCostClause(item);
+      if(below) toast(`Saved — but ${below}.`, 7000);
       saveData(); renderQuoteItems();
     });
     const resetBtn = row.querySelector('.q-sell-reset');
