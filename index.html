@@ -1555,6 +1555,59 @@
     margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
+  /* The delivery-runs banner borrows the cash banner's shape on purpose --
+     same place on the column, same job, so it reads as the same control
+     one step along. Verdigris rather than oxide: this one is a plan, not
+     a bill. */
+  .sq-cash.sq-runs{border-color:#BFD9D1;background:var(--ow-verdigris-soft);}
+  .sq-cash.sq-runs .sq-cash-top .icon{color:var(--ow-verdigris);}
+  .sq-cash.sq-runs .sq-cash-fig{color:var(--ow-verdigris);}
+  .sq-cash-note{
+    display:block;margin-top:7px;font-size:11px;color:var(--ink-soft);
+  }
+
+  /* One destination and everything going to it. */
+  .dr-run{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .dr-run:last-of-type{border-bottom:0;}
+  .dr-run-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+  .dr-run-head .icon{width:16px;height:16px;color:var(--ow-verdigris);flex-shrink:0;}
+  .dr-run-name{font-size:14.5px;font-weight:700;color:var(--ink);}
+  .dr-run-count{
+    font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+    color:var(--ow-verdigris);background:var(--ow-verdigris-soft);padding:2px 7px;border-radius:99px;
+  }
+  .dr-run-total{
+    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .dr-run-note{
+    display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ow-amber-ink);margin:0 0 7px;
+  }
+  .dr-run-note.split{color:var(--ink-soft);}
+  .dr-run-note .icon{width:13px;height:13px;flex-shrink:0;}
+  .dr-lines{width:100%;overflow-x:auto;}
+  .dr-lines table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+  .dr-lines col.who{width:44%;} .dr-lines col.driver{width:34%;} .dr-lines col.value{width:22%;}
+  .dr-lines td{padding:6px 0;border-top:1px solid var(--ow-rule-soft);vertical-align:top;}
+  .dr-lines tbody tr:first-child td{border-top:0;}
+  .dr-lines td.r{text-align:right;padding-left:6px;}
+  .dr-order-name{font-weight:700;color:var(--ink);}
+  .dr-order-sub{font-size:11.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .dr-driver{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);}
+  .dr-driver .icon{width:14px;height:14px;flex-shrink:0;}
+  .dr-driver.none{color:var(--ow-crimson);}
+  .dr-rest{padding:16px 0 2px;border-top:1px solid var(--line);margin-top:6px;}
+  .dr-rest h4{display:flex;align-items:center;gap:7px;margin:0 0 5px;font-size:13.5px;font-weight:700;color:var(--ink);}
+  .dr-rest h4 .icon{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
+  .dr-singles{display:flex;flex-direction:column;gap:1px;margin-top:8px;}
+  .dr-single{
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    padding:6px 0;border-top:1px solid var(--ow-rule-soft);font-size:12.5px;
+  }
+  .dr-single:first-child{border-top:0;}
+  .dr-single span{color:var(--ink-soft);}
+  .dr-single b{color:var(--ink);}
+
   /* Cash position. Sits between the total and the supplier runs because it
      is the question you ask after seeing the total and before setting off. */
   .bl-cash{
@@ -3546,6 +3599,19 @@
   </div>
 </div>
 
+<!-- WHAT IS GOING THE SAME WAY -->
+<div class="modal-overlay" id="deliveryRunsModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Going the same way</h2>
+      <button class="modal-close" id="deliveryRunsClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="deliveryRunsBody"></div>
+  </div>
+</div>
+
 <!-- COVERING THE SHORTFALL -->
 <div class="modal-overlay" id="shortfallPlanModal">
   <div class="modal modal-wide">
@@ -4882,6 +4948,10 @@ const ICON_CASH = '<svg class="icon" viewBox="0 0 24 24"><rect x="2" y="6" width
 const ICON_MOMO = '<svg class="icon" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>';
 const ICON_BANK = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 10h18L12 4 3 10Z"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 21h18"/></svg>';
 const ICON_CHECK = '<svg class="icon" viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></svg>';
+// Where an order is going, and the trip that takes several at once.
+const ICON_PIN = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+const ICON_ROUTE = '<svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg>';
+const ICON_TRUCK = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 16V6h11v10"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>';
 // Shown on a shortfall: the way out, not another warning.
 const ICON_PLAN = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 5-5 2.1 2.1-5 5-2.1Z"/></svg>';
 const ICON_COLLECT = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l2 3h6l2-3h4"/><path d="M5 12V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6"/><path d="M3 12v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg>';
@@ -5250,6 +5320,88 @@ function buyingListRuns(orders){
   return Object.values(bySupplier).sort((a,b)=> b.total - a.total);
 }
 
+/* ================= WHAT IS GOING THE SAME WAY =================
+   Two orders for the same street are one trip. The board could not say
+   that: it lists orders, and a driver reading a list of eight has no way
+   to see that three of them are in Ntinda without opening each one.
+
+   Where an order is going, in the order the answer is actually known:
+
+     the agent's address   an agent order carries the address the agent
+                           typed for their own client. The real client is
+                           deliberately never in `customers`
+                           (0012_sales_agents.sql), so there is nothing
+                           else to go on -- and if their name happened to
+                           collide with a shop customer's, that customer's
+                           location would be the wrong answer. Checked
+                           first for exactly that reason.
+     the customer's        a shop order goes to a customer we have on
+                           file, and their location is the thing we
+                           actually maintain.
+     the typed address     a walk-in with no customer record but a
+                           delivery address on the order.
+
+   Null when the order is not going anywhere we can name. That is not one
+   condition but two, and they are kept apart by orderIsCollected below --
+   an order being collected is settled, an order with no address is a
+   chore. Lumping either under "" would also invent a run to a place
+   called nothing. */
+function orderDestination(q){
+  if(!q || orderIsCollected(q)) return null;
+  if(q.originAgentId){
+    const typed = String(q.deliveryAddress||'').trim();
+    return typed || null;
+  }
+  const loc = String(orderCustomerLocation(q)||'').trim();
+  return loc || null;
+}
+
+// Nobody is driving this anywhere: the agent is picking it up themselves.
+// Distinguished from "we do not know where it goes" because the two look
+// identical on a board and mean opposite things -- one is finished
+// business, the other is somebody who still has to be rung for an address.
+function orderIsCollected(q){
+  return !!q && (q.deliveryMode==='agent_pickup' || q.assignedDeliveryId==='__agent__');
+}
+
+// Same place, spelled how people actually type it: "Ntinda", "ntinda",
+// " Ntinda " are one destination. Only for grouping -- the label shown is
+// whatever the first order spelled it, since that is a real string
+// somebody wrote rather than a normalised one nobody did.
+function destinationKey(dest){
+  return String(dest||'').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/* The runs, biggest first, then the orders that are not going anywhere
+   groupable. A "run" of one is still listed: an admin planning the day
+   needs the whole column accounted for, and a destination with one order
+   today is the same destination that had three yesterday. */
+function deliveryRuns(orders){
+  const byKey = new Map();
+  const collected = [];
+  const unknown = [];
+  (orders||[]).forEach(q=>{
+    const dest = orderDestination(q);
+    if(!dest){ (orderIsCollected(q) ? collected : unknown).push(q); return; }
+    const key = destinationKey(dest);
+    if(!byKey.has(key)) byKey.set(key, { key, label: dest, orders: [] });
+    byKey.get(key).orders.push(q);
+  });
+  const runs = [...byKey.values()].map(r=>({
+    ...r,
+    value: r.orders.reduce((s,q)=> s + savedQuoteTotal(q), 0),
+    drivers: [...new Set(r.orders.map(q=>q.assignedDeliveryId).filter(Boolean))],
+    unassigned: r.orders.filter(q=>orderNeedsDelivery(q)).length,
+  })).sort((a,b)=> b.orders.length - a.orders.length || b.value - a.value);
+  return { runs, collected, unknown };
+}
+
+// Orders waiting to go out. Same shape as beingPreparedOrders: live rows
+// only, and nothing that has aged off the board.
+function pendingDeliveryOrders(){
+  return (data.savedQuotes||[]).filter(q=> q.status==='pending_delivery' && !q.voided && !quoteAgedOffBoard(q));
+}
+
 /* ================= CAN WE ACTUALLY AFFORD IT =================
    Knowing the board needs 640,000 is only half a question. The other half
    is whether the shop has 640,000, and it is spread across three accounts
@@ -5613,6 +5765,112 @@ function openShortfallPlan(){
   openModal('shortfallPlanModal');
 }
 
+/* Over the Pending Delivery column: what is going the same way.
+
+   The column lists orders. A driver planning a morning needs the other
+   reading of the same list -- three of these are in Ntinda, so they are
+   one trip. Only runs of two or more are named here, because a run of one
+   is just an order and the column already shows those; the count of what
+   is left over says so rather than hiding it.
+
+   Nothing to group renders nothing. A banner announcing one destination
+   with one order in it is noise on every quiet day. */
+function deliveryRunsBannerHTML(group){
+  const orders = (group||[]).filter(q=>!q.voided && !quoteAgedOffBoard(q));
+  const { runs, unknown } = deliveryRuns(orders);
+  const shared = runs.filter(r=>r.orders.length > 1);
+  if(!shared.length) return '';
+  const shown = shared.slice(0, 3);
+  const rest = shared.length - shown.length;
+  const singles = runs.length - shared.length;
+  const together = shared.reduce((s,r)=> s + r.orders.length, 0);
+  return `<button type="button" class="sq-cash sq-runs" id="sq_runs_banner" title="Open the delivery runs">
+    <span class="sq-cash-top">
+      ${ICON_ROUTE}
+      <span class="sq-cash-label">Going the same way</span>
+      <span class="sq-cash-fig">${together} order${together===1?'':'s'}</span>
+    </span>
+    <span class="sq-cash-runs">${shown.map(r=>`
+      <span class="sq-cash-run">${ICON_PIN}${esc(r.label)} <b>${r.orders.length}</b></span>`).join('')}
+      ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>
+    ${(singles || unknown.length) ? `<span class="sq-cash-note">${
+      [singles ? `${singles} going somewhere of its own` : '',
+       unknown.length ? `${unknown.length} with no address yet` : ''].filter(Boolean).join(' · ')
+    }</span>` : ''}
+  </button>`;
+}
+
+/* The runs in full, as a document to plan a morning from.
+
+   Ordered by how many orders share a destination, because that is what
+   makes a trip worth combining. The orders with nowhere to group come
+   last and are named rather than dropped: an order with no location is
+   not a tidy zero, it is one somebody has to chase an address for. */
+function openDeliveryRuns(){
+  const orders = pendingDeliveryOrders();
+  const { runs, collected, unknown } = deliveryRuns(orders);
+  const shared = runs.filter(r=>r.orders.length > 1);
+  const singles = runs.filter(r=>r.orders.length === 1);
+
+  const orderRow = (q)=>{
+    const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : '';
+    return `<tr>
+      <td>
+        <div class="dr-order-name">${esc(quoteClientName(q))}</div>
+        <div class="dr-order-sub">${esc(invoiceNumberLabel(q))}${q.originAgentId ? ' · agent order' : ''}</div>
+      </td>
+      <td>${driver
+        ? `<span class="dr-driver">${ICON_TRUCK}${esc(driver)}</span>`
+        : `<span class="dr-driver none" title="Nobody is delivering this order">${ICON_WARN}Nobody yet</span>`}</td>
+      <td class="r num">${fmtUGX(savedQuoteTotal(q))}</td>
+    </tr>`;
+  };
+  const runBlock = (r)=>`
+    <div class="dr-run">
+      <div class="dr-run-head">
+        ${ICON_PIN}
+        <span class="dr-run-name">${esc(r.label)}</span>
+        <span class="dr-run-count">${r.orders.length} order${r.orders.length===1?'':'s'}</span>
+        <span class="dr-run-total">${fmtUGX(r.value)}</span>
+      </div>
+      ${r.unassigned ? `<div class="dr-run-note">${ICON_WARN}${r.unassigned} of these ${r.unassigned===1?'has':'have'} nobody delivering yet — one driver could take the whole run</div>` : ''}
+      ${r.drivers.length > 1 ? `<div class="dr-run-note split">${ICON_TRUCK}Split across ${r.drivers.length} drivers, for one destination</div>` : ''}
+      <div class="dr-lines"><table>
+        <colgroup><col class="who"><col class="driver"><col class="value"></colgroup>
+        <tbody>${r.orders.map(orderRow).join('')}</tbody>
+      </table></div>
+    </div>`;
+
+  document.getElementById('deliveryRunsBody').innerHTML = `
+    <div class="bl-top">
+      <span class="bl-top-label">${orders.length} order${orders.length===1?'':'s'} waiting to go out</span>
+      <span class="bl-top-fig">${shared.length} run${shared.length===1?'':'s'}</span>
+    </div>
+    ${shared.length
+      ? shared.map(runBlock).join('')
+      : `<p class="preset-hint">Nothing on this board is going the same way as anything else today.</p>`}
+    ${singles.length ? `<section class="dr-rest">
+      <h4>${ICON_PIN}One of a kind</h4>
+      <p class="sp-lead">A destination with a single order on it. Still worth seeing — it is where the next one may be going too.</p>
+      <div class="dr-singles">${singles.map(r=>`
+        <div class="dr-single"><span>${esc(r.label)}</span><b>${esc(quoteClientName(r.orders[0]))}</b></div>`).join('')}</div>
+    </section>` : ''}
+    ${collected.length ? `<section class="dr-rest">
+      <h4>${ICON_STORE}Being collected</h4>
+      <p class="sp-lead">Nobody is driving these anywhere — the agent is picking them up. Nothing to plan, and nothing missing.</p>
+      <div class="dr-singles">${collected.map(q=>`
+        <div class="dr-single"><span>${esc(invoiceNumberLabel(q))}</span><b>${esc(quoteClientName(q))}</b></div>`).join('')}</div>
+    </section>` : ''}
+    ${unknown.length ? `<section class="dr-rest">
+      <h4>${ICON_WARN}No address yet</h4>
+      <p class="sp-lead">These cannot be grouped or planned around until somebody has an address for them. A shop order takes its
+        location from the customer record; an agent order takes the address the agent typed.</p>
+      <div class="dr-singles">${unknown.map(q=>`
+        <div class="dr-single"><span>${esc(invoiceNumberLabel(q))}</span><b>${esc(quoteClientName(q))}</b></div>`).join('')}</div>
+    </section>` : ''}`;
+  openModal('deliveryRunsModal');
+}
+
 // Every other place in this file that reads a client name off an order goes
 // through `q.client && q.client.name` -- the file's standing judgment that
 // the object is not guaranteed. Here the whole modal body is one template,
@@ -5686,6 +5944,7 @@ function openBuyingList(){
 }
 document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
+document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
@@ -8435,6 +8694,7 @@ function renderSavedQuotes(){
           <span class="sq-col-count">${group.length}</span>
         </div>
         ${status==='preparing' ? cashToBuyBannerHTML(group) : ''}
+        ${status==='pending_delivery' ? deliveryRunsBannerHTML(group) : ''}
         <div class="sq-col-body">
           ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}
         </div>
@@ -8463,6 +8723,8 @@ function renderSavedQuotes(){
   // re-assigning does not reset how long the order has been waiting.
   const cashBanner = wrap.querySelector('#sq_cash_banner');
   if(cashBanner) cashBanner.addEventListener('click', openBuyingList);
+  const runsBanner = wrap.querySelector('#sq_runs_banner');
+  if(runsBanner) runsBanner.addEventListener('click', openDeliveryRuns);
   wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
   // Same, one stage on. Passing the status it is already in again, so
   // setSavedQuoteStatus leaves stageEnteredAt alone and naming a new driver
