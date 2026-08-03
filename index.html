@@ -5793,23 +5793,67 @@ function quoteSuggestedPrice(product, basePrice, kind, variantIdx=null, packQty=
 // purchase or by hand on a quote line), the matching entry is updated to
 // match rather than being left stale. No-ops for "Our stock" or when
 // there's no matching entry to update.
-function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price){
+/* Which figure purchasePriceAtQty() would have READ for this quantity.
+
+   A price is only ever observed at a quantity. Told "we paid 32,000 a bag"
+   the useful question is 32,000 for how many -- because the same supplier
+   sells at 34,000 for one bag and 32,500 for ten, and those are different
+   facts about different rows in the price book.
+
+   So the write has to land in the same slot the read came out of, and this
+   returns that slot. Deliberately mirrors purchasePriceAtQty step for step,
+   including its fallback to the other kind: if the two ever disagree, a
+   price typed into a quote goes somewhere other than where the quote read
+   it from, and the figure on screen does not change. */
+function purchasePriceSlotAtQty(row, qty){
+  const packQty = Number(row.packQty)||0;
+  const natural = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
+  const kind = tieredUnitPrice(row, qty, natural)!=null
+    ? natural
+    : (natural==='wholesale' ? 'retail' : 'wholesale');
+  // The tier tieredUnitPrice() settles on: the highest minQty that the
+  // quantity still reaches. None of them reaching it means the flat field
+  // was what got read.
+  const applies = tiersForKind(row, kind).filter(t=> t.price!=null && qty>=t.minQty);
+  if(!applies.length) return { kind, tier: null };
+  return { kind, tier: applies.reduce((best,t)=> t.minQty>=best.minQty ? t : best) };
+}
+
+/* A price paid is a fact about this supplier, so the price book learns it
+   rather than making someone go and retype it in Compare Prices.
+
+   Recorded against the quantity it was paid at. Before, this always wrote
+   to the LOWEST tier on the side it picked -- so negotiating 32,000 a bag
+   on an order of fifty rewrote the single-bag price to 32,000, and every
+   later one-bag quote came out at a bulk rate nobody had been offered.
+   A price agreed for a lorry-load is not a price for one bag.
+
+   It also chose the side by `wholesale!=null ? wholesale : retail`, which
+   is not how the price is read: a row with no pack break is read from
+   retail whatever wholesale holds, so the edit landed in a field nothing
+   was looking at and the quote appeared to ignore it. */
+function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price, qty){
   if(!supplierId || supplierId==='__stock__' || price==null) return;
   const priceRow = data.prices.find(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
   if(!priceRow) return;
-  const field = priceRow.wholesale!=null ? 'wholesale' : 'retail';
-  if(Number(priceRow[field])!==price){
-    priceRow[field] = price;
-    // The flat field is only a derived view of "the lowest-quantity tier
-    // on this side" (see deriveWholesaleRetail) -- correcting it here has
-    // to update that same tier too, or the next quote at that quantity
-    // would silently keep resolving to the old, now-stale tier price.
-    if(!Array.isArray(priceRow.tiers)) priceRow.tiers = [];
-    const baseTiers = tiersForKind(priceRow, field).sort((a,b)=>a.minQty-b.minQty);
-    if(baseTiers.length) baseTiers[0].price = price;
-    else {
-      priceRow.tiers.push({minQty: field==='wholesale' ? (Number(priceRow.packQty)||0) : 1, price});
-      priceRow.tiers.sort((a,b)=>a.minQty-b.minQty);
+  const atQty = Number(qty)||0;
+  const was = purchasePriceAtQty(priceRow, atQty);
+  if(Number(was)!==Number(price)){
+    const slot = purchasePriceSlotAtQty(priceRow, atQty);
+    if(slot.tier){
+      slot.tier.price = price;
+      // The flat field is a derived view of the LOWEST tier on its side
+      // (deriveWholesaleRetail), so it only moves when the tier that just
+      // changed is that lowest one. Moving it otherwise would report a
+      // bulk price as the row's headline figure.
+      const sideTiers = tiersForKind(priceRow, slot.kind).slice().sort((a,b)=>a.minQty-b.minQty);
+      if(sideTiers[0] === slot.tier) priceRow[slot.kind] = price;
+    } else {
+      // No tier reaches this quantity, so the flat field is what was read
+      // and what gets corrected. No tier is invented for it: a row with no
+      // tiers is fully described by its flat prices, and adding one would
+      // assert a volume break the supplier never quoted.
+      priceRow[slot.kind] = price;
     }
     priceRow.date = todayISO();
     priceRow.priceSource = 'purchase';
@@ -6884,9 +6928,13 @@ function renderQuoteItems(){
       if(item.supplierId && item.supplierId!=='__stock__'){
         const priceRow = data.prices.find(p=>p.productId===item.productId && (p.variantIdx==null?null:p.variantIdx)===(item.variantIdx==null?null:item.variantIdx) && p.supplierId===item.supplierId);
         if(priceRow){
-          const field = priceRow.wholesale!=null ? 'wholesale' : 'retail';
-          const oldTierPrice = tieredUnitPrice(priceRow, oldQty, field);
-          if(Number(item.price)===Number(oldTierPrice)) item.price = tieredUnitPrice(priceRow, newQty, field);
+          // Through purchasePriceAtQty, the same resolution the line was
+          // priced by (ipLineBuyPrice) and the same one an edit writes back
+          // through. Picking the side by hand here instead read a different
+          // figure than the line was filled from, so a hand-typed price
+          // could look untouched and a tier price could look hand-typed.
+          const oldTierPrice = Math.round(purchasePriceAtQty(priceRow, oldQty));
+          if(Number(item.price)===oldTierPrice) item.price = Math.round(purchasePriceAtQty(priceRow, newQty));
         }
       }
       item.qty = newQty;
@@ -6894,7 +6942,9 @@ function renderQuoteItems(){
     });
     row.querySelector('.q-price').addEventListener('change', (e)=>{
       item.price = Number(e.target.value) || 0;
-      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price);
+      // At THIS line's quantity -- the price was agreed for this many, and
+      // the price book records it against that.
+      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty);
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
@@ -15382,7 +15432,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     // Buying at a different price than what's on file for this supplier
     // means their price has changed -- keep the Price Registry current
     // instead of letting it go stale.
-    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price);
+    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q);
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
     await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     saveData();
