@@ -1696,6 +1696,33 @@
   }
   .st-table tr.st-spacer td{padding:5px 0;}
   .st-note{margin:12px 0 0;font-size:11.5px;line-height:1.55;color:var(--ow-ink-400);}
+  /* Ratios. Grouped by the question they answer rather than by the
+     textbook family they belong to -- "can it pay its bills" is what a
+     shopkeeper wants to know; "liquidity" is what an accountant calls it. */
+  .st-ratios{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
+  .st-ratios h3{margin:0 0 6px;font-size:14px;font-weight:700;color:var(--ink);}
+  .st-ratio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:14px;}
+  .st-ratio-group h4{
+    margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ow-ink-400);
+  }
+  .st-ratio{padding:9px 0;border-top:1px solid var(--ow-rule-soft);}
+  .st-ratio:first-of-type{border-top:0;}
+  .st-ratio-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .st-ratio-label{font-size:12.5px;color:var(--ink);}
+  .st-ratio-label em{
+    font-style:normal;margin-left:6px;padding:1px 5px;border-radius:99px;
+    background:var(--ow-steel-050);color:var(--ow-ink-400);
+    font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  }
+  .st-ratio-head b{
+    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;
+  }
+  .st-ratio.ok .st-ratio-head b{color:var(--good);}
+  .st-ratio.warn .st-ratio-head b{color:var(--ow-amber-ink);}
+  .st-ratio-read{display:block;font-size:11.5px;line-height:1.5;color:var(--ink-soft);margin-top:3px;}
+
   /* The reconciliation notes are the point, not a footnote: with no
      general ledger they stand in for a trial balance. */
   .st-checks{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
@@ -17109,6 +17136,124 @@ function statementChecks(is, bs, cf){
   return checks;
 }
 
+/* ================= RATIOS =================
+
+   Computed from the statements, not re-derived from the subledgers. If a
+   ratio disagreed with the statement above it, the reader would have no
+   way to tell which was wrong -- so there is only one arithmetic and the
+   ratios read its output.
+
+   Two honesty problems run through all of this, and both are stated on
+   the screen rather than left for the reader to work out:
+
+   ANNUALISING. A month's profit against a year's assets is not a return.
+   Anything that puts a period figure over a balance is scaled to a year
+   first, and says so -- a good March does not mean the shop earns that
+   twelve times over, but comparing an unscaled month to a balance is
+   worse than a scaled one that is labelled.
+
+   AVERAGES. Textbook turnover and collection ratios use AVERAGE stock and
+   AVERAGE debtors over the period. This data model keeps current balances
+   only, so they use closing figures. That overstates turnover in a shop
+   that is growing and understates it in one that is shrinking, and it is
+   named on every ratio it touches.
+
+   A ratio whose denominator is zero is null, never Infinity and never
+   zero: "cannot be worked out" and "is nothing" are different answers and
+   showing one for the other is how a shopkeeper ends up trusting a
+   figure that means nothing. */
+const RATIO_DAYS_IN_YEAR = 365;
+function periodDays(fromISO, toISO){
+  const d = monthsBetween(fromISO, toISO); // cheap guard against nonsense
+  if(isNaN(d)) return 0;
+  const a = new Date(String(fromISO)+'T00:00:00Z'), b = new Date(String(toISO)+'T00:00:00Z');
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return 0;
+  return Math.max(1, Math.round((b - a) / 86400000) + 1);
+}
+const safeRatio = (num, den)=> (den > 0 || den < 0) ? num/den : null;
+
+// Instalments falling due in the next twelve months -- the part of the
+// borrowing that belongs with the payables rather than below them.
+function loansDueWithin(months, asOfISO){
+  const asOf = asOfISO || todayISO();
+  // Built from the year and month alone, never by adding months to the
+  // date itself. Standing on the 31st, setUTCMonth(+11) asks for the 31st
+  // of a 30-day month and JavaScript rolls it into the next one -- so a
+  // twelve-month window opened on the 31st of December quietly spanned
+  // thirteen, overstating what falls due and understating liquidity.
+  //
+  // months-1 because the window includes the month being stood in.
+  const [yy, mm] = String(asOf).split('-').map(Number);
+  const cutoff = new Date(Date.UTC(yy, (mm-1) + months - 1, 1));
+  const to = cutoff.toISOString().slice(0,7);
+  const from = String(asOf).slice(0,7);
+  return liveLoans().reduce((s,l)=>{
+    const outstanding = loanOutstanding(l, asOf);
+    // A fast path rather than a guard: the cap below already reduces a
+    // settled loan to nothing, since min(due, 0) is 0.
+    if(outstanding <= 0) return s;
+    const due = loanSchedule(l)
+      .filter(r=> r.month >= from && r.month <= to)
+      .reduce((x,r)=> x + r.principal, 0);
+    return s + Math.min(due, outstanding);
+  }, 0);
+}
+
+function financialRatios(is, bs, cf){
+  const days = periodDays(is.from, is.to);
+  const annualise = (v)=> days>0 ? v * (RATIO_DAYS_IN_YEAR/days) : null;
+
+  const shortTermLoans = loansDueWithin(12, bs.asOf);
+  const currentAssets = bs.cash + bs.receivables + bs.inventory;
+  const currentLiabilities = bs.payables + shortTermLoans;
+  const annualRevenue = annualise(is.revenue);
+  const annualCOGS = annualise(is.costOfSales);
+  const annualNet = annualise(is.netProfit);
+
+  const pct = (v)=> v==null ? null : v*100;
+  return {
+    days, annualised: days !== RATIO_DAYS_IN_YEAR,
+    groups: [
+      { name:'Is it making money?', rows:[
+        { label:'Gross margin', value:pct(safeRatio(is.grossProfit, is.revenue)), unit:'%',
+          good:(v)=>v>=20, read:'What is left of each sale after the goods it sold.' },
+        { label:'Net margin', value:pct(safeRatio(is.netProfit, is.revenue)), unit:'%',
+          good:(v)=>v>0, read:'What is left after everything, including running costs and borrowing.' },
+        { label:'Return on assets', value:pct(safeRatio(annualNet, bs.assets)), unit:'%', annual:true,
+          good:(v)=>v>0, read:'What a year at this rate would earn on everything the shop owns.' },
+        { label:'Return on the owner’s money', value:pct(safeRatio(annualNet, bs.equity)), unit:'%', annual:true,
+          good:(v)=>v>0, read:'The same against what is actually yours once debts are settled.' },
+      ]},
+      { name:'Can it pay its bills?', rows:[
+        { label:'Current ratio', value:safeRatio(currentAssets, currentLiabilities), unit:'x',
+          good:(v)=>v>=1.5,
+          read:'Cash, debtors and stock against what falls due within the year. Under 1 means it cannot.' },
+        { label:'Quick ratio', value:safeRatio(bs.cash + bs.receivables, currentLiabilities), unit:'x',
+          good:(v)=>v>=1,
+          read:'The same without the stock, which has to be sold before it is money.' },
+        { label:'Cash to short-term debt', value:safeRatio(bs.cash, currentLiabilities), unit:'x',
+          good:(v)=>v>=0.5, read:'What could be paid this afternoon.' },
+      ]},
+      { name:'Is money moving?', rows:[
+        { label:'Stock turns a year', value:safeRatio(annualCOGS, bs.inventory), unit:'x', annual:true, closing:true,
+          good:(v)=>v>=4, read:'How many times the shelf sells through in a year.' },
+        { label:'Days of stock', value:safeRatio(bs.inventory * RATIO_DAYS_IN_YEAR, annualCOGS), unit:' days', annual:true, closing:true,
+          good:(v)=>v<=90, read:'How long today’s shelf would last at this rate of selling.' },
+        { label:'Days to get paid', value:safeRatio(bs.receivables * RATIO_DAYS_IN_YEAR, annualRevenue), unit:' days', annual:true, closing:true,
+          good:(v)=>v<=30, read:'How long customers take, on average, to settle.' },
+      ]},
+      { name:'How much is borrowed?', rows:[
+        { label:'Debt to net worth', value:safeRatio(bs.liabilities, bs.equity), unit:'x',
+          good:(v)=>v<=1, read:'Owed against owned. Over 1 means the lenders have more in it than you do.' },
+        { label:'Borrowing as a share of assets', value:pct(safeRatio(bs.liabilities, bs.assets)), unit:'%',
+          good:(v)=>v<=50, read:'How much of what the shop owns is really the lenders’.' },
+        { label:'Interest cover', value:safeRatio(is.operatingProfit, is.interest), unit:'x',
+          good:(v)=>v>=3, read:'How many times over the trading profit covers the interest. Blank means none is being paid.' },
+      ]},
+    ],
+  };
+}
+
 /* ---- Statements on screen ---- */
 function stDefaultRange(preset){
   const today = todayISO();
@@ -17119,6 +17264,43 @@ function stDefaultRange(preset){
     return { from:`${y}-${String(qStart).padStart(2,'0')}-01`, to:today };
   }
   return { from:`${y}-${String(m).padStart(2,'0')}-01`, to:today };
+}
+/* A ratio nobody can read is a number on a screen.
+
+   Each carries a plain sentence saying what it means, because "1.8x" is
+   only useful to a reader who already knows what a current ratio is --
+   and the shopkeeper this is built for reasonably does not. */
+function ratiosHTML(r){
+  const fmtVal = (row)=>{
+    if(row.value == null) return '—';
+    const v = row.unit === '%' ? row.value.toFixed(1)
+      : row.unit === 'x' ? row.value.toFixed(2)
+      : Math.round(row.value);
+    return v + row.unit;
+  };
+  return `<section class="st-ratios">
+    <h3>What the figures say</h3>
+    <p class="st-note">${r.annualised
+      ? `Anything marked <b>a year</b> scales this ${r.days}-day period up to twelve months so it can be set against the balances, which are a snapshot. A good month is not a good year.`
+      : 'The period is a full year, so nothing needed scaling.'}
+      Ratios marked <b>closing</b> use today's stock and debtors rather than the period's average, which this app does not keep — they read high in a growing shop and low in a shrinking one.</p>
+    <div class="st-ratio-grid">
+      ${r.groups.map(g=>`<div class="st-ratio-group">
+        <h4>${esc(g.name)}</h4>
+        ${g.rows.map(row=>{
+          const known = row.value != null && isFinite(row.value);
+          const tone = !known ? '' : (row.good(row.value) ? 'ok' : 'warn');
+          return `<div class="st-ratio ${tone}">
+            <div class="st-ratio-head">
+              <span class="st-ratio-label">${esc(row.label)}${row.annual?'<em>a year</em>':''}${row.closing?'<em>closing</em>':''}</span>
+              <b>${esc(fmtVal(row))}</b>
+            </div>
+            <span class="st-ratio-read">${known ? esc(row.read) : 'Cannot be worked out — there is nothing to measure it against yet.'}</span>
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
+    </div>
+  </section>`;
 }
 const stRow = (label, value, cls)=>
   `<tr class="${cls||''}"><td>${esc(label)}</td><td class="r num">${fmtUGX(Math.round(value))}</td></tr>`;
@@ -17200,6 +17382,8 @@ function renderStatements(){
         </table>
       </section>
     </div>
+
+    ${ratiosHTML(financialRatios(is, bs, cf))}
 
     <section class="st-checks">
       <h3>What these numbers rest on</h3>
