@@ -777,23 +777,30 @@ function renderWorkerPickStepper(q){
   `;
 
   const carousel = document.getElementById('wv_carousel');
-  // A single listener on the whole card (photo + badge + name/qty/source)
-  // -- tapping the "Pick"/"Picked" badge button (or anywhere else on a
-  // focused card) toggles it; the badge button click bubbles up here
-  // rather than needing its own separate handler.
+  // One listener on the card, but only the two controls on it do anything.
   //
-  // The short-pick control is the one part of the card that must NOT be
-  // swallowed by that gesture, so it is claimed by data-act before the
-  // toggle. Checked with closest() rather than against the button itself,
-  // or a tap that lands on something inside it falls through to the toggle
-  // and records a full pick -- the exact claim it exists to avoid making.
+  // The whole focused card used to be the toggle -- a tap anywhere on the
+  // photo, the name, the quantity or the supplier marked the line picked.
+  // That was survivable with two states. With three it is not: a recorded
+  // shortfall is a number the picker chose and the admin will be asked to
+  // settle, and a stray tap on the photo cleared it. The next tap marked
+  // the line fully picked, so a card that had said "3 of 5" now claimed all
+  // five, silently, on the way to an invoice built from it.
+  //
+  // So the badge marks a line picked, the corner control sets the number,
+  // and the rest of the card is something to look at while doing it. An
+  // unfocused card is still a target to bring into view -- that is
+  // navigation, not a decision, and it changes nothing.
+  //
+  // Both controls are matched with closest() rather than against the
+  // element itself, or a tap landing on the icon inside a button misses it.
   carousel.querySelectorAll('.wv-carousel-card-inner').forEach(inner=>{
     inner.addEventListener('click', (e)=>{
       const card = inner.closest('.wv-carousel-card');
       const idx = Number(inner.dataset.idx);
       if(!card.classList.contains('focused')){ centerCarouselCard(carousel, card, true); return; }
       if(e.target.closest('[data-act="short"]')) promptPickedQty(q.id, idx);
-      else toggleItemPickedAt(q.id, idx);
+      else if(e.target.closest('.wv-carousel-badge')) toggleItemPickedAt(q.id, idx);
     });
   });
   // Update focus once scrolling actually settles, not continuously while
@@ -836,6 +843,17 @@ function toggleItemPickedAt(orderId, idx){
   if(!q) return;
   const it = (q.items||[])[idx];
   if(!it) return;
+  // A recorded shortfall is not a state to toggle out of. It is a number
+  // the picker went and got -- three taps through a sheet -- and the one
+  // the admin will be asked to settle against the invoice and the stock.
+  // Toggling treated it as merely "answered", so the badge cleared it and a
+  // second press claimed the full quantity.
+  //
+  // The badge on a short line opens the sheet instead, which is also what
+  // it reads as: it says "3 of 5", so pressing it to change the 3 is the
+  // obvious meaning. Guarded here rather than only at the tap, so no other
+  // caller can discard one by accident either.
+  if(it.pickStatus==='short'){ promptPickedQty(orderId, idx); return; }
   if(itemPickAnswered(it)){ it.pickStatus='pending'; it.pickedQty=null; }
   else { it.pickStatus='done'; it.pickedQty=itemOrderedQty(it); }
   q.pickCursor = idx;

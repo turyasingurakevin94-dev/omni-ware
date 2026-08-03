@@ -210,6 +210,9 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         extractFunction(sharedJs, 'toggleItemPickedAt', 'shared-worker.js'),
       ], {
         data: data2, saveData: () => {}, renderWorkerView: () => {},
+        // The badge on a short line reopens the sheet rather than clearing
+        // the number; recorded so the test can see that it did.
+        promptPickedQty: (orderId, idx) => { data2.__sheetFor = `${orderId}:${idx}`; },
       }, [...MODEL_NAMES, 'setItemPickedQty', 'toggleItemPickedAt']);
 
       const line = () => data2.savedQuotes[0].items[0];
@@ -240,14 +243,37 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
       try { s2.setItemPickedQty(999, 0, 1); s2.setItemPickedQty(5, 99, 1); } catch (e) { threw = true; }
       t.check(!threw, 'a missing order or index is ignored rather than thrown');
 
-      // The tap has to undo a recorded number as well as a tick, or a
-      // mis-entered count would be stuck on the card with no way back.
-      load(); s2.setItemPickedQty(5, 0, 3); s2.toggleItemPickedAt(5, 0);
-      t.check(line().pickStatus === 'pending' && line().pickedQty === null,
-        'tapping a short card clears it back to unanswered, the same way a tick always cleared');
+      // A recorded number is not a state to toggle out of.
+      //
+      // This used to clear to 'pending' on one press and claim the full
+      // quantity on the next, so that a mis-entered count had a way back.
+      // Reported from the shop floor as the opposite: a card reading "3 of
+      // 5" became a claim for all five, and the way back was the thing
+      // doing the damage. Every press of it was one press from a wrong
+      // number on an invoice.
+      //
+      // The way back is the sheet, which is where the number came from and
+      // where setting it to the full count still lands on plain 'done'
+      // (asserted above). So the badge reopens it instead of clearing.
+      load(); s2.setItemPickedQty(5, 0, 3);
+      data2.__sheetFor = null;
+      s2.toggleItemPickedAt(5, 0);
+      t.check(line().pickStatus === 'short' && line().pickedQty === 3,
+        'the badge on a short line leaves the recorded number exactly as it was');
+      t.check(data2.__sheetFor === '5:0',
+        'and reopens the sheet on that line, which is what "3 of 5" reads as an invitation to change');
+      s2.toggleItemPickedAt(5, 0);
+      t.check(line().pickStatus === 'short' && line().pickedQty === 3,
+        'pressing it twice does not claim the full quantity either');
+
+      // The two-state path is untouched: this is still one tap to pick.
+      load();
       s2.toggleItemPickedAt(5, 0);
       t.check(line().pickStatus === 'done' && line().pickedQty === 5,
-        'and tapping again claims the full quantity, which is still the one-tap path for the common case');
+        'an unanswered line still goes to a full pick in one press');
+      s2.toggleItemPickedAt(5, 0);
+      t.check(line().pickStatus === 'pending' && line().pickedQty === null,
+        'and a full pick still undoes in one, since there is no chosen number to lose');
     }
 
     /* ---------- 5. the money gate ------------------------------------- */
@@ -519,6 +545,39 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
       // and "press this" indistinguishable before the palette split.
       t.check(amber && good && accent && amber !== good && amber !== accent,
         'short is its own colour, not a shade of done or of the button');
+    }
+
+    /* ---------- 11b. only the controls act on the card ----------------- */
+    /*
+     * The whole focused card was the toggle: a tap on the photo, the name,
+     * the quantity or the supplier marked the line picked. Survivable with
+     * two states, not with three -- a stray tap on a card reading "3 of 5"
+     * cleared it, and the next claimed all five.
+     *
+     * Reported from the shop floor, which is the only place a gesture like
+     * this gets properly tested: a picker holding a phone in one hand, at a
+     * shelf, is going to touch the card.
+     */
+    {
+      const src = read('shared-worker.js');
+      const handler = src.slice(src.indexOf("querySelectorAll('.wv-carousel-card-inner')"),
+        src.indexOf('scrollend'));
+
+      t.check(/if\(e\.target\.closest\('\[data-act="short"\]'\)\) promptPickedQty/.test(handler),
+        'the corner control opens the quantity sheet');
+      t.check(/else if\(e\.target\.closest\('\.wv-carousel-badge'\)\) toggleItemPickedAt/.test(handler),
+        'the badge, and only the badge, marks a line picked');
+      t.check(!/else toggleItemPickedAt/.test(handler),
+        'there is no bare else, which is what made the rest of the card a pick button');
+
+      // Navigation is not a decision: an unfocused card still centres.
+      t.check(/if\(!card\.classList\.contains\('focused'\)\)\{ centerCarouselCard\(carousel, card, true\); return; \}/.test(handler),
+        'and a card that is not focused is brought into view, changing nothing');
+
+      // Both matched with closest(), so a tap landing on the icon inside a
+      // button still counts as that button.
+      t.check((handler.match(/e\.target\.closest\(/g) || []).length === 2,
+        'both controls are matched by closest(), not by identity');
     }
 
     /* ---------- 12. money already taken that the order no longer wants -- */
