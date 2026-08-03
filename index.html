@@ -4929,6 +4929,102 @@ function productPackInfo(productId, variantIdx=null){
   return row ? {packQty:row.packQty, packUnit:row.packUnit, unit:row.unit} : null;
 }
 
+// Cheapest-first FOR A GIVEN QUANTITY: every supplier's price row carrying
+// what it would actually charge for that many, volume tiers included.
+//
+// rankedPriceRows below sorts on the flat wholesale figure, which is "the
+// price before any volume discount". That is the right answer only until
+// there is a quantity: a supplier who is cheap by the carton sorts above one
+// who is cheaper for the single unit being bought, and gets labelled
+// "cheapest" while doing it. A row with no wholesale price at all sorts
+// behind every row that has one, however expensive.
+//
+// This ranking was written out twice -- the quote builder's item picker and
+// Inventory > Purchase -- with the same comment explaining why, and the cash
+// figures below need it a third time. Three copies of "which supplier is
+// cheapest" is three chances for the buying list to disagree with the screen
+// the buyer used to choose, so it lives here once.
+function rankedPurchaseRowsAtQty(productId, variantIdx=null, qty=0){
+  return rankedPriceRows(productId, variantIdx)
+    .map(r=>({...r, purchasePrice: purchasePriceAtQty(r, qty)}))
+    .sort((a,b)=>{
+      const ap = a.purchasePrice!=null ? a.purchasePrice : Infinity;
+      const bp = b.purchasePrice!=null ? b.purchasePrice : Infinity;
+      return ap-bp;
+    });
+}
+
+/* ---- Cash to buy ------------------------------------------------------
+   What it costs to acquire everything the orders on the board need that is
+   not already on our own shelf.
+
+   A line sourced from '__stock__' costs nothing to acquire -- it is on the
+   shelf and already paid for -- so only supplier-sourced lines count. That
+   is the same rule generatePurchaseInvoicesForQuote() uses to decide which
+   lines become a purchase invoice, so the cash figure and the invoices that
+   eventually follow it are drawn on one line.
+
+   Priced at TODAY'S cheapest supplier rather than at the price stored on the
+   line. The line records what was quoted, which may be days old; the
+   question this answers is how much cash to take to market now. Through
+   rankedPurchaseRowsAtQty(), so the supplier named here is the one the item
+   picker would name for the same quantity. ---- */
+function orderLineIsBoughtIn(it){
+  return !!(it && it.supplierId && it.supplierId !== '__stock__');
+}
+
+// One row per line that has to be bought, carrying today's best price and
+// who it is from. `best` is null when nothing on file can price it: that
+// line is reported rather than counted, because a total that quietly treats
+// an unpriced line as free is worse than one that says what it cannot see.
+function orderPurchaseLines(q){
+  return (((q && q.items) || []).filter(orderLineIsBoughtIn)).map(it=>{
+    const qty = Number(it.qty) || 0;
+    const best = rankedPurchaseRowsAtQty(it.productId, it.variantIdx, qty)
+      .find(r=> r.purchasePrice != null) || null;
+    const unitCost = best ? Math.round(best.purchasePrice) : null;
+    return {
+      it, qty, best, unitCost,
+      lineCost: unitCost==null ? null : unitCost * qty,
+      // The order was quoted on somebody; today's cheapest may be somebody
+      // else. Worth saying, because the buyer is about to walk past one
+      // supplier to reach another, and should know they meant to.
+      movedFrom: (best && String(best.supplierId) !== String(it.supplierId)) ? it.supplierId : null,
+      quotedUnitCost: Number(it.price) || 0,
+    };
+  });
+}
+function orderCashToBuy(q){
+  return orderPurchaseLines(q).reduce((s,l)=> s + (l.lineCost || 0), 0);
+}
+function orderUnpricedLines(q){
+  return orderPurchaseLines(q).filter(l=> l.lineCost == null);
+}
+
+// The orders this is asked about. Draft is not committed work and would
+// inflate the figure; anything past Being Prepared has been picked, so
+// whatever had to be bought for it already was.
+function beingPreparedOrders(){
+  return (data.savedQuotes||[]).filter(q=> q.status==='preparing' && !q.voided && !quoteAgedOffBoard(q));
+}
+
+// The same money regrouped by who to go to, because that is how it is
+// actually spent: one trip to Roto with one amount, not three order-sized
+// amounts. Biggest run first -- that is the one worth planning around.
+function buyingListRuns(orders){
+  const bySupplier = {};
+  (orders||[]).forEach(q=>{
+    orderPurchaseLines(q).forEach(l=>{
+      if(l.lineCost==null) return;
+      const id = String(l.best.supplierId);
+      if(!bySupplier[id]) bySupplier[id] = { supplierId: l.best.supplierId, total: 0, lines: [] };
+      bySupplier[id].total += l.lineCost;
+      bySupplier[id].lines.push(Object.assign({order:q}, l));
+    });
+  });
+  return Object.values(bySupplier).sort((a,b)=> b.total - a.total);
+}
+
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
 // currently have the item shouldn't be recommended as a place to buy it.
@@ -5760,14 +5856,9 @@ function renderIpStage(){
   // bought, and labelled them "cheapest" while doing it. It also buried any
   // supplier with no wholesale price at all behind every supplier who had
   // one, however expensive. This is the same ranking Inventory > Purchase
-  // already uses, for the same reason.
-  const ranked = staticRanked
-    .map(r=>({...r, purchasePrice: purchasePriceAtQty(r, qty)}))
-    .sort((a,b)=>{
-      const ap = a.purchasePrice!=null ? a.purchasePrice : Infinity;
-      const bp = b.purchasePrice!=null ? b.purchasePrice : Infinity;
-      return ap-bp;
-    });
+  // and the buying list use -- rankedPurchaseRowsAtQty(), so all three name
+  // the same supplier as cheapest.
+  const ranked = rankedPurchaseRowsAtQty(ipProductId, variantIdx, qty);
   const top3 = ranked.slice(0, 3);
   const selectedRow = ranked.find(r=>r.supplierId===ipSelectedSupplierId) || null;
   // Prices and the recorded cost reference the selected supplier's row when
@@ -14529,13 +14620,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   // (their own volume tiers, if any) rather than by their flat qty-1 rate
   // -- the "best" one can change as the typed quantity crosses a
   // breakpoint, which is the whole point of asking "for this quantity".
-  const rankedForQty = allRows
-    .map(r=>({...r, purchasePrice: purchasePriceAtQty(r, qty)}))
-    .sort((a,b)=>{
-      const ap = a.purchasePrice!=null ? a.purchasePrice : Infinity;
-      const bp = b.purchasePrice!=null ? b.purchasePrice : Infinity;
-      return ap-bp;
-    });
+  const rankedForQty = rankedPurchaseRowsAtQty(invProductId, variantIdx, qty);
   const top3 = rankedForQty.slice(0, 3);
 
   if(!invPurchaseSupplierId || !top3.some(r=>r.supplierId===invPurchaseSupplierId)){

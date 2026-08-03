@@ -153,19 +153,36 @@ const row = (extra) => Object.assign({
 }
 {
   const stage = extractFunction(src, 'renderIpStage', 'index.html');
-  const iRankStart = stage.indexOf('const ranked = staticRanked');
-  t.check(/const ranked = staticRanked\s*\n\s*\.map\(r=>\(\{\.\.\.r, purchasePrice: purchasePriceAtQty\(r, qty\)\}\)\)/.test(stage),
-    'the quote screen works out what each supplier charges for this quantity');
+
+  // The ranking itself now lives in one place. It was written out here and
+  // again in Inventory > Purchase, with the same comment explaining why --
+  // and the buying list needed it a third time. Three copies of "which
+  // supplier is cheapest" is three chances for the buying list to disagree
+  // with the screen the buyer used to choose.
+  const ranker = extractFunction(src, 'rankedPurchaseRowsAtQty', 'index.html');
+  t.check(/\.map\(r=>\(\{\.\.\.r, purchasePrice: purchasePriceAtQty\(r, qty\)\}\)\)/.test(ranker),
+    'the shared ranker works out what each supplier charges for this quantity');
   // Computing it is not the same as sorting on it -- the comparator has to
   // actually read purchasePrice, or the flat figure can quietly drive the
   // order while the quantity-aware number sits there unused.
-  const sortBody = /\.sort\(\(a,b\)=>\{([\s\S]*?)\}\);/.exec(stage.slice(iRankStart));
+  const sortBody = /\.sort\(\(a,b\)=>\{([\s\S]*?)\}\);/.exec(ranker);
   t.check(sortBody && /a\.purchasePrice/.test(sortBody[1]) && /b\.purchasePrice/.test(sortBody[1])
     && !/a\.wholesale/.test(sortBody[1]),
     'and sorts on that figure rather than on the flat wholesale one');
+  t.check(/rankedPriceRows\(productId, variantIdx\)/.test(ranker),
+    'starting from the out-of-stock-filtered list, so a supplier who cannot supply cannot win');
+
+  // Everyone who ranks by quantity goes through it.
+  const inv = extractFunction(src, 'renderInvPurchaseStage', 'index.html');
+  [['the quote screen', stage], ['Inventory > Purchase', inv]].forEach(([what, fn]) => {
+    t.check(/rankedPurchaseRowsAtQty\(/.test(fn), `${what} uses the shared ranker`);
+    t.check(!/\.map\(r=>\(\{\.\.\.r, purchasePrice: purchasePriceAtQty/.test(fn),
+      `and no longer carries its own copy of it (${what})`);
+  });
+
   // Order matters: the ranking cannot be built before there is a quantity.
   const iQty = stage.indexOf('const qty = ipComputeQty');
-  const iRank = stage.indexOf('const ranked = staticRanked');
+  const iRank = stage.indexOf('const ranked = rankedPurchaseRowsAtQty');
   const iTop3 = stage.indexOf('const top3 = ranked.slice');
   t.check(iQty > -1 && iRank > iQty && iTop3 > iRank,
     'the quantity is settled first, then the ranking, then the cards');
