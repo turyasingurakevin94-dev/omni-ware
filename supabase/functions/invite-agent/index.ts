@@ -63,9 +63,10 @@ Deno.serve(async (req) => {
     // is issued by the database (0029_agent_identity_rebuild) and returned
     // below, because a caller-chosen id is what allowed one agent's order
     // history to be handed to another by re-typing or re-using a value.
-    let shopId: string, name: string, phone: string | undefined, email: string, paymentTerm: string | undefined;
+    let shopId: string, name: string, phone: string | undefined, email: string,
+      paymentTerm: string | undefined, location: string | undefined;
     try {
-      ({ shopId, name, phone, email, paymentTerm } = await req.json());
+      ({ shopId, name, phone, email, paymentTerm, location } = await req.json());
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
     }
@@ -135,6 +136,10 @@ Deno.serve(async (req) => {
       name,
       phone: phone || null,
       email,
+      // Required by the admin form, and stored here as typed. Not enforced
+      // server-side: agents invited before the field existed have none, so
+      // rejecting a blank would only block anyone re-inviting one of them.
+      location: (location && String(location).trim()) || null,
       payment_term: paymentTerm || "prepay",
     }).select("id").single();
     if (insertErr) return json({ error: insertErr.message, stage: "agents_insert" }, 500);

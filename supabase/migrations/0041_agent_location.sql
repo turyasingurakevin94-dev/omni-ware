@@ -1,0 +1,13 @@
+-- Where an agent is based.
+--
+-- Customers already carried a location; agents did not, so the roster
+-- could not say where anybody worked from. Required at the point of
+-- invite (index.html) and written by invite-agent, which is the only
+-- thing that inserts an agents row.
+--
+-- Nullable rather than `not null`: every agent already on the books
+-- predates the field, and a not-null column would have to invent a
+-- location for each of them. The admin roster shows the gap instead, so
+-- it gets filled in with something true rather than something that
+-- merely satisfies a constraint.
+alter table agents add column if not exists location text;

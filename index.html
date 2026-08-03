@@ -545,6 +545,14 @@
   /* Presets tab */
   .preset-panel{padding:16px 20px 20px;}
   .preset-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+  /* Marks a field that will refuse to save empty. On the label rather than
+     as a bare asterisk, because an asterisk only means "required" to
+     someone who already knows it does. */
+  .req{
+    margin-left:6px;padding:1px 6px;border-radius:99px;vertical-align:1px;
+    font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+    color:var(--ow-amber-ink);background:var(--ow-amber-soft);
+  }
   .preset-tabs{display:flex;gap:3px;background:#F1F3F5;padding:3px;border-radius:9px;flex-shrink:0;}
   .preset-tab{all:unset;cursor:pointer;padding:7px 16px;border-radius:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
   .preset-tab:hover{color:var(--ink);}
@@ -3393,6 +3401,7 @@
           <div class="preset-tabs" id="presetTabs">
             <button type="button" class="preset-tab active" data-ptab="categories">Categories</button>
             <button type="button" class="preset-tab" data-ptab="units">Units</button>
+            <button type="button" class="preset-tab" data-ptab="locations">Locations</button>
             <button type="button" class="preset-tab" data-ptab="attributes">Attributes</button>
             <button type="button" class="preset-tab" data-ptab="income-cats">Cash In Categories</button>
             <button type="button" class="preset-tab" data-ptab="expense-cats">Cash Out Categories</button>
@@ -3417,6 +3426,15 @@
             <button type="button" id="preset_unit_add">Add</button>
           </div>
           <div id="presetUnitsWrap"></div>
+        </div>
+
+        <div class="preset-pane" id="ppane-locations" style="display:none;">
+          <p class="preset-hint">Every place you deliver to. Chosen when a customer or an agent is added, and used to group orders going the same way on the Pending Delivery board — which only works while one place is spelled one way.</p>
+          <div class="preset-inline-add">
+            <input type="text" id="preset_location_new" placeholder="Add a location...">
+            <button type="button" id="preset_location_add">Add</button>
+          </div>
+          <div id="presetLocationsWrap"></div>
         </div>
 
         <div class="preset-pane" id="ppane-attributes" style="display:none;">
@@ -3495,6 +3513,7 @@
 <datalist id="dl_income_categories"></datalist>
 <datalist id="dl_expense_categories"></datalist>
 <datalist id="dl_units"></datalist>
+<datalist id="dl_locations"></datalist>
 <datalist id="dl_attribute_names"></datalist>
 
 <div class="toast" id="toast"></div>
@@ -3560,7 +3579,10 @@
         <div class="field"><label>Customer ID</label><input id="c_id" disabled><div class="field-hint">Generated automatically</div></div>
         <div class="field"><label>Customer name</label><input id="c_name" placeholder="e.g. Sarah Namono"></div>
         <div class="field"><label>Contact phone</label><input id="c_phone" placeholder="e.g. 0700 000 000"></div>
-        <div class="field"><label>Location</label><input id="c_location" placeholder="e.g. Ntinda"></div>
+        <div class="field"><label>Location <span class="req">required</span></label>
+          <input id="c_location" list="dl_locations" placeholder="Choose or type a new one">
+          <div class="field-hint">Pick from your locations, or type a new one and press Enter to add it.</div>
+        </div>
         <div class="field"><label>Opening debt balance (UGX)</label><input id="c_debt" type="number" min="0" placeholder="0"></div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="c_notes" placeholder="optional"></div>
       </div>
@@ -3617,6 +3639,10 @@
         <div class="field"><label>Agent name</label><input id="ag_name" placeholder="e.g. Peter Ochieng"></div>
         <div class="field"><label>Contact phone</label><input id="ag_phone" placeholder="e.g. 0700 000 000"></div>
         <div class="field"><label>Email (for their login invite)</label><input id="ag_email" type="email" placeholder="e.g. peter@example.com"></div>
+        <div class="field"><label>Based at <span class="req">required</span></label>
+          <input id="ag_location" list="dl_locations" placeholder="Choose or type a new one">
+          <div class="field-hint">Where they work from. Pick one, or type a new one and press Enter.</div>
+        </div>
         <div class="field" style="grid-column:1/-1;"><label>Payment terms</label>
           <select id="ag_payment_term">
             <option value="prepay">Pay before we prepare (recommended to start)</option>
@@ -4463,6 +4489,11 @@ function seedData(){
       {name:'Tools', subcategories:['Hand Tools','Power Tools']},
     ],
     presetUnits: ['Bag','Sheet','Kg','Litre','Roll','Length (3m)','Pack','Ctn','Bundle','Tin','Piece','Pair','Box','Metre'],
+    // Kept as one list because a location's whole job is to be the SAME
+    // string on two records. Free-typed, "Ntinda" and "ntinda" become two
+    // places that are one place, and every screen that groups by where
+    // something is going quietly splits in half.
+    presetLocations: ['Ntinda','Nakawa','Kireka','Kyaliwajjala','Bwaise','Kisenyi','Kampala Industrial Area'],
     presetIncomeCategories: ['Sales Revenue','Debt Collection','Loan Received','Owner Investment','Other Income'],
     presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Other Expense'],
     presetAttributes: [
@@ -4556,7 +4587,7 @@ async function loadData(shopId){
   return {
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
-    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
+    agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
@@ -4623,6 +4654,7 @@ async function loadData(shopId){
     nextSupplierCommissionId: (supplierCommissionsR.data||[]).length ? Math.max(0,...supplierCommissionsR.data.map(c=>c.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
+    presetLocations: presets.locations || seed.presetLocations,
     presetIncomeCategories: presets.incomeCategories || seed.presetIncomeCategories,
     presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
     presetAttributes: presets.attributes || seed.presetAttributes,
@@ -4654,7 +4686,7 @@ function buildSyncRows(d, shopId){
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
-    agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
+    agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||null, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
     customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
@@ -4718,7 +4750,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, idCounters:d.idCounters||{}},
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, idCounters:d.idCounters||{}},
       quote_draft: d.quote
     }
   };
@@ -10888,7 +10920,7 @@ function restoreAgent(id){
   toast(`${a.name} restored`);
 }
 function resetAgentForm(){
-  ['ag_name','ag_phone','ag_email'].forEach(id=>document.getElementById(id).value='');
+  ['ag_name','ag_phone','ag_email','ag_location'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ag_payment_term').value = 'prepay';
 }
 document.getElementById('ag_invite_btn').addEventListener('click', ()=>{ resetAgentForm(); openModal('agentModal'); });
@@ -10898,6 +10930,14 @@ document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
   const name = document.getElementById('ag_name').value.trim();
   const email = document.getElementById('ag_email').value.trim();
   if(!name || !email){ toast('Agent name and email are required'); return; }
+  // Same rule as a customer's, and the same reason: an agent based
+  // nowhere cannot be reasoned about when work is being handed out.
+  const location = rememberLocation(document.getElementById('ag_location').value);
+  if(!location){
+    toast('Choose where this agent is based, or type a new location and press Enter', 5000);
+    document.getElementById('ag_location').focus();
+    return;
+  }
   const phone = document.getElementById('ag_phone').value.trim();
   const paymentTerm = document.getElementById('ag_payment_term').value;
   const btn = document.getElementById('ag_invite_save');
@@ -10908,12 +10948,12 @@ document.getElementById('ag_invite_save').addEventListener('click', async ()=>{
     // typed id was how an agent's order history could end up attached to
     // someone else, and the duplicate check it needed was only ever as
     // good as whatever happened to be loaded locally.
-    const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, name, phone, email, paymentTerm } });
+    const { data: res, error } = await sb.functions.invoke('invite-agent', { body: { shopId: currentShopId, name, phone, email, paymentTerm, location } });
     if(error) throw error;
     if(res && res.error) throw new Error(res.error);
     const id = res && res.agentId;
     if(!id) throw new Error('The server did not return an Agent ID');
-    data.agents.push({ id, name, phone, email, paymentTerm, unavailable:false, retiredAt:null, userId: (res && res.userId) || null });
+    data.agents.push({ id, name, phone, email, paymentTerm, location, unavailable:false, retiredAt:null, userId: (res && res.userId) || null });
     saveData();
     closeModal('agentModal'); resetAgentForm(); renderAgents();
     toast(`Invite sent to ${email} — Agent ID ${id}`);
@@ -11499,14 +11539,27 @@ document.getElementById('c_save').addEventListener('click', ()=>{
   const id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
   if(!name){ toast('Customer name is required'); return; }
+  // Required, because everything downstream that plans a delivery reads it
+  // and there is no second place to get it from. An order for a customer
+  // with no location cannot be grouped, routed, or put on a run -- it just
+  // sits under "No address yet" until somebody rings them.
+  //
+  // rememberLocation rather than a bare read: a place typed here that is
+  // not on the list joins it, so the next person choosing gets this exact
+  // spelling instead of inventing their own.
+  const location = rememberLocation(document.getElementById('c_location').value);
+  if(!location){
+    toast('Choose a location, or type a new one and press Enter', 5000);
+    document.getElementById('c_location').focus();
+    return;
+  }
   if(!editingCustomerId && idIsPending(id)){ toast('Still issuing a Customer ID — try again in a moment'); return; }
   if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast(`Could not issue a new Customer ID (${id} is taken). Reload and try again.`); return; }
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
     data.customers[idx] = {
-      ...data.customers[idx], id, name,
+      ...data.customers[idx], id, name, location,
       phone: document.getElementById('c_phone').value.trim(),
-      location: document.getElementById('c_location').value.trim(),
       notes: document.getElementById('c_notes').value.trim(),
     };
   } else {
@@ -11515,9 +11568,8 @@ document.getElementById('c_save').addEventListener('click', ()=>{
     // two can never be reconciled again.
     const openingDebt = Number(document.getElementById('c_debt').value)||0;
     data.customers.push({
-      id, name,
+      id, name, location,
       phone: document.getElementById('c_phone').value.trim(),
-      location: document.getElementById('c_location').value.trim(),
       debt: openingDebt,
       notes: document.getElementById('c_notes').value.trim(),
       debtLog: openingDebt > 0
@@ -15217,6 +15269,66 @@ function renderPresetAttrs(edit){
 }
 // Feeds the presets into the datalists that back the Category/Sub-category,
 // Unit/Pack unit, and variant attribute-name fields elsewhere in the app.
+function renderPresetLocations(editIdx){
+  const wrap = document.getElementById('presetLocationsWrap');
+  const locs = data.presetLocations||[];
+  wrap.innerHTML = locs.length===0 ? '<div class="preset-empty">No locations yet — add one above.</div>' :
+    `<div class="preset-chip-flow">${locs.map((l,i)=> i===editIdx ?
+      `<span class="preset-chip preset-chip-editing"><input type="text" class="preset-location-edit-input" data-idx="${i}" value="${esc(l)}"></span>` :
+      `<span class="preset-chip">${esc(l)}<button type="button" class="preset-chip-edit preset-location-edit" data-idx="${i}" title="Rename location">${ICON_EDIT}</button><button type="button" class="preset-location-remove" data-idx="${i}" title="Remove location"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`
+    ).join('')}</div>`;
+  wrap.querySelectorAll('.preset-location-remove').forEach(btn=>btn.addEventListener('click', e=>{
+    const idx = Number(e.currentTarget.dataset.idx);
+    const name = data.presetLocations[idx];
+    // Records already carry the string, not a reference to this list, so
+    // removing it here cannot orphan anybody -- but it does stop the place
+    // being offered, and somebody is probably still there. Worth saying.
+    const inUse = (data.customers||[]).filter(c=>(c.location||'').toLowerCase()===String(name||'').toLowerCase()).length;
+    if(inUse && !confirm(`${inUse} customer${inUse===1?' is':'s are'} recorded at "${name}". They keep it, but it will no longer be offered. Remove it?`)) return;
+    data.presetLocations.splice(idx,1);
+    saveData(); renderPresets();
+  }));
+  wrap.querySelectorAll('.preset-location-edit').forEach(btn=>btn.addEventListener('click', e=>{
+    renderPresetLocations(Number(e.currentTarget.dataset.idx));
+  }));
+  wireChipRename(wrap, '.preset-location-edit-input', {
+    getCurrent: idx => data.presetLocations[idx],
+    isDup: (idx, val) => data.presetLocations.some((l,li)=>li!==idx && l.toLowerCase()===val.toLowerCase()),
+    setValue: (idx, val) => {
+      // Carry every record that was at the old spelling across to the new
+      // one. A rename that left customers pointing at a place no longer on
+      // the list would split exactly the grouping this preset exists for.
+      const from = data.presetLocations[idx];
+      data.presetLocations[idx] = val;
+      (data.customers||[]).forEach(c=>{
+        if((c.location||'').toLowerCase() === String(from||'').toLowerCase()) c.location = val;
+      });
+    },
+    onCancel: () => renderPresetLocations(),
+    onSaved: () => { renderPresets(); renderCustomers(); toast('Location renamed'); }
+  });
+}
+document.getElementById('preset_location_add').addEventListener('click', ()=>{
+  const input = document.getElementById('preset_location_new');
+  const val = input.value.trim();
+  if(!val) return;
+  if((data.presetLocations||[]).some(l=>l.toLowerCase()===val.toLowerCase())){ toast('That location already exists'); return; }
+  rememberLocation(val);
+  input.value = '';
+  renderPresets();
+});
+document.getElementById('preset_location_new').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('preset_location_add').click(); }
+});
+
+// Wired once at boot rather than on every open: the inputs are static
+// markup, and re-wiring on each open would stack a listener per open.
+// wireLocationInput guards on its own dataset flag as a second line.
+['c_location','ag_location'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) wireLocationInput(el);
+});
+
 function refreshPresetDatalists(){
   document.getElementById('dl_categories').innerHTML = (data.presetCategories||[]).map(c=>`<option value="${esc(c.name)}">`).join('');
   const typedCat = document.getElementById('p_category') ? document.getElementById('p_category').value.trim().toLowerCase() : '';
@@ -15224,13 +15336,75 @@ function refreshPresetDatalists(){
   const subs = currentCat ? (currentCat.subcategories||[]) : [...new Set((data.presetCategories||[]).flatMap(c=>c.subcategories||[]))];
   document.getElementById('dl_subcategories').innerHTML = subs.map(s=>`<option value="${esc(s)}">`).join('');
   document.getElementById('dl_units').innerHTML = (data.presetUnits||[]).map(u=>`<option value="${esc(u)}">`).join('');
+  document.getElementById('dl_locations').innerHTML = (data.presetLocations||[]).map(l=>`<option value="${esc(l)}">`).join('');
   document.getElementById('dl_attribute_names').innerHTML = (data.presetAttributes||[]).map(a=>`<option value="${esc(a.name)}">`).join('');
   document.getElementById('dl_income_categories').innerHTML = (data.presetIncomeCategories||[]).map(c=>`<option value="${esc(c)}">`).join('');
   document.getElementById('dl_expense_categories').innerHTML = (data.presetExpenseCategories||[]).map(c=>`<option value="${esc(c)}">`).join('');
 }
+/* Locations are a preset for one reason: a location's whole job is to be
+   the SAME string on two records.
+
+   Free-typed, "Ntinda" and "ntinda " become two places that are one
+   place, and every screen that groups by where something is going --
+   the delivery clusters most of all -- quietly splits in half. A list
+   people pick from is what stops that at the point of entry, rather
+   than normalising it away afterwards and hoping.
+
+   Adding is still one keystroke: type a place that is not on the list
+   and press Enter. Nobody is made to visit a settings screen to record
+   a customer who lives somewhere new. */
+function canonicalLocation(raw){
+  const val = String(raw==null ? '' : raw).trim().replace(/\s+/g, ' ');
+  if(!val) return '';
+  // An existing spelling wins over the one just typed. That is the whole
+  // point: the second person to enter "ntinda" gets the first person's
+  // "Ntinda", and the two records group together.
+  const known = (data.presetLocations||[]).find(l=>l.toLowerCase()===val.toLowerCase());
+  return known || val;
+}
+// Returns the canonical spelling, adding it to the presets if it is new.
+function rememberLocation(raw){
+  const val = canonicalLocation(raw);
+  if(!val) return '';
+  if(!Array.isArray(data.presetLocations)) data.presetLocations = [];
+  if(!data.presetLocations.some(l=>l.toLowerCase()===val.toLowerCase())){
+    data.presetLocations.push(val);
+    data.presetLocations.sort((a,b)=>a.localeCompare(b));
+    saveData();
+    refreshPresetDatalists();
+    toast(`"${val}" added to your locations`);
+  }
+  return val;
+}
+/* Wires a text input as a location field: suggests the list, and Enter
+   commits whatever is typed.
+
+   preventDefault on Enter because these inputs sit in modals whose
+   default action is to submit -- without it, adding a location and saving
+   the record become one keystroke, and the record saves before the person
+   has seen their new location accepted. */
+function wireLocationInput(input){
+  if(!input || input.dataset.locationWired) return;
+  input.dataset.locationWired = '1';
+  input.setAttribute('list', 'dl_locations');
+  input.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    if(!input.value.trim()) return;
+    input.value = rememberLocation(input.value);
+  });
+  // Typing a known place in any casing settles to the recorded spelling
+  // on the way out of the field, so the record and the list agree without
+  // anyone being corrected mid-word.
+  input.addEventListener('blur', ()=>{
+    if(input.value.trim()) input.value = canonicalLocation(input.value);
+  });
+}
+
 function renderPresets(){
   renderPresetCategories();
   renderPresetUnits();
+  renderPresetLocations();
   renderPresetAttrs();
   renderPresetIncomeCats();
   renderPresetExpenseCats();
