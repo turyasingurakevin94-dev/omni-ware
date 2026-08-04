@@ -1696,6 +1696,29 @@
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
     clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
+  /* ---- Payroll and rent ---- */
+  .pr-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px;}
+  .pr-cell{display:flex;flex-direction:column;gap:3px;background:var(--bg);
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .pr-cell-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .pr-cell b{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);}
+  .pr-cell.good b{color:var(--good);}
+  .pr-cell-note{font-size:11.5px;color:var(--ink-soft);}
+  .pr-name{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3;}
+  .pr-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .pr-quiet{color:var(--ink-soft);}
+  .pr-days{width:76px;padding:5px 8px;font-variant-numeric:tabular-nums;}
+  .pr-table td{vertical-align:middle;}
+  /* A settled month stays on the list -- it is the record that it was
+     paid -- but stops competing for attention with the ones that are not. */
+  .pr-table tr.pr-settled td{opacity:.62;}
+  .pr-state{display:inline-block;white-space:nowrap;font-size:11.5px;font-weight:700;
+    padding:3px 9px;border-radius:999px;background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .pr-state.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .pr-state.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .pr-state.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
   /* ===== Cash Book — opening wizard ===== */
   .cb-wizard-panel{max-width:600px;margin:0 auto 20px;}
   .cb-progress-bar{height:8px;border-radius:5px;background:#EEF1F3;overflow:hidden;margin-bottom:8px;}
@@ -3427,6 +3450,7 @@
       <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase Analytics</button>
       <button type="button" class="mms-item" data-tab="assets">Assets</button>
       <button type="button" class="mms-item" data-tab="loans">Loans</button>
+      <button type="button" class="mms-item" data-tab="payroll">Payroll &amp; rent</button>
       <button type="button" class="mms-item" data-tab="statements">Statements</button>
       <button type="button" class="mms-item" data-tab="analytics-debtors">Debtors List</button>
       <button type="button" class="mms-item" data-tab="analytics-creditors">Creditors List</button>
@@ -3520,6 +3544,9 @@
         <button type="button" data-tab="loans" title="Money the shop has borrowed">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
           <span class="nav-label">Loans</span></button>
+        <button type="button" data-tab="payroll" title="Wages and rent — what is due and what is owed">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
+          <span class="nav-label">Payroll &amp; rent</span></button>
       </div>
     </div>
 
@@ -4515,6 +4542,73 @@
       </div>
     </section>
 
+    <!-- PAYROLL AND RENT -->
+    <div class="modal-overlay" id="rentModal">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 id="rentModalTitle">Add premises</h2>
+          <button class="modal-close" id="rentModalClose" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field"><label>Premises</label><input id="rt_premises" placeholder="e.g. Main shop, Nakawa"></div>
+            <div class="field"><label>Landlord</label><input id="rt_landlord" placeholder="optional"></div>
+            <div class="field"><label>Rent per month (UGX)</label><input id="rt_amount" type="number" min="0" step="any" placeholder="e.g. 800000"></div>
+            <div class="field"><label>Due day</label>
+              <input id="rt_due_day" type="number" min="1" max="28" value="1">
+              <div class="field-hint">1 to 28, so every month has the day.</div>
+            </div>
+            <div class="field"><label>Rent starts</label>
+              <input id="rt_start" type="month">
+              <div class="field-hint">Nothing is raised for months before this.</div>
+            </div>
+            <div class="field"><label>Until</label>
+              <input id="rt_end" type="month">
+              <div class="field-hint">Leave empty while the tenancy is ongoing.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" id="rt_cancel">Cancel</button>
+          <button class="btn btn-accent" id="rt_save">Save premises</button>
+        </div>
+      </div>
+    </div>
+
+    <section id="tab-payroll" style="display:none;">
+      <div class="page-head">
+        <h1>Payroll &amp; rent</h1>
+        <p>What the shop owes its people and its landlord each month, what has been paid, and what is late. Paying here writes the entry straight to the Cash Book under Rent or Salaries &amp; Wages.</p>
+      </div>
+
+      <div class="panel" id="prPositionWrap"></div>
+
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">This month</h2>
+          <div class="btn-row" style="margin-top:0;">
+            <button type="button" class="btn btn-ghost btn-icon" id="pr_prev">‹ Previous</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="pr_today">This month</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="pr_next">Next ›</button>
+          </div>
+        </div>
+        <div id="prDuesWrap"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Rent agreements</h2>
+          <button type="button" class="btn btn-accent btn-icon" id="pr_add_rent">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Add premises
+          </button>
+        </div>
+        <div id="prRentWrap"></div>
+      </div>
+    </section>
+
     <!-- LOANS -->
     <section id="tab-loans" style="display:none;">
       <div class="page-head">
@@ -4937,6 +5031,18 @@
             <option value="worker">Worker</option>
             <option value="delivery">Delivery personnel</option>
           </select>
+        </div>
+        <div class="field"><label>How they are paid</label>
+          <select id="st_pay_basis">
+            <option value="">Not set</option>
+            <option value="monthly">Monthly salary</option>
+            <option value="daily">Daily rate</option>
+          </select>
+          <div class="field-hint" id="st_pay_basis_hint">Leave unset for someone who is not on the payroll.</div>
+        </div>
+        <div class="field"><label id="st_pay_rate_label">Rate</label>
+          <input id="st_pay_rate" type="number" min="0" step="any" placeholder="e.g. 350000">
+          <div class="field-hint" id="st_pay_rate_hint">Set how they are paid first.</div>
         </div>
         <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="st_notes" placeholder="optional"></div>
       </div>
@@ -6063,6 +6169,10 @@ function seedData(){
     nextFixedAssetId: 1,
     loans: [],
     nextLoanId: 1,
+    rentAgreements: [],
+    nextRentAgreementId: 1,
+    dues: [],
+    nextDueId: 1,
     nextPurchaseInvoiceId: 1,
     presetCategories: [
       {name:'Cement', subcategories:[]},
@@ -6139,15 +6249,17 @@ async function loadData(shopId){
   const [
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
-    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR
+    savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
+    rentAgreementsR, duesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
     sel('saved_quotes'), sel('purchase_invoices'),
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
-    sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans')
+    sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
+    sel('rent_agreements'), sel('dues')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, rentAgreementsR, duesR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -6171,7 +6283,14 @@ async function loadData(shopId){
 
   return {
     suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
-    staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
+    // payBasis and payRate stay null rather than becoming '' and 0: a
+    // staff member nobody has set a rate for has not been given a rate
+    // of nothing, and the payroll screen has to be able to tell those
+    // two apart. Every row that existed before this feature is the
+    // first case, so it is the common one, not an edge.
+    staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null,
+      payBasis: s.pay_basis || null,
+      payRate: s.pay_rate==null ? null : Number(s.pay_rate)})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
     customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
@@ -6262,6 +6381,24 @@ async function loadData(shopId){
       repayments: (l.payload && Array.isArray(l.payload.repayments)) ? l.payload.repayments : []
     })),
     nextLoanId: (loansR.data||[]).length ? Math.max(0,...loansR.data.map(l=>l.id||0))+1 : 1,
+    rentAgreements: (rentAgreementsR.data||[]).map(r=>({
+      id:r.id, premises:r.premises||'', landlord:r.landlord||'',
+      amount:Number(r.amount)||0, dueDay:Number(r.due_day)||1,
+      startMonth:r.start_month||'', endMonth:r.end_month||null, notes:r.notes||''
+    })),
+    nextRentAgreementId: (rentAgreementsR.data||[]).length ? Math.max(0,...rentAgreementsR.data.map(r=>r.id||0))+1 : 1,
+    // amount and days stay null rather than becoming 0. Null means nobody
+    // has costed this month yet -- a daily-paid worker's wages cannot be
+    // known until the days are counted -- and reading that as zero would
+    // report a payroll that is confidently short.
+    dues: (duesR.data||[]).map(d=>({
+      id:d.id, kind:d.kind, refId:d.ref_id, period:d.period, dueDate:d.due_date,
+      amount: d.amount==null ? null : Number(d.amount),
+      days: d.days==null ? null : Number(d.days),
+      rate: Number(d.rate)||0, paid: Number(d.paid)||0, notes:d.notes||'',
+      payments: (d.payload && Array.isArray(d.payload.payments)) ? d.payload.payments : []
+    })),
+    nextDueId: (duesR.data||[]).length ? Math.max(0,...duesR.data.map(d=>d.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
     presetLocations: presets.locations || seed.presetLocations,
@@ -6293,7 +6430,10 @@ function buildSyncRows(d, shopId){
   })));
   return {
     suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
-    staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable})),
+    staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
+      // Written through as null, never coerced to 0 -- see the load side.
+      pay_basis: s.payBasis || null,
+      pay_rate: s.payRate==null ? null : s.payRate})),
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
     agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||null, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
@@ -6375,6 +6515,20 @@ function buildSyncRows(d, shopId){
       started_on:l.startedOn, closed_on:l.closedOn||null,
       notes:l.notes||null, cash_txn_id:l.cashTxnId||null,
       payload:{ repayments: l.repayments||[] }
+    })),
+    rentAgreements: (d.rentAgreements||[]).map(r=>({
+      id:r.id, shop_id:shopId, premises:r.premises, landlord:r.landlord||null,
+      amount:r.amount||0, due_day:r.dueDay||1,
+      start_month:r.startMonth, end_month:r.endMonth||null, notes:r.notes||null
+    })),
+    dues: (d.dues||[]).map(x=>({
+      id:x.id, shop_id:shopId, kind:x.kind, ref_id:String(x.refId), period:x.period,
+      due_date:x.dueDate,
+      // null is carried through as null: it means uncosted, not zero.
+      amount: x.amount==null ? null : x.amount,
+      days: x.days==null ? null : x.days,
+      rate:x.rate||0, paid:x.paid||0, notes:x.notes||null,
+      payload:{ payments: x.payments||[] }
     })),
     settings: {
       shop_id: shopId,
@@ -6489,7 +6643,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -6512,6 +6666,8 @@ async function saveData(){
   addDiffOps(ops, 'supplierCommissions', 'supplier_commissions', 'id', shopId, rows.supplierCommissions);
   addDiffOps(ops, 'fixedAssets', 'fixed_assets', 'id', shopId, rows.fixedAssets);
   addDiffOps(ops, 'loans', 'loans', 'id', shopId, rows.loans);
+  addDiffOps(ops, 'rentAgreements', 'rent_agreements', 'id', shopId, rows.rentAgreements);
+  addDiffOps(ops, 'dues', 'dues', 'id', shopId, rows.dues);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -6883,6 +7039,7 @@ function goToTab(tab){
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
+  if(tab==='payroll') renderPayroll();
   if(tab==='statements') renderStatements();
   // Every other data tab redraws on entry; this one only ever drew at
   // boot. It mattered little when the panes were the whole screen, and
@@ -13449,16 +13606,44 @@ function editStaff(id){
   document.getElementById('st_phone').value = s.phone;
   document.getElementById('st_role').value = s.role;
   document.getElementById('st_notes').value = s.notes;
+  document.getElementById('st_pay_basis').value = s.payBasis || '';
+  syncStaffPayFields();
+  // After syncStaffPayFields, which clears the box when there is no basis.
+  document.getElementById('st_pay_rate').value = s.payRate==null ? '' : s.payRate;
   document.getElementById('staffFormTitle').textContent = 'Edit staff';
   openModal('staffModal');
 }
 function resetStaffForm(){
   editingStaffId = null;
-  ['st_id','st_name','st_phone','st_notes'].forEach(id=>document.getElementById(id).value='');
+  ['st_id','st_name','st_phone','st_notes','st_pay_rate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('st_role').value = 'worker';
+  document.getElementById('st_pay_basis').value = '';
+  syncStaffPayFields();
   fillIssuedId('st_id', 'staff', 'ST', 3, data.staff);
   document.getElementById('staffFormTitle').textContent = 'Add staff';
 }
+// The rate means a different thing depending on the basis, so the label
+// says which -- "Rate: 15,000" is ambiguous in a way that matters when
+// one reading is twenty times the other.
+function syncStaffPayFields(){
+  const basis = document.getElementById('st_pay_basis').value;
+  const label = document.getElementById('st_pay_rate_label');
+  const hint = document.getElementById('st_pay_rate_hint');
+  const input = document.getElementById('st_pay_rate');
+  input.disabled = !basis;
+  if(basis === 'monthly'){
+    label.textContent = 'Monthly salary (UGX)';
+    hint.textContent = 'Falls due at the end of each month.';
+  } else if(basis === 'daily'){
+    label.textContent = 'Rate per day (UGX)';
+    hint.textContent = 'Each month costs this times the days worked, which you enter on the Payroll screen.';
+  } else {
+    label.textContent = 'Rate';
+    hint.textContent = 'Set how they are paid first.';
+    input.value = '';
+  }
+}
+document.getElementById('st_pay_basis').addEventListener('change', syncStaffPayFields);
 // Grants a staff member an app login (via a Supabase invite email) and
 // links it to their staff row, so they can be recognized as themselves in
 // the worker pick & pack view. Runs server-side (service role) because it
@@ -13522,11 +13707,19 @@ document.getElementById('st_save').addEventListener('click', ()=>{
   if(!name){ toast('Staff name is required'); return; }
   if(!editingStaffId && idIsPending(id)){ toast('Still issuing a Staff ID — try again in a moment'); return; }
   if(!editingStaffId && data.staff.some(s=>s.id===id)){ toast(`Could not issue a new Staff ID (${id} is taken). Reload and try again.`); return; }
+  const payBasis = document.getElementById('st_pay_basis').value || null;
+  const rateRaw = document.getElementById('st_pay_rate').value;
   const record = {
     id, name,
     phone: document.getElementById('st_phone').value.trim(),
     role: document.getElementById('st_role').value,
     notes: document.getElementById('st_notes').value.trim(),
+    payBasis,
+    /* An empty box is NOT a rate of zero. Somebody set to "monthly" with
+       the amount left blank has not agreed to work for nothing -- they
+       are half set up, and the payroll screen has to be able to say so
+       rather than raising a due for 0 every month. */
+    payRate: (!payBasis || rateRaw === '') ? null : Number(rateRaw),
   };
   if(editingStaffId){
     const idx = data.staff.findIndex(s=>s.id===editingStaffId);
@@ -15235,6 +15428,528 @@ document.getElementById('deb_print_btn').addEventListener('click', ()=>{
   win.print();
 });
 
+/* ================= PAYROLL AND RENT =================
+
+   "Rent" and "Salaries & Wages" were already cash-book categories, so a
+   payment could be filed after the fact and would land in operating
+   costs correctly. Everything BEFORE the payment was missing. Staff
+   carried no pay rate, so payroll could only be typed as a lump sum and
+   never checked. There was no rent agreement, so nothing knew what was
+   due or when. And nothing in the app was ever owed-but-unpaid except a
+   loan -- so rent five days late, or a month of wages already worked,
+   was invisible.
+
+   A COMMITMENT AND A DUE.
+
+     a commitment  a rent agreement, or a staff member's pay rate.
+     a due         one month of one commitment. The thing that can be
+                   overdue, part-paid, or still uncosted.
+
+   The rate is SNAPSHOT onto the due when it is raised, so giving
+   somebody a raise in August does not rewrite what July cost -- the same
+   rule that keeps a loan's repayments when its terms are edited.
+
+   Paying a due goes through addCashPayment() under the same categories
+   that were always there, so this feeds the income statement through
+   cashIsOperatingExpense() exactly as a hand-typed entry did. The P&L
+   stays cash-basis; what is owed is shown here, not accrued there. */
+
+const DUE_KINDS = {
+  rent: {label:'Rent', cashCategory:'Rent'},
+  wage: {label:'Wages', cashCategory:'Salaries & Wages'},
+};
+
+function periodOf(iso){ return String(iso||'').slice(0,7); }
+function currentPeriod(){ return periodOf(todayISO()); }
+function periodLabel(period){
+  const [y,m] = String(period||'').split('-').map(Number);
+  if(!y || !m) return String(period||'');
+  return new Date(Date.UTC(y, m-1, 1)).toLocaleDateString('en-UG', {month:'long', year:'numeric', timeZone:'UTC'});
+}
+// Previous/next month as YYYY-MM, without tripping over December.
+function periodShift(period, months){
+  const [y,m] = String(period||'').split('-').map(Number);
+  if(!y || !m) return period;
+  const d = new Date(Date.UTC(y, m-1 + months, 1));
+  return d.toISOString().slice(0,7);
+}
+
+/* Who is on the payroll this month. A staff member with no rate set is
+   NOT on it at zero -- they are somebody nobody has set up, which the
+   screen has to say out loud rather than quietly costing them nothing
+   and reporting a month that is short by one person's wages. */
+function staffOnPayroll(){
+  return (data.staff||[]).filter(s=> s.payBasis === 'monthly' || s.payBasis === 'daily');
+}
+function staffWithoutPayRate(){
+  return (data.staff||[]).filter(s=> !(s.payBasis === 'monthly' || s.payBasis === 'daily') || s.payRate == null);
+}
+// A tenancy is live in a month if it had started and had not ended.
+function rentAgreementsFor(period){
+  return (data.rentAgreements||[]).filter(r=>
+    String(r.startMonth||'') <= period && (!r.endMonth || String(r.endMonth) >= period));
+}
+
+function findDue(kind, refId, period){
+  return (data.dues||[]).find(d=> d.kind===kind && String(d.refId)===String(refId) && d.period===period) || null;
+}
+
+/* Raises whatever this month is missing, and nothing it already has.
+
+   Idempotent on (kind, refId, period) -- the same constraint the table
+   carries -- because this runs every time the screen is opened and
+   raising the rent twice in one morning would be a real and expensive
+   bug. Returns what it created so the screen can say so. */
+function generateDuesForPeriod(period){
+  if(!data.dues) data.dues = [];
+  const made = [];
+
+  rentAgreementsFor(period).forEach(r=>{
+    if(findDue('rent', r.id, period)) return;
+    const day = String(Math.min(28, Math.max(1, Number(r.dueDay)||1))).padStart(2,'0');
+    made.push({
+      id: allocRowId('due'), kind:'rent', refId:String(r.id), period,
+      dueDate: `${period}-${day}`,
+      amount: Number(r.amount)||0, days:null, rate: Number(r.amount)||0,
+      paid:0, notes:'', payments:[],
+    });
+  });
+
+  staffOnPayroll().forEach(s=>{
+    if(findDue('wage', s.id, period)) return;
+    const monthly = s.payBasis === 'monthly';
+    made.push({
+      id: allocRowId('due'), kind:'wage', refId:String(s.id), period,
+      // Wages fall due at the end of the month they were worked.
+      dueDate: periodEndDate(period),
+      /* A monthly wage is known the moment the month exists. A daily one
+         is NOT -- it cannot be costed until somebody counts the days, and
+         that is why this is null rather than 0. Zero would be a claim
+         that they worked no days. */
+      amount: monthly ? (s.payRate==null ? null : Number(s.payRate)) : null,
+      days: null,
+      rate: s.payRate==null ? 0 : Number(s.payRate),
+      paid:0, notes:'', payments:[],
+    });
+  });
+
+  if(made.length){ data.dues = data.dues.concat(made); saveData(); }
+  return made;
+}
+
+// Last day of a YYYY-MM, via day 0 of the next month so February and the
+// leap years look after themselves.
+function periodEndDate(period){
+  const [y,m] = String(period||'').split('-').map(Number);
+  if(!y || !m) return period + '-28';
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
+}
+
+// Days worked, entered for a daily-paid month. Clearing the box puts the
+// month back to uncosted rather than costing it at nothing.
+function setDueDays(dueId, days){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return;
+  const n = (days===''||days===null||days===undefined) ? null : Number(days);
+  due.days = n;
+  due.amount = n===null ? null : n * (Number(due.rate)||0);
+  saveData();
+}
+
+function dueBalance(d){
+  if(d.amount === null || d.amount === undefined) return null;   // uncosted
+  return Math.max(0, Number(d.amount) - (Number(d.paid)||0));
+}
+function dueIsSettled(d){
+  const bal = dueBalance(d);
+  return bal !== null && bal <= 0.5;
+}
+function dueIsOverdue(d, asOf){
+  const bal = dueBalance(d);
+  return bal !== null && bal > 0.5 && String(d.dueDate||'') < (asOf || todayISO());
+}
+function dueName(d){
+  if(d.kind === 'rent'){
+    const r = (data.rentAgreements||[]).find(x=> String(x.id)===String(d.refId));
+    return r ? (r.premises || 'Premises') : 'Rent (agreement removed)';
+  }
+  const s = (data.staff||[]).find(x=> String(x.id)===String(d.refId));
+  return s ? s.name : 'Staff member (removed)';
+}
+
+/* What a month costs, what has been paid, and what is still owed.
+
+   UNCOSTED IS REPORTED SEPARATELY AND NEVER FOLDED INTO THE TOTAL. A
+   month with two daily workers whose days nobody has entered has a cost
+   that is not yet known, and "known so far" beside "2 still to count" is
+   the truth. Adding them in at zero would produce a confident figure
+   that is wrong by exactly the wages of the people who did the work. */
+function payrollPosition(period){
+  const dues = (data.dues||[]).filter(d=> d.period === period);
+  /* Splitting these out does not change any total on its own: every sum
+     below reads `Number(d.amount)||0`, so an uncosted month already
+     contributes nothing whether it is filtered here or not. Mutating
+     this line alone is an equivalent mutant and no test will catch it.
+     It stays because it states the intent at the point the decision is
+     made, and because it is what keeps the sums correct if one of those
+     ||0 guards is ever tightened into something that throws on null.
+     `uncosted` below is the load-bearing half -- that count is the whole
+     reason the screen can say "cost so far" instead of "total". */
+  const costed = dues.filter(d=> d.amount !== null && d.amount !== undefined);
+  const uncosted = dues.filter(d=> d.amount === null || d.amount === undefined);
+  const sum = (rows, f)=> rows.reduce((s,d)=> s + f(d), 0);
+
+  const byKind = {};
+  Object.keys(DUE_KINDS).forEach(k=>{
+    const mine = costed.filter(d=> d.kind===k);
+    byKind[k] = {
+      known: sum(mine, d=> Number(d.amount)||0),
+      paid: sum(mine, d=> Number(d.paid)||0),
+      owed: sum(mine, d=> dueBalance(d)||0),
+      uncosted: uncosted.filter(d=> d.kind===k).length,
+      count: dues.filter(d=> d.kind===k).length,
+    };
+  });
+
+  const overdue = costed.filter(d=> dueIsOverdue(d));
+  return {
+    period, dues, byKind,
+    known: sum(costed, d=> Number(d.amount)||0),
+    paid: sum(costed, d=> Number(d.paid)||0),
+    owed: sum(costed, d=> dueBalance(d)||0),
+    uncostedCount: uncosted.length,
+    overdueCount: overdue.length,
+    overdueAmount: sum(overdue, d=> dueBalance(d)||0),
+    settledCount: costed.filter(dueIsSettled).length,
+    // Somebody on the staff list with no rate is not on the payroll at
+    // all, so their month is missing entirely rather than uncosted.
+    noRateCount: staffWithoutPayRate().length,
+  };
+}
+
+/* Everything still owed, any month. What the rest of the app should ask
+   when it wants to know what the shop owes its own people. */
+function duesOutstanding(){
+  return (data.dues||[])
+    .filter(d=> (dueBalance(d) || 0) > 0.5)
+    .sort((a,b)=> String(a.dueDate||'').localeCompare(String(b.dueDate||'')) || (a.id-b.id));
+}
+function duesOverdue(asOf){
+  return duesOutstanding().filter(d=> dueIsOverdue(d, asOf));
+}
+
+/* Paying one. Straight through addCashPayment() under the category that
+   was always there, so it reaches operating costs the same way a
+   hand-typed entry does -- and the cash txn id is kept so a reversal can
+   find and remove the entry rather than leaving it orphaned. */
+function payDue(dueId, amount, account, dateISO){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return null;
+  const bal = dueBalance(due);
+  if(bal === null){ toast('Enter the days worked first — this month has not been costed'); return null; }
+  const pay = Math.min(Number(amount)||0, bal);
+  if(pay <= 0){ toast('Enter an amount to pay'); return null; }
+
+  const kind = DUE_KINDS[due.kind] || DUE_KINDS.wage;
+  const cashTxnId = addCashPayment(
+    account || 'cash', pay, kind.cashCategory,
+    `${kind.label} — ${dueName(due)} — ${periodLabel(due.period)}`,
+    dateISO || todayISO());
+
+  due.payments = (due.payments||[]).concat([{
+    date: dateISO || todayISO(), amount: pay, account: account||'cash', cashTxnId,
+  }]);
+  due.paid = (Number(due.paid)||0) + pay;
+  saveData();
+  return pay;
+}
+
+// Reverses one payment: removes its cash-book entry as well, so the two
+// cannot drift apart.
+function reverseDuePayment(dueId, index){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due || !due.payments || !due.payments[index]) return;
+  const p = due.payments[index];
+  removeCashTxnsByIds([p.cashTxnId]);
+  due.payments.splice(index, 1);
+  due.paid = Math.max(0, (Number(due.paid)||0) - (Number(p.amount)||0));
+  saveData();
+}
+
+/* ---- The payroll screen ---- */
+let prPeriod = null;
+function currentPrPeriod(){ return prPeriod || currentPeriod(); }
+
+function renderPayroll(){
+  const period = currentPrPeriod();
+  /* Raising this month's dues on open is what makes the screen work
+     without anybody remembering to "run payroll". It is idempotent on
+     (kind, refId, period), so opening it twice in a morning cannot
+     charge the rent twice -- the table carries the same constraint. */
+  generateDuesForPeriod(period);
+  renderPayrollPosition();
+  renderPayrollDues();
+  renderRentAgreements();
+  document.getElementById('pr_next').disabled = period >= currentPeriod();
+}
+
+function renderPayrollPosition(){
+  const period = currentPrPeriod();
+  const p = payrollPosition(period);
+  const wrap = document.getElementById('prPositionWrap');
+  if(!wrap) return;
+
+  if(!p.dues.length){
+    wrap.innerHTML = `<div class="age-pos-clear">
+      <b>Nothing is due for ${esc(periodLabel(period))}.</b>
+      <span>${(data.rentAgreements||[]).length || staffOnPayroll().length
+        ? 'No rent agreement or staff pay rate covers this month.'
+        : 'Set a pay rate on a staff member, or add premises below, and their months will appear here.'}</span>
+    </div>`;
+    return;
+  }
+
+  const cell = (label, value, note, cls)=> `<div class="pr-cell${cls?' '+cls:''}">
+    <span class="pr-cell-label">${esc(label)}</span>
+    <b>${esc(value)}</b>
+    ${note ? `<span class="pr-cell-note">${note}</span>` : ''}
+  </div>`;
+
+  /* "Known so far" rather than "total". A month with two daily workers
+     whose days nobody has entered has a cost that is NOT YET KNOWN, and
+     calling the part we have "the total" is the lie this whole screen
+     exists to avoid. */
+  const costLabel = p.uncostedCount ? 'Cost so far' : 'Cost this month';
+
+  const lines = [];
+  if(p.overdueCount) lines.push(`<div class="age-verdict bad">
+    <b>${esc(fmtUGX(Math.round(p.overdueAmount)))}</b> is past its due date —
+    ${p.overdueCount} ${p.overdueCount===1?'payment':'payments'} late. Wages and rent are the two bills
+    that cost more than money when they slip.
+  </div>`);
+  if(p.uncostedCount) lines.push(`<div class="age-verdict warn">
+    ${p.uncostedCount} daily ${p.uncostedCount===1?'worker has':'workers have'} no days entered for
+    ${esc(periodLabel(period))}, so ${p.uncostedCount===1?'that month':'those months'} cannot be costed yet.
+    The figures above leave ${p.uncostedCount===1?'it':'them'} out rather than counting ${p.uncostedCount===1?'it':'them'} as nothing.
+  </div>`);
+  if(p.noRateCount) lines.push(`<div class="age-verdict quiet">
+    ${p.noRateCount} ${p.noRateCount===1?'person on the staff list has':'people on the staff list have'}
+    no pay rate set, so ${p.noRateCount===1?'they are':'they are'} not on the payroll at all.
+    Open them in Staff and set how they are paid.
+  </div>`);
+
+  wrap.innerHTML = `<div class="age-pos">
+    <div class="age-pos-head">
+      <div class="age-pos-total">
+        <span class="age-pos-label">Still to pay · ${esc(periodLabel(period))}</span>
+        <b>${esc(fmtUGX(Math.round(p.owed)))}</b>
+        <span class="age-pos-meta">${p.settledCount} of ${p.dues.length} settled</span>
+      </div>
+    </div>
+    <div class="pr-cells">
+      ${cell(costLabel, fmtUGX(Math.round(p.known)),
+        p.uncostedCount ? `${p.uncostedCount} still to count` : `${p.dues.length} ${p.dues.length===1?'item':'items'}`)}
+      ${cell('Paid', fmtUGX(Math.round(p.paid)), 'to the cash book', 'good')}
+      ${cell('Wages', fmtUGX(Math.round(p.byKind.wage.owed)),
+        `owed of ${fmtUGX(Math.round(p.byKind.wage.known))}`)}
+      ${cell('Rent', fmtUGX(Math.round(p.byKind.rent.owed)),
+        `owed of ${fmtUGX(Math.round(p.byKind.rent.known))}`)}
+    </div>
+    ${lines.join('')}
+  </div>`;
+}
+
+function renderPayrollDues(){
+  const period = currentPrPeriod();
+  const wrap = document.getElementById('prDuesWrap');
+  if(!wrap) return;
+  document.querySelector('#tab-payroll .panel-head-row h2').textContent = periodLabel(period);
+
+  const dues = (data.dues||[]).filter(d=> d.period===period)
+    .sort((a,b)=> String(a.kind).localeCompare(String(b.kind))
+      || String(dueName(a)).localeCompare(String(dueName(b))));
+
+  if(!dues.length){
+    wrap.innerHTML = '<div class="empty">Nothing is due this month.</div>';
+    return;
+  }
+
+  const row = (d)=>{
+    const bal = dueBalance(d);
+    const overdue = dueIsOverdue(d);
+    const settled = dueIsSettled(d);
+    const staff = d.kind==='wage' ? (data.staff||[]).find(s=> String(s.id)===String(d.refId)) : null;
+    const daily = staff && staff.payBasis === 'daily';
+    const state = settled ? '<span class="pr-state ok">Paid</span>'
+      : bal === null ? '<span class="pr-state todo">Not costed</span>'
+      : overdue ? '<span class="pr-state bad">Late</span>'
+      : '<span class="pr-state">Due</span>';
+    return `<tr class="${settled?'pr-settled':''}">
+      <td>
+        <div class="pr-name">${esc(dueName(d))}</div>
+        <div class="pr-sub">${esc((DUE_KINDS[d.kind]||{}).label||'')}${daily?` · ${fmtUGX(Math.round(d.rate))} a day`:''}</div>
+      </td>
+      <td>${daily
+        ? `<input type="number" min="0" step="any" class="pr-days" data-id="${d.id}"
+             value="${d.days===null||d.days===undefined?'':d.days}" placeholder="days">`
+        : '<span class="pr-quiet">—</span>'}</td>
+      <td class="price">${bal===null
+        ? '<span class="pr-quiet">not costed</span>'
+        : `<span class="age-amt">${fmtUGX(Math.round(d.amount))}</span>`}</td>
+      <td class="price">${(Number(d.paid)||0) ? fmtUGX(Math.round(d.paid)) : '<span class="pr-quiet">—</span>'}</td>
+      <td class="price">${bal===null ? '<span class="pr-quiet">—</span>' : `<b>${fmtUGX(Math.round(bal))}</b>`}</td>
+      <td>${esc(fmtShortDate(d.dueDate))}</td>
+      <td>${state}</td>
+      <td class="row-actions">${bal!==null && bal>0.5
+        ? `<button type="button" class="age-act pr-pay" data-id="${d.id}">Pay</button>`
+        : (d.payments||[]).length
+          ? `<button type="button" class="age-act pr-undo" data-id="${d.id}">Undo</button>`
+          : ''}</td>
+    </tr>`;
+  };
+
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="age-table pr-table">
+    <thead><tr>
+      <th>Who / what</th><th>Days</th><th class="r">Cost</th><th class="r">Paid</th>
+      <th class="r">Still owed</th><th>Due</th><th>State</th><th></th>
+    </tr></thead>
+    <tbody>${dues.map(row).join('')}</tbody>
+  </table></div>`;
+
+  wrap.querySelectorAll('.pr-days').forEach(inp=> inp.addEventListener('change', ()=>{
+    setDueDays(Number(inp.dataset.id), inp.value);
+    renderPayroll();
+  }));
+  wrap.querySelectorAll('.pr-pay').forEach(btn=> btn.addEventListener('click', ()=> openDuePayment(Number(btn.dataset.id))));
+  wrap.querySelectorAll('.pr-undo').forEach(btn=> btn.addEventListener('click', ()=>{
+    const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
+    if(!d || !(d.payments||[]).length) return;
+    if(!confirm(`Reverse the last payment of ${fmtUGX(Math.round(d.payments[d.payments.length-1].amount))} to ${dueName(d)}?\n\nIts Cash Book entry is removed too.`)) return;
+    reverseDuePayment(d.id, d.payments.length-1);
+    renderPayroll();
+    toast('Payment reversed — cash book entry removed');
+  }));
+}
+
+// Deliberately a prompt rather than a modal: paying a wage is a single
+// figure against a known balance, and the amount is nearly always the
+// whole of it.
+function openDuePayment(dueId){
+  const d = (data.dues||[]).find(x=> x.id===dueId);
+  if(!d) return;
+  const bal = dueBalance(d);
+  if(bal === null){ toast('Enter the days worked first'); return; }
+  const raw = prompt(`Pay ${dueName(d)} for ${periodLabel(d.period)}.\n\nStill owed: ${fmtUGX(Math.round(bal))}\n\nHow much are you paying?`, String(Math.round(bal)));
+  if(raw === null) return;
+  const amount = Number(raw);
+  if(!amount || amount <= 0){ toast('Enter an amount to pay'); return; }
+  const paid = payDue(dueId, amount, 'cash');
+  if(paid === null) return;
+  renderPayroll();
+  toast(`${fmtUGX(Math.round(paid))} paid — logged to the cash book`);
+}
+
+function renderRentAgreements(){
+  const wrap = document.getElementById('prRentWrap');
+  if(!wrap) return;
+  const rows = data.rentAgreements||[];
+  if(!rows.length){
+    wrap.innerHTML = '<div class="empty">No premises yet. Add one and its rent will be raised every month automatically.</div>';
+    return;
+  }
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="age-table">
+    <thead><tr><th>Premises</th><th>Landlord</th><th class="r">Rent</th><th>Due day</th><th>From</th><th>Until</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td><div class="pr-name">${esc(r.premises)}</div></td>
+      <td>${esc(r.landlord||'—')}</td>
+      <td class="price"><span class="age-amt">${fmtUGX(Math.round(r.amount))}</span></td>
+      <td>${esc(ordinalDay(r.dueDay))} of the month</td>
+      <td>${esc(periodLabel(r.startMonth))}</td>
+      <td>${r.endMonth ? esc(periodLabel(r.endMonth)) : '<span class="pr-quiet">ongoing</span>'}</td>
+      <td class="row-actions">
+        <button type="button" class="age-act pr-rent-edit" data-id="${r.id}">${ICON_EDIT}Edit</button>
+        <button type="button" class="age-act danger pr-rent-del" data-id="${r.id}">${ICON_TRASH}Delete</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+  wrap.querySelectorAll('.pr-rent-edit').forEach(b=> b.addEventListener('click', ()=> openRentModal(Number(b.dataset.id))));
+  wrap.querySelectorAll('.pr-rent-del').forEach(b=> b.addEventListener('click', ()=> deleteRentAgreement(Number(b.dataset.id))));
+}
+function ordinalDay(n){
+  const d = Number(n)||1;
+  const s = ['th','st','nd','rd'][(d%100-d%10!=10)*(d%10<4)*(d%10)] || 'th';
+  return d + s;
+}
+
+let editingRentId = null;
+function openRentModal(id){
+  editingRentId = id || null;
+  const r = id ? (data.rentAgreements||[]).find(x=> x.id===id) : null;
+  document.getElementById('rentModalTitle').textContent = r ? 'Edit premises' : 'Add premises';
+  document.getElementById('rt_premises').value = r ? r.premises : '';
+  document.getElementById('rt_landlord').value = r ? (r.landlord||'') : '';
+  document.getElementById('rt_amount').value = r ? r.amount : '';
+  document.getElementById('rt_due_day').value = r ? r.dueDay : 1;
+  document.getElementById('rt_start').value = r ? r.startMonth : currentPeriod();
+  document.getElementById('rt_end').value = r ? (r.endMonth||'') : '';
+  openModal('rentModal');
+}
+function saveRentAgreement(){
+  const premises = document.getElementById('rt_premises').value.trim();
+  if(!premises){ toast('Give the premises a name'); return; }
+  const start = document.getElementById('rt_start').value;
+  if(!start){ toast('Say which month the rent starts'); return; }
+  const end = document.getElementById('rt_end').value || null;
+  if(end && end < start){ toast('The tenancy cannot end before it starts'); return; }
+  const rec = {
+    premises,
+    landlord: document.getElementById('rt_landlord').value.trim(),
+    amount: Number(document.getElementById('rt_amount').value)||0,
+    // Capped at 28 so every month has the day -- the 30th would skip February.
+    dueDay: Math.min(28, Math.max(1, Number(document.getElementById('rt_due_day').value)||1)),
+    startMonth: start, endMonth: end, notes:'',
+  };
+  if(editingRentId){
+    const i = (data.rentAgreements||[]).findIndex(x=> x.id===editingRentId);
+    if(i>=0) data.rentAgreements[i] = {...data.rentAgreements[i], ...rec};
+  } else {
+    if(!data.rentAgreements) data.rentAgreements = [];
+    data.rentAgreements.push({id: allocRowId('rentAgreement'), ...rec});
+  }
+  saveData();
+  closeModal('rentModal');
+  editingRentId = null;
+  renderPayroll();
+  toast('Premises saved');
+}
+/* Deleting a tenancy does NOT delete the months already raised under it.
+   Rent that was paid is part of what the shop spent, and the cash book
+   entries are still there -- removing the dues would leave those entries
+   explaining nothing. The dues name it as removed instead. */
+function deleteRentAgreement(id){
+  const r = (data.rentAgreements||[]).find(x=> x.id===id); if(!r) return;
+  const raised = (data.dues||[]).filter(d=> d.kind==='rent' && String(d.refId)===String(id));
+  const paid = raised.filter(d=> (Number(d.paid)||0) > 0).length;
+  if(!confirm(`Delete ${r.premises}?\n\n${raised.length} month${raised.length===1?'':'s'} already raised under it ${raised.length===1?'stays':'stay'} on record${paid?`, including ${paid} already paid`:''}. No cash book entry is touched.\n\nTo simply end a tenancy, set its "until" month instead.`)) return;
+  data.rentAgreements = (data.rentAgreements||[]).filter(x=> x.id!==id);
+  saveData();
+  renderPayroll();
+  toast('Premises deleted — the months raised under it were kept');
+}
+
+document.getElementById('pr_add_rent').addEventListener('click', ()=> openRentModal(null));
+document.getElementById('rt_save').addEventListener('click', saveRentAgreement);
+document.getElementById('rt_cancel').addEventListener('click', ()=> closeModal('rentModal'));
+document.getElementById('rentModalClose').addEventListener('click', ()=> closeModal('rentModal'));
+document.getElementById('pr_prev').addEventListener('click', ()=>{ prPeriod = periodShift(currentPrPeriod(), -1); renderPayroll(); });
+document.getElementById('pr_today').addEventListener('click', ()=>{ prPeriod = null; renderPayroll(); });
+// Guarded as well as disabled, so a keyboard cannot raise next month's
+// wages before the month has happened.
+document.getElementById('pr_next').addEventListener('click', ()=>{
+  const next = periodShift(currentPrPeriod(), 1);
+  if(next <= currentPeriod()){ prPeriod = next; renderPayroll(); }
+});
+
 /* ================= CREDITORS LIST =================
    Mirrors the Debtors list, but on the buy side: "owed to supplier X" is
    the sum of purchaseInvoiceBalanceDue() across that supplier's non-voided
@@ -16568,6 +17283,10 @@ const ROW_ID_KINDS = {
   // sequence costs nothing and blocks are safe.
   fixedAsset:      {kind:'row:fixed_asset',      counter:'nextFixedAssetId'},
   loan:            {kind:'row:loan',             counter:'nextLoanId'},
+  // Same reasoning as fixedAsset: neither a tenancy nor a month's wages
+  // is a number anyone quotes, so a gap in the sequence costs nothing.
+  rentAgreement:   {kind:'row:rent_agreement',    counter:'nextRentAgreementId'},
+  due:             {kind:'row:due',              counter:'nextDueId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
