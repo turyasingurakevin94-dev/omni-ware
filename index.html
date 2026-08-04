@@ -905,10 +905,78 @@
   .sc-matches-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
 
   /* Staff cards (reuse .supplier-grid/.supplier-card/.sc-* for layout) */
-  .staff-groups-row{display:flex;gap:20px;align-items:flex-start;}
-  .staff-group-panel{flex:1;min-width:0;}
-  .staff-group-note{font-size:11px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink-soft);}
-  @media (max-width:820px){ .staff-groups-row{flex-direction:column;} }
+  /* ---- The roster ----
+     One row per PERSON, not one card per role. A worker who also
+     delivers used to appear in both grids, which meant two statuses to
+     read for one human being. */
+  .team-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;margin-bottom:16px;}
+  .team-cell{flex:1 1 130px;background:var(--panel);padding:12px 14px;}
+  .team-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.1;}
+  .team-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+    color:var(--ink-soft);margin-top:4px;}
+  .team-cell.good .team-value{color:var(--good);}
+  .team-cell.warn .team-value{color:var(--ow-amber-ink);}
+
+  .rost-bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;
+    margin-bottom:16px;}
+  .rost-right{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+  .rost-search{margin:0;min-width:190px;}
+  .rost-filters, .rost-period{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;padding:3px;}
+  .rost-filter, .rost-per{
+    all:unset;box-sizing:border-box;cursor:pointer;padding:6px 12px;border-radius:7px;
+    font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+  }
+  .rost-filter:hover, .rost-per:hover{color:var(--ink);}
+  .rost-filter.active, .rost-per.active{background:var(--panel);color:var(--ink);
+    box-shadow:0 1px 3px rgba(20,30,40,0.10);}
+  .rost-filter:focus-visible, .rost-per:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .rost-list{display:flex;flex-direction:column;gap:10px;}
+  .rost-row{
+    display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(140px,1fr) minmax(0,2fr) auto;
+    gap:16px;align-items:center;cursor:pointer;
+    border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--panel);
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  .rost-row:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
+  .rost-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .rost-row.is-off{background:#FAFAFA;}
+  .rost-row.is-off .rost-name{color:var(--ink-soft);}
+  .rost-who{display:flex;align-items:center;gap:11px;min-width:0;}
+  .rost-ident{min-width:0;}
+  .rost-name{font-weight:700;font-size:14.5px;}
+  .rost-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .rost-caps{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+  .rost-cap{font-size:10px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--ink-soft);}
+  .rost-cap.warn{background:var(--ow-amber-soft);border-color:#EBD8AE;color:var(--ow-amber-ink);}
+  .rost-state{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;}
+  .rost-active{display:flex;flex-direction:column;gap:3px;}
+  .rost-active-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
+  .rost-flag{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--danger);}
+  .rost-flag .icon{width:13px;height:13px;}
+  /* Figures share one row and wrap rather than scroll: a stat that has
+     slid off the edge is a stat nobody reads. */
+  .rost-stats{display:flex;flex-wrap:wrap;gap:14px;min-width:0;}
+  .rost-stat{min-width:78px;}
+  .rost-stat-label{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .rost-stat-value{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;
+    font-variant-numeric:tabular-nums;margin-top:2px;}
+  .rost-stat-note{font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .rost-stat.bad .rost-stat-value{color:var(--danger);}
+  .rost-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+  .rost-foot{font-size:11.5px;color:var(--ink-soft);margin:14px 0 0;line-height:1.45;}
+  @media (max-width:1100px){
+    .rost-row{grid-template-columns:minmax(180px,1fr) minmax(130px,1fr);grid-template-areas:
+      "who state" "stats stats" "actions actions";}
+    .rost-who{grid-area:who;} .rost-state{grid-area:state;}
+    .rost-stats{grid-area:stats;padding-top:4px;border-top:1px solid var(--ow-rule-soft);}
+    .rost-actions{grid-area:actions;justify-content:flex-end;}
+  }
   .staff-card-unavailable{background:#FAFAFA;opacity:0.75;}
   .staff-card-unavailable:hover{opacity:1;}
   .st-status-block{padding-top:11px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;}
@@ -3612,25 +3680,29 @@
         <h1>Staff</h1>
         <p>Workers and delivery personnel. Assign them to orders as they move through Order Tracking.</p>
       </div>
+      <div id="staffTeamStrip"></div>
       <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">All staff</h2>
-          <button class="btn btn-accent btn-icon" id="st_add_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Add staff
-          </button>
+        <div class="rost-bar">
+          <div class="rost-filters" id="staffRoleFilter">
+            <button type="button" class="rost-filter active" data-role="all">Everyone</button>
+            <button type="button" class="rost-filter" data-role="worker">Workers</button>
+            <button type="button" class="rost-filter" data-role="delivery">Delivery</button>
+            <button type="button" class="rost-filter" data-role="off">Unavailable</button>
+          </div>
+          <div class="rost-right">
+            <div class="rost-period" id="staffPeriod">
+              <button type="button" class="rost-per active" data-period="month">This month</button>
+              <button type="button" class="rost-per" data-period="quarter">3 months</button>
+              <button type="button" class="rost-per" data-period="all">All time</button>
+            </div>
+            <div class="search-bar rost-search"><input id="st_search" placeholder="Search by name or phone..."></div>
+            <button class="btn btn-accent btn-icon" id="st_add_btn">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add staff
+            </button>
+          </div>
         </div>
-        <div class="search-bar" style="margin-top:14px;"><input id="st_search" placeholder="Search by name or phone..."></div>
-      </div>
-      <div class="staff-groups-row">
-        <div class="panel staff-group-panel">
-          <h2>Workers</h2>
-          <div id="staffWorkersWrap"></div>
-        </div>
-        <div class="panel staff-group-panel">
-          <h2>Delivery personnel <span class="staff-group-note">(workers can also be picked for delivery)</span></h2>
-          <div id="staffDeliveryWrap"></div>
-        </div>
+        <div id="staffRoster"></div>
       </div>
     </section>
 
@@ -4439,6 +4511,19 @@
       </button>
     </div>
     <div class="modal-body" id="deliveryRunsBody"></div>
+  </div>
+</div>
+
+<!-- ONE PERSON'S RECORD -->
+<div class="modal-overlay" id="staffPerfModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="staffPerfTitle">Staff</h2>
+      <button class="modal-close" id="staffPerfClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="staffPerfBody"></div>
   </div>
 </div>
 
@@ -12233,6 +12318,100 @@ let editingStaffId = null;
 // STAFF_ROLE_LABELS / staffName / staffEligibleForRole now live in
 // shared-worker.js (needed there too, for the worker app's own
 // delivery-assignment prompt).
+/* ================= HOW SOMEBODY IS ACTUALLY DOING ====================
+
+   The staff screen listed people and said whether they were busy. That
+   is a rota, not a record: it cannot tell the picker who clears an order
+   in ten minutes from the one who leaves it sitting until somebody
+   phones, and both look identical on a card.
+
+   WHAT CAN HONESTLY BE MEASURED, AND WHAT CANNOT.
+
+   Time SPENT preparing is not knowable after the fact. It lives in
+   stageEnteredAt, which is overwritten the moment the order leaves the
+   step, so once an order reaches Completed the record of how long its
+   picking took is gone. Reporting it from what survives would mean
+   inventing it.
+
+   What does survive is stored on the order itself:
+
+     pickingAssignedAt  when the job was handed over
+     workerAcceptedAt   when they picked it up on their device
+     pickStatus/pickedQty per line, so a shortfall is durable
+     assignedWorkerId / assignedDeliveryId
+
+   So the figures below are the ones the data can support: how quickly
+   work is taken up, how much of it there was, what it was worth, and how
+   often the shelf came up short under them. */
+function staffMedian(nums){
+  if(!nums.length) return null;
+  const a = nums.slice().sort((x,y)=> x-y), m = Math.floor(a.length/2);
+  return a.length % 2 ? a[m] : (a[m-1] + a[m]) / 2;
+}
+
+// An order belongs to a period by the day it was billed, falling back to
+// the day it was raised for one still on the board. Same rule the
+// customer history uses, so the two cannot disagree about which month an
+// order fell in.
+function staffOrdersInRange(staffId, fromISO, toISO){
+  const id = String(staffId);
+  const rows = (data.savedQuotes||[]).filter(q=>{
+    if(q.voided) return false;
+    const d = String(q.invoicedAt || q.date || '');
+    return d && d >= fromISO && d <= toISO;
+  });
+  return {
+    picked: rows.filter(q=> q.assignedWorkerId != null && String(q.assignedWorkerId) === id),
+    delivered: rows.filter(q=> q.assignedDeliveryId != null && String(q.assignedDeliveryId) === id),
+  };
+}
+
+function staffPerformance(staffId, fromISO, toISO){
+  const s = (data.staff||[]).find(x=> String(x.id) === String(staffId)) || null;
+  const { picked, delivered } = staffOrdersInRange(staffId, fromISO, toISO);
+
+  /* Median, not mean. One order handed over on a Friday evening and
+     accepted on Monday morning is 60 hours, and it drags a mean far
+     enough to make a reliable picker look slow. The median says what a
+     normal handover looks like. */
+  const accepts = picked
+    .filter(q=> q.pickingAssignedAt && q.workerAcceptedAt && q.workerAcceptedAt >= q.pickingAssignedAt)
+    .map(q=> (q.workerAcceptedAt - q.pickingAssignedAt) / 60000);
+
+  let linesPicked = 0, linesShort = 0, ordersShort = 0;
+  picked.forEach(q=>{
+    // Only lines that were actually answered. An order they never got to
+    // is not evidence about their picking either way.
+    const answered = (q.items||[]).filter(it=> itemPickedQty(it) != null).length;
+    const short = pickShortfallLines(q).length;
+    linesPicked += answered;
+    linesShort += short;
+    if(short) ordersShort++;
+  });
+
+  const value = (rows)=> rows.reduce((sum,q)=> sum + savedQuoteTotal(q), 0);
+  const places = new Set(delivered.map(q=> destinationKey(orderDestination(q) || '')).filter(Boolean));
+
+  return {
+    staff: s, from: fromISO, to: toISO,
+    picked: picked.length, pickedValue: value(picked),
+    delivered: delivered.length, deliveredValue: value(delivered),
+    places: places.size,
+    acceptMedianMins: staffMedian(accepts), acceptSamples: accepts.length,
+    // Handed over and never picked up. Counted only where the handover
+    // happened at all, so an order assigned this minute is not evidence
+    // of anything.
+    neverAccepted: picked.filter(q=> q.pickingAssignedAt && !q.workerAcceptedAt).length,
+    linesPicked, linesShort, ordersShort,
+    /* null, not 0, when nothing was picked. "Never comes up short" and
+       "has not picked anything yet" are different facts, and showing the
+       first for the second flatters somebody who has done no work. */
+    shortRate: linesPicked ? (linesShort / linesPicked) * 100 : null,
+    activeNow: s ? staffActiveOrders(s).length : 0,
+    orders: { picked, delivered },
+  };
+}
+
 function staffInitials(name){
   const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   if(parts.length===0) return '?';
@@ -12240,58 +12419,232 @@ function staffInitials(name){
 }
 // staffActiveOrders() now lives in shared-worker.js (needed there too, for
 // the delivery-picker's busy/idle status).
-function staffCardHTML(s){
-  const activeOrders = s.unavailable ? [] : staffActiveOrders(s);
-  const busy = activeOrders.length>0;
-  return `<div class="supplier-card ${s.unavailable?'staff-card-unavailable':''}">
-    <div class="sc-head">
+/* The roster.
+
+   Two card grids -- one headed Workers, one headed Delivery personnel --
+   listed the same person twice whenever somebody did both, which is the
+   normal case in a small shop: staffEligibleForRole already lets a
+   worker be picked for a delivery. Two entries for one person means two
+   places to read a status from and two to keep in your head.
+
+   One list of PEOPLE now, each carrying whatever capacities they have
+   and one status. The role buttons filter it rather than splitting it. */
+let staffRoleFilter = 'all';
+let staffPeriod = 'month';
+
+function staffPeriodRange(){
+  const to = todayISO();
+  if(staffPeriod === 'all') return { from: '0000-01-01', to, label: 'all time' };
+  if(staffPeriod === 'quarter') return { from: anShiftDate(to, -90), to, label: 'the last 3 months' };
+  return { from: to.slice(0,8) + '01', to, label: 'this month' };
+}
+
+function staffMinsLabel(mins){
+  if(mins == null) return '—';
+  if(mins < 1) return 'under a minute';
+  if(mins < 90) return `${Math.round(mins)} min`;
+  const hrs = mins / 60;
+  if(hrs < 36) return `${hrs.toFixed(hrs < 10 ? 1 : 0)} hr`;
+  return `${Math.round(hrs / 24)} days`;
+}
+
+function staffCapabilities(s){
+  const caps = [];
+  if(staffEligibleForRole(s, 'worker')) caps.push('Picking');
+  if(staffEligibleForRole(s, 'delivery')) caps.push('Delivery');
+  return caps;
+}
+
+function staffRosterRowHTML(s, range){
+  const p = staffPerformance(s.id, range.from, range.to);
+  const active = s.unavailable ? [] : staffActiveOrders(s);
+  const status = s.unavailable ? { cls:'unavailable', text:'Unavailable' }
+    : active.length ? { cls:'busy', text:`Busy — ${active.length} order${active.length===1?'':'s'}` }
+    : { cls:'idle', text:'Idle' };
+
+  // Only the figures that mean anything for what this person does. A
+  // delivery-only rider has no pick rate, and a column of dashes reads
+  // as a bad score rather than as a question that does not apply.
+  const stats = [];
+  if(p.picked){
+    stats.push({ label:'Picked', value:String(p.picked), note:fmtUGX(Math.round(p.pickedValue)) });
+    stats.push({ label:'Takes up in', value:staffMinsLabel(p.acceptMedianMins),
+      note: p.acceptSamples ? `median of ${p.acceptSamples}` : 'not recorded' });
+    stats.push({ label:'Came up short', value: p.shortRate == null ? '—' : `${p.shortRate.toFixed(1)}%`,
+      note: p.linesPicked ? `${p.linesShort} of ${p.linesPicked} lines` : 'nothing picked yet',
+      bad: p.shortRate != null && p.shortRate >= 10 });
+  }
+  if(p.delivered){
+    stats.push({ label:'Delivered', value:String(p.delivered), note:fmtUGX(Math.round(p.deliveredValue)) });
+    stats.push({ label:'Places', value:String(p.places), note:'distinct destinations' });
+  }
+  if(!stats.length) stats.push({ label:'Nothing yet', value:'—', note:`no orders ${range.label}` });
+
+  return `<div class="rost-row ${s.unavailable?'is-off':''}" data-staff="${esc(s.id)}"
+      role="button" tabindex="0" title="See ${esc(s.name)}'s record">
+    <div class="rost-who">
       <div class="sc-avatar">${esc(staffInitials(s.name))}</div>
-      <div class="sc-title">
-        <div class="sc-name">${esc(s.name)}</div>
-        <div class="sc-id">${esc(s.id)}</div>
+      <div class="rost-ident">
+        <div class="rost-name">${esc(s.name)}</div>
+        <div class="rost-sub">${esc(s.id)}${s.phone ? ` · ${esc(s.phone)}` : ''}</div>
+        <div class="rost-caps">
+          ${staffCapabilities(s).map(c=>`<span class="rost-cap">${esc(c)}</span>`).join('')}
+          ${s.userId ? '' : '<span class="rost-cap warn" title="They cannot use the worker app until they accept an invite">No app login</span>'}
+        </div>
       </div>
-      <div class="sc-actions">
-        <button class="pc-icon-btn ${s.unavailable?'pc-icon-btn-active-danger':''}" title="${s.unavailable?'Mark available':'Mark unavailable'}" onclick="toggleStaffAvailability('${esc(s.id)}')">${s.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
-        <button class="pc-icon-btn" title="Edit staff" onclick="editStaff('${esc(s.id)}')">${ICON_EDIT}</button>
-        <button class="pc-icon-btn danger" title="Delete staff" onclick="deleteStaff('${esc(s.id)}')">${ICON_TRASH}</button>
-      </div>
     </div>
-    <div class="sc-details">
-      ${s.phone ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(s.phone)}</span></div>` : ''}
-      ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
+    <div class="rost-state">
+      <span class="st-status-pill ${status.cls}">${esc(status.text)}</span>
+      ${active.length ? `<div class="rost-active">${active.map(({order:o, capacity})=>`
+        <span class="rost-active-row">${capacity==='worker'?ICON_PREP_ANIM:ICON_DELIVERY_ANIM}${esc(o.client.name||'Unnamed client')}</span>`).join('')}</div>` : ''}
+      ${p.neverAccepted ? `<span class="rost-flag" title="Handed over and not picked up on their device">${ICON_WARN}${p.neverAccepted} not taken up</span>` : ''}
     </div>
-    <div class="st-login-row" style="margin-top:8px">
-      ${s.userId
-        ? `<span class="st-status-pill idle">Has app login</span>`
-        : `<button type="button" class="btn btn-ghost" onclick="sendLoginInvite('${esc(s.id)}')">Send login invite</button>`}
+    <div class="rost-stats">
+      ${stats.map(st=>`<div class="rost-stat${st.bad?' bad':''}">
+        <div class="rost-stat-label">${esc(st.label)}</div>
+        <div class="rost-stat-value">${esc(st.value)}</div>
+        <div class="rost-stat-note">${esc(st.note)}</div>
+      </div>`).join('')}
     </div>
-    <div class="st-status-block">
-      ${s.unavailable ? `<span class="st-status-pill unavailable">Unavailable</span>`
-        : busy ? `<span class="st-status-pill busy">Busy — ${activeOrders.length} order${activeOrders.length===1?'':'s'}</span>`
-        : `<span class="st-status-pill idle">Idle</span>`}
-      ${busy ? `<div class="st-active-list">${activeOrders.map(({order:o, capacity})=>`
-        <div class="st-active-row" title="${capacity==='worker'?'Preparing':'Delivering'}">${capacity==='worker'?ICON_PREP_ANIM:ICON_DELIVERY_ANIM}<span class="st-active-client">${esc(o.client.name||'Unnamed client')}</span><span class="st-active-time">since ${esc(savedAgoLabel(o.stageEnteredAt))}</span></div>`).join('')}</div>` : ''}
+    <div class="rost-actions">
+      <button class="pc-icon-btn ${s.unavailable?'pc-icon-btn-active-danger':''}" title="${s.unavailable?'Mark available':'Mark unavailable'}" onclick="toggleStaffAvailability('${esc(s.id)}')">${s.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
+      ${s.userId ? '' : `<button class="pc-icon-btn" title="Send login invite" onclick="sendLoginInvite('${esc(s.id)}')"><svg class="icon" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>`}
+      <button class="pc-icon-btn" title="Edit staff" onclick="editStaff('${esc(s.id)}')">${ICON_EDIT}</button>
+      <button class="pc-icon-btn danger" title="Delete staff" onclick="deleteStaff('${esc(s.id)}')">${ICON_TRASH}</button>
     </div>
   </div>`;
 }
-function renderStaffGroup(wrapId, rows, role){
-  const wrap = document.getElementById(wrapId);
-  if(rows.length===0){
-    wrap.innerHTML = (data.staff||[]).filter(s=>s.role===role).length===0
-      ? `<div class="empty">No ${(STAFF_ROLE_LABELS[role]||role).toLowerCase()} yet. Add one above.</div>`
-      : '<div class="empty">No matches.</div>';
-    return;
-  }
-  wrap.innerHTML = `<div class="supplier-grid">${rows.map(staffCardHTML).join('')}</div>`;
+
+// What the shop has to hand right now. Live state only -- no period
+// applies to "who is free this minute".
+function renderStaffTeamStrip(){
+  const all = (data.staff||[]);
+  const off = all.filter(s=> s.unavailable);
+  const on = all.filter(s=> !s.unavailable);
+  const busy = on.filter(s=> staffActiveOrders(s).length);
+  const inHand = on.reduce((n,s)=> n + staffActiveOrders(s).length, 0);
+  const noLogin = all.filter(s=> !s.userId).length;
+  const cell = (value, label, cls)=> `<div class="team-cell ${cls||''}">
+    <div class="team-value">${esc(String(value))}</div><div class="team-label">${esc(label)}</div></div>`;
+  document.getElementById('staffTeamStrip').innerHTML = all.length ? `<div class="team-strip">
+    ${cell(on.length, on.length===1?'on the team':'on the team')}
+    ${cell(busy.length, 'working now', busy.length ? 'good' : '')}
+    ${cell(on.length - busy.length, 'free', (on.length - busy.length) ? '' : 'warn')}
+    ${cell(inHand, inHand===1?'order in hand':'orders in hand')}
+    ${off.length ? cell(off.length, 'unavailable', 'warn') : ''}
+    ${noLogin ? cell(noLogin, noLogin===1?'without a login':'without a login', 'warn') : ''}
+  </div>` : '';
 }
+
+/* One person's record, in the order somebody asks about them: what they
+   have been doing, how quickly they pick work up, whether the shelf
+   holds when they go to it, and then the orders themselves. */
+function staffPerfHTML(p, range){
+  const s = p.staff;
+  const plural = (n,a,b)=> n===1 ? a : b;
+  const stat = (label, value, note, cls)=> `<div class="cs-stat ${cls||''}">
+    <div class="cs-stat-label">${esc(label)}</div>
+    <div class="cs-stat-value">${value}</div>
+    ${note ? `<div class="cs-stat-note">${note}</div>` : ''}</div>`;
+
+  const orderRow = (q, capacity)=> `<tr>
+    <td>${esc(q.invoicedAt || q.date || '')}</td>
+    <td>${esc(quoteClientName(q))}</td>
+    <td>${capacity==='worker' ? 'Picked' : 'Delivered'}</td>
+    <td class="r num">${fmtUGX(Math.round(savedQuoteTotal(q)))}</td>
+  </tr>`;
+  const recent = [...p.orders.picked.map(q=>({q, capacity:'worker'})),
+                  ...p.orders.delivered.map(q=>({q, capacity:'delivery'}))]
+    .sort((a,b)=> String(b.q.invoicedAt || b.q.date || '').localeCompare(String(a.q.invoicedAt || a.q.date || '')))
+    .slice(0, 8);
+
+  if(!p.picked && !p.delivered){
+    return `<p class="cs-empty-note">No orders went through ${esc(s ? s.name : 'them')} ${esc(range.label)}.
+      ${p.activeNow ? `They are on ${p.activeNow} right now — those count once the order is billed.` : ''}</p>`;
+  }
+
+  return `
+    <div class="cs-stats">
+      ${p.picked ? stat('Orders picked', String(p.picked), fmtUGX(Math.round(p.pickedValue)) + ' of goods') : ''}
+      ${p.picked ? stat('Takes work up in', esc(staffMinsLabel(p.acceptMedianMins)),
+        p.acceptSamples
+          ? `median across ${p.acceptSamples} ${plural(p.acceptSamples,'handover','handovers')}`
+          : 'no handover was timed') : ''}
+      ${p.delivered ? stat('Deliveries', String(p.delivered), fmtUGX(Math.round(p.deliveredValue)) + ' of goods') : ''}
+      ${p.delivered ? stat('Places reached', String(p.places), 'distinct destinations') : ''}
+    </div>
+
+    ${p.picked ? `<section class="cs-block">
+      <h4>Does the shelf hold?</h4>
+      <p class="cs-read">${p.shortRate == null
+        ? 'No line has been answered yet, so there is nothing to say either way.'
+        : `<b>${p.shortRate.toFixed(1)}%</b> of the lines they picked came up short —
+           ${p.linesShort} of ${p.linesPicked}, across ${p.ordersShort} ${plural(p.ordersShort,'order','orders')}.`}</p>
+      <p class="cs-read cs-muted">A shortfall is what the picker found, not what they did wrong. A rate well above
+        the rest of the team usually means the stock figures for what they are sent to fetch are wrong,
+        rather than that the picker is.</p>
+      ${p.neverAccepted ? `<p class="cs-read"><b>${p.neverAccepted}</b>
+        ${plural(p.neverAccepted,'order was','orders were')} handed to them and never picked up on their device.</p>` : ''}
+    </section>` : ''}
+
+    <section class="cs-block">
+      <h4>Recent orders</h4>
+      <table class="cs-table">
+        <thead><tr><th>Date</th><th>Client</th><th>Their part</th><th class="r">Value</th></tr></thead>
+        <tbody>${recent.map(r=> orderRow(r.q, r.capacity)).join('')}</tbody>
+      </table>
+    </section>
+
+    <p class="cs-read cs-muted">Covering ${esc(range.label)}. How long the picking itself took is not here:
+      it is not kept once an order leaves the step, so it cannot be reported for anything but an order
+      still sitting in it.</p>`;
+}
+
+function openStaffPerformance(staffId){
+  const range = staffPeriodRange();
+  const p = staffPerformance(staffId, range.from, range.to);
+  const s = p.staff;
+  document.getElementById('staffPerfTitle').textContent =
+    s ? `${s.name} — ${staffCapabilities(s).join(' & ') || 'no role set'}` : 'Staff';
+  document.getElementById('staffPerfBody').innerHTML = staffPerfHTML(p, range);
+  openModal('staffPerfModal');
+}
+
 function renderStaff(filter=''){
+  renderStaffTeamStrip();
+  const range = staffPeriodRange();
   const tokens = searchTokens(filter);
   let rows = (data.staff||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
   if(tokens.length){
     rows = rows.filter(s=>matchesAllTokens((s.name+' '+(s.phone||'')+' '+s.id).toLowerCase(), tokens));
   }
-  renderStaffGroup('staffWorkersWrap', rows.filter(s=>s.role==='worker'), 'worker');
-  renderStaffGroup('staffDeliveryWrap', rows.filter(s=>s.role==='delivery'), 'delivery');
+  /* Filtered on the job they hold, not on what they are ELIGIBLE for.
+     staffEligibleForRole lets any worker be picked for a delivery, so
+     filtering by eligibility made "Delivery" return the whole team and
+     the button do nothing. What a worker can additionally be picked for
+     is on their row as a capability chip, which is where that fact
+     belongs -- it describes the person, it does not sort them. */
+  if(staffRoleFilter === 'off') rows = rows.filter(s=> s.unavailable);
+  else if(staffRoleFilter !== 'all') rows = rows.filter(s=> s.role === staffRoleFilter);
+
+  const wrap = document.getElementById('staffRoster');
+  wrap.innerHTML = rows.length
+    ? `<div class="rost-list">${rows.map(s=> staffRosterRowHTML(s, range)).join('')}</div>
+       <p class="rost-foot">Figures cover ${esc(range.label)}. How long picking itself took is not shown: it is not kept once an order leaves the step, and a number that cannot be checked is worse than none.</p>`
+    : `<div class="empty">${(data.staff||[]).length ? 'Nobody matches.' : 'Nobody on the team yet. Add someone above.'}</div>`;
+
+  wrap.querySelectorAll('.rost-row').forEach(row=>{
+    const open = (e)=>{
+      if(e.target.closest('button')) return;
+      openStaffPerformance(row.dataset.staff);
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', (e)=>{
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      openStaffPerformance(row.dataset.staff);
+    });
+  });
 }
 function toggleStaffAvailability(id){
   const s = data.staff.find(x=>x.id===id); if(!s) return;
@@ -12399,6 +12752,26 @@ document.getElementById('st_save').addEventListener('click', ()=>{
 document.getElementById('st_cancel').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('staffModalClose').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));
 document.getElementById('st_search').addEventListener('input', e=>renderStaff(e.target.value));
+// The filter and the period both re-read the search box rather than
+// clearing it: narrowing to Workers should not throw away the name
+// somebody has already typed.
+document.getElementById('staffRoleFilter').addEventListener('click', (e)=>{
+  const b = e.target.closest('.rost-filter');
+  if(!b) return;
+  staffRoleFilter = b.dataset.role;
+  document.querySelectorAll('#staffRoleFilter .rost-filter').forEach(x=>
+    x.classList.toggle('active', x === b));
+  renderStaff(document.getElementById('st_search').value);
+});
+document.getElementById('staffPeriod').addEventListener('click', (e)=>{
+  const b = e.target.closest('.rost-per');
+  if(!b) return;
+  staffPeriod = b.dataset.period;
+  document.querySelectorAll('#staffPeriod .rost-per').forEach(x=>
+    x.classList.toggle('active', x === b));
+  renderStaff(document.getElementById('st_search').value);
+});
+document.getElementById('staffPerfClose').addEventListener('click', ()=>closeModal('staffPerfModal'));
 
 /* ================= SALES AGENTS ================= */
 // Agents live in their own `agents` table, deliberately not shop_members
