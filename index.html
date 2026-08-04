@@ -1840,6 +1840,12 @@
      same place on the column, same job, so it reads as the same control
      one step along. Verdigris rather than oxide: this one is a plan, not
      a bill. */
+  /* One line where there is room, stacked where there is not. The basis
+     is 260px: two of them plus the gap need 530, so they break to one
+     column just below that rather than squeezing to unreadable. */
+  .sq-strip{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
+  .sq-strip:empty{display:none;margin:0;}
+  .sq-strip > .sq-cash{flex:1 1 260px;width:auto;margin:0;}
   .sq-cash.sq-pickups{border-color:#D6CBE4;background:#F1ECF7;}
   .sq-cash.sq-pickups .sq-cash-top .icon{color:#5B4A7A;}
   .sq-cash.sq-pickups .sq-cash-fig{color:#5B4A7A;}
@@ -10269,8 +10275,6 @@ function renderSavedQuotes(){
           <span class="sq-col-title">${esc(SQ_STATUSES[status].label)}</span>
           <span class="sq-col-count">${group.length}</span>
         </div>
-        ${status==='preparing' ? cashToBuyBannerHTML(group) : ''}
-        ${status==='preparing' ? pickupRunsBannerHTML(group) : ''}
         ${status==='pending_delivery' ? deliveryRunsBannerHTML(group) : ''}
         <div class="sq-col-body">
           ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}
@@ -10278,7 +10282,19 @@ function renderSavedQuotes(){
       </div>`;
   }).join('')}</div>`;
 
-  wrap.innerHTML = pillsHtml + boardHtml;
+  /* Both banners ask about the same group -- what Being Prepared needs
+     bought today -- and neither is about any one card. Inside the column
+     they were 157px of stacked chrome above the cards, in 244px of width
+     that cannot hold two figures abreast: 2,504,000 at 17px mono is
+     ~100px on its own.
+
+     Full width above the board they sit on one line with room for their
+     supplier chips intact, and the column gets its 157px back. They wrap
+     back to stacked below 560px, where side by side would mean shrinking
+     the figures to fit. */
+  const prepGroup = quotes.filter(q=>q.status==='preparing');
+  const stripHtml = `<div class="sq-strip">${cashToBuyBannerHTML(prepGroup)}${pickupRunsBannerHTML(prepGroup)}</div>`;
+  wrap.innerHTML = pillsHtml + stripHtml + boardHtml;
   wrap.querySelectorAll('.sq-stepper-step').forEach(step=>step.addEventListener('click', ()=>{
     sqActiveMobileStep = step.dataset.status;
     wrap.querySelectorAll('.sq-stepper-step').forEach(s=>{

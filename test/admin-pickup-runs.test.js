@@ -209,8 +209,15 @@ const reset = () => {
 
 /* ---------- 7. the banner and the panel it opens --------------------- */
 {
-  t.check(/status==='preparing' \? pickupRunsBannerHTML\(group\) : ''/.test(src),
-    'the banner sits on Being Prepared, where the buying is decided');
+  /* It shares a full-width strip above the board with the cash banner
+     rather than sitting inside the Being Prepared column: at 244px a
+     column cannot hold two figures side by side. The group it is asked
+     about is unchanged -- what Being Prepared needs bought. */
+  t.check(/const prepGroup = quotes\.filter\(q=>q\.status==='preparing'\)/.test(src)
+    && /pickupRunsBannerHTML\(prepGroup\)/.test(src),
+    'the banner is asked about Being Prepared, where the buying is decided');
+  t.check(/<div class="sq-strip">\$\{cashToBuyBannerHTML\(prepGroup\)\}\$\{pickupRunsBannerHTML\(prepGroup\)\}<\/div>/.test(src),
+    'and shares one line with the cash figure — what it costs beside where to go');
   t.check(/if\(pickupsBanner\) pickupsBanner\.addEventListener\('click', openPickupRuns\)/.test(src),
     'and opens the panel');
 
