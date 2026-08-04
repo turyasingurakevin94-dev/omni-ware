@@ -209,15 +209,29 @@ const reset = () => {
 
 /* ---------- 7. the banner and the panel it opens --------------------- */
 {
-  /* It shares a full-width strip above the board with the cash banner
-     rather than sitting inside the Being Prepared column: at 244px a
-     column cannot hold two figures side by side. The group it is asked
-     about is unchanged -- what Being Prepared needs bought. */
-  t.check(/const prepGroup = quotes\.filter\(q=>q\.status==='preparing'\)/.test(src)
-    && /pickupRunsBannerHTML\(prepGroup\)/.test(src),
-    'the banner is asked about Being Prepared, where the buying is decided');
-  t.check(/<div class="sq-strip">\$\{cashToBuyBannerHTML\(prepGroup\)\}\$\{pickupRunsBannerHTML\(prepGroup\)\}<\/div>/.test(src),
-    'and shares one line with the cash figure — what it costs beside where to go');
+  /* An ICON on the Being Prepared column head, not a banner in the
+     column. The column is 244px wide, the cash figure has first claim on
+     it, and a second banner underneath cost 79px of the space the cards
+     need to answer a question the buyer asks once a morning.
+
+     What it is asked about is unchanged: the preparing group. */
+  t.check(/\$\{status==='preparing' \? pickupRunsIconHTML\(group\) : ''\}/.test(src),
+    'the icon sits on the Being Prepared column, where the buying is decided');
+  t.check(/class="sq-col-head"[\s\S]{0,400}pickupRunsIconHTML/.test(src),
+    'on the column head, so it costs no vertical space at all');
+  t.check(/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(src),
+    'and the cash banner keeps the top of the column to itself');
+
+  // A bare pictogram is a guessing game. The count is on the face of it
+  // and everything the old banner said is in the title and the label.
+  const icon = (/function pickupRunsIconHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/<b>\$\{runs\.length\}<\/b>/.test(icon), 'the number of places rides on the icon');
+  t.check(/title="Where to buy from/.test(icon) && /aria-label="Where to buy from/.test(icon),
+    'and it names itself, by hover and to a screen reader');
+  t.check(/if\(noLocation\.length\) bits\.push/.test(icon) && /if\(unpriced\.length\) bits\.push/.test(icon),
+    'with the two exceptions still surfaced rather than lost with the banner');
+  t.check(/if\(!runs\.length && !noLocation\.length && !unpriced\.length\) return '';/.test(icon),
+    'and nothing to buy renders no icon at all');
   t.check(/if\(pickupsBanner\) pickupsBanner\.addEventListener\('click', openPickupRuns\)/.test(src),
     'and opens the panel');
 

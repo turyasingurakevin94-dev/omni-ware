@@ -1846,15 +1846,21 @@
      same place on the column, same job, so it reads as the same control
      one step along. Verdigris rather than oxide: this one is a plan, not
      a bill. */
-  /* One line where there is room, stacked where there is not. The basis
-     is 260px: two of them plus the gap need 530, so they break to one
-     column just below that rather than squeezing to unreadable. */
-  .sq-strip{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
-  .sq-strip:empty{display:none;margin:0;}
-  .sq-strip > .sq-cash{flex:1 1 260px;width:auto;margin:0;}
-  .sq-cash.sq-pickups{border-color:#D6CBE4;background:#F1ECF7;}
-  .sq-cash.sq-pickups .sq-cash-top .icon{color:#5B4A7A;}
-  .sq-cash.sq-pickups .sq-cash-fig{color:#5B4A7A;}
+  /* A pill on the column head rather than a banner in the column: it
+     costs no vertical space at all, and the count keeps it from being a
+     mystery button. */
+  .sq-pickups-icon{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+    padding:2px 8px 2px 6px;border-radius:999px;background:#F1ECF7;border:1px solid #D6CBE4;
+    color:#5B4A7A;flex-shrink:0;
+  }
+  .sq-pickups-icon .icon{width:13px;height:13px;}
+  .sq-pickups-icon b{font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  .sq-pickups-icon:hover{background:#E7DEF2;}
+  .sq-pickups-icon:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* The count no longer pushes to the right edge on its own -- the icon
+     sits beside it, so the pair is what gets pushed. */
+  .sq-col-head .sq-col-count{margin-left:auto;}
   /* One supplier block per stop inside a place card. */
   .pr-supplier{margin-top:10px;padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
   .pr-supplier:first-of-type{border-top:none;padding-top:0;}
@@ -7062,25 +7068,30 @@ function openShortfallPlan(){
 
    Nothing to deliver anywhere renders nothing -- a board of self-pickups
    has no journey in it to plan. */
-function pickupRunsBannerHTML(group){
+/* An icon, not a second banner.
+
+   The column is 244px wide and the cash figure has first claim on it. A
+   full pickup banner underneath cost 79px of the space the cards need,
+   to answer a question the buyer asks once a morning rather than at
+   every glance. The count rides on the icon so it is not a mystery
+   button, and everything the banner used to show -- the places, the
+   suppliers in each, the lines, the ones with no location and the ones
+   with no price -- is in the panel it opens, in more detail than a
+   banner could carry. */
+function pickupRunsIconHTML(group){
   const orders = (group||[]).filter(q=>!q.voided && !quoteAgedOffBoard(q));
   const { runs, noLocation, unpriced } = pickupRuns(orders);
   if(!runs.length && !noLocation.length && !unpriced.length) return '';
-  const shown = runs.slice(0, 3);
-  const rest = runs.length - shown.length;
   const stops = runs.reduce((s,r)=> s + r.suppliers.length, 0)
     + noLocation.reduce((s,r)=> s + r.suppliers.length, 0);
-  return `<button type="button" class="sq-cash sq-pickups" id="sq_pickups_banner" title="Open the pickup clusters">
-    <span class="sq-cash-top">
-      ${ICON_STORE}
-      <span class="sq-cash-label">${runs.length} place${runs.length===1?'':'s'} to buy from</span>
-      <span class="sq-cash-fig">${stops} stop${stops===1?'':'s'}</span>
-    </span>
-    ${shown.length ? `<span class="sq-cash-runs">${shown.map(r=>`
-      <span class="sq-cash-run">${ICON_PIN}${esc(r.label)} <b>${r.suppliers.length}</b></span>`).join('')}
-      ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>` : ''}
-    ${noLocation.length ? `<span class="sq-cash-note">${noLocation.length} supplier${noLocation.length===1?'':'s'} with no location on file</span>` : ''}
-    ${unpriced.length ? `<span class="sq-cash-gap">${ICON_WARN}${unpriced.length} line${unpriced.length===1?'':'s'} with no price — nowhere to send anybody</span>` : ''}
+  const bits = [`${runs.length} place${runs.length===1?'':'s'} to buy from`,
+    `${stops} stop${stops===1?'':'s'}`];
+  if(noLocation.length) bits.push(`${noLocation.length} supplier${noLocation.length===1?'':'s'} with no location`);
+  if(unpriced.length) bits.push(`${unpriced.length} line${unpriced.length===1?'':'s'} with no price`);
+  return `<button type="button" class="sq-pickups-icon" id="sq_pickups_banner"
+      title="Where to buy from — ${esc(bits.join(' · '))}"
+      aria-label="Where to buy from, ${esc(bits.join(', '))}">
+    ${ICON_STORE}<b>${runs.length}</b>
   </button>`;
 }
 
@@ -10277,7 +10288,9 @@ function renderSavedQuotes(){
           <span class="sq-col-dot" style="background:${SQ_STATUSES[status].color};"></span>
           <span class="sq-col-title">${esc(SQ_STATUSES[status].label)}</span>
           <span class="sq-col-count">${group.length}</span>
+          ${status==='preparing' ? pickupRunsIconHTML(group) : ''}
         </div>
+        ${status==='preparing' ? cashToBuyBannerHTML(group) : ''}
         ${status==='pending_delivery' ? deliveryRunsBannerHTML(group) : ''}
         <div class="sq-col-body">
           ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}
@@ -10295,9 +10308,7 @@ function renderSavedQuotes(){
      supplier chips intact, and the column gets its 157px back. They wrap
      back to stacked below 560px, where side by side would mean shrinking
      the figures to fit. */
-  const prepGroup = quotes.filter(q=>q.status==='preparing');
-  const stripHtml = `<div class="sq-strip">${cashToBuyBannerHTML(prepGroup)}${pickupRunsBannerHTML(prepGroup)}</div>`;
-  wrap.innerHTML = pillsHtml + stripHtml + boardHtml;
+  wrap.innerHTML = pillsHtml + boardHtml;
   wrap.querySelectorAll('.sq-stepper-step').forEach(step=>step.addEventListener('click', ()=>{
     sqActiveMobileStep = step.dataset.status;
     wrap.querySelectorAll('.sq-stepper-step').forEach(s=>{

@@ -408,15 +408,8 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   t.check(/\$\{status==='pending_delivery' \? deliveryRunsBannerHTML\(group\) : ''\}/.test(code),
     'the banner sits over Pending Delivery, where the question is asked');
-  /* The cash banner moved out of the column onto a full-width strip above
-     the board, so it and the pickup banner fit on one line -- 244px of
-     column cannot hold two figures abreast. What still has to hold is
-     WHICH orders it is asked about: the preparing group, not the whole
-     board. The delivery banner stays in its column, where it is one
-     question about one step. */
-  t.check(/const prepGroup = quotes\.filter\(q=>q\.status==='preparing'\)/.test(code)
-    && /cashToBuyBannerHTML\(prepGroup\)/.test(code),
-    'and the cash banner is still asked only about Being Prepared, now from the strip above the board');
+  t.check(/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(code),
+    'and the cash banner still sits over Being Prepared');
   t.check(/if\(runsBanner\) runsBanner\.addEventListener\('click', openDeliveryRuns\)/.test(code),
     'tapping it opens the runs');
   t.check(/id="deliveryRunsBody"/.test(code) && /id="deliveryRunsModal"/.test(code),
