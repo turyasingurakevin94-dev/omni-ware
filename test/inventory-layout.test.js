@@ -167,11 +167,17 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
 
 /* ---------- 5. the screen itself ------------------------------------- */
 {
-  t.check(!/inv-card|inv-grid/.test(code), 'the card grid and its builders are gone');
-  t.check(/class="inv-row/.test(code) && /class="inv-head"/.test(code),
-    'replaced by a list under one set of column headings');
-  t.check(/\.inv-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
-    'with tabular figures, so a column of values can be read down it');
+  /* Cards, kept. A list was tried and pulled back: the grid is how this
+     screen is meant to read, and the figures that were missing did not
+     need a new shape to be added -- "Value here" is one more stat beside
+     In stock and Cost/unit. */
+  t.check(/class="inv-card"/.test(code) && /class="inv-grid"/.test(code),
+    'the cards are the layout');
+  t.check(!/class="inv-row"/.test(code), 'and the row list is gone');
+  t.check(/Value here/.test(code) && /fmtUGX\(Math\.round\(l\.value\)\)/.test(code),
+    'with the line value on the card, which is what was actually missing');
+  t.check(/\.inv-qty-wrap\{font-variant-numeric:tabular-nums;\}/.test(src),
+    'and the figures set in tabular numerals so they align card to card');
 
   // Counted over the filtered lines, so the strip cannot contradict the
   // rows under it.
