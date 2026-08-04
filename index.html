@@ -628,6 +628,50 @@
     #printArea table{width:100%;border-collapse:collapse;}
     #printArea th, #printArea td{border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:left;}
     #printArea th{background:#eee;}
+
+    /* Statements print as documents, not as the boxed grid the generic
+       rule above gives every other printout. That rule bordered every
+       cell and left-aligned the figures, which is wrong for a statement:
+       the money has to stay in a right-hand column to be readable down
+       the page. Scoped to .st-print so no other printout is touched. */
+    @page{ size:A4; margin:14mm; }
+    #printArea .st-print{font-size:11.5px;color:#000;}
+    #printArea .st-print-head{border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:14px;}
+    #printArea .st-print-shop{font-family:'Archivo Black',sans-serif;font-size:17px;}
+    #printArea .st-print-title{font-size:14px;font-weight:700;margin-top:2px;}
+    #printArea .st-print-meta{font-size:10.5px;color:#444;margin-top:3px;}
+    /* One document per page for the set. Never after the LAST one, or
+       every print ends on a blank sheet. */
+    #printArea .st-print-break{page-break-after:always;}
+    #printArea .st-print-foot{margin-top:14px;padding-top:8px;border-top:1px solid #999;
+      font-size:9.5px;color:#444;line-height:1.45;}
+    #printArea .st-print .st-doc{border:none;border-radius:0;padding:0;margin-bottom:14px;
+      background:none;break-inside:auto;}
+    #printArea .st-print .st-doc-head h3{font-size:13px;margin:0 0 2px;}
+    #printArea .st-print .st-doc-when{font-size:10px;color:#444;}
+    #printArea .st-print th,
+    #printArea .st-print td{border:none;padding:4px 0;font-size:11px;background:none;}
+    #printArea .st-print td.st-v,
+    #printArea .st-print td.st-p,
+    #printArea .st-print th.st-v,
+    #printArea .st-print th.st-p,
+    #printArea .st-print .r{text-align:right;}
+    #printArea .st-print .st-section td{font-weight:700;border-bottom:1px solid #000;padding-top:9px;}
+    #printArea .st-print .st-total td{border-top:1px solid #666;font-weight:700;}
+    #printArea .st-print .st-grand td{border-top:2px solid #000;font-weight:700;}
+    /* A row must not be split across a page break -- half a figure at the
+       foot of one sheet and half at the head of the next. */
+    #printArea .st-print tr{break-inside:avoid;}
+    #printArea .st-print .st-vitals{display:flex;gap:14px;border:none;margin-bottom:12px;}
+    #printArea .st-print .st-vital{border:1px solid #999;padding:7px 9px;flex:1;}
+    #printArea .st-print .st-read{font-size:10.5px;color:#222;}
+    /* Colour does not survive a black-and-white printer, and a green
+       figure that prints mid-grey reads as less important rather than as
+       good news. Everything prints black; the words carry the meaning. */
+    #printArea .st-print *{color:#000 !important;}
+    #printArea .st-print .st-hint,
+    #printArea .st-print .st-doc-when,
+    #printArea .st-print .st-print-meta{color:#444 !important;}
   }
   .compare-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   .compare-col h3{font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);margin:0 0 12px 0;}
@@ -3857,6 +3901,11 @@
             <button type="button" class="btn btn-ghost st-preset" data-preset="quarter">Quarter</button>
             <button type="button" class="btn btn-ghost st-preset" data-preset="year">Year</button>
             <input type="date" id="st_from"><span class="st-to">to</span><input type="date" id="st_to">
+            <button type="button" class="btn btn-ghost" id="st_print" title="Print the statement on screen">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+              Print
+            </button>
+            <button type="button" class="btn btn-ghost" id="st_print_all" title="Print all five, one per page">Print all</button>
           </div>
         </div>
         <div id="st_body"></div>
@@ -18718,18 +18767,21 @@ function stLine(label, value, prior, opts){
 }
 const stHead = (a, b)=> `<tr class="st-head"><td></td><td class="st-v">${esc(a)}</td><td class="st-p">${esc(b)}</td></tr>`;
 
-function renderStatements(){
+/* Everything the five documents are built from, worked out once.
+
+   Split out of renderStatements so that printing goes through the same
+   arithmetic and the same renderers as the screen. A separate print path
+   is how a printed balance sheet comes to disagree with the one it was
+   printed from -- and a figure on paper is the one somebody takes to a
+   bank. Returns null when the range is backwards. */
+function statementsContext(){
   const fromEl = document.getElementById('st_from'), toEl = document.getElementById('st_to');
   if(!fromEl.value || !toEl.value){
     const d = stDefaultRange('month');
     fromEl.value = d.from; toEl.value = d.to;
   }
   const from = fromEl.value, to = toEl.value;
-  const body = document.getElementById('st_body');
-  if(from > to){
-    body.innerHTML = '<div class="empty">The start of the period is after its end.</div>';
-    return;
-  }
+  if(from > to) return null;
   // The same span of days immediately before, so the comparison is like
   // for like rather than a month against a fortnight.
   const days = periodDays(from, to);
@@ -18742,16 +18794,77 @@ function renderStatements(){
   const cf = cashFlowStatement(from, to);
   const prevCf = cashFlowStatement(prevFrom, prevTo);
   const checks = statementChecks(is, bs, cf);
-  const ctx = { from, to, prevFrom, prevTo, is, prev, bs, cf, prevCf, checks };
+  return { from, to, prevFrom, prevTo, is, prev, bs, cf, prevCf, checks };
+}
 
+const ST_DOCS = [
+  { key:'overview', title:'Overview' },
+  { key:'pl',       title:'Profit & loss' },
+  { key:'bs',       title:'Balance sheet' },
+  { key:'cf',       title:'Cash flow' },
+  { key:'ratios',   title:'Ratios' },
+];
+function statementDocHTML(key, ctx){
+  return key === 'pl'     ? stProfitAndLoss(ctx)
+    :    key === 'bs'     ? stBalanceSheet(ctx)
+    :    key === 'cf'     ? stCashFlow(ctx)
+    :    key === 'ratios' ? ratiosHTML(financialRatios(ctx.is, ctx.bs, ctx.cf))
+    :                       stOverview(ctx);
+}
+
+function renderStatements(){
+  const body = document.getElementById('st_body');
+  const ctx = statementsContext();
+  if(!ctx){
+    body.innerHTML = '<div class="empty">The start of the period is after its end.</div>';
+    return;
+  }
   document.querySelectorAll('#st_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.stab === stActiveTab));
-  body.innerHTML =
-      stActiveTab === 'pl'     ? stProfitAndLoss(ctx)
-    : stActiveTab === 'bs'     ? stBalanceSheet(ctx)
-    : stActiveTab === 'cf'     ? stCashFlow(ctx)
-    : stActiveTab === 'ratios' ? ratiosHTML(financialRatios(is, bs, cf))
-    : stOverview(ctx);
+  body.innerHTML = statementDocHTML(stActiveTab, ctx);
+}
+
+/* On paper.
+
+   `which` is a document key, or 'all' for the set. The set is what gets
+   taken to a bank or an accountant, and printing it five times over was
+   the reason none of it left the screen.
+
+   Built from statementDocHTML, so what prints is what was on screen --
+   including the reconciliation checks, which are the part a reader most
+   needs and the part a tidied-up print layout would be most tempted to
+   drop. */
+function printStatements(which){
+  const ctx = statementsContext();
+  if(!ctx){ toast('The start of the period is after its end'); return; }
+  const docs = which === 'all' ? ST_DOCS : ST_DOCS.filter(d=> d.key === which);
+  if(!docs.length) return;
+
+  const printedOn = todayISO();
+  document.getElementById('printArea').innerHTML = `
+    <div class="st-print">
+      <header class="st-print-head">
+        <div class="st-print-shop">${esc(printedShopName())}</div>
+        <div class="st-print-title">${docs.length > 1 ? 'Financial statements' : esc(docs[0].title)}</div>
+        <div class="st-print-meta">
+          ${esc(ctx.from)} to ${esc(ctx.to)} · printed ${esc(printedOn)}
+        </div>
+      </header>
+      ${docs.map((d,i)=>`<section class="st-print-doc${i < docs.length-1 ? ' st-print-break' : ''}">
+        ${statementDocHTML(d.key, ctx)}
+      </section>`).join('')}
+      <footer class="st-print-foot">
+        Prepared from the shop's own records. Cash, debtors and stock are balances as at
+        ${esc(ctx.bs.asOf)}; there is no general ledger behind these, so the checks printed
+        with them are what stands in for a trial balance.
+      </footer>
+    </div>`;
+
+  window.print();
+  window.addEventListener('afterprint', function cleanup(){
+    document.getElementById('printArea').innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  });
 }
 
 /* The answer to "how are we doing", before any document is opened. */
@@ -18895,6 +19008,8 @@ function stCashFlow({from, to, cf, prevCf}){
   </section>`;
 }
 
+document.getElementById('st_print').addEventListener('click', ()=> printStatements(stActiveTab));
+document.getElementById('st_print_all').addEventListener('click', ()=> printStatements('all'));
 document.getElementById('st_tabs').addEventListener('click', (e)=>{
   const b = e.target.closest('.st-tab');
   if(!b) return;

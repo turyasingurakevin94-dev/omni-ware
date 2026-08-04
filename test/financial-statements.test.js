@@ -372,8 +372,22 @@ const reset = () => {
   ['overview', 'pl', 'bs', 'cf', 'ratios'].forEach((tab)=>{
     t.check(new RegExp(`data-stab="${tab}"`).test(code), `there is a ${tab} view to switch to`);
   });
-  t.check(/stActiveTab === 'pl'\s+\? stProfitAndLoss/.test(code),
+  /* The picking moved into statementDocHTML so that printing goes
+     through the same renderers as the screen -- a separate print path is
+     how a printed balance sheet comes to disagree with the one it was
+     printed from. What still has to hold is that the BODY shows one
+     document, not the single scroll this replaced. */
+  t.check(/body\.innerHTML = statementDocHTML\(stActiveTab, ctx\);/.test(code),
     'and the body renders one of them rather than all of them at once');
+  t.check(/key === 'pl'\s+\? stProfitAndLoss/.test(code),
+    'chosen by key, one renderer per document');
+
+  // Printing is the one place that deliberately takes all five, and it
+  // takes them from the same function.
+  t.check(/which === 'all' \? ST_DOCS : ST_DOCS\.filter\(d=> d\.key === which\)/.test(code),
+    'printing takes either the one on screen or the whole set');
+  t.check(/statementDocHTML\(d\.key, ctx\)/.test(code),
+    'built from the same renderer the screen uses, so paper cannot disagree with the screen');
 
   // -0 is what negating zero gives, and toLocaleString prints it. On a
   // statement it reads as a figure somebody worked out.
