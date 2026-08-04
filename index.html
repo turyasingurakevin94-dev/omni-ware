@@ -1532,24 +1532,56 @@
   .pack-none{color:var(--ink-soft);}
 
   /* Inventory cards */
-  .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
-  .inv-card{
-    background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 14px 12px;
-    display:flex;flex-direction:column;gap:10px;transition:border-color .12s ease;
+  /* Stock on hand: a list, so the money lines up.
+     ------------------------------------------------------------------
+     The cards showed quantity and cost per unit but never the two
+     multiplied -- and quantity times cost is the figure that says which
+     line is 40,000 of stock and which is 4,000,000 of it. Nor could the
+     shelf be totalled, though the balance sheet has carried that number
+     all along. */
+  .inv-head, .inv-row{
+    display:grid;
+    grid-template-columns:minmax(200px,2fr) minmax(96px,.9fr) minmax(96px,.9fr) minmax(100px,.9fr) auto;
+    gap:14px;align-items:center;
   }
-  .inv-card:hover{border-color:#C7CFD8;}
-  .inv-card-head{display:flex;gap:10px;align-items:flex-start;}
-  .inv-card-title{display:flex;flex-direction:column;gap:3px;min-width:0;}
-  .inv-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
-  .inv-card-sub{font-size:11.5px;color:var(--ink-soft);}
-  .inv-card-meta{display:flex;flex-wrap:wrap;gap:6px;}
-  .inv-card-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--line);}
-  .inv-card-stats{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;}
-  .inv-qty-wrap{display:flex;flex-direction:column;gap:1px;}
-  .inv-qty-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
-  .inv-qty{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:19px;color:var(--ink);}
-  .inv-qty.zero{color:var(--danger);}
-  .inv-cost{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:15px;color:var(--ink);}
+  .inv-head{
+    padding:0 15px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;
+    text-transform:uppercase;color:var(--ow-ink-400);
+  }
+  .inv-list{display:flex;flex-direction:column;gap:8px;}
+  .inv-row{
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 15px;
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  .inv-row:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
+  .inv-row.is-empty{background:var(--bg);}
+  .inv-item{display:flex;align-items:center;gap:11px;min-width:0;}
+  .inv-ident{min-width:0;}
+  .inv-name{font-size:14px;font-weight:700;line-height:1.3;word-break:break-word;}
+  .inv-sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:3px;
+    font-size:11px;color:var(--ink-soft);}
+  .inv-cell{min-width:0;}
+  /* Tabular, so a column of values can be read down rather than across
+     five separate boxes. */
+  .inv-fig{font-family:'IBM Plex Mono',monospace;font-size:14.5px;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  .inv-fig.zero{color:var(--danger);}
+  .inv-unit{font-size:11px;font-weight:600;color:var(--ink-soft);}
+  .inv-none{color:var(--ow-ink-400);}
+  .inv-note{font-size:10.5px;color:var(--ink-soft);margin-top:2px;}
+  .inv-note.warn{color:var(--ow-amber-ink);}
+  .inv-row .pc-actions{justify-content:flex-end;flex-shrink:0;}
+  @media (max-width:1000px){
+    .inv-head{display:none;}
+    .inv-row{
+      grid-template-columns:1fr auto;
+      grid-template-areas:"item actions" "figs figs";
+      gap:10px 14px;
+    }
+    .inv-item{grid-area:item;}
+    .inv-row .pc-actions{grid-area:actions;}
+    .inv-cell{grid-area:figs;display:inline-block;margin-right:22px;}
+  }
   .variance-ok{color:var(--good);font-weight:700;}
   .variance-bad{color:var(--danger);font-weight:700;}
   .variance-pending{color:var(--ink-soft);}
@@ -4131,8 +4163,12 @@
             <label>Category</label>
             <select id="inv_category_filter"><option value="">All categories</option></select>
           </div>
+          <div class="field p-toolbar-filter"><label>Sort by</label>
+            <select id="inv_sort"></select>
+          </div>
           <label class="p-toolbar-checkbox"><input type="checkbox" id="inv_hide_zero">Hide no stock</label>
         </div>
+        <div id="invSummary"></div>
         <div id="invTableWrap"></div>
       </div>
       <div class="panel">
@@ -18593,67 +18629,162 @@ function populateInventoryCategoryFilter(selectedCategory){
   catSel.innerHTML = '<option value="">All categories</option>' +
     categories.map(c=>`<option value="${esc(c)}" ${c===selectedCategory?'selected':''}>${esc(c)}</option>`).join('');
 }
+/* ================= STOCK ON HAND =====================================
+
+   A grid of cards showing quantity and cost per unit. Two things a shop
+   asks of its shelves were missing from both:
+
+     what is this line worth   quantity times cost. Cost per unit alone
+                               does not say whether a line is 40,000 of
+                               stock or 4,000,000 of it, and that is the
+                               figure that decides what to count first
+                               and what is tying up the money.
+     what is the shelf worth   the same figure added up. It exists on the
+                               balance sheet and could not be seen here.
+
+   A list rather than cards, for the same reason as the catalogue: the
+   figures have to line up in a column to be compared at all. */
+const INVENTORY_SORTS = [
+  { key:'name',  label:'Product name' },
+  { key:'value', label:'Most money tied up' },
+  { key:'low',   label:'Least stock first' },
+];
+// Built from the list rather than written out in the markup too, so an
+// option cannot exist that the sort does not understand.
+(function buildInventorySort(){
+  const sel = document.getElementById('inv_sort');
+  if(!sel) return;
+  sel.innerHTML = INVENTORY_SORTS.map(s=>
+    `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
+  sel.addEventListener('change', renderInventory);
+})();
+
+function inventoryLineFor(p, variantIdx){
+  const qty = getStockQty(p.id, variantIdx);
+  const unitCost = getFIFOUnitCost(p.id, variantIdx);
+  const costUnit = productUnitLabel(p.id, variantIdx);
+  const packInfo = productPackInfo(p.id, variantIdx);
+  let packsLabel = null;
+  if(packInfo && packInfo.packQty > 0){
+    const packs = Math.floor(qty / packInfo.packQty);
+    const rem = qty % packInfo.packQty;
+    packsLabel = `${packs} ${packInfo.packUnit}` + (rem > 0 ? ` + ${rem} ${packInfo.unit || 'unit'}` : '');
+  }
+  return {
+    p, variantIdx, qty, unitCost, costUnit, packsLabel,
+    /* null, not 0, when nothing on the shelf has a recorded cost. "This
+       line is worth nothing" and "nobody wrote down what it cost" are
+       different facts, and the balance sheet already declares the second
+       as understating stock rather than valuing it at zero. */
+    value: unitCost == null ? null : qty * unitCost,
+    uncosted: qty > 0 && unitCost == null,
+  };
+}
+
+function inventoryLineStats(lines){
+  let value = 0, zero = 0, uncosted = 0;
+  lines.forEach(l=>{
+    /* `!= null` is EQUIVALENT to `+= (l.value||0)` here and is kept for
+       what it says: only a costed line contributes. A mutation run
+       swapping them changes no test, which is the honest reason to
+       record it rather than contrive a fixture -- null adds nothing
+       either way. The difference is that this reads as a rule about
+       costed lines rather than as arithmetic that happens to work. */
+    if(l.value != null) value += l.value;
+    if(l.qty <= 0) zero++;
+    if(l.uncosted) uncosted++;
+  });
+  return { lines: lines.length, value, zero, uncosted };
+}
+
+function sortInventoryLines(lines, mode){
+  const byName = (a,b)=> String(a.p.name).localeCompare(String(b.p.name))
+    || (a.variantIdx||0) - (b.variantIdx||0);
+  return lines.slice().sort((a,b)=>{
+    if(mode === 'value'){
+      // An uncosted line has no value to rank by. It sorts last rather
+      // than as worthless, which is what a 0 would have claimed.
+      const av = a.value == null ? -1 : a.value, bv = b.value == null ? -1 : b.value;
+      if(av !== bv) return bv - av;
+    } else if(mode === 'low'){
+      if(a.qty !== b.qty) return a.qty - b.qty;
+    }
+    return byName(a,b);
+  });
+}
+
 function renderInventory(){
   const wrap = document.getElementById('invTableWrap');
+  const strip = document.getElementById('invSummary');
   const searchEl = document.getElementById('inv_table_search');
   const categoryFilter = document.getElementById('inv_category_filter').value;
   const hideZero = document.getElementById('inv_hide_zero').checked;
+  const sortMode = (document.getElementById('inv_sort')||{}).value || 'name';
   populateInventoryCategoryFilter(categoryFilter);
   const tokens = searchTokens(searchEl ? searchEl.value : '');
   let entries = allProductVariantEntries(tokens);
   if(categoryFilter) entries = entries.filter(({p})=>p.category===categoryFilter);
   if(hideZero) entries = entries.filter(({p, variantIdx})=>getStockQty(p.id, variantIdx)>0);
+
+  const lines = sortInventoryLines(
+    entries.map(({p, variantIdx})=> inventoryLineFor(p, variantIdx)), sortMode);
+  const s = inventoryLineStats(lines);
+  const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  // Counted over what is LISTED, so the strip cannot contradict the rows
+  // under it when a filter is on.
+  if(strip){
+    strip.innerHTML = lines.length ? `<div class="sum-strip">
+      ${cell(fmtUGX(Math.round(s.value)), 'on the shelf')}
+      ${cell(s.lines, s.lines===1?'line':'lines')}
+      ${cell(s.zero, 'nothing left', s.zero ? 'warn' : '')}
+      ${s.uncosted ? cell(s.uncosted, 'with no cost on file', 'warn') : ''}
+    </div>` : '';
+  }
+
   if(data.products.length===0){
     wrap.innerHTML = '<div class="empty">No products yet — add products in the Products tab first, then track their stock here.</div>';
-  } else if(entries.length===0){
+  } else if(lines.length===0){
     wrap.innerHTML = '<div class="empty">No matching products.</div>';
   } else {
-    const cards = entries.map(({p, variantIdx})=>{
-      const qty = getStockQty(p.id, variantIdx);
-      const unitCost = getFIFOUnitCost(p.id, variantIdx);
-      const costUnit = productUnitLabel(p.id, variantIdx);
-      const packInfo = productPackInfo(p.id, variantIdx);
-      let packsLabel = null;
-      if(packInfo){
-        const packs = Math.floor(qty / packInfo.packQty);
-        const rem = qty % packInfo.packQty;
-        packsLabel = `${packs} ${esc(packInfo.packUnit)}` + (rem>0 ? ` + ${rem} ${esc(packInfo.unit||'unit')}` : '');
-      }
+    const cards = lines.map((l)=>{
+      const { p, variantIdx, qty, unitCost, costUnit, packsLabel } = l;
       const subLabel = variantIdx==null ? p.id : `${variantLabel(p.variants[variantIdx].combo)} · ${p.variants[variantIdx].sku || `${p.id}-${variantIdx+1}`}`;
       const vidxAttr = variantIdx==null ? '' : variantIdx;
-      return `<div class="inv-card">
-        <div class="inv-card-head">
+      return `<div class="inv-row${qty<=0?' is-empty':''}">
+        <div class="inv-item">
           ${productThumbHTML(p, variantIdx)}
-          <div class="inv-card-title">
-            <div class="inv-card-name">${esc(p.name)}</div>
-            <div class="inv-card-sub">${esc(subLabel)}</div>
+          <div class="inv-ident">
+            <div class="inv-name">${esc(p.name)}</div>
+            <div class="inv-sub">
+              <span>${esc(subLabel)}</span>
+              ${p.category ? `<span class="cat-cat">${esc(p.category)}</span>` : ''}
+            </div>
           </div>
         </div>
-        <div class="inv-card-meta">${p.category ? `<span class="pack-pill">${esc(p.category)}</span>` : ''}</div>
-        <div class="inv-card-foot">
-          <div class="inv-card-stats">
-            <div class="inv-qty-wrap">
-              <span class="inv-qty-label">In stock</span>
-              <span class="inv-qty ${qty===0?'zero':''}">${qty}${costUnit ? ` ${esc(costUnit)}` : ''}</span>
-            </div>
-            ${packsLabel ? `<div class="inv-qty-wrap">
-              <span class="inv-qty-label">Packs available</span>
-              <span class="inv-cost">${packsLabel}</span>
-            </div>` : ''}
-            <div class="inv-qty-wrap">
-              <span class="inv-qty-label">Cost/unit</span>
-              <span class="inv-cost">${unitCost!=null ? fmtUGXPerUnit(unitCost, costUnit) : '—'}</span>
-            </div>
-          </div>
-          <div class="pc-actions">
-            <button type="button" class="pc-icon-btn inv-action-btn" title="Purchase (restock)" data-action="purchase" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PURCHASE}</button>
-            <button type="button" class="pc-icon-btn inv-action-btn" title="Adjust stock" data-action="adjust" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_ADJUST}</button>
-            <button type="button" class="pc-icon-btn inv-price-rule-btn" title="Override price rule" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PRICE_RULE}</button>
-          </div>
+        <div class="inv-cell">
+          <div class="inv-fig${qty<=0?' zero':''}">${qty}${costUnit ? ` <span class="inv-unit">${esc(costUnit)}</span>` : ''}</div>
+          <div class="inv-note">${packsLabel ? esc(packsLabel) : (qty<=0 ? 'nothing on the shelf' : 'on the shelf')}</div>
+        </div>
+        <div class="inv-cell">
+          <div class="inv-fig">${unitCost!=null ? fmtUGXPerUnit(unitCost, costUnit) : '<span class="inv-none">—</span>'}</div>
+          <div class="inv-note${l.uncosted?' warn':''}">${l.uncosted ? 'no cost recorded' : 'cost each'}</div>
+        </div>
+        <div class="inv-cell">
+          <div class="inv-fig">${l.value!=null ? fmtUGX(Math.round(l.value)) : '<span class="inv-none">—</span>'}</div>
+          <div class="inv-note">${l.value!=null ? 'tied up here' : 'cannot be valued'}</div>
+        </div>
+        <div class="pc-actions">
+          <button type="button" class="pc-icon-btn inv-action-btn" title="Purchase (restock)" data-action="purchase" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PURCHASE}</button>
+          <button type="button" class="pc-icon-btn inv-action-btn" title="Adjust stock" data-action="adjust" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_ADJUST}</button>
+          <button type="button" class="pc-icon-btn inv-price-rule-btn" title="Override price rule" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PRICE_RULE}</button>
         </div>
       </div>`;
     }).join('');
-    wrap.innerHTML = `<div class="inv-grid">${cards}</div>`;
+    wrap.innerHTML = `<div class="inv-head">
+        <span>Item</span><span>In stock</span><span>Cost each</span><span>Value</span><span></span>
+      </div>
+      <div class="inv-list">${cards}</div>`;
     wrap.querySelectorAll('.inv-action-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const vidx = btn.dataset.vidx===''? null : Number(btn.dataset.vidx);
