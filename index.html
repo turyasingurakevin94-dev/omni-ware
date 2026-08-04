@@ -778,6 +778,38 @@
      second copy of the rules -- but a separate class, so the Presets pane
      switcher cannot pick up the modal's buttons and deactivate its own
      rail when one of them is clicked. */
+  /* The price form: numbered steps, not a rail.
+     ------------------------------------------------------------------
+     Unlike the product form, this genuinely is a sequence -- you cannot
+     price something before saying what it is, and a volume breakpoint
+     cannot be read as wholesale or retail until the pack size is known.
+     A rail would offer sections that make no sense to open yet.
+
+     The rule down the left is that dependency, which is also why the
+     numbering is honest here and would not have been on the product
+     form. */
+  .pfx-steps{list-style:none;margin:0;padding:0;position:relative;}
+  .pfx-steps::before{
+    content:"";position:absolute;left:15px;top:16px;bottom:16px;width:2px;background:var(--line);
+  }
+  .pfx-step{position:relative;padding:0 0 26px 46px;}
+  .pfx-step:last-child{padding-bottom:0;}
+  .pfx-num{
+    position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    background:var(--ow-oxide-soft);color:var(--accent);border:2px solid var(--panel);
+  }
+  .pfx-body h3{font-size:15.5px;font-weight:700;margin:5px 0 4px;}
+  .pfx-note{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 12px;max-width:66ch;}
+  .pfx-note:empty{display:none;}
+  .pfx-note.pfx-quiet{color:var(--ow-ink-400);margin:10px 0 0;}
+  @media (max-width:600px){
+    .pfx-steps::before{display:none;}
+    .pfx-step{padding-left:0;padding-bottom:22px;}
+    .pfx-num{position:static;margin-bottom:6px;}
+  }
+
   .pf-shell{display:grid;grid-template-columns:184px minmax(0,1fr);gap:0;align-items:start;}
   .pf-nav{
     display:flex;flex-direction:column;gap:1px;padding:2px 16px 2px 0;
@@ -5288,56 +5320,88 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field compare-select searchable-select" style="grid-column:1/-1;max-width:none;">
-          <label>Product</label>
-          <input type="text" id="pr_product_search" placeholder="Search by product name or ID..." autocomplete="off">
-          <input type="hidden" id="pr_product">
-          <input type="hidden" id="pr_variant">
-          <div class="suggestions" id="pr_suggestions"></div>
-          <div class="info-banner" id="pr_variant_hint" style="display:none;"></div>
-        </div>
-        <div class="field searchable-select"><label>Supplier</label>
-          <input type="text" id="pr_supplier_search" placeholder="Search suppliers..." autocomplete="off">
-          <input type="hidden" id="pr_supplier">
-          <div class="suggestions" id="pr_supplier_suggestions"></div>
-        </div>
-        <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
-      </div>
-      <div id="pr_tiers_wrap" style="display:none;">
-        <div class="section-label-row form-section-label" style="margin-top:16px;"><span id="pr_tiers_label_text">Pricing</span>
-          <span class="info-tip" tabindex="0"><span class="tip-bubble" id="pr_tiers_tip_text">Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier's price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don't need to sort them yourself.</span></span>
-        </div>
-        <div id="pr_tiers_list_wrap"></div>
-        <div class="pr-tier-add">
-          <span class="pr-tier-at">At</span>
-          <input type="number" id="pr_tier_qty" min="0" step="any" placeholder="Qty">
-          <select id="pr_tier_qty_unit"></select>
-          <span class="pr-tier-at">charge</span>
-          <input type="number" id="pr_tier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
-          <select id="pr_tier_price_unit"></select>
-          <button type="button" id="pr_tier_add">+ Add tier</button>
-        </div>
-      </div>
-      <!-- Bulk mode: picking a variable product itself (not one specific
-           variant) swaps the single wholesale/retail fields above for one
-           row per variant here, so a supplier's whole price list for a
-           product can be entered -- or reviewed and corrected -- in one
-           save instead of repeating this whole modal per variant. -->
-      <div id="pr_bulk_wrap" style="display:none;">
-        <div class="section-label-row form-section-label" style="margin-top:16px;">Prices per variant
-          <span class="info-tip" tabindex="0"><span class="tip-bubble">Enter a wholesale and/or retail price for as many variants as this supplier actually quoted -- leave any you don't have yet blank and come back to fill them in later the same way. Switching supplier reloads this list with whatever that supplier already has on file.</span></span>
-        </div>
-        <div id="pr_bulk_variants_wrap"></div>
-      </div>
-      <div class="section-label-row form-section-label" style="margin-top:16px;">Packing
-        <span class="info-tip" tabindex="0"><span class="tip-bubble">How this supplier's price is quoted. Leave Pack unit / Units per pack blank if it's only ever quoted by the single Unit. Example: Unit = Kg, Pack unit = Bag, Units per pack = 25 → shows as "25 Kg / Bag". In bulk mode this applies to every variant -- if a supplier packs different variants differently, price those ones separately by picking the specific variant instead.</span></span>
-      </div>
-      <div class="form-grid">
-        <div class="field"><label>Unit</label><input id="pr_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre"></div>
-        <div class="field"><label>Pack unit</label><input id="pr_pack_unit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin"></div>
-        <div class="field"><label>Units per pack</label><input id="pr_pack_qty" type="number" min="0" step="any" placeholder="e.g. 25"></div>
-      </div>
+      <!-- Numbered because this genuinely is a sequence: you cannot price
+           something before saying what it is, and a volume breakpoint
+           cannot be read as wholesale or retail until the pack size is
+           known.
+
+           Packing used to sit BELOW the prices while the prices depended
+           on it -- the tooltip said breakpoints were classified against
+           "Units per pack below", so entering a ladder correctly meant
+           scrolling past it, filling it in, and scrolling back. -->
+      <ol class="pfx-steps">
+
+        <li class="pfx-step">
+          <span class="pfx-num">1</span>
+          <div class="pfx-body">
+            <h3>What you are pricing</h3>
+            <p class="pfx-note">Pick the product, or one specific variant of it. Choosing a variable product itself lets you enter that supplier's whole price list in one go.</p>
+            <div class="form-grid">
+              <div class="field compare-select searchable-select" style="grid-column:1/-1;max-width:none;">
+                <label>Product</label>
+                <input type="text" id="pr_product_search" placeholder="Search by product name or ID..." autocomplete="off">
+                <input type="hidden" id="pr_product">
+                <input type="hidden" id="pr_variant">
+                <div class="suggestions" id="pr_suggestions"></div>
+                <div class="info-banner" id="pr_variant_hint" style="display:none;"></div>
+              </div>
+              <div class="field searchable-select"><label>Supplier</label>
+                <input type="text" id="pr_supplier_search" placeholder="Search suppliers..." autocomplete="off">
+                <input type="hidden" id="pr_supplier">
+                <div class="suggestions" id="pr_supplier_suggestions"></div>
+              </div>
+              <div class="field"><label>Date updated</label><input id="pr_date" type="date"></div>
+            </div>
+          </div>
+        </li>
+
+        <li class="pfx-step">
+          <span class="pfx-num">2</span>
+          <div class="pfx-body">
+            <h3>How this supplier quotes it</h3>
+            <p class="pfx-note">Leave Pack unit and Units per pack blank if it is only ever quoted by the single unit. Unit&nbsp;=&nbsp;Kg, Pack&nbsp;unit&nbsp;=&nbsp;Bag, Units&nbsp;per&nbsp;pack&nbsp;=&nbsp;25 reads as &ldquo;25 Kg / Bag&rdquo;. This is asked before the prices because a breakpoint is read as wholesale or retail by comparing its quantity against the pack size.</p>
+            <div class="form-grid">
+              <div class="field"><label>Unit</label><input id="pr_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre"></div>
+              <div class="field"><label>Pack unit</label><input id="pr_pack_unit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin"></div>
+              <div class="field"><label>Units per pack</label><input id="pr_pack_qty" type="number" min="0" step="any" placeholder="e.g. 25"></div>
+            </div>
+            <p class="pfx-note pfx-quiet">In bulk mode this applies to every variant. If a supplier packs variants differently, price those ones separately by picking the specific variant.</p>
+          </div>
+        </li>
+
+        <li class="pfx-step">
+          <span class="pfx-num">3</span>
+          <div class="pfx-body">
+            <h3 id="pr_tiers_label_text">Pricing</h3>
+            <p class="pfx-note" id="pr_tiers_tip_text"></p>
+
+            <div id="pr_tiers_wrap" style="display:none;">
+              <div id="pr_tiers_list_wrap"></div>
+              <div class="pr-tier-add">
+                <span class="pr-tier-at">At</span>
+                <input type="number" id="pr_tier_qty" min="0" step="any" placeholder="Qty">
+                <select id="pr_tier_qty_unit"></select>
+                <span class="pr-tier-at">charge</span>
+                <input type="number" id="pr_tier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
+                <select id="pr_tier_price_unit"></select>
+                <button type="button" id="pr_tier_add">+ Add tier</button>
+              </div>
+            </div>
+
+            <!-- Bulk mode: picking a variable product itself (not one
+                 specific variant) adds one row per variant here, so a
+                 supplier's whole price list can be entered -- or reviewed
+                 and corrected -- in one save instead of repeating this
+                 modal per variant. -->
+            <div id="pr_bulk_wrap" style="display:none;">
+              <div class="form-section-label" style="margin-top:16px;">Prices per variant</div>
+              <p class="pfx-note">Fill in as many as this supplier actually quoted and leave the rest blank; come back the same way later. Switching supplier reloads this list with whatever that supplier already has on file.</p>
+              <div id="pr_bulk_variants_wrap"></div>
+            </div>
+          </div>
+        </li>
+
+      </ol>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="pr_cancel">Cancel</button>
@@ -16225,9 +16289,13 @@ function setPrBulkMode(on){
   // breakpoints per variant was the whole complaint -- in single mode
   // it's just that one entry's own tiers, as before.
   document.getElementById('pr_tiers_label_text').textContent = on ? 'Volume pricing (default for every variant)' : 'Pricing';
+  /* "above", not "below": packing is asked in step 2 now, before the
+     prices that depend on it. The copy pointed down the form at a field
+     that had moved up, which is the kind of stale direction that sends
+     somebody hunting for a control that is already behind them. */
   document.getElementById('pr_tiers_tip_text').textContent = on
-    ? 'Add a shared price breakpoint here once and every variant below follows it by default -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity vs. Units per pack below. Need one variant priced differently? Use "Customize for this variant" on its card below to give it its own ladder instead.'
-    : 'Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier\'s price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity vs. Units per pack below -- you don\'t need to sort them yourself.';
+    ? 'Add a shared price breakpoint here once and every variant below follows it by default -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity against Units per pack above. Need one variant priced differently? Use "Customize for this variant" on its card below to give it its own ladder instead.'
+    : 'Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier\'s price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity against Units per pack above -- you don\'t need to sort them yourself.';
   if(on) renderPrBulkVariants();
   renderPrTierUnitOptions();
   renderPrTiers();
