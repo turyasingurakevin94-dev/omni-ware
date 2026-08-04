@@ -1589,6 +1589,127 @@
   /* A broken chain is the one thing this screen must not let past quietly:
      the day-level variance below only ever measures a day against its own
      opening figure, so a wrong opening reconciles perfectly. */
+  /* ================= THE CASH BOOK =================================
+     Laid out in the order the day is worked: what you have, what moved,
+     what the drawer says at close. The old page led with the date and a
+     row of opening figures -- yesterday's news -- and kept today's
+     position in the sixth column of a table at the foot of the page. */
+  .cb-position{padding:16px 20px 18px;}
+  .cb-day{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    gap:12px;margin-bottom:16px;}
+  .cb-day-nav{display:flex;align-items:center;gap:6px;}
+  .cb-daybtn{
+    all:unset;box-sizing:border-box;cursor:pointer;width:30px;height:30px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
+    border:1px solid var(--line);
+  }
+  .cb-daybtn:hover:not([disabled]){color:var(--ink);border-color:var(--ink-soft);}
+  .cb-daybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .cb-daybtn[disabled]{opacity:.35;cursor:not-allowed;}
+  .cb-day-label{display:flex;flex-direction:column;padding:0 6px;}
+  .cb-day-date{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  .cb-day-rel{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .cb-day-rel.is-today{color:var(--good);font-weight:700;}
+  .cb-today{padding:6px 12px;font-size:12.5px;}
+  .cb-day-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  /* Money out is an action of equal standing to money in, and reads as
+     one -- not as a ghost button beside a filled one. It carries the
+     danger colour because that is what it does to the balance. */
+  .cb-out-btn{background:var(--ow-crimson-soft);color:var(--danger);border:1px solid #EAC7C1;}
+  .cb-out-btn:hover{background:#F6DAD4;}
+
+  .cb-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .cb-tile{background:var(--panel);padding:14px 16px;}
+  .cb-tile-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .cb-tile-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.15;margin-top:5px;}
+  .cb-tile-sub{font-size:11px;color:var(--ink-soft);margin-top:5px;line-height:1.5;}
+  /* The total leads because "what have I got" is one figure before it is
+     three. The accounts follow because they are not interchangeable:
+     money in the bank does not buy cement from a yard wanting cash. */
+  .cb-tile.is-total{background:var(--ow-oxide-soft);}
+  .cb-tile.is-total .cb-tile-label{color:var(--ow-oxide-deep);}
+  .cb-tile.is-total .cb-tile-value{font-size:26px;color:var(--ow-oxide-deep);}
+  .cb-up{color:var(--good);font-weight:700;}
+  .cb-down{color:var(--danger);font-weight:700;}
+  .cb-quiet{color:var(--ow-ink-400);}
+  .cb-chain-slot:empty{display:none;}
+  .cb-chain-slot{margin-top:14px;}
+
+  .cb-ledger-filters{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;padding:3px;flex-wrap:wrap;}
+  .cb-lfilter{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
+    padding:6px 11px;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  }
+  .cb-lfilter:hover{color:var(--ink);}
+  .cb-lfilter.active{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(20,30,40,0.10);}
+  .cb-lfilter:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .cb-lfilter b{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ow-ink-400);}
+  .cb-lfilter.active b{color:var(--accent);}
+
+  .cb-ledger th.r, .cb-ledger td.price{text-align:right;}
+  .cb-ledger .cb-led-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .cb-ledger .cb-led-desc{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .cb-ledger .cb-in-cell{color:var(--good);font-weight:600;}
+  .cb-ledger .cb-out-cell{color:var(--danger);font-weight:600;}
+  /* The running balance is the column the page exists for, so it is the
+     one set apart rather than left to look like another amount. */
+  .cb-ledger .cb-bal{font-family:'IBM Plex Mono',monospace;font-weight:700;
+    font-variant-numeric:tabular-nums;background:var(--bg);}
+  .cb-ledger tr.cb-led-open td{color:var(--ink-soft);font-style:italic;
+    border-bottom:1px solid var(--line);}
+  .cb-ledger tfoot td{border-top:2px solid var(--line);font-weight:700;}
+  .cb-card-bal{font-size:11px;color:var(--ink-soft);}
+
+  .cb-close-state{font-size:12px;font-weight:600;color:var(--ink-soft);
+    background:var(--bg);border-radius:999px;padding:4px 12px;}
+  .cb-close-state.ok{background:var(--good-bg);color:var(--good);}
+  .cb-close-state.part{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cb-close-state.bad{background:var(--ow-crimson-soft);color:var(--danger);}
+
+  .cb-counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;}
+  .cb-count{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);}
+  .cb-count.ok{border-color:#BFD9D1;}
+  .cb-count.over{border-color:#EBD8AE;}
+  .cb-count.short{border-color:#EAC7C1;}
+  .cb-count-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    margin-bottom:10px;}
+  .cb-count-head h4{font-size:15px;font-weight:700;margin:0;}
+  .cb-count-state{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
+  .cb-count.ok .cb-count-state{background:var(--good-bg);color:var(--good);}
+  .cb-count.over .cb-count-state{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .cb-count.short .cb-count-state{background:var(--ow-crimson-soft);color:var(--danger);}
+  .cb-count-maths{border-top:1px solid var(--ow-rule-soft);padding-top:8px;}
+  .cb-cm-row{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;
+    color:var(--ink-soft);padding:3px 0;}
+  .cb-cm-row b{font-family:'IBM Plex Mono',monospace;color:var(--ink);
+    font-variant-numeric:tabular-nums;}
+  .cb-cm-total{border-top:1px solid var(--line);margin-top:5px;padding-top:7px;color:var(--ink);
+    font-weight:600;}
+  .cb-cm-total b{font-size:15px;}
+  .cb-count-input{display:flex;flex-direction:column;gap:4px;margin-top:12px;}
+  .cb-count-input span{font-size:11px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .cb-count-input input{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;background:var(--panel);
+  }
+  .cb-count-input input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent);}
+  .cb-count-verdict{margin-top:10px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;}
+  .cb-count-diff{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;}
+  .cb-count.over .cb-count-diff{color:var(--ow-amber-ink);}
+  .cb-count.short .cb-count-diff{color:var(--danger);}
+  .cb-count-why{color:var(--ink-soft);line-height:1.45;}
+  @media (max-width:640px){
+    .cb-day{flex-direction:column;align-items:stretch;}
+    .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
+  }
+
   .cb-chain-break{
     display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:12px 14px;
     border:1px solid var(--danger);border-left-width:4px;border-radius:10px;
@@ -4322,17 +4443,74 @@
       <!-- Main cash book — only shown once opening balances are set for the selected day -->
       <div id="cbMain" style="display:none;">
 
-        <div class="panel cb-day-summary">
-          <div class="panel-head-row">
-            <div>
-              <h2 style="margin-bottom:4px;">Day: <span id="cbDayLabel"></span></h2>
-              <div class="cb-open-recap" id="cbOpenRecap"></div>
+        <!-- WHAT YOU HAVE, RIGHT NOW.
+             The question the screen is opened for, and the one it could
+             not answer: the closing balance existed only as the sixth
+             column of the reconciliation table at the foot of the page.
+             Same arithmetic as that table, taken from one place so the
+             two can never disagree. -->
+        <div class="panel cb-position">
+          <header class="cb-day">
+            <div class="cb-day-nav">
+              <button type="button" class="cb-daybtn" id="cb_day_prev" title="The day before" aria-label="Previous day">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <div class="cb-day-label">
+                <span class="cb-day-date" id="cbDayLabel"></span>
+                <span class="cb-day-rel" id="cbDayRel"></span>
+              </div>
+              <button type="button" class="cb-daybtn" id="cb_day_next" title="The day after" aria-label="Next day">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+              <button type="button" class="btn btn-ghost cb-today" id="cb_day_today">Today</button>
             </div>
-            <button class="btn btn-ghost btn-icon" id="cb_edit_opening">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>
-              Change day / starting balances
-            </button>
+            <div class="cb-day-actions">
+              <button class="btn btn-accent btn-icon" id="cb_money_in">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                Money in
+              </button>
+              <button class="btn btn-icon cb-out-btn" id="cb_money_out">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                Money out
+              </button>
+              <button class="btn btn-ghost btn-icon" id="cb_edit_opening" title="Change the day or its starting balances">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>
+                Opening
+              </button>
+              <button class="btn btn-ghost btn-icon" id="cb_print" title="Print the day's report">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+                Print
+              </button>
+            </div>
+          </header>
+          <div class="cb-tiles" id="cbTiles"></div>
+          <div id="cbOpenRecap" class="cb-chain-slot"></div>
+        </div>
+
+        <!-- THE LEDGER.
+             With a running balance, which is what makes a cash book a
+             cash book: without it there is no way to trace how the day
+             got from its opening figure to its closing one. -->
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">The day's movements</h2>
+            <div class="cb-ledger-filters" id="cbLedgerFilter"></div>
           </div>
+          <div id="cbTxnTableWrap"></div>
+        </div>
+
+        <!-- CLOSING THE DAY.
+             One card per account rather than an eight-column table that
+             scrolled sideways on the most safety-critical control in the
+             app. Each says what the book expects, takes the count, and
+             explains what a difference MEANS -- money short and money
+             spare are different problems. -->
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2 style="margin-bottom:0;">Closing the day</h2>
+            <span class="cb-close-state" id="cbCloseState"></span>
+          </div>
+          <div id="cbSummaryWrap" style="margin-top:14px;"></div>
         </div>
 
         <div class="panel cb-analytics-panel">
@@ -4340,22 +4518,6 @@
             <div class="cb-flow-analytics" id="cbInAnalytics"></div>
             <div class="cb-flow-analytics" id="cbOutAnalytics"></div>
           </div>
-        </div>
-
-        <div class="panel">
-          <h2>Transactions for this day</h2>
-          <div id="cbTxnTableWrap"></div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">End-of-day reconciliation</h2>
-            <button class="btn btn-ghost btn-icon" id="cb_print">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-              Print daily report
-            </button>
-          </div>
-          <div id="cbSummaryWrap" style="margin-top:14px;"></div>
         </div>
 
       </div>
@@ -17437,13 +17599,200 @@ function showCbMain(){
   renderCbSummary();
   renderCbTriggers();
 }
+
+/* Moving between days without going through the wizard.
+
+   Looking at yesterday used to mean pressing "Change day / starting
+   balances" -- a button that sounds like it edits something, for a
+   reader who only wants to look. A day that was never opened still gets
+   the wizard, because it genuinely has no opening figure. */
+function cbGoToDay(date){
+  document.getElementById('cb_wiz_date').value = date;
+  const rec = getDayRecord(date);
+  if(rec.openingSet){ showCbMain(); }
+  else { fillCbWizardFromRecord(); showCbWizard(true); }
+}
+document.getElementById('cb_day_prev').addEventListener('click', ()=>
+  cbGoToDay(anShiftDate(currentCbDate(), -1)));
+document.getElementById('cb_day_next').addEventListener('click', ()=>{
+  const next = anShiftDate(currentCbDate(), 1);
+  // Guarded as well as disabled: a keyboard can reach a disabled-looking
+  // control if the attribute ever comes off, and a cash book has no
+  // tomorrow to open.
+  if(next <= todayISO()) cbGoToDay(next);
+});
+document.getElementById('cb_day_today').addEventListener('click', ()=> cbGoToDay(todayISO()));
+
+// The two actions the day is made of, out of the chart widget they were
+// buried in and into the header where an action belongs.
+document.getElementById('cb_money_in').addEventListener('click', ()=>{
+  resetCashTxnForms(); openModal('cashInModal');
+});
+document.getElementById('cb_money_out').addEventListener('click', ()=>{
+  resetCashTxnForms(); openModal('cashOutModal');
+});
+/* ================= THE DAY, AS ONE SET OF FIGURES ====================
+
+   Everything the cash book screen shows is derived here, once, so the
+   position at the top, the running balance in the ledger and the
+   reconciliation at the bottom cannot disagree with each other. Three
+   places computing the same closing balance independently is how a shop
+   ends up with two answers to "how much is in the drawer".
+
+   Built on cbAccountTotals and the stored opening, which is the same
+   arithmetic cbClosingFor uses -- so this cannot drift from the cash
+   figure the dashboard, the statements and the buying list read either. */
+function cbDayPosition(date){
+  const rec = getDayRecord(date);
+  const accounts = ACCOUNTS.map(a=>{
+    const { totalReceipts, totalPayments, totalExpenses } = cbAccountTotals(date, a.key);
+    const opening = Number(rec.opening[a.key]) || 0;
+    const out = totalPayments + totalExpenses;
+    const closing = opening + totalReceipts - out;
+    const raw = rec.actual ? rec.actual[a.key] : null;
+    // '' is a cleared input, not a count of zero. Counting nothing and
+    // counting zero are different claims, and treating the first as the
+    // second invents a variance nobody reported.
+    const counted = (raw === null || raw === undefined || raw === '') ? null : Number(raw);
+    return {
+      key: a.key, label: a.label, opening,
+      in: totalReceipts, out, payments: totalPayments, expenses: totalExpenses,
+      closing, counted,
+      variance: counted === null ? null : counted - closing,
+    };
+  });
+  const sum = (f)=> accounts.reduce((s,x)=> s + f(x), 0);
+  return {
+    date, accounts,
+    opening: sum(x=> x.opening),
+    in: sum(x=> x.in),
+    out: sum(x=> x.out),
+    closing: sum(x=> x.closing),
+    // Only the accounts actually counted. Adding an uncounted account in
+    // as zero would report a shortfall the size of that account.
+    countedAccounts: accounts.filter(x=> x.counted !== null).length,
+    varianceTotal: accounts.reduce((s,x)=> s + (x.variance || 0), 0),
+  };
+}
+
+/* The ledger, with the running balance that makes it a cash book rather
+   than a list of transactions.
+
+   The balance runs PER ACCOUNT. A single running total across cash,
+   mobile money and bank would be a number matching nothing you could
+   ever count -- the three are separate ledgers that happen to be kept on
+   one page. Each row therefore carries the balance of ITS OWN account
+   after that movement. */
+function cbLedgerFor(date, accountFilter){
+  const rows = (data.cashTxns||[])
+    .filter(t=> t.date === date && (!accountFilter || t.account === accountFilter))
+    .slice()
+    // By time, then by the order they were entered. Two movements at the
+    // same minute have no other ordering, and a running balance that
+    // reshuffles them shows a sequence that never happened.
+    .sort((a,b)=> String(a.time||'').localeCompare(String(b.time||'')) || (Number(a.id||0) - Number(b.id||0)));
+
+  const rec = getDayRecord(date);
+  const running = {};
+  ACCOUNTS.forEach(a=>{ running[a.key] = Number(rec.opening[a.key]) || 0; });
+
+  return rows.map(t=>{
+    const amt = Number(t.amount) || 0;
+    const isIn = cashIsMoneyIn(t);
+    const acct = t.account || 'cash';
+    if(running[acct] === undefined) running[acct] = 0;
+    running[acct] += isIn ? amt : -amt;
+    return { txn: t, isIn, amount: amt, account: acct, balanceAfter: running[acct] };
+  });
+}
+
+/* What a variance MEANS, in words.
+
+   A bare "+5,000" tells somebody there is five thousand more in the
+   drawer than the book says and nothing about what to do. Money missing
+   and money spare are not the same problem: one is usually an unlogged
+   payment out, the other an unlogged sale. Saying so is the difference
+   between a figure and a prompt. */
+function cbVarianceMeaning(account){
+  if(account.counted === null) return { state:'pending', text:'Not counted yet.' };
+  const v = account.variance;
+  if(Math.abs(v) < 1) return { state:'ok', text:'The count agrees with the book.' };
+  const amount = fmtUGX(Math.abs(Math.round(v)));
+  return v > 0
+    ? { state:'over', text:`${amount} more than the book says. Usually money taken in that was never logged.` }
+    : { state:'short', text:`${amount} less than the book says. Usually money paid out that was never logged.` };
+}
+
+// "3 days ago" beside the date, because a shopkeeper looking at a past
+// day needs to know it is a past day before reading a figure off it.
+function cbDayRelLabel(date){
+  const d = Math.round((Date.parse(todayISO()+'T00:00:00Z') - Date.parse(date+'T00:00:00Z')) / 86400000);
+  if(!Number.isFinite(d)) return '';
+  if(d === 0) return 'Today';
+  if(d === 1) return 'Yesterday';
+  if(d === -1) return 'Tomorrow';
+  return d > 0 ? `${d} days ago` : `in ${-d} days`;
+}
+
 function renderCbDayHeader(){
   const date = currentCbDate();
-  const rec = getDayRecord(date);
+  const pos = cbDayPosition(date);
+  const rel = cbDayRelLabel(date);
   document.getElementById('cbDayLabel').textContent = date;
-  document.getElementById('cbOpenRecap').innerHTML = ACCOUNTS.map(a=>
-    `<span class="cb-recap-chip">${esc(a.label)}: <b>${fmtUGX(rec.opening[a.key]||0)}</b></span>`
-  ).join('');
+  const relEl = document.getElementById('cbDayRel');
+  relEl.textContent = rel;
+  relEl.className = 'cb-day-rel' + (rel === 'Today' ? ' is-today' : '');
+  // Forward is disabled on today: a cash book has no tomorrow to open,
+  // and a control that does nothing should look like it.
+  document.getElementById('cb_day_next').disabled = date >= todayISO();
+  document.getElementById('cb_day_today').style.display = date === todayISO() ? 'none' : '';
+
+  /* The tiles. Total first and largest, because "what have I got" is one
+     figure before it is three -- then each account, since they are not
+     interchangeable: money in the bank does not buy cement from a yard
+     that wants cash this morning. */
+  const tile = (label, amount, sub, cls)=> `<div class="cb-tile ${cls||''}">
+    <div class="cb-tile-label">${esc(label)}</div>
+    <div class="cb-tile-value">${fmtUGX(Math.round(amount))}</div>
+    <div class="cb-tile-sub">${sub}</div>
+  </div>`;
+  /* A side that did not move is left out entirely rather than printed as
+     "+0 in". A zero dressed as a movement reads as a figure somebody
+     worked out, and on a day where only money went out it puts a green
+     "+0" beside the loss. Same reason the statements stopped printing
+     "-0 UGX" and the stock log stopped printing "-0 out". */
+  const movement = (a)=> {
+    const bits = [];
+    if(a.in) bits.push(`<span class="cb-up">+${fmtUGX(Math.round(a.in))}</span> in`);
+    if(a.out) bits.push(`<span class="cb-down">-${fmtUGX(Math.round(a.out))}</span> out`);
+    return bits.length ? bits.join(' · ') : '<span class="cb-quiet">nothing moved today</span>';
+  };
+  document.getElementById('cbTiles').innerHTML =
+    tile('Money on hand', pos.closing,
+      pos.in || pos.out
+        ? `opened at ${fmtUGX(Math.round(pos.opening))} · ${movement(pos)}`
+        : `opened at ${fmtUGX(Math.round(pos.opening))} · nothing moved yet`,
+      'is-total')
+    + pos.accounts.map(a=> tile(a.label, a.closing, movement(a))).join('');
+
+  document.getElementById('cbOpenRecap').innerHTML = cbChainBreakHTML(date, getDayRecord(date));
+  const fixBtn = document.getElementById('cb_chain_fix');
+  if(fixBtn) fixBtn.addEventListener('click', cbApplyCarriedOpening);
+}
+
+// Pulled out of renderCbSummary so the chain-break warning can sit with
+// the opening figures it is about, at the top, instead of at the foot of
+// the page under the reconciliation table.
+function cbApplyCarriedOpening(){
+  const d = currentCbDate();
+  const carried = carriedOpening(d);
+  if(!carried) return;
+  const rec = getDayRecord(d);
+  ACCOUNTS.forEach(a=>{ rec.opening[a.key] = carried.values[a.key]; });
+  rec.openingSet = true;
+  saveData();
+  showCbMain();
+  toast(`Opening balances set to what ${carried.from} left`);
 }
 
 /* ---- Trigger card totals (kept as the refresh hook for the category charts) ---- */
@@ -17548,13 +17897,80 @@ function accountLabel(key){ const a = ACCOUNTS.find(x=>x.key===key); return a? a
 function typeLabel(type){ return type==='receipt' ? 'Receipt' : (type==='payment' ? 'Payment' : (type==='expense' ? 'Expense' : (type==='in' ? 'Receipt' : 'Payment'))); }
 function typeClass(type){ return type==='receipt' ? 'txn-receipt' : (type==='payment' ? 'txn-payment' : (type==='expense' ? 'txn-expense' : (type==='in' ? 'txn-receipt' : 'txn-payment'))); }
 
+/* Which account's ledger is on screen. All three at once still shows a
+   running balance, but each row's balance is its OWN account's -- a
+   single total across cash, mobile money and bank would match nothing
+   anybody could ever count. */
+let cbLedgerAccount = '';
+
+function renderCbLedgerFilter(){
+  const wrap = document.getElementById('cbLedgerFilter');
+  if(!wrap) return;
+  const counts = {};
+  (data.cashTxns||[]).filter(t=> t.date === currentCbDate())
+    .forEach(t=>{ const k = t.account||'cash'; counts[k] = (counts[k]||0) + 1; });
+  const total = Object.values(counts).reduce((a,b)=> a+b, 0);
+  const btn = (key, label, n)=> `<button type="button" class="cb-lfilter${cbLedgerAccount===key?' active':''}" data-account="${esc(key)}">
+    ${esc(label)}${n ? `<b>${n}</b>` : ''}</button>`;
+  wrap.innerHTML = btn('', 'All', total)
+    + ACCOUNTS.map(a=> btn(a.key, a.label, counts[a.key]||0)).join('');
+  wrap.querySelectorAll('.cb-lfilter').forEach(b=>{
+    b.addEventListener('click', ()=>{ cbLedgerAccount = b.dataset.account; renderCbTransactions(); });
+  });
+}
+
 function renderCbTransactions(){
   const date = currentCbDate();
   const wrap = document.getElementById('cbTxnTableWrap');
-  const rows = data.cashTxns.filter(t=>t.date===date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
-  if(rows.length===0){ wrap.innerHTML = '<div class="empty">No transactions logged for this day yet.</div>'; return; }
-  const cardsHtml = rows.map(t=>`
-    <div class="pi-card">
+  renderCbLedgerFilter();
+  const rows = cbLedgerFor(date, cbLedgerAccount || null);
+  const rec = getDayRecord(date);
+
+  if(rows.length===0){
+    wrap.innerHTML = cbLedgerAccount
+      ? `<div class="empty">Nothing has moved through ${esc(accountLabel(cbLedgerAccount))} today.</div>`
+      : '<div class="empty">No transactions logged for this day yet. Use Money in or Money out above.</div>';
+    return;
+  }
+
+  /* The opening line is part of the ledger, not a heading above it. A
+     running balance that starts at the first transaction cannot be
+     checked against anything; starting it at the opening figure is what
+     lets somebody follow the day from the drawer count to now. */
+  const openingRow = cbLedgerAccount
+    ? `<tr class="cb-led-open">
+        <td>—</td><td colspan="3">Opening balance, ${esc(accountLabel(cbLedgerAccount))}</td>
+        <td class="price"></td><td class="price"></td>
+        <td class="price cb-bal">${fmtUGX(Math.round(Number(rec.opening[cbLedgerAccount])||0))}</td><td></td>
+      </tr>`
+    : '';
+
+  const row = (r)=>{
+    const t = r.txn;
+    return `<tr>
+      <td class="cb-led-time">${esc(t.time||'')}</td>
+      <td>${esc(accountLabel(t.account))}</td>
+      <td class="${typeClass(t.type)}">${typeLabel(t.type)}</td>
+      <td>
+        <div>${esc(t.category||'Uncategorized')}</div>
+        ${t.description ? `<div class="cb-led-desc">${esc(t.description)}</div>` : ''}
+      </td>
+      <td class="price cb-in-cell">${r.isIn ? fmtUGX(r.amount) : ''}</td>
+      <td class="price cb-out-cell">${r.isIn ? '' : fmtUGX(r.amount)}</td>
+      <td class="price cb-bal">${fmtUGX(Math.round(r.balanceAfter))}</td>
+      <td class="row-actions">
+        <button onclick="editCashTxn(${t.id})">${ICON_EDIT}Edit</button>
+        <button class="danger" onclick="deleteCashTxn(${t.id})">${ICON_TRASH}Delete</button>
+      </td>
+    </tr>`;
+  };
+
+  const inTotal = rows.filter(r=> r.isIn).reduce((s,r)=> s + r.amount, 0);
+  const outTotal = rows.filter(r=> !r.isIn).reduce((s,r)=> s + r.amount, 0);
+
+  const cardsHtml = rows.map(r=>{
+    const t = r.txn;
+    return `<div class="pi-card">
       <div class="pi-card-top">
         <div class="pi-card-title">
           <span class="an-rank">${esc(t.time||'')}</span>
@@ -17570,29 +17986,36 @@ function renderCbTransactions(){
         ${t.description ? `<div>${esc(t.description)}</div>` : ''}
       </div>
       <div class="pi-card-foot">
-        <span class="q-line-total price">${fmtUGX(t.amount)}</span>
+        <span class="q-line-total price ${r.isIn?'cb-in-cell':'cb-out-cell'}">${r.isIn?'+':'-'}${fmtUGX(r.amount)}</span>
+        <span class="cb-card-bal">${esc(accountLabel(t.account))} now ${fmtUGX(Math.round(r.balanceAfter))}</span>
       </div>
-    </div>`).join('');
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
-    <th>Time</th><th>Account</th><th>Type</th><th>Category</th><th>Amount</th><th>Description</th><th></th>
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="cb-ledger"><thead><tr>
+    <th>Time</th><th>Account</th><th>Type</th><th>Category</th>
+    <th class="r">In</th><th class="r">Out</th>
+    <!-- Named for what it is. Across all three accounts each row shows
+         ITS OWN account's balance, and a column headed plainly "Balance"
+         would be read as one running total -- a number matching nothing
+         anybody could count. -->
+    <th class="r">${cbLedgerAccount ? 'Balance' : 'That account now'}</th><th></th>
   </tr></thead><tbody>
-  ${rows.map(t=>`
-    <tr>
-      <td>${esc(t.time||'')}</td>
-      <td>${esc(accountLabel(t.account))}</td>
-      <td class="${typeClass(t.type)}">${typeLabel(t.type)}</td>
-      <td>${esc(t.category||'Uncategorized')}</td>
-      <td class="price">${fmtUGX(t.amount)}</td>
-      <td>${esc(t.description)}</td>
-      <td class="row-actions">
-        <button onclick="editCashTxn(${t.id})">${ICON_EDIT}Edit</button>
-        <button class="danger" onclick="deleteCashTxn(${t.id})">${ICON_TRASH}Delete</button>
-      </td>
-    </tr>`).join('')}
-  </tbody></table></div>
+    ${openingRow}
+    ${rows.map(row).join('')}
+  </tbody>
+  <tfoot><tr>
+    <td colspan="4">${rows.length} movement${rows.length===1?'':'s'}${cbLedgerAccount?` in ${esc(accountLabel(cbLedgerAccount))}`:''}</td>
+    <td class="price cb-in-cell">${fmtUGX(inTotal)}</td>
+    <td class="price cb-out-cell">${fmtUGX(outTotal)}</td>
+    <td class="price cb-bal">${cbLedgerAccount
+      ? fmtUGX(Math.round(cbDayPosition(date).accounts.find(a=> a.key===cbLedgerAccount).closing))
+      : ''}</td>
+    <td></td>
+  </tr></tfoot>
+  </table></div>
   <div class="pi-cards">${cardsHtml}</div>`;
 }
-
 /* ---- Cash In / Cash Out forms (inside popup modals) ---- */
 function resetCashTxnForms(){
   editingCashTxnId = null;
@@ -17813,82 +18236,83 @@ function cbChainBreakHTML(date, rec){
   </div>`;
 }
 
+/* Closing the day.
+
+   Was one table eight columns wide -- Account, Opening, Receipts,
+   Payments, Expenses, Calculated Closing, Actual Counted, Variance --
+   which scrolled sideways on the most safety-critical control in the
+   app. This is where a shop catches a theft or an unlogged payment, and
+   it was the least readable thing on the page.
+
+   One card per account instead, each reading as the sentence somebody
+   actually says while standing at the drawer: the book expects THIS, I
+   counted THAT, so the difference is this and here is what it means. */
 function renderCbSummary(){
   const date = currentCbDate();
-  const rec = getDayRecord(date);
+  const pos = cbDayPosition(date);
   const wrap = document.getElementById('cbSummaryWrap');
-  const cardsHtml = ACCOUNTS.map(a=>{
-    const {totalReceipts, totalPayments, totalExpenses} = cbAccountTotals(date, a.key);
-    const opening = rec.opening[a.key]||0;
-    const closing = opening + totalReceipts - totalPayments - totalExpenses;
-    const actualVal = rec.actual[a.key];
-    let varianceHtml = '<span class="variance-pending">— not counted yet</span>';
-    if(actualVal !== null && actualVal !== undefined && actualVal !== ''){
-      const variance = Number(actualVal) - closing;
-      varianceHtml = variance===0
-        ? `<span class="variance-ok">Matches ✓</span>`
-        : `<span class="variance-bad">${variance>0?'+':''}${fmtUGX(variance)}</span>`;
-    }
-    const inputHtml = `<input type="number" min="0" data-account="${a.key}" class="cb-actual-input" value="${actualVal===null||actualVal===undefined?'':actualVal}" placeholder="Enter count">`;
-    return {a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml};
-  });
 
-  wrap.innerHTML = `${cbChainBreakHTML(date, rec)}<div class="an-scroll pi-table-wrap"><table class="cb-summary-table"><thead><tr>
-    <th>Account</th><th>Opening</th><th>Receipts</th><th>Payments</th><th>Expenses</th><th>Calculated Closing</th><th>Actual Counted</th><th>Variance</th>
-  </tr></thead><tbody>
-  ${cardsHtml.map(({a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml})=>`<tr>
-      <td>${esc(a.label)}</td>
-      <td class="price">${fmtUGX(opening)}</td>
-      <td class="price txn-receipt">${fmtUGX(totalReceipts)}</td>
-      <td class="price txn-payment">${fmtUGX(totalPayments)}</td>
-      <td class="price txn-expense">${fmtUGX(totalExpenses)}</td>
-      <td class="price">${fmtUGX(closing)}</td>
-      <td>${inputHtml}</td>
-      <td>${varianceHtml}</td>
-    </tr>`).join('')}
-  </tbody></table></div>
-  <div class="pi-cards">${cardsHtml.map(({a, opening, totalReceipts, totalPayments, totalExpenses, closing, varianceHtml, inputHtml})=>`
-    <div class="pi-card">
-      <div class="pi-card-top">
-        <div class="pi-card-title"><span class="cmp-card-supplier">${esc(a.label)}</span></div>
+  const card = (a)=>{
+    const meaning = cbVarianceMeaning(a);
+    return `<article class="cb-count ${meaning.state}">
+      <header class="cb-count-head">
+        <h4>${esc(a.label)}</h4>
+        <span class="cb-count-state">${
+          meaning.state==='ok' ? 'Counted &amp; agrees'
+          : meaning.state==='pending' ? 'Not counted'
+          : meaning.state==='over' ? 'Over' : 'Short'}</span>
+      </header>
+
+      <div class="cb-count-maths">
+        <div class="cb-cm-row"><span>Opened with</span><b>${fmtUGX(Math.round(a.opening))}</b></div>
+        <div class="cb-cm-row"><span>Money in</span><b class="cb-up">+${fmtUGX(Math.round(a.in))}</b></div>
+        <div class="cb-cm-row"><span>Money out</span><b class="cb-down">-${fmtUGX(Math.round(a.out))}</b></div>
+        <div class="cb-cm-row cb-cm-total"><span>The book says</span><b>${fmtUGX(Math.round(a.closing))}</b></div>
       </div>
-      <div class="sc-stats an-card-stats">
-        <div class="sc-stat"><b>${fmtUGX(opening)}</b><span>Opening</span></div>
-        <div class="sc-stat"><b class="txn-receipt">${fmtUGX(totalReceipts)}</b><span>Receipts</span></div>
-        <div class="sc-stat"><b class="txn-payment">${fmtUGX(totalPayments)}</b><span>Payments</span></div>
-        <div class="sc-stat"><b class="txn-expense">${fmtUGX(totalExpenses)}</b><span>Expenses</span></div>
-        <div class="sc-stat"><b>${fmtUGX(closing)}</b><span>Calculated Closing</span></div>
-      </div>
-      <div class="pi-card-foot">
-        <div class="qc-field qc-field-full"><label>Actual Counted</label>${inputHtml}</div>
-        <div>${varianceHtml}</div>
-      </div>
-    </div>`).join('')}
-  </div>`;
+
+      <label class="cb-count-input">
+        <span>What did you count?</span>
+        <input type="number" min="0" step="any" data-account="${esc(a.key)}" class="cb-actual-input"
+          value="${a.counted===null?'':a.counted}" placeholder="Count it and type it here">
+      </label>
+
+      <div class="cb-count-verdict">${
+        meaning.state==='pending'
+          ? `<span class="variance-pending">${esc(meaning.text)}</span>`
+          : meaning.state==='ok'
+            ? `<span class="variance-ok">${esc(meaning.text)}</span>`
+            : `<span class="cb-count-diff">${a.variance>0?'+':''}${fmtUGX(Math.round(a.variance))}</span>
+               <span class="cb-count-why">${esc(meaning.text)}</span>`
+      }</div>
+    </article>`;
+  };
+
+  wrap.innerHTML = `<div class="cb-counts">${pos.accounts.map(card).join('')}</div>`;
 
   wrap.querySelectorAll('.cb-actual-input').forEach(input=>{
     input.addEventListener('change', ()=>{
-      const acct = input.dataset.account;
-      const rec2 = getDayRecord(currentCbDate());
-      rec2.actual[acct] = input.value===''? null : Number(input.value);
+      const rec = getDayRecord(currentCbDate());
+      rec.actual[input.dataset.account] = input.value==='' ? null : Number(input.value);
       saveData();
       renderCbSummary();
     });
   });
 
-  const fixBtn = document.getElementById('cb_chain_fix');
-  if(fixBtn) fixBtn.addEventListener('click', ()=>{
-    const d = currentCbDate();
-    const carried = carriedOpening(d);
-    if(!carried) return;
-    const rec2 = getDayRecord(d);
-    ACCOUNTS.forEach(a=>{ rec2.opening[a.key] = carried.values[a.key]; });
-    rec2.openingSet = true;
-    saveData();
-    renderCbDayHeader();
-    renderCbSummary();
-    toast(`Opening balances set to what ${carried.from} left`);
-  });
+  /* The one line that says whether the day is closed. Counting two of
+     three accounts and going home is the normal failure, and nothing on
+     the old screen said so -- the missing account simply showed a dash
+     among seven other columns. */
+  const stateEl = document.getElementById('cbCloseState');
+  if(stateEl){
+    const n = pos.countedAccounts, total = pos.accounts.length;
+    const off = pos.accounts.filter(a=> a.counted !== null && Math.abs(a.variance) >= 1);
+    stateEl.className = 'cb-close-state' + (n === 0 ? '' : off.length ? ' bad' : n < total ? ' part' : ' ok');
+    stateEl.textContent =
+      n === 0 ? `Nothing counted yet — ${total} accounts to check`
+      : n < total ? `${n} of ${total} counted${off.length ? `, ${off.length} not matching` : ''}`
+      : off.length ? `All counted — ${off.length} ${off.length===1?'account does':'accounts do'} not match`
+      : 'All counted and everything matches';
+  }
 }
 
 document.getElementById('cb_print').addEventListener('click', ()=>{

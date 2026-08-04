@@ -166,17 +166,24 @@ const day = (opening, actual) => ({
   t.check(/if\(!carried\) return ''/.test(html),
     'the first day of the book is not accused of breaking a chain it starts');
 
-  const summary = extractFunction(src, 'renderCbSummary', 'index.html');
-  t.check(/cbChainBreakHTML\(date, rec\)/.test(summary),
-    'the summary screen actually renders it');
+  /* The warning moved from the foot of the page to the day header, so it
+     sits with the opening figures it is about rather than under the
+     reconciliation table. What still has to hold is that something
+     renders it -- pinned on the call, not on which function makes it. */
+  const header = extractFunction(src, 'renderCbDayHeader', 'index.html');
+  t.check(/cbChainBreakHTML\(date, getDayRecord\(date\)\)/.test(header),
+    'the day header actually renders it, beside the opening balances it disputes');
 }
 {
   // The one-tap correction has to write the carried figures and mark the
   // day confirmed, or the warning returns on the next render.
-  const summary = extractFunction(src, 'renderCbSummary', 'index.html');
-  const fix = /cb_chain_fix[\s\S]*?toast\(/.exec(summary);
-  t.check(fix && /rec2\.opening\[a\.key\] = carried\.values\[a\.key\]/.test(fix[0]) && /rec2\.openingSet = true/.test(fix[0]),
+  // Pulled into its own function when the warning moved to the header;
+  // the behaviour it has to have is unchanged.
+  const fix = extractFunction(src, 'cbApplyCarriedOpening', 'index.html');
+  t.check(/rec\.opening\[a\.key\] = carried\.values\[a\.key\]/.test(fix) && /rec\.openingSet = true/.test(fix),
     'accepting the correction writes the carried figures and marks the day opened');
+  t.check(/showCbMain\(\);/.test(fix),
+    'and redraws the whole day, so the warning it just resolved cannot linger');
 }
 
 /* ---------- 6. the wizard shows where its numbers came from ----------- */
