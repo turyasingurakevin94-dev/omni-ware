@@ -1574,6 +1574,123 @@
   .txn-payment{color:var(--accent-ink);font-weight:600;}
   .txn-expense{color:var(--danger);font-weight:600;}
 
+  /* ================= DEBTORS — the aging profile ==================
+     A heat ramp built from the shop palette: verdigris for money that
+     is simply trade, through amber and a light oxide, to crimson for
+     the balances that have stopped behaving like money. Grey sits off
+     the ramp entirely and means "we do not know how old this is" --
+     deliberately neither good nor bad, because it is neither.
+     ================================================================ */
+  /* Three tokens per band, not one. --deb-hue is the fill, and a fill
+     that reads well as a 16px block is usually too light to read as
+     11px text on its own wash: oxide-light on oxide-soft comes out
+     around 3.5:1. --deb-ink is the same band a step darker, chosen so
+     every pill clears 4.5:1 against --deb-wash. */
+  .deb-b30{--deb-hue:var(--ow-verdigris);--deb-wash:var(--ow-verdigris-soft);--deb-ink:var(--ow-verdigris);}
+  .deb-b60{--deb-hue:var(--ow-amber);--deb-wash:var(--ow-amber-soft);--deb-ink:var(--ow-amber-ink);}
+  .deb-b90{--deb-hue:var(--ow-oxide-light);--deb-wash:var(--ow-oxide-soft);--deb-ink:var(--ow-oxide-deep);}
+  .deb-b90p{--deb-hue:var(--ow-crimson);--deb-wash:var(--ow-crimson-soft);--deb-ink:var(--ow-crimson);}
+  .deb-unknown{--deb-hue:var(--ow-ink-400);--deb-wash:var(--ow-steel-050);--deb-ink:var(--ow-ink-600);}
+
+  .deb-pos{display:flex;flex-direction:column;gap:16px;}
+  .deb-pos-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;}
+  .deb-pos-total{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .deb-pos-label,.deb-pos-aside-label{
+    font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+  .deb-pos-total b{
+    font-family:'Archivo Black',sans-serif;font-size:34px;line-height:1.05;color:var(--ink);
+    font-variant-numeric:tabular-nums;letter-spacing:-0.4px;word-break:break-word;}
+  .deb-pos-meta,.deb-pos-aside-meta{font-size:12.5px;color:var(--ink-soft);}
+  .deb-pos-aside{display:flex;flex-direction:column;gap:2px;text-align:right;min-width:0;
+    padding-left:16px;border-left:1px solid var(--line);}
+  .deb-pos-aside b{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);}
+  @media (max-width:640px){
+    .deb-pos-aside{text-align:left;padding-left:0;border-left:0;border-top:1px solid var(--line);padding-top:12px;width:100%;}
+    .deb-pos-total b{font-size:27px;}
+  }
+
+  /* The bar. Widths are flex-grow set from the money in each band, so it
+     is proportional to shillings rather than to how many rows a band
+     fills -- one big old balance is the problem, not three small fresh
+     ones. min-width keeps a 1% band clickable. */
+  .deb-bar{display:flex;gap:2px;height:16px;border-radius:8px;overflow:hidden;background:var(--ow-rule-soft);}
+  .deb-seg{flex-basis:0;min-width:14px;border:0;padding:0;cursor:pointer;background:var(--deb-hue);
+    transition:opacity .15s ease,transform .15s ease;}
+  .deb-seg:hover{opacity:.82;}
+  .deb-seg.on{box-shadow:inset 0 0 0 2px var(--panel),inset 0 0 0 4px var(--deb-hue);}
+  .deb-seg:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+
+  /* 136px is chosen, not rounded: it is the widest track that still fits
+     two bands across a 375px phone once the panel padding and the gap
+     are taken out. At 148px it fell to one column and five stacked cards
+     pushed the list itself off the first screen. */
+  .deb-bands{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px;}
+  .deb-band{
+    display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    border-top:3px solid var(--deb-hue);transition:background .15s ease,border-color .15s ease;}
+  .deb-band:hover{background:var(--bg);}
+  .deb-band.on{background:var(--deb-wash);border-color:var(--deb-hue);}
+  .deb-band-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .deb-band-amt{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);}
+  .deb-band-meta{font-size:11.5px;color:var(--ink-soft);}
+
+  .deb-verdict{font-size:13px;line-height:1.55;border-radius:10px;padding:11px 13px;}
+  .deb-verdict b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .deb-verdict.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .deb-verdict.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .deb-pos-clear{display:flex;flex-direction:column;gap:4px;}
+  .deb-pos-clear b{font-size:15px;}
+  .deb-pos-clear span{color:var(--ink-soft);font-size:13px;}
+
+  /* ---- the list ---- */
+  .deb-filter-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:13px;}
+  .deb-table td{vertical-align:middle;}
+  /* The band, carried onto the row as a stripe. The pill says which one;
+     the stripe is what lets somebody find all of them without reading.
+
+     Set on the first CELL, not on the row. Under border-collapse:collapse
+     -- which every table in this app uses -- a box-shadow on a <tr> is
+     computed and then never painted, so the first version of this was
+     five rules that did nothing at all. */
+  .deb-table tbody tr.deb-edge-b30 td:first-child{box-shadow:inset 3px 0 0 var(--ow-verdigris);}
+  .deb-table tbody tr.deb-edge-b60 td:first-child{box-shadow:inset 3px 0 0 var(--ow-amber);}
+  .deb-table tbody tr.deb-edge-b90 td:first-child{box-shadow:inset 3px 0 0 var(--ow-oxide-light);}
+  .deb-table tbody tr.deb-edge-b90p td:first-child{box-shadow:inset 3px 0 0 var(--ow-crimson);}
+  .deb-table tbody tr.deb-edge-unknown td:first-child{box-shadow:inset 3px 0 0 var(--ow-ink-400);}
+  .deb-table tbody tr td:first-child{padding-left:14px;}
+  .deb-name{background:none;border:0;padding:0;cursor:pointer;text-align:left;
+    font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3;}
+  .deb-name:hover{color:var(--accent);text-decoration:underline;}
+  .deb-where{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .deb-amt{font-family:'IBM Plex Mono',monospace;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .deb-pill{display:inline-block;white-space:nowrap;font-size:11.5px;font-weight:700;
+    padding:3px 9px;border-radius:999px;color:var(--deb-ink);background:var(--deb-wash);
+    font-variant-numeric:tabular-nums;}
+  .deb-paid-cell{white-space:nowrap;}
+  .deb-paid{display:block;font-size:12.5px;color:var(--ink);}
+  .deb-paid-ago{display:block;font-size:11px;color:var(--ink-soft);}
+  /* Never paid is a fact, not a blank. It reads darker than a date on
+     purpose: it is the one value in this column worth stopping on. */
+  .deb-never{font-size:12.5px;font-weight:700;color:var(--ow-crimson);}
+  .deb-receive{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+  .deb-card .pi-card-top{align-items:center;}
+  .deb-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px;}
+  .deb-card-amt{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .deb-card-paid{text-align:right;}
+  .deb-card-act{margin-top:10px;}
+  .deb-card.deb-edge-b30{border-left:3px solid var(--ow-verdigris);}
+  .deb-card.deb-edge-b60{border-left:3px solid var(--ow-amber);}
+  .deb-card.deb-edge-b90{border-left:3px solid var(--ow-oxide-light);}
+  .deb-card.deb-edge-b90p{border-left:3px solid var(--ow-crimson);}
+  .deb-card.deb-edge-unknown{border-left:3px solid var(--ow-ink-400);}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
   /* ===== Cash Book — opening wizard ===== */
   .cb-wizard-panel{max-width:600px;margin:0 auto 20px;}
   .cb-progress-bar{height:8px;border-radius:5px;background:#EEF1F3;overflow:hidden;margin-bottom:8px;}
@@ -3881,20 +3998,18 @@
     <section id="tab-analytics-debtors" style="display:none;">
       <div class="page-head">
         <h1>Debtors list</h1>
-        <p>Customers who currently owe money, pulled from the debt recorded against each customer.</p>
+        <p>What customers owe you, and how long they have owed it. The bands below split the money by age — click one to work through it.</p>
       </div>
 
-      <div class="panel">
-        <div class="an-toolbar">
-          <label class="sq-select-all-label" style="padding-bottom:9px;"><input type="checkbox" id="deb_hide_no_debt" checked> Hide no debt</label>
-          <div class="field" style="flex:1;min-width:220px;">
-            <label>Search</label>
-            <input id="deb_search" placeholder="Customer name / category...">
-          </div>
-        </div>
+      <!-- What you are owed. Always the whole book: the search box and the
+           band filter act on the list further down, never on this. A
+           position that shrinks because somebody left a filter on is a
+           position nobody can trust. -->
+      <div class="panel" id="debPositionWrap"></div>
 
-        <div class="an-table-head-row">
-          <div></div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Who to chase</h2>
           <div class="btn-row" style="margin-top:0;">
             <button type="button" class="btn btn-ghost btn-icon" id="deb_export_btn">
               <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>
@@ -3907,6 +4022,15 @@
           </div>
         </div>
 
+        <div class="an-toolbar">
+          <div class="field" style="flex:1;min-width:220px;">
+            <label>Search</label>
+            <input id="deb_search" placeholder="Customer name or place...">
+          </div>
+          <label class="sq-select-all-label" style="padding-bottom:9px;"><input type="checkbox" id="deb_hide_no_debt" checked> Hide no debt</label>
+        </div>
+
+        <div id="debFilterNote"></div>
         <div class="an-scroll" id="deb_tableWrap"></div>
       </div>
     </section>
@@ -6529,6 +6653,16 @@ function agingDaysLabel(days){
   if(days===0) return 'Today';
   if(days===1) return '1 day';
   return `${days} days`;
+}
+// A stored YYYY-MM-DD read back the way somebody would say it out loud.
+// Parsed and printed in UTC for the same reason daysSinceDate is: these
+// strings come from todayISO(), which is UTC, and letting the browser
+// read them as local time shifts the date by one for half the world.
+function fmtShortDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00Z');
+  if(isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString('en-UG', {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'});
 }
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
@@ -14573,9 +14707,95 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
 document.getElementById('cd_cancel').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
 document.getElementById('customerDebtModalClose').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
 
-/* ================= DEBTORS LIST ================= */
-const DEB_SORT_STATE = {key:'debt', dir:-1};
+/* ================= DEBTORS LIST =================
+
+   Money owed is not one number. It is a number AND an age, and the age
+   is what says whether the balance is trade or a loss nobody has
+   admitted yet. This page sorted by size and printed the age as a bare
+   figure in the fifth column, so a 210-day-old balance sat below a
+   3-day-old one purely for being smaller: the healthy debt at the top,
+   the rotting debt buried.
+
+   The bands are the structure now. The bar at the top is not a picture
+   of the list -- it IS the filter, so the shape of the problem and the
+   way into it are the same control. */
+
+// Sorted oldest first, because the page's job is a chase order and not
+// a rich list. Every column can still be sorted the other way.
+const DEB_SORT_STATE = {key:'ageDays', dir:-1};
+// Text reads A-Z first, money and days read worst-first. Every column
+// used to open descending, so clicking "Customer name" gave you Z-A.
+const DEB_SORT_FIRST_DIR = {name:1, location:1, lastPaid:1, debt:-1, ageDays:-1};
 let debLastRows = [];
+// Which age band the list is narrowed to. Set by clicking the bar.
+let debBandFilter = '';
+
+/* Boundaries are exclusive at the top, so a balance falls in exactly one
+   band and no shilling is counted twice. */
+const DEB_BANDS = [
+  {key:'b30',  label:'Under 30 days', short:'Under 30 days', test:(d)=> d>=0 && d<30},
+  {key:'b60',  label:'30 to 60 days', short:'30–60 days',    test:(d)=> d>=30 && d<60},
+  {key:'b90',  label:'60 to 90 days', short:'60–90 days',    test:(d)=> d>=60 && d<90},
+  {key:'b90p', label:'Over 90 days',  short:'Over 90 days',  test:(d)=> d>=90},
+  /* An age nobody knows is not an age of zero. A balance with no dated
+     charge behind it -- typed straight in, or drifted away from its own
+     history -- would otherwise land in "under 30 days" and flatter the
+     whole profile. That is the one band it must never quietly join. */
+  {key:'unknown', label:'No dated charge', short:'Age not known', test:(d)=> !(d>=0)},
+];
+function debBandFor(ageDays){
+  const band = DEB_BANDS.find(b=> b.test(ageDays));
+  return band ? band.key : 'unknown';
+}
+function debBandDef(key){ return DEB_BANDS.find(b=> b.key===key) || null; }
+
+// The most recent payment of any size, or null if they have never paid
+// anything at all. Never-paid is not "paid a long time ago": one is a
+// customer who has gone quiet, the other is one who never started, and
+// only the second is a reason not to sell to them again.
+function customerLastPaymentDate(c){
+  return (c.debtLog||[])
+    .filter(l=> l.type==='payment' && l.date)
+    .reduce((latest, l)=> (!latest || l.date > latest) ? l.date : latest, null);
+}
+
+/* One row per customer, built once. The list filters and sorts these;
+   the bands above total them. Two panels, one arithmetic -- the same
+   rule the cash book runs on, for the same reason: a page that derives
+   its headline twice is a page that can disagree with itself. */
+function debAllRows(){
+  return data.customers.map(c=>{
+    const debt = Number(c.debt)||0;
+    const owing = debt > 0.5;
+    const ageDays = owing ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1;
+    return {
+      id: c.id,
+      name: c.name || 'Unnamed customer',
+      // Was headed "Category" while showing the customer's location.
+      location: c.location || '',
+      debt, ageDays,
+      band: debBandFor(ageDays),
+      lastPaid: customerLastPaymentDate(c),
+    };
+  });
+}
+
+/* The position: what the shop is owed, split by how old it is. Computed
+   over every debtor on file rather than over the filtered list. */
+function debAgingProfile(){
+  const owing = debAllRows().filter(r=> r.debt > 0.5);
+  const bands = DEB_BANDS.map(b=>{
+    const rows = owing.filter(r=> r.band === b.key);
+    return {
+      key: b.key, label: b.label, short: b.short,
+      amount: rows.reduce((s,r)=> s + r.debt, 0),
+      count: rows.length,
+    };
+  });
+  const total = owing.reduce((s,r)=> s + r.debt, 0);
+  const biggest = owing.reduce((m,r)=> (!m || r.debt > m.debt) ? r : m, null);
+  return {total, bands, biggest, customers: owing.length};
+}
 // Walks a customer's debt ledger oldest-first, paying off charges with
 // payments in FIFO order (oldest charge cleared first) -- the same logic
 // a real aging report uses. Whatever charge date is still left open once
@@ -14604,15 +14824,26 @@ function customerOldestOpenChargeDate(c){
 function debRowsForList(filter=''){
   const hideNoDebt = document.getElementById('deb_hide_no_debt').checked;
   const tokens = searchTokens(filter);
-  let rows = data.customers.map(c=>{
-    const debt = Number(c.debt)||0;
-    const ageDays = debt>0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1;
-    return {id:c.id, name:c.name||'Unnamed customer', category: c.location||'', debt, ageDays};
-  });
+  let rows = debAllRows();
   if(hideNoDebt) rows = rows.filter(r=>r.debt>0);
-  if(tokens.length) rows = rows.filter(r=>matchesAllTokens((r.name+' '+r.category).toLowerCase(), tokens));
+  if(debBandFilter) rows = rows.filter(r=> r.band === debBandFilter);
+  if(tokens.length) rows = rows.filter(r=>matchesAllTokens((r.name+' '+r.location).toLowerCase(), tokens));
   rows.sort((a,b)=>{
     const key = DEB_SORT_STATE.key;
+    /* An age nobody knows has no place on an age axis. It sorts to the
+       end whichever way the column is pointed, rather than posing as
+       the newest debt in the book -- which is where a raw -1 put it. */
+    if(key === 'ageDays'){
+      const au = a.ageDays < 0, bu = b.ageDays < 0;
+      if(au !== bu) return au ? 1 : -1;
+      if(au && bu) return String(a.name||'').localeCompare(String(b.name||''));
+    }
+    /* Never having paid IS a position on this axis, and it is the far
+       end of it -- unlike an unknown age, it is a thing we know. */
+    if(key === 'lastPaid'){
+      return String(a.lastPaid || '0000-00-00').localeCompare(String(b.lastPaid || '0000-00-00'))
+        * DEB_SORT_STATE.dir;
+    }
     const av = a[key], bv = b[key];
     if(typeof av==='number' && typeof bv==='number') return (av-bv)*DEB_SORT_STATE.dir;
     return String(av||'').localeCompare(String(bv||'')) * DEB_SORT_STATE.dir;
@@ -14680,15 +14911,117 @@ function wireDebtDriftFix(wrap){
   const btn = wrap.querySelector('#deb_drift_fix');
   if(btn) btn.addEventListener('click', explainDebtDrift);
 }
+/* The bar and its bands. Proportional to money, not to how many people
+   are in each band -- one 4,000,000 balance at ninety days is the
+   problem, and three small fresh ones are not, however many rows they
+   fill. Every band is clickable and so is every segment: the picture of
+   the problem and the way into it are one control. */
+function renderDebtorsPosition(){
+  const wrap = document.getElementById('debPositionWrap');
+  if(!wrap) return;
+  const p = debAgingProfile();
+
+  if(!p.customers){
+    // A shop with no customers yet has not "settled up" -- it has not
+    // started. Saying the second to somebody on their first day reads
+    // as the app misunderstanding what it is looking at.
+    const any = (data.customers||[]).length > 0;
+    wrap.innerHTML = `<div class="deb-pos-clear">
+      <b>${any ? 'Nobody owes you anything.' : 'Nothing is owed to you yet.'}</b>
+      <span>${any ? 'Every customer on file is settled up.' : 'Debts appear here once a customer takes goods on credit.'}</span>
+    </div>`;
+    return;
+  }
+
+  const share = (n)=> p.total > 0 ? n / p.total : 0;
+  const pct = (n)=> Math.round(share(n) * 100);
+  const live = p.bands.filter(b=> b.amount > 0);
+
+  /* flex-grow carries the proportion, and a floor keeps a 1% band from
+     collapsing into a line nobody can hit. The floor distorts the
+     picture slightly; a segment too small to click is worse. */
+  const segs = live.map(b=> `<button type="button" class="deb-seg deb-${b.key}${debBandFilter===b.key?' on':''}"
+      style="flex-grow:${b.amount}"
+      data-band="${esc(b.key)}"
+      title="${esc(b.label)}: ${esc(fmtUGX(Math.round(b.amount)))} from ${b.count} customer${b.count===1?'':'s'}">
+      <span class="sr-only">${esc(b.label)}</span></button>`).join('');
+
+  const cards = live.map(b=> `<button type="button" class="deb-band deb-${b.key}${debBandFilter===b.key?' on':''}"
+      data-band="${esc(b.key)}">
+      <span class="deb-band-label">${esc(b.short)}</span>
+      <b class="deb-band-amt">${esc(fmtUGX(Math.round(b.amount)))}</b>
+      <span class="deb-band-meta">${b.count} customer${b.count===1?'':'s'} · ${pct(b.amount)}%</span>
+    </button>`).join('');
+
+  const worst = p.bands.find(b=> b.key === 'b90p');
+  const unknown = p.bands.find(b=> b.key === 'unknown');
+
+  /* One sentence, only when there is something to say. A shop with
+     nothing over ninety days does not need to be told so in red. */
+  const worstLine = worst && worst.amount > 0
+    ? `<div class="deb-verdict bad">
+        <b>${esc(fmtUGX(Math.round(worst.amount)))}</b> has been owing for more than 90 days —
+        ${pct(worst.amount)}% of everything you are owed, across
+        ${worst.count} customer${worst.count===1?'':'s'}. Money this old rarely arrives on its own.
+      </div>`
+    : '';
+
+  const unknownLine = unknown && unknown.amount > 0
+    ? `<div class="deb-verdict quiet">
+        <b>${esc(fmtUGX(Math.round(unknown.amount)))}</b> has no dated charge behind it, so how long it
+        has been owing cannot be worked out. That balance was usually typed in rather than built up
+        from charges — open the customer and check their history.
+      </div>`
+    : '';
+
+  /* How exposed the shop is to one name. Withheld when there is only one
+     debtor: "largest single debt, 100% of the total" is not a finding
+     when it is also the only debt, it is the same number twice. */
+  const big = p.customers > 1 ? p.biggest : null;
+  const concentration = big
+    ? `<div class="deb-pos-aside">
+        <span class="deb-pos-aside-label">Largest single debt</span>
+        <b>${esc(fmtUGX(Math.round(big.debt)))}</b>
+        <span class="deb-pos-aside-meta">${esc(big.name)} · ${pct(big.debt)}% of the total</span>
+      </div>`
+    : '';
+
+  wrap.innerHTML = `<div class="deb-pos">
+    <div class="deb-pos-head">
+      <div class="deb-pos-total">
+        <span class="deb-pos-label">Owed to you</span>
+        <b>${esc(fmtUGX(Math.round(p.total)))}</b>
+        <span class="deb-pos-meta">across ${p.customers} customer${p.customers===1?'':'s'}</span>
+      </div>
+      ${concentration}
+    </div>
+    <div class="deb-bar" role="group" aria-label="What you are owed, split by age">${segs}</div>
+    <div class="deb-bands">${cards}</div>
+    ${worstLine}
+    ${unknownLine}
+  </div>`;
+
+  wrap.querySelectorAll('[data-band]').forEach(el=> el.addEventListener('click', ()=>{
+    // Clicking the band you are already in takes the filter off, so the
+    // way out is the same control as the way in.
+    debBandFilter = (debBandFilter === el.dataset.band) ? '' : el.dataset.band;
+    renderDebtorsList(document.getElementById('deb_search').value);
+  }));
+}
+
 function renderDebtorsList(filter=''){
   const wrap = document.getElementById('deb_tableWrap');
   const rows = debRowsForList(filter);
   debLastRows = rows;
   const driftBanner = debtDriftBannerHTML();
+  renderDebtorsPosition();
+  renderDebFilterNote(rows.length);
   if(rows.length===0){
     wrap.innerHTML = driftBanner + (data.customers.length===0
       ? '<div class="empty">No customers yet — add one in the Customers tab.</div>'
-      : '<div class="empty">No debtors match this filter.</div>');
+      : debBandFilter
+        ? `<div class="empty">Nobody is in the ${esc((debBandDef(debBandFilter)||{}).label || 'chosen')} band with the current search.</div>`
+        : '<div class="empty">No debtors match this filter.</div>');
     // Drift can exist on a customer the current filter hides, so the fix
     // has to be reachable from this path too, not just the populated one.
     wireDebtDriftFix(wrap);
@@ -14696,74 +15029,124 @@ function renderDebtorsList(filter=''){
   }
   const sortArrow = (key)=> DEB_SORT_STATE.key===key ? `<span class="sort-arrow">${DEB_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
   const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
-  const cardsHtml = rows.map((r,i)=>`
-    <div class="pi-card">
+
+  // The age, coloured by its band. A day count on its own makes the
+  // reader do the banding in their head, thirty rows at a time.
+  const agePill = (r)=>{
+    const def = debBandDef(r.band);
+    return `<span class="deb-pill deb-${r.band}" title="${esc(def ? def.label : '')}">${esc(
+      r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
+  };
+  // When somebody last paid ANYTHING. The single best read on whether a
+  // customer has gone quiet, and the list has never carried it.
+  const paidCell = (r)=> r.lastPaid
+    ? `<span class="deb-paid">${esc(fmtShortDate(r.lastPaid))}</span><span class="deb-paid-ago">${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
+    : '<span class="deb-never">Never paid</span>';
+  const receiveBtn = (r)=> `<button type="button" class="deb-receive" data-id="${esc(r.id)}">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>
+      Receive</button>`;
+
+  const cardsHtml = rows.map(r=>`
+    <div class="pi-card deb-card deb-edge-${r.band}">
       <div class="pi-card-top">
         <div class="pi-card-title">
-          <span class="an-rank">${i+1}</span>
-          <span class="cmp-card-supplier">${esc(r.name)}</span>
+          <button type="button" class="deb-name" data-stats="${esc(r.id)}">${esc(r.name)}</button>
         </div>
-        <div class="inv-row-actions">
-          <button type="button" class="pc-icon-btn deb-receive" data-id="${esc(r.id)}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-        </div>
+        ${agePill(r)}
       </div>
-      ${r.category ? `<div class="pi-card-meta"><div>${esc(r.category)}</div></div>` : ''}
-      <div class="sc-stats">
-        <div class="sc-stat"><b>${fmtUGX(Math.round(r.debt))}</b><span>Total debt</span></div>
-        <div class="sc-stat"><b>${esc(agingDaysLabel(r.ageDays))}</b><span>Overdue by</span></div>
+      ${r.location ? `<div class="pi-card-meta"><div>${esc(r.location)}</div></div>` : ''}
+      <div class="deb-card-foot">
+        <span class="deb-card-amt">${fmtUGX(Math.round(r.debt))}</span>
+        <span class="deb-card-paid">${paidCell(r)}</span>
       </div>
+      <div class="deb-card-act">${receiveBtn(r)}</div>
     </div>`).join('');
-  wrap.innerHTML = driftBanner + `<div class="pi-table-wrap"><table>
+
+  wrap.innerHTML = driftBanner + `<div class="pi-table-wrap"><table class="deb-table">
     <thead><tr>
-      <th>No.</th>
-      <th class="sortable${DEB_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Customer name${sortArrow('name')}</th>
-      <th class="sortable${DEB_SORT_STATE.key==='category'?' sorted':''}" data-key="category">Category${sortArrow('category')}</th>
-      <th class="sortable${DEB_SORT_STATE.key==='debt'?' sorted':''}" data-key="debt">Total debt${sortArrow('debt')}</th>
-      <th class="sortable${DEB_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Overdue by${sortArrow('ageDays')}</th>
-      <th>Operation</th>
+      <th class="sortable${DEB_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Customer${sortArrow('name')}</th>
+      <th class="r sortable${DEB_SORT_STATE.key==='debt'?' sorted':''}" data-key="debt">Owing${sortArrow('debt')}</th>
+      <th class="sortable${DEB_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Owing for${sortArrow('ageDays')}</th>
+      <th class="sortable${DEB_SORT_STATE.key==='lastPaid'?' sorted':''}" data-key="lastPaid">Last payment${sortArrow('lastPaid')}</th>
+      <th></th>
     </tr></thead>
-    <tbody>${rows.map((r,i)=>`<tr>
-      <td class="an-rank">${i+1}</td>
-      <td>${esc(r.name)}</td>
-      <td>${esc(r.category)}</td>
-      <td class="price">${fmtUGX(Math.round(r.debt))}</td>
-      <td>${esc(agingDaysLabel(r.ageDays))}</td>
+    <tbody>${rows.map(r=>`<tr class="deb-edge-${r.band}">
       <td>
-        <div class="inv-row-actions">
-          <button type="button" class="pc-icon-btn deb-receive" data-id="${esc(r.id)}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-        </div>
+        <button type="button" class="deb-name" data-stats="${esc(r.id)}">${esc(r.name)}</button>
+        ${r.location ? `<div class="deb-where">${esc(r.location)}</div>` : ''}
       </td>
+      <td class="price deb-amt">${fmtUGX(Math.round(r.debt))}</td>
+      <td>${agePill(r)}</td>
+      <td class="deb-paid-cell">${paidCell(r)}</td>
+      <td class="row-actions">${receiveBtn(r)}</td>
     </tr>`).join('')}</tbody>
     <tfoot><tr class="inv-total-row">
-      <td></td><td class="inv-total-label">Total</td><td></td>
+      <td class="inv-total-label">${rows.length} customer${rows.length===1?'':'s'}${
+        debBandFilter ? ` · ${esc((debBandDef(debBandFilter)||{}).short || '')}` : ''}</td>
       <td class="price">${fmtUGX(Math.round(totalDebt))}</td>
-      <td></td><td></td>
+      <td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>
   <div class="pi-cards">
     ${cardsHtml}
     <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDebt))}</b><span>Total debt</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalDebt))}</b><span>${rows.length} customer${rows.length===1?'':'s'} shown</span></div>
     </div>
   </div>`;
+
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
-    if(DEB_SORT_STATE.key===key) DEB_SORT_STATE.dir *= -1; else { DEB_SORT_STATE.key = key; DEB_SORT_STATE.dir = -1; }
+    if(DEB_SORT_STATE.key===key) DEB_SORT_STATE.dir *= -1;
+    else { DEB_SORT_STATE.key = key; DEB_SORT_STATE.dir = DEB_SORT_FIRST_DIR[key] || -1; }
     renderDebtorsList(document.getElementById('deb_search').value);
   }));
   wrap.querySelectorAll('.deb-receive').forEach(btn=>btn.addEventListener('click', ()=>{
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
+  // Before chasing somebody it helps to see who they are and what they
+  // have bought. The statement to hand them prints from there too.
+  wrap.querySelectorAll('[data-stats]').forEach(btn=>btn.addEventListener('click', ()=>{
+    openCustomerStats(btn.dataset.stats);
+  }));
   wireDebtDriftFix(wrap);
+}
+
+/* The band filter lives up in the bar, so its effect is echoed down here
+   where the rows it removed would have been -- with the way out beside
+   it. A filter you cannot see is a filter you forget you set. */
+function renderDebFilterNote(shown){
+  const el = document.getElementById('debFilterNote');
+  if(!el) return;
+  if(!debBandFilter){ el.innerHTML = ''; return; }
+  const def = debBandDef(debBandFilter);
+  el.innerHTML = `<div class="deb-filter-note">
+    <span>Showing only <b>${esc(def ? def.label.toLowerCase() : 'one band')}</b> — ${shown} customer${shown===1?'':'s'}.</span>
+    <button type="button" class="btn btn-ghost" id="debClearBand">Show everyone</button>
+  </div>`;
+  el.querySelector('#debClearBand').addEventListener('click', ()=>{
+    debBandFilter = '';
+    renderDebtorsList(document.getElementById('deb_search').value);
+  });
 }
 document.getElementById('deb_hide_no_debt').addEventListener('change', ()=>renderDebtorsList(document.getElementById('deb_search').value));
 document.getElementById('deb_search').addEventListener('input', e=>renderDebtorsList(e.target.value));
 document.getElementById('deb_export_btn').addEventListener('click', ()=>{
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to export'); return; }
-  const lines = [['No.','Customer name','Category','Total debt','Overdue by (days)'].join(',')];
+  const lines = [['No.','Customer name','Location','Owing','Owing for (days)','Age band','Last payment'].join(',')];
   rows.forEach((r,i)=>{
-    lines.push([i+1, `"${r.name.replace(/"/g,'""')}"`, `"${r.category.replace(/"/g,'""')}"`, Math.round(r.debt), r.ageDays<0?'':r.ageDays].join(','));
+    const band = debBandDef(r.band);
+    lines.push([
+      i+1,
+      `"${r.name.replace(/"/g,'""')}"`,
+      `"${r.location.replace(/"/g,'""')}"`,
+      Math.round(r.debt),
+      // Blank, not 0 -- an age nobody knows is not an age of nothing,
+      // and a spreadsheet will happily average a zero into the answer.
+      r.ageDays < 0 ? '' : r.ageDays,
+      `"${band ? band.label : ''}"`,
+      r.lastPaid || 'Never',
+    ].join(','));
   });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
@@ -14776,20 +15159,60 @@ document.getElementById('deb_print_btn').addEventListener('click', ()=>{
   const rows = debLastRows;
   if(rows.length===0){ toast('No debtors to print'); return; }
   const totalDebt = rows.reduce((s,r)=>s+r.debt, 0);
-  const rowsHtml = rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.category)}</td><td>${fmtUGX(Math.round(r.debt))}</td><td>${esc(agingDaysLabel(r.ageDays))}</td></tr>`).join('');
+  const rowsHtml = rows.map((r,i)=>{
+    const band = debBandDef(r.band);
+    return `<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.location)}</td>
+      <td class="n">${fmtUGX(Math.round(r.debt))}</td>
+      <td>${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</td>
+      <td>${esc(band ? band.short : '')}</td>
+      <td>${esc(r.lastPaid ? fmtShortDate(r.lastPaid) : 'Never paid')}</td>
+      <td class="sign"></td></tr>`;
+  }).join('');
+
+  /* The profile prints too. A list carried out to chase people is worth
+     nothing if the shape of the problem stayed on the screen -- and this
+     is the sheet somebody actually reads in the car. It is always the
+     whole book, even when the screen is filtered to one band, so a
+     printed page cannot quietly under-report what is owed. */
+  const p = debAgingProfile();
+  const bandsHtml = p.bands.filter(b=> b.amount > 0).map(b=>
+    `<tr><td>${esc(b.label)}</td><td class="n">${fmtUGX(Math.round(b.amount))}</td>
+      <td class="n">${p.total>0?Math.round(b.amount/p.total*100):0}%</td>
+      <td class="n">${b.count}</td></tr>`).join('');
+
+  const scope = debBandFilter
+    ? `${rows.length} customer${rows.length===1?'':'s'} in the ${esc(((debBandDef(debBandFilter)||{}).label||'').toLowerCase())} band`
+    : `${rows.length} customer${rows.length===1?'':'s'}`;
+
   const win = window.open('', '_blank');
   win.document.write(`<html><head><title>Debtors list</title><style>
-    body{font-family:Arial,sans-serif;padding:16px;color:#1B2430;}
-    table{width:100%;border-collapse:collapse;font-size:12px;}
-    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}
-    th{background:#eee;}
+    @page{size:A4 portrait;margin:14mm;}
+    body{font-family:Arial,sans-serif;padding:0;color:#1B2430;}
+    table{width:100%;border-collapse:collapse;font-size:11.5px;}
+    th,td{border:1px solid #ccc;padding:5px 7px;text-align:left;}
+    th{background:#eee;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;}
+    td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
     tfoot td{font-weight:700;border-top:2px solid #999;}
-    h1{font-size:16px;}
+    h1{font-size:16px;margin:0 0 2px;}
+    .sub{font-size:11px;color:#555;margin:0 0 14px;}
+    h2{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin:0 0 6px;}
+    .profile{width:auto;min-width:52%;margin-bottom:16px;}
+    .sign{width:70px;}
+    tr{page-break-inside:avoid;}
   </style></head><body>
     <h1>Debtors list</h1>
-    <table><thead><tr><th>No.</th><th>Customer name</th><th>Category</th><th>Total debt</th><th>Overdue by</th></tr></thead>
+    <p class="sub">${esc(fmtShortDate(todayISO()))} · ${scope} · ${fmtUGX(Math.round(totalDebt))} listed</p>
+
+    <h2>What you are owed, by age — whole book</h2>
+    <table class="profile"><thead><tr><th>Age</th><th class="n">Amount</th><th class="n">Share</th><th class="n">Customers</th></tr></thead>
+    <tbody>${bandsHtml}</tbody>
+    <tfoot><tr><td>Total owed</td><td class="n">${fmtUGX(Math.round(p.total))}</td><td class="n">100%</td><td class="n">${p.customers}</td></tr></tfoot>
+    </table>
+
+    <h2>Who to chase</h2>
+    <table><thead><tr><th>No.</th><th>Customer</th><th>Location</th><th class="n">Owing</th><th>Owing for</th><th>Band</th><th>Last payment</th><th>Collected</th></tr></thead>
     <tbody>${rowsHtml}</tbody>
-    <tfoot><tr><td></td><td></td><td>Total</td><td>${fmtUGX(Math.round(totalDebt))}</td><td></td></tr></tfoot>
+    <tfoot><tr><td></td><td>${scope}</td><td></td><td class="n">${fmtUGX(Math.round(totalDebt))}</td><td></td><td></td><td></td><td></td></tr></tfoot>
     </table>
   </body></html>`);
   win.document.close();

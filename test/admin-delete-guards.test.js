@@ -147,7 +147,12 @@ if (fns) {
 {
   t.check(/let rows = data\.suppliers\.map\(s=>\{/.test(code),
     'the Creditors List is built by mapping suppliers');
-  t.check(/let rows = data\.customers\.map\(c=>\{/.test(code),
+  /* The debtors mapping moved into debAllRows() when the aging profile
+     was added, so the list and the bands above it read one row set
+     instead of building two. What has to hold is unchanged and is what
+     is pinned: the rows come from data.customers, so a debt log
+     pointing at a deleted customer has nowhere to appear. */
+  t.check(/function debAllRows\(\)\{\s*\n\s*return data\.customers\.map\(c=>\{/.test(code),
     'and the Debtors List by mapping customers');
   t.check(/const owed = creditorTotalOwed\(id\);\s*\n\s*if\(owed > 0\.5\)\{/.test(code),
     'so deleteSupplier checks what is owed first');
