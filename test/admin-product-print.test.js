@@ -75,8 +75,15 @@ if (rowsFor) {
 
   /* ---------- 3. the grid and the printout share it ----------------- */
   {
-    t.check(/const cards = productRowsForList\(filter, categoryFilter, supplierFilter\)\.map\(r=>/.test(code),
-      'the card grid is built from these rows');
+    /* The card grid became a list, but the point of this check did not
+       change: the screen and the printout must be built from the SAME
+       row set, or a filtered print could list rows the screen is not
+       showing. Pinned on the shared call rather than on the shape of
+       what is done with it. */
+    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter\);/.test(code),
+      'the on-screen list is built from these rows');
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter\)/g) || []).length === 2,
+      'and the printout calls the very same function with the very same filters');
     t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter\);/.test(code),
       'and so is the printout');
     // Neither may walk the catalog for itself.

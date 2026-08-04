@@ -724,7 +724,6 @@
   .type-option-body{display:flex;flex-direction:column;gap:2px;}
   .type-option-title{font-size:13.5px;font-weight:700;color:var(--ink);}
   .type-option-desc{font-size:11.5px;color:var(--ink-soft);}
-  .pc-parent-label{font-size:11px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.02em;}
   .p-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:14px 0 18px;}
   .p-toolbar-search{margin:0;flex:1 1 240px;min-width:200px;}
   .p-toolbar-search input{max-width:none;}
@@ -966,15 +965,15 @@
      One row per PERSON, not one card per role. A worker who also
      delivers used to appear in both grids, which meant two statuses to
      read for one human being. */
-  .team-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);
+  .sum-strip{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);
     border-radius:12px;overflow:hidden;margin-bottom:16px;}
-  .team-cell{flex:1 1 130px;background:var(--panel);padding:12px 14px;}
-  .team-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;
+  .sum-cell{flex:1 1 130px;background:var(--panel);padding:12px 14px;}
+  .sum-value{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;
     font-variant-numeric:tabular-nums;line-height:1.1;}
-  .team-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
+  .sum-label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;
     color:var(--ink-soft);margin-top:4px;}
-  .team-cell.good .team-value{color:var(--good);}
-  .team-cell.warn .team-value{color:var(--ow-amber-ink);}
+  .sum-cell.good .sum-value{color:var(--good);}
+  .sum-cell.warn .sum-value{color:var(--ow-amber-ink);}
 
   .rost-bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;
     margin-bottom:16px;}
@@ -1280,13 +1279,64 @@
   .prc-summary div+div{margin-top:1px;}
 
   /* Product cards */
-  .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
-  .product-card{
-    background:#fff;border:1px solid var(--line);border-radius:11px;padding:16px 16px 14px;
-    display:flex;flex-direction:column;gap:10px;position:relative;transition:border-color .12s ease;
+  /* The catalogue.
+     ------------------------------------------------------------------
+     A list, because a catalogue is scanned and compared. The card grid
+     it replaces put every figure in its own box, so nothing lined up and
+     nothing could be compared down a column -- and it showed neither
+     what a thing costs to buy nor how many are on the shelf, both of
+     which the PRINTED version of the same list already carried. */
+  .cat-head, .cat-row{
+    display:grid;
+    grid-template-columns:minmax(220px,2.2fr) minmax(130px,1.2fr) minmax(90px,.8fr) minmax(110px,.9fr) auto;
+    gap:16px;align-items:center;
   }
-  .product-card:hover{border-color:#C7CFD8;}
-  .pc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .cat-head{
+    padding:0 15px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;
+    text-transform:uppercase;color:var(--ow-ink-400);
+  }
+  .cat-list{display:flex;flex-direction:column;gap:8px;}
+  .cat-row{
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 15px;
+    transition:border-color .12s ease, box-shadow .12s ease;
+  }
+  .cat-row:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
+  .cat-row.is-unbuilt{background:var(--bg);}
+  .cat-item{display:flex;align-items:center;gap:11px;min-width:0;}
+  .cat-ident{min-width:0;}
+  .cat-name{font-size:14px;font-weight:700;line-height:1.3;word-break:break-word;}
+  .cat-variant{font-weight:500;color:var(--ink-soft);}
+  .cat-sub{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:4px;}
+  .cat-sku{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+  .cat-cat{font-size:10.5px;color:var(--ink-soft);background:var(--bg);border-radius:999px;padding:1px 8px;}
+  .cat-cell{min-width:0;}
+  /* Tabular numerals so the money and the counts line up down the page,
+     which is the entire reason this is a list and not a grid of cards. */
+  .cat-fig{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  .cat-fig.none{color:var(--ow-ink-400);font-weight:600;}
+  .cat-note{font-size:10.5px;color:var(--ink-soft);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-note.warn{color:var(--ow-amber-ink);}
+  .cat-flag{font-size:11.5px;color:var(--ow-amber-ink);}
+  .cat-markup{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--ink-soft);}
+  .cat-markup span{display:inline-block;width:13px;color:var(--ow-ink-400);font-weight:700;}
+  .cat-markup b{color:var(--ink);}
+  .cat-actions{display:flex;gap:5px;flex-shrink:0;}
+  @media (max-width:1000px){
+    .cat-head{display:none;}
+    .cat-row{
+      grid-template-columns:1fr auto;
+      grid-template-areas:"item actions" "buy stock" "markup markup";
+      gap:10px 16px;
+    }
+    .cat-item{grid-area:item;} .cat-actions{grid-area:actions;}
+    .cat-cell:nth-of-type(2){grid-area:buy;} .cat-cell:nth-of-type(3){grid-area:stock;}
+    .cat-markup{grid-area:markup;flex-direction:row;gap:14px;
+      padding-top:8px;border-top:1px solid var(--ow-rule-soft);}
+    .cat-note{white-space:normal;}
+  }
+
   .pc-thumb{
     width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;
     border:1px solid var(--line);background:#F3F5F7;
@@ -1296,9 +1346,6 @@
     background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .pc-thumb-placeholder .icon{width:18px;height:18px;}
-  .pc-head-main{display:flex;gap:10px;min-width:0;}
-  .pc-title{display:flex;flex-direction:column;gap:4px;min-width:0;}
-  .pc-name{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
   .pc-actions{display:flex;gap:6px;flex-shrink:0;}
   .pc-icon-btn{
     all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -1312,15 +1359,10 @@
   .pc-icon-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
   .pc-icon-btn-active-danger{color:var(--danger);border-color:var(--danger);}
   .pc-icon-btn .icon{width:14px;height:14px;}
-  .pc-meta{display:flex;flex-wrap:wrap;gap:6px;}
   .pc-details{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-soft);}
   .pc-details .pc-row{display:flex;justify-content:space-between;gap:10px;}
   .pc-details .pc-row span:first-child{color:var(--ink-soft);}
   .pc-details .pc-row span:last-child{color:var(--ink);font-weight:600;text-align:right;}
-  .pc-notes{font-size:12px;color:var(--ink-soft);font-style:italic;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-  .pc-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--line);}
-  .pc-markups{display:flex;gap:10px;font-size:11.5px;color:var(--ink-soft);}
-  .pc-markups b{color:var(--ink);}
   .id-pill{
     font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:#EEF1F3;padding:2px 7px;
     border-radius:5px;color:var(--ink-soft);
@@ -3929,6 +3971,7 @@
             <div class="suggestions" id="p_supplier_filter_suggestions"></div>
           </div>
         </div>
+        <div id="productsSummary"></div>
         <div id="productsTableWrap"></div>
       </div>
     </section>
@@ -12728,9 +12771,9 @@ function renderStaffTeamStrip(){
   const busy = on.filter(s=> staffActiveOrders(s).length);
   const inHand = on.reduce((n,s)=> n + staffActiveOrders(s).length, 0);
   const noLogin = all.filter(s=> !s.userId).length;
-  const cell = (value, label, cls)=> `<div class="team-cell ${cls||''}">
-    <div class="team-value">${esc(String(value))}</div><div class="team-label">${esc(label)}</div></div>`;
-  document.getElementById('staffTeamStrip').innerHTML = all.length ? `<div class="team-strip">
+  const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  document.getElementById('staffTeamStrip').innerHTML = all.length ? `<div class="sum-strip">
     ${cell(on.length, on.length===1?'on the team':'on the team')}
     ${cell(busy.length, 'working now', busy.length ? 'good' : '')}
     ${cell(on.length - busy.length, 'free', (on.length - busy.length) ? '' : 'warn')}
@@ -14885,100 +14928,6 @@ function ipThumbHTML(p, variantIdx){
   if(src) return `<img class="ip-thumb img-zoomable" src="${src}" alt="${esc(p.name)}">`;
   return `<div class="ip-thumb-placeholder"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg></div>`;
 }
-function simpleCardHTML(p, tokens=[]){
-  return `
-    <div class="product-card">
-      <div class="pc-head">
-        <div class="pc-head-main">
-          ${productThumbHTML(p)}
-          <div class="pc-title">
-            <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
-            <div class="pc-name">${highlightTokens(p.name, tokens)}</div>
-          </div>
-        </div>
-        <div class="pc-actions">
-          <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${p.id}')">${ICON_EDIT}</button>
-          <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${p.id}')">${ICON_TRASH}</button>
-        </div>
-      </div>
-      <div class="pc-meta">
-        ${p.category ? `<span class="pack-pill">${highlightTokens(p.category, tokens)}</span>` : ''}
-        ${p.subcategory ? `<span class="pack-pill">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
-      </div>
-      ${p.notes ? `<div class="pc-notes">${esc(p.notes)}</div>` : ''}
-      <div class="pc-foot">
-        <div class="pc-markups">
-          <span>W <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue)}</b></span>
-          <span>R <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue)}</b></span>
-        </div>
-      </div>
-    </div>`;
-}
-function variableEmptyCardHTML(p, tokens=[]){
-  return `
-    <div class="product-card">
-      <div class="pc-head">
-        <div class="pc-head-main">
-          ${productThumbHTML(p)}
-          <div class="pc-title">
-            <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
-            <div class="pc-name">${highlightTokens(p.name, tokens)}</div>
-          </div>
-        </div>
-        <div class="pc-actions">
-          <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${p.id}')">${ICON_EDIT}</button>
-          <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${p.id}')">${ICON_TRASH}</button>
-        </div>
-      </div>
-      <div class="pc-meta">
-        ${p.category ? `<span class="pack-pill">${highlightTokens(p.category, tokens)}</span>` : ''}
-        ${p.subcategory ? `<span class="pack-pill">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
-        <span class="variant-pill">Variable product</span>
-      </div>
-      <div class="pc-notes">No variants added yet — edit this product to add options like Color or Size.</div>
-    </div>`;
-}
-function variantCardHTML(p, v, idx, tokens=[]){
-  const idLabel = v.sku ? v.sku : `${p.id}-${idx+1}`;
-  return `
-    <div class="product-card">
-      <div class="pc-head">
-        <div class="pc-head-main">
-          ${productThumbHTML(p, idx)}
-          <div class="pc-title">
-            <span class="id-pill">${highlightTokens(idLabel, tokens)}</span>
-            <div class="pc-parent-label">${highlightTokens(p.name, tokens)}</div>
-            <div class="pc-name">${highlightTokens(variantLabel(v.combo), tokens)}</div>
-          </div>
-        </div>
-        <div class="pc-actions">
-          <button class="pc-icon-btn" title="Edit in parent product" onclick="editProduct('${p.id}')">${ICON_EDIT}</button>
-          <button class="pc-icon-btn danger" title="Delete this variant" onclick="deleteVariant('${p.id}', ${idx})">${ICON_TRASH}</button>
-        </div>
-      </div>
-      <div class="pc-meta">
-        ${p.category ? `<span class="pack-pill">${highlightTokens(p.category, tokens)}</span>` : ''}
-        ${p.subcategory ? `<span class="pack-pill">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
-        <span class="variant-pill">Variation</span>
-      </div>
-      <div class="pc-foot">
-        <div class="pc-markups">
-          <span>W <b>${(()=>{ const r=effectiveMarkupRule(p, idx, 'wholesale'); return r ? markupRuleLabel(r.type, r.value) + (r.source==='variant'?' <em style="font-style:normal;color:var(--accent-ink);">·custom</em>':'') : 'No rule'; })()}</b></span>
-          <span>R <b>${(()=>{ const r=effectiveMarkupRule(p, idx, 'retail'); return r ? markupRuleLabel(r.type, r.value) + (r.source==='variant'?' <em style="font-style:normal;color:var(--accent-ink);">·custom</em>':'') : 'No rule'; })()}</b></span>
-        </div>
-      </div>
-    </div>`;
-}
-// The catalog flattened to one row per sellable thing, under the filters
-// currently applied: a simple product is one row, a variable product one row
-// per variant, so e.g. "M12" matches that variant and not its siblings.
-// Matching requires every typed word to appear somewhere in the entry, in
-// any order, so "black plug" finds a "Black Wall Plug".
-//
-// Shared by the card grid and the printed list. Printing used to mean a
-// second copy of this walk, which is how two views of one thing drift into
-// showing different sets -- the fault behind several bugs already fixed in
-// this file.
 function productRowsForList(filter='', categoryFilter='', supplierFilter=''){
   const tokens = searchTokens(filter);
   const rows = [];
@@ -15006,17 +14955,136 @@ function productRowsForList(filter='', categoryFilter='', supplierFilter=''){
   });
   return rows;
 }
+
+/* ================= THE CATALOGUE =====================================
+
+   A grid of 270px cards, one per sellable thing, showing an id, a name,
+   two category pills and the MARKUP RULES. A catalogue is scanned and
+   compared -- what do I have, what does it cost me, what does it sell
+   for -- and a card grid is the one shape that makes comparing hard: the
+   figures never line up in a column.
+
+   Worse, the screen was quieter than the paper. The print button already
+   put stock on the page, on the reasoning that "walking the shelves is
+   most of what it is for", while the screen it printed from showed no
+   stock at all.
+
+   One row per line, with the two facts that were missing -- what it
+   costs to buy and how many are on the shelf -- in columns that line up
+   down the page. */
+function productLineStats(rows){
+  let variants = 0, unpriced = 0, noStock = 0, unbuilt = 0;
+  rows.forEach(r=>{
+    // A variable product with no variants yet cannot be priced or
+    // stocked, so counting it as unpriced would report a setup step as a
+    // pricing gap.
+    if(r.kind === 'variable-empty'){ unbuilt++; return; }
+    if(r.kind === 'variant') variants++;
+    if(!productPriceRows(r.p.id, r.idx).length) unpriced++;
+    if(getStockQty(r.p.id, r.idx) <= 0) noStock++;
+  });
+  return {
+    lines: rows.length,
+    products: new Set(rows.map(r=> r.p.id)).size,
+    variants, unpriced, noStock, unbuilt,
+  };
+}
+
+// What it costs to buy one, from the same ranking the buying list uses,
+// so the catalogue and the buying trip cannot name different suppliers.
+function productBestBuy(productId, variantIdx){
+  const ranked = rankedPurchaseRowsAtQty(productId, variantIdx, 1);
+  /* `.find(priced)` is EQUIVALENT to ranked[0] as the ranking stands,
+     and is kept anyway -- a mutation run swapping them changes no test,
+     which is the honest reason to record why rather than contrive a
+     fixture. rankedPurchaseRowsAtQty already sorts unpriced rows last,
+     so the first row is the cheapest priced one whenever any is priced;
+     and when none is, both give a null price. What this guards is a
+     future change to that sort, where taking [0] blind would quote a
+     supplier who has no price on file. */
+  const best = ranked.find(r=> r.purchasePrice != null) || null;
+  return {
+    suppliers: productPriceRows(productId, variantIdx).length,
+    price: best ? best.purchasePrice : null,
+    supplierId: best ? best.supplierId : null,
+  };
+}
+
+function productLineHTML(r, tokens){
+  const { p, v, idx, kind } = r;
+  const unbuilt = kind === 'variable-empty';
+  const buy = unbuilt ? null : productBestBuy(p.id, idx);
+  const qty = unbuilt ? null : getStockQty(p.id, idx);
+  const variant = kind === 'variant' ? variantLabel(v.combo) : '';
+
+  return `<div class="cat-row${unbuilt ? ' is-unbuilt' : ''}">
+    <div class="cat-item">
+      ${productThumbHTML(p, idx)}
+      <div class="cat-ident">
+        <div class="cat-name">${highlightTokens(p.name, tokens)}${
+          variant ? ` <span class="cat-variant">${highlightTokens(variant, tokens)}</span>` : ''}</div>
+        <div class="cat-sub">
+          <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
+          ${kind === 'variant' && v.sku ? `<span class="cat-sku">${highlightTokens(v.sku, tokens)}</span>` : ''}
+          ${p.category ? `<span class="cat-cat">${highlightTokens(p.category, tokens)}</span>` : ''}
+          ${p.subcategory ? `<span class="cat-cat">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="cat-cell">
+      ${unbuilt
+        ? '<span class="cat-flag">No variants set up yet</span>'
+        : buy.price != null
+          ? `<div class="cat-fig">${fmtUGX(Math.round(buy.price))}</div>
+             <div class="cat-note">${buy.suppliers} supplier${buy.suppliers===1?'':'s'} · cheapest ${esc(supplierName(buy.supplierId))}</div>`
+          : `<div class="cat-fig none">—</div><div class="cat-note warn">No price on file</div>`}
+    </div>
+
+    <div class="cat-cell">
+      ${unbuilt ? '' : `<div class="cat-fig${qty > 0 ? '' : ' none'}">${qty}</div>
+        <div class="cat-note">${qty > 0 ? 'on the shelf' : 'nothing on the shelf'}</div>`}
+    </div>
+
+    <div class="cat-cell cat-markup">
+      <div><span>W</span> <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue)}</b></div>
+      <div><span>R</span> <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue)}</b></div>
+    </div>
+
+    <div class="cat-actions">
+      <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${esc(p.id)}')">${ICON_EDIT}</button>
+      <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${esc(p.id)}')">${ICON_TRASH}</button>
+    </div>
+  </div>`;
+}
+
 function renderProducts(filter='', categoryFilter='', supplierFilter=''){
   populateProductFilterDropdowns(categoryFilter, supplierFilter);
   const wrap = document.getElementById('productsTableWrap');
+  const strip = document.getElementById('productsSummary');
   const tokens = searchTokens(filter);
-  const cards = productRowsForList(filter, categoryFilter, supplierFilter).map(r=>
-    r.kind==='variant' ? variantCardHTML(r.p, r.v, r.idx, tokens)
-    : r.kind==='variable-empty' ? variableEmptyCardHTML(r.p, tokens)
-    : simpleCardHTML(r.p, tokens));
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter);
 
-  if(cards.length===0){ wrap.innerHTML = '<div class="empty">No products match your filters.</div>'; return; }
-  wrap.innerHTML = `<div class="product-grid">${cards.join('')}</div>`;
+  const s = productLineStats(rows);
+  const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  // Counts of what is LISTED, not of the whole catalogue: a strip that
+  // ignored the filters would contradict the rows underneath it.
+  strip.innerHTML = rows.length ? `<div class="sum-strip">
+    ${cell(s.products, s.products===1?'product':'products')}
+    ${s.variants ? cell(s.variants, 'variants') : ''}
+    ${cell(s.lines, s.lines===1?'sellable line':'sellable lines')}
+    ${cell(s.unpriced, 'without a price', s.unpriced ? 'warn' : '')}
+    ${cell(s.noStock, 'not on the shelf', s.noStock ? 'warn' : '')}
+    ${s.unbuilt ? cell(s.unbuilt, 'with no variants yet', 'warn') : ''}
+  </div>` : '';
+
+  wrap.innerHTML = rows.length
+    ? `<div class="cat-head">
+         <span>Item</span><span>Costs to buy</span><span>In stock</span><span>Markup</span><span></span>
+       </div>
+       <div class="cat-list">${rows.map(r=> productLineHTML(r, tokens)).join('')}</div>`
+    : '<div class="empty">No products match your filters.</div>';
 }
 // Prints exactly what the screen is listing, filters and all.
 //
