@@ -5860,6 +5860,29 @@ let currentShopName = null;
 // a document with a blank letterhead is worse than one with ours.
 function printedShopName(){ return currentShopName || 'Omni-Ware'; }
 
+/* Every A5 printout in this app injects a <style> carrying its own @page
+   and removes it again on afterprint. afterprint is not reliable --
+   cancelling the dialog skips it on several platforms, and closing the
+   preview tab skips it everywhere -- so that sheet can outlive the print
+   it was made for.
+
+   The next print then inherits it, and @page does not cascade by
+   specificity: the last one in document order wins. A leftover A5 from a
+   receipt silently overrides the statements' A4, and a balance sheet
+   comes out on a receipt-sized page with half of it off the edge. Which
+   is indistinguishable, to whoever pressed the button, from printing
+   being broken.
+
+   So the sheets are cleared BEFORE each print rather than only after
+   one. Cheap, and it does not depend on an event that may never come. */
+const INJECTED_PRINT_STYLE_IDS = ['receiptPrintStyle', 'clientQuotePrintStyle', 'a5PrintStyle', 'piA5PrintStyle'];
+function clearInjectedPrintStyles(){
+  INJECTED_PRINT_STYLE_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.remove();
+  });
+}
+
 let data = null;
 let myStaff = null;
 let hasPushSubscription = false;
@@ -9030,6 +9053,7 @@ document.getElementById('q_print_btn').addEventListener('click', ()=>{
     <div class="a5-foot">Internal use — not for the client.</div>
   </div>`;
 
+  clearInjectedPrintStyles();
   const styleEl = document.createElement('style');
   styleEl.id = 'receiptPrintStyle';
   styleEl.textContent = `
@@ -9089,6 +9113,7 @@ document.getElementById('q_print_quote_btn').addEventListener('click', ()=>{
     <div class="a5-foot">Thank you for your enquiry — quotation valid for 7 days.</div>
   </div>`;
 
+  clearInjectedPrintStyles();
   const styleEl = document.createElement('style');
   styleEl.id = 'clientQuotePrintStyle';
   styleEl.textContent = `
@@ -10933,6 +10958,7 @@ function printQuotesA5(quotes){
   const printArea = document.getElementById('printArea');
   printArea.innerHTML = quotes.map(buildQuoteA5HTML).join('');
 
+  clearInjectedPrintStyles();
   const styleEl = document.createElement('style');
   styleEl.id = 'a5PrintStyle';
   styleEl.textContent = `
@@ -11539,6 +11565,7 @@ function printPurchaseInvoicesA5(invoices){
   const printArea = document.getElementById('printArea');
   printArea.innerHTML = invoices.map(buildPurchaseInvoiceA5HTML).join('');
 
+  clearInjectedPrintStyles();
   const styleEl = document.createElement('style');
   styleEl.id = 'piA5PrintStyle';
   styleEl.textContent = `
@@ -19213,6 +19240,10 @@ function printStatements(which){
   const docs = which === 'all' ? ST_DOCS : ST_DOCS.filter(d=> d.key === which);
   if(!docs.length) return;
 
+  // A receipt's A5 sheet left over from a cancelled dialog would set the
+  // page size for this one too, and print a balance sheet onto a
+  // receipt.
+  clearInjectedPrintStyles();
   const printedOn = todayISO();
   document.getElementById('printArea').innerHTML = `
     <div class="st-print">

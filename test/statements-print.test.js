@@ -128,4 +128,40 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
     'and the listener removes itself rather than stacking one per print');
 }
 
+/* ---------- 6. a stale page size from another printout --------------- */
+{
+  /* Every A5 printout in this app injects a <style> with its own @page
+     and removes it on afterprint. afterprint does not always fire --
+     cancelling the dialog skips it on several platforms -- so the sheet
+     outlives the print it was made for.
+
+     @page does not cascade by specificity; the last one in document
+     order wins. A leftover A5 from a receipt therefore overrides the
+     statements' A4 and prints a balance sheet onto a receipt-sized page,
+     which to whoever pressed the button looks exactly like printing
+     being broken. */
+  const ids = (/const INJECTED_PRINT_STYLE_IDS = \[([^\]]*)\]/.exec(code) || ['', ''])[1];
+  ['receiptPrintStyle', 'clientQuotePrintStyle', 'a5PrintStyle', 'piA5PrintStyle'].forEach((id) => {
+    t.check(new RegExp(`'${id}'`).test(ids), `${id} is known to the cleaner`);
+  });
+  // Every sheet the app injects has to be in that list, or the one left
+  // out is the one that breaks the next print.
+  const injected = [...code.matchAll(/styleEl\.id = '([A-Za-z0-9]+)'/g)].map((m) => m[1]);
+  const unlisted = injected.filter((id) => !new RegExp(`'${id}'`).test(ids));
+  t.check(unlisted.length === 0,
+    `every injected print sheet is cleared${unlisted.length ? ` (missing: ${unlisted.join(', ')})` : ` (${injected.length} of them)`}`);
+
+  const cleaner = (/function clearInjectedPrintStyles\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(el\) el\.remove\(\);/.test(cleaner),
+    'and the cleaner actually takes them out of the document');
+
+  t.check(/clearInjectedPrintStyles\(\);/.test(printFn),
+    'the statements clear them before printing');
+  // Cleared BEFORE, not only after: the whole point is not depending on
+  // an event that may never arrive.
+  const clears = (code.match(/clearInjectedPrintStyles\(\);/g) || []).length;
+  t.check(clears >= 5,
+    `every print path clears first, not just the statements (${clears} call sites)`);
+}
+
 process.exit(t.done() ? 1 : 0);
