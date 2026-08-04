@@ -145,13 +145,13 @@ if (fns) {
  * array, so a document pointing at a deleted row has nowhere to appear.
  */
 {
-  t.check(/let rows = data\.suppliers\.map\(s=>\{/.test(code),
+  /* Both mappings moved into their own row builders when the aging
+     profiles were added, so each list and the bands above it read one
+     row set instead of building two. What has to hold is unchanged and
+     is what is pinned: the rows come from the entity array, so a
+     document pointing at a deleted row has nowhere to appear. */
+  t.check(/function credAllRows\(\)\{[\s\S]*?\n  return data\.suppliers\.map\(s=>\{/.test(code),
     'the Creditors List is built by mapping suppliers');
-  /* The debtors mapping moved into debAllRows() when the aging profile
-     was added, so the list and the bands above it read one row set
-     instead of building two. What has to hold is unchanged and is what
-     is pinned: the rows come from data.customers, so a debt log
-     pointing at a deleted customer has nowhere to appear. */
   t.check(/function debAllRows\(\)\{\s*\n\s*return data\.customers\.map\(c=>\{/.test(code),
     'and the Debtors List by mapping customers');
   t.check(/const owed = creditorTotalOwed\(id\);\s*\n\s*if\(owed > 0\.5\)\{/.test(code),

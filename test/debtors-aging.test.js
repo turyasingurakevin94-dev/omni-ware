@@ -42,14 +42,14 @@ const ago = (days) => new Date(Date.parse(TODAY + 'T00:00:00Z') - days * 8640000
   .toISOString().slice(0, 10);
 
 const scope = compileScope([
-  extractDeclaration(src, 'DEB_BANDS', 'index.html'),
+  extractDeclaration(src, 'AGING_BANDS', 'index.html'),
   extractDeclaration(src, 'DEB_SORT_STATE', 'index.html'),
   extractDeclaration(src, 'DEB_SORT_FIRST_DIR', 'index.html'),
   extractFunction(src, 'daysSinceDate', 'index.html'),
   extractFunction(src, 'customerOldestOpenChargeDate', 'index.html'),
   extractFunction(src, 'customerLastPaymentDate', 'index.html'),
-  extractFunction(src, 'debBandFor', 'index.html'),
-  extractFunction(src, 'debBandDef', 'index.html'),
+  extractFunction(src, 'agingBandFor', 'index.html'),
+  extractFunction(src, 'agingBandDef', 'index.html'),
   extractFunction(src, 'debAllRows', 'index.html'),
   extractFunction(src, 'debAgingProfile', 'index.html'),
   // compileScope hands back functions only, so the two sort constants
@@ -59,7 +59,7 @@ const scope = compileScope([
 ], {
   data,
   todayISO: () => TODAY,
-}, ['debBandFor', 'debBandDef', 'debAllRows', 'debAgingProfile', 'customerLastPaymentDate',
+}, ['agingBandFor', 'agingBandDef', 'debAllRows', 'debAgingProfile', 'customerLastPaymentDate',
   'sortState', 'sortFirstDir']);
 
 let nextId = 1;
