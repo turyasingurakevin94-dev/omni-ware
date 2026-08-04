@@ -159,16 +159,58 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   eq(nothing.lines.length, 0, 'and an order with no items array at all is empty rather than broken');
 }
 
-/* ---------- 6. the card opens it, its controls do not ---------------- */
+/* ---------- 6. the eye opens it, and only the eye -------------------- */
 {
-  // \r?\n, not \n: this file is CRLF and a bare \n silently matches
-  // nothing, which reads as a missing guard rather than a bad regex.
-  const wiring = (/wrap\.querySelectorAll\('\.sq-card'\)[\s\S]*?\}\);\r?\n\s*\}\);/.exec(src) || [''])[0];
-  t.check(/closest\('button, input, label, a'\)/.test(wiring),
-    'the select checkbox, the stage arrows, edit, delete and assign all keep doing only their own job');
   t.check(/class="pc-icon-btn sq-preview"/.test(src),
-    'and there is an eye on the card, so the preview is discoverable rather than a hidden gesture');
-  t.check(/sq-preview'\)\.forEach/.test(src), 'wired to open the same panel');
+    'there is an eye on the card, so the preview is a visible control rather than a hidden gesture');
+  t.check(/sq-preview'\)\.forEach\(btn=>btn\.addEventListener\('click', \(\)=>openOrderPreview\(btn\.dataset\.id\)\)\)/.test(src),
+    'and it opens the panel');
+
+  /* The card body opened it too for a while. On a board that is dragged,
+     selected and stepped through, that meant the panel appearing on
+     clicks nobody meant as a request to read the order. Asking for it
+     explicitly does not have that problem.
+
+     Pinned as an absence, since the failure is a listener coming back
+     rather than one going missing. */
+  t.check(!/wrap\.querySelectorAll\('\.sq-card'\)\.forEach\(card=>\{[\s\S]{0,200}openOrderPreview/.test(src),
+    'the card body itself is not a second way in');
+  const cardCss = (/\.sq-card\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(!/cursor:pointer/.test(cardCss),
+    'and the card does not claim to be clickable when it is not');
+}
+
+/* ---------- 7. the columns do not run together ----------------------- */
+{
+  /* "5 Ctn(unknown supplier)". The quantity column is right-aligned, so
+     it carries no right padding, and every cell carries no left padding
+     -- which left the figure touching the supplier beside it and reading
+     as one word.
+
+     The gap goes on the FOLLOWING cell rather than by restoring right
+     padding, so the right-aligned figures still line up flush under
+     their own heading. */
+  t.check(/\.op-table th \+ th, \.op-table td \+ td\{padding-left:\d+px;\}/.test(src),
+    'every pair of columns is separated, whichever way the first one is aligned');
+
+  const rightCell = (/\.op-table \.r\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/padding-right:0/.test(rightCell),
+    'and the figures stay flush right rather than being nudged in to make the gap');
+}
+
+/* ---------- 8. the panel ends on the table --------------------------- */
+{
+  // The closing sentence restated the two figures already in the footer
+  // and the warnings already above it, in prose, at the point the reader
+  // had finished.
+  const fn = (/function orderPreviewHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(!/op-read/.test(fn),
+    'no summary paragraph after the lines — the totals row already says it');
+  t.check(/<\/table>`;/.test(fn), 'the panel ends on the table itself');
+
+  // The figure it used is still computed: the cash-flow of a trip is
+  // real, it is just shown where it belongs rather than narrated here.
+  t.check(/buyTotal:/.test(src), 'buyTotal survives for the callers that do show it');
 }
 
 process.exit(t.done() ? 1 : 0);

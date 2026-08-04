@@ -981,6 +981,13 @@
   .op-table tfoot td{border-bottom:none;border-top:2px solid var(--line);font-weight:600;
     color:var(--ink-soft);padding-top:9px;}
   .op-table .r{text-align:right;padding-right:0;}
+  /* A gap between every pair of columns, whatever their alignment. A
+     right-aligned cell has no right padding and every cell has no left
+     padding, so "5 Ctn" and its supplier ran together as
+     "5 Ctn(unknown supplier)". Put on the FOLLOWING cell rather than by
+     restoring right padding, so the right-aligned figures still line up
+     flush with their heading. */
+  .op-table th + th, .op-table td + td{padding-left:14px;}
   .op-table .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .op-table tr.op-short{background:var(--ow-amber-soft);}
   .op-short-num{color:var(--ow-amber-ink);}
@@ -988,7 +995,6 @@
   .op-src{font-size:12.5px;}
   .op-src.stock{color:var(--good);}
   .op-read{font-size:13.5px;line-height:1.5;margin:14px 0 0;color:var(--ink-soft);}
-  .sq-card{cursor:pointer;}
   .sq-card button, .sq-card input{cursor:pointer;}
 
   /* ---- One customer's history ---- */
@@ -6865,10 +6871,7 @@ function orderPreviewHTML(q){
         <td>${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} to buy` : ''}</td>
         <td class="r num"><b>${fmtUGX(Math.round(s.total))}</b></td>
       </tr></tfoot>
-    </table>
-
-    <p class="op-read">The client pays <b>${fmtUGX(Math.round(s.total))}</b>${
-      s.toBuy ? `, and ${fmtUGX(Math.round(s.buyTotal))} of that has to be spent buying the ${s.toBuy} ${plural(s.toBuy,'line','lines')} not already on the shelf${s.unpriced ? ` (excluding the ${s.unpriced} with no price)` : ''}.` : ' — everything on it is already on the shelf.'}</p>`;
+    </table>`;
 }
 
 function openOrderPreview(orderId){
@@ -10326,17 +10329,11 @@ function renderSavedQuotes(){
   // does not reset how long the order has been waiting to go out.
   wrap.querySelectorAll('.sq-assign-delivery-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'pending_delivery', 'delivery')));
   wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
+  /* The eye, and only the eye. The card body opened the preview too for a
+     while, and on a board that is dragged, selected and stepped through
+     it meant the panel appeared on clicks nobody meant as a request to
+     read the order. An explicit control does not have that problem. */
   wrap.querySelectorAll('.sq-preview').forEach(btn=>btn.addEventListener('click', ()=>openOrderPreview(btn.dataset.id)));
-  /* The eye is the discoverable way in; the card body is the convenient
-     one. Anything the card already does -- the select checkbox, the two
-     stage arrows, edit, delete, assign, the shortfall flag -- keeps doing
-     only its own job, so this ignores clicks that landed on a control. */
-  wrap.querySelectorAll('.sq-card').forEach(card=>{
-    card.addEventListener('click', (e)=>{
-      if(e.target.closest('button, input, label, a')) return;
-      openOrderPreview(card.dataset.id);
-    });
-  });
   wrap.querySelectorAll('.sq-edit').forEach(btn=>btn.addEventListener('click', ()=>loadSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-delete').forEach(btn=>btn.addEventListener('click', ()=>deleteSavedQuote(Number(btn.dataset.id))));
   wrap.querySelectorAll('.sq-stage-prev').forEach(btn=>btn.addEventListener('click', ()=>{
