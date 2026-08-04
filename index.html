@@ -669,6 +669,14 @@
        figure that prints mid-grey reads as less important rather than as
        good news. Everything prints black; the words carry the meaning. */
     #printArea .st-print *{color:#000 !important;}
+    /* A statement of account is a ledger: five columns that have to line
+       up down the page, and a brought-forward line that reads as an
+       opening position rather than as another transaction. */
+    #printArea .cst-table th{border-bottom:1px solid #000;padding-bottom:5px;}
+    #printArea .cst-table td{border-bottom:1px solid #E4E4E4;}
+    #printArea .cst-table tr.cst-opening td{font-style:italic;color:#333;}
+    #printArea .cst-none{color:#444;font-style:italic;padding:10px 0;}
+    #printArea .cst-flag{border:1px solid #000;padding:9px 11px;margin-top:12px;font-size:11px;line-height:1.5;}
     #printArea .st-print .st-hint,
     #printArea .st-print .st-doc-when,
     #printArea .st-print .st-print-meta{color:#444 !important;}
@@ -1183,6 +1191,7 @@
   .cs-table .r{text-align:right;}
   .cs-table .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .cs-table .cs-due{color:var(--danger);font-weight:600;}
+  .cs-actions{display:flex;justify-content:flex-end;margin-bottom:14px;}
   .cs-empty{padding:8px 0 4px;}
   .cs-empty p{margin:0 0 8px;font-size:14px;line-height:1.5;}
   .cs-empty-note{color:var(--ink-soft);font-size:12.5px;}
@@ -9994,6 +10003,66 @@ function customerStats(customerId){
   };
 }
 
+/* ================= A STATEMENT OF ACCOUNT ============================
+
+   What a customer gets handed when they ask what they owe: every charge
+   and every payment in date order, with the balance running down the
+   right-hand side.
+
+   BUILT FROM THE DEBT LOG, not from the invoices. Invoicing an order
+   already writes a charge into the log ("Auto-sync — INV-xxx"), payments
+   write a credit, and a manual charge or an opening balance write their
+   own entries. Re-deriving the account from invoices AND reading the log
+   would count every credit sale twice.
+
+   The consequence is worth stating plainly: this statement is exactly as
+   good as the debt log. If the log and the balance the shop carries ever
+   disagree, the sheet says so rather than picking one. */
+function customerStatementRows(customerId, fromISO, toISO){
+  const c = (data.customers||[]).find(x=> String(x.id) === String(customerId)) || null;
+  const log = (c && Array.isArray(c.debtLog) ? c.debtLog : []).slice()
+    // Sorted by date, then by the order they were written. Two entries on
+    // one day have no other way to be ordered, and a running balance that
+    // reorders them shows a customer a sequence that never happened.
+    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || ((a.id||0) - (b.id||0)));
+
+  const delta = (e)=> e.type === 'charge' ? (Number(e.amount)||0) : -(Number(e.amount)||0);
+
+  // Everything before the period collapses into one opening figure,
+  // rather than reprinting months the customer has already been sent.
+  let opening = 0;
+  log.forEach(e=>{ if(String(e.date||'') < fromISO) opening += delta(e); });
+
+  let running = opening;
+  const rows = log
+    .filter(e=>{ const d = String(e.date||''); return d >= fromISO && d <= toISO; })
+    .map(e=>{
+      running += delta(e);
+      return {
+        date: e.date || '', note: e.note || '', type: e.type,
+        charge: e.type === 'charge' ? (Number(e.amount)||0) : 0,
+        payment: e.type === 'payment' ? (Number(e.amount)||0) : 0,
+        balance: running,
+      };
+    });
+
+  const recorded = Number(c && c.debt) || 0;
+  return {
+    customer: c, from: fromISO, to: toISO,
+    opening, rows, closing: running,
+    charged: rows.reduce((s,r)=> s + r.charge, 0),
+    paid: rows.reduce((s,r)=> s + r.payment, 0),
+    recorded,
+    /* The one check this document can make on itself. The log is a
+       history and c.debt is a balance kept alongside it; nothing forces
+       them to agree, and a statement that quietly disagrees with what
+       the shop will chase for is worse than one that admits it. Only
+       meaningful when the period runs to today -- an older period is
+       supposed to end on a different figure. */
+    agrees: Math.abs(running - recorded) < 1,
+  };
+}
+
 function customerOutstandingInvoices(customerId){
   return data.savedQuotes
     .filter(q=>q.customerId===customerId && q.invoiced && !q.voided && invoiceBalanceDue(q)>0)
@@ -13650,12 +13719,113 @@ function customerStatsHTML(s){
     </div>`;
 }
 
+/* Six months, with whatever came before carried in as one opening line.
+   A statement of account is a periodic document -- reprinting three
+   years of a regular customer's history every time is not more honest,
+   it is just longer, and the opening balance carries the rest. */
+const CUSTOMER_STATEMENT_MONTHS = 6;
+function customerStatementRange(){
+  const to = todayISO();
+  const d = new Date(to + 'T00:00:00Z');
+  // Built from the year and month, never by subtracting months from the
+  // date: standing on the 31st, setUTCMonth(-6) asks for the 31st of a
+  // 30-day month and rolls into the next one.
+  const from = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - CUSTOMER_STATEMENT_MONTHS, 1))
+    .toISOString().slice(0,10);
+  return { from, to };
+}
+
+function printCustomerStatement(customerId){
+  const { from, to } = customerStatementRange();
+  const st = customerStatementRows(customerId, from, to);
+  const c = st.customer;
+  if(!c){ toast('That customer is no longer on file'); return; }
+
+  // A receipt's A5 sheet left over from a cancelled dialog would set the
+  // page size for this one too.
+  clearInjectedPrintStyles();
+
+  const money = (n)=> fmtUGX(Math.round(n));
+  document.getElementById('printArea').innerHTML = `
+    <div class="st-print cst-print">
+      <header class="st-print-head">
+        <div class="st-print-shop">${esc(printedShopName())}</div>
+        <div class="st-print-title">Statement of account</div>
+        <div class="st-print-meta">
+          ${esc(c.name)}${c.location ? ` · ${esc(c.location)}` : ''}${c.phone ? ` · ${esc(c.phone)}` : ''}<br>
+          ${esc(from)} to ${esc(to)} · printed ${esc(todayISO())}
+        </div>
+      </header>
+
+      <table class="st-table cst-table">
+        <thead><tr>
+          <th>Date</th><th>Detail</th>
+          <th class="r">Charged</th><th class="r">Paid</th><th class="r">Balance</th>
+        </tr></thead>
+        <tbody>
+          <tr class="cst-opening">
+            <td>${esc(from)}</td><td>Balance brought forward</td>
+            <td class="r"></td><td class="r"></td><td class="r num">${money(st.opening)}</td>
+          </tr>
+          ${st.rows.map(r=>`<tr>
+            <td>${esc(r.date)}</td>
+            <td>${esc(r.note || (r.type === 'charge' ? 'Goods supplied' : 'Payment received'))}</td>
+            <td class="r num">${r.charge ? money(r.charge) : ''}</td>
+            <td class="r num">${r.payment ? money(r.payment) : ''}</td>
+            <td class="r num">${money(r.balance)}</td>
+          </tr>`).join('')}
+          ${st.rows.length ? '' : `<tr><td colspan="5" class="cst-none">
+            Nothing was charged or paid in this period.</td></tr>`}
+        </tbody>
+        <tfoot>
+          <tr class="st-grand">
+            <td colspan="2">Balance now due</td>
+            <td class="r num">${money(st.charged)}</td>
+            <td class="r num">${money(st.paid)}</td>
+            <td class="r num">${money(st.closing)}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <p class="st-read">${st.closing > 0
+        ? `<b>${esc(c.name)}</b> owes <b>${money(st.closing)}</b> as at ${esc(to)}.`
+        : st.closing < 0
+          ? `The account is <b>${money(-st.closing)}</b> in credit as at ${esc(to)}.`
+          : `The account is settled as at ${esc(to)}.`}</p>
+
+      ${st.agrees ? '' : `<p class="cst-flag">The entries above come to ${money(st.closing)},
+        while the balance recorded against this customer is ${money(st.recorded)}.
+        The two disagree by ${money(Math.abs(st.closing - st.recorded))} — settle that before
+        sending this out.</p>`}
+
+      <footer class="st-print-foot">
+        Charges and payments as recorded by ${esc(printedShopName())}. Anything before
+        ${esc(from)} is included in the balance brought forward. Please quote this
+        statement when paying.
+      </footer>
+    </div>`;
+
+  window.print();
+  window.addEventListener('afterprint', function cleanup(){
+    document.getElementById('printArea').innerHTML = '';
+    window.removeEventListener('afterprint', cleanup);
+  });
+}
+
 function openCustomerStats(customerId){
   const s = customerStats(customerId);
   const c = s.customer;
   document.getElementById('customerStatsTitle').textContent =
     c ? `${c.name}${c.location ? ` — ${c.location}` : ''}` : 'Customer';
-  document.getElementById('customerStatsBody').innerHTML = customerStatsHTML(s);
+  document.getElementById('customerStatsBody').innerHTML =
+    `<div class="cs-actions">
+      <button type="button" class="btn btn-ghost" id="cstPrintBtn" data-id="${esc(customerId)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+        Print statement
+      </button>
+    </div>` + customerStatsHTML(s);
+  const btn = document.getElementById('cstPrintBtn');
+  if(btn) btn.addEventListener('click', ()=> printCustomerStatement(btn.dataset.id));
   openModal('customerStatsModal');
 }
 
