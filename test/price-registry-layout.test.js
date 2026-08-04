@@ -35,14 +35,16 @@ const TODAY = '2026-08-04';
 
 const scope = compileScope([
   extractDeclaration(src, 'PRICE_STALE_DAYS', 'index.html'),
+  extractDeclaration(src, 'PRICE_AGE_BUCKETS', 'index.html'),
   extractFunction(src, 'priceAgeDays', 'index.html'),
+  extractFunction(src, 'priceRowMatchesAge', 'index.html'),
   extractFunction(src, 'priceGroupsFor', 'index.html'),
   extractFunction(src, 'priceRegistryStats', 'index.html'),
 ], {
   todayISO: () => TODAY,
   // Buying one: the same question the catalogue and the buying list ask.
   purchasePriceAtQty: (row) => (row.retail == null ? row.wholesale : row.retail),
-}, ['priceGroupsFor', 'priceRegistryStats', 'priceAgeDays']);
+}, ['priceGroupsFor', 'priceRegistryStats', 'priceAgeDays', 'priceRowMatchesAge']);
 
 const row = (id, productId, supplierId, wholesale, retail, over) => Object.assign({
   id, productId, variantIdx: null, supplierId, wholesale, retail,
@@ -205,6 +207,116 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   // Same gap the Presets page had: a summary that only drew at boot.
   t.check(/if\(tab==='prices'\)\{ refreshPriceDropdowns\(\); triggerPricesRender\(\); \}/.test(code),
     'and the tab redraws on entry, since the strip makes a claim about current data');
+}
+
+/* ---------- 8. finding what has gone unrepriced ---------------------- */
+{
+  const q = (date) => row(1, 'P1', 'S1', 100, 100, { date });
+  const on = (date, f) => scope.priceRowMatchesAge(q(date), f);
+
+  eq(on('2026-05-01', '90'), true, 'a quote from three months back is over 90 days old');
+  eq(on('2026-07-20', '90'), false, 'one from a fortnight ago is not');
+  // The boundary, stated rather than left to be discovered: "over 90"
+  // means 91 and up. A quote taken exactly ninety days ago is not yet
+  // over ninety days old.
+  eq(scope.priceAgeDays('2026-05-06'), 90, 'this date is exactly 90 days old');
+  eq(on('2026-05-06', '90'), false, 'and exactly 90 is not OVER 90');
+  eq(on('2026-05-05', '90'), true, 'one day older is');
+  eq(on('2026-05-06', '89'), true, 'and 90 days is over 89');
+  eq(on('', ''), true, 'no filter lets everything through');
+
+  /* Undated is its own bucket, not the far end of "old". A quote with no
+     date is not ancient -- nobody knows how old it is -- and sweeping it
+     into "over a year" would report a certainty the record cannot
+     support. It is also the only bucket that can be acted on at once:
+     put a date on it. */
+  eq(on('', 'undated'), true, 'an undated quote is found by asking for undated ones');
+  eq(on('2026-05-01', 'undated'), false, 'and a dated one is not');
+  eq(on('', '365'), false,
+    'an undated quote is NOT "over a year old" — it has no age to be over anything');
+
+  // Every option the dropdown offers must be one the filter understands,
+  // or a user can pick a filter that silently does nothing.
+  const buckets = (/const PRICE_AGE_BUCKETS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
+  const keys = [...buckets.matchAll(/key:'([a-z0-9]*)'/g)].map((m) => m[1]);
+  t.check(keys.length >= 5, `the dropdown offers ${keys.length} ages`);
+  keys.filter(Boolean).forEach((k) => {
+    const understood = k === 'undated'
+      ? scope.priceRowMatchesAge(q(''), k)
+      : scope.priceRowMatchesAge(q('2020-01-01'), k);
+    t.check(understood, `"${k}" is a filter the code actually applies`);
+  });
+  t.check(/pr_age_filter'\)\.value/.test(code) && /PRICE_AGE_BUCKETS\.map/.test(code),
+    'and the dropdown is built from that same list rather than written out twice');
+}
+
+/* ---------- 9. sorting by how long since it was repriced ------------- */
+{
+  /* The freshest quote on an item, not the oldest. If any supplier
+     priced it last week the item is not going unrepriced, however old
+     the other quotes are -- that is what "what have I not looked at in a
+     while" actually asks. */
+  const groups = scope.priceGroupsFor([
+    row(1, 'P1', 'S1', 100, 100, { date: '2026-08-02', pname: 'Cement' }),
+    row(2, 'P1', 'S2', 110, 110, { date: '2025-06-01', pname: 'Cement' }),
+  ], 'name');
+  eq(groups[0].lastRepricedDays, 2,
+    'an item with one fresh quote and one ancient one was repriced two days ago');
+
+  const mixed = [
+    row(1, 'P1', 'S1', 100, 100, { date: '2026-08-02', pname: 'Cement' }),
+    row(2, 'P2', 'S1', 100, 100, { date: '2026-06-20', pname: 'Binding wire' }),
+    row(3, 'P3', 'S1', 100, 100, { date: '2025-06-20', pname: 'Old item' }),
+    row(4, 'P4', 'S1', 100, 100, { date: '', pname: 'Undated item' }),
+  ];
+  eq(scope.priceGroupsFor(mixed, 'oldest').map((g) => g.pname).join(' > '),
+    'Old item > Binding wire > Cement > Undated item',
+    'least recently repriced first — which is the list of what to go and re-quote');
+  eq(scope.priceGroupsFor(mixed, 'newest').map((g) => g.pname).join(' > '),
+    'Cement > Binding wire > Old item > Undated item',
+    'and the reverse');
+
+  /* Undated last in BOTH directions. It is not the oldest and not the
+     newest; it is unknown, and putting it at either end asserts
+     something the record does not say. */
+  ['oldest', 'newest'].forEach((mode) => {
+    const last = scope.priceGroupsFor(mixed, mode).slice(-1)[0].pname;
+    eq(last, 'Undated item', `undated sorts last under "${mode}", not to either extreme`);
+  });
+
+  eq(scope.priceGroupsFor(mixed, 'name').map((g) => g.pname).join(' > '),
+    'Binding wire > Cement > Old item > Undated item',
+    'and by name it is alphabetical, undated included');
+
+  // Two items last repriced on the same day fall back to name, or the
+  // order would shuffle between renders.
+  const tie = scope.priceGroupsFor([
+    row(1, 'P2', 'S1', 100, 100, { date: '2026-08-01', pname: 'Zinc' }),
+    row(2, 'P1', 'S1', 100, 100, { date: '2026-08-01', pname: 'Anvil' }),
+  ], 'oldest');
+  eq(tie.map((g) => g.pname).join(','), 'Anvil,Zinc',
+    'a tie falls back to the name rather than to whatever order they arrived in');
+}
+
+/* ---------- 10. the screen and the printout agree -------------------- */
+{
+  // The age filter lives inside getFilteredPriceRows, so printing cannot
+  // produce a different set of rows from the one on screen.
+  const fn = (/function getFilteredPriceRows[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/priceRowMatchesAge\(r, ageFilter\)/.test(fn),
+    'the age filter is applied where every caller gets it');
+  t.check((code.match(/getFilteredPriceRows\(filter, supplierFilter, categoryFilter, ageFilter\)/g) || []).length === 2,
+    'so the list and the printout ask for the same rows');
+
+  // A filtered printout under a plain heading is a partial registry that
+  // reads like the whole one.
+  t.check(/ageBucket\.label\.toLowerCase\(\)/.test(code),
+    'and the printed heading names the age filter alongside the others');
+
+  // "No matches" on a screen with an age filter set reads as an empty
+  // registry rather than as good news.
+  t.check(/every quote that matches your other filters is fresher than that/.test(code),
+    'an empty result explains that nothing is that old, rather than implying nothing exists');
 }
 
 process.exit(t.done() ? 1 : 0);

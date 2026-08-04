@@ -1317,6 +1317,9 @@
   .reg-row.is-best .reg-fig{font-weight:700;}
   .reg-when{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;}
   .reg-when.stale{color:var(--ow-amber-ink);}
+  .reg-since{color:var(--ink-soft);}
+  .reg-since.stale{color:var(--ow-amber-ink);font-weight:600;}
+  .reg-since.none{color:var(--ow-ink-400);font-style:italic;}
   .reg-when .icon{width:12px;height:12px;flex-shrink:0;}
   .reg-row .pc-actions{justify-content:flex-end;}
   .reg-row .prc-tiers{grid-column:1/-1;margin-top:2px;}
@@ -4133,6 +4136,12 @@
             <input type="text" id="pr_supplier_filter_search" placeholder="All suppliers" autocomplete="off">
             <input type="hidden" id="pr_supplier_filter">
             <div class="suggestions" id="pr_supplier_filter_suggestions"></div>
+          </div>
+          <div class="field p-toolbar-filter"><label>Last updated</label>
+            <select id="pr_age_filter"></select>
+          </div>
+          <div class="field p-toolbar-filter"><label>Sort by</label>
+            <select id="pr_sort"></select>
           </div>
         </div>
         <div id="pricesSummary"></div>
@@ -16404,7 +16413,36 @@ function productSearchHaystack(p, variantIdx){
   }
   return (p.id+' '+p.name+' '+(p.category||'')+extra).toLowerCase();
 }
-function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter=''){
+/* Finding what has gone unrepriced.
+   ------------------------------------------------------------------
+   'undated' is its own option, not folded into "over a year". A quote
+   with no date is not old -- nobody knows how old it is -- and sweeping
+   it in with the ancient ones would report a certainty the record does
+   not support. It is also the only bucket that can be acted on
+   immediately: put a date on it. */
+const PRICE_SORTS = [
+  { key:'name',   label:'Product name' },
+  { key:'oldest', label:'Least recently repriced' },
+  { key:'newest', label:'Most recently repriced' },
+];
+const PRICE_AGE_BUCKETS = [
+  { key:'',        label:'Any age' },
+  { key:'30',      label:'Over 30 days old' },
+  { key:'90',      label:'Over 90 days old' },
+  { key:'180',     label:'Over 6 months old' },
+  { key:'365',     label:'Over a year old' },
+  { key:'undated', label:'With no date at all' },
+];
+function priceRowMatchesAge(r, ageFilter){
+  if(!ageFilter) return true;
+  const age = priceAgeDays(r.date);
+  if(ageFilter === 'undated') return age === null;
+  // An undated quote is never "older than N": it has no age to compare.
+  if(age === null) return false;
+  return age > Number(ageFilter);
+}
+
+function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', ageFilter=''){
   let rows = data.prices.map(pr => {
     const product = data.products.find(p=>p.id===pr.productId);
     const pname = product ? productVariantLabel(product, pr.variantIdx) : productName(pr.productId);
@@ -16420,6 +16458,11 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter=''){
       return matchesAllTokens(haystack+' '+r.sname.toLowerCase(), tokens);
     });
   }
+  // Applied here rather than in the renderer so the printout carries the
+  // same rows as the screen -- printing "everything" from a screen
+  // showing only stale quotes would be a different document wearing the
+  // same heading.
+  if(ageFilter) rows = rows.filter(r=> priceRowMatchesAge(r, ageFilter));
   rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id-a.id));
   return rows;
 }
@@ -16463,9 +16506,25 @@ function triggerPricesRender(){
   renderPrices(
     document.getElementById('pr_search').value,
     document.getElementById('pr_supplier_filter').value,
-    document.getElementById('pr_category_filter').value
+    document.getElementById('pr_category_filter').value,
+    document.getElementById('pr_age_filter').value,
+    document.getElementById('pr_sort').value
   );
 }
+
+// Built from the lists rather than written twice in the markup, so an
+// option cannot exist in the dropdown that the filter does not know.
+(function buildPriceControls(){
+  const age = document.getElementById('pr_age_filter');
+  const sort = document.getElementById('pr_sort');
+  if(!age || !sort) return;
+  age.innerHTML = PRICE_AGE_BUCKETS.map(b=>
+    `<option value="${esc(b.key)}">${esc(b.label)}</option>`).join('');
+  sort.innerHTML = PRICE_SORTS.map(s=>
+    `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
+  age.addEventListener('change', triggerPricesRender);
+  sort.addEventListener('change', triggerPricesRender);
+})();
 
 /* ================= THE PRICE REGISTRY ================================
 
@@ -16491,7 +16550,8 @@ function priceAgeDays(dateStr){
   return Math.round((today - d) / 86400000);
 }
 
-function priceGroupsFor(rows){
+
+function priceGroupsFor(rows, sortMode){
   const byThing = new Map();
   (rows||[]).forEach(r=>{
     const key = r.productId + '::' + (r.variantIdx == null ? '' : r.variantIdx);
@@ -16520,9 +16580,32 @@ function priceGroupsFor(rows){
       if(usable.length < 2) return null;
       return { low: usable[0], high: usable[usable.length-1] };
     })();
+    /* When this ITEM was last repriced -- the freshest quote on it, not
+       the oldest. If any supplier gave a price last week the item is not
+       going unrepriced, however long ago the others were taken. That is
+       the question "what have I not looked at in a while" actually asks.
+
+       null when nothing here carries a date, which sorts apart from
+       old rather than being treated as ancient. */
+    const dated = g.rows.map(r=> priceAgeDays(r.date)).filter(a=> a != null);
+    const lastRepricedDays = dated.length ? Math.min(...dated) : null;
+
     return { ...g, rows: priced.map(x=> x.r), buyOf: new Map(priced.map(x=> [x.r.id, x.buy])),
-      cheapestId, spread };
-  }).sort((a,b)=> String(a.pname).localeCompare(String(b.pname)));
+      cheapestId, spread, lastRepricedDays };
+  }).sort((a,b)=>{
+    // Undated groups go last in both directions. They are not the oldest
+    // and not the newest; they are unknown, and putting them at either
+    // end would assert something the record does not say.
+    if(sortMode === 'oldest' || sortMode === 'newest'){
+      const av = a.lastRepricedDays, bv = b.lastRepricedDays;
+      if(av == null && bv == null) return String(a.pname).localeCompare(String(b.pname));
+      if(av == null) return 1;
+      if(bv == null) return -1;
+      const diff = sortMode === 'oldest' ? bv - av : av - bv;
+      if(diff) return diff;
+    }
+    return String(a.pname).localeCompare(String(b.pname));
+  });
 }
 
 function priceRegistryStats(rows){
@@ -16577,6 +16660,13 @@ function priceGroupHTML(g, tokens){
           ${g.category ? `<span class="cat-cat">${highlightTokens(g.category, tokens)}</span>` : ''}
           <span>${n} quote${n===1?'':'s'}</span>
           ${g.spread ? `<span title="Between the cheapest and dearest in stock">spread ${fmtUGX(Math.round(g.spread.high - g.spread.low))}</span>` : ''}
+          ${g.lastRepricedDays == null
+            ? `<span class="reg-since none" title="No quote here carries a date">never dated</span>`
+            : `<span class="reg-since${g.lastRepricedDays > PRICE_STALE_DAYS ? ' stale' : ''}"
+                 title="The freshest quote on this item">repriced ${g.lastRepricedDays === 0 ? 'today'
+                   : g.lastRepricedDays === 1 ? 'yesterday'
+                   : g.lastRepricedDays < 60 ? `${g.lastRepricedDays} days ago`
+                   : `${Math.round(g.lastRepricedDays/30)} months ago`}</span>`}
         </div>
       </div>
     </header>
@@ -16587,12 +16677,12 @@ function priceGroupHTML(g, tokens){
   </section>`;
 }
 
-function renderPrices(filter='', supplierFilter='', categoryFilter=''){
+function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='name'){
   populatePriceCategoryFilter(categoryFilter);
   const wrap = document.getElementById('pricesTableWrap');
   const strip = document.getElementById('pricesSummary');
   const tokens = searchTokens(filter);
-  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter);
+  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter);
 
   const s = priceRegistryStats(rows);
   const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
@@ -16606,12 +16696,17 @@ function renderPrices(filter='', supplierFilter='', categoryFilter=''){
   </div>` : '';
 
   if(rows.length===0){
+    const bucket = PRICE_AGE_BUCKETS.find(b=> b.key === ageFilter);
     wrap.innerHTML = data.prices.length===0
       ? '<div class="empty">No price entries yet. Add one above.</div>'
-      : '<div class="empty">No price entries match your search.</div>';
+      // Named, because "no matches" on a screen with an age filter set
+      // reads as an empty registry rather than as good news.
+      : ageFilter
+        ? `<div class="empty">Nothing is ${esc((bucket ? bucket.label : '').toLowerCase())} — every quote that matches your other filters is fresher than that.</div>`
+        : '<div class="empty">No price entries match your search.</div>';
     return;
   }
-  wrap.innerHTML = priceGroupsFor(rows).map(g=> priceGroupHTML(g, tokens)).join('');
+  wrap.innerHTML = priceGroupsFor(rows, sortMode).map(g=> priceGroupHTML(g, tokens)).join('');
 }
 // A price entry saved before the single-list rework (or one that's only
 // ever had flat wholesale/retail typed, never a tier) has no `tiers` of
@@ -16818,11 +16913,17 @@ document.getElementById('pr_print').addEventListener('click', ()=>{
   const filter = document.getElementById('pr_search').value;
   const supplierFilter = document.getElementById('pr_supplier_filter').value;
   const categoryFilter = document.getElementById('pr_category_filter').value;
-  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter);
+  const ageFilter = document.getElementById('pr_age_filter').value;
+  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter);
   const printArea = document.getElementById('printArea');
   if(rows.length===0){ toast('No results to print'); return; }
+  clearInjectedPrintStyles();
   const supplierLabel = supplierFilter ? supplierName(supplierFilter) : '';
-  const titleBits = [filter?`search: "${esc(filter)}"`:'', categoryFilter?`category: ${esc(categoryFilter)}`:'', supplierLabel?`supplier: ${esc(supplierLabel)}`:''].filter(Boolean).join(', ');
+  // The age filter is named on the sheet like the others. A list of only
+  // stale quotes printed under a plain "Price Registry" heading is a
+  // partial registry that reads like the whole one.
+  const ageBucket = PRICE_AGE_BUCKETS.find(b=> b.key === ageFilter);
+  const titleBits = [filter?`search: "${esc(filter)}"`:'', categoryFilter?`category: ${esc(categoryFilter)}`:'', supplierLabel?`supplier: ${esc(supplierLabel)}`:'', (ageFilter && ageBucket)?esc(ageBucket.label.toLowerCase()):''].filter(Boolean).join(', ');
   printArea.innerHTML = `
     <h2>Price Registry${titleBits? ' — '+titleBits : ''}</h2>
     <div class="print-meta">Printed ${new Date().toLocaleString('en-UG')} — ${rows.length} record${rows.length===1?'':'s'}</div>
