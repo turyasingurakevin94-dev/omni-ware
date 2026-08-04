@@ -343,6 +343,49 @@
   }
   .page-head p{margin:0;color:var(--ink-soft);font-size:14px;}
 
+  /* Instructions on demand.
+     ------------------------------------------------------------------
+     Every screen opened with a paragraph explaining itself. Useful once,
+     then permanently in the way -- twenty-three screens each spending
+     three or four lines above the work on prose the shopkeeper read
+     months ago.
+
+     Folded behind the title now. Hover, focus or tap the "i" and it is
+     there; ignore it and the screen starts with the work. */
+  .page-title-row{display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap;}
+  .page-title-row h1{margin-bottom:0;}
+  .page-info{position:relative;display:inline-flex;}
+  .page-info-btn{
+    all:unset;box-sizing:border-box;cursor:help;width:19px;height:19px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;line-height:1;
+    color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);
+  }
+  .page-info-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .page-info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .page-info-bubble{
+    position:absolute;top:calc(100% + 8px);left:-6px;z-index:120;
+    width:max-content;max-width:min(380px, calc(100vw - 48px));
+    background:var(--navy);color:#E6EAEE;font-size:13px;line-height:1.5;
+    padding:11px 13px;border-radius:9px;box-shadow:0 12px 30px rgba(10,15,20,0.32);
+    /* Hidden by visibility rather than display so the bubble keeps its
+       measured size -- a display:none tooltip has no width to position
+       against and jumps on first open. */
+    opacity:0;visibility:hidden;transition:opacity .12s ease;
+    pointer-events:none;
+  }
+  .page-info-bubble::before{
+    content:"";position:absolute;top:-5px;left:11px;width:10px;height:10px;
+    background:var(--navy);transform:rotate(45deg);
+  }
+  .page-info-bubble p{margin:0;color:inherit;font-size:inherit;}
+  /* Hover and focus for a pointer and a keyboard; .open is what a tap
+     sets, since a touch screen has no hover to offer. */
+  .page-info-btn:hover + .page-info-bubble,
+  .page-info-btn:focus-visible + .page-info-bubble,
+  .page-info.open .page-info-bubble{opacity:1;visibility:visible;}
+  @media (prefers-reduced-motion: reduce){ .page-info-bubble{transition:none;} }
+
   .panel{
     background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,30,40,0.04);
@@ -5967,6 +6010,71 @@ tabButtons.forEach(btn=>{
   btn.addEventListener('click', ()=>{
     goToTab(btn.dataset.tab);
   });
+});
+
+/* ---------------- Instructions on demand ----------------
+
+   Twenty-three screens each opened with a paragraph explaining itself,
+   above the work. Useful the first week and in the way ever after.
+
+   The paragraph is MOVED, not copied: the copy stays exactly where it
+   was written in the markup, keeping any inline markup it carries, and
+   there is no second version of a sentence to drift out of step with the
+   first.
+
+   Deliberately NOT inside the <h1>. updateMobileTopbarTitle() reads that
+   heading's textContent for the phone's title bar, and an icon plus a
+   paragraph of help nested inside it would have been appended to the
+   name of every screen. */
+function foldPageInstructions(){
+  let n = 0;
+  document.querySelectorAll('.page-head').forEach(head=>{
+    const p = head.querySelector(':scope > p');
+    const h1 = head.querySelector('h1');
+    if(!p || !h1 || !p.textContent.trim()) return;
+
+    const row = document.createElement('div');
+    row.className = 'page-title-row';
+    h1.parentNode.insertBefore(row, h1);
+    row.appendChild(h1);
+
+    const id = 'pageInfo' + (++n);
+    const info = document.createElement('span');
+    info.className = 'page-info';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'page-info-btn';
+    btn.textContent = 'i';
+    btn.setAttribute('aria-label', 'What this screen is for');
+    btn.setAttribute('aria-describedby', id);
+    const bubble = document.createElement('span');
+    bubble.className = 'page-info-bubble';
+    bubble.id = id;
+    bubble.setAttribute('role', 'tooltip');
+    bubble.appendChild(p);           // the original paragraph, moved
+    info.appendChild(btn);
+    info.appendChild(bubble);
+    row.appendChild(info);
+
+    // A tap has no hover to offer, so it toggles instead. stopPropagation
+    // so the document handler below does not close it in the same click
+    // that opened it.
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const wasOpen = info.classList.contains('open');
+      document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
+      if(!wasOpen) info.classList.add('open');
+    });
+  });
+  return n;
+}
+foldPageInstructions();
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
 });
 
 /* ---------------- Top bar menus ----------------
