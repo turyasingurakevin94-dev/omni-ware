@@ -773,6 +773,43 @@
      lists of words as though they were the same kind of thing. A left
      rail grouped by what the setting AFFECTS scales past eight, and the
      count on each list says what is already set up without opening it. */
+  /* The product form uses the same rail as the Presets page: sections on
+     the left, one at a time on the right. Grouped selectors rather than a
+     second copy of the rules -- but a separate class, so the Presets pane
+     switcher cannot pick up the modal's buttons and deactivate its own
+     rail when one of them is clicked. */
+  .pf-shell{display:grid;grid-template-columns:184px minmax(0,1fr);gap:0;align-items:start;}
+  .pf-nav{
+    display:flex;flex-direction:column;gap:1px;padding:2px 16px 2px 0;
+    border-right:1px solid var(--line);position:sticky;top:0;
+  }
+  .pf-tab{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
+    padding:9px 11px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink-soft);
+  }
+  .pf-tab span{flex:1;min-width:0;}
+  .pf-tab:hover{background:var(--bg);color:var(--ink);}
+  .pf-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .pf-tab.active{background:var(--ow-oxide-soft);color:var(--accent);font-weight:700;}
+  .pf-state{
+    font-size:10.5px;font-weight:600;color:var(--ow-ink-400);background:var(--bg);
+    border-radius:999px;padding:1px 7px;max-width:74px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;
+  }
+  .pf-tab.active .pf-state{background:var(--panel);color:var(--accent);}
+  /* Blank where nothing is set. A tick on an empty section would be a
+     lie, and a dash on every one of them reads as a broken screen. */
+  .pf-state:empty{display:none;}
+  .pf-body{padding:2px 0 0 20px;min-width:0;}
+  .pf-pane .pset-head{margin-bottom:16px;}
+  @media (max-width:760px){
+    .pf-shell{grid-template-columns:1fr;}
+    .pf-nav{flex-direction:row;overflow-x:auto;border-right:none;position:static;
+      border-bottom:1px solid var(--line);padding:0 0 10px;gap:6px;}
+    .pf-tab{flex-shrink:0;}
+    .pf-body{padding:16px 0 0;}
+  }
+
   .pset-shell{display:grid;grid-template-columns:212px minmax(0,1fr);gap:0;}
   .pset-nav{
     display:flex;flex-direction:column;gap:1px;padding:2px 18px 2px 0;
@@ -4993,145 +5030,168 @@
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body pf-shell">
+      <!-- Five panels in one scroll, all weighted the same, for a form
+           whose only required field is the name. You scrolled past a
+           photo uploader, two pairs of markup fields and a variant
+           builder to reach Save.
 
-      <div class="form-panel">
-        <div class="form-panel-head">
-          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></svg></span>
-          <div class="form-panel-title">Product type<small>How this item is sold and priced</small></div>
-        </div>
-        <div class="type-toggle" id="p_type_toggle">
-          <label class="type-option">
-            <input type="radio" name="p_type" id="p_type_simple" value="simple" checked>
-            <span class="type-option-body">
-              <span class="type-option-title">Simple product</span>
-              <span class="type-option-desc">One item, one set of prices.</span>
-            </span>
-          </label>
-          <label class="type-option">
-            <input type="radio" name="p_type" id="p_type_variable" value="variable">
-            <span class="type-option-body">
-              <span class="type-option-title">Variable product</span>
-              <span class="type-option-desc">Comes in options (e.g. sizes), each priced and searched on its own.</span>
-            </span>
-          </label>
-        </div>
-      </div>
+           The same rail the Presets page uses: sections on the left,
+           one at a time on the right, each carrying what is set in it so
+           the rail says what has been filled without opening anything. -->
+      <nav class="pf-nav" id="p_form_nav">
+        <button type="button" class="pf-tab active" data-pfpane="basics">
+          <span>Basics</span><b class="pf-state" data-state="basics"></b></button>
+        <button type="button" class="pf-tab" data-pfpane="photo">
+          <span>Photo</span><b class="pf-state" data-state="photo"></b></button>
+        <button type="button" class="pf-tab" data-pfpane="pricing">
+          <span>Markup</span><b class="pf-state" data-state="pricing"></b></button>
+        <button type="button" class="pf-tab" data-pfpane="agent">
+          <span>Agent terms</span><b class="pf-state" data-state="agent"></b></button>
+        <button type="button" class="pf-tab" data-pfpane="variants" id="p_form_nav_variants">
+          <span>Variants</span><b class="pf-state" data-state="variants"></b></button>
+      </nav>
 
-      <div class="form-panel">
-        <div class="form-panel-head">
-          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0zM12 8v4l3 2"/></svg></span>
-          <div class="form-panel-title">Product details<small>Identity and category</small></div>
-        </div>
-        <div class="section-label-row form-section-label">Basics</div>
-        <div class="form-grid">
-          <div class="field"><label>Product ID</label><input id="p_id" disabled><div class="field-hint" id="p_id_hint">Generated automatically</div></div>
-          <div class="field"><label>Product name</label><input id="p_name" placeholder="e.g. Wheelbarrow, heavy duty"></div>
-          <div class="field"><label>Category</label><input id="p_category" list="dl_categories" placeholder="e.g. Tools"></div>
-          <div class="field"><label>Sub-category</label><input id="p_subcategory" list="dl_subcategories" placeholder="e.g. Hand Tools"></div>
-          <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="p_notes" placeholder="optional"></div>
-        </div>
-        <div class="section-label-row form-section-label" style="margin-top:14px;">Photo</div>
-        <div class="img-upload">
-          <img id="p_image_preview" class="img-upload-preview" style="display:none;" alt="Product photo preview">
-          <div id="p_image_placeholder" class="img-upload-placeholder">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+      <div class="pf-body">
+
+        <div class="pf-pane" id="pfpane-basics">
+          <header class="pset-head">
+            <h3>Basics</h3>
+            <p>How this item is sold, and what it is called. Only the name is required — everything else can wait.</p>
+          </header>
+
+          <div class="type-toggle" id="p_type_toggle">
+            <label class="type-option">
+              <input type="radio" name="p_type" id="p_type_simple" value="simple" checked>
+              <span class="type-option-body">
+                <span class="type-option-title">Simple product</span>
+                <span class="type-option-desc">One item, one set of prices.</span>
+              </span>
+            </label>
+            <label class="type-option">
+              <input type="radio" name="p_type" id="p_type_variable" value="variable">
+              <span class="type-option-body">
+                <span class="type-option-title">Variable product</span>
+                <span class="type-option-desc">Comes in options (e.g. sizes), each priced and searched on its own.</span>
+              </span>
+            </label>
           </div>
-          <div class="img-upload-controls">
-            <input type="file" id="p_image_input" accept="image/*" style="display:none;">
-            <div class="img-upload-btns">
-              <button type="button" class="btn btn-ghost btn-icon" id="p_image_upload_btn">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
-                Upload photo
-              </button>
-              <button type="button" class="btn btn-ghost btn-icon danger" id="p_image_remove_btn" style="display:none;">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
-                Remove
-              </button>
+
+          <div class="form-grid" style="margin-top:16px;">
+            <div class="field"><label>Product name<span class="req">Required</span></label><input id="p_name" placeholder="e.g. Wheelbarrow, heavy duty"></div>
+            <div class="field"><label>Product ID</label><input id="p_id" disabled><div class="field-hint" id="p_id_hint">Generated automatically</div></div>
+            <div class="field"><label>Category</label><input id="p_category" list="dl_categories" placeholder="e.g. Tools"></div>
+            <div class="field"><label>Sub-category</label><input id="p_subcategory" list="dl_subcategories" placeholder="e.g. Hand Tools"></div>
+            <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="p_notes" placeholder="optional"></div>
+          </div>
+        </div>
+
+        <div class="pf-pane" id="pfpane-photo" style="display:none;">
+          <header class="pset-head">
+            <h3>Photo</h3>
+            <p>Shown on the catalogue, the item picker and the agent app. Optional, but it is the fastest way to tell two similar items apart on a shelf.</p>
+          </header>
+          <div class="img-upload">
+            <img id="p_image_preview" class="img-upload-preview" style="display:none;" alt="Product photo preview">
+            <div id="p_image_placeholder" class="img-upload-placeholder">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
             </div>
-            <div class="img-upload-hint">JPG or PNG, kept with this product's record.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-panel">
-        <div class="form-panel-head">
-          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
-          <div class="form-panel-title" id="p_markup_panel_title">Default markup rules<small>Added to a supplier's price to suggest a selling price</small></div>
-          <span class="info-tip" tabindex="0" style="margin-left:auto;"><span class="tip-bubble">Each rule adds on top of a supplier's wholesale or retail price to suggest a selling price in Compare Prices. Leave a value blank or 0 to skip it. For variable products, this is the fallback used whenever a variant doesn't set its own rule below.</span></span>
-        </div>
-        <div class="markup-rules-grid">
-          <div>
-            <div class="form-section-label">Wholesale markup rule</div>
-            <div class="form-grid">
-              <div class="field"><label>Type</label>
-                <select id="p_wholesale_markup_type">
-                  <option value="percent">Percentage (%)</option>
-                  <option value="fixed">Fixed amount (UGX)</option>
-                </select>
+            <div class="img-upload-controls">
+              <input type="file" id="p_image_input" accept="image/*" style="display:none;">
+              <div class="img-upload-btns">
+                <button type="button" class="btn btn-ghost btn-icon" id="p_image_upload_btn">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+                  Upload photo
+                </button>
+                <button type="button" class="btn btn-ghost btn-icon danger" id="p_image_remove_btn" style="display:none;">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+                  Remove
+                </button>
               </div>
-              <div class="field"><label>Value</label><input id="p_wholesale_markup_value" type="number" min="0" step="any" placeholder="e.g. 15"></div>
+              <div class="img-upload-hint">JPG or PNG, kept with this product's record.</div>
             </div>
           </div>
-          <div>
-            <div class="form-section-label">Retail markup rule</div>
-            <div class="form-grid">
-              <div class="field"><label>Type</label>
-                <select id="p_retail_markup_type">
-                  <option value="percent">Percentage (%)</option>
-                  <option value="fixed">Fixed amount (UGX)</option>
-                </select>
+        </div>
+
+        <div class="pf-pane" id="pfpane-pricing" style="display:none;">
+          <header class="pset-head">
+            <h3 id="p_markup_panel_title">Default markup rules</h3>
+            <p>Added on top of a supplier's wholesale or retail price to suggest a selling price in Compare Prices. Leave a value blank or 0 to skip it. On a variable product this is the fallback whenever a variant sets no rule of its own.</p>
+          </header>
+          <div class="markup-rules-grid">
+            <div>
+              <div class="form-section-label">Wholesale markup rule</div>
+              <div class="form-grid">
+                <div class="field"><label>Type</label>
+                  <select id="p_wholesale_markup_type">
+                    <option value="percent">Percentage (%)</option>
+                    <option value="fixed">Fixed amount (UGX)</option>
+                  </select>
+                </div>
+                <div class="field"><label>Value</label><input id="p_wholesale_markup_value" type="number" min="0" step="any" placeholder="e.g. 15"></div>
               </div>
-              <div class="field"><label>Value</label><input id="p_retail_markup_value" type="number" min="0" step="any" placeholder="e.g. 10"></div>
+            </div>
+            <div>
+              <div class="form-section-label">Retail markup rule</div>
+              <div class="form-grid">
+                <div class="field"><label>Type</label>
+                  <select id="p_retail_markup_type">
+                    <option value="percent">Percentage (%)</option>
+                    <option value="fixed">Fixed amount (UGX)</option>
+                  </select>
+                </div>
+                <div class="field"><label>Value</label><input id="p_retail_markup_value" type="number" min="0" step="any" placeholder="e.g. 10"></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="form-panel">
-        <div class="form-panel-head">
-          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-          <div class="form-panel-title">Agent discount override<small>Leave blank to use the shop-wide default from Presets</small></div>
-          <span class="info-tip" tabindex="0" style="margin-left:auto;"><span class="tip-bubble">Only affects the standalone agent app's floor price -- never your own quotes. A discount can never actually push an agent's price below your cost, no matter what's set here; the hint below is just a heads-up while you type.</span></span>
-        </div>
-        <div class="markup-rules-grid">
-          <div>
-            <div class="form-section-label">Wholesale discount override (%)</div>
-            <div class="form-grid">
-              <div class="field"><input id="p_agent_discount_wholesale" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+        <div class="pf-pane" id="pfpane-agent" style="display:none;">
+          <header class="pset-head">
+            <h3>Agent discount override</h3>
+            <p>Leave blank to use the shop-wide default from Presets. This only affects the standalone agent app's floor price, never your own quotes — and a discount can never push an agent's price below your cost, whatever is typed here.</p>
+          </header>
+          <div class="markup-rules-grid">
+            <div>
+              <div class="form-section-label">Wholesale discount override (%)</div>
+              <div class="form-grid">
+                <div class="field"><input id="p_agent_discount_wholesale" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+              </div>
+              <div class="agent-discount-hint" id="p_agent_discount_wholesale_hint"></div>
+              <div class="agent-discount-warn" id="p_agent_discount_wholesale_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
             </div>
-            <div class="agent-discount-hint" id="p_agent_discount_wholesale_hint"></div>
-            <div class="agent-discount-warn" id="p_agent_discount_wholesale_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
-          </div>
-          <div>
-            <div class="form-section-label">Retail discount override (%)</div>
-            <div class="form-grid">
-              <div class="field"><input id="p_agent_discount_retail" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+            <div>
+              <div class="form-section-label">Retail discount override (%)</div>
+              <div class="form-grid">
+                <div class="field"><input id="p_agent_discount_retail" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
+              </div>
+              <div class="agent-discount-hint" id="p_agent_discount_retail_hint"></div>
+              <div class="agent-discount-warn" id="p_agent_discount_retail_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
             </div>
-            <div class="agent-discount-hint" id="p_agent_discount_retail_hint"></div>
-            <div class="agent-discount-warn" id="p_agent_discount_retail_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
           </div>
         </div>
-      </div>
 
-      <div id="variantsSection" class="form-panel">
-        <div class="form-panel-head">
-          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M3 12l9 4 9-4"/></svg></span>
-          <div class="form-panel-title">Variants<small>Each option is searched and priced on its own, and can have its own markup rule</small></div>
-          <span class="info-tip" tabindex="0" style="margin-left:auto;"><span class="tip-bubble">Add an attribute like Color or Size, list its values separated by commas, then generate variants. Prices are entered later in the Price Registry tab, one row per supplier — each variant shows up there and can be searched for on its own, e.g. "M12 Wall Plug".</span></span>
+        <div class="pf-pane" id="pfpane-variants" style="display:none;">
+          <div id="variantsSection">
+            <header class="pset-head">
+              <h3>Variants</h3>
+              <p>Add an attribute like Colour or Size, list its values separated by commas, then generate the variants. Each is searched and priced on its own and can carry its own markup rule. Prices themselves are entered later in the Price Registry, one row per supplier.</p>
+            </header>
+            <div id="variantAttrsWrap"></div>
+            <div class="btn-row" style="margin-top:2px;">
+              <button type="button" class="btn btn-ghost btn-icon" id="v_add_attr_btn">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Add attribute
+              </button>
+              <button type="button" class="btn btn-ghost btn-icon" id="v_generate_btn">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                Generate variants
+              </button>
+            </div>
+            <div id="variantsListWrap" class="variant-cards" style="margin-top:14px;"></div>
+          </div>
         </div>
-        <div id="variantAttrsWrap"></div>
-        <div class="btn-row" style="margin-top:2px;">
-          <button type="button" class="btn btn-ghost btn-icon" id="v_add_attr_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Add attribute
-          </button>
-          <button type="button" class="btn btn-ghost btn-icon" id="v_generate_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-            Generate variants
-          </button>
-        </div>
-        <div id="variantsListWrap" class="variant-cards" style="margin-top:14px;"></div>
+
       </div>
     </div>
     <div class="modal-foot">
@@ -15159,7 +15219,63 @@ function setProductType(type){
   document.getElementById('p_type_simple').closest('.type-option').classList.toggle('active', !isVariable);
   document.getElementById('p_type_variable').closest('.type-option').classList.toggle('active', isVariable);
   document.getElementById('variantsSection').classList.toggle('hidden', !isVariable);
+  /* The rail entry goes with it. A simple product has no variants to
+     build, and a section you can open onto an empty panel is worse than
+     one that is not offered. If the pane being looked at is the one
+     disappearing, fall back to Basics rather than leaving the form
+     showing nothing. */
+  const navItem = document.getElementById('p_form_nav_variants');
+  navItem.style.display = isVariable ? '' : 'none';
+  if(!isVariable && navItem.classList.contains('active')) showProductFormPane('basics');
+  refreshProductFormRail();
 }
+
+function showProductFormPane(key){
+  document.querySelectorAll('#p_form_nav .pf-tab').forEach(b=>
+    b.classList.toggle('active', b.dataset.pfpane === key));
+  document.querySelectorAll('.pf-pane').forEach(p=>{
+    p.style.display = p.id === 'pfpane-'+key ? 'block' : 'none';
+  });
+}
+
+/* What each section carries, on the rail.
+
+   The same idea as the counts on the Presets rail: say what is set
+   without making somebody open five panels to find out. Blank where
+   nothing is set -- a tick on an empty section would be a lie, and a
+   dash on every one of them reads as a broken screen. */
+function refreshProductFormRail(){
+  const val = (id)=> (document.getElementById(id).value||'').trim();
+  const num = (id)=> Number(document.getElementById(id).value)||0;
+  const rule = (typeId, valId)=>{
+    const v = num(valId);
+    if(!v) return '';
+    return document.getElementById(typeId).value === 'fixed' ? fmtUGX(v) : `+${v}%`;
+  };
+  const markup = [rule('p_wholesale_markup_type','p_wholesale_markup_value'),
+                  rule('p_retail_markup_type','p_retail_markup_value')].filter(Boolean).join(' · ');
+  const agent = [val('p_agent_discount_wholesale'), val('p_agent_discount_retail')]
+    .filter(Boolean).map(v=> v+'%').join(' · ');
+  const state = {
+    basics: val('p_name') ? (val('p_category') || 'Named') : '',
+    photo: document.getElementById('p_image_preview').style.display === 'none' ? '' : 'Set',
+    pricing: markup,
+    agent: agent || '',
+    variants: draftVariants.length ? `${draftVariants.length}` : '',
+  };
+  document.querySelectorAll('#p_form_nav .pf-state').forEach(el=>{
+    el.textContent = state[el.dataset.state] || '';
+  });
+}
+
+document.getElementById('p_form_nav').addEventListener('click', (e)=>{
+  const b = e.target.closest('.pf-tab');
+  if(b) showProductFormPane(b.dataset.pfpane);
+});
+// Kept current as the form is filled, so the rail is never a stale claim
+// about what is in a panel nobody is looking at.
+document.getElementById('productModal').addEventListener('input', refreshProductFormRail);
+document.getElementById('productModal').addEventListener('change', refreshProductFormRail);
 document.getElementById('p_type_toggle').addEventListener('change', e=>{
   if(e.target.name==='p_type') setProductType(e.target.value);
 });
@@ -15583,6 +15699,10 @@ function resetProductForm(){
   renderVariantsList();
   setProductType('simple');
   renderAgentDiscountHints();
+  // Always opens on Basics. Reopening the form on whichever section was
+  // last looked at would hide the only field that has to be filled.
+  showProductFormPane('basics');
+  refreshProductFormRail();
 }
 function deleteProduct(id){
   if(!confirm('Delete this product? Price entries referencing it will remain but show a blank product.')) return;
