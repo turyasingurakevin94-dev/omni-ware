@@ -1554,6 +1554,14 @@
      than shown as 0 -- the balance sheet calls this understated stock,
      not worthless stock, and the two screens must not disagree. */
   .inv-cost-none{color:var(--ow-ink-400);}
+  /* Movements: the count and the net effect of whatever is filtered, so
+     the fifty-row cap is never mistaken for the whole answer. */
+  .log-count{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+    font-size:11.5px;color:var(--ink-soft);}
+  .log-net{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .log-net b{font-weight:700;}
+  .log-net .up{color:var(--good);}
+  .log-net .down{color:var(--danger);}
   .inv-qty-wrap{font-variant-numeric:tabular-nums;}
   .variance-ok{color:var(--good);font-weight:700;}
   .variance-bad{color:var(--danger);font-weight:700;}
@@ -4145,7 +4153,21 @@
         <div id="invTableWrap"></div>
       </div>
       <div class="panel">
-        <h2>Recent stock movements</h2>
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Recent stock movements</h2>
+          <span class="log-count" id="invLogCount"></span>
+        </div>
+        <div class="p-toolbar">
+          <div class="search-bar p-toolbar-search"><input id="inv_log_search" placeholder="Track one item — search by product, variant or note..."></div>
+          <div class="field p-toolbar-filter">
+            <label>Category</label>
+            <select id="inv_log_category"><option value="">All categories</option></select>
+          </div>
+          <div class="field p-toolbar-filter">
+            <label>Movement</label>
+            <select id="inv_log_type"><option value="">All movements</option></select>
+          </div>
+        </div>
         <div id="invLogWrap"></div>
       </div>
     </section>
@@ -18787,10 +18809,141 @@ document.getElementById('inv_category_filter').addEventListener('change', render
 document.getElementById('inv_hide_zero').addEventListener('change', renderInventory);
 
 const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'Damaged / lost', other:'Other', sale:'Sold (quote)', reversal:'Reversed'};
+/* ================= TRACKING ONE ITEM THROUGH THE LOG =================
+
+   The movements list was the last twenty entries, full stop. That is a
+   feed, not a record: to answer "what has happened to this cement" you
+   read twenty lines about everything else and hoped.
+
+   THE CAP MOVES AFTER THE FILTER, WHICH IS THE WHOLE THING. Taking the
+   last twenty and then filtering them would show nothing for any item
+   that has not moved in the last twenty movements shop-wide -- exactly
+   the item somebody is looking for. Filter first, then cap, then say how
+   many were found so the cap is never mistaken for the answer. */
+const STOCK_LOG_LIMIT = 50;
+
+/* Both dropdowns are built from what the log ACTUALLY contains, not from
+   every category or every movement type the app knows about. Offering a
+   filter that can only ever return nothing is a dead end dressed as a
+   choice. */
+function populateStockLogFilters(selectedCat, selectedType){
+  const catSel = document.getElementById('inv_log_category');
+  const typeSel = document.getElementById('inv_log_type');
+  if(!catSel || !typeSel) return;
+  const log = data.stockLog || [];
+
+  const cats = [...new Set(log.map(stockLogCategoryOf).filter(Boolean))]
+    .sort((a,b)=> a.localeCompare(b));
+  catSel.innerHTML = '<option value="">All categories</option>' + cats.map(c=>
+    `<option value="${esc(c)}"${c===selectedCat?' selected':''}>${esc(c)}</option>`).join('');
+  // A selection that no longer matches anything is kept rather than
+  // silently reset, so the empty result explains itself instead of the
+  // filter appearing to have been ignored.
+  if(selectedCat && !cats.includes(selectedCat)){
+    catSel.innerHTML += `<option value="${esc(selectedCat)}" selected>${esc(selectedCat)}</option>`;
+  }
+
+  const types = [...new Set(log.map(e=> e.type).filter(Boolean))]
+    .sort((a,b)=> String(STOCK_TYPE_LABELS[a]||a).localeCompare(String(STOCK_TYPE_LABELS[b]||b)));
+  typeSel.innerHTML = '<option value="">All movements</option>' + types.map(ty=>
+    `<option value="${esc(ty)}"${ty===selectedType?' selected':''}>${esc(STOCK_TYPE_LABELS[ty]||ty)}</option>`).join('');
+  if(selectedType && !types.includes(selectedType)){
+    typeSel.innerHTML += `<option value="${esc(selectedType)}" selected>${esc(STOCK_TYPE_LABELS[selectedType]||selectedType)}</option>`;
+  }
+}
+
+// Bound once. renderStockLog re-reads the controls itself, so nothing
+// needs to pass their values around.
+(function wireStockLogFilters(){
+  ['inv_log_search','inv_log_category','inv_log_type'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener(id === 'inv_log_search' ? 'input' : 'change', renderStockLog);
+  });
+})();
+
+// A log entry records the product but not its category, so the category
+// is looked up on read. An entry whose product has since been deleted
+// keeps its own label and simply matches no category filter.
+function stockLogCategoryOf(e){
+  const p = (data.products||[]).find(x=> x.id === e.productId);
+  return p ? (p.category || '') : '';
+}
+
+function stockLogRowsFor(filter='', categoryFilter='', typeFilter=''){
+  const tokens = searchTokens(filter);
+  let rows = (data.stockLog||[]).slice();
+  if(categoryFilter) rows = rows.filter(e=> stockLogCategoryOf(e) === categoryFilter);
+  if(typeFilter) rows = rows.filter(e=> e.type === typeFilter);
+  if(tokens.length){
+    rows = rows.filter(e=>{
+      // The label carries the product and variant as it read at the time,
+      // which is what somebody searches by. The note is searched too --
+      // "damaged in transit" is how you find that entry again.
+      const hay = `${e.label||''} ${e.productId||''} ${e.note||''} ${STOCK_TYPE_LABELS[e.type]||e.type||''}`.toLowerCase();
+      return matchesAllTokens(hay, tokens);
+    });
+  }
+  // Newest first, by the moment recorded where there is one -- several
+  // movements share a date, and `at` is what orders them within it.
+  rows.sort((a,b)=> String(b.date||'').localeCompare(String(a.date||''))
+    || (Number(b.at||0) - Number(a.at||0)) || (Number(b.id||0) - Number(a.id||0)));
+  /* `all` as well as the page. The totals beside the count have to be
+     taken over everything that MATCHED, not over the fifty rows that fit
+     on screen -- otherwise "showing the 50 most recent of 60" sits next
+     to a net figure for a different set of movements, and filtering to
+     one product could report more stock in than the unfiltered log. */
+  return { total: rows.length, all: rows, rows: rows.slice(0, STOCK_LOG_LIMIT) };
+}
+
+// How much of this went in and out, over every movement that matched --
+// which is the question a filtered log is asked.
+function stockLogTotals(rows){
+  let inQty = 0, outQty = 0;
+  rows.forEach(e=>{
+    const d = Number(e.delta)||0;
+    if(d > 0) inQty += d; else outQty += -d;
+  });
+  return { inQty, outQty, net: inQty - outQty };
+}
+
 function renderStockLog(){
   const wrap = document.getElementById('invLogWrap');
-  const entries = (data.stockLog||[]).slice(-20).reverse();
-  if(entries.length===0){ wrap.innerHTML = '<div class="empty">No stock movements recorded yet.</div>'; return; }
+  const searchEl = document.getElementById('inv_log_search');
+  const catEl = document.getElementById('inv_log_category');
+  const typeEl = document.getElementById('inv_log_type');
+  populateStockLogFilters(catEl ? catEl.value : '', typeEl ? typeEl.value : '');
+
+  const { total, all, rows: entries } = stockLogRowsFor(
+    searchEl ? searchEl.value : '', catEl ? catEl.value : '', typeEl ? typeEl.value : '');
+
+  const countEl = document.getElementById('invLogCount');
+  if(countEl){
+    // Over everything that matched, not over the page.
+    const t = stockLogTotals(all);
+    countEl.innerHTML = total === 0 ? '' :
+      `<span>${entries.length < total
+        ? `Showing the ${entries.length} most recent of ${total}`
+        : `${total} movement${total===1?'':'s'}`}</span>` +
+      // "-0" reads as a figure somebody worked out rather than the
+      // absence of one, so a zero is written plain. Same reason the
+      // statements stopped printing "-0 UGX".
+      `<span class="log-net"><b class="up">${t.inQty ? '+' : ''}${t.inQty}</b> in · ` +
+      `<b class="down">${t.outQty ? '-' : ''}${t.outQty}</b> out · ` +
+      `net ${t.net>0?'+':''}${t.net}</span>`;
+  }
+
+  if(entries.length===0){
+    const filtered = (searchEl && searchEl.value.trim()) || (catEl && catEl.value) || (typeEl && typeEl.value);
+    wrap.innerHTML = (data.stockLog||[]).length === 0
+      ? '<div class="empty">No stock movements recorded yet.</div>'
+      : filtered
+        // Named, so an empty result reads as "this item has not moved"
+        // rather than as an empty log.
+        ? '<div class="empty">Nothing has moved that matches those filters.</div>'
+        : '<div class="empty">No stock movements recorded yet.</div>';
+    return;
+  }
   const cardsHtml = entries.map(e=>`
     <div class="pi-card">
       <div class="pi-card-top">
