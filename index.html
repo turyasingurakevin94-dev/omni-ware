@@ -1273,6 +1273,73 @@
 
 
   /* Price entry cards */
+  /* The price registry.
+     ------------------------------------------------------------------
+     Grouped by what is being priced, because the registry answers one
+     question -- who is cheapest for this -- and a flat grid of cards in
+     date order was the one shape that could not answer it. Two quotes
+     for the same product were never side by side.
+
+     .price-card / .price-grid below are NOT dead with it: the agent
+     promotions and commission claims still build on them. */
+  .reg-group{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px 6px;margin-bottom:14px;
+  }
+  .reg-group-head{display:flex;align-items:center;gap:11px;margin-bottom:10px;}
+  .reg-group-ident{min-width:0;}
+  .reg-group-name{font-size:15px;font-weight:700;line-height:1.25;}
+  .reg-group-sub{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:3px;
+    font-size:11.5px;color:var(--ink-soft);}
+  .reg-head, .reg-row{
+    display:grid;
+    grid-template-columns:minmax(150px,1.6fr) minmax(96px,.9fr) minmax(96px,.9fr) minmax(92px,.8fr) auto;
+    gap:12px;align-items:center;
+  }
+  .reg-head{
+    padding:0 0 6px;border-bottom:1px solid var(--ow-rule-soft);
+    font-size:9.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;color:var(--ow-ink-400);
+  }
+  .reg-row{padding:9px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .reg-row:last-child{border-bottom:none;}
+  .reg-row.is-oos{opacity:.62;}
+  .reg-row.is-oos:hover{opacity:1;}
+  .reg-supplier{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;}
+  .reg-sname{font-size:13.5px;font-weight:600;}
+  .reg-best{
+    font-size:9px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    background:var(--good-bg);color:var(--good);border-radius:999px;padding:2px 7px;
+  }
+  /* Tabular, so two suppliers' prices can be read against each other
+     down the column -- the entire reason this is grouped and not a grid. */
+  .reg-fig{font-family:'IBM Plex Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums;}
+  .reg-none{color:var(--ow-ink-400);}
+  .reg-row.is-best .reg-fig{font-weight:700;}
+  .reg-when{font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;}
+  .reg-when.stale{color:var(--ow-amber-ink);}
+  .reg-when .icon{width:12px;height:12px;flex-shrink:0;}
+  .reg-row .pc-actions{justify-content:flex-end;}
+  .reg-row .prc-tiers{grid-column:1/-1;margin-top:2px;}
+  @media (max-width:900px){
+    .reg-head{display:none;}
+    .reg-row{
+      grid-template-columns:1fr auto;
+      grid-template-areas:"supplier actions" "figs figs" "when when";
+      gap:6px 12px;padding:11px 0;
+    }
+    .reg-supplier{grid-area:supplier;}
+    .reg-row .pc-actions{grid-area:actions;}
+    .reg-fig:nth-of-type(1){grid-area:figs;}
+    /* Both figures share one line on a phone, labelled, since the column
+       heading they sat under is gone. */
+    .reg-fig:nth-of-type(1)::before{content:"Wholesale ";font-family:inherit;font-size:10px;
+      text-transform:uppercase;letter-spacing:.6px;color:var(--ow-ink-400);}
+    .reg-fig:nth-of-type(2)::before{content:"Retail ";font-family:inherit;font-size:10px;
+      text-transform:uppercase;letter-spacing:.6px;color:var(--ow-ink-400);}
+    .reg-fig:nth-of-type(2){grid-area:figs;justify-self:end;}
+    .reg-when{grid-area:when;}
+  }
+
   .price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
   .price-card{
     background:#fff;border:1px solid var(--line);border-radius:11px;padding:15px 16px 14px;
@@ -4068,6 +4135,7 @@
             <div class="suggestions" id="pr_supplier_filter_suggestions"></div>
           </div>
         </div>
+        <div id="pricesSummary"></div>
         <div id="pricesTableWrap"></div>
       </div>
     </section>
@@ -6397,7 +6465,10 @@ function goToTab(tab){
   document.getElementById('tab-'+tab).style.display='block';
   updateMobileTopbarTitle(tab);
   if(tab==='dashboard') renderDashboard();
-  if(tab==='prices') refreshPriceDropdowns();
+  // Redrawn on entry, respecting whatever filters are set. The registry
+  // now carries a summary strip, and a count is a claim about current
+  // data -- it cannot be left saying what was true when the page loaded.
+  if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -16363,39 +16434,6 @@ function priceSummaryLine(r){
   }
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
-function priceCardHTML(r, tokens){
-  return `<div class="price-card ${r.outOfStock?'price-card-oos':''}">
-    <div class="prc-head">
-      <div class="prc-head-main">
-        ${productThumbHTML({image:r.image, name:r.pname})}
-        <div class="prc-title">
-          <div class="prc-name">${highlightTokens(r.pname, tokens)}</div>
-          <div class="prc-meta">
-            <span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span>
-            ${r.outOfStock ? `<span class="prc-oos-pill" title="Excluded from best-supplier recommendations">Out of stock</span>` : ''}
-            ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
-              : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
-          </div>
-        </div>
-      </div>
-      <div class="pc-actions">
-        <button class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
-        <button class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
-        <button class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
-      </div>
-    </div>
-    <div class="prc-summary">${priceSummaryLine(r)}</div>
-    <div class="prc-supplier">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>
-      ${highlightTokens(r.sname, tokens)}
-    </div>
-    <div class="prc-prices">
-      <div class="prc-price-box"><span>Wholesale</span><b>${fmtUGXPerUnit(r.wholesale, r.unit)}</b></div>
-      <div class="prc-price-box"><span>Retail</span><b>${fmtUGXPerUnit(r.retail, r.unit)}</b></div>
-    </div>
-    ${priceTiersSummaryHTML(r)}
-  </div>`;
-}
 // Compact "Volume pricing: 12+ 35,000 (420,000/Ctn) · 240+ 32,000" line
 // shown on a price card/comparison row when the entry has tiers, so the
 // tier ladder is visible without opening the entry to edit it. One list
@@ -16429,18 +16467,151 @@ function triggerPricesRender(){
   );
 }
 
+/* ================= THE PRICE REGISTRY ================================
+
+   A flat grid of cards, newest quote first, one card per entry. The
+   registry exists for exactly one question -- who is cheapest for this
+   product -- and that layout was the one shape that cannot answer it:
+   the three quotes for cement could sit in three different rows of the
+   grid, in date order, with no two prices ever side by side.
+
+   Grouped by what is being priced, suppliers underneath it, cheapest
+   first. */
+
+// A quote is not a price forever. Ninety days is a judgement, not a
+// rule -- it is stated on screen so a reader can discount it -- but a
+// figure collected two seasons ago should not sit unmarked beside one
+// taken this week.
+const PRICE_STALE_DAYS = 90;
+function priceAgeDays(dateStr){
+  if(!dateStr) return null;
+  const d = Date.parse(dateStr + 'T00:00:00Z');
+  if(!Number.isFinite(d)) return null;
+  const today = Date.parse(todayISO() + 'T00:00:00Z');
+  return Math.round((today - d) / 86400000);
+}
+
+function priceGroupsFor(rows){
+  const byThing = new Map();
+  (rows||[]).forEach(r=>{
+    const key = r.productId + '::' + (r.variantIdx == null ? '' : r.variantIdx);
+    if(!byThing.has(key)){
+      byThing.set(key, { key, pname: r.pname, category: r.category || '', image: r.image, rows: [] });
+    }
+    byThing.get(key).rows.push(r);
+  });
+
+  return [...byThing.values()].map(g=>{
+    const priced = g.rows.map(r=>({ r, buy: purchasePriceAtQty(r, 1) }));
+    /* Cheapest first, and unpriced rows last rather than first -- a null
+       sorting to the top would crown a row carrying no figure at all.
+
+       Out of stock is excluded from being the cheapest, not from the
+       list. The rest of the app already leaves those out of its
+       best-supplier recommendations, and a registry that crowned a
+       supplier the buying list will not walk to would be pointing at
+       the wrong yard. */
+    priced.sort((a,b)=>
+      (a.buy == null ? Infinity : a.buy) - (b.buy == null ? Infinity : b.buy));
+    const best = priced.find(x=> x.buy != null && !x.r.outOfStock) || null;
+    const cheapestId = best ? best.r.id : null;
+    const spread = (()=>{
+      const usable = priced.filter(x=> x.buy != null && !x.r.outOfStock).map(x=> x.buy);
+      if(usable.length < 2) return null;
+      return { low: usable[0], high: usable[usable.length-1] };
+    })();
+    return { ...g, rows: priced.map(x=> x.r), buyOf: new Map(priced.map(x=> [x.r.id, x.buy])),
+      cheapestId, spread };
+  }).sort((a,b)=> String(a.pname).localeCompare(String(b.pname)));
+}
+
+function priceRegistryStats(rows){
+  const suppliers = new Set(), things = new Set();
+  let stale = 0, oos = 0;
+  (rows||[]).forEach(r=>{
+    suppliers.add(String(r.supplierId));
+    things.add(r.productId + '::' + (r.variantIdx == null ? '' : r.variantIdx));
+    const age = priceAgeDays(r.date);
+    if(age != null && age > PRICE_STALE_DAYS) stale++;
+    if(r.outOfStock) oos++;
+  });
+  return { entries: (rows||[]).length, things: things.size, suppliers: suppliers.size, stale, oos };
+}
+
+function priceRegistryRowHTML(g, r, tokens){
+  const age = priceAgeDays(r.date);
+  const isStale = age != null && age > PRICE_STALE_DAYS;
+  const isBest = r.id === g.cheapestId;
+  return `<div class="reg-row${r.outOfStock ? ' is-oos' : ''}${isBest ? ' is-best' : ''}">
+    <div class="reg-supplier">
+      ${isBest ? `<span class="reg-best" title="Cheapest to buy one from, of those in stock">Cheapest</span>` : ''}
+      <span class="reg-sname">${highlightTokens(r.sname, tokens)}</span>
+      ${r.outOfStock ? `<span class="prc-oos-pill" title="Left out of best-supplier recommendations">Out of stock</span>` : ''}
+      ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
+        : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand here">By hand</span>` : ''}
+    </div>
+    <div class="reg-fig">${r.wholesale == null || r.wholesale === ''
+      ? '<span class="reg-none">—</span>' : fmtUGXPerUnit(r.wholesale, r.unit)}</div>
+    <div class="reg-fig">${r.retail == null || r.retail === ''
+      ? '<span class="reg-none">—</span>' : fmtUGXPerUnit(r.retail, r.unit)}</div>
+    <div class="reg-when${isStale ? ' stale' : ''}" title="${esc(r.date || '')}">
+      ${esc(daysAgoLabel(r.date))}${isStale ? ` ${ICON_WARN}` : ''}
+    </div>
+    <div class="pc-actions">
+      <button class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
+      <button class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
+      <button class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
+    </div>
+    ${priceTiersSummaryHTML(r)}
+  </div>`;
+}
+
+function priceGroupHTML(g, tokens){
+  const n = g.rows.length;
+  return `<section class="reg-group">
+    <header class="reg-group-head">
+      ${productThumbHTML({ image: g.image, name: g.pname })}
+      <div class="reg-group-ident">
+        <div class="reg-group-name">${highlightTokens(g.pname, tokens)}</div>
+        <div class="reg-group-sub">
+          ${g.category ? `<span class="cat-cat">${highlightTokens(g.category, tokens)}</span>` : ''}
+          <span>${n} quote${n===1?'':'s'}</span>
+          ${g.spread ? `<span title="Between the cheapest and dearest in stock">spread ${fmtUGX(Math.round(g.spread.high - g.spread.low))}</span>` : ''}
+        </div>
+      </div>
+    </header>
+    <div class="reg-head">
+      <span>Supplier</span><span>Wholesale</span><span>Retail</span><span>Collected</span><span></span>
+    </div>
+    ${g.rows.map(r=> priceRegistryRowHTML(g, r, tokens)).join('')}
+  </section>`;
+}
+
 function renderPrices(filter='', supplierFilter='', categoryFilter=''){
   populatePriceCategoryFilter(categoryFilter);
   const wrap = document.getElementById('pricesTableWrap');
+  const strip = document.getElementById('pricesSummary');
   const tokens = searchTokens(filter);
   const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter);
+
+  const s = priceRegistryStats(rows);
+  const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  strip.innerHTML = rows.length ? `<div class="sum-strip">
+    ${cell(s.entries, s.entries===1?'quote':'quotes')}
+    ${cell(s.things, s.things===1?'product priced':'products priced')}
+    ${cell(s.suppliers, s.suppliers===1?'supplier':'suppliers')}
+    ${cell(s.stale, `older than ${PRICE_STALE_DAYS} days`, s.stale ? 'warn' : '')}
+    ${cell(s.oos, 'out of stock', s.oos ? 'warn' : '')}
+  </div>` : '';
+
   if(rows.length===0){
     wrap.innerHTML = data.prices.length===0
       ? '<div class="empty">No price entries yet. Add one above.</div>'
       : '<div class="empty">No price entries match your search.</div>';
     return;
   }
-  wrap.innerHTML = `<div class="price-grid">${rows.map(r=>priceCardHTML(r, tokens)).join('')}</div>`;
+  wrap.innerHTML = priceGroupsFor(rows).map(g=> priceGroupHTML(g, tokens)).join('');
 }
 // A price entry saved before the single-list rework (or one that's only
 // ever had flat wholesale/retail typed, never a tier) has no `tiers` of
