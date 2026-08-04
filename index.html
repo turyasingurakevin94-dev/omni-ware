@@ -5275,6 +5275,21 @@
 </div>
 
 <!-- A REPAYMENT IS DUE -->
+<div class="modal-overlay" id="duesDueModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="duesDueTitle">Wages or rent are due today</h2>
+      <button class="modal-close" id="duesDueClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="duesDueBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="duesDueSnooze">Remind me tomorrow</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="loanDueModal">
   <div class="modal">
     <div class="modal-head">
@@ -8436,9 +8451,13 @@ document.getElementById('shortfallPlanClose').addEventListener('click', ()=>clos
 document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
 document.getElementById('customerStatsClose').addEventListener('click', ()=>closeModal('customerStatsModal'));
 document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
-document.getElementById('loanDueClose').addEventListener('click', ()=>closeModal('loanDueModal'));
+// Dismissing the one in front brings the next reminder up, rather than
+// leaving rent that is already late to wait until tomorrow.
+document.getElementById('loanDueClose').addEventListener('click', ()=>{ closeModal('loanDueModal'); maybeRemindDuesDue(); });
+document.getElementById('duesDueClose').addEventListener('click', ()=>closeModal('duesDueModal'));
+document.getElementById('duesDueSnooze').addEventListener('click', snoozeDues);
 document.getElementById('pickupRunsClose').addEventListener('click', ()=>closeModal('pickupRunsModal'));
-document.getElementById('loanDueSnooze').addEventListener('click', snoozeLoanDue);
+document.getElementById('loanDueSnooze').addEventListener('click', ()=>{ snoozeLoanDue(); maybeRemindDuesDue(); });
 
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
@@ -15638,6 +15657,22 @@ function duesOverdue(asOf){
   return duesOutstanding().filter(d=> dueIsOverdue(d, asOf));
 }
 
+/* What the reminder asks about: everything unpaid whose date has ARRIVED,
+   which is a day wider than overdue. Rent due today is not late, but a
+   reminder that only speaks once you are already late is a reminder that
+   was too slow to be useful. Wages fall due at month end, so on the last
+   of the month the whole payroll shows up here at once, which is exactly
+   the morning somebody needs telling.
+
+   Uncosted months cannot appear: dueBalance returns null for them, so
+   they are filtered out by duesOutstanding before this is reached. That
+   is right -- there is no figure to pay, and a reminder that cannot say
+   how much is just noise. The payroll screen counts them separately. */
+function duesNeedingPayment(asOf){
+  const on = asOf || todayISO();
+  return duesOutstanding().filter(d=> String(d.dueDate||'') <= on);
+}
+
 /* Paying one. Straight through addCashPayment() under the category that
    was always there, so it reaches operating costs the same way a
    hand-typed entry does -- and the cash txn id is kept so a reversal can
@@ -15834,7 +15869,7 @@ function renderPayrollDues(){
 // Deliberately a prompt rather than a modal: paying a wage is a single
 // figure against a known balance, and the amount is nearly always the
 // whole of it.
-function openDuePayment(dueId){
+async function openDuePayment(dueId){
   const d = (data.dues||[]).find(x=> x.id===dueId);
   if(!d) return;
   const bal = dueBalance(d);
@@ -15843,7 +15878,14 @@ function openDuePayment(dueId){
   if(raw === null) return;
   const amount = Number(raw);
   if(!amount || amount <= 0){ toast('Enter an amount to pay'); return; }
-  const paid = payDue(dueId, amount, 'cash');
+  /* Asked, not assumed. Wages paid by mobile money and logged against
+     the cash drawer would leave both accounts wrong by the same amount
+     and the day would fail to reconcile with nothing on screen to say
+     why. Same question the loan reminder asks. */
+  const account = await promptCashAccount('Where is the money coming from?',
+    `Recording ${fmtUGX(Math.round(amount))} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`);
+  if(!account) return;
+  const paid = payDue(dueId, amount, account);
   if(paid === null) return;
   renderPayroll();
   toast(`${fmtUGX(Math.round(paid))} paid — logged to the cash book`);
@@ -22689,13 +22731,120 @@ async function payLoanFromReminder(loanId, suggested){
   if(!left.length) closeModal('loanDueModal');
 }
 
-// Shown once a day at most, and never over an empty list.
+// Shown once a day at most, and never over an empty list. Returns
+// whether it took the screen, so the next reminder can wait its turn.
 function maybeRemindLoanDue(){
-  if(!(data.loans||[]).length) return;
-  if(loanDueSnoozed()) return;
-  if(!loansNeedingPayment().length) return;
+  if(!(data.loans||[]).length) return false;
+  if(loanDueSnoozed()) return false;
+  if(!loansNeedingPayment().length) return false;
   renderLoanDueModal();
   openModal('loanDueModal');
+  return true;
+}
+
+/* ---- Wages and rent that have fallen due ----
+
+   Same shape as the loan reminder and for the same reason: the point is
+   not to be told, it is to be able to act while being told, so the
+   payment and its cash-book entry are both written from here.
+
+   Snoozed by DATE and on its own key, so quietening the rent for a day
+   does not also quieten the loans, and neither can become "never remind
+   me again". */
+const DUES_SNOOZE_KEY = 'owDuesSnoozedThrough';
+// The stored date is the last day suppressed, so this is >= and not >.
+// Same trap the loan snooze fell into: with >, snoozing wrote today,
+// compared today > today, and the reminder came straight back.
+function duesSnoozed(asOfISO){
+  const through = lsGet(DUES_SNOOZE_KEY);
+  return !!through && String(through) >= String(asOfISO || todayISO());
+}
+function snoozeDues(){
+  lsSet(DUES_SNOOZE_KEY, todayISO());
+  closeModal('duesDueModal');
+}
+
+function dueReminderRowHTML(d){
+  const late = dueIsOverdue(d);
+  const bal = dueBalance(d);
+  const part = (Number(d.paid)||0) > 0;
+  return `<div class="ld-row ${late ? 'late' : ''}">
+    <div class="ld-main">
+      <div class="ld-lender">${esc(dueName(d))}</div>
+      <div class="ld-note">${esc((DUE_KINDS[d.kind]||{}).label||'')} for ${esc(periodLabel(d.period))} —
+        ${late
+          ? `was due ${esc(fmtShortDate(d.dueDate))}, ${esc(agingDaysLabel(daysSinceDate(d.dueDate)))} ago`
+          : `due today`}${part ? `. ${esc(fmtUGX(Math.round(d.paid)))} already paid.` : '.'}</div>
+    </div>
+    <div class="ld-act">
+      <div class="ld-amount">${fmtUGX(Math.round(bal))}</div>
+      <button type="button" class="btn btn-accent dd-pay" data-id="${d.id}" data-amount="${Math.round(bal)}">Pay now</button>
+    </div>
+  </div>`;
+}
+
+function renderDuesDueModal(){
+  const list = duesNeedingPayment();
+  const body = document.getElementById('duesDueBody');
+  if(!list.length){
+    body.innerHTML = '<p class="ld-clear">Nothing is due. Wages and rent are up to date.</p>';
+    return list;
+  }
+  const late = list.filter(d=> dueIsOverdue(d)).length;
+  document.getElementById('duesDueTitle').textContent =
+    late ? `${late} payment${late===1?'':'s'} overdue` : 'Wages or rent are due today';
+  body.innerHTML = `
+    <p class="ld-intro">Paying here records it against the month and into the Cash Book in one step, under Rent or Salaries &amp; Wages.</p>
+    ${list.map(dueReminderRowHTML).join('')}`;
+  body.querySelectorAll('.dd-pay').forEach(btn=>{
+    btn.addEventListener('click', ()=> payDueFromReminder(Number(btn.dataset.id), Number(btn.dataset.amount)));
+  });
+  return list;
+}
+
+/* The amount is offered, not imposed -- a shop that can only manage part
+   of somebody's wages this week should be able to record what it
+   actually paid rather than be forced into all-or-nothing. */
+async function payDueFromReminder(dueId, suggested){
+  const d = (data.dues||[]).find(x=> x.id === dueId);
+  if(!d) return;
+  const typed = prompt(`How much are you paying for ${dueName(d)} (${periodLabel(d.period)})?`, String(suggested||''));
+  if(typed === null) return;
+  const amount = Math.round(Number(typed)||0);
+  if(!(amount > 0)){ toast('Enter what was paid'); return; }
+
+  const account = await promptCashAccount('Where is the money coming from?',
+    `Recording ${fmtUGX(amount)} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`);
+  if(!account) return;
+
+  const paid = payDue(dueId, amount, account);
+  if(paid === null) return;
+  if(document.getElementById('tab-payroll').style.display !== 'none') renderPayroll();
+
+  // Re-read rather than assume it is settled: a part payment leaves the
+  // month still owing, and the reminder should say so instead of closing
+  // on a payment that did not cover it.
+  const left = renderDuesDueModal();
+  toast(`${fmtUGX(paid)} recorded for ${dueName(d)}`);
+  if(!left.length) closeModal('duesDueModal');
+}
+
+function maybeRemindDuesDue(){
+  if(!(data.dues||[]).length) return false;
+  if(duesSnoozed()) return false;
+  if(!duesNeedingPayment().length) return false;
+  renderDuesDueModal();
+  openModal('duesDueModal');
+  return true;
+}
+
+/* Both can be true on the same morning -- a loan instalment and last
+   month's rent. Stacking two modals hides one behind the other, and
+   showing only the first would make the second wait a day. So they
+   queue: dismissing the one in front brings the next up. */
+function runStartupReminders(){
+  if(maybeRemindLoanDue()) return;
+  maybeRemindDuesDue();
 }
 
 let editingLoanId = null;
@@ -23753,7 +23902,7 @@ async function boot(){
   // After the shell is up, so the reminder lands on a screen rather than
   // over a blank page. A repayment that is due does not stop being due
   // because somebody was heading for another tab.
-  maybeRemindLoanDue();
+  runStartupReminders();
   // handlePendingNotificationRoute() (the cold-start ?orderId=&action= URL
   // handler) no longer exists -- Web Push was retired in favor of native
   // FCM push, which delivers a notification tap straight into

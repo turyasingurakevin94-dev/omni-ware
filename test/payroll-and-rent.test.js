@@ -42,14 +42,17 @@ const data = { staff: [], rentAgreements: [], dues: [], cashTxns: [] };
 let nextId = 1;
 const cashAdded = [];
 const toasts = [];
+const store = {};
 
 const NAMES = ['periodOf', 'currentPeriod', 'periodShift', 'periodEndDate', 'staffOnPayroll',
   'staffWithoutPayRate', 'rentAgreementsFor', 'findDue', 'generateDuesForPeriod', 'setDueDays',
   'dueBalance', 'dueIsSettled', 'dueIsOverdue', 'dueName', 'payrollPosition', 'duesOutstanding',
-  'duesOverdue', 'payDue', 'reverseDuePayment'];
+  'duesOverdue', 'duesNeedingPayment', 'payDue', 'reverseDuePayment',
+  'duesSnoozed', 'snoozeDues'];
 
 const scope = compileScope([
   extractDeclaration(src, 'DUE_KINDS', 'index.html'),
+  extractDeclaration(src, 'DUES_SNOOZE_KEY', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -64,6 +67,9 @@ const scope = compileScope([
     data.cashTxns.push({ id, account, amount, category, description, date, type: 'payment' });
     return id;
   },
+  lsGet: (k) => store[k],
+  lsSet: (k, v) => { store[k] = v; },
+  closeModal: () => {},
   removeCashTxnsByIds: (ids) => {
     const set = new Set(ids.filter((x) => x != null));
     data.cashTxns = data.cashTxns.filter((x) => !set.has(x.id));
@@ -320,6 +326,121 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
     'and next month cannot be opened before it has happened');
   t.check(/if\(next <= currentPeriod\(\)\)\{ prPeriod = next;/.test(code),
     'guarded as well as disabled, so a keyboard cannot get past it either');
+}
+
+/* ---------- 10. the reminder ---------------------------------------- *
+ * The point is not to be told, it is to be able to act while being told,
+ * so the payment and its cash-book entry are both written from the
+ * reminder -- the same shape as the loan one.
+ */
+{
+  reset([staff('S1', 'Musa', 'monthly', 450000), staff('S2', 'Okello', 'daily', 15000)],
+    [rent(1, 'Main shop', 800000, 1, '2026-07')]);
+  scope.generateDuesForPeriod('2026-07');   // rent due 1 Jul, wages 31 Jul
+  scope.generateDuesForPeriod('2026-08');   // rent due 1 Aug, wages 31 Aug
+
+  const asked = scope.duesNeedingPayment().map((d) => `${scope.dueName(d)} ${d.period}`);
+
+  /* A day wider than overdue: rent due TODAY is not late, but a reminder
+     that only speaks once you are already late was too slow to be
+     useful. */
+  eq(asked.length, 3, 'everything whose date has arrived and is still unpaid');
+  t.check(asked.includes('Main shop 2026-07') && asked.includes('Musa 2026-07')
+    && asked.includes('Main shop 2026-08'), 'the two late rents and last month\'s wage');
+  t.check(!asked.includes('Musa 2026-08'),
+    'but not this month\'s wage, which is not due until the month is worked');
+
+  /* An uncosted month cannot be asked about: there is no figure to pay,
+     and a reminder that cannot say how much is noise. The payroll screen
+     counts them separately instead. */
+  t.check(!asked.some((a) => /Okello/.test(a)),
+    'and never an uncosted month, which has no amount to ask for');
+
+  // Due today counts, so the last of the month raises the whole payroll.
+  eq(scope.duesNeedingPayment('2026-08-31')
+    .filter((d) => scope.dueName(d) === 'Musa' && d.period === '2026-08').length, 1,
+    'on the day wages fall due they are asked about, not the day after');
+
+  // Paying settles it and it stops being asked about.
+  const rentJul = scope.duesNeedingPayment()[0];
+  scope.payDue(rentJul.id, 800000, 'momo');
+  eq(scope.duesNeedingPayment().length, 2, 'a settled month drops off the list');
+  eq(cashAdded[cashAdded.length - 1].account, 'momo',
+    'and the account it was paid from is carried through, not assumed to be cash');
+}
+
+/* ---------- 11. snoozing -------------------------------------------- *
+ * "Remind me tomorrow" has to mean the REST OF TODAY is quiet, and has
+ * to mean tomorrow rather than never. The loan reminder shipped with >
+ * here, wrote today, compared today > today, and came straight back.
+ */
+{
+  delete store.owDuesSnoozedThrough;
+  t.check(!scope.duesSnoozed('2026-08-04'), 'nothing is snoozed to begin with');
+
+  scope.snoozeDues();
+  eq(store.owDuesSnoozedThrough, '2026-08-04', 'snoozing records today as the last day suppressed');
+  t.check(scope.duesSnoozed('2026-08-04'),
+    'so the rest of today is quiet — the comparison is >= and not >');
+  t.check(!scope.duesSnoozed('2026-08-05'),
+    'and tomorrow it is back, so a snooze can never become "never remind me again"');
+
+  // Its own key, so quietening the rent does not also quieten the loans.
+  t.check(/const DUES_SNOOZE_KEY = 'owDuesSnoozedThrough'/.test(code)
+    && /const LOAN_DUE_SNOOZE_KEY = 'owLoanDueSnoozedThrough'/.test(code),
+    'and it snoozes on its own key, separate from the loan reminder');
+}
+
+/* ---------- 12. two reminders on one morning ------------------------ *
+ * A loan instalment and last month's rent can both be true. Stacking two
+ * modals hides one behind the other; showing only the first would make
+ * the second wait a day.
+ */
+{
+  t.check(/function runStartupReminders\(\)\{\s*\n\s*if\(maybeRemindLoanDue\(\)\) return;\s*\n\s*maybeRemindDuesDue\(\);/.test(code),
+    'they queue rather than stack — only one modal is opened at a time');
+  /* Anchored on the line inside the loan reminder, not on the function
+     wrapper: `maybeRemindLoanDue(){ [\s\S]*? return true; }` matched with
+     the loan one returning false, because the lazy span ran on into
+     maybeRemindDuesDue, which ends the same way. */
+  t.check(/openModal\('loanDueModal'\);\s*\n\s*return true;/.test(code),
+    'which works because the first one reports whether it took the screen');
+
+  /* And dismissing the one in front brings the next up, so rent that is
+     already late does not wait until tomorrow. BOTH ways out of the loan
+     modal have to do it, or snoozing the loan buries the rent. */
+  t.check(/loanDueClose'\)\.addEventListener\('click', \(\)=>\{ closeModal\('loanDueModal'\); maybeRemindDuesDue\(\); \}\);/.test(code),
+    'closing the loan reminder brings the next one up');
+  t.check(/loanDueSnooze'\)\.addEventListener\('click', \(\)=>\{ snoozeLoanDue\(\); maybeRemindDuesDue\(\); \}\);/.test(code),
+    'and so does snoozing it, or snoozing loans would bury the rent behind them');
+
+  t.check(/runStartupReminders\(\);/.test(code),
+    'and boot calls the queue rather than one reminder directly');
+
+  // Never over an empty list, and never when snoozed.
+  const fn = (/function maybeRemindDuesDue[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(!\(data\.dues\|\|\[\]\)\.length\) return false;/.test(fn), 'it stays shut when there are no dues at all');
+  t.check(/if\(duesSnoozed\(\)\) return false;/.test(fn), 'and when it has been snoozed');
+  t.check(/if\(!duesNeedingPayment\(\)\.length\) return false;/.test(fn), 'and when nothing has fallen due');
+}
+
+/* ---------- 13. paying from the reminder ---------------------------- */
+{
+  const fn = (/async function payDueFromReminder[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* Offered, not imposed: a shop that can only manage part of somebody's
+     wages should be able to record what it actually paid. */
+  t.check(/prompt\(`How much are you paying/.test(fn), 'the amount is offered rather than imposed');
+  /* Asked, not assumed. Wages paid by mobile money and logged against the
+     cash drawer leave both accounts wrong by the same amount, and the day
+     fails to reconcile with nothing on screen to say why. */
+  t.check(/await promptCashAccount\(/.test(fn), 'and which account it came out of is asked, not assumed');
+  t.check(/const left = renderDuesDueModal\(\);/.test(fn) && /if\(!left\.length\) closeModal/.test(fn),
+    'the list is re-read after paying, so a part payment leaves the reminder up rather than closing on one that did not cover it');
+
+  // The payroll screen asks the same question rather than defaulting.
+  const screen = (/async function openDuePayment[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/await promptCashAccount\(/.test(screen),
+    'and the payroll screen asks it too rather than hard-coding the cash drawer');
 }
 
 process.exit(t.done() ? 1 : 0);
