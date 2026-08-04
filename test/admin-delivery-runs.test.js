@@ -268,6 +268,7 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const body = {};
   const runs = compileScope([
     extractFunction(src, 'openDeliveryRuns', 'index.html'),
+    extractFunction(src, 'wireRunCarousel', 'index.html'),
   ], {
     pendingDeliveryOrders: scope.pendingDeliveryOrders,
     deliveryRuns: scope.deliveryRuns,
@@ -354,7 +355,8 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const buttons = { dr_prev: { disabled: false }, dr_next: { disabled: false } };
   Object.keys(buttons).forEach((id) => { buttons[id].addEventListener = (type, fn) => { handlers[id] = fn; }; });
 
-  const runs = compileScope([extractFunction(src, 'openDeliveryRuns', 'index.html')], {
+  const runs = compileScope([extractFunction(src, 'openDeliveryRuns', 'index.html'),
+    extractFunction(src, 'wireRunCarousel', 'index.html')], {
     pendingDeliveryOrders: scope.pendingDeliveryOrders,
     deliveryRuns: scope.deliveryRuns,
     savedQuoteTotal: () => 1000,
