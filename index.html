@@ -20555,6 +20555,16 @@ async function saveCashTxn(column){
   const prefix = column==='in' ? 'cb_in_' : 'cb_out_';
   const amount = tillReadAmount(column);
   const description = document.getElementById(prefix+'desc').value.trim();
+  /* Checked BEFORE the amount, because a line with no price makes the
+     total zero and the generic guard would then refuse with "enter a
+     valid amount" -- naming the one thing that was never wrong, while
+     the missing price goes unmentioned. */
+  const saleLines = (column==='in' && !editingCashTxnId) ? tillSaleLines : [];
+  const unpricedLines = saleLines.filter(l=> !(Number(l.price) > 0));
+  if(unpricedLines.length){
+    toast(`Put a price on ${unpricedLines.length} line${unpricedLines.length===1?'':'s'} first`);
+    return;
+  }
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   if(!description){ toast('Add a short description'); return; }
 
@@ -20562,10 +20572,10 @@ async function saveCashTxn(column){
      money arriving. It writes the invoiced quote, takes the stock down
      and links the receipt to it, which is what puts the trade into
      revenue, cost of sales and the shelf all at once. */
-  if(column==='in' && !editingCashTxnId && tillSaleLines.length){
-    const unpriced = tillSaleLines.filter(l=> !(Number(l.price) > 0));
-    if(unpriced.length){ toast(`Put a price on ${unpriced.length} line${unpriced.length===1?'':'s'} first`); return; }
-    if(!tillSaleLines.every(l=> Number(l.qty) > 0)){ toast('Every line needs a quantity'); return; }
+  if(saleLines.length){
+    // Prices were checked above, before the amount guard could mistake a
+    // priceless line for a mistyped amount.
+    if(!saleLines.every(l=> Number(l.qty) > 0)){ toast('Every line needs a quantity'); return; }
     /* The amount and the items have to agree, or the receipt says one
        thing and the sale behind it another -- and every margin drawn
        from the pair would be wrong. */

@@ -138,8 +138,14 @@ const line = (productId, qty, price, name) => ({ productId, variantIdx: null, na
 /* ---------- 3. the guards on the way in ------------------------------ */
 {
   const save = (/async function saveCashTxn[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/column==='in' && !editingCashTxnId && tillSaleLines\.length/.test(save),
+  /* The basket is resolved once, at the top, so the price check can run
+     BEFORE the amount guard -- see below for why that ordering matters.
+     What is pinned is unchanged: items turn the entry into a sale, and
+     only on a fresh cash-in, never on an edit. */
+  t.check(/const saleLines = \(column==='in' && !editingCashTxnId\) \? tillSaleLines : \[\];/.test(save),
     'picking items is what turns the till entry into a sale');
+  t.check(/if\(saleLines\.length\)\{/.test(save),
+    'and a till entry with no items takes none of this path');
 
   /* The receipt and the items have to agree. Letting them differ would
      put a margin on the books drawn from two numbers that describe
@@ -151,9 +157,18 @@ const line = (productId, qty, price, name) => ({ productId, variantIdx: null, na
 
   /* A line with no price is not a giveaway. Recording it at zero would
      understate the sale and quietly wreck the margin. */
-  t.check(/tillSaleLines\.filter\(l=> !\(Number\(l\.price\) > 0\)\)/.test(save),
+  t.check(/saleLines\.filter\(l=> !\(Number\(l\.price\) > 0\)\)/.test(save),
     'a line with no price is refused rather than sold for nothing');
   t.check(/l=> Number\(l\.qty\) > 0/.test(save), 'and so is a line with no quantity');
+
+  /* AND IT IS CHECKED BEFORE THE AMOUNT. A priceless line makes the
+     basket total zero, so the generic guard fired first and refused with
+     "enter a valid amount" -- naming the one thing that was never wrong
+     while the missing price went unmentioned. Found by driving the form,
+     not by reading it, and it is the same mistake the payroll reminder
+     made with its days. */
+  t.check(save.indexOf('Put a price on') < save.indexOf("toast('Enter a valid amount')"),
+    'and refused before the amount is judged, so the message names the price and not the amount');
 
   // Stock moved, so the screens that show it are stale.
   t.check(/triggerProductsRender\(\);/.test(save) && /renderInventory\(\);/.test(save),
@@ -162,7 +177,11 @@ const line = (productId, qty, price, name) => ({ productId, variantIdx: null, na
   const add = (/function tillAddSaleLine[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/price==null \? '' : price/.test(add),
     'a product with no price on file starts empty, not at zero');
-  t.check(/existing\.qty = \(Number\(existing\.qty\)\|\|0\) \+ 1/.test(add),
+  /* The CONDITION, not just the statement under it. Pinning the line
+     alone passed with `if(false)` in front of it — the text was present
+     and unreachable, the same trap the retained-earnings hint fell
+     into. */
+  t.check(/if\(existing\)\{ existing\.qty = \(Number\(existing\.qty\)\|\|0\) \+ 1; \}/.test(add),
     'and picking the same thing twice adds one more rather than a second identical line');
 
   const reset = (/function resetCashTxnForms[\s\S]*?\n\}/.exec(code) || [''])[0];
@@ -181,6 +200,16 @@ const line = (productId, qty, price, name) => ({ productId, variantIdx: null, na
 
 /* ---------- 4. wired through to the record --------------------------- */
 {
+  /* A saved quote is a DENSE id kind: the number is printed on the
+     shop's paperwork, so a gap in the sequence is a gap in their invoice
+     book. allocRowId refuses dense kinds by design — but both issuers
+     are stubbed in this file, so only the source can say which is used. */
+  const build = (/async function tillBuildSaleQuote[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/id: await issueRowId\('savedQuote'\),/.test(build),
+    'the invoice number is issued densely, from the server counter');
+  t.check(!/allocRowId\('savedQuote'\)/.test(code),
+    'and never from a local block, which would gap the shop\'s invoice numbers');
+
   t.check(/quote_id: t\.quoteId==null \? null : t\.quoteId/.test(code), 'the link is saved');
   t.check(/quoteId: t\.quote_id==null \? null : Number\(t\.quote_id\)/.test(code), 'and loaded');
   t.check(/add column quote_id bigint/.test(read('supabase/migrations/0047_counter_sales.sql')),
