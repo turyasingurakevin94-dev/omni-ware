@@ -1701,6 +1701,75 @@
     background:var(--bg);border:1px solid var(--line);border-radius:9px;
     padding:9px 12px;margin-bottom:12px;}
 
+  /* ================= ADDING SOMEBODY TO THE SHOP ===================
+     Three commitments, not seven boxes: who they are, what work they may
+     be handed, and what they cost every month. Asked in that order, each
+     showing what it does.
+     ================================================================= */
+  .sf{display:flex;flex-direction:column;gap:18px;}
+  .sf-block{display:flex;flex-direction:column;gap:8px;}
+  .sf-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+
+  .sf-who{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;}
+  @media (max-width:520px){ .sf-who{grid-template-columns:1fr;} }
+  .sf input[type=text],.sf input:not([type]),.sf input[type=number]{
+    width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
+    color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;transition:border-color .14s ease,box-shadow .14s ease;
+  }
+  /* The name is the subject of the form; everything else describes the
+     person it names.
+
+     `.sf input.sf-name`, not `.sf .sf-name`: the general rule above
+     carries `:not([type])`, whose argument lends it an attribute
+     selector's weight, so a two-class selector LOSES to it and the name
+     silently rendered at 14px like everything else. Measured, not
+     assumed -- it looked deliberate either way. */
+  .sf input.sf-name{font-size:19px;font-weight:700;padding:13px 15px;}
+  .sf input::placeholder{color:var(--ow-ink-400);}
+  .sf input:hover{border-color:var(--ow-steel-400);}
+  .sf input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+
+  /* The two are not peers, so they are not a dropdown. Each says what it
+     unlocks and what it costs you. */
+  .sf-roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:520px){ .sf-roles{grid-template-columns:1fr;} }
+  .sf-role{display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+    transition:border-color .15s ease,background .15s ease;}
+  .sf-role:hover{background:var(--bg);}
+  .sf-role.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--bg);}
+  .sf-role-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .sf-role-gives{font-size:12px;font-weight:600;color:var(--ow-verdigris);}
+  .sf-role.on .sf-role-gives{color:var(--ow-verdigris);}
+  .sf-role-note{font-size:11.5px;line-height:1.4;color:var(--ink-soft);}
+  .sf-warn{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
+  .sf-bases{display:flex;flex-wrap:wrap;gap:7px;}
+  .sf-basis{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    transition:background .15s ease,border-color .15s ease;}
+  .sf-basis:hover{background:var(--bg);}
+  .sf-basis.on{background:var(--ink);border-color:var(--ink);color:var(--panel);}
+
+  .sf-rate{display:flex;align-items:center;gap:9px;}
+  .sf-rate label{font-size:12.5px;font-weight:600;color:var(--ink-soft);flex-shrink:0;min-width:78px;}
+  /* Same weighting problem as the name: needs the type selector to beat
+     the general rule's :not([type]). */
+  .sf .sf-rate input[type=number]{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;
+    font-variant-numeric:tabular-nums;text-align:right;max-width:190px;}
+  .sf-rate-cur{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+
+  /* What this rate actually commits the shop to, said here rather than
+     discovered on the payroll screen a month later. */
+  .sf-consequence{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .sf-consequence b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .sf-consequence.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+
+  .sf-foot-note{font-size:11.5px;color:var(--ink-soft);padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
+
   /* ================= THE TILL ======================================
      Cash In and Cash Out are where every shilling in the business gets
      typed. They were a six-field form in which the amount -- the one
@@ -5305,29 +5374,46 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>Staff ID</label><input id="st_id" disabled><div class="field-hint">Generated automatically</div></div>
-        <div class="field"><label>Staff name</label><input id="st_name" placeholder="e.g. Musa Kato"></div>
-        <div class="field"><label>Contact phone</label><input id="st_phone" placeholder="e.g. 0700 000 000"></div>
-        <div class="field"><label>Role</label>
-          <select id="st_role">
-            <option value="worker">Worker</option>
-            <option value="delivery">Delivery personnel</option>
-          </select>
+      <div class="sf">
+        <div class="sf-block">
+          <span class="sf-label">Who they are</span>
+          <div class="sf-who">
+            <input id="st_name" class="sf-name" placeholder="Their name" autocomplete="off">
+            <input id="st_phone" class="sf-phone" placeholder="Phone — e.g. 0700 000 000" autocomplete="off">
+          </div>
         </div>
-        <div class="field"><label>How they are paid</label>
-          <select id="st_pay_basis">
-            <option value="">Not set</option>
-            <option value="monthly">Monthly salary</option>
-            <option value="daily">Daily rate</option>
-          </select>
-          <div class="field-hint" id="st_pay_basis_hint">Leave unset for someone who is not on the payroll.</div>
+
+        <!-- Not a dropdown. The two are not peers: a worker can be given
+             picking AND delivery, a delivery person only delivery, and a
+             neutral select said nothing about that. -->
+        <div class="sf-block">
+          <span class="sf-label">What they can be given</span>
+          <div class="sf-roles" id="st_roles"></div>
+          <input type="hidden" id="st_role" value="worker">
+          <div class="sf-role-warn" id="st_role_warn"></div>
         </div>
-        <div class="field"><label id="st_pay_rate_label">Rate</label>
-          <input id="st_pay_rate" type="number" min="0" step="any" placeholder="e.g. 350000">
-          <div class="field-hint" id="st_pay_rate_hint">Set how they are paid first.</div>
+
+        <div class="sf-block">
+          <span class="sf-label">What they are paid</span>
+          <div class="sf-bases" id="st_bases"></div>
+          <input type="hidden" id="st_pay_basis" value="">
+          <div class="sf-rate" id="st_rate_row">
+            <label for="st_pay_rate" id="st_pay_rate_label">Rate</label>
+            <input id="st_pay_rate" type="number" min="0" step="any" placeholder="0">
+            <span class="sf-rate-cur">UGX</span>
+          </div>
+          <div class="sf-consequence" id="st_pay_consequence"></div>
         </div>
-        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="st_notes" placeholder="optional"></div>
+
+        <div class="sf-block">
+          <span class="sf-label">Notes</span>
+          <input id="st_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
+        </div>
+
+        <div class="sf-foot-note">
+          <span id="st_id_note"></span>
+          <input type="hidden" id="st_id">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -13975,43 +14061,171 @@ function editStaff(id){
   document.getElementById('st_role').value = s.role;
   document.getElementById('st_notes').value = s.notes;
   document.getElementById('st_pay_basis').value = s.payBasis || '';
-  syncStaffPayFields();
-  // After syncStaffPayFields, which clears the box when there is no basis.
+  // Set BEFORE the sync, so the consequence line is drawn from the rate
+  // this person is actually on rather than from an empty box.
   document.getElementById('st_pay_rate').value = s.payRate==null ? '' : s.payRate;
+  sfRenderRoles();
+  sfUpdateRoleWarning();
+  syncStaffPayFields();
+  sfShowIssuedId();
   document.getElementById('staffFormTitle').textContent = 'Edit staff';
   openModal('staffModal');
+  document.getElementById('st_name').focus();
 }
+/* ================= ADDING SOMEBODY TO THE SHOP ===================
+
+   Seven boxes in a flat grid, opening on a disabled one. Three separate
+   commitments were being made through it -- who somebody is, what work
+   they may be handed, and what they cost every month -- and it presented
+   them as one undifferentiated list.
+
+   THE ROLE WAS THE WORST OF IT. staffEligibleForRole is asymmetric: a
+   worker may be given picking AND delivery, a delivery person only
+   delivery. A neutral dropdown offering "Worker" and "Delivery
+   personnel" reads as two equal choices, so picking the second quietly
+   narrowed what that person could ever be handed and nothing said so.
+   In a shop where one man does everything, that is a wrong default
+   waiting to happen. */
+
+const SF_ROLES = [
+  {key:'worker', name:'Worker', gives:'Picking and delivery',
+   note:'Can be handed anything on the board.'},
+  {key:'delivery', name:'Delivery only', gives:'Delivery',
+   note:'Cannot be given picking — choose Worker if they ever do both.'},
+];
+
+function sfRenderRoles(){
+  const wrap = document.getElementById('st_roles');
+  if(!wrap) return;
+  const chosen = document.getElementById('st_role').value || 'worker';
+  wrap.innerHTML = SF_ROLES.map(r=> `<button type="button" class="sf-role${r.key===chosen?' on':''}"
+      data-role="${esc(r.key)}" aria-pressed="${r.key===chosen}">
+      <span class="sf-role-name">${esc(r.name)}</span>
+      <span class="sf-role-gives">${esc(r.gives)}</span>
+      <span class="sf-role-note">${esc(r.note)}</span>
+    </button>`).join('');
+  wrap.querySelectorAll('.sf-role').forEach(b=> b.addEventListener('click', ()=>{
+    document.getElementById('st_role').value = b.dataset.role;
+    sfRenderRoles();
+    sfUpdateRoleWarning();
+  }));
+}
+
+/* Narrowing somebody who is already picking. Nothing re-checks an
+   assignment once it is made, so the orders they hold stay theirs -- but
+   they can never be given picking again, and finding that out later
+   through an empty list of candidates is no way to learn it. */
+function sfUpdateRoleWarning(){
+  const el = document.getElementById('st_role_warn');
+  if(!el) return;
+  const chosen = document.getElementById('st_role').value;
+  const s = editingStaffId ? (data.staff||[]).find(x=> x.id===editingStaffId) : null;
+  if(!s || chosen !== 'delivery' || s.role !== 'worker'){ el.innerHTML = ''; return; }
+  const picking = staffActiveOrders(s).filter(a=> a.capacity === 'worker').length;
+  el.innerHTML = `<div class="sf-warn">Narrowing ${esc(s.name)} to delivery only.${picking
+    ? ` They are picking ${picking} order${picking===1?'':'s'} right now — those stay theirs, but they cannot be given picking again.`
+    : ' They cannot be given picking after this.'}</div>`;
+}
+
+const SF_BASES = [
+  {key:'', name:'Not on the payroll', hint:'No wage is raised for them at all.'},
+  {key:'monthly', name:'Monthly salary', hint:''},
+  {key:'daily', name:'Daily rate', hint:''},
+];
+
+function sfRenderBases(){
+  const wrap = document.getElementById('st_bases');
+  if(!wrap) return;
+  const chosen = document.getElementById('st_pay_basis').value || '';
+  wrap.innerHTML = SF_BASES.map(b=> `<button type="button" class="sf-basis${b.key===chosen?' on':''}"
+      data-basis="${esc(b.key)}" aria-pressed="${b.key===chosen}">${esc(b.name)}</button>`).join('');
+  wrap.querySelectorAll('.sf-basis').forEach(b=> b.addEventListener('click', ()=>{
+    document.getElementById('st_pay_basis').value = b.dataset.basis;
+    syncStaffPayFields();
+  }));
+}
+
 function resetStaffForm(){
   editingStaffId = null;
   ['st_id','st_name','st_phone','st_notes','st_pay_rate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('st_role').value = 'worker';
   document.getElementById('st_pay_basis').value = '';
+  sfRenderRoles();
+  sfUpdateRoleWarning();
   syncStaffPayFields();
   fillIssuedId('st_id', 'staff', 'ST', 3, data.staff);
+  sfShowIssuedId();
   document.getElementById('staffFormTitle').textContent = 'Add staff';
+}
+
+/* The id is generated, so it is a footnote rather than the first thing
+   the eye lands on and the first thing the keyboard reaches. It still
+   has to be SHOWN -- it is what the shop will call this person on every
+   other screen -- but it is not a decision anybody is making here. */
+function sfShowIssuedId(){
+  const note = document.getElementById('st_id_note');
+  if(!note) return;
+  const el = document.getElementById('st_id');
+  const show = ()=>{
+    note.textContent = editingStaffId
+      ? `Saved as ${el.value}`
+      : (idIsPending(el.value) ? 'An ID is being issued…' : `Will be saved as ${el.value}`);
+  };
+  show();
+  // fillIssuedId resolves after a round trip; without this the footnote
+  // would sit on "being issued" until something else redrew it.
+  setTimeout(show, 400);
+  setTimeout(show, 1500);
 }
 // The rate means a different thing depending on the basis, so the label
 // says which -- "Rate: 15,000" is ambiguous in a way that matters when
 // one reading is twenty times the other.
+/* The rate means a different thing depending on the basis, so the label
+   says which -- "Rate: 15,000" is ambiguous in a way that matters when
+   one reading is twenty times the other.
+
+   AND IT SAYS WHAT IT COMMITS THE SHOP TO. Typing a monthly salary here
+   starts a wage being raised on the payroll every month from now until
+   somebody changes it. The machinery for that exists; the form that
+   starts it said nothing about it, so the first anybody saw of a
+   recurring obligation was the screen where it had already been
+   raised. */
 function syncStaffPayFields(){
   const basis = document.getElementById('st_pay_basis').value;
   const label = document.getElementById('st_pay_rate_label');
-  const hint = document.getElementById('st_pay_rate_hint');
   const input = document.getElementById('st_pay_rate');
-  input.disabled = !basis;
-  if(basis === 'monthly'){
-    label.textContent = 'Monthly salary (UGX)';
-    hint.textContent = 'Falls due at the end of each month.';
-  } else if(basis === 'daily'){
-    label.textContent = 'Rate per day (UGX)';
-    hint.textContent = 'Each month costs this times the days worked, which you enter on the Payroll screen.';
+  const row = document.getElementById('st_rate_row');
+  const out = document.getElementById('st_pay_consequence');
+  sfRenderBases();
+
+  // With nobody on the payroll there is no rate to ask for, so the box
+  // is taken away rather than shown greyed and unexplained.
+  row.style.display = basis ? '' : 'none';
+  if(!basis) input.value = '';
+  label.textContent = basis === 'daily' ? 'Each day' : 'Each month';
+
+  const rate = Number(input.value) || 0;
+  const month = periodLabel(currentPeriod());
+  if(!basis){
+    out.className = 'sf-consequence quiet';
+    out.textContent = 'They will not appear on the payroll, and no wage is raised for them.';
+  } else if(!rate){
+    out.className = 'sf-consequence quiet';
+    out.textContent = basis === 'monthly'
+      ? 'Put in the salary and this will say what it commits the shop to.'
+      : 'Put in the day rate and this will say how the month is worked out.';
+  } else if(basis === 'monthly'){
+    out.className = 'sf-consequence';
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> is raised on the payroll at the end of
+      every month, starting ${esc(month)}, until this is changed.`;
   } else {
-    label.textContent = 'Rate';
-    hint.textContent = 'Set how they are paid first.';
-    input.value = '';
+    out.className = 'sf-consequence';
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each day worked. A month costs that
+      times the days you enter on the Payroll screen — nothing is raised for ${esc(month)} until
+      somebody counts them.`;
   }
 }
-document.getElementById('st_pay_basis').addEventListener('change', syncStaffPayFields);
+document.getElementById('st_pay_rate').addEventListener('input', syncStaffPayFields);
 // Grants a staff member an app login (via a Supabase invite email) and
 // links it to their staff row, so they can be recognized as themselves in
 // the worker pick & pack view. Runs server-side (service role) because it
@@ -14068,7 +14282,12 @@ function deleteStaff(id){
     ? `Staff member deleted — ${releasing.length} order${releasing.length===1?'':'s'} released for reassignment`
     : 'Staff member deleted');
 }
-document.getElementById('st_add_btn').addEventListener('click', ()=>{ resetStaffForm(); openModal('staffModal'); });
+document.getElementById('st_add_btn').addEventListener('click', ()=>{
+  resetStaffForm();
+  openModal('staffModal');
+  // The only field somebody came here to fill in.
+  document.getElementById('st_name').focus();
+});
 document.getElementById('st_save').addEventListener('click', ()=>{
   const id = document.getElementById('st_id').value.trim();
   const name = document.getElementById('st_name').value.trim();
