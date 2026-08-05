@@ -2883,19 +2883,30 @@
   .q-usual-chip-add:hover{background:var(--ow-oxide-deep);}
   .q-usual-chip-add .icon{width:14px;height:14px;stroke-width:2.5;}
 
-  /* Financial summary bar above the quote action buttons */
+  /* The one number a rep says out loud, given the weight of being the
+     answer rather than one of four equal cells. Everything the shop
+     needs sits under it, quieter, and is never mistaken for the
+     price. */
   .qp-finbar{
-    display:flex;align-items:stretch;gap:0;margin-top:14px;border:1px solid var(--line);border-radius:10px;
-    overflow:hidden;background:var(--panel);
+    display:flex;flex-direction:column;gap:5px;margin:0 0 14px;padding:13px 16px;
+    border:1px solid var(--line);border-radius:10px;background:var(--panel);
   }
-  .qp-finbar-cell{flex:1;padding:10px 16px;border-right:1px solid var(--line);}
-  .qp-finbar-cell:last-child{border-right:none;}
-  .qp-finbar-label{font-size:10.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
-  .qp-finbar-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:19px;}
-  .qp-finbar-cell.sell .qp-finbar-value{color:var(--ink);}
-  .qp-finbar-cell.buy .qp-finbar-value{font-size:15px;color:var(--ink-soft);font-weight:600;}
-  .qp-finbar-cell.profit .qp-finbar-value{font-size:15px;}
-  .qp-finbar-cell.margin{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;}
+  .qp-says{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .qp-says-label{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink-soft);}
+  .qp-says-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:26px;
+    line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .qp-shopline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    font-size:12.5px;color:var(--ink-soft);padding-top:6px;border-top:1px solid var(--ow-rule-soft);}
+  .qp-shopline b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .qp-shopline-sep{color:var(--ow-ink-400);}
+
+  /* The rule between the client's side of the row and the shop's, so
+     no cost figure can be read as a price. */
+  .qp-items-table-wrap th.q-shop-first, .qp-items-table-wrap td.q-shop-first{
+    border-left:1px solid var(--line);
+  }
+  .q-cost-row td, .q-profit-row td{color:var(--ink-soft);font-weight:600;}
+  .q-grand-row td{font-size:15px;}
   .qp-margin-pill-lg{
     font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;padding:3px 11px;border-radius:20px;
   }
@@ -4676,8 +4687,11 @@
               </button>
             </div>
           </div>
-          <div id="q_itemsWrap"></div>
+          <!-- Above the items, not below them. With fifteen lines on a
+               quote the total was off the bottom of the screen at exactly
+               the moment somebody was being asked for it. -->
           <div class="qp-finbar" id="q_finbar"></div>
+          <div id="q_itemsWrap"></div>
         </div>
       </div>
     </section>
@@ -10820,9 +10834,15 @@ function renderQuoteItems(){
     const buy = Number(it.price)||0;
     const qty = Number(it.qty)||0;
     const sell = quoteItemSellPrice(it);
-    const lineTotal = qty * buy;
-    grandBuy += lineTotal;
-    grandSell += qty * sell;
+    /* TWO totals per line, and they are not interchangeable. lineSell is
+       the client's money -- what this line adds to their bill -- and
+       lineCost is the shop's. The row used to show the COST in a column
+       headed "Line total", and the table footed with that same cost
+       under the words "Grand total". */
+    const lineCost = qty * buy;
+    const lineSell = qty * sell;
+    grandBuy += lineCost;
+    grandSell += lineSell;
     const marginPct = sell>0 ? ((sell-buy)/sell*100) : (buy>0 ? -100 : 0);
     let rowMarginClass = '', cardMarginClass = '', pillClass = 'good';
     if(sell<=0 || sell<=buy){ rowMarginClass = 'q-row-margin-danger'; cardMarginClass = 'qc-card-danger'; pillClass = 'danger'; }
@@ -10857,7 +10877,7 @@ function renderQuoteItems(){
       <div class="qc-field qc-field-full"><label>Sell @ (UGX)</label>${sellCellHTML}</div>
       <div class="qc-card-foot">
         <div class="q-margin-pill ${pillClass}">${Math.round(marginPct)}% margin</div>
-        <div class="q-line-total price">${fmtUGX(lineTotal)}</div>
+        <div class="q-line-total price" title="What this line adds to the client's bill">${fmtUGX(lineSell)}</div>
       </div>
     </div>`);
 
@@ -10868,11 +10888,11 @@ function renderQuoteItems(){
       </div></td>
       <td><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></td>
       <td><input type="number" class="qty-input q-qty" min="1" step="any" value="${it.qty}"></td>
-      <td>${supplierPickerHTML}</td>
-      <td><input type="number" class="price-input q-price" min="0" step="any" value="${Math.round(it.price)}"></td>
       <td>${sellCellHTML}</td>
+      <td class="q-line-total price">${fmtUGX(lineSell)}</td>
+      <td class="q-shop-first">${supplierPickerHTML}</td>
+      <td><input type="number" class="price-input q-price" min="0" step="any" value="${Math.round(it.price)}"></td>
       <td><div class="q-margin-pill ${pillClass}">${Math.round(marginPct)}% margin</div></td>
-      <td class="q-line-total price">${fmtUGX(lineTotal)}</td>
     </tr>`;
   }).join('');
 
@@ -10887,11 +10907,26 @@ function renderQuoteItems(){
   const profit = grandSell - grandBuy;
   const profitColor = profit < 0 ? 'var(--danger)' : 'var(--good)';
 
+  /* The client's side of the quote first, then the shop's, with a rule
+     between them. "Price each" is the wording the printed quotation
+     already uses for the same figure, so the screen and the document
+     the client is handed say the same words about the same number.
+
+     The foot names whose money each row is. It read "Grand total" over
+     the COST -- the number a rep says down the phone -- while the
+     printed quotation, the WhatsApp message and the client copy all
+     totalled the sell. Measured on a three-line quote: the screen said
+     3,845,000 and every document the client received said 4,806,250. */
   wrap.innerHTML = `<div class="qp-items-table-wrap"><table><thead><tr>
-    <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th class="q-supplier-th">Supplier</th><th>Buy @</th><th>Sell @</th><th>Margin</th><th>Line total</th>
+    <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th>Price each</th><th>Line total</th>
+    <th class="q-shop-first q-supplier-th">Supplier</th><th>Buy @</th><th>Margin</th>
   </tr></thead><tbody>${rowsHtml}${addRowHtml}
-    <tr class="q-grand-row"><td colspan="7" style="text-align:right;">Grand total</td><td class="price">${fmtUGX(grandBuy)}</td></tr>
-    <tr class="q-profit-row"><td colspan="7" style="text-align:right;">Estimated profit</td><td class="price" style="color:${profitColor};">${fmtUGX(profit)}</td></tr>
+    <tr class="q-grand-row"><td colspan="4" style="text-align:right;">The client pays</td>
+      <td class="price">${fmtUGX(grandSell)}</td><td colspan="3" class="q-shop-first"></td></tr>
+    <tr class="q-cost-row"><td colspan="4" style="text-align:right;">Costs you</td>
+      <td class="price">${fmtUGX(grandBuy)}</td><td colspan="3" class="q-shop-first"></td></tr>
+    <tr class="q-profit-row"><td colspan="4" style="text-align:right;">You keep</td>
+      <td class="price" style="color:${profitColor};">${fmtUGX(profit)}</td><td colspan="3" class="q-shop-first"></td></tr>
   </tbody></table></div>
   <div class="qp-items-cards">${cardsArr.join('')}
     <button type="button" class="qc-add-card" id="q_add_card_btn">
@@ -10975,9 +11010,19 @@ function renderQuoteItems(){
   wrap.querySelector('#q_add_card_btn').addEventListener('click', openItemPicker);
 }
 
-// Glanceable Sell / Buy / Profit / Margin% strip shown above the print
-// buttons, color-coded so a rep can confirm profitability at a glance
-// mid-call without reading the line-by-line table.
+/* THE NUMBER THE REP SAYS OUT LOUD.
+
+   This was a four-cell strip of equal weight below the table, the first
+   cell labelled "Total sell" -- and the table's own bottom line, the
+   biggest and most authoritative figure in the grid, said "Grand total"
+   over the shop's COST. On a three-line quote the screen said 3,845,000
+   while the printed quotation, the WhatsApp message and the client copy
+   all said 4,806,250. A rep reading the screen down the phone gave away
+   961,250, which was the entire margin.
+
+   So the client's figure leads, in the words somebody actually speaks,
+   and the shop's economics sit under it in one line where they can be
+   checked but never mistaken for the price. */
 function renderQuoteFinbar(grandBuy, grandSell, profit){
   const bar = document.getElementById('q_finbar');
   if(!bar) return;
@@ -10986,10 +11031,16 @@ function renderQuoteFinbar(grandBuy, grandSell, profit){
   if(grandSell<=0 || profit<=0) pillClass = 'danger';
   else if(marginPct < 10) pillClass = 'warn';
   bar.innerHTML = `
-    <div class="qp-finbar-cell sell"><div class="qp-finbar-label">Total sell</div><div class="qp-finbar-value">${fmtUGX(grandSell)}</div></div>
-    <div class="qp-finbar-cell buy"><div class="qp-finbar-label">Total cost</div><div class="qp-finbar-value">${fmtUGX(grandBuy)}</div></div>
-    <div class="qp-finbar-cell profit"><div class="qp-finbar-label">Est. profit</div><div class="qp-finbar-value" style="color:${profit<0?'var(--danger)':'var(--good)'};">${fmtUGX(profit)}</div></div>
-    <div class="qp-finbar-cell margin"><div class="qp-finbar-label">Margin</div><span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span></div>
+    <div class="qp-says">
+      <div class="qp-says-label">The client pays</div>
+      <div class="qp-says-value">${fmtUGX(grandSell)}</div>
+    </div>
+    <div class="qp-shopline">
+      <span>Costs you <b>${fmtUGX(grandBuy)}</b></span>
+      <span class="qp-shopline-sep">&middot;</span>
+      <span>You keep <b style="color:${profit<0?'var(--danger)':'var(--good)'};">${fmtUGX(profit)}</b></span>
+      <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
+    </div>
   `;
 }
 
