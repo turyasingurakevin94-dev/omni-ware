@@ -50,6 +50,7 @@ const scope = compileScope([
   extractFunction(src, 'credAgingProfile', 'index.html'),
   extractFunction(src, 'credAllRows', 'index.html'),
   extractFunction(src, 'credRowAmount', 'index.html'),
+  extractFunction(src, 'credRowProgress', 'index.html'),
   extractFunction(src, 'credCashOnHand', 'index.html'),
   'function sortState(){ return CRED_SORT_STATE; }',
   'function sortFirstDir(){ return CRED_SORT_FIRST_DIR; }',
@@ -57,10 +58,12 @@ const scope = compileScope([
 ], {
   data,
   todayISO: () => TODAY,
+  // The fixture carries an invoice total directly; both helpers read it.
+  purchaseInvoiceTotal: (pi) => Number(pi.total) || 0,
   purchaseInvoiceBalanceDue: (pi) => Math.max(0, pi.total - (Number(pi.amountPaid) || 0)),
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '',
   cbDayPosition: (d) => ({ closing: data.__closing[d] }),
-}, ['credOpenInvoices', 'credAgingProfile', 'credAllRows', 'credRowAmount', 'credCashOnHand',
+}, ['credOpenInvoices', 'credAgingProfile', 'credAllRows', 'credRowAmount', 'credRowProgress', 'credCashOnHand',
   'creditorLastPaymentDate', 'agingBandFor', 'sortState', 'sortFirstDir', 'setBandFilter']);
 
 let iid = 1;
@@ -342,6 +345,105 @@ const reset = (suppliers, invoices) => {
   const tfoot = (/<tfoot>[\s\S]*?<\/tfoot>/.exec(render) || [''])[0];
   t.check(/rows\.length\} supplier\$\{rows\.length===1\?'':'s'\}/.test(tfoot),
     'the table foot counts what it is showing rather than printing a bare Total');
+}
+
+/* ---------- how far through paying a supplier off -------------------- *
+ * The same question as the customer side, on data that answers it more
+ * directly: a supplier balance is not stored anywhere, it IS the sum of
+ * what their own invoices still carry. So there is no drift case here
+ * and no "typed straight in" case -- porting the customer side's two
+ * reasons would imply hazards the buy side does not have.
+ */
+{
+  scope.setBandFilter('');
+  reset(
+    [{ id: 'S1', name: 'Roofings' }, { id: 'S2', name: 'Nile Paints' }, { id: 'S3', name: 'Settled' }],
+    [
+      inv('S1', 10, 5000000, 2000000, 5),   // fresh, 40% paid
+      inv('S1', 200, 1000000, 0),           // ancient, untouched
+      inv('S2', 20, 1000000, 900000, 3),    // nearly clear
+      inv('S3', 15, 1000000, 1000000, 2),   // fully settled
+    ],
+  );
+  const prog = (name) => scope.credRowProgress(rowFor(name));
+  const pct = (name) => Math.round(prog(name).pct * 100);
+
+  eq(pct('Roofings'), 33, 'two million paid against six million still open is a third of the way');
+  eq(prog('Roofings').owed, 4000000, 'with four million still to find');
+  eq(pct('Nile Paints'), 90, 'and a nearly-cleared supplier reads nearly cleared');
+
+  /* THE BAR MUST NEVER DISAGREE WITH THE FIGURE BESIDE IT. Whatever the
+     scope, what it says is owed is what the row reports as owed. */
+  ['Roofings', 'Nile Paints'].forEach((n) => {
+    t.check(Math.abs(prog(n).owed - scope.credRowAmount(rowFor(n))) < 1,
+      `${n}'s bar is measured against the very amount printed next to it`);
+  });
+
+  /* A supplier with nothing outstanding is not at 100% and not at 0% --
+     there is nothing to be part way through. They only appear at all
+     when Hide-no-balance is off, and a bar either way would be a claim
+     about a debt that does not exist. */
+  t.check(prog('Settled') === null,
+    'a settled supplier has no progress to show rather than a full bar');
+}
+
+/* ---------- scoped exactly as the amount is -------------------------- *
+ * Clicking a band makes each row report that band's share. A bar drawn
+ * over ALL of a supplier's invoices would then sit beside a figure it
+ * was not measuring -- the row would say one thing and the bar another.
+ */
+{
+  scope.setBandFilter('b90p');
+  const r = rowFor('Roofings');
+  const p = scope.credRowProgress(r);
+  eq(scope.credRowAmount(r), 1000000, 'the row reports only the over-90 invoice');
+  eq(Math.round(p.pct * 100), 0,
+    'and the bar is measured over that invoice alone — nothing has been paid on it');
+  eq(p.charged, 1000000, 'against what that invoice was for');
+  t.check(Math.abs(p.owed - scope.credRowAmount(r)) < 1,
+    'so the two still agree, which is the point of scoping it');
+
+  scope.setBandFilter('b30');
+  const fresh = scope.credRowProgress(rowFor('Roofings'));
+  eq(Math.round(fresh.pct * 100), 40,
+    'and narrowed to the fresh band the same supplier reads 40%, not 33%');
+
+  /* A supplier with nothing in the chosen band has nothing to show,
+     rather than falling back to their whole balance. */
+  eq(scope.credRowProgress(rowFor('Nile Paints')) === null
+    || Math.round(scope.credRowProgress(rowFor('Nile Paints')).pct * 100) === 90, true,
+    'a supplier wholly inside the band still reads their own figure');
+  scope.setBandFilter('b90p');
+  t.check(scope.credRowProgress(rowFor('Roofings')).charged === 1000000,
+    'and one split across bands is measured only on the part being shown');
+  scope.setBandFilter('');
+}
+
+/* ---------- what the cell says --------------------------------------- */
+{
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  const render = (/function renderCreditorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/<th>Paid off<\/th>/.test(render), 'the list has a column for it');
+  t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
+    'drawn as a bar whose width is the share paid');
+
+  /* The dash means something DIFFERENT here from on the customer side.
+     A supplier balance is the sum of their own invoices, so it cannot
+     drift and cannot be typed in -- the only way to have no progress is
+     to owe nothing. Carrying the customer side's wording across would
+     tell somebody their supplier balance has no charges behind it, which
+     on the buy side is never the reason. */
+  t.check(/Nothing outstanding to this supplier/.test(render),
+    'a supplier with nothing owing is told that, not the customer-side reason');
+  t.check(!/No dated charges behind this balance/.test(render),
+    'and the customer-side wording is not borrowed for a case it cannot describe');
+
+  // Invoiced, not charged: it is the buy side and the document is an
+  // invoice the shop received.
+  t.check(/invoiced on what is still open/.test(render),
+    'the figures behind the percentage are named in buy-side words');
+  t.check(/credBandFilter\?', in this band':''/.test(render),
+    'and say so when a band has narrowed what is being measured');
 }
 
 process.exit(t.done() ? 1 : 0);

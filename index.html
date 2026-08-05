@@ -16747,6 +16747,9 @@ function credOpenInvoices(){
     .map(pi=>{
       const ageDays = daysSinceDate(pi.date);
       return {invoice: pi, supplierId: pi.supplierId, due: purchaseInvoiceBalanceDue(pi),
+        // What the invoice was for, so how much of it has been paid can
+        // be worked out without going back to the document.
+        total: purchaseInvoiceTotal(pi),
         ageDays, band: agingBandFor(ageDays)};
     });
 }
@@ -16818,6 +16821,8 @@ function credAllRows(){
       openCount: mine.length,
       undatedCount: mine.length - dated.length,
       inBand,
+      // Kept on the row so the bar can be scoped exactly as the amount is.
+      openInvoices: mine,
       lastPaid: creditorLastPaymentDate(s.id),
     };
   });
@@ -16826,6 +16831,33 @@ function credAllRows(){
 // What a row is reporting: the whole balance, or -- when a band has been
 // clicked -- only the part of it sitting in that band, so the list foot
 // adds up to the band card instead of overshooting it.
+/* How far through paying a supplier off.
+
+   Scoped the SAME WAY the amount beside it is: with a band selected the
+   row reports only that band's money, so a bar drawn over all their
+   invoices would disagree with the very figure it sits next to.
+
+   NO DRIFT CASE HERE, unlike the customer side. A supplier balance is
+   not stored anywhere -- it is the sum of what their own invoices still
+   carry -- so there is no second number for it to disagree with, and
+   porting the customer side's two reasons would imply a hazard the buy
+   side does not have. The one case that IS real is a supplier with
+   nothing outstanding, which is not "unknown" but "nothing to be part
+   way through". */
+function credRowProgress(r){
+  const scoped = credBandFilter
+    ? (r.openInvoices||[]).filter(i=> i.band === credBandFilter)
+    : (r.openInvoices||[]);
+  if(!scoped.length) return null;
+  const charged = scoped.reduce((s,i)=> s + (Number(i.total)||0), 0);
+  // Defensive: an invoice cannot be open without a total above its
+  // payments, so this cannot be reached as credOpenInvoices stands.
+  if(charged <= 0) return null;
+  const owed = scoped.reduce((s,i)=> s + (Number(i.due)||0), 0);
+  const paid = charged - owed;
+  return { charged, owed, paid, pct: Math.max(0, Math.min(1, paid / charged)) };
+}
+
 function credRowAmount(r){
   return credBandFilter ? (r.inBand[credBandFilter] || 0) : r.owed;
 }
@@ -17011,6 +17043,20 @@ function renderCreditorsList(filter=''){
   const amountCell = (r)=> credBandFilter
     ? `<span class="age-amt">${fmtUGX(Math.round(credRowAmount(r)))}</span><span class="age-paid-ago">of ${fmtUGX(Math.round(r.owed))} owed</span>`
     : `<span class="age-amt">${fmtUGX(Math.round(r.owed))}</span>`;
+  /* How far through paying them off. The dash here means something
+     different from the customer side's: not "unknowable" but "nothing
+     outstanding to be part way through", which is what a settled
+     supplier left on screen by the Hide-no-balance box actually is. */
+  const progressCell = (r)=>{
+    const p = credRowProgress(r);
+    if(!p) return `<span class="deb-prog-none" title="Nothing outstanding to this supplier${credBandFilter?' in this band':''}, so there is nothing to be part way through">—</span>`;
+    const pct = Math.round(p.pct*100);
+    return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} invoiced on what is still open${credBandFilter?', in this band':''}">
+      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${pct}%"></div></div>
+      <span class="deb-prog-pct">${pct}%</span>
+    </div>`;
+  };
+
   const payBtn = (r)=> `<button type="button" class="age-act cred-pay" data-id="${esc(r.id)}">
       <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>
       Pay</button>`;
@@ -17026,6 +17072,7 @@ function renderCreditorsList(filter=''){
         <span class="age-card-amt">${fmtUGX(Math.round(credRowAmount(r)))}</span>
         <span class="age-card-paid">${paidCell(r)}</span>
       </div>
+      <div class="deb-card-prog">${progressCell(r)}</div>
       <div class="age-card-act">${payBtn(r)}</div>
     </div>`).join('');
 
@@ -17034,6 +17081,7 @@ function renderCreditorsList(filter=''){
       <th class="sortable${CRED_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Supplier${sortArrow('name')}</th>
       <th class="r sortable${CRED_SORT_STATE.key==='owed'?' sorted':''}" data-key="owed">${
         credBandFilter ? 'In this band' : 'Owed'}${sortArrow('owed')}</th>
+      <th>Paid off</th>
       <th class="sortable${CRED_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Waiting${sortArrow('ageDays')}</th>
       <th class="sortable${CRED_SORT_STATE.key==='openCount'?' sorted':''}" data-key="openCount">Bills${sortArrow('openCount')}</th>
       <th class="sortable${CRED_SORT_STATE.key==='lastPaid'?' sorted':''}" data-key="lastPaid">Last paid${sortArrow('lastPaid')}</th>
@@ -17042,6 +17090,7 @@ function renderCreditorsList(filter=''){
     <tbody>${rows.map(r=>`<tr class="age-edge-${r.band}">
       <td>${esc(r.name)}</td>
       <td class="price">${amountCell(r)}</td>
+      <td>${progressCell(r)}</td>
       <td>${agePill(r)}</td>
       <td class="age-paid-cell">${billsCell(r)}</td>
       <td class="age-paid-cell">${paidCell(r)}</td>
@@ -17051,7 +17100,7 @@ function renderCreditorsList(filter=''){
       <td class="inv-total-label">${rows.length} supplier${rows.length===1?'':'s'}${
         credBandFilter ? ` · ${esc((agingBandDef(credBandFilter)||{}).short || '')}` : ''}</td>
       <td class="price">${fmtUGX(Math.round(totalOwed))}</td>
-      <td></td><td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>
   <div class="pi-cards">
