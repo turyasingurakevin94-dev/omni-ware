@@ -2860,6 +2860,21 @@
   .st-trend-x span{flex:1;text-align:center;font-size:10.5px;color:var(--ink-soft);}
   @media (max-width:560px){ .st-trend-svg{height:96px;} .st-trend-x span{font-size:9.5px;} }
 
+  /* What the shop leans on. The risk that appears on no statement:
+     trading well and one phone call from trouble. */
+  .st-leans{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:10px;margin-bottom:12px;}
+  .st-lean{display:flex;flex-direction:column;gap:2px;background:var(--bg);
+    border:1px solid var(--line);border-radius:9px;padding:10px 12px;border-left:3px solid var(--ow-rule);}
+  .st-lean.warn{border-left-color:var(--ow-amber);background:var(--ow-amber-soft);}
+  .st-lean.hot{border-left-color:var(--ow-crimson);background:var(--ow-crimson-soft);}
+  .st-lean-label{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink-soft);}
+  .st-lean b{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);line-height:1.15;}
+  .st-lean.hot b{color:var(--ow-crimson);}
+  .st-lean.warn b{color:var(--ow-amber-ink);}
+  .st-lean-note{font-size:11.5px;line-height:1.4;color:var(--ink-soft);}
+  .st-lean-bad{color:var(--ow-crimson);}
+
   /* Breakeven. The target the shop is trading against, which nothing on
      this page could state until it knew what the shop was committed to. */
   .st-breakeven{border:1px solid var(--line);border-radius:11px;padding:14px 15px;margin-bottom:16px;}
@@ -23115,6 +23130,157 @@ function stBreakevenHTML(be){
   </div>`;
 }
 
+/* ================= WHAT THE SHOP LEANS ON =========================
+
+   Concentration is the risk that appears on no statement. A shop can be
+   trading well and be one phone call from trouble, because most of what
+   it sells goes through one name or most of what it buys comes from one.
+   Nothing on this page said so.
+
+   THE TRAP IS THE COUNTER SALE. Every walk-in is written under a single
+   label, so grouping sales by customer name would report the most
+   diversified shop there is -- one whose trade is spread across a
+   hundred strangers who never gave a name -- as almost wholly dependent
+   on one "customer". They are counted apart and called what they are. */
+
+function revenueConcentration(fromISO, toISO){
+  const invoices = anInvoicesInRange(fromISO, toISO);
+  let counter = 0;
+  const byName = {};
+  invoices.forEach(q=>{
+    const total = anInvoiceTotals(q).sales;
+    if(q.counterSale){ counter += total; return; }
+    const name = (((q.client && q.client.name) || '').trim()) || 'Unnamed';
+    byName[name] = (byName[name] || 0) + total;
+  });
+  const named = Object.keys(byName).map(name=> ({name, amount: byName[name]}))
+    .sort((a,b)=> b.amount - a.amount || String(a.name).localeCompare(String(b.name)));
+  const namedTotal = named.reduce((s,x)=> s + x.amount, 0);
+  const total = namedTotal + counter;
+  const share = (n)=> total > 0 ? n / total : 0;
+  return {
+    total, counter, named, namedTotal, customers: named.length,
+    top: named[0] || null,
+    /* Share of EVERYTHING SOLD, not of the named part alone. A customer
+       who is half the invoiced trade in a shop that takes as much again
+       over the counter is a quarter of the business, and calling that
+       half would overstate what losing them costs. */
+    topShare: named[0] ? share(named[0].amount) : 0,
+    topThreeShare: share(named.slice(0,3).reduce((s,x)=> s + x.amount, 0)),
+    counterShare: share(counter),
+  };
+}
+
+function purchaseConcentration(fromISO, toISO){
+  // Through the supplier list, the same rule the creditors figures use.
+  const known = new Set((data.suppliers||[]).map(s=> s.id));
+  const by = {};
+  (data.purchaseInvoices||[])
+    .filter(pi=> !pi.voided && known.has(pi.supplierId)
+      && String(pi.date||'') >= fromISO && String(pi.date||'') <= toISO)
+    .forEach(pi=>{ by[pi.supplierId] = (by[pi.supplierId] || 0) + purchaseInvoiceTotal(pi); });
+  const ranked = Object.keys(by).map(id=> ({id, name: supplierName(id), amount: by[id]}))
+    .sort((a,b)=> b.amount - a.amount || String(a.name).localeCompare(String(b.name)));
+  const total = ranked.reduce((s,x)=> s + x.amount, 0);
+  return {
+    total, ranked, suppliers: ranked.length, top: ranked[0] || null,
+    topShare: total > 0 && ranked[0] ? ranked[0].amount / total : 0,
+  };
+}
+
+/* Lines only one supplier has ever quoted. Deliberately a COUNT and not
+   a share of spending: a line bought twice a year can still stop the
+   shop on the morning somebody wants it, and weighting it by money would
+   hide exactly those. */
+function singleSourcedLines(){
+  return productRowsForList('', '', '', 'priced')
+    .filter(r=> new Set(productPriceRows(r.p.id, r.idx).map(x=> x.supplierId)).size === 1)
+    .length;
+}
+
+/* What losing the largest customer would actually mean, in the only
+   terms that decide it: whether the shop would still cover itself.
+   Concentration on its own is a percentage; against breakeven it is a
+   consequence. */
+function concentrationExposure(is, be){
+  const rev = revenueConcentration(is.from, is.to);
+  if(!rev.top || !be || be.salesNeeded == null) return null;
+  const without = rev.total - rev.top.amount;
+  return {
+    name: rev.top.name, amount: rev.top.amount, share: rev.topShare,
+    without, needed: be.salesNeeded,
+    // Below the line without them, and by how much.
+    sinks: without < be.salesNeeded,
+    shortBy: Math.max(0, be.salesNeeded - without),
+  };
+}
+
+function stConcentrationHTML(is, be){
+  const rev = revenueConcentration(is.from, is.to);
+  const buy = purchaseConcentration(is.from, is.to);
+  const single = singleSourcedLines();
+  const exposure = concentrationExposure(is, be);
+  const pct = (n)=> Math.round(n * 100);
+
+  if(rev.total <= 0 && buy.total <= 0){
+    return `<section class="st-doc">
+      <header class="st-doc-head"><h3>What the shop leans on</h3>
+        <span class="st-doc-when">nothing invoiced either way</span></header>
+      <p class="st-read">Nothing was sold or bought on an invoice in this period, so there is nothing to be concentrated in.</p>
+    </section>`;
+  }
+
+  const sellLine = rev.top
+    ? `<div class="st-lean ${rev.topShare >= 0.35 ? 'hot' : ''}">
+        <span class="st-lean-label">Largest customer</span>
+        <b>${pct(rev.topShare)}%</b>
+        <span class="st-lean-note">${esc(rev.top.name)} — ${esc(fmtUGX(Math.round(rev.top.amount)))} of everything sold</span>
+      </div>`
+    : `<div class="st-lean">
+        <span class="st-lean-label">Largest customer</span><b>—</b>
+        <span class="st-lean-note">every sale this period was over the counter</span>
+      </div>`;
+
+  const buyLine = buy.top
+    ? `<div class="st-lean ${buy.topShare >= 0.5 ? 'hot' : ''}">
+        <span class="st-lean-label">Largest supplier</span>
+        <b>${pct(buy.topShare)}%</b>
+        <span class="st-lean-note">${esc(buy.top.name)} — ${esc(fmtUGX(Math.round(buy.top.amount)))} of what was bought in</span>
+      </div>`
+    : `<div class="st-lean">
+        <span class="st-lean-label">Largest supplier</span><b>—</b>
+        <span class="st-lean-note">nothing was bought on a purchase invoice</span>
+      </div>`;
+
+  const singleLine = `<div class="st-lean ${single > 0 ? 'warn' : ''}">
+    <span class="st-lean-label">Single-sourced lines</span>
+    <b>${single}</b>
+    <span class="st-lean-note">${single
+      ? 'only one supplier has ever priced them — nothing to fall back on'
+      : 'every priced line has more than one supplier behind it'}</span>
+  </div>`;
+
+  /* Counter trade is the opposite of concentration, so it is said as a
+     good thing rather than left as an unexplained slice. */
+  const counterNote = rev.counter > 0
+    ? `<p class="st-read">${pct(rev.counterShare)}% of what was sold went over the counter, spread across walk-in customers rather than resting on any one name.</p>`
+    : '';
+
+  const exposureNote = exposure
+    ? (exposure.sinks
+        ? `<p class="st-read st-lean-bad">Without ${esc(exposure.name)} the shop would have sold ${esc(fmtUGX(Math.round(exposure.without)))} — ${esc(fmtUGX(Math.round(exposure.shortBy)))} short of covering itself. That is the exposure, not the percentage.</p>`
+        : `<p class="st-read">Even without ${esc(exposure.name)} the shop would still have covered itself this period.</p>`)
+    : '';
+
+  return `<section class="st-doc">
+    <header class="st-doc-head"><h3>What the shop leans on</h3>
+      <span class="st-doc-when">${rev.customers} named customer${rev.customers===1?'':'s'} · ${buy.suppliers} supplier${buy.suppliers===1?'':'s'}</span></header>
+    <div class="st-leans">${sellLine}${buyLine}${singleLine}</div>
+    ${exposureNote}
+    ${counterNote}
+  </section>`;
+}
+
 function statementChecks(is, bs, cf){
   const checks = [];
   const gap = statementBasisGap(is, cf);
@@ -23819,7 +23985,9 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
           <div><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></div>
         </div>`).join('')}
       </section>
-    </div>`;
+    </div>
+
+    ${stConcentrationHTML(is, breakevenPosition(is, periodOf(to)))}`;
 }
 
 function stProfitAndLoss(ctx){
