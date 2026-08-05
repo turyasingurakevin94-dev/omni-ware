@@ -186,11 +186,22 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   eq(scope.priceGroupsFor([]).length, 0, 'and no groups');
 }
 
-/* ---------- 7. the card grid is gone, but not for everyone ----------- */
+/* ---------- 7. back to cards, without losing the sort ---------------- *
+ * The grouped rows were asked to go back to the card the registry had
+ * before them. What must NOT go with them is priceGroupsFor: it does the
+ * sorting as well as the grouping -- including "undated last whichever
+ * way the sort points" -- so rendering the filtered rows straight into
+ * cards silently killed the Sort by dropdown.
+ */
 {
-  t.check(!/priceCardHTML/.test(code), 'the registry card builder is gone');
-  t.check(/class="reg-group"/.test(code) && /priceGroupHTML/.test(code),
-    'replaced by grouped rows');
+  t.check(/priceCardHTML/.test(code), 'the registry is drawn as cards again');
+  t.check(/priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\)/.test(code),
+    'through priceGroupsFor, so the chosen sort still applies');
+  /* And a product's competing quotes stay consecutive in the grid, which
+     is the one thing the grouped layout had that a plain card grid did
+     not. Flattening the groups keeps it for free. */
+  t.check(/\.flatMap\(g=> g\.rows\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
+    'and one product\'s quotes land next to each other rather than scattered by date');
 
   /* .price-card and .price-grid are NOT dead with it: the agent
      promotions and the commission claims still build on them. Removing

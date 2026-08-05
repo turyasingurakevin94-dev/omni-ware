@@ -1472,10 +1472,18 @@
 
      .price-card / .price-grid below are NOT dead with it: the agent
      promotions and commission claims still build on them. */
+  /* Laid out as cards side by side rather than stacked full width. The
+     GROUPING is what makes the registry answerable -- a card per product
+     holding its competing quotes, not a card per quote -- so the cards
+     are wide enough that the quote rows inside still line up in their
+     columns. Below that they reflow the same way they do on a phone. */
   .reg-group{
     background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:14px 16px 6px;margin-bottom:14px;
+    padding:14px 16px 6px;margin-bottom:0;
+    container-type:inline-size;
+    transition:border-color .12s ease,box-shadow .12s ease;
   }
+  .reg-group:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
   .reg-group-head{display:flex;align-items:center;gap:11px;margin-bottom:10px;}
   .reg-group-ident{min-width:0;}
   .reg-group-name{font-size:15px;font-weight:700;line-height:1.25;}
@@ -1525,6 +1533,27 @@
     .reg-fig:nth-of-type(1){grid-area:figs;}
     /* Both figures share one line on a phone, labelled, since the column
        heading they sat under is gone. */
+    .reg-fig:nth-of-type(1)::before{content:"Wholesale ";font-family:inherit;font-size:10px;
+      text-transform:uppercase;letter-spacing:.6px;color:var(--ow-ink-400);}
+    .reg-fig:nth-of-type(2)::before{content:"Retail ";font-family:inherit;font-size:10px;
+      text-transform:uppercase;letter-spacing:.6px;color:var(--ow-ink-400);}
+    .reg-fig:nth-of-type(2){grid-area:figs;justify-self:end;}
+    .reg-when{grid-area:when;}
+  }
+  /* Same reflow, but keyed to the CARD rather than the window: on a wide
+     screen a card can still be narrow, and a media query cannot see
+     that. Browsers without container queries fall back to the five
+     columns, which the 460px minimum keeps workable. */
+  @container (max-width:430px){
+    .reg-head{display:none;}
+    .reg-row{
+      grid-template-columns:1fr auto;
+      grid-template-areas:"supplier actions" "figs figs" "when when";
+      gap:6px 12px;padding:11px 0;
+    }
+    .reg-supplier{grid-area:supplier;}
+    .reg-row .pc-actions{grid-area:actions;}
+    .reg-fig:nth-of-type(1){grid-area:figs;}
     .reg-fig:nth-of-type(1)::before{content:"Wholesale ";font-family:inherit;font-size:10px;
       text-transform:uppercase;letter-spacing:.6px;color:var(--ow-ink-400);}
     .reg-fig:nth-of-type(2)::before{content:"Retail ";font-family:inherit;font-size:10px;
@@ -1583,23 +1612,10 @@
      nothing could be compared down a column -- and it showed neither
      what a thing costs to buy nor how many are on the shelf, both of
      which the PRINTED version of the same list already carried. */
-  .cat-head, .cat-row{
-    display:grid;
-    grid-template-columns:minmax(220px,2.2fr) minmax(130px,1.2fr) minmax(90px,.8fr) minmax(110px,.9fr) auto;
-    gap:16px;align-items:center;
-  }
-  .cat-head{
-    padding:0 15px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;
-    text-transform:uppercase;color:var(--ow-ink-400);
-  }
-  .cat-list{display:flex;flex-direction:column;gap:8px;}
-  .cat-row{
-    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 15px;
-    transition:border-color .12s ease, box-shadow .12s ease;
-  }
-  .cat-row:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
-  .cat-row.is-unbuilt{background:var(--bg);}
-  .cat-item{display:flex;align-items:center;gap:11px;min-width:0;}
+  /* Back to a card per product, on the same .price-card shell the
+     registry uses. The classes below that survive are the ones the card
+     still needs: the variant label, the sku, the flag and the markup
+     pair. The rest went with the row. */
   .cat-ident{min-width:0;}
   .cat-name{font-size:14px;font-weight:700;line-height:1.3;word-break:break-word;}
   .cat-variant{font-weight:500;color:var(--ink-soft);}
@@ -1620,18 +1636,12 @@
   .cat-markup span{display:inline-block;width:13px;color:var(--ow-ink-400);font-weight:700;}
   .cat-markup b{color:var(--ink);}
   .cat-actions{display:flex;gap:5px;flex-shrink:0;}
+  /* The card stacks on its own; only the note needs releasing, since it
+     was clipped to one line to keep a column aligned and there is no
+     column any more. */
   @media (max-width:1000px){
-    .cat-head{display:none;}
-    .cat-row{
-      grid-template-columns:1fr auto;
-      grid-template-areas:"item actions" "buy stock" "markup markup";
-      gap:10px 16px;
-    }
-    .cat-item{grid-area:item;} .cat-actions{grid-area:actions;}
-    .cat-cell:nth-of-type(2){grid-area:buy;} .cat-cell:nth-of-type(3){grid-area:stock;}
-    .cat-markup{grid-area:markup;flex-direction:row;gap:14px;
-      padding-top:8px;border-top:1px solid var(--ow-rule-soft);}
     .cat-note{white-space:normal;}
+    .cat-markup{flex-direction:row;gap:14px;}
   }
 
   .pc-thumb{
@@ -19675,44 +19685,58 @@ function productLineHTML(r, tokens){
   const qty = unbuilt ? null : getStockQty(p.id, idx);
   const variant = kind === 'variant' ? variantLabel(v.combo) : '';
 
-  return `<div class="cat-row${unbuilt ? ' is-unbuilt' : ''}">
-    <div class="cat-item">
-      ${productThumbHTML(p, idx)}
-      <div class="cat-ident">
-        <div class="cat-name">${highlightTokens(p.name, tokens)}${
-          variant ? ` <span class="cat-variant">${highlightTokens(variant, tokens)}</span>` : ''}</div>
-        <div class="cat-sub">
-          <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
-          ${kind === 'variant' && v.sku ? `<span class="cat-sku">${highlightTokens(v.sku, tokens)}</span>` : ''}
-          ${p.category ? `<span class="cat-cat">${highlightTokens(p.category, tokens)}</span>` : ''}
-          ${p.subcategory ? `<span class="cat-cat">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
+  /* The old product card, on the same .price-card shell the registry
+     uses, so the two screens match.
+
+     It keeps the buy price and the stock count. Those were the reason
+     the cards became rows in the first place -- the note on the list
+     said the grid "showed neither what a thing costs to buy nor how
+     many are on the shelf" -- and dropping them again to match a look
+     was not what was asked for. */
+  return `<div class="price-card${unbuilt ? ' price-card-oos' : ''}">
+    <div class="prc-head">
+      <div class="prc-head-main">
+        ${productThumbHTML(p, idx)}
+        <div class="prc-title">
+          <div class="prc-name">${highlightTokens(p.name, tokens)}${
+            variant ? ` <span class="cat-variant">${highlightTokens(variant, tokens)}</span>` : ''}</div>
+          <div class="prc-meta">
+            <span class="id-pill">${highlightTokens(p.id, tokens)}</span>
+            ${kind === 'variant' && v.sku ? `<span class="cat-sku">${highlightTokens(v.sku, tokens)}</span>` : ''}
+            ${p.category ? `<span class="pack-pill">${highlightTokens(p.category, tokens)}</span>` : ''}
+            ${p.subcategory ? `<span class="pack-pill">${highlightTokens(p.subcategory, tokens)}</span>` : ''}
+          </div>
         </div>
+      </div>
+      <div class="pc-actions">
+        <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${esc(p.id)}')">${ICON_EDIT}</button>
+        <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${esc(p.id)}')">${ICON_TRASH}</button>
       </div>
     </div>
 
-    <div class="cat-cell">
-      ${unbuilt
-        ? '<span class="cat-flag">No variants set up yet</span>'
-        : buy.price != null
-          ? `<div class="cat-fig">${fmtUGX(Math.round(buy.price))}</div>
-             <div class="cat-note">${buy.suppliers} supplier${buy.suppliers===1?'':'s'} · cheapest ${esc(supplierName(buy.supplierId))}</div>`
-          : `<div class="cat-fig none">—</div><div class="cat-note warn">No price on file</div>`}
+    ${unbuilt
+      ? '<div class="prc-supplier"><span class="cat-flag">No variants set up yet</span></div>'
+      : `<div class="prc-prices">
+      <div class="prc-price-box">
+        <span>Costs you</span>
+        ${buy.price != null
+          ? `<b>${fmtUGX(Math.round(buy.price))}</b>`
+          : '<b class="cat-fig none">&mdash;</b>'}
+      </div>
+      <div class="prc-price-box">
+        <span>On the shelf</span>
+        <b class="${qty > 0 ? '' : 'cat-fig none'}">${qty}</b>
+      </div>
     </div>
-
-    <div class="cat-cell">
-      ${unbuilt ? '' : `<div class="cat-fig${qty > 0 ? '' : ' none'}">${qty}</div>
-        <div class="cat-note">${qty > 0 ? 'on the shelf' : 'nothing on the shelf'}</div>`}
+    <div class="prc-summary">
+      ${buy.price != null
+        ? `${buy.suppliers} supplier${buy.suppliers===1?'':'s'} &middot; cheapest ${esc(supplierName(buy.supplierId))}`
+        : 'No price on file'}
     </div>
-
-    <div class="cat-cell cat-markup">
+    <div class="cat-markup">
       <div><span>W</span> <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue)}</b></div>
       <div><span>R</span> <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue)}</b></div>
-    </div>
-
-    <div class="cat-actions">
-      <button class="pc-icon-btn" title="Edit product" onclick="editProduct('${esc(p.id)}')">${ICON_EDIT}</button>
-      <button class="pc-icon-btn danger" title="Delete product" onclick="deleteProduct('${esc(p.id)}')">${ICON_TRASH}</button>
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -19747,11 +19771,10 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
        the variants exist.</div>`
     : '';
 
+  // No column heading: a card labels each figure where it stands, and a
+  // heading strip over a grid of cards would point at nothing.
   wrap.innerHTML = rows.length
-    ? heldNote + `<div class="cat-head">
-         <span>Item</span><span>Costs to buy</span><span>In stock</span><span>Markup</span><span></span>
-       </div>
-       <div class="cat-list">${rows.map(r=> productLineHTML(r, tokens)).join('')}</div>`
+    ? heldNote + `<div class="price-grid">${rows.map(r=> productLineHTML(r, tokens)).join('')}</div>`
     : heldNote + `<div class="empty">${
         pricedFilter === 'unpriced' ? 'Every line that matches has a price on file.'
         : pricedFilter === 'priced' ? 'Nothing that matches has been priced yet.'
@@ -21220,6 +21243,49 @@ function priceRegistryRowHTML(g, r, tokens){
   </div>`;
 }
 
+/* The card the registry had before it was grouped into rows,
+   restored on request. One card per quote, in the shared .price-card
+   shell that the agent promotions and the commission claims also use,
+   so the screens that kept it and the one that came back match.
+
+   What it gives up is what the grouping bought: two quotes for one
+   product are no longer guaranteed to sit side by side. Sorting by
+   product gathers them, and Compare Prices answers 'who is cheapest
+   for this' properly -- at a quantity -- which is where that question
+   is actually settled. */
+function priceCardHTML(r, tokens){
+  return `<div class="price-card ${r.outOfStock?'price-card-oos':''}">
+    <div class="prc-head">
+      <div class="prc-head-main">
+        ${productThumbHTML({image:r.image, name:r.pname})}
+        <div class="prc-title">
+          <div class="prc-name">${highlightTokens(r.pname, tokens)}</div>
+          <div class="prc-meta">
+            <span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span>
+            ${r.outOfStock ? `<span class="prc-oos-pill" title="Excluded from best-supplier recommendations">Out of stock</span>` : ''}
+            ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
+              : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="pc-actions">
+        <button class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
+        <button class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
+        <button class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
+      </div>
+    </div>
+    <div class="prc-summary">${priceSummaryLine(r)}</div>
+    <div class="prc-supplier">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>
+      ${highlightTokens(r.sname, tokens)}
+    </div>
+    <div class="prc-prices">
+      <div class="prc-price-box"><span>Wholesale</span><b>${fmtUGXPerUnit(r.wholesale, r.unit)}</b></div>
+      <div class="prc-price-box"><span>Retail</span><b>${fmtUGXPerUnit(r.retail, r.unit)}</b></div>
+    </div>
+    ${priceTiersSummaryHTML(r)}
+  </div>`;
+}
 function priceGroupHTML(g, tokens){
   const n = g.rows.length;
   return `<section class="reg-group">
@@ -21277,7 +21343,17 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
         : '<div class="empty">No price entries match your search.</div>';
     return;
   }
-  wrap.innerHTML = priceGroupsFor(rows, sortMode).map(g=> priceGroupHTML(g, tokens)).join('');
+  /* Flattened through priceGroupsFor rather than rendered from `rows`
+     directly. That function does the SORTING as well as the grouping --
+     including the rule that an undated quote goes last whichever way the
+     sort points, because it is not the oldest and not the newest -- so
+     rendering the raw rows quietly killed the Sort by dropdown.
+
+     It also leaves a product's competing quotes consecutive in the grid,
+     which is the one thing the grouped layout had that a plain card
+     grid never did. */
+  wrap.innerHTML = `<div class="price-grid">${
+    priceGroupsFor(rows, sortMode).flatMap(g=> g.rows).map(r=> priceCardHTML(r, tokens)).join('')}</div>`;
 }
 // A price entry saved before the single-list rework (or one that's only
 // ever had flat wholesale/retail typed, never a tier) has no `tiers` of

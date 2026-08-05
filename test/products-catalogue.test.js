@@ -54,6 +54,7 @@ const scope = compileScope([
                     - (b.purchasePrice == null ? Infinity : b.purchasePrice)),
 }, ['productLineStats', 'productBestBuy', 'getStockQty']);
 
+const line = extractFunction(src, 'productLineHTML', 'index.html');
 const price = (productId, variantIdx, supplierId, buy) => ({ productId, variantIdx, supplierId, buy });
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const reset = () => {
@@ -164,12 +165,23 @@ const reset = () => {
     'and shows nothing at all when nothing matched');
 }
 
-/* ---------- 6. figures line up, which is the point ------------------- */
+/* ---------- 6. back to cards, keeping what the rows were for --------- *
+ * The list was asked to go back to the card the catalogue had before it.
+ * The rows existed because the card grid "showed neither what a thing
+ * costs to buy nor how many are on the shelf" -- so the card comes back
+ * carrying both, rather than the look being restored by dropping them.
+ */
 {
+  t.check(/class="price-card/.test(line),
+    'a product is a card again, on the same shell the price registry uses');
+  t.check(/Costs you/.test(line) && /productBestBuy/.test(code),
+    'and it still says what the thing costs to buy');
+  t.check(/On the shelf/.test(line) && /getStockQty\(p\.id, idx\)/.test(code),
+    'and how many are on the shelf');
   t.check(/\.cat-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
-    'the figures are tabular, so they line up down the column');
-  t.check(/\.cat-head, \.cat-row\{[\s\S]{0,200}grid-template-columns:/.test(src),
-    'and the heading uses the same columns as the rows, or the labels would drift off them');
+    'with the figures still tabular, so they line up between the cards in a row of them');
+  t.check(/cheapest \$\{esc\(supplierName\(buy\.supplierId\)\)\}/.test(line),
+    'and the cheapest supplier named, which the printed list has always carried');
 }
 
 process.exit(t.done() ? 1 : 0);
