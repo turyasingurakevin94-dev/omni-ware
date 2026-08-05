@@ -957,6 +957,34 @@
   .ag-earned{font-size:12px;line-height:1.5;color:var(--ink-soft);padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
   .ag-earned b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
   @media (max-width:420px){ .ag-figs{grid-template-columns:1fr 1fr;} }
+
+  /* ---- Supplier-funded promotions --------------------------------
+     starts_at and ends_at were saved and edited by this screen and
+     rendered nowhere, so a promotion that ended in June and one running
+     today were the same green card. Whether it is PAYING is the first
+     thing the card says now. */
+  .promo-card{display:flex;flex-direction:column;gap:10px;}
+  .promo-when{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .promo-state{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    border-radius:999px;padding:3px 9px;}
+  .promo-state.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .promo-state.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .promo-state.bad{background:var(--ow-oxide-soft);color:var(--danger);}
+  .promo-state.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .promo-when-text{font-size:12.5px;color:var(--ink-soft);}
+
+  .promo-figs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+    border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);padding:10px 0;}
+  .promo-fig{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .promo-fig b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:700;color:var(--ink);line-height:1.2;overflow:hidden;text-overflow:ellipsis;}
+  .promo-fig span{font-size:10.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+
+  .promo-note{font-size:12px;line-height:1.5;border-radius:8px;padding:8px 11px;
+    background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .promo-note.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);border-color:transparent;}
+  .promo-note.bad{background:var(--ow-oxide-soft);color:var(--danger);border-color:transparent;}
+  @media (max-width:420px){ .promo-figs{grid-template-columns:1fr 1fr;} }
   .preset-hint{margin:0 0 10px;font-size:12px;color:var(--ink-soft);}
   .preset-inline-add{display:flex;gap:8px;max-width:340px;margin-bottom:12px;}
   .momo-provider-card{max-width:420px;}
@@ -15503,27 +15531,231 @@ document.getElementById('agentSubTabs').addEventListener('click', (e)=>{
 function promotionBonusLabel(promo){
   return promo.bonus_type==='fixed' ? `${fmtUGX(promo.bonus_value)} bonus / unit` : `${promo.bonus_value}% bonus`;
 }
+
+/* ---- Is this promotion actually paying anybody? ---------------------
+   starts_at and ends_at were saved by this form, edited by this form,
+   and rendered NOWHERE. The card had one signal -- the `active` flag --
+   and treated it as the whole answer, so a promotion that ended in June
+   and one running today were the same green card.
+
+   They are not the same thing. `active` is the admin's own switch; the
+   window is the schedule, and agent-submit-order enforces it:
+
+     (!p.starts_at || p.starts_at <= today) && (!p.ends_at || p.ends_at >= today)
+
+   Measured on a seeded roster with today at 2026-08-05: of four
+   promotions all shown as on, one had ENDED 36 days earlier and one did
+   not START for another 88. The server paid nothing on either, and the
+   shop had no way to tell.
+
+   promotionRunsOn is that same predicate, so the two screens cannot
+   disagree about what is live. */
+function promotionRunsOn(promo, today){
+  const t = today || todayISO();
+  return (!promo.starts_at || promo.starts_at <= t) && (!promo.ends_at || promo.ends_at >= t);
+}
+/* Four states, not two. "Not paying" covers three quite different
+   situations -- switched off, not started yet, finished -- and they call
+   for three different actions: turn it on, wait, or renew it. */
+function promotionState(promo, today){
+  const t = today || todayISO();
+  if(!promo.active) return 'off';
+  /* A window that closes before it opens satisfies neither of the
+     server's tests on any day there will ever be. Saving one is refused
+     now, but rows predating that check exist, and neither of the other
+     answers is true about them: "starts in 88 days" promises a run that
+     will not happen, and "ended 36 days ago" claims one that never did.
+     So it gets said as what it is. */
+  if(promo.starts_at && promo.ends_at && promo.ends_at < promo.starts_at) return 'never';
+  /* With that handled, these two cannot both apply: being scheduled AND
+     ended needs ends_at < t < starts_at, which is the backwards window
+     caught above. So their order is free, and the mutation swapping them
+     changes no answer -- recorded here rather than chased with a fixture
+     that cannot exist. */
+  if(promo.starts_at && promo.starts_at > t) return 'scheduled';
+  if(promo.ends_at && promo.ends_at < t) return 'ended';
+  return 'running';
+}
+// A key matching the one agent-submit-order builds, so a promotion and
+// the order lines it paid on are joined the same way the server joined
+// them. variant_idx is stored as a STRING by this form, so an index of 0
+// survives `|| ''` -- a numeric 0 would not, and the server's key has the
+// same shape for the same reason.
+function promotionKey(productId, variantIdx){
+  return `${productId}::${variantIdx == null || variantIdx === '' ? '' : variantIdx}`;
+}
+
+/* What it has actually produced. bonusCommission is snapshotted onto
+   each order line at submit time -- the amount that was really granted,
+   not a recomputation -- so this is what the promotion has cost its
+   funder and earned its agents, rather than what it would pay today.
+
+   Lines with a zero bonus are excluded on purpose: the same product sold
+   by an agent who never added it to their cluster earns nothing, and
+   counting those as promotion sales would credit it with business it did
+   not cause. */
+function promotionEarnings(promo){
+  const key = promotionKey(promo.product_id, promo.variant_idx);
+  let units = 0, bonus = 0, orders = 0;
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.originAgentId) return;
+    let hit = false;
+    (q.items||[]).forEach(it=>{
+      const b = Number(it.bonusCommission)||0;
+      if(b <= 0) return;
+      if(promotionKey(it.productId, it.variantIdx == null ? '' : String(it.variantIdx)) !== key) return;
+      hit = true; units += Number(it.qty)||0; bonus += b;
+    });
+    if(hit) orders++;
+  });
+  return { orders, units, bonus };
+}
+
+/* Two promotions on one product is not a richer offer -- it is an
+   ambiguous one. agent-submit-order builds promoByKey as a Map, so the
+   second row for a key silently overwrites the first, and its query has
+   no ORDER BY: which of them pays is whatever Postgres happens to return
+   first. Nothing in this form stopped two being created, and the cards
+   gave no hint that they collided. */
+function promotionClashes(promo, all, today){
+  const key = promotionKey(promo.product_id, promo.variant_idx);
+  return (all||[]).filter(p=> p.id !== promo.id
+    && promotionKey(p.product_id, p.variant_idx) === key
+    && p.active && promo.active
+    && promotionRunsOn(p, today) && promotionRunsOn(promo, today));
+}
+
+/* Over every promotion, not the rendered subset: "six promotions" is not
+   a fact anybody can act on, "two of six are actually paying" is. */
+function promotionPosition(all, today){
+  const rows = (all||[]).map(p=> ({ p, state: promotionState(p, today), earned: promotionEarnings(p) }));
+  const running = rows.filter(r=> r.state === 'running');
+  /* Totalled over DISTINCT products, not over promotions. A line's
+     bonusCommission records the amount, never which promotion produced
+     it, so two promotions on one product both report the same figure --
+     and adding them made the shop's total bonus bill larger than the
+     bonus it had actually paid. Counted once per product key, which is
+     the granularity the evidence actually has. */
+  const seen = new Set();
+  const bonus = rows.reduce((s,r)=>{
+    const key = promotionKey(r.p.product_id, r.p.variant_idx);
+    if(seen.has(key)) return s;
+    seen.add(key); return s + r.earned.bonus;
+  }, 0);
+  return {
+    total: rows.length,
+    running: running.length,
+    ended: rows.filter(r=> r.state === 'ended').length,
+    scheduled: rows.filter(r=> r.state === 'scheduled').length,
+    off: rows.filter(r=> r.state === 'off').length,
+    bonus,
+    // A live promotion nobody has sold under is the one worth chasing:
+    // it is agreed, funded and earning the supplier nothing.
+    runningUnsold: running.filter(r=> r.earned.units === 0).length,
+    clashes: rows.filter(r=> promotionClashes(r.p, all, today).length).length,
+  };
+}
+// The window said the way somebody would say it, rather than as two ISO
+// dates they have to subtract in their head.
+const PROMO_STATES = {
+  running:   { label: 'Running',      cls: 'ok' },
+  scheduled: { label: 'Not yet',      cls: 'warn' },
+  ended:     { label: 'Ended',        cls: 'bad' },
+  off:       { label: 'Switched off', cls: 'quiet' },
+  never:     { label: 'Never runs',   cls: 'bad' },
+};
+function promotionWhenLabel(promo, state, today){
+  const t = today || todayISO();
+  // agingDaysLabel(0) is "Today", which reads as "Ends in Today". The last
+  // day is worth saying plainly anyway -- it is the one that needs a
+  // decision before the shop closes.
+  const inDays = (to)=>{
+    const d = daysBetweenPromo(t, to);
+    return d === 0 ? 'today' : `in ${agingDaysLabel(d)}`;
+  };
+  if(state === 'never') return `Set to end ${fmtShortDate(promo.ends_at)}, before it starts ${fmtShortDate(promo.starts_at)}`;
+  if(state === 'scheduled') return `Starts ${inDays(promo.starts_at)}`;
+  if(state === 'ended') return `Ended ${agingDaysLabel(daysSinceDate(promo.ends_at))} ago`;
+  if(state === 'running') return promo.ends_at
+    ? `Ends ${inDays(promo.ends_at)}`
+    : 'No end date — runs until switched off';
+  return promo.ends_at ? `Window ended ${fmtShortDate(promo.ends_at)}` : 'No window set';
+}
+// Whole days from `from` to `to`, both YYYY-MM-DD, in UTC for the same
+// reason daysSinceDate is: these strings come from todayISO().
+function daysBetweenPromo(from, to){
+  if(!from || !to) return 0;
+  const a = new Date(from+'T00:00:00Z'), b = new Date(to+'T00:00:00Z');
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return 0;
+  return Math.max(0, Math.round((b-a)/86400000));
+}
+
 function promotionCardHTML(promo){
   const product = data.products.find(p=>p.id===promo.product_id);
   const variantIdx = (promo.variant_idx==null || promo.variant_idx==='') ? null : Number(promo.variant_idx);
   const pname = product ? productDisplayLabel(product, variantIdx) : promo.product_id;
   const supplier = promo.supplier_id ? data.suppliers.find(s=>s.id===promo.supplier_id) : null;
-  return `<div class="price-card ${promo.active?'':'price-card-oos'}">
+  const state = promotionState(promo);
+  const def = PROMO_STATES[state];
+  const earned = promotionEarnings(promo);
+  const clash = promotionClashes(promo, agentPromotions||[]);
+  return `<div class="price-card promo-card ${state==='running'?'':'price-card-oos'}">
     <div class="prc-head">
       <div class="prc-head-main">
         ${productThumbHTML(product||{image:null,name:pname}, variantIdx)}
         <div class="prc-title">
           <div class="prc-name">${esc(pname)}</div>
-          <div class="prc-meta"><span class="prc-date">${esc(promotionBonusLabel(promo))}${promo.active?'':' — inactive'}</span></div>
+          <div class="prc-meta"><span class="prc-date">${esc(promotionBonusLabel(promo))}</span></div>
         </div>
       </div>
       <div class="pc-actions">
-        <button class="pc-icon-btn ${promo.active?'pc-icon-btn-active-danger':''}" title="${promo.active?'Deactivate':'Activate'}" onclick="togglePromotionActive(${promo.id})">${promo.active?ICON_NO_STOCK:ICON_RESTOCK}</button>
+        <button class="pc-icon-btn ${promo.active?'pc-icon-btn-active-danger':''}" title="${promo.active?'Switch off — agents stop earning its bonus':'Switch on'}" onclick="togglePromotionActive(${promo.id})">${promo.active?ICON_NO_STOCK:ICON_RESTOCK}</button>
         <button class="pc-icon-btn" title="Edit promotion" onclick="editPromotion(${promo.id})">${ICON_EDIT}</button>
         <button class="pc-icon-btn danger" title="Delete promotion" onclick="deletePromotion(${promo.id})">${ICON_TRASH}</button>
       </div>
     </div>
+    <div class="promo-when">
+      <span class="promo-state ${esc(def.cls)}">${esc(def.label)}</span>
+      <span class="promo-when-text">${esc(promotionWhenLabel(promo, state))}</span>
+    </div>
+    <div class="promo-figs">
+      <div class="promo-fig"><b>${earned.units ? esc(String(Math.round(earned.units))) : '0'}</b><span>units sold${clash.length?' on this product':' on it'}</span></div>
+      <div class="promo-fig"><b>${esc(fmtUGX(Math.round(earned.bonus)))}</b><span>bonus earned</span></div>
+      <div class="promo-fig"><b>${earned.orders}</b><span>orders</span></div>
+    </div>
+    ${state === 'running' && earned.units === 0
+      ? '<div class="promo-note warn">Running, and no agent has sold one yet. Nobody is earning from it and its funder is getting nothing.</div>' : ''}
+    ${state === 'ended'
+      ? '<div class="promo-note bad">Agents stopped earning this the day it ended. Give it a new end date to bring it back.</div>' : ''}
+    ${state === 'scheduled'
+      ? '<div class="promo-note warn">Agents cannot earn this yet, and it does not show as a bonus on their Explore page until it starts.</div>' : ''}
+    ${state === 'never'
+      ? '<div class="promo-note bad">Its end date is before its start date, so there is no day on which it pays. Edit the dates to bring it back.</div>' : ''}
+    ${clash.length
+      ? `<div class="promo-note bad">${clash.length === 1 ? 'Another promotion' : `${clash.length} other promotions`} on this same product ${clash.length === 1 ? 'is' : 'are'} running too. Only one of them pays, and which is not decided anywhere — switch off the ones you do not mean.${
+          earned.bonus > 0 ? ' The figures above cover the product, not this promotion alone: an order line records the bonus it was paid, never which promotion paid it.' : ''}</div>` : ''}
     ${supplier ? `<div class="prc-supplier"><svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>Funded by ${esc(supplier.name)}</div>` : ''}
+  </div>`;
+}
+
+function promotionPositionHTML(){
+  const p = promotionPosition(agentPromotions||[]);
+  if(!p.total) return '';
+  const idle = [
+    p.ended ? `${p.ended} ended` : '',
+    p.scheduled ? `${p.scheduled} not started` : '',
+    p.off ? `${p.off} switched off` : '',
+  ].filter(Boolean).join(' &middot; ');
+  return `<div class="ag-pos">
+    <div class="ag-pos-figs">
+      <div class="ag-pos-fig ${p.running ? '' : 'bad'}"><b>${p.running} of ${p.total}</b><span>actually paying today</span></div>
+      <div class="ag-pos-fig"><b>${esc(fmtUGX(Math.round(p.bonus)))}</b><span>bonus earned on them</span></div>
+    </div>
+    ${idle ? `<div class="ag-pos-line">${idle}.</div>` : ''}
+    ${p.runningUnsold
+      ? `<div class="ag-pos-line">${p.runningUnsold} running promotion${p.runningUnsold===1?' has':'s have'} never been sold on.</div>` : ''}
+    ${p.clashes
+      ? `<div class="ag-pos-line bad">${p.clashes} promotion${p.clashes===1?'':'s'} share a product with another that is also running — only one of each pair pays.</div>` : ''}
   </div>`;
 }
 async function renderAgentPromotions(){
@@ -15538,7 +15770,23 @@ async function renderAgentPromotions(){
     wrap.innerHTML = `<div class="empty">No promotions yet. Add one when a supplier agrees to fund extra push on a product.</div>`;
     return;
   }
-  wrap.innerHTML = `<div class="price-grid">${agentPromotions.map(promotionCardHTML).join('')}</div>`;
+  /* Ordered by what needs doing. Newest-first put a promotion that ended
+     in June above one running today purely because it was typed later --
+     and the ones needing a decision (ended, clashing, live but never sold
+     on) are exactly the ones that were hardest to find. */
+  const rank = { never: 0, ended: 1, running: 2, scheduled: 3, off: 4 };
+  const rows = agentPromotions.slice().sort((a,b)=>{
+    const sa = promotionState(a), sb = promotionState(b);
+    if(sa !== sb) return rank[sa] - rank[sb];
+    // Within a state, whichever has produced more comes first -- except
+    // for the live ones, where a promotion nobody has sold on is the one
+    // to look at, so it rises instead.
+    const ea = promotionEarnings(a).bonus, eb = promotionEarnings(b).bonus;
+    if(sa === 'running' && ea !== eb) return ea - eb;
+    if(ea !== eb) return eb - ea;
+    return b.id - a.id;
+  });
+  wrap.innerHTML = promotionPositionHTML() + `<div class="price-grid">${rows.map(promotionCardHTML).join('')}</div>`;
 }
 function resetPromotionForm(){
   editingPromotionId = null;
@@ -15573,7 +15821,19 @@ async function togglePromotionActive(id){
   toast(promo.active ? 'Promotion activated' : 'Promotion deactivated');
 }
 async function deletePromotion(id){
-  if(!confirm('Delete this promotion? Agents who already added it to their cluster will stop seeing a bonus for it.')) return;
+  /* What has already been earned under it. Not a reason to refuse -- the
+     bonuses are snapshotted onto the order lines and survive the row
+     going -- but it is the difference between deleting a promotion
+     nobody used and deleting the record of an arrangement a supplier has
+     been billed for. The same guard the supplier and customer deletes
+     carry, for the same reason: the figure belongs on screen at the
+     moment of the decision, not afterwards. */
+  const promo = (agentPromotions||[]).find(x=>x.id===id);
+  const earned = promo ? promotionEarnings(promo) : { orders:0, units:0, bonus:0 };
+  if(!confirm(`Delete this promotion? Agents who already added it to their cluster will stop seeing a bonus for it.${
+    earned.bonus > 0
+      ? `\n\n${fmtUGX(Math.round(earned.bonus))} of bonus has already been earned under it across ${earned.orders} order${earned.orders===1?'':'s'}. That stays on those orders and stays claimable — but this record of the arrangement goes.`
+      : ''}`)) return;
   const { error } = await sb.from('agent_promotions').delete().eq('shop_id', currentShopId).eq('id', id);
   if(error){ toast('Could not delete: '+error.message); return; }
   agentPromotions = agentPromotions.filter(x=>x.id!==id);
@@ -15630,6 +15890,27 @@ document.getElementById('promo_save').addEventListener('click', async ()=>{
   const supplierId = document.getElementById('promo_supplier').value || null;
   const startsAt = document.getElementById('promo_starts_at').value || null;
   const endsAt = document.getElementById('promo_ends_at').value || null;
+  /* A window that closes before it opens can never pay: the server's own
+     test is `starts_at <= today && ends_at >= today`, which no day
+     satisfies. It saved happily, showed as active, and paid nothing. */
+  if(startsAt && endsAt && endsAt < startsAt){
+    toast('The end date is before the start date, so this promotion could never run.', 6000);
+    document.getElementById('promo_ends_at').focus(); return;
+  }
+  /* Backdating an end is legitimate -- closing one off today, or
+     recording one that already finished -- so this asks rather than
+     refuses. What it must not do is stay silent, which is how a
+     promotion got saved, shown as on, and never paid a shilling. */
+  if(endsAt && endsAt < todayISO()
+    && !confirm(`That end date has already passed, so this promotion will not pay anybody from the moment you save it.\n\nSave it anyway?`)) return;
+  /* Two live promotions on one product is ambiguous, not generous: the
+     server keys them into a Map, so the second silently replaces the
+     first, and its query has no ORDER BY to say which. */
+  const clashKey = promotionKey(productId, variantIdxRaw === '' ? '' : String(variantIdxRaw));
+  const clashing = (agentPromotions||[]).filter(p=> p.id !== editingPromotionId
+    && p.active && promotionKey(p.product_id, p.variant_idx) === clashKey
+    && promotionRunsOn(p) && (!startsAt || startsAt <= todayISO()) && (!endsAt || endsAt >= todayISO()));
+  if(clashing.length && !confirm(`This product already has ${clashing.length === 1 ? 'a promotion' : clashing.length + ' promotions'} running.\n\nOnly one bonus is ever paid per product, and which one wins is not decided anywhere — agents would earn whichever the server happens to read first.\n\nAdd this one anyway?`)) return;
   const row = {
     shop_id: currentShopId,
     product_id: productId,
