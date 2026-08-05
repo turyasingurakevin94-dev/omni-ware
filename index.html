@@ -479,8 +479,29 @@
   .kpi-cell{padding:16px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
   .kpi-cell:last-child{border-right:none;}
   .kpi-label{font-size:11.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
-  .kpi-value{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;color:var(--ink);word-break:break-word;}
+  .kpi-value{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;color:var(--ink);word-break:break-word;
+    display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;}
   .kpi-value.good{color:var(--good);}
+  /* The Gross profit cell carried a hardcoded `good`, so a LOSS rendered
+     in the same verdigris as a profit -- verified: -60,000 in
+     rgb(28,107,88). It is coloured by its sign now. */
+  .kpi-value.bad{color:var(--danger);}
+
+  /* A figure on its own says nothing about a business. 20,271,000 of
+     sales is either a good month or a collapse, and this page never
+     said which. */
+  .an-delta{font-family:inherit;font-size:12px;font-weight:700;letter-spacing:0.2px;}
+  .an-delta.up{color:var(--good);}
+  .an-delta.down{color:var(--danger);}
+  .an-delta.new{color:var(--ink-soft);}
+
+  /* What the figures rest on. */
+  .an-kpi-note{font-size:12.5px;line-height:1.55;color:var(--ink-soft);
+    background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin:-4px 0 16px;}
+  .an-note-estimated{color:var(--ow-amber-ink);font-weight:600;}
+  .an-note-filtered{color:var(--ink);font-weight:600;}
+  .an-total-row td{font-weight:700;border-top:2px solid var(--line);background:var(--bg);}
+  .an-neg{color:var(--danger);}
 
   /* ===== Executive Dashboard ===== */
   .dash-range-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
@@ -4745,6 +4766,10 @@
         </div>
 
         <div class="kpi-grid" id="an_kpiGrid"></div>
+        <!-- What the figures above rest on: the period they are compared
+             with, whether a search is narrowing them, and how much of the
+             cost behind them was a guess. -->
+        <div class="an-kpi-note" id="an_kpiNote" style="display:none;"></div>
 
         <div class="an-subtabs" id="an_subtabs">
           <button type="button" data-view="doc" class="active">Statistics by doc.</button>
@@ -13816,7 +13841,10 @@ function anRowsByDoc(invoices){
       date: q.invoicedAt || q.date || '', doc: invoiceNumberLabel(q),
       customer: (q.client && q.client.name) || 'Unnamed client',
       items: q.items.length, qty: t.qty, sales: t.sales, cost: t.cost,
-      profit: t.profit, margin: t.margin
+      profit: t.profit, margin: t.margin,
+      // Carried onto the row so it survives a search: how much of this
+      // row's cost was a guess is a property of the row, not of the range.
+      estimatedQty: t.estimatedQty
     };
   });
 }
@@ -13828,7 +13856,8 @@ function anRowsByItem(invoices){
       const iqty = Number(it.qty)||0;
       const sell = quoteItemSellPrice(it);
       // Same costing as every other profit figure -- see invoiceLineCost.
-      const lineCost = invoiceLineCost(it).cost;
+      const lineCosting = invoiceLineCost(it);
+      const lineCost = lineCosting.cost;
       const product = data.products.find(p=>p.id===it.productId);
       if(!map.has(key)){
         map.set(key, {
@@ -13840,11 +13869,12 @@ function anRowsByItem(invoices){
           name: it.productName || (product ? product.name : 'Unknown item'),
           variant: (product && it.variantIdx!=null) ? productVariantLabel(product, it.variantIdx) : '',
           category: product ? (product.category||'') : '',
-          unit: it.unit || '', sales:0, qty:0, cost:0
+          unit: it.unit || '', sales:0, qty:0, cost:0, estimatedQty:0
         });
       }
       const row = map.get(key);
       row.sales += iqty*sell; row.qty += iqty; row.cost += lineCost;
+      row.estimatedQty += lineCosting.estimatedQty;
     });
   });
   return [...map.values()].map(r=>({...r, profit: r.sales-r.cost, margin: r.sales>0 ? (r.sales-r.cost)/r.sales*100 : 0}));
@@ -13857,10 +13887,11 @@ function anRowsByCustomer(invoices){
     const t = anInvoiceTotals(q);
     if(!map.has(key)){
       const rec = data.customers.find(c=>(c.name||'').trim().toLowerCase()===key);
-      map.set(key, {name, location: rec ? (rec.location||'') : '', sales:0, cost:0, qty:0, count:0});
+      map.set(key, {name, location: rec ? (rec.location||'') : '', sales:0, cost:0, qty:0, count:0, estimatedQty:0});
     }
     const row = map.get(key);
     row.sales += t.sales; row.cost += t.cost; row.qty += t.qty; row.count += 1;
+    row.estimatedQty += t.estimatedQty;
   });
   return [...map.values()].map(r=>({...r, profit: r.sales-r.cost, margin: r.sales>0 ? (r.sales-r.cost)/r.sales*100 : 0}));
 }
@@ -13869,22 +13900,151 @@ function anRowsForView(){
   if(anView==='customer') return anRowsByCustomer(anLastInvoices);
   return anRowsByDoc(anLastInvoices);
 }
-function renderAnKpis(){
-  const t = anOverallTotals(anLastInvoices);
+
+/* ---- What is on the screen, and only that ---------------------------
+   The search box filtered the table and NOTHING else. The KPIs above it
+   went on describing the whole range -- "Sales count 3" sat over a
+   single row -- and Export CSV, the button immediately beside the search
+   box, wrote every row in the range in a different order from the one
+   being looked at. Verified: searching "Beta" showed one customer and
+   exported three.
+
+   So the rows are worked out once and the table, the totals, the KPIs
+   and the export all read the same list. */
+function anFilterRows(rows, query){
+  const q = String(query||'').trim().toLowerCase();
+  /* The early return is a shortcut, not a guard: "".includes("") is true,
+     so removing it changes no answer, only the work done. Recorded here
+     rather than chased with a fixture that cannot tell them apart. */
+  if(!q) return rows;
+  /* `key` is an internal join field, not something anybody searched for.
+     Left in, typing "::" matched every row on every screen. */
+  return rows.filter(r => Object.entries(r)
+    .filter(([k]) => k !== 'key')
+    .map(([,v]) => v).join(' ').toLowerCase().includes(q));
+}
+function anSortRows(rows, sort){
+  return rows.slice().sort((a,b)=>{
+    const av = a[sort.key], bv = b[sort.key];
+    if(typeof av==='number' && typeof bv==='number') return (av-bv)*sort.dir;
+    return String(av||'').localeCompare(String(bv||'')) * sort.dir;
+  });
+}
+function anVisibleRows(){
+  return anSortRows(
+    anFilterRows(anRowsForView(), document.getElementById('an_table_search').value),
+    anSortState[anView]);
+}
+/* Totalled over the rows in front of somebody rather than over the
+   range, so the summary and the table cannot contradict each other. With
+   an empty search box the two are the same thing. */
+function anVisibleTotals(rows){
+  const t = rows.reduce((a,r)=>({
+    sales: a.sales + (Number(r.sales)||0),
+    cost: a.cost + (Number(r.cost)||0),
+    qty: a.qty + (Number(r.qty)||0),
+    estimatedQty: a.estimatedQty + (Number(r.estimatedQty)||0),
+    count: a.count + (r.count == null ? 1 : Number(r.count)||0),
+  }), {sales:0, cost:0, qty:0, estimatedQty:0, count:0});
+  t.profit = t.sales - t.cost;
+  t.margin = t.sales>0 ? t.profit/t.sales*100 : 0;
+  return t;
+}
+
+/* How much of the cost behind these figures was a guess.
+
+   invoiceLineCost already works this out -- estimatedQty is the units
+   sold out of the shop's own stock with NO cost lot behind them, costed
+   at whatever `price` happened to be on the line, which for a
+   counter-picked item is often nothing at all. The page then printed the
+   margin those units produced to two decimal places.
+
+   Measured: 20 of 30 units costed at zero, and the screen reported a
+   gross margin of 79.71% without a word. A margin is a claim about the
+   difference between two numbers, and it is worth nothing if one of them
+   was invented. */
+function anCostConfidence(totals){
+  const est = Number(totals.estimatedQty)||0;
+  const qty = Number(totals.qty)||0;
+  if(est <= 0 || qty <= 0) return null;
+  return { est, qty, share: est/qty, dominant: est/qty >= 0.5 };
+}
+/* The same window, immediately before this one. A number on its own says
+   nothing about a business -- 20,271,000 of sales is either a good month
+   or a collapse, and this page has never said which. Null for "all
+   time", which has no period before it to compare with. */
+function anPreviousTotals(){
+  const {from, to} = anGetDateRange();
+  if(!from || !to) return null;
+  const days = dashRangeSpanDays(from, to);
+  if(!(days > 0)) return null;
+  const prevTo = anShiftDate(from, -1);
+  const prevFrom = anShiftDate(prevTo, -(days-1));
+  const prev = anInvoicesInRange(prevFrom, prevTo);
+  if(!prev.length) return null;
+  return { ...anOverallTotals(prev), from: prevFrom, to: prevTo };
+}
+/* A change against a base of nothing is not a percentage. Said as what it
+   is -- new business -- rather than as +100%, which implies a doubling.
+
+   And a margin moves in POINTS, not per cent. A margin going from 13.2%
+   to 23.3% is up 10.1 points; reporting it as "+77%" reads as though the
+   margin itself were 77, which is the number somebody would then repeat
+   to their supplier. */
+function anDeltaHTML(now, before, higherIsBetter, points){
+  if(before == null) return '';
+  if(points){
+    const d = now - before;
+    if(Math.abs(d) < 0.05) return '<span class="an-delta new">level</span>';
+    const good = higherIsBetter ? d >= 0 : d <= 0;
+    return `<span class="an-delta ${good?'up':'down'}">${d>=0?'+':''}${d.toFixed(1)} pts</span>`;
+  }
+  if(!(Math.abs(before) > 0)) return now > 0 ? '<span class="an-delta new">new</span>' : '';
+  const pct = (now - before)/Math.abs(before)*100;
+  const good = higherIsBetter ? pct >= 0 : pct <= 0;
+  return `<span class="an-delta ${good?'up':'down'}">${pct>=0?'+':''}${pct.toFixed(0)}%</span>`;
+}
+
+function renderAnKpis(rows){
+  const t = anVisibleTotals(rows || anVisibleRows());
+  const prev = anPreviousTotals();
+  const filtered = !!document.getElementById('an_table_search').value.trim();
+  const conf = anCostConfidence(t);
+  // A comparison against the whole previous period means nothing while a
+  // search is narrowing this one to a single customer.
+  const cmp = filtered ? null : prev;
+
   const secondCell = anView==='item'
     ? `<div class="kpi-cell"><div class="kpi-label">Sold</div><div class="kpi-value">${t.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</div></div>`
     : `<div class="kpi-cell"><div class="kpi-label">Sales count</div><div class="kpi-value">${t.count}</div></div>`;
   document.getElementById('an_kpiGrid').innerHTML = `
-    <div class="kpi-cell"><div class="kpi-label">Items sales</div><div class="kpi-value">${fmtUGX(Math.round(t.sales))}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">Items sales</div><div class="kpi-value">${fmtUGX(Math.round(t.sales))}${
+      cmp ? anDeltaHTML(t.sales, cmp.sales, true) : ''}</div></div>
     ${secondCell}
     <div class="kpi-cell"><div class="kpi-label">Cost of item sold</div><div class="kpi-value">${fmtUGX(Math.round(t.cost))}</div></div>
-    <div class="kpi-cell"><div class="kpi-label">Gross profit</div><div class="kpi-value good">${fmtUGX(Math.round(t.profit))}</div></div>
-    <div class="kpi-cell"><div class="kpi-label">Gross margin</div><div class="kpi-value">${t.margin.toFixed(2)}%</div></div>
+    <div class="kpi-cell"><div class="kpi-label">Gross profit</div><div class="kpi-value ${t.profit >= 0 ? 'good' : 'bad'}">${fmtUGX(Math.round(t.profit))}${
+      cmp ? anDeltaHTML(t.profit, cmp.profit, true) : ''}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">Gross margin</div><div class="kpi-value ${t.margin >= 0 ? '' : 'bad'}">${
+      /* One decimal, not two. Two decimals on a figure part of whose cost
+         was invented is precision the number does not have. */
+      t.margin.toFixed(1)}%${cmp ? anDeltaHTML(t.margin, cmp.margin, true, true) : ''}</div></div>
   `;
+  const note = document.getElementById('an_kpiNote');
+  const bits = [];
+  if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('an_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
+  else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.sales)))} of sales, ${esc(fmtUGX(Math.round(prev.profit)))} profit.`);
+  if(conf) bits.push(`<span class="an-note-estimated">Cost was estimated on ${conf.est.toLocaleString('en-UG',{maximumFractionDigits:2})} of ${conf.qty.toLocaleString('en-UG',{maximumFractionDigits:2})} units${
+    conf.dominant ? ' — most of this margin rests on a guess' : ''}. Those came out of your own stock with no purchase cost recorded against them.</span>`);
+  note.innerHTML = bits.join(' ');
+  note.style.display = bits.length ? '' : 'none';
 }
 function anFormatCell(col, value){
   if(col.money) return fmtUGX(Math.round(Number(value)||0));
-  if(col.pct) return (Number(value)||0).toFixed(2) + '%';
+  /* One decimal, not two -- the same reason the KPI carries one: part of
+     the cost behind a margin can be estimated, and two decimals is
+     precision the figure does not have. Shared with Purchase Analytics,
+     where the argument is identical. */
+  if(col.pct) return (Number(value)||0).toFixed(1) + '%';
   if(col.numeric) return Number(value||0).toLocaleString('en-UG', {maximumFractionDigits:2});
   return esc(value||'');
 }
@@ -13912,17 +14072,34 @@ function reportCardHTML(cols, row, idx, formatCellFn){
     </div>
   </div>`;
 }
+/* A totals row. Somebody looking at "which customers made me money" had
+   no way to see what the column added up to without exporting it and
+   opening a spreadsheet.
+
+   The margin is NOT the sum of the margins -- it is the total profit over
+   the total sales. Adding percentages would weight a one-bag sale the
+   same as a lorry load. */
+function anTableFootHTML(cols, rows){
+  if(!rows.length) return '';
+  const t = anVisibleTotals(rows);
+  return `<tfoot><tr class="an-total-row">
+    <td></td>
+    ${cols.map((c,i)=>{
+      if(!c.numeric) return `<td>${i===0 ? 'Total' : ''}</td>`;
+      const v = c.key==='margin' ? t.margin
+        : c.key==='count' ? t.count
+        : (t[c.key] != null ? t[c.key] : rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0));
+      return `<td class="price${c.key==='profit' && v<0 ? ' an-neg' : ''}">${anFormatCell(c, v)}</td>`;
+    }).join('')}
+  </tr></tfoot>`;
+}
+
 function renderAnTable(){
-  let rows = anRowsForView();
-  const q = document.getElementById('an_table_search').value.trim().toLowerCase();
-  if(q) rows = rows.filter(r => Object.values(r).join(' ').toLowerCase().includes(q));
+  const rows = anVisibleRows();
   const cols = AN_COLUMNS[anView];
   const sort = anSortState[anView];
-  rows = rows.slice().sort((a,b)=>{
-    const av = a[sort.key], bv = b[sort.key];
-    if(typeof av==='number' && typeof bv==='number') return (av-bv)*sort.dir;
-    return String(av||'').localeCompare(String(bv||'')) * sort.dir;
-  });
+  // The summary describes these rows, so it is drawn from them.
+  renderAnKpis(rows);
   const wrap = document.getElementById('an_tableWrap');
   if(rows.length===0){
     wrap.innerHTML = anLastInvoices.length===0
@@ -13935,8 +14112,9 @@ function renderAnTable(){
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
-    ${cols.map(c=>`<td class="${c.numeric?'price':''}">${anFormatCell(c, r[c.key])}</td>`).join('')}
-  </tr>`).join('')}</tbody></table></div>
+    ${cols.map(c=>`<td class="${c.numeric?'price':''}${c.key==='profit' && Number(r[c.key])<0 ? ' an-neg' : ''}">${anFormatCell(c, r[c.key])}</td>`).join('')}
+  </tr>`).join('')}</tbody>
+  ${anTableFootHTML(cols, rows)}</table></div>
   <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, anFormatCell)).join('')}</div>`;
   wrap.querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click', ()=>{
     const key = th.dataset.key;
@@ -13947,7 +14125,8 @@ function renderAnTable(){
 function renderSalesAnalytics(){
   const {from, to} = anGetDateRange();
   anLastInvoices = anInvoicesInRange(from, to);
-  renderAnKpis();
+  // renderAnTable works out the visible rows and hands them to the KPIs,
+  // so the summary is always describing exactly what is below it.
   renderAnTable();
 }
 document.getElementById('an_range_preset').addEventListener('change', ()=>{
@@ -13963,19 +14142,24 @@ document.querySelectorAll('#an_subtabs button').forEach(btn=>{
     document.querySelectorAll('#an_subtabs button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     anView = btn.dataset.view;
-    renderAnKpis();
     renderAnTable();
   });
 });
 document.getElementById('an_export_btn').addEventListener('click', ()=>{
   const cols = AN_COLUMNS[anView];
-  const rows = anRowsForView();
+  /* What is on the screen. This read anRowsForView(), which is the whole
+     range unsorted -- so somebody who searched for one customer, saw one
+     row, and pressed the button beside that search box got a file with
+     everybody in it, in a different order. */
+  const rows = anVisibleRows();
   const lines = [['No.', ...cols.map(c=>c.label)].join(',')];
   rows.forEach((r,i)=>{
     const vals = cols.map(c=>{
       let v = r[c.key];
       if(c.money) v = Math.round(Number(v)||0);
-      else if(c.pct) v = (Number(v)||0).toFixed(2);
+      // Matching the screen. A CSV that disagrees with the table it was
+      // exported from is a second set of books.
+      else if(c.pct) v = (Number(v)||0).toFixed(1);
       else v = v==null ? '' : v;
       return `"${String(v).replace(/"/g,'""')}"`;
     });
