@@ -24042,7 +24042,15 @@ function stBalanceSheet({bs}){
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What is left over — yours</td></tr>
       ${stLine("Money the owner put in", bs.ownerCapital, null)}
-      ${stLine('Profit kept in the business', bs.retainedEarnings, null)}
+      ${/* Named for what it IS. "Profit kept in the business" claims the
+            app added up years of profit and put the answer here; it did
+            not. This is net worth less the owner's money, arrived at by
+            subtraction -- so every error anywhere else on the sheet
+            lands in this one line, and a reader has to know that before
+            they trust it. The caveat belongs on the line rather than in
+            a footnote under it. */''}
+      ${stLine('Kept in the business', bs.retainedEarnings, null,
+        {hint:'a balancing figure, not a running total of profit — it is what is left once the owner\'s money is taken from net worth, so anything unexplained elsewhere on this sheet lands here'})}
       ${stLine('Net worth', bs.equity, null, {cls:'st-grand'})}
     </table>
     <p class="st-read">${bs.assets>0

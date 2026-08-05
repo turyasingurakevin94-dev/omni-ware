@@ -239,6 +239,28 @@ const reset = () => {
     'the sheet balances -- which it always will, since equity is the remainder');
   t.check(r(bs.retainedEarnings) === r(bs.equity - bs.ownerCapital),
     'and retained earnings is that remainder less what the owner put in');
+
+  /* Which is why the LINE must not claim otherwise. "Profit kept in the
+     business" says the app added up years of profit and put the answer
+     here; it did not, and cannot -- there are no opening balances and no
+     ledger. It is arrived at by subtraction, so every error anywhere
+     else on the sheet lands in this one line, and the reader has to be
+     told that where they read it rather than in a footnote below. */
+  /* Pinned on the stLine CALL, not on the function's prose: the comment
+     explaining the change quotes the old label, so a body-wide search
+     for it matches the very note saying it was wrong. */
+  const doc = (/function stBalanceSheet[\s\S]*?\n\}\n/.exec(src) || [''])[0];
+  t.check(!/stLine\('Profit kept in the business'/.test(doc),
+    'the line does not claim to be a total of profits earned');
+  t.check(/stLine\('Kept in the business'/.test(doc),
+    'and is named for what it is');
+  /* As a hint, not merely as text present somewhere in the function.
+     Renaming the key left the sentence sitting in the source, unrendered
+     and unreachable, while a content-only check went on passing. */
+  t.check(/\{hint:'a balancing figure, not a running total of profit/.test(doc),
+    'it says what it actually is, on the line where it is read');
+  t.check(/anything unexplained elsewhere on this sheet lands here/.test(doc),
+    'and that it absorbs everything the rest of the sheet could not explain');
 }
 
 /* ---------- 4b. wages and rent are a liability ------------------------ *
