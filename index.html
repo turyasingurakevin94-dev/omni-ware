@@ -1696,6 +1696,103 @@
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
     clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 
+  /* ================= THE TILL ======================================
+     Cash In and Cash Out are where every shilling in the business gets
+     typed. They were a six-field form in which the amount -- the one
+     thing the form exists to capture -- was 169x37 at 14px, byte for
+     byte the same box as "Time", a field the app fills in for you.
+
+     So: the amount is the subject and everything else is a qualifier.
+     ================================================================= */
+  .till{display:flex;flex-direction:column;gap:18px;}
+
+  /* The amount. Mono because the digits have to line up as they are
+     typed, and large because miscounting a zero here is the most
+     expensive mistake available in this app. */
+  .till-amount{display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:18px 16px 16px;border-radius:14px;background:var(--bg);border:1px solid var(--line);}
+  .till-amount.in{background:var(--ow-verdigris-soft);border-color:#C4DED6;}
+  .till-amount.out{background:var(--ow-crimson-soft);border-color:#EAC7C1;}
+  .till-amount-label{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .till-amount.in .till-amount-label{color:var(--ow-verdigris);}
+  .till-amount.out .till-amount-label{color:var(--ow-crimson);}
+  .till-amount-row{display:flex;align-items:baseline;gap:8px;max-width:100%;}
+  .till-input{
+    font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:700;line-height:1.1;
+    font-variant-numeric:tabular-nums;letter-spacing:-0.5px;
+    border:0;background:transparent;text-align:right;padding:0;width:100%;max-width:340px;
+    color:var(--ink);-moz-appearance:textfield;
+  }
+  .till-input::-webkit-outer-spin-button,.till-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .till-input:focus{outline:none;}
+  .till-input::placeholder{color:var(--ink-soft);opacity:.45;}
+  .till-cur{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink-soft);flex-shrink:0;}
+  /* The figure written out. A cheque does this for exactly one reason,
+     and it is the same reason here: 2,500,000 and 250,000 are one
+     keystroke apart and look alike at a glance, but "two million five
+     hundred thousand" and "two hundred fifty thousand" do not. */
+  .till-words{font-size:12.5px;line-height:1.4;text-align:center;min-height:18px;
+    color:var(--ink-soft);font-style:italic;}
+  .till-amount.in .till-words{color:var(--ow-verdigris);}
+  .till-amount.out .till-words{color:var(--ow-crimson);}
+
+  .till-block{display:flex;flex-direction:column;gap:8px;}
+  .till-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+
+  /* Where the money sits. Each account carries what it holds, so the
+     choice and the consequence are the same control. */
+  .till-accounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .till-acct{display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+    transition:border-color .15s ease,background .15s ease;}
+  .till-acct:hover{background:var(--bg);}
+  .till-acct.on{border-color:var(--ink);background:var(--bg);box-shadow:inset 0 0 0 1px var(--ink);}
+  .till-acct-name{font-size:12.5px;font-weight:700;color:var(--ink);}
+  .till-acct-bal{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;}
+
+  /* What this does to that account, in one line, live. */
+  .till-effect{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;
+    flex-wrap:wrap;min-height:17px;}
+  .till-effect b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .till-effect .till-arrow{color:var(--ink-soft);}
+  .till-warn{font-size:12.5px;line-height:1.45;border-radius:9px;padding:9px 11px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .till-warn b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* Categories are tapped, not typed. They were a text box with a
+     datalist, which meant retyping "Sales Revenue" a dozen times a day. */
+  .till-cats{display:flex;flex-wrap:wrap;gap:7px;}
+  .till-cat{font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    transition:background .15s ease,border-color .15s ease;}
+  .till-cat:hover{background:var(--bg);}
+  .till-cat.on{background:var(--ink);border-color:var(--ink);color:var(--panel);}
+  .till-cat.till-cat-new{border-style:dashed;color:var(--ink-soft);}
+  .till-newcat{display:none;}
+  .till-newcat.show{display:block;}
+
+  /* The collection block. On Cash In this is how a customer's debt
+     actually gets settled -- it was the last field on the form, under
+     Time, behind a parenthetical. */
+  .till-collect{border:1px solid var(--line);border-radius:11px;padding:12px 13px;background:var(--bg);}
+  .till-collect-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .till-collect-head .till-label{margin:0;}
+  .till-collect-hint{font-size:11.5px;color:var(--ink-soft);}
+
+  /* Time is something the app knows. It is a footnote, not a field. */
+  .till-foot-note{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);}
+  .till-foot-note input[type=time]{border:0;background:transparent;color:var(--ink);
+    font-size:11.5px;padding:2px 4px;border-bottom:1px dashed var(--line);}
+  .till-foot-note input[type=time]:focus{outline:none;border-bottom-color:var(--ink);}
+
+  @media (max-width:560px){
+    .till-input{font-size:32px;}
+    .till-accounts{grid-template-columns:1fr;}
+    .till-acct{flex-direction:row;align-items:baseline;justify-content:space-between;}
+  }
+
   /* ---- Payroll and rent ---- */
   .pr-cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:10px;}
   .pr-cell{display:flex;flex-direction:column;gap:3px;background:var(--bg);
@@ -5965,28 +6062,54 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>Account</label>
-          <select id="cb_in_account">
-            <option value="cash">Cash</option>
-            <option value="momo">Mobile Money</option>
-            <option value="bank">Bank</option>
-          </select>
+      <div class="till">
+        <div class="till-amount in">
+          <span class="till-amount-label">Money coming in</span>
+          <div class="till-amount-row">
+            <input type="text" id="cb_in_amount" class="till-input" placeholder="0" inputmode="decimal" autocomplete="off">
+            <span class="till-cur">UGX</span>
+          </div>
+          <div class="till-words" id="cb_in_words"></div>
         </div>
-        <div class="field"><label>Category</label>
-          <input type="text" id="cb_in_category" list="dl_income_categories" placeholder="e.g. Sales Revenue — press Enter to add a new one">
+
+        <div class="till-block">
+          <span class="till-label">Into which account</span>
+          <div class="till-accounts" id="cb_in_accounts"></div>
+          <input type="hidden" id="cb_in_account" value="cash">
+          <div class="till-effect" id="cb_in_effect"></div>
         </div>
-        <div class="field"><label>Amount (UGX)</label><input type="number" id="cb_in_amount" min="0" placeholder="e.g. 50000"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Description</label><input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client"></div>
-        <div class="field"><label>Time</label><input type="time" id="cb_in_time"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Customer (optional — apply this to their invoice(s))</label>
-          <input type="text" id="cb_in_customer" list="dl_cb_in_customers" placeholder="Type a customer name to collect against their outstanding invoices">
+
+        <div class="till-block">
+          <span class="till-label">What is it for</span>
+          <div class="till-cats" id="cb_in_cats"></div>
+          <div class="till-newcat" id="cb_in_newcat_wrap">
+            <input type="text" id="cb_in_category" placeholder="Name the new category, then press Enter" autocomplete="off">
+          </div>
         </div>
-      </div>
-      <div id="cb_in_invoice_picker_section" style="display:none;">
-        <div class="section-label-row form-section-label" style="margin-top:10px;">Apply to invoice(s)</div>
-        <div id="cb_in_invoice_picker_wrap"></div>
-        <div class="field-hint" id="cb_in_invoice_picker_summary" style="margin-top:6px;"></div>
+
+        <div class="till-block">
+          <span class="till-label">Description</span>
+          <input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client" autocomplete="off">
+        </div>
+
+        <div class="till-collect">
+          <div class="till-collect-head">
+            <span class="till-label">Settling a customer's debt?</span>
+            <span class="till-collect-hint">Optional</span>
+          </div>
+          <input type="text" id="cb_in_customer" list="dl_cb_in_customers" placeholder="Type their name to put this against their unpaid invoices" autocomplete="off">
+          <div id="cb_in_invoice_picker_section" style="display:none;">
+            <div class="section-label-row form-section-label" style="margin-top:10px;">Apply to invoice(s)</div>
+            <div id="cb_in_invoice_picker_wrap"></div>
+            <div class="field-hint" id="cb_in_invoice_picker_summary" style="margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <div class="till-foot-note">
+          <span>Recorded at</span>
+          <input type="time" id="cb_in_time">
+          <span id="cb_in_datenote"></span>
+        </div>
       </div>
       <datalist id="dl_cb_in_customers"></datalist>
     </div>
@@ -6007,26 +6130,49 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>Account</label>
-          <select id="cb_out_account">
-            <option value="cash">Cash</option>
-            <option value="momo">Mobile Money</option>
-            <option value="bank">Bank</option>
-          </select>
+      <div class="till">
+        <div class="till-amount out">
+          <span class="till-amount-label">Money going out</span>
+          <div class="till-amount-row">
+            <input type="text" id="cb_out_amount" class="till-input" placeholder="0" inputmode="decimal" autocomplete="off">
+            <span class="till-cur">UGX</span>
+          </div>
+          <div class="till-words" id="cb_out_words"></div>
         </div>
-        <div class="field"><label>Type</label>
-          <select id="cb_out_type">
-            <option value="payment">Payment</option>
-            <option value="expense">Expense</option>
-          </select>
+
+        <div class="till-block">
+          <span class="till-label">Out of which account</span>
+          <div class="till-accounts" id="cb_out_accounts"></div>
+          <input type="hidden" id="cb_out_account" value="cash">
+          <div class="till-effect" id="cb_out_effect"></div>
+          <div id="cb_out_overdraw"></div>
         </div>
-        <div class="field"><label>Category</label>
-          <input type="text" id="cb_out_category" list="dl_expense_categories" placeholder="e.g. Supplier Payment — press Enter to add a new one">
+
+        <div class="till-block">
+          <span class="till-label">What is it for</span>
+          <div class="till-cats" id="cb_out_cats"></div>
+          <div class="till-newcat" id="cb_out_newcat_wrap">
+            <input type="text" id="cb_out_category" placeholder="Name the new category, then press Enter" autocomplete="off">
+          </div>
         </div>
-        <div class="field"><label>Amount (UGX)</label><input type="number" id="cb_out_amount" min="0" placeholder="e.g. 50000"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Description</label><input type="text" id="cb_out_desc" placeholder="e.g. Supplier payment"></div>
-        <div class="field"><label>Time</label><input type="time" id="cb_out_time"></div>
+
+        <div class="till-block">
+          <span class="till-label">Description</span>
+          <input type="text" id="cb_out_desc" placeholder="e.g. Supplier payment" autocomplete="off">
+        </div>
+
+        <div class="till-foot-note">
+          <span>Recorded at</span>
+          <input type="time" id="cb_out_time">
+          <span id="cb_out_datenote"></span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+            <label for="cb_out_type" style="font-size:11.5px;">Show in the ledger as</label>
+            <select id="cb_out_type" style="font-size:11.5px;padding:2px 6px;">
+              <option value="payment">Payment</option>
+              <option value="expense">Expense</option>
+            </select>
+          </span>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -19183,10 +19329,10 @@ document.getElementById('cb_day_today').addEventListener('click', ()=> cbGoToDay
 // The two actions the day is made of, out of the chart widget they were
 // buried in and into the header where an action belongs.
 document.getElementById('cb_money_in').addEventListener('click', ()=>{
-  resetCashTxnForms(); openModal('cashInModal');
+  resetCashTxnForms(); openTill('in');
 });
 document.getElementById('cb_money_out').addEventListener('click', ()=>{
-  resetCashTxnForms(); openModal('cashOutModal');
+  resetCashTxnForms(); openTill('out');
 });
 /* ================= THE DAY, AS ONE SET OF FIGURES ====================
 
@@ -19446,8 +19592,8 @@ function renderCbFlowAnalytics(){
     "Today's expenses by category", ['payment','expense','out'],
     'No cash out recorded yet today — add one below to see the breakdown.', 'out'
   );
-  document.getElementById('cbAnalyticsFabIn').addEventListener('click', ()=>{ resetCashTxnForms(); openModal('cashInModal'); });
-  document.getElementById('cbAnalyticsFabOut').addEventListener('click', ()=>{ resetCashTxnForms(); openModal('cashOutModal'); });
+  document.getElementById('cbAnalyticsFabIn').addEventListener('click', ()=>{ resetCashTxnForms(); openTill('in'); });
+  document.getElementById('cbAnalyticsFabOut').addEventListener('click', ()=>{ resetCashTxnForms(); openTill('out'); });
 }
 
 function accountLabel(key){ const a = ACCOUNTS.find(x=>x.key===key); return a? a.label : key; }
@@ -19595,6 +19741,14 @@ function resetCashTxnForms(){
   document.getElementById('cb_out_time').value = new Date().toTimeString().slice(0,5);
   document.getElementById('cb_out_cancel').style.display = 'none';
   document.getElementById('cbOutTitle').textContent = 'Cash Out';
+
+  // Both accounts back to cash, both new-category boxes shut, and the
+  // balances re-read -- they move whenever anything else is recorded.
+  ['in','out'].forEach(c=>{
+    document.getElementById(`cb_${c}_account`).value = 'cash';
+    document.getElementById(`cb_${c}_newcat_wrap`).classList.remove('show');
+    tillRefresh(c);
+  });
 }
 function setupCashCatQuickAdd(prefix, dataKey){
   const catInput = document.getElementById(prefix+'_category');
@@ -19638,7 +19792,7 @@ function resolveCbInCustomer(){
 function updateCbInPickerSummary(){
   const wrap = document.getElementById('cb_in_invoice_picker_wrap');
   const el = document.getElementById('cb_in_invoice_picker_summary');
-  const amount = Number(document.getElementById('cb_in_amount').value)||0;
+  const amount = tillReadAmount('in');
   invoicePickerCascade(wrap, amount);
   const selections = invoicePickerSelections(wrap);
   const allocated = selections.reduce((s,a)=>s+a.amount, 0);
@@ -19666,9 +19820,245 @@ function updateCbInInvoicePicker(){
 document.getElementById('cb_in_customer').addEventListener('input', updateCbInInvoicePicker);
 document.getElementById('cb_in_amount').addEventListener('input', updateCbInPickerSummary);
 
+/* ================= THE TILL ======================================
+
+   Every shilling in the business is typed into these two modals. They
+   were a six-field grid in which the amount -- the only reason the form
+   exists -- was the same 169x37 box at the same 14px as "Time", a field
+   the app fills in for you.
+
+   THE ONE THAT MATTERS IS THE WORDS. 2,500,000 and 250,000 are one
+   keystroke apart and, in an unseparated string of digits, look alike at
+   a glance. Nothing in this app catches a misplaced zero: the cash book
+   would show the variance a day later, by which time the money and the
+   memory are both gone. A cheque is written out in words for exactly
+   this reason, so the amount is written out here as it is typed. It is
+   not decoration; it is the check digit.
+   ================================================================= */
+
+const TILL_ONES = ['','one','two','three','four','five','six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const TILL_TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+// Below a hundred billion, which is past anything a hardware shop takes
+// in a day and past where the words would help anyway.
+const TILL_SCALES = [[1e9,'billion'],[1e6,'million'],[1e3,'thousand']];
+
+function tillWordsUnder1000(n){
+  const out = [];
+  if(n >= 100){ out.push(TILL_ONES[Math.floor(n/100)], 'hundred'); n %= 100; }
+  if(n >= 20){ out.push(TILL_TENS[Math.floor(n/10)]); n %= 10; if(n) out.push(TILL_ONES[n]); }
+  else if(n > 0){ out.push(TILL_ONES[n]); }
+  return out.join(' ');
+}
+/* The figure in words. Returns '' for anything that cannot be written --
+   nothing typed, or a number past where this helps -- rather than a
+   guess, because a wrong reading here is worse than no reading. */
+function tillAmountWords(value){
+  const n = Math.floor(Math.abs(Number(value) || 0));
+  if(!n) return '';
+  if(n >= 1e12) return '';
+  const parts = [];
+  let rest = n;
+  TILL_SCALES.forEach(([size, name])=>{
+    if(rest >= size){
+      parts.push(tillWordsUnder1000(Math.floor(rest/size)), name);
+      rest %= size;
+    }
+  });
+  if(rest) parts.push(tillWordsUnder1000(rest));
+  const words = parts.join(' ').trim();
+  // Shillings are not divisible in practice; a fractional entry is a
+  // typo, and saying so beats writing it out as if it were meant.
+  const frac = Math.abs(Number(value) || 0) - n;
+  return words + (frac > 0.004 ? ' shillings and a fraction — check that' : ' shillings');
+}
+
+/* Grouping the digits AS THEY ARE TYPED. A number input cannot hold a
+   separator, so these are text inputs and the grouping is done here.
+
+   Digits and at most one point are kept, and everything else is dropped
+   rather than silently reinterpreted -- pasting "1500.50" into a
+   digits-only field would give 150050, a hundredfold error introduced by
+   the very control meant to prevent one. */
+function tillGroup(raw){
+  const cleaned = String(raw == null ? '' : raw).replace(/[^\d.]/g, '');
+  const firstDot = cleaned.indexOf('.');
+  const whole = firstDot === -1 ? cleaned : cleaned.slice(0, firstDot);
+  // Any further points are typos, not more decimals.
+  const frac = firstDot === -1 ? '' : cleaned.slice(firstDot + 1).replace(/\./g, '');
+  const grouped = whole.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return grouped + (firstDot === -1 ? '' : '.' + frac);
+}
+function tillReadAmount(column){
+  const el = document.getElementById(`cb_${column}_amount`);
+  return Number(String(el ? el.value : '').replace(/,/g, '')) || 0;
+}
+/* Reformats in place and puts the caret back where the typist left it.
+   Counted in DIGITS rather than characters, because the commas move as
+   the number grows: at "1,234" typing a 5 on the end must not land the
+   caret before the comma the new digit just created. */
+function tillFormatInput(el){
+  const before = el.value;
+  const caret = el.selectionStart == null ? before.length : el.selectionStart;
+  const digitsBefore = (before.slice(0, caret).match(/[\d.]/g) || []).length;
+  const after = tillGroup(before);
+  if(after === before) return;
+  el.value = after;
+  let seen = 0, pos = after.length;
+  for(let i = 0; i < after.length; i++){
+    if(/[\d.]/.test(after[i])) seen++;
+    if(seen === digitsBefore){ pos = i + 1; break; }
+  }
+  if(digitsBefore === 0) pos = 0;
+  try { el.setSelectionRange(pos, pos); } catch(e) { /* not a text input */ }
+}
+
+const TILL_ACCOUNT_LABELS = {cash:'Cash', momo:'Mobile Money', bank:'Bank'};
+
+// What each account holds on the day being worked. Read from the cash
+// book's own arithmetic -- the same cbDayPosition the Cash Book page and
+// the reconciliation read -- so the figure on the button is the figure
+// on the page behind it.
+function tillAccountBalances(){
+  const pos = cbDayPosition(currentCbDate());
+  const out = {};
+  pos.accounts.forEach(a=>{ out[a.key] = a.closing; });
+  return out;
+}
+
+function tillRenderAccounts(column){
+  const wrap = document.getElementById(`cb_${column}_accounts`);
+  if(!wrap) return;
+  const chosen = document.getElementById(`cb_${column}_account`).value || 'cash';
+  const bal = tillAccountBalances();
+  wrap.innerHTML = ACCOUNTS.map(a=> `<button type="button" class="till-acct${a.key===chosen?' on':''}"
+      data-account="${esc(a.key)}" aria-pressed="${a.key===chosen}">
+      <span class="till-acct-name">${esc(a.label)}</span>
+      <span class="till-acct-bal">${fmtUGX(Math.round(bal[a.key]||0))}</span>
+    </button>`).join('');
+  wrap.querySelectorAll('.till-acct').forEach(b=> b.addEventListener('click', ()=>{
+    document.getElementById(`cb_${column}_account`).value = b.dataset.account;
+    tillRenderAccounts(column);
+    tillUpdate(column);
+  }));
+}
+
+function tillRenderCategories(column){
+  const wrap = document.getElementById(`cb_${column}_cats`);
+  if(!wrap) return;
+  const list = column==='in'
+    ? (data.presetIncomeCategories||[])
+    : (data.presetExpenseCategories||[]);
+  const chosen = document.getElementById(`cb_${column}_category`).value.trim();
+  const known = list.some(c=> c === chosen);
+  wrap.innerHTML = list.map(c=> `<button type="button" class="till-cat${c===chosen?' on':''}"
+      data-cat="${esc(c)}">${esc(c)}</button>`).join('')
+    + (chosen && !known ? `<button type="button" class="till-cat on" data-cat="${esc(chosen)}">${esc(chosen)}</button>` : '')
+    + `<button type="button" class="till-cat till-cat-new" id="cb_${column}_newcat">+ Something else</button>`;
+
+  wrap.querySelectorAll('.till-cat[data-cat]').forEach(b=> b.addEventListener('click', ()=>{
+    const input = document.getElementById(`cb_${column}_category`);
+    // Tapping the chosen one again clears it, so the way out is the way in.
+    input.value = (input.value.trim() === b.dataset.cat) ? '' : b.dataset.cat;
+    document.getElementById(`cb_${column}_newcat_wrap`).classList.remove('show');
+    tillRenderCategories(column);
+    tillUpdate(column);
+  }));
+  const newBtn = document.getElementById(`cb_${column}_newcat`);
+  if(newBtn) newBtn.addEventListener('click', ()=>{
+    const box = document.getElementById(`cb_${column}_newcat_wrap`);
+    box.classList.add('show');
+    const input = document.getElementById(`cb_${column}_category`);
+    input.value = '';
+    input.focus();
+    tillRenderCategories(column);
+  });
+}
+
+/* What this entry does to the account it names, in one line, live. The
+   form used to change the shop's cash position without ever mentioning
+   it. */
+function tillUpdate(column){
+  const amount = tillReadAmount(column);
+  const account = document.getElementById(`cb_${column}_account`).value || 'cash';
+  const isIn = column === 'in';
+
+  const words = document.getElementById(`cb_${column}_words`);
+  if(words) words.textContent = tillAmountWords(amount);
+
+  const bal = tillAccountBalances();
+  const now = Math.round(bal[account] || 0);
+  const after = Math.round(now + (isIn ? amount : -amount));
+  const eff = document.getElementById(`cb_${column}_effect`);
+  if(eff){
+    eff.innerHTML = amount > 0
+      ? `${esc(TILL_ACCOUNT_LABELS[account] || account)} goes from <b>${fmtUGX(now)}</b>
+         <span class="till-arrow">→</span> <b>${fmtUGX(after)}</b>`
+      : `${esc(TILL_ACCOUNT_LABELS[account] || account)} holds <b>${fmtUGX(now)}</b> right now.`;
+  }
+
+  /* Paying out more than the account holds. A WARNING and never a block:
+     the drawer figure can itself be wrong, and an app that refuses to
+     record what actually happened just moves the error somewhere it
+     cannot be seen. But it is worth saying at the moment of entry --
+     the alternative is the cash book reporting the variance tomorrow,
+     by which time nobody remembers which entry caused it. */
+  const over = document.getElementById('cb_out_overdraw');
+  if(over && column === 'out'){
+    over.innerHTML = (amount > 0 && after < 0)
+      ? `<div class="till-warn">That is <b>${fmtUGX(Math.abs(after))}</b> more than
+         ${esc(TILL_ACCOUNT_LABELS[account] || account)} is holding. Record it if that is what happened —
+         it usually means money came in that has not been logged yet.</div>`
+      : '';
+  }
+}
+
+/* Opening one. The balances are re-read every time because they move
+   whenever anything else in the app records money, and the cursor lands
+   in the amount because that is the only field somebody came here to
+   fill in. */
+function openTill(column){
+  tillRefresh(column);
+  openModal(column==='in' ? 'cashInModal' : 'cashOutModal');
+  document.getElementById(`cb_${column}_amount`).focus();
+}
+
+function tillRefresh(column){
+  tillRenderAccounts(column);
+  tillRenderCategories(column);
+  const note = document.getElementById(`cb_${column}_datenote`);
+  if(note){
+    const d = currentCbDate();
+    note.textContent = d === todayISO() ? 'today' : `on ${fmtShortDate(d)}`;
+  }
+  tillUpdate(column);
+}
+
+// Wiring, once, for both tills.
+['in','out'].forEach(column=>{
+  const amount = document.getElementById(`cb_${column}_amount`);
+  amount.addEventListener('input', ()=>{ tillFormatInput(amount); tillUpdate(column); });
+  const cat = document.getElementById(`cb_${column}_category`);
+  cat.addEventListener('input', ()=> tillUpdate(column));
+  /* Enter saves, from any single-line field. A till is used with a
+     customer waiting, and reaching for the mouse to finish a number you
+     have just typed is the slowest part of recording it. */
+  [`cb_${column}_amount`, `cb_${column}_category`, `cb_${column}_desc`, `cb_${column}_customer`]
+    .forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('keydown', (e)=>{
+        if(e.key !== 'Enter') return;
+        e.preventDefault();
+        if(id === `cb_${column}_category`){ tillRenderCategories(column); }
+        saveCashTxn(column);
+      });
+    });
+});
+
 function saveCashTxn(column){
   const prefix = column==='in' ? 'cb_in_' : 'cb_out_';
-  const amount = Number(document.getElementById(prefix+'amount').value);
+  const amount = tillReadAmount(column);
   const description = document.getElementById(prefix+'desc').value.trim();
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   if(!description){ toast('Add a short description'); return; }
@@ -19747,12 +20137,16 @@ function editCashTxn(id){
   document.getElementById(prefix+'account').value = t.account;
   if(column==='out') document.getElementById('cb_out_type').value = (t.type==='expense' ? 'expense' : 'payment');
   document.getElementById(prefix+'category').value = t.category || '';
-  document.getElementById(prefix+'amount').value = t.amount;
+  document.getElementById(prefix+'amount').value = tillGroup(String(t.amount));
   document.getElementById(prefix+'desc').value = t.description;
   document.getElementById(prefix+'time').value = t.time;
   document.getElementById(column==='in' ? 'cbInTitle' : 'cbOutTitle').textContent = column==='in' ? 'Edit cash in' : 'Edit cash out';
   document.getElementById(prefix+'cancel').style.display = 'inline-block';
+  /* Drawn AFTER the record is loaded, so the account button and the
+     category chip come up already chosen rather than reset to cash. */
+  tillRefresh(column);
   openModal(column==='in' ? 'cashInModal' : 'cashOutModal');
+  document.getElementById(prefix+'amount').focus();
 }
 function deleteCashTxn(id){
   if(!confirm('Delete this transaction?')) return;
