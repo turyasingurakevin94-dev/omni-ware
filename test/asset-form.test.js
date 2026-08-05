@@ -21,7 +21,7 @@
  *
  * Run: node test/asset-form.test.js   (or: npm test)
  */
-const { read, extractDeclaration, compileScope, createReporter } = require('./_extract');
+const { read, extractDeclaration, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('asset form');
 const src = read('index.html');
@@ -153,15 +153,19 @@ const pay = (/function faUpdatePayment[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   /* Cost drives every depreciation charge, the value on the balance
      sheet and the entry in the cash book. It was the same 183x37 box at
      14px as Category. */
-  t.check(/\.fa input\[type=number\]\.fa-cost\{font-family:'IBM Plex Mono'/.test(src)
-    && /font-size:24px/.test((/\.fa input\[type=number\]\.fa-cost\{[^}]*\}/.exec(src) || [''])[0]),
-    'the cost is the subject of the form, in figures that line up');
-  /* Type selectors on both overrides: `.fa .fa-cost` would lose to the
-     general rule's :not([type]), exactly as the staff form's name did. */
-  t.check(/\.fa input\[type=text\]\.fa-name\{/.test(src),
-    'and the name beats the general input rule on its own terms');
-  t.check(src.indexOf('.fa input[type=text],.fa input:not([type])') < src.indexOf('.fa input[type=text].fa-name'),
-    'with the general rule first, so order agrees with weight');
+  /* MEASURED, not matched. This form asserted its rules were present and
+     written after the general one; both were true and the name still
+     rendered at 14px, because `input[type=text]` does not match an
+     <input> that declares no type. winningDeclaration resolves the
+     cascade the way a browser does. */
+  eq(winningDeclaration(src, 'fa_cost', 'font-size').value, '24px',
+    'the cost actually renders as the subject of the form');
+  t.check(/IBM Plex Mono/.test(winningDeclaration(src, 'fa_cost', 'font-family').value),
+    'in figures that line up');
+  eq(winningDeclaration(src, 'fa_name', 'font-size').value, '19px',
+    'and the name renders above the fields that describe the thing');
+  eq(winningDeclaration(src, 'fa_category', 'font-size').value, '14px',
+    'which only means something because those fields do not');
 
   // The preview was the best thing on the form and sat last, in grey.
   t.check(modal.indexOf('id="fa_preview"') < modal.indexOf('id="fa_notes"'),

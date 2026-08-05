@@ -178,4 +178,151 @@ function createReporter(title) {
   };
 }
 
-module.exports = { ROOT, read, extractFunction, extractDeclaration, stripTypes, compileScope, createReporter };
+/* ---- Does a CSS rule actually reach the element it was written for? ----
+ *
+ * Written after four forms were "fixed" and none of the fixes applied.
+ * Each form sets its name field apart from the fields that merely
+ * describe it, and each has to beat a general rule of the shape
+ * `.x input[type=text], .x input:not([type])` -- whose :not() lends its
+ * argument an attribute selector's weight, so a plain two-class selector
+ * LOSES to it. The fix raised the weight with `input[type=text].x-name`,
+ * which won the cascade and stopped matching the element: none of these
+ * inputs declare a type, and [type=text] matches the ATTRIBUTE, not the
+ * default the browser resolves to.
+ *
+ * Every test asserted the rule's text was present and written after the
+ * general one. Both were true. All three fields rendered at 14px anyway,
+ * for weeks, until they were measured in a browser.
+ *
+ * So: match the selector against the element the way a browser would,
+ * and compare weights properly. A rule that cannot reach its element is
+ * not a rule.
+ */
+
+// Specificity as (ids, classes, types). :not() contributes its argument's
+// weight but nothing for itself -- which is the whole trap above.
+function selectorSpecificity(sel) {
+  let s = String(sel);
+  let a = 0, b = 0, c = 0;
+  s = s.replace(/:not\(([^)]*)\)/g, (_, inner) => {
+    const [ia, ib, ic] = selectorSpecificity(inner);
+    a += ia; b += ib; c += ic;
+    return ' ';
+  });
+  a += (s.match(/#[\w-]+/g) || []).length;
+  b += (s.match(/\.[\w-]+/g) || []).length + (s.match(/\[[^\]]*\]/g) || []).length;
+  c += (s.match(/(^|[\s>+~])([a-zA-Z][\w-]*)/g) || []).length;
+  return [a, b, c];
+}
+const specGTE = (x, y) => (x[0] !== y[0] ? x[0] > y[0] : x[1] !== y[1] ? x[1] > y[1] : x[2] >= y[2]);
+
+/* Does one compound selector match this element? Only the forms these
+   stylesheets actually use: tag, .class, #id, [attr], [attr=value] and
+   :not(...) of those. Anything unrecognised returns false rather than
+   guessing -- a check that cannot read the selector must not pass it. */
+function compoundMatches(compound, el) {
+  const parts = compound.match(/:not\([^)]*\)|\[[^\]]*\]|[.#]?[\w-]+/g) || [];
+  for (const p of parts) {
+    if (p.startsWith(':not(')) {
+      if (compoundMatches(p.slice(5, -1), el)) return false;
+    } else if (p.startsWith('[')) {
+      const m = /^\[([\w-]+)(?:=["']?([^\]"']*)["']?)?\]$/.exec(p);
+      if (!m) return false;
+      const have = el.attrs[m[1]];
+      if (have === undefined) return false;
+      if (m[2] !== undefined && have !== m[2]) return false;
+    } else if (p.startsWith('.')) {
+      if (!el.classes.includes(p.slice(1))) return false;
+    } else if (p.startsWith('#')) {
+      if (el.attrs.id !== p.slice(1)) return false;
+    } else if (p.toLowerCase() !== el.tag) return false;
+  }
+  return true;
+}
+/* The rightmost compound must match the element; the ones before it must
+   match ancestors, outermost last, gaps allowed. Ancestry is checked for
+   real -- taking it on trust made this report that a supplier field was
+   styled by a customer-form rule, which is precisely the class of
+   mistake it exists to catch. Only the descendant combinator is
+   understood; anything else returns false rather than guessing. */
+function selectorMatchesElement(sel, el, ancestors) {
+  const s = sel.trim();
+  if (/[>+~]/.test(s)) return false;
+  const compounds = s.split(/\s+/);
+  if (!compoundMatches(compounds.pop(), el)) return false;
+  let i = (ancestors || []).length - 1;
+  for (let k = compounds.length - 1; k >= 0; k--) {
+    while (i >= 0 && !compoundMatches(compounds[k], ancestors[i])) i--;
+    if (i < 0) return false;
+    i--;
+  }
+  return true;
+}
+
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img',
+  'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+const parseAttrs = (raw) => {
+  const attrs = {};
+  (raw.match(/[\w-]+(?:="[^"]*")?/g) || []).forEach((a) => {
+    const i = a.indexOf('=');
+    if (i < 0) attrs[a] = '';
+    else attrs[a.slice(0, i)] = a.slice(i + 2, -1);
+  });
+  return attrs;
+};
+const asElement = (tag, raw) => {
+  const attrs = parseAttrs(raw);
+  return { tag: tag.toLowerCase(), attrs, classes: (attrs.class || '').split(/\s+/).filter(Boolean) };
+};
+
+// An element and everything it sits inside, read out of the markup.
+function elementById(src, id) {
+  const at = src.search(new RegExp(`<[a-zA-Z][\\w-]*[^>]*\\bid="${id}"`));
+  if (at < 0) throw new Error(`no element with id="${id}" in the markup`);
+  const self = /^<([a-zA-Z][\w-]*)([^>]*)>/.exec(src.slice(at));
+  const stack = [];
+  const re = /<(\/?)([a-zA-Z][\w-]*)([^>]*?)(\/?)>/g;
+  let m;
+  while ((m = re.exec(src)) && m.index < at) {
+    if (m[1]) { for (let i = stack.length - 1; i >= 0; i--) if (stack[i].tag === m[2].toLowerCase()) { stack.length = i; break; } }
+    else if (!m[4] && !VOID_TAGS.has(m[2].toLowerCase())) stack.push(asElement(m[2], m[3]));
+  }
+  const el = asElement(self[1], self[2]);
+  el.ancestors = stack;
+  return el;
+}
+
+/* Which declaration actually wins for one property on one element, given
+   every rule in the stylesheet: the last of the highest-specificity rules
+   that both matches and sets it. Returns null when nothing does. */
+function winningDeclaration(src, id, prop) {
+  const el = elementById(src, id);
+  /* Stylesheet only, comments stripped. Left in, a comment containing a
+     brace parses as a rule and its prose parses as a selector -- which
+     is how the first draft of this reported that a phone field was
+     19px because a sentence in a comment mentioned .sf-name. */
+  const css = (src.match(/<style[^>]*>([\s\S]*?)<\/style>/g) || [])
+    .map((b) => b.replace(/^<style[^>]*>/, '').replace(/<\/style>$/, ''))
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(css))) {
+    const body = m[2];
+    const decl = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`).exec(body);
+    if (!decl) continue;
+    m[1].split(',').forEach((sel) => {
+      if (!/[{}<]/.test(sel) && selectorMatchesElement(sel, el, el.ancestors)) {
+        rules.push({ sel: sel.trim(), spec: selectorSpecificity(sel), value: decl[1].trim(), at: m.index });
+      }
+    });
+  }
+  if (!rules.length) return null;
+  return rules.reduce((best, r) => (!best || specGTE(r.spec, best.spec) ? r : best), null);
+}
+
+module.exports = {
+  ROOT, read, extractFunction, extractDeclaration, stripTypes, compileScope, createReporter,
+  selectorSpecificity, selectorMatchesElement, elementById, winningDeclaration,
+};

@@ -18,7 +18,7 @@
  *
  * Run: node test/loan-form.test.js   (or: npm test)
  */
-const { read, extractDeclaration, compileScope, createReporter } = require('./_extract');
+const { read, extractDeclaration, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('loan form');
 const src = read('index.html');
@@ -140,9 +140,16 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
   /* Type selectors on both: `.lnf .lnf-principal` would lose to the
      general rule's :not([type]), the same trap the staff and asset forms
      fell into. */
-  t.check(/\.lnf input\[type=text\]\.lnf-lender\{/.test(src), 'as is the lender');
-  t.check(src.indexOf('.lnf input[type=text],.lnf input:not([type])') < src.indexOf('.lnf input[type=text].lnf-lender'),
-    'with the general rule first, so order agrees with weight');
+  /* MEASURED, not matched. Every one of these forms asserted its rule
+     was present and written after the general one; both were true and
+     the field still rendered at 14px, because `input[type=text]` does
+     not match an <input> that declares no type. winningDeclaration
+     resolves the cascade the way a browser does. */
+  eq(winningDeclaration(src, 'ln_lender', 'font-size').value, '18px', 'as is the lender');
+  eq(winningDeclaration(src, 'ln_principal', 'font-size').value, '22px',
+    'and the amount borrowed actually renders as the subject of the form');
+  eq(winningDeclaration(src, 'ln_rate', 'font-size').value, '14px',
+    'which only means something because the fields describing the loan do not');
   t.check(/document\.getElementById\('ln_lender'\)\.focus\(\);/.test(code),
     'and the cursor lands on the first thing to type');
 }

@@ -25,7 +25,7 @@
  *
  * Run: node test/staff-form.test.js   (or: npm test)
  */
-const { read, extractDeclaration, compileScope, createReporter } = require('./_extract');
+const { read, extractDeclaration, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('staff form');
 const src = read('index.html');
@@ -160,10 +160,15 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
      second class. The name silently rendered at 14px like everything
      else, and looked deliberate. Caught by measuring the computed size,
      not by reading the rule. */
-  t.check(/\.sf input\.sf-name\{font-size:19px/.test(src),
-    'the name beats the general input rule on its own terms');
-  t.check(!/\.sf \.sf-name\{/.test(src),
-    'rather than through a selector that quietly loses to it');
+  /* MEASURED, not matched. Every one of these forms asserted its rule
+     was present and written after the general one; both were true and
+     the field still rendered at 14px, because `input[type=text]` does
+     not match an <input> that declares no type. winningDeclaration
+     resolves the cascade the way a browser does. */
+  eq(winningDeclaration(src, 'st_name', 'font-size').value, '19px',
+    'the name actually renders bigger than the fields that describe the person');
+  eq(winningDeclaration(src, 'st_phone', 'font-size').value, '14px',
+    'which only means something because those fields do not');
   t.check(/\.sf \.sf-rate input\[type=number\]\{/.test(src),
     'and the rate does the same, for the same reason');
   t.check(src.indexOf('.sf input[type=text],.sf input:not([type])') < src.indexOf('.sf input.sf-name'),

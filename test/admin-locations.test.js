@@ -120,7 +120,10 @@ const reset = (locs) => {
   // is a rule the person only meets by being refused.
   t.check(/<input id="c_location" list="dl_locations"/.test(code), 'the customer field offers the list');
   t.check(/<input id="ag_location" list="dl_locations"/.test(code), 'and so does the agent field');
-  t.check(/Location <span class="req">required<\/span>/.test(code)
+  /* The customer form's label is now "Where they are" — what the field
+     is for rather than what it is called — so this matches the marker on
+     the field, not one particular wording of the label. */
+  t.check(/<span class="cf-label">Where they are <span class="req">required<\/span><\/span>/.test(code)
     && /Based at <span class="req">required<\/span>/.test(code),
   'both labels say so before the person fills the form in, not after');
   t.check(/press Enter to add it/.test(code) && /press Enter\./.test(code),

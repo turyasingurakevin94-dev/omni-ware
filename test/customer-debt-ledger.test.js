@@ -178,8 +178,14 @@ const invoice = (id, total, paid) => {
   const save = /getElementById\('c_save'\)\.addEventListener\('click', \(\)=>\{([\s\S]*?)\n\}\);/.exec(src)
     || [null, src.slice(src.indexOf('const openingDebt'), src.indexOf('const openingDebt') + 700)];
   const body = save[1] || '';
-  t.check(/const openingDebt = Number\(document\.getElementById\('c_debt'\)\.value\)\|\|0;/.test(body),
-    'the opening balance is read once, as a value');
+  /* Read through cfOpeningBalanceCheck now, not straight off the box.
+     `Number(box)||0` took -500,000 happily, and since the ledger entry
+     is only written above zero it saved a balance with an EMPTY
+     history -- drift, manufactured by the form meant to prevent it. */
+  t.check(/const chk = cfOpeningBalanceCheck\(document\.getElementById\('c_debt'\)\.value,/.test(body),
+    'the opening balance is read once, through the check that decides whether it is writable');
+  t.check(/const openingDebt = chk\.amount;/.test(body),
+    'and only what that check returns is written');
   t.check(/openingDebt > 0[\s\S]{0,200}type:'charge', amount: openingDebt/.test(body),
     'and a matching ledger entry is written for it, so the two start in step');
   t.check(/note:'Opening balance'/.test(body),

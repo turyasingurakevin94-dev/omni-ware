@@ -21,7 +21,7 @@
  *
  * Run: node test/supplier-form.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('supplier form');
 const src = read('index.html');
@@ -135,10 +135,15 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
      would pass with the add path — the one used most — silently broken. */
   eq((code.match(/getElementById\('s_name'\)\.focus\(\)/g) || []).length, 2,
     'with the cursor in it, whether the form was opened to add or to edit');
-  t.check(/\.sup input\[type=text\]\.sup-name\{font-size:19px/.test(src),
-    'and the name set apart from the fields that describe it');
-  t.check(src.indexOf('.sup input[type=text],.sup input:not([type])') < src.indexOf('.sup input[type=text].sup-name'),
-    'by a selector that beats the general rule, written after it');
+  /* MEASURED, not matched. Every one of these forms asserted its rule
+     was present and written after the general one; both were true and
+     the field still rendered at 14px, because `input[type=text]` does
+     not match an <input> that declares no type. winningDeclaration
+     resolves the cascade the way a browser does. */
+  eq(winningDeclaration(src, 's_name', 'font-size').value, '19px',
+    'and the name actually renders set apart from the fields that describe it');
+  eq(winningDeclaration(src, 's_phone', 'font-size').value, '14px',
+    'which only means something because those fields do not');
 }
 
 /* ---------- 6. the place is one of the shop's, not free text --------- *
