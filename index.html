@@ -1660,6 +1660,19 @@
      as "has paid nothing". */
   .deb-prog-none{color:var(--ink-soft);cursor:help;}
   .deb-card-prog{margin-top:8px;}
+  /* Paid MORE than the invoice asks for. The bar is clamped so it cannot
+     run past its own track, which on its own would look identical to
+     settled -- and the status pill already says "Settled" for it. The
+     colour and the number beside it are what carry the difference, since
+     the money is a real loose end: nothing clamps a payment to the
+     balance due, and amending a short order lowers the total while what
+     was paid stays put. */
+  .deb-prog.inv-prog-over .deb-prog-fill{background:var(--danger);}
+  .deb-prog.inv-prog-over .deb-prog-pct{color:var(--danger);font-weight:700;}
+  /* The pill states WHAT it is, the bar states HOW FAR -- stacked, so
+     the column reads top to bottom rather than fighting for one line. */
+  .inv-status-cell{min-width:132px;}
+  .inv-status-cell .deb-prog{margin-top:5px;}
 
   /* ---- the list ---- */
   .age-filter-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
@@ -12268,6 +12281,45 @@ function invoicePaymentStatusLabel(q){
   if(paid>=total) return {cls:'settled', label:'Settled'};
   return {cls:'partial', label:'Partial'};
 }
+/* How far through paying an invoice off the customer is.
+
+   Unlike a customer's debt, an invoice is one document with one total, so
+   the sum is just paid over total. What needed thinking about is the
+   three cases where that sum lies, all three reachable and all three
+   found on the running app before this was written:
+
+   AN INVOICE THAT TOTALS NOTHING. An item with no sell price contributes
+   zero, so an invoice of them totals zero and paid/total is NaN --
+   width:NaN% is an invalid declaration the browser drops, leaving a bar
+   at whatever width it last had. Reporting 0% instead would be worse
+   than a broken bar: it says nothing has been paid on an invoice with
+   nothing to pay.
+
+   A VOIDED INVOICE. Voiding drops the debt charge from the customer but
+   deliberately keeps q.payments and the Cash Book entries behind them --
+   so a voided invoice can still hold real money. A bar there would say
+   somebody is part of the way through settling a document that has been
+   cancelled. The money is a loose end and the reason says so, because
+   this is the only screen where anyone would notice it.
+
+   AN OVERPAID INVOICE. Nothing clamps a payment to the balance due, and
+   amending a short order lowers the total while amountPaid stays put --
+   the app's own dialog admits the resulting credit "is not tracked". The
+   status pill calls that Settled. The bar is clamped so it cannot run
+   past its own track, but `over` carries the excess so the screen can
+   say so rather than showing a serene full bar.
+
+   Returns pct null, never 0, whenever there is nothing to measure --
+   the same rule the debtors and creditors bars follow, for the same
+   reason: a bar at zero is a claim about somebody's conduct. */
+function invoicePaymentProgress(q){
+  const paid = Number(q.amountPaid)||0;
+  const total = savedQuoteTotal(q);
+  if(q.voided) return { pct:null, reason:'voided', paid, total };
+  if(total<=0) return { pct:null, reason:'no-total', paid, total };
+  return { pct: Math.max(0, Math.min(1, paid/total)), reason:null, paid, total,
+    over: Math.max(0, paid-total) };
+}
 function invDocShiftDate(iso, days){ return anShiftDate(iso, days); }
 function invDocGetDateRange(){
   const preset = document.getElementById('inv_doc_range_preset').value;
@@ -12326,6 +12378,28 @@ function renderInvoices(filter=''){
   }
 
   const sortArrow = (key)=> INV_SORT_STATE.key===key ? `<span class="sort-arrow">${INV_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
+  /* The same bar the debtors and creditors lists use, deliberately: this
+     is the same question at a different level, and a second bar that
+     looked slightly different would read as a different measure. */
+  const progressCell = (q)=>{
+    const p = invoicePaymentProgress(q);
+    if(p.pct === null){
+      const why = p.reason === 'voided'
+        ? (p.paid > 0
+          ? `This invoice is voided, so there is nothing left to pay off — but ${fmtUGX(Math.round(p.paid))} is still recorded against it and still in the Cash Book. Unvoid it, or remove the payment.`
+          : 'This invoice is voided, so there is nothing to be part way through paying.')
+        : 'This invoice totals nothing — its items carry no price — so there is nothing to measure against. Price the items to see progress.';
+      return `<span class="deb-prog-none" title="${esc(why)}">—</span>`;
+    }
+    const pct = p.total > 0 ? Math.round(p.paid/p.total*100) : 0;
+    const title = p.over > 0
+      ? `${fmtUGX(Math.round(p.paid))} received on an invoice of ${fmtUGX(Math.round(p.total))} — ${fmtUGX(Math.round(p.over))} more than it asks for. This app does not track customer credit, so it needs refunding or carrying to their next order.`
+      : `${fmtUGX(Math.round(p.paid))} received of ${fmtUGX(Math.round(p.total))}`;
+    return `<div class="deb-prog${p.over > 0 ? ' inv-prog-over' : ''}" title="${esc(title)}">
+      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${Math.round(p.pct*100)}%"></div></div>
+      <span class="deb-prog-pct">${pct}%</span>
+    </div>`;
+  };
   let totalAmt=0, totalPaid=0, totalDue=0;
   const cardsArr = [];
   const rowsHtml = invoices.map((q,i)=>{
@@ -12361,6 +12435,7 @@ function renderInvoices(filter=''){
         <div class="sc-stat"><b>${fmtUGX(Math.round(paid))}</b><span>Paid</span></div>
         <div class="sc-stat"><b>${fmtUGX(Math.round(due))}</b><span>Balance</span></div>
       </div>
+      <div class="deb-card-prog">${progressCell(q)}</div>
       <div class="pi-card-foot">
         <span class="inv-status ${status.cls}">${esc(status.label)}${q.voided?' (voided)':''}</span>
       </div>
@@ -12375,7 +12450,10 @@ function renderInvoices(filter=''){
       <td class="price">${fmtUGX(Math.round(total))}</td>
       <td class="price">${fmtUGX(Math.round(paid))}</td>
       <td class="price">${fmtUGX(Math.round(due))}</td>
-      <td><span class="inv-status ${status.cls}">${esc(status.label)}${q.voided?' (voided)':''}</span></td>
+      <td class="inv-status-cell">
+        <span class="inv-status ${status.cls}">${esc(status.label)}${q.voided?' (voided)':''}</span>
+        ${progressCell(q)}
+      </td>
       <td>${esc(notesLabel)}</td>
       <td>
         <div class="inv-row-actions">${actionsHtml}</div>
