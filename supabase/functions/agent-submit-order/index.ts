@@ -228,6 +228,24 @@ Deno.serve(async (req) => {
     if (clientErr) return json({ error: clientErr.message, stage: "client_lookup" }, 500);
     if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
     if (!agent) return json({ error: "Agent not found" }, 404);
+    // A paused agent. `unavailable` was written by the admin roster and
+    // read by nothing anywhere -- not current_agent_id(), not this
+    // function, not agent.html -- so "Mark inactive" greyed a card in the
+    // admin's browser and left the agent free to keep placing orders.
+    //
+    // Checked HERE rather than in current_agent_id() on purpose. That
+    // function is what every agent-scoped policy resolves through, so
+    // failing it closes their clients, goals, catalogues and order
+    // history all at once -- which is retirement, and is already what
+    // retirement does. A pause is meant to stop the new business and
+    // leave the rest, so it belongs on the one door new business comes
+    // through.
+    if (agent.unavailable) {
+      return json({
+        error: "Your account is paused. Talk to the shop before placing new orders.",
+        paused: true,
+      }, 403);
+    }
     if (!client || client.agent_id !== agentId) return json({ error: "That client doesn't belong to this agent" }, 403);
     const presets = settingsRow?.presets || {};
 

@@ -896,6 +896,67 @@
   .agent-subtab{all:unset;cursor:pointer;padding:7px 16px;border-radius:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
   .agent-subtab:hover{color:var(--ink);}
   .agent-subtab.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,40,0.14);}
+
+  /* ---- The agent roster ------------------------------------------
+     It was a contact list: name, id, phone, email, dropdown, the same
+     for everybody. What the shop is deciding here is whether an agent
+     is worth keeping, whether it is exposed to them, and whether to let
+     them take goods on trust -- and not one of those was answerable. */
+  .ag-pos{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;
+    display:flex;flex-direction:column;gap:10px;}
+  .ag-pos-figs{display:flex;flex-wrap:wrap;gap:26px;}
+  .ag-pos-fig{display:flex;flex-direction:column;gap:2px;}
+  .ag-pos-fig b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:21px;font-weight:700;color:var(--ink);line-height:1.15;}
+  .ag-pos-fig span{font-size:11px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;color:var(--ink-soft);}
+  .ag-pos-fig.bad b{color:var(--danger);}
+  .ag-pos-line{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+  .ag-pos-line.bad{color:var(--danger);}
+  .ag-pos-line b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  .ag-card{display:flex;flex-direction:column;gap:11px;}
+  /* Three figures, given the room the dropdown used to have to itself. */
+  .ag-figs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+    border-top:1px solid var(--ow-rule-soft);border-bottom:1px solid var(--ow-rule-soft);padding:11px 0;}
+  .ag-fig{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ag-fig b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:16px;font-weight:700;color:var(--ink);line-height:1.2;
+    overflow:hidden;text-overflow:ellipsis;}
+  .ag-fig span{font-size:10.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  /* Money owed reads differently depending on how it came to be owed:
+     unpaid on prepay terms is a hiccup, unpaid on credit terms is the
+     shop's own decision coming due. */
+  .ag-fig.warn b{color:var(--ow-amber-ink);}
+  .ag-fig.bad b{color:var(--danger);}
+
+  .ag-activity{font-size:12.5px;color:var(--ink-soft);}
+  .ag-activity.cold{color:var(--ow-amber-ink);font-weight:600;}
+  .ag-never{color:var(--ink-soft);font-style:italic;}
+
+  .ag-note{font-size:12px;line-height:1.5;border-radius:8px;padding:8px 11px;
+    background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .ag-note.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);border-color:transparent;}
+  .ag-note.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);border-color:transparent;}
+  .ag-note.bad{background:var(--ow-oxide-soft);color:var(--danger);border-color:transparent;}
+  .ag-note b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* Paused and retired are not degrees of one thing, so they do not look
+     like degrees of one thing. */
+  .ag-state{font-size:12px;line-height:1.5;border-radius:8px;padding:8px 11px;}
+  .ag-state.paused{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ag-state.retired{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+
+  .ag-term{display:flex;flex-direction:column;gap:6px;}
+  .ag-term label{font-size:10.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;color:var(--ink-soft);}
+  .ag-term select{width:100%;box-sizing:border-box;font-family:inherit;font-size:13.5px;
+    color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px;}
+  .ag-term select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+
+  /* The agent's own margin, not the shop's money -- said in those words
+     so nobody reads it as revenue. */
+  .ag-earned{font-size:12px;line-height:1.5;color:var(--ink-soft);padding-top:9px;border-top:1px solid var(--ow-rule-soft);}
+  .ag-earned b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
+  @media (max-width:420px){ .ag-figs{grid-template-columns:1fr 1fr;} }
   .preset-hint{margin:0 0 10px;font-size:12px;color:var(--ink-soft);}
   .preset-inline-add{display:flex;gap:8px;max-width:340px;margin-bottom:12px;}
   .momo-provider-card{max-width:420px;}
@@ -15026,51 +15087,259 @@ document.getElementById('staffPeriod').addEventListener('click', (e)=>{
 });
 document.getElementById('staffPerfClose').addEventListener('click', ()=>closeModal('staffPerfModal'));
 
-/* ================= SALES AGENTS ================= */
-// Agents live in their own `agents` table, deliberately not shop_members
-// (see supabase/migrations/0012_sales_agents.sql) -- this admin UI is the
-// only place their payment terms get set, since the agent app itself only
-// ever shows an agent their own current term, never lets them change it.
+/* ================= SALES AGENTS =================
+   Agents live in their own `agents` table, deliberately not shop_members
+   (see supabase/migrations/0012_sales_agents.sql) -- this admin UI is the
+   only place their payment terms get set, since the agent app itself only
+   ever shows an agent their own current term, never lets them change it.
+
+   THE ROSTER WAS A CONTACT LIST. Name, id, phone, email, and a payment
+   terms dropdown -- identical for every agent. Verified on the running
+   app with four agents: the one who had brought in 2,800,000 and was
+   sitting on 2,500,000 unpaid rendered byte for byte the same as the one
+   who had brought 150,000 and last sold in February.
+
+   Everything below is derived on read from orders the shop already holds.
+   None of it is stored, so none of it can drift from the Invoices and
+   Order Tracking screens it is drawn from. */
+
+// Their orders. Voided ones are excluded everywhere here for the same
+// reason the invoice totals exclude them: the document stands but the
+// money is not anybody's.
+function agentOrders(a){
+  return (data.savedQuotes||[]).filter(q=> q.originAgentId === a.id && !q.voided);
+}
+
+/* What the AGENT earns -- their own margin over the shop's price, plus
+   any supplier-funded bonus. A third copy of a rule that already exists
+   in agent.html and agent-leaderboard, and it has to give the same
+   answer: an agent is shown these figures on their Earnings screen and
+   ranked on them in the league table, so a shop reading a different
+   number is reading a different agent. earnings-commission.test.js holds
+   all three to the same fixtures.
+
+   A line the agent never priced earns them nothing -- it does not COST
+   them the shop's full price, which is what coercing an absent price to
+   zero did. The shop adding a line to an agent's order used to push that
+   agent down the league table by its whole value. */
+function agentLinePriced(it){
+  return !!it && it.agentSellPrice !== null && it.agentSellPrice !== undefined
+    && it.agentSellPrice !== '' && Number.isFinite(Number(it.agentSellPrice));
+}
+function orderEarnings(items){
+  let total = 0;
+  for(const it of items || []){
+    if(agentLinePriced(it)){
+      total += (Number(it.agentSellPrice) - (Number(it.sellPrice) || 0)) * (Number(it.qty) || 0);
+    }
+    total += Number(it.bonusCommission) || 0;
+  }
+  return total;
+}
+
+/* Where one agent stands. The four questions this screen is actually
+   for: are they selling, do they owe us anything, when did they last do
+   anything, and are they earning enough to stay.
+
+   `owed` is the shop's exposure and it is the number that matters most,
+   because an agent on "pay on delivery" takes goods out of the building
+   before any money arrives -- that is what the term MEANS, and it was
+   set from a bare dropdown with no sight of what they already owe. Same
+   arithmetic as the Invoices screen (invoiceBalanceDue), so the two
+   cannot disagree about one order. */
+function agentStanding(a){
+  const orders = agentOrders(a);
+  const done = orders.filter(q=> q.status==='completed');
+  const live = orders.filter(q=> q.status!=='completed');
+  const lastAt = orders.reduce((m,q)=>{ const d = q.invoicedAt || q.date || ''; return d > m ? d : m; }, '');
+  return {
+    orders: orders.length, done: done.length, live: live.length,
+    // What the SHOP is owed and was paid, at the shop's own prices.
+    revenue: done.reduce((s,q)=> s + savedQuoteTotal(q), 0),
+    owed: orders.filter(q=> q.invoiced).reduce((s,q)=> s + invoiceBalanceDue(q), 0),
+    // What the agent made on top. Not the shop's money.
+    earned: done.reduce((s,q)=> s + orderEarnings(q.items||[]), 0),
+    lastAt: lastAt || null,
+    /* Null, never a big number, when they have never sold at all. Never
+       having started is not the same as having gone quiet -- one is a
+       dead invite to chase up, the other is a working relationship
+       going cold, and they need different conversations. */
+    idleDays: lastAt ? daysSinceDate(lastAt) : null,
+    onCredit: a.paymentTerm === 'pay_on_delivery',
+    retired: !!a.retiredAt, paused: !!a.unavailable && !a.retiredAt,
+  };
+}
+
+/* The roster at a glance. "Eight agents" is not a fact anybody can act
+   on; "three of eight sold anything in the last sixty days" is. */
+const AGENT_IDLE_DAYS = 60;
+function agentRosterPosition(){
+  const all = (data.agents||[]).filter(a=> !a.retiredAt);
+  const rows = all.map(a=> ({ a, s: agentStanding(a) }));
+  const selling = rows.filter(r=> r.s.idleDays != null && r.s.idleDays <= AGENT_IDLE_DAYS);
+  return {
+    total: all.length,
+    selling: selling.length,
+    // Split apart on purpose, as above.
+    neverSold: rows.filter(r=> r.s.idleDays == null).length,
+    goneQuiet: rows.filter(r=> r.s.idleDays != null && r.s.idleDays > AGENT_IDLE_DAYS).length,
+    revenue: rows.reduce((s,r)=> s + r.s.revenue, 0),
+    owed: rows.reduce((s,r)=> s + r.s.owed, 0),
+    // Exposure that exists BECAUSE somebody was put on credit terms.
+    owedOnCredit: rows.filter(r=> r.s.onCredit).reduce((s,r)=> s + r.s.owed, 0),
+    onCredit: rows.filter(r=> r.s.onCredit).length,
+    paused: rows.filter(r=> r.s.paused).length,
+  };
+}
+
+/* An agent's unpaid orders do not sit still. Invoicing one runs through
+   resolveInvoiceCustomer(), which matches on the name on the order --
+   the AGENT's name, for an agent order -- finds nothing, and CREATES a
+   customer record. Verified on the running app: invoicing one unpaid
+   agent order produced "Joan Akello, debt 2,500,000, location ''", who
+   then appeared in the Debtors list among the shop's retail customers.
+   That is where agent credit has been living, under a record nobody
+   created and with no location, so it also lands in the delivery
+   clusters' "No address yet" bucket.
+
+   Restructuring the ledger is not this screen's job, and doing it
+   quietly would be worse than leaving it. Naming it is: the agents
+   screen is where somebody looking at that money would expect to be
+   told where else it appears. */
+function agentPhantomCustomer(a){
+  const key = String(a.name||'').trim().toLowerCase();
+  if(!key) return null;
+  return (data.customers||[]).find(c=> String(c.name||'').trim().toLowerCase() === key) || null;
+}
+
+// What a payment term actually commits the shop to, in the terms the
+// shop experiences it. "Pay on delivery" is not a preference; it is a
+// decision to hand stock over before any money arrives.
+function agentTermConsequence(term){
+  return term === 'pay_on_delivery'
+    ? { cls:'warn', text:'Goods leave the shop before any money arrives. Whatever they have not paid for is the shop’s risk until they do.' }
+    : { cls:'ok', text:'Their orders cannot be prepared until the money is in. Nothing leaves the shop on trust.' };
+}
+
 function agentCardHTML(a){
   const initials = (a.name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
   // A retired agent keeps their card on purpose -- it's the only thing
   // telling an admin why that Agent ID is still taken when they try to
   // reuse it, which is the whole point of retiring rather than deleting.
   const retired = !!a.retiredAt;
-  return `<div class="supplier-card ${(a.unavailable||retired)?'staff-card-unavailable':''}">
+  const s = agentStanding(a);
+  const term = agentTermConsequence(a.paymentTerm);
+  const phantom = s.owed > 0 ? agentPhantomCustomer(a) : null;
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+
+  /* The two are NOT a softer and a harder version of one thing, and the
+     card said nothing to tell them apart while sitting them side by
+     side. Retiring runs through current_agent_id(), which every
+     agent-scoped policy in the schema resolves through, so it closes
+     everything at once and burns the id for ever. Pausing stops new
+     orders and leaves them their clients and history. */
+  const actions = retired
+    ? `<button class="pc-icon-btn" title="Bring back — they get access, clients and history again" onclick="restoreAgent('${esc(a.id)}')">${ICON_RESTOCK}</button>`
+    : `<button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable
+        ? 'Let them sell again'
+        : 'Pause — they keep their clients and history but cannot place new orders'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
+       <button class="pc-icon-btn danger" title="Retire — permanent. Access closes everywhere and their Agent ID can never be reused" onclick="retireAgent('${esc(a.id)}')">${ICON_TRASH}</button>`;
+
+  const state = retired
+    ? `<div class="ag-state retired">Retired. Access is closed everywhere and ${esc(a.id)} can never be reused. Their orders stay on record.</div>`
+    : a.unavailable
+      ? '<div class="ag-state paused">Paused. They can still sign in and see their clients and history, but cannot place new orders.</div>'
+      : '';
+
+  /* Never sold is not "sold a long time ago". One is an invite that
+     never took, the other is a working relationship going cold, and
+     they are different conversations. */
+  const activity = s.idleDays == null
+    ? '<span class="ag-never">Has never sold anything</span>'
+    : `Last order ${esc(agingDaysLabel(s.idleDays))}${s.idleDays===0?'':' ago'} &middot; ${s.orders} order${s.orders===1?'':'s'}`;
+
+  return `<div class="supplier-card ag-card ${(a.unavailable||retired)?'staff-card-unavailable':''}">
     <div class="sc-head">
       <div class="sc-avatar">${esc(initials)}</div>
       <div class="sc-title">
         <div class="sc-name">${esc(a.name)}</div>
-        <div class="sc-id">${esc(a.id)}${retired?' &middot; Retired':''}</div>
+        <div class="sc-id">${esc(a.id)}${a.location?' &middot; '+esc(a.location):''}${a.phone?' &middot; '+esc(a.phone):''}</div>
       </div>
-      <div class="sc-actions">
-        ${retired
-          ? `<button class="pc-icon-btn" title="Restore agent" onclick="restoreAgent('${esc(a.id)}')">${ICON_RESTOCK}</button>`
-          : `<button class="pc-icon-btn ${a.unavailable?'pc-icon-btn-active-danger':''}" title="${a.unavailable?'Mark active':'Mark inactive'}" onclick="toggleAgentAvailability('${esc(a.id)}')">${a.unavailable?ICON_RESTOCK:ICON_NO_STOCK}</button>
-             <button class="pc-icon-btn danger" title="Retire agent" onclick="retireAgent('${esc(a.id)}')">${ICON_TRASH}</button>`}
-      </div>
+      <div class="sc-actions">${actions}</div>
     </div>
-    <div class="sc-details">
-      ${a.phone ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(a.phone)}</span></div>` : ''}
-      ${a.email ? `<div class="sc-notes">${esc(a.email)}</div>` : ''}
+    ${state}
+    <div class="ag-figs">
+      <div class="ag-fig"><b>${money(s.revenue)}</b><span>brought in</span></div>
+      <div class="ag-fig ${s.owed > 0 ? (s.onCredit?'bad':'warn') : ''}"><b>${money(s.owed)}</b><span>owed to you</span></div>
+      <div class="ag-fig"><b>${s.live}</b><span>in flight</span></div>
     </div>
-    <div class="field" style="margin-top:10px;">
-      <label>Payment terms</label>
-      <select class="ag-payment-term-select" data-id="${esc(a.id)}" ${retired?'disabled':''}>
+    <div class="ag-activity ${s.idleDays != null && s.idleDays > AGENT_IDLE_DAYS ? 'cold' : ''}">${activity}</div>
+    ${s.owed > 0 && s.onCredit
+      ? `<div class="ag-note bad">${money(s.owed)} is out on trust — they take goods before paying. ${
+          s.idleDays != null && s.idleDays > AGENT_IDLE_DAYS ? 'And they have gone quiet.' : ''}</div>` : ''}
+    ${phantom
+      ? `<div class="ag-note">This money also shows in the Debtors list under <b>${esc(phantom.name)}</b> (${esc(phantom.id)}) — invoicing an agent order files it against a customer record of the same name.</div>` : ''}
+    <div class="ag-term">
+      <label for="ag_term_${esc(a.id)}">Payment terms</label>
+      <select id="ag_term_${esc(a.id)}" class="ag-payment-term-select" data-id="${esc(a.id)}" ${retired?'disabled':''}>
         <option value="prepay" ${a.paymentTerm==='prepay'?'selected':''}>Pay before we prepare</option>
         <option value="pay_on_delivery" ${a.paymentTerm==='pay_on_delivery'?'selected':''}>Pay on delivery</option>
       </select>
+      ${retired ? '' : `<div class="ag-note ${esc(term.cls)}">${esc(term.text)}</div>`}
     </div>
+    ${s.done > 0
+      ? `<div class="ag-earned">They made <b>${money(s.earned)}</b> of their own on top of your prices${
+          s.revenue > 0 ? ` — ${Math.round(s.earned / s.revenue * 100)}% over` : ''}.</div>` : ''}
+  </div>`;
+}
+
+/* The roster at a glance, over the whole roster rather than the filtered
+   view -- the same rule the debtors position follows, because a search
+   box should not be able to change what the shop is owed. */
+function agentRosterPositionHTML(){
+  const p = agentRosterPosition();
+  if(!p.total) return '';
+  const idle = p.neverSold + p.goneQuiet;
+  return `<div class="ag-pos">
+    <div class="ag-pos-figs">
+      <div class="ag-pos-fig"><b>${esc(fmtUGX(Math.round(p.revenue)))}</b><span>brought in by agents</span></div>
+      <div class="ag-pos-fig ${p.owed > 0 ? 'bad' : ''}"><b>${esc(fmtUGX(Math.round(p.owed)))}</b><span>still owed to you</span></div>
+      <div class="ag-pos-fig"><b>${p.selling} of ${p.total}</b><span>sold in the last ${AGENT_IDLE_DAYS} days</span></div>
+    </div>
+    ${p.owedOnCredit > 0
+      ? `<div class="ag-pos-line bad"><b>${esc(fmtUGX(Math.round(p.owedOnCredit)))}</b> of that is with the ${p.onCredit} agent${p.onCredit===1?' who takes':'s who take'} goods before paying.</div>` : ''}
+    ${idle
+      ? `<div class="ag-pos-line">${[
+          p.neverSold ? `${p.neverSold} ${p.neverSold===1?'has':'have'} never sold anything` : '',
+          p.goneQuiet ? `${p.goneQuiet} ${p.goneQuiet===1?'has':'have'} gone quiet` : '',
+        ].filter(Boolean).join(' &middot; ')}.</div>` : ''}
+    ${p.paused ? `<div class="ag-pos-line">${p.paused} paused.</div>` : ''}
   </div>`;
 }
 function renderAgents(filter=''){
   const tokens = searchTokens(filter);
-  // Retired agents sink to the bottom rather than disappearing -- still
-  // findable (and still visibly holding their Agent ID), just out of the
-  // way of the active roster.
-  let rows = (data.agents||[]).slice().sort((a,b)=>
-    (!!a.retiredAt - !!b.retiredAt) || a.name.localeCompare(b.name));
+  /* Retired agents sink to the bottom rather than disappearing -- still
+     findable (and still visibly holding their Agent ID), just out of the
+     way of the active roster.
+
+     Above that line the order is what needs attention, not the alphabet.
+     Sorted by name, a dead invite that has never sold anything sat above
+     the agent holding 2,500,000 of the shop's stock on trust, because
+     her name began with a J. Money owed first, then who sold most
+     recently, then the alphabet to settle the rest -- so the top of the
+     roster is always the part somebody has to do something about. */
+  let rows = (data.agents||[]).slice().sort((a,b)=>{
+    if(!!a.retiredAt !== !!b.retiredAt) return a.retiredAt ? 1 : -1;
+    const sa = agentStanding(a), sb = agentStanding(b);
+    if(sa.owed !== sb.owed) return sb.owed - sa.owed;
+    // Never sold sorts BELOW anyone who has, whichever way the rest
+    // points -- an agent with no history has no position on a recency
+    // axis, and a raw '' put them at the far end of it as though they
+    // were the oldest.
+    if((sa.lastAt == null) !== (sb.lastAt == null)) return sa.lastAt == null ? 1 : -1;
+    if(sa.lastAt !== sb.lastAt) return String(sb.lastAt||'').localeCompare(String(sa.lastAt||''));
+    return String(a.name||'').localeCompare(String(b.name||''));
+  });
   if(tokens.length){
     rows = rows.filter(a=>matchesAllTokens((a.name+' '+(a.phone||'')+' '+a.id).toLowerCase(), tokens));
   }
@@ -15081,21 +15350,56 @@ function renderAgents(filter=''){
       : '<div class="empty">No matches.</div>';
     return;
   }
-  wrap.innerHTML = `<div class="supplier-grid">${rows.map(agentCardHTML).join('')}</div>`;
+  wrap.innerHTML = agentRosterPositionHTML() + `<div class="supplier-grid">${rows.map(agentCardHTML).join('')}</div>`;
   wrap.querySelectorAll('.ag-payment-term-select').forEach(sel=>{
     sel.addEventListener('change', ()=>{
       const a = data.agents.find(x=>x.id===sel.dataset.id); if(!a) return;
+      const prior = a.paymentTerm;
+      /* Putting an agent on "pay on delivery" is a credit decision: from
+         then on their orders can be prepared and handed over with no
+         money in. It was made from a bare dropdown that said nothing and
+         raised a toast reading "payment terms updated" -- the same
+         sentence for either direction.
+
+         Asked in the one place it can be asked well, with what they
+         already owe named, because that is the figure the answer turns
+         on and it was on no screen at all. */
+      if(sel.value === 'pay_on_delivery' && prior !== 'pay_on_delivery'){
+        const s = agentStanding(a);
+        if(!confirm(`Let ${a.name} take goods before paying?\n\nTheir orders will be prepared and handed over with no money in, and whatever they have not paid for is yours to chase.${
+          s.owed > 0 ? `\n\nThey already owe ${fmtUGX(Math.round(s.owed))}.` : ''}${
+          s.idleDays == null ? '\n\nThey have never sold anything yet.' : ''}`)){
+          sel.value = prior; return;
+        }
+      }
       a.paymentTerm = sel.value;
       saveData();
-      toast(`${a.name}'s payment terms updated`);
+      renderAgents(document.getElementById('ag_search').value);
+      toast(sel.value === 'pay_on_delivery'
+        ? `${a.name} can now take goods before paying`
+        : `${a.name} must now pay before anything is prepared`);
     });
   });
 }
+/* Pausing an agent. The flag was written to the database and read by
+   NOTHING -- not current_agent_id(), not agent-submit-order, not
+   agent.html. "Mark inactive" greyed a card in the admin's own browser
+   and left the agent able to sign in and keep placing orders, while
+   sitting next to Retire (which really does close everything) looking
+   like the gentler version of it. An admin wanting to stop somebody
+   short of the permanent option reached for this one and got nothing.
+
+   agent-submit-order now refuses a paused agent's order, which is the
+   right place for it: retirement has to close every agent-scoped policy
+   at once and so belongs in current_agent_id(), but a pause is meant to
+   leave them their clients and history and stop only the new business. */
 function toggleAgentAvailability(id){
   const a = data.agents.find(x=>x.id===id); if(!a) return;
   a.unavailable = !a.unavailable;
   saveData(); renderAgents(document.getElementById('ag_search').value);
-  toast(a.unavailable ? `${a.name} marked inactive` : `${a.name} marked active`);
+  toast(a.unavailable
+    ? `${a.name} paused — they keep their clients and history but cannot place new orders`
+    : `${a.name} can sell again`, 5000);
 }
 // Retires rather than deletes. Removing the row outright used to free the
 // agent's id for reuse, and since an order's owner is nothing but
@@ -15104,7 +15408,15 @@ function toggleAgentAvailability(id){
 // and the attribution intact; see 0028_retire_agents_instead_of_deleting.
 function retireAgent(id){
   const a = data.agents.find(x=>x.id===id); if(!a) return;
-  if(!confirm(`Retire ${a.name} as an agent? They'll lose access immediately and their private client list will be hidden. Orders they already submitted stay on record under their name, and their Agent ID stays reserved so it can never be reused.`)) return;
+  /* Money owed does not stop a retirement -- an agent who has stopped
+     paying is a reason TO retire them, not a reason it should be
+     refused. But it must be on the screen at the moment of the decision:
+     retiring closes their access, and the balance stays owed by somebody
+     who can no longer sign in. */
+  const s = agentStanding(a);
+  if(!confirm(`Retire ${a.name} as an agent? They'll lose access immediately and their private client list will be hidden. Orders they already submitted stay on record under their name, and their Agent ID stays reserved so it can never be reused.${
+    s.owed > 0 ? `\n\nTHEY STILL OWE ${fmtUGX(Math.round(s.owed))}. Retiring does not collect it, and they will not be able to sign in to settle it.` : ''}${
+    s.live > 0 ? `\n\n${s.live} of their order${s.live===1?' is':'s are'} still in progress.` : ''}`)) return;
   a.retiredAt = new Date().toISOString();
   saveData(); renderAgents(document.getElementById('ag_search').value);
   toast(`${a.name} retired`);

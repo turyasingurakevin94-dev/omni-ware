@@ -5,10 +5,12 @@
  *
  * Two agent-facing numbers are computed in more than one place:
  *
- *   orderEarnings()  -- agent.html (the Earnings screen) and
- *                       agent-leaderboard (the agent's rank). If these
- *                       disagree, an agent is ranked on figures that don't
- *                       match the ones they're shown.
+ *   orderEarnings()  -- agent.html (the Earnings screen),
+ *                       agent-leaderboard (the agent's rank), and now
+ *                       index.html (what the admin roster says an agent
+ *                       has made). If these disagree, an agent is ranked
+ *                       on figures that don't match the ones they're
+ *                       shown, and the shop reads a third number again.
  *
  *   the month's bonus -- agent.html shows it on the "Claim UGX X" button,
  *                        agent-claim-commission recomputes it server-side
@@ -27,6 +29,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('earnings/commission');
 const agentSrc = read('agent.html');
 const boardSrc = read('supabase/functions/agent-leaderboard/index.ts');
+const adminSrc = read('index.html');
 const claimSrc = read('supabase/functions/agent-claim-commission/index.ts');
 
 // monthEarnings() reads the myOrders global, so it has to be a live binding
@@ -44,6 +47,16 @@ const board = compileScope(
   [extractFunction(boardSrc, 'agentLinePriced', 'agent-leaderboard'),
    extractFunction(boardSrc, 'orderEarnings', 'agent-leaderboard')],
   {}, ['orderEarnings'], { typescript: true },
+);
+
+/* The admin roster's copy. The shop showing an agent a different figure
+   from the one the agent is shown is the same failure as the leaderboard
+   showing one -- it is the number a conversation about their pay starts
+   from. */
+const admin = compileScope(
+  [extractFunction(adminSrc, 'agentLinePriced', 'index.html'),
+   extractFunction(adminSrc, 'orderEarnings', 'index.html')],
+  {}, ['orderEarnings'],
 );
 
 const item = (agentSellPrice, sellPrice, qty, bonusCommission) =>
@@ -83,15 +96,16 @@ let disagreements = 0;
 for (const o of ORDERS) {
   const a = agent.orderEarnings(o);      // { margin, bonus, total }
   const b = board.orderEarnings(o.items); // a bare total
-  if (!Number.isFinite(a.total) || !Number.isFinite(b)) {
+  const c = admin.orderEarnings(o.items); // a bare total
+  if (!Number.isFinite(a.total) || !Number.isFinite(b) || !Number.isFinite(c)) {
     disagreements++;
-    t.fail(`orderEarnings produced a non-finite total — "${o.name}": agent.html=${a.total}, leaderboard=${b}`);
-  } else if (a.total !== b) {
+    t.fail(`orderEarnings produced a non-finite total — "${o.name}": agent.html=${a.total}, leaderboard=${b}, admin=${c}`);
+  } else if (a.total !== b || a.total !== c) {
     disagreements++;
-    t.fail(`orderEarnings disagrees — "${o.name}": agent.html=${a.total} (margin ${a.margin} + bonus ${a.bonus}), leaderboard=${b}`);
+    t.fail(`orderEarnings disagrees — "${o.name}": agent.html=${a.total} (margin ${a.margin} + bonus ${a.bonus}), leaderboard=${b}, admin=${c}`);
   }
 }
-if (!disagreements) t.pass(`orderEarnings total identical in agent.html and agent-leaderboard (${ORDERS.length} order shapes)`);
+if (!disagreements) t.pass(`orderEarnings total identical in agent.html, agent-leaderboard and the admin roster (${ORDERS.length} order shapes)`);
 
 /* ---------- 2. margin and bonus are separated correctly ---------------- */
 {
