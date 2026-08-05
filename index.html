@@ -1632,8 +1632,14 @@
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cat-note.warn{color:var(--ow-amber-ink);}
   .cat-flag{font-size:11.5px;color:var(--ow-amber-ink);}
-  .cat-markup{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:var(--ink-soft);}
-  .cat-markup span{display:inline-block;width:13px;color:var(--ow-ink-400);font-weight:700;}
+  /* Both markup rules on one line where they fit, and each label glued
+     to its own value. In a plain flex row the value wrapped away from
+     its letter -- "No rule" broke in half and the R ended up beside
+     the word "rule" rather than beside "No". Wrapping is allowed
+     BETWEEN the two pairs and never inside one. */
+  .cat-markup{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:11.5px;color:var(--ink-soft);}
+  .cat-markup>div{display:flex;align-items:baseline;gap:5px;white-space:nowrap;}
+  .cat-markup span{color:var(--ow-ink-400);font-weight:700;flex-shrink:0;}
   .cat-markup b{color:var(--ink);}
   .cat-actions{display:flex;gap:5px;flex-shrink:0;}
   /* The card stacks on its own; only the note needs releasing, since it
@@ -1641,7 +1647,6 @@
      column any more. */
   @media (max-width:1000px){
     .cat-note{white-space:normal;}
-    .cat-markup{flex-direction:row;gap:14px;}
   }
 
   .pc-thumb{
