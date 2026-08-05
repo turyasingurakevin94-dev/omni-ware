@@ -1715,6 +1715,43 @@
     background:var(--bg);border:1px solid var(--line);border-radius:9px;
     padding:9px 12px;margin-bottom:12px;}
 
+  /* ================= WHO TO BUY FROM ===============================
+     The quantity is half the question. Everything else answers it.
+     ================================================================= */
+  .cmp-ask{display:grid;grid-template-columns:1fr 190px;gap:14px;align-items:end;margin-bottom:16px;}
+  @media (max-width:640px){ .cmp-ask{grid-template-columns:1fr;} }
+  .cmp-qty-row{display:flex;align-items:center;gap:8px;}
+  .cmp-qty-row input{flex:1;min-width:0;font-family:'IBM Plex Mono',monospace;font-size:18px;
+    font-weight:700;font-variant-numeric:tabular-nums;text-align:right;
+    padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:#FBFCFD;color:var(--ink);}
+  .cmp-qty-row input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .cmp-qty-unit{font-size:12.5px;color:var(--ink-soft);flex-shrink:0;min-width:34px;}
+
+  .cmp-verdict{display:flex;flex-direction:column;gap:2px;border-radius:12px;
+    padding:13px 15px;margin-bottom:12px;border:1px solid transparent;}
+  .cmp-verdict.ok{background:var(--ow-verdigris-soft);border-color:#C4DED6;color:var(--ow-verdigris);}
+  .cmp-verdict.warn{background:var(--ow-amber-soft);border-color:#EBD9B4;color:var(--ow-amber-ink);}
+  .cmp-verdict.quiet{background:var(--bg);border-color:var(--line);color:var(--ink-soft);}
+  .cmp-verdict-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;opacity:.85;}
+  .cmp-verdict > b{font-family:'Archivo Black',sans-serif;font-size:24px;line-height:1.1;letter-spacing:-0.3px;}
+  .cmp-verdict-sub{font-size:13px;line-height:1.5;}
+  .cmp-verdict-sub b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  .cmp-note{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;margin-bottom:10px;
+    background:var(--bg);border:1px solid var(--line);color:var(--ink-soft);}
+  .cmp-note.warn{background:var(--ow-amber-soft);border-color:#EBD9B4;color:var(--ow-amber-ink);}
+
+  .cmp-sup{font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .cmp-per{font-size:11px;color:var(--ink-soft);font-weight:400;}
+  .cmp-none{color:var(--ink-soft);font-size:12px;}
+  .cmp-break{font-size:12px;color:var(--ow-verdigris);font-weight:600;white-space:nowrap;}
+  .cmp-age{font-size:11.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+  /* A price old enough that the recommendation resting on it should be
+     checked before money is committed. Same 90 days the registry uses. */
+  .cmp-age.stale{color:var(--ow-amber-ink);background:var(--ow-amber-soft);
+    padding:2px 8px;border-radius:999px;}
+  .cmp-flag{font-size:11px;line-height:1.4;color:var(--ow-crimson);margin-top:3px;}
+
   /* ================= ADDING A SUPPLIER =============================
      Nothing stopped the same one being entered twice, and a supplier
      with no prices can be picked for nothing. Both said out loud.
@@ -5452,14 +5489,26 @@
         <p>Pick a product to see every supplier ranked cheapest to most expensive, for both wholesale and retail — plus a suggested selling price based on the product's markup rules.</p>
       </div>
       <div class="panel">
-        <div class="field compare-select searchable-select">
-          <label>Product</label>
-          <input type="text" id="cmp_search" placeholder="Search by product name or ID..." autocomplete="off">
-          <input type="hidden" id="cmp_product">
-          <input type="hidden" id="cmp_variant">
-          <div class="suggestions" id="cmp_suggestions"></div>
-          <div class="info-banner" id="cmp_variant_hint" style="display:none;"></div>
+        <div class="cmp-ask">
+          <div class="field compare-select searchable-select cmp-ask-product">
+            <label>What are you buying</label>
+            <input type="text" id="cmp_search" placeholder="Search by product name or ID..." autocomplete="off">
+            <input type="hidden" id="cmp_product">
+            <input type="hidden" id="cmp_variant">
+            <div class="suggestions" id="cmp_suggestions"></div>
+          </div>
+          <!-- The cheapest supplier CHANGES with the quantity, because
+               that is what a volume tier is. Without this the page could
+               only ever rank on the price before any discount. -->
+          <div class="field cmp-ask-qty">
+            <label for="cmp_qty">How many</label>
+            <div class="cmp-qty-row">
+              <input type="number" id="cmp_qty" min="1" step="any" value="1">
+              <span class="cmp-qty-unit" id="cmp_qty_unit"></span>
+            </div>
+          </div>
         </div>
+        <div class="info-banner" id="cmp_variant_hint" style="display:none;"></div>
         <div id="compareResults"></div>
       </div>
     </section>
@@ -20034,6 +20083,8 @@ document.getElementById('cmp_search').addEventListener('input', (e)=>{
   renderCompare();
 });
 document.getElementById('cmp_search').addEventListener('focus', (e)=> cmpSuggestionsList(e.target.value));
+// The quantity is half the question, so it redraws the answer.
+document.getElementById('cmp_qty').addEventListener('input', renderCompare);
 document.getElementById('cmp_suggestions').addEventListener('mousedown', (e)=>{
   if(e.target.closest('.img-zoomable')) return;
   const sel = readSuggestionSelection(e);
@@ -20062,57 +20113,155 @@ function suggestedSellingPrice(product, basePrice, kind, variantIdx=null, packQt
   return basePrice*(1+rule.value/100);
 }
 
+/* ================= WHO TO BUY FROM ================================
+
+   The page ranked suppliers on r.wholesale and r.retail -- the flat
+   fields deriveWholesaleRetail() builds, which its own comment calls
+   "the price before any volume discount kicks in" -- and split them into
+   two columns. Neither is what the shop pays.
+
+   THE CHEAPEST SUPPLIER CHANGES WITH THE QUANTITY. That is what a volume
+   tier IS. Verified on the running app: at one bag Hima was cheaper and
+   the page said BEST; at a hundred bags Tororo was 5,000 a bag cheaper
+   -- 500,000 on the order -- and the page still said Hima, because it
+   had no quantity to rank at.
+
+   It ranks on purchasePriceAtQty now, the same arithmetic the buying
+   list uses, so the two screens cannot name different suppliers for the
+   same purchase. */
+
+function cmpQty(){
+  const v = Number(document.getElementById('cmp_qty').value);
+  return v > 0 ? v : 1;
+}
+
+// Which side of the pack split this quantity lands on -- the same test
+// purchasePriceAtQty makes, so a suggested selling price is built on the
+// rate actually being paid.
+function cmpKindAtQty(row, qty){
+  const packQty = Number(row.packQty) || 0;
+  return (packQty > 0 && qty >= packQty) ? 'wholesale' : 'retail';
+}
+
+/* The next rung down, and how many more it takes to reach it. A shop
+   buying 80 of something that drops in price at 100 is the one fact this
+   page could always have given and never did. */
+function cmpNextBreak(row, qty){
+  const now = purchasePriceAtQty(row, qty);
+  if(now == null) return null;
+  const rungs = (Array.isArray(row.tiers) ? row.tiers : [])
+    .filter(t=> t.price != null && Number(t.minQty) > qty)
+    .sort((a,b)=> Number(a.minQty) - Number(b.minQty));
+  const better = rungs.find(t=> Number(t.price) < now);
+  if(!better) return null;
+  return { atQty: Number(better.minQty), price: Number(better.price),
+    more: Number(better.minQty) - qty, saving: now - Number(better.price) };
+}
+
 function renderCompare(){
   const productId = document.getElementById('cmp_product').value;
   const wrap = document.getElementById('compareResults');
-  if(!productId){ wrap.innerHTML = '<div class="empty">Search and choose a product above to compare supplier prices.</div>'; return; }
+  if(!productId){ wrap.innerHTML = '<div class="empty">Search and choose a product above to see who to buy it from.</div>'; return; }
   const product = data.products.find(x=>x.id===productId);
   const variantRaw = document.getElementById('cmp_variant').value;
   const variantIdx = variantRaw==='' ? null : Number(variantRaw);
-  const rows = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && !p.outOfStock).map(p=>({...p, sname: supplierName(p.supplierId)}));
+  const qty = cmpQty();
+
+  const rows = rankedPurchaseRowsAtQty(productId, variantIdx, qty)
+    .map(r=>({...r, sname: supplierName(r.supplierId)}));
+  const unitEl = document.getElementById('cmp_qty_unit');
+  if(unitEl) unitEl.textContent = (rows.find(r=> r.unit) || {}).unit || '';
+
   if(rows.length===0){ wrap.innerHTML = '<div class="empty">No prices recorded yet for this product.</div>'; return; }
 
-  const wholesaleRows = rows.filter(r=>r.wholesale!=null).slice().sort((a,b)=>a.wholesale-b.wholesale);
-  const retailRows = rows.filter(r=>r.retail!=null).slice().sort((a,b)=>a.retail-b.retail);
+  const priced = rows.filter(r=> r.purchasePrice != null);
+  const best = priced[0] || null;
+  const runnerUp = priced[1] || null;
+
+  /* What the choice is worth, in money, for the quantity being bought.
+     "BEST" on its own does not say whether the next supplier is a
+     thousand shillings behind or half a million. */
+  const savingPerUnit = (best && runnerUp) ? (runnerUp.purchasePrice - best.purchasePrice) : 0;
+  const savingTotal = savingPerUnit * qty;
+  const bestAge = best ? priceAgeDays(best.date) : null;
+
+  const headline = !best
+    ? `<div class="cmp-verdict quiet"><b>No usable price</b>
+        <span>None of the ${rows.length} supplier${rows.length===1?'':'s'} on file has a figure for this quantity.</span></div>`
+    : `<div class="cmp-verdict ${bestAge != null && bestAge > PRICE_STALE_DAYS ? 'warn' : 'ok'}">
+        <!-- No unit here: they are singular labels ("Bag", "Ctn") and
+             nothing in this app can pluralise them safely, so "100 Bag"
+             is the best it could do. The unit sits beside the quantity
+             box and in the per-unit price, where it reads correctly. -->
+        <span class="cmp-verdict-label">Cheapest for ${esc(String(qty))}</span>
+        <b>${esc(best.sname)}</b>
+        <span class="cmp-verdict-sub">${esc(fmtUGX(Math.round(best.purchasePrice)))} each —
+          ${esc(fmtUGX(Math.round(best.purchasePrice * qty)))} for the lot.${runnerUp && savingPerUnit > 0
+            ? ` That is <b>${esc(fmtUGX(Math.round(savingTotal)))}</b> less than ${esc(runnerUp.sname)}.`
+            : runnerUp ? ` The same as ${esc(runnerUp.sname)}.` : ' The only supplier with a price.'}</span>
+      </div>`;
+
+  /* A recommendation resting on an old figure. The registry already
+     treats 90 days as stale; the same constant is used here so the two
+     screens cannot disagree about what old means. */
+  const staleNote = (best && bestAge != null && bestAge > PRICE_STALE_DAYS)
+    ? `<div class="cmp-note warn">${esc(best.sname)}&rsquo;s price was last checked ${esc(agingDaysLabel(bestAge))} ago. Worth confirming before ordering ${esc(fmtUGX(Math.round(best.purchasePrice * qty)))} of stock on it.</div>`
+    : '';
+
+  const undated = rows.filter(r=> priceAgeDays(r.date) == null).length;
+  const undatedNote = undated
+    ? `<div class="cmp-note">${undated} price${undated===1?' has':'s have'} no date on file, so how current ${undated===1?'it is':'they are'} cannot be told.</div>`
+    : '';
+
+  const rowHTML = (r, i)=>{
+    const kind = cmpKindAtQty(r, qty);
+    const age = priceAgeDays(r.date);
+    const stale = age != null && age > PRICE_STALE_DAYS;
+    const nb = cmpNextBreak(r, qty);
+    const bad = invertedTierPairs(Array.isArray(r.tiers) ? r.tiers : []);
+    const sell = r.purchasePrice != null
+      ? suggestedSellingPrice(product, r.purchasePrice, kind, variantIdx, r.packQty) : null;
+    return `<tr class="${i===0 && r.purchasePrice!=null ? 'best' : ''}">
+      <td>
+        <div class="cmp-sup">${esc(r.sname)}${i===0 && r.purchasePrice!=null
+          ? '<span class="tag-badge"><span class="dot"></span>BEST</span>' : ''}</div>
+        ${bad.length ? '<div class="cmp-flag">Buying more costs more on this ladder — probably a typo</div>' : ''}
+      </td>
+      <td class="price">${r.purchasePrice != null
+        ? `<b>${esc(fmtUGX(Math.round(r.purchasePrice)))}</b>${r.unit?`<span class="cmp-per"> / ${esc(r.unit)}</span>`:''}`
+        : '<span class="cmp-none">no price at this quantity</span>'}</td>
+      <td class="price">${r.purchasePrice != null
+        ? esc(fmtUGX(Math.round(r.purchasePrice * qty))) : '—'}</td>
+      <td>${nb
+        ? `<span class="cmp-break">${esc(String(nb.more))} more &rarr; ${esc(fmtUGX(Math.round(nb.price)))}</span>`
+        : '<span class="cmp-none">—</span>'}</td>
+      <td><span class="cmp-age ${stale?'stale':''}">${age == null ? 'no date' : esc(agingDaysLabel(age))}</span></td>
+      <td class="price">${sell != null ? esc(fmtUGX(sell)) : '—'}</td>
+    </tr>`;
+  };
+
+  const cards = rows.map((r,i)=>{
+    const age = priceAgeDays(r.date);
+    const nb = cmpNextBreak(r, qty);
+    return `<div class="pi-card cmp-card ${i===0 && r.purchasePrice!=null ? 'cmp-card-best':''}">
+      <div class="pi-card-top">
+        <div class="pi-card-title"><span class="cmp-card-supplier">${esc(r.sname)}</span></div>
+        ${i===0 && r.purchasePrice!=null ? '<span class="tag-badge"><span class="dot"></span>BEST</span>' : ''}
+      </div>
+      <div class="sc-stats">
+        <div class="sc-stat"><b>${r.purchasePrice!=null?esc(fmtUGX(Math.round(r.purchasePrice))):'—'}</b><span>each</span></div>
+        <div class="sc-stat"><b>${r.purchasePrice!=null?esc(fmtUGX(Math.round(r.purchasePrice*qty))):'—'}</b><span>for ${esc(String(qty))}</span></div>
+        <div class="sc-stat"><b>${age==null?'no date':esc(agingDaysLabel(age))}</b><span>last checked</span></div>
+      </div>
+      ${nb ? `<div class="prc-tiers-note">${esc(String(nb.more))} more drops it to ${esc(fmtUGX(Math.round(nb.price)))}</div>` : ''}
+    </div>`;
+  }).join('');
 
   const wholesaleRule = effectiveMarkupRule(product, variantIdx, 'wholesale');
   const retailRule = effectiveMarkupRule(product, variantIdx, 'retail');
-  const ruleHtml = `<div class="hint" style="margin-bottom:16px;">
-    Wholesale markup: <strong>${wholesaleRule? markupRuleLabel(wholesaleRule.type, wholesaleRule.value) : 'No rule set'}</strong>${wholesaleRule && wholesaleRule.source==='variant' ? ' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>' : ''}
-    &nbsp;·&nbsp;
-    Retail markup: <strong>${retailRule? markupRuleLabel(retailRule.type, retailRule.value) : 'No rule set'}</strong>${retailRule && retailRule.source==='variant' ? ' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>' : ''}
-    ${(!wholesaleRule && !retailRule) ? ' — set these in the Products tab to see a suggested selling price.' : ''}
-  </div>`;
-
-  function buildTable(list, field){
-    if(list.length===0) return '<div class="empty">No prices of this type yet.</div>';
-    const showSuggested = field==='wholesale' ? !!wholesaleRule : !!retailRule;
-    const tierNote = r => priceTierSummaryPart(tiersForKind(r, field), r.unit, r.packUnit, r.packQty);
-    const cardsArr = list.map((r,i)=>`
-      <div class="cmp-card ${i===0?'cmp-card-best':''}">
-        <div class="cmp-card-top">
-          <span class="cmp-card-supplier">${esc(r.sname)}</span>
-          ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}
-        </div>
-        <div class="sc-stats">
-          <div class="sc-stat"><b>${fmtUGXPerUnit(r[field], r.unit)}</b><span>Price</span></div>
-          ${showSuggested?`<div class="sc-stat"><b class="txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx, r.packQty))}</b><span>Suggested</span></div>`:''}
-          <div class="sc-stat"><b>${esc(r.date)}</b><span>Date</span></div>
-        </div>
-        ${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}
-      </div>`).join('');
-    return `<div class="cmp-table-wrap"><table><thead><tr><th>Supplier</th><th>Unit</th><th>Price</th>${showSuggested?'<th>Suggested Selling Price</th>':''}<th>Date</th></tr></thead><tbody>
-      ${list.map((r,i)=>`
-        <tr class="${i===0?'best':''}">
-          <td>${esc(r.sname)} ${i===0?'<span class="tag-badge"><span class="dot"></span>BEST</span>':''}</td>
-          <td>${esc(r.unit)}</td>
-          <td class="price">${fmtUGX(r[field])}${tierNote(r) ? `<div class="prc-tiers-note">Volume: ${esc(tierNote(r))}</div>` : ''}</td>
-          ${showSuggested?`<td class="price txn-receipt">${fmtUGX(suggestedSellingPrice(product, r[field], field, variantIdx, r.packQty))}</td>`:''}
-          <td>${esc(r.date)}</td>
-        </tr>`).join('')}
-    </tbody></table></div>
-    <div class="cmp-cards">${cardsArr}</div>`;
-  }
+  const ruleNote = (!wholesaleRule && !retailRule)
+    ? '<div class="cmp-note">No markup rule on this product, so there is no suggested selling price. Set one in Products.</div>'
+    : '';
 
   wrap.innerHTML = `<div class="cmp-result-head">
       ${ipStageThumbHTML(product, variantIdx)}
@@ -20121,10 +20270,15 @@ function renderCompare(){
         ${variantIdx!=null && product.variants && product.variants[variantIdx] ? `<div class="cmp-result-variant">${esc(variantLabel(product.variants[variantIdx].combo))}</div>` : ''}
       </div>
     </div>
-    ${ruleHtml}<div class="compare-cols">
-    <div class="compare-col"><h3>Wholesale</h3>${buildTable(wholesaleRows,'wholesale')}</div>
-    <div class="compare-col"><h3>Retail</h3>${buildTable(retailRows,'retail')}</div>
-  </div>`;
+    ${headline}${staleNote}${undatedNote}${ruleNote}
+    <div class="cmp-table-wrap"><table>
+      <thead><tr>
+        <th>Supplier</th><th class="r">Each</th><th class="r">For ${esc(String(qty))}</th>
+        <th>Next price break</th><th>Last checked</th><th class="r">Sell at</th>
+      </tr></thead>
+      <tbody>${rows.map(rowHTML).join('')}</tbody>
+    </table></div>
+    <div class="cmp-cards">${cards}</div>`;
 }
 
 /* ================= CASH BOOK ================= */
