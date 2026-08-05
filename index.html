@@ -1715,6 +1715,39 @@
     background:var(--bg);border:1px solid var(--line);border-radius:9px;
     padding:9px 12px;margin-bottom:12px;}
 
+  /* ================= ADDING A SUPPLIER =============================
+     Nothing stopped the same one being entered twice, and a supplier
+     with no prices can be picked for nothing. Both said out loud.
+     ================================================================= */
+  .sup{display:flex;flex-direction:column;gap:18px;}
+  .sup-block{display:flex;flex-direction:column;gap:8px;}
+  .sup-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+  .sup-hint{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  .sup input[type=text],.sup input:not([type]){
+    width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
+    color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;transition:border-color .14s ease,box-shadow .14s ease;
+  }
+  .sup input::placeholder{color:var(--ow-ink-400);}
+  .sup input:hover{border-color:var(--ow-steel-400);}
+  .sup input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  /* Type selector, so it beats the general rule's :not([type]) -- the
+     same weighting trap as the staff, asset and loan forms. */
+  .sup input[type=text].sup-name{font-size:19px;font-weight:700;padding:13px 15px;}
+
+  .sup-dup{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+    border:1px solid #EBD9B4;border-radius:10px;padding:11px 13px;}
+  .sup-dup b{font-size:13.5px;line-height:1.4;}
+  .sup-dup span{font-size:12px;line-height:1.5;}
+  .sup-dup .btn{margin-top:3px;}
+
+  .sup-consequence{font-size:12.5px;line-height:1.5;border-radius:9px;padding:9px 12px;
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .sup-consequence.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .sup-consequence.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .sup-foot-note{font-size:11.5px;color:var(--ink-soft);padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
+
   /* ================= WHAT THE MONEY REALLY COSTS ===================
      The true annual cost is the reason this form exists. It used to be
      twelve-point grey, four hundred pixels down, under nine boxes.
@@ -5454,12 +5487,36 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>Supplier ID</label><input id="s_id" disabled><div class="field-hint">Generated automatically</div></div>
-        <div class="field"><label>Supplier name</label><input id="s_name" placeholder="e.g. Katwe Iron Works"></div>
-        <div class="field"><label>Contact phone</label><input id="s_phone" placeholder="e.g. 0700 000 000"></div>
-        <div class="field"><label>Location</label><input id="s_location" placeholder="e.g. Katwe"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="s_notes" placeholder="optional"></div>
+      <div class="sup">
+        <div class="sup-block">
+          <span class="sup-label">Who they are</span>
+          <input id="s_name" class="sup-name" placeholder="Their name" autocomplete="off">
+          <!-- Nothing stopped the same supplier being entered twice, and
+               once they were, every screen showed two identical names
+               with the prices on one and the invoices on the other. -->
+          <div id="s_duplicate"></div>
+          <input id="s_phone" placeholder="Phone — e.g. 0700 000 000" autocomplete="off">
+        </div>
+
+        <div class="sup-block">
+          <span class="sup-label">Where you collect from them</span>
+          <input id="s_location" placeholder="Where in town — e.g. Katwe, off Nsambya Road" autocomplete="off">
+          <div class="sup-hint" id="s_location_hint"></div>
+        </div>
+
+        <div class="sup-block">
+          <span class="sup-label">Notes</span>
+          <input id="s_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
+        </div>
+
+        <!-- A supplier with no prices cannot be chosen for anything. The
+             form used to close on that silently. -->
+        <div class="sup-consequence" id="s_consequence"></div>
+
+        <div class="sup-foot-note">
+          <span id="s_id_note"></span>
+          <input type="hidden" id="s_id">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -13863,20 +13920,122 @@ function editSupplier(id){
   const s = data.suppliers.find(x=>x.id===id); if(!s) return;
   editingSupplierId = id;
   document.getElementById('s_id').value = s.id;
-  document.getElementById('s_id').disabled = true;
   document.getElementById('s_name').value = s.name;
   document.getElementById('s_phone').value = s.phone;
   document.getElementById('s_location').value = s.location;
   document.getElementById('s_notes').value = s.notes;
   document.getElementById('supplierFormTitle').textContent = 'Edit supplier';
+  supShowIssuedId();
+  supRefresh();
   openModal('supplierModal');
+  document.getElementById('s_name').focus();
 }
 function resetSupplierForm(){
   editingSupplierId = null;
   ['s_id','s_name','s_phone','s_location','s_notes'].forEach(id=>document.getElementById(id).value='');
   fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
+  supShowIssuedId();
+  supRefresh();
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
 }
+
+/* ================= ADDING A SUPPLIER =============================
+
+   Five boxes opening on a disabled one, and NOTHING STOPPED THE SAME
+   SUPPLIER BEING ENTERED TWICE. Once they were, every screen that shows
+   a supplier -- the creditors list, the price registry, the comparison,
+   the buying list, the pickup runs -- showed two identical names, with
+   the prices attached to one and the invoices to the other, and no way
+   to tell which was which. supplierName() returns the same string for
+   both.
+
+   The other silence: a supplier with no prices on file cannot be chosen
+   as a source for anything. Adding one and closing the form changed
+   nothing operationally, and the form did not say so. */
+
+// Matched on the name as somebody would say it, not as they typed it:
+// trailing spaces and capitals are not a different supplier.
+function supNormalisedName(n){ return String(n||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function supFindDuplicate(name, exceptId){
+  const key = supNormalisedName(name);
+  if(!key) return null;
+  return (data.suppliers||[]).find(s=>
+    s.id !== exceptId && supNormalisedName(s.name) === key) || null;
+}
+
+function supRenderDuplicate(){
+  const el = document.getElementById('s_duplicate');
+  if(!el) return;
+  const dup = supFindDuplicate(document.getElementById('s_name').value, editingSupplierId);
+  if(!dup){ el.innerHTML = ''; return; }
+  const owed = creditorTotalOwed(dup.id);
+  const priced = (data.prices||[]).filter(p=> p.supplierId === dup.id).length;
+  const bits = [];
+  if(priced) bits.push(`${priced} price${priced===1?'':'s'} on file`);
+  if(owed > 0.5) bits.push(`${fmtUGX(Math.round(owed))} owed to them`);
+  el.innerHTML = `<div class="sup-dup">
+    <b>You already have a ${esc(dup.name)}${dup.location ? ` in ${esc(dup.location)}` : ''}.</b>
+    <span>${bits.length ? bits.join(' · ') + '. ' : ''}Saving this makes a second one with the same
+      name — every list would show both, and there would be no way to tell which is which.</span>
+    <button type="button" class="btn btn-ghost sup-dup-open" data-id="${esc(dup.id)}">Open the one you have instead</button>
+  </div>`;
+  el.querySelector('.sup-dup-open').addEventListener('click', ()=>{
+    closeModal('supplierModal');
+    editSupplier(dup.id);
+  });
+}
+
+/* What this supplier can and cannot do yet. Adding one is a means to an
+   end -- pricing things from them -- and until a price exists they
+   cannot be picked as a source anywhere in the app. */
+function supRenderConsequence(){
+  const el = document.getElementById('s_consequence');
+  if(!el) return;
+  const s = editingSupplierId ? (data.suppliers||[]).find(x=> x.id===editingSupplierId) : null;
+  const priced = s ? (data.prices||[]).filter(p=> p.supplierId === s.id).length : 0;
+  if(!s){
+    el.className = 'sup-consequence quiet';
+    el.textContent = 'Once saved, add prices against them in the Price book — until a price exists they cannot be picked as a source for anything.';
+    return;
+  }
+  el.className = priced ? 'sup-consequence' : 'sup-consequence warn';
+  el.textContent = priced
+    ? `${priced} price${priced===1?'':'s'} on file, so they can be picked as a source.`
+    : 'No prices on file, so they cannot be picked as a source for anything yet. Add one in the Price book.';
+}
+
+// Where somebody actually drives to. The pickup runs group a morning's
+// collections by this, so a blank one leaves that trip with nowhere to go.
+function supRenderLocationHint(){
+  const el = document.getElementById('s_location_hint');
+  if(!el) return;
+  el.textContent = document.getElementById('s_location').value.trim()
+    ? 'Used to group the morning’s collections by where they are.'
+    : 'Leave it blank and their goods have nowhere to be collected from on a pickup run.';
+}
+
+function supShowIssuedId(){
+  const note = document.getElementById('s_id_note');
+  if(!note) return;
+  const el = document.getElementById('s_id');
+  const show = ()=>{
+    note.textContent = editingSupplierId
+      ? `Saved as ${el.value}`
+      : (idIsPending(el.value) ? 'An ID is being issued…' : `Will be saved as ${el.value}`);
+  };
+  show();
+  // fillIssuedId resolves after a round trip.
+  setTimeout(show, 400);
+  setTimeout(show, 1500);
+}
+
+function supRefresh(){
+  supRenderDuplicate();
+  supRenderConsequence();
+  supRenderLocationHint();
+}
+document.getElementById('s_name').addEventListener('input', supRenderDuplicate);
+document.getElementById('s_location').addEventListener('input', supRenderLocationHint);
 function deleteSupplier(id){
   // Refused while money is still owed to them.
   //
@@ -13897,7 +14056,12 @@ function deleteSupplier(id){
   triggerPricesRender();
   toast('Supplier deleted');
 }
-document.getElementById('s_add_btn').addEventListener('click', ()=>{ resetSupplierForm(); openModal('supplierModal'); });
+document.getElementById('s_add_btn').addEventListener('click', ()=>{
+  resetSupplierForm();
+  openModal('supplierModal');
+  // The only field somebody came here to fill in.
+  document.getElementById('s_name').focus();
+});
 document.getElementById('s_save').addEventListener('click', ()=>{
   const id = document.getElementById('s_id').value.trim();
   const name = document.getElementById('s_name').value.trim();
@@ -13906,6 +14070,17 @@ document.getElementById('s_save').addEventListener('click', ()=>{
   // Defensive only -- the id comes from nextEntityId() now, so a clash here
   // would mean the counter itself is wrong rather than a mistyped entry.
   if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast(`Could not issue a new Supplier ID (${id} is taken). Reload and try again.`); return; }
+  /* A second supplier with the same name is almost always the same one
+     entered twice -- and once saved, every screen shows two identical
+     names with the prices on one and the invoices on the other. Asked
+     rather than refused: two genuinely different firms CAN share a name,
+     and a shop that means it has to be able to say so. */
+  const dup = supFindDuplicate(name, editingSupplierId);
+  if(dup && !confirm(`You already have a supplier called ${dup.name}${dup.location ? ` in ${dup.location}` : ''}.
+
+Saving this creates a second one with the same name. Every list will show both, and prices and invoices will split between them.
+
+Add them anyway?`)) return;
   // Commission rate is managed from the commission modal, not this form --
   // carry whatever's already on file forward so saving here doesn't wipe it.
   const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
