@@ -1740,6 +1740,47 @@
   .till-block{display:flex;flex-direction:column;gap:8px;}
   .till-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
 
+  /* The ordinary fields.
+
+     These were bare <input> elements sitting in the till blocks, and the
+     app's input styling is scoped to `.field input` -- so on the one
+     screen that had otherwise been given the most attention they fell
+     all the way through to the browser's own 2px inset bevel, square
+     corners, one pixel of padding and Arial.
+
+     Deliberately a touch larger than .field's 9px/11px: this is a
+     focused screen with four inputs on it rather than a dense form with
+     a dozen, the targets are worth having, and it is often used
+     standing up. The radius follows the till's own 9-14px rather than
+     the app's form radius, so the fields belong to the panel they sit
+     in.
+
+     :not(.till-input) because the amount is a text input too, and it
+     has a type treatment of its own that this must not overwrite. */
+  .till input[type=text]:not(.till-input),
+  .till input[type=number]:not(.till-input),
+  .till input[type=search]:not(.till-input){
+    width:100%;box-sizing:border-box;
+    font-family:inherit;font-size:14px;line-height:1.4;color:var(--ink);
+    background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;
+    transition:border-color .14s ease, box-shadow .14s ease;
+  }
+  .till input:not(.till-input)::placeholder{color:var(--ow-ink-400);}
+  .till input[type=text]:not(.till-input):hover,
+  .till input[type=number]:not(.till-input):hover{border-color:var(--ow-steel-400);}
+  /* A ring rather than the app's outline: these fields sit on tinted
+     panels, and an outline-offset ring cuts across the panel edge. */
+  .till input[type=text]:not(.till-input):focus,
+  .till input[type=number]:not(.till-input):focus{
+    outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--ow-oxide-soft);
+  }
+  /* The amount carries the same focus language, drawn on the block it
+     sits in rather than on the borderless input itself. */
+  .till-amount:focus-within{box-shadow:0 0 0 3px rgba(178,58,38,0.13);}
+
   /* Where the money sits. Each account carries what it holds, so the
      choice and the consequence are the same control. */
   .till-accounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
@@ -1781,11 +1822,22 @@
   .till-collect-head .till-label{margin:0;}
   .till-collect-hint{font-size:11.5px;color:var(--ink-soft);}
 
-  /* Time is something the app knows. It is a footnote, not a field. */
-  .till-foot-note{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);}
-  .till-foot-note input[type=time]{border:0;background:transparent;color:var(--ink);
-    font-size:11.5px;padding:2px 4px;border-bottom:1px dashed var(--line);}
-  .till-foot-note input[type=time]:focus{outline:none;border-bottom-color:var(--ink);}
+  /* Time is something the app knows. It is a footnote, not a field --
+     styled to be editable rather than to be filled in, so it reads as a
+     correction somebody makes occasionally and not as another box
+     waiting for them. */
+  .till-foot-note{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);
+    flex-wrap:wrap;padding-top:2px;border-top:1px solid var(--ow-rule-soft);}
+  .till-foot-note input[type=time],
+  .till-foot-note select{
+    border:0;background:transparent;color:var(--ink);
+    font-family:inherit;font-size:11.5px;font-weight:600;padding:3px 5px;
+    border-bottom:1px dashed var(--ow-rule);border-radius:0;cursor:pointer;
+  }
+  .till-foot-note input[type=time]:hover,
+  .till-foot-note select:hover{border-bottom-color:var(--ink-soft);}
+  .till-foot-note input[type=time]:focus,
+  .till-foot-note select:focus{outline:none;border-bottom-color:var(--accent);border-bottom-style:solid;}
 
   @media (max-width:560px){
     .till-input{font-size:32px;}
@@ -6167,7 +6219,7 @@
           <span id="cb_out_datenote"></span>
           <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
             <label for="cb_out_type" style="font-size:11.5px;">Show in the ledger as</label>
-            <select id="cb_out_type" style="font-size:11.5px;padding:2px 6px;">
+            <select id="cb_out_type">
               <option value="payment">Payment</option>
               <option value="expense">Expense</option>
             </select>

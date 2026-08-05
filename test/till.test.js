@@ -138,6 +138,39 @@ const group = (s) => scope.tillGroup(s);
     'and asks in words somebody would use');
 }
 
+/* ---------- 4b. the ordinary fields are styled too ------------------ *
+ * The app's input styling is scoped to `.field input`. Rebuilding these
+ * modals out of bare <input> elements inside .till blocks dropped every
+ * one of them through to the browser's own 2px inset bevel, square
+ * corners, one pixel of padding and Arial -- on the screen that had
+ * otherwise been given the most attention. Novel controls got designed
+ * and the ordinary ones got forgotten, which is exactly what makes a
+ * design look unfinished.
+ */
+{
+  // The till does not use .field wrappers, so it has to dress its own.
+  t.check(!/class="field"/.test((/<div class="modal-overlay" id="cashInModal">[\s\S]*?id="cashOutModal"[\s\S]*?\n<\/div>/.exec(src) || [''])[0]),
+    'the till does not lean on the app\'s .field wrapper');
+  const rule = /\.till input\[type=text\]:not\(\.till-input\),[\s\S]*?\}/.exec(src);
+  t.check(!!rule, 'so it styles its own text inputs');
+  const css = rule ? rule[0] : '';
+  t.check(/font-family:inherit/.test(css), 'in the app\'s typeface rather than the browser\'s Arial');
+  t.check(/font-size:14px/.test(css), 'at the app\'s size rather than the browser\'s 13.33');
+  t.check(/border-radius:9px/.test(css), 'with corners, which a default input has none of');
+  t.check(/padding:11px 13px/.test(css), 'and room to type in, against a default one pixel');
+  t.check(/width:100%/.test(css) && /box-sizing:border-box/.test(css),
+    'filling the block rather than falling back to the browser\'s twenty-character guess');
+
+  /* :not(.till-input) matters: the amount is a text input too, and it
+     has a type treatment of its own this must not overwrite. */
+  t.check(/:not\(\.till-input\)/.test(css),
+    'while leaving the amount its own treatment');
+  t.check(/\.till input\[type=text\]:not\(\.till-input\):focus/.test(src),
+    'and there is a focus state, so a keyboard can be seen');
+  t.check(/\.till-amount:focus-within/.test(src),
+    'including on the amount, drawn on the block since the input itself has no border');
+}
+
 /* ---------- 5. the account carries what it holds -------------------- */
 {
   const fn = (/function tillAccountBalances[\s\S]*?\n\}/.exec(code) || [''])[0];
