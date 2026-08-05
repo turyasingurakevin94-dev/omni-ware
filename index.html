@@ -486,6 +486,41 @@
   .dash-range-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
   .dash-range-bar .field select{padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
   .dash-asof{font-size:12px;color:var(--ink-soft);}
+  /* ---- What needs you today -------------------------------------
+     The dashboard opened on four figures and eight panels of equal
+     weight, and the one thing with a deadline -- the shop's biggest
+     seller two days from running out -- was ranked fifth inside a panel
+     in the second row, labelled "info".
+
+     So the answer comes first and the figures become its context. The
+     rows are ordered by when a thing bites, not by how big its number
+     is, and each carries what to actually do. */
+  .dash-action-panel{margin-bottom:20px;}
+  .dash-action-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+  .dash-alert{
+    display:flex;flex-direction:column;gap:6px;
+    background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:13px 15px;
+    border-left:4px solid var(--line);
+  }
+  .dash-alert.bad{border-left-color:var(--danger);background:var(--ow-oxide-soft);}
+  .dash-alert.warn{border-left-color:var(--ow-amber-ink);background:var(--ow-amber-soft);}
+  .dash-alert.quiet{border-left-color:var(--ow-steel-400);}
+  .dash-alert-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .dash-alert-band{font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink-soft);}
+  .dash-alert-band.bad{color:var(--danger);}
+  .dash-alert-band.warn{color:var(--ow-amber-ink);}
+  /* The money is the tiebreak within a band, so it reads as secondary to
+     the sentence rather than competing with it. */
+  .dash-alert-money{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);flex-shrink:0;}
+  .dash-alert-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.35;}
+  .dash-alert-detail{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+  .dash-alert-action{font-size:12px;font-weight:700;color:var(--ink);margin-top:1px;}
+  .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
+  .dash-alert-more{align-self:center;font-size:12px;color:var(--ink-soft);padding:10px;}
+  .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
+    background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
+
   .vital-grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px;
   }
@@ -4435,6 +4470,16 @@
         <div class="dash-asof" id="dash_asof"></div>
       </div>
 
+      <!-- 0. WHAT NEEDS YOU TODAY.
+           Above the vitals on purpose: the four figures are how the shop
+           IS, this is what to do about it, and the thing with a deadline
+           was previously fifth in a panel in the second row. -->
+      <div class="panel dash-action-panel">
+        <div class="dash-panel-title"><h2>What needs you today</h2></div>
+        <p class="dash-panel-note" id="dash_actionNote"></p>
+        <div class="dash-action-list" id="dash_actionList"></div>
+      </div>
+
       <!-- 1. VITAL SIGNS -->
       <div class="vital-grid" id="dash_vitalGrid"></div>
 
@@ -4446,8 +4491,8 @@
           <div id="dash_cashbridge"></div>
         </div>
         <div class="panel">
-          <div class="dash-panel-title"><h2>Active Threat Monitor</h2></div>
-          <p class="dash-panel-note">Automated risk flags from your live data.</p>
+          <div class="dash-panel-title"><h2>Everything flagged</h2></div>
+          <p class="dash-panel-note">The same list in full, in the same order — the top of it is what needs you today.</p>
           <div class="threat-list" id="dash_threatList"></div>
         </div>
       </div>
@@ -13787,6 +13832,11 @@ function anRowsByItem(invoices){
       const product = data.products.find(p=>p.id===it.productId);
       if(!map.has(key)){
         map.set(key, {
+          // Carried out so callers can join to this row exactly. The
+          // dashboard needs to put a price on an item about to run out,
+          // and matching these rows by NAME would pair the wrong variant
+          // -- or miss entirely when a line carried its own productName.
+          key,
           name: it.productName || (product ? product.name : 'Unknown item'),
           variant: (product && it.variantIdx!=null) ? productVariantLabel(product, it.variantIdx) : '',
           category: product ? (product.category||'') : '',
@@ -27454,7 +27504,10 @@ function dashStockOutExposure(){
     const dailyRate = v/30;
     const daysLeft = dailyRate>0 ? qty/dailyRate : Infinity;
     if(daysLeft < 10){
-      rows.push({name: productDisplayLabel(p, variantIdx==null?null:variantIdx), qty, daysLeft});
+      // key/dailyRate carried out so the dashboard can price what running
+      // out actually costs, joined exactly rather than by name.
+      rows.push({key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx, dailyRate,
+        name: productDisplayLabel(p, variantIdx==null?null:variantIdx), qty, daysLeft});
     }
   });
   return rows.sort((a,b)=>a.daysLeft-b.daysLeft).slice(0,3);
@@ -27607,6 +27660,221 @@ async function checkDetachedAgentOrders(cardHTML){
   if(empty) list.innerHTML = card; else list.insertAdjacentHTML('afterbegin', card);
 }
 
+/* ================= WHAT NEEDS YOU TODAY ==========================
+
+   The dashboard answered "how is the business doing?" over eight panels
+   and three and a bit screens, and never once answered "so what do I do
+   about it?". Everything actionable lived in one panel in the second
+   row, in SOURCE ORDER -- the order the checks happened to be written --
+   with no sort and no cap.
+
+   Measured on a shop with a quarter of real trading behind it:
+
+     crit  Supplier cost rising     a cost trend, months old
+     warn  Debtor exposure          84 days old
+     warn  Debtor exposure          67 days old
+     warn  Debtor exposure          45 days old
+     info  Stock-out risk           CEMENT. 1.9 DAYS OF COVER.
+     warn  Demand concentration     a structural fact
+
+   The one thing that would cost money that week -- the shop's biggest
+   seller running out on Friday -- was ranked fifth and labelled "info",
+   the lowest tier there is, under three near-identical cards about money
+   that had been outstanding for months and would still be outstanding
+   tomorrow.
+
+   The severity was inverted. An 84-day debt is chronic; a two-day
+   stock-out is acute. So alerts are ranked by WHEN THEY BITE, and only
+   then by how much money is on them.
+
+   And "crit / warn / info" is the system's vocabulary, not the shop's. A
+   shopkeeper does not triage by log level. */
+const DASH_URGENT_DAYS = 7;
+const DASH_SOON_DAYS = 30;
+/* Four bands, because "no deadline" and "a deadline three months out"
+   are not the same thing and lumping them made a cash runway read as a
+   puddle. A countdown is a countdown however far off it is; old debt
+   just sits there. */
+const DASH_BANDS = {
+  now:     { label: 'Needs you today',  cls: 'bad'  },
+  soon:    { label: 'Before month end', cls: 'warn' },
+  later:   { label: 'Coming',           cls: 'quiet' },
+  chronic: { label: 'Money leaking',    cls: 'quiet' },
+};
+/* Null is not zero here either: an alert with no deadline is not due
+   today, it is undated. Coerced to 0 it would outrank a genuine
+   emergency, which is how a cost trend from May ends up above a
+   stock-out on Friday. */
+function dashBandFor(dueDays){
+  if(dueDays == null) return 'chronic';
+  if(dueDays <= DASH_URGENT_DAYS) return 'now';
+  if(dueDays <= DASH_SOON_DAYS) return 'soon';
+  return 'later';
+}
+const DASH_BAND_RANK = { now: 0, soon: 1, later: 2, chronic: 3 };
+
+/* One list, built once, ranked once. The block at the top of the page
+   and the panel further down are the same alerts -- the top of the page
+   is not a second opinion that can drift from the panel below it.
+
+   `ctx` is handed the figures renderDashboard has already worked out,
+   rather than recomputing them, so the alert about the shop's profit and
+   the card showing its profit cannot disagree. */
+function dashAlerts(ctx){
+  const out = [];
+  const add = (a)=> out.push({ ...a, band: dashBandFor(a.dueDays) });
+
+  /* Running out. The only alert here with a real deadline, and the one
+     that was labelled "info". Priced at the gross profit the item earned
+     in the window, because that is what stops when the shelf is empty --
+     not the stock's value, which is what it would cost to replace. */
+  (ctx.stockOut||[]).forEach(s=>{
+    /* Built the way anRowsByItem builds ITS key, not with stockKey.
+       The two disagree for a product with no variant -- stockKey gives
+       "P001", anRowsByItem gives "P001::" -- so joining on stockKey
+       matched nothing, silently, and every stock-out came out priced at
+       zero while looking perfectly well formed. */
+    const rowKey = s.productId + '::' + (s.variantIdx == null ? '' : s.variantIdx);
+    const row = (ctx.itemRows||[]).find(r=> r.key === rowKey);
+    add({
+      id: 'stockout:'+s.key, kind: 'stockout',
+      dueDays: s.daysLeft, money: row ? Math.max(0, row.profit) : 0,
+      title: `${s.name} runs out in ${s.daysLeft < 1 ? 'under a day' : agingDaysLabel(Math.round(s.daysLeft))}`,
+      detail: `${Math.round(s.qty)} left, selling about ${s.dailyRate.toFixed(1)} a day.${
+        row && row.profit > 0 ? ` It earned ${fmtUGX(Math.round(row.profit))} of profit this period.` : ''}`,
+      action: 'Reorder it',
+    });
+  });
+
+  /* Cash. Runway is only a warning while there IS runway -- once the
+     balance is negative the shop is not months from trouble, it is in
+     it, and dividing a negative balance by burn printed "-0.4 months of
+     runway", which reads like a small number rather than a hole. */
+  if(ctx.cashBalance < 0){
+    add({ id:'cash:overdrawn', kind:'cash', dueDays: 0, money: Math.abs(ctx.cashBalance),
+      title: 'The cash book is overdrawn',
+      detail: `It stands at ${fmtUGX(Math.round(ctx.cashBalance))}. That is not runway running short — the money has already gone.`,
+      action: 'Check the Cash Book' });
+  } else if(ctx.runwayMonths != null && ctx.runwayMonths < 3){
+    add({ id:'cash:runway', kind:'cash', dueDays: Math.round(ctx.runwayMonths*30),
+      /* Not the cash balance. Money here is what is AT STAKE, and the
+         balance is what the shop still has -- carrying it made a healthy
+         40,780,700 the largest number in the list and sorted a comfortable
+         runway above everything else that was actually bleeding. */
+      money: 0,
+      title: `About ${ctx.runwayMonths.toFixed(1)} months of cash left at the current rate`,
+      detail: `${fmtUGX(Math.round(ctx.cashBalance))} in hand against ${fmtUGX(Math.round(ctx.burn))} a month going out.`,
+      action: 'Slow the spending or collect faster' });
+  }
+
+  /* SOLD BELOW WHAT IT COST. The old dashboard flagged a supplier's price
+     climbing -- the input -- and never joined it to the selling price, so
+     it could report "Cement costs 34% more" as its top alert while the
+     fact that every bag was now going out at a LOSS appeared nowhere.
+     Measured on a quarter of real trading: cement at -5.7% margin,
+     -187,659 over the window, because the cost passed 34,000 and the
+     shelf price did not move.
+
+     dueDays 0, and it is not a stretch: this is not something that will
+     bite, it is biting on every sale made today. */
+  (ctx.itemRows||[]).filter(r=> r.sales > 0 && r.profit < 0)
+    .sort((a,b)=> a.profit - b.profit).slice(0,3)
+    .forEach(r=>{
+      const perUnit = r.qty > 0 ? Math.abs(r.profit)/r.qty : 0;
+      add({ id:'loss:'+r.key, kind:'loss', dueDays: 0, money: Math.abs(r.profit),
+        title: `${r.name} is selling for less than it costs`,
+        detail: `${Math.round(r.qty)} sold this period at a ${r.margin.toFixed(1)}% margin — ${fmtUGX(Math.round(Math.abs(r.profit)))} lost${
+          perUnit > 0 ? `, about ${fmtUGX(Math.round(perUnit))} on every one` : ''}.`,
+        action: 'Raise the price or change supplier' });
+    });
+
+  /* Costs, not sales. This shop sold 22,743,500 at a 14.8% margin and
+     still lost money, because overheads came to more than the gross
+     profit -- and the vital card said "-3.0% margin", which describes
+     the symptom and hides the cause. Only raised when the trading was
+     actually fine: a shop losing money on the goods themselves has a
+     different problem and gets told a different thing. */
+  if(ctx.grossProfit > 0 && ctx.netProfit < 0){
+    add({ id:'costs:overheads', kind:'costs', dueDays: null, money: Math.abs(ctx.netProfit),
+      title: 'Overheads are eating the whole margin',
+      detail: `The goods made ${fmtUGX(Math.round(ctx.grossProfit))} this period, and running the shop cost ${fmtUGX(Math.round(ctx.opex))}. Trading is fine; the overheads are the problem.`,
+      action: 'Look at the Cash Book expenses' });
+  } else if(ctx.grossProfit <= 0 && ctx.totals.sales > 0){
+    add({ id:'costs:gross', kind:'costs', dueDays: null, money: Math.abs(ctx.grossProfit),
+      title: 'The goods themselves are not making money',
+      detail: `${fmtUGX(Math.round(ctx.totals.sales))} of sales cost ${fmtUGX(Math.round(ctx.totals.cost))} to buy. This is pricing, not overheads.`,
+      action: 'Check selling prices against what you pay' });
+  }
+
+  /* Debt, as ONE row. Three cards reading "X owes Y, outstanding Z days"
+     are a list, not three separate alarms -- and they crowded out
+     everything else by sheer number. What the shop needs is the total,
+     the worst age, and one way in. */
+  const owed = (ctx.debtors||[]).filter(d=> d.debt > 0.5);
+  if(owed.length){
+    const total = owed.reduce((s,d)=> s + d.debt, 0);
+    const dated = owed.filter(d=> d.ageDays >= 0);
+    const worst = dated.reduce((m,d)=> (!m || d.ageDays > m.ageDays) ? d : m, null);
+    add({ id:'debt:all', kind:'debt',
+      // No deadline: old debt is not due on a date, it just sits there.
+      dueDays: null, money: total,
+      title: `${fmtUGX(Math.round(total))} is sitting with customers`,
+      detail: worst
+        ? `Across ${owed.length} ${owed.length===1?'customer':'customers'}. The oldest is ${esc(worst.name)} at ${agingDaysLabel(worst.ageDays)}, owing ${fmtUGX(Math.round(worst.debt))}.`
+        : `Across ${owed.length} ${owed.length===1?'customer':'customers'}, none of it with a date behind it.`,
+      action: 'Open the Debtors list' });
+  }
+
+  // Stock that has not moved in two months, priced at what it cost.
+  if(ctx.inv && ctx.inv.deadValue > 0){
+    add({ id:'stock:dead', kind:'deadstock', dueDays: null, money: ctx.inv.deadValue,
+      title: `${fmtUGX(Math.round(ctx.inv.deadValue))} of stock has not sold in 60 days`,
+      detail: `${Math.round(ctx.inv.deadQty)} units, ${(100-ctx.inv.ratio).toFixed(0)}% of what the shop is holding by value.`,
+      action: 'Clear it or stop reordering it' });
+  }
+
+  // What the shop pays, climbing. Chronic by nature -- it is a trend,
+  // not an event -- so it stops outranking things with deadlines.
+  (ctx.inflation||[]).forEach((f,i)=>{
+    add({ id:'cost-rise:'+i, kind:'costrise', dueDays: null,
+      money: Math.max(0, (f.last - f.first)),
+      title: `${f.name} costs ${f.growth.toFixed(0)}% more than it did`,
+      detail: `From ${esc(f.supplierName||'this supplier')}: ${fmtUGX(Math.round(f.first))} on ${esc(fmtShortDate(f.since))}, ${fmtUGX(Math.round(f.last))} now. Check the selling price still covers it.`,
+      action: 'Compare prices' });
+  });
+
+  // Customers going quiet, collapsed the same way the debtors are.
+  const quiet = ctx.goingQuiet || [];
+  if(quiet.length){
+    const w = quiet[0];
+    add({ id:'quiet:all', kind:'quiet', dueDays: null, money: 0,
+      title: `${quiet.length} regular ${quiet.length===1?'customer has':'customers have'} gone quiet`,
+      detail: `${esc(w.name)} usually orders every ${agingDaysLabel(Math.round(w.avgGapDays))} and it has been ${agingDaysLabel(Math.round(w.sinceLastDays))}.`,
+      action: 'Ring them' });
+  }
+
+  (ctx.concentration||[]).forEach((r,i)=>{
+    add({ id:'conc:'+i, kind:'concentration', dueDays: null, money: 0,
+      title: `${r.name} sells almost entirely to one customer`,
+      detail: `${r.concentration.toFixed(0)}% of this period's volume went to ${esc(r.topBuyerName)}. If they stop, so does the line.`,
+      action: 'Spread it wider' });
+  });
+
+  /* Deadline first, money second. Sorting on money alone would put a
+     15,556,600 debt that has waited three months above a stock-out on
+     Friday; sorting on urgency alone would rank two stock-outs by luck. */
+  /* The null guard on the second key is unreachable as the bands stand:
+     dashBandFor sends every null to `chronic` and nothing else lands
+     there, so two alerts in one band always have comparable dueDays.
+     Kept anyway -- it is what stops an undated alert sorting as due
+     today if a band is ever added or widened -- and recorded here rather
+     than chased with a fixture that cannot exist. */
+  return out.sort((a,b)=>
+    (DASH_BAND_RANK[a.band] - DASH_BAND_RANK[b.band])
+    || ((a.dueDays == null ? Infinity : a.dueDays) - (b.dueDays == null ? Infinity : b.dueDays))
+    || (b.money - a.money));
+}
+
 function renderDashboard(){
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
@@ -27644,27 +27912,64 @@ function renderDashboard(){
   const profitDelta = prevNetProfit!==0 ? ((netProfit-prevNetProfit)/Math.abs(prevNetProfit)*100) : (netProfit>0?100:0);
   const salesDelta = prevTotals.sales>0 ? ((curTotals.sales-prevTotals.sales)/prevTotals.sales*100) : (curTotals.sales>0?100:0);
 
+  /* The oldest money owed, so the debt card can be about age as well as
+     size -- 15,556,600 owed for a fortnight and the same figure owed for
+     three months are not the same fact, and the card showed one number
+     for both. */
+  const debtorRows = data.customers
+    .map(c=>({ name: c.name || 'Unnamed customer', debt: Number(c.debt)||0,
+      ageDays: (Number(c.debt)||0) > 0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1 }))
+    .filter(r=> r.debt > 0.5);
+  const oldestDebt = debtorRows.reduce((m,r)=> (r.ageDays >= 0 && (!m || r.ageDays > m.ageDays)) ? r : m, null);
+
   const vitalCards = [
     {
-      label:'Net Operating Profit', value: fmtUGX(netProfit),
+      label:'Net profit this period', value: fmtUGX(netProfit),
       tone: netProfit>=0?'good':'bad',
-      sub: `${netMargin.toFixed(1)}% margin • <span class="${profitDelta>=0?'trend-up':'trend-down'}">${dashPct(profitDelta)}</span> vs prior period`
+      /* Says WHICH half moved. The old sub read "-3.0% margin, -113.7%
+         vs prior period" for a shop whose goods were making money and
+         whose overheads were eating it -- a description of the symptom
+         with the cause left off. */
+      sub: netProfit < 0 && curTotals.profit > 0
+        ? `Goods made ${fmtUGX(Math.round(curTotals.profit))}, running the shop cost ${fmtUGX(Math.round(curOpex))}`
+        : `${netMargin.toFixed(1)}% of ${fmtUGX(Math.round(curTotals.sales))} in sales`
+          + (prevNetProfit !== 0 || prevTotals.sales > 0
+            ? ` • <span class="${profitDelta>=0?'trend-up':'trend-down'}">${dashPct(profitDelta)}</span> vs prior period`
+            : ' • nothing to compare it with yet')
     },
     {
-      label:'Cash Position (Liquidity)', value: fmtUGX(cashBalance),
-      tone: cashBalance>=0?'good':'bad',
-      sub: runwayMonths==null ? 'No recent burn — liquidity stable' : `${runwayMonths.toFixed(1)} months of runway at current burn`
+      label:'Cash in hand', value: fmtUGX(cashBalance),
+      tone: cashBalance<0 ? 'bad' : (runwayMonths!=null && runwayMonths<3 ? 'warn' : 'good'),
+      /* A negative balance has no runway. Dividing it by burn printed
+         "-0.4 months of runway", which reads as a small number rather
+         than as money already gone. */
+      sub: cashBalance < 0
+        ? 'Overdrawn — this is money already spent, not months remaining'
+        : runwayMonths==null
+          ? 'Nothing going out lately, so there is no burn rate to measure'
+          : `${runwayMonths.toFixed(1)} months at ${fmtUGX(Math.round(burn))} a month going out`
     },
     {
-      label:'Working Capital Gap', value: fmtUGX(Math.abs(wcGap)),
-      tone: wcGap>=0?'good':'warn',
-      sub: (wcGap>=0 ? `Owed to us exceeds what we owe by this much` : `We owe more than customers owe us`)
-        + (owedToStaffAndLandlord ? ` (includes ${fmtUGX(Math.round(owedToStaffAndLandlord))} of wages and rent)` : '')
+      label:'Owed to you by customers', value: fmtUGX(Math.round(totalDebtors)),
+      /* NOT green for being large. The old card showed the debtors and
+         creditors GAP and called any positive gap good -- so 15,556,600
+         of the shop's money sitting in other people's pockets rendered
+         as a healthy figure in the same colour as a profit. What decides
+         the tone is how long it has been out there. */
+      tone: !oldestDebt ? 'good' : (oldestDebt.ageDays > 60 ? 'bad' : (oldestDebt.ageDays > 30 ? 'warn' : 'good')),
+      sub: oldestDebt
+        ? `Oldest is ${agingDaysLabel(oldestDebt.ageDays)} — ${esc(oldestDebt.name)}. You owe ${fmtUGX(Math.round(totalCreditors))} out.`
+        : (debtorRows.length ? `${debtorRows.length} owing, none of it dated` : 'Nobody owes you anything')
     },
     {
-      label:'Inventory Health Ratio', value: inv.ratio.toFixed(0)+'% fast-moving',
+      label:'Stock not moving', value: fmtUGX(Math.round(inv.deadValue)),
+      /* Led with the money rather than the ratio. "90% fast-moving"
+         sounds like a pass mark; 1,500,000 sitting still is the fact
+         somebody can act on. */
       tone: inv.ratio>=60?'good':(inv.ratio>=35?'warn':'bad'),
-      sub: `${fmtUGX(inv.deadValue)} tied up in stock with no sale in 60 days`
+      sub: inv.deadValue > 0
+        ? `${Math.round(inv.deadQty)} units unsold in 60 days • ${inv.ratio.toFixed(0)}% of your stock value is moving`
+        : `Everything on the shelves has sold in the last 60 days`
     }
   ];
   document.getElementById('dash_vitalGrid').innerHTML = vitalCards.map(c=>`
@@ -27681,39 +27986,61 @@ function renderDashboard(){
     `<div class="cashbridge-legend"><span><i style="background:var(--good);"></i>Cash In</span><span><i style="background:var(--danger);"></i>Cash Out</span></div>`;
 
 
-  // Threat monitor
-  const threats = [];
-  dashSupplierPriceInflation().forEach(f=>{
-    threats.push({level:'crit', title:'Supplier cost rising', body:`<b>${esc(f.name)}</b> from ${esc(f.supplierName||'this supplier')} cost ${fmtUGX(Math.round(f.first))} on ${esc(f.since)} and ${fmtUGX(Math.round(f.last))} now — up ${f.growth.toFixed(1)}%. Check your selling price still covers it.`});
-  });
-  dashDebtorExposure().forEach(d=>{
-    threats.push({level:'warn', title:'Debtor exposure', body:`<b>${esc(d.name)}</b> owes ${fmtUGX(d.debt)}${d.ageDays>0?`, outstanding ${d.ageDays} days`:''}.`});
-  });
-  dashStockOutExposure().forEach(s=>{
-    threats.push({level:'info', title:'Stock-out risk', body:`<b>${esc(s.name)}</b> has ~${s.qty} left, roughly ${s.daysLeft.toFixed(1)} days of cover at current sale pace.`});
-  });
   const goingQuiet = dashGoingQuietCustomers();
-  goingQuiet.slice(0,3).forEach(g=>{
-    threats.push({level:'warn', title:'Customer going quiet', body:`<b>${esc(g.name)}</b> usually orders every ~${Math.round(g.avgGapDays)} days — it's been ${Math.round(g.sinceLastDays)} days since their last order.`});
-  });
   const breadth = dashDemandBreadth(curInvoices);
   // Only worth flagging among products that actually move volume -- a
   // low-volume item bought entirely by one customer isn't a real
   // dependency risk, it's just a niche item.
-  breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,5)
+  const concentration = breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,5)
     .filter(r=>r.concentration>=60)
-    .slice(0,3)
-    .forEach(r=>{
-      threats.push({level:'warn', title:'Demand concentration risk', body:`<b>${esc(r.name)}</b>: ${r.concentration.toFixed(0)}% of this window's volume came from a single customer, <b>${esc(r.topBuyerName)}</b>.`});
-    });
+    .slice(0,3);
+
+  const itemRows = anRowsByItem(curInvoices).filter(r=>r.qty>0);
+  /* One ranked list, built once. The block at the top of the page and
+     the panel below it are the same alerts, so the two cannot drift. */
+  const alerts = dashAlerts({
+    itemRows, totals: curTotals, opex: curOpex, grossProfit: curTotals.profit, netProfit,
+    cashBalance, burn, runwayMonths, inv,
+    debtors: debtorRows, goingQuiet, concentration,
+    stockOut: dashStockOutExposure(), inflation: dashSupplierPriceInflation(),
+  });
+
+  const alertCardHTML = (a)=>{
+    const band = DASH_BANDS[a.band];
+    return `<div class="dash-alert ${esc(band.cls)}">
+      <div class="dash-alert-head">
+        <span class="dash-alert-band ${esc(band.cls)}">${esc(band.label)}</span>
+        ${a.money > 0 ? `<span class="dash-alert-money">${esc(fmtUGX(Math.round(a.money)))}</span>` : ''}
+      </div>
+      <div class="dash-alert-title">${esc(a.title)}</div>
+      <div class="dash-alert-detail">${a.detail}</div>
+      <div class="dash-alert-action">${esc(a.action)}</div>
+    </div>`;
+  };
+  /* Capped at five. A list that runs to twenty is a list nobody reads,
+     and the whole point of ranking them was that the top of it is where
+     somebody should start. The rest are still on the page, below. */
+  const TOP = 5;
+  const urgent = alerts.filter(a=> a.band === 'now' || a.band === 'soon');
+  document.getElementById('dash_actionList').innerHTML = alerts.length
+    ? alerts.slice(0, TOP).map(alertCardHTML).join('')
+      + (alerts.length > TOP ? `<div class="dash-alert-more">${alerts.length - TOP} more below.</div>` : '')
+    : `<div class="dash-allclear">Nothing needs you right now. Nothing is running out, nobody is overdue, and the money adds up.</div>`;
+  document.getElementById('dash_actionNote').textContent = alerts.length
+    ? (urgent.length
+      ? `${urgent.length} ${urgent.length===1?'thing has':'things have'} a deadline. Ranked by when they bite, then by what is on them.`
+      : 'Nothing has a deadline today — these are the things quietly costing money.')
+    : '';
+
+  // The same alerts, all of them, as the evidence below the answer.
+  document.getElementById('dash_threatList').innerHTML = alerts.length
+    ? alerts.map(alertCardHTML).join('')
+    : `<div class="threat-empty">No active risk flags right now.</div>`;
   const threatCardHTML = t=>`
     <div class="threat-card ${t.level}">
       <div class="threat-card-head"><strong>${esc(t.title)}</strong><span class="threat-pill ${t.level}">${t.level}</span></div>
       <div class="threat-card-body">${t.body}</div>
     </div>`;
-  document.getElementById('dash_threatList').innerHTML = threats.length
-    ? threats.map(threatCardHTML).join('')
-    : `<div class="threat-empty">No active risk flags right now.</div>`;
   // Asks the database separately, because this is the one flag that cannot
   // be worked out from what the admin app loads: a detached order is
   // indistinguishable from an ordinary walk-in order here, and only the
@@ -27726,8 +28053,8 @@ function renderDashboard(){
   document.getElementById('dash_unitsTrend').innerHTML = dashAreaSVG(trend.map(t=>t.qty), trend.map(t=>t.label), '#3B82C4');
   document.getElementById('dash_revenueTrend').innerHTML = dashAreaSVG(trend.map(t=>t.sales), trend.map(t=>t.label), 'var(--good)');
 
-  // Quadrant matrix (use current window's item performance)
-  const itemRows = anRowsByItem(curInvoices).filter(r=>r.qty>0);
+  // Quadrant matrix (use current window's item performance) -- itemRows is
+  // built once above, where the alerts also read it.
   document.getElementById('dash_quadrant_note').textContent = `${itemRows.length} items sold in the selected window, plotted by volume vs margin.`;
   document.getElementById('dash_quadrant').innerHTML = dashQuadrantSVG(itemRows);
 

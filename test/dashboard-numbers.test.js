@@ -215,10 +215,18 @@ const inv = (date, supplier, name, price, variantIdx = null, voided = false) => 
  * figure -- so that comparison was not merely wrong, it was uncomputable.
  */
 {
-  const render = extractFunction(src, 'renderDashboard', 'index.html');
-  t.check(/Supplier cost rising/.test(render) && !/margin is being squeezed/.test(render),
-    'the card reports the cost rise it can actually see');
-  t.check(!/f\.rGrowth/.test(render),
+  /* The card moved into dashAlerts when the dashboard grew a ranked
+     list -- same claim, said in the shop's terms rather than as a
+     severity label. */
+  const alerts = extractFunction(src, 'dashAlerts', 'index.html');
+  t.check(/costs \$\{f\.growth\.toFixed\(0\)\}% more than it did/.test(alerts)
+    && !/margin is being squeezed/.test(src),
+  'the card reports the cost rise it can actually see');
+  /* Both ends of the trend, which is the part that IS computable: what
+     it cost then and what it costs now, from the purchase invoices. */
+  t.check(/\$\{fmtUGX\(Math\.round\(f\.first\)\)\} on \$\{esc\(fmtShortDate\(f\.since\)\)\}, \$\{fmtUGX\(Math\.round\(f\.last\)\)\} now/.test(alerts),
+    'naming both prices and when the first was paid');
+  t.check(!/f\.rGrowth/.test(src),
     'and no longer quotes a retail trend that cannot be computed from anything stored');
 }
 
