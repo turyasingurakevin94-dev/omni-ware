@@ -89,8 +89,16 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
      is not printed is not knowable. */
   t.check(/no general ledger behind these/.test(printFn),
     'and it states that there is no ledger behind the figures');
-  t.check(/balances as at\s*\$\{esc\(ctx\.bs\.asOf\)\}/.test(printFn),
-    'and that cash, debtors and stock are today\'s balances rather than the period\'s');
+  /* This used to assert that the printed balances were TODAY's whatever
+     period was asked for -- which was true, and was the bug: a July set
+     carried a balance sheet from today and called them one document.
+     The sheet is dated now, so what has to hold is that the paper says
+     which date it is as at, and says when that was rebuilt rather than
+     taken live. */
+  t.check(/The balance sheet is as at \$\{esc\(ctx\.bs\.asOf\)\}/.test(printFn),
+    'and names the date the balance sheet is as at');
+  t.check(/ctx\.bs\.historic \? ', rebuilt from the dated records rather than taken from today' : ''/.test(printFn),
+    'saying so when it was rebuilt rather than taken live');
 }
 
 /* ---------- 4. print mechanics --------------------------------------- */

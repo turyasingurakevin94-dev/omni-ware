@@ -22725,33 +22725,154 @@ function incomeStatement(fromISO, toISO){
    That is worse than not offering it. Fixed assets and loans can be
    stated at any date, but a balance sheet is only ever as good as its
    weakest line. */
-function balanceSheetToday(){
-  const asOf = todayISO();
-  const cash = cashOnHandByAccount();
-  const receivables = dashTotalDebtors();
-  const inv = inventoryValue();
+/* ---- The sheet as at a date ----
+
+   It was always today's, whatever period was on screen, so printing a
+   set of statements for July handed somebody a July profit and loss
+   beside a balance sheet from today and called them one document.
+
+   Most of it reconstructs exactly, because the records are dated:
+   cashOnHandFor, fixedAssetsNBVAt and loansOutstandingAt already took a
+   date; debtors, creditors and what is owed to staff all have dated
+   ledgers behind them.
+
+   STOCK IS THE ONE THAT DOES NOT. The log carries qtyAfter on every
+   movement, so how many were on the shelf that day is exact -- but what
+   they were worth is not, because the FIFO lots as they stood then were
+   never kept. The quantity is therefore reconstructed and valued at
+   today's unit cost, and the sheet says that is what it did. Rather
+   than silently mixing one current line into six historical ones. */
+function stockValueAsAt(asOf){
+  const lots = data.stockLots || {};
+  const today = todayISO();
+  if(!asOf || asOf >= today) return inventoryValue();
+
+  // Where each item stood that day: the last movement on or before it.
+  const log = (data.stockLog||[]).slice()
+    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || (a.id-b.id));
+  const qtyThen = {};
+  const seen = new Set();
+  log.forEach(e=>{
+    if(!e.key) return;
+    if(String(e.date||'') <= asOf){ qtyThen[e.key] = Number(e.qtyAfter)||0; }
+    else if(!seen.has(e.key) && qtyThen[e.key] === undefined){
+      /* Every movement of this item is AFTER the date, so what it held
+         then is what stood before the earliest of them. */
+      qtyThen[e.key] = (Number(e.qtyAfter)||0) - (Number(e.delta)||0);
+    }
+    seen.add(e.key);
+  });
+
+  let value = 0, uncostedQty = 0;
+  const keys = new Set(Object.keys(lots).concat(Object.keys(qtyThen)));
+  keys.forEach(k=>{
+    const current = (lots[k]||[]);
+    const currentQty = current.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+    const costed = current.filter(l=> l.cost != null);
+    const costedQty = costed.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+    const costedValue = costed.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+    // An item that never moved held then what it holds now.
+    const qty = qtyThen[k] === undefined ? currentQty : qtyThen[k];
+    if(qty <= 0) return;
+    if(costedQty <= 0){ uncostedQty += qty; return; }
+    value += qty * (costedValue / costedQty);
+  });
+  return { value, uncostedQty, estimated: true };
+}
+
+// What customers owed that day, from their own dated ledgers rather than
+// from the stored balance -- which is only ever current.
+function receivablesAsAt(asOf){
+  const today = todayISO();
+  if(!asOf || asOf >= today) return dashTotalDebtors();
+  return (data.customers||[]).reduce((s,c)=>{
+    const bal = (c.debtLog||[])
+      .filter(l=> String(l.date||'') <= asOf)
+      .reduce((n,l)=> n + (l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0)), 0);
+    return s + Math.max(0, bal);
+  }, 0);
+}
+
+function payablesAsAt(asOf){
+  const today = todayISO();
+  if(!asOf || asOf >= today) return dashTotalCreditors();
+  /* Reached through the supplier list, the same way dashTotalCreditors
+     is. That rule loses an invoice whose supplier was deleted -- which
+     is deliberate elsewhere in the app, since a document pointing at a
+     deleted row has nowhere to appear -- and the point here is that BOTH
+     dates obey the same rule. Two sheets counting different sets of
+     invoices would show a movement between them that never happened. */
+  const known = new Set((data.suppliers||[]).map(s=> s.id));
+  return (data.purchaseInvoices||[])
+    .filter(pi=> !pi.voided && known.has(pi.supplierId) && String(pi.date||'') <= asOf)
+    .reduce((s,pi)=>{
+      const paid = (pi.payments||[])
+        .filter(p=> String(p.date||'') <= asOf)
+        .reduce((n,p)=> n + (Number(p.amount)||0), 0);
+      return s + Math.max(0, purchaseInvoiceTotal(pi) - paid);
+    }, 0);
+}
+
+function duesOwedAsAt(asOf){
+  const today = todayISO();
+  if(!asOf || asOf >= today) return duesOwed();
+  const open = (data.dues||[]).filter(d=>{
+    if(String(d.dueDate||'') > asOf) return false;      // not yet due that day
+    if(d.amount === null || d.amount === undefined) return false;
+    const paid = (d.payments||[])
+      .filter(p=> String(p.date||'') <= asOf)
+      .reduce((n,p)=> n + (Number(p.amount)||0), 0);
+    return (Number(d.amount) - paid) > 0.5;
+  });
+  const bal = (d)=> Number(d.amount) - (d.payments||[])
+    .filter(p=> String(p.date||'') <= asOf)
+    .reduce((n,p)=> n + (Number(p.amount)||0), 0);
+  return {
+    wages: open.filter(d=> d.kind==='wage').reduce((s,d)=> s + bal(d), 0),
+    rent: open.filter(d=> d.kind==='rent').reduce((s,d)=> s + bal(d), 0),
+    total: open.reduce((s,d)=> s + bal(d), 0),
+    count: open.length,
+    uncostedCount: (data.dues||[]).filter(d=>
+      String(d.dueDate||'') <= asOf && (d.amount === null || d.amount === undefined)).length,
+  };
+}
+
+function balanceSheetToday(){ return balanceSheetAsAt(todayISO()); }
+
+function balanceSheetAsAt(asOfISO){
+  const asOf = asOfISO || todayISO();
+  const historic = asOf < todayISO();
+  const cash = {
+    byAccount: ACCOUNTS.map(a=>({ key:a.key, label:a.label, amount: Math.round(cashOnHandFor(a.key, asOf)) })),
+  };
+  cash.total = cash.byAccount.reduce((s,a)=> s + a.amount, 0);
+  const receivables = receivablesAsAt(asOf);
+  const inv = stockValueAsAt(asOf);
   const fixed = fixedAssetsNBVAt(asOf);
   const assets = cash.total + receivables + inv.value + fixed;
 
-  const payables = dashTotalCreditors();
+  const payables = payablesAsAt(asOf);
   const loans = loansOutstandingAt(asOf);
   /* Wages and rent already fallen due and not yet paid. Its own line
      rather than folded into payables: a supplier, a member of staff and
      a landlord are three different creditors, and the one you can least
      afford to keep waiting is not the one on an invoice. */
-  const staffAndRent = duesOwed();
+  const staffAndRent = duesOwedAsAt(asOf);
   const liabilities = payables + loans + staffAndRent.total;
 
   // Owner money in and out, from the cash book. What is left of equity
   // after it is retained earnings -- and it is a PLUG, not a computed
   // figure, because nothing here posts a double entry.
   const ownerIn = (data.cashTxns||[])
-    .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment')
+    .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment' && String(t.date||'') <= asOf)
     .reduce((s,t)=> s + (Number(t.amount)||0), 0);
   const equity = assets - liabilities;
 
   return {
-    asOf,
+    asOf, historic,
+    // Stock is the one line that cannot be rebuilt exactly: the lots as
+    // they stood that day were never kept.
+    inventoryEstimated: !!inv.estimated,
     cashAccounts: cash.byAccount, cash: cash.total,
     receivables, inventory: inv.value, inventoryUncostedQty: inv.uncostedQty,
     fixedAssets: fixed, assets,
@@ -23442,7 +23563,9 @@ function statementsContext(){
 
   const is = incomeStatement(from, to);
   const prev = incomeStatement(prevFrom, prevTo);
-  const bs = balanceSheetToday();
+  // Capped at today: a sheet dated forward would be today's figures
+  // under a heading that has not happened yet.
+  const bs = balanceSheetAsAt(to > todayISO() ? todayISO() : to);
   const cf = cashFlowStatement(from, to);
   const prevCf = cashFlowStatement(prevFrom, prevTo);
   const checks = statementChecks(is, bs, cf);
@@ -23523,9 +23646,10 @@ function printStatements(which){
         ${statementDocHTML(d.key, ctx)}
       </section>`).join('')}
       <footer class="st-print-foot">
-        Prepared from the shop's own records. Cash, debtors and stock are balances as at
-        ${esc(ctx.bs.asOf)}; there is no general ledger behind these, so the checks printed
-        with them are what stands in for a trial balance.
+        Prepared from the shop's own records. The balance sheet is as at ${esc(ctx.bs.asOf)}${
+          ctx.bs.historic ? ', rebuilt from the dated records rather than taken from today' : ''}; there is
+        no general ledger behind these, so the checks printed with them are what stands in for
+        a trial balance.
       </footer>
     </div>`;
 
@@ -23733,7 +23857,9 @@ function stBalanceSheet({bs}){
       ${bs.cashAccounts.map(a=>stLine(a.label, a.amount, null)).join('')}
       ${stLine('Owed by customers', bs.receivables, null)}
       ${stLine('Stock on the shelf', bs.inventory, null,
-        bs.inventoryUncostedQty ? {hint:`${bs.inventoryUncostedQty} units have no cost on file and count as nothing`} : {})}
+        bs.inventoryEstimated
+          ? {hint:`how many were on the shelf that day is exact; what they were worth is today's unit cost, since the lots as they stood then were not kept${bs.inventoryUncostedQty ? ` — and ${bs.inventoryUncostedQty} units have no cost on file at all` : ''}`}
+          : (bs.inventoryUncostedQty ? {hint:`${bs.inventoryUncostedQty} units have no cost on file and count as nothing`} : {}))}
       ${stLine('Equipment and vehicles', bs.fixedAssets, null, {hint:'after depreciation'})}
       ${stLine('Total', bs.assets, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
@@ -23755,8 +23881,9 @@ function stBalanceSheet({bs}){
       ? `${Math.round(bs.liabilities/bs.assets*100)}% of what the shop owns is financed by what it owes.`
       : 'There is nothing on the books yet.'}
       Wages and rent owed are counted from the month they fall due, while the cost of them reaches the profit and loss when they are actually paid. That mixture is deliberate: it is what lets this sheet show money the shop genuinely owes its people without restating every profit figure the app has ever shown. Retained earnings absorbs the difference, and is a balancing figure rather than a computed one.
-      As at today only: cash, debtors and stock are live balances rather than history, so a sheet dated to a past month would be today's figures under an old heading.
-      Cash and mobile money are where the book stands this minute — the last figure counted or opened, plus everything that has moved since. Counting the drawer at close corrects them; it is not what they wait for.</p>
+      ${bs.historic
+        ? `Rebuilt as at ${esc(bs.asOf)} from the dated records: cash from the cash book, debtors and creditors from their own ledgers, equipment and loans from their schedules. Stock is the exception — how many were on the shelf that day is exact, but their value is at today's unit cost, because the lots as they stood then were never kept.`
+        : `Cash and mobile money are where the book stands this minute — the last figure counted or opened, plus everything that has moved since. Counting the drawer at close corrects them; it is not what they wait for.`}</p>
   </section>`;
 }
 

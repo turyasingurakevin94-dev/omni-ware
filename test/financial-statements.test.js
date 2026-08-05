@@ -59,6 +59,11 @@ const scope = compileScope([
   extractFunction(src, 'dashTotalDebtors', 'index.html'),
   extractFunction(src, 'dueBalance', 'index.html'),
   extractFunction(src, 'duesOwed', 'index.html'),
+  extractFunction(src, 'stockValueAsAt', 'index.html'),
+  extractFunction(src, 'receivablesAsAt', 'index.html'),
+  extractFunction(src, 'payablesAsAt', 'index.html'),
+  extractFunction(src, 'duesOwedAsAt', 'index.html'),
+  extractFunction(src, 'balanceSheetAsAt', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
@@ -96,7 +101,7 @@ const scope = compileScope([
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   dashTotalCreditors: () => 0,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed', 'statementBasisGap']);
+}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed', 'statementBasisGap', 'balanceSheetAsAt']);
 
 const r = (n) => Math.round(n);
 const txn = (over) => Object.assign({ id: 1, date: TODAY, account: 'cash', type: 'expense', category: 'Rent', amount: 0 }, over);

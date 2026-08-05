@@ -455,8 +455,11 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   t.check(/cashCategory:'Rent'/.test(code) && /cashCategory:'Salaries & Wages'/.test(code),
     'payments carry the categories the income statement already treats as running costs');
 
-  const bs = (/function balanceSheetToday[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/const staffAndRent = duesOwed\(\);/.test(bs),
+  /* The sheet takes a date now, so the call is the as-at variant. What
+     is guarded is unchanged: the sheet asks what is owed to staff and
+     the landlord rather than counting only suppliers. */
+  const bs = (/function balanceSheetAsAt[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const staffAndRent = duesOwedAsAt\(asOf\);/.test(bs),
     'the balance sheet asks what is owed to staff and the landlord');
   t.check(/const liabilities = payables \+ loans \+ staffAndRent\.total;/.test(bs),
     'and it is inside total liabilities, not merely reported beside them');
