@@ -503,6 +503,19 @@
   .an-total-row td{font-weight:700;border-top:2px solid var(--line);background:var(--bg);}
   .an-neg{color:var(--danger);}
 
+  /* ---- Purchase analytics ----------------------------------------
+     A price paid that has no purchase behind it, and a price move with
+     no previous period to move from, are both dashes rather than zeros:
+     an item bought for the first time has not gone up, it has appeared. */
+  .pan-none{color:var(--ink-soft);}
+  /* A quantity across bags, sheets and kilograms is not a number. The
+     KPI used to add them anyway. */
+  .pan-nototal{color:var(--ink-soft);cursor:help;}
+  /* A commission total that covers only the suppliers who have a rate. */
+  .kpi-value.partial{color:var(--ow-amber-ink);}
+  .pan-partial{color:var(--ow-amber-ink);}
+  .pan-partial-mark{color:var(--ow-amber-ink);font-weight:700;margin-left:2px;cursor:help;}
+
   /* ===== Executive Dashboard ===== */
   .dash-range-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
   .dash-range-bar .field select{padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
@@ -4823,6 +4836,10 @@
         </div>
 
         <div class="kpi-grid" id="pan_kpiGrid"></div>
+        <!-- The period compared against, whether a search is narrowing
+             the figures, which units are in play, and how much of the
+             spending the commission total does not cover. -->
+        <div class="an-kpi-note" id="pan_kpiNote" style="display:none;"></div>
 
         <div class="an-subtabs" id="pan_subtabs">
           <button type="button" data-view="item" class="active">Statistics by item</button>
@@ -14181,7 +14198,11 @@ const PAN_COLUMNS = {
     {key:'category', label:'Category'},
     {key:'unit', label:'Unit'},
     {key:'amt', label:'Amt', numeric:true, money:true},
-    {key:'purchased', label:'Purchased', numeric:true}
+    {key:'purchased', label:'Purchased', numeric:true},
+    // The number a buyer actually works from, and the only one that says
+    // whether this is getting worse.
+    {key:'unitPrice', label:'Price paid', numeric:true, money:true},
+    {key:'priceMove', label:'vs last period', numeric:true, pctMove:true}
   ],
   supplier: [
     {key:'name', label:'Supplier name'},
@@ -14232,6 +14253,10 @@ function panRowsByItem(invoices){
       const variant = (product && it.variantIdx!=null && product.variants) ? product.variants[it.variantIdx] : null;
       if(!map.has(key)){
         map.set(key, {
+          // Carried out so a row can be matched to the same item in
+          // another period. Matching by name would pair the wrong
+          // variant, or miss where a line carried its own productName.
+          key,
           name: product ? product.name : (it.productName||''),
           variant: variant ? variantLabel(variant.combo) : '--',
           category: product ? (product.category||'') : '',
@@ -14245,7 +14270,45 @@ function panRowsByItem(invoices){
       row.amt += qty * (Number(it.price)||0);
     });
   });
-  return [...map.values()];
+  /* WHAT THE SHOP IS ACTUALLY PAYING. The row carried the total spent and
+     the quantity bought and never the one number in between them, which
+     is the number a buyer works from: 21,301,800 over 600 bags is 35,503
+     a bag. One division from data already on the row, and on no screen.
+
+     Null, not zero, when nothing was bought -- a price of zero is a
+     claim, and "we bought none" is not it. */
+  return [...map.values()].map(r=>({
+    ...r, unitPrice: r.purchased > 0 ? r.amt / r.purchased : null,
+  }));
+}
+
+/* What the same items cost in the period immediately before this one.
+   The Purchase Invoices are the only record of what the shop pays, this
+   is the page devoted to them, and it could not answer "is it going up?"
+   -- the question a buyer opens it with. */
+function panPreviousUnitPrices(){
+  const {from, to} = panGetDateRange();
+  if(!from || !to) return null;
+  const days = dashRangeSpanDays(from, to);
+  if(!(days > 0)) return null;
+  const prevTo = anShiftDate(from, -1);
+  const prevFrom = anShiftDate(prevTo, -(days-1));
+  const prev = panInvoicesInRange(prevFrom, prevTo);
+  if(!prev.length) return null;
+  const map = new Map();
+  panRowsByItem(prev).forEach(r=>{ if(r.unitPrice != null) map.set(r.key, r.unitPrice); });
+  return { prices: map, from: prevFrom, to: prevTo };
+}
+/* How far a price has moved since then, as a share. Null when there is
+   nothing to compare against -- an item bought for the first time this
+   period has not gone up, it has simply appeared, and reporting that as
+   a rise of anything would put a new line at the top of a list of
+   problems. */
+function panPriceMove(row, prevPrices){
+  if(!prevPrices || row.unitPrice == null) return null;
+  const before = prevPrices.get(row.key);
+  if(before == null || !(before > 0)) return null;
+  return (row.unitPrice - before) / before;
 }
 // The Commission column is a projection, not a lookup: rate% x however
 // much was actually bought from that supplier within the selected date
@@ -14273,8 +14336,66 @@ function panRowsBySupplier(invoices){
   });
 }
 function panRowsForView(){
-  return panView==='supplier' ? panRowsBySupplier(panLastEntries) : panRowsByItem(panLastEntries);
+  if(panView==='supplier') return panRowsBySupplier(panLastEntries);
+  /* Attached to the row rather than worked out at render time, so it
+     sorts, filters and exports like any other column -- "show me what
+     has gone up most" is the whole reason to want it. */
+  const prev = panPreviousUnitPrices();
+  return panRowsByItem(panLastEntries)
+    .map(r=>({ ...r, priceMove: panPriceMove(r, prev && prev.prices) }));
 }
+// Same rows the table shows, filtered and sorted once. anFilterRows and
+// anSortRows are the Sales Analytics ones -- the behaviour is identical
+// and a second copy would only be somewhere for the two to drift apart.
+function panVisibleRows(){
+  return anSortRows(
+    anFilterRows(panRowsForView(), document.getElementById('pan_table_search').value),
+    panSortState[panView]);
+}
+
+/* Totals over the rows in front of somebody.
+
+   QUANTITY IS NOT ALWAYS ADDABLE. The KPI said "Total stock 1,400" for a
+   period in which the shop bought 600 bags of cement, 200 sheets of iron
+   and 600 kilograms of nails -- three units added into one number, in the
+   largest type on the page. And the item table refused a totals row for
+   the AMOUNT, which is money and adds up perfectly, on the grounds that
+   an item-level total would be meaningless. It had it exactly backwards.
+
+   So: money and counts always total; quantity totals only when every row
+   is in the same unit, and says so rather than adding bags to kilograms. */
+function panVisibleTotals(rows){
+  const units = new Set(rows.map(r=> String(r.unit||'').trim()).filter(Boolean));
+  const t = rows.reduce((a,r)=>({
+    amt: a.amt + (Number(r.amt)||0),
+    docCount: a.docCount + (Number(r.docCount)||0),
+    purchased: a.purchased + (Number(r.purchased)||0),
+  }), {amt:0, docCount:0, purchased:0});
+  return { ...t, units, sameUnit: units.size === 1 ? [...units][0] : null,
+    qty: units.size === 1 ? t.purchased : null };
+}
+
+/* Expected commission, and what it does NOT cover.
+
+   panRowsBySupplier keeps a null for a supplier with no rate on file --
+   its own comment says null is "kept distinct from an honest 0 so the
+   table can show '--'" -- and then the totals row collapsed it back with
+   `Number(r.commission)||0`. Measured: a total of 723,054 printed under
+   33,901,800 of purchases, 8,400,000 of which was with a supplier who
+   has no rate at all. The row was honest; the line under it was not. */
+function panCommissionCoverage(rows){
+  const rated = rows.filter(r=> r.commission != null);
+  const unrated = rows.filter(r=> r.commission == null);
+  return {
+    total: rated.reduce((s,r)=> s + (Number(r.commission)||0), 0),
+    ratedSpend: rated.reduce((s,r)=> s + (Number(r.amt)||0), 0),
+    unratedSpend: unrated.reduce((s,r)=> s + (Number(r.amt)||0), 0),
+    unratedCount: unrated.length,
+    // Nothing to qualify when every supplier on screen has a rate.
+    complete: unrated.length === 0,
+  };
+}
+
 function panOverallTotals(invoices){
   let amt=0, qty=0;
   invoices.forEach(pi=>{
@@ -14283,35 +14404,73 @@ function panOverallTotals(invoices){
   });
   return {amt, qty};
 }
-function renderPanKpis(){
-  const t = panOverallTotals(panLastEntries);
-  const secondCell = panView==='supplier'
-    ? `<div class="kpi-cell"><div class="kpi-label">Total qty</div><div class="kpi-value">${t.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</div></div>`
-    : `<div class="kpi-cell"><div class="kpi-label">Total stock</div><div class="kpi-value">${t.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</div></div>`;
+function panPreviousTotals(){
+  const {from, to} = panGetDateRange();
+  if(!from || !to) return null;
+  const days = dashRangeSpanDays(from, to);
+  if(!(days > 0)) return null;
+  const prevTo = anShiftDate(from, -1);
+  const prevFrom = anShiftDate(prevTo, -(days-1));
+  const prev = panInvoicesInRange(prevFrom, prevTo);
+  if(!prev.length) return null;
+  return { ...panOverallTotals(prev), count: prev.length, from: prevFrom, to: prevTo };
+}
+function renderPanKpis(rows){
+  const visible = rows || panVisibleRows();
+  const t = panVisibleTotals(visible);
+  const prev = panPreviousTotals();
+  const filtered = !!document.getElementById('pan_table_search').value.trim();
+  const cmp = filtered ? null : prev;
+  const cov = panView==='supplier' ? panCommissionCoverage(visible) : null;
+
+  /* "Total stock 1,400" was 600 bags plus 200 sheets plus 600 kilograms.
+     A quantity only totals where every row shares a unit; otherwise the
+     honest second figure is how many purchases were made. */
+  const secondCell = t.qty != null
+    ? `<div class="kpi-cell"><div class="kpi-label">Bought (${esc(t.sameUnit)})</div><div class="kpi-value">${t.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</div></div>`
+    : `<div class="kpi-cell"><div class="kpi-label">${panView==='supplier' ? 'Suppliers' : 'Items bought'}</div><div class="kpi-value">${visible.length}${
+        cmp ? '' : ''}</div></div>`;
   document.getElementById('pan_kpiGrid').innerHTML = `
-    <div class="kpi-cell"><div class="kpi-label">Total amt</div><div class="kpi-value">${fmtUGX(Math.round(t.amt))}</div></div>
+    <div class="kpi-cell"><div class="kpi-label">Total amt</div><div class="kpi-value">${fmtUGX(Math.round(t.amt))}${
+      cmp ? anDeltaHTML(t.amt, cmp.amt, false) : ''}</div></div>
     ${secondCell}
+    ${cov ? `<div class="kpi-cell"><div class="kpi-label">Expected commission</div><div class="kpi-value ${cov.complete?'':'partial'}">${
+      fmtUGX(Math.round(cov.total))}</div></div>` : ''}
   `;
+
+  const note = document.getElementById('pan_kpiNote');
+  const bits = [];
+  if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('pan_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
+  else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.amt)))} spent across ${prev.count} purchase${prev.count===1?'':'s'}.`);
+  if(t.units.size > 1) bits.push(`Bought in ${t.units.size} different units (${esc([...t.units].join(', '))}), so there is no one quantity to total.`);
+  if(cov && !cov.complete) bits.push(`<span class="an-note-estimated">This covers ${esc(fmtUGX(Math.round(cov.ratedSpend)))} of purchases. ${cov.unratedCount} supplier${cov.unratedCount===1?' has':'s have'} no commission rate on file, so ${esc(fmtUGX(Math.round(cov.unratedSpend)))} of spending earns nothing here — set a rate to include ${cov.unratedCount===1?'them':'those'}.</span>`);
+  note.innerHTML = bits.join(' ');
+  note.style.display = bits.length ? '' : 'none';
 }
 function panFormatCell(col, value){
   // Expected commission is only meaningful once a supplier has a rate on
   // file -- null (no rate) reads as "--", distinct from an honest 0.
   if(col.key==='commission' && value==null) return '--';
+  /* Nothing bought is not a price of nothing, and an item bought for the
+     first time this period has not gone up -- it has appeared. Both read
+     as a dash rather than as a figure nobody can act on. */
+  if(col.pctMove){
+    if(value == null) return '<span class="pan-none">—</span>';
+    const pct = Number(value)*100;
+    if(Math.abs(pct) < 0.5) return '<span class="pan-none">level</span>';
+    return `<span class="an-delta ${pct > 0 ? 'down' : 'up'}">${pct>0?'+':''}${pct.toFixed(0)}%</span>`;
+  }
+  if(col.money && value == null) return '<span class="pan-none">—</span>';
   if(col.money) return fmtUGX(Math.round(Number(value)||0));
   if(col.numeric) return Number(value||0).toLocaleString('en-UG', {maximumFractionDigits:2});
   return esc(value||'');
 }
 function renderPanTable(){
-  let rows = panRowsForView();
-  const q = document.getElementById('pan_table_search').value.trim().toLowerCase();
-  if(q) rows = rows.filter(r => Object.values(r).join(' ').toLowerCase().includes(q));
+  const rows = panVisibleRows();
   const cols = PAN_COLUMNS[panView];
   const sort = panSortState[panView];
-  rows = rows.slice().sort((a,b)=>{
-    const av = a[sort.key], bv = b[sort.key];
-    if(typeof av==='number' && typeof bv==='number') return (av-bv)*sort.dir;
-    return String(av||'').localeCompare(String(bv||'')) * sort.dir;
-  });
+  // The summary describes these rows, so it is drawn from them.
+  renderPanKpis(rows);
   const wrap = document.getElementById('pan_tableWrap');
   if(rows.length===0){
     wrap.innerHTML = panLastEntries.length===0
@@ -14319,17 +14478,49 @@ function renderPanTable(){
       : '<div class="empty">No rows match your search.</div>';
     return;
   }
-  // Only the supplier view gets a running total row -- an item-level total
-  // would just be a meaningless sum of unrelated products' amounts.
-  const totalRowHTML = panView==='supplier' ? `<tfoot><tr class="an-total-row">
+  /* BOTH views get a total now. The item view was refused one because
+     "an item-level total would just be a meaningless sum of unrelated
+     products' amounts" -- but the amount is MONEY, and money adds up:
+     it is the total spend, which the KPI was already showing. What is
+     genuinely not addable is a quantity in mixed units, and that was the
+     one being totalled, at the top, in the largest type on the page. */
+  const pt = panVisibleTotals(rows);
+  const cov = panView==='supplier' ? panCommissionCoverage(rows) : null;
+  const totalRowHTML = `<tfoot><tr class="an-total-row">
     <td></td>
-    ${cols.map(c=>{
-      if(c.key==='name') return `<td><strong>Total</strong></td>`;
-      if(!c.numeric) return `<td></td>`;
-      const sum = rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0);
+    ${cols.map((c,i)=>{
+      if(!c.numeric) return `<td>${i===0 ? '<strong>Total</strong>' : ''}</td>`;
+      // A quantity across bags, sheets and kilograms is not a number.
+      if(c.key==='purchased' && pt.qty == null){
+        return `<td class="price pan-nototal" title="Bought in ${esc([...pt.units].join(', '))} — different units cannot be added">—</td>`;
+      }
+      // And a commission total is only the suppliers who have a rate.
+      if(c.key==='commission'){
+        return `<td class="price${cov && !cov.complete ? ' pan-partial' : ''}"><strong>${panFormatCell(c, cov ? cov.total : 0)}</strong>${
+          cov && !cov.complete ? `<span class="pan-partial-mark" title="${esc(fmtUGX(Math.round(cov.unratedSpend)))} of purchases is with ${cov.unratedCount} supplier${cov.unratedCount===1?' who has':'s who have'} no rate on file">*</span>` : ''}</td>`;
+      }
+      /* A PRICE DOES NOT TOTAL, and neither does a percentage. Falling
+         through to a generic reduce, this row added 35,503 + 42,000 +
+         7,000 and printed 84,503 as the "price paid" -- the same mistake
+         as adding bags to kilograms, one column along. Every numeric
+         column now has to say what its total means.
+
+         A price paid does have a real total where the units match: the
+         whole spend over the whole quantity, which is the weighted
+         average and not the average of the prices. */
+      if(c.key==='unitPrice'){
+        const avg = (pt.qty != null && pt.qty > 0) ? pt.amt/pt.qty : null;
+        return avg == null
+          ? `<td class="price pan-nototal" title="Bought in ${esc([...pt.units].join(', '))} — prices in different units cannot be averaged">—</td>`
+          : `<td class="price"><strong>${panFormatCell(c, avg)}</strong></td>`;
+      }
+      if(c.pctMove) return '<td class="price pan-nototal" title="A change is per item — there is no total of percentages">—</td>';
+      const sum = c.key==='purchased' ? pt.qty
+        : c.key==='amt' ? pt.amt
+        : rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0);
       return `<td class="price"><strong>${panFormatCell(c, sum)}</strong></td>`;
     }).join('')}
-  </tr></tfoot>` : '';
+  </tr></tfoot>`;
   wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr>
     <th>No.</th>
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
@@ -14347,7 +14538,7 @@ function renderPanTable(){
 function renderPurchaseAnalytics(){
   const {from, to} = panGetDateRange();
   panLastEntries = panInvoicesInRange(from, to);
-  renderPanKpis();
+  // renderPanTable works out the visible rows and hands them to the KPIs.
   renderPanTable();
 }
 document.getElementById('pan_range_preset').addEventListener('change', ()=>{
@@ -14363,20 +14554,23 @@ document.querySelectorAll('#pan_subtabs button').forEach(btn=>{
     document.querySelectorAll('#pan_subtabs button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     panView = btn.dataset.view;
-    renderPanKpis();
     renderPanTable();
   });
 });
 document.getElementById('pan_export_btn').addEventListener('click', ()=>{
   const cols = PAN_COLUMNS[panView];
-  const rows = panRowsForView();
+  /* What is on the screen -- this read the whole range, unsorted, from
+     the button beside the search box that had just narrowed it. */
+  const rows = panVisibleRows();
   const lines = [['No.', ...cols.map(c=>c.label)].join(',')];
   rows.forEach((r,i)=>{
     const vals = cols.map(c=>{
       let v = r[c.key];
-      if(c.key==='commission' && v==null) v = '';
+      // Empty, never 0: a missing rate and a rate of nothing are
+      // different facts, and a spreadsheet will happily total both.
+      if(v == null) v = '';
+      else if(c.pctMove) v = (Number(v)*100).toFixed(1);
       else if(c.money) v = Math.round(Number(v)||0);
-      else v = v==null ? '' : v;
       return `"${String(v).replace(/"/g,'""')}"`;
     });
     lines.push([i+1, ...vals].join(','));
