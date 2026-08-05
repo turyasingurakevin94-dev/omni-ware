@@ -4794,6 +4794,11 @@
             <button type="button" class="btn btn-ghost st-preset" data-preset="quarter">Quarter</button>
             <button type="button" class="btn btn-ghost st-preset" data-preset="year">Year</button>
             <input type="date" id="st_from"><span class="st-to">to</span><input type="date" id="st_to">
+            <select id="st_basis" title="What this period is measured against">
+              <option value="">Compare automatically</option>
+              <option value="lastyear">vs same dates last year</option>
+              <option value="previous">vs the period just before</option>
+            </select>
             <button type="button" class="btn btn-ghost" id="st_print" title="Print the statement on screen">
               <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
               Print
@@ -23352,6 +23357,77 @@ const stHead = (a, b)=> `<tr class="st-head"><td></td><td class="st-v">${esc(a)}
    is how a printed balance sheet comes to disagree with the one it was
    printed from -- and a figure on paper is the one somebody takes to a
    bank. Returns null when the range is backwards. */
+/* ---- What this period is being measured against ----
+
+   Every comparison on this page was "the same span of days immediately
+   before". For a building-materials shop that mostly measures THE
+   SEASON: August against July says the rains came, not that the
+   business changed. August against last August is the comparison that
+   says whether the shop is growing.
+
+   Both are offered because both are real questions -- last month is the
+   right frame for a cost that was just cut -- and the page says which
+   one it is showing rather than leaving a delta chip to be read against
+   an assumption. */
+/* One sentence saying what the figures beside these are, and when there
+   are none, why. A delta chip read against the wrong frame is worse
+   than no chip: month-on-month in a seasonal trade reads a downpour as
+   a downturn. */
+function stComparisonNote(ctx){
+  const span = `${esc(ctx.prevFrom)} to ${esc(ctx.prevTo)}`;
+  if(!ctx.prevHasActivity){
+    return `There is nothing on file for ${span}, so this period is shown on its own — the figures beside it would all be measured against zero.`;
+  }
+  return ctx.basis === 'lastyear'
+    ? `Measured against the same dates a year earlier (${span}), which is the comparison that survives a season — August against July mostly says the rains came.`
+    : `Measured against the ${periodDays(ctx.from, ctx.to)} days immediately before this period (${span}), so the two are the same length.`;
+}
+
+const ST_BASES = {
+  previous: 'The period just before',
+  lastyear: 'The same dates last year',
+};
+// '' means take whichever is actually available; an explicit choice wins.
+let stComparisonBasis = '';
+
+/* A year back, by year arithmetic rather than by subtracting 365 days --
+   which would land a day out across a leap year and quietly compare
+   Monday's trade with Sunday's. 29 February has no counterpart in an
+   ordinary year: day 0 of the next month is the last day of this one,
+   so it lands on the 28th instead of rolling forward into March. */
+function stShiftYear(iso){
+  const d = new Date(String(iso) + 'T00:00:00Z');
+  if(isNaN(d.getTime())) return iso;
+  const y = d.getUTCFullYear() - 1, m = d.getUTCMonth(), day = d.getUTCDate();
+  const lastOfMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(day, lastOfMonth))).toISOString().slice(0, 10);
+}
+
+function stComparisonWindow(from, to, basis){
+  if(basis === 'lastyear') return { from: stShiftYear(from), to: stShiftYear(to) };
+  // The same span of days immediately before, so the comparison is like
+  // for like rather than a month against a fortnight.
+  const days = periodDays(from, to);
+  const prevTo = anShiftDate(from, -1);
+  return { from: anShiftDate(prevTo, -(days - 1)), to: prevTo };
+}
+
+// Whether the shop was trading at all in a window. A comparison against
+// a period the shop did not exist in is not a comparison.
+function stWindowHasActivity(from, to){
+  return anInvoicesInRange(from, to).length > 0
+    || dashCashTxnsInRange(from, to).length > 0;
+}
+
+/* Left to itself the page shows the better comparison where there is one
+   and falls back where there is not, rather than defaulting to last year
+   and showing a shop six months old a column of nothing. */
+function stResolvedBasis(from, to){
+  if(stComparisonBasis) return stComparisonBasis;
+  const ly = stComparisonWindow(from, to, 'lastyear');
+  return stWindowHasActivity(ly.from, ly.to) ? 'lastyear' : 'previous';
+}
+
 function statementsContext(){
   const fromEl = document.getElementById('st_from'), toEl = document.getElementById('st_to');
   if(!fromEl.value || !toEl.value){
@@ -23360,11 +23436,9 @@ function statementsContext(){
   }
   const from = fromEl.value, to = toEl.value;
   if(from > to) return null;
-  // The same span of days immediately before, so the comparison is like
-  // for like rather than a month against a fortnight.
-  const days = periodDays(from, to);
-  const prevTo = anShiftDate(from, -1);
-  const prevFrom = anShiftDate(prevTo, -(days-1));
+  const basis = stResolvedBasis(from, to);
+  const win = stComparisonWindow(from, to, basis);
+  const prevFrom = win.from, prevTo = win.to;
 
   const is = incomeStatement(from, to);
   const prev = incomeStatement(prevFrom, prevTo);
@@ -23372,7 +23446,13 @@ function statementsContext(){
   const cf = cashFlowStatement(from, to);
   const prevCf = cashFlowStatement(prevFrom, prevTo);
   const checks = statementChecks(is, bs, cf);
-  return { from, to, prevFrom, prevTo, is, prev, bs, cf, prevCf, checks };
+  /* A window the shop was not trading in makes every delta chip vanish,
+     because stDeltaChip withholds one when the base is zero. Without
+     saying so the reader sees a page with no comparisons on it and no
+     reason given. */
+  const prevHasActivity = stWindowHasActivity(prevFrom, prevTo);
+  return { from, to, prevFrom, prevTo, basis, prevHasActivity,
+    is, prev, bs, cf, prevCf, checks };
 }
 
 const ST_DOCS = [
@@ -23399,6 +23479,13 @@ function renderStatements(){
   }
   document.querySelectorAll('#st_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.stab === stActiveTab));
+  /* Left on "automatically", the control says which one that turned out
+     to be rather than leaving the reader to infer it from the note. */
+  const basisEl = document.getElementById('st_basis');
+  basisEl.value = stComparisonBasis;
+  basisEl.title = `Comparing against ${ST_BASES[ctx.basis].toLowerCase()}`;
+  basisEl.querySelector('option[value=""]').textContent =
+    stComparisonBasis ? 'Compare automatically' : `Automatic — ${ST_BASES[ctx.basis].toLowerCase()}`;
   body.innerHTML = statementDocHTML(stActiveTab, ctx);
 }
 
@@ -23611,7 +23698,8 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
     </div>`;
 }
 
-function stProfitAndLoss({from, to, prevFrom, prevTo, is, prev}){
+function stProfitAndLoss(ctx){
+  const {from, to, prevFrom, prevTo, is, prev} = ctx;
   const cats = [...new Set(Object.keys(is.opexRows).concat(Object.keys(prev.opexRows)))].sort();
   return `<section class="st-doc st-doc-wide">
     <header class="st-doc-head"><h3>Profit and loss</h3>
@@ -23631,7 +23719,7 @@ function stProfitAndLoss({from, to, prevFrom, prevTo, is, prev}){
       ${(is.loanFees||prev.loanFees) ? stLine('Loan arrangement fees', -is.loanFees, -prev.loanFees) : ''}
       ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
-    <p class="st-read">Sales counted when invoiced, costs when paid. The comparison is the ${periodDays(from,to)} days immediately before this period (${esc(prevFrom)} to ${esc(prevTo)}), so the two are the same length.</p>
+    <p class="st-read">Sales counted when invoiced, costs when paid. ${stComparisonNote(ctx)}</p>
   </section>`;
 }
 
@@ -23722,6 +23810,10 @@ document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', (
 }));
 ['st_from','st_to'].forEach(id=>
   document.getElementById(id).addEventListener('change', renderStatements));
+document.getElementById('st_basis').addEventListener('change', (e)=>{
+  stComparisonBasis = e.target.value;
+  renderStatements();
+});
 
 /* ---- Loans on screen ---- */
 function loanMethodLabel(l){
