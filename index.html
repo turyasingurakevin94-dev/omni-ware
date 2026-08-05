@@ -5500,7 +5500,7 @@
 
         <div class="sup-block">
           <span class="sup-label">Where you collect from them</span>
-          <input id="s_location" placeholder="Where in town — e.g. Katwe, off Nsambya Road" autocomplete="off">
+          <input id="s_location" list="dl_locations" placeholder="Choose a place, or type a new one" autocomplete="off">
           <div class="sup-hint" id="s_location_hint"></div>
         </div>
 
@@ -14009,9 +14009,19 @@ function supRenderConsequence(){
 function supRenderLocationHint(){
   const el = document.getElementById('s_location_hint');
   if(!el) return;
-  el.textContent = document.getElementById('s_location').value.trim()
+  const val = document.getElementById('s_location').value.trim();
+  if(!val){
+    el.textContent = 'Leave it blank and their goods have nowhere to be collected from on a pickup run.';
+    return;
+  }
+  /* Whether this place is already one the shop uses. A new one is kept
+     and offered next time, and saying so is what stops somebody typing
+     "Ntinda" today and "ntinda town" next week and getting two stops on
+     the same pickup run. */
+  const known = (data.presetLocations||[]).some(l=> l.toLowerCase() === val.toLowerCase());
+  el.textContent = known
     ? 'Used to group the morning’s collections by where they are.'
-    : 'Leave it blank and their goods have nowhere to be collected from on a pickup run.';
+    : `“${val}” is new — it will be added to your places and offered next time.`;
 }
 
 function supShowIssuedId(){
@@ -14035,6 +14045,10 @@ function supRefresh(){
   supRenderLocationHint();
 }
 document.getElementById('s_name').addEventListener('input', supRenderDuplicate);
+/* s_location is wired with c_location and ag_location at boot, in the
+   one place that does it. Suppliers were the last field still keeping
+   their own free text, so a supplier in Ntinda and a customer in Ntinda
+   were two unrelated strings and a pickup run could not group them. */
 document.getElementById('s_location').addEventListener('input', supRenderLocationHint);
 function deleteSupplier(id){
   // Refused while money is still owed to them.
@@ -14087,7 +14101,10 @@ Add them anyway?`)) return;
   const record = {
     id, name,
     phone: document.getElementById('s_phone').value.trim(),
-    location: document.getElementById('s_location').value.trim(),
+    // rememberLocation adds a new place to the shared list and settles
+    // a known one to its recorded spelling, so "ntinda" and "Ntinda"
+    // do not become two places on the pickup run.
+    location: rememberLocation(document.getElementById('s_location').value),
     notes: document.getElementById('s_notes').value.trim(),
     commissionPct: priorPct!=null ? priorPct : null,
   };
@@ -21944,11 +21961,15 @@ document.getElementById('preset_location_new').addEventListener('keydown', (e)=>
 // Wired once at boot rather than on every open: the inputs are static
 // markup, and re-wiring on each open would stack a listener per open.
 // wireLocationInput guards on its own dataset flag as a second line.
-['c_location','ag_location'].forEach(id=>{
+['c_location','ag_location','s_location'].forEach(id=>{
   const el = document.getElementById(id);
   if(el) wireLocationInput(el);
 });
 
+function refreshLocationDatalist(){
+  const el = document.getElementById('dl_locations');
+  if(el) el.innerHTML = (data.presetLocations||[]).map(l=>`<option value="${esc(l)}">`).join('');
+}
 function refreshPresetDatalists(){
   document.getElementById('dl_categories').innerHTML = (data.presetCategories||[]).map(c=>`<option value="${esc(c.name)}">`).join('');
   const typedCat = document.getElementById('p_category') ? document.getElementById('p_category').value.trim().toLowerCase() : '';
@@ -21956,7 +21977,7 @@ function refreshPresetDatalists(){
   const subs = currentCat ? (currentCat.subcategories||[]) : [...new Set((data.presetCategories||[]).flatMap(c=>c.subcategories||[]))];
   document.getElementById('dl_subcategories').innerHTML = subs.map(s=>`<option value="${esc(s)}">`).join('');
   document.getElementById('dl_units').innerHTML = (data.presetUnits||[]).map(u=>`<option value="${esc(u)}">`).join('');
-  document.getElementById('dl_locations').innerHTML = (data.presetLocations||[]).map(l=>`<option value="${esc(l)}">`).join('');
+  refreshLocationDatalist();
   document.getElementById('dl_attribute_names').innerHTML = (data.presetAttributes||[]).map(a=>`<option value="${esc(a.name)}">`).join('');
   document.getElementById('dl_income_categories').innerHTML = (data.presetIncomeCategories||[]).map(c=>`<option value="${esc(c)}">`).join('');
   document.getElementById('dl_expense_categories').innerHTML = (data.presetExpenseCategories||[]).map(c=>`<option value="${esc(c)}">`).join('');
@@ -22007,6 +22028,11 @@ function wireLocationInput(input){
   if(!input || input.dataset.locationWired) return;
   input.dataset.locationWired = '1';
   input.setAttribute('list', 'dl_locations');
+  /* The list was only ever filled by the product form and the presets
+     page, so going straight to a form with a location field offered
+     nothing -- seven places on file and an empty dropdown. Filled when
+     the field is used, which is the one moment it is certainly needed. */
+  input.addEventListener('focus', refreshLocationDatalist);
   input.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter') return;
     e.preventDefault();

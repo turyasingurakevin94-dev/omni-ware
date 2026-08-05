@@ -141,4 +141,48 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
     'by a selector that beats the general rule, written after it');
 }
 
+/* ---------- 6. the place is one of the shop's, not free text --------- *
+ * Customers and agents already chose from a shared list of places and
+ * added to it. Suppliers were the last field keeping their own free
+ * text, so a supplier in Ntinda and a customer in Ntinda were unrelated
+ * strings — and the pickup runs, which group a morning's collections by
+ * where they are, could not put them on the same trip.
+ */
+{
+  t.check(/<input id="s_location" list="dl_locations"/.test(modal),
+    'the location field suggests the places the shop already uses');
+  t.check(/Choose a place, or type a new one/.test(modal),
+    'and says a new one may be typed');
+  t.check(/\['c_location','ag_location','s_location'\]\.forEach/.test(code),
+    'wired alongside the customer and agent fields, in the one place that does it');
+
+  /* rememberLocation both KEEPS a new place and settles a known one to
+     its recorded spelling, so "ntinda" and "Ntinda" do not become two
+     stops on the same run. Saving the raw box would do neither. */
+  t.check(/location: rememberLocation\(document\.getElementById\('s_location'\)\.value\)/.test(save),
+    'and what is saved goes through the list, so a new place is kept and a known one settles');
+
+  const locHint = (/function supRenderLocationHint[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/data\.presetLocations\|\|\[\]\)\.some\(l=> l\.toLowerCase\(\) === val\.toLowerCase\(\)\)/.test(locHint),
+    'the form knows whether what was typed is a place it already has');
+  t.check(/is new — it will be added to your places and offered next time/.test(locHint),
+    'and says when it is about to add one, rather than doing it silently');
+}
+
+/* ---------- 7. the list was empty when it mattered ------------------- *
+ * refreshPresetDatalists only ever ran from the product form and the
+ * presets page. Opening the app and going straight to any form with a
+ * location field offered an EMPTY dropdown — seven places on file, none
+ * suggested. True of customers and agents too, and my supplier field
+ * would have inherited it.
+ */
+{
+  t.check(/function refreshLocationDatalist\(\)\{/.test(code),
+    'the list of places can be built on its own');
+  t.check(/input\.addEventListener\('focus', refreshLocationDatalist\);/.test(code),
+    'and is built when a location field is focused — the one moment it is certainly needed');
+  t.check(/function refreshPresetDatalists\(\)\{[\s\S]*?refreshLocationDatalist\(\);/.test(code),
+    'with the bulk refresh calling the same function, so the two cannot drift apart');
+}
+
 process.exit(t.done() ? 1 : 0);

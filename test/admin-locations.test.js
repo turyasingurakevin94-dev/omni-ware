@@ -126,11 +126,23 @@ const reset = (locs) => {
   t.check(/press Enter to add it/.test(code) && /press Enter\./.test(code),
     'and both say how to add one that is not on the list');
 
-  t.check(/\['c_location','ag_location'\]\.forEach/.test(code),
+  /* The supplier field joined these two. It was the last one keeping its
+     own free text, so a supplier in Ntinda and a customer in Ntinda were
+     unrelated strings and a pickup run could not group them. */
+  t.check(/\['c_location','ag_location','s_location'\]\.forEach/.test(code),
     'both inputs are wired for choose-or-add');
   t.check(/<datalist id="dl_locations">/.test(code)
-    && /getElementById\('dl_locations'\)\.innerHTML = \(data\.presetLocations\|\|\[\]\)/.test(code),
+    && /function refreshLocationDatalist\(\)\{[\s\S]*?\(data\.presetLocations\|\|\[\]\)/.test(code),
   'off one datalist fed from the preset list');
+  /* Pulled out of refreshPresetDatalists because THAT only ever ran from
+     the product form and the presets page: opening the app and going
+     straight to a form with a location field offered an empty dropdown
+     with seven places on file. Filled when the field is focused, which
+     is the one moment it is certainly needed. */
+  t.check(/input\.addEventListener\('focus', refreshLocationDatalist\);/.test(code),
+    'and filled when a location field is used, not only when the presets page has been visited');
+  t.check(/function refreshPresetDatalists\(\)\{[\s\S]*?refreshLocationDatalist\(\);/.test(code),
+    'from the one function that builds it, so the two cannot drift apart');
 }
 
 /* ---------- 5. the list is carried with the shop ---------------------- */
