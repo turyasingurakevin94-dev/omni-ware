@@ -88,6 +88,7 @@ const scope = compileScope([
   extractFunction(src, 'incomeStatement', 'index.html'),
   extractFunction(src, 'balanceSheetToday', 'index.html'),
   extractFunction(src, 'cashFlowStatement', 'index.html'),
+  extractFunction(src, 'statementBasisGap', 'index.html'),
   extractFunction(src, 'statementChecks', 'index.html'),
 ], {
   data,
@@ -95,7 +96,7 @@ const scope = compileScope([
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   dashTotalCreditors: () => 0,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed']);
+}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed', 'statementBasisGap']);
 
 const r = (n) => Math.round(n);
 const txn = (over) => Object.assign({ id: 1, date: TODAY, account: 'cash', type: 'expense', category: 'Rent', amount: 0 }, over);

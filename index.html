@@ -2783,6 +2783,41 @@
   .st-to{font-size:12px;color:var(--ow-ink-400);}
 
   /* The four figures a day actually turns on. */
+  /* The verdict. Stated before the figures it qualifies, because a
+     statement's first job is to say whether it can be believed. */
+  .st-verdict{display:flex;flex-direction:column;gap:3px;border-radius:11px;
+    padding:13px 15px;margin-bottom:16px;border:1px solid transparent;}
+  .st-verdict b{font-size:15px;line-height:1.35;}
+  .st-verdict span{font-size:13px;line-height:1.5;}
+  .st-verdict.ok{background:var(--ow-verdigris-soft);border-color:#C4DED6;color:var(--ow-verdigris);}
+  .st-verdict.warn{background:var(--ow-amber-soft);border-color:#EBD9B4;color:var(--ow-amber-ink);}
+  .st-verdict.bad{background:var(--ow-crimson-soft);border-color:#EAC7C1;color:var(--ow-crimson);}
+
+  /* Month by month. Two points have no direction, and this page had two. */
+  .st-trend{border:1px solid var(--line);border-radius:11px;padding:13px 15px 10px;margin-bottom:16px;}
+  .st-trend-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px;}
+  .st-trend-title{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+  .st-trend-key{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);}
+  .st-trend-key .st-trend-dot{margin-left:8px;}
+  .st-trend-key .st-trend-dot:first-child{margin-left:0;}
+  .st-trend-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+  .st-trend-dot.a{background:var(--ow-steel-800);}
+  .st-trend-dot.b{background:var(--ow-verdigris);}
+  /* Fixed height with a non-uniform viewBox: the bars carry proportion
+     horizontally, and letting them stretch vertically with the panel
+     would make the same month look different on a wider screen. */
+  .st-trend-svg{display:block;width:100%;height:120px;overflow:visible;}
+  .st-tr-zero{stroke:var(--ow-rule);stroke-width:0.4;vector-effect:non-scaling-stroke;}
+  .st-tr-bar{fill:var(--ow-steel-800);}
+  .st-tr-bar.b{fill:var(--ow-verdigris);}
+  /* A loss is the same series, so it keeps its colour and is marked by
+     being under the line -- recolouring it red would read as a third
+     series rather than as the same one below zero. */
+  .st-tr-bar.neg{opacity:.42;}
+  .st-trend-x{display:flex;margin-top:5px;}
+  .st-trend-x span{flex:1;text-align:center;font-size:10.5px;color:var(--ink-soft);}
+  @media (max-width:560px){ .st-trend-svg{height:96px;} .st-trend-x span{font-size:9.5px;} }
+
   .st-vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px;}
   .st-vital{background:var(--panel);padding:14px 15px 13px;}
@@ -22438,8 +22473,54 @@ function cashFlowStatement(fromISO, toISO){
    With no general ledger the balance sheet balances by construction, so
    it proves nothing. These are the things that CAN disagree, and showing
    them is what makes the statements worth trusting. */
+/* THE GAP BETWEEN WHAT WAS SOLD AND WHAT WAS INVOICED.
+
+   Revenue on the profit and loss comes from invoices, deliberately: it
+   puts revenue and cost of sales on the same accrual footing. That is
+   correct, and it is also how this page came to report a shop that sells
+   over the counter for cash as making a loss every single month.
+
+   cf.tradingIn is money in under a trading category. A cash sale settling
+   an invoice arrives as Debt Collection and is counted separately, so
+   what is left here is trade with no invoice behind it -- takings the
+   profit and loss cannot see. Neither that money NOR the cost of the
+   goods it sold reaches the statement, so the shop is understated at both
+   ends and the loss on screen is an artefact of the basis, not a result.
+
+   Reported as a caveat when it is a minority of the trade and as a
+   failure when it is the majority, because a check that is red every day
+   in a cash shop is a check nobody reads. */
+function statementBasisGap(is, cf){
+  const uninvoiced = Math.round(Number(cf.tradingIn) || 0);
+  const revenue = Math.round(Number(is.revenue) || 0);
+  if(uninvoiced < 1) return null;
+  const total = uninvoiced + revenue;
+  return {
+    uninvoiced, revenue, total,
+    // What share of the trade the statement above can actually see.
+    invoicedShare: total > 0 ? revenue / total : 0,
+    // The majority of the trade is missing, so the figures describe a
+    // minority of the business rather than merely omitting a corner.
+    dominant: uninvoiced > revenue,
+  };
+}
+
 function statementChecks(is, bs, cf){
   const checks = [];
+  const gap = statementBasisGap(is, cf);
+  if(gap){
+    checks.push({
+      ok: gap.dominant ? false : null,
+      label: gap.dominant
+        ? 'Most of the trade is not in these figures'
+        : 'Some sales are not in these figures',
+      detail: `${fmtUGX(gap.uninvoiced)} came in as sales cash with no invoice behind it. `
+        + `Revenue above counts invoiced sales only, so neither that money nor the cost of the goods it sold is in the profit and loss`
+        + (gap.dominant
+          ? `. It is ${Math.round((1-gap.invoicedShare)*100)}% of what the shop took, so the profit shown describes the smaller part of the business. Invoice the counter sales, or read the cash flow instead.`
+          : `, which understates both. Invoice counter sales to bring them in.`),
+    });
+  }
   const day = (data.cashDays||{})[bs.asOf];
   const counted = day && day.actual
     ? ACCOUNTS.reduce((s,a)=>{
@@ -22884,12 +22965,94 @@ function printStatements(which){
   });
 }
 
+/* ---- How the shop has been doing, month by month ----
+
+   The page compared one period against the one before it and stopped
+   there. "How are we doing" is a DIRECTION, and two points do not have
+   one -- a bad month next to a worse one reads as recovery.
+
+   Two series, because when they disagree that IS the story: net profit
+   is what the statements say, cash from trading is what the till says.
+   In a shop whose counter sales are never invoiced they diverge
+   permanently, and seeing them apart is what sends somebody to read the
+   caveat rather than believe the loss. */
+function stTrendMonths(count){
+  const out = [];
+  let p = currentPeriod();
+  for(let i = 0; i < count; i++){ out.unshift(p); p = periodShift(p, -1); }
+  return out;
+}
+function statementsTrend(count){
+  return stTrendMonths(count || 6).map(period=>{
+    const from = period + '-01';
+    const to = periodEndDate(period);
+    const is = incomeStatement(from, to);
+    const cf = cashFlowStatement(from, to);
+    return {
+      period, from, to,
+      label: periodLabel(period),
+      short: periodLabel(period).slice(0,3),
+      netProfit: is.netProfit,
+      revenue: is.revenue,
+      // Everything the shop actually took from trading, invoiced or not.
+      tradingCash: cf.tradingIn + cf.debtCollected,
+      operating: cf.operating,
+    };
+  });
+}
+
+/* The chart. Bars from a zero line because a month can be negative, and
+   a chart that cannot show a loss is no use on a profit and loss. */
+function stTrendChartHTML(trend){
+  const series = [
+    {key:'netProfit', label:'Net profit', cls:'a'},
+    {key:'operating', label:'Cash from trading', cls:'b'},
+  ];
+  const values = trend.flatMap(m=> series.map(s=> Number(m[s.key]) || 0));
+  const max = Math.max(1, ...values.map(Math.abs));
+  const W = 100, H = 46, gap = 2;
+  const slot = (W - gap) / trend.length;
+  const barW = (slot - gap) / series.length;
+  const zeroY = H / 2;
+  const scale = (v)=> (Math.abs(v) / max) * (H / 2 - 3);
+
+  const bars = trend.map((m, i)=> series.map((s, j)=>{
+    const v = Number(m[s.key]) || 0;
+    const h = scale(v);
+    const x = gap/2 + i * slot + j * barW;
+    const y = v >= 0 ? zeroY - h : zeroY;
+    return `<rect class="st-tr-bar ${s.cls}${v<0?' neg':''}" x="${x.toFixed(2)}" y="${y.toFixed(2)}"
+      width="${(barW - 0.5).toFixed(2)}" height="${Math.max(h, 0.4).toFixed(2)}"
+      ><title>${esc(m.label)} — ${esc(s.label)}: ${esc(fmtUGX(Math.round(v)))}</title></rect>`;
+  }).join('')).join('');
+
+  return `<div class="st-trend">
+    <div class="st-trend-head">
+      <span class="st-trend-title">The last ${trend.length} months</span>
+      <span class="st-trend-key">
+        ${series.map(s=> `<span class="st-trend-dot ${s.cls}"></span>${esc(s.label)}`).join('')}
+      </span>
+    </div>
+    <svg class="st-trend-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+      aria-label="Net profit and cash from trading, by month">
+      <line class="st-tr-zero" x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}"></line>
+      ${bars}
+    </svg>
+    <div class="st-trend-x">${trend.map(m=> `<span>${esc(m.short)}</span>`).join('')}</div>
+  </div>`;
+}
+
 /* The answer to "how are we doing", before any document is opened. */
 function stOverview({from, to, is, prev, bs, cf, checks}){
   const failing = checks.filter(c=>c.ok === false).length;
   const vitals = [
+    /* A margin needs something to be a margin OF. With no invoiced
+       sales the ratio is 0/0, and "0.0% of everything sold" reads as
+       breaking even on a full month of trade. */
     { label:'Net profit', value:is.netProfit, prior:prev.netProfit, higherIsBetter:true,
-      note:`${is.netMarginPct.toFixed(1)}% of everything sold` },
+      note: is.revenue > 0
+        ? `${is.netMarginPct.toFixed(1)}% of everything sold`
+        : 'no invoiced sales to measure it against' },
     { label:'Cash in hand', value:bs.cash, prior:null,
       note:`across ${bs.cashAccounts.length} account${bs.cashAccounts.length===1?'':'s'}, right now` },
     { label:'What the business is worth', value:bs.equity, prior:null,
@@ -22897,7 +23060,34 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
     { label:'Money in the till moved by', value:cf.netMovement, prior:null,
       note:'over this period, every account together' },
   ];
+  /* THE VERDICT COMES BEFORE THE NUMBERS IT QUALIFIES.
+
+     A statement's first job is to say whether it can be believed, and
+     that was a box at the foot of one of five tabs. Somebody reading a
+     loss learned only afterwards -- if they scrolled -- that the loss
+     was an artefact of counter sales never being invoiced. */
+  const gap = statementBasisGap(is, cf);
+  const failing2 = checks.filter(c=>c.ok === false).length;
+  const verdict = gap && gap.dominant
+    ? {state:'bad', head:`These figures are missing ${Math.round((1-gap.invoicedShare)*100)}% of what the shop took`,
+       body:`${fmtUGX(gap.uninvoiced)} came in as sales cash with no invoice behind it, and the profit and loss counts invoiced sales only. Read the cash flow for the fuller picture, or start invoicing the counter sales.`}
+    : failing2
+      ? {state:'warn', head:`${failing2} thing${failing2===1?'':'s'} below would change these figures`,
+         body:'The numbers are shown as they stand. What is unresolved is listed under “Can these be trusted?”.'}
+      : gap
+        ? {state:'warn', head:'Some sales are not in these figures',
+           body:`${fmtUGX(gap.uninvoiced)} of counter takings has no invoice behind it, so it is outside the profit and loss.`}
+        : {state:'ok', head:'Nothing is outstanding against these figures',
+           body:'Everything the app can check about them agrees.'};
+
   return `
+    <div class="st-verdict ${verdict.state}">
+      <b>${esc(verdict.head)}</b>
+      <span>${esc(verdict.body)}</span>
+    </div>
+
+    ${stTrendChartHTML(statementsTrend(6))}
+
     <div class="st-vitals">
       ${vitals.map(v=>`<div class="st-vital ${v.value<0?'neg':''}">
         <span class="st-vital-label">${esc(v.label)}</span>
