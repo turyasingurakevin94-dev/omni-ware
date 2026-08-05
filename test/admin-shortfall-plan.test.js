@@ -70,6 +70,7 @@ const scope = compileScope([
   extractFunction(src, 'beingPreparedOrders', 'index.html'),
   extractFunction(src, 'cashPositionForBuying', 'index.html'),
   extractFunction(src, 'daysSinceDate', 'index.html'),
+  extractFunction(src, 'customerOpenCharges', 'index.html'),
   extractFunction(src, 'customerOldestOpenChargeDate', 'index.html'),
   extractFunction(src, 'collectableDebts', 'index.html'),
   extractFunction(src, 'debtsCovering', 'index.html'),

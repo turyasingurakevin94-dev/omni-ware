@@ -46,8 +46,12 @@ const scope = compileScope([
   extractDeclaration(src, 'DEB_SORT_STATE', 'index.html'),
   extractDeclaration(src, 'DEB_SORT_FIRST_DIR', 'index.html'),
   extractFunction(src, 'daysSinceDate', 'index.html'),
+  extractFunction(src, 'customerOpenCharges', 'index.html'),
   extractFunction(src, 'customerOldestOpenChargeDate', 'index.html'),
   extractFunction(src, 'customerLastPaymentDate', 'index.html'),
+  extractFunction(src, 'customerLedgerTotal', 'index.html'),
+  extractFunction(src, 'customerDebtDrift', 'index.html'),
+  extractFunction(src, 'customerDebtProgress', 'index.html'),
   extractFunction(src, 'agingBandFor', 'index.html'),
   extractFunction(src, 'agingBandDef', 'index.html'),
   extractFunction(src, 'debAllRows', 'index.html'),
@@ -60,7 +64,7 @@ const scope = compileScope([
   data,
   todayISO: () => TODAY,
 }, ['agingBandFor', 'agingBandDef', 'debAllRows', 'debAgingProfile', 'customerLastPaymentDate',
-  'sortState', 'sortFirstDir']);
+  'sortState', 'sortFirstDir', 'customerDebtProgress']);
 
 let nextId = 1;
 // charges/payments are [daysAgo, amount] pairs.
@@ -320,6 +324,87 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
   t.check(!/Overdue/i.test(render), 'nothing claims to be overdue, since no terms are ever agreed');
   t.check(/>Owing for/.test(render), 'it says how long the money has been owing');
   t.check(/>Last payment/.test(render), 'and when they last paid anything');
+}
+
+/* ---------- 11. how far through their debt they are ------------------ *
+ * A bar next to a balance needs a denominator, and trade debt REVOLVES.
+ * "Paid divided by everything ever charged" would put a customer who has
+ * bought from the shop for years and settled every bill but the last at
+ * ninety-odd per cent for ever -- looking nearly clear while their
+ * balance climbed. The denominator is the charges STILL OPEN.
+ */
+{
+  const prog = (name) => scope.customerDebtProgress(data.customers.find((c) => c.name === name));
+  const pct = (name) => Math.round(prog(name).pct * 100);
+
+  data.customers = [
+    customer('Never Paid', [[40, 1000000]]),
+    customer('Part Payer', [[40, 5000000]], [[10, 2000000]]),
+    // Settled 9,000,000 over years, then took 1,000,000 they have not
+    // touched. Naively that is 90% paid. They have paid NOTHING towards
+    // what they owe now.
+    customer('Long Trader', [[400, 9000000], [5, 1000000]], [[380, 9000000]]),
+    // Part-paid, then took on more: the bar must go DOWN, because that
+    // is what happened.
+    customer('Piling Up', [[60, 5000000], [3, 5000000]], [[30, 2000000]]),
+  ];
+
+  eq(pct('Never Paid'), 0, 'somebody who has paid nothing is at nothing');
+  eq(pct('Part Payer'), 40, 'two million against an open five million is 40%');
+  eq(prog('Part Payer').owed, 3000000, 'with the rest still owing');
+
+  eq(pct('Long Trader'), 0,
+    'years of settled trade count for nothing against a fresh unpaid charge');
+  const naive = (() => {
+    const c = data.customers.find((x) => x.name === 'Long Trader');
+    const ch = c.debtLog.filter((l) => l.type === 'charge').reduce((s, l) => s + l.amount, 0);
+    const pd = c.debtLog.filter((l) => l.type === 'payment').reduce((s, l) => s + l.amount, 0);
+    return Math.round(pd / ch * 100);
+  })();
+  eq(naive, 90,
+    'where paid-over-everything-ever-charged would have claimed 90% — which is the whole reason for the denominator');
+
+  eq(pct('Piling Up'), 20, 'taking on new debt pushes the bar down rather than leaving it');
+  t.check(pct('Piling Up') < 40, 'below where it stood before the new charge');
+
+  /* Null, never 0, when there is nothing to measure. A bar at zero says
+     "they have paid nothing" -- a claim about somebody's conduct that
+     the records do not support. */
+  data.customers = [{ id: 'CX', name: 'Typed In', location: '', debt: 800000, debtLog: [] }];
+  eq(prog('Typed In').pct, null, 'a balance with no ledger behind it has no progress to show');
+  eq(prog('Typed In').reason, 'no-history', 'and says which of the two reasons it is');
+
+  /* Two reasons, and they are NOT the same thing to say. A balance with
+     no history IS drift by definition -- nothing explains it -- so
+     testing drift first told the customer with no history that their
+     balance "does not match its own history". */
+  const drifted = customer('Drifted', [[40, 5000000]], [[10, 2000000]]);
+  drifted.debt += 500000;
+  data.customers = [drifted];
+  eq(prog('Drifted').pct, null, 'a balance its own ledger cannot explain is not measured');
+  eq(prog('Drifted').reason, 'drift', 'and is told apart from having no history at all');
+
+  // Carried onto the row the list draws from.
+  data.customers = [customer('Rowed', [[40, 1000000]], [[5, 250000]])];
+  eq(Math.round(scope.debAllRows()[0].progress.pct * 100), 25,
+    'the row the list draws carries it, so the bar and the age come from one walk');
+}
+
+/* ---------- 12. what the cell says ----------------------------------- */
+{
+  const render = (/function renderDebtorsList[\s\S]*?\n\}\n/.exec(code) || [''])[0];
+  t.check(/<th>Paid off<\/th>/.test(render), 'the list has a column for it');
+  t.check(/deb-prog-fill" style="width:\$\{pct\}%"/.test(render),
+    'drawn as a bar whose width is the share paid');
+  /* A dash, not an empty bar: an empty bar reads as "has paid nothing",
+     which is the one thing it must not say when the answer is unknown. */
+  t.check(/p\.pct === null/.test(render) && /deb-prog-none/.test(render),
+    'and a dash rather than an empty bar when there is nothing to measure');
+  t.check(/does not match its own history/.test(render)
+    && /No dated charges behind this balance/.test(render),
+    'with the two reasons worded differently, since they are different problems');
+  t.check(/paid of \$\{esc\(fmtUGX\(Math\.round\(p\.charged\)\)\)\} charged on what is still open/.test(render),
+    'and the figures behind the percentage available on the cell');
 }
 
 process.exit(t.done() ? 1 : 0);

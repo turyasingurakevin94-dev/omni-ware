@@ -1647,6 +1647,20 @@
   .age-pos-clear b{font-size:15px;}
   .age-pos-clear span{color:var(--ink-soft);font-size:13px;}
 
+  /* How far through their current debt somebody is. Verdigris because
+     progress here is the good direction -- unlike the aging bands, where
+     the ramp runs the other way. */
+  .deb-prog{display:flex;align-items:center;gap:8px;min-width:112px;}
+  .deb-prog-track{flex:1;height:6px;border-radius:3px;background:var(--ow-rule-soft);overflow:hidden;}
+  .deb-prog-fill{height:100%;background:var(--ow-verdigris);border-radius:3px;
+    transition:width .2s ease;}
+  .deb-prog-pct{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;
+    color:var(--ink-soft);flex-shrink:0;min-width:30px;text-align:right;}
+  /* Nothing to measure is a dash, not an empty bar: an empty bar reads
+     as "has paid nothing". */
+  .deb-prog-none{color:var(--ink-soft);cursor:help;}
+  .deb-card-prog{margin-top:8px;}
+
   /* ---- the list ---- */
   .age-filter-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
     background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:13px;}
@@ -15571,6 +15585,8 @@ function debAllRows(){
       debt, ageDays,
       band: agingBandFor(ageDays),
       lastPaid: customerLastPaymentDate(c),
+      // Null when there is nothing to measure — see customerDebtProgress.
+      progress: owing ? customerDebtProgress(c) : null,
     };
   });
 }
@@ -15596,13 +15612,18 @@ function debAgingProfile(){
 // a real aging report uses. Whatever charge date is still left open once
 // every payment has been applied is how long the CURRENT balance has been
 // outstanding (not just when the customer last did something).
-function customerOldestOpenChargeDate(c){
+/* Payments applied to charges oldest first, the way a ledger settles,
+   returning the charges that still have anything left on them. Both how
+   OLD a balance is and how far THROUGH it somebody is are read from this
+   one walk, so the age beside a customer and the bar under them cannot
+   tell different stories. */
+function customerOpenCharges(c){
   const log = (c.debtLog||[]).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.id-b.id));
   const open = [];
   log.forEach(entry=>{
     const amt = Number(entry.amount)||0;
     if(entry.type==='charge'){
-      open.push({date: entry.date, remaining: amt});
+      open.push({date: entry.date, original: amt, remaining: amt});
     } else if(entry.type==='payment'){
       let rem = amt;
       for(const ch of open){
@@ -15612,9 +15633,61 @@ function customerOldestOpenChargeDate(c){
       }
     }
   });
-  const stillOpen = open.filter(ch=>ch.remaining>0.5);
+  return open.filter(ch=>ch.remaining>0.5);
+}
+function customerOldestOpenChargeDate(c){
+  const stillOpen = customerOpenCharges(c);
   if(!stillOpen.length) return null;
   return stillOpen.reduce((min,ch)=> (!min || (ch.date||'') < min) ? ch.date : min, null);
+}
+
+/* How far through their current debt a customer has got.
+
+   THE DENOMINATOR IS THE CHARGES STILL OPEN, not everything they have
+   ever been charged. Trade debt revolves: a customer who has bought from
+   the shop for years and settled every bill but the last would otherwise
+   sit at 95% for ever -- looking nearly clear while their balance
+   climbed. Measured this way, taking on new debt pushes the bar DOWN,
+   which is what actually happened.
+
+   Returns null, never 0, when there is nothing to measure. A balance
+   typed straight in has no charges behind it, and a bar at zero would
+   say "they have paid nothing" -- a claim about somebody's conduct that
+   the records do not support. */
+function customerDebtProgress(c){
+  /* A balance its own ledger cannot explain is not a balance this can
+     measure: the bar would be describing a different number from the one
+     printed beside it. The drift banner already handles that case and
+     says what to do about it. */
+  /* Two different reasons it cannot be measured, and they are NOT the
+     same thing to say to somebody. A balance with no charges behind it
+     has nothing to measure; a balance that disagrees with the charges it
+     does have has something to measure that would describe a different
+     number from the one printed beside it. Collapsing both into "no
+     dated charges" tells a customer with a full history that they have
+     none. */
+  /* No history is tested FIRST, because a balance with no ledger behind
+     it is drift BY DEFINITION -- nothing explains it, so the difference
+     is the whole balance. Checked the other way round, the customer with
+     no history at all was told their balance "does not match its own
+     history", which is a strange thing to say to somebody who has
+     none. */
+  if(!(c.debtLog||[]).length) return { pct: null, reason: 'no-history' };
+  if(customerDebtDrift(c) !== 0) return { pct: null, reason: 'drift' };
+  const open = customerOpenCharges(c);
+  if(!open.length) return { pct: null, reason: 'no-history' };
+  const charged = open.reduce((s,ch)=> s + ch.original, 0);
+  if(charged <= 0) return { pct: null, reason: 'no-history' };
+  const owed = open.reduce((s,ch)=> s + ch.remaining, 0);
+  const paid = charged - owed;
+  /* The clamp is unreachable as customerOpenCharges stands, and is kept
+     anyway: every `remaining` is bounded by its own `original` and is
+     positive to be in the list at all, so `paid` cannot leave 0..charged
+     and the mutation removing it changes no test. Recording that here
+     rather than contriving a fixture that cannot occur. What it guards
+     is a later change to the walk -- a credit note, or a payment allowed
+     to overrun its charges -- putting a bar past its own track. */
+  return { charged, owed, paid, reason: null, pct: Math.max(0, Math.min(1, paid / charged)) };
 }
 function debRowsForList(filter=''){
   const hideNoDebt = document.getElementById('deb_hide_no_debt').checked;
@@ -15837,6 +15910,25 @@ function renderDebtorsList(filter=''){
   const paidCell = (r)=> r.lastPaid
     ? `<span class="age-paid">${esc(fmtShortDate(r.lastPaid))}</span><span class="age-paid-ago">${esc(agingDaysLabel(daysSinceDate(r.lastPaid)))} ago</span>`
     : '<span class="age-never">Never paid</span>';
+  /* How far through their CURRENT debt they are. Absent rather than
+     empty when there is nothing to measure it from: a bar at zero would
+     say they have paid nothing, which is a claim about somebody's
+     conduct the records do not support. */
+  const progressCell = (r)=>{
+    const p = r.progress;
+    if(!p || p.pct === null){
+      const why = (p && p.reason === 'drift')
+        ? 'This balance does not match its own history, so anything measured from that history would describe a different figure. Fix it with the note above.'
+        : 'No dated charges behind this balance, so there is nothing to measure against.';
+      return `<span class="deb-prog-none" title="${esc(why)}">—</span>`;
+    }
+    const pct = Math.round(p.pct*100);
+    return `<div class="deb-prog" title="${esc(fmtUGX(Math.round(p.paid)))} paid of ${esc(fmtUGX(Math.round(p.charged)))} charged on what is still open">
+      <div class="deb-prog-track"><div class="deb-prog-fill" style="width:${pct}%"></div></div>
+      <span class="deb-prog-pct">${pct}%</span>
+    </div>`;
+  };
+
   const receiveBtn = (r)=> `<button type="button" class="age-act deb-receive" data-id="${esc(r.id)}">
       <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg>
       Receive</button>`;
@@ -15854,6 +15946,7 @@ function renderDebtorsList(filter=''){
         <span class="age-card-amt">${fmtUGX(Math.round(r.debt))}</span>
         <span class="age-card-paid">${paidCell(r)}</span>
       </div>
+      <div class="deb-card-prog">${progressCell(r)}</div>
       <div class="age-card-act">${receiveBtn(r)}</div>
     </div>`).join('');
 
@@ -15861,6 +15954,7 @@ function renderDebtorsList(filter=''){
     <thead><tr>
       <th class="sortable${DEB_SORT_STATE.key==='name'?' sorted':''}" data-key="name">Customer${sortArrow('name')}</th>
       <th class="r sortable${DEB_SORT_STATE.key==='debt'?' sorted':''}" data-key="debt">Owing${sortArrow('debt')}</th>
+      <th>Paid off</th>
       <th class="sortable${DEB_SORT_STATE.key==='ageDays'?' sorted':''}" data-key="ageDays">Owing for${sortArrow('ageDays')}</th>
       <th class="sortable${DEB_SORT_STATE.key==='lastPaid'?' sorted':''}" data-key="lastPaid">Last payment${sortArrow('lastPaid')}</th>
       <th></th>
@@ -15871,6 +15965,7 @@ function renderDebtorsList(filter=''){
         ${r.location ? `<div class="age-where">${esc(r.location)}</div>` : ''}
       </td>
       <td class="price age-amt">${fmtUGX(Math.round(r.debt))}</td>
+      <td>${progressCell(r)}</td>
       <td>${agePill(r)}</td>
       <td class="age-paid-cell">${paidCell(r)}</td>
       <td class="row-actions">${receiveBtn(r)}</td>
@@ -15879,7 +15974,7 @@ function renderDebtorsList(filter=''){
       <td class="inv-total-label">${rows.length} customer${rows.length===1?'':'s'}${
         debBandFilter ? ` · ${esc((agingBandDef(debBandFilter)||{}).short || '')}` : ''}</td>
       <td class="price">${fmtUGX(Math.round(totalDebt))}</td>
-      <td></td><td></td><td></td>
+      <td></td><td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>
   <div class="pi-cards">
