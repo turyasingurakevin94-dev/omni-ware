@@ -892,6 +892,17 @@
      something is wrong was the least readable thing on screen. */
   .ag-offline-banner{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:8px;background:var(--bonus-bg);color:var(--ink);padding:9px 16px;font-size:12.5px;font-weight:700;line-height:1.35;}
   .ag-offline-banner .icon{color:var(--bonus);}
+  /* Sticky like the offline banner and stacked with it: an agent can be
+     paused AND offline, and hiding one behind the other would leave
+     whichever lost looking like the only thing wrong. */
+  .ag-paused-banner{position:sticky;top:0;z-index:61;display:flex;align-items:flex-start;gap:8px;
+    background:#F7D9D3;color:#7F1D1A;padding:10px 16px;font-size:12.5px;font-weight:600;line-height:1.4;}
+  .ag-paused-banner .icon{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;
+    stroke-linecap:round;margin-top:1px;}
+  /* The submit button says why it will not work, rather than looking
+     broken. */
+  .ag-submit-blocked{font-size:12px;line-height:1.45;color:#7F1D1A;background:#F7D9D3;
+    border-radius:8px;padding:8px 11px;margin-bottom:9px;}
   .ag-offline-banner .icon{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
 </style>
 </head>
@@ -900,6 +911,17 @@
 <div class="ag-offline-banner" id="ag_offlineBanner" style="display:none;">
   <svg class="icon" viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/></svg>
   <span id="ag_offlineBannerText">You're offline &mdash; showing your last saved data. New actions won't go through until you're back online.</span>
+</div>
+
+<!-- Being paused is a STATE, not a failed action, so it does not get a
+     toast. A toast disappears, says "could not submit" (which invites a
+     retry that will always fail), and only shows up after a whole basket
+     has been built. This sits on every screen until the shop lifts it,
+     and says exactly what still works -- their clients, their orders,
+     their catalogue are all untouched. -->
+<div class="ag-paused-banner" id="ag_pausedBanner" style="display:none;">
+  <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>
+  <span>Your account is paused, so new orders can&rsquo;t be placed. Everything else &mdash; your clients, your orders, your catalogue &mdash; is still here. Talk to the shop to have it lifted.</span>
 </div>
 
 <!-- Fixed, so it sits over every screen, not just Home. Its letter was
@@ -1970,8 +1992,53 @@ async function ensureAgentAuth(){
     throw new Error("This agent account has been retired, so it can't be used to sign in. Contact the shop if that's not right.");
   }
   currentShopId = agentRow.shop_id;
-  myAgent = { id: agentRow.id, name: agentRow.name, phone: agentRow.phone, email: agentRow.email, paymentTerm: agentRow.payment_term };
+  /* Paused is NOT retired and must not be treated like it. Retiring
+     closes current_agent_id(), so every policy shuts and the app would
+     load empty -- which is why the block above refuses to start at all.
+     A pause leaves all of that open on purpose: the agent keeps their
+     clients, orders, earnings and catalogue, and only new orders stop.
+     So they sign in normally and the app tells them what has changed.
+
+     Read here because select('*') already has it -- the agent knows
+     before building a basket, not after being refused one. */
+  myAgent = { id: agentRow.id, name: agentRow.name, phone: agentRow.phone, email: agentRow.email,
+    paymentTerm: agentRow.payment_term, paused: !!agentRow.unavailable };
   hideAuthOverlay();
+}
+
+/* Whether the shop has paused this agent. Kept off `myAgent` as the
+   source of truth for the UI so a cached boot can decline to apply it --
+   see setAgentPaused below. */
+let agentPaused = false;
+/* The server is the authority on this, and a cached snapshot is not the
+   server. Applying a stale `paused` from the offline cache would lock a
+   working agent out of the one thing the app is for, with no way to
+   disprove it until they got signal back; letting a stale ACTIVE stand
+   costs them one refused submit, which now explains itself. So the
+   pessimistic direction is the one that needs a live read. */
+function setAgentPaused(on){
+  agentPaused = !!on;
+  const banner = document.getElementById('ag_pausedBanner');
+  if(banner) banner.style.display = agentPaused ? 'flex' : 'none';
+  applyPausedToCart();
+}
+// The basket is deliberately NOT cleared. Their work survives the pause
+// and is still there when the shop lifts it.
+function applyPausedToCart(){
+  const btn = document.getElementById('ag_submit_btn');
+  if(!btn) return;
+  btn.disabled = agentPaused;
+  btn.textContent = agentPaused ? 'Orders are paused' : 'Submit order';
+  let note = document.getElementById('ag_submit_blocked');
+  if(agentPaused && !note){
+    note = document.createElement('div');
+    note.className = 'ag-submit-blocked';
+    note.id = 'ag_submit_blocked';
+    note.textContent = 'The shop has paused your account, so this order can’t be sent yet. It will stay in your basket until they lift it.';
+    btn.parentNode.insertBefore(note, btn);
+  } else if(!agentPaused && note){
+    note.remove();
+  }
 }
 
 async function callAgentFn(name, body){
@@ -1982,15 +2049,31 @@ async function callAgentFn(name, body){
     // the function's own { error: "..." } body (the actually useful part)
     // is on error.context, the raw Response, and has to be read separately.
     let msg = error.message;
+    /* The whole body, not just its message. A function that says WHY it
+       refused -- `paused: true` -- can only be acted on if the flag
+       survives the throw, and this used to keep the string and drop
+       everything around it, so every refusal arrived looking the same as
+       every other. */
+    let body = null;
     try{
       if(error.context && typeof error.context.json === 'function'){
-        const parsed = await error.context.json();
-        if(parsed && parsed.error) msg = parsed.error;
+        body = await error.context.json();
+        if(body && body.error) msg = body.error;
       }
     }catch(_e){ /* keep the generic message if the body isn't JSON */ }
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.body = body;
+    /* A pause is an account state, so it is applied the moment the server
+       reports one -- an agent who was working when the shop paused them
+       finds out here, not at the next sign-in. */
+    if(body && body.paused){ err.paused = true; setAgentPaused(true); }
+    throw err;
   }
   if(data && data.error) throw new Error(data.error);
+  /* A call that SUCCEEDS is proof they are not paused: the server checks
+     on every submit, so getting through means the pause was lifted. That
+     is what clears the banner without making them sign in again. */
+  if(name === 'agent-submit-order' && agentPaused) setAgentPaused(false);
   return data;
 }
 
@@ -2015,7 +2098,7 @@ function mapOrderRow(q){
 
 async function fetchAgentHomeRows(){
   const [{ data: clientsData, error: clientsErr }, { data: ordersData, error: ordersErr },
-         { data: inquiriesData, error: inquiriesErr }] = await Promise.all([
+         { data: inquiriesData, error: inquiriesErr }, { data: meData, error: meErr }] = await Promise.all([
     sb.from('agent_clients').select('*').eq('shop_id', currentShopId).order('name'),
     sb.from('saved_quotes').select('*').eq('shop_id', currentShopId),
     // Catalogue requests. 0025 created the policy for these and nothing ever
@@ -2024,6 +2107,16 @@ async function fetchAgentHomeRows(){
     // name and a phone number with no idea what was wanted.
     sb.from('catalogue_inquiries').select('*').eq('shop_id', currentShopId)
       .order('created_at', { ascending: false }).limit(50),
+    /* The agent's own row, off the "agent views own row" policy (0012).
+       This is how a LIFTED pause is noticed: the submit button is
+       disabled while paused, so the successful-call path that clears the
+       flag can never be reached from inside the app -- without this an
+       agent would stay visibly paused until they signed in again, long
+       after the shop had let them go.
+
+       Folded into the existing Promise.all rather than added after it,
+       so it costs no extra round trip. */
+    sb.from('agents').select('unavailable').eq('shop_id', currentShopId).limit(1),
   ]);
   if(clientsErr) throw clientsErr;
   if(ordersErr) throw ordersErr;
@@ -2031,7 +2124,12 @@ async function fetchAgentHomeRows(){
   // failing the whole screen over them would turn a missing extra into a
   // dead app.
   if(inquiriesErr) console.warn('Could not load catalogue requests:', inquiriesErr.message);
-  return { clients: clientsData || [], orders: ordersData || [], inquiries: inquiriesData || [] };
+  // Same rule, and it matters more here: refusing to show an agent their
+  // orders because the pause check failed would be a worse outage than
+  // the pause. Absent means "leave the flag as it was", not "active".
+  if(meErr) console.warn('Could not re-check account status:', meErr.message);
+  return { clients: clientsData || [], orders: ordersData || [], inquiries: inquiriesData || [],
+    me: (!meErr && meData && meData.length) ? meData[0] : null };
 }
 // GUARD 2 -- an RLS denial and an expired/mid-refresh token both come back
 // from PostgREST as an ordinary empty result set, indistinguishable from
@@ -2086,6 +2184,11 @@ async function loadAgentHomeData(){
   agentClients = rows.clients;
   myOrders = rows.orders.map(mapOrderRow);
   myInquiries = rows.inquiries;
+  /* A live read of their own row, so lifting a pause reaches them on the
+     next refresh instead of the next sign-in. Only when the row actually
+     came back: `me` is null when the check failed, and treating that as
+     "not paused" would clear a real pause on a network wobble. */
+  if(rows.me) setAgentPaused(!!rows.me.unavailable);
   // Trusted because it came back on a token we had just renewed. Without
   // saying so, wouldWipeCachedData would refuse to write a snapshot that
   // empties something -- leaving the stale rows on the device to reappear
@@ -5541,10 +5644,20 @@ document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
       deliveryAddress: deliveryMode==='shop_delivery' ? deliveryAddress : undefined,
     });
   }catch(err){
-    toast(isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online" : `Could not submit order: ${err.message||err}`);
+    /* Not "Could not submit order: ...". That framing says try again, and
+       a paused account will refuse every retry. callAgentFn has already
+       raised the banner and disabled the button by now; this only
+       acknowledges the tap. */
+    toast(err.paused
+      ? 'Your account is paused — the shop has to lift it before orders can go through'
+      : isNetworkError(err) ? "You're offline -- this order needs a live price check, so it can't submit until you're back online"
+      : `Could not submit order: ${err.message||err}`, err.paused ? 6000 : undefined);
     return;
   }finally{
+    /* Re-enabled unless the pause is what stopped it -- otherwise this
+       hands the button straight back and undoes the block. */
     btn.disabled = false;
+    applyPausedToCart();
   }
 
   // The order exists from here on. The basket is cleared before the reload
@@ -5578,6 +5691,14 @@ async function boot(){
     el.innerHTML = `<div style="color:#f66;font-family:inherit;max-width:400px;text-align:center;padding:0 20px;">Couldn't load your account: ${(e && e.message) || e}. Reload to try again.</div>`;
     return;
   }
+  /* Applied only when the row was actually read. A cached boot carries
+     whatever `paused` was true at the last sign-in, and believing that
+     offline would lock a working agent out of the only thing the app is
+     for, with no way to disprove it until they had signal again. The
+     server refuses a paused submit regardless, so the cost of guessing
+     ACTIVE is one refused order that explains itself -- the cost of
+     guessing PAUSED is a day's work. */
+  setAgentPaused(!bootedFromCache && myAgent && myAgent.paused);
   // Always attempted, even if ensureAgentAuth() itself already resumed
   // from cache above -- that step only restores identity (myAgent/
   // currentShopId), never the reference-data arrays below, which only

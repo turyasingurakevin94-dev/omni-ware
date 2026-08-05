@@ -59,23 +59,36 @@ function extractSubmitHandler() {
 // resetCartAfterSubmit touches on its way through is auto-created below --
 // this file is about what the agent is told, not about the DOM.
 const fields = {
-  ag_submit_btn: { disabled: false },
+  // parentNode/textContent because applyPausedToCart writes the reason in
+  // beside the button -- the handler's finally calls it, so it runs on
+  // every outcome in this file, not only the paused one.
+  ag_submit_btn: { disabled: false, textContent: 'Submit order', parentNode: null },
   ag_delivery_shop: { checked: false },
   ag_delivery_address: { value: '' },
 };
+const btnParent = { children: [], insertBefore(n) { this.children.push(n); fields[n.id] = n; } };
+fields.ag_submit_btn.parentNode = btnParent;
 const noopEl = () => ({
   value: '', checked: false, disabled: false, innerHTML: '', textContent: '',
   style: {}, dataset: {},
   classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
   addEventListener() {}, focus() {}, click() {}, querySelectorAll: () => [],
+  remove() {},
 });
 const getElementById = (id) => fields[id] || (fields[id] = noopEl());
+const createElement = () => ({ className: '', id: '', textContent: '',
+  remove() { delete fields[this.id]; btnParent.children = btnParent.children.filter((c) => c !== this); } });
 
 const state = {};
 let s = null, err = null;
 try {
   s = compileScope([
     'let cart = [], carts = Object.create(null), chosenClient = null, myAgent = null, myOrders = [];',
+    // The real one, not a stub: whether the finally hands a disabled
+    // button back is exactly the kind of thing this file exists to catch.
+    'let agentPaused = false;',
+    'function setAgentPaused(on){ agentPaused = !!on; applyPausedToCart(); }',
+    extractFunction(src, 'applyPausedToCart', 'agent.html'),
     'const cartKey = (client) => client ? String(client.id) : null;',
     extractFunction(src, 'isNetworkError', 'agent.html'),
     extractFunction(src, 'resetCartAfterSubmit', 'agent.html'),
@@ -92,11 +105,12 @@ try {
        told: state.told.slice(), submits: state.submits,
        cartLeft: cart.length, basketsLeft: Object.keys(carts),
        buttonUsable: !fields.ag_submit_btn.disabled,
+       buttonSays: fields.ag_submit_btn.textContent,
        paymentPrompted: state.paymentPrompted, tab: state.tab,
      }; }`,
   ], {
     fields, state,
-    document: { getElementById, querySelectorAll: () => [] },
+    document: { getElementById, createElement, querySelectorAll: () => [] },
     toast: (m) => { state.told.push(String(m)); },
     switchTab: (tab) => { state.tab = tab; },
     openPaymentChoiceModal: () => { state.paymentPrompted = true; },
@@ -104,9 +118,20 @@ try {
     clearQuoteDraft: () => {},
     updateCartBadge: () => {},
     renderSellClientChip: () => {},
-    callAgentFn: async () => { state.submits++; return state.submitResult(); },
+    /* Models the real one's contract, not just its return value.
+       callAgentFn is the single place that sees the server's `paused`
+       flag and raises the state -- the handler's finally only re-applies
+       whatever the state already is. A stub that skipped that made the
+       handler look like it was handing a disabled button back. */
+    callAgentFn: async () => {
+      state.submits++;
+      try { return state.submitResult(); } catch (e) {
+        if (e && e.paused) s.setAgentPaused(true);
+        throw e;
+      }
+    },
     loadAgentHomeData: async () => state.loadResult(),
-  }, ['submitOrder', 'setUp', 'readState']);
+  }, ['submitOrder', 'setUp', 'readState', 'setAgentPaused']);
 } catch (e) { err = e; }
 t.check(!!s, `the submit handler compiles out of agent.html${err ? ` (${err.message})` : ''}`);
 
@@ -119,6 +144,7 @@ const said = (r, re) => r.told.some((m) => re.test(m));
 
 const run = async (submitResult, loadResult) => {
   s.setUp({ client: CLIENT, agent: AGENT, cart: BASKET });
+  s.setAgentPaused(false);
   state.submitResult = submitResult;
   state.loadResult = loadResult;
   await s.submitOrder();
@@ -199,6 +225,32 @@ const run = async (submitResult, loadResult) => {
         'the basket is cleared BEFORE the reload, so a failure there cannot leave it inviting a re-send');
       t.check(/return;\s*\}finally\{/.test(handler.replace(/\r?\n\s*/g, '')),
         'a failed submit returns rather than falling through into the success path');
+    }
+
+    /* ---------- 7. refused because the shop paused them ---------------- *
+     * Not a failure that might work next time. The finally re-enables the
+     * button on every outcome, which for this one would hand it straight
+     * back and undo the block -- so the agent taps, is refused, taps
+     * again, and the app looks broken rather than paused.
+     */
+    {
+      const r = await run(() => {
+        const e = new Error('Your account is paused. Talk to the shop before placing new orders.');
+        e.paused = true; throw e;
+      }, async () => {});
+
+      t.check(said(r, /account is paused/), 'the agent is told the shop paused them');
+      t.check(!said(r, /Could not submit order/),
+        'not that the order could not be submitted, which describes something that might work next time');
+      t.check(!said(r, /back online/), 'and not blamed on the network');
+      t.check(!r.buttonUsable, 'the submit button stays out of reach rather than being handed back');
+      t.check(r.buttonSays === 'Orders are paused', 'saying why, rather than looking broken');
+      /* Their work is not thrown away. A pause is the shop's decision and
+         the agent should not lose a basket over it. */
+      t.check(r.cartLeft === 1 && r.basketsLeft.length === 1,
+        'and the basket is still there for when the pause is lifted');
+      t.check(!r.paymentPrompted && r.tab === null,
+        'with none of the order-placed housekeeping run for an order that was never placed');
     }
   }
   process.exit(t.done() ? 1 : 0);
