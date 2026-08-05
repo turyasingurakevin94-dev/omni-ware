@@ -80,12 +80,15 @@ if (rowsFor) {
        row set, or a filtered print could list rows the screen is not
        showing. Pinned on the shared call rather than on the shape of
        what is done with it. */
-    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter\);/.test(code),
+    /* The pricing filter joined the other three. What is pinned is
+       unchanged -- both callers pass the SAME filters -- and it now
+       covers one more of them. */
+    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\);/.test(code),
       'the on-screen list is built from these rows');
-    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter\)/g) || []).length === 2,
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/g) || []).length === 2,
       'and the printout calls the very same function with the very same filters');
-    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter\);/.test(code),
-      'and so is the printout');
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 3,
+      'and nothing calls it with a filter the other one is not passing');
     // Neither may walk the catalog for itself.
     const printHandler = (/document\.getElementById\('p_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
     t.check(printHandler.length > 0, 'the print handler is found');
