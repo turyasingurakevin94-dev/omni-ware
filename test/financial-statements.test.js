@@ -30,6 +30,8 @@ const TODAY = '2026-08-03';
 const data = {
   savedQuotes: [], customers: [], suppliers: [], products: [],
   cashTxns: [], cashDays: {}, stockLots: {}, fixedAssets: [], loans: [],
+  // Wages and rent already fallen due are a liability on this sheet.
+  dues: [],
 };
 
 const scope = compileScope([
@@ -55,6 +57,8 @@ const scope = compileScope([
   extractFunction(src, 'anInvoicesInRange', 'index.html'),
   extractFunction(src, 'dashCashTxnsInRange', 'index.html'),
   extractFunction(src, 'dashTotalDebtors', 'index.html'),
+  extractFunction(src, 'dueBalance', 'index.html'),
+  extractFunction(src, 'duesOwed', 'index.html'),
   extractFunction(src, 'monthsBetween', 'index.html'),
   extractFunction(src, 'assetIsDisposed', 'index.html'),
   extractFunction(src, 'assetMonthsCharged', 'index.html'),
@@ -91,7 +95,7 @@ const scope = compileScope([
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   dashTotalCreditors: () => 0,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
-}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue']);
+}, ['incomeStatement', 'balanceSheetToday', 'cashFlowStatement', 'statementChecks', 'inventoryValue', 'duesOwed']);
 
 const r = (n) => Math.round(n);
 const txn = (over) => Object.assign({ id: 1, date: TODAY, account: 'cash', type: 'expense', category: 'Rent', amount: 0 }, over);
@@ -229,6 +233,60 @@ const reset = () => {
     'the sheet balances -- which it always will, since equity is the remainder');
   t.check(r(bs.retainedEarnings) === r(bs.equity - bs.ownerCapital),
     'and retained earnings is that remainder less what the owner put in');
+}
+
+/* ---------- 4b. wages and rent are a liability ------------------------ *
+ * Wages for a month already worked, and rent for a month already
+ * occupied, are money owed whether or not anybody has handed it over.
+ * Suppliers were counted here from the start; the staff and the landlord
+ * were not, so the sheet overstated what the shop was worth by exactly
+ * what it owed its own people.
+ */
+{
+  reset();
+  data.cashDays[TODAY].opening = { cash: 5000000, momo: 0, bank: 0 };
+  const due = (id, kind, amount, paid) => ({
+    id, kind, refId: 'X', period: '2026-07', dueDate: '2026-07-31',
+    amount, days: null, rate: amount || 0, paid: paid || 0, payments: [],
+  });
+  data.dues = [
+    due(1, 'wage', 450000),            // a month worked, unpaid
+    due(2, 'wage', 400000, 400000),    // settled -- owed nothing
+    due(3, 'rent', 800000, 300000),    // part paid -- 500,000 left
+    // Uncosted: a real obligation of an unknown size. It must not be
+    // guessed at, and it must not be counted as nothing either.
+    due(4, 'wage', null),
+  ];
+
+  const owed = scope.duesOwed();
+  t.check(owed.wages === 450000, 'a settled month owes nothing and a worked one owes its whole wage');
+  t.check(owed.rent === 500000, 'and a part-paid month owes only the remainder');
+  t.check(owed.total === 950000, 'which is what the shop owes its people and its landlord');
+  t.check(owed.uncostedCount === 1,
+    'with the uncosted month counted separately rather than guessed at or ignored');
+  /* The count is what makes the filter load-bearing: a settled month and
+     an uncosted one both add 0 to the totals, so without this a version
+     that counted every due whatever its balance summed identically. */
+  t.check(owed.count === 2,
+    'and only the two months actually owing something are in it');
+
+  const bs = scope.balanceSheetToday();
+  t.check(bs.staffAndRent === 950000, 'the balance sheet carries it');
+  t.check(bs.liabilities === bs.payables + bs.loans + bs.staffAndRent,
+    'inside total liabilities, not merely reported beside them');
+  /* Its own line, not folded into payables: a supplier, a member of
+     staff and a landlord are three different creditors, and the one you
+     can least afford to keep waiting is not the one on an invoice. */
+  t.check(bs.payables !== bs.staffAndRent || bs.staffAndRent === 0,
+    'and separately from what is owed to suppliers');
+  t.check(bs.equity === bs.assets - bs.liabilities,
+    'so net worth is after what is owed to staff, not before it');
+
+  // Nothing owed, nothing added.
+  data.dues = [due(5, 'wage', 400000, 400000)];
+  t.check(scope.balanceSheetToday().staffAndRent === 0,
+    'a shop that has paid everybody carries no such liability');
+  data.dues = [];
 }
 
 /* ---------- 5. where the money went ----------------------------------- */

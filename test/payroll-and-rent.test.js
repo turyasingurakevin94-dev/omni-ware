@@ -443,4 +443,42 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
     'and the payroll screen asks it too rather than hard-coding the cash drawer');
 }
 
+/* ---------- 14. reaching the cash book and the statements ----------- *
+ * Paying already went through addCashPayment under categories the income
+ * statement's cashIsOperatingExpense accepts, so the COST reached the
+ * P&L from the start. What was owed and not yet paid reached nothing:
+ * the balance sheet counted suppliers and loans and left the staff and
+ * the landlord out entirely, overstating what the shop was worth by
+ * exactly what it owed its own people.
+ */
+{
+  t.check(/cashCategory:'Rent'/.test(code) && /cashCategory:'Salaries & Wages'/.test(code),
+    'payments carry the categories the income statement already treats as running costs');
+
+  const bs = (/function balanceSheetToday[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const staffAndRent = duesOwed\(\);/.test(bs),
+    'the balance sheet asks what is owed to staff and the landlord');
+  t.check(/const liabilities = payables \+ loans \+ staffAndRent\.total;/.test(bs),
+    'and it is inside total liabilities, not merely reported beside them');
+  t.check(/staffAndRent: staffAndRent\.total/.test(bs),
+    'on its own line, since a supplier, a member of staff and a landlord are three different creditors');
+
+  t.check(/const currentLiabilities = bs\.payables \+ bs\.staffAndRent \+ shortTermLoans;/.test(code),
+    'and in current liabilities, because wages are due within the month rather than the year');
+
+  /* The dashboard's working-capital gap is what somebody glances at
+     before deciding whether the week is affordable. Computed against
+     suppliers alone it read better than the shop's week actually was. */
+  t.check(/const totalCreditors = dashTotalCreditors\(\) \+ owedToStaffAndLandlord;/.test(code),
+    'the working capital gap counts what is owed to staff as well as to suppliers');
+  t.check(/const owedToStaffAndLandlord = duesOwedTotal\(\);/.test(code),
+    'reading the same figure the balance sheet reads, rather than adding it up a second way');
+
+  /* The mixed basis is named on the sheet rather than left to be
+     discovered -- the same thing the P&L already does about sales being
+     counted when invoiced and costs when paid. */
+  t.check(/Wages and rent owed are counted from the month they fall due, while the cost of them reaches the profit and loss when they are actually paid/.test(code),
+    'and the sheet says out loud that the liability and the expense land on different bases');
+}
+
 process.exit(t.done() ? 1 : 0);

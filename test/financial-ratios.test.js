@@ -71,6 +71,9 @@ const BS = (over) => Object.assign({
   asOf: TODAY, cash: 2000000, receivables: 1000000, inventory: 3000000,
   fixedAssets: 4000000, assets: 10000000,
   payables: 2000000, loans: 3000000, liabilities: 5000000,
+  // Wages and rent already fallen due. A current liability without
+  // argument -- not due within the year, due within the month.
+  staffAndRent: 0, staffAndRentDetail: { wages: 0, rent: 0, total: 0, count: 0, uncostedCount: 0 },
   ownerCapital: 1000000, retainedEarnings: 4000000, equity: 5000000,
   cashAccounts: [], inventoryUncostedQty: 0,
 }, over);
@@ -206,6 +209,20 @@ const CF = () => ({ operating: 0, financing: 0, netMovement: 0, unclassified: 0 
     `the quick ratio leaves the stock out (got ${val(out, 'Quick ratio').toFixed(2)}x)`);
   t.check(val(out, 'Quick ratio') < val(out, 'Current ratio'),
     'so it is always the harsher of the two, which is its point');
+
+  /* Wages and rent already fallen due belong in current liabilities
+     without argument: they are not due within the year, they are due
+     within the month. Leaving them out flattered every liquidity ratio
+     on the page -- a shop that cannot make payroll on Friday would have
+     read as comfortably able to pay its way. */
+  const withWages = scope.financialRatios(IS(), BS({
+    cash: 2000000, receivables: 1000000, inventory: 3000000,
+    payables: 2000000, loans: 3600000, staffAndRent: 800000,
+  }), CF());
+  t.check(Math.abs(val(withWages, 'Current ratio') - 6000000/4000000) < 0.01,
+    `wages owed are current liabilities too (got ${val(withWages, 'Current ratio').toFixed(2)}x)`);
+  t.check(val(withWages, 'Current ratio') < val(out, 'Current ratio'),
+    'so owing your staff makes the shop read as less able to pay, not more');
 
   // A loan already settled must not inflate current liabilities either.
   data.loans = [{ id: 1, lender: 'Bank', principal: 1000000, fees: 0, ratePct: 0,

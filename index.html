@@ -15657,6 +15657,33 @@ function duesOverdue(asOf){
   return duesOutstanding().filter(d=> dueIsOverdue(d, asOf));
 }
 
+/* What the shop owes its own people and its landlord, as a figure the
+   rest of the app can ask for.
+
+   This is a LIABILITY. Wages for a month already worked, and rent for a
+   month already occupied, are money owed whether or not anybody has
+   handed it over -- and leaving it off the balance sheet overstates what
+   the shop is worth by exactly that amount. Suppliers were already
+   counted; the staff and the landlord were not.
+
+   Only costed months count. An uncosted one has no figure to owe, and
+   guessing it would put an invented number on the balance sheet. It is
+   returned alongside so the statement can say what it is leaving out
+   rather than quietly leaving it out. */
+function duesOwed(){
+  const open = (data.dues||[]).filter(d=> (dueBalance(d) || 0) > 0.5);
+  const by = (k)=> open.filter(d=> d.kind===k).reduce((s,d)=> s + dueBalance(d), 0);
+  return {
+    wages: by('wage'),
+    rent: by('rent'),
+    total: open.reduce((s,d)=> s + dueBalance(d), 0),
+    count: open.length,
+    // Months nobody has costed yet: a real obligation of an unknown size.
+    uncostedCount: (data.dues||[]).filter(d=> dueBalance(d) === null).length,
+  };
+}
+function duesOwedTotal(){ return duesOwed().total; }
+
 /* What the reminder asks about: everything unpaid whose date has ARRIVED,
    which is a day wider than overdue. Rent due today is not late, but a
    reminder that only speaks once you are already late is a reminder that
@@ -21802,7 +21829,12 @@ function balanceSheetToday(){
 
   const payables = dashTotalCreditors();
   const loans = loansOutstandingAt(asOf);
-  const liabilities = payables + loans;
+  /* Wages and rent already fallen due and not yet paid. Its own line
+     rather than folded into payables: a supplier, a member of staff and
+     a landlord are three different creditors, and the one you can least
+     afford to keep waiting is not the one on an invoice. */
+  const staffAndRent = duesOwed();
+  const liabilities = payables + loans + staffAndRent.total;
 
   // Owner money in and out, from the cash book. What is left of equity
   // after it is retained earnings -- and it is a PLUG, not a computed
@@ -21818,6 +21850,7 @@ function balanceSheetToday(){
     receivables, inventory: inv.value, inventoryUncostedQty: inv.uncostedQty,
     fixedAssets: fixed, assets,
     payables, loans, liabilities,
+    staffAndRent: staffAndRent.total, staffAndRentDetail: staffAndRent,
     ownerCapital: ownerIn, retainedEarnings: equity - ownerIn, equity,
   };
 }
@@ -22068,7 +22101,10 @@ function financialRatios(is, bs, cf){
 
   const shortTermLoans = loansDueWithin(12, bs.asOf);
   const currentAssets = bs.cash + bs.receivables + bs.inventory;
-  const currentLiabilities = bs.payables + shortTermLoans;
+  /* Wages and rent owed belong here without argument: they are not due
+     within the year, they are due within the month. Leaving them out
+     flattered every liquidity ratio on the page. */
+  const currentLiabilities = bs.payables + bs.staffAndRent + shortTermLoans;
   const annualRevenue = annualise(is.revenue);
   const annualCOGS = annualise(is.costOfSales);
   const annualNet = annualise(is.netProfit);
@@ -22410,6 +22446,10 @@ function stBalanceSheet({bs}){
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What the shop owes</td></tr>
       ${stLine('Owed to suppliers', bs.payables, null)}
+      ${stLine('Wages and rent owed', bs.staffAndRent, null,
+        bs.staffAndRentDetail.uncostedCount
+          ? {hint:`${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages not yet costed, so not counted here`}
+          : {hint:'months already worked or occupied, not yet paid'})}
       ${stLine('Loans outstanding', bs.loans, null)}
       ${stLine('Total', bs.liabilities, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
@@ -22421,6 +22461,7 @@ function stBalanceSheet({bs}){
     <p class="st-read">${bs.assets>0
       ? `${Math.round(bs.liabilities/bs.assets*100)}% of what the shop owns is financed by what it owes.`
       : 'There is nothing on the books yet.'}
+      Wages and rent owed are counted from the month they fall due, while the cost of them reaches the profit and loss when they are actually paid. That mixture is deliberate: it is what lets this sheet show money the shop genuinely owes its people without restating every profit figure the app has ever shown. Retained earnings absorbs the difference, and is a balancing figure rather than a computed one.
       As at today only: cash, debtors and stock are live balances rather than history, so a sheet dated to a past month would be today's figures under an old heading.
       Cash and mobile money are where the book stands this minute — the last figure counted or opened, plus everything that has moved since. Counting the drawer at close corrects them; it is not what they wait for.</p>
   </section>`;
@@ -23700,7 +23741,12 @@ function renderDashboard(){
   const runwayMonths = burn>0 ? cashBalance/burn : null;
 
   const totalDebtors = dashTotalDebtors();
-  const totalCreditors = dashTotalCreditors();
+  /* Everything the shop owes short-term, not only its suppliers. Wages
+     and rent already fallen due are the same kind of obligation and the
+     harder one to defer, so a gap computed without them read better
+     than the shop's week actually was. */
+  const owedToStaffAndLandlord = duesOwedTotal();
+  const totalCreditors = dashTotalCreditors() + owedToStaffAndLandlord;
   const wcGap = totalDebtors - totalCreditors;
 
   const inv = dashInventoryHealth();
@@ -23724,7 +23770,8 @@ function renderDashboard(){
     {
       label:'Working Capital Gap', value: fmtUGX(Math.abs(wcGap)),
       tone: wcGap>=0?'good':'warn',
-      sub: wcGap>=0 ? `Owed to us exceeds what we owe suppliers by this much` : `We owe suppliers more than customers owe us`
+      sub: (wcGap>=0 ? `Owed to us exceeds what we owe by this much` : `We owe more than customers owe us`)
+        + (owedToStaffAndLandlord ? ` (includes ${fmtUGX(Math.round(owedToStaffAndLandlord))} of wages and rent)` : '')
     },
     {
       label:'Inventory Health Ratio', value: inv.ratio.toFixed(0)+'% fast-moving',
