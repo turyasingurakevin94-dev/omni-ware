@@ -2860,6 +2860,30 @@
   .st-trend-x span{flex:1;text-align:center;font-size:10.5px;color:var(--ink-soft);}
   @media (max-width:560px){ .st-trend-svg{height:96px;} .st-trend-x span{font-size:9.5px;} }
 
+  /* Breakeven. The target the shop is trading against, which nothing on
+     this page could state until it knew what the shop was committed to. */
+  .st-breakeven{border:1px solid var(--line);border-radius:11px;padding:14px 15px;margin-bottom:16px;}
+  .st-be-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px;}
+  .st-be-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+  .st-be-head b{font-family:'Archivo Black',sans-serif;font-size:29px;line-height:1.1;color:var(--ink);
+    font-variant-numeric:tabular-nums;letter-spacing:-0.4px;word-break:break-word;}
+  .st-be-head b.st-be-none{color:var(--ink-soft);}
+  .st-be-sub{font-size:12.5px;color:var(--ink-soft);}
+  .st-be-verdict{font-size:13px;line-height:1.5;border-radius:9px;padding:9px 12px;margin-bottom:11px;}
+  .st-be-verdict b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .st-be-verdict.good{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .st-be-verdict.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
+  .st-be-parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;}
+  .st-be-part{display:flex;flex-direction:column;gap:2px;background:var(--bg);
+    border:1px solid var(--line);border-radius:9px;padding:9px 11px;}
+  .st-be-part > span:first-child{font-size:11px;font-weight:700;letter-spacing:0.5px;
+    text-transform:uppercase;color:var(--ink-soft);}
+  .st-be-part b{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);}
+  .st-be-part-note{font-size:11px;color:var(--ink-soft);line-height:1.4;}
+  .st-be-caveat{margin-top:10px;font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  @media (max-width:560px){ .st-be-head b{font-size:24px;} }
+
   .st-vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
     background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px;}
   .st-vital{background:var(--panel);padding:14px 15px 13px;}
@@ -22830,6 +22854,141 @@ function statementBasisGap(is, cf){
   };
 }
 
+/* ================= BREAKEVEN ====================================
+
+   What has to be sold before the shop earns anything.
+
+   Newly possible. Until the rent agreements and staff pay rates existed
+   there was no record of what the shop is COMMITTED to -- only of what
+   it had already paid, which is a different question and always looks
+   backwards. */
+
+function committedMonthlyCost(period){
+  const p = period || currentPeriod();
+  const rent = rentAgreementsFor(p).reduce((s,r)=> s + (Number(r.amount)||0), 0);
+  const salaried = staffOnPayroll().filter(s=> s.payBasis==='monthly' && s.payRate!=null);
+  const wages = salaried.reduce((s,x)=> s + (Number(x.payRate)||0), 0);
+  return {
+    period: p, rent, wages, total: rent + wages,
+    salariedCount: salaried.length,
+    /* Daily-paid people are NOT a committed cost: what they cost follows
+       the days worked, which follows the trade. Counting them would put
+       a floor under the shop that it does not actually have. */
+    dailyCount: staffOnPayroll().filter(s=> s.payBasis==='daily').length,
+    // Somebody on the staff list with no rate at all is missing from
+    // this figure, which is worth saying rather than quietly
+    // understating the floor.
+    noRateCount: staffWithoutPayRate().length,
+  };
+}
+
+function breakevenPosition(is, period){
+  const committed = committedMonthlyCost(period);
+  /* Everything that had to be covered which is NOT the cost of the goods
+     themselves. Cost of sales is left out on purpose: it rises and falls
+     with what is sold, so it belongs inside the margin rather than in
+     the target the margin has to cover. */
+  const running = (Number(is.opex)||0) + (Number(is.depreciation)||0)
+    + (Number(is.interest)||0) + (Number(is.loanFees)||0);
+
+  /* Two different reasons this cannot be worked out, and they call for
+     opposite responses, so they are not collapsed into one null:
+
+       no sales    nothing was invoiced, so there is no way to know what
+                   a shilling of sales leaves behind. The answer is to
+                   record the sales.
+       no margin   goods are going out at or below what they cost. NO
+                   volume covers the running costs -- selling more makes
+                   it worse. The answer is the prices.
+
+     A breakeven worked out from a guessed margin would be a confident
+     number that is wrong, on the one figure somebody would set a target
+     by. */
+  let reason = 'ok';
+  if(!(is.revenue > 0)) reason = 'no-sales';
+  else if(!(is.grossMarginPct > 0)) reason = 'no-margin';
+
+  const marginPct = reason === 'ok' ? is.grossMarginPct : null;
+  const salesNeeded = marginPct == null ? null : running / (marginPct / 100);
+  const days = periodDays(is.from, is.to);
+
+  return {
+    from: is.from, to: is.to, days, reason,
+    committed, running, marginPct, salesNeeded,
+    perDay: (salesNeeded == null || !days) ? null : salesNeeded / days,
+    actual: Number(is.revenue) || 0,
+    over: salesNeeded == null ? null : (Number(is.revenue)||0) - salesNeeded,
+    /* Margin of safety: how much of what was sold was above the line.
+       Undefined with nothing sold rather than 0%, which would read as
+       trading exactly at breakeven.
+
+       The `!(is.revenue > 0)` half is belt and braces and no test can
+       catch it alone: no sales already means reason 'no-sales', which
+       means salesNeeded is null, which the first clause catches. It
+       stays because it makes the division safe on its own terms rather
+       than by relying on a decision made twenty lines earlier. */
+    safetyPct: (salesNeeded == null || !(is.revenue > 0)) ? null
+      : ((Number(is.revenue) - salesNeeded) / Number(is.revenue)) * 100,
+  };
+}
+
+function stBreakevenHTML(be){
+  const money = (n)=> fmtUGX(Math.round(n));
+  const floor = be.committed;
+
+  /* The floor is stated whatever else is knowable. It needs no margin
+     and no sales -- it is simply what leaves whether or not anybody
+     walks in, and for a shop owner it is the most concrete number on
+     the page. */
+  const floorNote = [];
+  if(floor.dailyCount) floorNote.push(`${floor.dailyCount} daily-paid ${floor.dailyCount===1?'worker is':'workers are'} not in this — what they cost follows the trade`);
+  if(floor.noRateCount) floorNote.push(`${floor.noRateCount} on the staff list ${floor.noRateCount===1?'has':'have'} no pay rate set, so ${floor.noRateCount===1?'they are':'they are'} missing from it`);
+
+  const head = be.reason === 'ok'
+    ? `<div class="st-be-head">
+        <span class="st-be-label">To cover the shop over these ${be.days} days you must sell</span>
+        <b>${money(be.salesNeeded)}</b>
+        ${be.perDay ? `<span class="st-be-sub">about ${money(be.perDay)} a day</span>` : ''}
+      </div>`
+    : `<div class="st-be-head">
+        <span class="st-be-label">What you must sell cannot be worked out yet</span>
+        <b class="st-be-none">—</b>
+        <span class="st-be-sub">${be.reason === 'no-sales'
+          ? 'nothing was invoiced in this period, so there is no margin to work it from'
+          : 'the goods are going out at or below what they cost, so no amount of selling covers the shop'}</span>
+      </div>`;
+
+  const standing = be.reason === 'ok'
+    ? (be.over >= 0
+        ? `<div class="st-be-verdict good">Sold ${money(be.actual)} — <b>${money(be.over)} above the line</b>${
+            be.safetyPct!=null ? `, so ${Math.round(be.safetyPct)}% of the trade was profit-making` : ''}.</div>`
+        : `<div class="st-be-verdict bad">Sold ${money(be.actual)} — <b>${money(Math.abs(be.over))} short of covering the shop</b>.</div>`)
+    : be.reason === 'no-margin'
+      ? `<div class="st-be-verdict bad">Selling more will not fix this. The prices will.</div>`
+      : '';
+
+  return `<div class="st-breakeven">
+    ${head}
+    ${standing}
+    <div class="st-be-parts">
+      <div class="st-be-part">
+        <span>Running costs to cover</span><b>${money(be.running)}</b>
+        <span class="st-be-part-note">over these ${be.days} days, everything but the goods</span>
+      </div>
+      <div class="st-be-part">
+        <span>Of which committed</span><b>${money(floor.total)} a month</b>
+        <span class="st-be-part-note">${money(floor.rent)} rent · ${money(floor.wages)} in ${floor.salariedCount} ${floor.salariedCount===1?'salary':'salaries'} — leaves whether or not anyone walks in</span>
+      </div>
+      <div class="st-be-part">
+        <span>Kept from every 100 sold</span>
+        <b>${be.marginPct==null ? '—' : Math.round(be.marginPct) + ' UGX'}</b>
+        <span class="st-be-part-note">${be.marginPct==null ? 'no margin on file for this period' : 'after what the goods cost'}</span>
+      </div>
+    </div>
+    ${floorNote.length ? `<div class="st-be-caveat">${esc(floorNote.join('. '))}.</div>` : ''}
+  </div>`;
+}
+
 function statementChecks(is, bs, cf){
   const checks = [];
   const gap = statementBasisGap(is, cf);
@@ -23412,6 +23571,8 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
     </div>
 
     ${stTrendChartHTML(statementsTrend(6))}
+
+    ${stBreakevenHTML(breakevenPosition(is, periodOf(to)))}
 
     <div class="st-vitals">
       ${vitals.map(v=>`<div class="st-vital ${v.value<0?'neg':''}">
