@@ -1827,6 +1827,48 @@
   .till-collect-head .till-label{margin:0;}
   .till-collect-hint{font-size:11.5px;color:var(--ink-soft);}
 
+  /* What was sold. Filling this in is what turns a receipt into a sale
+     the rest of the app can see, so it is given room to be used rather
+     than tucked away as an advanced option. */
+  .till-sale{background:var(--ow-verdigris-soft);border-color:#C4DED6;}
+  .till-pick{position:relative;}
+  .till-pick-list{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 8px 22px rgba(20,30,40,0.13);max-height:230px;overflow-y:auto;}
+  .till-pick-list.show{display:block;}
+  .till-pick-item{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;cursor:pointer;
+    background:none;border:0;border-bottom:1px solid var(--ow-rule-soft);padding:9px 12px;}
+  .till-pick-item:last-child{border-bottom:0;}
+  .till-pick-item:hover{background:var(--bg);}
+  .till-pick-name{font-size:13.5px;font-weight:600;color:var(--ink);}
+  .till-pick-meta{font-size:11.5px;color:var(--ink-soft);}
+  .till-pick-meta em{font-style:normal;color:var(--ow-amber-ink);}
+  .till-pick-empty{padding:10px 12px;font-size:12.5px;color:var(--ink-soft);}
+
+  .till-lines{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .till-line{display:grid;grid-template-columns:1fr 62px 10px 92px 96px 26px;align-items:center;gap:7px;}
+  .till-line-name{font-size:13px;font-weight:600;color:var(--ink);min-width:0;overflow-wrap:anywhere;}
+  .till-line-unit{font-weight:400;color:var(--ink-soft);font-size:11.5px;}
+  /* Overriding the till's generous field padding: these sit six across
+     and have to stay on one line on a phone. */
+  .till .till-line input[type=number]{padding:6px 8px;font-size:13px;border-radius:7px;
+    font-variant-numeric:tabular-nums;text-align:right;width:100%;box-sizing:border-box;}
+  .till-line-x{color:var(--ink-soft);font-size:11px;text-align:center;}
+  .till-line-total{font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-align:right;
+    font-variant-numeric:tabular-nums;color:var(--ink);}
+  .till-line-del{background:none;border:0;cursor:pointer;font-size:17px;line-height:1;
+    color:var(--ink-soft);padding:0 4px;}
+  .till-line-del:hover{color:var(--danger);}
+  .till-lines-foot{display:flex;align-items:baseline;justify-content:space-between;
+    border-top:1px solid var(--ow-rule);padding-top:7px;margin-top:2px;
+    font-size:12px;color:var(--ink-soft);}
+  .till-lines-foot b{font-family:'IBM Plex Mono',monospace;font-size:14.5px;color:var(--ink);
+    font-variant-numeric:tabular-nums;}
+  @media (max-width:560px){
+    .till-line{grid-template-columns:1fr 54px 8px 78px 26px;}
+    .till-line-total{display:none;}
+  }
+
   /* Time is something the app knows. It is a footnote, not a field --
      styled to be editable rather than to be filled in, so it reads as a
      correction somebody makes occasionally and not as another box
@@ -6192,6 +6234,20 @@
           <input type="text" id="cb_in_desc" placeholder="e.g. Payment from Katwe client" autocomplete="off">
         </div>
 
+        <!-- What was actually sold. Filling this in is what turns a
+             receipt into a sale the rest of the app can see. -->
+        <div class="till-collect till-sale">
+          <div class="till-collect-head">
+            <span class="till-label">What did they buy?</span>
+            <span class="till-collect-hint" id="cb_in_sale_hint">Recording the items fills in the amount</span>
+          </div>
+          <div class="till-pick">
+            <input type="text" id="cb_in_item_search" placeholder="Search a product to add it" autocomplete="off">
+            <div class="till-pick-list" id="cb_in_item_list"></div>
+          </div>
+          <div id="cb_in_sale_lines"></div>
+        </div>
+
         <div class="till-collect">
           <div class="till-collect-head">
             <span class="till-label">Settling a customer's debt?</span>
@@ -6591,7 +6647,9 @@ async function loadData(shopId){
     stockLog: (stockLogR.data||[]).map(l=>({id:l.id, key:l.key, productId:l.product_id, variantIdx:l.variant_idx, label:l.label, type:l.type, delta:Number(l.delta)||0, qtyAfter:Number(l.qty_after)||0, note:l.note||'', date:l.date, at:l.at})),
     nextStockLogId: (stockLogR.data||[]).length ? Math.max(0,...stockLogR.data.map(l=>l.id||0))+1 : 1,
     cashDays,
-    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time})),
+    // quoteId stays null rather than 0: null means this receipt was not
+    // taken for a counter sale, which is the ordinary case.
+    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time, quoteId: t.quote_id==null ? null : Number(t.quote_id)})),
     nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
     quote,
     // lineId, not id -- quote items have never had an `id`, so this read
@@ -6733,7 +6791,8 @@ function buildSyncRows(d, shopId){
     })),
     cashTxns: d.cashTxns.map(t=>({
       id:t.id, shop_id:shopId, date:t.date, account:t.account, type:t.type, category:t.category,
-      amount:t.amount, description:t.description, time:t.time
+      amount:t.amount, description:t.description, time:t.time,
+      quote_id: t.quoteId==null ? null : t.quoteId
     })),
     savedQuotes: d.savedQuotes.map(q=>({
       id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
@@ -19903,6 +19962,11 @@ function resetCashTxnForms(){
   document.getElementById('cb_in_customer').value = '';
   document.getElementById('cb_in_invoice_picker_section').style.display = 'none';
   document.getElementById('cb_in_invoice_picker_wrap').innerHTML = '';
+  // Or the next sale silently inherits the last one's basket.
+  tillSaleLines = [];
+  document.getElementById('cb_in_item_search').value = '';
+  tillRenderItemSearch('');
+  tillRenderSaleLines();
   document.getElementById('dl_cb_in_customers').innerHTML = data.customers.map(c=>`<option value="${esc(c.name)}">`).join('');
 
   document.getElementById('cb_out_amount').value = '';
@@ -19988,6 +20052,7 @@ function updateCbInInvoicePicker(){
   renderInvoicePicker(document.getElementById('cb_in_invoice_picker_wrap'), customer.id, updateCbInPickerSummary);
 }
 document.getElementById('cb_in_customer').addEventListener('input', updateCbInInvoicePicker);
+document.getElementById('cb_in_item_search').addEventListener('input', (e)=> tillRenderItemSearch(e.target.value));
 document.getElementById('cb_in_amount').addEventListener('input', updateCbInPickerSummary);
 
 /* ================= THE TILL ======================================
@@ -20226,12 +20291,260 @@ function tillRefresh(column){
     });
 });
 
-function saveCashTxn(column){
+/* ================= THE COUNTER SALE ==============================
+
+   A walk-in sale was a cash receipt and nothing else. No invoice, so no
+   revenue and no cost of sales; no stock movement, so the goods stayed
+   on the shelf for ever. The statements reported a loss equal to the
+   shop's whole running costs every month while its inventory grew by
+   everything it had ever sold.
+
+   Picking the items here writes a REAL SALE -- a completed, invoiced
+   quote whose lines come off our own shelf -- and links the receipt to
+   it. Revenue, cost of sales, stock and margin all become true at once,
+   because they all read the same records the rest of the app reads.
+
+   The lines are kept on the form rather than in the data until the
+   moment of saving, so a till that is closed without saving leaves
+   nothing behind. */
+let tillSaleLines = [];
+
+// What one of them would sell for, from the same price rows the quote
+// builder reads, so the till cannot quote a price the rest of the app
+// disagrees with.
+function tillSuggestedPrice(productId, variantIdx){
+  const best = rankedPriceRows(productId, variantIdx)[0];
+  if(!best) return null;
+  const p = best.retail != null ? best.retail : best.wholesale;
+  return p == null ? null : Number(p);
+}
+
+function tillSaleTotal(){
+  return tillSaleLines.reduce((s,l)=> s + (Number(l.qty)||0) * (Number(l.price)||0), 0);
+}
+
+/* Search. Only what the shop is actually holding is offered first,
+   because this is a counter sale -- the customer is standing there and
+   the goods either exist or they do not. Items with none on the shelf
+   are still offered, last and marked, since the stock figure can be
+   behind and refusing the sale would be worse than recording it. */
+function tillRenderItemSearch(query){
+  const list = document.getElementById('cb_in_item_list');
+  if(!list) return;
+  const q = String(query||'').trim();
+  if(!q){ list.innerHTML = ''; list.classList.remove('show'); return; }
+  const entries = buildProductSuggestionEntries(searchTokens(q)).slice(0, 8);
+  if(!entries.length){
+    list.innerHTML = '<div class="till-pick-empty">No product matches that.</div>';
+    list.classList.add('show');
+    return;
+  }
+  list.innerHTML = entries.map(({p, variantIdx})=>{
+    const price = tillSuggestedPrice(p.id, variantIdx);
+    const have = getStockQty(p.id, variantIdx);
+    const name = p.name + (variantIdx==null ? '' : ' — ' + variantLabel(p.variants[variantIdx].combo));
+    return `<button type="button" class="till-pick-item" data-id="${esc(p.id)}" data-vidx="${variantIdx==null?'':variantIdx}">
+      <span class="till-pick-name">${esc(name)}</span>
+      <span class="till-pick-meta">${price==null
+        ? '<em>no price on file</em>'
+        : esc(fmtUGX(Math.round(price)))} · ${have>0 ? `${have} on the shelf` : '<em>none on the shelf</em>'}</span>
+    </button>`;
+  }).join('');
+  list.classList.add('show');
+  list.querySelectorAll('.till-pick-item').forEach(b=> b.addEventListener('click', ()=>{
+    const vidx = b.dataset.vidx==='' ? null : Number(b.dataset.vidx);
+    tillAddSaleLine(b.dataset.id, vidx);
+  }));
+}
+
+function tillAddSaleLine(productId, variantIdx){
+  const p = data.products.find(x=> x.id===productId);
+  if(!p) return;
+  const name = p.name + (variantIdx==null ? '' : ' — ' + variantLabel(p.variants[variantIdx].combo));
+  const existing = tillSaleLines.find(l=> l.productId===productId && l.variantIdx===variantIdx);
+  // Picking the same thing twice adds one more of it rather than a
+  // second line saying the same thing.
+  if(existing){ existing.qty = (Number(existing.qty)||0) + 1; }
+  else {
+    const price = tillSuggestedPrice(productId, variantIdx);
+    tillSaleLines.push({
+      productId, variantIdx, name,
+      qty: 1,
+      /* A product with no price on file starts EMPTY, not at zero: a
+         zero here would be a sale given away, and the running total
+         would quietly under-charge the customer. */
+      price: price==null ? '' : price,
+      unit: productUnitLabel(productId, variantIdx),
+    });
+  }
+  document.getElementById('cb_in_item_search').value = '';
+  tillRenderItemSearch('');
+  tillRenderSaleLines();
+}
+
+function tillRenderSaleLines(){
+  const wrap = document.getElementById('cb_in_sale_lines');
+  if(!wrap) return;
+  if(!tillSaleLines.length){ wrap.innerHTML = ''; tillSyncAmountFromSale(); return; }
+  wrap.innerHTML = `<div class="till-lines">
+    ${tillSaleLines.map((l,i)=>`<div class="till-line">
+      <span class="till-line-name">${esc(l.name)}${l.unit?` <span class="till-line-unit">${esc(l.unit)}</span>`:''}</span>
+      <input type="number" min="0" step="any" class="till-line-qty" data-i="${i}" value="${esc(String(l.qty))}" aria-label="Quantity">
+      <span class="till-line-x">&times;</span>
+      <input type="number" min="0" step="any" class="till-line-price" data-i="${i}" value="${esc(String(l.price))}"
+        placeholder="price" aria-label="Price each">
+      <span class="till-line-total">${(Number(l.qty)&&Number(l.price))?esc(fmtUGX(Math.round(l.qty*l.price))):'—'}</span>
+      <button type="button" class="till-line-del" data-i="${i}" aria-label="Remove">&times;</button>
+    </div>`).join('')}
+    <div class="till-lines-foot">
+      <span>${tillSaleLines.length} line${tillSaleLines.length===1?'':'s'}</span>
+      <b>${esc(fmtUGX(Math.round(tillSaleTotal())))}</b>
+    </div>
+  </div>`;
+  wrap.querySelectorAll('.till-line-qty').forEach(el=> el.addEventListener('input', ()=>{
+    tillSaleLines[Number(el.dataset.i)].qty = el.value; tillSyncAmountFromSale(); tillRefreshLineTotals();
+  }));
+  wrap.querySelectorAll('.till-line-price').forEach(el=> el.addEventListener('input', ()=>{
+    tillSaleLines[Number(el.dataset.i)].price = el.value; tillSyncAmountFromSale(); tillRefreshLineTotals();
+  }));
+  wrap.querySelectorAll('.till-line-del').forEach(el=> el.addEventListener('click', ()=>{
+    tillSaleLines.splice(Number(el.dataset.i), 1); tillRenderSaleLines();
+  }));
+  tillSyncAmountFromSale();
+}
+// Totals only, so the boxes being typed into are not rebuilt underneath
+// the cursor.
+function tillRefreshLineTotals(){
+  const wrap = document.getElementById('cb_in_sale_lines');
+  if(!wrap) return;
+  wrap.querySelectorAll('.till-line').forEach((row,i)=>{
+    const l = tillSaleLines[i]; if(!l) return;
+    const cell = row.querySelector('.till-line-total');
+    cell.textContent = (Number(l.qty) && Number(l.price)) ? fmtUGX(Math.round(l.qty*l.price)) : '—';
+  });
+  const foot = wrap.querySelector('.till-lines-foot b');
+  if(foot) foot.textContent = fmtUGX(Math.round(tillSaleTotal()));
+}
+
+/* The amount follows the items. This is what makes recording the sale
+   FASTER than not recording it -- the figure fills itself, and it is
+   arithmetic rather than a number somebody worked out in their head. */
+function tillSyncAmountFromSale(){
+  const amount = document.getElementById('cb_in_amount');
+  if(!amount) return;
+  if(!tillSaleLines.length) return;
+  amount.value = tillGroup(String(Math.round(tillSaleTotal())));
+  tillUpdate('in');
+}
+
+/* Turned into the sale itself at the moment of saving.
+
+   supplierId '__stock__' is what marks a line as coming off our own
+   shelf: applyQuoteStockDeduction takes those units down and records the
+   FIFO lots it consumed onto the line, which is what lets
+   invoiceLineCost report what the goods ACTUALLY cost rather than an
+   estimate. generatePurchaseInvoicesForQuote skips them, correctly --
+   nothing is being bought in for a sale off the shelf. */
+async function tillBuildSaleQuote(customerName, dateISO){
+  return {
+    // Dense: an invoice number is printed on the shop's paperwork, so it
+    // is issued from the server's counter and never from a local block.
+    id: await issueRowId('savedQuote'),
+    client: {name: customerName || 'Counter sale', phone: ''},
+    date: dateISO,
+    status: 'completed',
+    invoiced: true,
+    invoicedAt: dateISO,
+    invoicedTs: Date.now(),
+    amountPaid: 0,
+    voided: false,
+    // Marks where it came from, so the order board and the invoice list
+    // can tell a counter sale from an order that was quoted and prepared.
+    counterSale: true,
+    items: tillSaleLines.map(l=>({
+      lineId: data.nextQuoteLineId++,
+      productId: l.productId,
+      variantIdx: l.variantIdx,
+      name: l.name,
+      qty: Number(l.qty)||0,
+      // supplierId is the marker; price is the buy side and is left to
+      // the FIFO lots, which is where a sale off the shelf gets its cost.
+      supplierId: '__stock__',
+      price: 0,
+      sellPrice: Number(l.price)||0,
+      unit: l.unit || '',
+      packUnit: '', packQty: 0,
+    })),
+  };
+}
+
+/* Selling more than the shelf says is there is not blocked. The stock
+   figure can itself be behind -- goods received and not yet entered are
+   ordinary -- and an app that refuses to record a sale that has already
+   happened just moves the error somewhere nobody can see it. What it
+   does instead is take what is there, leave the rest uncosted, and let
+   the existing "cost of sales resting on estimates" check report it. */
+async function tillCommitSale(customerName, dateISO, account, amount, description){
+  const q = await tillBuildSaleQuote(customerName, dateISO);
+  data.savedQuotes.push(q);
+  const shortfall = applyQuoteStockDeduction(q);
+
+  const cashTxnId = allocRowId('cashTxn');
+  data.cashTxns.push({
+    id: cashTxnId,
+    date: dateISO,
+    account: account || 'cash',
+    type: 'receipt',
+    category: 'Sales Revenue',
+    amount,
+    description: description || `Counter sale — ${q.items.length} item${q.items.length===1?'':'s'}`,
+    time: document.getElementById('cb_in_time').value || new Date().toTimeString().slice(0,5),
+    // The link. Without it the statements cannot tell this sale from
+    // takings that were never invoiced at all.
+    quoteId: q.id,
+  });
+  q.amountPaid = amount;
+  return {quote:q, shortfall, cashTxnId};
+}
+
+async function saveCashTxn(column){
   const prefix = column==='in' ? 'cb_in_' : 'cb_out_';
   const amount = tillReadAmount(column);
   const description = document.getElementById(prefix+'desc').value.trim();
   if(!amount || amount<=0){ toast('Enter a valid amount'); return; }
   if(!description){ toast('Add a short description'); return; }
+
+  /* A counter sale: items were picked, so this is a SALE and not just
+     money arriving. It writes the invoiced quote, takes the stock down
+     and links the receipt to it, which is what puts the trade into
+     revenue, cost of sales and the shelf all at once. */
+  if(column==='in' && !editingCashTxnId && tillSaleLines.length){
+    const unpriced = tillSaleLines.filter(l=> !(Number(l.price) > 0));
+    if(unpriced.length){ toast(`Put a price on ${unpriced.length} line${unpriced.length===1?'':'s'} first`); return; }
+    if(!tillSaleLines.every(l=> Number(l.qty) > 0)){ toast('Every line needs a quantity'); return; }
+    /* The amount and the items have to agree, or the receipt says one
+       thing and the sale behind it another -- and every margin drawn
+       from the pair would be wrong. */
+    const lineTotal = Math.round(tillSaleTotal());
+    if(Math.abs(lineTotal - amount) >= 1){
+      toast(`The items come to ${fmtUGX(lineTotal)} but the amount says ${fmtUGX(Math.round(amount))}`);
+      return;
+    }
+    const customer = resolveCbInCustomer();
+    const res = await tillCommitSale(customer ? customer.name : '', currentCbDate(),
+      document.getElementById('cb_in_account').value, amount, description);
+    saveData();
+    closeModal('cashInModal');
+    resetCashTxnForms();
+    renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+    // Stock moved, so every screen that shows it is stale.
+    triggerProductsRender();
+    renderInventory();
+    toast(res.shortfall
+      ? 'Sale recorded — more was sold than the shelf had, so part of it has no cost on file'
+      : 'Sale recorded — stock, revenue and the cash book all updated');
+    return;
+  }
 
   // A fresh (not being edited) cash-in linked to a customer goes through
   // the same allocation path as the Customers tab's "Record payment" --
@@ -22429,6 +22742,15 @@ function cashFlowStatement(fromISO, toISO){
   const sum = (f)=> rows.filter(f).reduce((s,t)=> s + (Number(t.amount)||0), 0);
 
   const tradingIn = sum(cashIsTradingIncome);
+  /* Trading takings with no sale recorded behind them. A counter sale
+     put through the till writes a real invoiced sale AND its receipt --
+     both true, and both belong where they are: the receipt in the cash
+     flow, the sale in the profit and loss. Only the receipts with no
+     quote behind them are trade the statements cannot see, and that is
+     what the basis-gap warning is about. Counting the linked ones would
+     fire the warning on exactly the sales that were just recorded
+     properly, which teaches a shop to ignore it. */
+  const tradingInUninvoiced = sum(t=> cashIsTradingIncome(t) && t.quoteId == null);
   const operatingOut = sum(cashIsOperatingExpense);
   // Named rather than "everything that is not a running cost": that set
   // also holds Loan Repayment, which is financing, and folding it in here
@@ -22455,7 +22777,7 @@ function cashFlowStatement(fromISO, toISO){
   const netMovement = rows.reduce((s,t)=> s + (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0), 0);
   return {
     from: fromISO, to: toISO,
-    tradingIn, debtCollected, operatingOut, stockOut, operating,
+    tradingIn, tradingInUninvoiced, debtCollected, operatingOut, stockOut, operating,
     equipmentOut, assetSaleIn, investing,
     borrowed, ownerIn, repaid, financing,
     netMovement,
@@ -22491,7 +22813,10 @@ function cashFlowStatement(fromISO, toISO){
    failure when it is the majority, because a check that is red every day
    in a cash shop is a check nobody reads. */
 function statementBasisGap(is, cf){
-  const uninvoiced = Math.round(Number(cf.tradingIn) || 0);
+  // The takings with no sale behind them, not all trading takings: a
+  // counter sale put through the till is invoiced, and must not be
+  // reported as though it were not.
+  const uninvoiced = Math.round(Number(cf.tradingInUninvoiced) || 0);
   const revenue = Math.round(Number(is.revenue) || 0);
   if(uninvoiced < 1) return null;
   const total = uninvoiced + revenue;

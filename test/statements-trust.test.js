@@ -36,7 +36,11 @@ const NAMES = ['statementBasisGap'];
 const scope = compileScope([...NAMES.map((n) => extractFunction(src, n, 'index.html'))],
   { fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX' }, NAMES);
 
-const gap = (revenue, tradingIn) => scope.statementBasisGap({ revenue }, { tradingIn });
+/* tradingInUninvoiced, not tradingIn: a counter sale put through the
+   till writes a real invoiced sale AND its receipt, and the receipt is
+   linked to it. Only takings with no sale behind them are trade the
+   statements cannot see. */
+const gap = (revenue, uninvoiced) => scope.statementBasisGap({ revenue }, { tradingInUninvoiced: uninvoiced });
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 /* ---------- 1. the shop that looks like it is failing --------------- */
@@ -83,6 +87,31 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
      fall under the threshold and the mutant read as equivalent. */
   eq(gap(1000, 1234.6).uninvoiced, 1235,
     'and what is reported is whole shillings, since it is printed as money');
+}
+
+/* ---------- 3b. a counter sale is not a gap ------------------------- *
+ * The till can now record what was sold: it writes an invoiced sale, takes
+ * the stock down, and links the receipt to it. Both halves are true and
+ * both stay -- the receipt in the cash flow, the sale in the profit and
+ * loss. If the warning counted linked receipts it would fire on exactly
+ * the sales that had just been recorded properly, which is how a shop
+ * learns to ignore the one warning worth reading.
+ */
+{
+  const cf = (/function cashFlowStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const tradingInUninvoiced = sum\(t=> cashIsTradingIncome\(t\) && t\.quoteId == null\);/.test(cf),
+    'the cash flow separates takings with a sale behind them from takings without');
+  /* == null, not === null: a receipt loaded before this column existed
+     has undefined there, and treating it as linked would hide a real
+     gap on every book written before today. */
+  t.check(/t\.quoteId == null/.test(cf) && !/t\.quoteId === null/.test(cf),
+    'and an older receipt with no such field at all still counts as uninvoiced');
+  t.check(/tradingIn, tradingInUninvoiced,/.test(cf),
+    'while the cash flow itself still reports every shilling it took');
+
+  const bg = (/function statementBasisGap[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/cf\.tradingInUninvoiced/.test(bg) && !/cf\.tradingIn\b\s*\)/.test(bg),
+    'and the warning reads only the unlinked ones');
 }
 
 /* ---------- 4. the checks panel carries it -------------------------- */
