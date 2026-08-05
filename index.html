@@ -1715,6 +1715,71 @@
     background:var(--bg);border:1px solid var(--line);border-radius:9px;
     padding:9px 12px;margin-bottom:12px;}
 
+  /* ================= BUYING SOMETHING THAT LASTS ===================
+     Three facts: what it is, what it cost and how it was paid for, and
+     how it will lose value. The money side shows what will reach the
+     cash book BEFORE it writes it.
+     ================================================================= */
+  .fa{display:flex;flex-direction:column;gap:18px;}
+  .fa-block{display:flex;flex-direction:column;gap:8px;}
+  .fa-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
+  .fa-hint{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  .fa-what{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;}
+  @media (max-width:560px){ .fa-what{grid-template-columns:1fr;} }
+
+  .fa input[type=text],.fa input:not([type]),.fa input[type=number],.fa input[type=date],.fa select{
+    width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
+    color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:11px 13px;transition:border-color .14s ease,box-shadow .14s ease;
+  }
+  .fa input::placeholder{color:var(--ow-ink-400);}
+  .fa input:hover,.fa select:hover{border-color:var(--ow-steel-400);}
+  .fa input:focus,.fa select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--ow-oxide-soft);}
+  /* Type selectors, so these beat the :not([type]) in the rule above --
+     the same weighting trap the staff form's name fell into. */
+  .fa input[type=text].fa-name{font-size:19px;font-weight:700;padding:13px 15px;}
+  .fa input[type=number].fa-cost{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;
+    font-variant-numeric:tabular-nums;text-align:right;padding:12px 14px;}
+
+  .fa-cost-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .fa-cost-row .fa-cost{max-width:230px;}
+  .fa-cost-cur{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--ink-soft);flex-shrink:0;}
+  .fa-inline{font-size:12.5px;color:var(--ink-soft);flex-shrink:0;margin-left:6px;}
+  .fa-cost-row input[type=date]{width:auto;flex:0 0 auto;}
+
+  .fa-pay{display:flex;flex-direction:column;gap:8px;}
+  .fa-pay-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .fa-pay-row > label{font-size:12.5px;font-weight:600;color:var(--ink-soft);flex-shrink:0;min-width:132px;}
+  .fa-pay-row select{flex:1;min-width:180px;}
+  .fa-pay-row input[type=number]{flex:0 0 150px;font-family:'IBM Plex Mono',monospace;
+    font-variant-numeric:tabular-nums;text-align:right;}
+  @media (max-width:560px){
+    .fa-pay-row{align-items:stretch;flex-direction:column;gap:5px;}
+    .fa-pay-row > label{min-width:0;}
+    .fa-pay-row input[type=number]{flex:1 1 auto;}
+  }
+
+  /* Two methods that cannot be compared in a dropdown, each carrying
+     what it would charge in the first year. */
+  .fa-methods{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:560px){ .fa-methods{grid-template-columns:1fr;} }
+  .fa-method{display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+    transition:border-color .15s ease,background .15s ease;}
+  .fa-method:hover{background:var(--bg);}
+  .fa-method.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--bg);}
+  .fa-method-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .fa-method-shape{font-size:11.5px;color:var(--ink-soft);line-height:1.4;}
+  .fa-method-figure{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ow-verdigris);min-height:16px;}
+  .fa-method-inputs{display:flex;flex-direction:column;gap:8px;}
+
+  .fa-consequence{font-size:12.5px;line-height:1.55;border-radius:9px;padding:9px 12px;
+    background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .fa-consequence b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .fa-consequence.quiet{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line);}
+  .fa-consequence.warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
   /* ================= ADDING SOMEBODY TO THE SHOP ===================
      Three commitments, not seven boxes: who they are, what work they may
      be handed, and what they cost every month. Asked in that order, each
@@ -5552,40 +5617,83 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>What is it <span class="req">required</span></label><input id="fa_name" placeholder="e.g. Delivery van"></div>
-        <div class="field"><label>Category</label><input id="fa_category" placeholder="e.g. Vehicles"></div>
-        <div class="field"><label>What it cost <span class="req">required</span></label><input id="fa_cost" type="number" min="0" step="any" placeholder="0">
-          <div class="field-hint">Everything to get it working — delivery and fitting too, not just the invoice.</div>
+      <div class="fa">
+        <div class="fa-block">
+          <span class="fa-label">What it is</span>
+          <div class="fa-what">
+            <input id="fa_name" class="fa-name" placeholder="What did you buy?" autocomplete="off">
+            <input id="fa_category" placeholder="Category — e.g. Vehicles" autocomplete="off">
+          </div>
         </div>
-        <div class="field"><label>Date acquired <span class="req">required</span></label><input id="fa_acquired" type="date"></div>
-        <div class="field"><label>How it loses value</label>
-          <select id="fa_method">
-            <option value="straight_line">Straight line — the same each month</option>
-            <option value="reducing_balance">Reducing balance — heavier early</option>
-          </select>
+
+        <div class="fa-block">
+          <span class="fa-label">What it cost</span>
+          <div class="fa-cost-row">
+            <input id="fa_cost" class="fa-cost" type="number" min="0" step="any" placeholder="0">
+            <span class="fa-cost-cur">UGX</span>
+            <label class="fa-inline" for="fa_acquired">bought on</label>
+            <input id="fa_acquired" type="date">
+          </div>
+          <div class="fa-hint">Everything to get it working — delivery and fitting too, not just the invoice.</div>
         </div>
-        <div class="field" id="fa_life_field"><label>Useful life (months)</label><input id="fa_life" type="number" min="1" step="1" placeholder="e.g. 60">
-          <div class="field-hint">60 is five years.</div>
+
+        <!-- The money side. It used to be an account with no amount, and
+             saving wrote the WHOLE cost to the cash book: a van bought
+             with a loan and a deposit recorded the lender's money
+             leaving the shop's own bank. -->
+        <div class="fa-block" id="fa_pay_block">
+          <span class="fa-label">How it was paid for</span>
+          <div class="fa-pay">
+            <div class="fa-pay-row">
+              <label for="fa_loan">Financed by</label>
+              <select id="fa_loan"><option value="">Nothing — paid for it myself</option></select>
+            </div>
+            <div class="fa-pay-row">
+              <label for="fa_cash_account">The rest came from</label>
+              <select id="fa_cash_account">
+                <option value="">Nowhere — already owned, or paid before this app</option>
+                <option value="cash">Cash</option>
+                <option value="momo">Mobile Money</option>
+                <option value="bank">Bank</option>
+              </select>
+            </div>
+            <div class="fa-pay-row" id="fa_paid_row">
+              <label for="fa_paid_now">Of which you paid</label>
+              <input id="fa_paid_now" type="number" min="0" step="any" placeholder="0">
+              <span class="fa-cost-cur">UGX</span>
+            </div>
+          </div>
+          <div class="fa-consequence" id="fa_cash_consequence"></div>
         </div>
-        <div class="field" id="fa_rate_field" style="display:none;"><label>Rate (% a year)</label><input id="fa_rate" type="number" min="0" step="any" placeholder="e.g. 25"></div>
-        <div class="field"><label>Worth at the end</label><input id="fa_salvage" type="number" min="0" step="any" placeholder="0">
-          <div class="field-hint">Depreciation never takes it below this.</div>
+
+        <div class="fa-block">
+          <span class="fa-label">How it loses value</span>
+          <div class="fa-methods" id="fa_methods"></div>
+          <input type="hidden" id="fa_method" value="straight_line">
+          <div class="fa-method-inputs">
+            <div class="fa-pay-row" id="fa_life_field">
+              <label for="fa_life">Useful life</label>
+              <input id="fa_life" type="number" min="1" step="1" placeholder="60">
+              <span class="fa-cost-cur">months</span>
+            </div>
+            <div class="fa-pay-row" id="fa_rate_field" style="display:none;">
+              <label for="fa_rate">Rate a year</label>
+              <input id="fa_rate" type="number" min="0" step="any" placeholder="25">
+              <span class="fa-cost-cur">%</span>
+            </div>
+            <div class="fa-pay-row">
+              <label for="fa_salvage">Worth at the end</label>
+              <input id="fa_salvage" type="number" min="0" step="any" placeholder="0">
+              <span class="fa-cost-cur">UGX</span>
+            </div>
+          </div>
+          <div class="fa-consequence" id="fa_preview"></div>
         </div>
-        <div class="field" id="fa_cash_field"><label>Paid from</label>
-          <select id="fa_cash_account">
-            <option value="">Already owned — do not touch the cash book</option>
-            <option value="cash">Cash</option>
-            <option value="momo">Mobile Money</option>
-            <option value="bank">Bank</option>
-          </select>
-          <div class="field-hint">Records the money leaving, so the cash book and this register agree. Choose the first option for something bought before you started using this app.</div>
+
+        <div class="fa-block">
+          <span class="fa-label">Notes</span>
+          <input id="fa_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
         </div>
-        <div class="field"><label>Bought with</label>
-          <select id="fa_loan"><option value="">Paid for outright</option></select>
-          <div class="field-hint">If a loan paid for it, saying so lets the books show what it is worth against what is still owed on it.</div>
-        </div>
-        <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="fa_notes" placeholder="optional"></div>
       </div>
       <div id="fa_disposal_block" style="display:none;">
         <hr class="fa-rule">
@@ -25092,10 +25200,129 @@ function assetFinancingHTML(a){
 }
 
 let editingAssetId = null;
+
+/* ================= BUYING SOMETHING THAT LASTS ===================
+
+   Ten fields at one weight, and the money side was an account with NO
+   AMOUNT: saving wrote the whole cost to the cash book. A 20,000,000 van
+   bought with a 15,000,000 loan and a 5,000,000 deposit recorded
+   20,000,000 leaving the shop's own bank -- 15,000,000 of which was the
+   lender's money that never passed through it. Silent, and in the one
+   screen the shop reconciles against a physical count, where it would
+   surface days later as a variance nobody could trace. */
+
+const FA_METHODS = [
+  {key:'straight_line',     name:'Straight line',     shape:'The same charge every month'},
+  {key:'reducing_balance',  name:'Reducing balance',  shape:'Heavier early, easing off'},
+];
+
+/* The first year under EACH method, so the choice can be compared rather
+   than guessed at and met a year later in the profit and loss. Probed
+   from the raw inputs rather than through readAssetForm, which nulls
+   whichever input the CURRENT method does not use -- reading it back
+   would leave the other card permanently blank. */
+function faFirstYearUnder(method){
+  const cost = Number(document.getElementById('fa_cost').value) || 0;
+  const acquiredOn = document.getElementById('fa_acquired').value;
+  const life = Number(document.getElementById('fa_life').value) || 0;
+  const rate = Number(document.getElementById('fa_rate').value) || 0;
+  if(!(cost > 0) || !acquiredOn) return null;
+  if(method === 'reducing_balance' ? !(rate > 0) : !(life > 0)) return null;
+  const rows = assetSchedule({
+    cost, acquiredOn, method,
+    lifeMonths: method === 'reducing_balance' ? null : life,
+    ratePct: method === 'reducing_balance' ? rate : null,
+    salvage: Number(document.getElementById('fa_salvage').value) || 0,
+    disposedOn: null,
+  });
+  if(!rows.length) return null;
+  return rows.slice(0, 12).reduce((s,r)=> s + r.charge, 0);
+}
+
+function faRenderMethods(){
+  const wrap = document.getElementById('fa_methods');
+  if(!wrap) return;
+  const chosen = document.getElementById('fa_method').value || 'straight_line';
+  wrap.innerHTML = FA_METHODS.map(m=>{
+    const firstYear = faFirstYearUnder(m.key);
+    return `<button type="button" class="fa-method${m.key===chosen?' on':''}"
+        data-method="${esc(m.key)}" aria-pressed="${m.key===chosen}">
+      <span class="fa-method-name">${esc(m.name)}</span>
+      <span class="fa-method-shape">${esc(m.shape)}</span>
+      <span class="fa-method-figure">${firstYear == null
+        ? '&nbsp;'
+        : esc(fmtUGX(Math.round(firstYear))) + ' in the first year'}</span>
+    </button>`;
+  }).join('');
+  wrap.querySelectorAll('.fa-method').forEach(b=> b.addEventListener('click', ()=>{
+    document.getElementById('fa_method').value = b.dataset.method;
+    assetFormMethodChanged();
+  }));
+}
+
+/* Has the deposit been typed in by hand? Until it has, it follows the
+   cost and the loan, so the ordinary case needs no arithmetic from
+   anybody. Once touched it is left alone -- silently overwriting a
+   figure somebody entered is worse than making them retype it. */
+let faPaidTouched = false;
+
+function faUpdatePayment(){
+  const cost = Number(document.getElementById('fa_cost').value) || 0;
+  const loanId = document.getElementById('fa_loan').value;
+  const loan = loanId ? (data.loans||[]).find(l=> String(l.id) === String(loanId)) : null;
+  const financed = loan ? Math.min(Number(loan.principal)||0, cost) : 0;
+  const account = document.getElementById('fa_cash_account').value;
+  const paidEl = document.getElementById('fa_paid_now');
+  const row = document.getElementById('fa_paid_row');
+  const out = document.getElementById('fa_cash_consequence');
+
+  // With nothing leaving an account of the shop's, there is no amount to
+  // ask for, so the box goes rather than sitting there greyed.
+  row.style.display = account ? '' : 'none';
+  if(!faPaidTouched) paidEl.value = account ? Math.max(0, cost - financed) : '';
+
+  const paid = account ? (Number(paidEl.value) || 0) : 0;
+  const label = TILL_ACCOUNT_LABELS[account] || account;
+  const gap = Math.round(cost - financed - paid);
+
+  if(!cost){ out.className = 'fa-consequence quiet'; out.textContent = 'Put in what it cost and this will say what reaches the cash book.'; return; }
+
+  const parts = [];
+  if(financed) parts.push(`<b>${esc(fmtUGX(Math.round(financed)))}</b> from the ${esc(loan.lender)} loan`);
+  if(account && paid) parts.push(`<b>${esc(fmtUGX(Math.round(paid)))}</b> from ${esc(label)}`);
+
+  /* The three figures shown adding up. A gap is not refused -- part of a
+     price genuinely can come from somewhere this app does not know about
+     -- but it is named, because the alternative is a register and a cash
+     book that quietly disagree by exactly that much. */
+  /* Nothing chosen either way is not a gap, it is the default the select
+     literally offers -- something the shop already owned, or bought
+     before it kept books here. Warning at that point calls the whole
+     cost missing on a form somebody has only just started. */
+  if(!account && !loan){
+    out.className = 'fa-consequence quiet';
+    out.textContent = 'Nothing will be written to the cash book — recorded as something already owned.';
+    return;
+  }
+  if(Math.abs(gap) >= 1){
+    out.className = 'fa-consequence warn';
+    out.innerHTML = `${esc(fmtUGX(Math.round(cost)))} cost${parts.length ? ', made up of ' + parts.join(' and ') : ''}
+      — that leaves <b>${esc(fmtUGX(Math.abs(gap)))}</b> ${gap > 0 ? 'unaccounted for' : 'more than the thing cost'}.
+      Only what you say came out of ${account ? esc(label) : 'an account'} is written to the cash book.`;
+    return;
+  }
+  out.className = 'fa-consequence';
+  out.innerHTML = account && paid
+    ? `<b>${esc(fmtUGX(Math.round(paid)))}</b> will be recorded leaving ${esc(label)}.${financed
+        ? ` The other ${esc(fmtUGX(Math.round(financed)))} was the ${esc(loan.lender)} loan and never passed through the shop.` : ''}`
+    : `Nothing will be written to the cash book${financed ? ` — the ${esc(loan.lender)} loan paid for all of it` : ''}.`;
+}
+
 function assetFormMethodChanged(){
   const m = document.getElementById('fa_method').value;
   document.getElementById('fa_life_field').style.display = m==='reducing_balance' ? 'none' : '';
   document.getElementById('fa_rate_field').style.display = m==='reducing_balance' ? '' : 'none';
+  faRenderMethods();
   updateAssetPreview();
 }
 // Says what the entered numbers actually mean before they are saved, so a
@@ -25137,13 +25364,16 @@ function openAssetForm(id){
   set('fa_name', a?a.name:''); set('fa_category', a?a.category:'');
   set('fa_cost', a?a.cost:''); set('fa_acquired', a?a.acquiredOn:todayISO());
   document.getElementById('fa_method').value = a ? a.method : 'straight_line';
-  set('fa_life', a?a.lifeMonths:60); set('fa_rate', a?a.ratePct:'');
+  /* Both defaults are visible in their own fields, and both are needed
+     for the two methods to be comparable: a card with nothing under it
+     cannot be weighed against one that has a figure. */
+  set('fa_life', a?a.lifeMonths:60); set('fa_rate', a?a.ratePct:25);
   set('fa_salvage', a?a.salvage:''); set('fa_notes', a?a.notes:'');
   set('fa_disposed', a?a.disposedOn:''); set('fa_proceeds', a?a.disposalProceeds:'');
   // Rebuilt each time it opens: a loan recorded since the page loaded has
   // to be selectable without a reload.
   const loanSel = document.getElementById('fa_loan');
-  loanSel.innerHTML = '<option value="">Paid for outright</option>'
+  loanSel.innerHTML = '<option value="">Nothing — paid for it myself</option>'
     + (data.loans||[]).map(l=>`<option value="${l.id}">${esc(l.lender)} — ${fmtUGX(Math.round(Number(l.principal)||0))}</option>`).join('');
   loanSel.value = (a && a.loanId != null) ? String(a.loanId) : '';
   // Disposal is only offered on something that exists: there is no sense
@@ -25152,10 +25382,17 @@ function openAssetForm(id){
   // Only a new asset spends money. Editing one already on the register must
   // not write a second payment for cash that left once.
   document.getElementById('fa_cash_account').value = '';
-  document.getElementById('fa_cash_field').style.display = a ? 'none' : '';
+  document.getElementById('fa_paid_now').value = '';
+  faPaidTouched = false;
+  /* The whole money block goes when editing: an asset already on the
+     register spent its money once, and the only thing this form could do
+     by showing it again is spend it twice. */
+  document.getElementById('fa_pay_block').style.display = a ? 'none' : '';
   document.getElementById('assetModalTitle').textContent = a ? 'Edit asset' : 'Add an asset';
   assetFormMethodChanged();
+  faUpdatePayment();
   openModal('assetModal');
+  document.getElementById('fa_name').focus();
 }
 /* Both entries an asset can have put in the cash book: what was paid for
    it, and what came back when it was sold. Either can be absent -- an
@@ -25182,9 +25419,18 @@ document.getElementById('fa_add_btn').addEventListener('click', ()=>openAssetFor
 document.getElementById('fa_cancel').addEventListener('click', ()=>closeModal('assetModal'));
 document.getElementById('assetModalClose').addEventListener('click', ()=>closeModal('assetModal'));
 document.getElementById('assetScheduleClose').addEventListener('click', ()=>closeModal('assetScheduleModal'));
-document.getElementById('fa_method').addEventListener('change', assetFormMethodChanged);
+/* The cards drive the hidden field, so nothing listens on a select any
+   more. Everything that can change either the schedule or the money is
+   wired to redraw both -- the cost feeds each of them. */
 ['fa_cost','fa_acquired','fa_life','fa_rate','fa_salvage'].forEach(id=>
-  document.getElementById(id).addEventListener('input', updateAssetPreview));
+  document.getElementById(id).addEventListener('input', ()=>{ faRenderMethods(); updateAssetPreview(); faUpdatePayment(); }));
+['fa_loan','fa_cash_account'].forEach(id=>
+  document.getElementById(id).addEventListener('change', faUpdatePayment));
+document.getElementById('fa_paid_now').addEventListener('input', ()=>{
+  // Typed by hand from here on: it stops following the cost and the loan.
+  faPaidTouched = true;
+  faUpdatePayment();
+});
 document.getElementById('fa_save').addEventListener('click', async ()=>{
   const a = readAssetForm();
   if(!a.name){ toast('Give the asset a name'); return; }
@@ -25211,9 +25457,13 @@ document.getElementById('fa_save').addEventListener('click', async ()=>{
        (invoice payments, debt payments, stock purchases, agent
        commissions): write the entry, keep its id, so removing the record
        can remove the entry too. */
+    /* WHAT ACTUALLY LEFT, not the whole price. Writing a.cost here put
+       the lender's money through the shop's own bank on anything
+       financed. */
     const account = document.getElementById('fa_cash_account').value;
-    if(account){
-      a.cashTxnId = addCashPayment(account, a.cost, 'Equipment purchase',
+    const paidNow = Number(document.getElementById('fa_paid_now').value) || 0;
+    if(account && paidNow > 0){
+      a.cashTxnId = addCashPayment(account, paidNow, 'Equipment purchase',
         `${a.name}${a.category ? ' — ' + a.category : ''}`, a.acquiredOn);
     }
     data.fixedAssets.push(a);
