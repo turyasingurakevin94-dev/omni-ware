@@ -19926,7 +19926,12 @@ function catalogueLine(p, variantIdx, kind, v){
   if(!base){
     // Two different reasons, and they need different fixing.
     const priced = productPriceRows(p.id, variantIdx).length > 0;
-    return { name, skip: priced ? 'no markup rule, so no retail price' : 'no supplier price on file' };
+    /* Named as the RETAIL rule specifically. A shop can have a wholesale
+       markup set and no retail one -- that is a perfectly ordinary state
+       for a yard that sells mostly to builders -- and "no markup rule"
+       tells them they have none when the Products screen is showing them
+       one. */
+    return { name, skip: priced ? 'no retail markup rule (a wholesale rule does not set the catalogue price)' : 'no supplier price on file' };
   }
   return {
     name, skip: null,
@@ -19967,7 +19972,19 @@ document.getElementById('p_catalogue_btn').addEventListener('click', ()=>{
 
   const { sections, printable, skipped } = catalogueSections(rows);
   if(printable.length===0){
-    toast('Nothing here can be priced yet — a catalogue needs a supplier price and a markup rule on each product.', 6500);
+    /* Say which of the two is actually blocking, and count it. The first
+       version of this said "a catalogue needs a supplier price and a
+       markup rule" to a shop whose every product had BOTH a price and a
+       supplier -- they were missing only the RETAIL rule, and the
+       message read as though nothing at all was set up. */
+    const noRule = skipped.filter(x=> /retail markup rule/.test(x.skip)).length;
+    const noPrice = skipped.filter(x=> x.skip === 'no supplier price on file').length;
+    const line = (n)=> `${n} line${n===1?'':'s'}`;
+    toast(noRule && !noPrice
+      ? `${line(noRule)} ${noRule===1?'has':'have'} a supplier price but no RETAIL markup rule. A wholesale rule does not set the catalogue price — add a retail markup on the product.`
+      : noPrice && !noRule
+        ? `${line(noPrice)} ${noPrice===1?'has':'have'} no supplier price yet. Add one in the Price book.`
+        : `${line(noRule)} need a retail markup rule and ${line(noPrice)} need a supplier price before a catalogue can be printed.`, 8000);
     return;
   }
 

@@ -137,8 +137,13 @@ if (scope) {
   eq(out.printable.length, 1, 'only what can actually be priced is printed');
   eq(out.skipped.length, 2, 'and the rest are held back rather than printed at nothing');
   const why = Object.fromEntries(out.skipped.map((s) => [s.name, s.skip]));
-  eq(why['Priced, no rule'], 'no markup rule, so no retail price',
-    'a product with a cost but no rule is named for what it is missing');
+  /* Named as the RETAIL rule specifically. A yard selling mostly to
+     builders can perfectly well have a wholesale markup set and no
+     retail one -- the Products screen shows it as "W +10,000 · R No
+     rule" -- and telling that shop it has "no markup rule" contradicts
+     what it is looking at. */
+  eq(why['Priced, no rule'], 'no retail markup rule (a wholesale rule does not set the catalogue price)',
+    'a product with a cost and a WHOLESALE rule is told which rule is actually missing');
   eq(why['No price at all'], 'no supplier price on file',
     'which is a different problem from having no price at all, and says so');
   /* Zero is the one thing a price must never print as: it reads as free. */
@@ -205,11 +210,22 @@ if (scope) {
   // empty document.
   /* Pinned on the guard: `if(false)` leaves the sentence sitting in the
      file unreachable while a match on its words goes on passing. */
-  t.check(/if\(printable\.length===0\)\{[\s\S]{0,320}?return;\s*\}/.test(handler),
+  t.check(/if\(printable\.length===0\)\{[\s\S]{0,1400}?return;\s*\}/.test(handler),
     'a shop with nothing priceable gets no document at all');
-  t.check(/Nothing here can be priced yet/.test(handler)
-    && /needs a supplier price and a markup rule/.test(handler),
-  'and is told what is missing rather than handed blank paper');
+  /* AND IS TOLD WHICH OF THE TWO IS BLOCKING. The first version said
+     "a catalogue needs a supplier price and a markup rule" to a shop
+     whose every product had both a price and a supplier -- they were
+     missing only the retail rule, and the message read as though nothing
+     was set up at all. */
+  t.check(/const noRule = skipped\.filter\(x=> \/retail markup rule\/\.test\(x\.skip\)\)\.length;/.test(handler)
+    && /const noPrice = skipped\.filter\(x=> x\.skip === 'no supplier price on file'\)\.length;/.test(handler),
+  'the refusal counts each cause separately rather than guessing');
+  t.check(/noRule && !noPrice/.test(handler) && /A wholesale rule does not set the catalogue price/.test(handler),
+    'a shop blocked only by missing retail rules is told exactly that');
+  t.check(/noPrice && !noRule/.test(handler) && /Add one in the Price book/.test(handler),
+    'and one blocked only by missing prices is sent somewhere else');
+  t.check(/need a retail markup rule and \$\{line\(noPrice\)\} need a supplier price/.test(handler),
+    'with both counted when both are in the way');
 
   t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, ''\)/.test(handler),
     'it follows the screen\'s own filters');
