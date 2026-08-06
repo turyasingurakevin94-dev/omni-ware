@@ -332,22 +332,79 @@ Deno.serve(async (req) => {
         windowClosed: true,
       }, 403);
     }
+    const headers = { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` };
+
+    // The number's commerce settings gate BOTH the storefront icon and
+    // catalog messages -- and default to off on a fresh Cloud API
+    // number. Idempotent, so it is simply ensured on every send.
+    const csResp = await fetch(
+      `${GRAPH_BASE}/${numRow.phone_number_id}/whatsapp_commerce_settings?is_cart_enabled=true&is_catalog_visible=true`,
+      { method: "POST", headers });
+    if (!csResp.ok) {
+      const cs = await csResp.json().catch(() => ({}));
+      console.error("wa-send: commerce settings update failed", csResp.status, cs);
+    }
+
+    // The card wants a thumbnail product; the first item of the shop's
+    // own catalog serves.
+    let thumbId = "";
+    if (numRow.catalog_id) {
+      const listResp = await fetch(
+        `${GRAPH_BASE}/${numRow.catalog_id}/products?fields=retailer_id&limit=10`,
+        { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+      const list = await listResp.json().catch(() => ({}));
+      // deno-lint-ignore no-explicit-any
+      const first = ((list as any).data ?? [])[0];
+      if (first?.retailer_id) thumbId = String(first.retailer_id);
+    }
+
     const catText = "Browse our catalogue and add what you need to the cart 🛒";
-    const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
-      body: JSON.stringify({
+    const send = (payload: unknown) => fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
+      method: "POST", headers, body: JSON.stringify(payload),
+    });
+    let resp = await send({
+      messaging_product: "whatsapp",
+      to: conv.wa_id,
+      type: "interactive",
+      interactive: {
+        type: "catalog_message",
+        body: { text: catText },
+        action: {
+          name: "catalog_message",
+          ...(thumbId ? { parameters: { thumbnail_product_retailer_id: thumbId } } : {}),
+        },
+      },
+    });
+    let result = await resp.json().catch(() => ({}));
+    if (!resp.ok && numRow.catalog_id && thumbId) {
+      // Some numbers reject catalog_message but accept an explicit
+      // product list -- same shop window, named items.
+      console.error("wa-send: catalog_message refused, retrying as product_list", resp.status, result);
+      const listResp2 = await fetch(
+        `${GRAPH_BASE}/${numRow.catalog_id}/products?fields=retailer_id,name&limit=10`,
+        { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+      const list2 = await listResp2.json().catch(() => ({}));
+      // deno-lint-ignore no-explicit-any
+      const prods = ((list2 as any).data ?? []) as { retailer_id: string }[];
+      resp = await send({
         messaging_product: "whatsapp",
         to: conv.wa_id,
         type: "interactive",
         interactive: {
-          type: "catalog_message",
+          type: "product_list",
+          header: { type: "text", text: "Our products" },
           body: { text: catText },
-          action: { name: "catalog_message" },
+          action: {
+            catalog_id: numRow.catalog_id,
+            sections: [{
+              title: "Available now",
+              product_items: prods.map((pr) => ({ product_retailer_id: pr.retailer_id })),
+            }],
+          },
         },
-      }),
-    });
-    const result = await resp.json().catch(() => ({}));
+      });
+      result = await resp.json().catch(() => ({}));
+    }
     if (!resp.ok) {
       // deno-lint-ignore no-explicit-any
       const err = (result as any)?.error;

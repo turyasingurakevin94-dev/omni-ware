@@ -183,8 +183,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
   /* The catalog card pushed into a chat: same gate as a text reply. */
   const catBlock = (/action === "send-catalog"[\s\S]*?action === "send"/.exec(sendSrc) || [''])[0];
-  t.check(/type: "catalog_message",/.test(catBlock) && /action: \{ name: "catalog_message" \}/.test(catBlock),
+  t.check(/type: "catalog_message",/.test(catBlock) && /name: "catalog_message",/.test(catBlock),
     'the card is a real interactive catalog message');
+  t.check(/whatsapp_commerce_settings\?is_cart_enabled=true&is_catalog_visible=true/.test(catBlock),
+    'the number\'s commerce settings are ensured on every send — they gate the storefront icon too');
+  t.check(/thumbnail_product_retailer_id: thumbId/.test(catBlock)
+    && /type: "product_list",/.test(catBlock),
+    'a thumbnail rides along, and a refusal falls back to an explicit product list');
   t.check(catBlock.indexOf('windowState(conv.last_inbound_at') > -1
     && catBlock.indexOf('windowState(conv.last_inbound_at') < catBlock.indexOf('fetch(`${GRAPH_BASE}'),
     'and the window is checked before any bytes go to Meta, same as a reply');
