@@ -208,7 +208,15 @@ Deno.serve(async (req) => {
       const nums = await numsResp.json().catch(() => ({}));
       const subsResp = await fetch(`${GRAPH_BASE}/${oneWaba}/subscribed_apps`, { headers });
       const subs = await subsResp.json().catch(() => ({}));
-      return json({ wabas: [{ wabaId: oneWaba, numbers: (nums as { data?: unknown[] }).data ?? nums, subscribedApps: (subs as { data?: unknown[] }).data ?? subs }] });
+      // The catalog link -- the thing WhatsApp Manager's "Connect
+      // catalogue" flow writes, and the thing chats read to decide
+      // whether to show the storefront icon.
+      const catsResp = await fetch(`${GRAPH_BASE}/${oneWaba}/product_catalogs?fields=id,name`, { headers });
+      const cats = await catsResp.json().catch(() => ({}));
+      return json({ wabas: [{ wabaId: oneWaba,
+        numbers: (nums as { data?: unknown[] }).data ?? nums,
+        subscribedApps: (subs as { data?: unknown[] }).data ?? subs,
+        productCatalogs: (cats as { data?: unknown[] }).data ?? cats }] });
     }
     const dbgResp = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(ACCESS_TOKEN)}`, { headers });
     const dbg = await dbgResp.json().catch(() => ({}));
@@ -303,6 +311,60 @@ Deno.serve(async (req) => {
       sent += chunk.length;
     }
     return json({ pushed: items.length, removed: toDelete.length });
+  }
+
+  // Pushes the catalog INTO the chat as an interactive card -- the
+  // customer browses and carts from it immediately, whether or not the
+  // storefront icon has propagated to their phone yet. Same rules as a
+  // text reply: member-authed above, window-checked here.
+  if (action === "send-catalog") {
+    const conversationId = Number(body.conversationId);
+    if (!conversationId) return json({ error: "conversationId is required" }, 400);
+    if (!ACCESS_TOKEN || !numRow) return json({ error: "WhatsApp is not connected yet" }, 409);
+    const { data: conv, error: convErr } = await admin.from("wa_conversations")
+      .select("id, wa_id, last_inbound_at").eq("id", conversationId).eq("shop_id", shopId).maybeSingle();
+    if (convErr) return json({ error: convErr.message, stage: "conversation" }, 500);
+    if (!conv) return json({ error: "Conversation not found" }, 404);
+    const win = windowState(conv.last_inbound_at, Date.now());
+    if (!win.open) {
+      return json({
+        error: "The 24-hour reply window is closed — the customer has to message first.",
+        windowClosed: true,
+      }, 403);
+    }
+    const catText = "Browse our catalogue and add what you need to the cart 🛒";
+    const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: conv.wa_id,
+        type: "interactive",
+        interactive: {
+          type: "catalog_message",
+          body: { text: catText },
+          action: { name: "catalog_message" },
+        },
+      }),
+    });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      // deno-lint-ignore no-explicit-any
+      const err = (result as any)?.error;
+      console.error("wa-send: catalog message failed", resp.status, result);
+      return json({ error: err?.message || `Graph API error ${resp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    const wamid = String((result as any)?.messages?.[0]?.id ?? "");
+    const now = new Date().toISOString();
+    const { error: insErr } = await admin.from("wa_messages").insert({
+      shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
+      direction: "out", msg_type: "interactive", body: "[catalog] " + catText,
+      status: "sent", sent_at: now,
+    });
+    if (insErr) console.error("wa-send: catalog message record failed AFTER delivery", insErr);
+    await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", conv.id);
+    return json({ sent: true, wamid });
   }
 
   if (action === "send") {

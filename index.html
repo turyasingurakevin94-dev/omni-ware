@@ -9809,6 +9809,7 @@ function waRenderInbox(){
         return `<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
       <div class="wa-composer">
         <textarea id="wa_reply" data-conv="${active.id}" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
+        <button class="btn btn-ghost" id="wa_send_catalog" title="Send a browsable catalog card into this chat" ${w.open && !waInbox.sending ? '' : 'disabled'}>Catalog</button>
         <button class="btn btn-accent" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}>Send</button>
       </div>`; })()}`
     : `<div class="wa-thread-empty">Pick a conversation. Replies you send here appear on your phone too.</div>`}
@@ -9834,6 +9835,26 @@ function waRenderInbox(){
   }
   const sendBtn = document.getElementById('wa_reply_send');
   if(sendBtn) sendBtn.addEventListener('click', waSendReply);
+  const catBtn = document.getElementById('wa_send_catalog');
+  if(catBtn) catBtn.addEventListener('click', async ()=>{
+    if(waInbox.active == null || waInbox.sending) return;
+    waInbox.sending = true;
+    catBtn.disabled = true;
+    try{
+      const { error } = await sb.functions.invoke('wa-send', {
+        body: { shopId: currentShopId, action: 'send-catalog', conversationId: waInbox.active } });
+      if(error){
+        let msg = error.message;
+        try{ const body = await error.context.json(); if(body && body.error) msg = body.error; }catch(_e){}
+        toast(msg);
+        return;
+      }
+      await waFetchThread(waInbox.active);
+    } finally {
+      waInbox.sending = false;
+      waRenderInbox();
+    }
+  });
   const ta = document.getElementById('wa_reply');
   if(ta) ta.addEventListener('keydown', e=>{
     if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); waSendReply(); }

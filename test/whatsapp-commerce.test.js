@@ -180,6 +180,16 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'an order message renders as its summary in the thread');
   t.check(/update\(\{ catalog_id: v \}\)\.eq\('shop_id', currentShopId\)/.test(src),
     'saving the catalog id updates the shop\'s own connection row');
+
+  /* The catalog card pushed into a chat: same gate as a text reply. */
+  const catBlock = (/action === "send-catalog"[\s\S]*?action === "send"/.exec(sendSrc) || [''])[0];
+  t.check(/type: "catalog_message",/.test(catBlock) && /action: \{ name: "catalog_message" \}/.test(catBlock),
+    'the card is a real interactive catalog message');
+  t.check(catBlock.indexOf('windowState(conv.last_inbound_at') > -1
+    && catBlock.indexOf('windowState(conv.last_inbound_at') < catBlock.indexOf('fetch(`${GRAPH_BASE}'),
+    'and the window is checked before any bytes go to Meta, same as a reply');
+  t.check(/action: 'send-catalog', conversationId: waInbox\.active/.test(src),
+    'the Catalog button sends it into the OPEN conversation');
 }
 
 process.exit(t.done() ? 1 : 0);
