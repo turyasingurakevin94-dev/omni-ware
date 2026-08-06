@@ -4341,6 +4341,45 @@
     border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
   .wp-hint{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
   #wa_history table{width:100%;}
+  /* the inbox */
+  .wa-connect{font-size:13.5px;max-width:70ch;}
+  .wa-connect ol{margin:10px 0;padding-left:22px;}
+  .wa-connect li{margin:8px 0;line-height:1.5;}
+  .wa-connect code{background:var(--ow-steel-050);border-radius:5px;padding:1px 6px;font-size:12px;}
+  .wa-connect-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px;}
+  .wa-connect-row .field{margin:0;max-width:260px;}
+  .wa-inbox{display:flex;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;min-height:380px;}
+  .wa-convs{flex:0 0 250px;border-right:1px solid var(--line);overflow-y:auto;max-height:520px;}
+  .wa-conv{display:block;width:100%;text-align:left;border:none;background:none;cursor:pointer;
+    padding:11px 13px;border-bottom:1px solid var(--line-soft, #E3E7EA);font-family:inherit;}
+  .wa-conv:hover{background:var(--ow-steel-050);}
+  .wa-conv.active{background:var(--ow-oxide-soft);}
+  .wa-conv .wc-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .wa-conv .wc-unread{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .wa-conv .wc-cust{font-size:10.5px;color:var(--good);background:var(--good-bg);border-radius:999px;padding:1px 7px;}
+  .wa-conv .wc-snippet{font-size:12px;color:var(--ink-soft);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wa-conv .wc-time{font-size:10.5px;color:var(--ink-soft);margin-top:2px;}
+  .wa-thread{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;}
+  .wa-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;max-height:420px;
+    background:var(--ow-steel-050);}
+  .wa-msg{max-width:78%;border-radius:11px;padding:8px 12px;font-size:13px;line-height:1.45;
+    white-space:pre-wrap;overflow-wrap:break-word;}
+  .wa-msg.in{background:var(--panel);border:1px solid var(--line);align-self:flex-start;}
+  .wa-msg.out{background:var(--ow-verdigris-soft);border:1px solid var(--ow-verdigris);align-self:flex-end;}
+  .wa-msg .wm-meta{font-size:10px;color:var(--ink-soft);margin-top:4px;text-align:right;}
+  .wa-composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);align-items:flex-end;}
+  .wa-composer textarea{flex:1;resize:none;font-family:inherit;font-size:13px;border:1px solid var(--line);
+    border-radius:8px;padding:8px 11px;min-height:38px;max-height:110px;}
+  .wa-window{font-size:11.5px;padding:5px 13px;border-top:1px solid var(--line-soft, #E3E7EA);}
+  .wa-window.open{color:var(--good);}
+  .wa-window.closed{color:var(--ow-amber-ink);background:var(--ow-amber-soft);}
+  .wa-thread-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
+    font-size:13px;padding:20px;text-align:center;}
+  @media (max-width: 700px){
+    .wa-inbox{flex-direction:column;}
+    .wa-convs{flex-basis:auto;max-height:200px;border-right:none;border-bottom:1px solid var(--line);}
+  }
 </style>
 </head>
 <body class="app-loading">
@@ -5545,7 +5584,17 @@
     <section id="tab-whatsapp" style="display:none;">
       <div class="page-head">
         <h1>WhatsApp</h1>
-        <p>What the shop should show people today, and why. The picks come from your own numbers &mdash; stock that is sitting, margins, price drops, what sells on this weekday &mdash; and each one becomes a finished status image and caption, ready to post in two taps.</p>
+        <p>What the shop should show people today, and why. The picks come from your own numbers &mdash; stock that is sitting, margins, price drops, what sells on this weekday &mdash; and each one becomes a finished status image and caption, ready to post in two taps. Once your number is connected, customer chats land in the inbox below and replies go straight back to their WhatsApp.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;" id="wa_inbox_head">Inbox</h2>
+          <button class="btn btn-ghost btn-icon" id="wa_inbox_refresh" style="display:none;">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="wa_inbox"></div>
       </div>
       <div class="panel">
         <div class="panel-head-row">
@@ -9446,6 +9495,239 @@ document.getElementById('wp_posted').addEventListener('click', ()=>{
   renderWhatsApp();
 });
 
+/* ---------------- WhatsApp: the inbox ----------------
+
+   Conversations and messages are READ from wa_conversations/wa_messages
+   (written only by the wa-webhook and wa-send Edge Functions -- the
+   browser holds no WhatsApp credentials and cannot fabricate a message;
+   the RLS in 0052 enforces both). The one thing this client writes
+   directly is last_read_at, its own read marker. */
+
+const WA_WINDOW_MS = 24*60*60*1000;
+const WA_INBOX_POLL_MS = 12000;
+
+// The 24-hour reply window, as the UI states it. The SERVER re-checks
+// this on every send (wa-send refuses a closed window); this copy only
+// exists so the composer can say so before the attempt. No inbound ever
+// means closed: a window that was never opened is not an open window.
+function waWindowInfo(lastInboundAt, nowMs){
+  if(!lastInboundAt) return { open: false, hoursLeft: 0 };
+  const opened = Date.parse(lastInboundAt);
+  if(!isFinite(opened)) return { open: false, hoursLeft: 0 };
+  const msLeft = opened + WA_WINDOW_MS - nowMs;
+  return { open: msLeft > 0, hoursLeft: Math.max(0, Math.floor(msLeft/3600000)) };
+}
+function waWindowLabel(info){
+  return info.open
+    ? `Free to reply — window open, about ${info.hoursLeft}h left`
+    : 'Window closed — the customer has to message first. (Paid template messages come in a later phase.)';
+}
+
+function waConvUnread(c){
+  if(!c.last_inbound_at) return false;
+  return !c.last_read_at || c.last_inbound_at > c.last_read_at;
+}
+
+// The customer record whose phone ends in the same 9 digits as the
+// WhatsApp id, if exactly one does. Display-only: a suffix match is a
+// good hint and a bad merge key.
+function waMatchCustomer(waId){
+  const suffix = cfNormalisedPhone(waId);
+  if(!suffix) return null;
+  const hits = (data.customers||[]).filter(c=> cfNormalisedPhone(c.phone) === suffix);
+  return hits.length === 1 ? hits[0] : null;
+}
+
+function waTimeShort(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  if(d.toDateString() === now.toDateString())
+    return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+
+let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false };
+
+async function waInboxStatus(){
+  try{
+    const { data: res, error } = await sb.functions.invoke('wa-send', {
+      body: { shopId: currentShopId, action: 'status' } });
+    if(error) throw error;
+    return !!(res && res.configured);
+  }catch(e){ return false; }
+}
+
+async function waFetchConvs(){
+  const { data: rows, error } = await sb.from('wa_conversations')
+    .select('*').eq('shop_id', currentShopId)
+    .order('last_message_at', { ascending: false }).limit(100);
+  if(error){ console.error('inbox conversations failed', error); return; }
+  waInbox.convs = rows || [];
+}
+async function waFetchThread(convId){
+  const { data: rows, error } = await sb.from('wa_messages')
+    .select('*').eq('conversation_id', convId)
+    .order('sent_at', { ascending: true }).limit(300);
+  if(error){ console.error('inbox thread failed', error); return; }
+  waInbox.msgs = rows || [];
+}
+
+async function waInboxEnter(){
+  if(waInbox.configured == null) waInbox.configured = await waInboxStatus();
+  document.getElementById('wa_inbox_refresh').style.display = waInbox.configured ? '' : 'none';
+  if(!waInbox.configured){ waRenderConnect(); return; }
+  await waFetchConvs();
+  if(waInbox.active) await waFetchThread(waInbox.active);
+  waRenderInbox();
+  // One poller, self-terminating when the user leaves the tab -- the
+  // interval checks where it is instead of trusting a cleanup hook to run.
+  if(!waInbox.timer){
+    waInbox.timer = setInterval(async ()=>{
+      if(currentActiveTab !== 'whatsapp' || !waInbox.configured){
+        clearInterval(waInbox.timer); waInbox.timer = null; return;
+      }
+      await waFetchConvs();
+      if(waInbox.active) await waFetchThread(waInbox.active);
+      waRenderInbox();
+    }, WA_INBOX_POLL_MS);
+  }
+}
+
+function waRenderConnect(){
+  const hook = `${SUPABASE_URL}/functions/v1/wa-webhook`;
+  document.getElementById('wa_inbox').innerHTML = `<div class="wa-connect">
+    <p><b>Not connected yet.</b> Connecting keeps WhatsApp working on your phone exactly as it is —
+    the same number runs the app and this inbox side by side, and chats mirror to both.</p>
+    <ol>
+      <li>Create a (free) Meta developer app with the <b>WhatsApp</b> product at
+        developers.facebook.com, under your Meta Business account.</li>
+      <li>In WhatsApp → API setup, add your existing business number and choose to keep using it in
+        the WhatsApp Business app — Meta walks you through scanning a QR from the phone. Keep
+        opening the app at least every 14 days or Meta cuts the link.</li>
+      <li>Set the three secrets <b>from your own terminal</b> (never paste tokens into a chat or a web form):
+        <br><code>npx supabase secrets set WHATSAPP_ACCESS_TOKEN=… WHATSAPP_APP_SECRET=… WHATSAPP_VERIFY_TOKEN=…</code>
+        <br>The token is a permanent System User token with <i>whatsapp_business_messaging</i>;
+        the app secret is on the app's Basic Settings page; the verify token is any phrase you invent.</li>
+      <li>In the app's WhatsApp → Configuration, set the webhook to
+        <br><code>${esc(hook)}</code>
+        <br>with your verify token, and subscribe to <b>messages</b>.</li>
+      <li>Paste the <b>Phone number ID</b> (shown in API setup, next to your number) here:</li>
+    </ol>
+    <div class="wa-connect-row">
+      <div class="field"><label>Phone number ID</label><input id="wa_pnid" placeholder="e.g. 106540352242922"></div>
+      <button class="btn btn-accent" id="wa_pnid_save">Save</button>
+      <button class="btn btn-ghost" id="wa_check">Check connection</button>
+    </div>
+  </div>`;
+  sb.from('wa_numbers').select('phone_number_id').eq('shop_id', currentShopId).maybeSingle()
+    .then(({ data: row })=>{ if(row) document.getElementById('wa_pnid').value = row.phone_number_id; });
+  document.getElementById('wa_pnid_save').addEventListener('click', async ()=>{
+    const v = document.getElementById('wa_pnid').value.trim();
+    if(!v){ toast('Paste the Phone number ID first'); return; }
+    const { error } = await sb.from('wa_numbers').upsert(
+      { shop_id: currentShopId, phone_number_id: v }, { onConflict: 'phone_number_id' });
+    if(error){ toast('Could not save: ' + error.message); return; }
+    toast('Number saved');
+  });
+  document.getElementById('wa_check').addEventListener('click', async ()=>{
+    waInbox.configured = null;
+    const ok = await waInboxStatus();
+    waInbox.configured = ok;
+    toast(ok ? 'Connected — the inbox is live' : 'Not yet — the token or the number is still missing');
+    if(ok) waInboxEnter();
+  });
+}
+
+function waConvTitle(c){
+  return c.profile_name || ('+' + c.wa_id);
+}
+function waRenderInbox(){
+  const wrap = document.getElementById('wa_inbox');
+  const unreadCount = waInbox.convs.filter(waConvUnread).length;
+  document.getElementById('wa_inbox_head').textContent =
+    unreadCount ? `Inbox — ${unreadCount} unread` : 'Inbox';
+  if(!waInbox.convs.length){
+    wrap.innerHTML = `<div class="wa-empty">Connected and listening. The first customer message to
+      your WhatsApp number appears here — chats keep mirroring to your phone as before.</div>`;
+    return;
+  }
+  const active = waInbox.convs.find(c=> c.id === waInbox.active) || null;
+  wrap.innerHTML = `<div class="wa-inbox">
+    <div class="wa-convs">${waInbox.convs.map(c=>{
+      const cust = waMatchCustomer(c.wa_id);
+      return `<button type="button" class="wa-conv ${c.id===waInbox.active?'active':''}" data-cid="${c.id}">
+        <div class="wc-name">${waConvUnread(c) ? '<span class="wc-unread"></span>' : ''}${esc(waConvTitle(c))}
+          ${cust ? `<span class="wc-cust">${esc(cust.name)}</span>` : ''}</div>
+        <div class="wc-time">${esc(waTimeShort(c.last_message_at))}</div>
+      </button>`;}).join('')}</div>
+    <div class="wa-thread">${active ? `
+      <div class="wa-msgs" id="wa_msgs">${waInbox.msgs.map(m=>`
+        <div class="wa-msg ${m.direction==='in'?'in':'out'}">${esc(m.body || '['+m.msg_type+']')}
+          <div class="wm-meta">${esc(waTimeShort(m.sent_at))}${m.direction==='out' && m.status ? ' · ' + esc(m.status) : ''}</div>
+        </div>`).join('')}</div>
+      ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
+        return `<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
+      <div class="wa-composer">
+        <textarea id="wa_reply" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
+        <button class="btn btn-accent" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}>Send</button>
+      </div>`; })()}`
+    : `<div class="wa-thread-empty">Pick a conversation. Replies you send here appear on your phone too.</div>`}
+    </div>
+  </div>`;
+
+  wrap.querySelectorAll('.wa-conv').forEach(btn=> btn.addEventListener('click', ()=> waOpenConv(Number(btn.dataset.cid))));
+  const msgsEl = document.getElementById('wa_msgs');
+  if(msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+  const sendBtn = document.getElementById('wa_reply_send');
+  if(sendBtn) sendBtn.addEventListener('click', waSendReply);
+  const ta = document.getElementById('wa_reply');
+  if(ta) ta.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); waSendReply(); }
+  });
+}
+
+async function waOpenConv(id){
+  waInbox.active = id;
+  await waFetchThread(id);
+  const c = waInbox.convs.find(x=> x.id === id);
+  if(c && waConvUnread(c)){
+    const now = new Date().toISOString();
+    c.last_read_at = now;   // locally first, so the dot clears at once
+    const { error } = await sb.from('wa_conversations').update({ last_read_at: now }).eq('id', id);
+    if(error) console.error('read marker failed', error);
+  }
+  waRenderInbox();
+}
+
+async function waSendReply(){
+  const ta = document.getElementById('wa_reply');
+  const text = ta ? ta.value.trim() : '';
+  if(!text || waInbox.sending || waInbox.active == null) return;
+  waInbox.sending = true;
+  const btn = document.getElementById('wa_reply_send');
+  if(btn) btn.disabled = true;
+  try{
+    const { error } = await sb.functions.invoke('wa-send', {
+      body: { shopId: currentShopId, action: 'send', conversationId: waInbox.active, text } });
+    if(error){
+      // The useful message is in the response body, not error.message.
+      let msg = error.message;
+      try{ const body = await error.context.json(); if(body && body.error) msg = body.error; }catch(_e){}
+      toast(msg);
+      return;
+    }
+    ta.value = '';
+    await waFetchThread(waInbox.active);
+    await waFetchConvs();
+  } finally {
+    waInbox.sending = false;
+    waRenderInbox();
+  }
+}
+
+document.getElementById('wa_inbox_refresh').addEventListener('click', ()=> waInboxEnter());
+
 /* ---------------- Tabs ---------------- */
 const tabButtons = document.querySelectorAll('nav button[data-tab]');
 // The five flyout containers are gone with the regroup -- every
@@ -9472,7 +9754,7 @@ function goToTab(tab){
   // data -- it cannot be left saying what was true when the page loaded.
   if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='media') renderMedia();
-  if(tab==='whatsapp') renderWhatsApp();
+  if(tab==='whatsapp'){ renderWhatsApp(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();

@@ -243,7 +243,7 @@ const THU = '2026-08-06', MON = '2026-08-03';
 
 /* ---------- 8. all of it is REACHED ---------------------------------- */
 {
-  t.check(/if\(tab==='whatsapp'\) renderWhatsApp\(\);/.test(src), 'the tab renders on entry');
+  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); waInboxEnter\(\); \}/.test(src), 'the tab renders on entry');
   t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 2,
     'reachable from the topbar and the phone sheet');
 
