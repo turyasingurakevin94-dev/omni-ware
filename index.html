@@ -9553,7 +9553,8 @@ function waTimeShort(ts){
   return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 }
 
-let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false };
+let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
+  drafts: {} };   // conversation id -> half-typed reply, surviving re-renders
 
 async function waInboxStatus(){
   try{
@@ -9673,6 +9674,22 @@ function waConvTitle(c){
 }
 function waRenderInbox(){
   const wrap = document.getElementById('wa_inbox');
+  /* The poll redraws this whole panel every few seconds, and a redraw
+     REPLACES the composer -- which was eating whatever the user had
+     half-typed. So the draft, focus, cursor and scroll position are
+     carried across the rebuild. Drafts are kept per conversation, so
+     switching threads never leaks one customer's half-written reply
+     into another customer's chat. */
+  const prevTa = document.getElementById('wa_reply');
+  if(prevTa && prevTa.dataset.conv) waInbox.drafts[prevTa.dataset.conv] = prevTa.value;
+  const hadFocus = prevTa && document.activeElement === prevTa;
+  const selStart = prevTa ? prevTa.selectionStart : 0;
+  const selEnd = prevTa ? prevTa.selectionEnd : 0;
+  const prevConv = prevTa ? prevTa.dataset.conv : null;
+  const prevMsgs = document.getElementById('wa_msgs');
+  const nearBottom = !prevMsgs ||
+    (prevMsgs.scrollHeight - prevMsgs.scrollTop - prevMsgs.clientHeight < 40);
+  const prevScrollTop = prevMsgs ? prevMsgs.scrollTop : null;
   const unreadCount = waInbox.convs.filter(waConvUnread).length;
   document.getElementById('wa_inbox_head').textContent =
     unreadCount ? `Inbox — ${unreadCount} unread` : 'Inbox';
@@ -9698,7 +9715,7 @@ function waRenderInbox(){
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
         return `<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
       <div class="wa-composer">
-        <textarea id="wa_reply" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
+        <textarea id="wa_reply" data-conv="${active.id}" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
         <button class="btn btn-accent" id="wa_reply_send" ${w.open && !waInbox.sending ? '' : 'disabled'}>Send</button>
       </div>`; })()}`
     : `<div class="wa-thread-empty">Pick a conversation. Replies you send here appear on your phone too.</div>`}
@@ -9707,7 +9724,21 @@ function waRenderInbox(){
 
   wrap.querySelectorAll('.wa-conv').forEach(btn=> btn.addEventListener('click', ()=> waOpenConv(Number(btn.dataset.cid))));
   const msgsEl = document.getElementById('wa_msgs');
-  if(msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+  if(msgsEl){
+    // Follow new messages only if the reader was already at the bottom;
+    // a poll must never yank someone away from an older message.
+    const sameThread = prevConv != null && String(waInbox.active) === prevConv;
+    if(!sameThread || nearBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    else if(prevScrollTop != null) msgsEl.scrollTop = prevScrollTop;
+  }
+  const newTa = document.getElementById('wa_reply');
+  if(newTa){
+    newTa.value = waInbox.drafts[newTa.dataset.conv] || '';
+    if(hadFocus && newTa.dataset.conv === prevConv && !newTa.disabled){
+      newTa.focus();
+      try{ newTa.setSelectionRange(selStart, selEnd); }catch(_e){}
+    }
+  }
   const sendBtn = document.getElementById('wa_reply_send');
   if(sendBtn) sendBtn.addEventListener('click', waSendReply);
   const ta = document.getElementById('wa_reply');
@@ -9747,6 +9778,7 @@ async function waSendReply(){
       return;
     }
     ta.value = '';
+    delete waInbox.drafts[String(waInbox.active)];
     await waFetchThread(waInbox.active);
     await waFetchConvs();
   } finally {

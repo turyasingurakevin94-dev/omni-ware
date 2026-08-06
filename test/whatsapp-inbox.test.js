@@ -236,10 +236,20 @@ if (!hook) process.exit(1);
     'the poller stops itself when the user leaves the tab');
   t.check(/action: 'send', conversationId: waInbox\.active, text/.test(src),
     'a reply goes through the edge function, with the conversation named');
-  t.check(/<textarea id="wa_reply" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
+  t.check(/<textarea id="wa_reply" data-conv="\$\{active\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
     'a closed window disables the composer before the server has to refuse');
   t.check(/const body = await error\.context\.json\(\); if\(body && body\.error\) msg = body\.error;/.test(src),
     'a refusal reaches the user as its real sentence, not "non-2xx status code"');
+  /* Learned live: the 12s poll re-renders the panel, and the rebuild was
+     eating whatever the user had half-typed into the composer. */
+  t.check(/if\(prevTa && prevTa\.dataset\.conv\) waInbox\.drafts\[prevTa\.dataset\.conv\] = prevTa\.value;/.test(src),
+    'the draft is captured before the panel is rebuilt');
+  t.check(/newTa\.value = waInbox\.drafts\[newTa\.dataset\.conv\] \|\| '';/.test(src),
+    'and restored to the SAME conversation it was typed for');
+  t.check(/if\(!sameThread \|\| nearBottom\) msgsEl\.scrollTop = msgsEl\.scrollHeight;/.test(src),
+    'a poll follows new messages only when the reader was already at the bottom');
+  t.check(/delete waInbox\.drafts\[String\(waInbox\.active\)\];/.test(src),
+    'a sent reply clears its draft');
   t.check(/return json\(\{ received: true \}\);/.test(hookSrc)
     && /console\.error\("wa-webhook: processing failed", e\);/.test(hookSrc),
     'the webhook answers 200 even when processing fails — a bug costs one event, not the channel');
