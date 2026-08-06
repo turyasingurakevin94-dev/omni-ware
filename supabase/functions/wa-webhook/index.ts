@@ -177,8 +177,10 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
     if (mode === "subscribe" && VERIFY_TOKEN && token === VERIFY_TOKEN && challenge) {
+      console.log("wa-webhook: handshake OK");
       return new Response(challenge, { status: 200 });
     }
+    console.error("wa-webhook: handshake refused", { mode, tokenMatches: token === VERIFY_TOKEN, hasVerifyToken: !!VERIFY_TOKEN });
     return json({ error: "verification failed" }, 403);
   }
 
@@ -187,7 +189,15 @@ Deno.serve(async (req) => {
   const raw = await req.text();
   if (APP_SECRET) {
     const ok = await validSignature(raw, req.headers.get("x-hub-signature-256"), APP_SECRET);
-    if (!ok) return json({ error: "bad signature" }, 401);
+    if (!ok) {
+      // LOUD on purpose: a silent 401 here cost a live debugging session
+      // -- the function booted, said nothing, and every delivery died.
+      // A mismatch means the WHATSAPP_APP_SECRET secret differs from the
+      // app's actual App secret.
+      console.error("wa-webhook: SIGNATURE REJECTED — WHATSAPP_APP_SECRET does not match the Meta app secret",
+        { hasHeader: !!req.headers.get("x-hub-signature-256") });
+      return json({ error: "bad signature" }, 401);
+    }
   } else {
     console.error("wa-webhook: WHATSAPP_APP_SECRET unset — accepting unsigned traffic until it is set");
   }
@@ -206,6 +216,9 @@ Deno.serve(async (req) => {
           continue;
         }
         await handleEvents(String(numRow.shop_id), events);
+        // Success says so too -- absence of errors must be distinguishable
+        // from absence of traffic.
+        console.log("wa-webhook: filed", events.length, "event(s) for", phoneNumberId);
       }
     }
   } catch (e) {
