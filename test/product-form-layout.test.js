@@ -41,7 +41,9 @@ const modal = (/<div class="modal-overlay" id="productModal">[\s\S]*?\n<\/div>/.
   const IDS = [
     'p_type_simple', 'p_type_variable', 'p_type_toggle',
     'p_id', 'p_id_hint', 'p_name', 'p_category', 'p_subcategory', 'p_notes',
-    'p_image_preview', 'p_image_placeholder', 'p_image_input',
+    // p_image_input is gone by design: the photo is picked from the
+    // media library now, so there is no hidden file input to survive.
+    'p_image_preview', 'p_image_placeholder',
     'p_image_upload_btn', 'p_image_remove_btn',
     'p_markup_panel_title',
     'p_wholesale_markup_type', 'p_wholesale_markup_value',

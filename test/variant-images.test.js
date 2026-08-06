@@ -43,10 +43,14 @@ const admin = read('index.html');
 {
   t.check(/draftVariants\.map\(v=>\(\{sku:\(v\.sku\|\|''\)\.trim\(\), combo:v\.combo, image:v\.image\|\|null/.test(strip(admin)),
     'the admin saves an image on each variant');
-  t.check(/originalVariantImagesBySig\[JSON\.stringify\(v\.combo\)\] = v\.image \|\| null;/.test(strip(admin)),
-    'and tracks it across an edit');
-  t.check(/\(product && product\.variants \|\| \[\]\)\.forEach\(v=>\{ if\(v\.image\) deleteProductImageIfStored\(v\.image\)/.test(strip(admin)),
-    'and deletes it with the product, which is only sensible if it is real');
+  /* Since the media library, the image is picked per variant index rather
+     than uploaded in place, and the usage scan counts each variant as a
+     real user of its picture -- which is this file's "only sensible if it
+     is real" evidence now that deleting a product no longer deletes photos. */
+  t.check(/openMediaPicker\(\{ sessionTrack: true, onPick: m=> setVariantImagePreview\(idx, m\.url\) \}\)/.test(strip(admin)),
+    'and picks it from the media library, per variant');
+  t.check(/add\(v\.image, 'variant', /.test(strip(admin)),
+    'and the usage scan counts each variant photo as real');
 }
 
 /* ---------- 2. the agent catalogue ---------------------------------- */
