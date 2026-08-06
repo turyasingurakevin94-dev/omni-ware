@@ -8233,7 +8233,12 @@ function buildSyncRows(d, shopId){
         // order, preserved here rather than dropped so an admin re-saving
         // this quote (advancing its status, editing an item, etc.) never
         // silently strips what agent-submit-order originally set.
-        originAgentId:q.originAgentId, agentClientId:q.agentClientId, deliveryMode:q.deliveryMode, deliveryAddress:q.deliveryAddress, agentPaymentStatus:q.agentPaymentStatus}
+        originAgentId:q.originAgentId, agentClientId:q.agentClientId, deliveryMode:q.deliveryMode, deliveryAddress:q.deliveryAddress, agentPaymentStatus:q.agentPaymentStatus,
+        // WhatsApp-originated orders only -- same preservation contract
+        // as the agent fields above: absent for a normal order, and an
+        // admin re-save must never strip what wa-webhook set. Learned
+        // live when order 151's origin vanished on its first edit.
+        originWa:q.originWa, originWamid:q.originWamid}
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,

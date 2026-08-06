@@ -195,6 +195,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the window is checked before any bytes go to Meta, same as a reply');
   t.check(/action: 'send-catalog', conversationId: waInbox\.active/.test(src),
     'the Catalog button sends it into the OPEN conversation');
+
+  /* Learned live on order 151: the client sync mapping rebuilds the
+     quote payload from NAMED keys, and any key not named is stripped on
+     the first admin edit. The wa origin fields must be in the list, the
+     same preservation contract the agent fields already carry. */
+  t.check(/originWa:q\.originWa, originWamid:q\.originWamid\}/.test(src),
+    'an admin re-save never strips what wa-webhook set on the order');
 }
 
 process.exit(t.done() ? 1 : 0);
