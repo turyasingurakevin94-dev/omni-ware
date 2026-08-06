@@ -80,6 +80,38 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Registers the shop's saved number with the Cloud API -- the same
+  // thing the dashboard's flaky "Register" button does, except Meta's
+  // REAL error comes back instead of "Registration failed. Please try
+  // again." Registration requires a two-step PIN; one is minted on first
+  // use and kept on the wa_numbers row, because the same PIN is required
+  // for any future re-registration and losing it strands the number.
+  if (action === "register") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    if (!numRow) return json({ error: "Save the Phone number ID first" }, 400);
+    const { data: pinRow } = await admin.from("wa_numbers")
+      .select("pin").eq("phone_number_id", numRow.phone_number_id).maybeSingle();
+    const pin = (pinRow && pinRow.pin) || String(Math.floor(100000 + Math.random() * 900000));
+    const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+      body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+    });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const err = (result as { error?: { message?: string; error_data?: { details?: string } } })?.error;
+      console.error("wa-send: register failed", resp.status, result);
+      return json({
+        error: err?.error_data?.details || err?.message || `Graph API error ${resp.status}`,
+      }, 502);
+    }
+    // Persist the PIN only once registration has accepted it.
+    const { error: pinErr } = await admin.from("wa_numbers")
+      .update({ pin }).eq("phone_number_id", numRow.phone_number_id);
+    if (pinErr) console.error("wa-send: pin save failed AFTER registration", pinErr);
+    return json({ registered: true });
+  }
+
   if (action === "send") {
     const conversationId = Number(body.conversationId);
     const text = String(body.text ?? "").trim();

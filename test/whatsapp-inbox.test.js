@@ -120,8 +120,12 @@ if (!hook) process.exit(1);
     eq(send.windowState(null, now).open, false, 'a customer who never wrote: closed, not open-by-default');
     eq(send.windowState('garbage', now).open, false, 'an unparseable date: closed, the safe way to be wrong');
   }
-  const sendIdx = sendSrc.indexOf('windowState(conv.last_inbound_at');
-  const graphIdx = sendSrc.indexOf('fetch(`${GRAPH_BASE}');
+  /* Scoped to the send action: the register action has its own Graph
+     call earlier in the file, and a whole-file indexOf would compare
+     against the wrong one. */
+  const sendBlock = sendSrc.slice(sendSrc.indexOf('action === "send"'));
+  const sendIdx = sendBlock.indexOf('windowState(conv.last_inbound_at');
+  const graphIdx = sendBlock.indexOf('fetch(`${GRAPH_BASE}');
   t.check(sendIdx > -1 && graphIdx > -1 && sendIdx < graphIdx,
     'wa-send re-checks the window BEFORE any bytes go to Meta');
   t.check(/windowClosed: true/.test(sendSrc), 'and the refusal is machine-readable for the composer');
@@ -136,6 +140,18 @@ if (!hook) process.exit(1);
   t.check(memberIdx > -1 && memberIdx < graphIdx, 'membership is checked before the Graph API is touched');
   t.check(/record failed AFTER delivery/.test(sendSrc),
     'a bookkeeping failure after delivery is reported as such — never as "not sent"');
+
+  /* The register action: the dashboard's opaque toast, replaced by
+     Meta's real sentence. */
+  const regBlock = (/action === "register"[\s\S]*?action === "send"/.exec(sendSrc) || [''])[0];
+  t.check(/err\?\.error_data\?\.details \|\| err\?\.message/.test(regBlock),
+    'a failed registration surfaces Meta\'s own reason, detail first');
+  t.check(/\/register`/.test(regBlock) && /messaging_product: "whatsapp", pin/.test(regBlock),
+    'registration goes to the register endpoint with a PIN');
+  const pinSaveAt = regBlock.indexOf('update({ pin })');
+  const okCheckAt = regBlock.indexOf('if (!resp.ok)');
+  t.check(pinSaveAt > -1 && okCheckAt > -1 && okCheckAt < pinSaveAt,
+    'the PIN is persisted only once Meta has accepted it');
 }
 
 /* ---------- 4. the client: window label, unread, matching ------------ */
