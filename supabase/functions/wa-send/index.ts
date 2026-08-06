@@ -112,6 +112,111 @@ Deno.serve(async (req) => {
     return json({ registered: true });
   }
 
+  // Asks Meta what the saved Phone number ID actually IS -- which
+  // display number it belongs to and what state Meta thinks it is in.
+  // Exists because a shop can end up holding an ID from a deleted
+  // setup, and "which number am I actually connected to?" should be
+  // answerable from the app instead of by archaeology in two dashboards.
+  if (action === "diagnose") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    if (!numRow) return json({ error: "Save the Phone number ID first" }, 400);
+    const resp = await fetch(
+      `${GRAPH_BASE}/${numRow.phone_number_id}?fields=display_phone_number,verified_name,code_verification_status,platform_type,status,quality_rating`,
+      { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const err = (result as { error?: { message?: string } })?.error;
+      return json({ error: err?.message || `Graph API error ${resp.status}` }, 502);
+    }
+    return json({ number: result });
+  }
+
+  // The last link nothing else verifies: an app only receives a WABA's
+  // events if it is SUBSCRIBED TO THAT WABA -- separate from the
+  // app-level webhook field config, and silently absent after a WABA is
+  // deleted and remade. Reads the current state, then subscribes.
+  if (action === "subscribe-app") {
+    const wabaId = String(body.wabaId ?? "").trim();
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    if (!wabaId) return json({ error: "wabaId is required" }, 400);
+    const headers = { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const beforeResp = await fetch(`${GRAPH_BASE}/${wabaId}/subscribed_apps`, { headers });
+    const before = await beforeResp.json().catch(() => ({}));
+    if (!beforeResp.ok) {
+      const err = (before as { error?: { message?: string } })?.error;
+      return json({ error: err?.message || `Graph API error ${beforeResp.status}` }, 502);
+    }
+    const subResp = await fetch(`${GRAPH_BASE}/${wabaId}/subscribed_apps`, { method: "POST", headers });
+    const sub = await subResp.json().catch(() => ({}));
+    if (!subResp.ok) {
+      const err = (sub as { error?: { message?: string } })?.error;
+      return json({ error: err?.message || `Graph API error ${subResp.status}`, before }, 502);
+    }
+    return json({ before, subscribed: sub });
+  }
+
+  // Walks every WhatsApp Business Account the business owns and lists
+  // each one's numbers and subscribed apps -- because after enough
+  // delete-and-retry cycles, "which WABA is my number actually in, and
+  // is anyone listening to it?" is the question, and the dashboards
+  // answer it one page at a time.
+  if (action === "find-waba") {
+    const businessId = String(body.businessId ?? "").trim();
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    if (!businessId) return json({ error: "businessId is required" }, 400);
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const wabasResp = await fetch(`${GRAPH_BASE}/${businessId}/owned_whatsapp_business_accounts?fields=id,name`, { headers });
+    const wabas = await wabasResp.json().catch(() => ({}));
+    if (!wabasResp.ok) {
+      const err = (wabas as { error?: { message?: string } })?.error;
+      return json({ error: err?.message || `Graph API error ${wabasResp.status}` }, 502);
+    }
+    const out = [];
+    for (const w of ((wabas as { data?: { id: string; name: string }[] }).data ?? [])) {
+      const numsResp = await fetch(`${GRAPH_BASE}/${w.id}/phone_numbers?fields=id,display_phone_number,status`, { headers });
+      const nums = await numsResp.json().catch(() => ({}));
+      const subsResp = await fetch(`${GRAPH_BASE}/${w.id}/subscribed_apps`, { headers });
+      const subs = await subsResp.json().catch(() => ({}));
+      out.push({ waba: w, numbers: (nums as { data?: unknown[] }).data ?? nums, subscribedApps: (subs as { data?: unknown[] }).data ?? subs });
+    }
+    return json({ accounts: out });
+  }
+
+  // Asks the token itself which WABAs it can touch (debug_token's
+  // granular scopes), then inspects each -- works without the
+  // business_management permission the business-node walk needs.
+  if (action === "token-wabas") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    const headers = { Authorization: `Bearer ${ACCESS_TOKEN}` };
+    // With an explicit wabaId, skip discovery and inspect just that one.
+    const oneWaba = String(body.wabaId ?? "").trim();
+    if (oneWaba) {
+      const numsResp = await fetch(`${GRAPH_BASE}/${oneWaba}/phone_numbers?fields=id,display_phone_number,status,platform_type`, { headers });
+      const nums = await numsResp.json().catch(() => ({}));
+      const subsResp = await fetch(`${GRAPH_BASE}/${oneWaba}/subscribed_apps`, { headers });
+      const subs = await subsResp.json().catch(() => ({}));
+      return json({ wabas: [{ wabaId: oneWaba, numbers: (nums as { data?: unknown[] }).data ?? nums, subscribedApps: (subs as { data?: unknown[] }).data ?? subs }] });
+    }
+    const dbgResp = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(ACCESS_TOKEN)}`, { headers });
+    const dbg = await dbgResp.json().catch(() => ({}));
+    if (!dbgResp.ok) {
+      const err = (dbg as { error?: { message?: string } })?.error;
+      return json({ error: err?.message || `Graph API error ${dbgResp.status}` }, 502);
+    }
+    const scopes = ((dbg as { data?: { granular_scopes?: { scope: string; target_ids?: string[] }[] } }).data?.granular_scopes) ?? [];
+    const ids = [...new Set(scopes.filter((s) => s.scope.startsWith("whatsapp_business"))
+      .flatMap((s) => s.target_ids ?? []))];
+    const out = [];
+    for (const id of ids) {
+      const numsResp = await fetch(`${GRAPH_BASE}/${id}/phone_numbers?fields=id,display_phone_number,status`, { headers });
+      const nums = await numsResp.json().catch(() => ({}));
+      const subsResp = await fetch(`${GRAPH_BASE}/${id}/subscribed_apps`, { headers });
+      const subs = await subsResp.json().catch(() => ({}));
+      out.push({ wabaId: id, numbers: (nums as { data?: unknown[] }).data ?? nums, subscribedApps: (subs as { data?: unknown[] }).data ?? subs });
+    }
+    return json({ wabas: out });
+  }
+
   if (action === "send") {
     const conversationId = Number(body.conversationId);
     const text = String(body.text ?? "").trim();
