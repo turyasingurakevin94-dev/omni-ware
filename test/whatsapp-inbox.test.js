@@ -230,8 +230,8 @@ if (!hook) process.exit(1);
 
 /* ---------- 6. all of it is REACHED ---------------------------------- */
 {
-  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); waInboxEnter\(\); \}/.test(src),
-    'entering the tab starts both the picks and the inbox');
+  t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src),
+    'entering the tab starts the picks, the intelligence strip and the inbox');
   t.check(/if\(currentActiveTab !== 'whatsapp' \|\| !waInbox\.configured\)\{\s*\n?\s*clearInterval\(waInbox\.timer\); waInbox\.timer = null; return;/.test(src),
     'the poller stops itself when the user leaves the tab');
   t.check(/action: 'send', conversationId: waInbox\.active, text/.test(src),

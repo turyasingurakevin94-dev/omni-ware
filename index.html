@@ -4384,6 +4384,27 @@
     font-size:13px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
   .wa-bc-est{font-size:13px;font-weight:600;color:var(--ink);padding-bottom:9px;}
   .wa-bc-meta{font-size:11.5px;color:var(--ink-soft);margin-top:8px;}
+  /* the intelligence strip */
+  .wa-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+  .wa-stat{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 16px 11px;
+    position:relative;overflow:hidden;}
+  .wa-stat.hot{border-color:var(--accent);}
+  .wa-stat.hot::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
+  .wa-stat .ws-num{font-size:21px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;
+    line-height:1.15;letter-spacing:-0.01em;}
+  .wa-stat.hot .ws-num{color:var(--ow-oxide-deep);}
+  .wa-stat .ws-label{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
+    color:var(--ink-soft);margin-top:3px;}
+  .wa-stat .ws-sub{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  /* the three rooms */
+  .wa-tabs{display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:16px;}
+  .wa-tab{border:none;background:none;padding:10px 18px;font-size:14px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;
+    display:flex;align-items:center;gap:7px;}
+  .wa-tab:hover{color:var(--ink);}
+  .wa-tab.active{color:var(--ink);border-bottom-color:var(--accent);}
+  .wa-tab-badge{background:var(--accent);color:#fff;border-radius:999px;font-size:10.5px;font-weight:700;
+    padding:1px 7px;min-width:12px;text-align:center;}
   @media (max-width: 700px){
     .wa-inbox{flex-direction:column;}
     .wa-convs{flex-basis:auto;max-height:200px;border-right:none;border-bottom:1px solid var(--line);}
@@ -5592,8 +5613,15 @@
     <section id="tab-whatsapp" style="display:none;">
       <div class="page-head">
         <h1>WhatsApp</h1>
-        <p>What the shop should show people today, and why. The picks come from your own numbers &mdash; stock that is sitting, margins, price drops, what sells on this weekday &mdash; and each one becomes a finished status image and caption, ready to post in two taps. Once your number is connected, customer chats land in the inbox below and replies go straight back to their WhatsApp.</p>
+        <p>The shop's online front desk &mdash; who is asking, what is selling, what the system answered in your name, and what to show the world today. Every number here is counted live from the shop's own records.</p>
       </div>
+      <div id="wa_hero"></div>
+      <div class="wa-tabs" id="wa_tabs">
+        <button type="button" class="wa-tab active" data-waview="inbox">Inbox<span class="wa-tab-badge" id="wa_tab_unread" style="display:none;"></span></button>
+        <button type="button" class="wa-tab" data-waview="post">Today's post</button>
+        <button type="button" class="wa-tab" data-waview="broadcast">Broadcasts</button>
+      </div>
+      <div id="wa_pane_inbox">
       <div class="panel">
         <div class="panel-head-row">
           <h2 style="margin-bottom:0;" id="wa_inbox_head">Inbox</h2>
@@ -5610,6 +5638,8 @@
         </div>
         <div id="wa_inbox"></div>
       </div>
+      </div>
+      <div id="wa_pane_post" style="display:none;">
       <div class="panel">
         <div class="panel-head-row">
           <h2 style="margin-bottom:0;" id="wa_today_head">Today's picks</h2>
@@ -5628,6 +5658,8 @@
         <h2>Post history</h2>
         <div id="wa_history"></div>
       </div>
+      </div>
+      <div id="wa_pane_bc" style="display:none;">
       <div class="panel">
         <div class="panel-head-row">
           <h2 style="margin-bottom:0;">Broadcasts</h2>
@@ -5637,6 +5669,7 @@
           </button>
         </div>
         <div id="wa_broadcasts"></div>
+      </div>
       </div>
     </section>
 
@@ -9731,8 +9764,10 @@ async function waInboxEnter(){
   document.getElementById('wa_inbox_refresh').style.display = waInbox.configured ? '' : 'none';
   if(!waInbox.configured){ waRenderConnect(); return; }
   await waFetchConvs();
+  await waFetchInsightMsgs();
   if(waInbox.active) await waFetchThread(waInbox.active);
   waRenderInbox();
+  renderWaInsights();
   waRenderBroadcasts();
   // One poller, self-terminating when the user leaves the tab -- the
   // interval checks where it is instead of trusting a cleanup hook to run.
@@ -9742,8 +9777,10 @@ async function waInboxEnter(){
         clearInterval(waInbox.timer); waInbox.timer = null; return;
       }
       await waFetchConvs();
+      await waFetchInsightMsgs();
       if(waInbox.active) await waFetchThread(waInbox.active);
       waRenderInbox();
+      renderWaInsights();
     }, WA_INBOX_POLL_MS);
   }
 }
@@ -10123,6 +10160,147 @@ document.getElementById('wa_inbox_refresh').addEventListener('click', ()=> waInb
 // connection to be broken first.
 document.getElementById('wa_inbox_settings').addEventListener('click', ()=> waRenderConnect());
 
+/* ---------------- WhatsApp: the intelligence strip ----------------
+
+   The header the whole page answers to. Every number is DERIVED at
+   render time from records the system already keeps -- conversations,
+   messages, orders -- because a stored statistic is a second copy of a
+   fact, and second copies drift (the rule's fifth appearance). And
+   every number is honest about absence: no replies yet is a median of
+   NOTHING, not a median of zero. */
+
+function waMedian(arr){
+  if(!arr || !arr.length) return null;
+  const a = [...arr].sort((x,y)=> x-y);
+  const mid = Math.floor(a.length/2);
+  return a.length % 2 ? a[mid] : (a[mid-1] + a[mid]) / 2;
+}
+
+function waInsightStats(convs, msgs, quotes, nowMs){
+  const cs = convs || [];
+  const ms = msgs || [];
+  const unread = cs.filter(waConvUnread).length;
+  const openWindows = cs.filter(c=> waWindowInfo(c.last_inbound_at, nowMs).open).length;
+  const audience = cs.filter(c=> !c.opt_out).length;
+  const optOuts = cs.length - audience;
+
+  // WhatsApp-born orders, at the prices the carts promised. Voided
+  // orders are not sales.
+  const monthKey = new Date(nowMs).toISOString().slice(0,7);
+  let orders = 0, revenue = 0, monthOrders = 0, monthRevenue = 0;
+  (quotes||[]).forEach(q=>{
+    if(!q.originWa || q.voided) return;
+    const total = (q.items||[]).reduce((t,it)=> t + (Number(it.qty)||0)*(Number(it.sellPrice)||0), 0);
+    orders++; revenue += total;
+    if(String(q.date||'').slice(0,7) === monthKey){ monthOrders++; monthRevenue += total; }
+  });
+
+  // How much of the talking the system does. Null when nothing has
+  // been sent -- an empty record is not "0% automated".
+  const outbound = ms.filter(m=> m.direction === 'out');
+  const auto = outbound.filter(m=> m.payload && m.payload.auto).length;
+  const autoShare = outbound.length ? auto / outbound.length : null;
+
+  // Time-to-answer: per conversation, from the FIRST message of an
+  // unanswered inbound run to the outbound that answers it. Median,
+  // because one slow Sunday should not define the shop.
+  const byConv = new Map();
+  ms.forEach(m=>{
+    if(!byConv.has(m.conversation_id)) byConv.set(m.conversation_id, []);
+    byConv.get(m.conversation_id).push(m);
+  });
+  const deltas = [];
+  byConv.forEach(list=>{
+    const sorted = [...list].sort((a,b)=> String(a.sent_at).localeCompare(String(b.sent_at)));
+    let pendingSince = null;
+    sorted.forEach(m=>{
+      if(m.direction === 'in'){ if(pendingSince == null) pendingSince = Date.parse(m.sent_at); }
+      else if(pendingSince != null){
+        const d = Date.parse(m.sent_at) - pendingSince;
+        if(isFinite(d) && d >= 0) deltas.push(d / 60000);
+        pendingSince = null;
+      }
+    });
+  });
+  const medianReplyMins = waMedian(deltas);
+
+  return { unread, openWindows, audience, optOuts,
+    orders, revenue, monthOrders, monthRevenue,
+    autoShare, autoCount: auto, outboundCount: outbound.length,
+    medianReplyMins };
+}
+
+function waFmtMins(mins){
+  if(mins == null) return '—';
+  if(mins < 1) return '<1 min';
+  if(mins < 60) return Math.round(mins) + ' min';
+  return (mins/60).toFixed(1) + ' h';
+}
+
+function renderWaInsights(){
+  const el = document.getElementById('wa_hero');
+  const st = waInsightStats(waInbox.convs, waInbox.allMsgs, data.savedQuotes, Date.now());
+  el.innerHTML = `<div class="wa-hero">
+    <div class="wa-stat ${st.unread ? 'hot' : ''}">
+      <div class="ws-num">${st.unread}</div>
+      <div class="ws-label">unread chats</div>
+      <div class="ws-sub">${st.unread ? 'waiting for you' : 'all answered'}</div>
+    </div>
+    <div class="wa-stat">
+      <div class="ws-num">${st.openWindows}</div>
+      <div class="ws-label">open reply windows</div>
+      <div class="ws-sub">free to message right now</div>
+    </div>
+    <div class="wa-stat">
+      <div class="ws-num">${st.monthOrders ? fmtUGX(st.monthRevenue) : '—'}</div>
+      <div class="ws-label">WhatsApp sales this month</div>
+      <div class="ws-sub">${st.orders} order${st.orders===1?'':'s'} all time · ${fmtUGX(st.revenue)||'0 UGX'}</div>
+    </div>
+    <div class="wa-stat">
+      <div class="ws-num">${st.autoShare == null ? '—' : Math.round(st.autoShare*100) + '%'}</div>
+      <div class="ws-label">answered by the system</div>
+      <div class="ws-sub">${st.autoShare == null ? 'no replies yet' : `${st.autoCount} of ${st.outboundCount} replies`}</div>
+    </div>
+    <div class="wa-stat">
+      <div class="ws-num">${waFmtMins(st.medianReplyMins)}</div>
+      <div class="ws-label">median time to answer</div>
+      <div class="ws-sub">${st.medianReplyMins == null ? 'no questions answered yet' : 'from question to reply'}</div>
+    </div>
+    <div class="wa-stat">
+      <div class="ws-num">${st.audience}</div>
+      <div class="ws-label">broadcast audience</div>
+      <div class="ws-sub">${st.optOuts ? `${st.optOuts} opted out` : 'nobody opted out'}</div>
+    </div>
+  </div>`;
+  const badge = document.getElementById('wa_tab_unread');
+  badge.style.display = st.unread ? '' : 'none';
+  badge.textContent = st.unread;
+}
+
+/* ---- the sub-views: one page, three rooms ---- */
+let waView = 'inbox';
+function waSetView(v){
+  waView = v;
+  document.getElementById('wa_pane_inbox').style.display = v==='inbox' ? '' : 'none';
+  document.getElementById('wa_pane_post').style.display = v==='post' ? '' : 'none';
+  document.getElementById('wa_pane_bc').style.display = v==='broadcast' ? '' : 'none';
+  document.querySelectorAll('#wa_tabs .wa-tab').forEach(b=>
+    b.classList.toggle('active', b.dataset.waview === v));
+}
+document.querySelectorAll('#wa_tabs .wa-tab').forEach(btn=>
+  btn.addEventListener('click', ()=> waSetView(btn.dataset.waview)));
+
+// One aggregate read feeds the strip: recent messages across every
+// conversation (the per-thread fetches only know the open one).
+async function waFetchInsightMsgs(){
+  const { data: rows, error } = await sb.from('wa_messages')
+    .select('conversation_id, direction, sent_at, payload')
+    .eq('shop_id', currentShopId)
+    .order('sent_at', { ascending: false }).limit(500);
+  if(error){ console.error('insight messages failed', error); return; }
+  waInbox.allMsgs = rows || [];
+}
+
 /* ---------------- WhatsApp: broadcasts (phase 5) ----------------
 
    The only paid surface in the whole front desk, and it behaves like
@@ -10274,7 +10452,7 @@ function goToTab(tab){
   // data -- it cannot be left saying what was true when the page loaded.
   if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='media') renderMedia();
-  if(tab==='whatsapp'){ renderWhatsApp(); waInboxEnter(); }
+  if(tab==='whatsapp'){ renderWhatsApp(); renderWaInsights(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
