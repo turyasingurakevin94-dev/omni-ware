@@ -4376,6 +4376,10 @@
   .wa-window.closed{color:var(--ow-amber-ink);background:var(--ow-amber-soft);}
   .wa-thread-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
     font-size:13px;padding:20px;text-align:center;}
+  .wa-suggest{border-top:1px solid var(--line);background:var(--ow-amber-soft);padding:10px 14px;}
+  .wa-suggest-head{font-size:11.5px;font-weight:700;color:var(--ow-amber-ink);display:flex;align-items:center;gap:8px;}
+  .wa-suggest-x{margin-left:auto;border:none;background:none;cursor:pointer;color:var(--ow-amber-ink);font-size:13px;padding:2px 6px;}
+  .wa-suggest-body{font-size:13px;margin-top:6px;white-space:pre-wrap;color:var(--ink);}
   @media (max-width: 700px){
     .wa-inbox{flex-direction:column;}
     .wa-convs{flex-basis:auto;max-height:200px;border-right:none;border-bottom:1px solid var(--line);}
@@ -9559,7 +9563,8 @@ function waTimeShort(ts){
 }
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
-  drafts: {} };   // conversation id -> half-typed reply, surviving re-renders
+  drafts: {},         // conversation id -> half-typed reply, surviving re-renders
+  dismissed: {} };    // wamid -> true; suggestion cards waved away this session
 
 /* What the WhatsApp catalog should hold: every product with a photo and
    a RETAIL price -- the same two gates the daily picks use, priced by
@@ -9589,6 +9594,78 @@ function waCatalogItems(){
     });
   });
   return { items, gaps };
+}
+
+/* ---- The quote assistant (phase 4): draft-first, by decision. ----
+
+   When a customer's message names a product, a reply is DRAFTED from
+   the same retail pricing the catalogue proves -- and waits for the
+   admin's tap. Nothing sends itself: the assistant's whole authority is
+   a suggestion card above the composer. An unclear match suggests
+   nothing, because a wrong price sent in the shop's name is the failure
+   mode this design exists to avoid. */
+
+const WA_QUOTE_STOPWORDS = new Set(('how much is the a an of for price cost what whats does do you have i want need me my '
+  + 'hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one '
+  + 'buy get selling sell kwa ya sente ssente meka').split(' '));
+
+function waQuoteTokens(s){
+  return String(s||'').toLowerCase()
+    .replace(/[^a-z0-9\u00C0-\u024F]+/g, ' ')
+    .split(/\s+/)
+    .filter(w=> w && !WA_QUOTE_STOPWORDS.has(w));
+}
+
+/* Everything the shop can QUOTE: a retail price is required, a photo is
+   not -- a customer asking for a price deserves an answer whether or
+   not the product has been photographed yet. */
+function waQuoteCandidates(){
+  const out = [];
+  (data.products||[]).forEach(p=>{
+    const idxs = p.type==='variable' ? (p.variants||[]).map((v,i)=>i) : [null];
+    if(p.type==='variable' && idxs.length===0) return;
+    idxs.forEach(idx=>{
+      const at = catalogueSellAtQty(p, idx, 1, 'retail');
+      if(!at || at.price==null) return;
+      const name = productVariantLabel(p, idx);
+      out.push({ productId: p.id, variantIdx: idx, name,
+        tokens: waQuoteTokens(name), price: at.price, unit: at.unit || '',
+        breaks: catalogueBreaks(p, idx, 'retail') });
+    });
+  });
+  return out;
+}
+
+/* The match, or honestly nothing. Scored by how much of the product's
+   own name the message covers; a winner must beat every rival OUTRIGHT
+   -- "sofa leg 4" against both a Gold 4" and a Silver 4" is a tie, and
+   a tie is ambiguity, and ambiguity goes to the human. */
+function waQuoteMatch(text, candidates){
+  // No empty-tokens guard: an empty set hits nothing in the loop and
+  // falls out through the same `!best` return -- one path, not two.
+  const qSet = new Set(waQuoteTokens(text));
+  let best = null, bestScore = 0, contested = false;
+  candidates.forEach(c=>{
+    if(!c.tokens.length) return;
+    const hit = c.tokens.filter(t=> qSet.has(t)).length;
+    if(hit === 0) return;
+    const score = hit / c.tokens.length;
+    if(score > bestScore){ best = c; bestScore = score; contested = false; }
+    else if(score === bestScore && best && c.name !== best.name){ contested = true; }
+  });
+  if(!best || bestScore < 0.5 || contested) return null;
+  return { ...best, exact: bestScore === 1 };
+}
+
+/* What leaves the building: SELL prices only, the same rule the caption
+   and the printed catalogue carry, held by the same kind of test. */
+function waQuoteReply(m){
+  const lines = [];
+  lines.push(`${m.name}: UGX ${Number(m.price).toLocaleString('en-UG')}${m.unit ? ' per ' + m.unit : ''}.`);
+  (m.breaks||[]).slice(0,1).forEach(b=>
+    lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}.`));
+  lines.push('Reply here to order, or ask about anything else.');
+  return lines.join('\n');
 }
 
 /* An order message, as the conversation list and the thread show it.
@@ -9811,7 +9888,26 @@ function waRenderInbox(){
           <div class="wm-meta">${esc(waTimeShort(m.sent_at))}${m.direction==='out' && m.status ? ' · ' + esc(m.status) : ''}</div>
         </div>`).join('')}</div>
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
-        return `<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
+        let suggestion = '';
+        if(w.open){
+          const lastIn = [...waInbox.msgs].reverse().find(x=> x.direction==='in' && x.msg_type==='text');
+          if(lastIn && !waInbox.dismissed[lastIn.wamid]){
+            const m = waQuoteMatch(lastIn.body||'', waQuoteCandidates());
+            if(m){
+              const reply = waQuoteReply(m);
+              suggestion = `<div class="wa-suggest" data-wamid="${esc(lastIn.wamid)}">
+                <div class="wa-suggest-head">Suggested reply — matched ${esc(m.name)}${m.exact?'':' (partial match, check it)'}
+                  <button type="button" class="wa-suggest-x" title="Dismiss">\u2715</button></div>
+                <div class="wa-suggest-body">${esc(reply)}</div>
+                <div class="btn-row" style="margin-top:8px;">
+                  <button type="button" class="btn btn-accent" id="wa_suggest_send">Send suggestion</button>
+                  <button type="button" class="btn btn-ghost" id="wa_suggest_edit">Edit first</button>
+                </div>
+              </div>`;
+            }
+          }
+        }
+        return `${suggestion}<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
       <div class="wa-composer">
         <textarea id="wa_reply" data-conv="${active.id}" placeholder="Reply…" ${w.open?'':'disabled'}></textarea>
         <button class="btn btn-ghost" id="wa_send_catalog" title="Send a browsable catalog card into this chat" ${w.open && !waInbox.sending ? '' : 'disabled'}>Catalog</button>
@@ -9840,6 +9936,36 @@ function waRenderInbox(){
   }
   const sendBtn = document.getElementById('wa_reply_send');
   if(sendBtn) sendBtn.addEventListener('click', waSendReply);
+  const sug = wrap.querySelector('.wa-suggest');
+  if(sug){
+    const wamid = sug.dataset.wamid;
+    const replyText = sug.querySelector('.wa-suggest-body').textContent;
+    sug.querySelector('.wa-suggest-x').addEventListener('click', ()=>{
+      waInbox.dismissed[wamid] = true;
+      waRenderInbox();
+    });
+    const sendBtn2 = sug.querySelector('#wa_suggest_send');
+    sendBtn2.addEventListener('click', ()=>{
+      // Draft-first by decision: even "Send suggestion" travels the same
+      // road as a hand-typed reply -- through the composer send, with
+      // the server's own window check waiting at the end of it.
+      waSendReply(replyText);
+      waInbox.dismissed[wamid] = true;
+    });
+    sug.querySelector('#wa_suggest_edit').addEventListener('click', ()=>{
+      waInbox.drafts[String(waInbox.active)] = replyText;
+      // Into the LIVE textarea too, before the re-render: the rebuild's
+      // draft-capture reads the current composer first, and an empty
+      // composer would stomp the draft this click just wrote. Found by
+      // driving the running app; the unit tests cannot see this race.
+      const taNow = document.getElementById('wa_reply');
+      if(taNow) taNow.value = replyText;
+      waInbox.dismissed[wamid] = true;
+      waRenderInbox();
+      const ta2 = document.getElementById('wa_reply');
+      if(ta2){ ta2.focus(); ta2.setSelectionRange(ta2.value.length, ta2.value.length); }
+    });
+  }
   const catBtn = document.getElementById('wa_send_catalog');
   if(catBtn) catBtn.addEventListener('click', async ()=>{
     if(waInbox.active == null || waInbox.sending) return;
@@ -9879,9 +10005,11 @@ async function waOpenConv(id){
   waRenderInbox();
 }
 
-async function waSendReply(){
+async function waSendReply(textOverride){
   const ta = document.getElementById('wa_reply');
-  const text = ta ? ta.value.trim() : '';
+  const text = typeof textOverride === 'string' && textOverride.trim()
+    ? textOverride.trim()
+    : (ta ? ta.value.trim() : '');
   if(!text || waInbox.sending || waInbox.active == null) return;
   waInbox.sending = true;
   const btn = document.getElementById('wa_reply_send');
@@ -9896,7 +10024,7 @@ async function waSendReply(){
       toast(msg);
       return;
     }
-    ta.value = '';
+    if(ta && !(typeof textOverride === 'string' && textOverride.trim())) ta.value = '';
     delete waInbox.drafts[String(waInbox.active)];
     await waFetchThread(waInbox.active);
     await waFetchConvs();
