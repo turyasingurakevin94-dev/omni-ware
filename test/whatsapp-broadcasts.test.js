@@ -110,6 +110,11 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'per-recipient failures are reported, not swallowed');
   t.check(/category: "MARKETING",/.test(sendSrc) && /Reply STOP to opt out of promotions/.test(sendSrc),
     'the template is honest about being marketing, and carries its own exit');
+  /* Meta's grammar, learned from a live rejection: a variable may not
+     start or end the template body. */
+  const bodyText = (sendSrc.match(/type: "BODY", text: "([^"]+)"/) || [])[1] || '';
+  t.check(bodyText.includes('{{1}}') && !bodyText.startsWith('{{1}}') && !bodyText.endsWith('{{1}}'),
+    'the body variable sits INSIDE the text, never at an edge');
   t.check(/\n  for select using \(is_shop_member\(shop_id\)\);/.test(migSrc)
     && !/wa_campaigns[\s\S]*?for all/.test(migSrc),
     'campaign rows: members read, only the server writes');

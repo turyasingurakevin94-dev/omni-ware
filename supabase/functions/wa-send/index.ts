@@ -453,7 +453,10 @@ Deno.serve(async (req) => {
         category: "MARKETING",
         language: "en",
         components: [
-          { type: "BODY", text: "Hello! News from our shop: {{1}}", example: { body_text: [["Simba Cement now UGX 43,000 per bag this week"]] } },
+          // Meta's template grammar: a variable may not START or END the
+          // body -- learned from the live rejection, so the text closes
+          // after the variable.
+          { type: "BODY", text: "Hello! News from our shop: {{1}}. Reply here to order anytime.", example: { body_text: [["Simba Cement now UGX 43,000 per bag this week"]] } },
           { type: "FOOTER", text: "Reply STOP to opt out of promotions" },
         ],
       }),
