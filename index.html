@@ -5589,10 +5589,16 @@
       <div class="panel">
         <div class="panel-head-row">
           <h2 style="margin-bottom:0;" id="wa_inbox_head">Inbox</h2>
-          <button class="btn btn-ghost btn-icon" id="wa_inbox_refresh" style="display:none;">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-            Refresh
-          </button>
+          <div class="btn-row" style="margin-top:0;">
+            <button class="btn btn-ghost btn-icon" id="wa_inbox_settings">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Connection
+            </button>
+            <button class="btn btn-ghost btn-icon" id="wa_inbox_refresh" style="display:none;">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              Refresh
+            </button>
+          </div>
         </div>
         <div id="wa_inbox"></div>
       </div>
@@ -9632,6 +9638,10 @@ function waRenderConnect(){
     const { error } = await sb.from('wa_numbers').upsert(
       { shop_id: currentShopId, phone_number_id: v }, { onConflict: 'phone_number_id' });
     if(error){ toast('Could not save: ' + error.message); return; }
+    const { error: cleanErr } = await sb.from('wa_numbers')
+      .delete().eq('shop_id', currentShopId).neq('phone_number_id', v);
+    if(cleanErr) console.error('old number cleanup failed', cleanErr);
+    waInbox.configured = null;
     toast('Number saved');
   });
   document.getElementById('wa_register').addEventListener('click', async ()=>{
@@ -9746,6 +9756,9 @@ async function waSendReply(){
 }
 
 document.getElementById('wa_inbox_refresh').addEventListener('click', ()=> waInboxEnter());
+// Reachable in every state -- changing the number must not require the
+// connection to be broken first.
+document.getElementById('wa_inbox_settings').addEventListener('click', ()=> waRenderConnect());
 
 /* ---------------- Tabs ---------------- */
 const tabButtons = document.querySelectorAll('nav button[data-tab]');

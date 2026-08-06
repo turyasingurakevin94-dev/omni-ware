@@ -245,6 +245,19 @@ if (!hook) process.exit(1);
     'the webhook answers 200 even when processing fails — a bug costs one event, not the channel');
   t.check(/mode === "subscribe" && VERIFY_TOKEN && token === VERIFY_TOKEN/.test(hookSrc),
     'the GET handshake needs the real verify token — an unset one never matches');
+  /* Learned live: the number field lived only inside the unconfigured
+     checklist, so once ANY number was saved there was no way to change
+     it. The settings button must exist outside the checklist, and
+     saving a different number must REPLACE the shop's mapping -- a
+     second row makes every maybeSingle() lookup fail. */
+  const settingsAt = src.indexOf("id=\"wa_inbox_settings\"");
+  const checklistAt = src.indexOf('function waRenderConnect');
+  t.check(settingsAt > -1 && settingsAt < checklistAt,
+    'connection settings are reachable outside the checklist');
+  t.check(/wa_inbox_settings'\)\.addEventListener\('click', \(\)=> waRenderConnect\(\)\);/.test(src),
+    'and the button actually opens them');
+  t.check(/\.delete\(\)\.eq\('shop_id', currentShopId\)\.neq\('phone_number_id', v\);/.test(src),
+    'saving a new number replaces the old mapping instead of standing beside it');
 }
 
 /* async signature checks finish before the verdict */
