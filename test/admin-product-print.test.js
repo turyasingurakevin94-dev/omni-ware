@@ -87,8 +87,17 @@ if (rowsFor) {
       'the on-screen list is built from these rows');
     t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/g) || []).length === 2,
       'and the printout calls the very same function with the very same filters');
-    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 3,
-      'and nothing calls it with a filter the other one is not passing');
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 4,
+      'and nothing calls it with a filter the others are not passing');
+    /* The catalogue is the fourth caller and the one deliberate
+       exception: it passes '' for the pricing filter because it decides
+       for itself what it can price -- a product needs a supplier price
+       AND a markup rule -- and then names what it left out. Pinned with
+       its reason so the exception cannot spread silently. */
+    // The reason is a line comment, which `code` strips -- read from src.
+    t.check(/Deliberately not the priced filter/.test(src)
+      && /productRowsForList\(filter, categoryFilter, supplierFilter, ''\)/.test(code),
+    'except the catalogue, which decides its own pricing filter and says why');
     // Neither may walk the catalog for itself.
     const printHandler = (/document\.getElementById\('p_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
     t.check(printHandler.length > 0, 'the print handler is found');

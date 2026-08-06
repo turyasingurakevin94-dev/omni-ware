@@ -5258,6 +5258,10 @@
               <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
               Print list
             </button>
+            <button class="btn btn-ghost btn-icon" id="p_catalogue_btn" title="Print a customer catalogue — photos by category, then a trade price list. Retail prices with volume breaks.">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z"/></svg>
+              Catalogue
+            </button>
             <button class="btn btn-accent btn-icon" id="p_add_btn">
               <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
               Add product
@@ -19852,6 +19856,261 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
 // A filtered list printed without saying so is a partial catalog that looks
 // like the whole one -- so the header names whichever filters are on, and
 // says plainly when none are.
+/* ================= THE PRINTED CATALOGUE ==========================
+
+   A customer-facing document built from the same data every other screen
+   reads: category spreads with photos, then a trade price list at the
+   back. Retail prices, with the volume breaks printed — those are the
+   shop's best argument in print.
+
+   THE TRAP, AND IT IS A BAD ONE. A price row's `tiers` are the
+   SUPPLIER'S ladder — what the shop pays at each quantity. Printing
+   those as the customer's volume prices would hand every reader the
+   shop's cost. Every rung goes through the markup rule before it is
+   printed, exactly as the quote screen prices a line.
+
+   Three things must all be true before a product can be catalogued: a
+   supplier price, a markup rule (suggestedSellingPrice returns null
+   without one — it does NOT fall back to cost), and a name. Anything
+   missing one is left out and COUNTED, so nobody mistakes the catalogue
+   for the whole shop. */
+function catalogueRetailAtQty(product, variantIdx, qty){
+  /* .find rather than [0] is belt and braces, not a behaviour change:
+     rankedPurchaseRowsAtQty already sorts a row with no price at this
+     quantity to the end, and if EVERY row is priceless the null falls
+     through suggestedSellingPrice and comes back null anyway. Kept
+     because it states the intent, and recorded here rather than chased
+     with a fixture that cannot tell the two apart. */
+  const best = rankedPurchaseRowsAtQty(product.id, variantIdx, qty)
+    .find(r=> r.purchasePrice != null);
+  if(!best) return null;
+  const sell = suggestedSellingPrice(product, best.purchasePrice, 'retail', variantIdx, best.packQty);
+  return sell == null ? null : { price: sell, unit: best.unit || '', packQty: best.packQty || 0, packUnit: best.packUnit || '' };
+}
+
+/* Where the customer's price actually drops, which is not the same as
+   where the supplier's does: a fixed markup keeps the gap constant, so a
+   supplier break of 2,000 shows as a customer break of 2,000, while a
+   percentage markup widens it. Rungs that do not move the customer's
+   price are not breaks and are not printed. */
+function catalogueBreaks(product, variantIdx){
+  const rows = productPriceRows(product.id, variantIdx);
+  const rungs = new Set();
+  rows.forEach(r=> (Array.isArray(r.tiers) ? r.tiers : []).forEach(t=>{
+    const n = Number(t.minQty);
+    /* `n > 1` is likewise a statement of intent rather than a filter that
+       changes an answer: a rung at one IS the base price, so it can never
+       be cheaper than itself and the drop test below discards it. */
+    if(n > 1 && isFinite(n)) rungs.add(n);
+  }));
+  const base = catalogueRetailAtQty(product, variantIdx, 1);
+  if(!base) return [];
+  const out = [];
+  let last = base.price;
+  [...rungs].sort((a,b)=> a-b).forEach(qty=>{
+    const at = catalogueRetailAtQty(product, variantIdx, qty);
+    if(!at || at.price == null) return;
+    // Strictly cheaper, or it is not a break worth printing.
+    if(at.price < last - 0.5){ out.push({ qty, price: at.price }); last = at.price; }
+  });
+  return out;
+}
+
+// One printable line, or a reason it cannot be printed.
+function catalogueLine(p, variantIdx, kind, v){
+  const name = kind === 'variant'
+    ? `${p.name} — ${variantLabel(v.combo)}`
+    : p.name;
+  if(kind === 'variable-empty') return { name, skip: 'no variants set up yet' };
+  const base = catalogueRetailAtQty(p, variantIdx, 1);
+  if(!base){
+    // Two different reasons, and they need different fixing.
+    const priced = productPriceRows(p.id, variantIdx).length > 0;
+    return { name, skip: priced ? 'no markup rule, so no retail price' : 'no supplier price on file' };
+  }
+  return {
+    name, skip: null,
+    category: p.category || 'Uncategorised',
+    image: resolveProductImage(p, variantIdx),
+    unit: base.unit || productUnitLabel(p.id, variantIdx) || '',
+    price: base.price,
+    packQty: base.packQty, packUnit: base.packUnit,
+    breaks: catalogueBreaks(p, variantIdx),
+  };
+}
+
+// Grouped by category, categories alphabetical, items alphabetical
+// inside them -- a printed document is read in order, not sorted.
+function catalogueSections(rows){
+  const lines = rows.map(r=> catalogueLine(r.p, r.idx, r.kind, r.v));
+  const printable = lines.filter(l=> !l.skip);
+  const skipped = lines.filter(l=> l.skip);
+  const byCat = new Map();
+  printable.forEach(l=>{
+    if(!byCat.has(l.category)) byCat.set(l.category, []);
+    byCat.get(l.category).push(l);
+  });
+  const sections = [...byCat.entries()]
+    .map(([name, items])=> ({ name, items: items.slice().sort((a,b)=> a.name.localeCompare(b.name)) }))
+    .sort((a,b)=> a.name.localeCompare(b.name));
+  return { sections, printable, skipped };
+}
+
+document.getElementById('p_catalogue_btn').addEventListener('click', ()=>{
+  const filter = document.getElementById('p_search').value;
+  const categoryFilter = document.getElementById('p_category_filter').value;
+  const supplierFilter = document.getElementById('p_supplier_filter').value;
+  // Deliberately not the priced filter: the catalogue decides for itself
+  // what it can price, and says what it left out.
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter, '');
+  if(rows.length===0){ toast('No products match your filters'); return; }
+
+  const { sections, printable, skipped } = catalogueSections(rows);
+  if(printable.length===0){
+    toast('Nothing here can be priced yet — a catalogue needs a supplier price and a markup rule on each product.', 6500);
+    return;
+  }
+
+  const shop = printedShopName();
+  const today = new Date().toLocaleDateString('en-UG', {day:'numeric', month:'long', year:'numeric'});
+  const scopeBits = [];
+  if(filter.trim()) scopeBits.push(`matching “${filter.trim()}”`);
+  if(categoryFilter) scopeBits.push(`in ${categoryFilter}`);
+  if(supplierFilter) scopeBits.push(`priced by ${supplierName(supplierFilter)}`);
+  const scopeNote = scopeBits.length ? `This catalogue covers only products ${scopeBits.join(', ')}.` : '';
+
+  const money = (n)=> esc(fmtUGX(Math.round(n)));
+  const breaksInline = (l)=> l.breaks.length
+    ? l.breaks.map(b=> `${b.qty}+ ${money(b.price)}`).join(' · ')
+    : '';
+
+  // ---- the category spreads
+  const spreadHTML = sections.map(sec=>`
+    <section class="cat-page">
+      <div class="pg-head">
+        <div><div class="pg-shop">${esc(shop)}</div><div class="pg-tag">Catalogue</div></div>
+        <div class="pg-sec">${esc(sec.name)}</div>
+      </div>
+      <div class="cat-hero">
+        <div class="cat-hero-t">${esc(sec.name)}</div>
+        <div class="cat-hero-s">${sec.items.length} line${sec.items.length===1?'':'s'} priced</div>
+      </div>
+      <div class="cat-items">
+        ${sec.items.map(l=>`
+          <div class="cat-item">
+            ${l.image ? `<img class="cat-img" src="${esc(l.image)}" alt="">`
+                      : '<div class="cat-img cat-img-none">no photo</div>'}
+            <div class="cat-info">
+              <div class="cat-name">${esc(l.name)}</div>
+              ${l.packQty > 0 && l.packUnit ? `<div class="cat-desc">${esc(String(l.packQty))} ${esc(l.unit)} in a ${esc(l.packUnit)}</div>` : ''}
+            </div>
+            <div class="cat-right">
+              <div class="cat-price">${money(l.price)}</div>
+              ${l.unit ? `<div class="cat-per">per ${esc(l.unit)}</div>` : ''}
+              ${l.breaks.length ? `<div class="cat-break">${breaksInline(l)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="pg-foot"><span>${esc(shop)} · prices as at ${esc(today)}</span><span class="pg-num"></span></div>
+    </section>`).join('');
+
+  // ---- the trade list at the back
+  const tradeHTML = `
+    <section class="trade-page">
+      <div class="pg-head">
+        <div><div class="pg-shop">${esc(shop)}</div><div class="pg-tag">Trade price list</div></div>
+        <div class="pg-sec">${esc(today)}</div>
+      </div>
+      ${sections.map(sec=>`
+        <div class="tr-cat">${esc(sec.name)}</div>
+        <table class="tr-table">
+          <thead><tr><th>Item</th><th>Unit</th><th class="r">Price</th><th class="r">Volume price</th></tr></thead>
+          <tbody>${sec.items.map(l=>`<tr>
+            <td>${esc(l.name)}</td>
+            <td>${esc(l.unit)}</td>
+            <td class="r">${money(l.price)}</td>
+            <td class="r tr-break">${breaksInline(l) || '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>`).join('')}
+      <div class="pg-foot"><span>Retail prices, VAT as applicable. Volume prices are per unit at that quantity and above.</span><span class="pg-num"></span></div>
+    </section>`;
+
+  const win = window.open('', '_blank');
+  if(!win){ toast('Your browser blocked the print window — allow pop-ups for this site'); return; }
+  win.document.write(`<html><head><title>${esc(shop)} — Catalogue</title><style>
+    @page{size:A4;margin:14mm 12mm;}
+    *{box-sizing:border-box;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#14171B;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    /* Each section starts a page, so a category never splits across a
+       turn and the trade list always begins on a fresh sheet. */
+    section{page-break-after:always;break-after:page;}
+    section:last-child{page-break-after:auto;break-after:auto;}
+    .pg-head{display:flex;justify-content:space-between;align-items:flex-start;
+      border-bottom:2px solid #14171B;padding-bottom:6px;margin-bottom:12px;}
+    .pg-shop{font-size:17px;font-weight:bold;letter-spacing:-.3px;}
+    .pg-tag{font-size:8.5px;letter-spacing:1.1px;text-transform:uppercase;color:#59626B;margin-top:2px;}
+    .pg-sec{font-size:11px;font-weight:bold;color:#B23A26;text-transform:uppercase;letter-spacing:.8px;text-align:right;}
+    .pg-foot{position:running(foot);margin-top:14px;padding-top:6px;border-top:1px solid #E3E7EA;
+      display:flex;justify-content:space-between;font-size:7.5px;color:#8A939C;}
+
+    .cat-hero{background:#F1F3F5;border-radius:4px;padding:12px 14px;margin-bottom:12px;}
+    .cat-hero-t{font-size:22px;font-weight:bold;line-height:1.05;}
+    .cat-hero-s{font-size:9px;color:#59626B;margin-top:3px;}
+    .cat-items{display:flex;flex-direction:column;}
+    /* A single item never breaks across a page. */
+    .cat-item{display:flex;gap:10px;align-items:center;padding:7px 0;
+      border-bottom:1px solid #EDEFF1;page-break-inside:avoid;break-inside:avoid;}
+    .cat-img{width:46px;height:46px;flex-shrink:0;border-radius:3px;object-fit:cover;border:1px solid #E3E7EA;}
+    .cat-img-none{display:flex;align-items:center;justify-content:center;background:#F5F7F8;
+      color:#A9B2B9;font-size:6.5px;text-align:center;}
+    .cat-info{flex:1;min-width:0;}
+    .cat-name{font-size:11px;font-weight:bold;line-height:1.25;}
+    .cat-desc{font-size:8px;color:#59626B;margin-top:1px;}
+    .cat-right{text-align:right;flex-shrink:0;}
+    .cat-price{font-size:13px;font-weight:bold;line-height:1.1;}
+    .cat-per{font-size:7.5px;color:#8A939C;}
+    .cat-break{font-size:7.5px;color:#1C6B58;font-weight:bold;margin-top:2px;}
+
+    .tr-cat{font-size:10px;font-weight:bold;letter-spacing:.9px;text-transform:uppercase;
+      color:#B23A26;margin:12px 0 4px;}
+    .tr-table{width:100%;border-collapse:collapse;font-size:9px;}
+    .tr-table th{text-align:left;font-size:7.5px;letter-spacing:.6px;text-transform:uppercase;
+      color:#8A939C;border-bottom:1px solid #CFD5DA;padding:0 4px 3px;}
+    .tr-table td{padding:3px 4px;border-bottom:1px solid #F2F4F5;}
+    .tr-table .r{text-align:right;}
+    .tr-break{color:#1C6B58;font-weight:bold;white-space:nowrap;}
+    .tr-table tr{page-break-inside:avoid;break-inside:avoid;}
+
+    .note{font-size:8.5px;color:#59626B;margin-top:10px;line-height:1.5;}
+    @media screen{ body{background:#E9EBED;padding:18px;}
+      section{background:#fff;padding:16mm 14mm;margin:0 auto 18px;max-width:210mm;min-height:297mm;
+        box-shadow:0 2px 12px rgba(20,30,40,.15);} }
+  </style></head><body>
+    ${spreadHTML}
+    ${tradeHTML}
+    <section class="trade-page">
+      <div class="pg-head">
+        <div><div class="pg-shop">${esc(shop)}</div><div class="pg-tag">About this catalogue</div></div>
+        <div class="pg-sec">${esc(today)}</div>
+      </div>
+      <p class="note"><b>Prices as at ${esc(today)}.</b> Retail, per unit. Volume prices apply at the
+        stated quantity and above. Prices are subject to change — ask at the counter to confirm
+        before ordering against this sheet.</p>
+      ${scopeNote ? `<p class="note">${esc(scopeNote)}</p>` : ''}
+      <p class="note">${printable.length} product line${printable.length===1?'':'s'} across
+        ${sections.length} categor${sections.length===1?'y':'ies'}.${
+        skipped.length ? ` ${skipped.length} line${skipped.length===1?'':'s'} could not be priced and
+        ${skipped.length===1?'is':'are'} not shown — see the list below.` : ''}</p>
+      ${skipped.length ? `<p class="note"><b>Not in this catalogue</b><br>${
+        skipped.slice(0,60).map(s=> `${esc(s.name)} — ${esc(s.skip)}`).join('<br>')
+      }${skipped.length>60 ? `<br>…and ${skipped.length-60} more.` : ''}</p>` : ''}
+    </section>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 350);
+});
+
 document.getElementById('p_print_btn').addEventListener('click', ()=>{
   const filter = document.getElementById('p_search').value;
   const categoryFilter = document.getElementById('p_category_filter').value;
