@@ -30,6 +30,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('whatsapp quote assistant');
 const src = read('index.html');
+const hookSrc = read('supabase/functions/wa-webhook/index.ts');
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -148,9 +149,8 @@ if (!scope) process.exit(1);
     'the last inbound text is what gets matched');
   t.check(/const lastIn = \[\.\.\.waInbox\.msgs\]\.reverse\(\)\.find\(x=> x\.direction==='in' && x\.msg_type==='text'\);/.test(src),
     'and "last" means LAST — the newest inbound, not the first ever');
-  t.check(/if\(lastIn && !waInbox\.dismissed\[lastIn\.wamid\]\)/.test(src),
-    'a dismissed suggestion stays dismissed');
-  t.check(/if\(w\.open\)\{\s*\n\s*const lastIn/.test(src),
+  // (dismissal is asserted with the unanswered-question gate in section 6)
+  t.check(/if\(w\.open\)\{\s*\n\s*const lastMsg/.test(src),
     'no suggestion on a closed window — it could not be sent anyway');
   t.check(/waSendReply\(replyText\);/.test(src),
     'even "Send suggestion" travels the composer road, with the server\'s window check at the end');
@@ -172,6 +172,64 @@ if (!scope) process.exit(1);
     'tapping an option DRAFTS its quote — the edit-first road, never a direct send');
   t.check(/\(partial match, check it\)/.test(src),
     'a partial match is labelled as one on the card');
+}
+
+/* ---------- 6. the server mirror: autonomy is EXACT AND ALONE -------- */
+{
+  let hook = null; let hErr = null;
+  try {
+    hook = compileScope([
+      extractFunction(hookSrc, 'waQuoteTokens', 'wa-webhook'),
+      extractFunction(hookSrc, 'waExactMatch', 'wa-webhook'),
+      (hookSrc.match(/const WA_QUOTE_STOPWORDS = new Set\([\s\S]*?\);/) || [''])[0],
+    ], {}, ['waQuoteTokens', 'waExactMatch'], { typescript: true });
+  } catch (e) { hErr = e; }
+  t.check(!!hook, `the webhook mirror compiles${hErr ? ` (${hErr.message})` : ''}`);
+  if (hook) {
+    const cands = scope.waQuoteCandidates();
+    /* The two implementations must AGREE: the server auto-answers
+       exactly the messages the client would mark as an exact match,
+       and nothing else. One fixture set, both matchers. */
+    const fixtures = [
+      'price of sofa leg gold 4',        // exact -> auto
+      'how much is cement?',             // partial -> human
+      'sofa leg 4',                      // tie -> human (question card)
+      'sofa leg',                        // scatter -> nothing
+      'hello, good morning!',            // greeting -> nothing
+      'wheelbarrow price?',              // below threshold -> nothing
+    ];
+    fixtures.forEach((text) => {
+      const client = scope.waQuoteMatch(text, cands);
+      const server = hook.waExactMatch(text, cands);
+      const clientExact = client && !client.ambiguous && client.exact ? client.name : null;
+      const serverName = server ? server.name : null;
+      eq(serverName, clientExact,
+        `both matchers agree on ${JSON.stringify(text)} — the server answers only what the client calls exact`);
+    });
+  }
+
+  /* The autonomy contract, held in the source. */
+  t.check(/if \(bestScore === 1 && winners\.length === 1\) return winners\[0\];/.test(hookSrc),
+    'the server sends only on EXACT AND ALONE — anything less returns nothing');
+  t.check(/if \(!numRow \|\| !numRow\.auto_quote \|\| !numRow\.catalog_id \|\| !ACCESS_TOKEN\) return;/.test(hookSrc),
+    'and only when the shop has OPTED IN and published a catalog');
+  t.check(/ev\.type === "text" && ev\.body && \(landed \?\? \[\]\)\.length > 0/.test(hookSrc),
+    'auto-quote rides the freshly-landed gate — a webhook retry cannot answer twice');
+  /* The lookup existing is not the guard working -- the RETURN is. */
+  t.check(/if \(recent && recent\.length\) return;/.test(hookSrc),
+    'the parrot guard: the same answer twice in an hour is noise, not service');
+  t.check(/payload: \{ auto: true \},/.test(hookSrc),
+    'every automatic reply is marked as the system speaking');
+  t.check(!/catalogueSellAtQty|suggestedSellingPrice/.test(hookSrc),
+    'the server never re-prices — it quotes the PUBLISHED catalog, the shop\'s own public word');
+
+  /* The client's side of the bargain. */
+  t.check(/update\(\{ auto_quote: on \}\)\.eq\('shop_id', currentShopId\)/.test(src),
+    'the toggle writes the shop\'s own opt-in row');
+  t.check(/\$\{m\.payload && m\.payload\.auto \? ' · auto' : ''\}/.test(src),
+    'the thread shows which words the system said in the shop\'s name');
+  t.check(/if\(lastIn && lastMsg === lastIn && !waInbox\.dismissed\[lastIn\.wamid\]\)/.test(src),
+    'the suggestion card shows only for UNANSWERED questions — an auto-reply retires it');
 }
 
 process.exit(t.done() ? 1 : 0);

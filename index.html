@@ -9770,6 +9770,14 @@ function waRenderConnect(){
       <button class="btn btn-accent" id="wa_catid_save">Save</button>
       <button class="btn btn-ghost" id="wa_cat_sync">Sync products to catalog</button>
     </div>
+    <div class="wa-connect-row" style="align-items:center;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="wa_auto_quote">
+        Answer price questions automatically — EXACT product matches only, priced from the
+        published catalog. Partial matches and ties still wait for you. Every automatic reply is
+        marked "auto" in the thread.
+      </label>
+    </div>
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">Sync pushes every product that
     has a photo and a retail price, at retail prices — and removes from the catalogue anything the
     shop no longer offers. Customers browse it inside WhatsApp and send carts; carts land in Order
@@ -9778,11 +9786,19 @@ function waRenderConnect(){
     dashboard's Register button does, but shows Meta's real answer when it fails. The number must be
     verified (the SMS code step) and must not be running on any WhatsApp app.</p>
   </div>`;
-  sb.from('wa_numbers').select('phone_number_id, catalog_id').eq('shop_id', currentShopId).maybeSingle()
+  sb.from('wa_numbers').select('phone_number_id, catalog_id, auto_quote').eq('shop_id', currentShopId).maybeSingle()
     .then(({ data: row })=>{
       if(row) document.getElementById('wa_pnid').value = row.phone_number_id;
       if(row && row.catalog_id) document.getElementById('wa_catid').value = row.catalog_id;
+      if(row) document.getElementById('wa_auto_quote').checked = !!row.auto_quote;
     });
+  document.getElementById('wa_auto_quote').addEventListener('change', async e=>{
+    const on = e.target.checked;
+    const { error } = await sb.from('wa_numbers')
+      .update({ auto_quote: on }).eq('shop_id', currentShopId);
+    if(error){ toast('Could not save: ' + error.message); e.target.checked = !on; return; }
+    toast(on ? 'Auto-answers ON — exact matches only' : 'Auto-answers off');
+  });
   document.getElementById('wa_pnid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_pnid').value.trim();
     if(!v){ toast('Paste the Phone number ID first'); return; }
@@ -9890,13 +9906,17 @@ function waRenderInbox(){
     <div class="wa-thread">${active ? `
       <div class="wa-msgs" id="wa_msgs">${waInbox.msgs.map(m=>`
         <div class="wa-msg ${m.direction==='in'?'in':'out'}">${esc(m.msg_type==='order' ? waOrderSummary(m.payload) : (m.body || '['+m.msg_type+']'))}
-          <div class="wm-meta">${esc(waTimeShort(m.sent_at))}${m.direction==='out' && m.status ? ' · ' + esc(m.status) : ''}</div>
+          <div class="wm-meta">${esc(waTimeShort(m.sent_at))}${m.direction==='out' && m.status ? ' · ' + esc(m.status) : ''}${m.payload && m.payload.auto ? ' · auto' : ''}</div>
         </div>`).join('')}</div>
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
         let suggestion = '';
         if(w.open){
+          const lastMsg = waInbox.msgs[waInbox.msgs.length-1];
           const lastIn = [...waInbox.msgs].reverse().find(x=> x.direction==='in' && x.msg_type==='text');
-          if(lastIn && !waInbox.dismissed[lastIn.wamid]){
+          // Only for an UNANSWERED question: if anything has gone out
+          // since -- a hand-typed reply, an auto-quote -- the moment has
+          // passed and the card would just be noise.
+          if(lastIn && lastMsg === lastIn && !waInbox.dismissed[lastIn.wamid]){
             const m = waQuoteMatch(lastIn.body||'', waQuoteCandidates());
             if(m && m.ambiguous){
               // A small tie is a QUESTION, not a guess and not a

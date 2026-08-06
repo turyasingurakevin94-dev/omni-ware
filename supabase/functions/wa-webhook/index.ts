@@ -244,6 +244,101 @@ async function createWaOrder(shopId: string, phoneNumberId: string, waId: string
   }
 }
 
+/* ---- Auto-quote (phase 4b): exact matches only, by decision. ----
+
+   A MIRROR of the client's waQuoteTokens/waQuoteMatch, small enough to
+   carry twice; the test suite runs both implementations over the same
+   fixtures and fails if they ever disagree. Prices come from the
+   PUBLISHED CATALOG -- the shop's own public word, priced by the
+   client's proven chain at sync time -- so an auto-reply can never say
+   a number the shop window does not. Anything less than an exact match
+   is left for the humans and the inbox card. */
+const WA_QUOTE_STOPWORDS = new Set(("how much is the a an of for price cost what whats does do you have i want need me my "
+  + "hello hi hey ok okay thanks thank good morning afternoon evening please pls and or in on at to it this that one "
+  + "buy get selling sell kwa ya sente ssente meka").split(" "));
+
+function waQuoteTokens(str: string) {
+  return String(str || "").toLowerCase()
+    .replace(/[^a-z0-9\u00C0-\u024F]+/g, " ")
+    .split(/\s+/)
+    .filter((w) => w && !WA_QUOTE_STOPWORDS.has(w));
+}
+
+// deno-lint-ignore no-explicit-any -- extracted into the Node harness
+function waExactMatch(text: string, candidates: any) {
+  const qSet = new Set(waQuoteTokens(text));
+  let bestScore = 0;
+  let winners: any[] = [];
+  candidates.forEach((c: any) => {
+    if (!c.tokens.length) return;
+    const hit = c.tokens.filter((t: string) => qSet.has(t)).length;
+    if (hit === 0) return;
+    const score = hit / c.tokens.length;
+    if (score > bestScore) { bestScore = score; winners = [c]; }
+    else if (score === bestScore) winners.push(c);
+  });
+  // EXACT AND ALONE, or nothing -- the whole autonomy contract.
+  if (bestScore === 1 && winners.length === 1) return winners[0];
+  return null;
+}
+
+// The published catalog, cached per instance: a burst of questions must
+// not become a burst of Graph calls.
+let catalogCache: { catalogId: string; at: number; items: { tokens: string[]; name: string; price: string }[] } | null = null;
+
+async function catalogQuoteItems(catalogId: string) {
+  if (catalogCache && catalogCache.catalogId === catalogId && Date.now() - catalogCache.at < 5 * 60 * 1000) {
+    return catalogCache.items;
+  }
+  const items: { tokens: string[]; name: string; price: string }[] = [];
+  let url = `${GRAPH_BASE}/${catalogId}/products?fields=name,price&limit=100`;
+  for (let page = 0; page < 10 && url; page++) {
+    const resp = await fetch(url, { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) { console.error("wa-webhook: catalog fetch for auto-quote failed", resp.status, result); return null; }
+    // deno-lint-ignore no-explicit-any
+    for (const pr of ((result as any).data ?? [])) {
+      if (pr.name) items.push({ name: String(pr.name), tokens: waQuoteTokens(String(pr.name)), price: String(pr.price ?? "") });
+    }
+    // deno-lint-ignore no-explicit-any
+    url = (result as any).paging?.next ?? "";
+  }
+  catalogCache = { catalogId, at: Date.now(), items };
+  return items;
+}
+
+async function maybeAutoQuote(shopId: string, phoneNumberId: string, convId: number, waId: string, text: string) {
+  const { data: numRow } = await admin.from("wa_numbers")
+    .select("auto_quote, catalog_id").eq("shop_id", shopId).maybeSingle();
+  if (!numRow || !numRow.auto_quote || !numRow.catalog_id || !ACCESS_TOKEN) return;
+  const items = await catalogQuoteItems(String(numRow.catalog_id));
+  if (!items) return;
+  const m = waExactMatch(text, items);
+  if (!m) return;
+  const reply = `${m.name}: ${m.price ? m.price.replace(/(\d) UGX$/, "$1 UGX") : "price on request"}. `
+    + "Reply here to order, or ask about bulk prices.";
+  // Parrot guard: the same answer, twice in an hour, to the same
+  // conversation is noise, not service.
+  const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data: recent } = await admin.from("wa_messages")
+    .select("id").eq("conversation_id", convId).eq("direction", "out")
+    .eq("body", reply).gte("sent_at", cutoff).limit(1);
+  if (recent && recent.length) return;
+  const wamid = await sendText(phoneNumberId, waId, reply);
+  if (!wamid) return;
+  const now = new Date().toISOString();
+  const { error } = await admin.from("wa_messages").insert({
+    shop_id: shopId, conversation_id: convId, wamid,
+    direction: "out", msg_type: "text", body: reply, status: "sent", sent_at: now,
+    // The marker the inbox shows: the shop always knows which words the
+    // system said in its name.
+    payload: { auto: true },
+  });
+  if (error) console.error("wa-webhook: auto-quote record failed AFTER delivery", error);
+  await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", convId);
+  console.log("wa-webhook: auto-quoted", m.name, "to conversation", convId);
+}
+
 async function conversationFor(shopId: string, waId: string, name: string | null, ts: string, inbound: boolean): Promise<number | null> {
   // Upsert keyed on (shop_id, wa_id); last_inbound_at only ever moves
   // FORWARD and only for real inbound -- it is the 24h window's anchor.
@@ -300,6 +395,12 @@ async function handleEvents(shopId: string, phoneNumberId: string, events: WaEve
     const orderPayload = (ev as any).payload?.order;
     if (ev.kind === "in" && ev.type === "order" && orderPayload && (landed ?? []).length > 0) {
       await createWaOrder(shopId, phoneNumberId, ev.waId, ev.name, orderPayload, ev.wamid);
+    }
+    // Auto-quote rides the same freshly-landed gate as orders: a
+    // webhook retry that bounced off the unique wamid must not answer
+    // the customer twice.
+    if (ev.kind === "in" && ev.type === "text" && ev.body && (landed ?? []).length > 0) {
+      await maybeAutoQuote(shopId, phoneNumberId, convId, ev.waId, ev.body);
     }
   }
 }
