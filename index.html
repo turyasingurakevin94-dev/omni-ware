@@ -9642,19 +9642,24 @@ function waQuoteCandidates(){
    a tie is ambiguity, and ambiguity goes to the human. */
 function waQuoteMatch(text, candidates){
   // No empty-tokens guard: an empty set hits nothing in the loop and
-  // falls out through the same `!best` return -- one path, not two.
+  // falls out through the same empty-winners return -- one path, not two.
   const qSet = new Set(waQuoteTokens(text));
-  let best = null, bestScore = 0, contested = false;
+  let bestScore = 0, winners = [];
   candidates.forEach(c=>{
     if(!c.tokens.length) return;
     const hit = c.tokens.filter(t=> qSet.has(t)).length;
     if(hit === 0) return;
     const score = hit / c.tokens.length;
-    if(score > bestScore){ best = c; bestScore = score; contested = false; }
-    else if(score === bestScore && best && c.name !== best.name){ contested = true; }
+    if(score > bestScore){ bestScore = score; winners = [c]; }
+    else if(score === bestScore) winners.push(c);
   });
-  if(!best || bestScore < 0.5 || contested) return null;
-  return { ...best, exact: bestScore === 1 };
+  if(!winners.length || bestScore < 0.5) return null;
+  if(winners.length === 1) return { ...winners[0], exact: bestScore === 1 };
+  // A small tie is a QUESTION worth asking -- "sofa leg black" against
+  // Black 4", 5" and 6" -- so the card can offer the options instead
+  // of guessing or going silent. A bigger scatter is neither: nothing.
+  if(winners.length <= 4) return { ambiguous: true, options: winners };
+  return null;
 }
 
 /* What leaves the building: SELL prices only, the same rule the caption
@@ -9893,8 +9898,20 @@ function waRenderInbox(){
           const lastIn = [...waInbox.msgs].reverse().find(x=> x.direction==='in' && x.msg_type==='text');
           if(lastIn && !waInbox.dismissed[lastIn.wamid]){
             const m = waQuoteMatch(lastIn.body||'', waQuoteCandidates());
-            if(m){
+            if(m && m.ambiguous){
+              // A small tie is a QUESTION, not a guess and not a
+              // silence: each option drafts its own quote, edit-first.
+              suggestion = `<div class="wa-suggest" data-wamid="${esc(lastIn.wamid)}">
+                <div class="wa-suggest-head">Which one did they mean? Tap to draft its quote
+                  <button type="button" class="wa-suggest-x" title="Dismiss">\u2715</button></div>
+                <div class="btn-row" style="margin-top:8px;flex-wrap:wrap;">
+                  ${m.options.map((o,i)=> `<button type="button" class="btn btn-ghost wa-suggest-opt" data-oi="${i}">${esc(o.name)}</button>`).join('')}
+                </div>
+              </div>`;
+              waInbox.suggestOptions = m.options;
+            } else if(m){
               const reply = waQuoteReply(m);
+
               suggestion = `<div class="wa-suggest" data-wamid="${esc(lastIn.wamid)}">
                 <div class="wa-suggest-head">Suggested reply — matched ${esc(m.name)}${m.exact?'':' (partial match, check it)'}
                   <button type="button" class="wa-suggest-x" title="Dismiss">\u2715</button></div>
@@ -9939,20 +9956,35 @@ function waRenderInbox(){
   const sug = wrap.querySelector('.wa-suggest');
   if(sug){
     const wamid = sug.dataset.wamid;
-    const replyText = sug.querySelector('.wa-suggest-body').textContent;
+    sug.querySelectorAll('.wa-suggest-opt').forEach(btn=> btn.addEventListener('click', ()=>{
+      const opt = (waInbox.suggestOptions||[])[Number(btn.dataset.oi)];
+      if(!opt) return;
+      const text = waQuoteReply(opt);
+      waInbox.drafts[String(waInbox.active)] = text;
+      const taNow = document.getElementById('wa_reply');
+      if(taNow) taNow.value = text;
+      waInbox.dismissed[wamid] = true;
+      waRenderInbox();
+      const ta2 = document.getElementById('wa_reply');
+      if(ta2){ ta2.focus(); ta2.setSelectionRange(ta2.value.length, ta2.value.length); }
+    }));
+    const bodyEl = sug.querySelector('.wa-suggest-body');
+    const replyText = bodyEl ? bodyEl.textContent : '';
+
     sug.querySelector('.wa-suggest-x').addEventListener('click', ()=>{
       waInbox.dismissed[wamid] = true;
       waRenderInbox();
     });
     const sendBtn2 = sug.querySelector('#wa_suggest_send');
-    sendBtn2.addEventListener('click', ()=>{
+    if(sendBtn2) sendBtn2.addEventListener('click', ()=>{
       // Draft-first by decision: even "Send suggestion" travels the same
       // road as a hand-typed reply -- through the composer send, with
       // the server's own window check waiting at the end of it.
       waSendReply(replyText);
       waInbox.dismissed[wamid] = true;
     });
-    sug.querySelector('#wa_suggest_edit').addEventListener('click', ()=>{
+    const editBtn2 = sug.querySelector('#wa_suggest_edit');
+    if(editBtn2) editBtn2.addEventListener('click', ()=>{
       waInbox.drafts[String(waInbox.active)] = replyText;
       // Into the LIVE textarea too, before the re-render: the rebuild's
       // draft-capture reads the current composer first, and an empty

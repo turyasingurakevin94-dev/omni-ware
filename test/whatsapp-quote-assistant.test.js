@@ -10,11 +10,12 @@
  *
  * The claims that matter:
  *
- *   AMBIGUITY GOES TO THE HUMAN. "sofa leg 4" against both a Gold 4"
- *   and a Silver 4" is a tie, a tie is ambiguity, and the assistant
- *   suggests NOTHING -- a wrong price sent in the shop's name is the
- *   failure mode this design exists to avoid. Same for greetings,
- *   generic words, and anything scoring below half a product's name.
+ *   AMBIGUITY GOES TO THE HUMAN -- AS A QUESTION. "sofa leg 4" against
+ *   a Gold 4" and a Silver 4" is a tie; the assistant offers the
+ *   OPTIONS to tap, never a guess. A bigger scatter, a greeting, a
+ *   generic word, or anything scoring below half a product's name
+ *   offers nothing -- a wrong price sent in the shop's name is the
+ *   failure mode this design exists to avoid.
  *
  *   A QUOTE NEEDS A PRICE, NOT A PHOTO. The candidate pool is gated on
  *   a retail price only -- unlike the catalog, where a photo is the
@@ -80,10 +81,15 @@ if (!scope) process.exit(1);
     // Four tokens on purpose: one generic word scores 0.25 with no
     // rival, so ONLY the threshold stands between it and a quote.
     { id: 'P9', name: 'Heavy Duty Steel Wheelbarrow', type: 'simple', image: null },
+    // Six variants: four share the size 4" (an askable tie), and all
+    // six share "sofa leg" (a scatter past the cap, which stays silent).
     { id: 'P17', name: 'Sofa Leg', type: 'variable', variants: [
       { combo: { Colour: 'Gold', Size: '4"' } },
       { combo: { Colour: 'Gold', Size: '5"' } },
       { combo: { Colour: 'Silver', Size: '4"' } },
+      { combo: { Colour: 'Black', Size: '4"' } },
+      { combo: { Colour: 'Blue', Size: '4"' } },
+      { combo: { Colour: 'Blue', Size: '5"' } },
     ] },
   ];
   sellFixture.set('P1', { price: 45000, unit: 'bag' });
@@ -91,10 +97,13 @@ if (!scope) process.exit(1);
   sellFixture.set('P17::0', { price: 203000, unit: 'ctn' });
   sellFixture.set('P17::1', { price: 208000, unit: 'ctn' });
   sellFixture.set('P17::2', { price: 199000, unit: 'ctn' });
+  sellFixture.set('P17::3', { price: 201000, unit: 'ctn' });
+  sellFixture.set('P17::4', { price: 198000, unit: 'ctn' });
+  sellFixture.set('P17::5', { price: 197000, unit: 'ctn' });
   breaksFixture.set('P1', [{ qty: 10, price: 43500 }]);
 
   const cands = scope.waQuoteCandidates();
-  eq(cands.length, 5, 'a quote needs a PRICE, not a photo — the photoless cement is in, the priceless sheet is out');
+  eq(cands.length, 8, 'a quote needs a PRICE, not a photo — the photoless cement is in, the priceless sheet is out');
   t.check(basisAsked.every((b) => b === 'retail'), 'every price the assistant quotes is the RETAIL one');
 }
 
@@ -109,8 +118,12 @@ if (!scope) process.exit(1);
   eq(m2 && m2.name, 'Sofa Leg — Gold / 4"', 'a fully named variant matches exactly');
   eq(m2 && m2.exact, true, 'and says so');
 
-  eq(scope.waQuoteMatch('sofa leg 4', cands), null,
-    'Gold 4" and Silver 4" tie — ambiguity goes to the human, not to a coin toss');
+  const tie = scope.waQuoteMatch('sofa leg 4', cands);
+  eq(tie && tie.ambiguous, true, 'four 4" colours tie — ambiguity becomes a QUESTION, not a guess');
+  eq(tie && tie.options.length, 4, 'with every tied option offered');
+  t.check(tie && tie.options.every((o) => /4"/.test(o.name)), 'and only the tied ones');
+  eq(scope.waQuoteMatch('sofa leg', cands), null,
+    'six variants tying is a scatter, not a question — past the cap, silence');
   eq(scope.waQuoteMatch('hello, good morning!', cands), null, 'a greeting suggests nothing');
   eq(scope.waQuoteMatch('do you have wheelbarrows?', cands), null, 'an unknown product suggests nothing');
   eq(scope.waQuoteMatch('leg', cands), null,
@@ -147,6 +160,16 @@ if (!scope) process.exit(1);
     '"Edit first" hands the text to the composer as a draft');
   t.check(/if\(taNow\) taNow\.value = replyText;/.test(src),
     'and into the LIVE textarea before the re-render, or the rebuild\'s draft-capture stomps it');
+  /* The ambiguity card. */
+  t.check(/Which one did they mean\? Tap to draft its quote/.test(src),
+    'a tie renders as a question with the options on the card');
+  t.check(/\$\{m\.options\.map\(\(o,i\)=>/.test(src),
+    'every tied option becomes a button');
+  const optHandler = (/wa-suggest-opt'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{[\s\S]*?\}\)\);/.exec(src) || [''])[0];
+  t.check(/waInbox\.drafts\[String\(waInbox\.active\)\] = text;/.test(optHandler)
+    && /if\(taNow\) taNow\.value = text;/.test(optHandler)
+    && !/waSendReply/.test(optHandler),
+    'tapping an option DRAFTS its quote — the edit-first road, never a direct send');
   t.check(/\(partial match, check it\)/.test(src),
     'a partial match is labelled as one on the card');
 }
