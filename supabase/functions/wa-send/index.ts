@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   if (!isMember) return json({ error: "Not a member of this shop" }, 403);
 
   const { data: numRow } = await admin.from("wa_numbers")
-    .select("phone_number_id, catalog_id").eq("shop_id", shopId).maybeSingle();
+    .select("phone_number_id, catalog_id, waba_id").eq("shop_id", shopId).maybeSingle();
 
   if (action === "status") {
     return json({
@@ -422,6 +422,137 @@ Deno.serve(async (req) => {
     if (insErr) console.error("wa-send: catalog message record failed AFTER delivery", insErr);
     await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", conv.id);
     return json({ sent: true, wamid });
+  }
+
+  // ---- Phase 5: the marketing template and the broadcast. ----
+  // Business-initiated messages outside a customer's 24h window only
+  // travel as pre-approved TEMPLATES. The app owns one: shop_update,
+  // "{{1}}" being the campaign text -- created here, approved by Meta
+  // (usually minutes), and refused for sending until it is.
+  const TEMPLATE_NAME = "shop_update";
+
+  if (action === "template-ensure") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    const wabaId = numRow?.waba_id;
+    if (!wabaId) return json({ error: "Save the WhatsApp Business Account ID first" }, 400);
+    const headers = { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` };
+    const listResp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates?name=${TEMPLATE_NAME}`, { headers });
+    const list = await listResp.json().catch(() => ({}));
+    if (!listResp.ok) {
+      // deno-lint-ignore no-explicit-any
+      const err = (list as any)?.error;
+      return json({ error: err?.message || `Graph API error ${listResp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    const existing = ((list as any).data ?? []).find((t: any) => t.name === TEMPLATE_NAME);
+    if (existing) return json({ status: existing.status, existed: true });
+    const createResp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates`, {
+      method: "POST", headers,
+      body: JSON.stringify({
+        name: TEMPLATE_NAME,
+        category: "MARKETING",
+        language: "en",
+        components: [
+          { type: "BODY", text: "Hello! News from our shop: {{1}}", example: { body_text: [["Simba Cement now UGX 43,000 per bag this week"]] } },
+          { type: "FOOTER", text: "Reply STOP to opt out of promotions" },
+        ],
+      }),
+    });
+    const created = await createResp.json().catch(() => ({}));
+    if (!createResp.ok) {
+      // deno-lint-ignore no-explicit-any
+      const err = (created as any)?.error;
+      return json({ error: err?.error_user_msg || err?.message || `Graph API error ${createResp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    return json({ status: (created as any).status || "PENDING", existed: false });
+  }
+
+  if (action === "template-status") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    const wabaId = numRow?.waba_id;
+    if (!wabaId) return json({ error: "Save the WhatsApp Business Account ID first" }, 400);
+    const resp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates?name=${TEMPLATE_NAME}`,
+      { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      // deno-lint-ignore no-explicit-any
+      const err = (result as any)?.error;
+      return json({ error: err?.message || `Graph API error ${resp.status}` }, 502);
+    }
+    // deno-lint-ignore no-explicit-any
+    const tpl = ((result as any).data ?? []).find((t: any) => t.name === TEMPLATE_NAME);
+    return json({ status: tpl ? tpl.status : "MISSING" });
+  }
+
+  if (action === "broadcast") {
+    const text = String(body.text ?? "").trim();
+    if (!text) return json({ error: "text is required" }, 400);
+    if (!ACCESS_TOKEN || !numRow) return json({ error: "WhatsApp is not connected yet" }, 409);
+    const wabaId = numRow.waba_id;
+    if (!wabaId) return json({ error: "Save the WhatsApp Business Account ID first" }, 400);
+
+    // The template must be APPROVED -- Meta rejects sends otherwise,
+    // and a campaign that half-fails is worse than one that waits.
+    const tplResp = await fetch(`${GRAPH_BASE}/${wabaId}/message_templates?name=${TEMPLATE_NAME}`,
+      { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+    const tplList = await tplResp.json().catch(() => ({}));
+    // deno-lint-ignore no-explicit-any
+    const tpl = ((tplList as any).data ?? []).find((t: any) => t.name === TEMPLATE_NAME);
+    if (!tpl || tpl.status !== "APPROVED") {
+      return json({ error: `The message template is ${tpl ? tpl.status : "missing"} — it must be APPROVED before broadcasts can go out.` }, 409);
+    }
+
+    // The audience: everyone who has messaged the shop, minus everyone
+    // who said STOP. Consent by existing relationship, exit by one word.
+    const { data: convs, error: convErr } = await admin.from("wa_conversations")
+      .select("id, wa_id").eq("shop_id", shopId).eq("opt_out", false);
+    if (convErr) return json({ error: convErr.message, stage: "audience" }, 500);
+    const audience = convs ?? [];
+    if (!audience.length) return json({ error: "Nobody to send to — the audience is empty" }, 400);
+
+    const { data: campaign, error: campErr } = await admin.from("wa_campaigns").insert({
+      shop_id: shopId, template_name: TEMPLATE_NAME, body: text, recipients: audience.length,
+    }).select("id").single();
+    if (campErr) return json({ error: campErr.message, stage: "campaign" }, 500);
+
+    let sent = 0; const failures: string[] = [];
+    for (const conv of audience) {
+      const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: conv.wa_id,
+          type: "template",
+          template: {
+            name: TEMPLATE_NAME,
+            language: { code: "en" },
+            components: [{ type: "body", parameters: [{ type: "text", text }] }],
+          },
+        }),
+      });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        // deno-lint-ignore no-explicit-any
+        const err = (result as any)?.error;
+        failures.push(`${conv.wa_id}: ${err?.message || resp.status}`);
+        continue;
+      }
+      // deno-lint-ignore no-explicit-any
+      const wamid = String((result as any)?.messages?.[0]?.id ?? "");
+      const now = new Date().toISOString();
+      const { error } = await admin.from("wa_messages").insert({
+        shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
+        direction: "out", msg_type: "template", body: text, status: "sent", sent_at: now,
+        // The campaign id rides the message, so sent/delivered/read per
+        // campaign is a COUNT over messages -- derived, never stored.
+        payload: { broadcast: campaign.id },
+      });
+      if (error) console.error("wa-send: broadcast record failed AFTER delivery", error);
+      sent++;
+    }
+    return json({ campaignId: campaign.id, sent, failed: failures.length, failures: failures.slice(0, 5) });
   }
 
   if (action === "send") {

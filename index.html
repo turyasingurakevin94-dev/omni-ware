@@ -4380,6 +4380,10 @@
   .wa-suggest-head{font-size:11.5px;font-weight:700;color:var(--ow-amber-ink);display:flex;align-items:center;gap:8px;}
   .wa-suggest-x{margin-left:auto;border:none;background:none;cursor:pointer;color:var(--ow-amber-ink);font-size:13px;padding:2px 6px;}
   .wa-suggest-body{font-size:13px;margin-top:6px;white-space:pre-wrap;color:var(--ink);}
+  .wa-bc-compose textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;
+    font-size:13px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
+  .wa-bc-est{font-size:13px;font-weight:600;color:var(--ink);padding-bottom:9px;}
+  .wa-bc-meta{font-size:11.5px;color:var(--ink-soft);margin-top:8px;}
   @media (max-width: 700px){
     .wa-inbox{flex-direction:column;}
     .wa-convs{flex-basis:auto;max-height:200px;border-right:none;border-bottom:1px solid var(--line);}
@@ -5623,6 +5627,16 @@
       <div class="panel">
         <h2>Post history</h2>
         <div id="wa_history"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Broadcasts</h2>
+          <button class="btn btn-ghost btn-icon" id="wa_bc_refresh">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="wa_broadcasts"></div>
       </div>
     </section>
 
@@ -8156,6 +8170,10 @@ async function loadData(shopId){
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
+    // UGX per marketing message, for the pre-send estimate. A local
+    // guess the shop corrects from its own Meta bill -- labelled as an
+    // estimate everywhere it appears.
+    presetWaMarketingRate: presets.waMarketingRate!=null ? Number(presets.waMarketingRate) : 150,
     // Highest id ever issued per entity type. Persisted rather than derived
     // so it survives deletions -- see nextEntityId().
     idCounters: presets.idCounters || {},
@@ -8299,7 +8317,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', idCounters:d.idCounters||{}},
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, idCounters:d.idCounters||{}},
       quote_draft: d.quote
     }
   };
@@ -9715,6 +9733,7 @@ async function waInboxEnter(){
   await waFetchConvs();
   if(waInbox.active) await waFetchThread(waInbox.active);
   waRenderInbox();
+  waRenderBroadcasts();
   // One poller, self-terminating when the user leaves the tab -- the
   // interval checks where it is instead of trusting a cleanup hook to run.
   if(!waInbox.timer){
@@ -9770,6 +9789,10 @@ function waRenderConnect(){
       <button class="btn btn-accent" id="wa_catid_save">Save</button>
       <button class="btn btn-ghost" id="wa_cat_sync">Sync products to catalog</button>
     </div>
+    <div class="wa-connect-row">
+      <div class="field"><label>WhatsApp Business Account ID</label><input id="wa_wabaid" placeholder="from WhatsApp Manager's URL (asset_id)"></div>
+      <button class="btn btn-accent" id="wa_wabaid_save">Save</button>
+    </div>
     <div class="wa-connect-row" style="align-items:center;">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
         <input type="checkbox" id="wa_auto_quote">
@@ -9786,11 +9809,20 @@ function waRenderConnect(){
     dashboard's Register button does, but shows Meta's real answer when it fails. The number must be
     verified (the SMS code step) and must not be running on any WhatsApp app.</p>
   </div>`;
-  sb.from('wa_numbers').select('phone_number_id, catalog_id, auto_quote').eq('shop_id', currentShopId).maybeSingle()
+  sb.from('wa_numbers').select('phone_number_id, catalog_id, auto_quote, waba_id').eq('shop_id', currentShopId).maybeSingle()
     .then(({ data: row })=>{
       if(row) document.getElementById('wa_pnid').value = row.phone_number_id;
       if(row && row.catalog_id) document.getElementById('wa_catid').value = row.catalog_id;
       if(row) document.getElementById('wa_auto_quote').checked = !!row.auto_quote;
+      if(row && row.waba_id) document.getElementById('wa_wabaid').value = row.waba_id;
+    });
+  document.getElementById('wa_wabaid_save').addEventListener('click', async ()=>{
+    const v = document.getElementById('wa_wabaid').value.trim();
+    if(!v){ toast('Paste the WhatsApp Business Account ID first'); return; }
+    const { error } = await sb.from('wa_numbers')
+      .update({ waba_id: v }).eq('shop_id', currentShopId);
+    if(error){ toast('Could not save: ' + error.message); return; }
+    toast('Account ID saved');
     });
   document.getElementById('wa_auto_quote').addEventListener('change', async e=>{
     const on = e.target.checked;
@@ -9901,7 +9933,7 @@ function waRenderInbox(){
       return `<button type="button" class="wa-conv ${c.id===waInbox.active?'active':''}" data-cid="${c.id}">
         <div class="wc-name">${waConvUnread(c) ? '<span class="wc-unread"></span>' : ''}${esc(waConvTitle(c))}
           ${cust ? `<span class="wc-cust">${esc(cust.name)}</span>` : ''}</div>
-        <div class="wc-time">${esc(waTimeShort(c.last_message_at))}</div>
+        <div class="wc-time">${esc(waTimeShort(c.last_message_at))}${c.opt_out ? ' · no promos' : ''}</div>
       </button>`;}).join('')}</div>
     <div class="wa-thread">${active ? `
       <div class="wa-msgs" id="wa_msgs">${waInbox.msgs.map(m=>`
@@ -10090,6 +10122,131 @@ document.getElementById('wa_inbox_refresh').addEventListener('click', ()=> waInb
 // Reachable in every state -- changing the number must not require the
 // connection to be broken first.
 document.getElementById('wa_inbox_settings').addEventListener('click', ()=> waRenderConnect());
+
+/* ---------------- WhatsApp: broadcasts (phase 5) ----------------
+
+   The only paid surface in the whole front desk, and it behaves like
+   it: the audience is people who have MESSAGED the shop minus anyone
+   who said STOP, the cost is shown before the send with the count, and
+   sent/delivered/read per campaign is DERIVED from the message rows the
+   delivery webhooks already update -- counted, never stored. */
+
+function waBroadcastAudience(convs){
+  return (convs||[]).filter(c=> !c.opt_out);
+}
+function waBroadcastEstimate(count, rate){
+  const r = Number(rate);
+  if(!isFinite(r) || r < 0) return null;   // a garbage rate is no estimate
+  return Math.round(count * r);
+}
+function waCampaignStats(msgs){
+  const s = { sent: 0, delivered: 0, read: 0, failed: 0 };
+  (msgs||[]).forEach(m=>{
+    if(m.status === 'read') s.read++;
+    else if(m.status === 'delivered') s.delivered++;
+    else if(m.status === 'failed') s.failed++;
+    else s.sent++;
+  });
+  // read implies delivered: the ticks are a ladder, not buckets.
+  s.delivered += s.read;
+  return s;
+}
+
+async function waRenderBroadcasts(){
+  const wrap = document.getElementById('wa_broadcasts');
+  if(!waInbox.configured){
+    wrap.innerHTML = '<div class="wa-empty">Connect WhatsApp first — broadcasts ride the same connection.</div>';
+    return;
+  }
+  const audience = waBroadcastAudience(waInbox.convs);
+  const optedOut = (waInbox.convs||[]).length - audience.length;
+  const rate = data.presetWaMarketingRate;
+  const { data: campaigns } = await sb.from('wa_campaigns')
+    .select('*').eq('shop_id', currentShopId).order('created_at', { ascending: false }).limit(10);
+
+  const rows = [];
+  for(const c of (campaigns||[])){
+    const { data: msgs } = await sb.from('wa_messages')
+      .select('status').eq('shop_id', currentShopId).eq('payload->>broadcast', String(c.id));
+    const st = waCampaignStats(msgs);
+    rows.push(`<tr><td style="white-space:nowrap;">${esc(String(c.created_at).slice(0,10))}</td>
+      <td>${esc(c.body)}</td>
+      <td class="r">${c.recipients}</td>
+      <td class="r">${st.delivered}</td>
+      <td class="r">${st.read}</td>${st.failed ? `<td class="r" style="color:var(--danger);">${st.failed} failed</td>` : '<td></td>'}</tr>`);
+  }
+
+  wrap.innerHTML = `
+    <div class="wa-bc-compose">
+      <div class="field"><label>The message — lands as: “Hello! News from our shop: …”</label>
+        <textarea id="wa_bc_text" rows="2" placeholder="e.g. Simba Cement now UGX 43,000 per bag this week"></textarea></div>
+      <div class="wa-connect-row" style="align-items:flex-end;">
+        <div class="field" style="max-width:140px;"><label>Est. rate (UGX/msg)</label>
+          <input id="wa_bc_rate" type="number" min="0" value="${esc(String(rate))}"></div>
+        <div class="wa-bc-est" id="wa_bc_est"></div>
+        <button class="btn btn-accent btn-icon" id="wa_bc_send" style="margin-left:auto;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
+          Send broadcast
+        </button>
+      </div>
+      <div class="wa-bc-meta" id="wa_bc_meta"></div>
+    </div>
+    ${rows.length ? `<table style="margin-top:14px;"><tr><th>Date</th><th>Message</th><th class="r">Sent to</th><th class="r">Delivered</th><th class="r">Read</th><th></th></tr>${rows.join('')}</table>`
+      : '<div class="wa-empty" style="padding-top:10px;">No broadcasts yet. The first one starts the record.</div>'}`;
+
+  const refreshEstimate = ()=>{
+    const r = Number(document.getElementById('wa_bc_rate').value);
+    const est = waBroadcastEstimate(audience.length, r);
+    document.getElementById('wa_bc_est').textContent =
+      `${audience.length} recipient${audience.length===1?'':'s'}` +
+      (optedOut ? ` (${optedOut} opted out)` : '') +
+      (est==null ? '' : ` · est. UGX ${est.toLocaleString('en-UG')}`);
+  };
+  refreshEstimate();
+  document.getElementById('wa_bc_meta').textContent =
+    'Estimate only — Meta bills per delivered marketing message at its own rate card. Template approval required before the first send.';
+  document.getElementById('wa_bc_rate').addEventListener('input', ()=>{
+    const r = Number(document.getElementById('wa_bc_rate').value);
+    if(isFinite(r) && r >= 0 && r !== data.presetWaMarketingRate){
+      data.presetWaMarketingRate = r; saveData();
+    }
+    refreshEstimate();
+  });
+  document.getElementById('wa_bc_send').addEventListener('click', async ()=>{
+    const text = document.getElementById('wa_bc_text').value.trim();
+    if(!text){ toast('Write the message first'); return; }
+    const est = waBroadcastEstimate(audience.length, Number(document.getElementById('wa_bc_rate').value));
+    if(!confirm(`Send to ${audience.length} recipient${audience.length===1?'':'s'}${est==null?'':` — estimated cost UGX ${est.toLocaleString('en-UG')}`}? This is a PAID marketing send.`)) return;
+    const btn = document.getElementById('wa_bc_send');
+    btn.disabled = true;
+    try{
+      // The template is ensured (created on first use), then the send.
+      const { data: tpl, error: tplErr } = await sb.functions.invoke('wa-send', {
+        body: { shopId: currentShopId, action: 'template-ensure' } });
+      if(tplErr){
+        let msg = tplErr.message;
+        try{ const b = await tplErr.context.json(); if(b && b.error) msg = b.error; }catch(_e){}
+        toast(msg, 6000); return;
+      }
+      if(tpl.status !== 'APPROVED'){
+        toast(`The message template is ${tpl.status} — Meta approves it first (usually minutes). Try again shortly.`, 7000);
+        return;
+      }
+      const { data: res, error } = await sb.functions.invoke('wa-send', {
+        body: { shopId: currentShopId, action: 'broadcast', text } });
+      if(error){
+        let msg = error.message;
+        try{ const b = await error.context.json(); if(b && b.error) msg = b.error; }catch(_e){}
+        toast(msg, 7000); return;
+      }
+      toast(`Broadcast sent — ${res.sent} of ${audience.length}${res.failed ? `, ${res.failed} failed` : ''}`, 6000);
+      document.getElementById('wa_bc_text').value = '';
+      waRenderBroadcasts();
+    } finally { btn.disabled = false; }
+  });
+}
+
+document.getElementById('wa_bc_refresh').addEventListener('click', ()=> waRenderBroadcasts());
 
 /* ---------------- Tabs ---------------- */
 const tabButtons = document.querySelectorAll('nav button[data-tab]');

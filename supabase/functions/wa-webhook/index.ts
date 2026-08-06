@@ -307,6 +307,15 @@ async function catalogQuoteItems(catalogId: string) {
   return items;
 }
 
+// STOP in the customer's own words -- and a few of the words they
+// actually use. Pure, so the harness can hold the whole vocabulary.
+function waOptOutCommand(text: string) {
+  const t = String(text || "").toLowerCase().replace(/[^a-z ]+/g, " ").trim();
+  if (["stop", "unsubscribe", "opt out", "no promotions", "stop promotions"].includes(t)) return "stop";
+  if (["start", "subscribe", "opt in"].includes(t)) return "start";
+  return null;
+}
+
 async function maybeAutoQuote(shopId: string, phoneNumberId: string, convId: number, waId: string, text: string) {
   const { data: numRow } = await admin.from("wa_numbers")
     .select("auto_quote, catalog_id").eq("shop_id", shopId).maybeSingle();
@@ -400,7 +409,29 @@ async function handleEvents(shopId: string, phoneNumberId: string, events: WaEve
     // webhook retry that bounced off the unique wamid must not answer
     // the customer twice.
     if (ev.kind === "in" && ev.type === "text" && ev.body && (landed ?? []).length > 0) {
-      await maybeAutoQuote(shopId, phoneNumberId, convId, ev.waId, ev.body);
+      const cmd = waOptOutCommand(ev.body);
+      if (cmd) {
+        // Honoured FIRST and INSTANTLY -- an opt-out that waits for a
+        // human, or gets answered with a product quote, defeats itself.
+        const { error } = await admin.from("wa_conversations")
+          .update({ opt_out: cmd === "stop" }).eq("id", convId);
+        if (error) console.error("wa-webhook: opt-out update failed", error);
+        const ack = cmd === "stop"
+          ? "Done — you won't receive promotions from us again. Reply START any time to rejoin. You can still order and ask questions here as normal."
+          : "Welcome back — you'll receive our offers again. Reply STOP any time to leave.";
+        const ackWamid = await sendText(phoneNumberId, ev.waId, ack);
+        if (ackWamid) {
+          const now = new Date().toISOString();
+          await admin.from("wa_messages").insert({
+            shop_id: shopId, conversation_id: convId, wamid: ackWamid,
+            direction: "out", msg_type: "text", body: ack, status: "sent", sent_at: now,
+            payload: { auto: true },
+          });
+          await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", convId);
+        }
+      } else {
+        await maybeAutoQuote(shopId, phoneNumberId, convId, ev.waId, ev.body);
+      }
     }
   }
 }
