@@ -30,7 +30,7 @@
  *
  * Run: node test/media-library.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('media library');
 const src = read('index.html');
@@ -267,6 +267,19 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   t.check(/addDiffOps\(ops, 'media', 'media', 'id', shopId, rows\.media\);/.test(src)
     && /addDiffOps\(ops, 'mediaFolders', 'media_folders', 'id', shopId, rows\.mediaFolders\);/.test(src),
     'and both collections are in the diff-sync');
+
+  /* The picker opens ON TOP of the product form -- another modal, at the
+     shared overlay z-index of 100 -- and DOM order put the form later, so
+     the picker opened underneath it, invisible. Found by watching the
+     running app, and asserted through the cascade resolver so an inert
+     rule can never satisfy it. */
+  const pickerZ = winningDeclaration(src, 'mediaPickerModal', 'z-index');
+  const baseZ = 100;
+  t.check(pickerZ && Number(pickerZ.value) > baseZ,
+    `the picker outranks the modal that summons it (z-index ${pickerZ && pickerZ.value} over ${baseZ})`);
+  const detailZ = winningDeclaration(src, 'mediaDetailModal', 'z-index');
+  t.check(detailZ && Number(detailZ.value) > baseZ,
+    'and so does the photo record it can hand off to');
 }
 
 process.exit(t.done() ? 1 : 0);
