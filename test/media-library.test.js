@@ -257,8 +257,8 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
 
   /* The sync plumbing: loaded in step, seeded in lastSynced (or a photo
      deleted before the first save would quietly come back), and diffed. */
-  t.check(/loansR,\s*\n\s*mediaR, mediaFoldersR,\s*\n\s*rentAgreementsR/.test(src)
-    && /sel\('loans'\),\s*\n\s*sel\('media'\), sel\('media_folders'\),\s*\n\s*sel\('rent_agreements'\)/.test(src),
+  t.check(/loansR,\s*\n\s*mediaR, mediaFoldersR, waPostsR,\s*\n\s*rentAgreementsR/.test(src)
+    && /sel\('loans'\),\s*\n\s*sel\('media'\), sel\('media_folders'\), sel\('wa_posts'\),\s*\n\s*sel\('rent_agreements'\)/.test(src),
     'the load destructuring and the select list agree on where media sits');
   const lastSyncedFn = extractFunction(src, 'buildLastSynced', 'index.html');
   t.check(/media: keyRowsById\(rows\.media, 'id'\)/.test(lastSyncedFn)

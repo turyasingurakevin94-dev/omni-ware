@@ -4317,6 +4317,30 @@
     .media-layout{flex-direction:column;}
     .media-rail{flex-direction:row;flex-wrap:wrap;flex-basis:auto;width:100%;}
   }
+
+  /* ---------------- WhatsApp: today's post ---------------- */
+  .wa-phone-field{margin:0;max-width:220px;}
+  .wa-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  .wa-pick{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel);
+    display:flex;flex-direction:column;}
+  .wa-pick .wap-thumb{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--ow-steel-050);}
+  .wa-pick .wap-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+  .wa-pick .wap-name{font-size:14px;font-weight:700;line-height:1.3;}
+  .wa-pick .wap-price{font-size:13px;color:var(--ow-verdigris);font-weight:600;}
+  .wa-pick .wap-reasons{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-soft);}
+  .wa-pick .wap-reasons div::before{content:'·';margin-right:6px;color:var(--accent);}
+  .wa-pick .wap-actions{display:flex;gap:8px;margin-top:auto;padding-top:6px;}
+  .wa-empty{padding:24px 8px;color:var(--ink-soft);font-size:13.5px;}
+  .wa-gap-row{font-size:13px;padding:6px 0;border-bottom:1px solid var(--line-soft, #E3E7EA);}
+  .wa-gap-row:last-child{border-bottom:none;}
+  .wp-layout{display:flex;gap:18px;flex-wrap:wrap;}
+  .wp-canvas-wrap{flex:0 0 auto;}
+  #wp_canvas{width:250px;height:auto;border-radius:12px;border:1px solid var(--line);display:block;}
+  .wp-side{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:12px;}
+  .wp-side textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;font-size:13px;
+    border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
+  .wp-hint{font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
+  #wa_history table{width:100%;}
 </style>
 </head>
 <body class="app-loading">
@@ -4369,6 +4393,7 @@
       <button type="button" class="mms-item" data-tab="quote">Add New Quote</button>
       <button type="button" class="mms-item" data-tab="invoices">Invoices</button>
       <button type="button" class="mms-item" data-tab="compare">Compare Prices</button>
+      <button type="button" class="mms-item" data-tab="whatsapp">WhatsApp</button>
     </div>
     <div class="mms-group">
       <div class="mms-group-label">Catalog</div>
@@ -4443,6 +4468,9 @@
         <button type="button" data-tab="agents">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="nav-label">Sales agents</span></button>
+        <button type="button" data-tab="whatsapp">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.5-1.5 2 1-1 2c-4.5.5-9.5-4.5-9-9l2-1 1 2z"/></svg>
+          <span class="nav-label">WhatsApp</span></button>
       </div>
     </div>
 
@@ -5513,6 +5541,32 @@
       </div>
     </section>
 
+    <!-- WHATSAPP: TODAY'S POST -->
+    <section id="tab-whatsapp" style="display:none;">
+      <div class="page-head">
+        <h1>WhatsApp</h1>
+        <p>What the shop should show people today, and why. The picks come from your own numbers &mdash; stock that is sitting, margins, price drops, what sells on this weekday &mdash; and each one becomes a finished status image and caption, ready to post in two taps.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;" id="wa_today_head">Today's picks</h2>
+          <div class="wa-phone-field field">
+            <label>Number shown on posts</label>
+            <input id="wa_phone" placeholder="e.g. 0772 123 456">
+          </div>
+        </div>
+        <div id="wa_picks"></div>
+      </div>
+      <div class="panel" id="wa_gaps_panel" style="display:none;">
+        <h2>What is holding products back</h2>
+        <div id="wa_gaps"></div>
+      </div>
+      <div class="panel">
+        <h2>Post history</h2>
+        <div id="wa_history"></div>
+      </div>
+    </section>
+
     <!-- FIXED ASSETS -->
     <section id="tab-assets" style="display:none;">
       <div class="page-head">
@@ -6495,6 +6549,45 @@
       </button>
     </div>
     <div class="modal-body" id="md_body"></div>
+  </div>
+</div>
+
+<!-- THE FINISHED POST -->
+<div class="modal-overlay" id="waPostModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="wp_title">Prepare post</h2>
+      <button class="modal-close" id="wp_close" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="wp-layout">
+        <div class="wp-canvas-wrap"><canvas id="wp_canvas" width="1080" height="1920"></canvas></div>
+        <div class="wp-side">
+          <div class="field"><label>Caption</label><textarea id="wp_caption" rows="7"></textarea></div>
+          <div class="btn-row" style="flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-icon" id="wp_copy">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              Copy caption
+            </button>
+            <button class="btn btn-ghost btn-icon" id="wp_download">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Download image
+            </button>
+            <button class="btn btn-ghost btn-icon" id="wp_share" style="display:none;">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+              Share&hellip;
+            </button>
+            <button class="btn btn-accent btn-icon" id="wp_posted">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+              Mark as posted
+            </button>
+          </div>
+          <div class="wp-hint">Share (or download) the image, paste the caption, post to your Status or Channel &mdash; then mark it posted so tomorrow's picks know.</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7817,7 +7910,7 @@ async function loadData(shopId){
     suppliersR, staffR, customersR, debtLogR, productsR, pricesR,
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
-    mediaR, mediaFoldersR,
+    mediaR, mediaFoldersR, waPostsR,
     rentAgreementsR, duesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
@@ -7825,10 +7918,10 @@ async function loadData(shopId){
     sel('saved_quotes'), sel('purchase_invoices'),
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
-    sel('media'), sel('media_folders'),
+    sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, rentAgreementsR, duesR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -7975,6 +8068,12 @@ async function loadData(shopId){
       id:f.id, name:f.name||'', parentId: f.parent_id==null ? null : Number(f.parent_id)
     })),
     nextMediaFolderId: (mediaFoldersR.data||[]).length ? Math.max(0,...mediaFoldersR.data.map(f=>f.id||0))+1 : 1,
+    waPosts: (waPostsR.data||[]).map(w=>({
+      id:w.id, date:w.date, productId:w.product_id,
+      variantIdx: w.variant_idx==null ? null : Number(w.variant_idx),
+      name:w.name||'', reason:w.reason||'', createdAt:w.created_at
+    })),
+    nextWaPostId: (waPostsR.data||[]).length ? Math.max(0,...waPostsR.data.map(w=>w.id||0))+1 : 1,
     // amount and days stay null rather than becoming 0. Null means nobody
     // has costed this month yet -- a daily-paid worker's wages cannot be
     // known until the days are counted -- and reading that as zero would
@@ -7997,6 +8096,7 @@ async function loadData(shopId){
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
+    presetWaPhone: presets.waPhone || '',
     // Highest id ever issued per entity type. Persisted rather than derived
     // so it survives deletions -- see nextEntityId().
     idCounters: presets.idCounters || {},
@@ -8114,6 +8214,11 @@ function buildSyncRows(d, shopId){
     mediaFolders: (d.mediaFolders||[]).map(f=>({
       id:f.id, shop_id:shopId, name:f.name, parent_id: f.parentId==null ? null : f.parentId
     })),
+    waPosts: (d.waPosts||[]).map(w=>({
+      id:w.id, shop_id:shopId, date:w.date, product_id:w.productId,
+      variant_idx: w.variantIdx==null ? null : w.variantIdx,
+      name:w.name, reason:w.reason||null
+    })),
     rentAgreements: (d.rentAgreements||[]).map(r=>({
       id:r.id, shop_id:shopId, premises:r.premises, landlord:r.landlord||null,
       amount:r.amount||0, due_day:r.dueDay||1,
@@ -8130,7 +8235,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, idCounters:d.idCounters||{}},
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', idCounters:d.idCounters||{}},
       quote_draft: d.quote
     }
   };
@@ -8171,6 +8276,7 @@ function buildLastSynced(d, shopId){
        quietly bring the photo back. */
     media: keyRowsById(rows.media, 'id'),
     mediaFolders: keyRowsById(rows.mediaFolders, 'id'),
+    waPosts: keyRowsById(rows.waPosts, 'id'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -8250,7 +8356,7 @@ async function saveData(){
   // partial object literal that predates newer collections. Old localStorage
   // saveData() silently tolerated that (JSON.stringify skips undefined
   // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders'].forEach(k=>{ if(!data[k]) data[k] = []; });
+  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts'].forEach(k=>{ if(!data[k]) data[k] = []; });
   ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
 
   const rows = buildSyncRows(data, shopId);
@@ -8277,6 +8383,7 @@ async function saveData(){
   addDiffOps(ops, 'dues', 'dues', 'id', shopId, rows.dues);
   addDiffOps(ops, 'media', 'media', 'id', shopId, rows.media);
   addDiffOps(ops, 'mediaFolders', 'media_folders', 'id', shopId, rows.mediaFolders);
+  addDiffOps(ops, 'waPosts', 'wa_posts', 'id', shopId, rows.waPosts);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -8981,6 +9088,364 @@ document.getElementById('mp_file_input').addEventListener('change', async e=>{
   }
 });
 
+/* ---------------- WhatsApp: today's post ----------------
+
+   The picker answers "what should the shop show people today?" from the
+   shop's own numbers, and every pick carries its reasons -- a
+   recommendation that can't be interrogated is one that stops being
+   trusted. The reasons (margin included) are for the shop's eyes; what
+   ever leaves the building -- caption and image -- carries SELL prices
+   only, the same rule the printed catalogue enforces. */
+
+const WA_ROTATION_DAYS = 14;   // a repeat inside this window gets skipped
+const WA_SITTING_DAYS = 30;    // stock unmoved this long starts to count
+const WA_PICK_COUNT = 3;
+
+function waDaysBetween(a, b){
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+const WA_DAY_NAMES = ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'];
+function waWeekday(dateISO){ return new Date(dateISO + 'T00:00:00Z').getUTCDay(); }
+
+// Sales units per product+variant key, split by weekday -- from orders
+// that were actually invoiced, because a draft quote is an intention,
+// not a sale.
+function waSalesByKey(){
+  const out = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced || !q.date) return;
+    const wd = waWeekday(q.date);
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
+      const s = out.get(key) || { units: 0, byWeekday: [0,0,0,0,0,0,0] };
+      const qty = Number(it.qty)||0;
+      s.units += qty; s.byWeekday[wd] += qty;
+      out.set(key, s);
+    });
+  });
+  return out;
+}
+
+// The last two prices actually PAID per key, from dated purchase
+// invoices -- the price registry can't carry this claim, because a
+// supplier's new quote REPLACES their old row and the history is gone.
+function waPriceTrail(){
+  const out = new Map();
+  (data.purchaseInvoices||[]).slice()
+    .filter(pi=> !pi.voided && pi.date)
+    .sort((a,b)=> String(a.date).localeCompare(String(b.date)))
+    .forEach(pi=> (pi.items||[]).forEach(it=>{
+      if(!it.productId || !(Number(it.price)>0)) return;
+      const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
+      const t = out.get(key) || { prev: null, last: null };
+      t.prev = t.last; t.last = Number(it.price);
+      out.set(key, t);
+    }));
+  return out;
+}
+
+// When stock last moved OUT (a sale) or, failing that, IN -- so "sitting
+// N days" is measured from the last time anyone touched it. A key with
+// stock but no dated movement at all makes no sitting claim: unknown age
+// is not old age.
+function waStockIdle(key, dateISO){
+  const qty = Number((data.stock||{})[key])||0;
+  if(qty<=0) return null;
+  let lastOut = null, lastIn = null;
+  (data.stockLog||[]).forEach(l=>{
+    if(l.key !== key || !l.date) return;
+    if(l.delta < 0){ if(!lastOut || l.date > lastOut) lastOut = l.date; }
+    if(l.delta > 0){ if(!lastIn || l.date > lastIn) lastIn = l.date; }
+  });
+  const since = lastOut || lastIn;
+  if(!since) return null;
+  return { qty, days: Math.max(0, waDaysBetween(since, dateISO)) };
+}
+
+// Every product+variant that COULD be posted: has a photo and a retail
+// price. What can't be posted is returned as named gaps, because "3
+// products are missing photos" is something the shop can fix and "no
+// picks today" is not.
+function waPostCandidates(dateISO, skipKeys){
+  const skip = new Set(skipKeys||[]);
+  const sales = waSalesByKey();
+  const trail = waPriceTrail();
+  const wd = waWeekday(dateISO);
+  const lastPosted = new Map();
+  (data.waPosts||[]).forEach(w=>{
+    const key = stockKey(w.productId, w.variantIdx==null?null:w.variantIdx);
+    const prev = lastPosted.get(key);
+    if(!prev || w.date > prev) lastPosted.set(key, w.date);
+  });
+
+  const candidates = [], excluded = [], gaps = { noPhoto: [], noPrice: [] };
+  (data.products||[]).forEach(p=>{
+    const idxs = p.type==='variable'
+      ? (p.variants||[]).map((v,i)=>i)
+      : [null];
+    if(p.type==='variable' && idxs.length===0) return;
+    idxs.forEach(idx=>{
+      const name = productVariantLabel(p, idx);
+      const image = resolveProductImage(p, idx);
+      if(!image){ gaps.noPhoto.push(name); return; }
+      const at = catalogueSellAtQty(p, idx, 1, 'retail');
+      if(!at || at.price==null){ gaps.noPrice.push(name); return; }
+      const key = stockKey(p.id, idx);
+      if(skip.has(key)) return;
+
+      const posted = lastPosted.get(key) || null;
+      const sinceLast = posted ? waDaysBetween(posted, dateISO) : null;
+      if(sinceLast != null && sinceLast < WA_ROTATION_DAYS){
+        excluded.push({ key, name, daysAgo: sinceLast });
+        return;
+      }
+
+      let score = 0; const reasons = [];
+      const idle = waStockIdle(key, dateISO);
+      if(idle && idle.days >= WA_SITTING_DAYS){
+        score += 2 + Math.min(idle.days/30, 3);
+        reasons.push(`${idle.qty} ${at.unit || 'units'} sitting ${idle.days} days`);
+      }
+      const best = rankedPurchaseRowsAtQty(p.id, idx, 1).find(r=> r.purchasePrice != null);
+      if(best && best.purchasePrice > 0 && at.price > best.purchasePrice){
+        const m = (at.price - best.purchasePrice) / at.price;
+        if(m >= 0.10){ score += m*10; reasons.push(`Margin ${Math.round(m*100)}%`); }
+      }
+      const t = trail.get(key);
+      const dropped = !!(t && t.prev != null && t.last != null && t.last <= t.prev*0.98);
+      if(dropped){ score += 2.5; reasons.push(`Costs the shop less than it used to — the price can say so`); }
+      const s = sales.get(key);
+      if(s && s.units >= 5 && s.byWeekday[wd]/s.units >= 0.25){
+        score += 1.5;
+        reasons.push(`Sells on ${WA_DAY_NAMES[wd]} (${Math.round(100*s.byWeekday[wd]/s.units)}% of its sales)`);
+      }
+      if(!posted){ score += 1; reasons.push('Never been posted'); }
+
+      candidates.push({ key, productId: p.id, variantIdx: idx, name, category: p.category || '',
+        image, price: at.price, unit: at.unit || '', dropped,
+        breaks: catalogueBreaks(p, idx, 'retail'), score, reasons });
+    });
+  });
+
+  candidates.sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
+  return { candidates, excluded, gaps };
+}
+
+// Top picks with one rule of taste: not everything from the same shelf.
+// Greedy by score, but a candidate whose category is already picked
+// waits while any other category is still available for the slot.
+function waDailyPicks(dateISO, skipKeys){
+  const { candidates, excluded, gaps } = waPostCandidates(dateISO, skipKeys);
+  const picks = []; const rest = [...candidates];
+  while(picks.length < WA_PICK_COUNT && rest.length){
+    const cats = new Set(picks.map(x=> x.category));
+    const i = rest.findIndex(c=> !cats.has(c.category));
+    picks.push(rest.splice(i === -1 ? 0 : i, 1)[0]);
+  }
+  return { picks, others: rest, excluded, gaps };
+}
+
+// What leaves the building. SELL prices only -- the mutation suite holds
+// this to the same "no supplier cost on paper" rule as the catalogue.
+function waCaption(pick, shopName, phone){
+  const lines = [];
+  if(pick.dropped) lines.push('🔻 New lower price');
+  lines.push(pick.name);
+  lines.push(`UGX ${Number(pick.price).toLocaleString('en-UG')}${pick.unit ? ' per ' + pick.unit : ''}`);
+  (pick.breaks||[]).slice(0,1).forEach(b=>
+    lines.push(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}`));
+  lines.push('');
+  const who = [shopName, phone].filter(Boolean).join(' · ');
+  if(who) lines.push(who);
+  lines.push('Send us a message to order.');
+  return lines.join('\n');
+}
+
+/* ---- the composed status image (1080x1920, WhatsApp story frame) ---- */
+function waWrapText(ctx, text, maxWidth){
+  const words = String(text).split(/\s+/); const lines = []; let line = '';
+  words.forEach(w=>{
+    const tryLine = line ? line + ' ' + w : w;
+    if(ctx.measureText(tryLine).width > maxWidth && line){ lines.push(line); line = w; }
+    else line = tryLine;
+  });
+  if(line) lines.push(line);
+  return lines.slice(0, 2);
+}
+function waDrawStatus(canvas, pick, shopName, phone, img){
+  const c = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  c.fillStyle = '#14171B'; c.fillRect(0, 0, W, H);
+  // photo, covered into a rounded frame
+  const fx = 60, fy = 60, fw = W-120, fh = 1020;
+  c.save();
+  c.beginPath(); c.roundRect(fx, fy, fw, fh, 36); c.clip();
+  c.fillStyle = '#252A31'; c.fillRect(fx, fy, fw, fh);
+  if(img){
+    const scale = Math.max(fw/img.width, fh/img.height);
+    const dw = img.width*scale, dh = img.height*scale;
+    c.drawImage(img, fx+(fw-dw)/2, fy+(fh-dh)/2, dw, dh);
+  }
+  c.restore();
+  if(pick.dropped){
+    c.fillStyle = '#B23A26';
+    c.beginPath(); c.roundRect(fx, fy+24, 460, 88, 44); c.fill();
+    c.fillStyle = '#FFFFFF'; c.font = 'bold 44px Inter, sans-serif';
+    c.textBaseline = 'middle'; c.fillText('NEW LOWER PRICE', fx+40, fy+70);
+  }
+  c.textBaseline = 'alphabetic';
+  c.fillStyle = '#FFFFFF'; c.font = 'bold 68px Inter, sans-serif';
+  const nameLines = waWrapText(c, pick.name, W-160);
+  nameLines.forEach((l,i)=> c.fillText(l, 80, 1210 + i*84));
+  const py = 1210 + nameLines.length*84 + 96;
+  c.fillStyle = '#F0B429'; c.font = 'bold 104px Inter, sans-serif';
+  c.fillText(`UGX ${Number(pick.price).toLocaleString('en-UG')}`, 80, py);
+  c.fillStyle = '#8A939C'; c.font = '46px Inter, sans-serif';
+  if(pick.unit) c.fillText(`per ${pick.unit}`, 80, py+66);
+  const b = (pick.breaks||[])[0];
+  if(b){
+    c.fillStyle = '#DCE0E4'; c.font = '48px Inter, sans-serif';
+    c.fillText(`Buy ${b.qty}+ at UGX ${Number(b.price).toLocaleString('en-UG')}`, 80, py+170);
+  }
+  c.strokeStyle = '#3A4149'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(80, H-260); c.lineTo(W-80, H-260); c.stroke();
+  c.fillStyle = '#FFFFFF'; c.font = 'bold 52px Inter, sans-serif';
+  c.fillText(shopName || '', 80, H-160);
+  c.fillStyle = '#8A939C'; c.font = '46px Inter, sans-serif';
+  c.fillText(phone ? `WhatsApp ${phone}` : 'Send us a message to order', 80, H-90);
+}
+
+/* ---- the screen ---- */
+let waSkipKeys = [];      // session-only: "pick something else" skips
+let waCurrentPick = null; // the pick open in the modal
+
+function renderWhatsApp(){
+  const today = todayISO();
+  const wd = waWeekday(today);
+  document.getElementById('wa_today_head').textContent =
+    `Today's picks — ${WA_DAY_NAMES[wd].replace(/s$/,'')} ${today}`;
+  const phoneInput = document.getElementById('wa_phone');
+  if(document.activeElement !== phoneInput) phoneInput.value = data.presetWaPhone || '';
+
+  const { picks, others, gaps } = waDailyPicks(today, waSkipKeys);
+  const wrap = document.getElementById('wa_picks');
+  if(!picks.length){
+    const total = (data.products||[]).length;
+    wrap.innerHTML = `<div class="wa-empty">${total
+      ? 'Nothing can be picked — see what is holding products back below.'
+      : 'No products yet. Picks appear once products have photos and retail prices.'}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="wa-picks">${picks.map((p,i)=>`
+      <div class="wa-pick" data-key="${esc(p.key)}">
+        <img class="wap-thumb" loading="lazy" src="${esc(p.image)}" alt="">
+        <div class="wap-body">
+          <div class="wap-name">${esc(p.name)}</div>
+          <div class="wap-price">${fmtUGX(p.price)}${p.unit ? ' / ' + esc(p.unit) : ''}</div>
+          <div class="wap-reasons">${p.reasons.map(r=> `<div>${esc(r)}</div>`).join('') || '<div>In rotation</div>'}</div>
+          <div class="wap-actions">
+            <button class="btn btn-accent btn-icon wa-prepare" data-i="${i}">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
+              Prepare post
+            </button>
+            ${others.length ? `<button class="btn btn-ghost wa-swap" data-key="${esc(p.key)}" title="Pick something else">Swap</button>` : ''}
+          </div>
+        </div>
+      </div>`).join('')}</div>`;
+    wrap.querySelectorAll('.wa-prepare').forEach(btn=> btn.addEventListener('click', ()=>
+      openWaPost(picks[Number(btn.dataset.i)])));
+    wrap.querySelectorAll('.wa-swap').forEach(btn=> btn.addEventListener('click', ()=>{
+      waSkipKeys.push(btn.dataset.key);
+      renderWhatsApp();
+    }));
+  }
+
+  const gapsPanel = document.getElementById('wa_gaps_panel');
+  const gapBits = [];
+  if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><b>${gaps.noPhoto.length} without a photo</b> — ${esc(gaps.noPhoto.slice(0,6).join(', '))}${gaps.noPhoto.length>6?'…':''}. Add photos in Media and they become postable.</div>`);
+  if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><b>${gaps.noPrice.length} without a retail price</b> — ${esc(gaps.noPrice.slice(0,6).join(', '))}${gaps.noPrice.length>6?'…':''}. They need a supplier price and a retail markup rule.</div>`);
+  gapsPanel.style.display = gapBits.length ? '' : 'none';
+  document.getElementById('wa_gaps').innerHTML = gapBits.join('');
+
+  const hist = (data.waPosts||[]).slice()
+    .sort((a,b)=> String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)))
+    .slice(0, 20);
+  document.getElementById('wa_history').innerHTML = hist.length
+    ? `<table><tr><th>Date</th><th>Product</th><th>Why it was picked</th><th></th></tr>${hist.map(w=>
+        `<tr><td style="white-space:nowrap;">${esc(w.date)}</td><td>${esc(w.name)}</td>
+         <td style="color:var(--ink-soft);">${esc(w.reason||'')}</td>
+         <td><button class="btn btn-ghost wa-hist-del" data-id="${w.id}" title="Remove this record">✕</button></td></tr>`).join('')}</table>`
+    : `<div class="wa-empty">Nothing posted yet. The first "Mark as posted" starts the rotation record.</div>`;
+  document.querySelectorAll('.wa-hist-del').forEach(btn=> btn.addEventListener('click', ()=>{
+    const id = Number(btn.dataset.id);
+    const w = (data.waPosts||[]).find(x=> x.id === id);
+    if(!w || !confirm(`Remove the record of posting "${w.name}" on ${w.date}? It becomes pickable again sooner.`)) return;
+    data.waPosts = data.waPosts.filter(x=> x.id !== id);
+    saveData(); renderWhatsApp();
+  }));
+}
+
+document.getElementById('wa_phone').addEventListener('change', e=>{
+  data.presetWaPhone = e.target.value.trim();
+  saveData();
+});
+
+function openWaPost(pick){
+  waCurrentPick = pick;
+  document.getElementById('wp_title').textContent = pick.name;
+  document.getElementById('wp_caption').value =
+    waCaption(pick, printedShopName(), data.presetWaPhone || '');
+  const canvas = document.getElementById('wp_canvas');
+  waDrawStatus(canvas, pick, printedShopName(), data.presetWaPhone || '', null);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = ()=>{ if(waCurrentPick === pick) waDrawStatus(canvas, pick, printedShopName(), data.presetWaPhone || '', img); };
+  img.src = pick.image;
+  document.getElementById('wp_share').style.display =
+    (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', {type:'image/png'})] })) ? '' : 'none';
+  openModal('waPostModal');
+}
+document.getElementById('wp_close').addEventListener('click', ()=> closeModal('waPostModal'));
+document.getElementById('wp_copy').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(document.getElementById('wp_caption').value)
+    .then(()=> toast('Caption copied'))
+    .catch(()=> toast('Could not copy — select and copy by hand'));
+});
+function waCanvasBlob(){
+  return new Promise(res=> document.getElementById('wp_canvas').toBlob(res, 'image/png'));
+}
+document.getElementById('wp_download').addEventListener('click', async ()=>{
+  const blob = await waCanvasBlob();
+  if(!blob){ toast('Could not render the image'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `status-${todayISO()}.png`;
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 5000);
+});
+document.getElementById('wp_share').addEventListener('click', async ()=>{
+  const blob = await waCanvasBlob();
+  if(!blob){ toast('Could not render the image'); return; }
+  const file = new File([blob], `status-${todayISO()}.png`, { type: 'image/png' });
+  try{
+    await navigator.share({ files: [file], text: document.getElementById('wp_caption').value });
+  }catch(e){ /* user closed the sheet */ }
+});
+document.getElementById('wp_posted').addEventListener('click', ()=>{
+  const p = waCurrentPick;
+  if(!p) return;
+  data.waPosts.push({
+    id: allocRowId('waPost'), date: todayISO(),
+    productId: p.productId, variantIdx: p.variantIdx==null ? null : p.variantIdx,
+    name: p.name, reason: p.reasons.join(' · '),
+    createdAt: new Date().toISOString(),
+  });
+  saveData();
+  closeModal('waPostModal');
+  toast('Recorded — rotation now knows');
+  renderWhatsApp();
+});
+
 /* ---------------- Tabs ---------------- */
 const tabButtons = document.querySelectorAll('nav button[data-tab]');
 // The five flyout containers are gone with the regroup -- every
@@ -9007,6 +9472,7 @@ function goToTab(tab){
   // data -- it cannot be left saying what was true when the page loaded.
   if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='media') renderMedia();
+  if(tab==='whatsapp') renderWhatsApp();
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -21274,6 +21740,7 @@ const ROW_ID_KINDS = {
   // in the sequence costs nothing and blocks are safe.
   media:           {kind:'row:media',            counter:'nextMediaId'},
   mediaFolder:     {kind:'row:media_folder',     counter:'nextMediaFolderId'},
+  waPost:          {kind:'row:wa_post',          counter:'nextWaPostId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
