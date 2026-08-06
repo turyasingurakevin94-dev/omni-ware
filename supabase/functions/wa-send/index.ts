@@ -38,6 +38,19 @@ function json(body: unknown, status = 200) {
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
+// What stays in the catalog and what leaves it. Pure, so the promise is
+// testable: everything desired is pushed (upsert), and anything in the
+// catalog that the shop no longer offers is DELETED -- a product taken
+// off the shelf must come off the shop window too, or WhatsApp keeps
+// selling what the shop cannot deliver.
+// deno-lint-ignore no-explicit-any -- extracted into the Node harness
+function catalogDiff(existingIds: any, desired: any) {
+  const want = new Set(desired.map((d: any) => d.retailerId));
+  return {
+    toDelete: existingIds.filter((id: string) => !want.has(id)),
+  };
+}
+
 // The window fact, computed one way for both the refusal and the UI.
 // No last_inbound_at means the customer has never written: closed --
 // a window that was never opened is not an open window.
@@ -70,7 +83,7 @@ Deno.serve(async (req) => {
   if (!isMember) return json({ error: "Not a member of this shop" }, 403);
 
   const { data: numRow } = await admin.from("wa_numbers")
-    .select("phone_number_id").eq("shop_id", shopId).maybeSingle();
+    .select("phone_number_id, catalog_id").eq("shop_id", shopId).maybeSingle();
 
   if (action === "status") {
     return json({
@@ -215,6 +228,81 @@ Deno.serve(async (req) => {
       out.push({ wabaId: id, numbers: (nums as { data?: unknown[] }).data ?? nums, subscribedApps: (subs as { data?: unknown[] }).data ?? subs });
     }
     return json({ wabas: out });
+  }
+
+  // Pushes the shop's sellable products into the Meta catalog connected
+  // to the WABA. The client computes WHAT to sell (photo + retail price,
+  // the same gates the daily picks use, priced by the same rules the
+  // printed catalogue proves); this action only carries it to Meta.
+  // Prices ride as feed-style strings ("203000 UGX") -- no cents
+  // arithmetic to get wrong on a zero-decimal currency.
+  if (action === "catalog-sync") {
+    if (!ACCESS_TOKEN) return json({ error: "WHATSAPP_ACCESS_TOKEN is not set yet" }, 409);
+    const catalogId = numRow?.catalog_id;
+    if (!catalogId) return json({ error: "Save the Catalog ID first (Connection settings)" }, 400);
+    const items = Array.isArray(body.items) ? body.items as {
+      retailerId: string; name: string; price: number; imageUrl: string; description?: string;
+    }[] : [];
+    if (!items.length) return json({ error: "Nothing to sync — no product has both a photo and a retail price" }, 400);
+
+    const headers = { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` };
+    // Everything currently in the catalog, by retailer id.
+    const existing: string[] = [];
+    let url = `${GRAPH_BASE}/${catalogId}/products?fields=retailer_id&limit=100`;
+    for (let page = 0; page < 50 && url; page++) {
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${ACCESS_TOKEN}` } });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        // deno-lint-ignore no-explicit-any
+        const err = (result as any)?.error;
+        return json({ error: err?.message || `Graph API error ${resp.status}`, stage: "list" }, 502);
+      }
+      // deno-lint-ignore no-explicit-any
+      for (const p of ((result as any).data ?? [])) if (p.retailer_id) existing.push(String(p.retailer_id));
+      // deno-lint-ignore no-explicit-any
+      url = (result as any).paging?.next ?? "";
+    }
+
+    const { toDelete } = catalogDiff(existing, items);
+    // deno-lint-ignore no-explicit-any
+    const requests: any[] = [
+      ...items.map((it) => ({
+        method: "UPDATE",
+        data: {
+          id: it.retailerId,
+          title: it.name,
+          description: it.description || it.name,
+          availability: "in stock",
+          condition: "new",
+          price: `${Math.round(it.price)} UGX`,
+          link: "https://omni-ware.vercel.app/catalogue.html",
+          image_link: it.imageUrl,
+          brand: "Omni-ware",
+        },
+      })),
+      ...toDelete.map((id) => ({ method: "DELETE", data: { id } })),
+    ];
+
+    let sent = 0;
+    for (let i = 0; i < requests.length; i += 100) {
+      const chunk = requests.slice(i, i + 100);
+      const resp = await fetch(`${GRAPH_BASE}/${catalogId}/items_batch`, {
+        method: "POST", headers,
+        body: JSON.stringify({ item_type: "PRODUCT_ITEM", requests: chunk }),
+      });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        // deno-lint-ignore no-explicit-any
+        const err = (result as any)?.error;
+        console.error("wa-send: items_batch failed", resp.status, result);
+        return json({
+          error: err?.message || `Graph API error ${resp.status}`,
+          stage: "batch", pushedBeforeFailure: sent,
+        }, 502);
+      }
+      sent += chunk.length;
+    }
+    return json({ pushed: items.length, removed: toDelete.length });
   }
 
   if (action === "send") {

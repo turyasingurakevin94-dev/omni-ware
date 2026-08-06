@@ -9556,6 +9556,47 @@ function waTimeShort(ts){
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
   drafts: {} };   // conversation id -> half-typed reply, surviving re-renders
 
+/* What the WhatsApp catalog should hold: every product with a photo and
+   a RETAIL price -- the same two gates the daily picks use, priced by
+   the same rules the printed catalogue proves. The retailer id is the
+   app's own stock key, which is what lets a cart walk straight back to
+   the product when the order arrives. What cannot be listed is returned
+   as named gaps, because "3 products missing photos" is a task and a
+   silent omission is not. */
+function waCatalogItems(){
+  const items = []; const gaps = { noPhoto: [], noPrice: [] };
+  (data.products||[]).forEach(p=>{
+    const idxs = p.type==='variable' ? (p.variants||[]).map((v,i)=>i) : [null];
+    if(p.type==='variable' && idxs.length===0) return;
+    idxs.forEach(idx=>{
+      const name = productVariantLabel(p, idx);
+      const image = resolveProductImage(p, idx);
+      if(!image){ gaps.noPhoto.push(name); return; }
+      const at = catalogueSellAtQty(p, idx, 1, 'retail');
+      if(!at || at.price==null){ gaps.noPrice.push(name); return; }
+      items.push({
+        retailerId: stockKey(p.id, idx),
+        name,
+        price: Math.round(at.price),
+        imageUrl: image,
+        description: at.unit ? `Sold per ${at.unit}` : name,
+      });
+    });
+  });
+  return { items, gaps };
+}
+
+/* An order message, as the conversation list and the thread show it.
+   The count is UNITS, the total is what the cart promised -- both from
+   the payload the webhook stored whole. */
+function waOrderSummary(payload){
+  const items = payload && payload.order && Array.isArray(payload.order.product_items)
+    ? payload.order.product_items : [];
+  const count = items.reduce((s,i)=> s + (Number(i.quantity)||0), 0);
+  const total = items.reduce((s,i)=> s + (Number(i.quantity)||0) * (Number(i.item_price)||0), 0);
+  return `\u{1F6D2} Order — ${count} item${count===1?'':'s'} · UGX ${total.toLocaleString('en-UG')}`;
+}
+
 async function waInboxStatus(){
   try{
     const { data: res, error } = await sb.functions.invoke('wa-send', {
@@ -9627,12 +9668,34 @@ function waRenderConnect(){
       <button class="btn btn-ghost" id="wa_register">Register number</button>
       <button class="btn btn-ghost" id="wa_check">Check connection</button>
     </div>
+    <h3 style="margin-top:22px;">Catalog — products inside WhatsApp</h3>
+    <ol>
+      <li>Create a catalogue at <b>business.facebook.com/commerce</b> (type: E-commerce), then in
+        <b>WhatsApp Manager &rarr; Catalog</b> connect it to your number.</li>
+      <li>The system-user token needs the <i>catalog_management</i> permission and the catalogue
+        assigned as an asset — if it was generated without them, assign the catalogue to the system
+        user, generate a fresh token ticking <i>catalog_management</i> too, and re-set
+        <code>WHATSAPP_ACCESS_TOKEN</code> from your terminal.</li>
+      <li>Paste the <b>Catalog ID</b> (shown in Commerce Manager under the catalogue name) and sync.</li>
+    </ol>
+    <div class="wa-connect-row">
+      <div class="field"><label>Catalog ID</label><input id="wa_catid" placeholder="e.g. 1234567890"></div>
+      <button class="btn btn-accent" id="wa_catid_save">Save</button>
+      <button class="btn btn-ghost" id="wa_cat_sync">Sync products to catalog</button>
+    </div>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">Sync pushes every product that
+    has a photo and a retail price, at retail prices — and removes from the catalogue anything the
+    shop no longer offers. Customers browse it inside WhatsApp and send carts; carts land in Order
+    tracking automatically.</p>
     <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">"Register number" does what the
     dashboard's Register button does, but shows Meta's real answer when it fails. The number must be
     verified (the SMS code step) and must not be running on any WhatsApp app.</p>
   </div>`;
-  sb.from('wa_numbers').select('phone_number_id').eq('shop_id', currentShopId).maybeSingle()
-    .then(({ data: row })=>{ if(row) document.getElementById('wa_pnid').value = row.phone_number_id; });
+  sb.from('wa_numbers').select('phone_number_id, catalog_id').eq('shop_id', currentShopId).maybeSingle()
+    .then(({ data: row })=>{
+      if(row) document.getElementById('wa_pnid').value = row.phone_number_id;
+      if(row && row.catalog_id) document.getElementById('wa_catid').value = row.catalog_id;
+    });
   document.getElementById('wa_pnid_save').addEventListener('click', async ()=>{
     const v = document.getElementById('wa_pnid').value.trim();
     if(!v){ toast('Paste the Phone number ID first'); return; }
@@ -9644,6 +9707,36 @@ function waRenderConnect(){
     if(cleanErr) console.error('old number cleanup failed', cleanErr);
     waInbox.configured = null;
     toast('Number saved');
+  });
+  document.getElementById('wa_catid_save').addEventListener('click', async ()=>{
+    const v = document.getElementById('wa_catid').value.trim();
+    if(!v){ toast('Paste the Catalog ID first'); return; }
+    const { error } = await sb.from('wa_numbers')
+      .update({ catalog_id: v }).eq('shop_id', currentShopId);
+    if(error){ toast('Could not save: ' + error.message); return; }
+    toast('Catalog saved');
+  });
+  document.getElementById('wa_cat_sync').addEventListener('click', async ()=>{
+    const btn = document.getElementById('wa_cat_sync');
+    const { items, gaps } = waCatalogItems();
+    if(!items.length){
+      toast('Nothing to sync — no product has both a photo and a retail price');
+      return;
+    }
+    btn.disabled = true;
+    try{
+      const { data: res, error } = await sb.functions.invoke('wa-send', {
+        body: { shopId: currentShopId, action: 'catalog-sync', items } });
+      if(error){
+        let msg = error.message;
+        try{ const body = await error.context.json(); if(body && body.error) msg = body.error; }catch(_e){}
+        toast(msg, 6000);
+        return;
+      }
+      const gapNote = (gaps.noPhoto.length + gaps.noPrice.length)
+        ? ` (${gaps.noPhoto.length + gaps.noPrice.length} left out — photos or prices missing)` : '';
+      toast(`Catalog synced — ${res.pushed} pushed, ${res.removed} removed${gapNote}`, 6000);
+    } finally { btn.disabled = false; }
   });
   document.getElementById('wa_register').addEventListener('click', async ()=>{
     const btn = document.getElementById('wa_register');
@@ -9709,7 +9802,7 @@ function waRenderInbox(){
       </button>`;}).join('')}</div>
     <div class="wa-thread">${active ? `
       <div class="wa-msgs" id="wa_msgs">${waInbox.msgs.map(m=>`
-        <div class="wa-msg ${m.direction==='in'?'in':'out'}">${esc(m.body || '['+m.msg_type+']')}
+        <div class="wa-msg ${m.direction==='in'?'in':'out'}">${esc(m.msg_type==='order' ? waOrderSummary(m.payload) : (m.body || '['+m.msg_type+']'))}
           <div class="wm-meta">${esc(waTimeShort(m.sent_at))}${m.direction==='out' && m.status ? ' · ' + esc(m.status) : ''}</div>
         </div>`).join('')}</div>
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());

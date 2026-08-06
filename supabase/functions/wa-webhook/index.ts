@@ -23,6 +23,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VERIFY_TOKEN = Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 const APP_SECRET = Deno.env.get("WHATSAPP_APP_SECRET");
+// Same project-wide secret wa-send uses -- the webhook needs it to send
+// the order confirmation back inside the (freshly opened) 24h window.
+const ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+const GRAPH_BASE = "https://graph.facebook.com/v23.0";
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -117,6 +121,129 @@ function normalizeChange(value: any) {
   return { phoneNumberId, events };
 }
 
+// A cart's retailer ids are this app's own stock keys ("P017::0" for a
+// variant, "P001" for a simple product) -- minted that way by the
+// catalog sync precisely so an order can be walked straight back to the
+// product. Pure, so the mapping is testable: every cart line becomes a
+// quote line, and a retailer id that matches nothing becomes a NAMED
+// unknown line rather than silently vanishing from the order.
+// deno-lint-ignore no-explicit-any -- extracted into the Node harness, see messageBody
+function waOrderLines(productItems: any, productsById: any) {
+  const lines = [];
+  for (const it of (Array.isArray(productItems) ? productItems : [])) {
+    const rid = String(it.product_retailer_id ?? "");
+    const qty = Number(it.quantity) || 0;
+    const sell = Number(it.item_price) || 0;
+    if (!rid || qty <= 0) continue;
+    const sep = rid.indexOf("::");
+    const productId = sep === -1 ? rid : rid.slice(0, sep);
+    const variantIdx = sep === -1 ? null : Number(rid.slice(sep + 2));
+    const product = productsById.get(productId);
+    if (!product) {
+      lines.push({ productId: null, variantIdx: null,
+        productName: `UNKNOWN ITEM (${rid}) — check the catalog`,
+        unit: "", packUnit: "", packQty: 0, qty,
+        supplierId: null, supplierName: null,
+        sellPrice: sell, unknownRetailerId: rid });
+      continue;
+    }
+    const v = variantIdx != null && Array.isArray(product.variants) ? product.variants[variantIdx] : null;
+    const combo = v && v.combo ? Object.values(v.combo).join(" / ") : "";
+    lines.push({
+      productId: product.id,
+      variantIdx: variantIdx == null ? null : variantIdx,
+      productName: combo ? `${product.name} — ${combo}` : product.name,
+      unit: "", packUnit: "", packQty: 0, qty,
+      supplierId: null, supplierName: null,
+      // The price the CATALOG promised at cart time. The shop honours
+      // what it advertised; if the catalog was stale, the admin sees it
+      // on the order and rings the customer -- the system does not
+      // quietly bill a different number than the customer agreed to.
+      sellPrice: sell,
+    });
+  }
+  return lines;
+}
+
+async function sendText(phoneNumberId: string, to: string, text: string) {
+  if (!ACCESS_TOKEN) return null;
+  const resp = await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text } }),
+  });
+  const result = await resp.json().catch(() => ({}));
+  if (!resp.ok) { console.error("wa-webhook: confirmation send failed", resp.status, result); return null; }
+  // deno-lint-ignore no-explicit-any
+  return String((result as any)?.messages?.[0]?.id ?? "");
+}
+
+// A cart becomes an order in Order tracking, the same server-inserted
+// shape agent-submit-order has used in production since the agent app
+// shipped: no explicit id (the identity column assigns), the quote JSON
+// in payload. originWamid carries the cart's message id so the link
+// back to the conversation survives.
+// deno-lint-ignore no-explicit-any
+async function createWaOrder(shopId: string, phoneNumberId: string, waId: string, name: string | null, order: any, wamid: string) {
+  const items = Array.isArray(order?.product_items) ? order.product_items : [];
+  if (!items.length) { console.error("wa-webhook: order with no items", wamid); return; }
+  // deno-lint-ignore no-explicit-any
+  const productIds = [...new Set(items.map((it: any) => {
+    const rid = String(it.product_retailer_id ?? "");
+    const sep = rid.indexOf("::");
+    return sep === -1 ? rid : rid.slice(0, sep);
+  }).filter(Boolean))];
+  const { data: products, error: prodErr } = await admin.from("products")
+    .select("id, name, variants").eq("shop_id", shopId).in("id", productIds);
+  if (prodErr) { console.error("wa-webhook: order product lookup failed", prodErr); return; }
+  const productsById = new Map((products ?? []).map((p) => [String(p.id), p]));
+  const lines = waOrderLines(items, productsById);
+  if (!lines.length) { console.error("wa-webhook: order mapped to no lines", wamid); return; }
+  const total = lines.reduce((s, l) => s + l.qty * l.sellPrice, 0);
+  const clientName = name || `+${waId}`;
+  const now = new Date().toISOString();
+  const { data: inserted, error: insErr } = await admin.from("saved_quotes").insert({
+    shop_id: shopId,
+    client_name: clientName,
+    client_phone: `+${waId}`,
+    date: now.slice(0, 10),
+    status: "draft",
+    invoiced: false,
+    voided: false,
+    amount_paid: 0,
+    payload: {
+      client: { name: clientName, phone: `+${waId}` },
+      items: lines,
+      savedAt: now,
+      payments: [],
+      customerId: null,
+      debtCharged: 0,
+      originWa: true,
+      originWamid: wamid,
+    },
+  }).select("id").single();
+  if (insErr) { console.error("wa-webhook: order insert failed", insErr); return; }
+  console.log("wa-webhook: order", inserted.id, "created from cart", wamid, "-", lines.length, "line(s), total", total);
+
+  const confirmation =
+    `Thank you! Your order is in — ${lines.length} item${lines.length === 1 ? "" : "s"}, ` +
+    `UGX ${total.toLocaleString("en-UG")}. We'll confirm availability and delivery shortly. ` +
+    `Order no. ${inserted.id}.`;
+  const outWamid = await sendText(phoneNumberId, waId, confirmation);
+  if (outWamid) {
+    const { data: conv } = await admin.from("wa_conversations")
+      .select("id").eq("shop_id", shopId).eq("wa_id", waId).maybeSingle();
+    if (conv) {
+      const { error } = await admin.from("wa_messages").insert({
+        shop_id: shopId, conversation_id: conv.id, wamid: outWamid,
+        direction: "out", msg_type: "text", body: confirmation, status: "sent", sent_at: now,
+      });
+      if (error) console.error("wa-webhook: confirmation record failed AFTER delivery", error);
+      await admin.from("wa_conversations").update({ last_message_at: now }).eq("id", conv.id);
+    }
+  }
+}
+
 async function conversationFor(shopId: string, waId: string, name: string | null, ts: string, inbound: boolean): Promise<number | null> {
   // Upsert keyed on (shop_id, wa_id); last_inbound_at only ever moves
   // FORWARD and only for real inbound -- it is the 24h window's anchor.
@@ -148,7 +275,7 @@ async function conversationFor(shopId: string, waId: string, name: string | null
   return Number(existing.id);
 }
 
-async function handleEvents(shopId: string, events: WaEvent[]) {
+async function handleEvents(shopId: string, phoneNumberId: string, events: WaEvent[]) {
   for (const ev of events) {
     if (ev.kind === "status") {
       const { error } = await admin.from("wa_messages")
@@ -158,13 +285,22 @@ async function handleEvents(shopId: string, events: WaEvent[]) {
     }
     const convId = await conversationFor(shopId, ev.waId, ev.kind === "in" ? ev.name : null, ev.ts, ev.kind === "in");
     if (convId == null) continue;
-    const { error } = await admin.from("wa_messages").upsert({
+    const { data: landed, error } = await admin.from("wa_messages").upsert({
       shop_id: shopId, conversation_id: convId, wamid: ev.wamid,
       direction: ev.kind === "in" ? "in" : "out",
       msg_type: ev.type, body: ev.body, payload: ev.payload,
       status: ev.kind === "out" ? "sent" : null, sent_at: ev.ts,
-    }, { onConflict: "shop_id,wamid", ignoreDuplicates: true });
-    if (error) console.error("wa-webhook: message insert failed", error);
+    }, { onConflict: "shop_id,wamid", ignoreDuplicates: true }).select("id");
+    if (error) { console.error("wa-webhook: message insert failed", error); continue; }
+    // An order becomes an order EXACTLY once: only when the message row
+    // was newly inserted. Meta retries webhooks, and a retried cart must
+    // not become a second order -- the unique wamid answers a duplicate
+    // with an empty insert, and the empty insert means do nothing.
+    // deno-lint-ignore no-explicit-any
+    const orderPayload = (ev as any).payload?.order;
+    if (ev.kind === "in" && ev.type === "order" && orderPayload && (landed ?? []).length > 0) {
+      await createWaOrder(shopId, phoneNumberId, ev.waId, ev.name, orderPayload, ev.wamid);
+    }
   }
 }
 
@@ -215,7 +351,7 @@ Deno.serve(async (req) => {
           console.error("wa-webhook: no shop mapped for phone_number_id", phoneNumberId, error);
           continue;
         }
-        await handleEvents(String(numRow.shop_id), events);
+        await handleEvents(String(numRow.shop_id), phoneNumberId, events);
         // Success says so too -- absence of errors must be distinguishable
         // from absence of traffic.
         console.log("wa-webhook: filed", events.length, "event(s) for", phoneNumberId);
