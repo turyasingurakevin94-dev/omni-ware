@@ -56,6 +56,7 @@ const scope = compileScope([
 ], { data, todayISO: () => TODAY },
   ['loanDuePosition', 'loansNeedingPayment', 'loanScheduledPayment', 'loanSchedule']);
 
+const r = (n) => Math.round(n);
 const mkLoan = (over) => Object.assign({
   id: 1, lender: 'Centenary', principal: 20000000, ratePct: 24,
   method: 'reducing_balance', termMonths: 12, startedOn: '2026-01-15',
@@ -275,6 +276,64 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
   // this afternoon.
   t.check(/id="ln_due_banner"/.test(src) && /ln_due_banner'\)/.test(src),
     'and the Loans screen still offers a way in after it has been dismissed');
+}
+
+/* ---------- a weekly loan is not asked for the whole month -----------
+ * FOUND ON A REAL LOAN. A Spiro bike loan repaid every week, fully paid
+ * up: seventeen instalments due from 17 April to 7 August, seventeen
+ * payments made, not a shilling late. The panel said "20 of 52
+ * instalments due by today" and showed 1.15m in arrears.
+ *
+ * Nothing was wrong with the loan or the data. loanDuePosition and
+ * loanPerformance selected instalments by MONTH -- fine while every loan
+ * was monthly, since one row IS one month, but on a weekly loan it swept
+ * in the rest of the calendar month and demanded the 14th, 21st and 28th
+ * of August before they fell due. The owner said the start date was
+ * right and was right to say so.
+ *
+ * The other half of the fix: LATE is a period behind DUE, not a day
+ * behind it. The app has always let the current instalment run its
+ * course (a monthly one due on the 1st is not in arrears on the 4th, as
+ * the sections above assert), so an instalment goes late only once the
+ * NEXT one has fallen due -- a week's grace on a weekly loan where a
+ * monthly one gets a month.
+ */
+{
+  const weeks = (from, n) => Array.from({ length: n }, (_, i) =>
+    new Date(Date.parse(from + 'T00:00:00Z') + i * 7 * 86400000).toISOString().slice(0, 10));
+  const paidUp = weeks('2026-04-17', 17).map((date) => ({ date, amount: 88149 }));
+  const bike = mkLoan({
+    lender: 'Spiro', principal: 3310000, ratePct: 33.6, termMonths: 52,
+    frequency: 'weekly', method: 'reducing_balance', feePerInstallment: 13000,
+    startedOn: '2026-04-10', repayments: paidUp,
+  });
+  const AUG7 = '2026-08-07';
+  const sched = scope.loanSchedule(bike);
+  eq(sched.filter((r) => r.date <= AUG7).length, 17,
+    'seventeen instalments have fallen due by 7 August');
+  eq(sched.filter((r) => r.month <= '2026-08').length, 20,
+    'though twenty rows share a month with it — the three the old rule wrongly demanded');
+
+  const d = scope.loanDuePosition(bike, AUG7);
+  eq(r(d.overdue), 0, 'a borrower who has paid every instalment due is not in arrears');
+  eq(d.instalmentsBehind, 0, 'nor behind by any number of instalments');
+  t.check(d.status !== 'overdue', `and is not reported overdue (${d.status})`);
+  eq(r(d.dueNow), 0, 'with nothing outstanding as of today');
+
+  /* The instalment falling due TODAY is due, not late — a week's grace,
+     the same shape as the month's grace a monthly loan gets. */
+  const missedToday = mkLoan({
+    lender: 'Spiro', principal: 3310000, ratePct: 33.6, termMonths: 52,
+    frequency: 'weekly', method: 'reducing_balance', feePerInstallment: 13000,
+    startedOn: '2026-04-10', repayments: weeks('2026-04-17', 16).map((date) => ({ date, amount: 88149 })),
+  });
+  const d2 = scope.loanDuePosition(missedToday, AUG7);
+  eq(r(d2.overdue), 0, 'the instalment falling due today is not yet late');
+  t.check(d2.dueNow > 88000, `but it IS due (${r(d2.dueNow)})`);
+  /* A week later, with still nothing paid, it is late — and only it. */
+  const d3 = scope.loanDuePosition(missedToday, '2026-08-14');
+  eq(d3.instalmentsBehind, 1, 'a week on, exactly one instalment is late');
+  t.check(Math.abs(d3.overdue - 88149) < 2, `by exactly that instalment (${r(d3.overdue)})`);
 }
 
 process.exit(t.done() ? 1 : 0);

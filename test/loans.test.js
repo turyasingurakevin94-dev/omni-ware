@@ -429,6 +429,22 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
     'an unrecognised rhythm falls back to monthly rather than being trusted');
   eq(scope.loanFrequency(loan({ frequency: null })), 'monthly', 'and so does none at all');
 
+  /* THE PANEL'S OWN COUNT, which is the number the owner actually read.
+     It said "20 of 52 instalments due by today" on a loan that was fully
+     paid up, because it selected rows by MONTH -- one row IS one month
+     on a monthly loan, so nobody noticed until a weekly one swept in the
+     rest of August. 1.15m of phantom arrears. */
+  const weeks = (from, n) => Array.from({ length: n }, (_, i) =>
+    new Date(Date.parse(from + 'T00:00:00Z') + i * 7 * 86400000).toISOString().slice(0, 10));
+  const paidUp = { ...bike, repayments: weeks('2026-04-17', 17).map((d) => ({ date: d, amount: 88149 })) };
+  const perf = scope.loanPerformance(paidUp, '2026-08-07');
+  eq(perf.instalmentsDue, 17, 'seventeen instalments have fallen due by 7 August, not twenty');
+  eq(perf.instalments, 52, 'out of fifty-two');
+  t.check(Math.abs(perf.scheduledByNow - 17 * 88149) < 5,
+    `and the agreement asks for exactly those seventeen (${r(perf.scheduledByNow)})`);
+  t.check(perf.behind < 1,
+    `so a borrower who has paid all seventeen is not behind (${r(perf.behind)})`);
+
   /* Repayments must settle the charge as well, or the app credits 13,000
      a week to principal that the lender never did -- and shows the loan
      closing nine weeks early. */

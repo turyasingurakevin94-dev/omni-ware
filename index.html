@@ -28247,8 +28247,9 @@ function loanInterestForPeriod(fromISO, toISO){
 function loanPerformance(loan, asOfISO){
   const asOf = asOfISO || todayISO();
   const sched = loanSchedule(loan);
-  const dueMonth = String(asOf).slice(0,7);
-  const dueRows = sched.filter(r=> r.month <= dueMonth);
+  // Due by DATE. See loanDuePosition: comparing months made a weekly
+  // loan demand the rest of the calendar month before it fell due.
+  const dueRows = sched.filter(r=> r.date <= asOf);
   const scheduledByNow = dueRows.reduce((s,r)=> s + r.payment, 0);
   const applied = loanApplied(loan, asOf);
   const paidByNow = loanRepayments(loan)
@@ -29021,12 +29022,32 @@ function loanDuePosition(loan, asOfISO){
   const nowMonth = String(asOf).slice(0,7);
   const rows = loanSchedule(loan);
 
-  const past = rows.filter(r=> r.month < nowMonth);
+  /* By DATE, not by month. Month granularity was invisible while every
+     loan was monthly -- one row per month, so "this month" and "due by
+     today" were the same set. On a WEEKLY loan it demanded the whole
+     calendar month up front: a borrower fully paid up on 7 August was
+     told they owed the 14th, 21st and 28th too, and shown three
+     instalments in arrears they had no way to be in arrears on. Found on
+     a real loan whose owner insisted the start date was right, and was.
+
+     LATE is a period behind DUE, not a day behind it. The app has always
+     let the current instalment run its course -- a monthly one falling
+     due on the 1st is not in arrears on the 4th -- so an instalment
+     counts as late only once the NEXT one has also fallen due. For a
+     monthly loan that is exactly the old "previous calendar months"
+     rule; for a weekly loan it is a week's grace instead of a month's. */
+  const past = [];
   let askedBefore = 0, askedByNow = 0, thisMonth = 0, next = null;
-  rows.forEach(r=>{
-    if(r.month < nowMonth){ askedBefore += r.payment; askedByNow += r.payment; }
-    else if(r.month === nowMonth){ askedByNow += r.payment; thisMonth += r.payment; }
+  rows.forEach((r, i)=>{
+    if(r.date <= asOf){
+      askedByNow += r.payment;
+      const nextDue = loanDueDate(loan, i+1);
+      const graceEnds = nextDue ? nextDue.toISOString().slice(0,10) : r.date;
+      if(graceEnds <= asOf){ askedBefore += r.payment; past.push(r); }
+    }
     else if(!next){ next = r; }
+    // Still a calendar month, because the sentence it feeds says "this month".
+    if(r.month === nowMonth) thisMonth += r.payment;
   });
 
   const paid = loanRepayments(loan)
