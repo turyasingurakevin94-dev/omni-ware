@@ -21110,6 +21110,12 @@ function renderPayrollDues(){
     const settled = dueIsSettled(d);
     const staff = d.kind==='wage' ? (data.staff||[]).find(s=> String(s.id)===String(d.refId)) : null;
     const daily = staff && staff.payBasis === 'daily';
+    /* A wage addressed to nobody, with nothing paid against it: a demand
+       with no person behind it (the worker was deleted before deleteStaff
+       learned to take these along). It gets Remove instead of Pay. A
+       part-paid orphan keeps Pay -- the shop may genuinely owe a departed
+       worker the balance, and that is the shop's call, not a cleanup's. */
+    const orphanGhost = d.kind==='wage' && !staff && !(Number(d.paid)||0) && !(d.payments||[]).length;
     const state = settled ? '<span class="pr-state ok">Paid</span>'
       : bal === null ? '<span class="pr-state todo">Not costed</span>'
       : overdue ? '<span class="pr-state bad">Late</span>'
@@ -21130,7 +21136,9 @@ function renderPayrollDues(){
       <td class="price">${bal===null ? '<span class="pr-quiet">—</span>' : `<b>${fmtUGX(Math.round(bal))}</b>`}</td>
       <td>${esc(fmtShortDate(d.dueDate))}</td>
       <td>${state}</td>
-      <td class="row-actions">${bal!==null && bal>0.5
+      <td class="row-actions">${orphanGhost
+        ? `<button type="button" class="age-act pr-orphan-del" data-id="${d.id}" title="Addressed to a staff member who no longer exists, nothing paid against it">Remove</button>`
+        : bal!==null && bal>0.5
         ? `<button type="button" class="age-act pr-pay" data-id="${d.id}">Pay</button>`
         : (d.payments||[]).length
           ? `<button type="button" class="age-act pr-undo" data-id="${d.id}">Undo</button>`
@@ -21151,6 +21159,14 @@ function renderPayrollDues(){
     renderPayroll();
   }));
   wrap.querySelectorAll('.pr-pay').forEach(btn=> btn.addEventListener('click', ()=> openDuePayment(Number(btn.dataset.id))));
+  wrap.querySelectorAll('.pr-orphan-del').forEach(btn=> btn.addEventListener('click', ()=>{
+    const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
+    if(!d) return;
+    if(!confirm(`Remove this wage of ${d.amount==null?'(not costed)':fmtUGX(Math.round(d.amount))} for ${dueName(d)}?\n\nIt is addressed to a staff member who no longer exists and nothing has been paid against it.`)) return;
+    data.dues = data.dues.filter(x=> x.id !== d.id);
+    saveData(); renderPayroll();
+    toast('Wage removed');
+  }));
   wrap.querySelectorAll('.pr-undo').forEach(btn=> btn.addEventListener('click', ()=>{
     const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
     if(!d || !(d.payments||[]).length) return;

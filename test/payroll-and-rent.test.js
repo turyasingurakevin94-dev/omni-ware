@@ -522,6 +522,20 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
     'and the confirm says the ghost wage goes');
   t.check(/months with money already recorded stay on record/.test(confirms[0] || ''),
     'and that the part-paid month stays');
+
+  /* The payroll screen heals dues orphaned BEFORE deleteStaff learned
+     this: a wage addressed to nobody with nothing paid gets Remove
+     instead of Pay, so a shop that hit the old bug is not stuck with a
+     demand no button can dismiss. A part-paid orphan keeps Pay -- the
+     shop may genuinely owe a departed worker the balance. */
+  t.check(/const orphanGhost = d\.kind==='wage' && !staff && !\(Number\(d\.paid\)\|\|0\) && !\(d\.payments\|\|\[\]\)\.length;/.test(src),
+    'an orphan ghost is a wage for a missing worker with no money recorded');
+  t.check(/\$\{orphanGhost\s*\n?\s*\? `<button type="button" class="age-act pr-orphan-del"/.test(src),
+    'and it is offered Remove where every real wage is offered Pay');
+  const orphanHandler = (/querySelectorAll\('\.pr-orphan-del'\)\.forEach\(btn=> btn\.addEventListener\('click', \(\)=>\{([\s\S]*?)\}\)\);/.exec(src) || ['', ''])[1];
+  t.check(/if\(!confirm\(/.test(orphanHandler) && /data\.dues = data\.dues\.filter\(x=> x\.id !== d\.id\);/.test(orphanHandler)
+    && /saveData\(\)/.test(orphanHandler),
+    'Remove asks first, then deletes the due and saves so the delete syncs');
 }
 
 process.exit(t.done() ? 1 : 0);
