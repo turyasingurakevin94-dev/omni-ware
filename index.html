@@ -3617,6 +3617,23 @@
   .ln-addpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .ln-addpay input{flex:1 1 130px;min-width:0;}
   .ln-addpay .btn{flex:0 0 auto;}
+  /* A recorded repayment. The date and the amount used to render as two
+     adjacent inline boxes with nothing between them, so "2026-04-17" and
+     "88,149 UGX" read as one string. They are the two ends of a row now,
+     with the buttons that change them between. */
+  .dr-singles{display:flex;flex-direction:column;margin-top:4px;}
+  .dr-single{display:flex;align-items:center;gap:12px;padding:7px 0;
+    border-bottom:1px solid var(--line);}
+  .dr-single:last-child{border-bottom:none;}
+  .dr-single > span{flex:1;min-width:0;font-size:13px;color:var(--ink-soft);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dr-single > b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .dr-single-acts{display:flex;gap:4px;flex:0 0 auto;}
+  /* Editing one in place. Same row, same order, so nothing jumps. */
+  .dr-single.editing{gap:8px;flex-wrap:wrap;}
+  .dr-single.editing input{min-width:0;}
+  .dr-single.editing input[type=date]{flex:1 1 130px;}
+  .dr-single.editing input[type=number]{flex:1 1 110px;}
   .fa-rule{border:0;border-top:1px solid var(--line);margin:18px 0 14px;}
 
   /* Cash position. Sits between the total and the supplier runs because it
@@ -29820,6 +29837,10 @@ function renderLoans(){
     openModal('loanDueModal');
   });
 }
+/* Which recorded repayment is open for editing, by its index in the
+   loan's own array. Module-level because the panel is rebuilt from
+   scratch on every change, so the cursor cannot live inside it. */
+let lnPayEditIdx = null;
 function openLoanPerformance(id){
   const l = (data.loans||[]).find(x=>x.id===id);
   if(!l) return;
@@ -29842,8 +29863,33 @@ function openLoanPerformance(id){
 
     <section class="dr-rest">
       <h4>${ICON_MONEY}Repayments made</h4>
-      ${paid.length ? `<div class="dr-singles">${paid.map(rp=>`
-        <div class="dr-single"><span>${esc(rp.date||'')}${rp.note?` · ${esc(rp.note)}`:''}</span><b>${fmtUGX(Math.round(Number(rp.amount)||0))}</b></div>`).join('')}</div>`
+      ${paid.length ? `<div class="dr-singles">${paid.map(rp=>{
+        /* The key is the index in the loan's OWN array, not in this
+           sorted view: loanRepayments() sorts a copy by date, so a row's
+           position here says nothing about where it lives. Editing by
+           display position would rewrite the wrong payment the moment
+           one was entered out of order. */
+        const idx = (l.repayments||[]).indexOf(rp);
+        const amt = Math.round(Number(rp.amount)||0);
+        if(idx === lnPayEditIdx) return `
+        <div class="dr-single editing">
+          <input type="date" class="ln-pe-date" value="${esc(rp.date||'')}">
+          <input type="number" class="ln-pe-amount" min="0" step="any" value="${amt}">
+          <div class="dr-single-acts">
+            <button type="button" class="btn btn-accent ln-pe-save" data-idx="${idx}">Save</button>
+            <button type="button" class="btn btn-ghost ln-pe-cancel">Cancel</button>
+          </div>
+        </div>`;
+        return `
+        <div class="dr-single">
+          <span>${esc(rp.date||'')}${rp.note?` · ${esc(rp.note)}`:''}${
+            rp.cashTxnId==null ? ' · not in the cash book' : ''}</span>
+          <b>${fmtUGX(amt)}</b>
+          <div class="dr-single-acts">
+            <button type="button" class="pc-icon-btn ln-pe-edit" data-idx="${idx}" title="Change this repayment">${ICON_EDIT}</button>
+            <button type="button" class="pc-icon-btn danger ln-pe-del" data-idx="${idx}" title="Remove this repayment">${ICON_TRASH}</button>
+          </div>
+        </div>`;}).join('')}</div>`
         : '<p class="preset-hint">Nothing recorded against this loan yet.</p>'}
       <div class="ln-addpay">
         <input type="date" id="ln_pay_date" value="${esc(today)}">
@@ -29873,6 +29919,50 @@ function openLoanPerformance(id){
         </tr>`).join('')}</tbody>
       </table></div>
     </section>`;
+  /* Changing a repayment has to change its cash-book entry too, or the
+     books and the loan tell different stories about the same money. A
+     repayment recorded with "do not touch the cash book" has no entry to
+     carry, and stays that way. */
+  const reopen = ()=>{ saveData(); renderLoans(); openLoanPerformance(id); };
+  document.querySelectorAll('.ln-pe-edit').forEach(b=> b.addEventListener('click', ()=>{
+    lnPayEditIdx = Number(b.dataset.idx);
+    openLoanPerformance(id);
+  }));
+  document.querySelectorAll('.ln-pe-cancel').forEach(b=> b.addEventListener('click', ()=>{
+    lnPayEditIdx = null;
+    openLoanPerformance(id);
+  }));
+  document.querySelectorAll('.ln-pe-save').forEach(b=> b.addEventListener('click', ()=>{
+    const loan = (data.loans||[]).find(x=>x.id===id);
+    const rp = loan && (loan.repayments||[])[Number(b.dataset.idx)];
+    if(!rp) return;
+    const row = b.closest('.dr-single');
+    const newDate = row.querySelector('.ln-pe-date').value;
+    const newAmount = Number(row.querySelector('.ln-pe-amount').value)||0;
+    if(!(newAmount > 0)){ toast('Enter what was paid'); return; }
+    if(!newDate){ toast('Enter the date it was paid'); return; }
+    rp.date = newDate; rp.amount = newAmount;
+    const txn = rp.cashTxnId==null ? null : (data.cashTxns||[]).find(t=> t.id === rp.cashTxnId);
+    if(txn){ txn.amount = newAmount; txn.date = newDate; }
+    lnPayEditIdx = null;
+    reopen();
+    toast(txn ? 'Repayment updated — cash book too' : 'Repayment updated');
+  }));
+  document.querySelectorAll('.ln-pe-del').forEach(b=> b.addEventListener('click', ()=>{
+    const loan = (data.loans||[]).find(x=>x.id===id);
+    const i = Number(b.dataset.idx);
+    const rp = loan && (loan.repayments||[])[i];
+    if(!rp) return;
+    if(!confirm(`Remove the ${fmtUGX(Math.round(Number(rp.amount)||0))} repayment of ${rp.date}?`
+      + (rp.cashTxnId!=null ? '\n\nIts cash book entry goes too.' : '')
+      + '\n\nThe loan will show more still owed.')) return;
+    removeCashTxnsByIds([rp.cashTxnId]);
+    loan.repayments.splice(i, 1);
+    lnPayEditIdx = null;
+    reopen();
+    toast('Repayment removed');
+  }));
+
   const btn = document.getElementById('ln_pay_add');
   if(btn) btn.addEventListener('click', ()=>{
     const amount = Number(document.getElementById('ln_pay_amount').value)||0;

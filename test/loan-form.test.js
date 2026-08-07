@@ -176,4 +176,58 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
     'and the cursor lands on the first thing to type');
 }
 
+/* ---------- a repayment recorded wrong could not be put right --------
+ * The panel listed what had been paid and offered no way to change any
+ * of it: a mistyped amount or a wrong date meant the loan reported the
+ * wrong balance forever, and the only escape was deleting the loan and
+ * its whole history.
+ *
+ * The trap this guards: loanRepayments() returns a copy SORTED BY DATE,
+ * so a row's position in the list says nothing about where it lives in
+ * the loan's own array. Editing by display position quietly rewrites a
+ * different payment the moment one is entered out of order -- verified
+ * live with two repayments stored newest-first.
+ */
+{
+  t.check(/const idx = \(l\.repayments\|\|\[\]\)\.indexOf\(rp\);/.test(src),
+    'a row is keyed by its place in the loan\'s own array, not by where it sits on screen');
+  t.check(/class="pc-icon-btn ln-pe-edit" data-idx="\$\{idx\}"/.test(src)
+    && /class="pc-icon-btn danger ln-pe-del" data-idx="\$\{idx\}"/.test(src),
+    'every recorded repayment can be changed or removed');
+  t.check(/let lnPayEditIdx = null;/.test(code),
+    'the editing cursor lives outside the panel, which is rebuilt on every change');
+
+  const save = (/querySelectorAll\('\.ln-pe-save'\)[\s\S]*?\n  \}\)\);/.exec(code) || [''])[0];
+  t.check(/rp\.date = newDate; rp\.amount = newAmount;/.test(save),
+    'saving writes the new date and amount');
+  t.check(/if\(!\(newAmount > 0\)\)/.test(save) && /if\(!newDate\)/.test(save),
+    'and refuses an empty amount or date, the same way recording one does');
+  /* The books and the loan must not tell different stories about the
+     same money: a repayment carrying a cash-book entry has to carry it
+     through the edit. One recorded with "do not touch the cash book" has
+     no entry to carry, and stays that way. */
+  t.check(/const txn = rp\.cashTxnId==null \? null : \(data\.cashTxns\|\|\[\]\)\.find\(t=> t\.id === rp\.cashTxnId\);/.test(save)
+    && /if\(txn\)\{ txn\.amount = newAmount; txn\.date = newDate; \}/.test(save),
+    'and the cash book entry follows the repayment it belongs to');
+
+  const del = (/querySelectorAll\('\.ln-pe-del'\)[\s\S]*?\n  \}\)\);/.exec(code) || [''])[0];
+  t.check(/if\(!confirm\(/.test(del) && /Its cash book entry goes too/.test(del),
+    'removing one asks first, and says the cash entry goes with it');
+  t.check(/The loan will show more still owed/.test(del),
+    'naming the consequence, since removing a payment increases the debt');
+  t.check(/removeCashTxnsByIds\(\[rp\.cashTxnId\]\);/.test(del)
+    && /loan\.repayments\.splice\(i, 1\);/.test(del),
+    'and takes both the entry and the repayment');
+  t.check(/const reopen = \(\)=>\{ saveData\(\); renderLoans\(\); openLoanPerformance\(id\); \};/.test(code),
+    'every change is saved and redrawn through one path');
+
+  /* The date and the amount rendered as two adjacent inline boxes with
+     nothing between them, so "2026-04-17" and "88,149 UGX" read as one
+     string on screen. */
+  t.check(/\.dr-single\{display:flex;align-items:center;gap:12px/.test(src),
+    'a repayment row spaces its date from its amount');
+  t.check(/\.dr-single > span\{flex:1/.test(src),
+    'with the date taking the slack so the amount sits at the end');
+}
+
 process.exit(t.done() ? 1 : 0);
