@@ -47,6 +47,10 @@ const scope = compileScope([
   extractFunction(src, 'loanRepayments', 'index.html'),
   extractFunction(src, 'loanApplied', 'index.html'),
   extractFunction(src, 'loanOutstanding', 'index.html'),
+  extractFunction(src, 'loanMethodLabel', 'index.html'),
+  extractFunction(src, 'loanRoundTo', 'index.html'),
+  extractFunction(src, 'loanRound', 'index.html'),
+  extractFunction(src, 'loanRateFor', 'index.html'),
   extractFunction(src, 'dayBeforeISO', 'index.html'),
   extractFunction(src, 'loanInterestPaidBetween', 'index.html'),
   extractFunction(src, 'liveLoans', 'index.html'),
@@ -56,9 +60,10 @@ const scope = compileScope([
 ], { data, todayISO: () => '2026-08-04' },
 ['loanScheduledPayment', 'loanSchedule', 'loanTotalInterest', 'loanEffectiveRate',
   'loanApplied', 'loanOutstanding', 'loanInterestPaidBetween', 'loansOutstandingAt',
-  'loanInterestForPeriod', 'loanPerformance', 'dayBeforeISO']);
+  'loanInterestForPeriod', 'loanPerformance', 'dayBeforeISO', 'loanMethodLabel']);
 
 const r = (n) => Math.round(n);
+const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const loan = (over) => Object.assign({
   id: 1, lender: 'Centenary Bank', principal: 10000000, ratePct: 24,
   method: 'reducing_balance', termMonths: 12, startedOn: '2026-01-01', repayments: [],
@@ -224,6 +229,93 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
     'editing a loan merges into the stored row, so its repayments survive');
   t.check(!/readLoanForm\(\)[\s\S]{0,120}repayments/.test(code),
     'and the form never carries a repayments list of its own to overwrite them with');
+}
+
+/* ---------- equal principal, against a real printed schedule ---------
+ * Every figure below is copied from the Lyamujungu SACCO repayment
+ * schedule for loan C0DB761897: 20,000,000 over 12 months at 24%, which
+ * the paperwork calls "declining". It IS declining -- the interest is 2%
+ * of the outstanding balance -- but the PRINCIPAL is a flat 1/12 each
+ * month, so the instalment falls from 2,066,700 to 1,699,600 instead of
+ * staying level.
+ *
+ * Modelling that as an annuity (the only reducing-balance shape the app
+ * had) overstated the balance from month one and the total interest by
+ * 94,303. A schedule that disagrees with the lender's is worse than no
+ * schedule: it is a number the shop would reconcile against and lose.
+ *
+ * The rounding is not cosmetic either. The sheet rounds every figure to
+ * the nearest 100, and twelve slices of 1,666,700 overshoot the
+ * principal by 400 -- so the last row is 1,666,300 and the loan closes
+ * at exactly 0.00. Both facts are held here.
+ */
+{
+  const sacco = loan({
+    principal: 20000000, ratePct: 24, termMonths: 12,
+    method: 'equal_principal', roundTo: 100, startedOn: '2026-07-25',
+  });
+  const rows = scope.loanSchedule(sacco);
+  eq(rows.length, 12, 'twelve months, twelve rows');
+
+  // [installment, interest, ending balance] -- straight off the paper.
+  const paper = [
+    [2066700, 400000, 18333300], [2033400, 366700, 16666600],
+    [2000000, 333300, 14999900], [1966700, 300000, 13333200],
+    [1933400, 266700, 11666500], [1900000, 233300, 9999800],
+    [1866700, 200000, 8333100], [1833400, 166700, 6666400],
+    [1800000, 133300, 4999700], [1766700, 100000, 3333000],
+    [1733400, 66700, 1666300], [1699600, 33300, 0],
+  ];
+  let mismatched = 0;
+  rows.forEach((row, i) => {
+    const [pay, int, end] = paper[i];
+    if (r(row.payment) !== pay || r(row.interest) !== int || r(row.closing) !== end) mismatched++;
+  });
+  eq(mismatched, 0, 'every row matches the lender\'s printed schedule exactly');
+  eq(r(rows[0].principal), 1666700, 'the principal slice is flat and rounded');
+  eq(r(rows[11].principal), 1666300, 'and the last one absorbs the rounding, to the shilling');
+  eq(r(rows[11].closing), 0, 'so the loan closes at exactly nothing');
+  eq(r(scope.loanTotalInterest(sacco)), 2600000,
+    'total interest is what the sheet says — 94,303 less than the annuity charged');
+
+  /* The instalment is different every month, so "the payment" can only
+     honestly mean the first -- the one the borrower must actually find. */
+  eq(r(scope.loanScheduledPayment(sacco)), 2066700,
+    'the quoted payment is the FIRST instalment, the largest');
+
+  /* Both balance-based methods charge the stated rate honestly; only the
+     flat one hides its real cost. Priced off the ACTUAL instalments, so a
+     falling schedule is not mispriced as a level one. */
+  t.check(Math.abs(scope.loanEffectiveRate(sacco) - 24) < 0.01,
+    `equal principal costs the rate it states (${scope.loanEffectiveRate(sacco).toFixed(2)}%)`);
+  const annuity = loan({ principal: 20000000, ratePct: 24, termMonths: 12,
+    method: 'reducing_balance', startedOn: '2026-07-25' });
+  t.check(Math.abs(scope.loanEffectiveRate(annuity) - 24) < 0.01,
+    'and so does the annuity, unchanged by the generalisation');
+  t.check(scope.loanTotalInterest(annuity) > scope.loanTotalInterest(sacco),
+    'the annuity really is the dearer of the two at the same stated rate');
+
+  /* Unrounded, the same method still closes cleanly -- rounding is a
+     lender's habit, not a requirement of the maths. */
+  const unrounded = loan({ principal: 20000000, ratePct: 24, termMonths: 12,
+    method: 'equal_principal', roundTo: 0, startedOn: '2026-07-25' });
+  const ur = scope.loanSchedule(unrounded);
+  eq(r(ur[ur.length-1].closing), 0, 'an unrounded equal-principal loan closes at zero too');
+  t.check(Math.abs(ur[0].principal - 20000000/12) < 0.01,
+    'with the exact slice rather than a rounded one');
+
+  /* A zero-rate loan of this shape is just the principal, in slices. */
+  const free = loan({ principal: 1200000, ratePct: 0, termMonths: 12,
+    method: 'equal_principal', roundTo: 0, startedOn: '2026-07-25' });
+  const fr = scope.loanSchedule(free);
+  /* On a list, "Reducing" alone covered both balance-based shapes, so an
+     equal-principal loan read exactly like the annuity beside it. */
+  eq(scope.loanMethodLabel(sacco), 'Equal principal 24%', 'the list names the shape it actually is');
+  eq(scope.loanMethodLabel(annuity), 'Reducing 24%', 'and still tells the annuity apart from it');
+  eq(scope.loanMethodLabel(loan({ method: 'flat', ratePct: 12 })), 'Flat 12%', 'flat unchanged');
+
+  eq(r(fr[0].payment), 100000, 'no rate, no interest — just the slice');
+  eq(r(scope.loanTotalInterest(free)), 0, 'and nothing charged over the term');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -6551,6 +6551,18 @@
               <input id="ln_fees" type="number" min="0" step="any" placeholder="0">
               <span class="lnf-cur">UGX</span>
             </div>
+            <!-- Lenders' sheets repeat round figures (1,666,700 a month,
+                 not 1,666,666.67). Matching that is what makes a printed
+                 schedule and this one agree row for row. -->
+            <div class="lnf-row">
+              <label for="ln_round">Figures rounded to</label>
+              <select id="ln_round">
+                <option value="0">Not rounded</option>
+                <option value="100">Nearest 100</option>
+                <option value="1000">Nearest 1,000</option>
+              </select>
+              <span class="lnf-cur">UGX</span>
+            </div>
           </div>
           <div class="lnf-hint">Insurance, arrangement and paperwork the lender takes out of the money before handing it over. You still owe the full amount above.</div>
         </div>
@@ -8268,6 +8280,7 @@ async function loadData(shopId){
       id:l.id, lender:l.lender||'', principal:Number(l.principal)||0,
       ratePct:Number(l.rate_pct)||0, method:l.method||'reducing_balance',
       termMonths:Number(l.term_months)||12, startedOn:l.started_on, fees:Number(l.fees)||0,
+      roundTo:Number(l.round_to)||0,
       closedOn:l.closed_on||null, notes:l.notes||'', cashTxnId:l.cash_txn_id||null,
       repayments: (l.payload && Array.isArray(l.payload.repayments)) ? l.payload.repayments : []
     })),
@@ -8437,6 +8450,7 @@ function buildSyncRows(d, shopId){
     loans: (d.loans||[]).map(l=>({
       id:l.id, shop_id:shopId, lender:l.lender, principal:l.principal,
       rate_pct:l.ratePct, method:l.method, term_months:l.termMonths, fees:l.fees||0,
+      round_to:l.roundTo||0,
       started_on:l.startedOn, closed_on:l.closedOn||null,
       notes:l.notes||null, cash_txn_id:l.cashTxnId||null,
       payload:{ repayments: l.repayments||[] }
@@ -27790,16 +27804,34 @@ function assetDisposalResult(asset){
    repayments list, and the two are deliberately separate -- comparing
    them is the whole of loanPerformance, and a shop that has fallen behind
    should find that out here rather than from the lender. */
-const LOAN_METHODS = { reducing_balance: 'Reducing balance', flat: 'Flat rate' };
+const LOAN_METHODS = { reducing_balance: 'Reducing balance', equal_principal: 'Equal principal', flat: 'Flat rate' };
+/* Rounding as the lender's paperwork does it. A SACCO schedule that reads
+   1,666,700 a month is rounding to the nearest 100 -- and the rounding is
+   not cosmetic: it is what makes the last row clear the balance to
+   exactly 0.00. Zero means no rounding, which is what every loan entered
+   before this existed carries. */
+function loanRoundTo(loan){ return Math.max(0, Number(loan && loan.roundTo)||0); }
+function loanRound(x, step){ return step > 0 ? Math.round(x/step)*step : x; }
 function loanMonths(loan){ return Math.max(1, Math.round(Number(loan.termMonths)||0)); }
 function loanPrincipal(loan){ return Math.max(0, Number(loan.principal)||0); }
-// The instalment the agreement calls for.
+/* The instalment the agreement calls for.
+
+   For the two level-payment methods this is THE payment, every month.
+   For equal principal there is no such number -- the instalment falls
+   every month by design -- so this answers with the FIRST one, the
+   largest, and every screen that shows it says so. Answering with an
+   average would understate the first payment, which is the one the
+   borrower has to find money for. */
 function loanScheduledPayment(loan){
   const P = loanPrincipal(loan), n = loanMonths(loan);
   const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
   if(loan.method === 'flat'){
     // Interest on the original sum for the whole term, then split evenly.
     return (P + P * annual * (n/12)) / n;
+  }
+  if(loan.method === 'equal_principal'){
+    const rows = loanSchedule(loan);
+    return rows.length ? rows[0].payment : 0;
   }
   const r = annual / 12;
   if(r === 0) return P / n;
@@ -27818,13 +27850,21 @@ function loanSchedule(loan){
   const P = loanPrincipal(loan), n = loanMonths(loan);
   if(P <= 0) return rows;
   const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
-  const pay = loanScheduledPayment(loan);
+  const equalPrincipal = loan.method === 'equal_principal';
+  const step = loanRoundTo(loan);
+  /* Not loanScheduledPayment() for equal principal: that reads row 0 of
+     this schedule, and asking for it here would be circular. */
+  const pay = equalPrincipal ? 0 : loanScheduledPayment(loan);
   const start = new Date(String(loan.startedOn||'')+'T00:00:00Z');
   if(isNaN(start.getTime())) return rows;
   const flatInterest = loan.method === 'flat' ? (P * annual * (n/12)) / n : null;
+  // Rounded once, up front: the lender's sheet repeats ONE figure every
+  // month, it does not re-derive a slightly different one each time.
+  const slice = equalPrincipal ? loanRound(P/n, step) : 0;
   let bal = P;
   for(let i=0; i<n; i++){
-    const interest = loan.method === 'flat' ? flatInterest : bal * (annual/12);
+    const interest = loan.method === 'flat' ? flatInterest
+      : loanRound(bal * (annual/12), step);
     // The last instalment clears whatever is left rather than leaving a
     // few shillings behind from rounding. Belt and braces rather than
     // load-bearing: the annuity is self-correcting, and across every
@@ -27832,7 +27872,14 @@ function loanSchedule(loan){
     // sees. Kept because the cost is one comparison and the failure it
     // guards against -- a loan that never quite closes -- is the kind
     // somebody would have to reconcile by hand.
-    const principal = (i === n-1) ? bal : Math.min(bal, pay - interest);
+    /* The last instalment clears whatever is left. On a rounded equal-
+       principal schedule that is load-bearing rather than belt and
+       braces: twelve slices of 1,666,700 overshoot 20,000,000 by 400, so
+       the final principal is 1,666,300 -- exactly what the SACCO's own
+       sheet shows, and what makes it close at 0.00. */
+    const principal = (i === n-1) ? bal
+      : equalPrincipal ? Math.min(bal, slice)
+      : Math.min(bal, pay - interest);
     const m = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i+1, 1));
     rows.push({
       month: m.toISOString().slice(0,7),
@@ -27858,21 +27905,27 @@ function loanTotalInterest(loan){
    Solved by bisection rather than algebraically: there is no closed form
    for the rate given a payment, and a hundred halvings is exact to far
    more places than a percentage needs. */
-function loanEffectiveRate(loan){
-  const P = loanPrincipal(loan), n = loanMonths(loan);
-  const pay = loanScheduledPayment(loan);
-  if(P <= 0 || pay <= 0) return 0;
-  if(pay * n <= P) return 0;
-  const owed = (monthlyRate)=>{
-    if(monthlyRate === 0) return pay * n - P;
-    return pay * (1 - Math.pow(1 + monthlyRate, -n)) / monthlyRate - P;
-  };
+/* The rate that makes the ACTUAL instalments worth the sum advanced.
+
+   Discounts the schedule row by row rather than assuming one level
+   payment: an equal-principal loan has no level payment, and pricing it
+   as though it did would report a rate for a loan nobody is repaying.
+   For the level-payment methods this is the same annuity as before,
+   written the general way. */
+function loanRateFor(rows, advanced){
+  const total = rows.reduce((sum, r)=> sum + r.payment, 0);
+  if(advanced <= 0 || total <= advanced) return 0;
+  const owed = (mr)=> rows.reduce((sum, r, i)=>
+    sum + r.payment / Math.pow(1 + mr, i + 1), 0) - advanced;
   let lo = 0, hi = 1;                    // 0% to 1200% a year, monthly
   for(let i=0; i<100; i++){
     const mid = (lo + hi) / 2;
     if(owed(mid) > 0) lo = mid; else hi = mid;
   }
   return ((lo + hi) / 2) * 12 * 100;
+}
+function loanEffectiveRate(loan){
+  return loanRateFor(loanSchedule(loan), loanPrincipal(loan));
 }
 
 /* ---- What the loan actually put in your hands ---- */
@@ -27911,19 +27964,7 @@ function loanCashTxnIds(loan){
    than the agreement says. Same bisection, discounting the same
    repayments against the smaller sum that turned up. */
 function loanTrueCostRate(loan){
-  const net = loanNetAdvanced(loan), n = loanMonths(loan);
-  const pay = loanScheduledPayment(loan);
-  if(net <= 0 || pay <= 0) return 0;
-  if(pay * n <= net) return 0;
-  const owed = (mr)=> mr === 0
-    ? pay * n - net
-    : pay * (1 - Math.pow(1 + mr, -n)) / mr - net;
-  let lo = 0, hi = 1;
-  for(let i=0; i<100; i++){
-    const mid = (lo + hi) / 2;
-    if(owed(mid) > 0) lo = mid; else hi = mid;
-  }
-  return ((lo + hi) / 2) * 12 * 100;
+  return loanRateFor(loanSchedule(loan), loanNetAdvanced(loan));
 }
 /* The fee as a cost of the period it was charged in.
 
@@ -29553,8 +29594,16 @@ document.getElementById('st_basis').addEventListener('change', (e)=>{
 });
 
 /* ---- Loans on screen ---- */
+/* Named so two loans on the same list can be told apart. "Reducing" alone
+   covered both balance-based shapes, so an equal-principal loan -- whose
+   instalment falls every month -- read exactly like the annuity beside
+   it, which is the confusion that made the app disagree with a lender's
+   printed sheet in the first place. */
 function loanMethodLabel(l){
-  return l.method==='flat' ? `Flat ${Number(l.ratePct)||0}%` : `Reducing ${Number(l.ratePct)||0}%`;
+  const rate = Number(l.ratePct)||0;
+  if(l.method === 'flat') return `Flat ${rate}%`;
+  if(l.method === 'equal_principal') return `Equal principal ${rate}%`;
+  return `Reducing ${rate}%`;
 }
 function renderLoans(){
   const today = todayISO();
@@ -29933,6 +29982,7 @@ function readLoanForm(){
     termMonths: Math.round(Number(document.getElementById('ln_term').value)||0),
     startedOn: document.getElementById('ln_started').value,
     fees: Number(document.getElementById('ln_fees').value)||0,
+    roundTo: Number(document.getElementById('ln_round').value)||0,
     notes: document.getElementById('ln_notes').value.trim(),
   };
 }
@@ -29952,7 +30002,8 @@ function readLoanForm(){
    on it now. */
 
 const LNF_METHODS = [
-  {key:'reducing_balance', name:'Reducing balance', shape:'Interest on what is still owed'},
+  {key:'reducing_balance', name:'Reducing balance', shape:'Interest on what is still owed · same payment monthly'},
+  {key:'equal_principal',  name:'Equal principal',  shape:'Interest on what is still owed · payment falls monthly'},
   {key:'flat',             name:'Flat rate',        shape:'Interest on the original sum, all term'},
 ];
 
@@ -30052,11 +30103,18 @@ function updateLoanPreview(){
   const l = readLoanForm();
   const el = document.getElementById('ln_preview');
   if(!(l.principal>0) || !(l.termMonths>0)){ el.textContent = ''; return; }
-  const pay = loanScheduledPayment(l);
   const interest = loanTotalInterest(l);
   const eff = loanEffectiveRate(l);
   const fees = loanFees(l);
-  el.textContent = `${fmtUGX(Math.round(pay))} a month for ${l.termMonths} months. `
+  /* An equal-principal instalment is different every month, so quoting
+     one figure "a month" would be wrong eleven times out of twelve. */
+  const sched = loanSchedule(l);
+  const opening = sched.length
+    ? (l.method === 'equal_principal'
+        ? `${fmtUGX(Math.round(sched[0].payment))} the first month, falling to ${fmtUGX(Math.round(sched[sched.length-1].payment))} by the last`
+        : `${fmtUGX(Math.round(loanScheduledPayment(l)))} a month`)
+    : '';
+  el.textContent = `${opening} for ${l.termMonths} months. `
     + `Interest over the term ${fmtUGX(Math.round(interest))}`
     + (l.method==='flat' ? ` — about ${eff.toFixed(1)}% a year in real terms, not ${l.ratePct}%.` : '.')
     + (fees > 0
@@ -30072,6 +30130,7 @@ function openLoanForm(id){
   set('ln_rate', l?l.ratePct:''); set('ln_term', l?l.termMonths:12);
   set('ln_started', l?l.startedOn:todayISO()); set('ln_notes', l?l.notes:'');
   document.getElementById('ln_method').value = l ? l.method : 'reducing_balance';
+  document.getElementById('ln_round').value = String(l ? (Number(l.roundTo)||0) : 0);
   // Only a new loan draws money. Editing the terms of one already recorded
   // must not write a second receipt for cash that arrived once.
   document.getElementById('ln_cash_account').value = '';
@@ -30102,6 +30161,7 @@ document.getElementById('loanPerfClose').addEventListener('click', ()=>closeModa
    that moves the arithmetic is here now. */
 ['ln_principal','ln_rate','ln_term','ln_fees'].forEach(id=>
   document.getElementById(id).addEventListener('input', lnfRefresh));
+document.getElementById('ln_round').addEventListener('change', lnfRefresh);
 // The cards drive the hidden field now; nothing listens on a select.
 document.getElementById('ln_cash_account').addEventListener('change', lnfUpdateCashHint);
 document.getElementById('ln_save').addEventListener('click', ()=>{

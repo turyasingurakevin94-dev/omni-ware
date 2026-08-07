@@ -94,13 +94,32 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
     'while a loan that costs what it claims is told so plainly');
 }
 
-/* ---------- 4. the two methods are not peers ------------------------- */
+/* ---------- 4. the three methods are not peers ----------------------- */
 {
   const list = scope.methods();
-  eq(list.length, 2, 'both ways of charging interest are offered');
+  eq(list.length, 3, 'every way of charging interest is offered');
   eq(list[0].key, 'reducing_balance', 'the cheaper shape first');
-  t.check(/Interest on the original sum, all term/.test(list[1].shape),
-    'and the flat one described by what it does rather than by its name');
+  eq(list[1].key, 'equal_principal', 'then the other balance-based one');
+  eq(list[2].key, 'flat', 'and flat last');
+  t.check(/Interest on the original sum, all term/.test(list[2].shape),
+    'the flat one described by what it does rather than by its name');
+  /* The two balance-based methods charge the same interest on the same
+     balance and differ ONLY in how the instalment behaves. Naming that
+     difference on the card is the whole point -- picking wrong is what
+     made the app disagree with a real SACCO's printed sheet. */
+  t.check(/same payment monthly/.test(list[0].shape) && /payment falls monthly/.test(list[1].shape),
+    'and the two balance-based ones are told apart by what the payment does');
+
+  /* A lender's sheet repeats round figures; matching that rounding is
+     what makes the two schedules agree row for row. */
+  t.check(/id="ln_round"/.test(modal) && /Nearest 100/.test(modal),
+    'the form can be told how the lender rounds');
+  t.check(/roundTo: Number\(document\.getElementById\('ln_round'\)\.value\)\|\|0,/.test(code),
+    'and the form reads it');
+  t.check(/document\.getElementById\('ln_round'\)\.addEventListener\('change', lnfRefresh\);/.test(code),
+    'changing it redraws the arithmetic, like every other figure on the form');
+  t.check(/round_to:l\.roundTo\|\|0,/.test(code) && /roundTo:Number\(l\.round_to\)\|\|0,/.test(code),
+    'and it survives a round trip to the server, in both directions');
 
   /* A dropdown showed one at a time, so the difference between them --
      which at the same stated rate is most of the cost of the loan -- was

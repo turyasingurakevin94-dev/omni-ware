@@ -35,6 +35,8 @@ const scope = compileScope([
   extractFunction(src, 'loanPrincipal', 'index.html'),
   extractFunction(src, 'loanFees', 'index.html'),
   extractFunction(src, 'loanMonths', 'index.html'),
+  extractFunction(src, 'loanRoundTo', 'index.html'),
+  extractFunction(src, 'loanRound', 'index.html'),
   extractFunction(src, 'loanScheduledPayment', 'index.html'),
   extractFunction(src, 'loanSchedule', 'index.html'),
   extractFunction(src, 'loanRepayments', 'index.html'),
