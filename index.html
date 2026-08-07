@@ -8559,6 +8559,10 @@ function dedupeLoadedPrices(d){
 // delete+insert of that key's lots -- but only for keys that actually
 // changed or disappeared, not the whole shop on every save.
 function addStockLotsDiffOps(ops, shopId, stockLotsMap){
+  if(syncAbsentCollections && syncAbsentCollections.has('stockLots')){
+    console.error('REFUSING to sync stockLots: the collection is absent from data');
+    return;
+  }
   const prev = lastSynced.stockLots || (lastSynced.stockLots = {});
   const changedKeys = Object.keys(stockLotsMap).filter(k=> JSON.stringify(stockLotsMap[k]) !== JSON.stringify(prev[k]));
   const removedKeys = Object.keys(prev).filter(k=> !Object.prototype.hasOwnProperty.call(stockLotsMap, k));
@@ -8594,12 +8598,18 @@ function addSettingsDiffOp(ops, shopId, settingsCore){
 async function saveData(){
   const shopId = currentShopId;
 
-  // Some existing UI actions (e.g. "Clear all data") rebuild `data` from a
-  // partial object literal that predates newer collections. Old localStorage
-  // saveData() silently tolerated that (JSON.stringify skips undefined
-  // keys); this one iterates each collection directly, so normalize first.
-  ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts'].forEach(k=>{ if(!data[k]) data[k] = []; });
-  ['stock','stockLots','cashDays'].forEach(k=>{ if(!data[k]) data[k] = {}; });
+  /* A collection ABSENT from `data` is a partial rebuild or a bug, never
+     a statement that the shop owns nothing. This used to back-fill the
+     gap as empty -- which the diff below read as "delete every row of
+     it, from every device". The absence is recorded FIRST now, and those
+     collections sit this save out entirely (addDiffOps refuses them):
+     declining to speak for a collection is recoverable, deleting it is
+     not. debtLog rides customers, so an absent customers benches both. */
+  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
+  if(absent.includes('customers')) absent.push('debtLog');
+  syncAbsentCollections = absent.length ? new Set(absent) : null;
+  if(absent.length) console.error(`REFUSING to sync ${absent.length} absent collection(s) — a partial data object is not an instruction to empty the shop: ${absent.join(', ')}`);
+  absent.forEach(k=>{ if(!data[k]) data[k] = (k==='stock'||k==='stockLots'||k==='cashDays') ? {} : []; });
 
   const rows = buildSyncRows(data, shopId);
   const ops = [];
@@ -26812,7 +26822,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
     try{
       const imported = JSON.parse(ev.target.result);
       if(!imported.products || !imported.suppliers || !imported.prices) throw new Error('bad shape');
-      if(!confirm('This will replace all current data with the backup file. Continue?')) return;
+      if(!confirm(`Restore this backup? The shop's data becomes exactly what is in the file — for every device and every member.\n\nAnything created or changed AFTER this backup was made will be permanently deleted. Collections the file does not contain are left untouched.`)) return;
       data = imported;
       if(!data.nextPriceId) data.nextPriceId = Math.max(0,...data.prices.map(p=>p.id||0))+1;
       if(!data.stock) data.stock = {};
@@ -26882,7 +26892,9 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
           pr.packQty = product && product.packQty ? product.packQty : 0;
         }
       });
+      __owAllowMassDelete = true;
       saveData();
+      __owAllowMassDelete = false;
       renderAll();
       toast('Backup restored');
     }catch(err){ toast('Could not read that file — is it an Omni-Ware backup?'); }
@@ -26891,13 +26903,27 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
   e.target.value = '';
 });
 document.getElementById('clearBtn').addEventListener('click', ()=>{
-  if(!confirm('This deletes every supplier, product, price entry, and cash book record on this computer. This cannot be undone. Continue?')) return;
-  data = {suppliers:[], products:[], prices:[], nextPriceId:1, stock:{}, stockLots:{}, stockLog:[], nextStockLogId:1, cashDays:{}, cashTxns:[], nextCashTxnId:1, quote:{client:{name:'',phone:''}, date: todayISO(), items:[], savedId:null}, nextQuoteLineId:1,
-    savedQuotes:[], nextSavedQuoteId:1,
+  /* The old confirm said "on this computer". It was never true: the sync
+     read the emptied collections as deletes and erased the WHOLE SHOP,
+     for every device and member. The words now match the blast radius,
+     and agreeing takes typing, not clicking through. */
+  const typed = prompt(`This erases the WHOLE SHOP'S data from the server — every supplier, product, price, order, stock record, cash book entry, asset, loan and wage — for every device and every member of the shop. It is NOT limited to this computer, and it cannot be undone.\n\nType ERASE to continue.`);
+  if(typed === null) return;
+  if(typed.trim() !== 'ERASE'){ toast('Nothing was deleted — the word typed was not ERASE'); return; }
+  /* Every synced collection listed EXPLICITLY: an absent one would be
+     refused by the save (absence is not emptiness), and a "clear" that
+     silently skipped collections would resurrect them later. */
+  data = {suppliers:[], staff:[], agents:[], customers:[], products:[], prices:[], nextPriceId:1,
+    stock:{}, stockLots:{}, stockLog:[], nextStockLogId:1, cashDays:{}, cashTxns:[], nextCashTxnId:1,
+    quote:{client:{name:'',phone:''}, date: todayISO(), items:[], savedId:null}, nextQuoteLineId:1,
+    savedQuotes:[], nextSavedQuoteId:1, purchaseInvoices:[], supplierCommissions:[],
+    fixedAssets:[], loans:[], rentAgreements:[], dues:[], media:[], mediaFolders:[], waPosts:[],
     presetCategories: seedData().presetCategories, presetUnits: seedData().presetUnits,
     presetIncomeCategories: seedData().presetIncomeCategories, presetExpenseCategories: seedData().presetExpenseCategories,
     presetAttributes: seedData().presetAttributes, seeded:false};
+  __owAllowMassDelete = true;
   saveData();
+  __owAllowMassDelete = false;
   renderAll();
   toast('All data cleared');
 });

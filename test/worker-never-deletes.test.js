@@ -48,6 +48,8 @@ const indexHtml = read('index.html');
   };
   const errors = [];
   const scope = (new Function('sb', 'lastSynced', 'console', `
+    let syncAbsentCollections = null;
+    let __owAllowMassDelete = false;
     ${extractFunction(sharedJs, 'cloneJSON', 'shared-worker.js')}
     ${extractFunction(sharedJs, 'addDiffOps', 'shared-worker.js')}
     return { addDiffOps };

@@ -29,11 +29,16 @@ const sb = {
     delete: () => ({ eq: () => ({ in: (field, values) => ({ __op: 'delete', table, field, values }) }) }),
   }),
 };
+const baseConfirms = [];
 const { addDiffOps } = compileScope(
   [extractFunction(workerSrc, 'addDiffOps', 'shared-worker.js')],
-  { lastSynced, sb, cloneJSON: (x) => JSON.parse(JSON.stringify(x)) },
+  { lastSynced, sb, cloneJSON: (x) => JSON.parse(JSON.stringify(x)),
+    syncAbsentCollections: null, __owAllowMassDelete: false,
+    confirm: (m) => { baseConfirms.push(String(m)); return false; },
+    console: { error: () => {} } },
   ['addDiffOps'],
 );
+const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
 // Runs a diff and reports what it would have sent, without sending it.
 function diff(prevRows, currRows) {
@@ -89,16 +94,20 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
     'an empty snapshot against real data only upserts');
 }
 
-/* ---------- 3. a stale snapshot deletes everything -------------------- */
+/* ---------- 3. a stale snapshot no longer deletes everything ---------- */
 /*
- * Not a bug in addDiffOps -- this is its contract, and the reason the two
- * assignments have to be atomic. Pinned here so the consequence is on the
- * record next to the code that relies on it.
+ * The diff's raw contract IS "delete the difference" -- which is exactly
+ * how the shop got wiped (products 11 times over, orders 174) whenever a
+ * snapshot and its data drifted. The atomic refresh (section 5) prevents
+ * the drift; the mass-delete breaker now stands in front of the contract
+ * for whatever slips through: a storm ASKS, and unconfirmed it deletes
+ * nothing. The full breaker behavior is proven in THE ARMOR below.
  */
 {
+  baseConfirms.length = 0;
   const d = diff([row(1, 'a'), row(2, 'b'), row(3, 'c')], []);
-  t.check(d.deleted.length === 3,
-    `a populated snapshot against empty data deletes every row (${d.deleted.length}) — which is why the refresh below must be atomic`);
+  t.check(d.deleted.length === 0 && baseConfirms.length === 1,
+    `a populated snapshot against empty data ASKS, and unconfirmed deletes nothing (deleted ${d.deleted.length}, asked ${baseConfirms.length})`);
 }
 
 /* ---------- 4. commit only advances what actually went ---------------- */
@@ -172,6 +181,155 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
   diffed.forEach((k) =>
     t.check(new RegExp(`\\b${k}: keyRowsById\\(rows\\.${k},`).test(snap),
       `${k} is diffed, so the snapshot seeds it -- or its deletes never reach the server`));
+}
+
+/* =====================================================================
+ * THE ARMOR. The shop lost products 11 times over and orders 174 times
+ * to delete storms before these existed. Three latches, each proven:
+ * absence is not emptiness (an absent collection is refused, not
+ * emptied); a mass delete asks the human in plain words; and the only
+ * two intentional wipes (typed-out Clear, backup restore) raise a flag
+ * instead of being interrogated collection by collection.
+ */
+{
+  const sharedSrc = read('shared-worker.js');
+  const mk = (n, from) => Array.from({ length: n }, (_, i) => ({ id: (from || 0) + i + 1, v: 'x' }));
+  const key = (rows) => Object.fromEntries(rows.map((r) => [String(r.id), r]));
+
+  const runScenario = (prevRows, rows, opts, env2) => {
+    const confirms = [];
+    const deletes = [];
+    const scope = compileScope([extractFunction(sharedSrc, 'addDiffOps', 'shared-worker.js')], {
+      lastSynced: { c: key(prevRows) },
+      cloneJSON: (x) => JSON.parse(JSON.stringify(x)),
+      confirm: (m) => { confirms.push(String(m)); return env2 && env2.confirmSays === undefined ? false : !!(env2 && env2.confirmSays); },
+      sb: { from: (t) => ({
+        upsert: () => ({ error: null }),
+        delete: () => ({ eq: () => ({ in: (f, vals) => { deletes.push({ t, vals }); return { error: null }; } }) }),
+      }) },
+      syncAbsentCollections: (env2 && env2.absent) || null,
+      __owAllowMassDelete: !!(env2 && env2.allow),
+      console: { error: () => {} },
+    }, ['addDiffOps']);
+    const ops = [];
+    scope.addDiffOps(ops, 'c', 'saved_quotes', 'id', 'SHOP', rows, opts);
+    ops.forEach((op) => op.run());
+    return { confirms, deletes, ops };
+  };
+
+  /* wiping 20 rows: asked, and No means no */
+  const a = runScenario(mk(20), [], null, { confirmSays: false });
+  eq(a.confirms.length, 1, 'deleting all 20 remembered rows asks the human first');
+  t.check(/permanently DELETE 20 of the shop's 20 saved quotes record/.test(a.confirms[0]),
+    'and the question says the number, the table, and the blast radius in plain words');
+  eq(a.deletes.length, 0, 'Cancel means nothing is deleted');
+
+  /* Yes means yes */
+  const b = runScenario(mk(20), [], null, { confirmSays: true });
+  eq(b.deletes.length, 1, 'a confirmed mass delete goes through');
+  eq(b.deletes[0].vals.length, 20, 'all of it');
+
+  /* one row is normal work, not an interrogation */
+  const c = runScenario(mk(20), mk(19), null, {});
+  eq(c.confirms.length, 0, 'deleting 1 of 20 asks nobody');
+  eq(c.deletes.length, 1, 'and just happens');
+
+  /* half of a small collection is still a storm */
+  const d = runScenario(mk(4), mk(1), null, { confirmSays: false });
+  eq(d.confirms.length, 1, '3 of 4 remembered rows is half the shop — asked');
+  eq(d.deletes.length, 0, 'and blocked on Cancel');
+
+  /* 9 of 100 is below both thresholds */
+  const e = runScenario(mk(100), mk(91), null, {});
+  eq(e.confirms.length, 0, '9 of 100 is not a storm');
+  eq(e.deletes.length, 1, 'and proceeds');
+
+  /* 10 of 100 crosses the absolute threshold with the half-rule silent —
+     the case that proves the ten-row line exists on its own */
+  const e2 = runScenario(mk(100), mk(90), null, { confirmSays: false });
+  eq(e2.confirms.length, 1, '10 of 100 is a storm by count alone');
+  eq(e2.deletes.length, 0, 'and blocked on Cancel');
+
+  /* the intentional-wipe flag skips the question, not the delete */
+  const f = runScenario(mk(20), [], null, { allow: true });
+  eq(f.confirms.length, 0, 'an intentional wipe is not interrogated');
+  eq(f.deletes.length, 1, 'it just happens');
+
+  /* absence is not emptiness — with rows that WOULD have upserted, so a
+     refusal that quietly stopped refusing cannot hide behind a no-op diff */
+  const g = runScenario(mk(20), mk(20).map((r) => ({ ...r, v: 'CHANGED' })), null, { absent: new Set(['c']) });
+  eq(g.ops.length, 0, 'an absent collection sits the save out entirely — no upserts, no deletes');
+
+  /* the stock-lots rewrite honors the same latch, REACHABLY — its refusal
+     string existing is not the refusal running */
+  {
+    const lotDeletes = [];
+    const lotsScope = compileScope([extractFunction(adminSrc, 'addStockLotsDiffOps', 'index.html')], {
+      lastSynced: { stockLots: { A: [{ qty: 1, cost: 5 }] } },
+      syncAbsentCollections: new Set(['stockLots']),
+      cloneJSON: (x) => JSON.parse(JSON.stringify(x)),
+      sb: { from: () => ({ delete: () => ({ eq: () => ({ in: (f, vals) => { lotDeletes.push(vals); return { error: null }; } }) }) }) },
+      console: { error: () => {} },
+    }, ['addStockLotsDiffOps']);
+    const lops = [];
+    lotsScope.addStockLotsDiffOps(lops, 'SHOP', {});
+    eq(lops.length, 0, 'an absent stockLots is refused by the lot rewrite too — not read as "rewrite to nothing"');
+  }
+
+  /* the worker's old guard still holds */
+  const h = runScenario(mk(20), [], { neverDelete: true }, {});
+  eq(h.confirms.length, 0, 'neverDelete refuses silently');
+  eq(h.deletes.length, 0, 'and deletes nothing');
+
+  /* the flag rests low, and the two wipes raise it around their save */
+  t.check(/let __owAllowMassDelete = false;/.test(sharedSrc),
+    'the intentional-wipe flag rests false');
+  eq((adminSrc.match(/__owAllowMassDelete = true;\s*\r?\n\s*saveData\(\);\s*\r?\n\s*__owAllowMassDelete = false;/g) || []).length, 2,
+    'exactly two places raise it — the typed-out Clear and the backup restore — and both lower it');
+}
+
+/* saveData records absence FIRST, and refuses to speak for the gap */
+{
+  t.check(/const absent = \['suppliers','staff'[\s\S]{0,400}'stock','stockLots','cashDays'\]\.filter\(k=> !data\[k\]\);/.test(adminSrc),
+    'saveData computes which collections are absent before anything fills them');
+  t.check(/syncAbsentCollections = absent\.length \? new Set\(absent\) : null;/.test(adminSrc),
+    'and hands the set to the diff engine to refuse');
+  t.check(/if\(absent\.includes\('customers'\)\) absent\.push\('debtLog'\);/.test(adminSrc),
+    'debtLog rides customers, so an absent customers benches both');
+  t.check(/REFUSING to sync stockLots/.test(adminSrc),
+    'the stock-lots rewrite refuses an absent collection the same way');
+}
+
+/* the Clear button says what it does, and does all of what it says */
+{
+  const clear = (/clearBtn'\)\.addEventListener\('click', \(\)=>\{[\s\S]*?\n\}\);/.exec(adminSrc) || [''])[0];
+  t.check(/Type ERASE to continue/.test(clear) && /typed\.trim\(\) !== 'ERASE'/.test(clear),
+    'erasing the shop takes typing ERASE, not clicking through');
+  t.check(/WHOLE SHOP'S data from the server/.test(clear) && /every device and every member/.test(clear),
+    'and the words match the real blast radius — not "on this computer"');
+  /* Every diffed collection appears in the literal: one an absent-refusal
+     would skip is one a "clear" silently fails to clear. */
+  const diffedKeys = [...adminSrc.matchAll(/addDiffOps\(ops, '(\w+)'/g)].map((m) => m[1])
+    .filter((k) => k !== 'debtLog');   // derived from customers, not its own literal key
+  diffedKeys.concat(['stockLots']).forEach((k) =>
+    t.check(new RegExp(`${k}:`).test(clear), `the clear literal names ${k} — nothing left to be refused or resurrected`));
+}
+
+/* restoring a backup names its cost */
+{
+  t.check(/Anything created or changed AFTER this backup was made will be permanently deleted/.test(adminSrc),
+    'the restore confirm says what a restore deletes');
+}
+
+/* the server no longer takes a delete from anyone but the owner */
+{
+  const mig = read('supabase/migrations/0058_owner_only_deletes.sql');
+  t.check(/as restrictive for delete/.test(mig) && /role = 'owner'/.test(mig),
+    'deletes are gated by a RESTRICTIVE policy on the owner role');
+  const diffedTables = [...adminSrc.matchAll(/addDiffOps\(ops, '\w+', '(\w+)'/g)].map((m) => m[1]);
+  diffedTables.concat(['stock_lots']).forEach((tbl) =>
+    t.check(new RegExp(`'${tbl}'`).test(mig),
+      `${tbl} is synced, so a stale client cannot delete from it — only the owner's session can`));
 }
 
 process.exit(t.done() ? 1 : 0);

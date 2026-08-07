@@ -30,6 +30,17 @@ function keyRowsById(rows, field){
   return m;
 }
 
+/* Two safety latches, set by the host app around a save:
+   - syncAbsentCollections: collections MISSING from `data` this save (a
+     partial rebuild, an old backup, a bug). Absence is not emptiness --
+     addDiffOps refuses to speak for them rather than reading the gap as
+     "delete every row".
+   - __owAllowMassDelete: raised only around an INTENTIONAL wipe (the
+     typed-out Clear, a backup restore) so the mass-delete breaker below
+     does not interrogate a deliberate act collection by collection. */
+let syncAbsentCollections = null;
+let __owAllowMassDelete = false;
+
 // Diffs `rows` (keyed by `idField`) against lastSynced[collectionKey] and
 // pushes at most one upsert op and one delete op onto `ops` for whatever
 // actually changed. Each op carries its own commit(), so lastSynced only
@@ -40,6 +51,10 @@ function keyRowsById(rows, field){
 // `lastSynced` having drifted apart -- and the diff turns that into "delete
 // everything the snapshot still remembers".
 function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
+  if(syncAbsentCollections && syncAbsentCollections.has(collectionKey)){
+    console.error(`REFUSING to sync ${collectionKey}: the collection is absent from data — a partial data object is not an instruction to empty the shop`);
+    return;
+  }
   const prev = lastSynced[collectionKey] || (lastSynced[collectionKey] = {});
   const currById = {};
   rows.forEach(r=> currById[String(r[idField])] = r);
@@ -63,6 +78,22 @@ function addDiffOps(ops, collectionKey, tableName, idField, shopId, rows, opts){
       // away from deletion.
       console.error(`Refusing to delete ${toDeleteValues.length} ${tableName} row(s): this app never removes them, so data and lastSynced have drifted`, toDeleteValues);
       return;
+    }
+    /* The mass-delete breaker. Deleting a row or two is normal work;
+       deleting ten, or half of what the snapshot remembers, is almost
+       always the sync about to repeat the wipes (products deleted 11
+       times over, orders 174, before this existed). Ask the human in
+       plain words. Blocking is recoverable -- the rows are still on the
+       server and the next honest diff can try again; deleting is not. */
+    const remembered = Object.keys(prev).length;
+    const massDelete = toDeleteValues.length >= 10
+      || (toDeleteValues.length >= 3 && toDeleteValues.length * 2 >= remembered);
+    if(massDelete && !__owAllowMassDelete){
+      const ok = (typeof confirm === 'function') && confirm(`This save wants to permanently DELETE ${toDeleteValues.length} of the shop's ${remembered} ${tableName.replace(/_/g,' ')} record(s) — from the server, for every device and every member.\n\nUnless you just deleted these yourself on purpose, something has gone wrong and you should press Cancel.\n\nDelete them?`);
+      if(!ok){
+        console.error(`Mass delete of ${toDeleteValues.length} ${tableName} row(s) BLOCKED — not confirmed by the user`, toDeleteValues);
+        return;
+      }
     }
     ops.push({
       run: ()=> sb.from(tableName).delete().eq('shop_id', shopId).in(idField, toDeleteValues),

@@ -297,8 +297,8 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   t.check(/sel\('rent_agreements'\)/.test(code) && /sel\('dues'\)/.test(code), 'both tables are loaded');
   t.check(/addDiffOps\(ops, 'rentAgreements', 'rent_agreements', 'id', shopId, rows\.rentAgreements\);/.test(code)
     && /addDiffOps\(ops, 'dues', 'dues', 'id', shopId, rows\.dues\);/.test(code), 'and saved');
-  t.check(/'loans','rentAgreements','dues','media','mediaFolders','waPosts'\]/.test(code),
-    'and guarded against being absent when data is rebuilt from a partial literal');
+  t.check(/'loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'\]\.filter\(k=> !data\[k\]\);/.test(code),
+    'and an absent dues collection is refused from the sync, not read as empty');
   t.check(/rentAgreement:\s*\{kind:'row:rent_agreement'/.test(code) && /due:\s*\{kind:'row:due'/.test(code),
     'with their own id kinds, named the way every other kind is');
 

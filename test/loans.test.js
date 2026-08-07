@@ -207,8 +207,8 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
      was appended after it -- while the thing it exists to protect, that
      a partial `data` rebuild cannot leave data.loans undefined for the
      save path, was never in question. */
-  t.check(/\['suppliers','staff'[^\]]*'loans'[^\]]*\]\.forEach\(k=>\{ if\(!data\[k\]\) data\[k\] = \[\]; \}\);/.test(code),
-    'and guarded against being absent');
+  t.check(/const absent = \['suppliers','staff'[^\]]*'loans'[^\]]*\]\.filter\(k=> !data\[k\]\);/.test(code),
+    'and an absent loans collection is refused from the sync, not read as empty');
   t.check(/payload:\{ repayments: l\.repayments\|\|\[\] \}/.test(code),
     'repayments ride in the payload, following purchase_invoices and saved_quotes');
 

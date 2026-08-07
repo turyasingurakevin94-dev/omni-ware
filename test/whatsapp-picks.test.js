@@ -326,8 +326,8 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'lastSynced is seeded, so deleting a history record before the first save still deletes');
   t.check(/addDiffOps\(ops, 'waPosts', 'wa_posts', 'id', shopId, rows\.waPosts\);/.test(src),
     'and the collection is in the diff-sync');
-  t.check(/'media','mediaFolders','waPosts'\]\.forEach\(k=>\{ if\(!data\[k\]\) data\[k\] = \[\]; \}\);/.test(src),
-    'guarded against being absent when data is rebuilt from a partial literal');
+  t.check(/'media','mediaFolders','waPosts','stock','stockLots','cashDays'\]\.filter\(k=> !data\[k\]\);/.test(src),
+    'an absent waPosts collection is refused from the sync, not read as empty');
   t.check(/waPost:\s*\{kind:'row:wa_post',\s*counter:'nextWaPostId'\}/.test(src),
     'with an id kind named the way every other kind is');
 }
