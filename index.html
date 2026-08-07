@@ -8499,13 +8499,19 @@ function buildLastSynced(d, shopId){
     savedQuotes: keyRowsById(rows.savedQuotes, 'id'),
     purchaseInvoices: keyRowsById(rows.purchaseInvoices, 'id'),
     supplierCommissions: keyRowsById(rows.supplierCommissions, 'id'),
-    /* Unlike the collections above this line that are absent (fixed
-       assets, loans, dues -- rows that are closed or disposed, never
-       removed), media rows really do get deleted. addDiffOps() derives
-       deletes from lastSynced, so an unseeded snapshot would lose any
-       delete made before the first save: the row would vanish from
-       `data`, no delete op would be built, and the next poll would
-       quietly bring the photo back. */
+    /* EVERY collection addDiffOps() diffs is seeded here, no exceptions.
+       This block used to skip fixed assets, loans, and dues as "rows
+       that are never removed" -- but deleteFixedAsset(), deleteStaff()'s
+       wage-due cleanup, and deleteRentAgreement() all remove rows, and
+       addDiffOps() derives its deletes from lastSynced. An unseeded
+       snapshot loses any delete made before that collection's first save
+       of the session: the row vanishes from `data`, no delete op is
+       built, and the next load quietly brings it back. Learned live: the
+       delivery bike that would not stay deleted. */
+    fixedAssets: keyRowsById(rows.fixedAssets, 'id'),
+    loans: keyRowsById(rows.loans, 'id'),
+    rentAgreements: keyRowsById(rows.rentAgreements, 'id'),
+    dues: keyRowsById(rows.dues, 'id'),
     media: keyRowsById(rows.media, 'id'),
     mediaFolders: keyRowsById(rows.mediaFolders, 'id'),
     waPosts: keyRowsById(rows.waPosts, 'id'),
@@ -18079,9 +18085,20 @@ function deleteStaff(id){
   // which throws away a finished pick to correct somebody's name.
   const delivering = live.filter(q=>q.assignedDeliveryId===id && q.status==='pending_delivery');
   const releasing = picking.concat(delivering);
-  const msg = releasing.length
+  /* Wages already raised for them: a month with money recorded against it
+     stays -- it explains cash that actually left, same as rent keeps its
+     raised months. But a due with nothing paid is only a demand, and a
+     demand addressed to nobody is the payroll asking the shop to pay a
+     ghost every month until someone notices. */
+  const wageDues = (data.dues||[]).filter(d=> d.kind==='wage' && String(d.refId)===String(id));
+  const ghostDues = wageDues.filter(d=> !(Number(d.paid)||0) && !(d.payments||[]).length);
+  const keptDues = wageDues.length - ghostDues.length;
+  const wageNote = ghostDues.length
+    ? ` ${ghostDues.length} unpaid wage month${ghostDues.length===1?'':'s'} raised for them come${ghostDues.length===1?'s':''} off the payroll${keptDues?'; months with money already recorded stay on record':''}.`
+    : keptDues ? ' Wage months with money already recorded stay on record.' : '';
+  const msg = (releasing.length
     ? `Delete this staff member? ${releasing.length} order${releasing.length===1?'':'s'} they are working on will go back to the board for someone else. Orders they have already finished keep their name.`
-    : 'Delete this staff member? Orders they have already finished will keep showing their name.';
+    : 'Delete this staff member? Orders they have already finished will keep showing their name.') + wageNote;
   if(!confirm(msg)) return;
   picking.forEach(q=>{
     q.assignedWorkerId = null;
@@ -18091,6 +18108,10 @@ function deleteStaff(id){
   // go back for a re-pick because its driver left.
   delivering.forEach(q=>{ q.assignedDeliveryId = null; });
   data.staff = data.staff.filter(s=>s.id!==id);
+  if(ghostDues.length){
+    const gone = new Set(ghostDues.map(d=> d.id));
+    data.dues = (data.dues||[]).filter(d=> !gone.has(d.id));
+  }
   saveData(); renderStaff();
   refreshAdminOrderBoardIfOpen();
   toast(releasing.length

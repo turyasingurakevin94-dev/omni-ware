@@ -157,4 +157,21 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
     'buildLastSynced returns a snapshot instead of assigning one');
 }
 
+/* Every collection addDiffOps() diffs MUST be seeded in the snapshot.
+ * addDiffOps derives deletes from lastSynced[collection]; a diffed
+ * collection the snapshot skips loses any delete made before that
+ * collection's first save of the session -- the row vanishes locally, no
+ * delete op is built, and the next load resurrects it. Learned live: the
+ * snapshot skipped fixed assets, loans, and dues as "never removed", and
+ * a deleted delivery bike kept coming back from the server.
+ */
+{
+  const diffed = [...adminSrc.matchAll(/addDiffOps\(ops, '(\w+)'/g)].map((m) => m[1]);
+  t.check(diffed.length >= 19, `the save fn diffs the collections we expect (found ${diffed.length})`);
+  const snap = extractFunction(adminSrc, 'buildLastSynced', 'index.html');
+  diffed.forEach((k) =>
+    t.check(new RegExp(`\\b${k}: keyRowsById\\(rows\\.${k},`).test(snap),
+      `${k} is diffed, so the snapshot seeds it -- or its deletes never reach the server`));
+}
+
 process.exit(t.done() ? 1 : 0);

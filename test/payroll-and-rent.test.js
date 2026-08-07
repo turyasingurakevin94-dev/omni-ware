@@ -484,4 +484,44 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
     'and the sheet says out loud that the liability and the expense land on different bases');
 }
 
+/* ---------- deleting a worker deletes their ghost wages -------------
+ * A wage due is a demand addressed to a person. Delete the person and a
+ * due with NOTHING paid must go too, or the payroll dunns the shop for a
+ * ghost every month (learned live: "its asking me to pay salary to a
+ * worker i deleted"). But a month with money already recorded against it
+ * stays -- it explains cash that actually left, the same way a deleted
+ * rent agreement keeps its raised months.
+ */
+{
+  const confirms = [];
+  const dsData = { staff: [], dues: [], savedQuotes: [] };
+  const dsScope = compileScope([extractFunction(src, 'deleteStaff', 'index.html')], {
+    data: dsData,
+    confirm: (m) => { confirms.push(String(m)); return true; },
+    saveData: () => {}, renderStaff: () => {}, toast: () => {},
+    refreshAdminOrderBoardIfOpen: () => {}, resetPickingProgress: () => {},
+  }, ['deleteStaff']);
+
+  dsData.staff = [ staff('W1', 'Departing Dan', 'monthly', 300000),
+                   staff('W2', 'Staying Sam', 'monthly', 250000) ];
+  dsData.dues = [
+    { id: 1, kind: 'wage', refId: 'W1', period: '2026-08', amount: 300000, paid: 0, payments: [] },
+    { id: 2, kind: 'wage', refId: 'W1', period: '2026-07', amount: 300000, paid: 100000,
+      payments: [{ amount: 100000 }] },
+    { id: 3, kind: 'wage', refId: 'W2', period: '2026-08', amount: 250000, paid: 0, payments: [] },
+    { id: 4, kind: 'rent', refId: 'W1', period: '2026-08', amount: 500000, paid: 0, payments: [] },
+  ];
+  dsScope.deleteStaff('W1');
+
+  eq(dsData.staff.length, 1, 'the worker is gone');
+  eq(dsData.dues.find((d) => d.id === 1), undefined, 'their unpaid wage month goes with them');
+  t.check(!!dsData.dues.find((d) => d.id === 2), 'a month with money recorded stays on record');
+  t.check(!!dsData.dues.find((d) => d.id === 3), 'the other worker\'s wage is untouched');
+  t.check(!!dsData.dues.find((d) => d.id === 4), 'a rent due that merely shares the id is not a wage and stays');
+  t.check(/1 unpaid wage month raised for them comes off the payroll/.test(confirms[0] || ''),
+    'and the confirm says the ghost wage goes');
+  t.check(/months with money already recorded stay on record/.test(confirms[0] || ''),
+    'and that the part-paid month stays');
+}
+
 process.exit(t.done() ? 1 : 0);
