@@ -226,7 +226,7 @@ if (!scope) process.exit(1);
   /* The client's side of the bargain. */
   t.check(/update\(\{ auto_quote: on \}\)\.eq\('shop_id', currentShopId\)/.test(src),
     'the toggle writes the shop\'s own opt-in row');
-  t.check(/\$\{m\.payload && m\.payload\.auto \? ' · auto' : ''\}/.test(src),
+  t.check(/\$\{m\.payload && m\.payload\.auto \? '<span class="wm-auto">auto<\/span>' : ''\}/.test(src),
     'the thread shows which words the system said in the shop\'s name');
   t.check(/if\(lastIn && lastMsg === lastIn && !waInbox\.dismissed\[lastIn\.wamid\]\)/.test(src),
     'the suggestion card shows only for UNANSWERED questions — an auto-reply retires it');
