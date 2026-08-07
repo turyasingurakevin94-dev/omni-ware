@@ -190,4 +190,50 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
     'with the bulk refresh calling the same function, so the two cannot drift apart');
 }
 
+/* ---------- 8. the shop no.: the door, not the town ------------------ *
+ * "Ntinda" says which part of town the pickup run goes to; "B12" says
+ * which door inside the arcade the worker actually knocks on. One field
+ * doing both jobs did neither, so the shop no. is its own field -- and
+ * it rides all the way to the label the collecting worker reads.
+ */
+{
+  t.check(/<input id="s_shopno"[^>]*placeholder="Shop no\. inside the building/.test(modal),
+    'the form asks for the shop no., separate from the place');
+  t.check(/shopNo: document\.getElementById\('s_shopno'\)\.value\.trim\(\),/.test(save),
+    'and saving records it, trimmed');
+  t.check(/document\.getElementById\('s_shopno'\)\.value = s\.shopNo \|\| '';/.test(src),
+    'editing fills it back');
+  t.check(/\['s_id','s_name','s_phone','s_location','s_shopno','s_notes'\]/.test(src),
+    'and the reset clears it with the rest');
+
+  /* Both directions of the sync, in both apps -- an unmapped column is a
+     field that quietly empties itself on the next reload. */
+  t.check(/shopNo:s\.shop_no\|\|''/.test(src), 'the admin load carries shop_no in');
+  t.check(/shop_no:s\.shopNo\|\|null/.test(src), 'the save maps it back to its column');
+  t.check(/shopNo:s\.shop_no\|\|''/.test(read('worker.html')), 'and the worker load carries it too');
+
+  /* The label the collecting worker reads, from the shared code both
+     apps run. */
+  const lscope = compileScope(
+    [extractFunction(read('shared-worker.js'), 'pickItemSourceLabel', 'shared-worker.js')],
+    { data }, ['pickItemSourceLabel']);
+  data.suppliers = [
+    { id: 'SP1', name: 'Katwe Iron Works', location: 'Katwe', shopNo: 'B12' },
+    { id: 'SP2', name: 'Nsambya Steel', location: 'Nsambya', shopNo: '' },
+    { id: 'SP3', name: 'City Bolts', location: '', shopNo: '7C' },
+  ];
+  eq(lscope.pickItemSourceLabel({ supplierId: 'SP1' }), 'Katwe Iron Works — Katwe · Shop B12',
+    'the collecting worker reads the town AND the door');
+  eq(lscope.pickItemSourceLabel({ supplierId: 'SP2' }), 'Nsambya Steel — Nsambya',
+    'no shop no., no clutter');
+  eq(lscope.pickItemSourceLabel({ supplierId: 'SP3' }), 'City Bolts — Shop 7C',
+    'a door with no town still shows');
+  eq(lscope.pickItemSourceLabel({ supplierId: '__stock__' }), 'Shop',
+    'shelf stock is still just the shop');
+
+  /* And the admin's pickup-run line shows the door beside the place. */
+  t.check(/\$\{esc\(sup\.location\)\}\$\{sup\.shopNo \? ' · Shop ' \+ esc\(sup\.shopNo\) : ''\}/.test(src),
+    'the pickup run names the shop no. beside the place');
+}
+
 process.exit(t.done() ? 1 : 0);

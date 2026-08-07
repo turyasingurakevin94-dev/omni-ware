@@ -1004,7 +1004,10 @@ function pickItemSourceLabel(it){
   if(!it.supplierId || it.supplierId==='__stock__') return 'Shop';
   const sup = (data.suppliers||[]).find(s=>s.id===it.supplierId);
   if(!sup) return it.supplierName || 'Supplier';
-  return sup.location ? `${sup.name} — ${sup.location}` : sup.name;
+  // The worker is standing in that part of town looking for a door:
+  // "Ntinda · Shop B12" is directions, "Ntinda" alone is a search.
+  const place = [sup.location, sup.shopNo ? 'Shop ' + sup.shopNo : ''].filter(Boolean).join(' · ');
+  return place ? `${sup.name} — ${place}` : sup.name;
 }
 
 // Same combo-values-joined format used everywhere else a variant is shown
