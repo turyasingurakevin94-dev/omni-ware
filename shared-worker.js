@@ -567,62 +567,27 @@ function showSetPasswordScreen(){
 // including its creator -- can remove it. Only 0004's `created_by =
 // auth.uid()` branch on the shops select policy makes it visible at all.
 //
-// So the second attempt reuses the first one's shop instead of stranding
-// another. Matched on name: adopting a shop the user called something else
-// would silently rename what they asked for. An orphan under a different
-// name is left alone.
-async function adoptHalfCreatedShop(name){
-  // Only reached from showCreateShopScreen, which only runs when this user
-  // has no shop_members rows at all -- so every shop they created is one
-  // they are not a member of.
-  const { data: mine, error } = await sb.from('shops').select('id, name').eq('created_by', currentUser.id);
-  if(error || !Array.isArray(mine)) return null;
-  return mine.find(s=>s.name === name) || null;
-}
-
-function showCreateShopScreen(){
-  return new Promise((resolve)=>{
+/* The Create-shop era is over. Shop creation was the one door a stranger
+   could walk through: with email verification off, any visitor to the
+   login page could sign up and be OFFERED a blank shop — and the old RLS
+   policy let them take it (one did; deleted 2026-08-07, and migration
+   0059 locked the door server-side). A new shop is created by the
+   operator in the Supabase SQL editor, never from a login screen. An
+   account with no membership is told to ask the owner — the same dead
+   end the worker app already gives, with its own wording. Deliberately
+   never resolves: there is nothing to load behind it. */
+function showNoShopDefaultScreen(){
+  return new Promise(()=>{
     const el = ensureAuthOverlay();
     el.innerHTML = `
-      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;">
-        <h2 style="margin:0 0 8px;font-size:18px;">Create your shop</h2>
-        <p style="margin:0 0 16px;font-size:13px;color:#aaa;">You're not a member of any shop yet. Create one to get started.</p>
-        <input id="shop_name" type="text" placeholder="Shop name" style="width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#111;color:#eee;box-sizing:border-box;">
-        <div id="shop_error" style="color:#f66;font-size:13px;margin-bottom:8px;min-height:16px;"></div>
-        <button id="shop_create_btn" style="width:100%;padding:10px;border-radius:6px;border:none;background:#2F7FBF;color:#fff;cursor:pointer;">Create shop</button>
+      <div style="background:#1c1c1c;padding:32px;border-radius:12px;width:320px;max-width:90vw;color:#eee;font-family:sans-serif;text-align:center;">
+        <h2 style="margin:0 0 8px;font-size:18px;">No shop on this account</h2>
+        <p style="margin:0 0 18px;font-size:13px;color:#aaa;line-height:1.5;">This login isn't a member of any shop. If you work here, ask the shop owner to add you — shops can't be created from this screen.</p>
+        <button id="noshop_signout_btn" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:transparent;color:#eee;cursor:pointer;">Sign out</button>
       </div>`;
-    const errEl = el.querySelector('#shop_error');
-    const btn = el.querySelector('#shop_create_btn');
-    btn.addEventListener('click', async ()=>{
-      errEl.textContent = '';
-      const name = el.querySelector('#shop_name').value.trim();
-      if(!name){ errEl.textContent = 'Enter a shop name'; return; }
-      // Creating a shop is two writes that cannot be made atomic from the
-      // client, and a half-finished one cannot be cleaned up afterwards, so
-      // a second click must not start a second attempt.
-      btn.disabled = true;
-      const fail = (msg)=>{ btn.disabled = false; errEl.textContent = msg; };
-      try{
-        let shop = await adoptHalfCreatedShop(name);
-        if(!shop){
-          const { data: created, error: shopErr } = await sb.from('shops').insert({name, created_by: currentUser.id}).select().single();
-          if(shopErr){ fail(shopErr.message); return; }
-          shop = created;
-        }
-        const { error: memberErr } = await sb.from('shop_members').insert({shop_id: shop.id, user_id: currentUser.id, role: 'owner'});
-        if(memberErr){ fail(memberErr.message); return; }
-        currentShopId = shop.id;
-        currentShopName = shop.name || name;
-        data = (typeof seedData === 'function') ? seedData() : { savedQuotes: [] };
-        await saveData();
-        resolve(shop.id);
-      }catch(e){
-        // saveData() and the lookup above can both throw. Without this the
-        // promise never settles: the overlay stays up, the button stays
-        // dead, and boot() never reaches its own error handler.
-        fail((e && e.message) || String(e));
-      }
-    });
+    // A way out, since this is a dead end otherwise -- most often reached
+    // by signing in with the wrong account.
+    document.getElementById('noshop_signout_btn').addEventListener('click', signOutAndReload);
   });
 }
 
@@ -682,8 +647,7 @@ async function ensureAuthAndShop(){
     // So the host answers this, not the shared file. A host that offers no
     // opinion gets the original behaviour.
     if(typeof showNoShopScreen === 'function'){ await showNoShopScreen(); return; }
-    currentShopId = await showCreateShopScreen();
-    currentMemberRole = 'owner';
+    await showNoShopDefaultScreen(); return;
   } else if(memberships.length === 1){
     currentShopId = memberships[0].shop_id;
     currentMemberRole = memberships[0].role;

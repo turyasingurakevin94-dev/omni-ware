@@ -78,7 +78,7 @@ const stripComments = (s) => s
   const fn = extractFunction(sharedJs, 'showLoginScreen', 'shared-worker.js');
   const [adminMarkup, workerMarkup] = fn.split('` : `');
 
-  t.check(/auth_signup_btn/.test(adminMarkup), 'the admin screen offers to create a shop');
+  t.check(/auth_signup_btn/.test(adminMarkup), 'the admin screen offers account sign-up (an account, never a shop)');
   t.check(!/auth_signup_btn/.test(workerMarkup.split('const signupBtn')[0]),
     'the worker screen does not, because an account made there would belong to no shop');
   t.check(!/auth_signup_btn/.test(extractFunction(agentHtml, 'showLoginScreen', 'agent.html')),
@@ -178,6 +178,36 @@ const stripComments = (s) => s
   t.check(wwShared === sharedJs, 'worker-www/shared-worker.js is byte-identical to the source');
   t.check(/var OW_APP_ROLE = 'worker';/.test(stripComments(wwIndex)),
     'and the packaged worker app declares its role, or it would ship the admin door');
+}
+
+/* ---------- 6. nobody creates a shop from a login screen -------------- *
+ * With email verification off, any visitor could sign up and be OFFERED a
+ * blank shop -- and the old RLS policy let them take it. One stranger
+ * shop existed. The door is closed at both ends: no client app carries a
+ * shops insert, and migration 0059 drops the policy that would have
+ * allowed one anyway.
+ */
+{
+  [['shared-worker.js', sharedJs], ['index.html', adminHtml], ['agent.html', agentHtml]].forEach(([where, src]) => {
+    t.check(!/from\('shops'\)\s*\.\s*insert/.test(src) && !/showCreateShopScreen/.test(src),
+      `${where}: no code path creates a shop`);
+  });
+  const branch = extractFunction(sharedJs, 'ensureAuthAndShop', 'shared-worker.js');
+  t.check(/if\(typeof showNoShopScreen === 'function'\)\{ await showNoShopScreen\(\); return; \}[\s\S]{0,40}await showNoShopDefaultScreen\(\); return;/.test(branch),
+    'an account with no membership hits a dead end in every host — never an offer');
+  const dead = extractFunction(sharedJs, 'showNoShopDefaultScreen', 'shared-worker.js');
+  t.check(/shops can't be created from this screen/.test(dead),
+    'and the dead end says so in words');
+  t.check(/noshop_signout_btn/.test(dead) && /addEventListener\('click', signOutAndReload\)/.test(dead),
+    'with a signed-out way back, since it is most often reached with the wrong account');
+
+  const mig = read('supabase/migrations/0059_no_client_shop_creation.sql');
+  t.check(/drop policy if exists "any authenticated user can create a shop" on shops;/.test(mig),
+    'the policy that let anyone create a shop is dropped');
+  t.check(/drop policy if exists "bootstrap owner or admin invites" on shop_members;/.test(mig)
+    && /create policy "admin invites only" on shop_members/.test(mig)
+    && /with check \(is_shop_admin\(shop_id\)\);/.test(mig),
+    'and the bootstrap self-invite goes with it — membership comes from an admin or the invite function');
 }
 
 process.exit(t.done() ? 1 : 0);

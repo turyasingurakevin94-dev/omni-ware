@@ -29,7 +29,7 @@ function build({ memberships, hostAnswers }) {
   const seen = [];
   const scope = (new Function(
     'sb', 'getAuthedUser', 'showLoginScreen', 'showSetPasswordScreen',
-    'showCreateShopScreen', 'showShopPicker', 'hideAuthOverlay', 'showNoShopScreen',
+    'showCreateShopScreen', 'showNoShopDefaultScreen', 'showShopPicker', 'hideAuthOverlay', 'showNoShopScreen',
     'initialAuthLinkType', `
     let currentUser = null, currentShopId = null, currentMemberRole = null;
     ${extractFunction(sharedJs, 'ensureAuthAndShop', 'shared-worker.js')}
@@ -41,7 +41,8 @@ function build({ memberships, hostAnswers }) {
     async () => ({ id: 'U1' }),
     async () => { seen.push('login'); },
     async () => { seen.push('setPassword'); },
-    async () => { seen.push('CREATE SHOP OFFERED'); return 'shop-new'; },
+    async () => { seen.push('CREATE SHOP OFFERED'); return 'shop-new'; },   // a canary: nothing should ever call it
+    async () => { seen.push('DEFAULT DEAD END'); },
     async () => { seen.push('shopPicker'); return 'shop-2'; },
     () => seen.push('overlayHidden'),
     hostAnswers ? async () => { seen.push('NO SHOP MESSAGE'); } : undefined,
@@ -65,15 +66,24 @@ function build({ memberships, hostAnswers }) {
     'and the overlay stays up, because there is nothing behind it to show');
 }
 
-/* ---------- 2. the admin app is unchanged ----------------------------- */
+/* ---------- 2. the admin app gets the dead end too -------------------- */
+/*
+ * This section used to assert the opposite -- "a host that offers no
+ * opinion still gets the create-shop flow". That flow is gone: with email
+ * verification off it was the door any stranger could walk through, and
+ * migration 0059 bricked it server-side. A host with no opinion now gets
+ * the shared dead end, never an offer.
+ */
 {
   const { scope, seen } = build({ memberships: [], hostAnswers: false });
   await scope.ensureAuthAndShop();
 
-  t.check(seen.includes('CREATE SHOP OFFERED'),
-    'a host that offers no opinion still gets the create-shop flow');
-  t.check(scope.state().currentShopId === 'shop-new' && scope.state().currentMemberRole === 'owner',
-    'and becomes the owner of what it creates');
+  t.check(seen.includes('DEFAULT DEAD END'),
+    'a host that offers no opinion gets the shared dead end');
+  t.check(!seen.includes('CREATE SHOP OFFERED'),
+    'and nobody is offered a shop — the canary stays silent');
+  t.check(scope.state().currentShopId === null,
+    'nothing is loaded against a shop that does not exist');
 }
 
 /* ---------- 3. having a shop is unaffected either way ----------------- */
@@ -101,7 +111,7 @@ function build({ memberships, hostAnswers }) {
   t.check(/function showNoShopScreen\(\)/.test(workerHtml),
     'worker.html defines it');
   t.check(!/function showNoShopScreen\(\)/.test(adminHtml),
-    'and index.html deliberately does not, keeping its create-shop flow');
+    'and index.html deliberately does not — it falls back to the shared dead end');
 
   const fn = extractFunction(workerHtml, 'showNoShopScreen', 'worker.html');
   t.check(/return new Promise\(\(\)=>\{/.test(fn),
@@ -114,8 +124,8 @@ function build({ memberships, hostAnswers }) {
   const shared = extractFunction(sharedJs, 'ensureAuthAndShop', 'shared-worker.js');
   t.check(/if\(typeof showNoShopScreen === 'function'\)\{ await showNoShopScreen\(\); return; \}/.test(shared),
     'and the shared file checks before calling, so a host without one is unaffected');
-  t.check(shared.indexOf('showNoShopScreen') < shared.indexOf('showCreateShopScreen'),
-    'asking the host first, or the admin form would have been built already');
+  t.check(shared.indexOf('showNoShopScreen') < shared.indexOf('showNoShopDefaultScreen'),
+    'asking the host first, so a host with its own wording keeps it');
 }
 
 process.exit(t.done() ? 1 : 0);
