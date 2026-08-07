@@ -39,7 +39,7 @@ const src = read('index.html');
 const workerSrc = read('shared-worker.js');
 
 const NAMES = ['waDaysBetween', 'waWeekday', 'waSalesByKey', 'waPriceTrail',
-  'waStockIdle', 'waPostCandidates', 'waDailyPicks', 'waCaption'];
+  'waStockIdle', 'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats'];
 
 // The pricing chain (catalogueSellAtQty, catalogueBreaks, ranked rows) is
 // already mutation-proven by the printed-catalogue suite; here it is
@@ -78,8 +78,11 @@ t.check(!!scope, `the pick helpers compile${err ? ` (${err.message})` : ''}`);
 if (!scope) { process.exit(1); }
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
-const has = (arr, rx, msg) => t.check(arr.some((r) => rx.test(r)), `${msg} (reasons: ${JSON.stringify(arr)})`);
-const hasNot = (arr, rx, msg) => t.check(!arr.some((r) => rx.test(r)), `${msg} (reasons: ${JSON.stringify(arr)})`);
+/* A reason is typed evidence — {kind, text} — so the desk can wear it as
+   a coloured chip. The helpers read the text; the kinds get their own checks. */
+const has = (arr, rx, msg) => t.check(arr.some((r) => rx.test(r.text)), `${msg} (reasons: ${JSON.stringify(arr)})`);
+const hasNot = (arr, rx, msg) => t.check(!arr.some((r) => rx.test(r.text)), `${msg} (reasons: ${JSON.stringify(arr)})`);
+const kindOf = (arr, rx) => (arr.find((r) => rx.test(r.text)) || {}).kind;
 
 // 2026-08-06 is a Thursday; 2026-08-03 a Monday.
 const THU = '2026-08-06', MON = '2026-08-03';
@@ -174,6 +177,12 @@ const THU = '2026-08-06', MON = '2026-08-03';
   has(p1.reasons, /Never been posted/, 'and a fresh product says so');
   hasNot(p1.reasons, /Thursdays/, 'no weekday claim on a day the item does not favour');
 
+  /* each claim wears its kind, so the board can colour it */
+  eq(kindOf(p1.reasons, /sitting/), 'sitting', 'the sitting claim is typed sitting');
+  eq(kindOf(p1.reasons, /Margin/), 'margin', 'the margin claim is typed margin');
+  eq(kindOf(p1.reasons, /Costs the shop less/), 'drop', 'the drop claim is typed drop');
+  eq(kindOf(p1.reasons, /Never been posted/), 'fresh', 'the freshness claim is typed fresh');
+
   const p2 = candidates.find((c) => c.key === 'P2');
   hasNot(p2.reasons, /Margin/, 'a 5% margin is not worth bragging about');
   eq(p2.dropped, false, 'a price that went UP is not a drop');
@@ -181,6 +190,7 @@ const THU = '2026-08-06', MON = '2026-08-03';
 
   const mon = scope.waPostCandidates(MON, []).candidates.find((c) => c.key === 'P1');
   has(mon.reasons, /Sells on Mondays \(80% of its sales\)/, 'on Monday the weekday claim appears, with its share');
+  eq(kindOf(mon.reasons, /Sells on/), 'weekday', 'and it is typed weekday');
 
   /* rotation */
   env.data.waPosts = [{ id: 1, date: '2026-08-01', productId: 'P1', variantIdx: null, name: 'x' }];
@@ -224,7 +234,7 @@ const THU = '2026-08-06', MON = '2026-08-03';
 /* ---------- 7. what leaves the building ------------------------------ */
 {
   const pick = { name: 'Simba Cement', price: 45000, unit: 'bag', dropped: true,
-    breaks: [{ qty: 10, price: 43500 }], reasons: ['Margin 23%'] };
+    breaks: [{ qty: 10, price: 43500 }], reasons: [{ kind: 'margin', text: 'Margin 23%' }] };
   const cap = scope.waCaption(pick, 'Omni Hardware', '0772 123 456');
   t.check(cap.includes('Simba Cement'), 'the caption names the product');
   t.check(cap.includes('UGX 45,000 per bag'), 'and the retail price');
@@ -241,7 +251,53 @@ const THU = '2026-08-06', MON = '2026-08-03';
     'the status image is drawn from sell prices only — no cost variable in reach');
 }
 
-/* ---------- 8. all of it is REACHED ---------------------------------- */
+/* ---------- 8. the desk head: status before recommendations ---------- */
+{
+  eq(scope.waPostDeskStats([], THU).postedTodayName, null, 'no posts: nothing claimed for today');
+  eq(scope.waPostDeskStats([], THU).lastDaysAgo, null, 'never posted is null, not zero days ago');
+  eq(scope.waPostDeskStats([], THU).last30, 0, 'and the month count is honestly zero');
+
+  const posts = [
+    { id: 1, date: '2026-08-01', name: 'Old pick' },
+    { id: 2, date: THU, name: 'First today' },
+    { id: 3, date: THU, name: 'Second today' },
+    { id: 4, date: '2026-06-01', name: 'Ancient' },      // 66 days ago: outside the month
+  ];
+  const d = scope.waPostDeskStats(posts, THU);
+  eq(d.postedTodayName, 'Second today', 'today is done, named by the LATEST post');
+  eq(d.lastDaysAgo, 0, 'the last post was today');
+  eq(d.last30, 3, 'the month counts 30 days back, no further');
+
+  eq(scope.waPostDeskStats([{ id: 1, date: '2026-08-03', name: 'Mon' }], THU).lastDaysAgo, 3,
+    'quiet since Monday reads as 3 days ago');
+
+  /* worn by the render */
+  t.check(/waPostDeskStats\(data\.waPosts, today\)/.test(src)
+    && /id="wa_desk_head"/.test(src),
+    'the desk head is derived at render, from the same rows as the rotation');
+  t.check(/wa-desk-state \$\{desk\.postedTodayName \? 'done' : 'due'\}/.test(src),
+    'and the status pill changes state with the fact');
+}
+
+/* ---------- 9. the board wears the evidence -------------------------- */
+{
+  t.check(/class="wa-pick\$\{i===0\?' lead':''\}"/.test(src),
+    'the first pick leads the board, larger than its alternates');
+  t.check(/\$\{i===0 \? "Today's pick" : 'Alternate ' \+ i\}/.test(src),
+    'and every card names its rank in words');
+  t.check(/class="wap-chip \$\{esc\(r\.kind\)\}"/.test(src)
+    && /\$\{esc\(r\.text\)\}/.test(src),
+    'each reason renders as a chip coloured by its kind');
+  ['sitting', 'margin', 'drop', 'weekday', 'fresh'].forEach((k) =>
+    t.check(new RegExp(`\\.wap-chip\\.${k}\\{`).test(src), `the ${k} chip has its own colour`));
+  t.check(/data-go="media"/.test(src) && /data-go="products"/.test(src)
+    && /goToTab\(btn\.dataset\.go\)/.test(src),
+    'the unlock rail walks straight to Media and Products');
+  t.check(/class="btn btn-ghost wa-hist-del"/.test(src) && /class="wa-rec-sub"/.test(src),
+    'the record list still lets a row be removed, and shows why it was picked');
+}
+
+/* ---------- 10. all of it is REACHED ---------------------------------- */
 {
   t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src), 'the tab renders on entry');
   t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 2,
@@ -250,7 +306,7 @@ const THU = '2026-08-06', MON = '2026-08-03';
   const posted = (/wp_posted'\)\.addEventListener\('click', \(\)=>\{[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/allocRowId\('waPost'\)/.test(posted) && /date: todayISO\(\)/.test(posted),
     '"Mark as posted" writes a dated row with a real id');
-  t.check(/reason: p\.reasons\.join\(' · '\)/.test(posted),
+  t.check(/reason: p\.reasons\.map\(r=> r\.text\)\.join\(' · '\)/.test(posted),
     'and keeps the reasons it was picked for, for the history to show');
   t.check(/variantIdx: p\.variantIdx==null \? null : p\.variantIdx,/.test(posted),
     'a simple product posts as null, not as variant zero');

@@ -4318,21 +4318,75 @@
     .media-rail{flex-direction:row;flex-wrap:wrap;flex-basis:auto;width:100%;}
   }
 
-  /* ---------------- WhatsApp: today's post ---------------- */
-  .wa-phone-field{margin:0;max-width:220px;}
-  .wa-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
-  .wa-pick{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel);
+  /* ---------------- WhatsApp: the publishing desk ----------------
+     One question answered before anything else: has today's post gone
+     out? Then a ranked board — the lead pick large with its evidence
+     worn as typed chips, alternates beneath — and a side rail for what
+     is blocked, what was posted, and the one setting. */
+  .wa-desk{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start;}
+  .wa-desk .panel{margin-bottom:0;}
+  .wa-desk-side{display:flex;flex-direction:column;gap:16px;min-width:0;}
+  @media (max-width: 900px){ .wa-desk{grid-template-columns:1fr;} }
+  .wa-side-h{font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0 0 10px;}
+  .wa-desk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--line);}
+  .wa-desk-kicker{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--ow-oxide);margin-bottom:2px;}
+  .wa-desk-date{font-size:19px;font-weight:800;margin:0;line-height:1.2;}
+  .wa-desk-cadence{font-size:12.5px;color:var(--ink-soft);margin-top:3px;}
+  .wa-desk-state{font-size:12.5px;font-weight:700;border-radius:999px;padding:6px 12px;white-space:nowrap;}
+  .wa-desk-state.done{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .wa-desk-state.due{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .wa-picks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+  @media (max-width: 640px){ .wa-picks{grid-template-columns:1fr;} }
+  .wa-pick{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);
     display:flex;flex-direction:column;}
-  .wa-pick .wap-thumb{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--ow-steel-050);}
-  .wa-pick .wap-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
-  .wa-pick .wap-name{font-size:14px;font-weight:700;line-height:1.3;}
-  .wa-pick .wap-price{font-size:13px;color:var(--ow-verdigris);font-weight:600;}
-  .wa-pick .wap-reasons{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-soft);}
-  .wa-pick .wap-reasons div::before{content:'·';margin-right:6px;color:var(--accent);}
-  .wa-pick .wap-actions{display:flex;gap:8px;margin-top:auto;padding-top:6px;}
+  .wa-pick.lead{grid-column:1/-1;flex-direction:row;border-color:var(--ow-steel-400);}
+  .wap-media{position:relative;background:var(--ow-steel-050);}
+  .wa-pick.lead .wap-media{width:42%;flex:none;}
+  .wap-thumb{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;}
+  .wa-pick.lead .wap-thumb{height:100%;aspect-ratio:auto;min-height:210px;}
+  @media (max-width: 640px){
+    .wa-pick.lead{flex-direction:column;}
+    .wa-pick.lead .wap-media{width:100%;}
+    .wa-pick.lead .wap-thumb{height:auto;aspect-ratio:16/10;min-height:0;}
+  }
+  .wap-rank{position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:700;
+    letter-spacing:0.05em;text-transform:uppercase;color:#fff;background:rgba(20,26,33,0.62);
+    padding:4px 9px;border-radius:999px;}
+  .wap-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;}
+  .wa-pick.lead .wap-body{padding:18px 20px;}
+  .wap-name{font-size:14px;font-weight:700;line-height:1.3;}
+  .wa-pick.lead .wap-name{font-size:17px;}
+  .wap-price{font-size:13px;color:var(--ow-verdigris);font-weight:700;}
+  .wa-pick.lead .wap-price{font-size:15px;}
+  .wap-why{display:flex;flex-wrap:wrap;gap:5px;}
+  .wap-chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;line-height:1.35;
+    background:var(--ow-steel-050);color:var(--ink-soft);border:1px solid transparent;}
+  .wap-chip.sitting{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .wap-chip.margin{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .wap-chip.drop{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .wap-chip.weekday{background:var(--ow-steel-100);color:var(--ow-ink-600);}
+  .wap-chip.fresh{background:var(--panel);border-color:var(--line);}
+  .wap-actions{display:flex;gap:8px;margin-top:auto;padding-top:8px;}
   .wa-empty{padding:24px 8px;color:var(--ink-soft);font-size:13.5px;}
-  .wa-gap-row{font-size:13px;padding:6px 0;border-bottom:1px solid var(--line-soft, #E3E7EA);}
-  .wa-gap-row:last-child{border-bottom:none;}
+  .wa-gap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 0;border-bottom:1px solid var(--line);}
+  .wa-gap-row:last-child{border-bottom:none;padding-bottom:0;}
+  .wa-gap-row:first-child{padding-top:0;}
+  .wa-gap-text{font-size:12.5px;min-width:0;}
+  .wa-gap-text b{display:block;}
+  .wa-gap-text span{color:var(--ink-soft);display:block;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;}
+  .wa-recs{display:flex;flex-direction:column;max-height:340px;overflow-y:auto;}
+  .wa-rec{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .wa-rec:last-child{border-bottom:none;}
+  .wa-rec:first-child{padding-top:0;}
+  .wa-rec-main{flex:1;min-width:0;}
+  .wa-rec-name{font-size:13px;font-weight:600;line-height:1.3;}
+  .wa-rec-sub{font-size:11.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;}
   .wp-layout{display:flex;gap:18px;flex-wrap:wrap;}
   .wp-canvas-wrap{flex:0 0 auto;}
   #wp_canvas{width:250px;height:auto;border-radius:12px;border:1px solid var(--line);display:block;}
@@ -5698,23 +5752,28 @@
       </div>
       </div>
       <div id="wa_pane_post" style="display:none;">
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;" id="wa_today_head">Today's picks</h2>
-          <div class="wa-phone-field field">
-            <label>Number shown on posts</label>
-            <input id="wa_phone" placeholder="e.g. 0772 123 456">
-          </div>
+      <div class="wa-desk">
+        <div class="panel wa-desk-main">
+          <div id="wa_desk_head"></div>
+          <div id="wa_picks"></div>
         </div>
-        <div id="wa_picks"></div>
-      </div>
-      <div class="panel" id="wa_gaps_panel" style="display:none;">
-        <h2>What is holding products back</h2>
-        <div id="wa_gaps"></div>
-      </div>
-      <div class="panel">
-        <h2>Post history</h2>
-        <div id="wa_history"></div>
+        <aside class="wa-desk-side">
+          <div class="panel" id="wa_gaps_panel" style="display:none;">
+            <h2 class="wa-side-h">Unlock more picks</h2>
+            <div id="wa_gaps"></div>
+          </div>
+          <div class="panel">
+            <h2 class="wa-side-h">Post record</h2>
+            <div id="wa_history"></div>
+          </div>
+          <div class="panel">
+            <h2 class="wa-side-h">Post settings</h2>
+            <div class="field" style="margin:0;">
+              <label>Number shown on posts</label>
+              <input id="wa_phone" placeholder="e.g. 0772 123 456">
+            </div>
+          </div>
+        </aside>
       </div>
       </div>
       <div id="wa_pane_bc" style="display:none;">
@@ -9378,22 +9437,22 @@ function waPostCandidates(dateISO, skipKeys){
       const idle = waStockIdle(key, dateISO);
       if(idle && idle.days >= WA_SITTING_DAYS){
         score += 2 + Math.min(idle.days/30, 3);
-        reasons.push(`${idle.qty} ${at.unit || 'units'} sitting ${idle.days} days`);
+        reasons.push({ kind: 'sitting', text: `${idle.qty} ${at.unit || 'units'} sitting ${idle.days} days` });
       }
       const best = rankedPurchaseRowsAtQty(p.id, idx, 1).find(r=> r.purchasePrice != null);
       if(best && best.purchasePrice > 0 && at.price > best.purchasePrice){
         const m = (at.price - best.purchasePrice) / at.price;
-        if(m >= 0.10){ score += m*10; reasons.push(`Margin ${Math.round(m*100)}%`); }
+        if(m >= 0.10){ score += m*10; reasons.push({ kind: 'margin', text: `Margin ${Math.round(m*100)}%` }); }
       }
       const t = trail.get(key);
       const dropped = !!(t && t.prev != null && t.last != null && t.last <= t.prev*0.98);
-      if(dropped){ score += 2.5; reasons.push(`Costs the shop less than it used to — the price can say so`); }
+      if(dropped){ score += 2.5; reasons.push({ kind: 'drop', text: 'Costs the shop less than it used to — the price can say so' }); }
       const s = sales.get(key);
       if(s && s.units >= 5 && s.byWeekday[wd]/s.units >= 0.25){
         score += 1.5;
-        reasons.push(`Sells on ${WA_DAY_NAMES[wd]} (${Math.round(100*s.byWeekday[wd]/s.units)}% of its sales)`);
+        reasons.push({ kind: 'weekday', text: `Sells on ${WA_DAY_NAMES[wd]} (${Math.round(100*s.byWeekday[wd]/s.units)}% of its sales)` });
       }
-      if(!posted){ score += 1; reasons.push('Never been posted'); }
+      if(!posted){ score += 1; reasons.push({ kind: 'fresh', text: 'Never been posted' }); }
 
       candidates.push({ key, productId: p.id, variantIdx: idx, name, category: p.category || '',
         image, price: at.price, unit: at.unit || '', dropped,
@@ -9489,6 +9548,22 @@ function waDrawStatus(canvas, pick, shopName, phone, img){
   c.fillText(phone ? `WhatsApp ${phone}` : 'Send us a message to order', 80, H-90);
 }
 
+/* The desk's own facts, derived like everything else: whether today's
+   post has gone out (and of what), how long since the last one, and the
+   pace over the last month. "Never" stays null -- a shop that has not
+   started is not a shop that posted zero days ago. */
+function waPostDeskStats(posts, todayIso){
+  const list = posts || [];
+  const todays = list.filter(w=> w.date === todayIso);
+  const postedTodayName = todays.length ? todays[todays.length-1].name : null;
+  let last = null;
+  list.forEach(w=>{ if(w.date && (!last || w.date > last)) last = w.date; });
+  const lastDaysAgo = last == null ? null : waDaysBetween(last, todayIso);
+  const last30 = list.filter(w=> w.date
+    && waDaysBetween(w.date, todayIso) >= 0 && waDaysBetween(w.date, todayIso) < 30).length;
+  return { postedTodayName, lastDaysAgo, last30 };
+}
+
 /* ---- the screen ---- */
 let waSkipKeys = [];      // session-only: "pick something else" skips
 let waCurrentPick = null; // the pick open in the modal
@@ -9496,8 +9571,20 @@ let waCurrentPick = null; // the pick open in the modal
 function renderWhatsApp(){
   const today = todayISO();
   const wd = waWeekday(today);
-  document.getElementById('wa_today_head').textContent =
-    `Today's picks — ${WA_DAY_NAMES[wd].replace(/s$/,'')} ${today}`;
+  const desk = waPostDeskStats(data.waPosts, today);
+  document.getElementById('wa_desk_head').innerHTML = `
+    <div class="wa-desk-head">
+      <div>
+        <div class="wa-desk-kicker">Daily post</div>
+        <h2 class="wa-desk-date">${WA_DAY_NAMES[wd].replace(/s$/,'')} · ${today}</h2>
+        <div class="wa-desk-cadence">${desk.lastDaysAgo == null
+          ? 'No posts yet — the record starts with the first one.'
+          : `Last post ${desk.lastDaysAgo === 0 ? 'today' : desk.lastDaysAgo === 1 ? 'yesterday'
+              : desk.lastDaysAgo + ' days ago'} · ${desk.last30} in the last 30 days`}</div>
+      </div>
+      <span class="wa-desk-state ${desk.postedTodayName ? 'done' : 'due'}">${desk.postedTodayName
+        ? '✓ Posted today — ' + esc(desk.postedTodayName) : 'Not posted yet'}</span>
+    </div>`;
   const phoneInput = document.getElementById('wa_phone');
   if(document.activeElement !== phoneInput) phoneInput.value = data.presetWaPhone || '';
 
@@ -9506,16 +9593,19 @@ function renderWhatsApp(){
   if(!picks.length){
     const total = (data.products||[]).length;
     wrap.innerHTML = `<div class="wa-empty">${total
-      ? 'Nothing can be picked — see what is holding products back below.'
+      ? 'Nothing can be picked — "Unlock more picks" names what is missing.'
       : 'No products yet. Picks appear once products have photos and retail prices.'}</div>`;
   } else {
     wrap.innerHTML = `<div class="wa-picks">${picks.map((p,i)=>`
-      <div class="wa-pick" data-key="${esc(p.key)}">
-        <img class="wap-thumb" loading="lazy" src="${esc(p.image)}" alt="">
+      <div class="wa-pick${i===0?' lead':''}" data-key="${esc(p.key)}">
+        <div class="wap-media">
+          <img class="wap-thumb" loading="lazy" src="${esc(p.image)}" alt="">
+          <span class="wap-rank">${i===0 ? "Today's pick" : 'Alternate ' + i}</span>
+        </div>
         <div class="wap-body">
           <div class="wap-name">${esc(p.name)}</div>
           <div class="wap-price">${fmtUGX(p.price)}${p.unit ? ' / ' + esc(p.unit) : ''}</div>
-          <div class="wap-reasons">${p.reasons.map(r=> `<div>${esc(r)}</div>`).join('') || '<div>In rotation</div>'}</div>
+          <div class="wap-why">${p.reasons.map(r=> `<span class="wap-chip ${esc(r.kind)}">${esc(r.text)}</span>`).join('') || '<span class="wap-chip">In rotation</span>'}</div>
           <div class="wap-actions">
             <button class="btn btn-accent btn-icon wa-prepare" data-i="${i}">
               <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/></svg>
@@ -9535,19 +9625,21 @@ function renderWhatsApp(){
 
   const gapsPanel = document.getElementById('wa_gaps_panel');
   const gapBits = [];
-  if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><b>${gaps.noPhoto.length} without a photo</b> — ${esc(gaps.noPhoto.slice(0,6).join(', '))}${gaps.noPhoto.length>6?'…':''}. Add photos in Media and they become postable.</div>`);
-  if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><b>${gaps.noPrice.length} without a retail price</b> — ${esc(gaps.noPrice.slice(0,6).join(', '))}${gaps.noPrice.length>6?'…':''}. They need a supplier price and a retail markup rule.</div>`);
+  if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPhoto.length} waiting on a photo</b><span>${esc(gaps.noPhoto.slice(0,4).join(', '))}${gaps.noPhoto.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="media">Media</button></div>`);
+  if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPrice.length} without a retail price</b><span>${esc(gaps.noPrice.slice(0,4).join(', '))}${gaps.noPrice.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="products">Products</button></div>`);
   gapsPanel.style.display = gapBits.length ? '' : 'none';
   document.getElementById('wa_gaps').innerHTML = gapBits.join('');
+  gapsPanel.querySelectorAll('.wa-gap-go').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.go)));
 
   const hist = (data.waPosts||[]).slice()
     .sort((a,b)=> String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)))
     .slice(0, 20);
   document.getElementById('wa_history').innerHTML = hist.length
-    ? `<table><tr><th>Date</th><th>Product</th><th>Why it was picked</th><th></th></tr>${hist.map(w=>
-        `<tr><td style="white-space:nowrap;">${esc(w.date)}</td><td>${esc(w.name)}</td>
-         <td style="color:var(--ink-soft);">${esc(w.reason||'')}</td>
-         <td><button class="btn btn-ghost wa-hist-del" data-id="${w.id}" title="Remove this record">✕</button></td></tr>`).join('')}</table>`
+    ? `<div class="wa-recs">${hist.map(w=>
+        `<div class="wa-rec"><div class="wa-rec-main">
+         <div class="wa-rec-name">${esc(w.name)}</div>
+         <div class="wa-rec-sub" title="${esc(w.reason||'')}">${esc(w.date)}${w.reason ? ' · ' + esc(w.reason) : ''}</div></div>
+         <button class="btn btn-ghost wa-hist-del" data-id="${w.id}" title="Remove this record">✕</button></div>`).join('')}</div>`
     : `<div class="wa-empty">Nothing posted yet. The first "Mark as posted" starts the rotation record.</div>`;
   document.querySelectorAll('.wa-hist-del').forEach(btn=> btn.addEventListener('click', ()=>{
     const id = Number(btn.dataset.id);
@@ -9610,7 +9702,7 @@ document.getElementById('wp_posted').addEventListener('click', ()=>{
   data.waPosts.push({
     id: allocRowId('waPost'), date: todayISO(),
     productId: p.productId, variantIdx: p.variantIdx==null ? null : p.variantIdx,
-    name: p.name, reason: p.reasons.join(' · '),
+    name: p.name, reason: p.reasons.map(r=> r.text).join(' · '),
     createdAt: new Date().toISOString(),
   });
   saveData();
