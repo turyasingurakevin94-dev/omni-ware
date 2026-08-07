@@ -37,8 +37,8 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
 {
   /* THE BUG. Everything that moves the arithmetic has to redraw, and the
      fee moves it more than anything else on the form. */
-  t.check(/\['ln_principal','ln_rate','ln_term','ln_fees'\]\.forEach/.test(code),
-    'the fee is wired to redraw, which it was not');
+  t.check(/\['ln_principal','ln_rate','ln_term','ln_fees','ln_fee_each'\]\.forEach/.test(code),
+    'the fee is wired to redraw, which it was not — and so is the per-payment charge');
   t.check(/\.addEventListener\('input', lnfRefresh\)\);/.test(code),
     'and every one of them redraws the whole verdict, not just the old grey line');
 
@@ -71,10 +71,13 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
   /* The three figures a borrower actually weighs. "You repay" was
      nowhere on the old form -- only a monthly payment and an interest
      total, which have to be multiplied in the head to mean anything. */
-  t.check(/You receive/.test(verdict) && /You repay/.test(verdict) && /Every month/.test(verdict),
-    'with what you get, what you give back and what it takes each month');
-  t.check(/const repaid = l\.principal \+ interest;/.test(verdict),
-    'the repayment being principal and interest together');
+  t.check(/You receive/.test(verdict) && /You repay/.test(verdict) && /Every \$\{esc\(freq\.each/.test(verdict),
+    'with what you get, what you give back and what it takes each period — named in the loan\'s own rhythm, not always a month');
+  /* "You repay" counted principal and interest only, which on a loan
+     with a charge on every payment understated it by more than the whole
+     interest bill -- in the one cell a borrower reads to decide. */
+  t.check(/const repaid = l\.principal \+ interest \+ recurring;/.test(verdict),
+    'the repayment being everything handed over: principal, interest AND recurring charges');
   t.check(/loanNetAdvanced\(l\)/.test(verdict),
     'and what you receive being net of anything kept back');
 }
@@ -116,7 +119,7 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
     'the form can be told how the lender rounds');
   t.check(/roundTo: Number\(document\.getElementById\('ln_round'\)\.value\)\|\|0,/.test(code),
     'and the form reads it');
-  t.check(/document\.getElementById\('ln_round'\)\.addEventListener\('change', lnfRefresh\);/.test(code),
+  t.check(/\['ln_round','ln_freq'\]\.forEach\(id=>\s*\r?\n\s*document\.getElementById\(id\)\.addEventListener\('change', lnfRefresh\)\);/.test(code),
     'changing it redraws the arithmetic, like every other figure on the form');
   t.check(/round_to:l\.roundTo\|\|0,/.test(code) && /roundTo:Number\(l\.round_to\)\|\|0,/.test(code),
     'and it survives a round trip to the server, in both directions');

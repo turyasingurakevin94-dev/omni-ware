@@ -38,7 +38,7 @@ const data = { loans: [] };
 
 const scope = compileScope([
   extractFunction(src, 'monthsBetween', 'index.html'),
-  extractFunction(src, 'loanMonths', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
   extractFunction(src, 'loanPrincipal', 'index.html'),
   extractFunction(src, 'loanScheduledPayment', 'index.html'),
   extractFunction(src, 'loanSchedule', 'index.html'),
@@ -47,6 +47,19 @@ const scope = compileScope([
   extractFunction(src, 'loanRepayments', 'index.html'),
   extractFunction(src, 'loanApplied', 'index.html'),
   extractFunction(src, 'loanOutstanding', 'index.html'),
+  extractDeclaration(src, 'LOAN_FREQUENCIES', 'index.html'),
+  extractFunction(src, 'loanFrequency', 'index.html'),
+  extractFunction(src, 'loanPeriodsPerYear', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
+  extractFunction(src, 'loanPeriodRate', 'index.html'),
+  extractFunction(src, 'loanFeePerInstallment', 'index.html'),
+  extractFunction(src, 'loanDueDate', 'index.html'),
+  extractFunction(src, 'loanPeriodsBetween', 'index.html'),
+  extractFunction(src, 'loanLevelPI', 'index.html'),
+  extractFunction(src, 'loanTotalFees', 'index.html'),
+  extractFunction(src, 'loanFees', 'index.html'),
+  extractFunction(src, 'loanNetAdvanced', 'index.html'),
+  extractFunction(src, 'loanTrueCostRate', 'index.html'),
   extractFunction(src, 'loanMethodLabel', 'index.html'),
   extractFunction(src, 'loanRoundTo', 'index.html'),
   extractFunction(src, 'loanRound', 'index.html'),
@@ -60,7 +73,8 @@ const scope = compileScope([
 ], { data, todayISO: () => '2026-08-04' },
 ['loanScheduledPayment', 'loanSchedule', 'loanTotalInterest', 'loanEffectiveRate',
   'loanApplied', 'loanOutstanding', 'loanInterestPaidBetween', 'loansOutstandingAt',
-  'loanInterestForPeriod', 'loanPerformance', 'dayBeforeISO', 'loanMethodLabel']);
+  'loanInterestForPeriod', 'loanPerformance', 'dayBeforeISO', 'loanMethodLabel',
+  'loanTotalFees', 'loanFrequency', 'loanScheduledPayment', 'loanTrueCostRate', 'loanApplied']);
 
 const r = (n) => Math.round(n);
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -316,6 +330,119 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
 
   eq(r(fr[0].payment), 100000, 'no rate, no interest — just the slice');
   eq(r(scope.loanTotalInterest(free)), 0, 'and nothing charged over the term');
+}
+
+/* ---------- weekly, with a charge on every payment -------------------
+ * Every figure below is copied from a real Spiro bike loan (UMA977GM):
+ * 3,310,000 over 52 WEEKLY payments of 88,149, each one 75,149 of
+ * principal and interest plus a fixed 13,000 charge. The charges come to
+ * 676,000 over the year -- MORE than the 597,744 of interest.
+ *
+ * The app could hold neither fact. Its schedule walked calendar months,
+ * and its only fee was a one-off deduction from the money handed over.
+ * Entered with the closest settings it could manage (12 monthly payments
+ * at the same rate) it produced 328,572 a month against a real 88,149 a
+ * week, and lost the 676,000 of charges entirely -- a loan showing
+ * 3,942,863 owed against a true 4,733,744.
+ */
+{
+  const bike = loan({
+    principal: 3310000, ratePct: 33.6, termMonths: 52, frequency: 'weekly',
+    method: 'reducing_balance', feePerInstallment: 13000, fees: 150000,
+    startedOn: '2026-04-10',
+  });
+  const rows = scope.loanSchedule(bike);
+  eq(rows.length, 52, 'fifty-two weekly instalments, not twelve monthly ones');
+
+  /* The dates land a week apart, which is what makes it a weekly loan
+     rather than a monthly one wearing a different number. */
+  eq(rows[0].date, '2026-04-17', 'the first falls a week after drawdown');
+  eq(rows[1].date, '2026-04-24', 'and the next a week after that');
+  eq(rows[51].date, '2027-04-09', 'the last lands a year out');
+  eq(rows[0].month, '2026-04', 'each row still knows its month, so monthly reporting can sum them');
+
+  // Straight off the printed sheet.
+  eq(r(rows[0].payment), 88149, 'the instalment is what the lender asks for');
+  eq(r(rows[0].interest), 21388, 'interest is 2% of the whole balance, weekly');
+  eq(r(rows[0].principal), 53761, 'and the rest goes to principal');
+  eq(r(rows[0].fee), 13000, 'with the fixed charge riding on top');
+  eq(r(rows[50].principal), 74187, 'row 51 matches the sheet');
+  eq(r(rows[50].interest), 962, 'to the shilling');
+  eq(r(rows[51].closing), 0, 'and the loan closes at nothing');
+
+  eq(r(scope.loanTotalFees(bike)), 676000, 'the charges total what the sheet totals');
+  t.check(Math.abs(scope.loanTotalInterest(bike) - 597744) < 5,
+    `interest matches the sheet (${r(scope.loanTotalInterest(bike))} vs 597,744)`);
+  t.check(Math.abs(rows.reduce((a, row) => a + row.payment, 0) - 4583744) < 5,
+    'and so does everything handed over across the year');
+  eq(r(scope.loanScheduledPayment(bike)), 88149,
+    'the quoted instalment is the WHOLE payment, charge included — what is actually handed over');
+
+  /* A charge is not interest. Folding it into the interest column would
+     put 676,000 of fees through the P&L as a financing cost and report a
+     rate the agreement never stated. */
+  t.check(rows.every((row) => Math.abs(row.payment - (row.principal + row.interest + row.fee)) < 0.01),
+    'every row adds up: principal + interest + charge = payment');
+  t.check(Math.abs(scope.loanEffectiveRate(bike) - 33.6) < 0.05,
+    `the interest terms price at the stated rate (${scope.loanEffectiveRate(bike).toFixed(2)}%)`);
+  /* And the figure a borrower should actually act on: every shilling
+     handed over, against the money that turned up. */
+  t.check(scope.loanTrueCostRate(bike) > 70,
+    `while the true cost, charges and upfront fee counted, is far higher (${scope.loanTrueCostRate(bike).toFixed(1)}%)`);
+
+  /* A weekly rate is the annual one over 52, not over 12. Getting this
+     wrong would quote a weekly loan at a quarter of its cost. */
+  eq(scope.loanFrequency(bike), 'weekly', 'the loan knows its own rhythm');
+  eq(scope.loanFrequency(loan({})), 'monthly', 'and an old loan with no frequency is monthly, as it always was');
+  eq(scope.loanMethodLabel(bike), 'Reducing 33.6% · weekly',
+    'the list says how often it is paid, since two loans at one rate can be years apart in cost');
+  eq(scope.loanMethodLabel(loan({ ratePct: 24 })), 'Reducing 24%',
+    'and stays quiet about the monthly default');
+
+  /* Fortnightly is its own thing, not a slower week: 26 periods a year,
+     14 days apart. Sharing a constant with weekly would halve the rate
+     and double the gap on every loan of this shape. */
+  const fortnightly = loan({
+    principal: 3310000, ratePct: 33.6, termMonths: 26, frequency: 'fortnightly',
+    method: 'reducing_balance', startedOn: '2026-04-10',
+  });
+  const fn = scope.loanSchedule(fortnightly);
+  eq(fn.length, 26, 'twenty-six fortnights in a year');
+  eq(fn[0].date, '2026-04-24', 'the first falls a fortnight after drawdown, not a week');
+  eq(r(fn[0].interest), r(3310000 * 0.336 / 26),
+    'and a fortnight is charged a 26th of the annual rate, not a 52nd');
+  t.check(Math.abs(scope.loanEffectiveRate(fortnightly) - 33.6) < 0.05,
+    'which prices back to the rate on the agreement');
+
+  /* A flat loan spread over 52 weeks charges ONE year of interest, not
+     the four-and-a-third a monthly reading of "52" would produce. */
+  const flatWeekly = loan({
+    principal: 1000000, ratePct: 12, termMonths: 52, frequency: 'weekly',
+    method: 'flat', startedOn: '2026-04-10',
+  });
+  eq(r(scope.loanTotalInterest(flatWeekly)), 120000,
+    '12% flat over 52 weekly payments is one year of interest');
+
+  /* A frequency nobody recognises is monthly, not a crash and not a
+     silent zero-period loan. */
+  eq(scope.loanFrequency(loan({ frequency: 'daily' })), 'monthly',
+    'an unrecognised rhythm falls back to monthly rather than being trusted');
+  eq(scope.loanFrequency(loan({ frequency: null })), 'monthly', 'and so does none at all');
+
+  /* Repayments must settle the charge as well, or the app credits 13,000
+     a week to principal that the lender never did -- and shows the loan
+     closing nine weeks early. */
+  const paidTwice = loan({
+    principal: 3310000, ratePct: 33.6, termMonths: 52, frequency: 'weekly',
+    method: 'reducing_balance', feePerInstallment: 13000, startedOn: '2026-04-10',
+    repayments: [{ date: '2026-04-17', amount: 88149 }, { date: '2026-04-24', amount: 88149 }],
+  });
+  const applied = scope.loanApplied(paidTwice, '2026-04-24');
+  eq(r(applied.feesPaid), 26000, 'two weeks of charges are settled as charges');
+  t.check(Math.abs(applied.principalPaid - (53761 + 54108)) < 3,
+    `and only the rest reduced the debt (${r(applied.principalPaid)})`);
+  t.check(Math.abs(applied.balance - 3202131) < 3,
+    `so the balance is what the lender's sheet says after two weeks (${r(applied.balance)})`);
 }
 
 process.exit(t.done() ? 1 : 0);

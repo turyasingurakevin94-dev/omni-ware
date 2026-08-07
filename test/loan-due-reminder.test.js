@@ -34,7 +34,16 @@ const data = { loans: [] };
 const scope = compileScope([
   extractFunction(src, 'loanPrincipal', 'index.html'),
   extractFunction(src, 'loanFees', 'index.html'),
-  extractFunction(src, 'loanMonths', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
+  extractDeclaration(src, 'LOAN_FREQUENCIES', 'index.html'),
+  extractFunction(src, 'loanFrequency', 'index.html'),
+  extractFunction(src, 'loanPeriodsPerYear', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
+  extractFunction(src, 'loanPeriodRate', 'index.html'),
+  extractFunction(src, 'loanFeePerInstallment', 'index.html'),
+  extractFunction(src, 'loanDueDate', 'index.html'),
+  extractFunction(src, 'loanPeriodsBetween', 'index.html'),
+  extractFunction(src, 'loanLevelPI', 'index.html'),
   extractFunction(src, 'loanRoundTo', 'index.html'),
   extractFunction(src, 'loanRound', 'index.html'),
   extractFunction(src, 'loanScheduledPayment', 'index.html'),
@@ -75,7 +84,7 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
   eq(d.status, 'overdue', 'a loan nothing has been paid on is overdue, not merely due');
   near(d.dueNow, PAY * 7, 'everything asked for so far is wanted, this month included');
   near(d.overdue, PAY * 6, 'and the part that is LATE excludes this month, which still has time to run');
-  eq(d.monthsBehind, 6, 'six instalment months have gone by uncovered');
+  eq(d.instalmentsBehind, 6, 'six instalments have gone by uncovered');
   eq(d.next.month, '2026-09', 'with next month named so the shop can see what is coming');
 }
 
@@ -89,7 +98,7 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
   eq(d.status, 'due', 'up to date through July leaves August due, not overdue');
   near(d.dueNow, PAY, 'and only August is wanted');
   eq(d.overdue, 0, 'nothing is late');
-  eq(d.monthsBehind, 0, 'no month has gone by uncovered');
+  eq(d.instalmentsBehind, 0, 'no instalment has gone by uncovered');
 
   const alsoAugust = mkLoan({ repayments: [...upToJuly.repayments, paidOn('2026-08-02')] });
   const d2 = scope.loanDuePosition(alsoAugust, TODAY);
@@ -106,7 +115,7 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
      April. */
   const lump = mkLoan({ repayments: [paidOn('2026-02-20', PAY * 3)] });
   const d = scope.loanDuePosition(lump, TODAY);
-  eq(d.monthsBehind, 3, 'Feb, Mar and Apr are covered by the lump — only May, Jun and Jul are behind');
+  eq(d.instalmentsBehind, 3, 'Feb, Mar and Apr are covered by the lump — only May, Jun and Jul are behind');
   near(d.overdue, PAY * 3, 'and the arrears are three instalments, not six');
 
   /* The opposite error. Something arrived every single month, so no
@@ -119,7 +128,7 @@ const paidOn = (date, amount) => ({ date, amount: amount == null ? PAY : amount 
   const dh = scope.loanDuePosition(half, TODAY);
   eq(dh.status, 'overdue', 'paying half every month is still falling behind');
   near(dh.overdue, PAY * 3, 'by exactly the half that was never paid');
-  t.check(dh.monthsBehind > 0, 'and it is reported as months behind rather than passing as up to date');
+  t.check(dh.instalmentsBehind > 0, 'and it is reported as instalments behind rather than passing as up to date');
 }
 
 /* ---------- 5. a reminder never asks for more than the loan ---------- */

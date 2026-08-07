@@ -6541,13 +6541,33 @@
               <input id="ln_rate" type="number" min="0" step="any" placeholder="24">
               <span class="lnf-cur">%</span>
             </div>
+            <!-- A bike loan is 52 weekly payments, a SACCO 12 monthly
+                 ones. Asked before the count, because the count means
+                 nothing until you know what it counts. -->
             <div class="lnf-row">
-              <label for="ln_term">Paid back over</label>
-              <input id="ln_term" type="number" min="1" step="1" placeholder="12">
-              <span class="lnf-cur">months</span>
+              <label for="ln_freq">Paid back</label>
+              <select id="ln_freq">
+                <option value="monthly">Monthly</option>
+                <option value="fortnightly">Fortnightly</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <span class="lnf-cur"></span>
             </div>
             <div class="lnf-row">
-              <label for="ln_fees">Fees kept back</label>
+              <label for="ln_term">Number of payments</label>
+              <input id="ln_term" type="number" min="1" step="1" placeholder="12">
+              <span class="lnf-cur" id="ln_term_unit">months</span>
+            </div>
+            <!-- Added to every payment, which is the opposite of the fee
+                 below. The bike loan's 13,000 a week comes to more than
+                 its interest. -->
+            <div class="lnf-row">
+              <label for="ln_fee_each">Charge on each payment</label>
+              <input id="ln_fee_each" type="number" min="0" step="any" placeholder="0">
+              <span class="lnf-cur">UGX</span>
+            </div>
+            <div class="lnf-row">
+              <label for="ln_fees">Fees kept back once</label>
               <input id="ln_fees" type="number" min="0" step="any" placeholder="0">
               <span class="lnf-cur">UGX</span>
             </div>
@@ -8280,7 +8300,8 @@ async function loadData(shopId){
       id:l.id, lender:l.lender||'', principal:Number(l.principal)||0,
       ratePct:Number(l.rate_pct)||0, method:l.method||'reducing_balance',
       termMonths:Number(l.term_months)||12, startedOn:l.started_on, fees:Number(l.fees)||0,
-      roundTo:Number(l.round_to)||0,
+      roundTo:Number(l.round_to)||0, frequency:l.frequency||'monthly',
+      feePerInstallment:Number(l.fee_per_instalment)||0,
       closedOn:l.closed_on||null, notes:l.notes||'', cashTxnId:l.cash_txn_id||null,
       repayments: (l.payload && Array.isArray(l.payload.repayments)) ? l.payload.repayments : []
     })),
@@ -8450,7 +8471,8 @@ function buildSyncRows(d, shopId){
     loans: (d.loans||[]).map(l=>({
       id:l.id, shop_id:shopId, lender:l.lender, principal:l.principal,
       rate_pct:l.ratePct, method:l.method, term_months:l.termMonths, fees:l.fees||0,
-      round_to:l.roundTo||0,
+      round_to:l.roundTo||0, frequency:l.frequency||'monthly',
+      fee_per_instalment:l.feePerInstallment||0,
       started_on:l.startedOn, closed_on:l.closedOn||null,
       notes:l.notes||null, cash_txn_id:l.cashTxnId||null,
       payload:{ repayments: l.repayments||[] }
@@ -27810,82 +27832,149 @@ const LOAN_METHODS = { reducing_balance: 'Reducing balance', equal_principal: 'E
    not cosmetic: it is what makes the last row clear the balance to
    exactly 0.00. Zero means no rounding, which is what every loan entered
    before this existed carries. */
-function loanRoundTo(loan){ return Math.max(0, Number(loan && loan.roundTo)||0); }
-function loanRound(x, step){ return step > 0 ? Math.round(x/step)*step : x; }
-function loanMonths(loan){ return Math.max(1, Math.round(Number(loan.termMonths)||0)); }
+function loanRoundTo(loan){
+  return Math.max(0, Number(loan && loan.roundTo)||0);
+}
+function loanRound(x, step){
+  return step > 0 ? Math.round(x/step)*step : x;
+}
+/* Not every lender is paid monthly. A real Spiro bike loan is 52 WEEKLY
+   payments; a SACCO is 12 monthly ones. Everything below counts in
+   PERIODS, and the frequency says how long a period is and how many of
+   them a year holds. Monthly is the default and behaves exactly as it
+   did before any of this existed. */
+const LOAN_FREQUENCIES = {
+  weekly:      { label: 'Weekly',      each: 'a week',      perYear: 52, days: 7 },
+  fortnightly: { label: 'Fortnightly', each: 'a fortnight', perYear: 26, days: 14 },
+  monthly:     { label: 'Monthly',     each: 'a month',     perYear: 12, days: 0 },
+};
+function loanFrequency(loan){
+  const k = loan && loan.frequency;
+  return LOAN_FREQUENCIES[k] ? k : 'monthly';
+}
+function loanPeriodsPerYear(loan){
+  return LOAN_FREQUENCIES[loanFrequency(loan)].perYear;
+}
+/* Historical name: term_months counts INSTALMENTS, which for a monthly
+   loan is the same number of months it always was. */
+function loanInstallments(loan){
+  return Math.max(1, Math.round(Number(loan.termMonths)||0));
+}
+function loanPeriodRate(loan){
+  return Math.max(0, Number(loan.ratePct)||0) / 100 / loanPeriodsPerYear(loan);
+}
+/* A charge on EVERY instalment, which is not the same animal as `fees`:
+   that one is kept back from the money handed over, this one is added to
+   each payment. The bike loan's 13,000 a week comes to 676,000 -- more
+   than its interest. */
+function loanFeePerInstallment(loan){
+  return Math.max(0, Number(loan && loan.feePerInstallment)||0);
+}
+// When instalment i (0-based) falls due.
+function loanDueDate(loan, i){
+  const start = new Date(String(loan.startedOn||'')+'T00:00:00Z');
+  if(isNaN(start.getTime())) return null;
+  const f = LOAN_FREQUENCIES[loanFrequency(loan)];
+  return f.days
+    ? new Date(start.getTime() + f.days*(i+1)*86400000)
+    // Monthly keeps the shape it always had: the first of the month after.
+    : new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i+1, 1));
+}
+// Whole periods between two dates, in the loan's own unit.
+function loanPeriodsBetween(loan, fromISO, toISO){
+  const f = LOAN_FREQUENCIES[loanFrequency(loan)];
+  if(!f.days) return monthsBetween(fromISO, toISO);
+  const a = new Date(String(fromISO)+'T00:00:00Z'), b = new Date(String(toISO)+'T00:00:00Z');
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return 0;
+  return Math.floor((b.getTime() - a.getTime()) / (f.days*86400000));
+}
 function loanPrincipal(loan){ return Math.max(0, Number(loan.principal)||0); }
-/* The instalment the agreement calls for.
-
-   For the two level-payment methods this is THE payment, every month.
-   For equal principal there is no such number -- the instalment falls
-   every month by design -- so this answers with the FIRST one, the
-   largest, and every screen that shows it says so. Answering with an
-   average would understate the first payment, which is the one the
-   borrower has to find money for. */
-function loanScheduledPayment(loan){
-  const P = loanPrincipal(loan), n = loanMonths(loan);
+/* The principal-and-interest part of a level instalment -- NOT the whole
+   payment, because a recurring fee rides on top of it and a fee is not
+   interest. Equal principal has no level part at all, so it answers null
+   and the schedule slices the principal itself. */
+function loanLevelPI(loan){
+  const P = loanPrincipal(loan), n = loanInstallments(loan);
   const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
+  if(loan.method === 'equal_principal') return null;
   if(loan.method === 'flat'){
     // Interest on the original sum for the whole term, then split evenly.
-    return (P + P * annual * (n/12)) / n;
+    return (P + P * annual * (n/loanPeriodsPerYear(loan))) / n;
   }
-  if(loan.method === 'equal_principal'){
-    const rows = loanSchedule(loan);
-    return rows.length ? rows[0].payment : 0;
-  }
-  const r = annual / 12;
+  const r = loanPeriodRate(loan);
   if(r === 0) return P / n;
   // Standard amortisation. A rate of zero is handled above because this
   // divides by (1 - 1) otherwise.
   return P * r / (1 - Math.pow(1 + r, -n));
 }
-/* The agreed schedule, month by month.
+/* The instalment the agreement calls for -- the whole of it, fee
+   included, because that is the sum the borrower actually hands over.
 
-   Both methods produce the same shape so everything downstream reads one
+   Read off the schedule rather than recomputed, so there is exactly one
+   place the arithmetic lives. For equal principal the instalment FALLS
+   every period by design, so this is the FIRST one, the largest, and
+   every screen that shows it says so. An average would understate the
+   payment the borrower must actually find. */
+function loanScheduledPayment(loan){
+  const rows = loanSchedule(loan);
+  return rows.length ? rows[0].payment : 0;
+}
+/* The agreed schedule, instalment by instalment.
+
+   Every method produces the same shape so everything downstream reads one
    thing. For a flat loan the "interest" column is the evenly-split charge
    rather than interest on the outstanding balance -- that is what a flat
-   loan actually charges, and showing it any other way would flatter it. */
+   loan actually charges, and showing it any other way would flatter it.
+
+   `payment` is the WHOLE instalment, fee included, because that is the
+   sum handed over; `interest` never includes the fee, because a fee is
+   not interest and the P&L must not confuse the two. Each row carries
+   both its due `date` and the `month` that date falls in -- a weekly loan
+   puts four or five rows in one month, and everything that reports by
+   month sums them. */
 function loanSchedule(loan){
   const rows = [];
-  const P = loanPrincipal(loan), n = loanMonths(loan);
+  const P = loanPrincipal(loan), n = loanInstallments(loan);
   if(P <= 0) return rows;
   const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
   const equalPrincipal = loan.method === 'equal_principal';
   const step = loanRoundTo(loan);
-  /* Not loanScheduledPayment() for equal principal: that reads row 0 of
-     this schedule, and asking for it here would be circular. */
-  const pay = equalPrincipal ? 0 : loanScheduledPayment(loan);
-  const start = new Date(String(loan.startedOn||'')+'T00:00:00Z');
-  if(isNaN(start.getTime())) return rows;
-  const flatInterest = loan.method === 'flat' ? (P * annual * (n/12)) / n : null;
+  /* Null for equal principal, whose instalment is different every period
+     -- and loanScheduledPayment() would be circular here anyway, since it
+     reads row 0 of this very schedule. */
+  const pi = loanLevelPI(loan);
+  if(loanDueDate(loan, 0) == null) return rows;
+  const periodRate = loanPeriodRate(loan);
+  const fee = loanFeePerInstallment(loan);
+  const flatInterest = loan.method === 'flat'
+    ? (P * annual * (n/loanPeriodsPerYear(loan))) / n : null;
   // Rounded once, up front: the lender's sheet repeats ONE figure every
-  // month, it does not re-derive a slightly different one each time.
+  // period, it does not re-derive a slightly different one each time.
   const slice = equalPrincipal ? loanRound(P/n, step) : 0;
   let bal = P;
   for(let i=0; i<n; i++){
     const interest = loan.method === 'flat' ? flatInterest
-      : loanRound(bal * (annual/12), step);
-    // The last instalment clears whatever is left rather than leaving a
-    // few shillings behind from rounding. Belt and braces rather than
-    // load-bearing: the annuity is self-correcting, and across every
-    // awkward principal, rate and term tried it changes no figure anyone
-    // sees. Kept because the cost is one comparison and the failure it
-    // guards against -- a loan that never quite closes -- is the kind
-    // somebody would have to reconcile by hand.
+      : loanRound(bal * periodRate, step);
     /* The last instalment clears whatever is left. On a rounded equal-
        principal schedule that is load-bearing rather than belt and
        braces: twelve slices of 1,666,700 overshoot 20,000,000 by 400, so
        the final principal is 1,666,300 -- exactly what the SACCO's own
-       sheet shows, and what makes it close at 0.00. */
+       sheet shows, and what makes it close at 0.00. For the level
+       methods it is belt and braces: the annuity is self-correcting, but
+       a loan that never quite closes is the kind somebody has to
+       reconcile by hand. */
     const principal = (i === n-1) ? bal
       : equalPrincipal ? Math.min(bal, slice)
-      : Math.min(bal, pay - interest);
-    const m = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth()+i+1, 1));
+      : Math.min(bal, pi - interest);
+    const m = loanDueDate(loan, i);
+    const date = m.toISOString().slice(0,10);
     rows.push({
-      month: m.toISOString().slice(0,7),
+      date,
+      month: date.slice(0,7),
       opening: bal,
-      payment: principal + interest,
+      payment: principal + interest + fee,
       interest,
+      fee,
       principal,
       closing: bal - principal,
     });
@@ -27897,6 +27986,14 @@ function loanSchedule(loan){
 // What the whole thing costs, over and above what was borrowed.
 function loanTotalInterest(loan){
   return loanSchedule(loan).reduce((s,r)=> s + r.interest, 0);
+}
+/* Recurring charges over the term, kept apart from interest because they
+   are a different thing that behaves differently: interest falls as the
+   balance does, a fixed fee never moves. On the bike loan the fees
+   (676,000) are LARGER than the interest (597,744), which is a fact a
+   borrower should be able to see rather than have blended away. */
+function loanTotalFees(loan){
+  return loanSchedule(loan).reduce((s,r)=> s + (r.fee||0), 0);
 }
 /* What the shop is really paying, whatever the paperwork says.
 
@@ -27912,20 +28009,31 @@ function loanTotalInterest(loan){
    as though it did would report a rate for a loan nobody is repaying.
    For the level-payment methods this is the same annuity as before,
    written the general way. */
-function loanRateFor(rows, advanced){
-  const total = rows.reduce((sum, r)=> sum + r.payment, 0);
+function loanRateFor(flows, advanced, perYear){
+  const total = flows.reduce((sum, x)=> sum + x, 0);
   if(advanced <= 0 || total <= advanced) return 0;
-  const owed = (mr)=> rows.reduce((sum, r, i)=>
-    sum + r.payment / Math.pow(1 + mr, i + 1), 0) - advanced;
-  let lo = 0, hi = 1;                    // 0% to 1200% a year, monthly
+  const owed = (mr)=> flows.reduce((sum, x, i)=>
+    sum + x / Math.pow(1 + mr, i + 1), 0) - advanced;
+  let lo = 0, hi = 1;                    // 0% to 1200% a year, per period
   for(let i=0; i<100; i++){
     const mid = (lo + hi) / 2;
     if(owed(mid) > 0) lo = mid; else hi = mid;
   }
-  return ((lo + hi) / 2) * 12 * 100;
+  // Annualised by how many periods a year holds, so a weekly loan is not
+  // quoted twelve times cheaper than it is.
+  return ((lo + hi) / 2) * (perYear || 12) * 100;
 }
+/* What the INTEREST TERMS are worth, and nothing else.
+
+   Principal and interest only: a recurring fee is a real cost but it is
+   not interest, and folding it in here would report a rate the agreement
+   never stated and make the method cards -- whose whole job is comparing
+   interest shapes at one rate -- incomparable. The fee gets its due in
+   loanTrueCostRate below, which is the figure a borrower should act on. */
 function loanEffectiveRate(loan){
-  return loanRateFor(loanSchedule(loan), loanPrincipal(loan));
+  const rows = loanSchedule(loan);
+  return loanRateFor(rows.map(r=> r.payment - (r.fee||0)),
+    loanPrincipal(loan), loanPeriodsPerYear(loan));
 }
 
 /* ---- What the loan actually put in your hands ---- */
@@ -27963,8 +28071,15 @@ function loanCashTxnIds(loan){
    20,000,000 of interest but only ever delivered 19,400,000 is dearer
    than the agreement says. Same bisection, discounting the same
    repayments against the smaller sum that turned up. */
+/* Every shilling that leaves, against every shilling that arrived.
+
+   The whole instalment -- fee included -- discounted against the money
+   actually advanced. On the bike loan that is the difference between the
+   33.6% on the agreement and what the borrowing really costs once
+   676,000 of weekly charges are counted. */
 function loanTrueCostRate(loan){
-  return loanRateFor(loanSchedule(loan), loanNetAdvanced(loan));
+  return loanRateFor(loanSchedule(loan).map(r=> r.payment),
+    loanNetAdvanced(loan), loanPeriodsPerYear(loan));
 }
 /* The fee as a cost of the period it was charged in.
 
@@ -28045,27 +28160,42 @@ function loanRepayments(loan){
 function loanApplied(loan, asOfISO){
   const P = loanPrincipal(loan);
   const annual = Math.max(0, Number(loan.ratePct)||0) / 100;
-  const n = loanMonths(loan);
+  const n = loanInstallments(loan);
   // A flat loan's interest is fixed at the outset, so it accrues evenly
   // rather than on the balance.
-  const flatPerMonth = loan.method === 'flat' ? (P * annual * (n/12)) / n : null;
+  const flatPerPeriod = loan.method === 'flat'
+    ? (P * annual * (n/loanPeriodsPerYear(loan))) / n : null;
+  const periodRate = loanPeriodRate(loan);
+  /* A charge that falls with every instalment accrues with every period,
+     the same way interest does. Left out, a bike loan's 88,149 would put
+     13,000 a week against principal that the lender never credited, and
+     the app would show the loan closing nine weeks early. */
+  const feePerPeriod = loanFeePerInstallment(loan);
   let balance = P, interestPaid = 0, principalPaid = 0, accrued = 0;
+  let feesPaid = 0, feesAccrued = 0;
   let lastISO = String(loan.startedOn||'');
   loanRepayments(loan).forEach(rp=>{
     const when = String(rp.date||'');
     if(asOfISO && when > String(asOfISO)) return;
-    const months = Math.max(0, monthsBetween(lastISO, when));
+    const periods = Math.max(0, loanPeriodsBetween(loan, lastISO, when));
     accrued += loan.method === 'flat'
-      ? flatPerMonth * months
-      : balance * (annual/12) * months;
+      ? flatPerPeriod * periods
+      : balance * periodRate * periods;
+    feesAccrued += feePerPeriod * periods;
     lastISO = when;
     let amt = Math.max(0, Number(rp.amount)||0);
+    /* Fee, then interest, then principal -- the order the lender applies
+       it, and the only order that does not flatter the borrower: money
+       spent on charges has not reduced the debt. */
+    const toFees = Math.min(amt, feesAccrued);
+    feesAccrued -= toFees; amt -= toFees; feesPaid += toFees;
     const toInterest = Math.min(amt, accrued);
     accrued -= toInterest; amt -= toInterest; interestPaid += toInterest;
     const toPrincipal = Math.min(amt, balance);
     balance -= toPrincipal; principalPaid += toPrincipal;
   });
-  return { balance, interestPaid, principalPaid, accruedUnpaid: accrued };
+  return { balance, interestPaid, principalPaid, accruedUnpaid: accrued,
+    feesPaid, feesUnpaid: feesAccrued };
 }
 function loanOutstanding(loan, asOfISO){ return loanApplied(loan, asOfISO).balance; }
 // Interest actually paid inside a period -- the P&L line, on the same
@@ -28889,7 +29019,7 @@ function loanDuePosition(loan, asOfISO){
   const applied = loanApplied(loan, asOf);
   // What it would take to close the loan today: the balance plus interest
   // that has accrued since the last payment and has not been settled.
-  const payoff = Math.max(0, applied.balance + applied.accruedUnpaid);
+  const payoff = Math.max(0, applied.balance + applied.accruedUnpaid + (applied.feesUnpaid||0));
   const settled = payoff < 1;
 
   const overdue = Math.max(0, askedBefore - paid);
@@ -28909,7 +29039,10 @@ function loanDuePosition(loan, asOfISO){
     // Walked cumulatively for the same reason the amounts are: a lump
     // sum covering three months leaves none of them uncovered. Reported
     // for the wording only -- every figure above stands without it.
-    monthsBehind: (()=>{
+    /* Instalments, not months: a weekly loan can be four behind inside
+       one month, and calling those "4 months" would be a lie in the one
+       sentence a borrower reads to know how much trouble they are in. */
+    instalmentsBehind: (()=>{
       let acc = 0, behind = 0;
       past.forEach(r=>{ acc += r.payment; if(acc - paid > 0.5) behind++; });
       return behind;
@@ -29601,9 +29734,12 @@ document.getElementById('st_basis').addEventListener('change', (e)=>{
    printed sheet in the first place. */
 function loanMethodLabel(l){
   const rate = Number(l.ratePct)||0;
-  if(l.method === 'flat') return `Flat ${rate}%`;
-  if(l.method === 'equal_principal') return `Equal principal ${rate}%`;
-  return `Reducing ${rate}%`;
+  const shape = l.method === 'flat' ? `Flat ${rate}%`
+    : l.method === 'equal_principal' ? `Equal principal ${rate}%`
+    : `Reducing ${rate}%`;
+  // Silent for the monthly default, so the common case stays uncluttered.
+  const f = loanFrequency(l);
+  return f === 'monthly' ? shape : `${shape} · ${LOAN_FREQUENCIES[f].label.toLowerCase()}`;
 }
 function renderLoans(){
   const today = todayISO();
@@ -29723,14 +29859,15 @@ function openLoanPerformance(id){
     </section>
 
     <section class="dr-rest">
-      <h4>${ICON_ITEMS}The agreement, month by month</h4>
+      <h4>${ICON_ITEMS}The agreement, payment by payment</h4>
       <div class="dr-lines"><table>
-        <thead><tr><th>Month</th><th class="r">Opening</th><th class="r">Payment</th><th class="r">Interest</th><th class="r">Principal</th><th class="r">Closing</th></tr></thead>
+        <thead><tr><th>Due</th><th class="r">Opening</th><th class="r">Payment</th><th class="r">Interest</th><th class="r">Charge</th><th class="r">Principal</th><th class="r">Closing</th></tr></thead>
         <tbody>${sched.map(r=>`<tr>
-          <td>${esc(r.month)}</td>
+          <td>${esc(r.date || r.month)}</td>
           <td class="r num">${fmtUGX(Math.round(r.opening))}</td>
           <td class="r num">${fmtUGX(Math.round(r.payment))}</td>
           <td class="r num">${fmtUGX(Math.round(r.interest))}</td>
+          <td class="r num">${r.fee ? fmtUGX(Math.round(r.fee)) : '—'}</td>
           <td class="r num">${fmtUGX(Math.round(r.principal))}</td>
           <td class="r num">${fmtUGX(Math.round(r.closing))}</td>
         </tr>`).join('')}</tbody>
@@ -29793,7 +29930,7 @@ function loanDueRowHTML({loan, due}){
     <div class="ld-main">
       <div class="ld-lender">${esc(loan.lender)}</div>
       <div class="ld-note">${late
-        ? `Behind by ${fmtUGX(Math.round(due.overdue))}${due.monthsBehind ? ` across ${due.monthsBehind} month${due.monthsBehind===1?'':'s'}` : ''}, and this month's instalment is on top of it.`
+        ? `Behind by ${fmtUGX(Math.round(due.overdue))}${due.instalmentsBehind ? ` across ${due.instalmentsBehind} instalment${due.instalmentsBehind===1?'':'s'}` : ''}, and this month's instalment is on top of it.`
         : `This month's instalment of ${fmtUGX(Math.round(due.thisMonth))}.`}</div>
     </div>
     <div class="ld-act">
@@ -29980,6 +30117,8 @@ function readLoanForm(){
     ratePct: Number(document.getElementById('ln_rate').value)||0,
     method: document.getElementById('ln_method').value,
     termMonths: Math.round(Number(document.getElementById('ln_term').value)||0),
+    frequency: document.getElementById('ln_freq').value,
+    feePerInstallment: Number(document.getElementById('ln_fee_each').value)||0,
     startedOn: document.getElementById('ln_started').value,
     fees: Number(document.getElementById('ln_fees').value)||0,
     roundTo: Number(document.getElementById('ln_round').value)||0,
@@ -30015,6 +30154,15 @@ function lnfRealRateUnder(method){
   return { effective: loanEffectiveRate(probe), trueCost: loanTrueCostRate(probe) };
 }
 
+/* "12 months" and "52 weekly payments" are counted in different things,
+   so the word beside the box follows the frequency rather than sitting
+   there saying months at a loan that is nothing of the sort. */
+function lnfSyncTermUnit(){
+  const f = document.getElementById('ln_freq').value;
+  const el = document.getElementById('ln_term_unit');
+  if(el) el.textContent = f === 'weekly' ? 'weeks' : f === 'fortnightly' ? 'fortnights' : 'months';
+}
+
 function lnfRenderMethods(){
   const wrap = document.getElementById('ln_methods');
   if(!wrap) return;
@@ -30043,14 +30191,21 @@ function lnfRenderVerdict(){
     el.innerHTML = `<div class="lnf-verdict quiet">Put in how much and over how long, and this will say what the money really costs.</div>`;
     return;
   }
-  const monthly = loanScheduledPayment(l);
+  const instalment = loanScheduledPayment(l);
   const interest = loanTotalInterest(l);
+  const recurring = loanTotalFees(l);
   const fees = loanFees(l);
   const net = loanNetAdvanced(l);
-  const repaid = l.principal + interest;
+  /* Everything handed over, charges included. Counting only principal and
+     interest understated the bike loan by 676,000 -- more than its whole
+     interest bill -- in the one cell a borrower reads to know what the
+     agreement costs them. */
+  const repaid = l.principal + interest + recurring;
+  const freq = LOAN_FREQUENCIES[loanFrequency(l)];
   const trueCost = loanTrueCostRate(l);
   /* The gap between the number on the paperwork and the number the money
-     actually costs. Flat interest opens it; a fee kept back widens it. */
+     actually costs. Flat interest opens it; a fee kept back widens it;
+     a charge on every payment widens it furthest of all. */
   const overstated = trueCost - (Number(l.ratePct) || 0);
   const tone = overstated >= 5 ? 'bad' : (overstated >= 1 ? 'warn' : 'ok');
 
@@ -30060,7 +30215,8 @@ function lnfRenderVerdict(){
       <b>${esc(trueCost.toFixed(1))}% a year</b>
       <span class="lnf-verdict-sub">${overstated >= 1
         ? `The agreement says ${esc(String(l.ratePct))}%. ${
-            l.method === 'flat' && fees > 0 ? 'Flat interest and the fee kept back both push it up.'
+            recurring > 0 ? 'The charge on every payment is part of what the money costs, and here it comes to more than the interest.'
+            : l.method === 'flat' && fees > 0 ? 'Flat interest and the fee kept back both push it up.'
             : l.method === 'flat' ? 'Flat interest is charged on the whole sum for the whole term, even the part you have paid back.'
             : 'The fee kept back is part of what the money costs.'}`
         : `Which is what the agreement says.`}</span>
@@ -30069,9 +30225,10 @@ function lnfRenderVerdict(){
       <div class="lnf-cell"><span>You receive</span><b>${esc(fmtUGX(Math.round(net)))}</b>
         ${fees > 0 ? `<span class="lnf-cell-note">after ${esc(fmtUGX(Math.round(fees)))} kept back</span>` : '<span class="lnf-cell-note">the whole sum</span>'}</div>
       <div class="lnf-cell"><span>You repay</span><b>${esc(fmtUGX(Math.round(repaid)))}</b>
-        <span class="lnf-cell-note">${esc(fmtUGX(Math.round(interest)))} of it interest</span></div>
-      <div class="lnf-cell"><span>Every month</span><b>${esc(fmtUGX(Math.round(monthly)))}</b>
-        <span class="lnf-cell-note">for ${l.termMonths} month${l.termMonths===1?'':'s'}</span></div>
+        <span class="lnf-cell-note">${esc(fmtUGX(Math.round(interest)))} of it interest${
+          recurring > 0 ? `, ${esc(fmtUGX(Math.round(recurring)))} charges` : ''}</span></div>
+      <div class="lnf-cell"><span>Every ${esc(freq.each.replace(/^an? /,''))}</span><b>${esc(fmtUGX(Math.round(instalment)))}</b>
+        <span class="lnf-cell-note">${l.method === 'equal_principal' ? 'at first, then less, ' : ''}for ${l.termMonths} payment${l.termMonths===1?'':'s'}</span></div>
     </div>
   </div>`;
 }
@@ -30093,6 +30250,7 @@ function lnfUpdateCashHint(){
 }
 
 function lnfRefresh(){
+  lnfSyncTermUnit();
   lnfRenderMethods();
   lnfRenderVerdict();
   lnfUpdateCashHint();
@@ -30106,20 +30264,31 @@ function updateLoanPreview(){
   const interest = loanTotalInterest(l);
   const eff = loanEffectiveRate(l);
   const fees = loanFees(l);
-  /* An equal-principal instalment is different every month, so quoting
-     one figure "a month" would be wrong eleven times out of twelve. */
+  const recurring = loanTotalFees(l);
+  const freq = LOAN_FREQUENCIES[loanFrequency(l)];
+  /* An equal-principal instalment is different every period, so quoting
+     one figure would be wrong every time but the first -- and "a month"
+     is wrong outright on a loan repaid every week. */
   const sched = loanSchedule(l);
   const opening = sched.length
     ? (l.method === 'equal_principal'
-        ? `${fmtUGX(Math.round(sched[0].payment))} the first month, falling to ${fmtUGX(Math.round(sched[sched.length-1].payment))} by the last`
-        : `${fmtUGX(Math.round(loanScheduledPayment(l)))} a month`)
+        ? `${fmtUGX(Math.round(sched[0].payment))} at first, falling to ${fmtUGX(Math.round(sched[sched.length-1].payment))} by the last`
+        : `${fmtUGX(Math.round(loanScheduledPayment(l)))} ${freq.each}`)
     : '';
-  el.textContent = `${opening} for ${l.termMonths} months. `
+  el.textContent = `${opening} for ${l.termMonths} payments. `
     + `Interest over the term ${fmtUGX(Math.round(interest))}`
     + (l.method==='flat' ? ` — about ${eff.toFixed(1)}% a year in real terms, not ${l.ratePct}%.` : '.')
+    /* Named separately, and never folded into the interest: on the bike
+       loan the charges are LARGER than the interest, which is the whole
+       reason to show them. */
+    + (recurring > 0
+      ? ` Charges on top of that ${fmtUGX(Math.round(recurring))} over ${l.termMonths} payments.`
+      : '')
     + (fees > 0
-      ? ` You receive ${fmtUGX(Math.round(loanNetAdvanced(l)))} but repay against ${fmtUGX(Math.round(l.principal))}, `
-        + `so the money really costs about ${loanTrueCostRate(l).toFixed(1)}% a year.`
+      ? ` You receive ${fmtUGX(Math.round(loanNetAdvanced(l)))} but repay against ${fmtUGX(Math.round(l.principal))}.`
+      : '')
+    + ((fees > 0 || recurring > 0)
+      ? ` All in, the money really costs about ${loanTrueCostRate(l).toFixed(1)}% a year.`
       : '');
 }
 function openLoanForm(id){
@@ -30131,6 +30300,8 @@ function openLoanForm(id){
   set('ln_started', l?l.startedOn:todayISO()); set('ln_notes', l?l.notes:'');
   document.getElementById('ln_method').value = l ? l.method : 'reducing_balance';
   document.getElementById('ln_round').value = String(l ? (Number(l.roundTo)||0) : 0);
+  document.getElementById('ln_freq').value = (l && l.frequency) || 'monthly';
+  set('ln_fee_each', l && l.feePerInstallment ? l.feePerInstallment : '');
   // Only a new loan draws money. Editing the terms of one already recorded
   // must not write a second receipt for cash that arrived once.
   document.getElementById('ln_cash_account').value = '';
@@ -30159,9 +30330,10 @@ document.getElementById('loanPerfClose').addEventListener('click', ()=>closeModa
    and the sentence saying what the money really costs never appeared --
    unless you happened to touch another field afterwards. Every input
    that moves the arithmetic is here now. */
-['ln_principal','ln_rate','ln_term','ln_fees'].forEach(id=>
+['ln_principal','ln_rate','ln_term','ln_fees','ln_fee_each'].forEach(id=>
   document.getElementById(id).addEventListener('input', lnfRefresh));
-document.getElementById('ln_round').addEventListener('change', lnfRefresh);
+['ln_round','ln_freq'].forEach(id=>
+  document.getElementById(id).addEventListener('change', lnfRefresh));
 // The cards drive the hidden field now; nothing listens on a select.
 document.getElementById('ln_cash_account').addEventListener('change', lnfUpdateCashHint);
 document.getElementById('ln_save').addEventListener('click', ()=>{

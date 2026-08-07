@@ -29,7 +29,7 @@
  *
  * Run: node test/loan-fees-and-financing.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('loan fees and asset financing');
 const src = read('index.html');
@@ -43,10 +43,19 @@ const scope = compileScope([
   extractFunction(src, 'assetMonthlyCharge', 'index.html'),
   extractFunction(src, 'assetSchedule', 'index.html'),
   extractFunction(src, 'assetNBVAt', 'index.html'),
-  extractFunction(src, 'loanMonths', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
   extractFunction(src, 'loanPrincipal', 'index.html'),
   extractFunction(src, 'loanScheduledPayment', 'index.html'),
   extractFunction(src, 'loanSchedule', 'index.html'),
+  extractDeclaration(src, 'LOAN_FREQUENCIES', 'index.html'),
+  extractFunction(src, 'loanFrequency', 'index.html'),
+  extractFunction(src, 'loanPeriodsPerYear', 'index.html'),
+  extractFunction(src, 'loanInstallments', 'index.html'),
+  extractFunction(src, 'loanPeriodRate', 'index.html'),
+  extractFunction(src, 'loanFeePerInstallment', 'index.html'),
+  extractFunction(src, 'loanDueDate', 'index.html'),
+  extractFunction(src, 'loanPeriodsBetween', 'index.html'),
+  extractFunction(src, 'loanLevelPI', 'index.html'),
   extractFunction(src, 'loanRoundTo', 'index.html'),
   extractFunction(src, 'loanRound', 'index.html'),
   extractFunction(src, 'loanRateFor', 'index.html'),
