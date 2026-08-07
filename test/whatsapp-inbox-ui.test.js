@@ -139,6 +139,23 @@ if (!scope) process.exit(1);
     'and typing in it survives the poll\'s redraw, like the composer learned to');
   t.check(/data-conv="\$\{active\.id\}" placeholder="Reply…" \$\{w\.open\?'':'disabled'\}/.test(src),
     'the composer kept its identity through the restyle — drafts still survive');
+
+  /* The tall-bubble bug, held down: pre-wrap on the whole bubble
+     rendered the TEMPLATE's own newlines as blank lines inside every
+     message. So the text span and meta span must sit ADJACENT on one
+     template line, and pre-wrap must live on the text span alone. */
+  t.check(/<\/span><span class="wm-meta">/.test(src),
+    'the meta tucks against the text with not one whitespace character between');
+  t.check(/\.wm-text\{white-space:pre-wrap/.test(src),
+    'pre-wrap lives on the text span');
+  const bubbleRule = (src.match(/\.wa-msg\{[^}]*\}/) || [''])[0];
+  t.check(bubbleRule.length > 0 && !/pre-wrap/.test(bubbleRule),
+    'and NOT on the bubble, where it rendered template indentation as blank lines');
+  t.check(/\.wa-msg \.wm-meta\{float:right/.test(src),
+    'the timestamp floats into the trailing space of the last line');
+  t.check(/\$\{mi>0 && g\.msgs\[mi-1\]\.direction===m\.direction\?' cont':''\}/.test(src)
+    && /\.wa-msg\.cont\{margin-top:2px/.test(src),
+    'consecutive messages from the same side cluster tight, direction changes breathe');
 }
 
 process.exit(t.done() ? 1 : 0);

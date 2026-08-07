@@ -4380,19 +4380,27 @@
   .wt-name{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;}
   .wt-name .wc-cust{font-size:10px;color:var(--good);background:var(--good-bg);border-radius:999px;padding:1px 7px;}
   .wt-sub{font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
-  .wa-msgs{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:3px;
+  .wa-msgs{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;
     max-height:440px;background:var(--ow-steel-050);}
   .wa-day{display:flex;justify-content:center;margin:10px 0 8px;}
   .wa-day span{background:var(--panel);border:1px solid var(--line-soft, #E3E7EA);color:var(--ink-soft);
     font-size:10.5px;font-weight:600;letter-spacing:.04em;border-radius:999px;padding:3px 12px;}
-  .wa-msg{max-width:72%;border-radius:14px;padding:8px 12px 6px;font-size:13.5px;line-height:1.45;
-    white-space:pre-wrap;overflow-wrap:break-word;box-shadow:0 1px 1px rgba(20,26,33,0.06);
-    margin-bottom:4px;}
+  /* Message bubbles. The text alone is pre-wrap (pre-wrap on the whole
+     bubble rendered the TEMPLATE's own newlines as blank lines — the
+     tall-bubble bug); the meta floats into the trailing space of the
+     last line, the way every real messaging app tucks its timestamp. */
+  .wa-msg{max-width:70%;border-radius:12px;padding:6px 10px 7px;font-size:13px;line-height:1.42;
+    box-shadow:0 1px 1px rgba(20,26,33,0.06);margin-top:8px;}
+  .wa-msg::after{content:'';display:block;clear:both;}
+  .wa-msg.cont{margin-top:2px;}
   .wa-msg.in{background:var(--panel);align-self:flex-start;border-bottom-left-radius:4px;}
   .wa-msg.out{background:var(--ow-verdigris-soft);align-self:flex-end;border-bottom-right-radius:4px;}
-  .wa-msg.order{border:1px solid var(--ow-amber);background:var(--ow-amber-soft);font-weight:600;}
-  .wa-msg .wm-meta{display:flex;align-items:center;justify-content:flex-end;gap:5px;
-    font-size:10px;color:var(--ink-soft);margin-top:3px;user-select:none;}
+  .wa-msg.order{border:1px solid var(--ow-amber);background:var(--ow-amber-soft);}
+  .wa-msg.order .wm-text{font-weight:600;}
+  .wm-text{white-space:pre-wrap;overflow-wrap:break-word;}
+  .wa-msg .wm-meta{float:right;font-size:10px;color:var(--ink-soft);user-select:none;
+    display:inline-flex;align-items:center;gap:4px;line-height:1;
+    margin:9px -3px -1px 10px;}
   .wm-auto{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
     color:var(--ow-amber-ink);background:var(--ow-amber-soft);border:1px solid var(--ow-amber);
     border-radius:4px;padding:0 4px;}
@@ -10129,10 +10137,8 @@ function waRenderInbox(){
       </div>
       <div class="wa-msgs" id="wa_msgs">${waThreadGroups(waInbox.msgs, Date.now()).map(g=>`
         <div class="wa-day"><span>${esc(g.label)}</span></div>
-        ${g.msgs.map(m=>`
-        <div class="wa-msg ${m.direction==='in'?'in':'out'}${m.msg_type==='order'?' order':''}">${esc(m.msg_type==='order' ? waOrderSummary(m.payload) : (m.body || '['+m.msg_type+']'))}
-          <div class="wm-meta">${m.payload && m.payload.auto ? '<span class="wm-auto">auto</span>' : ''}${esc(waTimeShort(m.sent_at))}${m.direction==='out' ? waTickHTML(m.status) : ''}</div>
-        </div>`).join('')}`).join('')}</div>
+        ${g.msgs.map((m,mi)=>`
+        <div class="wa-msg ${m.direction==='in'?'in':'out'}${m.msg_type==='order'?' order':''}${mi>0 && g.msgs[mi-1].direction===m.direction?' cont':''}"><span class="wm-text">${esc(m.msg_type==='order' ? waOrderSummary(m.payload) : (m.body || '['+m.msg_type+']'))}</span><span class="wm-meta">${m.payload && m.payload.auto ? '<span class="wm-auto">auto</span>' : ''}${esc(waTimeShort(m.sent_at))}${m.direction==='out' ? waTickHTML(m.status) : ''}</span></div>`).join('')}`).join('')}</div>
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
         let suggestion = '';
         if(w.open){
