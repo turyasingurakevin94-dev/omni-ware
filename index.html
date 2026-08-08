@@ -7711,6 +7711,19 @@
             <div id="pr_bulk_wrap" style="display:none;">
               <div class="form-section-label" style="margin-top:16px;">Prices per variant</div>
               <p class="pfx-note">Fill in as many as this supplier actually quoted and leave the rest blank; come back the same way later. Switching supplier reloads this list with whatever that supplier already has on file.</p>
+              <!-- Same bar as the product form's variant list, and shown
+                   on the same terms: only once there are enough variants
+                   that finding one is work. -->
+              <div class="vf-bar" id="prVariantFilterBar" style="display:none;">
+                <div class="search-bar vf-search"><input id="prv_search" placeholder="Filter variants — e.g. soft close, or soft 12"></div>
+                <select id="prv_sort">
+                  <option value="generated">Product order</option>
+                  <option value="az">A to Z</option>
+                  <option value="za">Z to A</option>
+                </select>
+                <span class="vf-count" id="prv_count"></span>
+                <button type="button" class="btn btn-ghost" id="prv_clear">Clear</button>
+              </div>
               <div id="pr_bulk_variants_wrap"></div>
             </div>
           </div>
@@ -25202,8 +25215,21 @@ function hidePrSuggestions(){ document.getElementById('pr_suggestions').classLis
 // supplier's full price list for that product can be entered or reviewed
 // in a single save.
 let prBulkMode = false;
+/* The price form's own filter, kept separate from the product form's
+   vfQuery: two different modals, and a word typed in one has no business
+   narrowing the other. */
+let prvQuery = '', prvSort = 'generated';
+function resetPrVariantFilter(){
+  prvQuery = ''; prvSort = 'generated';
+  const s = document.getElementById('prv_search'); if(s) s.value = '';
+  const o = document.getElementById('prv_sort'); if(o) o.value = 'generated';
+}
 function setPrBulkMode(on){
   prBulkMode = on;
+  /* Cleared whenever the form switches product or mode: a filter left
+     over from the last product would open the next one showing a
+     fraction of its variants with nothing saying why. */
+  resetPrVariantFilter();
   document.getElementById('pr_bulk_wrap').style.display = on ? '' : 'none';
   document.getElementById('pr_tiers_wrap').style.display = '';
   // Volume pricing is shown either way, but its meaning shifts: in bulk
@@ -25307,12 +25333,27 @@ function renderPrBulkVariantRows(){
   const wrap = document.getElementById('pr_bulk_variants_wrap');
   const productId = document.getElementById('pr_product').value;
   const p = data.products.find(x=>x.id===productId);
-  if(!p || !Array.isArray(p.variants) || !p.variants.length){ wrap.innerHTML = ''; return; }
+  const filterBar = document.getElementById('prVariantFilterBar');
+  if(!p || !Array.isArray(p.variants) || !p.variants.length){
+    wrap.innerHTML = '';
+    if(filterBar) filterBar.style.display = 'none';
+    return;
+  }
+  if(filterBar) filterBar.style.display = p.variants.length >= VARIANT_FILTER_MIN ? '' : 'none';
+  /* Each row keeps the index it has in p.variants: every tier control on
+     a card carries that number in data-idx, and toggleBulkVariantOverride
+     and addBulkVariantTier read it straight back. Renumbering the
+     filtered rows would customize the wrong variant's pricing. */
+  const shownVariants = filterSortVariants(p.variants, prvQuery, prvSort);
+  const prvCount = document.getElementById('prv_count');
+  if(prvCount) prvCount.textContent = shownVariants.length === p.variants.length
+    ? `${p.variants.length} variants`
+    : `${shownVariants.length} of ${p.variants.length}`;
   const unit = document.getElementById('pr_unit').value.trim();
   const packUnit = document.getElementById('pr_pack_unit').value.trim();
   const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
   const unitOptionsHTML = document.getElementById('pr_tier_qty_unit').innerHTML;
-  wrap.innerHTML = p.variants.map((v,i)=>{
+  wrap.innerHTML = shownVariants.length ? shownVariants.map(({v,i})=>{
     const override = prBulkVariantOverrides[i];
     const tiers = override || prTiers;
     const chipsHTML = tiers.length
@@ -25338,7 +25379,10 @@ function renderPrBulkVariantRows(){
         <button type="button" class="pr-bulk-tier-add" data-idx="${i}">+ Add tier</button>
       </div>` : ''}
     </div>`;
-  }).join('');
+  }).join('')
+    /* Without this, a filter that matches nothing reads as a supplier
+       whose product suddenly has no variants to price. */
+    : '<div class="pr-tier-empty">No variant matches that. Clear the search to see all of them again.</div>';
   wrap.querySelectorAll('.pr-bulk-tier-toggle').forEach(btn=>btn.addEventListener('click', e=>{
     toggleBulkVariantOverride(Number(e.currentTarget.dataset.idx));
   }));
@@ -25351,6 +25395,22 @@ function renderPrBulkVariantRows(){
     addBulkVariantTier(Number(e.currentTarget.dataset.idx));
   }));
 }
+/* Filtering redraws the cards from the same overrides and tiers, so a
+   variant customized a moment ago is still customized when it comes back
+   into view. */
+document.getElementById('prv_search').addEventListener('input', (e)=>{
+  prvQuery = e.target.value;
+  renderPrBulkVariantRows();
+});
+document.getElementById('prv_sort').addEventListener('change', (e)=>{
+  prvSort = e.target.value;
+  renderPrBulkVariantRows();
+});
+document.getElementById('prv_clear').addEventListener('click', ()=>{
+  resetPrVariantFilter();
+  renderPrBulkVariantRows();
+});
+
 function toggleBulkVariantOverride(idx){
   prBulkVariantOverrides[idx] = prBulkVariantOverrides[idx] ? null : prTiers.map(t=>({...t}));
   renderPrBulkVariantRows();

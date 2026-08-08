@@ -117,7 +117,11 @@ const V = [
   t.check(/\$\{shown\.length\} of \$\{draftVariants\.length\}/.test(src)
     && /\$\{draftVariants\.length\} variants/.test(src),
     'the bar says how many of how many are showing, so a filtered list never reads as a short one');
-  t.check(/No variant matches that/.test(src),
+  /* Read from renderVariantsList, not the whole file: the price form
+     carries the same sentence, and a file-wide match would let this pass
+     on the strength of the other form's copy. */
+  const list = extractFunction(src, 'renderVariantsList', 'index.html');
+  t.check(/No variant matches that/.test(list),
     'and a query that matches nothing says so rather than looking like an empty product');
 
   /* A filter left over from the last product would open the next one
@@ -130,6 +134,41 @@ const V = [
   t.check(/const VARIANT_FILTER_MIN = 6;/.test(code)
     && /draftVariants\.length >= VARIANT_FILTER_MIN \? '' : 'none'/.test(code),
     'and it only appears once there are enough variants for finding one to be work');
+}
+
+/* ---------- 5. the same filter on the price form --------------------- */
+/*
+ * Entering a supplier's price list means the same wall of cards, and the
+ * same trap wearing different clothes: every tier control there carries
+ * data-idx, and toggleBulkVariantOverride / addBulkVariantTier read that
+ * number straight back. A renumbered row would give the wrong variant its
+ * own price ladder.
+ */
+{
+  t.check(/id="prv_search"/.test(src) && /id="prv_sort"/.test(src) && /id="prv_clear"/.test(src),
+    'the price form has its own filter, sort and clear');
+  const bulk = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
+  t.check(/const shownVariants = filterSortVariants\(p\.variants, prvQuery, prvSort\);/.test(bulk),
+    'and narrows the price list through the same filter as the product form');
+  t.check(/wrap\.innerHTML = shownVariants\.length \? shownVariants\.map\(\(\{v,i\}\)=>\{/.test(bulk),
+    'the price cards render from the pairs, so data-idx stays the real variant');
+  t.check(/\$\{shownVariants\.length\} of \$\{p\.variants\.length\}/.test(bulk)
+    && /\$\{p\.variants\.length\} variants/.test(bulk),
+    'the price bar says how many of how many are showing');
+  t.check(/No variant matches that/.test(bulk),
+    'and a query matching nothing says so, rather than reading as a product with nothing to price');
+  t.check(/p\.variants\.length >= VARIANT_FILTER_MIN \? '' : 'none'/.test(bulk),
+    'appearing on the same terms — only once there are enough variants for finding one to be work');
+
+  /* Two modals, two filters. A word typed while pricing one product must
+     not silently narrow the variants of the next. */
+  t.check(/let prvQuery = '', prvSort = 'generated';/.test(code),
+    'the price form keeps its own filter state, separate from the product form');
+  const mode = extractFunction(src, 'setPrBulkMode', 'index.html');
+  t.check(/resetPrVariantFilter\(\);/.test(mode),
+    'switching product or mode clears the filter left over from the last one');
+  t.check(/prvQuery = e\.target\.value;\s*\r?\n\s*renderPrBulkVariantRows\(\);/.test(code),
+    'typing narrows the price list as you go');
 }
 
 process.exit(t.done() ? 1 : 0);
