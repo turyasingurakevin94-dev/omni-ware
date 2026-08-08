@@ -3021,6 +3021,18 @@
     background:#FBF3E4;border:1px solid #EAD6A8;color:var(--accent-ink);font-size:11.5px;
     padding:6px 9px;border-radius:7px;margin-bottom:8px;
   }
+  /* Somebody quoted this and ran out. The softer amber is the same note
+     as above; the red edge is for when NOBODY currently has it, which is
+     the version that should stop somebody promising a delivery date. */
+  .q-oos-note{
+    background:#FBF3E4;border:1px solid #EAD6A8;color:var(--accent-ink);font-size:11.5px;
+    padding:7px 10px;border-radius:7px;margin-bottom:8px;
+  }
+  .q-oos-note-hard{background:#FCEDEA;border-color:#F0C4BA;}
+  .q-oos-head{font-weight:700;margin-bottom:3px;}
+  .q-oos-list{margin:0;padding-left:16px;}
+  .q-oos-list li{margin:1px 0;}
+  .q-oos-tail{margin-top:4px;color:var(--ink-soft);}
 
   /* Recommended prices — compact horizontal rows (icon + label/value +
      use-link), not the tall squares these used to be, so the pair takes
@@ -8513,6 +8525,7 @@ async function loadData(shopId){
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
       priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
+      outOfStockSince: pr.out_of_stock_since || null,
       tiers: Array.isArray(pr.tiers) ? pr.tiers : []
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
@@ -8681,6 +8694,7 @@ function buildSyncRows(d, shopId){
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
       wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
       price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
+      out_of_stock_since: pr.outOfStockSince || null,
       tiers: pr.tiers||[]
     })),
     stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
@@ -13187,6 +13201,36 @@ document.getElementById('duesDueSnooze').addEventListener('click', snoozeDues);
 document.getElementById('pickupRunsClose').addEventListener('click', ()=>closeModal('pickupRunsModal'));
 document.getElementById('loanDueSnooze').addEventListener('click', ()=>{ snoozeLoanDue(); maybeRemindDuesDue(); });
 
+/* Who had this item and hasn't got it now.
+ *
+ * rankedPriceRows() drops out-of-stock suppliers, which is right for
+ * recommending somewhere to buy -- but it made the quote screen say "no
+ * prices recorded for this item yet" about an item a supplier had quoted
+ * and simply run out of. Two different facts, and the second one is worth
+ * knowing before quoting a client: somebody stocks this, ask them when
+ * it's back.
+ *
+ * Returns null when there is nothing to say -- nobody ever priced it, or
+ * nobody has run out. Otherwise the out-of-stock suppliers cheapest
+ * first, each with how long it has been out: days is null, never 0, when
+ * the row predates the date being recorded.
+ */
+function outOfStockNotice(rows){
+  const all = rows || [];
+  const out = all.filter(r=> r && r.outOfStock);
+  if(!out.length) return null;
+  const priceOf = (r)=> r.wholesale!=null ? r.wholesale : (r.retail!=null ? r.retail : null);
+  const entries = out.map(r=>{
+    const d = daysSinceDate(r.outOfStockSince);
+    return { supplierId: r.supplierId, price: priceOf(r), days: d < 0 ? null : d };
+  }).sort((a,b)=> (a.price==null?Infinity:a.price) - (b.price==null?Infinity:b.price));
+  return {
+    entries,
+    // Whether anyone is left to buy from decides whether this is a
+    // warning or a note.
+    anyInStock: all.some(r=> r && !r.outOfStock)
+  };
+}
 // Cheapest-first (by wholesale cost, falling back to retail) list of price rows for a product.
 // Excludes anything marked out of stock -- a supplier that doesn't
 // currently have the item shouldn't be recommended as a place to buy it.
@@ -14214,6 +14258,30 @@ function renderIpStage(){
 
   const backBtn = `<button class="ip-back" id="ip_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to search</button>`;
 
+  /* Read from ALL rows, not the ranked ones -- ranking is what hides the
+     out-of-stock suppliers in the first place. */
+  const oosNotice = outOfStockNotice(productPriceRows(ipProductId, variantIdx));
+  const oosLines = oosNotice ? oosNotice.entries.map(e=>{
+    const who = esc(supplierName(e.supplierId));
+    const at = e.price!=null ? ` at ${fmtUGX(e.price)}` : '';
+    // No date on the row means nobody knows how long -- say that rather
+    // than reporting a confident "0 days".
+    const since = e.days==null ? 'date not recorded'
+      : e.days===0 ? 'since today'
+      : e.days===1 ? '1 day'
+      : `${e.days} days`;
+    return `<li><strong>${who}</strong>${at} — out of stock, ${since}</li>`;
+  }).join('') : '';
+  const oosHTML = oosNotice ? `<div class="q-oos-note${oosNotice.anyInStock ? '' : ' q-oos-note-hard'}">
+      <div class="q-oos-head">${oosNotice.anyInStock
+        ? 'Cheaper supplier out of stock'
+        : `Nobody has this in stock right now`}</div>
+      <ul class="q-oos-list">${oosLines}</ul>
+      <div class="q-oos-tail">${oosNotice.anyInStock
+        ? 'The prices below are from suppliers who still have it.'
+        : 'This item has been quoted before, so ask when it is back before promising a date.'}</div>
+    </div>` : '';
+
   if(staticRanked.length===0 && data.suppliers.length===0 && stockQty===0){
     wrap.innerHTML = `${backBtn}<div class="q-stage"><div class="q-empty-hint">No suppliers on file at all yet — add one in the Suppliers tab first.</div></div>`;
     wrap.querySelector('#ip_back_btn').addEventListener('click', ipShowSearchView);
@@ -14380,7 +14448,8 @@ function renderIpStage(){
       </div>
     </div>
 
-    ${ranked.length===0 ? `<div class="q-no-prices">No prices recorded for this item yet. Set a price manually below, or add price entries in the Price Registry tab.</div>` : ''}
+    ${oosHTML}
+    ${ranked.length===0 && !oosNotice ? `<div class="q-no-prices">No prices recorded for this item yet. Set a price manually below, or add price entries in the Price Registry tab.</div>` : ''}
 
     <div class="q-stage-columns">
       <div class="q-stage-col q-stage-col-left">
@@ -14406,7 +14475,7 @@ function renderIpStage(){
       </div>
 
       <div class="q-stage-col q-stage-col-right">
-        ${(top3.length || stockCardHtml)? `<div class="q-section-label">Best suppliers for this item</div><div class="q-supplier-cards">${stockCardHtml}${cardsHtml}</div>` : `<div class="q-empty-hint">No priced suppliers for this item yet — choose one below.</div>`}
+        ${(top3.length || stockCardHtml)? `<div class="q-section-label">Best suppliers for this item</div><div class="q-supplier-cards">${stockCardHtml}${cardsHtml}</div>` : `<div class="q-empty-hint">${oosNotice ? 'No supplier has this in stock right now — choose one below.' : 'No priced suppliers for this item yet — choose one below.'}</div>`}
       </div>
     </div>
 
@@ -25926,6 +25995,11 @@ function deletePrice(id){
 function toggleOutOfStock(id){
   const r = data.prices.find(p=>p.id===id); if(!r) return;
   r.outOfStock = !r.outOfStock;
+  /* Stamped when it goes out, cleared when it comes back, so a quote can
+     say how long this supplier has been without it. Rows flagged before
+     this field existed carry no date -- those report "date not recorded"
+     rather than a made-up zero days. */
+  r.outOfStockSince = r.outOfStock ? todayISO() : null;
   saveData(); triggerPricesRender();
   toast(r.outOfStock ? 'Marked out of stock — hidden from best-supplier recommendations' : 'Marked back in stock');
 }
@@ -26001,7 +26075,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         tiers: effectiveTiers.map(t=>({...t}))
       };
       data.prices = data.prices.filter(p=>!dups.includes(p));
-      data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false});
+      data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false, outOfStockSince: keep ? (keep.outOfStockSince||null) : null});
       saved++;
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
@@ -26049,9 +26123,13 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     const editingRow = data.prices.find(p=>p.id===editingPriceId);
     if(!editingRow){ toast('That price entry no longer exists — it may have been deleted elsewhere'); return; }
     const wasOutOfStock = !!editingRow.outOfStock;
+    // Re-pricing an item does not restock it, so the date it went out
+    // travels with the flag. Dropping it here would turn a row we know
+    // the age of into one we do not.
+    const wasOutOfStockSince = editingRow.outOfStockSince || null;
     const otherDups = data.prices.filter(p=>p.id!==editingPriceId && p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
     if(otherDups.length) data.prices = data.prices.filter(p=>!otherDups.includes(p));
-    data.prices[data.prices.findIndex(p=>p.id===editingPriceId)] = {...record, id: editingPriceId, outOfStock: wasOutOfStock};
+    data.prices[data.prices.findIndex(p=>p.id===editingPriceId)] = {...record, id: editingPriceId, outOfStock: wasOutOfStock, outOfStockSince: wasOutOfStockSince};
   } else {
     // A supplier only ever has one current price for a given item -- once
     // they change it, the old figure isn't relevant any more, so this save
@@ -26061,7 +26139,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     const dups = data.prices.filter(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
     const keep = dups[0];
     data.prices = data.prices.filter(p=>!dups.includes(p));
-    data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false});
+    data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false, outOfStockSince: keep ? (keep.outOfStockSince||null) : null});
   }
   saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
   toast('Price entry saved');
