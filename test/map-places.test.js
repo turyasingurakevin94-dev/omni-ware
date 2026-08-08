@@ -51,6 +51,8 @@ const scope = compileScope([
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const byName = (rows, n) => rows.find((r) => r.name === n);
+const stripLineComments = (text) => text.split(/\r?\n/)
+  .map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 // Real coordinates, so the distances below are real distances.
 const KAMPALA = { lat: 0.3152, lng: 32.5816 };   // the shop, roughly Nakasero
 const reset = () => {
@@ -258,6 +260,75 @@ const reset = () => {
   const split = scope.mapPlaceSplit(kampalaish.map((r, i) => Object.assign({ name: 'P' + i }, r)), centre);
   eq(split.far.length, 1, 'exactly the distant one is set aside');
   eq(split.core.length, 3, 'and the cluster is the map');
+}
+
+/* ---------- 8. today's deliveries, on the map ------------------------ *
+ * Built on deliveryRuns(), which already answers "which of these are
+ * going the same way" for the delivery banner. A second grouping would
+ * be a second opinion about which orders share a trip, and the two would
+ * disagree the first time either changed.
+ *
+ * A run carries what the driver should come back WITH -- the balance
+ * still unpaid, not the order's value. On any part-paid order those are
+ * different numbers, and the one somebody is accountable for is the
+ * balance.
+ */
+{
+  const dData = { places: [{ name: 'Bwaise', lat: 0.3476, lng: 32.5619 }] };
+  const mk = (id, driver) => ({ id, client: { name: 'Cust ' + id }, assignedDeliveryId: driver });
+  const runsFixture = [
+    { key: 'bwaise', label: 'Bwaise', orders: [mk(1, 'ST1'), mk(2, null)],
+      value: 600000, drivers: ['ST1'], unassigned: 1 },
+    { key: 'nowhere yet', label: 'Nowhere Yet', orders: [mk(3, 'ST1')],
+      value: 90000, drivers: ['ST1'], unassigned: 0 },
+  ];
+  const balances = { 1: 300000, 2: 200000, 3: 90000 };
+
+  const dScope = compileScope([
+    extractFunction(src, 'placePin', 'index.html'),
+    extractFunction(src, 'deliveryMapRuns', 'index.html'),
+  ], {
+    data: dData,
+    canonicalLocation: (raw) => String(raw == null ? '' : raw).trim(),
+    deliveryRuns: () => ({ runs: runsFixture, collected: [{ id: 9 }], unknown: [{ id: 8 }] }),
+    pendingDeliveryOrders: () => [],
+    invoiceBalanceDue: (q) => balances[q.id] || 0,
+  }, ['deliveryMapRuns']);
+
+  const out = dScope.deliveryMapRuns();
+  eq(out.runs.length, 2, 'every stop is carried through, pinned or not');
+  const bwaise = out.runs.find((r) => r.label === 'Bwaise');
+  t.check(!!bwaise.pin, 'a stop at a pinned place can be drawn');
+  eq(out.runs.find((r) => r.label === 'Nowhere Yet').pin, null,
+    'and a stop at an unpinned place carries no pin rather than a guessed one');
+
+  /* THE NUMBER SOMEBODY IS ACCOUNTABLE FOR. Order value is 600,000;
+     100,000 is already paid, so 500,000 should come back. Sending a
+     driver out against the value would expect the wrong money. */
+  eq(bwaise.value, 600000, 'the run keeps the order value it was grouped with');
+  eq(bwaise.toCollect, 500000, 'but what to collect is the UNPAID balance, not the value');
+  eq(bwaise.unassigned, 1, 'and it still knows how many have no driver');
+
+  /* Two kinds of "not a stop", kept apart: collecting in person was never
+     going to be one; an order with no destination is one nobody can plan. */
+  eq(out.collected.length, 1, 'orders being collected in person are set aside');
+  eq(out.unknown.length, 1, 'and orders with no destination are their own problem');
+}
+
+/* ---------- 9. the delivery layer is wired --------------------------- */
+{
+  const wired = stripLineComments(src);
+  t.check(/data-layer="deliveries"/.test(src), 'the map offers a deliveries layer');
+  t.check(/if\(mpLayer === 'deliveries'\) return renderDeliveryMap\(\);/.test(wired),
+    'which takes its own render path');
+  const dm = extractFunction(src, 'renderDeliveryMap', 'index.html');
+  t.check(/r\.unassigned > 0 \? '#B0700A' : '#2F7FBF'/.test(dm),
+    'a stop with no driver is the colour that stands out — it is the one thing to fix before the van leaves');
+  t.check(/const noPin = runs\.filter\(r=> !r\.pin\);/.test(dm) && /not on the map/.test(dm),
+    'stops the map cannot draw are named, not silently dropped from the day');
+  const ds = extractFunction(src, 'renderDeliverySide', 'index.html');
+  t.check(/invoiceBalanceDue\(q\)/.test(ds) && /no driver yet/.test(ds),
+    'and each order shows what is owed on it and who is taking it');
 }
 
 process.exit(t.done() ? 1 : 0);

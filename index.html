@@ -5492,6 +5492,7 @@
           <div class="mp-layers" id="mp_layers">
             <button type="button" class="mp-layer active" data-layer="customers">Customers</button>
             <button type="button" class="mp-layer" data-layer="suppliers">Suppliers</button>
+            <button type="button" class="mp-layer" data-layer="deliveries">Deliveries</button>
           </div>
           <div class="mp-head-right"><span id="mp_summary" class="mp-summary"></span></div>
         </div>
@@ -11507,6 +11508,33 @@ function mapPlaceSplit(rows, home){
   return { core, far, unpinned };
 }
 
+/* Today's deliveries, on the map.
+
+   Built on deliveryRuns() rather than beside it: that function already
+   answers "which of these are going the same way", and the map is that
+   answer drawn rather than listed. A second grouping would be a second
+   opinion about which orders share a trip, and the two would disagree
+   the first time either changed.
+
+   A run carries what the driver should come back WITH -- the balance
+   still unpaid, not the order's value. Those are different numbers on
+   any order already part-paid, and the one the driver is accountable for
+   is the balance. */
+function deliveryMapRuns(){
+  const { runs, collected, unknown } = deliveryRuns(pendingDeliveryOrders());
+  return {
+    runs: runs.map(r=> Object.assign({}, r, {
+      pin: placePin(r.label),
+      toCollect: r.orders.reduce((sum,q)=> sum + Math.max(0, invoiceBalanceDue(q)), 0),
+    })),
+    /* Two kinds of "not on the map", kept apart because they are not the
+       same problem: a customer collecting in person was never going to be
+       a stop on a run, while an order with no destination at all is a
+       delivery nobody can plan. */
+    collected, unknown,
+  };
+}
+
 /* The colour a marker wears. Bands come straight from AGING_BANDS so the
    map and the Debtors list can never disagree about what "late" means. */
 const MAP_BAND_COLOURS = {
@@ -11536,6 +11564,7 @@ function mapHomePin(){
 }
 
 function renderMap(){
+  if(mpLayer === 'deliveries') return renderDeliveryMap();
   const rows = mapPlaceRows();
   /* The shop's own pin if it has one, else the middle of everything
      already placed -- so the far strip works from the first pin, with
@@ -11605,6 +11634,88 @@ function renderMap(){
         ${unpinned.map(r=> `<button type="button" class="mp-chip mp-pin" data-name="${esc(r.name)}">Place ${esc(r.name)}</button>`).join('')}</div>`
     : '';
   todo.querySelectorAll('.mp-pin').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
+}
+
+/* The delivery board, drawn. One marker per destination, sized by how
+   many drops are there, and coloured by whether anybody is taking them:
+   a stop with no driver is the thing an owner can act on before the van
+   leaves, which is why it is the colour that stands out. */
+function renderDeliveryMap(){
+  const { runs, collected, unknown } = deliveryMapRuns();
+  const drawable = runs.filter(r=> r.pin);
+  const drops = runs.reduce((n,r)=> n + r.orders.length, 0);
+  const money = runs.reduce((n,r)=> n + r.toCollect, 0);
+
+  document.getElementById('mp_summary').textContent = drops
+    ? `${drops} to deliver · ${fmtUGX(Math.round(money))} to collect`
+    : 'Nothing waiting for delivery';
+  document.getElementById('mp_legend').innerHTML =
+    '<div><i style="background:#B0700A"></i>No driver yet</div>'
+    + '<div><i style="background:#2F7FBF"></i>Driver assigned</div>';
+
+  if(mpMap){
+    mpMarkers.clearLayers();
+    drawable.forEach(r=>{
+      const n = r.orders.length;
+      const d = mapMarkerRadius(n) * 2;
+      const colour = r.unassigned > 0 ? '#B0700A' : '#2F7FBF';
+      const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
+        html: `<div class="mp-marker" style="width:${d}px;height:${d}px;background:${colour};font-size:${d>32?13:11}px;">${n}</div>` });
+      L.marker([r.pin.lat, r.pin.lng], { icon, title: r.label })
+        .on('click', ()=>{ mpSelected = r.label; renderDeliverySide(); })
+        .addTo(mpMarkers);
+    });
+    if(drawable.length){
+      mpMap.fitBounds(drawable.map(r=> [r.pin.lat, r.pin.lng]), { padding: [40, 40], maxZoom: 14 });
+    }
+    setTimeout(()=> mpMap.invalidateSize(), 0);
+  }
+
+  renderDeliverySide();
+  document.getElementById('mp_far').innerHTML = '';
+
+  /* Everything the map cannot show, said out loud. A run whose place has
+     no pin is not missing from today -- it is missing from the MAP, and
+     the difference matters when somebody is counting the van's stops. */
+  const bits = [];
+  const noPin = runs.filter(r=> !r.pin);
+  if(noPin.length) bits.push(`<div class="mp-strip todo"><span><b>${noPin.length}</b> stop${noPin.length===1?'':'s'} not on the map — ${
+    esc(noPin.map(r=> `${r.label} (${r.orders.length})`).join(', '))}. Place them from the Customers layer.</span></div>`);
+  if(unknown.length) bits.push(`<div class="mp-strip todo"><span><b>${unknown.length}</b> order${unknown.length===1?'':'s'} with no destination on file — nobody can plan a drop for them.</span></div>`);
+  if(collected.length) bits.push(`<div class="mp-strip far"><span>${collected.length} being collected in person — no drop needed.</span></div>`);
+  document.getElementById('mp_unpinned').innerHTML = bits.join('');
+}
+
+function renderDeliverySide(){
+  const el = document.getElementById('mp_side');
+  const { runs } = deliveryMapRuns();
+  const r = mpSelected ? runs.find(x=> x.label === mpSelected) : null;
+  if(!r){
+    el.innerHTML = runs.length
+      ? '<div class="mp-side-empty">Click a stop to see the orders going there.</div>'
+      : '<div class="mp-side-empty">Nothing is waiting for delivery today.</div>';
+    return;
+  }
+  el.innerHTML = `<h3>${esc(r.label)}</h3>
+    <div class="mp-side-sub">${r.orders.length} order${r.orders.length===1?'':'s'}${
+      r.unassigned ? ` · ${r.unassigned} with no driver` : ''}</div>
+    <div class="mp-money">
+      <div><span>Order value</span><b>${fmtUGX(Math.round(r.value))}</b></div>
+      <div><span>To collect</span><b>${fmtUGX(Math.round(r.toCollect))}</b></div>
+    </div>
+    ${r.orders.map(q=>{
+      const due = Math.max(0, invoiceBalanceDue(q));
+      const driver = q.assignedDeliveryId ? deliveryAssigneeLabel(q) : null;
+      return `<div class="mp-person" data-order="${esc(String(q.id))}">
+        <div><div class="mp-person-name">${esc((q.client && q.client.name) || 'Order')}</div>
+          <div class="mp-person-sub">${esc(invoiceNumberLabel(q))}${driver ? ` · ${esc(driver)}` : ' · no driver yet'}</div></div>
+        <div class="mp-person-amt">${due > 0.5 ? fmtUGX(Math.round(due)) : 'paid'}</div>
+      </div>`;
+    }).join('')}`;
+  el.querySelectorAll('.mp-person').forEach(row=> row.addEventListener('click', ()=>{
+    goToTab('quote-saved');
+    loadSavedQuote(Number(row.dataset.order));
+  }));
 }
 
 /* Dropping a pin: the next click on the map is the place's position. No
