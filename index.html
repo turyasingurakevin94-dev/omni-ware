@@ -25472,6 +25472,33 @@ function renderPrTiers(){
   // display it live, so editing it here up top needs to redraw them too.
   if(prBulkMode) renderPrBulkVariantRows();
 }
+/* A tier typed into the entry boxes but never committed with "+ Add tier".
+ *
+ * The save only ever read tiers that had been added, so a quantity and a
+ * price sitting in the boxes when somebody pressed "Save price" were
+ * thrown away without a word -- and if that was the only price for a
+ * variant, the variant was skipped entirely and its packing went with it.
+ * Typing two numbers and pressing Save is not an ambiguous act.
+ *
+ * Returns { tier } when both figures are there, { missing } when only one
+ * is -- half a tier is not a price and must not be guessed at -- and null
+ * when the boxes are empty, which is the ordinary case.
+ *
+ * The conversion is the same one addPrTier does, deliberately: a tier
+ * committed by the button and one committed by the save have to mean the
+ * same thing. */
+function pendingTierEntry(rawQty, rawPrice, qtyUnit, priceUnit, packQty){
+  const q = Number(rawQty), p = Number(rawPrice);
+  const hasQty = String(rawQty == null ? '' : rawQty).trim() !== '' && q > 0;
+  const hasPrice = String(rawPrice == null ? '' : rawPrice).trim() !== '' && p > 0;
+  if(!hasQty && !hasPrice) return null;
+  if(!hasQty || !hasPrice) return { missing: hasQty ? 'price' : 'quantity' };
+  const pq = Number(packQty) || 0;
+  return { tier: {
+    minQty: qtyUnit === 'pack' ? q * pq : q,
+    price: (priceUnit === 'pack' && pq > 0) ? p / pq : p,
+  } };
+}
 function addPrTier(){
   const qtyInput = document.getElementById('pr_tier_qty');
   const qtyUnitSel = document.getElementById('pr_tier_qty_unit');
@@ -26379,6 +26406,52 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
   if(!productId || !supplierId){ toast('Add at least one product and supplier first'); return; }
   const product = data.products.find(p=>p.id===productId);
 
+  /* Anything still in the tier boxes counts. Pressing "Save price" with a
+     quantity and a price on screen means those figures; they used to be
+     dropped on the floor. Committed here rather than warned about,
+     because there is nothing to decide -- but a half-filled pair stops
+     the save and says so, since half a tier is not a price. */
+  const sharedPending = pendingTierEntry(
+    document.getElementById('pr_tier_qty').value,
+    document.getElementById('pr_tier_price').value,
+    document.getElementById('pr_tier_qty_unit').value,
+    document.getElementById('pr_tier_price_unit').value,
+    Number(document.getElementById('pr_pack_qty').value)||0);
+  if(sharedPending && sharedPending.missing){
+    toast(`The volume pricing row is missing a ${sharedPending.missing} — fill it in or clear the row`);
+    return;
+  }
+  if(sharedPending && !prTiers.some(t=> t.minQty === sharedPending.tier.minQty)){
+    prTiers.push(sharedPending.tier);
+    prTiers.sort((a,b)=>a.minQty-b.minQty);
+    document.getElementById('pr_tier_qty').value = '';
+    document.getElementById('pr_tier_price').value = '';
+    renderPrTiers();
+  }
+  /* The same for each variant that has a ladder of its own on screen. */
+  if(prBulkMode && product && Array.isArray(product.variants)){
+    for(let i=0; i<product.variants.length; i++){
+      if(!prBulkVariantOverrides[i]) continue;
+      const q = document.querySelector(`.pr-bulk-tier-qty[data-idx="${i}"]`);
+      const pr = document.querySelector(`.pr-bulk-tier-price[data-idx="${i}"]`);
+      if(!q || !pr) continue;   // card filtered off screen; nothing typed to read
+      const ov = prBulkPackOverrides[i];
+      const pending = pendingTierEntry(q.value, pr.value,
+        document.querySelector(`.pr-bulk-tier-qty-unit[data-idx="${i}"]`).value,
+        document.querySelector(`.pr-bulk-tier-price-unit[data-idx="${i}"]`).value,
+        ov ? (Number(ov.packQty)||0) : (Number(document.getElementById('pr_pack_qty').value)||0));
+      if(pending && pending.missing){
+        toast(`${variantLabel(product.variants[i].combo||{})} is missing a ${pending.missing} — fill it in or clear that row`);
+        return;
+      }
+      if(pending && !prBulkVariantOverrides[i].some(t=> t.minQty === pending.tier.minQty)){
+        prBulkVariantOverrides[i].push(pending.tier);
+        prBulkVariantOverrides[i].sort((a,b)=>a.minQty-b.minQty);
+        q.value = ''; pr.value = '';
+      }
+    }
+  }
+
   if(prBulkMode){
     if(!product || !Array.isArray(product.variants) || !product.variants.length){ toast('This product has no variants to price'); return; }
     const unit = document.getElementById('pr_unit').value.trim();
@@ -26409,6 +26482,12 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
        appears nowhere in their data. */
     let saved = 0, cleared = 0, keptOwnPacking = 0, lostWholesale = 0;
     const lostAt = [];
+    /* Packing is only ever stored ON a price row, so a variant given its
+       own packing and no price has nowhere for that packing to live. That
+       is allowed -- but it used to happen in silence, and somebody who
+       had just typed a pack size watched it vanish on reopening with
+       nothing having said why. */
+    let packingWithNoPrice = 0;
     product.variants.forEach((v,i)=>{
       // A variant with its own override ladder uses that; everything else
       // follows the shared one, when there is a deliberately entered one.
@@ -26424,6 +26503,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         // an existing entry and the admin cleared it, that's a deliberate
         // removal, not just "nothing to say about this one".
         if(dups.length){ data.prices = data.prices.filter(p=>!dups.includes(p)); cleared++; }
+        else if(prBulkPackOverrides[i]) packingWithNoPrice++;
         return;
       }
       const keep = dups[0];
@@ -26455,7 +26535,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
     saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
-    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}${keptOwnPacking?` · ${keptOwnPacking} kept their own pack size`:''}${lostWholesale?` · ${lostWholesale} lost their bulk rate (no price set at ${[...new Set(lostAt)].sort((a,b)=>a-b).join(' or ')}+)`:''}`, lostWholesale?6000:undefined);
+    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}${keptOwnPacking?` · ${keptOwnPacking} kept their own pack size`:''}${lostWholesale?` · ${lostWholesale} lost their bulk rate (no price set at ${[...new Set(lostAt)].sort((a,b)=>a-b).join(' or ')}+)`:''}${packingWithNoPrice?` · ${packingWithNoPrice} had packing but no price, so nothing was saved for ${packingWithNoPrice===1?'it':'them'}`:''}`, (lostWholesale||packingWithNoPrice)?6000:undefined);
     return;
   }
 

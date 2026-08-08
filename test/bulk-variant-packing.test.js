@@ -31,7 +31,7 @@ const t = createReporter('bulk variant packing');
 const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-const NAMES = ['packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail', 'tierUnitOptionsHTML'];
+const NAMES = ['packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail', 'tierUnitOptionsHTML', 'pendingTierEntry'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')),
   { esc: (x) => String(x == null ? '' : x) }, NAMES);
 
@@ -152,6 +152,43 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'values arriving from inputs — padded, and numbers as text — still resolve');
 }
 
+/* ---------- 4c. a price typed but never added -------------------------- */
+/*
+ * REPORTED, and it cost real data. Packing was set on a variant and a
+ * quantity and price typed into its tier row, then "Save price" pressed
+ * without touching "+ Add tier". The save only ever read COMMITTED tiers,
+ * so those two figures were dropped without a word -- and because they
+ * were that variant's only price, the variant was skipped entirely and
+ * its packing went with it. Reopening showed a variant with nothing on
+ * it, and no way to tell that anything had been lost.
+ */
+{
+  const f = fn.pendingTierEntry;
+
+  eqJ(f('20', '245000', 'unit', 'unit', 0).tier, { minQty: 20, price: 245000 },
+    'two figures left in the boxes are a tier, and pressing Save means them');
+
+  /* Converted exactly as the "+ Add tier" button converts, or a tier
+     committed by the save would mean something else than the same
+     numbers committed by the button. */
+  eqJ(f('1', '100000', 'pack', 'pack', 20).tier, { minQty: 20, price: 5000 },
+    'per-pack figures are converted against the pack size, same as the button does');
+  eqJ(f('2', '9000', 'pack', 'unit', 5).tier, { minQty: 10, price: 9000 },
+    'a per-pack quantity with a per-unit price converts only the quantity');
+
+  // The ordinary case: nothing typed, nothing to commit.
+  eq(f('', '', 'unit', 'unit', 0), null, 'empty boxes are not a tier');
+  eq(f(null, undefined, 'unit', 'unit', 0), null, 'and neither is nothing at all');
+  eq(f('0', '0', 'unit', 'unit', 0), null, 'nor a pair of noughts');
+
+  /* HALF A TIER IS NOT A PRICE. Guessing the missing half is how a
+     quantity becomes a price or a price becomes free. */
+  eq(f('20', '', 'unit', 'unit', 0).missing, 'price', 'a quantity with no price says which half is missing');
+  eq(f('', '245000', 'unit', 'unit', 0).missing, 'quantity', 'and a price with no quantity');
+  t.check(f('20', '', 'unit', 'unit', 0).tier === undefined,
+    'and neither is turned into a tier by filling in the blank');
+}
+
 /* ---------- 5. wired into the card and the save ---------------------- */
 {
   const rows = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
@@ -202,6 +239,40 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'and the warning names those rather than the shared field');
   t.check(!/no price set at \$\{packQty\}\+/.test(body),
     'the default pack size is no longer quoted as though it were every row\'s');
+
+  /* Committed BEFORE the save reads prTiers, or a figure typed into the
+     shared row would not even count as having edited the default. */
+  t.check(/const sharedPending = pendingTierEntry\(/.test(body),
+    'the shared tier row is read on save, not only when "+ Add tier" is pressed');
+  t.check(/if\(!prBulkVariantOverrides\[i\]\) continue;/.test(body)
+    && /const pending = pendingTierEntry\(q\.value, pr\.value,/.test(body),
+    'and so is each variant\'s own tier row');
+
+  /* Reading the boxes is only half of it — what is read has to reach the
+     ladder. Pinned on the commit itself, because a guard that never fires
+     leaves every "is it read?" check above passing while the figures go
+     in the bin exactly as before. */
+  t.check(body.includes('if(sharedPending && !prTiers.some(t=> t.minQty === sharedPending.tier.minQty)){')
+    && body.includes('prTiers.push(sharedPending.tier);'),
+    'a figure typed into the shared row actually joins the shared ladder');
+  t.check(body.includes('if(pending && !prBulkVariantOverrides[i].some(t=> t.minQty === pending.tier.minQty)){')
+    && body.includes('prBulkVariantOverrides[i].push(pending.tier);'),
+    'and one typed into a variant\'s row joins that variant\'s ladder');
+  /* Not committed twice: the button may already have added this rung. */
+  t.check(/!prTiers\.some\(t=> t\.minQty === sharedPending\.tier\.minQty\)/.test(body),
+    'a rung already on the ladder is not added a second time');
+  t.check(body.indexOf('sharedPending') < body.indexOf('const tiersEdited'),
+    'both are committed before the save decides what was edited and what to write');
+  t.check(/if\(sharedPending && sharedPending\.missing\)/.test(body)
+    && /is missing a \$\{pending\.missing\}/.test(body),
+    'a half-filled row stops the save and names the variant, rather than being guessed at');
+
+  /* Packing lives on a price row, so a variant given packing and no price
+     has nowhere to keep it. Allowed, but not in silence. */
+  t.check(/else if\(prBulkPackOverrides\[i\]\) packingWithNoPrice\+\+;/.test(body),
+    'a variant given its own packing but no price is counted');
+  t.check(/had packing but no price, so nothing was saved for/.test(body),
+    'and the save says so instead of dropping it quietly');
 }
 
 /* ---------- 6. the copy no longer sends people away ------------------ */
