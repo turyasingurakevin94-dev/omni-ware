@@ -4428,6 +4428,13 @@
   .mp-dot.on{background:var(--ow-verdigris);}
   .mp-dot.off{background:var(--ow-amber);}
   .mp-results-more{padding:8px 12px;font-size:11.5px;color:var(--ink-soft);}
+  /* Scrolls rather than truncates: a row that is not rendered is a place
+     that cannot be moved or removed. */
+  .mp-results{max-height:320px;overflow-y:auto;}
+  .mp-filters{display:flex;gap:4px;}
+  .mp-filter{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);}
+  .mp-filter.active{background:var(--ow-steel-100);color:var(--ink);}
   .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;
     color:#fff;font-weight:700;font-family:'Inter',sans-serif;border:2px solid #fff;
     box-shadow:0 1px 3px rgba(20,26,33,0.35);}
@@ -5510,6 +5517,11 @@
             <button type="button" class="mp-layer" data-layer="deliveries">Deliveries</button>
           </div>
           <div class="mp-head-right">
+            <div class="mp-filters" id="mp_filters">
+              <button type="button" class="mp-filter active" data-filter="all">All</button>
+              <button type="button" class="mp-filter" data-filter="todo">To place</button>
+              <button type="button" class="mp-filter" data-filter="placed">On the map</button>
+            </div>
             <div class="search-bar mp-search"><input id="mp_search" placeholder="Search places to place or find..."></div>
             <span id="mp_summary" class="mp-summary"></span>
           </div>
@@ -11560,7 +11572,7 @@ function deliveryMapRuns(){
    twenty places quick, and the ones still to do are the work. Within
    each half, busiest first -- pinning the place holding thirteen
    customers is worth more than the one holding one. */
-function mapPlaceSearch(rows, query){
+function mapPlaceSearch(rows, query, filter){
   const tokens = searchTokens(query);
   /* No .slice() and no empty-query branch: filter() already returns a
      fresh array, so sort() cannot reach the caller's rows, and
@@ -11568,6 +11580,13 @@ function mapPlaceSearch(rows, query){
      box already shows everything. Both were belt on top of braces. */
   return (rows||[])
     .filter(r=> matchesAllTokens(String(r.name||'').toLowerCase(), tokens))
+    /* Unplaced sorts first, which is right for the job of pinning twenty
+       places -- and wrong the moment somebody wants to change a pin they
+       already set, because the placed ones sort LAST and fall off the end
+       of the list. Found live: two pins that existed, could not be seen,
+       and so could not be removed. The filter is how you ask for the
+       other half. */
+    .filter(r=> filter === 'todo' ? !r.pin : filter === 'placed' ? !!r.pin : true)
     .sort((a,b)=>
       (a.pin ? 1 : 0) - (b.pin ? 1 : 0)
       || b.count - a.count
@@ -11616,6 +11635,7 @@ function mapMarkerRadius(count){
 }
 
 let mpLayer = 'customers';
+let mpFilter = 'all';
 let mpMap = null, mpMarkers = null, mpSelected = null;
 const MAP_HOME_PLACE_KEY = 'owMapHomePlace';
 
@@ -11838,12 +11858,17 @@ function renderMapResults(){
   const el = document.getElementById('mp_results');
   if(!el) return;
   const q = document.getElementById('mp_search').value;
-  const all = mapPlaceSearch(mapPlaceRows(), q);
+  const all = mapPlaceSearch(mapPlaceRows(), q, mpFilter);
   const tokens = searchTokens(q);
-  const shown = all.slice(0, 12);
+  // Every match is rendered; the box scrolls. Cutting the list at twelve
+  // hid the placed ones entirely, since they sort last by design.
+  const shown = all;
   if(!all.length){
     el.innerHTML = `<div class="mp-results"><div class="mp-results-more">${
-      q.trim() ? 'No place matches that.' : 'No places on file yet.'}</div></div>`;
+      q.trim() ? 'No place matches that.'
+        : mpFilter === 'placed' ? 'Nothing is on the map yet.'
+        : mpFilter === 'todo' ? 'Every place is on the map.'
+        : 'No places on file yet.'}</div></div>`;
     return;
   }
   el.innerHTML = `<div class="mp-results">${shown.map(r=>`
@@ -11860,8 +11885,7 @@ function renderMapResults(){
           mpPinning === r.name ? 'Click the map…' : (r.pin ? 'Move' : 'Place')}</button>
         ${r.pin ? `<button type="button" class="mp-chip mp-clear" data-name="${esc(r.name)}">Remove</button>` : ''}
       </div>
-    </div>`).join('')}${all.length > shown.length
-      ? `<div class="mp-results-more">${all.length - shown.length} more — keep typing to narrow it.</div>` : ''}</div>`;
+    </div>`).join('')}</div>`;
 
   el.querySelectorAll('.mp-place').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
   el.querySelectorAll('.mp-clear').forEach(b=> b.addEventListener('click', ()=> mapRemovePin(b.dataset.name)));
@@ -11907,6 +11931,12 @@ function renderMapSide(){
 }
 
 document.getElementById('mp_search').addEventListener('input', renderMapResults);
+document.getElementById('mp_filters').addEventListener('click', (e)=>{
+  const b = e.target.closest('.mp-filter'); if(!b) return;
+  mpFilter = b.dataset.filter;
+  document.querySelectorAll('.mp-filter').forEach(x=> x.classList.toggle('active', x === b));
+  renderMapResults();
+});
 document.getElementById('mp_layers').addEventListener('click', (e)=>{
   const b = e.target.closest('.mp-layer'); if(!b) return;
   mpLayer = b.dataset.layer;

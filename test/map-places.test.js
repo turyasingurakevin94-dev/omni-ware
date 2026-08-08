@@ -430,4 +430,69 @@ const reset = () => {
     'then saves and redraws');
 }
 
+/* ---------- 12. the placed ones must be reachable -------------------- *
+ * REPORTED LIVE: "I had already placed a pin for Katwe and Gaggawala but
+ * am not seeing a way of removing them." Both pins existed with good
+ * coordinates. The list sorts unplaced FIRST -- right for the job of
+ * pinning twenty places -- and was then cut at twelve rows. With twenty
+ * places still to do, the two that were placed sorted to positions
+ * twenty-one and twenty-two and were never rendered. Move and Remove
+ * live on those rows, so a pin became unremovable by being invisible.
+ *
+ * Two things follow: the list renders every match and scrolls, and there
+ * is a way to ask for the placed half directly.
+ */
+{
+  const fData = { places: [] };
+  const fScope = compileScope([
+    extractFunction(src, 'searchTokens', 'index.html'),
+    extractFunction(src, 'matchesAllTokens', 'index.html'),
+    extractFunction(src, 'mapPlaceSearch', 'index.html'),
+  ], { data: fData, canonicalLocation: (raw) => String(raw || '').trim() }, ['mapPlaceSearch']);
+
+  // The reported shape: twenty unplaced, two placed.
+  const many = [];
+  for (let i = 0; i < 20; i++) many.push({ name: 'Todo ' + i, count: 20 - i, pin: null });
+  many.push({ name: 'Katwe', count: 5, pin: { lat: 0.316, lng: 32.568 } });
+  many.push({ name: 'Gaggawala', count: 12, pin: { lat: 0.317, lng: 32.571 } });
+
+  const all = fScope.mapPlaceSearch(many, '', 'all');
+  eq(all.length, 22, 'every place is returned — nothing is dropped before it reaches the screen');
+  /* The bug, stated as the thing that must stay true: the placed ones
+     sort last, so any cap at all buries them. */
+  t.check(all.findIndex((r) => r.name === 'Katwe') > 12,
+    'placed places still sort last, which is why the list may not be truncated');
+
+  const placed = fScope.mapPlaceSearch(many, '', 'placed');
+  eq(placed.length, 2, 'asking for the placed half returns exactly the pins on the map');
+  t.check(placed.every((r) => r.pin), 'and nothing without a pin');
+  eq(placed[0].name, 'Gaggawala', 'busiest first among them');
+
+  const todo = fScope.mapPlaceSearch(many, '', 'todo');
+  eq(todo.length, 20, 'and asking for the work returns only what is still to do');
+  t.check(todo.every((r) => !r.pin), 'with nothing already placed in the way');
+
+  // The filter and the search compose.
+  eq(fScope.mapPlaceSearch(many, 'katwe', 'placed').length, 1, 'searching within the placed half works');
+  eq(fScope.mapPlaceSearch(many, 'katwe', 'todo').length, 0,
+    'and a placed place is correctly absent from the to-do half');
+}
+
+/* ---------- 13. and the screen honours that --------------------------- */
+{
+  const wired3 = stripLineComments(src);
+  const rr2 = extractFunction(src, 'renderMapResults', 'index.html');
+  t.check(/const shown = all;/.test(rr2),
+    'every match is rendered — a row that is not drawn is a pin that cannot be moved or removed');
+  t.check(!/all\.slice\(0, ?\d+\)/.test(rr2), 'nothing silently truncates the list');
+  t.check(/\.mp-results\{max-height:320px;overflow-y:auto;\}/.test(src),
+    'the list scrolls instead, so a long one is still all there');
+  t.check(/mapPlaceSearch\(mapPlaceRows\(\), q, mpFilter\)/.test(rr2),
+    'and the chosen half is what it asks for');
+  t.check(/data-filter="placed"/.test(src) && /data-filter="todo"/.test(src),
+    'with a way to ask for either half');
+  t.check(/mpFilter = b\.dataset\.filter;/.test(wired3) && /renderMapResults\(\);/.test(wired3),
+    'that redraws when pressed');
+}
+
 process.exit(t.done() ? 1 : 0);
