@@ -203,7 +203,7 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
     'and saving records it, trimmed');
   t.check(/document\.getElementById\('s_shopno'\)\.value = s\.shopNo \|\| '';/.test(src),
     'editing fills it back');
-  t.check(/\['s_id','s_name','s_phone','s_location','s_shopno','s_notes'\]/.test(src),
+  t.check(/\['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes'\]/.test(src),
     'and the reset clears it with the rest');
 
   /* Both directions of the sync, in both apps -- an unmapped column is a

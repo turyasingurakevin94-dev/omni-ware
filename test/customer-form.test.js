@@ -193,8 +193,8 @@ if (scope) {
  * it has to be able to say so.
  */
 {
-  t.check(/const dup = cfFindDuplicate\(name, phone, editingCustomerId\);/.test(save),
-    'saving checks for one');
+  t.check(/const dup = cfFindDuplicate\(name, phone, editingCustomerId, phone2\);/.test(save),
+    'saving checks for one — against BOTH numbers, or a second-line duplicate slips through');
   t.check(/if\(dup && !confirm\(/.test(save) && /Add them anyway\?/.test(save),
     'and asks rather than refusing');
   t.check(/the second record would never be charged/.test(save),
@@ -313,6 +313,84 @@ if (scope) {
   t.check(/chk\.amount > 0 && !cfNormalisedPhone/.test(chase),
     'a balance given to somebody with no phone number is flagged');
   t.check(/nobody to ring about this/.test(chase), 'in terms of what it costs the shop');
+}
+
+/* ---------- a second phone, and the duplicate check that reads it ----
+ * People here carry two lines -- a personal one and a shop one, or two
+ * networks against a bad signal. The second number used to go in the
+ * notes, where nothing could match it.
+ *
+ * THE TRAP: the duplicate check compares phones, and it has to compare
+ * EVERY number on the form against EVERY number on file. Checking only
+ * the first pair means typing somebody's second line is met with
+ * silence, and the shop creates exactly the duplicate this check exists
+ * to prevent -- one where invoices charge the old record while the new
+ * one sits at zero.
+ */
+{
+  const dupNames = ['cfNormalisedName', 'cfNormalisedPhone', 'contactPhones', 'cfFindDuplicate'];
+  const dupData = { customers: [] };
+  const dupScope = compileScope(
+    dupNames.map((n) => extractFunction(src, n, 'index.html')), { data: dupData }, dupNames);
+
+  eq(dupScope.contactPhones({ phone: '0772111222', phone2: '0700333444' }).length, 2,
+    'a record with two numbers reports two');
+  eq(dupScope.contactPhones({ phone: '0772111222', phone2: '   ' }).length, 1,
+    'a blank second number is not a number');
+  eq(dupScope.contactPhones({}).length, 0, 'and a record with none reports none');
+
+  dupData.customers = [{ id: 'C1', name: 'Kato', phone: '0772111222', phone2: '0700333444' }];
+  t.check(!!dupScope.cfFindDuplicate('Someone Else', '0772111222', null, ''),
+    'their FIRST number is recognised');
+  /* The whole point: matching their second number, from either box. */
+  t.check(!!dupScope.cfFindDuplicate('Someone Else', '0700333444', null, ''),
+    'and so is their SECOND, typed as somebody\'s first');
+  t.check(!!dupScope.cfFindDuplicate('Someone Else', '0755000000', null, '0700333444'),
+    'and their second matched against a second, which is the case that used to pass silently');
+  t.check(dupScope.cfFindDuplicate('Someone Else', '0755000000', null, '0788000000') === null,
+    'while two genuinely new numbers are not a duplicate');
+  t.check(dupScope.cfFindDuplicate('Someone Else', '', null, '') === null,
+    'and no number at all matches nobody by phone');
+  /* Excluding yourself still works, or editing a customer accuses them
+     of being their own duplicate. */
+  t.check(dupScope.cfFindDuplicate('Kato', '0772111222', 'C1', '0700333444') === null,
+    'a customer is never their own duplicate');
+}
+
+/* ---------- the second number is asked for, kept and shown ---------- */
+{
+  const code2 = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(/id="c_phone2"/.test(src) && /id="s_phone2"/.test(src),
+    'both the customer and supplier forms offer a second number');
+  t.check(/const phone2 = document\.getElementById\('c_phone2'\)\.value\.trim\(\);/.test(code2),
+    'the customer save reads it');
+  /* BOTH branches. Found live: the edit path kept it and the create path
+     did not, so a customer entered with two numbers came out with one --
+     and asserting the shared fragment alone was satisfied by whichever
+     branch still had it. */
+  t.check(/\.\.\.data\.customers\[idx\], id, name, location, phone, phone2,/.test(code2),
+    'editing keeps it on the record');
+  t.check(/data\.customers\.push\(\{[\s\S]{0,40}id, name, location, phone, phone2,/.test(code2),
+    'and creating a new customer keeps it too');
+  t.check(/phone2: document\.getElementById\('s_phone2'\)\.value\.trim\(\),/.test(code2),
+    'the supplier save keeps it too');
+  t.check(/document\.getElementById\('c_phone2'\)\.value = c\.phone2 \|\| '';/.test(code2)
+    && /document\.getElementById\('s_phone2'\)\.value = s\.phone2 \|\| '';/.test(code2),
+    'and editing either form fills it back');
+
+  // Both directions, or the number empties itself on the next reload.
+  t.check(/phone2:c\.phone2\|\|''/.test(code2) && /phone2:c\.phone2\|\|null/.test(code2),
+    'the customer number round-trips to the server, both ways');
+  t.check(/phone2:s\.phone2\|\|''/.test(code2) && /phone2:s\.phone2\|\|null/.test(code2),
+    'and so does the supplier one');
+
+  /* Read through the one helper everywhere, so a number the shop can
+     see on the card is a number the duplicate check and the WhatsApp
+     match can see too. */
+  t.check(/\$\{contactPhones\(c\)\.map\(ph=>/.test(src) && /\$\{contactPhones\(s\)\.map\(ph=>/.test(src),
+    'both cards list every number on the record, not just the first');
+  t.check(/\$\{\(!contactPhones\(c\)\.length && !c\.location && !c\.notes\)/.test(src),
+    'and "no contact details" counts the second number as contact details');
 }
 
 process.exit(t.done() ? 1 : 0);

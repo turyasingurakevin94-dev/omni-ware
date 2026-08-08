@@ -6332,6 +6332,7 @@
                with the prices on one and the invoices on the other. -->
           <div id="s_duplicate"></div>
           <input id="s_phone" placeholder="Phone — e.g. 0700 000 000" autocomplete="off">
+          <input id="s_phone2" placeholder="Second phone — optional" autocomplete="off">
         </div>
 
         <div class="sup-block">
@@ -6414,6 +6415,9 @@
           <div class="cf-who">
             <input id="c_name" class="cf-name" placeholder="Their name" autocomplete="off">
             <input id="c_phone" class="cf-phone" placeholder="Phone — e.g. 0700 000 000" autocomplete="off">
+            <!-- Optional, and second: a shop with one number for somebody
+                 should not be made to look at an empty required box. -->
+            <input id="c_phone2" class="cf-phone" placeholder="Second phone — optional" autocomplete="off">
           </div>
           <div class="cf-duplicate" id="c_duplicate"></div>
         </div>
@@ -8289,7 +8293,7 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||'', location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     // payBasis and payRate stay null rather than becoming '' and 0: a
     // staff member nobody has set a rate for has not been given a rate
     // of nothing, and the payroll screen has to be able to tell those
@@ -8299,7 +8303,7 @@ async function loadData(shopId){
       payBasis: s.pay_basis || null,
       payRate: s.pay_rate==null ? null : Number(s.pay_rate)})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
-    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null, debtLog: debtByCustomer[c.id]||[]})),
+    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||'', location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
       id:p.id, name:p.name, type:p.type||'simple', category:p.category, subcategory:p.subcategory||'',
@@ -8468,7 +8472,7 @@ function buildSyncRows(d, shopId){
     id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
       // Written through as null, never coerced to 0 -- see the load side.
       pay_basis: s.payBasis || null,
@@ -8476,7 +8480,7 @@ function buildSyncRows(d, shopId){
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
     agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||null, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
-    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null})),
+    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, phone2:c.phone2||null, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
       shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
@@ -9892,7 +9896,10 @@ function waConvUnread(c){
 function waMatchCustomer(waId){
   const suffix = cfNormalisedPhone(waId);
   if(!suffix) return null;
-  const hits = (data.customers||[]).filter(c=> cfNormalisedPhone(c.phone) === suffix);
+  // Either of their numbers: people message from whichever line has
+  // signal, which is the reason for having two.
+  const hits = (data.customers||[]).filter(c=>
+    contactPhones(c).some(p=> cfNormalisedPhone(p) === suffix));
   return hits.length === 1 ? hits[0] : null;
 }
 
@@ -17475,7 +17482,7 @@ function supplierCardHTML(s, productMatches){
       </div>
     </div>
     <div class="sc-details">
-      ${s.phone ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(s.phone)}</span></div>` : ''}
+      ${contactPhones(s).map(ph=> `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(ph)}</span></div>`).join('')}
       ${s.location ? `<div class="sc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(s.location)}</span></div>` : ''}
       ${s.notes ? `<div class="sc-notes">${esc(s.notes)}</div>` : ''}
       ${(!s.phone && !s.location && !s.notes) ? `<div class="sc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
@@ -17515,6 +17522,7 @@ function editSupplier(id){
   document.getElementById('s_id').value = s.id;
   document.getElementById('s_name').value = s.name;
   document.getElementById('s_phone').value = s.phone;
+  document.getElementById('s_phone2').value = s.phone2 || '';
   document.getElementById('s_location').value = s.location;
   document.getElementById('s_shopno').value = s.shopNo || '';
   document.getElementById('s_notes').value = s.notes;
@@ -17527,7 +17535,7 @@ function editSupplier(id){
 }
 function resetSupplierForm(){
   editingSupplierId = null;
-  ['s_id','s_name','s_phone','s_location','s_shopno','s_notes'].forEach(id=>document.getElementById(id).value='');
+  ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes'].forEach(id=>document.getElementById(id).value='');
   fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
   sfFillLinkPicker(null);
   supShowIssuedId();
@@ -17703,6 +17711,7 @@ Add them anyway?`)) return;
   const record = {
     id, name,
     phone: document.getElementById('s_phone').value.trim(),
+    phone2: document.getElementById('s_phone2').value.trim(),
     // rememberLocation adds a new place to the shared list and settles
     // a known one to its recorded spelling, so "ntinda" and "Ntinda"
     // do not become two places on the pickup run.
@@ -19658,7 +19667,7 @@ function customerCardHTML(c){
       </div>
     </div>
     <div class="cc-details">
-      ${c.phone ? `<div class="cc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(c.phone)}</span></div>` : ''}
+      ${contactPhones(c).map(ph=> `<div class="cc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(ph)}</span></div>`).join('')}
       ${c.location ? `<div class="cc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(c.location)}</span></div>` : ''}
       ${(()=>{
         /* The whole point of the link: what they owe and what is owed to
@@ -19676,7 +19685,7 @@ function customerCardHTML(c){
         </div>`;
       })()}
       ${c.notes ? `<div class="cc-notes">${esc(c.notes)}</div>` : ''}
-      ${(!c.phone && !c.location && !c.notes) ? `<div class="cc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
+      ${(!contactPhones(c).length && !c.location && !c.notes) ? `<div class="cc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
     </div>
     <div class="cc-debt-row">
       <div>
@@ -19955,6 +19964,19 @@ function cfNormalisedName(s){ return String(s||'').trim().replace(/\s+/g,' ').to
 /* One phone written three ways -- 0772 900 900, +256 772 900 900,
    772900900 -- is one phone. Reduced to the nine local digits so the
    check is not defeated by how somebody happened to type it. */
+/* Every number on a record, in one place.
+
+   Written once because four things read it -- the duplicate check, the
+   WhatsApp match, the card and the printed line -- and a second number
+   that only some of them knew about would be worse than no second
+   number: the shop would think it had recorded a way to reach somebody
+   that half the app could not see. Blanks are dropped rather than
+   returned empty, so callers never have to test each one. */
+function contactPhones(rec){
+  return [rec && rec.phone, rec && rec.phone2]
+    .map(x=> String(x||'').trim())
+    .filter(Boolean);
+}
 function cfNormalisedPhone(s){
   let d = String(s||'').replace(/\D+/g,'');
   if(d.length < 9) return '';
@@ -19964,11 +19986,17 @@ function cfNormalisedPhone(s){
    called Kato is ordinary in this trade, two on one number is one
    person. Matching on name alone would miss the second and query the
    first. */
-function cfFindDuplicate(name, phone, excludeId){
+function cfFindDuplicate(name, phone, excludeId, phone2){
   const list = (data.customers||[]).filter(c=> c.id !== excludeId);
-  const ph = cfNormalisedPhone(phone);
-  if(ph){
-    const byPhone = list.find(c=> cfNormalisedPhone(c.phone) === ph);
+  /* EVERY number against EVERY number. A shop that types somebody's
+     second line and is told nothing has been warned about nothing: the
+     duplicate it was about to create is exactly the one this check
+     exists to catch, and it is on file under the other number. */
+  const mine = [phone, phone2].map(cfNormalisedPhone).filter(Boolean);
+  if(mine.length){
+    const byPhone = list.find(c=>
+      contactPhones(c).map(cfNormalisedPhone).filter(Boolean)
+        .some(p=> mine.includes(p)));
     if(byPhone) return { c: byPhone, on: 'phone' };
   }
   const key = cfNormalisedName(name);
@@ -20021,6 +20049,7 @@ function editCustomer(id){
   document.getElementById('c_id').value = c.id;
   document.getElementById('c_name').value = c.name || '';
   document.getElementById('c_phone').value = c.phone || '';
+  document.getElementById('c_phone2').value = c.phone2 || '';
   document.getElementById('c_location').value = c.location || '';
   document.getElementById('c_notes').value = c.notes || '';
   document.getElementById('c_debt').value = '';
@@ -20036,7 +20065,7 @@ function editCustomer(id){
 }
 function resetCustomerForm(){
   editingCustomerId = null;
-  ['c_id','c_name','c_phone','c_location','c_debt','c_debt_since','c_notes'].forEach(id=>document.getElementById(id).value='');
+  ['c_id','c_name','c_phone','c_phone2','c_location','c_debt','c_debt_since','c_notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c_debt_undated').checked = false;
   fillIssuedId('c_id', 'customer', 'C', 3, data.customers);
   cfFillLinkPicker(null);
@@ -20161,7 +20190,8 @@ function cfShowOwed(c){
 function cfRenderDuplicate(){
   const el = document.getElementById('c_duplicate');
   const dup = cfFindDuplicate(document.getElementById('c_name').value,
-    document.getElementById('c_phone').value, editingCustomerId);
+    document.getElementById('c_phone').value, editingCustomerId,
+    document.getElementById('c_phone2').value);
   if(!dup){ el.innerHTML = ''; return; }
   const owed = Math.round(Number(dup.c.debt)||0);
   const open = customerOutstandingInvoices(dup.c.id).length;
@@ -20294,6 +20324,8 @@ function deleteCustomer(id){
 document.getElementById('c_add_btn').addEventListener('click', ()=>{
   resetCustomerForm(); openModal('customerModal'); document.getElementById('c_name').focus();
 });
+document.getElementById('c_phone2').addEventListener('input', cfRefresh);
+document.getElementById('s_phone2').addEventListener('input', supRefresh);
 document.getElementById('c_link_supplier').addEventListener('change', ()=>
   cfShowLinkHint(editingCustomerId ? data.customers.find(c=>c.id===editingCustomerId) : null));
 document.getElementById('s_link_customer').addEventListener('change', ()=>
@@ -20303,12 +20335,13 @@ document.getElementById('c_save').addEventListener('click', ()=>{
   const name = document.getElementById('c_name').value.trim();
   if(!name){ toast('Customer name is required'); document.getElementById('c_name').focus(); return; }
   const phone = document.getElementById('c_phone').value.trim();
+  const phone2 = document.getElementById('c_phone2').value.trim();
   /* Asked, not refused. Two genuinely different people CAN share a name,
      and a shop that means it has to be able to say so -- refusing would
      make the app wrong about the world. Staying silent made it wrong
      about the shop's own records, which is worse: the duplicate never
      gets charged and nobody finds out. */
-  const dup = cfFindDuplicate(name, phone, editingCustomerId);
+  const dup = cfFindDuplicate(name, phone, editingCustomerId, phone2);
   if(dup && !confirm(dup.on === 'phone'
     ? `${dup.c.name || 'A customer'} is already on file with that phone number.\n\nIf this is the same person, adding them twice means invoices only ever charge the first record — the new one sits at zero while the money piles up on the old one.\n\nAdd them anyway?`
     : `You already have a customer called "${dup.c.name}".\n\nInvoices find a customer by name and take the first match, so the second record would never be charged — it would sit at zero while the money piles up on the first.\n\nAdd them anyway?`)) return;
@@ -20332,7 +20365,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
     data.customers[idx] = {
-      ...data.customers[idx], id, name, location, phone,
+      ...data.customers[idx], id, name, location, phone, phone2,
       notes: document.getElementById('c_notes').value.trim(),
     };
     // Through linkCustomerSupplier so BOTH records are written and any
@@ -20370,7 +20403,7 @@ document.getElementById('c_save').addEventListener('click', ()=>{
     }
     const openingDebt = chk.amount;
     data.customers.push({
-      id, name, location, phone,
+      id, name, location, phone, phone2,
       debt: openingDebt,
       notes: document.getElementById('c_notes').value.trim(),
       debtLog: openingDebt > 0

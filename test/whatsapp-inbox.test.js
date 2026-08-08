@@ -163,6 +163,7 @@ if (!hook) process.exit(1);
     scope = compileScope([
       ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
       extractFunction(src, 'cfNormalisedPhone', 'index.html'),
+      extractFunction(src, 'contactPhones', 'index.html'),
     ], env, NAMES);
   } catch (e) { cErr = e; }
   t.check(!!scope, `the client inbox helpers compile${cErr ? ` (${cErr.message})` : ''}`);
@@ -195,6 +196,21 @@ if (!hook) process.exit(1);
     eq((scope.waMatchCustomer('256772123456') || {}).id, 'C1',
       'a WhatsApp id matches the customer whose phone ends the same way');
     eq(scope.waMatchCustomer('256799999999'), null, 'no match, no guess');
+
+    /* People message from whichever line has signal -- which is the
+       whole reason for having two. Matching only the first number would
+       show a regular customer as an unknown number every time they used
+       their other phone.
+
+       The list is put back afterwards: later checks in this block APPEND
+       to it, and replacing it outright left them testing a different
+       fixture than the one they set up. */
+    const savedCustomers = env.data.customers;
+    env.data.customers = [{ id: 'C9', name: 'Two Lines', phone: '0772111222', phone2: '0700333444' }];
+    eq((scope.waMatchCustomer('256700333444') || {}).id, 'C9',
+      'a customer messaging from their SECOND number is still recognised');
+    eq((scope.waMatchCustomer('256772111222') || {}).id, 'C9', 'and from their first');
+    env.data.customers = savedCustomers;
     env.data.customers.push({ id: 'C3', name: 'Other Okello', phone: '+256 772 123456' });
     eq(scope.waMatchCustomer('256772123456'), null,
       'TWO customers sharing the suffix: no match — a hint must never merge people');
