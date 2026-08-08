@@ -107,9 +107,6 @@ const V = [
      already writes through. */
   t.check(/wrap\.innerHTML = shown\.map\(\(\{v,i\}\)=>`/.test(code),
     'the cards render from the filtered pairs, keeping the real index as `i`');
-  t.check(/const shown = filterSortVariants\(draftVariants, vfQuery, vfSort\);/.test(code),
-    'and the visible slice is what the filter decided');
-
   t.check(/vfQuery = e\.target\.value;\s*\r?\n\s*renderVariantsList\(\);/.test(code),
     'typing narrows the list as you go');
   /* Showing a slice without saying so leaves somebody sure the other
@@ -125,15 +122,26 @@ const V = [
     'and a query that matches nothing says so rather than looking like an empty product');
 
   /* A filter left over from the last product would open the next one
-     showing a fraction of its variants with nothing saying why. */
-  const open = extractFunction(src, 'editProduct', 'index.html');
-  t.check(/vfQuery = ''; vfSort = 'generated';/.test(open),
-    'opening a product clears the filter left over from the last one');
+     showing a fraction of its variants with nothing saying why. Both
+     paths into the form must clear it — this shipped broken because only
+     the edit path did, and the Add path carried a stale query in. */
+  t.check(/resetVariantFilter\(\);/.test(extractFunction(src, 'editProduct', 'index.html')),
+    'opening a product to edit clears the filter left over from the last one');
+  t.check(/resetVariantFilter\(\);/.test(extractFunction(src, 'resetProductForm', 'index.html')),
+    'and so does opening the form to add a new one');
 
   /* The bar is furniture on a product with three variants. */
   t.check(/const VARIANT_FILTER_MIN = 6;/.test(code)
-    && /draftVariants\.length >= VARIANT_FILTER_MIN \? '' : 'none'/.test(code),
+    && /const filterable = draftVariants\.length >= VARIANT_FILTER_MIN;/.test(code)
+    && /bar\.style\.display = filterable \? '' : 'none'/.test(code),
     'and it only appears once there are enough variants for finding one to be work');
+
+  /* THE ESCAPE HATCH. Hiding the bar takes the Clear button with it, so
+     a filter that still applied below the threshold would be a list of
+     four variants showing none, with nothing on screen to undo it. This
+     is what a stale query actually did before the guard existed. */
+  t.check(/const shown = filterable\s*\r?\n\s*\? filterSortVariants\(draftVariants, vfQuery, vfSort\)\s*\r?\n\s*: draftVariants\.map\(\(v,i\)=>\(\{ v, i \}\)\);/.test(code),
+    'a hidden bar does not filter — no visible Clear means no filter, whatever the state says');
 }
 
 /* ---------- 5. the same filter on the price form --------------------- */
@@ -148,8 +156,10 @@ const V = [
   t.check(/id="prv_search"/.test(src) && /id="prv_sort"/.test(src) && /id="prv_clear"/.test(src),
     'the price form has its own filter, sort and clear');
   const bulk = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
-  t.check(/const shownVariants = filterSortVariants\(p\.variants, prvQuery, prvSort\);/.test(bulk),
+  t.check(/const shownVariants = prFilterable\s*\r?\n\s*\? filterSortVariants\(p\.variants, prvQuery, prvSort\)\s*\r?\n\s*: p\.variants\.map\(\(v,i\)=>\(\{ v, i \}\)\);/.test(bulk),
     'and narrows the price list through the same filter as the product form');
+  t.check(/const prFilterable = p\.variants\.length >= VARIANT_FILTER_MIN;/.test(bulk),
+    'with the same escape hatch: below the threshold the hidden bar filters nothing');
   t.check(/wrap\.innerHTML = shownVariants\.length \? shownVariants\.map\(\(\{v,i\}\)=>\{/.test(bulk),
     'the price cards render from the pairs, so data-idx stays the real variant');
   t.check(/\$\{shownVariants\.length\} of \$\{p\.variants\.length\}/.test(bulk)
@@ -157,7 +167,7 @@ const V = [
     'the price bar says how many of how many are showing');
   t.check(/No variant matches that/.test(bulk),
     'and a query matching nothing says so, rather than reading as a product with nothing to price');
-  t.check(/p\.variants\.length >= VARIANT_FILTER_MIN \? '' : 'none'/.test(bulk),
+  t.check(/filterBar\.style\.display = prFilterable \? '' : 'none'/.test(bulk),
     'appearing on the same terms — only once there are enough variants for finding one to be work');
 
   /* Two modals, two filters. A word typed while pricing one product must

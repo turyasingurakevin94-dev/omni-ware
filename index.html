@@ -23484,9 +23484,16 @@ function renderVariantsList(){
   }
   /* The bar earns its place once there are enough variants that finding
      one is work. Below that it would be furniture. */
+  const filterable = draftVariants.length >= VARIANT_FILTER_MIN;
   const bar = document.getElementById('variantFilterBar');
-  if(bar) bar.style.display = draftVariants.length >= VARIANT_FILTER_MIN ? '' : 'none';
-  const shown = filterSortVariants(draftVariants, vfQuery, vfSort);
+  if(bar) bar.style.display = filterable ? '' : 'none';
+  /* A hidden bar must not still be filtering. The Clear button goes with
+     it, so a query carried in from a longer list would empty a short one
+     with no visible way back -- four variants generated, none shown, and
+     nothing on screen to explain it or undo it. */
+  const shown = filterable
+    ? filterSortVariants(draftVariants, vfQuery, vfSort)
+    : draftVariants.map((v,i)=>({ v, i }));
   const count = document.getElementById('vf_count');
   if(count) count.textContent = shown.length === draftVariants.length
     ? `${draftVariants.length} variants`
@@ -23626,10 +23633,16 @@ document.getElementById('vf_sort').addEventListener('change', (e)=>{
   vfSort = e.target.value;
   renderVariantsList();
 });
-document.getElementById('vf_clear').addEventListener('click', ()=>{
+/* One reset, called from every path that opens the product form. It was
+   two inline copies and the Add path had neither, so a query typed on a
+   sixty-variant product rode into a four-variant one and hid all four. */
+function resetVariantFilter(){
   vfQuery = ''; vfSort = 'generated';
-  document.getElementById('vf_search').value = '';
-  document.getElementById('vf_sort').value = 'generated';
+  const s = document.getElementById('vf_search'); if(s) s.value = '';
+  const o = document.getElementById('vf_sort'); if(o) o.value = 'generated';
+}
+document.getElementById('vf_clear').addEventListener('click', ()=>{
+  resetVariantFilter();
   renderVariantsList();
 });
 
@@ -24673,9 +24686,7 @@ function editProduct(id){
   /* Cleared with the form: a filter left over from the last product
      would open the next one showing a fraction of its variants, with
      nothing on screen saying why. */
-  vfQuery = ''; vfSort = 'generated';
-  const vfs = document.getElementById('vf_search'); if(vfs) vfs.value = '';
-  const vfo = document.getElementById('vf_sort'); if(vfo) vfo.value = 'generated';
+  resetVariantFilter();
   draftVariants = (p.variants||[]).map(v=>({sku:v.sku||'', combo:{...v.combo}, image:v.image||null,
     wholesaleMarkupType:v.wholesaleMarkupType||'percent', wholesaleMarkupValue:v.wholesaleMarkupValue||0,
     retailMarkupType:v.retailMarkupType||'percent', retailMarkupValue:v.retailMarkupValue||0}));
@@ -24776,6 +24787,7 @@ function resetProductForm(){
   setProductImagePreview(null);
   draftVariantAttrs = [];
   draftVariants = [];
+  resetVariantFilter();
   renderVariantAttrRows();
   renderVariantsList();
   setProductType('simple');
@@ -25339,12 +25351,18 @@ function renderPrBulkVariantRows(){
     if(filterBar) filterBar.style.display = 'none';
     return;
   }
-  if(filterBar) filterBar.style.display = p.variants.length >= VARIANT_FILTER_MIN ? '' : 'none';
+  const prFilterable = p.variants.length >= VARIANT_FILTER_MIN;
+  if(filterBar) filterBar.style.display = prFilterable ? '' : 'none';
   /* Each row keeps the index it has in p.variants: every tier control on
      a card carries that number in data-idx, and toggleBulkVariantOverride
      and addBulkVariantTier read it straight back. Renumbering the
-     filtered rows would customize the wrong variant's pricing. */
-  const shownVariants = filterSortVariants(p.variants, prvQuery, prvSort);
+     filtered rows would customize the wrong variant's pricing.
+
+     And as on the product form, a hidden bar does not filter: no Clear
+     button on screen means no way out of a query that matches nothing. */
+  const shownVariants = prFilterable
+    ? filterSortVariants(p.variants, prvQuery, prvSort)
+    : p.variants.map((v,i)=>({ v, i }));
   const prvCount = document.getElementById('prv_count');
   if(prvCount) prvCount.textContent = shownVariants.length === p.variants.length
     ? `${p.variants.length} variants`
