@@ -131,7 +131,9 @@ const V = [
     'and so does opening the form to add a new one');
 
   /* The bar is furniture on a product with three variants. */
-  t.check(/const VARIANT_FILTER_MIN = 6;/.test(code)
+  /* Four, because a four-variant product already scrolls in the price
+     form. Six was a guess and it hid the bar on a real product. */
+  t.check(/const VARIANT_FILTER_MIN = 4;/.test(code)
     && /const filterable = draftVariants\.length >= VARIANT_FILTER_MIN;/.test(code)
     && /bar\.style\.display = filterable \? '' : 'none'/.test(code),
     'and it only appears once there are enough variants for finding one to be work');
