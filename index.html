@@ -1158,6 +1158,14 @@
   .agent-discount-hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
   .agent-discount-warn{font-size:12px;color:var(--danger);margin-top:4px;font-weight:600;}
 
+  .vf-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
+    padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--ow-steel-050);}
+  .vf-search{flex:1 1 220px;min-width:0;margin:0;}
+  /* Matched to the other filter selects in the app; a bare <select> here
+     renders half the height of the search box beside it. */
+  .vf-bar select{padding:9px 10px;border:1px solid var(--line);border-radius:7px;
+    font-size:13px;font-family:inherit;background:#fff;color:var(--ink);}
+  .vf-count{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .variant-cards{display:flex;flex-direction:column;gap:12px;}
   .variant-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px 16px;}
   .variant-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);}
@@ -7591,6 +7599,18 @@
                 <svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
                 Generate variants
               </button>
+            </div>
+            <!-- Shown only once there are enough variants that finding
+                 one is work; see VARIANT_FILTER_MIN. -->
+            <div class="vf-bar" id="variantFilterBar" style="display:none;">
+              <div class="search-bar vf-search"><input id="vf_search" placeholder="Filter variants — e.g. red, or red m8"></div>
+              <select id="vf_sort">
+                <option value="generated">Generated order</option>
+                <option value="az">A to Z</option>
+                <option value="za">Z to A</option>
+              </select>
+              <span class="vf-count" id="vf_count"></span>
+              <button type="button" class="btn btn-ghost" id="vf_clear">Clear</button>
             </div>
             <div id="variantsListWrap" class="variant-cards" style="margin-top:14px;"></div>
           </div>
@@ -23370,6 +23390,10 @@ function variantEffectiveCaption(v){
 
 /* ---- Variant attribute/combination builder (used inside the product modal) ---- */
 let draftVariantAttrs = [];   // [{name:'Color', values:'Red, Blue'}]
+/* Below this many, every variant fits on the screen and a filter bar is
+   just another control to read past. */
+const VARIANT_FILTER_MIN = 6;
+let vfQuery = '', vfSort = 'generated';
 let draftVariants = [];       // [{sku:'RED-S', combo:{Color:'Red', Size:'S'}}]
 let draftProductImage = null; // Storage URL of the uploaded product photo, or null
 let sessionUploadedMediaIds = [];    // media rows uploaded during this modal session, not yet committed to anything
@@ -23405,13 +23429,60 @@ function renderVariantAttrRows(){
     renderVariantAttrRows();
   }));
 }
+/* Everything a variant can be searched by: its attribute names and
+   values, and its SKU. "red" finds the red ones; "red m8" finds the ones
+   that are both. */
+function variantSearchText(v){
+  const combo = (v && v.combo) || {};
+  return Object.keys(combo)
+    .map(k=> `${k} ${combo[k]}`)
+    .concat([ (v && v.sku) || '' ])
+    .join(' ')
+    .toLowerCase();
+}
+/* The visible slice of a long variant list, each row carrying the index
+   it has in draftVariants.
+
+   THE INDEX IS THE WHOLE PROBLEM. Every field in a variant card writes
+   back through data-idx, so a filtered list that renumbered its rows
+   would send the price typed on the third visible card to the third
+   variant of sixty. The pairs keep the original index and the cards
+   keep their original numbering, so what you see edits what you meant. */
+function filterSortVariants(variants, query, sort){
+  const tokens = searchTokens(query);
+  const rows = (variants||[])
+    .map((v, i)=> ({ v, i }))
+    .filter(r=> matchesAllTokens(variantSearchText(r.v), tokens));
+  const label = (r)=> Object.values((r.v && r.v.combo) || {}).join(' ').toLowerCase();
+  if(sort === 'az') rows.sort((a,b)=> label(a).localeCompare(label(b)));
+  else if(sort === 'za') rows.sort((a,b)=> label(b).localeCompare(label(a)));
+  // 'generated' is the order the attributes made them, which is the order
+  // somebody reading their own list expects. Nothing to sort.
+  return rows;
+}
+
 function renderVariantsList(){
   const wrap = document.getElementById('variantsListWrap');
   if(draftVariants.length===0){
     wrap.innerHTML = '<div class="variants-empty">No variants yet — add attributes above and click "Generate variants", or leave this product as a single option.</div>';
+    const bar0 = document.getElementById('variantFilterBar');
+    if(bar0) bar0.style.display = 'none';
     return;
   }
-  wrap.innerHTML = draftVariants.map((v,i)=>`
+  /* The bar earns its place once there are enough variants that finding
+     one is work. Below that it would be furniture. */
+  const bar = document.getElementById('variantFilterBar');
+  if(bar) bar.style.display = draftVariants.length >= VARIANT_FILTER_MIN ? '' : 'none';
+  const shown = filterSortVariants(draftVariants, vfQuery, vfSort);
+  const count = document.getElementById('vf_count');
+  if(count) count.textContent = shown.length === draftVariants.length
+    ? `${draftVariants.length} variants`
+    : `${shown.length} of ${draftVariants.length}`;
+  if(!shown.length){
+    wrap.innerHTML = '<div class="variants-empty">No variant matches that. Clear the search to see all of them again.</div>';
+    return;
+  }
+  wrap.innerHTML = shown.map(({v,i})=>`
     <div class="variant-card" data-idx="${i}">
       <div class="variant-card-head">
         <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
@@ -23531,6 +23602,24 @@ function refreshVariantCaptions(){
   document.getElementById(id).addEventListener('input', refreshVariantCaptions);
   document.getElementById(id).addEventListener('change', refreshVariantCaptions);
 });
+/* Typing filters, it does not rebuild: the cards keep their identity and
+   their data-idx, so a half-typed price in a card that stays visible
+   survives. */
+document.getElementById('vf_search').addEventListener('input', (e)=>{
+  vfQuery = e.target.value;
+  renderVariantsList();
+});
+document.getElementById('vf_sort').addEventListener('change', (e)=>{
+  vfSort = e.target.value;
+  renderVariantsList();
+});
+document.getElementById('vf_clear').addEventListener('click', ()=>{
+  vfQuery = ''; vfSort = 'generated';
+  document.getElementById('vf_search').value = '';
+  document.getElementById('vf_sort').value = 'generated';
+  renderVariantsList();
+});
+
 function generateVariants(){
   const attrs = draftVariantAttrs
     .map(a=>({name:a.name.trim(), values:a.values.split(',').map(v=>v.trim()).filter(Boolean)}))
@@ -24568,6 +24657,12 @@ function editProduct(id){
   document.getElementById('p_agent_discount_wholesale').value = p.agentDiscountWholesalePct!=null ? p.agentDiscountWholesalePct : '';
   document.getElementById('p_agent_discount_retail').value = p.agentDiscountRetailPct!=null ? p.agentDiscountRetailPct : '';
   draftVariantAttrs = (p.variantAttributes||[]).map(a=>({name:a.name, values:(a.values||[]).join(', ')}));
+  /* Cleared with the form: a filter left over from the last product
+     would open the next one showing a fraction of its variants, with
+     nothing on screen saying why. */
+  vfQuery = ''; vfSort = 'generated';
+  const vfs = document.getElementById('vf_search'); if(vfs) vfs.value = '';
+  const vfo = document.getElementById('vf_sort'); if(vfo) vfo.value = 'generated';
   draftVariants = (p.variants||[]).map(v=>({sku:v.sku||'', combo:{...v.combo}, image:v.image||null,
     wholesaleMarkupType:v.wholesaleMarkupType||'percent', wholesaleMarkupValue:v.wholesaleMarkupValue||0,
     retailMarkupType:v.retailMarkupType||'percent', retailMarkupValue:v.retailMarkupValue||0}));
