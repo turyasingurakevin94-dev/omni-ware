@@ -12629,11 +12629,50 @@ function loadQuoteClientDate(){
 }
 
 // Generates the next unused "C001", "C002", ... customer ID.
-function generateCustomerId(){
-  let n = data.customers.length + 1;
-  let id = 'C' + String(n).padStart(3,'0');
-  while(data.customers.some(c=>c.id===id)){ n++; id = 'C' + String(n).padStart(3,'0'); }
+/* THE SECOND ALLOCATOR, now the same one as everywhere else.
+
+   This counted `data.customers.length + 1` and walked forward to the
+   first free number -- so a shop with 44 customers started proposing
+   C045 and handed out ids from LONG below the range in use. Every id
+   freed by a deleted customer was there to be reissued, and a reissued
+   customer id carries the deleted person's debt history: the new
+   customer opens owing money somebody else was charged. That is exactly
+   the failure nextEntityId() was written to prevent, and this function
+   quietly went around it.
+
+   Synchronous by necessity -- its callers create a customer inline -- so
+   it uses the local monotonic counter rather than the server allocator.
+   That counter only ever moves forward and is maxed against every id on
+   file, so it can neither reuse nor collide. */
+/* A proposed id that turns out to be taken used to end here: "Reload and
+   try again", with the form full of typing and no way forward. Reloading
+   is not a fix either -- if the allocator is proposing a low number, it
+   proposes the same one again.
+
+   So the collision is RESOLVED instead of reported: walk to the first
+   number nothing on file is using. Monotonic allocation is still the
+   normal path and still what prevents reissuing a deleted record's id;
+   this is the seatbelt for when the counter has somehow fallen behind
+   the records, which is the only way to get here at all. */
+function firstFreeEntityId(prefix, pad, existing, proposed){
+  const taken = new Set((existing||[]).map(r=> String((r && r.id) || '')));
+  if(!taken.has(proposed)) return proposed;
+  const rx = new RegExp('^' + prefix + '(\\d+)$');
+  let highest = 0;
+  taken.forEach(id=>{ const m = rx.exec(id); if(m) highest = Math.max(highest, Number(m[1])); });
+  let n = highest + 1;
+  let id = prefix + String(n).padStart(pad, '0');
+  while(taken.has(id)){ n++; id = prefix + String(n).padStart(pad, '0'); }
+  // Keep the counter above what was just handed out, so the next open
+  // does not propose it all over again.
+  if(!data.idCounters) data.idCounters = {};
+  const kindOf = { C:'customer', S:'supplier', ST:'staff', P:'product' }[prefix];
+  if(kindOf) data.idCounters[kindOf] = Math.max(Number(data.idCounters[kindOf])||0, n);
   return id;
+}
+
+function generateCustomerId(){
+  return nextEntityId('customer', 'C', 3, data.customers);
 }
 
 // Client name autocomplete on the quote builder: lists matching existing
@@ -17694,13 +17733,17 @@ document.getElementById('s_add_btn').addEventListener('click', ()=>{
   document.getElementById('s_name').focus();
 });
 document.getElementById('s_save').addEventListener('click', ()=>{
-  const id = document.getElementById('s_id').value.trim();
+  /* `let`, because the collision check below may replace it. As a
+     const this threw "Assignment to constant variable" and took the
+     whole save handler with it -- the form simply did nothing. */
+  let id = document.getElementById('s_id').value.trim();
   const name = document.getElementById('s_name').value.trim();
   if(!name){ toast('Supplier name is required'); return; }
   if(!editingSupplierId && idIsPending(id)){ toast('Still issuing a Supplier ID — try again in a moment'); return; }
   // Defensive only -- the id comes from nextEntityId() now, so a clash here
   // would mean the counter itself is wrong rather than a mistyped entry.
-  if(!editingSupplierId && data.suppliers.some(s=>s.id===id)){ toast(`Could not issue a new Supplier ID (${id} is taken). Reload and try again.`); return; }
+  // Taken is not a dead end: take the next free one and carry on.
+  if(!editingSupplierId) id = firstFreeEntityId('S', 3, data.suppliers, id);
   /* A second supplier with the same name is almost always the same one
      entered twice -- and once saved, every screen shows two identical
      names with the prices on one and the invoices on the other. Asked
@@ -18493,11 +18536,15 @@ document.getElementById('st_add_btn').addEventListener('click', ()=>{
   document.getElementById('st_name').focus();
 });
 document.getElementById('st_save').addEventListener('click', ()=>{
-  const id = document.getElementById('st_id').value.trim();
+  /* `let`, because the collision check below may replace it. As a
+     const this threw "Assignment to constant variable" and took the
+     whole save handler with it -- the form simply did nothing. */
+  let id = document.getElementById('st_id').value.trim();
   const name = document.getElementById('st_name').value.trim();
   if(!name){ toast('Staff name is required'); return; }
   if(!editingStaffId && idIsPending(id)){ toast('Still issuing a Staff ID — try again in a moment'); return; }
-  if(!editingStaffId && data.staff.some(s=>s.id===id)){ toast(`Could not issue a new Staff ID (${id} is taken). Reload and try again.`); return; }
+  // Taken is not a dead end: take the next free one and carry on.
+  if(!editingStaffId) id = firstFreeEntityId('ST', 3, data.staff, id);
   const payBasis = document.getElementById('st_pay_basis').value || null;
   const rateRaw = document.getElementById('st_pay_rate').value;
   const record = {
@@ -20338,7 +20385,10 @@ document.getElementById('c_link_supplier').addEventListener('change', ()=>
 document.getElementById('s_link_customer').addEventListener('change', ()=>
   sfShowLinkHint(editingSupplierId ? data.suppliers.find(x=>x.id===editingSupplierId) : null));
 document.getElementById('c_save').addEventListener('click', ()=>{
-  const id = document.getElementById('c_id').value.trim();
+  /* `let`, because the collision check below may replace it. As a
+     const this threw "Assignment to constant variable" and took the
+     whole save handler with it -- the form simply did nothing. */
+  let id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
   if(!name){ toast('Customer name is required'); document.getElementById('c_name').focus(); return; }
   const phone = document.getElementById('c_phone').value.trim();
@@ -20367,7 +20417,8 @@ document.getElementById('c_save').addEventListener('click', ()=>{
     return;
   }
   if(!editingCustomerId && idIsPending(id)){ toast('Still issuing a Customer ID — try again in a moment'); return; }
-  if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast(`Could not issue a new Customer ID (${id} is taken). Reload and try again.`); return; }
+  // Taken is not a dead end: take the next free one and carry on.
+  if(!editingCustomerId) id = firstFreeEntityId('C', 3, data.customers, id);
   const linkSupplierId = document.getElementById('c_link_supplier').value || null;
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
@@ -23835,11 +23886,15 @@ function ensurePresetCategory(category, subcategory){
 }
 document.getElementById('p_add_btn').addEventListener('click', ()=>{ resetProductForm(); openModal('productModal'); });
 document.getElementById('p_save').addEventListener('click', ()=>{
-  const id = document.getElementById('p_id').value.trim();
+  /* `let`, because the collision check below may replace it. As a
+     const this threw "Assignment to constant variable" and took the
+     whole save handler with it -- the form simply did nothing. */
+  let id = document.getElementById('p_id').value.trim();
   const name = document.getElementById('p_name').value.trim();
   if(!name){ toast('Product name is required'); return; }
   if(!editingProductId && idIsPending(id)){ toast('Still issuing a Product ID — try again in a moment'); return; }
-  if(!editingProductId && data.products.some(p=>p.id===id)){ toast(`Could not issue a new Product ID (${id} is taken). Reload and try again.`); return; }
+  // Taken is not a dead end: take the next free one and carry on.
+  if(!editingProductId) id = firstFreeEntityId('P', 3, data.products, id);
   const type = document.getElementById('p_type_variable').checked ? 'variable' : 'simple';
   const variantAttributes = type==='variable' ? draftVariantAttrs
     .map(a=>({name:a.name.trim(), values:a.values.split(',').map(v=>v.trim()).filter(Boolean)}))
