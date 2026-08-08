@@ -25418,13 +25418,26 @@ let prBulkPackPrefill = null;
 // ctn]" unit dropdowns in sync with whatever unit/pack unit/pack qty are
 // currently typed in the Packing section -- the pack option only appears
 // once there's a pack unit and a pack qty to convert with.
+/* The "per unit / per pack" choices for one packing.
+   Built from whatever packing is being priced against, because in bulk
+   mode that is not always the shared one: a variant that comes 20 to a
+   Bundle has to offer "per Bundle" even when the default packing has no
+   pack unit at all. The variant cards used to copy these options off the
+   shared control, so a variant with its own packing was offered only
+   "per unit" -- the one thing its packing said it was not. */
+function tierUnitOptionsHTML(unit, packUnit, packQty){
+  const u = String(unit||'').trim() || 'unit';
+  const pu = String(packUnit||'').trim();
+  const pq = Number(packQty)||0;
+  return `<option value="unit">per ${esc(u)}</option>` +
+    ((pu && pq>0) ? `<option value="pack">per ${esc(pu)} (${pq} ${esc(u)})</option>` : '');
+}
 function renderPrTierUnitOptions(){
   const unit = document.getElementById('pr_unit').value.trim() || 'unit';
   const packUnit = document.getElementById('pr_pack_unit').value.trim();
   const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
   const hasPack = packUnit && packQty>0;
-  const optionsHTML = `<option value="unit">per ${esc(unit)}</option>` +
-    (hasPack ? `<option value="pack">per ${esc(packUnit)} (${packQty} ${esc(unit)})</option>` : '');
+  const optionsHTML = tierUnitOptionsHTML(unit, packUnit, packQty);
   ['pr_tier_qty_unit','pr_tier_price_unit'].forEach(id=>{
     const sel = document.getElementById(id);
     const prevVal = sel.value;
@@ -25725,7 +25738,8 @@ function renderPrBulkVariantRows(){
   const packUnit = document.getElementById('pr_pack_unit').value.trim();
   const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
   const sharedPack = { unit, packUnit, packQty };
-  const unitOptionsHTML = document.getElementById('pr_tier_qty_unit').innerHTML;
+  // Deliberately NOT copied off the shared control: each card builds its
+  // own from the packing that card is priced against.
   wrap.innerHTML = shownVariants.length ? shownVariants.map(({v,i})=>{
     const override = prBulkVariantOverrides[i];
     const tiers = override || prTiers;
@@ -25738,6 +25752,7 @@ function renderPrBulkVariantRows(){
       packUnit: String(packOverride.packUnit||'').trim(),
       packQty: Number(packOverride.packQty)||0,
     } : sharedPack;
+    const pkOptions = tierUnitOptionsHTML(pk.unit, pk.packUnit, pk.packQty);
     const chipsHTML = tiers.length
       ? `<div class="preset-chip-flow">${tiers.map((t,ti)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, pk.unit, pk.packUnit, pk.packQty))}${override ? `<button type="button" class="pr-bulk-tier-remove" data-idx="${i}" data-ti="${ti}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</span>`).join('')}</div>`
       : `<div class="pr-tier-empty">${override ? 'No tiers yet for this variant.' : 'No shared pricing set yet.'}</div>`;
@@ -25768,10 +25783,10 @@ function renderPrBulkVariantRows(){
       ${override ? `<div class="pr-tier-add">
         <span class="pr-tier-at">At</span>
         <input type="number" class="pr-bulk-tier-qty" data-idx="${i}" min="0" step="any" placeholder="Qty">
-        <select class="pr-bulk-tier-qty-unit" data-idx="${i}">${unitOptionsHTML}</select>
+        <select class="pr-bulk-tier-qty-unit" data-idx="${i}">${pkOptions}</select>
         <span class="pr-tier-at">charge</span>
         <input type="number" class="pr-tier-price pr-bulk-tier-price" data-idx="${i}" min="0" step="any" placeholder="UGX">
-        <select class="pr-bulk-tier-price-unit" data-idx="${i}">${unitOptionsHTML}</select>
+        <select class="pr-bulk-tier-price-unit" data-idx="${i}">${pkOptions}</select>
         <button type="button" class="pr-bulk-tier-add" data-idx="${i}">+ Add tier</button>
       </div>` : ''}
     </div>`;

@@ -31,8 +31,9 @@ const t = createReporter('bulk variant packing');
 const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-const NAMES = ['packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail'];
-const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
+const NAMES = ['packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail', 'tierUnitOptionsHTML'];
+const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')),
+  { esc: (x) => String(x == null ? '' : x) }, NAMES);
 
 const pk = (unit, packUnit, packQty) => ({ unit, packUnit, packQty });
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -123,6 +124,34 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'and each priced variant opens carrying the packing it actually has');
 }
 
+/* ---------- 4b. the per-pack choice on a variant's own packing -------- */
+/*
+ * REPORTED. A variant set to 20 Pcs to a Bundle was offered only "per
+ * unit" when entering its tiers -- the card copied its dropdown options
+ * off the SHARED control, which knew nothing about that variant's bundle.
+ * So the one packing the person had just typed in was the one thing they
+ * could not price against.
+ */
+{
+  const opts = fn.tierUnitOptionsHTML;
+  const bundle = opts('Pcs', 'Bundle', 20);
+  t.check(/value="pack"/.test(bundle),
+    'packing with a pack unit and a pack size offers the per-pack choice');
+  t.check(/per Bundle \(20 Pcs\)/.test(bundle),
+    `named after that packing, so it reads as the thing on the card (${bundle})`);
+  t.check(/per Pcs/.test(bundle), 'and the single-unit choice is named after its own unit');
+
+  /* The three ways there is no pack to price by. Offering "per pack" for
+     any of them would divide a typed price by nought. */
+  t.check(!/value="pack"/.test(opts('Pcs', '', 20)), 'no pack unit, no per-pack choice');
+  t.check(!/value="pack"/.test(opts('Pcs', 'Bundle', 0)), 'nor with a pack size of nought');
+  t.check(!/value="pack"/.test(opts('Pcs', 'Bundle', '')), 'nor with the pack size left blank');
+  t.check(/per unit/.test(opts('', '', 0)),
+    'and packing with no unit at all still offers something to price by');
+  t.check(/value="pack"/.test(opts(' Pcs ', ' Bundle ', '20')),
+    'values arriving from inputs — padded, and numbers as text — still resolve');
+}
+
 /* ---------- 5. wired into the card and the save ---------------------- */
 {
   const rows = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
@@ -133,6 +162,16 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'with all three fields, since any of them can differ');
   t.check(/data-idx="\$\{i\}"/.test(rows),
     'carrying the real variant index, like every other control on the card');
+
+  /* Built per card, not copied off the shared control -- that copy is
+     what left a variant unable to price by its own bundle. */
+  t.check(/const pkOptions = tierUnitOptionsHTML\(pk\.unit, pk\.packUnit, pk\.packQty\);/.test(rows),
+    'each card builds its unit choices from the packing that card is priced against');
+  t.check(/class="pr-bulk-tier-qty-unit" data-idx="\$\{i\}">\$\{pkOptions\}/.test(rows)
+    && /class="pr-bulk-tier-price-unit" data-idx="\$\{i\}">\$\{pkOptions\}/.test(rows),
+    'and uses them for both the quantity and the price');
+  t.check(!/\$\{unitOptionsHTML\}/.test(rows),
+    'rather than the shared control\'s options, which know nothing of this variant');
 
   /* A chip reading "1 Ctn+" has to mean THIS variant's carton. */
   t.check(/prTierChipLabel\(t, pk\.unit, pk\.packUnit, pk\.packQty\)/.test(rows),
