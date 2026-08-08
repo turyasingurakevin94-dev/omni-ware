@@ -22,7 +22,7 @@
  *
  * Run: node test/product-pricing-filter.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('product pricing filter');
 const src = read('index.html');
@@ -32,6 +32,13 @@ const data = { products: [], prices: [] };
 const NAMES = ['productPriceRows', 'productLineIsPriced', 'productRowsForList',
   'productLinesNotPriceable', 'productLineStats'];
 const scope = compileScope([
+  // productRowsForList now consults the date-added band; pull in the real
+  // helpers rather than stubbing, so this file keeps testing real code.
+  extractFunction(src, 'todayISO', 'index.html'),
+  extractFunction(src, 'daysSinceDate', 'index.html'),
+  extractDeclaration(src, 'PRODUCT_ADDED_BANDS', 'index.html'),
+  extractFunction(src, 'productAddedDaysAgo', 'index.html'),
+  extractFunction(src, 'productMatchesAddedBand', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -142,7 +149,7 @@ const list = (priced) => scope.productRowsForList('', '', '', priced).map(label)
 /* ---------- 5. what the screen and the sheet say -------------------- */
 {
   const render = (/function renderProducts[\s\S]*?\n\}\n/.exec(code) || [''])[0];
-  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/.test(render),
+  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/.test(render),
     'the list on screen is the filtered one');
   t.check(/productLinesNotPriceable\(filter, categoryFilter, supplierFilter\)/.test(render),
     'and it works out what it is holding back');
@@ -156,7 +163,7 @@ const list = (priced) => scope.productRowsForList('', '', '', priced).map(label)
     'an empty list says which of the two emptinesses it is');
 
   const prt = (/p_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
-  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/.test(prt),
+  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/.test(prt),
     'the sheet prints exactly what the screen is listing');
   t.check(/with no price on file/.test(prt) && /with a price on file/.test(prt),
     'and names the pricing filter in its header, so a partial list cannot pass for the whole one');

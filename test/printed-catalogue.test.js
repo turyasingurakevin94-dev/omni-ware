@@ -235,7 +235,10 @@ if (scope) {
   t.check(/need a \$\{basis\.rule\} markup rule and \$\{line\(noPrice\)\} need a supplier price/.test(handler),
     'with both counted when both are in the way');
 
-  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, ''\)/.test(handler),
+  /* The catalogue opts out of the PRICING filter (it decides that for
+     itself) but honours the date-added band, which scopes which products
+     are in the catalogue at all — the same as category and supplier. */
+  t.check(/productRowsForList\(filter, categoryFilter, supplierFilter, '', document\.getElementById\('p_added_filter'\)\.value\)/.test(handler),
     'it follows the screen\'s own filters');
 }
 

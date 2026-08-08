@@ -154,8 +154,8 @@ const reset = () => {
 
   // Both the list and the printout must come from one row set, or a
   // filtered print could list rows the screen is not showing.
-  // Four filters now, still shared between the screen and the sheet.
-  t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/g) || []).length === 2,
+  // Five filters now, still shared between the screen and the sheet.
+  t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/g) || []).length === 2,
     'the list and the printout are built from the same filtered rows');
 
   // The strip reports the filtered set, not the whole catalogue.

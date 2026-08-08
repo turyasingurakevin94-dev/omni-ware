@@ -16,7 +16,7 @@
  *
  * Run: node test/admin-product-print.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('admin product print');
 const src = read('index.html');
@@ -26,8 +26,10 @@ const store = { products: [], prices: [] };
 let rowsFor = null, err = null;
 try {
   ({ productRowsForList: rowsFor } = compileScope(
-    ['searchTokens', 'matchesAllTokens', 'variantLabel', 'productRowsForList']
-      .map(n => extractFunction(src, n, 'index.html')),
+    [extractDeclaration(src, 'PRODUCT_ADDED_BANDS', 'index.html')].concat(
+      ['searchTokens', 'matchesAllTokens', 'variantLabel', 'todayISO', 'daysSinceDate',
+        'productAddedDaysAgo', 'productMatchesAddedBand', 'productRowsForList']
+        .map(n => extractFunction(src, n, 'index.html'))),
     { data: store }, ['productRowsForList'],
   ));
 } catch (e) { err = e; }
@@ -80,12 +82,12 @@ if (rowsFor) {
        row set, or a filtered print could list rows the screen is not
        showing. Pinned on the shared call rather than on the shape of
        what is done with it. */
-    /* The pricing filter joined the other three. What is pinned is
-       unchanged -- both callers pass the SAME filters -- and it now
-       covers one more of them. */
-    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\);/.test(code),
+    /* The pricing and date-added filters joined the other three. What is
+       pinned is unchanged -- both callers pass the SAME filters -- and it
+       now covers two more of them. */
+    t.check(/const rows = productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\);/.test(code),
       'the on-screen list is built from these rows');
-    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter\)/g) || []).length === 2,
+    t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter\)/g) || []).length === 2,
       'and the printout calls the very same function with the very same filters');
     t.check((code.match(/productRowsForList\(filter, categoryFilter, supplierFilter[,)]/g) || []).length === 4,
       'and nothing calls it with a filter the others are not passing');
@@ -95,8 +97,11 @@ if (rowsFor) {
        AND a markup rule -- and then names what it left out. Pinned with
        its reason so the exception cannot spread silently. */
     // The reason is a line comment, which `code` strips -- read from src.
+    /* The catalogue still opts out of the PRICING filter and says why --
+       but it honours the date-added band, which scopes which products are
+       in the catalogue at all, the same as category and supplier do. */
     t.check(/Deliberately not the priced filter/.test(src)
-      && /productRowsForList\(filter, categoryFilter, supplierFilter, ''\)/.test(code),
+      && /productRowsForList\(filter, categoryFilter, supplierFilter, '', document\.getElementById\('p_added_filter'\)\.value\)/.test(code),
     'except the catalogue, which decides its own pricing filter and says why');
     // Neither may walk the catalog for itself.
     const printHandler = (/document\.getElementById\('p_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];

@@ -5828,6 +5828,13 @@
               <option value="unpriced">Not priced yet</option>
             </select>
           </div>
+          <div class="field p-toolbar-filter">
+            <label>Date added</label>
+            <!-- Options are built in populateProductFilterDropdowns: the
+                 "date not recorded" band is only offered when something
+                 is actually in it. -->
+            <select id="p_added_filter"></select>
+          </div>
         </div>
         <div id="productsSummary"></div>
         <div id="productsTableWrap"></div>
@@ -8508,7 +8515,11 @@ async function loadData(shopId){
       agentDiscountWholesalePct: p.agent_discount_wholesale_pct==null ? null : Number(p.agent_discount_wholesale_pct),
       agentDiscountRetailPct: p.agent_discount_retail_pct==null ? null : Number(p.agent_discount_retail_pct),
       stockRetailMarkupType:p.stock_retail_markup_type||'percent', stockRetailMarkupValue:Number(p.stock_retail_markup_value)||0,
-      variantAttributes:p.variant_attributes||[], variants:p.variants||[]
+      variantAttributes:p.variant_attributes||[], variants:p.variants||[],
+      // Written by the column's own default on insert and never sent
+      // back up (see the push payload), so this is the product's real
+      // creation date rather than the date of its last edit.
+      createdAt: p.created_at || null
     })),
     prices: (pricesR.data||[]).map(pr=>({
       id:pr.id, productId:pr.product_id,
@@ -23754,20 +23765,38 @@ document.getElementById('v_add_attr_btn').addEventListener('click', ()=>{
 });
 document.getElementById('v_generate_btn').addEventListener('click', generateVariants);
 
-function populateProductFilterDropdowns(selectedCategory, selectedSupplier){
+function productAddedBandLabel(key){
+  if(key === 'unknown') return 'Date not recorded';
+  const b = PRODUCT_ADDED_BANDS.find(x=> x.key === key);
+  return b ? b.label : 'Any time';
+}
+function populateProductFilterDropdowns(selectedCategory, selectedSupplier, selectedAdded){
   const catSel = document.getElementById('p_category_filter');
   const categories = [...new Set(data.products.map(p=>p.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   catSel.innerHTML = '<option value="">All categories</option>' +
     categories.map(c=>`<option value="${esc(c)}" ${c===selectedCategory?'selected':''}>${esc(c)}</option>`).join('');
   document.getElementById('p_supplier_filter').value = selectedSupplier || '';
   document.getElementById('p_supplier_filter_search').value = selectedSupplier ? supplierName(selectedSupplier) : '';
+
+  /* "Date not recorded" is offered only when a product is actually in it
+     -- normally none are, and an option that always finds nothing is a
+     dead end somebody has to try before believing it. It stays on the
+     list while selected, so choosing it does not make the choice vanish
+     underneath the person who made it. */
+  const anyUndated = data.products.some(p=> productAddedDaysAgo(p) === null);
+  const addedSel = document.getElementById('p_added_filter');
+  const opts = [{ key:'', label:'Any time' }].concat(PRODUCT_ADDED_BANDS);
+  if(anyUndated || selectedAdded === 'unknown') opts.push({ key:'unknown', label:'Date not recorded' });
+  addedSel.innerHTML = opts.map(o=>
+    `<option value="${esc(o.key)}" ${o.key===(selectedAdded||'')?'selected':''}>${esc(o.label)}</option>`).join('');
 }
 function triggerProductsRender(){
   renderProducts(
     document.getElementById('p_search').value,
     document.getElementById('p_category_filter').value,
     document.getElementById('p_supplier_filter').value,
-    document.getElementById('p_priced_filter').value
+    document.getElementById('p_priced_filter').value,
+    document.getElementById('p_added_filter').value
   );
 }
 function variantLabel(combo){ return Object.values(combo).join(' / '); }
@@ -23795,13 +23824,50 @@ function productLineIsPriced(row){
   return productPriceRows(row.p.id, row.idx).length > 0;
 }
 
-function productRowsForList(filter='', categoryFilter='', supplierFilter='', pricedFilter=''){
+/* How many whole days ago a product was added, or null when nothing
+   recorded it.
+
+   Null is not zero. A product with no date has not been shown to be new;
+   saying "0 days" would put every undated product at the top of "added
+   today", which is where somebody looks to check what they entered this
+   morning. */
+function productAddedDaysAgo(p){
+  const raw = p && p.createdAt;
+  if(!raw) return null;
+  const d = new Date(raw);
+  if(isNaN(d.getTime())) return null;
+  return daysSinceDate(d.toISOString().slice(0,10));
+}
+/* The bands the Products filter offers. Windows are inclusive of today,
+   so "Last 7 days" is today and the six before it -- what somebody means
+   by "this week's entries", not a 7-day-old cutoff that drops today. */
+const PRODUCT_ADDED_BANDS = [
+  { key:'today',   label:'Added today',        match:(d)=> d === 0 },
+  { key:'d7',      label:'Last 7 days',        match:(d)=> d <= 6 },
+  { key:'d30',     label:'Last 30 days',       match:(d)=> d <= 29 },
+  { key:'d90',     label:'Last 90 days',       match:(d)=> d <= 89 },
+  { key:'older',   label:'Older than 90 days', match:(d)=> d >= 90 },
+];
+function productMatchesAddedBand(p, band){
+  if(!band) return true;
+  const days = productAddedDaysAgo(p);
+  // Its own band, offered only when there is something in it.
+  if(band === 'unknown') return days === null;
+  // A product with no date cannot be claimed to fall inside a window.
+  if(days === null) return false;
+  const b = PRODUCT_ADDED_BANDS.find(x=> x.key === band);
+  return b ? b.match(days) : true;
+}
+function productRowsForList(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
   const tokens = searchTokens(filter);
   const rows = [];
   data.products.forEach(p=>{
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
     const matchesSupplier = !supplierFilter || data.prices.some(pr=>pr.productId===p.id && pr.supplierId===supplierFilter);
-    if(!matchesCategory || !matchesSupplier) return;
+    // When a product was added is a fact about the PRODUCT, so it keeps
+    // or drops all of its variants together.
+    const matchesAdded = productMatchesAddedBand(p, addedFilter);
+    if(!matchesCategory || !matchesSupplier || !matchesAdded) return;
 
     if(p.type==='variable'){
       if(!p.variants || p.variants.length===0){
@@ -23951,12 +24017,12 @@ function productLineHTML(r, tokens){
   </div>`;
 }
 
-function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedFilter=''){
-  populateProductFilterDropdowns(categoryFilter, supplierFilter);
+function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
+  populateProductFilterDropdowns(categoryFilter, supplierFilter, addedFilter);
   const wrap = document.getElementById('productsTableWrap');
   const strip = document.getElementById('productsSummary');
   const tokens = searchTokens(filter);
-  const rows = productRowsForList(filter, categoryFilter, supplierFilter, pricedFilter);
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter);
 
   const s = productLineStats(rows);
   const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
@@ -24125,7 +24191,7 @@ document.getElementById('p_catalogue_btn').addEventListener('click', ()=>{
   const supplierFilter = document.getElementById('p_supplier_filter').value;
   // Deliberately not the priced filter: the catalogue decides for itself
   // what it can price, and says what it left out.
-  const rows = productRowsForList(filter, categoryFilter, supplierFilter, '');
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter, '', document.getElementById('p_added_filter').value);
   if(rows.length===0){ toast('No products match your filters'); return; }
 
   const basisKey = document.getElementById('p_catalogue_basis').value;
@@ -24294,7 +24360,8 @@ document.getElementById('p_print_btn').addEventListener('click', ()=>{
   const categoryFilter = document.getElementById('p_category_filter').value;
   const supplierFilter = document.getElementById('p_supplier_filter').value;
   const pricedFilter = document.getElementById('p_priced_filter').value;
-  const rows = productRowsForList(filter, categoryFilter, supplierFilter, pricedFilter);
+  const addedFilter = document.getElementById('p_added_filter').value;
+  const rows = productRowsForList(filter, categoryFilter, supplierFilter, pricedFilter, addedFilter);
   if(rows.length===0){ toast('No products match your filters'); return; }
 
   const applied = [];
@@ -24303,6 +24370,9 @@ document.getElementById('p_print_btn').addEventListener('click', ()=>{
   if(supplierFilter) applied.push(`priced by ${supplierName(supplierFilter)}`);
   if(pricedFilter==='priced') applied.push('with a price on file');
   if(pricedFilter==='unpriced') applied.push('with no price on file');
+  // A printed sheet is read away from the screen, so a narrowed list has
+  // to carry the reason it is short.
+  if(addedFilter) applied.push(productAddedBandLabel(addedFilter).toLowerCase());
   const scope = applied.length
     ? `${rows.length} product${rows.length===1?'':'s'} ${applied.join(', ')}`
     : `All ${rows.length} product${rows.length===1?'':'s'}`;
@@ -24983,6 +25053,14 @@ document.getElementById('p_save').addEventListener('click', ()=>{
     agentDiscountWholesalePct: document.getElementById('p_agent_discount_wholesale').value==='' ? null : Math.min(100, Math.max(0, Number(document.getElementById('p_agent_discount_wholesale').value)||0)),
     agentDiscountRetailPct: document.getElementById('p_agent_discount_retail').value==='' ? null : Math.min(100, Math.max(0, Number(document.getElementById('p_agent_discount_retail').value)||0)),
     variantAttributes, variants,
+    /* The server owns this column -- the push deliberately omits it -- but
+       the client needs a value the moment a product is added, or the
+       product just created is missing from "Added today" until the next
+       full reload. Carried across on edit, because replacing the record
+       wholesale would otherwise wipe the creation date on every save. */
+    createdAt: editingProductId
+      ? ((data.products.find(p=>p.id===editingProductId)||{}).createdAt || null)
+      : new Date().toISOString(),
   };
   if(editingProductId){
     const idx = data.products.findIndex(p=>p.id===editingProductId);
@@ -25023,6 +25101,7 @@ document.getElementById('productModalClose').addEventListener('click', ()=>close
 document.getElementById('p_search').addEventListener('input', triggerProductsRender);
 document.getElementById('p_category_filter').addEventListener('change', triggerProductsRender);
 document.getElementById('p_priced_filter').addEventListener('change', triggerProductsRender);
+document.getElementById('p_added_filter').addEventListener('change', triggerProductsRender);
 wireSupplierFilterSearch('p_supplier_filter_search', 'p_supplier_filter', 'p_supplier_filter_suggestions', triggerProductsRender);
 
 /* ================= PRICE LIST ================= */
