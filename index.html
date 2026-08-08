@@ -3616,6 +3616,18 @@
   .ln-callout .icon{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
   /* Signed-in devices. A row per device, its person on the left and
      when it was last heard from on the right. */
+  /* One person, both sides. Quiet on the card until it matters -- most
+     customers are only customers. */
+  .both-tag{font-size:10px;font-weight:700;letter-spacing:0.04em;
+    text-transform:uppercase;padding:2px 7px;border-radius:999px;
+    background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);
+    margin-left:7px;vertical-align:middle;white-space:nowrap;}
+  .cc-both{display:flex;align-items:center;justify-content:space-between;
+    gap:10px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;border-radius:8px;
+    background:var(--ow-steel-050);font-size:12px;color:var(--ink-soft);}
+  .cc-both b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .cc-both b.in{color:var(--ow-verdigris);}
+  .cc-both b.out{color:var(--ow-crimson);}
   .ls-row{display:flex;align-items:center;gap:12px;padding:11px 0;
     border-bottom:1px solid var(--line);}
   .ls-row:last-child{border-bottom:none;}
@@ -6331,6 +6343,16 @@
           <input id="s_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
         </div>
 
+        <!-- The mirror of the customer form's question. Either side can
+             tie the knot; both write the same symmetric link. -->
+        <div class="sup-block">
+          <span class="sup-label">Do you also sell to them?</span>
+          <select id="s_link_customer">
+            <option value="">No — they are only a supplier</option>
+          </select>
+          <div class="sup-hint" id="s_link_hint"></div>
+        </div>
+
         <!-- A supplier with no prices cannot be chosen for anything. The
              form used to close on that silently. -->
         <div class="sup-consequence" id="s_consequence"></div>
@@ -6426,6 +6448,18 @@
         <div class="cf-block">
           <span class="cf-label">Notes</span>
           <input id="c_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
+        </div>
+
+        <!-- A shop this size buys from people it also sells to. Two
+             records is the right shape (a quote points at a customer, a
+             purchase invoice at a supplier); what was missing was them
+             knowing about each other. -->
+        <div class="cf-block">
+          <span class="cf-label">Do you also buy from them?</span>
+          <select id="c_link_supplier">
+            <option value="">No — they are only a customer</option>
+          </select>
+          <div class="cf-consequence" id="c_link_hint"></div>
         </div>
 
         <div class="cf-foot-note">
@@ -8249,7 +8283,7 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, shopNo:s.shop_no||'', notes:s.notes, linkedCustomerId:s.linked_customer_id||null, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     // payBasis and payRate stay null rather than becoming '' and 0: a
     // staff member nobody has set a rate for has not been given a rate
     // of nothing, and the payroll screen has to be able to tell those
@@ -8259,7 +8293,7 @@ async function loadData(shopId){
       payBasis: s.pay_basis || null,
       payRate: s.pay_rate==null ? null : Number(s.pay_rate)})),
     agents: (agentsR.data||[]).map(a=>({id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||'', paymentTerm:a.payment_term||'prepay', unavailable:!!a.unavailable, retiredAt:a.retired_at||null, notes:a.notes||'', userId:a.user_id||null})),
-    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, debtLog: debtByCustomer[c.id]||[]})),
+    customers: (customersR.data||[]).map(c=>({id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:Number(c.debt)||0, linkedSupplierId:c.linked_supplier_id||null, debtLog: debtByCustomer[c.id]||[]})),
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
       id:p.id, name:p.name, type:p.type||'simple', category:p.category, subcategory:p.subcategory||'',
@@ -8428,7 +8462,7 @@ function buildSyncRows(d, shopId){
     id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, shop_no:s.shopNo||null, notes:s.notes, linked_customer_id:s.linkedCustomerId||null, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
       // Written through as null, never coerced to 0 -- see the load side.
       pay_basis: s.payBasis || null,
@@ -8436,7 +8470,7 @@ function buildSyncRows(d, shopId){
     // user_id is deliberately omitted -- only invite-agent (service role)
     // ever sets it, same reasoning as staff.user_id in 0011.
     agents: (d.agents||[]).map(a=>({shop_id:shopId, id:a.id, name:a.name, phone:a.phone, email:a.email, location:a.location||null, payment_term:a.paymentTerm, unavailable:!!a.unavailable, retired_at:a.retiredAt||null, notes:a.notes})),
-    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt})),
+    customers: d.customers.map(c=>({shop_id:shopId, id:c.id, name:c.name, phone:c.phone, location:c.location, notes:c.notes, debt:c.debt, linked_supplier_id:c.linkedSupplierId||null})),
     debtLog: debtLogRows,
     products: d.products.map(p=>({
       shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
@@ -12740,6 +12774,66 @@ function renderClientHistoryBox(){
 //
 // customerOutstandingInvoices() already returns them oldest first, so the
 // age is simply the head of that list. Nothing new is computed or stored.
+/* ================= ONE PERSON, BOTH SIDES ==========================
+
+   A hardware shop buys from people it also sells to. Until now that
+   person was two records that never met: what they owed the shop sat in
+   Debtors, what the shop owed them sat in Creditors, and nobody could
+   see that the two largely cancelled.
+
+   A LINK, not a merge. Quotes reference a customer id and purchase
+   invoices reference a supplier id, so folding the records together
+   would rewrite both halves of the books to fix a display problem. Each
+   side keeps its own id and its own history and simply knows who the
+   other one is -- and the link is SYMMETRIC, always written from one
+   place, because a half-link is a person who is their own supplier from
+   one screen and nobody's from the other.
+*/
+function linkedSupplierOf(customer){
+  if(!customer || !customer.linkedSupplierId) return null;
+  return (data.suppliers||[]).find(x=> x.id === customer.linkedSupplierId) || null;
+}
+function linkedCustomerOf(supplier){
+  if(!supplier || !supplier.linkedCustomerId) return null;
+  return (data.customers||[]).find(x=> x.id === supplier.linkedCustomerId) || null;
+}
+/* Ties two records together, or unties them. Both sides are written
+   here, and any PREVIOUS partner on either side is released first --
+   without that, re-pointing a link leaves the old counterpart still
+   claiming this one, and two customers end up sharing one supplier. */
+function linkCustomerSupplier(customerId, supplierId){
+  const c = (data.customers||[]).find(x=> x.id === customerId);
+  const sup = (data.suppliers||[]).find(x=> x.id === supplierId);
+  if(!c) return false;
+  // Release whoever each side was pointing at before.
+  const oldSup = linkedSupplierOf(c);
+  if(oldSup) oldSup.linkedCustomerId = null;
+  if(sup){
+    const oldCus = linkedCustomerOf(sup);
+    if(oldCus) oldCus.linkedSupplierId = null;
+  }
+  c.linkedSupplierId = sup ? sup.id : null;
+  if(sup) sup.linkedCustomerId = c.id;
+  return true;
+}
+/* What this person and the shop actually owe each other.
+
+   owed  = what they owe the shop, as a customer
+   owing = what the shop owes them, as a supplier
+   net   = positive means they owe the shop on balance
+
+   Null when there is no link at all: a person with only one side is not
+   a person whose net position is zero, and saying so would put a
+   reassuring figure on a screen where there is no second side to net
+   against. */
+function bothSidesPosition(customer){
+  const sup = linkedSupplierOf(customer);
+  if(!sup) return null;
+  const owed = Math.max(0, Number(customer.debt)||0);
+  const owing = Math.max(0, creditorTotalOwed(sup.id));
+  return { supplier: sup, owed, owing, net: owed - owing };
+}
+
 function customerDebtStanding(customer){
   if(!customer) return null;
   const owed = Number(customer.debt)||0;
@@ -17352,7 +17446,8 @@ function supplierCardHTML(s, productMatches){
     <div class="sc-head">
       <div class="sc-avatar">${esc(supplierInitials(s.name))}</div>
       <div class="sc-title">
-        <div class="sc-name">${esc(s.name)}</div>
+        <div class="sc-name">${esc(s.name)}${
+          s.linkedCustomerId ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}</div>
         <div class="sc-id">${esc(s.id)}</div>
       </div>
       <div class="sc-actions">
@@ -17406,6 +17501,7 @@ function editSupplier(id){
   document.getElementById('s_shopno').value = s.shopNo || '';
   document.getElementById('s_notes').value = s.notes;
   document.getElementById('supplierFormTitle').textContent = 'Edit supplier';
+  sfFillLinkPicker(s);
   supShowIssuedId();
   supRefresh();
   openModal('supplierModal');
@@ -17415,6 +17511,7 @@ function resetSupplierForm(){
   editingSupplierId = null;
   ['s_id','s_name','s_phone','s_location','s_shopno','s_notes'].forEach(id=>document.getElementById(id).value='');
   fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
+  sfFillLinkPicker(null);
   supShowIssuedId();
   supRefresh();
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
@@ -17581,6 +17678,9 @@ Add them anyway?`)) return;
   const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
   const record = {
     id, name,
+    linkedCustomerId: editingSupplierId
+      ? (data.suppliers.find(x=>x.id===editingSupplierId)||{}).linkedCustomerId || null
+      : null,
     phone: document.getElementById('s_phone').value.trim(),
     // rememberLocation adds a new place to the shared list and settles
     // a known one to its recorded spelling, so "ntinda" and "Ntinda"
@@ -17596,6 +17696,11 @@ Add them anyway?`)) return;
   } else {
     data.suppliers.push(record);
   }
+  /* Written after the record is in place, and through the one function
+     that writes both sides -- a supplier whose customer still points
+     somewhere else is a person who is their own supplier from one screen
+     and nobody's from the other. */
+  linkCustomerSupplier(document.getElementById('s_link_customer').value || null, id);
   saveData(); closeModal('supplierModal'); resetSupplierForm(); renderSuppliers();
   populatePriceSupplierFilter(document.getElementById('pr_supplier_filter').value);
   toast('Supplier saved');
@@ -19522,7 +19627,8 @@ function customerCardHTML(c){
     <div class="cc-head">
       <div class="cc-avatar">${esc(customerInitials(c.name))}</div>
       <div class="cc-title">
-        <div class="cc-name">${esc(c.name)}</div>
+        <div class="cc-name">${esc(c.name)}${
+          c.linkedSupplierId ? '<span class="both-tag" title="You buy from them as well as sell to them">Also a supplier</span>' : ''}</div>
         <div class="cc-id">${esc(c.id)}</div>
       </div>
       <div class="cc-actions">
@@ -19533,6 +19639,21 @@ function customerCardHTML(c){
     <div class="cc-details">
       ${c.phone ? `<div class="cc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${esc(c.phone)}</span></div>` : ''}
       ${c.location ? `<div class="cc-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(c.location)}</span></div>` : ''}
+      ${(()=>{
+        /* The whole point of the link: what they owe and what is owed to
+           them, side by side, with the balance between. Rendered only
+           when there IS a second side -- an unlinked customer has no net
+           position, and printing a reassuring zero would invent one. */
+        const both = bothSidesPosition(c);
+        if(!both) return '';
+        return `<div class="cc-both">
+          <span>Owes you ${esc(fmtUGX(Math.round(both.owed)))} · you owe them ${esc(fmtUGX(Math.round(both.owing)))}</span>
+          <b class="${both.net > 0 ? 'in' : both.net < 0 ? 'out' : ''}">${
+            Math.abs(both.net) < 1 ? 'Square'
+              : both.net > 0 ? fmtUGX(Math.round(both.net)) + ' your way'
+              : fmtUGX(Math.round(-both.net)) + ' their way'}</b>
+        </div>`;
+      })()}
       ${c.notes ? `<div class="cc-notes">${esc(c.notes)}</div>` : ''}
       ${(!c.phone && !c.location && !c.notes) ? `<div class="cc-row" style="color:var(--ink-soft);">No contact details on file yet</div>` : ''}
     </div>
@@ -19885,6 +20006,7 @@ function editCustomer(id){
   document.getElementById('c_debt_since').value = '';
   document.getElementById('c_debt_undated').checked = false;
   document.getElementById('customerFormTitle').textContent = 'Edit customer';
+  cfFillLinkPicker(c);
   cfShowOwed(c);
   cfRefresh();
   cfShowIssuedId();
@@ -19896,6 +20018,7 @@ function resetCustomerForm(){
   ['c_id','c_name','c_phone','c_location','c_debt','c_debt_since','c_notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c_debt_undated').checked = false;
   fillIssuedId('c_id', 'customer', 'C', 3, data.customers);
+  cfFillLinkPicker(null);
   document.getElementById('customerFormTitle').textContent = 'Add customer';
   cfShowOwed(null);
   cfRefresh();
@@ -19912,6 +20035,69 @@ function resetCustomerForm(){
    typed over it, "Customer saved", balance still 250,000, no message.
    Making it work would have been the wrong fix: a balance typed over its
    own ledger is precisely the drift the app raises a banner about. */
+/* Fills one side's picker with the other side's records, and says what
+   tying them together will mean in money. Anyone already linked to
+   somebody ELSE is left out: a counterpart can only be claimed once, and
+   offering a taken one just produces a save that quietly steals it. */
+function cfFillLinkPicker(customer){
+  const sel = document.getElementById('c_link_supplier');
+  if(!sel) return;
+  const mineId = customer && customer.linkedSupplierId;
+  const free = (data.suppliers||[]).filter(sup=>
+    !sup.linkedCustomerId || (customer && sup.linkedCustomerId === customer.id));
+  sel.innerHTML = '<option value="">No — they are only a customer</option>'
+    + free.map(sup=> `<option value="${esc(sup.id)}"${sup.id===mineId?' selected':''}>${esc(sup.name||sup.id)}${
+        sup.location ? ' — ' + esc(sup.location) : ''}</option>`).join('');
+  cfShowLinkHint(customer);
+}
+function cfShowLinkHint(customer){
+  const el = document.getElementById('c_link_hint');
+  const sel = document.getElementById('c_link_supplier');
+  if(!el || !sel) return;
+  const sup = (data.suppliers||[]).find(x=> x.id === sel.value);
+  if(!sup){ el.textContent = 'Pick their supplier record and the two are held together — what they owe you and what you owe them can then be seen side by side.'; return; }
+  const owed = Math.max(0, Number((customer||{}).debt)||0);
+  const owing = Math.max(0, creditorTotalOwed(sup.id));
+  el.innerHTML = `Held together with <b>${esc(sup.name||sup.id)}</b>. `
+    + (owed || owing
+      ? `They owe you <b>${esc(fmtUGX(Math.round(owed)))}</b> and you owe them <b>${esc(fmtUGX(Math.round(owing)))}</b> — `
+        + (Math.abs(owed-owing) < 1
+          ? 'the two cancel out exactly.'
+          : owed > owing
+            /* Whose way the balance falls. owed is what THEY owe the
+               shop, so more of it means the balance is the SHOP's way --
+               the hint said the opposite of the card on the same facts,
+               which is how a shopkeeper ends up paying somebody who owes
+               them money. */
+            ? `<b>${esc(fmtUGX(Math.round(owed-owing)))}</b> your way on balance.`
+            : `<b>${esc(fmtUGX(Math.round(owing-owed)))}</b> their way on balance.`)
+      : 'Neither side owes the other anything at the moment.');
+}
+function sfFillLinkPicker(supplier){
+  const sel = document.getElementById('s_link_customer');
+  if(!sel) return;
+  const mineId = supplier && supplier.linkedCustomerId;
+  const free = (data.customers||[]).filter(c=>
+    !c.linkedSupplierId || (supplier && c.linkedSupplierId === supplier.id));
+  sel.innerHTML = '<option value="">No — they are only a supplier</option>'
+    + free.map(c=> `<option value="${esc(c.id)}"${c.id===mineId?' selected':''}>${esc(c.name||c.id)}${
+        c.location ? ' — ' + esc(c.location) : ''}</option>`).join('');
+  sfShowLinkHint(supplier);
+}
+function sfShowLinkHint(supplier){
+  const el = document.getElementById('s_link_hint');
+  const sel = document.getElementById('s_link_customer');
+  if(!el || !sel) return;
+  const c = (data.customers||[]).find(x=> x.id === sel.value);
+  if(!c){ el.textContent = 'Pick their customer record and the two are held together — what you owe them and what they owe you can then be seen side by side.'; return; }
+  const owed = Math.max(0, Number(c.debt)||0);
+  const owing = supplier ? Math.max(0, creditorTotalOwed(supplier.id)) : 0;
+  el.innerHTML = `Held together with <b>${esc(c.name||c.id)}</b>. `
+    + (owed || owing
+      ? `You owe them <b>${esc(fmtUGX(Math.round(owing)))}</b> and they owe you <b>${esc(fmtUGX(Math.round(owed)))}</b>.`
+      : 'Neither side owes the other anything at the moment.');
+}
+
 function cfShowOwed(c){
   const owe = document.getElementById('c_owe_block');
   const owes = document.getElementById('c_owes_block');
@@ -20084,6 +20270,10 @@ function deleteCustomer(id){
 document.getElementById('c_add_btn').addEventListener('click', ()=>{
   resetCustomerForm(); openModal('customerModal'); document.getElementById('c_name').focus();
 });
+document.getElementById('c_link_supplier').addEventListener('change', ()=>
+  cfShowLinkHint(editingCustomerId ? data.customers.find(c=>c.id===editingCustomerId) : null));
+document.getElementById('s_link_customer').addEventListener('change', ()=>
+  sfShowLinkHint(editingSupplierId ? data.suppliers.find(x=>x.id===editingSupplierId) : null));
 document.getElementById('c_save').addEventListener('click', ()=>{
   const id = document.getElementById('c_id').value.trim();
   const name = document.getElementById('c_name').value.trim();
@@ -20114,12 +20304,16 @@ document.getElementById('c_save').addEventListener('click', ()=>{
   }
   if(!editingCustomerId && idIsPending(id)){ toast('Still issuing a Customer ID — try again in a moment'); return; }
   if(!editingCustomerId && data.customers.some(c=>c.id===id)){ toast(`Could not issue a new Customer ID (${id} is taken). Reload and try again.`); return; }
+  const linkSupplierId = document.getElementById('c_link_supplier').value || null;
   if(editingCustomerId){
     const idx = data.customers.findIndex(c=>c.id===editingCustomerId);
     data.customers[idx] = {
       ...data.customers[idx], id, name, location, phone,
       notes: document.getElementById('c_notes').value.trim(),
     };
+    // Through linkCustomerSupplier so BOTH records are written and any
+    // previous partner on either side is released.
+    linkCustomerSupplier(id, linkSupplierId);
   } else {
     /* An opening balance is a real charge and has to appear in the
        ledger, or the customer starts life with a debt nothing accounts
@@ -20161,6 +20355,9 @@ document.getElementById('c_save').addEventListener('click', ()=>{
         : []
     });
   }
+  // A NEW customer is linked after it exists, or there is nothing for
+  // the supplier side to point back at.
+  if(!editingCustomerId) linkCustomerSupplier(id, linkSupplierId);
   saveData(); closeModal('customerModal'); resetCustomerForm(); renderCustomers(document.getElementById('c_search').value);
   toast('Customer saved');
 });
