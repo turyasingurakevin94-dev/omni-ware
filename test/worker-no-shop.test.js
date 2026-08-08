@@ -29,7 +29,7 @@ function build({ memberships, hostAnswers }) {
   const seen = [];
   const scope = (new Function(
     'sb', 'getAuthedUser', 'showLoginScreen', 'showSetPasswordScreen',
-    'showCreateShopScreen', 'showNoShopDefaultScreen', 'showShopPicker', 'hideAuthOverlay', 'showNoShopScreen',
+    'showCreateShopScreen', 'showNoShopDefaultScreen', 'showShopPicker', 'hideAuthOverlay', 'owSessionBeat', 'showNoShopScreen',
     'initialAuthLinkType', `
     let currentUser = null, currentShopId = null, currentMemberRole = null;
     ${extractFunction(sharedJs, 'ensureAuthAndShop', 'shared-worker.js')}
@@ -45,6 +45,7 @@ function build({ memberships, hostAnswers }) {
     async () => { seen.push('DEFAULT DEAD END'); },
     async () => { seen.push('shopPicker'); return 'shop-2'; },
     () => seen.push('overlayHidden'),
+    async () => { seen.push('sessionRecorded'); },
     hostAnswers ? async () => { seen.push('NO SHOP MESSAGE'); } : undefined,
     null,
   );

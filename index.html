@@ -3614,6 +3614,23 @@
     font-size:12.5px;line-height:1.55;color:var(--ow-amber-ink);
   }
   .ln-callout .icon{width:16px;height:16px;flex-shrink:0;margin-top:1px;}
+  /* Signed-in devices. A row per device, its person on the left and
+     when it was last heard from on the right. */
+  .ls-row{display:flex;align-items:center;gap:12px;padding:11px 0;
+    border-bottom:1px solid var(--line);}
+  .ls-row:last-child{border-bottom:none;}
+  .ls-main{flex:1;min-width:0;}
+  .ls-who{font-size:13.5px;font-weight:600;line-height:1.3;}
+  .ls-what{font-size:12px;color:var(--ink-soft);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ls-when{font-size:12px;color:var(--ink-soft);white-space:nowrap;
+    font-variant-numeric:tabular-nums;flex:0 0 auto;}
+  .ls-tag{font-size:10.5px;font-weight:700;letter-spacing:0.04em;
+    text-transform:uppercase;padding:2px 7px;border-radius:999px;
+    background:var(--ow-steel-100);color:var(--ow-ink-600);margin-left:6px;}
+  .ls-tag.live{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .ls-tag.you{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .ls-tag.out{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .ln-addpay{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .ln-addpay input{flex:1 1 130px;min-width:0;}
   .ln-addpay .btn{flex:0 0 auto;}
@@ -5403,6 +5420,18 @@
         <p>Workers and delivery personnel. Assign them to orders as they move through Order Tracking.</p>
       </div>
       <div id="staffTeamStrip"></div>
+      <!-- Who is signed in, on what, and since when. On the Staff tab
+           because it is a question about people, not about settings. -->
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Signed-in devices</h2>
+          <button class="btn btn-ghost btn-icon" id="ls_refresh">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="ls_list"></div>
+      </div>
       <div class="panel">
         <div class="rost-bar">
           <div class="rost-filters" id="staffRoleFilter">
@@ -10800,6 +10829,7 @@ function goToTab(tab){
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
   if(tab==='payroll') renderPayroll();
+  if(tab==='staff') loadLoginSessions();
   if(tab==='statements') renderStatements();
   // Every other data tab redraws on entry; this one only ever drew at
   // boot. It mattered little when the panes were the whole screen, and
@@ -17899,6 +17929,132 @@ function openStaffPerformance(staffId){
   openModal('staffPerfModal');
 }
 
+/* ================= WHO IS SIGNED IN =================================
+
+   A monitor answers one question -- what is signed in right now -- and
+   has to answer it in words an owner can act on, so every figure here is
+   derived at render from the rows themselves rather than stored.
+*/
+/* Live means heard from within two heartbeats. One would call a device
+   dead every time a beat was late; the row still shows its real last
+   seen either way, so this only chooses a word, never hides a fact. */
+const LS_LIVE_MS = 5 * 60 * 1000;
+function lsIsLive(row, nowMs){
+  if(!row || row.revoked_at) return false;
+  const t = Date.parse(row.last_seen_at || '');
+  /* The isNaN guard is a statement of intent, not a filter that
+     changes an answer: an unreadable timestamp gives NaN, and every
+     comparison against NaN is already false. Kept because "unreadable
+     means not live" should be legible without knowing that. */
+  return !isNaN(t) && (nowMs - t) < LS_LIVE_MS;
+}
+/* "3 minutes ago". Under a minute is "just now" rather than "0 minutes
+   ago", which reads as broken. Null in, null out -- a device that has
+   never been heard from makes no claim about when it was. */
+function lsAgo(iso, nowMs){
+  const t = Date.parse(iso || '');
+  if(isNaN(t)) return null;
+  const mins = Math.floor((nowMs - t) / 60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return `${mins} minute${mins===1?'':'s'} ago`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs} hour${hrs===1?'':'s'} ago`;
+  const days = Math.floor(hrs/24);
+  return `${days} day${days===1?'':'s'} ago`;
+}
+const LS_APP_LABELS = { admin: 'Admin app', worker: 'Worker app', agent: 'Agent app' };
+/* Whose account it is. A shop member is not always on the staff list --
+   the owner is not -- so an unmatched account is named by its login
+   rather than reported as nobody. */
+function lsWhoName(row, staffList, myUserId){
+  const st = (staffList||[]).find(x=> x.userId && String(x.userId) === String(row.user_id));
+  if(st && st.name) return st.name;
+  if(myUserId && String(row.user_id) === String(myUserId)) return 'You';
+  return 'Account ' + String(row.user_id||'').slice(0, 8);
+}
+/* Newest first, but anything still live floats above anything that is
+   not: the rows worth acting on are the ones signed in NOW. */
+function lsSortRows(rows, nowMs){
+  return (rows||[]).slice().sort((a,b)=>{
+    const la = lsIsLive(a, nowMs), lb = lsIsLive(b, nowMs);
+    if(la !== lb) return la ? -1 : 1;
+    return String(b.last_seen_at||'').localeCompare(String(a.last_seen_at||''));
+  });
+}
+
+let lsRows = [];
+async function loadLoginSessions(){
+  try {
+    const { data, error } = await sb.from('login_sessions')
+      .select('id, user_id, device_id, app, label, started_at, last_seen_at, revoked_at')
+      .eq('shop_id', currentShopId)
+      .order('last_seen_at', { ascending: false })
+      .limit(100);
+    if(error) throw error;
+    lsRows = data || [];
+  } catch(e){
+    console.error('could not load login sessions', e);
+    lsRows = null;      // null is "could not read", which is not "nothing signed in"
+  }
+  renderLoginSessions();
+}
+
+function renderLoginSessions(){
+  const wrap = document.getElementById('ls_list');
+  if(!wrap) return;
+  if(lsRows === null){
+    wrap.innerHTML = '<div class="wa-empty">Could not read the signed-in devices. Only an owner or admin can see them.</div>';
+    return;
+  }
+  const now = Date.now();
+  const mine = typeof owDeviceId === 'function' ? owDeviceId() : null;
+  const myUser = currentUser ? currentUser.id : null;
+  const rows = lsSortRows(lsRows, now);
+  if(!rows.length){
+    wrap.innerHTML = '<div class="wa-empty">Nothing signed in yet. Devices appear here the moment somebody signs in.</div>';
+    return;
+  }
+  wrap.innerHTML = rows.map(r=>{
+    const isMe = mine && r.device_id === mine && String(r.user_id) === String(myUser);
+    const live = lsIsLive(r, now);
+    const seen = lsAgo(r.last_seen_at, now);
+    const since = lsAgo(r.started_at, now);
+    return `<div class="ls-row">
+      <div class="ls-main">
+        <div class="ls-who">${esc(lsWhoName(r, data.staff, myUser))}${
+          isMe ? '<span class="ls-tag you">This device</span>' : ''}${
+          r.revoked_at ? '<span class="ls-tag out">Signed out</span>'
+          : live ? '<span class="ls-tag live">Online</span>' : ''}</div>
+        <div class="ls-what">${esc(LS_APP_LABELS[r.app] || r.app)} · ${esc(r.label || 'Unknown device')}${
+          since ? ` · first seen ${esc(since)}` : ''}</div>
+      </div>
+      <div class="ls-when">${esc(seen || 'never')}</div>
+      ${r.revoked_at ? '' : `<button type="button" class="btn btn-ghost ls-revoke" data-id="${r.id}">Sign out</button>`}
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.ls-revoke').forEach(btn=> btn.addEventListener('click', async ()=>{
+    const row = lsRows.find(x=> String(x.id) === String(btn.dataset.id));
+    if(!row) return;
+    const isMe = mine && row.device_id === mine && String(row.user_id) === String(myUser);
+    /* Signing a device out is not the same as taking somebody's access
+       away, and saying so is the difference between a shopkeeper who is
+       protected and one who thinks they are. */
+    if(!confirm(`Sign out ${lsWhoName(row, data.staff, myUser)} on ${row.label || 'this device'}?`
+      + (isMe ? '\n\nTHIS IS THE DEVICE YOU ARE USING. You will be signed out.' : '')
+      + '\n\nIt stops within a minute. If they know the password they can sign in again — remove them from Staff to stop that.')) return;
+    try {
+      const { error } = await sb.from('login_sessions')
+        .update({ revoked_at: new Date().toISOString() }).eq('id', row.id);
+      if(error) throw error;
+      toast('Signed out — that device stops within a minute');
+      await loadLoginSessions();
+    } catch(e){
+      toast('Could not sign that device out: ' + ((e && e.message) || e));
+    }
+  }));
+}
+
 function renderStaff(filter=''){
   renderStaffTeamStrip();
   const range = staffPeriodRange();
@@ -18187,6 +18343,7 @@ function deleteStaff(id){
     ? `Staff member deleted — ${releasing.length} order${releasing.length===1?'':'s'} released for reassignment`
     : 'Staff member deleted');
 }
+document.getElementById('ls_refresh').addEventListener('click', loadLoginSessions);
 document.getElementById('st_add_btn').addEventListener('click', ()=>{
   resetStaffForm();
   openModal('staffModal');
@@ -31920,7 +32077,12 @@ async function pollForUpdatesNow(){
 let dataPollTimer = null;
 function startDataPolling(){
   if(dataPollTimer) return;
-  dataPollTimer = setInterval(()=>{ if(!document.hidden) pollForUpdatesNow(); }, 30000);
+  dataPollTimer = setInterval(()=>{ if(!document.hidden){
+    pollForUpdatesNow();
+    // Rides the same tick and throttles itself to one write every two
+    // minutes. A device revoked by the owner signs itself out here.
+    owSessionBeat();
+  } }, 30000);
   // A tab that was backgrounded when a scheduled tick fired shouldn't
   // have to wait up to another full 30s after coming back into view --
   // nudge an immediate refresh the moment it becomes visible again (the

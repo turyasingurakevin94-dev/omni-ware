@@ -659,6 +659,122 @@ async function ensureAuthAndShop(){
     currentShopName = shopNameOf(chosen);
   }
   hideAuthOverlay();
+  // Before the first screen, so a device appears in the monitor the
+  // moment it gets in rather than at the first heartbeat.
+  await owSessionBeat(true);
+}
+
+/* ================= WHO IS SIGNED IN =================================
+
+   Three apps sign in against one shop and nothing recorded that a
+   sign-in had happened: a phone left in a taxi, a password shared
+   between two workers, or somebody still signed in months after they
+   stopped working here were all invisible to the person who owns the
+   data.
+
+   One row per (person, device, app), kept fresh by a heartbeat. Not a
+   log of every sign-in -- that grows without limit and buries the
+   question actually being asked, which is what is signed in RIGHT NOW.
+*/
+const OW_DEVICE_KEY = 'owDeviceId';
+/* Minted once per browser profile and kept in its own storage. NOT a
+   fingerprint: clearing storage makes a new one, and the monitor shows
+   that as a new device rather than pretending to recognise it. Private
+   browsing can refuse storage entirely, so a failure falls back to a
+   per-tab id rather than throwing on the way into the app. */
+let owFallbackDeviceId = null;
+function owDeviceId(){
+  let id = null;
+  try { id = localStorage.getItem(OW_DEVICE_KEY); } catch(e){ /* storage refused */ }
+  if(id) return id;
+  id = 'dev_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try { localStorage.setItem(OW_DEVICE_KEY, id); }
+  catch(e){
+    if(!owFallbackDeviceId) owFallbackDeviceId = id;
+    return owFallbackDeviceId;
+  }
+  return id;
+}
+/* "Chrome on Android" -- enough for an owner to recognise their own
+   phone in a list, and no more. ORDER IS THE WHOLE THING here: Edge's
+   user agent contains "Chrome", Chrome's contains "Safari", and every
+   Android browser's contains "Linux". Each test therefore has to come
+   before the one it would be mistaken for. */
+function owDeviceLabel(ua){
+  const s = String(ua || '');
+  const browser = /Edg\//.test(s) ? 'Edge'
+    : /OPR\/|Opera/.test(s) ? 'Opera'
+    : /Chrome\//.test(s) ? 'Chrome'
+    : /Firefox\//.test(s) ? 'Firefox'
+    : /Safari\//.test(s) ? 'Safari'
+    : '';
+  const os = /Android/.test(s) ? 'Android'
+    : /iPhone/.test(s) ? 'iPhone'
+    : /iPad/.test(s) ? 'iPad'
+    : /Windows/.test(s) ? 'Windows'
+    : /Mac OS X/.test(s) ? 'Mac'
+    : /Linux/.test(s) ? 'Linux'
+    : '';
+  if(browser && os) return `${browser} on ${os}`;
+  return browser || os || 'Unknown device';
+}
+
+let owSessionRowId = null;
+let owSessionLastBeat = 0;
+/* How often a signed-in device says it is still here. Frequent enough
+   that "last seen" means something to somebody watching, rare enough
+   that it is not a write every poll. */
+const OW_SESSION_BEAT_MS = 120000;
+
+/* Registers this device against the shop, and answers whether it has
+   been revoked.
+
+   Read-then-write rather than an upsert, deliberately: an upsert writes
+   the whole row, so a revoked device would clear its own revoked_at just
+   by reloading. (The database trigger refuses that too -- this is the
+   half that keeps the client from asking.) */
+async function owTouchSession(force){
+  if(!currentUser || !currentShopId || typeof sb === 'undefined') return false;
+  const now = Date.now();
+  if(!force && now - owSessionLastBeat < OW_SESSION_BEAT_MS) return false;
+  owSessionLastBeat = now;
+  const app = typeof owSessionApp === 'function' ? owSessionApp() : authAppRole();
+  try {
+    const { data: mine } = await sb.from('login_sessions')
+      .select('id, revoked_at')
+      .eq('shop_id', currentShopId).eq('user_id', currentUser.id)
+      .eq('device_id', owDeviceId()).eq('app', app)
+      .maybeSingle();
+    if(mine && mine.revoked_at) return true;          // revoked: caller signs out
+    const stamp = new Date().toISOString();
+    if(mine){
+      owSessionRowId = mine.id;
+      await sb.from('login_sessions').update({ last_seen_at: stamp }).eq('id', mine.id);
+    } else {
+      const { data: made } = await sb.from('login_sessions').insert({
+        shop_id: currentShopId, user_id: currentUser.id, device_id: owDeviceId(),
+        app, label: owDeviceLabel(typeof navigator !== 'undefined' ? navigator.userAgent : ''),
+        started_at: stamp, last_seen_at: stamp,
+      }).select('id').maybeSingle();
+      if(made) owSessionRowId = made.id;
+    }
+  } catch(e){
+    /* Never block the app on this. A shop that cannot record who is
+       signed in must still be able to sell things. */
+    console.error('login session heartbeat failed', e);
+  }
+  return false;
+}
+
+/* The heartbeat, and the thing that acts on a revocation. Called from
+   each app's existing poll, so a revoked device signs itself out within
+   one beat rather than staying live until someone closes the tab. */
+async function owSessionBeat(force){
+  const revoked = await owTouchSession(force);
+  if(revoked){
+    alert('This device has been signed out by the shop owner.');
+    await signOutAndReload();
+  }
 }
 
 // This device's FCM token, once the OS has handed it over. Set by the

@@ -1591,6 +1591,93 @@ function showSetPasswordScreen(){
   });
 }
 
+/* ================= WHO IS SIGNED IN =================================
+
+   The agent app is deliberately self-contained -- it does not load
+   shared-worker.js -- so it carries its own copy of this. owDeviceId and
+   owDeviceLabel are lifted VERBATIM from that file and a test compares
+   them byte for byte, because a label that parses user agents two
+   different ways in two apps is a monitor that quietly disagrees with
+   itself about what a device is.
+
+   An agent is an outside salesperson holding a login to somebody else's
+   shop, which is exactly the account an owner most wants to see.
+*/
+const OW_DEVICE_KEY = 'owDeviceId';
+let owFallbackDeviceId = null;
+function owDeviceId(){
+  let id = null;
+  try { id = localStorage.getItem(OW_DEVICE_KEY); } catch(e){ /* storage refused */ }
+  if(id) return id;
+  id = 'dev_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try { localStorage.setItem(OW_DEVICE_KEY, id); }
+  catch(e){
+    if(!owFallbackDeviceId) owFallbackDeviceId = id;
+    return owFallbackDeviceId;
+  }
+  return id;
+}
+
+function owDeviceLabel(ua){
+  const s = String(ua || '');
+  const browser = /Edg\//.test(s) ? 'Edge'
+    : /OPR\/|Opera/.test(s) ? 'Opera'
+    : /Chrome\//.test(s) ? 'Chrome'
+    : /Firefox\//.test(s) ? 'Firefox'
+    : /Safari\//.test(s) ? 'Safari'
+    : '';
+  const os = /Android/.test(s) ? 'Android'
+    : /iPhone/.test(s) ? 'iPhone'
+    : /iPad/.test(s) ? 'iPad'
+    : /Windows/.test(s) ? 'Windows'
+    : /Mac OS X/.test(s) ? 'Mac'
+    : /Linux/.test(s) ? 'Linux'
+    : '';
+  if(browser && os) return `${browser} on ${os}`;
+  return browser || os || 'Unknown device';
+}
+
+let owSessionLastBeat = 0;
+const OW_SESSION_BEAT_MS = 120000;
+
+async function owTouchSession(force){
+  if(!currentUser || !currentShopId) return false;
+  const now = Date.now();
+  if(!force && now - owSessionLastBeat < OW_SESSION_BEAT_MS) return false;
+  owSessionLastBeat = now;
+  try {
+    const { data: mine } = await sb.from('login_sessions')
+      .select('id, revoked_at')
+      .eq('shop_id', currentShopId).eq('user_id', currentUser.id)
+      .eq('device_id', owDeviceId()).eq('app', 'agent')
+      .maybeSingle();
+    if(mine && mine.revoked_at) return true;
+    const stamp = new Date().toISOString();
+    if(mine){
+      await sb.from('login_sessions').update({ last_seen_at: stamp }).eq('id', mine.id);
+    } else {
+      await sb.from('login_sessions').insert({
+        shop_id: currentShopId, user_id: currentUser.id, device_id: owDeviceId(),
+        app: 'agent', label: owDeviceLabel(navigator.userAgent),
+        started_at: stamp, last_seen_at: stamp,
+      });
+    }
+  } catch(e){
+    // An agent who cannot be monitored must still be able to sell.
+    console.error('login session heartbeat failed', e);
+  }
+  return false;
+}
+
+async function owSessionBeat(force){
+  if(await owTouchSession(force)){
+    alert('This device has been signed out by the shop.');
+    await signOutAndReload();
+  }
+}
+// Its own rhythm, since this app has no shared poll to ride.
+setInterval(()=>{ if(!document.hidden) owSessionBeat(); }, 60000);
+
 async function signOutAndReload(){
   // Drop the snapshot on the way out. Ownership is checked on every read
   // anyway, but leaving one agent's clients and orders sitting in a shared
@@ -1992,6 +2079,8 @@ async function ensureAgentAuth(){
     throw new Error("This agent account has been retired, so it can't be used to sign in. Contact the shop if that's not right.");
   }
   currentShopId = agentRow.shop_id;
+  // The monitor should show an agent's phone the moment it gets in.
+  owSessionBeat(true);
   /* Paused is NOT retired and must not be treated like it. Retiring
      closes current_agent_id(), so every policy shuts and the app would
      load empty -- which is why the block above refuses to start at all.

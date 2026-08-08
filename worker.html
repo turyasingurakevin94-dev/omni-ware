@@ -823,6 +823,9 @@ async function refreshWorkerData(opts){
 
 function startWorkerPolling(){
   setInterval(refreshWorkerData, WORKER_POLL_MS);
+  // A worker's phone is the one most likely to be lost, so it checks
+  // whether it has been signed out on the same rhythm as its orders.
+  setInterval(()=>{ if(!document.hidden) owSessionBeat(); }, 60000);
   document.addEventListener('visibilitychange', ()=>{
     if(document.visibilityState === 'visible') refreshWorkerData();
   });
