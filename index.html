@@ -8289,7 +8289,7 @@ async function loadData(shopId){
   const quote = settings.quote_draft || {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
 
   return {
-    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, shopNo:s.shop_no||'', notes:s.notes, linkedCustomerId:s.linked_customer_id||null, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
+    suppliers: (suppliersR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, location:s.location, shopNo:s.shop_no||'', notes:s.notes, commissionPct: s.commission_pct==null ? null : Number(s.commission_pct)})),
     // payBasis and payRate stay null rather than becoming '' and 0: a
     // staff member nobody has set a rate for has not been given a rate
     // of nothing, and the payroll screen has to be able to tell those
@@ -8468,7 +8468,7 @@ function buildSyncRows(d, shopId){
     id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
   })));
   return {
-    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, shop_no:s.shopNo||null, notes:s.notes, linked_customer_id:s.linkedCustomerId||null, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
+    suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
     staff: (d.staff||[]).map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable,
       // Written through as null, never coerced to 0 -- see the load side.
       pay_basis: s.payBasis || null,
@@ -12799,9 +12799,16 @@ function linkedSupplierOf(customer){
   if(!customer || !customer.linkedSupplierId) return null;
   return (data.suppliers||[]).find(x=> x.id === customer.linkedSupplierId) || null;
 }
+/* DERIVED, not stored. The link used to live on both records with a
+   foreign key each way -- a cycle, and saveData() writes every table
+   concurrently, so whichever row landed first referenced one the other
+   request had not written yet. It failed in production the first time a
+   real customer was linked. One field now: the customer holds it, and
+   the supplier side is whoever points at them. The two halves cannot
+   disagree because there is only one half. */
 function linkedCustomerOf(supplier){
-  if(!supplier || !supplier.linkedCustomerId) return null;
-  return (data.customers||[]).find(x=> x.id === supplier.linkedCustomerId) || null;
+  if(!supplier) return null;
+  return (data.customers||[]).find(x=> x.linkedSupplierId === supplier.id) || null;
 }
 /* Ties two records together, or unties them. Both sides are written
    here, and any PREVIOUS partner on either side is released first --
@@ -12811,15 +12818,20 @@ function linkCustomerSupplier(customerId, supplierId){
   const c = (data.customers||[]).find(x=> x.id === customerId);
   const sup = (data.suppliers||[]).find(x=> x.id === supplierId);
   if(!c) return false;
-  // Release whoever each side was pointing at before.
-  const oldSup = linkedSupplierOf(c);
-  if(oldSup) oldSup.linkedCustomerId = null;
+  /* A counterpart can only be claimed once -- two customers pointing at
+     one supplier would net that balance twice, against two people -- so
+     whoever held it is released first. Still needed with one field: the
+     exclusivity is between CUSTOMERS, not between the two halves. */
   if(sup){
     const oldCus = linkedCustomerOf(sup);
-    if(oldCus) oldCus.linkedSupplierId = null;
+    /* The id test is a statement of intent, not a filter that changes an
+       answer: when the holder IS this customer, oldCus and c are the same
+       object and the assignment below puts the link straight back. Kept
+       so "do not clear the one we are about to set" is legible without
+       having to notice that. */
+    if(oldCus && oldCus.id !== c.id) oldCus.linkedSupplierId = null;
   }
   c.linkedSupplierId = sup ? sup.id : null;
-  if(sup) sup.linkedCustomerId = c.id;
   return true;
 }
 /* What this person and the shop actually owe each other.
@@ -17453,7 +17465,7 @@ function supplierCardHTML(s, productMatches){
       <div class="sc-avatar">${esc(supplierInitials(s.name))}</div>
       <div class="sc-title">
         <div class="sc-name">${esc(s.name)}${
-          s.linkedCustomerId ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}</div>
+          linkedCustomerOf(s) ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}</div>
         <div class="sc-id">${esc(s.id)}</div>
       </div>
       <div class="sc-actions">
@@ -17635,6 +17647,12 @@ document.getElementById('s_name').addEventListener('input', supRenderDuplicate);
    were two unrelated strings and a pickup run could not group them. */
 document.getElementById('s_location').addEventListener('input', supRenderLocationHint);
 function deleteSupplier(id){
+  /* Cleared here rather than by the database: the foreign key that used
+     to do it was half of a cycle the concurrent sync could not satisfy
+     (0064). Left behind, the customer would keep claiming a supplier
+     that no longer exists -- harmless on screen, since the lookup finds
+     nothing, but it would silently block the id if it were ever reissued. */
+  (data.customers||[]).forEach(c=>{ if(c.linkedSupplierId === id) c.linkedSupplierId = null; });
   // Refused while money is still owed to them.
   //
   // The Creditors List is built by mapping data.suppliers, so deleting a
@@ -17684,9 +17702,6 @@ Add them anyway?`)) return;
   const priorPct = editingSupplierId ? (data.suppliers.find(s=>s.id===editingSupplierId)||{}).commissionPct : null;
   const record = {
     id, name,
-    linkedCustomerId: editingSupplierId
-      ? (data.suppliers.find(x=>x.id===editingSupplierId)||{}).linkedCustomerId || null
-      : null,
     phone: document.getElementById('s_phone').value.trim(),
     // rememberLocation adds a new place to the shared list and settles
     // a known one to its recorded spelling, so "ntinda" and "Ntinda"
@@ -20049,8 +20064,10 @@ function cfFillLinkPicker(customer){
   const sel = document.getElementById('c_link_supplier');
   if(!sel) return;
   const mineId = customer && customer.linkedSupplierId;
-  const free = (data.suppliers||[]).filter(sup=>
-    !sup.linkedCustomerId || (customer && sup.linkedCustomerId === customer.id));
+  const free = (data.suppliers||[]).filter(sup=>{
+    const holder = linkedCustomerOf(sup);
+    return !holder || (customer && holder.id === customer.id);
+  });
   sel.innerHTML = '<option value="">No — they are only a customer</option>'
     + free.map(sup=> `<option value="${esc(sup.id)}"${sup.id===mineId?' selected':''}>${esc(sup.name||sup.id)}${
         sup.location ? ' — ' + esc(sup.location) : ''}</option>`).join('');
@@ -20082,7 +20099,8 @@ function cfShowLinkHint(customer){
 function sfFillLinkPicker(supplier){
   const sel = document.getElementById('s_link_customer');
   if(!sel) return;
-  const mineId = supplier && supplier.linkedCustomerId;
+  const held = linkedCustomerOf(supplier);
+  const mineId = held ? held.id : null;
   const free = (data.customers||[]).filter(c=>
     !c.linkedSupplierId || (supplier && c.linkedSupplierId === supplier.id));
   sel.innerHTML = '<option value="">No — they are only a supplier</option>'

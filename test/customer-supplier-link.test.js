@@ -14,10 +14,21 @@
  * problem, so each side keeps its own id and its own history and simply
  * knows who the other one is.
  *
- * THE LINK IS SYMMETRIC OR IT IS NOTHING. A half-written link is a
- * person who is their own supplier seen from the customer screen and
- * nobody at all seen from the supplier screen -- worse than no link,
- * because it looks right from wherever you happen to be standing.
+ * THE LINK IS HELD IN ONE PLACE. It was first built as two stored
+ * fields pointing at each other, one foreign key each way -- and that is
+ * a CYCLE. saveData() writes every table concurrently, one transaction
+ * per request, so whichever row landed first referenced a row the other
+ * request had not written yet. It failed on the first real customer
+ * somebody linked:
+ *
+ *   insert or update on table "suppliers" violates foreign key
+ *   constraint "suppliers_linked_customer_fk"
+ *
+ * No ordering fixes a genuine cycle -- link a new customer to a new
+ * supplier and each row needs the other to exist first. So the customer
+ * holds the link and the supplier side is DERIVED: whoever points at
+ * them. The two halves cannot disagree because there is only one half,
+ * and there is nothing to write out of order.
  *
  * AND IT IS EXCLUSIVE. A counterpart claimed by two customers would have
  * its balance netted twice, against two different people.
@@ -54,18 +65,18 @@ const reset = () => {
 {
   reset();
   eq(scope.linkCustomerSupplier('C1', 'S1'), true, 'a customer can be tied to a supplier');
-  eq(data.customers[0].linkedSupplierId, 'S1', 'the customer points at the supplier');
-  eq(data.suppliers[0].linkedCustomerId, 'C1', 'AND the supplier points back');
-  eq(scope.linkedSupplierOf(data.customers[0]).id, 'S1', 'so each side can find the other');
-  eq(scope.linkedCustomerOf(data.suppliers[0]).id, 'C1', 'from either direction');
+  eq(data.customers[0].linkedSupplierId, 'S1', 'the customer holds the link');
+  /* The supplier stores NOTHING -- a second stored copy is what made the
+     cycle that failed in production. */
+  eq(data.suppliers[0].linkedCustomerId, undefined, 'and the supplier stores nothing at all');
+  eq(scope.linkedSupplierOf(data.customers[0]).id, 'S1', 'yet each side still finds the other');
+  eq(scope.linkedCustomerOf(data.suppliers[0]).id, 'C1', 'the supplier side by derivation');
 
-  /* Untying is the same operation with nothing on the other end, and it
-     has to clear BOTH sides too. */
   scope.linkCustomerSupplier('C1', null);
-  eq(data.customers[0].linkedSupplierId, null, 'untying clears the customer');
-  eq(data.suppliers[0].linkedCustomerId, null, 'and releases the supplier, not just the customer');
+  eq(data.customers[0].linkedSupplierId, null, 'untying clears the one field there is');
   eq(scope.linkedSupplierOf(data.customers[0]), null, 'after which neither side finds the other');
-  eq(scope.linkedCustomerOf(data.suppliers[0]), null, 'in either direction');
+  eq(scope.linkedCustomerOf(data.suppliers[0]), null,
+    'the supplier included, without anything having to be cleared on it');
 }
 
 /* ---------- 2. a counterpart can only be claimed once ---------------- *
@@ -79,15 +90,15 @@ const reset = () => {
   // The same customer changes their mind about which supplier it is.
   scope.linkCustomerSupplier('C1', 'S2');
   eq(data.customers[0].linkedSupplierId, 'S2', 'the customer follows the change');
-  eq(data.suppliers[1].linkedCustomerId, 'C1', 'the new supplier points back');
-  eq(data.suppliers[0].linkedCustomerId, null,
-    'and the supplier that was dropped stops claiming them');
+  eq(scope.linkedCustomerOf(data.suppliers[1]).id, 'C1', 'the new supplier derives them');
+  eq(scope.linkedCustomerOf(data.suppliers[0]), null,
+    'and the supplier that was dropped derives nobody — no stale copy to go stale');
 
   reset();
   scope.linkCustomerSupplier('C1', 'S1');
   // A DIFFERENT customer claims the supplier that C1 already holds.
   scope.linkCustomerSupplier('C2', 'S1');
-  eq(data.suppliers[0].linkedCustomerId, 'C2', 'the supplier follows the newer claim');
+  eq(scope.linkedCustomerOf(data.suppliers[0]).id, 'C2', 'the supplier derives the newer claim');
   eq(data.customers[1].linkedSupplierId, 'S1', 'which is written on that customer');
   eq(data.customers[0].linkedSupplierId, null,
     'and the customer who held it before is released — never two claims on one record');
@@ -97,7 +108,7 @@ const reset = () => {
 {
   reset();
   eq(scope.linkCustomerSupplier('NOPE', 'S1'), false, 'a customer that does not exist links nothing');
-  eq(data.suppliers[0].linkedCustomerId, undefined, 'and the supplier is left untouched');
+  eq(scope.linkedCustomerOf(data.suppliers[0]), null, 'and the supplier is claimed by nobody');
   /* A supplier id that matches nothing is an UNLINK, not a crash: the
      customer ends up pointing at nobody, which is the truth. */
   scope.linkCustomerSupplier('C1', 'GONE');
@@ -165,16 +176,21 @@ const reset = () => {
   /* Only free counterparts are offered: showing a taken one produces a
      save that silently steals it from whoever held it. */
   const fill = extractFunction(src, 'cfFillLinkPicker', 'index.html');
-  t.check(/!sup\.linkedCustomerId \|\| \(customer && sup\.linkedCustomerId === customer\.id\)/.test(fill),
-    'the picker offers unclaimed counterparts, plus the one already held');
+  t.check(/const holder = linkedCustomerOf\(sup\);\s*\r?\n\s*return !holder \|\| \(customer && holder\.id === customer\.id\)/.test(fill),
+    'the picker offers unclaimed counterparts, plus the one already held — asked of the derived side');
 
   // Both directions of the sync, or the link empties itself on reload.
   t.check(/linkedSupplierId:c\.linked_supplier_id\|\|null/.test(code)
     && /linked_supplier_id:c\.linkedSupplierId\|\|null/.test(code),
     'the customer half round-trips to the server, both ways');
-  t.check(/linkedCustomerId:s\.linked_customer_id\|\|null/.test(code)
-    && /linked_customer_id:s\.linkedCustomerId\|\|null/.test(code),
-    'and so does the supplier half');
+  /* THE FIX, held down: the supplier half must never become a stored
+     column again. Two tables referencing each other cannot both be
+     written by a sync that fires every table concurrently. */
+  t.check(!/linked_customer_id/.test(code) && !/linkedCustomerId/.test(code),
+    'the supplier half is derived, never stored — the cycle cannot come back');
+  const derived = extractFunction(src, 'linkedCustomerOf', 'index.html');
+  t.check(/\(data\.customers\|\|\[\]\)\.find\(x=> x\.linkedSupplierId === supplier\.id\)/.test(derived),
+    'the supplier side is worked out by asking which customer points at it');
 
   /* WHOSE WAY THE BALANCE FALLS, said the same way in both places.
      Found live: the form's hint read "400,000 their way" about a customer
@@ -197,18 +213,25 @@ const reset = () => {
   t.check(/const both = bothSidesPosition\(c\);/.test(src) && /if\(!both\) return '';/.test(src),
     'and the card nets them only when there IS another side');
 
-  const mig = read('supabase/migrations/0063_customer_supplier_link.sql');
-  /* Each constraint asserted on its own. A bare search for the clause is
-     satisfied by whichever of the two still has it, so dropping it from
-     one FK left the test green while deleting that side stranded the
-     other pointing at a row that no longer exists. */
-  t.check(/references suppliers\(shop_id, id\)\s*\r?\n\s*on delete set null;/.test(mig),
-    'deleting a supplier leaves its customer a normal record, not a dangling pointer');
-  t.check(/references customers\(shop_id, id\)\s*\r?\n\s*on delete set null;/.test(mig),
-    'and deleting a customer does the same for its supplier');
+  /* Both foreign keys are gone: each was half of a cycle, and even the
+     surviving single direction could still be violated, because the
+     supplier form creates a supplier and links it in the same save. */
+  const mig = read('supabase/migrations/0064_link_one_source_of_truth.sql');
+  t.check(/drop constraint if exists customers_linked_supplier_fk/.test(mig)
+    && /drop constraint if exists suppliers_linked_customer_fk/.test(mig),
+    'neither direction is a foreign key any more');
+  t.check(/drop column if exists linked_customer_id/.test(mig),
+    'and the second copy is dropped from the table, not merely left unwritten');
+  /* Kept, because it is WITHIN one table and so has no cycle to fall
+     into -- and it is the guarantee that actually matters. */
   t.check(/create unique index if not exists customers_linked_supplier_uniq/.test(mig)
     && /where linked_supplier_id is not null/.test(mig),
-    'and the database refuses two customers claiming one supplier');
+    'while the database still refuses two customers claiming one supplier');
+
+  /* Nothing else clears it now, so the delete path must. */
+  const del = extractFunction(src, 'deleteSupplier', 'index.html');
+  t.check(/if\(c\.linkedSupplierId === id\) c\.linkedSupplierId = null;/.test(del),
+    'deleting a supplier releases the customer that claimed them');
 }
 
 process.exit(t.done() ? 1 : 0);
