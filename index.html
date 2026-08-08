@@ -4386,7 +4386,13 @@
   .mp-wrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,300px);gap:0;
     border:1px solid var(--line);border-radius:11px;overflow:hidden;}
   @media (max-width: 900px){ .mp-wrap{grid-template-columns:1fr;} }
-  .mp-canvas{position:relative;min-width:0;}
+  /* z-index:0 is load-bearing, not decoration. Leaflet stacks its own
+     panes and controls up to 1000, and the app's top bar sits at 60 --
+     so without a stacking context here the map's zoom buttons paint
+     straight through the nav menu. position:relative alone does NOT make
+     one; it takes a z-index as well. With it, every Leaflet layer is
+     confined inside this box however high it counts. */
+  .mp-canvas{position:relative;z-index:0;min-width:0;}
   #mp_map{height:460px;width:100%;background:var(--ow-steel-050);}
   .mp-bases{position:absolute;left:10px;top:10px;z-index:500;display:flex;gap:3px;
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;}

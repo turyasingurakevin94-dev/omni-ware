@@ -696,6 +696,18 @@ const reset = () => {
   t.check(!/mpMarkers/.test(set), 'swapping the ground never touches the markers on it');
   t.check(/data-base="satellite"/.test(src) && /data-base="streets"/.test(src),
     'with a control to choose between them');
+
+  /* THE MAP MUST STAY INSIDE ITS BOX. Leaflet stacks its own panes and
+     controls up to z-index 1000; the app's top bar sits at 60. Reported
+     live: the zoom buttons and the basemap chips painted straight
+     through the open nav menu. position:relative alone does NOT create a
+     stacking context -- it takes a z-index too -- and measured in the
+     browser, removing just the z-index puts the bug straight back. */
+  t.check(/\.mp-canvas\{position:relative;z-index:0;/.test(src),
+    'the map canvas makes a stacking context, so nothing inside it can paint over the nav');
+  const topbarZ = /position:fixed;top:0;left:0;right:0;height:var\(--topbar-h\);z-index:(\d+);/.exec(src);
+  t.check(!!topbarZ && Number(topbarZ[1]) > 0,
+    'and the bar it must stay under is itself positioned above the page');
 }
 
 process.exit(t.done() ? 1 : 0);
