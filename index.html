@@ -7514,7 +7514,16 @@
             <div class="field"><label>Product ID</label><input id="p_id" disabled><div class="field-hint" id="p_id_hint">Generated automatically</div></div>
             <div class="field"><label>Category</label><input id="p_category" list="dl_categories" placeholder="e.g. Tools"></div>
             <div class="field"><label>Sub-category</label><input id="p_subcategory" list="dl_subcategories" placeholder="e.g. Hand Tools"></div>
-            <div class="field" style="grid-column:1/-1;"><label>Notes</label><input id="p_notes" placeholder="optional"></div>
+            <div class="field" style="grid-column:1/-1;">
+              <label>Short description</label>
+              <input id="p_short_desc" maxlength="120" placeholder="e.g. Heavy duty steel wheelbarrow, 90 litre">
+              <div class="field-hint">One line saying what it is — the sort of thing you would read out to a customer. Up to 120 characters.</div>
+            </div>
+            <div class="field" style="grid-column:1/-1;">
+              <label>Notes</label>
+              <input id="p_notes" placeholder="optional">
+              <div class="field-hint">For yourselves, not the customer — whose van it comes on, which supplier to ask for.</div>
+            </div>
           </div>
         </div>
 
@@ -8570,7 +8579,7 @@ async function loadData(shopId){
     nextCustomerDebtLogId: (debtLogR.data||[]).length ? Math.max(0,...debtLogR.data.map(l=>l.id||0))+1 : 1,
     products: (productsR.data||[]).map(p=>({
       id:p.id, name:p.name, type:p.type||'simple', category:p.category, subcategory:p.subcategory||'',
-      notes:p.notes, image:p.image||null,
+      notes:p.notes, shortDescription: p.short_description || '', image:p.image||null,
       wholesaleMarkupType:p.wholesale_markup_type, wholesaleMarkupValue:Number(p.wholesale_markup_value)||0,
       retailMarkupType:p.retail_markup_type, retailMarkupValue:Number(p.retail_markup_value)||0,
       stockWholesaleMarkupType:p.stock_wholesale_markup_type||'percent', stockWholesaleMarkupValue:Number(p.stock_wholesale_markup_value)||0,
@@ -8753,7 +8762,7 @@ function buildSyncRows(d, shopId){
     debtLog: debtLogRows,
     products: d.products.map(p=>({
       shop_id:shopId, id:p.id, name:p.name, type:p.type, category:p.category, subcategory:p.subcategory,
-      notes:p.notes, image:p.image,
+      notes:p.notes, short_description: p.shortDescription || null, image:p.image,
       wholesale_markup_type:p.wholesaleMarkupType, wholesale_markup_value:p.wholesaleMarkupValue,
       retail_markup_type:p.retailMarkupType, retail_markup_value:p.retailMarkupValue,
       stock_wholesale_markup_type:p.stockWholesaleMarkupType, stock_wholesale_markup_value:p.stockWholesaleMarkupValue,
@@ -23962,9 +23971,15 @@ function productMatchesAddedBand(p, band){
    of their own get written -- which supplier's van it comes on, the
    thread size, the name a customer actually asks for. A note nobody can
    search is a note you have to remember you wrote, which is the one
-   thing writing it down was meant to avoid. */
+   thing writing it down was meant to avoid.
+
+   The short description for the same reason from the other side: it
+   holds the words a customer would use -- "90 litre", "heavy duty" --
+   which are exactly the words somebody types when a customer has just
+   said them and the product's own name does not contain them. */
 function productSearchText(p){
-  return (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '+(p.notes||'')).toLowerCase();
+  return (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '
+    +(p.shortDescription||'')+' '+(p.notes||'')).toLowerCase();
 }
 function productRowsForList(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
   const tokens = searchTokens(filter);
@@ -24925,6 +24940,7 @@ function editProduct(id){
   document.getElementById('p_subcategory').value = p.subcategory || '';
   refreshPresetDatalists();
   document.getElementById('p_notes').value = p.notes;
+  document.getElementById('p_short_desc').value = p.shortDescription || '';
   sessionUploadedMediaIds = [];
   setProductImagePreview(p.image || null);
   document.getElementById('p_wholesale_markup_type').value = p.wholesaleMarkupType || 'percent';
@@ -25027,7 +25043,7 @@ document.getElementById('sr_save_btn').addEventListener('click', ()=>{
 });
 function resetProductForm(){
   editingProductId = null;
-  ['p_id','p_name','p_category','p_subcategory','p_notes','p_wholesale_markup_value','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>document.getElementById(id).value='');
+  ['p_id','p_name','p_category','p_subcategory','p_short_desc','p_notes','p_wholesale_markup_value','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>document.getElementById(id).value='');
   refreshPresetDatalists();
   document.getElementById('p_wholesale_markup_type').value = 'percent';
   document.getElementById('p_retail_markup_type').value = 'percent';
@@ -25153,6 +25169,7 @@ document.getElementById('p_save').addEventListener('click', ()=>{
     category: document.getElementById('p_category').value.trim(),
     subcategory: document.getElementById('p_subcategory').value.trim(),
     notes: document.getElementById('p_notes').value.trim(),
+    shortDescription: document.getElementById('p_short_desc').value.trim(),
     image: draftProductImage || null,
     wholesaleMarkupType: document.getElementById('p_wholesale_markup_type').value,
     wholesaleMarkupValue: Number(document.getElementById('p_wholesale_markup_value').value)||0,
