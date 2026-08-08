@@ -22,7 +22,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('price authoring');
 const src = read('index.html');
 
-const NAMES = ['deriveWholesaleRetail', 'tiersFromLegacyRow', 'tiersSignature', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
+const NAMES = ['deriveWholesaleRetail', 'tiersFromLegacyRow', 'tiersSignature', 'packingSignature', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
 
 const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }));
@@ -104,7 +104,11 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     const body = save[1];
     t.check(/const packEdited = !prBulkPackPrefill/.test(body),
       'the bulk save distinguishes a typed pack size from an untouched pre-fill');
-    t.check(/const own = \(!packEdited && keep\) \? keep : null/.test(body),
+    /* The rule moved into effectiveVariantPacking() when variants gained
+       packing of their own -- the same guarantee, now asked as a question
+       rather than decided inline. Its precedence is tested on its own in
+       test/bulk-variant-packing.test.js. */
+    t.check(/const rowPack = effectiveVariantPacking\(prBulkPackOverrides\[i\], sharedPack, keep, packEdited\)/.test(body),
       'an untouched packing form leaves each variant on its own packing');
     t.check(/deriveWholesaleRetail\(effectiveTiers, rowPackQty\)/.test(body),
       'wholesale/retail are derived against the packing the row ends up with, not the shared field');
@@ -112,7 +116,10 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
       'the shared pack size is no longer used to derive a per-variant rate');
     // A pack size raised past every rung leaves a row with no wholesale
     // rate. That IS what was asked for, but it has to be said out loud.
-    t.check(/if\(keep && keep\.wholesale != null && derived\.wholesale == null\) lostWholesale\+\+/.test(body)
+    /* Now also records the pack size it was lost AT, since variants can
+       be packed differently and the shared field is no longer every
+       row's. The wording is pinned in test/bulk-variant-packing.test.js. */
+    t.check(/if\(keep && keep\.wholesale != null && derived\.wholesale == null\)\{ lostWholesale\+\+; lostAt\.push\(rowPackQty\); \}/.test(body)
       && /lost their bulk rate/.test(body),
       'a save that drops a variant\'s bulk rate reports it rather than doing it quietly');
   }
@@ -134,19 +141,21 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     },
     document: { getElementById: el },
     tiersFromLegacyRow: fn.tiersFromLegacyRow,
+    packingSignature: fn.packingSignature,
     renderPrTierUnitOptions: () => {},
     renderPrTiers: () => {},
     renderPrBulkVariantRows: () => {},
   };
   env.tiersSignature = fn.tiersSignature;
   const scope = compileScope([
-    'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
+    'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
     extractFunction(src, 'renderPrBulkVariants', 'index.html'),
     'function __prefill(){ return prBulkPackPrefill; }',
     'function __overrides(){ return prBulkVariantOverrides; }',
     'function __tiers(){ return prTiers; }',
     'function __tiersPrefill(){ return prBulkTiersPrefill; }',
-  ], env, ['renderPrBulkVariants', '__prefill', '__overrides', '__tiers', '__tiersPrefill']);
+    'function __packOverrides(){ return prBulkPackOverrides; }',
+  ], env, ['renderPrBulkVariants', '__prefill', '__overrides', '__tiers', '__tiersPrefill', '__packOverrides']);
 
   el('pr_product').value = 'P1';
   el('pr_supplier').value = 'S1';
@@ -157,9 +166,17 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     && snap.packUnit === el('pr_pack_unit').value
     && snap.packQty === el('pr_pack_qty').value,
     `the snapshot records what was actually put in the fields (${JSON.stringify(snap)} vs pack qty "${el('pr_pack_qty').value}")`);
-  // Which is what makes "untouched" detectable at all.
-  t.check(String(el('pr_pack_qty').value) === '50',
-    `the fields are pre-filled from one representative variant (${el('pr_pack_qty').value})`);
+  /* These two variants are packed 50 and 25 to a box. There is no shared
+     packing to show, so the default boxes stay empty rather than showing
+     one variant's box size as though it were how all of them come --
+     each variant carries its own on its own card instead. */
+  t.check(String(el('pr_pack_qty').value) === '',
+    `variants packed differently leave the default pack size empty (${el('pr_pack_qty').value})`);
+  t.check(scope.__packOverrides().length === 2 && scope.__packOverrides().every(Boolean),
+    'and each one opens carrying the packing it actually has');
+  t.check(String(scope.__packOverrides()[0].packQty) === '50'
+    && String(scope.__packOverrides()[1].packQty) === '25',
+    `namely its own, not the other one's (${scope.__packOverrides().map(o=>o.packQty).join(', ')})`);
   t.check(scope.__overrides().length === 2 && scope.__overrides().every(Boolean),
     'each variant with a saved entry gets its own ladder as an override');
 
@@ -189,15 +206,18 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
       document: { getElementById: el },
       tiersFromLegacyRow: fn.tiersFromLegacyRow,
       tiersSignature: fn.tiersSignature,
+      packingSignature: fn.packingSignature,
       renderPrTierUnitOptions: () => {}, renderPrTiers: () => {}, renderPrBulkVariantRows: () => {},
     };
     const s = compileScope([
-      'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
+      'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
       extractFunction(src, 'renderPrBulkVariants', 'index.html'),
       'function __tiers(){ return prTiers; }',
       'function __overrides(){ return prBulkVariantOverrides; }',
       'function __tiersPrefill(){ return prBulkTiersPrefill; }',
-    ], env, ['renderPrBulkVariants', '__tiers', '__overrides', '__tiersPrefill']);
+      'function __packOverrides(){ return prBulkPackOverrides; }',
+      "function __packQty(){ return document.getElementById('pr_pack_qty').value; }",
+    ], env, ['renderPrBulkVariants', '__tiers', '__overrides', '__tiersPrefill', '__packOverrides', '__packQty']);
     el('pr_product').value = 'P1';
     el('pr_supplier').value = 'S1';
     s.renderPrBulkVariants();
@@ -215,9 +235,16 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
 
   // All four on the same rungs: that IS a shared default, so show it.
   const same = ladder([1, 9000], [12, 8000]);
-  const all = build(four.map((v, i) => ({ id: i + 1, productId: 'P1', variantIdx: i, supplierId: 'S1', packQty: 12, tiers: same.map((x) => ({ ...x })) })));
+  const all = build(four.map((v, i) => ({ id: i + 1, productId: 'P1', variantIdx: i, supplierId: 'S1', unit: 'Pc', packUnit: 'Ctn', packQty: 12, tiers: same.map((x) => ({ ...x })) })));
   t.check(all.__tiers().length === 2 && all.__tiers()[0].price === 9000,
     'a ladder every variant really shares is pre-filled, which is what the box claims to be');
+  /* Packing follows the same rule from the other side: when they ARE all
+     packed the same, that is a genuine default and belongs in the boxes,
+     with no variant needing its own. */
+  t.check(String(all.__packQty()) === '12',
+    `packing every variant really shares is pre-filled too (${all.__packQty()})`);
+  t.check(all.__packOverrides().every((o) => o === null),
+    'and no variant is given packing of its own, because none of them differs');
   t.check(all.__tiersPrefill() === fn.tiersSignature(same),
     'and the snapshot records it, so an untouched box can be told from a typed one');
 

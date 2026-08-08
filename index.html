@@ -1137,6 +1137,18 @@
   .pr-bulk-tier-status{font-size:11.5px;color:var(--ink-soft);}
   .pr-bulk-tier-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
   .pr-bulk-tier-toggle:hover{text-decoration:underline;}
+  /* Packing sits above the prices on a card for the same reason it is
+     step 2 and not step 4: a breakpoint is read as wholesale or retail by
+     comparing it against the pack size, so the pack size has to be
+     settled first. */
+  .pr-bulk-pack-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;}
+  .pr-bulk-pack-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
+  .pr-bulk-pack-toggle:hover{text-decoration:underline;}
+  .pr-bulk-pack-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px;}
+  .pr-bulk-pack-row input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;
+    font-size:12px;font-family:inherit;min-width:0;}
+  .pr-bulk-pack-row input[type=text]{flex:1 1 120px;}
+  .pr-bulk-pack-row input[type=number]{flex:0 1 120px;}
 
   /* Product modal — sectioned panels + per-variant cards */
   .modal.modal-xwide{max-width:940px;}
@@ -7708,7 +7720,10 @@
               <div class="field"><label>Pack unit</label><input id="pr_pack_unit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin"></div>
               <div class="field"><label>Units per pack</label><input id="pr_pack_qty" type="number" min="0" step="any" placeholder="e.g. 25"></div>
             </div>
-            <p class="pfx-note pfx-quiet">In bulk mode this applies to every variant. If a supplier packs variants differently, price those ones separately by picking the specific variant.</p>
+            <!-- Rewritten by setPrBulkMode for each mode; this is the
+                 single-entry wording, so the stale sentence is never on
+                 screen even for the moment before that runs. -->
+            <p class="pfx-note pfx-quiet" id="pr_pack_note">Leave Pack unit and Units per pack blank if this is only ever quoted by the single unit.</p>
           </div>
         </li>
 
@@ -25392,6 +25407,10 @@ let prBulkVariantOverrides = [];
 // Signature of the shared ladder as it was pre-filled, so an untouched
 // box can be told from one the admin actually typed into.
 let prBulkTiersPrefill = null;
+// Per-variant packing, for the variants a supplier packs differently from
+// the rest. null means "follow the default above" -- the common case, and
+// the reason the default exists at all.
+let prBulkPackOverrides = [];
 // The packing values renderPrBulkVariants() pre-filled, so a bulk save can
 // tell a deliberate change from an untouched pre-fill. See the note there.
 let prBulkPackPrefill = null;
@@ -25530,6 +25549,12 @@ function setPrBulkMode(on){
   // breakpoints per variant was the whole complaint -- in single mode
   // it's just that one entry's own tiers, as before.
   document.getElementById('pr_tiers_label_text').textContent = on ? 'Volume pricing (default for every variant)' : 'Pricing';
+  /* The old note sent anyone with a differently-packed variant out of
+     this form and into one modal per variant. They can now say so on the
+     variant's own card, so the note says where. */
+  document.getElementById('pr_pack_note').textContent = on
+    ? 'This is the default: every variant below follows it. A variant this supplier packs differently gets its own — use "Set packing for this variant" on its card.'
+    : 'Leave Pack unit and Units per pack blank if this is only ever quoted by the single unit.';
   /* "above", not "below": packing is asked in step 2 now, before the
      prices that depend on it. The copy pointed down the form at a field
      that had moved up, which is the kind of stale direction that sends
@@ -25564,6 +25589,7 @@ function selectPrProduct(id, variantIdx=null){
   // selected, so neither path is left showing another entry's stale list.
   prTiers = [];
   prBulkVariantOverrides = [];
+  prBulkPackOverrides = [];
   prBulkPackPrefill = null;
   prBulkTiersPrefill = null;
   setPrBulkMode(!!(hasVariants && variantIdx==null));
@@ -25585,10 +25611,39 @@ function renderPrBulkVariants(){
   // this supplier already has on file for any variant of this product,
   // so saving without touching them keeps existing packing info instead
   // of blanking it out on every variant a save happens to also touch.
-  const packSample = supplierId ? data.prices.find(pr=>pr.productId===productId && pr.supplierId===supplierId) : null;
+  const variantRows0 = p.variants.map((v,i)=> supplierId
+    ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
+    : null);
+  /* The default boxes are filled only when the packing genuinely IS the
+     default -- every variant this supplier prices packed the same way.
+     Filled from whichever row came first, they would say "this is how all
+     of them come" about one variant's packing, which is the same untruth
+     the shared price ladder used to tell.
+
+     Variants this supplier has never priced are left out of the
+     comparison, and this is where packing parts company with the price
+     ladder above. A ladder pre-filled from the priced ones can be WRITTEN
+     onto the unpriced ones, inventing prices nobody quoted -- so there it
+     takes every variant agreeing. Packing invents nothing: a variant with
+     no tiers is skipped by the save entirely. Counting the unpriced ones
+     as "differently packed" would only mean a product with sixteen
+     identical variants and six not yet quoted showed an empty default and
+     sixteen cards each claiming packing of its own, which is the exact
+     retyping this is meant to end. */
+  const packSigs = variantRows0.filter(Boolean).map(r=> packingSignature(r));
+  const sharedPackSig = packSigs.length ? packSigs[0] : '';
+  const packTrulyShared = packSigs.length > 0 && packSigs.every(sig=> sig === sharedPackSig);
+  const packSample = packTrulyShared ? variantRows0.find(Boolean) : null;
   document.getElementById('pr_unit').value = packSample ? (packSample.unit||'') : '';
   document.getElementById('pr_pack_unit').value = packSample ? (packSample.packUnit||'') : '';
   document.getElementById('pr_pack_qty').value = packSample && packSample.packQty ? packSample.packQty : '';
+  /* When they are NOT all the same, each priced variant carries its own
+     packing on its own card -- which is the whole point: a supplier who
+     sells the 10" in tens and the 20" in fives can now be recorded in one
+     save instead of one modal per variant. */
+  prBulkPackOverrides = variantRows0.map(r=> (r && !packTrulyShared)
+    ? { unit: r.unit||'', packUnit: r.packUnit||'', packQty: r.packQty ? String(r.packQty) : '' }
+    : null);
   // Remembered so the save can tell "the admin typed a new pack size" from
   // "these fields are just showing one variant's". Without that, a bulk
   // save wrote the SAMPLE variant's packing onto every variant -- and
@@ -25669,18 +25724,42 @@ function renderPrBulkVariantRows(){
   const unit = document.getElementById('pr_unit').value.trim();
   const packUnit = document.getElementById('pr_pack_unit').value.trim();
   const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  const sharedPack = { unit, packUnit, packQty };
   const unitOptionsHTML = document.getElementById('pr_tier_qty_unit').innerHTML;
   wrap.innerHTML = shownVariants.length ? shownVariants.map(({v,i})=>{
     const override = prBulkVariantOverrides[i];
     const tiers = override || prTiers;
+    const packOverride = prBulkPackOverrides[i];
+    /* Read against THIS variant's packing. A chip saying "1 Ctn+" has to
+       mean this variant's carton -- the whole reason per-variant packing
+       exists is that they are not all the same carton. */
+    const pk = packOverride ? {
+      unit: String(packOverride.unit||'').trim(),
+      packUnit: String(packOverride.packUnit||'').trim(),
+      packQty: Number(packOverride.packQty)||0,
+    } : sharedPack;
     const chipsHTML = tiers.length
-      ? `<div class="preset-chip-flow">${tiers.map((t,ti)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, unit, packUnit, packQty))}${override ? `<button type="button" class="pr-bulk-tier-remove" data-idx="${i}" data-ti="${ti}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</span>`).join('')}</div>`
+      ? `<div class="preset-chip-flow">${tiers.map((t,ti)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, pk.unit, pk.packUnit, pk.packQty))}${override ? `<button type="button" class="pr-bulk-tier-remove" data-idx="${i}" data-ti="${ti}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</span>`).join('')}</div>`
       : `<div class="pr-tier-empty">${override ? 'No tiers yet for this variant.' : 'No shared pricing set yet.'}</div>`;
+    const packSummary = pk.packUnit && pk.packQty
+      ? `${pk.packQty} ${esc(pk.unit||'unit')} / ${esc(pk.packUnit)}`
+      : (pk.unit ? `sold by the ${esc(pk.unit)}` : 'no packing set');
+    const packHTML = `
+      <div class="pr-bulk-pack-head">
+        <span class="pr-bulk-tier-status">${packOverride ? 'Own packing' : 'Uses default packing above'}${packOverride ? '' : ` — ${packSummary}`}</span>
+        <button type="button" class="pr-bulk-pack-toggle" data-idx="${i}">${packOverride ? 'Use default packing instead' : 'Set packing for this variant'}</button>
+      </div>
+      ${packOverride ? `<div class="pr-bulk-pack-row">
+        <input type="text" class="pr-bulk-pack-unit" data-idx="${i}" list="dl_units" placeholder="Unit — e.g. Pc" value="${esc(packOverride.unit||'')}">
+        <input type="text" class="pr-bulk-pack-punit" data-idx="${i}" list="dl_units" placeholder="Pack unit — e.g. Ctn" value="${esc(packOverride.packUnit||'')}">
+        <input type="number" class="pr-bulk-pack-qty" data-idx="${i}" min="0" step="any" placeholder="Units per pack" value="${esc(packOverride.packQty||'')}">
+      </div>` : ''}`;
     return `
     <div class="variant-card" data-idx="${i}" style="margin-bottom:10px;">
       <div class="variant-card-head" style="border-bottom:none;margin-bottom:10px;padding-bottom:0;">
         <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo||{}).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
       </div>
+      ${packHTML}
       <div class="pr-bulk-tier-head">
         <span class="pr-bulk-tier-status">${override ? 'Custom pricing for this variant' : 'Uses shared volume pricing above'}</span>
         <button type="button" class="pr-bulk-tier-toggle" data-idx="${i}">${override ? 'Use shared pricing instead' : 'Customize for this variant'}</button>
@@ -25711,6 +25790,34 @@ function renderPrBulkVariantRows(){
   wrap.querySelectorAll('.pr-bulk-tier-add').forEach(btn=>btn.addEventListener('click', e=>{
     addBulkVariantTier(Number(e.currentTarget.dataset.idx));
   }));
+  wrap.querySelectorAll('.pr-bulk-pack-toggle').forEach(btn=>btn.addEventListener('click', e=>{
+    toggleBulkVariantPacking(Number(e.currentTarget.dataset.idx));
+  }));
+  /* Typed into on `input` but redrawn only on `change`. Redrawing every
+     keystroke would take the focus out of the box mid-number; not
+     redrawing at all would leave the tier chips above still priced
+     against the old pack size. */
+  const packField = (sel, key)=> wrap.querySelectorAll(sel).forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const idx = Number(e.currentTarget.dataset.idx);
+      if(prBulkPackOverrides[idx]) prBulkPackOverrides[idx][key] = e.currentTarget.value;
+    });
+    inp.addEventListener('change', ()=> renderPrBulkVariantRows());
+  });
+  packField('.pr-bulk-pack-unit', 'unit');
+  packField('.pr-bulk-pack-punit', 'packUnit');
+  packField('.pr-bulk-pack-qty', 'packQty');
+}
+/* Starts from the default rather than from blank: a variant packed
+   differently is usually a variation on how the rest come, so the numbers
+   to change are already in the boxes. */
+function toggleBulkVariantPacking(idx){
+  prBulkPackOverrides[idx] = prBulkPackOverrides[idx] ? null : {
+    unit: document.getElementById('pr_unit').value,
+    packUnit: document.getElementById('pr_pack_unit').value,
+    packQty: document.getElementById('pr_pack_qty').value,
+  };
+  renderPrBulkVariantRows();
 }
 /* Filtering redraws the cards from the same overrides and tiers, so a
    variant customized a moment ago is still customized when it comes back
@@ -25741,7 +25848,12 @@ function addBulkVariantTier(idx){
   const rawPrice = Number(priceInput.value);
   if(!rawQty || rawQty<=0){ toast('Enter a quantity for the tier'); return; }
   if(!rawPrice || rawPrice<=0){ toast('Enter a price for the tier'); return; }
-  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
+  /* This variant's pack size, not the default one. "300,000 per carton"
+     on a variant that comes 5 to a carton is 60,000 each; dividing it by
+     the default 12 would file it as 25,000 and quietly undercut the
+     price by a factor of two. */
+  const ov = prBulkPackOverrides[idx];
+  const packQty = ov ? (Number(ov.packQty)||0) : (Number(document.getElementById('pr_pack_qty').value)||0);
   const minQty = qtyUnitSel.value==='pack' ? rawQty*packQty : rawQty;
   const price = priceUnitSel.value==='pack' && packQty>0 ? rawPrice/packQty : rawPrice;
   const tiers = prBulkVariantOverrides[idx];
@@ -25756,6 +25868,7 @@ document.getElementById('pr_product_search').addEventListener('input', (e)=>{
   document.getElementById('pr_variant_hint').style.display = 'none';
   prTiers = [];
   prBulkVariantOverrides = [];
+  prBulkPackOverrides = [];
   setPrBulkMode(false);
   prSuggestionsList(e.target.value);
 });
@@ -26137,6 +26250,39 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
 // (skipped if there's no pack size, since a flat wholesale price with no
 // pack qty was already unreachable before this rework -- qty>=packQty
 // can never be true when packQty is 0).
+/* The same question for packing: is this the same packing? Used to ask
+   whether every variant really shares one, and whether the default boxes
+   have been touched since they were filled in. */
+function packingSignature(p){
+  if(!p) return '';
+  return [String(p.unit||'').trim(), String(p.packUnit||'').trim(), Number(p.packQty)||0].join('|');
+}
+/* Which packing a variant is actually saved with, in order of who said so
+   most deliberately:
+
+     1. its own packing, when one was set for this variant
+     2. the default, when the default was actually typed into
+     3. otherwise whatever this variant already had on file
+
+   Three is the one that matters. packQty is what splits a tier ladder
+   into a wholesale side and a retail side, so writing an untouched
+   default over a variant packed differently does not merely mislabel it
+   -- it re-reads the same numbers as meaning something else, and a
+   variant whose pack size grew loses its wholesale price outright. */
+function effectiveVariantPacking(override, shared, own, sharedEdited){
+  const norm = (p)=> ({
+    unit: String((p && p.unit) || '').trim(),
+    packUnit: String((p && p.packUnit) || '').trim(),
+    packQty: Number(p && p.packQty) || 0,
+  });
+  if(override) return norm(override);
+  if(sharedEdited) return norm(shared);
+  if(own) return norm(own);
+  // Nothing on file for this variant and an untouched default: the
+  // default is what the form is showing, and with nothing of its own to
+  // preserve there is nothing to flatten.
+  return norm(shared);
+}
 /* A comparable form of a tier ladder, for asking "is this the same
    ladder?" -- whether every variant really shares one, and whether the
    shared box has been touched since it was filled in. */
@@ -26177,6 +26323,7 @@ function resetPriceForm(){
   document.getElementById('pr_variant_hint').style.display = 'none';
   prTiers = [];
   prBulkVariantOverrides = [];
+  prBulkPackOverrides = [];
   prBulkPackPrefill = null;
   prBulkTiersPrefill = null;
   setPrBulkMode(false);
@@ -26228,6 +26375,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     // pack size grew loses its wholesale price entirely. Only apply them
     // where the admin actually typed something; otherwise each variant
     // keeps its own packing.
+    const sharedPack = { unit, packUnit, packQty };
     const packEdited = !prBulkPackPrefill
       || document.getElementById('pr_unit').value !== prBulkPackPrefill.unit
       || document.getElementById('pr_pack_unit').value !== prBulkPackPrefill.packUnit
@@ -26239,7 +26387,13 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
        reason: pre-filled is not the same as entered. */
     const tiersEdited = prBulkTiersPrefill == null
       || tiersSignature(prTiers) !== prBulkTiersPrefill;
+    /* The pack sizes a bulk rate was actually lost AT. It used to be
+       enough to report the shared one, because there was only one; now
+       that a variant can be packed differently, quoting the default at
+       somebody whose variant comes 5 to a carton names a number that
+       appears nowhere in their data. */
     let saved = 0, cleared = 0, keptOwnPacking = 0, lostWholesale = 0;
+    const lostAt = [];
     product.variants.forEach((v,i)=>{
       // A variant with its own override ladder uses that; everything else
       // follows the shared one, when there is a deliberately entered one.
@@ -26258,13 +26412,13 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         return;
       }
       const keep = dups[0];
-      // An untouched packing form leaves this variant's own packing alone;
-      // only a deliberate edit is applied across the board.
-      const own = (!packEdited && keep) ? keep : null;
-      if(own && (Number(own.packQty)||0) !== packQty) keptOwnPacking++;
-      const rowUnit    = own ? (own.unit||'')     : unit;
-      const rowPackUnit= own ? (own.packUnit||'') : packUnit;
-      const rowPackQty = own ? (Number(own.packQty)||0) : packQty;
+      /* Its own packing if one was set for it; otherwise the default when
+         the default was actually typed into; otherwise whatever this
+         variant already had, because an untouched form must not flatten
+         variants that are packed differently. */
+      const rowPack = effectiveVariantPacking(prBulkPackOverrides[i], sharedPack, keep, packEdited);
+      const rowUnit = rowPack.unit, rowPackUnit = rowPack.packUnit, rowPackQty = rowPack.packQty;
+      if(keep && !prBulkPackOverrides[i] && !packEdited && (Number(keep.packQty)||0) !== packQty) keptOwnPacking++;
       // Derived against the packing this row actually ends up with -- using
       // the shared figure here is what silently dropped a variant's
       // wholesale price.
@@ -26273,7 +26427,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       // with no wholesale rate at all. Legitimate -- the admin said this is
       // how it's packed and there's no price on file for that much -- but
       // nothing on screen would otherwise show a bulk rate had just gone.
-      if(keep && keep.wholesale != null && derived.wholesale == null) lostWholesale++;
+      if(keep && keep.wholesale != null && derived.wholesale == null){ lostWholesale++; lostAt.push(rowPackQty); }
       const record = {
         productId, variantIdx:i, supplierId,
         wholesale: derived.wholesale, retail: derived.retail,
@@ -26286,7 +26440,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     });
     if(saved===0 && cleared===0){ toast('Add at least one price'); return; }
     saveData(); closeModal('priceModal'); resetPriceForm(); triggerPricesRender();
-    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}${keptOwnPacking?` · ${keptOwnPacking} kept their own pack size`:''}${lostWholesale?` · ${lostWholesale} lost their bulk rate (no price set at ${packQty}+)`:''}`, lostWholesale?6000:undefined);
+    toast(`Saved ${saved} price${saved===1?'':'s'}${cleared?` · removed ${cleared}`:''}${keptOwnPacking?` · ${keptOwnPacking} kept their own pack size`:''}${lostWholesale?` · ${lostWholesale} lost their bulk rate (no price set at ${[...new Set(lostAt)].sort((a,b)=>a-b).join(' or ')}+)`:''}`, lostWholesale?6000:undefined);
     return;
   }
 
