@@ -495,4 +495,75 @@ const reset = () => {
     'that redraws when pressed');
 }
 
+/* ---------- 14. which way is up -------------------------------------- *
+ * A bearing is an angle on a circle: a nudge past north gives 375 and a
+ * nudge back past it gives -15, and both are the same direction.
+ * JavaScript's % keeps the sign of its left operand, so -15 % 360 is
+ * -15, not 345 -- the wrap has to be written, not assumed.
+ *
+ * AND THE COMPASS MUST NOT LIE. The first version read (360 - bearing),
+ * which is the obvious-looking inversion and is wrong: measured on the
+ * running map, at a bearing of 90 true north sits at 90 degrees on
+ * screen — pointing right — while the compass said "W". A compass that
+ * points the opposite way is worse than no compass.
+ */
+{
+  const bScope = compileScope([
+    extractDeclaration(src, 'MAP_COMPASS_POINTS', 'index.html'),
+    extractFunction(src, 'mapNormaliseBearing', 'index.html'),
+    extractFunction(src, 'mapBearingLabel', 'index.html'),
+  ], {}, ['mapNormaliseBearing', 'mapBearingLabel']);
+
+  eq(bScope.mapNormaliseBearing(0), 0, 'north is zero');
+  eq(bScope.mapNormaliseBearing(375), 15, 'past a full turn wraps round');
+  eq(bScope.mapNormaliseBearing(-15), 345, 'and BACK past north wraps the other way, rather than staying negative');
+  eq(bScope.mapNormaliseBearing(-370), 350, 'however many turns it takes');
+  eq(bScope.mapNormaliseBearing(360), 0, 'a whole turn is north again');
+  eq(bScope.mapNormaliseBearing(44.6), 45, 'a fraction of a degree is rounded, since the readout has no room for it');
+  eq(bScope.mapNormaliseBearing('nonsense'), 0, 'and nonsense faces north rather than NaN');
+  eq(bScope.mapNormaliseBearing(undefined), 0, 'as does nothing at all');
+
+  /* Each of these was measured against where north ACTUALLY appeared on
+     the running map, not reasoned about. */
+  eq(bScope.mapBearingLabel(0), 'N', 'unturned, north is up');
+  eq(bScope.mapBearingLabel(90), 'E', 'turned a quarter, north is to the right — E, never W');
+  eq(bScope.mapBearingLabel(180), 'S', 'turned half about');
+  eq(bScope.mapBearingLabel(270), 'W', 'and three quarters');
+  eq(bScope.mapBearingLabel(45), 'NE', 'the in-between points are named too');
+  eq(bScope.mapBearingLabel(315), 'NW', 'all eight of them');
+  /* Anything not on a point reads in degrees: "37" is worth more than a
+     wrong "NE". */
+  eq(bScope.mapBearingLabel(37), '37\u00B0', 'an angle between points reads as degrees rather than the nearest lie');
+  eq(bScope.mapBearingLabel(-90), 'W', 'and a negative bearing is normalised before it is named');
+}
+
+/* ---------- 15. the map can actually be turned ----------------------- */
+{
+  const wired4 = stripLineComments(src);
+  t.check(/leaflet-rotate@0\.2\.8/.test(src),
+    'the rotation plugin is loaded — Leaflet cannot turn a map by itself');
+  t.check(/rotate: true, touchRotate: true, shiftKeyRotate: true/.test(wired4),
+    'with two fingers on a phone and shift-drag on a desktop, as well as the buttons');
+  /* A CSS transform on the container would rotate the picture without
+     rotating the maths, and every click would land in the wrong place. */
+  t.check(!/#mp_map\{[^}]*transform:\s*rotate/.test(src),
+    'and NOT by transforming the container, which would leave clicks landing at the wrong point');
+
+  const sync = extractFunction(src, 'mapSyncCompass', 'index.html');
+  t.check(/rotate\(\$\{b\}deg\)/.test(sync),
+    'the needle points where north is, by the bearing itself and not its opposite');
+  t.check(/mpMap\.on\('rotate rotateend', mapSyncCompass\)/.test(wired4),
+    'and follows a turn made by finger or shift-drag, not only by the buttons');
+
+  const set = extractFunction(src, 'mapSetBearing', 'index.html');
+  t.check(/lsSet\(MAP_BEARING_KEY/.test(set),
+    'the map remembers which way it was turned');
+  const init = /mpMap = L\.map\('mp_map'[\s\S]{0,320}?\}\);/.exec(wired4)[0];
+  t.check(/bearing: mapNormaliseBearing\(lsGet\(MAP_BEARING_KEY\)\)/.test(init),
+    'and opens that way next time, normalised in case the stored value is junk');
+  t.check(/mapNudgeBearing\(-15\)/.test(wired4) && /mapNudgeBearing\(15\)/.test(wired4)
+    && /mapSetBearing\(0\)/.test(wired4),
+    'with a turn each way and one press back to north');
+}
+
 process.exit(t.done() ? 1 : 0);

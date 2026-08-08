@@ -4388,6 +4388,18 @@
   @media (max-width: 900px){ .mp-wrap{grid-template-columns:1fr;} }
   .mp-canvas{position:relative;min-width:0;}
   #mp_map{height:460px;width:100%;background:var(--ow-steel-050);}
+  /* Sits opposite the legend, out of the way of the markers. */
+  .mp-compass{position:absolute;right:10px;top:10px;z-index:500;display:flex;gap:4px;
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:4px;}
+  .mp-compass button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;min-width:30px;height:30px;
+    border-radius:6px;font-size:14px;color:var(--ink-soft);}
+  .mp-compass button:hover{background:var(--ow-steel-050);color:var(--ink);}
+  #mp_rot_north{min-width:38px;gap:0;}
+  .mp-needle{display:block;font-size:11px;line-height:1;color:var(--ow-oxide);
+    transition:transform .18s ease;}
+  .mp-bearing{display:block;font-size:9.5px;line-height:1.2;font-weight:700;
+    font-variant-numeric:tabular-nums;}
   .mp-legend{position:absolute;left:10px;bottom:10px;z-index:500;background:var(--panel);
     border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;
     color:var(--ink-soft);line-height:1.7;}
@@ -5529,6 +5541,14 @@
         <div class="mp-wrap">
           <div class="mp-canvas"><div id="mp_map"></div>
             <div class="mp-legend" id="mp_legend"></div>
+            <div class="mp-compass" id="mp_compass">
+              <button type="button" id="mp_rot_left" title="Turn the map left">&#8630;</button>
+              <button type="button" id="mp_rot_north" title="Put north back at the top">
+                <span class="mp-needle" id="mp_needle">&#9650;</span>
+                <span class="mp-bearing" id="mp_bearing">N</span>
+              </button>
+              <button type="button" id="mp_rot_right" title="Turn the map right">&#8631;</button>
+            </div>
           </div>
           <aside class="mp-side" id="mp_side"></aside>
         </div>
@@ -7919,6 +7939,7 @@
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="shared-worker.js"></script>
 <script>
@@ -11566,6 +11587,34 @@ function deliveryMapRuns(){
   };
 }
 
+/* Which way is up.
+
+   A bearing is an angle on a circle, so every value has to land in
+   0-359 whatever arrives: a nudge past north gives 375, a nudge back
+   past it gives -15, and both are the same direction. JavaScript's %
+   keeps the sign of its left operand, so -15 % 360 is -15 rather than
+   345 -- the extra + 360 is what makes it a compass rather than a
+   number line. */
+function mapNormaliseBearing(deg){
+  const n = Number(deg);
+  if(!isFinite(n)) return 0;
+  return ((Math.round(n) % 360) + 360) % 360;
+}
+/* What the compass reads. The eight points people actually say, and the
+   degrees for anything between them -- "NE" is worth more than "45°" to
+   somebody orienting a map, and "37°" is worth more than a wrong "NE". */
+const MAP_COMPASS_POINTS = ['N','NE','E','SE','S','SW','W','NW'];
+function mapBearingLabel(deg){
+  const b = mapNormaliseBearing(deg);
+  /* North appears at the bearing itself, NOT at its opposite. Measured on
+     the running map: at a bearing of 90 true north sits at 90 degrees on
+     screen -- pointing right. The obvious-looking (360 - b) had the
+     compass reading W while north was plainly to the east, which is the
+     one mistake a compass must never make. */
+  const i = Math.round(b / 45) % 8;
+  return Math.abs(b - i * 45) < 1 ? MAP_COMPASS_POINTS[i] : b + '\u00B0';
+}
+
 /* The place list, searched.
 
    Unplaced FIRST, whatever the query: this list exists to make pinning
@@ -11673,11 +11722,22 @@ function renderMap(){
       '<div class="mp-side-empty" style="padding:18px;">The map could not load — it needs a connection the first time. Your places and figures below are unaffected.</div>';
   } else {
     if(!mpMap){
-      mpMap = L.map('mp_map', { scrollWheelZoom: false });
+      /* rotate/touchRotate/shiftKeyRotate come from leaflet-rotate.
+         Leaflet cannot turn a map by itself, and the alternative -- a CSS
+         transform on the container -- rotates the picture without
+         rotating the maths, so every click would land at the wrong
+         place. rotateControl is off because the compass below is ours. */
+      mpMap = L.map('mp_map', { scrollWheelZoom: false,
+        rotate: true, touchRotate: true, shiftKeyRotate: true, rotateControl: false,
+        bearing: mapNormaliseBearing(lsGet(MAP_BEARING_KEY)) });
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mpMap);
       mpMap.setView([0.3152, 32.5816], 12);
       mpMarkers = L.layerGroup().addTo(mpMap);
+      // Two fingers on a phone and shift-drag on a desktop both turn the
+      // map without touching the compass, so the readout has to follow.
+      mpMap.on('rotate rotateend', mapSyncCompass);
+      mapSyncCompass();
     }
     mpMarkers.clearLayers();
     shown.forEach(r=>{
@@ -11823,6 +11883,31 @@ function mapPinClick(e){
   toast(`${key} placed`);
   renderMap();
 }
+/* The map remembers which way it was turned, because somebody who has
+   oriented a map to how they think about the town should not have to do
+   it again every time they open the tab. */
+const MAP_BEARING_KEY = 'owMapBearing';
+function mapSetBearing(deg){
+  const b = mapNormaliseBearing(deg);
+  if(mpMap && mpMap.setBearing) mpMap.setBearing(b);
+  lsSet(MAP_BEARING_KEY, String(b));
+  mapSyncCompass();
+}
+function mapSyncCompass(){
+  const b = mpMap && mpMap.getBearing ? mapNormaliseBearing(mpMap.getBearing())
+    : mapNormaliseBearing(lsGet(MAP_BEARING_KEY));
+  const needle = document.getElementById('mp_needle');
+  const label = document.getElementById('mp_bearing');
+  // The needle points where north actually is on screen, which is the
+  // bearing itself -- see mapBearingLabel.
+  if(needle) needle.style.transform = `rotate(${b}deg)`;
+  if(label) label.textContent = mapBearingLabel(b);
+}
+function mapNudgeBearing(by){
+  const now = mpMap && mpMap.getBearing ? mpMap.getBearing() : Number(lsGet(MAP_BEARING_KEY)) || 0;
+  mapSetBearing(now + by);
+}
+
 /* Arming the map: the NEXT click is this place's position. Only ever one
    place is armed -- arming a second cancels the first, or two names race
    for one click and whichever listener fired last wins silently. */
@@ -11930,6 +12015,10 @@ function renderMapSide(){
   }));
 }
 
+document.getElementById('mp_rot_left').addEventListener('click', ()=> mapNudgeBearing(-15));
+document.getElementById('mp_rot_right').addEventListener('click', ()=> mapNudgeBearing(15));
+// One press puts north back at the top, from wherever it has got to.
+document.getElementById('mp_rot_north').addEventListener('click', ()=> mapSetBearing(0));
 document.getElementById('mp_search').addEventListener('input', renderMapResults);
 document.getElementById('mp_filters').addEventListener('click', (e)=>{
   const b = e.target.closest('.mp-filter'); if(!b) return;
