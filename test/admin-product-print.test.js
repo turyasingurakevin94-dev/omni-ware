@@ -28,7 +28,7 @@ try {
   ({ productRowsForList: rowsFor } = compileScope(
     [extractDeclaration(src, 'PRODUCT_ADDED_BANDS', 'index.html')].concat(
       ['searchTokens', 'matchesAllTokens', 'variantLabel', 'todayISO', 'daysSinceDate',
-        'productAddedDaysAgo', 'productMatchesAddedBand', 'productRowsForList']
+        'productAddedDaysAgo', 'productMatchesAddedBand', 'productSearchText', 'productRowsForList']
         .map(n => extractFunction(src, n, 'index.html'))),
     { data: store }, ['productRowsForList'],
   ));
@@ -38,11 +38,14 @@ t.check(typeof rowsFor === 'function', `productRowsForList compiles${err ? ` (${
 if (rowsFor) {
   const seed = () => {
     store.products = [
-      { id: 'P1', name: 'Cement (Tororo 50kg)', category: 'Cement', subcategory: '', type: 'simple' },
+      { id: 'P1', name: 'Cement (Tororo 50kg)', category: 'Cement', subcategory: '', type: 'simple',
+        notes: 'Comes on Musa van, ask for the grey bag' },
       { id: 'P2', name: 'Black Wall Plug', category: 'Fixings', subcategory: 'Plugs', type: 'simple' },
       { id: 'P3', name: 'Cabinet Hinge', category: 'Furniture', subcategory: 'Hinges', type: 'variable',
+        notes: 'Kikuubo backstreet supplier only',
         variants: [{ sku: 'HNG-BR', combo: { Finish: 'Brass' } }, { sku: 'HNG-ST', combo: { Finish: 'Steel' } }] },
-      { id: 'P4', name: 'Unset Variable', category: 'Furniture', subcategory: '', type: 'variable', variants: [] },
+      { id: 'P4', name: 'Unset Variable', category: 'Furniture', subcategory: '', type: 'variable', variants: [],
+        notes: 'Waiting on the mould from Nakawa' },
     ];
     store.prices = [{ productId: 'P1', supplierId: 'S1' }];
   };
@@ -67,6 +70,27 @@ if (rowsFor) {
     t.check(rowsFor('', 'Furniture', '').length === 3, 'a category filter keeps that category only');
     t.check(rowsFor('', '', 'S1').length === 1, 'a supplier filter keeps what that supplier prices');
     t.check(rowsFor('hinge', '', '').length === 2, 'a search matches across both variants of a product');
+    /* Notes are where the things with no field of their own get written
+       -- whose van it comes on, which backstreet the supplier is down.
+       A note nobody can search is a note you have to remember you wrote,
+       which is the one thing writing it down was meant to avoid. */
+    t.check(rowsFor('musa', '', '').length === 1, 'a word only in the notes finds its product');
+    t.check(rowsFor('kikuubo', '', '').length === 2,
+      'and a note on a variable product finds every variant under it');
+    t.check(rowsFor('kikuubo brass', '', '').length === 1,
+      'notes narrow alongside the rest, rather than replacing it');
+    t.check(rowsFor('musa kikuubo', '', '').length === 0,
+      'two words from two different products still match neither');
+    /* A product whose variants are not built yet is the one most likely
+       to be carrying a note about why. It has its own branch in the
+       walk, and it needs the notes too. */
+    t.check(rowsFor('nakawa', '', '').length === 1,
+      'a note on a product with no variants built yet finds it too');
+    t.check(rowsFor('nakawa', '', '')[0].kind === 'variable-empty',
+      'and finds it as the unbuilt product it is');
+    t.check(rowsFor('grey', '', '').length === 1,
+      'a note on one product does not sweep in the others');
+
     t.check(rowsFor('brass', '', '').length === 1,
       'and narrows to one variant -- the reason a variable product is flattened at all');
     t.check(rowsFor('black plug', '', '').length === 1,

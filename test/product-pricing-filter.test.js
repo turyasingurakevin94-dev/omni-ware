@@ -39,6 +39,7 @@ const scope = compileScope([
   extractDeclaration(src, 'PRODUCT_ADDED_BANDS', 'index.html'),
   extractFunction(src, 'productAddedDaysAgo', 'index.html'),
   extractFunction(src, 'productMatchesAddedBand', 'index.html'),
+  extractFunction(src, 'productSearchText', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,

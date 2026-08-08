@@ -46,7 +46,9 @@ const env = {
 let scope = null; let err = null;
 try {
   scope = compileScope(
-    [...NAMES, 'variantLabel'].map((n) => extractFunction(src, n, 'index.html')),
+    // mediaVisibleRows now resolves a folder's subtree; pull in the real
+    // helper rather than stubbing, so this file keeps testing real code.
+    [...NAMES, 'variantLabel', 'mediaFolderSubtreeIds'].map((n) => extractFunction(src, n, 'index.html')),
     env, NAMES);
 } catch (e) { err = e; }
 t.check(!!scope, `the media helpers compile${err ? ` (${err.message})` : ''}`);

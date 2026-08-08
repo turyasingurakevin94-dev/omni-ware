@@ -8272,6 +8272,71 @@ async function addMediaFromFile(file, folderId){
 // Deleting a folder never orphans what was inside it: photos move to the
 // folder's parent (top level if none) and child folders are re-parented
 // the same way. Pure so the promise is testable.
+/* Folders in the order the rail draws them: each parent immediately
+   followed by everything under it, carrying the depth to indent by.
+
+   Two things this must not do. It must not loop forever if a parentId
+   ever points back up its own chain, and it must not silently swallow a
+   folder whose parent has gone missing -- an orphan appended at the top
+   is a folder somebody can still see and fix, where one dropped from the
+   walk is a folder full of photos that has simply vanished. */
+function mediaFolderTree(folders){
+  const all = (folders||[]).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+  const out = [];
+  const seen = new Set();
+  const walk = (parentId, depth)=>{
+    all.forEach(f=>{
+      if(seen.has(f.id)) return;
+      const p = f.parentId == null ? null : f.parentId;
+      if(p !== parentId) return;
+      seen.add(f.id);
+      out.push({ folder: f, depth });
+      walk(f.id, depth + 1);
+    });
+  };
+  walk(null, 0);
+  // Anything the walk could not reach -- a parent that no longer exists,
+  // or a chain that points at itself.
+  all.forEach(f=>{ if(!seen.has(f.id)) out.push({ folder: f, depth: 0 }); });
+  return out;
+}
+/* A folder and everything filed underneath it, at any depth.
+
+   Clicking a parent shows what is inside its subfolders too. Filing a
+   photo under Doors → Handles and then finding Doors empty is the thing
+   people mean when they say a folder "lost" their photos. */
+function mediaFolderSubtreeIds(folders, folderId){
+  const kids = new Map();
+  (folders||[]).forEach(f=>{
+    const p = f.parentId == null ? null : f.parentId;
+    if(!kids.has(p)) kids.set(p, []);
+    kids.get(p).push(f.id);
+  });
+  const out = [];
+  const seen = new Set();
+  const walk = (id)=>{
+    if(seen.has(id)) return;   // a cycle must not hang the grid
+    seen.add(id);
+    out.push(id);
+    (kids.get(id)||[]).forEach(walk);
+  };
+  walk(folderId);
+  return out;
+}
+/* "Doors → Handles", for the dropdowns that have no room to indent. A
+   bare "Handles" in a flat list does not say which of two it is. */
+function mediaFolderPath(folders, folderId, sep=' → '){
+  const byId = new Map((folders||[]).map(f=> [f.id, f]));
+  const parts = [];
+  const seen = new Set();
+  let cur = byId.get(folderId);
+  while(cur && !seen.has(cur.id)){
+    seen.add(cur.id);
+    parts.unshift(cur.name);
+    cur = cur.parentId == null ? null : byId.get(cur.parentId);
+  }
+  return parts.join(sep);
+}
 function mediaFolderRemovalPlan(folders, media, folderId){
   const f = folders.find(x=> x.id === folderId);
   const newParent = f && f.parentId != null ? f.parentId : null;
@@ -9139,6 +9204,7 @@ function fmtShortDate(iso){
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
+const ICON_PLUS_SM = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
 // Shown instead of a delete button on a ledger entry that mirrors an
 // invoice -- the row is a derived record, so the invoice is where it changes.
 const ICON_LOCK = '<svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -9326,7 +9392,12 @@ function mediaFolderById(id){ return (data.mediaFolders||[]).find(f=> f.id === i
 function mediaVisibleRows(usage){
   let rows = (data.media||[]).slice();
   if(mlState.folder === 'none') rows = rows.filter(m=> m.folderId == null);
-  else if(mlState.folder !== 'all') rows = rows.filter(m=> m.folderId === mlState.folder);
+  else if(mlState.folder !== 'all'){
+    // Subfolders included: a photo filed under Doors → Handles is still
+    // in Doors, and a parent that looked empty would read as lost.
+    const ids = mediaFolderSubtreeIds(data.mediaFolders||[], mlState.folder);
+    rows = rows.filter(m=> ids.includes(m.folderId));
+  }
   if(mlState.filter === 'unused') rows = rows.filter(m=> !(usage.get(m.url)||[]).length);
   if(mlState.filter === 'dupes'){
     const bySha = new Map();
@@ -9367,23 +9438,37 @@ function renderMediaRail(){
     const k = m.folderId == null ? 'none' : m.folderId;
     counts.set(k, (counts.get(k)||0)+1);
   });
-  const folders = (data.mediaFolders||[]).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
-  const item = (key, label, count)=>{
+  const tree = mediaFolderTree(data.mediaFolders||[]);
+  // A parent's count is everything filed under it, so the number agrees
+  // with what clicking it shows.
+  const subtreeCount = (id)=> mediaFolderSubtreeIds(data.mediaFolders||[], id)
+    .reduce((n, fid)=> n + (counts.get(fid)||0), 0);
+  const item = (key, label, count, depth=0)=>{
     const active = mlState.folder === key;
     const editable = typeof key === 'number';
-    return `<button type="button" class="mr-item ${active?'active':''}" data-mlfolder="${key}">
+    return `<button type="button" class="mr-item ${active?'active':''}" data-mlfolder="${key}" style="padding-left:${10 + depth*14}px;">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(label)}</span>
-      ${editable ? `<span class="mr-edit" data-mlrename="${key}" title="Rename folder">${ICON_EDIT}</span>
+      ${editable ? `<span class="mr-edit" data-mlsub="${key}" title="Add a folder inside this one">${ICON_PLUS_SM}</span>
+      <span class="mr-edit" data-mlrename="${key}" title="Rename folder">${ICON_EDIT}</span>
       <span class="mr-edit" data-mldelfolder="${key}" title="Remove folder">${ICON_TRASH}</span>` : ''}
       <span class="mr-count">${count}</span>
     </button>`;
   };
   let html = item('all', 'All photos', rows.length);
-  html += folders.map(f=> mlRailEdit && mlRailEdit.type==='rename' && mlRailEdit.id===f.id
-    ? `<input type="text" class="mr-name-input" data-mlfid="${f.id}" value="${esc(f.name)}">`
-    : item(f.id, f.name, counts.get(f.id)||0)).join('');
+  html += tree.map(({folder:f, depth})=>{
+    const renaming = mlRailEdit && mlRailEdit.type==='rename' && mlRailEdit.id===f.id;
+    const row = renaming
+      ? `<input type="text" class="mr-name-input" data-mlfid="${f.id}" value="${esc(f.name)}" style="margin-left:${depth*14}px;">`
+      : item(f.id, f.name, subtreeCount(f.id), depth);
+    // The box for a new subfolder opens UNDER the folder it will sit in,
+    // indented one step, so it is obvious where it is being made.
+    const adding = mlRailEdit && mlRailEdit.type==='new' && mlRailEdit.parentId === f.id
+      ? `<input type="text" class="mr-name-input" data-mlfid="new" placeholder="Folder inside ${esc(f.name)}" style="margin-left:${(depth+1)*14}px;">`
+      : '';
+    return row + adding;
+  }).join('');
   if(counts.get('none')) html += item('none', 'No folder', counts.get('none'));
-  html += mlRailEdit && mlRailEdit.type==='new'
+  html += mlRailEdit && mlRailEdit.type==='new' && mlRailEdit.parentId == null
     ? `<input type="text" class="mr-name-input" data-mlfid="new" placeholder="Folder name">`
     : `<button type="button" class="mr-item mr-new" id="ml_new_folder">+ New folder</button>`;
   wrap.innerHTML = html;
@@ -9393,6 +9478,12 @@ function renderMediaRail(){
     const raw = btn.dataset.mlfolder;
     mlState.folder = (raw==='all'||raw==='none') ? raw : Number(raw);
     renderMedia();
+  }));
+  wrap.querySelectorAll('[data-mlsub]').forEach(el=> el.addEventListener('click', e=>{
+    e.stopPropagation();
+    mlRailEdit = {type:'new', parentId: Number(el.dataset.mlsub)};
+    renderMediaRail();
+    const inp = wrap.querySelector('.mr-name-input'); if(inp) inp.focus();
   }));
   wrap.querySelectorAll('[data-mlrename]').forEach(el=> el.addEventListener('click', e=>{
     e.stopPropagation();
@@ -9415,7 +9506,9 @@ function renderMediaRail(){
   }));
   const newBtn = wrap.querySelector('#ml_new_folder');
   if(newBtn) newBtn.addEventListener('click', ()=>{
-    mlRailEdit = {type:'new'};
+    // The button at the bottom of the rail always makes a top-level
+    // folder; the + on a folder row is what makes one inside it.
+    mlRailEdit = {type:'new', parentId: null};
     renderMediaRail();
     const inp = wrap.querySelector('.mr-name-input'); if(inp) inp.focus();
   });
@@ -9430,7 +9523,8 @@ function renderMediaRail(){
         const f = mediaFolderById(edit.id);
         if(f && f.name !== name){ f.name = name; saveData(); }
       } else {
-        data.mediaFolders.push({ id: allocRowId('mediaFolder'), name, parentId: null });
+        data.mediaFolders.push({ id: allocRowId('mediaFolder'), name,
+          parentId: (edit && edit.parentId != null) ? edit.parentId : null });
         saveData();
       }
       renderMedia();
@@ -9505,7 +9599,7 @@ function openMediaDetail(id){
   if(!m) return;
   mediaDetailId = id;
   const users = mediaUsage(m.url);
-  const folders = (data.mediaFolders||[]).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+  const folderOpts = mediaFolderTree(data.mediaFolders||[]);
   const added = m.createdAt ? String(m.createdAt).slice(0,10) : null;
   document.getElementById('md_title').textContent = m.name;
   document.getElementById('md_body').innerHTML = `<div class="md-layout">
@@ -9514,7 +9608,7 @@ function openMediaDetail(id){
       <div class="field"><label>Name</label><input id="md_name" value="${esc(m.name)}"></div>
       <div class="field"><label>Folder</label><select id="md_folder">
         <option value="">No folder</option>
-        ${folders.map(f=> `<option value="${f.id}" ${m.folderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('')}
+        ${folderOpts.map(({folder:f})=> `<option value="${f.id}" ${m.folderId===f.id?'selected':''}>${esc(mediaFolderPath(data.mediaFolders||[], f.id))}</option>`).join('')}
       </select></div>
       <div class="md-meta">${[mediaFmtBytes(m.bytes)||'size unknown', m.mime||null, added?`added ${added}`:null].filter(Boolean).join(' · ')}</div>
       <div class="md-used-list">
@@ -9581,9 +9675,11 @@ function mpSetTab(up){
 function openMediaPicker(opts){
   mpState = { onPick: opts.onPick, sessionTrack: !!opts.sessionTrack, selectedId: null, search: '', folder: 'all' };
   document.getElementById('mp_search').value = '';
-  const folders = (data.mediaFolders||[]).slice().sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+  // Tree order and full paths: a bare "Handles" in a flat list does not
+  // say which folder's Handles it is.
   document.getElementById('mp_folder').innerHTML = `<option value="all">All folders</option>` +
-    folders.map(f=> `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+    mediaFolderTree(data.mediaFolders||[]).map(({folder:f})=>
+      `<option value="${f.id}">${esc(mediaFolderPath(data.mediaFolders||[], f.id))}</option>`).join('');
   // Straight to Upload when the library is empty -- an empty grid with
   // the way out hidden behind a second tab helps nobody.
   mpSetTab(!(data.media||[]).length);
@@ -9595,7 +9691,10 @@ function renderMediaPickerGrid(){
   if(!mpState) return;
   const usage = mediaUsageIndex();
   let rows = (data.media||[]).slice();
-  if(mpState.folder !== 'all') rows = rows.filter(m=> m.folderId === mpState.folder);
+  if(mpState.folder !== 'all'){
+    const ids = mediaFolderSubtreeIds(data.mediaFolders||[], mpState.folder);
+    rows = rows.filter(m=> ids.includes(m.folderId));
+  }
   const q = mpState.search.trim().toLowerCase();
   if(q) rows = rows.filter(m=> String(m.name||'').toLowerCase().includes(q));
   rows.sort((a,b)=> String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
@@ -23858,6 +23957,15 @@ function productMatchesAddedBand(p, band){
   const b = PRODUCT_ADDED_BANDS.find(x=> x.key === band);
   return b ? b.match(days) : true;
 }
+/* Everything a product can be found by.
+   The notes are in here because notes are where the things with no field
+   of their own get written -- which supplier's van it comes on, the
+   thread size, the name a customer actually asks for. A note nobody can
+   search is a note you have to remember you wrote, which is the one
+   thing writing it down was meant to avoid. */
+function productSearchText(p){
+  return (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '+(p.notes||'')).toLowerCase();
+}
 function productRowsForList(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
   const tokens = searchTokens(filter);
   const rows = [];
@@ -23871,17 +23979,19 @@ function productRowsForList(filter='', categoryFilter='', supplierFilter='', pri
 
     if(p.type==='variable'){
       if(!p.variants || p.variants.length===0){
-        if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)){
+        if(!tokens.length || matchesAllTokens(productSearchText(p), tokens)){
           rows.push({ p, v:null, idx:null, kind:'variable-empty' });
         }
         return;
       }
       p.variants.forEach((v,idx)=>{
-        const haystack = (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
+        // A variant carries its product's text as well as its own, so a
+        // note on the product finds every variant under it.
+        const haystack = productSearchText(p)+' '+((v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
         if(!tokens.length || matchesAllTokens(haystack, tokens)) rows.push({ p, v, idx, kind:'variant' });
       });
     } else {
-      if(!tokens.length || matchesAllTokens((p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id).toLowerCase(), tokens)){
+      if(!tokens.length || matchesAllTokens(productSearchText(p), tokens)){
         rows.push({ p, v:null, idx:null, kind:'simple' });
       }
     }
