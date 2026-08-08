@@ -5548,6 +5548,7 @@
                 <span class="mp-bearing" id="mp_bearing">N</span>
               </button>
               <button type="button" id="mp_rot_right" title="Turn the map right">&#8631;</button>
+              <button type="button" id="mp_fit" title="Frame everything on this layer">&#9974;</button>
             </div>
           </div>
           <aside class="mp-side" id="mp_side"></aside>
@@ -11587,6 +11588,26 @@ function deliveryMapRuns(){
   };
 }
 
+/* When the map is allowed to move itself.
+
+   It used to re-fit on every draw, and the background refresh redraws
+   the open tab every thirty seconds -- so zooming out to see more was
+   undone a moment later, by the app, for no reason the user could see.
+
+   The view is the USER'S once they have one. The map frames itself the
+   first time a layer is looked at, when the layer changes, and when
+   there was nothing to show before and now there is. Never otherwise:
+   not on a poll, and not after dropping a pin, because somebody placing
+   twenty pins is working at a zoom they chose. The Fit button is how
+   you ask for it back. */
+function mapShouldAutoFit(prev, next){
+  if(!next || !next.count) return false;
+  if(!prev) return true;
+  if(prev.layer !== next.layer) return true;
+  if(!prev.count) return true;
+  return false;
+}
+
 /* Which way is up.
 
    A bearing is an angle on a circle, so every value has to land in
@@ -11685,6 +11706,16 @@ function mapMarkerRadius(count){
 
 let mpLayer = 'customers';
 let mpFilter = 'all';
+let mpLastFit = null;
+/* Frames the pins, but only when mapShouldAutoFit says the map may take
+   the view -- or when somebody presses Fit, which always may. */
+function mapFitTo(pins, layerKey, force){
+  const next = { layer: layerKey, count: pins.length };
+  if(force || mapShouldAutoFit(mpLastFit, next)){
+    if(pins.length) mpMap.fitBounds(pins, { padding: [40, 40], maxZoom: 14 });
+  }
+  mpLastFit = next;
+}
 let mpMap = null, mpMarkers = null, mpSelected = null;
 const MAP_HOME_PLACE_KEY = 'owMapHomePlace';
 
@@ -11727,7 +11758,14 @@ function renderMap(){
          transform on the container -- rotates the picture without
          rotating the maths, so every click would land at the wrong
          place. rotateControl is off because the compass below is ours. */
-      mpMap = L.map('mp_map', { scrollWheelZoom: false,
+      /* zoomAnimation OFF is not a style choice, it is the price of
+         rotation: leaflet-rotate breaks Leaflet's animated zoom, and a
+         broken animated zoom does not fail loudly -- it starts, never
+         commits, and the map springs back. Measured on the running map:
+         with the animation on, setZoom(14) from 12 left the zoom at 12
+         and the +/- buttons did nothing at ALL bearings, including
+         north. Off, both work. Zoom is instant instead of gliding. */
+      mpMap = L.map('mp_map', { scrollWheelZoom: false, zoomAnimation: false,
         rotate: true, touchRotate: true, shiftKeyRotate: true, rotateControl: false,
         bearing: mapNormaliseBearing(lsGet(MAP_BEARING_KEY)) });
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -11750,9 +11788,7 @@ function renderMap(){
         .on('click', ()=>{ mpSelected = r.name; renderMapSide(); })
         .addTo(mpMarkers);
     });
-    if(shown.length){
-      mpMap.fitBounds(shown.map(r=> [r.pin.lat, r.pin.lng]), { padding: [40, 40], maxZoom: 14 });
-    }
+    mapFitTo(shown.map(r=> [r.pin.lat, r.pin.lng]), mpLayer, false);
     setTimeout(()=> mpMap.invalidateSize(), 0);
   }
 
@@ -11809,9 +11845,7 @@ function renderDeliveryMap(){
         .on('click', ()=>{ mpSelected = r.label; renderDeliverySide(); })
         .addTo(mpMarkers);
     });
-    if(drawable.length){
-      mpMap.fitBounds(drawable.map(r=> [r.pin.lat, r.pin.lng]), { padding: [40, 40], maxZoom: 14 });
-    }
+    mapFitTo(drawable.map(r=> [r.pin.lat, r.pin.lng]), 'deliveries', false);
     setTimeout(()=> mpMap.invalidateSize(), 0);
   }
 
@@ -12015,6 +12049,20 @@ function renderMapSide(){
   }));
 }
 
+/* Asks for the framing back, whenever the user wants it -- which is the
+   other half of never taking it by surprise. */
+document.getElementById('mp_fit').addEventListener('click', ()=>{
+  if(!mpMap) return;
+  if(mpLayer === 'deliveries'){
+    const { runs } = deliveryMapRuns();
+    mapFitTo(runs.filter(r=> r.pin).map(r=> [r.pin.lat, r.pin.lng]), 'deliveries', true);
+  } else {
+    const rows = mapPlaceRows();
+    const { core } = mapPlaceSplit(rows, mapHomePin() || mapCentrePin(rows));
+    mapFitTo(core.filter(r=> mpLayer === 'customers' ? r.customers.length : r.suppliers.length)
+      .map(r=> [r.pin.lat, r.pin.lng]), mpLayer, true);
+  }
+});
 document.getElementById('mp_rot_left').addEventListener('click', ()=> mapNudgeBearing(-15));
 document.getElementById('mp_rot_right').addEventListener('click', ()=> mapNudgeBearing(15));
 // One press puts north back at the top, from wherever it has got to.

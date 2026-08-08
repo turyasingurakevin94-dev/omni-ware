@@ -544,6 +544,13 @@ const reset = () => {
     'the rotation plugin is loaded — Leaflet cannot turn a map by itself');
   t.check(/rotate: true, touchRotate: true, shiftKeyRotate: true/.test(wired4),
     'with two fingers on a phone and shift-drag on a desktop, as well as the buttons');
+  /* The price of rotation, measured rather than assumed: leaflet-rotate
+     breaks Leaflet's animated zoom, and it breaks it QUIETLY -- the zoom
+     starts, never commits, and the map springs back, at every bearing
+     including north. With the animation off, both setZoom and the +/-
+     buttons work. Without this line the map cannot be zoomed at all. */
+  t.check(/zoomAnimation: false/.test(wired4),
+    'and with zoom animation off, or the rotation plugin leaves the map unzoomable');
   /* A CSS transform on the container would rotate the picture without
      rotating the maths, and every click would land in the wrong place. */
   t.check(!/#mp_map\{[^}]*transform:\s*rotate/.test(src),
@@ -564,6 +571,63 @@ const reset = () => {
   t.check(/mapNudgeBearing\(-15\)/.test(wired4) && /mapNudgeBearing\(15\)/.test(wired4)
     && /mapSetBearing\(0\)/.test(wired4),
     'with a turn each way and one press back to north');
+}
+
+/* ---------- 16. the view belongs to whoever is looking --------------- *
+ * REPORTED LIVE: "why does the map auto zoom in when i have zoomed out
+ * to see more details". Because the map re-fitted its bounds on every
+ * draw, and the background refresh redraws the open tab every thirty
+ * seconds -- so zooming out was undone a moment later by the app, for no
+ * reason a user could see.
+ *
+ * The map may frame itself the first time a layer is looked at, when the
+ * layer changes, and when there was nothing to show before. Never on a
+ * poll, and never after dropping a pin: somebody placing twenty pins is
+ * working at a zoom they chose, and yanking it each time would make the
+ * job worse the more of it they did.
+ */
+{
+  const fitScope = compileScope(
+    [extractFunction(src, 'mapShouldAutoFit', 'index.html')], {}, ['mapShouldAutoFit']);
+  const f = fitScope.mapShouldAutoFit;
+
+  eq(f(null, { layer: 'customers', count: 5 }), true, 'the first look frames what is there');
+  /* THE BUG: same layer, same pins, drawn again by the poll. */
+  eq(f({ layer: 'customers', count: 5 }, { layer: 'customers', count: 5 }), false,
+    'a redraw with nothing changed leaves the view exactly where the user put it');
+  /* And dropping a pin is a redraw with one MORE pin — still the user\'s view. */
+  eq(f({ layer: 'customers', count: 5 }, { layer: 'customers', count: 6 }), false,
+    'placing another pin does not yank the view somebody is working in');
+  eq(f({ layer: 'customers', count: 6 }, { layer: 'customers', count: 5 }), false,
+    'nor does removing one');
+
+  eq(f({ layer: 'customers', count: 5 }, { layer: 'suppliers', count: 3 }), true,
+    'switching layer frames the new set, which is a different question');
+  eq(f({ layer: 'customers', count: 0 }, { layer: 'customers', count: 2 }), true,
+    'and going from nothing on the map to something frames it, or it opens on empty sea');
+  eq(f({ layer: 'customers', count: 5 }, { layer: 'customers', count: 0 }), false,
+    'with nothing to fit to, nothing moves');
+  eq(f(null, { layer: 'customers', count: 0 }), false, 'not even on the first look');
+  eq(f(null, null), false, 'and no answer is not a reason to move');
+}
+
+/* ---------- 17. and it can be asked for back ------------------------- */
+{
+  const wired5 = stripLineComments(src);
+  const fitter = extractFunction(src, 'mapFitTo', 'index.html');
+  t.check(/if\(force \|\| mapShouldAutoFit\(mpLastFit, next\)\)/.test(fitter),
+    'the map moves itself only when the rule allows it, or when asked outright');
+  t.check(/mpLastFit = next;/.test(fitter),
+    'and remembers what it framed, so the next draw can tell whether anything changed');
+  /* Both renders must go through it — one calling fitBounds directly
+     would put the thirty-second yank straight back. */
+  t.check(!/mpMap\.fitBounds\(/.test(wired5.replace(fitter, '')),
+    'no render fits the bounds behind the rule\'s back');
+  t.check(/mapFitTo\(shown\.map\(r=> \[r\.pin\.lat, r\.pin\.lng\]\), mpLayer, false\)/.test(wired5)
+    && /mapFitTo\(drawable\.map\(r=> \[r\.pin\.lat, r\.pin\.lng\]\), 'deliveries', false\)/.test(wired5),
+    'places and deliveries both defer to it');
+  t.check(/id="mp_fit"/.test(src) && /mapFitTo\([\s\S]{0,200}?, true\)/.test(wired5),
+    'and a Fit button asks for the framing back — the other half of never taking it by surprise');
 }
 
 process.exit(t.done() ? 1 : 0);
