@@ -630,4 +630,72 @@ const reset = () => {
     'and a Fit button asks for the framing back — the other half of never taking it by surprise');
 }
 
+/* ---------- 18. what the map is drawn on ----------------------------- *
+ * REPORTED: "the map you used is not up to date, some buildings are not
+ * showing". OpenStreetMap is volunteer-drawn -- it only draws buildings
+ * where somebody has traced them, and only at close zoom. Parts of
+ * Kampala have none, which is not a stale tile but an unfinished map.
+ * Imagery shows a roof whether or not anyone drew it.
+ *
+ * Both sources are free and need no key, and both carry the attribution
+ * their licences require -- which is a condition of use, not a
+ * courtesy.
+ */
+{
+  const bmScope = compileScope([
+    extractDeclaration(src, 'MAP_BASEMAPS', 'index.html'),
+    extractFunction(src, 'mapBasemapKey', 'index.html'),
+    'function bases(){ return MAP_BASEMAPS; }',
+  ], {}, ['mapBasemapKey', 'bases']);
+  const maps = bmScope.bases();
+
+  t.check(!!maps.streets && !!maps.satellite, 'there is a street map and an aerial one');
+  Object.keys(maps).forEach((k) => {
+    const m = maps[k];
+    t.check(/^https:\/\//.test(m.url), `${k} is served over https`);
+    t.check(/\{z\}/.test(m.url) && /\{x\}/.test(m.url) && /\{y\}/.test(m.url),
+      `${k} is a real tile template`);
+    /* Attribution is a licence condition for both OSM and Esri. */
+    t.check(!!m.attribution && m.attribution.length > 5, `${k} carries its attribution`);
+    /* Past the last real tile, imagery must stretch rather than turn to
+       grey squares -- so native zoom never exceeds the zoom allowed. */
+    t.check(m.maxNativeZoom <= m.maxZoom, `${k} never asks for a tile past what it has`);
+  });
+  t.check(/openstreetmap/i.test(maps.streets.attribution), 'OpenStreetMap is credited by name');
+  t.check(/esri/i.test(maps.satellite.attribution), 'and so is Esri for the imagery');
+  /* Bare aerial photography is useless for finding a place by name. */
+  t.check(!!maps.satellite.labels, 'the imagery carries a labels overlay, or nothing on it is findable');
+  t.check(!maps.streets.labels, 'while the street map already has its own names');
+
+  eq(bmScope.mapBasemapKey('satellite'), 'satellite', 'a known choice is honoured');
+  eq(bmScope.mapBasemapKey('streets'), 'streets', 'either way');
+  /* A stored value can outlive the option it named. */
+  eq(bmScope.mapBasemapKey('mapbox-hybrid-2019'), 'streets',
+    'and an unrecognised one falls back to the street map rather than leaving no tiles at all');
+  eq(bmScope.mapBasemapKey(null), 'streets', 'as does nothing stored');
+  eq(bmScope.mapBasemapKey(undefined), 'streets', 'or nothing at all');
+}
+
+/* ---------- 19. and switching it keeps everything else --------------- */
+{
+  const wired6 = stripLineComments(src);
+  const set = extractFunction(src, 'mapSetBasemap', 'index.html');
+  t.check(/if\(mpBaseLayer\) mpMap\.removeLayer\(mpBaseLayer\);/.test(set),
+    'the old tiles are taken off, rather than stacked under the new ones for ever');
+  t.check(/if\(mpLabelLayer\)\{ mpMap\.removeLayer\(mpLabelLayer\); mpLabelLayer = null; \}/.test(set),
+    'labels too, or they linger over a street map that already has its own');
+  /* Having labels in the config is not the same as putting them on the
+     map — the config said so while the render ignored it. */
+  t.check(/if\(cfg\.labels\)\{/.test(set) && /mpLabelLayer = L\.tileLayer\(cfg\.labels,/.test(set),
+    'and a basemap that declares labels actually gets them drawn');
+  t.check(/lsSet\(MAP_BASEMAP_KEY, k\)/.test(set), 'the choice is remembered');
+  t.check(/mapSetBasemap\(lsGet\(MAP_BASEMAP_KEY\)\)/.test(wired6),
+    'and restored next time, through the fallback');
+  /* The markers live in their own layer group, so swapping the ground
+     under them must not disturb them. */
+  t.check(!/mpMarkers/.test(set), 'swapping the ground never touches the markers on it');
+  t.check(/data-base="satellite"/.test(src) && /data-base="streets"/.test(src),
+    'with a control to choose between them');
+}
+
 process.exit(t.done() ? 1 : 0);
