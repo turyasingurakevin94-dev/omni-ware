@@ -844,8 +844,15 @@
     display:flex;flex-direction:column;align-items:center;gap:2px;
   }
   .ag-badge-ring{position:relative;width:48px;height:48px;margin-bottom:8px;}
-  .ag-badge-ring svg{width:48px;height:48px;transform:rotate(-90deg);}
-  .ag-badge-ring circle{fill:none;stroke-width:3;}
+  /* `>` and not a descendant selector, both here and on the circle below.
+     The icon is its own <svg> sitting INSIDE this ring, so `.ag-badge-ring
+     svg` matched it too: every achievement mark was drawn a quarter turn
+     over, and the circles inside four of them (the medal, the two heads,
+     the coin) took the ring's 3px stroke while the paths beside them in
+     the same icon kept 1.9. The ring's own svg is the direct child; the
+     icon's is not. */
+  .ag-badge-ring > svg{width:48px;height:48px;transform:rotate(-90deg);}
+  .ag-badge-ring > svg circle{fill:none;stroke-width:3;}
   .ag-badge-ring .track{stroke:var(--slate-soft);}
   .ag-badge-ring .fill{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .5s ease;}
   .ag-badge-icon{

@@ -58,6 +58,36 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/const icon = ACHIEVEMENT_ICONS\[a\.id\] \|\| ACHIEVEMENT_ICONS\.first_sale;/.test(code),
     'the card looks its icon up by achievement id');
 
+  /* THE ICON SITS INSIDE THE RING.
+   *
+   * The progress ring is turned a quarter over so its arc starts at the
+   * top, and its track is stroked at 3. The icon is a second <svg> nested
+   * inside the same .ag-badge-ring, so a DESCENDANT selector reaches it
+   * too -- which is how every achievement mark ended up drawn on its side,
+   * with the circles inside four of them (the medal, the two heads, the
+   * coin) fattened to the ring's stroke while the paths beside them in the
+   * same icon stayed at 1.9.
+   *
+   * The ring's own svg is a direct child; the icon's is not. Nothing in a
+   * unit test renders, so this is pinned on the selector itself. */
+  t.check(/\.ag-badge-ring > svg\{[^}]*transform:rotate\(-90deg\)/.test(src),
+    'the quarter turn is scoped to the ring itself, not to every svg inside it');
+  t.check(!/\.ag-badge-ring svg\{/.test(src),
+    'so the icon is never turned on its side with it');
+  t.check(/\.ag-badge-ring > svg circle\{/.test(src),
+    'and the ring stroke reaches only the ring, not circles drawn inside an icon');
+  t.check(!/\.ag-badge-ring circle\{/.test(src),
+    'which four of the nine icons have');
+  /* Guards the two assertions above: if the icons stopped drawing circles
+     the scoping would be pinned for no reason, and nobody could tell
+     whether it still mattered. Named rather than counted, so redrawing an
+     icon reports WHICH claim above went stale. */
+  const byKey = Object.fromEntries([...iconBlock.matchAll(/^\s{2}([a-z0-9_]+): '(<svg[\s\S]*?<\/svg>)'/gm)]
+    .map((m) => [m[1], m[2]]));
+  const roundIcons = keyed.filter((k) => /<circle|<ellipse/.test(byKey[k] || '')).sort();
+  t.check(roundIcons.join(',') === 'earn_100k,earn_1m,orders_50,repeat_10,repeat_3',
+    `the medal, the two heads and the two coins really do draw a round shape of their own (${roundIcons.join(',') || 'none'})`);
+
   // Every dotted reference must resolve to a key that exists.
   //
   // Rekeying this table from metric family to achievement id broke the
