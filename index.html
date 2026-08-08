@@ -4377,6 +4377,46 @@
     .media-rail{flex-direction:row;flex-wrap:wrap;flex-basis:auto;width:100%;}
   }
 
+  /* ---------------- The map ---------------- */
+  .mp-layers{display:flex;gap:6px;}
+  .mp-layer{all:unset;box-sizing:border-box;cursor:pointer;font-size:12.5px;font-weight:600;
+    padding:6px 13px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);}
+  .mp-layer.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .mp-summary{font-size:12.5px;color:var(--ink-soft);}
+  .mp-wrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,300px);gap:0;
+    border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+  @media (max-width: 900px){ .mp-wrap{grid-template-columns:1fr;} }
+  .mp-canvas{position:relative;min-width:0;}
+  #mp_map{height:460px;width:100%;background:var(--ow-steel-050);}
+  .mp-legend{position:absolute;left:10px;bottom:10px;z-index:500;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;
+    color:var(--ink-soft);line-height:1.7;}
+  .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
+  .mp-side{border-left:1px solid var(--line);padding:13px 15px;min-width:0;max-height:460px;overflow-y:auto;}
+  @media (max-width: 900px){ .mp-side{border-left:none;border-top:1px solid var(--line);max-height:none;} }
+  .mp-side-empty{font-size:13px;color:var(--ink-soft);line-height:1.6;}
+  .mp-side h3{font-size:15px;font-weight:700;margin:0;}
+  .mp-side-sub{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .mp-money{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+  .mp-money div{background:var(--ow-steel-050);border-radius:8px;padding:9px 10px;}
+  .mp-money span{display:block;font-size:11px;color:var(--ink-soft);}
+  .mp-money b{display:block;font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .mp-person{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+  .mp-person:last-child{border-bottom:none;}
+  .mp-person-name{font-size:13px;}
+  .mp-person-sub{font-size:11px;color:var(--ink-soft);}
+  .mp-person-amt{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .mp-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;
+    padding:9px 12px;border-radius:9px;font-size:12.5px;}
+  .mp-strip.far{background:var(--ow-steel-050);color:var(--ink-soft);}
+  .mp-strip.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .mp-chip{all:unset;box-sizing:border-box;cursor:pointer;font-size:12px;padding:3px 9px;
+    border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink);}
+  .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-family:'Inter',sans-serif;border:2px solid #fff;
+    box-shadow:0 1px 3px rgba(20,26,33,0.35);}
+
   /* ---------------- WhatsApp: the publishing desk ----------------
      One question answered before anything else: has today's post gone
      out? Then a ranked board — the lead pick large with its evidence
@@ -4752,7 +4792,10 @@
         <button type="button" data-tab="loans" title="Money the shop has borrowed">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
           <span class="nav-label">Loans</span></button>
-        <button type="button" data-tab="payroll" title="Wages and rent — what is due and what is owed">
+        <button type="button" data-tab="map" title="Where your customers and suppliers are">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"/></svg>
+        <span class="nav-label">Map</span></button>
+      <button type="button" data-tab="payroll" title="Wages and rent — what is due and what is owed">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
           <span class="nav-label">Payroll &amp; rent</span></button>
       </div>
@@ -5439,6 +5482,30 @@
     </section>
 
     <!-- STAFF -->
+    <section id="tab-map" style="display:none;">
+      <div class="page-head">
+        <h1>Map</h1>
+        <p>Where your customers and suppliers are, and what is owed at each place.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <div class="mp-layers" id="mp_layers">
+            <button type="button" class="mp-layer active" data-layer="customers">Customers</button>
+            <button type="button" class="mp-layer" data-layer="suppliers">Suppliers</button>
+          </div>
+          <div class="mp-head-right"><span id="mp_summary" class="mp-summary"></span></div>
+        </div>
+        <div class="mp-wrap">
+          <div class="mp-canvas"><div id="mp_map"></div>
+            <div class="mp-legend" id="mp_legend"></div>
+          </div>
+          <aside class="mp-side" id="mp_side"></aside>
+        </div>
+        <div id="mp_far"></div>
+        <div id="mp_unpinned"></div>
+      </div>
+    </section>
+
     <section id="tab-staff" style="display:none;">
       <div class="page-head">
         <h1>Staff</h1>
@@ -7818,6 +7885,8 @@
   <img id="imgLightboxImg" src="" alt="">
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="shared-worker.js"></script>
 <script>
@@ -8267,7 +8336,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR
+    rentAgreementsR, duesR, placesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -8275,9 +8344,9 @@ async function loadData(shopId){
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
-    sel('rent_agreements'), sel('dues')
+    sel('rent_agreements'), sel('dues'), sel('places')
   ]);
-  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR]
+  [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
 
   const debtByCustomer = {};
@@ -8426,6 +8495,7 @@ async function loadData(shopId){
       id:f.id, name:f.name||'', parentId: f.parent_id==null ? null : Number(f.parent_id)
     })),
     nextMediaFolderId: (mediaFoldersR.data||[]).length ? Math.max(0,...mediaFoldersR.data.map(f=>f.id||0))+1 : 1,
+    places: (placesR.data||[]).map(r=>({name:r.name, lat:r.lat==null?null:Number(r.lat), lng:r.lng==null?null:Number(r.lng)})),
     waPosts: (waPostsR.data||[]).map(w=>({
       id:w.id, date:w.date, productId:w.product_id,
       variantIdx: w.variant_idx==null ? null : Number(w.variant_idx),
@@ -8583,6 +8653,11 @@ function buildSyncRows(d, shopId){
     mediaFolders: (d.mediaFolders||[]).map(f=>({
       id:f.id, shop_id:shopId, name:f.name, parent_id: f.parentId==null ? null : f.parentId
     })),
+    places: (d.places||[]).map(r=>({
+      shop_id:shopId, name:r.name,
+      lat: r.lat==null ? null : Number(r.lat),
+      lng: r.lng==null ? null : Number(r.lng),
+    })),
     waPosts: (d.waPosts||[]).map(w=>({
       id:w.id, shop_id:shopId, date:w.date, product_id:w.productId,
       variant_idx: w.variantIdx==null ? null : w.variantIdx,
@@ -8652,6 +8727,7 @@ function buildLastSynced(d, shopId){
     media: keyRowsById(rows.media, 'id'),
     mediaFolders: keyRowsById(rows.mediaFolders, 'id'),
     waPosts: keyRowsById(rows.waPosts, 'id'),
+    places: keyRowsById(rows.places, 'name'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -8769,6 +8845,7 @@ async function saveData(){
   addDiffOps(ops, 'media', 'media', 'id', shopId, rows.media);
   addDiffOps(ops, 'mediaFolders', 'media_folders', 'id', shopId, rows.mediaFolders);
   addDiffOps(ops, 'waPosts', 'wa_posts', 'id', shopId, rows.waPosts);
+  addDiffOps(ops, 'places', 'places', 'name', shopId, rows.places);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -10884,6 +10961,7 @@ function goToTab(tab){
   if(tab==='loans') renderLoans();
   if(tab==='payroll') renderPayroll();
   if(tab==='staff') loadLoginSessions();
+  if(tab==='map') renderMap();
   if(tab==='statements') renderStatements();
   // Every other data tab redraws on entry; this one only ever drew at
   // boot. It mattered little when the panes were the whole screen, and
@@ -11298,6 +11376,300 @@ function supplierLocationFor(supplierId){
   const s = (data.suppliers||[]).find(x=> String(x.id) === String(supplierId));
   return canonicalLocation(s && s.location);
 }
+
+/* ================= WHERE THINGS AND PEOPLE ARE =====================
+
+   Every customer and supplier carries a place NAME. A pin gives that
+   name a position on Earth, once, and every record naming it inherits
+   the pin -- 45 customers and 40 suppliers resolve to about twenty
+   places, so this is twenty pins by hand rather than eighty-five
+   lookups against a geocoder that has no addresses to work with.
+
+   Everything below is DERIVED at render from customers, suppliers and
+   their ledgers. Nothing about money is stored on a place, so the map
+   cannot drift out of step with the Debtors list -- the same rule the
+   insight strip, the media counts and the campaign stats follow.
+*/
+function placePin(name){
+  const key = canonicalLocation(name);
+  if(!key) return null;
+  const row = (data.places||[]).find(p=> p.name === key);
+  /* A place nobody has pinned is not a place at 0,0. Half a pin is not a
+     pin either -- it would put a marker on a real meridian at a
+     fictional latitude. */
+  if(!row || row.lat == null || row.lng == null) return null;
+  return { lat: Number(row.lat), lng: Number(row.lng) };
+}
+/* How old the oldest thing they still owe is, in days -- null when
+   nothing is owed, and null when a balance exists but nothing behind it
+   carries a date. Unknown age must never read as new: agingBandFor()
+   sends it to its own band for exactly that reason. */
+function customerOldestDebtDays(customer){
+  if(!customer || !(Number(customer.debt) > 0)) return null;
+  const open = customerOutstandingInvoices(customer.id) || [];
+  let oldest = null;
+  open.forEach(q=>{
+    const when = q.invoicedAt || q.date;
+    if(!when) return;
+    const d = daysSinceDate(when);
+    if(d != null && d >= 0 && (oldest == null || d > oldest)) oldest = d;
+  });
+  return oldest;
+}
+/* One row per PLACE, which is what goes on the map -- not one per
+   person. Forty-five customers in sixteen places is sixteen markers, and
+   "Bwaise: 3 customers, 1.2m owed" is the sentence somebody actually
+   wants. Places with nothing at them are still listed, so a pin can be
+   dropped before the first customer moves in. */
+function mapPlaceRows(){
+  const rows = new Map();
+  const at = (raw)=>{
+    const key = canonicalLocation(raw);
+    if(!key) return null;
+    if(!rows.has(key)){
+      rows.set(key, { name: key, customers: [], suppliers: [],
+        owed: 0, owing: 0, oldestDays: null, pin: placePin(key) });
+    }
+    return rows.get(key);
+  };
+  (data.presetLocations||[]).forEach(at);
+  (data.customers||[]).forEach(c=>{
+    const r = at(c.location); if(!r) return;
+    r.customers.push(c);
+    r.owed += Math.max(0, Number(c.debt)||0);
+    const age = customerOldestDebtDays(c);
+    if(age != null && (r.oldestDays == null || age > r.oldestDays)) r.oldestDays = age;
+  });
+  (data.suppliers||[]).forEach(sup=>{
+    const r = at(sup.location); if(!r) return;
+    r.suppliers.push(sup);
+    r.owing += Math.max(0, creditorTotalOwed(sup.id));
+  });
+  return [...rows.values()].map(r=> Object.assign(r, {
+    /* The band the marker is coloured by. A place where money is owed
+       but nothing is dated is 'unknown', never 'under 30 days'. */
+    /* Spelled out rather than handed to agingBandFor as null, because
+       null >= 0 is TRUE in JavaScript: a null age sails through the
+       under-30 test and lands in the one band AGING_BANDS says a debt
+       with no date must never quietly join. */
+    band: r.owed > 0.5
+      ? (r.oldestDays == null ? 'unknown' : agingBandFor(r.oldestDays))
+      : null,
+    count: r.customers.length + r.suppliers.length,
+  })).sort((a,b)=> b.count - a.count || a.name.localeCompare(b.name));
+}
+/* Kilometres between two pins, so the map can tell a place across town
+   from a place across the country. Haversine on a spherical earth --
+   accurate to a fraction of a percent at these distances, and the
+   alternative (flat degrees) is wrong by a third at this latitude
+   because a degree of longitude is not a degree of latitude. */
+function pinDistanceKm(a, b){
+  if(!a || !b) return null;
+  const R = 6371, rad = Math.PI/180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const s1 = Math.sin(dLat/2), s2 = Math.sin(dLng/2);
+  const h = s1*s1 + Math.cos(a.lat*rad) * Math.cos(b.lat*rad) * s2*s2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+/* Anything further out than this is shown in its own strip rather than
+   on the map. A customer in Lira is 340km from a shop in Kampala: fitting
+   both on one screen makes the twenty places that matter a single dot. */
+const MAP_CORE_RADIUS_KM = 40;
+/* Splits the pinned places into the ones the map opens on and the ones
+   listed beside it, and names the unpinned separately again -- three
+   states, because "no pin" and "too far to draw" are different problems
+   with different fixes. */
+/* Where the business actually sits, when nobody has said where the shop
+   is. The MEDIAN of the pinned places, not the mean: a single customer
+   in Lira drags a mean two hundred kilometres north and takes the whole
+   map with it, while the median does not move at all. That is the entire
+   reason for choosing it -- the outliers this measurement exists to find
+   must not be able to move the thing they are measured from. */
+function mapCentrePin(rows){
+  const pins = (rows||[]).map(r=> r.pin).filter(Boolean);
+  if(!pins.length) return null;
+  const mid = (nums)=>{
+    const a = nums.slice().sort((x,y)=> x - y);
+    const i = Math.floor(a.length / 2);
+    return a.length % 2 ? a[i] : (a[i-1] + a[i]) / 2;
+  };
+  return { lat: mid(pins.map(p=> p.lat)), lng: mid(pins.map(p=> p.lng)) };
+}
+function mapPlaceSplit(rows, home){
+  const core = [], far = [], unpinned = [];
+  (rows||[]).forEach(r=>{
+    if(!r.pin){ unpinned.push(r); return; }
+    const km = home ? pinDistanceKm(home, r.pin) : 0;
+    if(km != null && km > MAP_CORE_RADIUS_KM) far.push(Object.assign({ km }, r));
+    else core.push(r);
+  });
+  far.sort((a,b)=> a.km - b.km);
+  return { core, far, unpinned };
+}
+
+/* The colour a marker wears. Bands come straight from AGING_BANDS so the
+   map and the Debtors list can never disagree about what "late" means. */
+const MAP_BAND_COLOURS = {
+  b30: '#1C6B58', b60: '#B0700A', b90: '#B23A26', b90p: '#7F1D1A',
+  unknown: '#59626B',
+};
+function mapBandColour(band){
+  return MAP_BAND_COLOURS[band] || '#1C6B58';
+}
+/* Marker radius from headcount, on a square root so a place with twenty
+   people is not a hundred times the area of a place with two -- area is
+   what the eye reads, and linear radius would exaggerate it. */
+function mapMarkerRadius(count){
+  return Math.round(11 + Math.sqrt(Math.max(0, count)) * 3.6);
+}
+
+let mpLayer = 'customers';
+let mpMap = null, mpMarkers = null, mpSelected = null;
+const MAP_HOME_PLACE_KEY = 'owMapHomePlace';
+
+/* The shop's own pin: whichever place the shop itself sits in. Read from
+   the printed shop location if it names a pinned place, so nothing extra
+   has to be configured before the map is useful. */
+function mapHomePin(){
+  const named = (data.presetShopLocation || data.presetShopAddress || '');
+  return placePin(named) || placePin(lsGet(MAP_HOME_PLACE_KEY) || '') || null;
+}
+
+function renderMap(){
+  const rows = mapPlaceRows();
+  /* The shop's own pin if it has one, else the middle of everything
+     already placed -- so the far strip works from the first pin, with
+     nothing to configure. */
+  const home = mapHomePin() || mapCentrePin(rows);
+  const { core, far, unpinned } = mapPlaceSplit(rows, home);
+  const shown = core.filter(r=> mpLayer === 'customers' ? r.customers.length : r.suppliers.length);
+
+  const totalPeople = rows.reduce((n,r)=> n + (mpLayer==='customers' ? r.customers.length : r.suppliers.length), 0);
+  const totalMoney = rows.reduce((n,r)=> n + (mpLayer==='customers' ? r.owed : r.owing), 0);
+  document.getElementById('mp_summary').textContent =
+    `${totalPeople} ${mpLayer === 'customers' ? 'customers' : 'suppliers'} · `
+    + `${mpLayer === 'customers' ? 'owed to you' : 'you owe'} ${fmtUGX(Math.round(totalMoney))}`;
+
+  document.getElementById('mp_legend').innerHTML = mpLayer === 'customers'
+    ? AGING_BANDS.map(b=> `<div><i style="background:${mapBandColour(b.key)}"></i>${esc(b.short)}</div>`).join('')
+      + `<div><i style="background:#1C6B58"></i>Nothing owed</div>`
+    : `<div><i style="background:#1C6B58"></i>Suppliers</div>`;
+
+  if(typeof L === 'undefined'){
+    document.getElementById('mp_map').innerHTML =
+      '<div class="mp-side-empty" style="padding:18px;">The map could not load — it needs a connection the first time. Your places and figures below are unaffected.</div>';
+  } else {
+    if(!mpMap){
+      mpMap = L.map('mp_map', { scrollWheelZoom: false });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mpMap);
+      mpMap.setView([0.3152, 32.5816], 12);
+      mpMarkers = L.layerGroup().addTo(mpMap);
+    }
+    mpMarkers.clearLayers();
+    shown.forEach(r=>{
+      const n = mpLayer === 'customers' ? r.customers.length : r.suppliers.length;
+      const d = mapMarkerRadius(n) * 2;
+      const colour = mpLayer === 'customers' ? mapBandColour(r.band) : '#1C6B58';
+      const icon = L.divIcon({ className: '', iconSize: [d, d], iconAnchor: [d/2, d/2],
+        html: `<div class="mp-marker" style="width:${d}px;height:${d}px;background:${colour};font-size:${d>32?13:11}px;">${n}</div>` });
+      L.marker([r.pin.lat, r.pin.lng], { icon, title: r.name })
+        .on('click', ()=>{ mpSelected = r.name; renderMapSide(); })
+        .addTo(mpMarkers);
+    });
+    if(shown.length){
+      mpMap.fitBounds(shown.map(r=> [r.pin.lat, r.pin.lng]), { padding: [40, 40], maxZoom: 14 });
+    }
+    setTimeout(()=> mpMap.invalidateSize(), 0);
+  }
+
+  renderMapSide();
+
+  const farEl = document.getElementById('mp_far');
+  farEl.innerHTML = far.length
+    ? `<div class="mp-strip far"><span>Too far to draw with the rest:</span>${far.map(r=>
+        `<button type="button" class="mp-chip mp-fly" data-name="${esc(r.name)}">${esc(r.name)} · ${Math.round(r.km)}km</button>`).join('')}</div>`
+    : '';
+  farEl.querySelectorAll('.mp-fly').forEach(b=> b.addEventListener('click', ()=>{
+    const r = rows.find(x=> x.name === b.dataset.name);
+    if(r && r.pin && mpMap){ mpMap.setView([r.pin.lat, r.pin.lng], 12); }
+    mpSelected = b.dataset.name; renderMapSide();
+  }));
+
+  /* Named, never guessed at. A place with no pin is not drawn somewhere
+     approximate -- it is listed until somebody says where it is. */
+  const todo = document.getElementById('mp_unpinned');
+  todo.innerHTML = unpinned.length
+    ? `<div class="mp-strip todo"><span><b>${unpinned.length}</b> place${unpinned.length===1?'':'s'} not on the map yet — ${
+        esc(unpinned.slice(0,5).map(r=> r.name).join(', '))}${unpinned.length>5?'…':''}. Click a place, then click the map to put it there.</span>
+        ${unpinned.map(r=> `<button type="button" class="mp-chip mp-pin" data-name="${esc(r.name)}">Place ${esc(r.name)}</button>`).join('')}</div>`
+    : '';
+  todo.querySelectorAll('.mp-pin').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
+}
+
+/* Dropping a pin: the next click on the map is the place's position. No
+   typing coordinates, and no geocoder -- there are no addresses here to
+   give one. */
+let mpPinning = null;
+function mapBeginPin(name){
+  if(!mpMap){ toast('The map needs to load before a place can be put on it'); return; }
+  mpPinning = name;
+  toast(`Click the map where ${name} is`, 6000);
+  mpMap.getContainer().style.cursor = 'crosshair';
+  mpMap.once('click', (e)=>{
+    mpMap.getContainer().style.cursor = '';
+    const key = canonicalLocation(mpPinning);
+    mpPinning = null;
+    if(!key) return;
+    if(!Array.isArray(data.places)) data.places = [];
+    const row = data.places.find(x=> x.name === key);
+    const lat = Number(e.latlng.lat.toFixed(6)), lng = Number(e.latlng.lng.toFixed(6));
+    if(row){ row.lat = lat; row.lng = lng; } else { data.places.push({ name: key, lat, lng }); }
+    saveData();
+    toast(`${key} placed`);
+    renderMap();
+  });
+}
+
+function renderMapSide(){
+  const el = document.getElementById('mp_side');
+  const rows = mapPlaceRows();
+  const r = mpSelected ? rows.find(x=> x.name === mpSelected) : null;
+  if(!r){
+    el.innerHTML = '<div class="mp-side-empty">Click a marker to see who is there and what is owed.</div>';
+    return;
+  }
+  const people = mpLayer === 'customers' ? r.customers : r.suppliers;
+  el.innerHTML = `<h3>${esc(r.name)}</h3>
+    <div class="mp-side-sub">${r.customers.length} customer${r.customers.length===1?'':'s'} · ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}</div>
+    <div class="mp-money">
+      <div><span>They owe you</span><b>${fmtUGX(Math.round(r.owed))}</b></div>
+      <div><span>You owe them</span><b>${fmtUGX(Math.round(r.owing))}</b></div>
+    </div>
+    ${people.length ? people.map(pp=>{
+      const isCust = mpLayer === 'customers';
+      const amt = isCust ? Math.max(0, Number(pp.debt)||0) : Math.max(0, creditorTotalOwed(pp.id));
+      const age = isCust ? customerOldestDebtDays(pp) : null;
+      return `<div class="mp-person" data-open="${esc(pp.id)}">
+        <div><div class="mp-person-name">${esc(pp.name || pp.id)}</div>
+          <div class="mp-person-sub">${esc(pp.id)}${age != null ? ` · ${age} days` : ''}${
+            isCust && pp.linkedSupplierId ? ' · also a supplier' : ''}</div></div>
+        <div class="mp-person-amt">${amt > 0.5 ? fmtUGX(Math.round(amt)) : '—'}</div>
+      </div>`;
+    }).join('') : '<div class="mp-side-empty">Nobody on this layer is here.</div>'}`;
+  el.querySelectorAll('.mp-person').forEach(row2=> row2.addEventListener('click', ()=>{
+    const id = row2.dataset.open;
+    if(mpLayer === 'customers'){ goToTab('customers'); editCustomer(id); }
+    else { goToTab('suppliers'); editSupplier(id); }
+  }));
+}
+
+document.getElementById('mp_layers').addEventListener('click', (e)=>{
+  const b = e.target.closest('.mp-layer'); if(!b) return;
+  mpLayer = b.dataset.layer;
+  document.querySelectorAll('.mp-layer').forEach(x=> x.classList.toggle('active', x === b));
+  renderMap();
+});
 
 function pickupRuns(orders){
   const byPlace = new Map();
@@ -27444,6 +27816,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
     quote:{client:{name:'',phone:''}, date: todayISO(), items:[], savedId:null}, nextQuoteLineId:1,
     savedQuotes:[], nextSavedQuoteId:1, purchaseInvoices:[], supplierCommissions:[],
     fixedAssets:[], loans:[], rentAgreements:[], dues:[], media:[], mediaFolders:[], waPosts:[],
+    places:[],
     presetCategories: seedData().presetCategories, presetUnits: seedData().presetUnits,
     presetIncomeCategories: seedData().presetIncomeCategories, presetExpenseCategories: seedData().presetExpenseCategories,
     presetAttributes: seedData().presetAttributes, seeded:false};

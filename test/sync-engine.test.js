@@ -15,6 +15,8 @@
  *
  * Run: node test/sync-engine.test.js   (or: npm test)
  */
+const fs = require('fs');
+const path = require('path');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('sync-engine');
@@ -326,10 +328,20 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
   const mig = read('supabase/migrations/0058_owner_only_deletes.sql');
   t.check(/as restrictive for delete/.test(mig) && /role = 'owner'/.test(mig),
     'deletes are gated by a RESTRICTIVE policy on the owner role');
+  /* Searched across EVERY migration, not just 0058. The gate is a fact
+     about the database; a table added afterwards carries its policy in
+     its own migration, and reading one file could only ever describe the
+     tables that existed when it was written. */
+  const allMigrations = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations'))
+    .filter((f) => f.endsWith('.sql'))
+    .map((f) => read('supabase/migrations/' + f)).join('\n');
   const diffedTables = [...adminSrc.matchAll(/addDiffOps\(ops, '\w+', '(\w+)'/g)].map((m) => m[1]);
-  diffedTables.concat(['stock_lots']).forEach((tbl) =>
-    t.check(new RegExp(`'${tbl}'`).test(mig),
-      `${tbl} is synced, so a stale client cannot delete from it — only the owner's session can`));
+  diffedTables.concat(['stock_lots']).forEach((tbl) => {
+    const gated = new RegExp(`on ${tbl}\\s+as restrictive\\s+for delete`).test(allMigrations)
+      || new RegExp(`'${tbl}'`).test(mig);
+    t.check(gated,
+      `${tbl} is synced, so a stale client cannot delete from it — only the owner's session can`);
+  });
 }
 
 process.exit(t.done() ? 1 : 0);
