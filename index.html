@@ -25114,6 +25114,9 @@ let prTiers = [];
 // ladder above" or an array meaning "this variant has its own ladder
 // instead". Index-aligned with the selected product's variants array.
 let prBulkVariantOverrides = [];
+// Signature of the shared ladder as it was pre-filled, so an untouched
+// box can be told from one the admin actually typed into.
+let prBulkTiersPrefill = null;
 // The packing values renderPrBulkVariants() pre-filled, so a bulk save can
 // tell a deliberate change from an untouched pre-fill. See the note there.
 let prBulkPackPrefill = null;
@@ -25287,6 +25290,7 @@ function selectPrProduct(id, variantIdx=null){
   prTiers = [];
   prBulkVariantOverrides = [];
   prBulkPackPrefill = null;
+  prBulkTiersPrefill = null;
   setPrBulkMode(!!(hasVariants && variantIdx==null));
   hidePrSuggestions();
 }
@@ -25322,18 +25326,36 @@ function renderPrBulkVariants(){
     packUnit: document.getElementById('pr_pack_unit').value,
     packQty: document.getElementById('pr_pack_qty').value
   };
-  // Same best-effort convenience as the packing fields above: if this
-  // supplier already has a shared tier ladder on file for the product
-  // (from an earlier bulk save), show it pre-filled rather than blank --
-  // it's still just one representative variant's tiers, so it won't
-  // catch variants that were later edited individually to diverge.
-  prTiers = packSample && Array.isArray(packSample.tiers) ? packSample.tiers.map(t=>({...t})) : [];
-  prBulkVariantOverrides = p.variants.map((v,i)=>{
-    const existing = supplierId
-      ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
-      : null;
-    return existing ? tiersFromLegacyRow(existing) : null;
-  });
+  const variantRows = p.variants.map((v,i)=> supplierId
+    ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
+    : null);
+  const ladders = variantRows.map(r=> r ? tiersFromLegacyRow(r) : []);
+  /* The shared box is pre-filled only when the ladder genuinely IS shared:
+     every variant priced by this supplier, all on the same rungs.
+
+     It used to be filled from whichever row came first, which showed one
+     variant's own prices under a heading that says "default for every
+     variant" -- a claim the data did not support. Worse, the save then
+     made it true: a variant with no price of its own fell back to this
+     box, so reopening the form for a supplier and saving wrote that one
+     variant's ladder onto every variant that had none. Prices nobody
+     entered, for variants nobody had quoted.
+
+     There is deliberately no separate "is every variant priced?" check
+     here: a variant with no row has an empty ladder, so it either differs
+     from a priced one and fails the test below, or leaves every ladder
+     empty -- which pre-fills an empty box, the same as not pre-filling.
+     A check that cannot change the answer would only read as though it
+     were doing the work. */
+  const sharedSig = ladders.length ? tiersSignature(ladders[0]) : '';
+  const trulyShared = ladders.length > 0
+    && ladders.every(l=> tiersSignature(l) === sharedSig);
+  prTiers = trulyShared ? ladders[0].map(t=>({...t})) : [];
+  // Remembered for the same reason as the packing prefill above: the save
+  // has to tell "the admin typed a shared ladder" from "this box is only
+  // showing what is already on file".
+  prBulkTiersPrefill = tiersSignature(prTiers);
+  prBulkVariantOverrides = ladders.map((l,i)=> variantRows[i] ? l : null);
   renderPrTierUnitOptions();
   renderPrTiers();
   renderPrBulkVariantRows();
@@ -25840,6 +25862,15 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
 // (skipped if there's no pack size, since a flat wholesale price with no
 // pack qty was already unreachable before this rework -- qty>=packQty
 // can never be true when packQty is 0).
+/* A comparable form of a tier ladder, for asking "is this the same
+   ladder?" -- whether every variant really shares one, and whether the
+   shared box has been touched since it was filled in. */
+function tiersSignature(tiers){
+  return (tiers||[])
+    .map(t=>`${Number(t.minQty)||0}@${Number(t.price)||0}`)
+    .sort()
+    .join('|');
+}
 function tiersFromLegacyRow(r){
   if(Array.isArray(r.tiers) && r.tiers.length) return r.tiers.map(t=>({...t}));
   const synthesized = [];
@@ -25872,6 +25903,7 @@ function resetPriceForm(){
   prTiers = [];
   prBulkVariantOverrides = [];
   prBulkPackPrefill = null;
+  prBulkTiersPrefill = null;
   setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_date').value = todayISO();
@@ -25920,11 +25952,18 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       || document.getElementById('pr_unit').value !== prBulkPackPrefill.unit
       || document.getElementById('pr_pack_unit').value !== prBulkPackPrefill.packUnit
       || document.getElementById('pr_pack_qty').value !== prBulkPackPrefill.packQty;
+    /* The shared ladder only reaches variants that have no price of their
+       own when the admin actually entered one. A box merely SHOWING what
+       is already on file must not write itself onto variants nobody
+       quoted -- same rule as the packing fields above, for the same
+       reason: pre-filled is not the same as entered. */
+    const tiersEdited = prBulkTiersPrefill == null
+      || tiersSignature(prTiers) !== prBulkTiersPrefill;
     let saved = 0, cleared = 0, keptOwnPacking = 0, lostWholesale = 0;
     product.variants.forEach((v,i)=>{
       // A variant with its own override ladder uses that; everything else
-      // follows the shared one entered above.
-      const effectiveTiers = prBulkVariantOverrides[i] || prTiers;
+      // follows the shared one, when there is a deliberately entered one.
+      const effectiveTiers = prBulkVariantOverrides[i] || (tiersEdited ? prTiers : []);
       // A supplier only ever has one current price for a given item -- once
       // they change it, the old figure isn't relevant any more, so this
       // save replaces every existing entry for this product+variant+supplier

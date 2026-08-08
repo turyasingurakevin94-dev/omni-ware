@@ -22,7 +22,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('price authoring');
 const src = read('index.html');
 
-const NAMES = ['deriveWholesaleRetail', 'tiersFromLegacyRow', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
+const NAMES = ['deriveWholesaleRetail', 'tiersFromLegacyRow', 'tiersSignature', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
 
 const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }));
@@ -138,12 +138,15 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     renderPrTiers: () => {},
     renderPrBulkVariantRows: () => {},
   };
+  env.tiersSignature = fn.tiersSignature;
   const scope = compileScope([
-    'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackPrefill = null;',
+    'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
     extractFunction(src, 'renderPrBulkVariants', 'index.html'),
     'function __prefill(){ return prBulkPackPrefill; }',
     'function __overrides(){ return prBulkVariantOverrides; }',
-  ], env, ['renderPrBulkVariants', '__prefill', '__overrides']);
+    'function __tiers(){ return prTiers; }',
+    'function __tiersPrefill(){ return prBulkTiersPrefill; }',
+  ], env, ['renderPrBulkVariants', '__prefill', '__overrides', '__tiers', '__tiersPrefill']);
 
   el('pr_product').value = 'P1';
   el('pr_supplier').value = 'S1';
@@ -159,6 +162,103 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     `the fields are pre-filled from one representative variant (${el('pr_pack_qty').value})`);
   t.check(scope.__overrides().length === 2 && scope.__overrides().every(Boolean),
     'each variant with a saved entry gets its own ladder as an override');
+
+  /* Two variants, two DIFFERENT ladders: there is no shared default here,
+     and the box must not claim there is by showing the first one. */
+  t.check(scope.__tiers().length === 0,
+    `variants priced differently leave the shared box empty (${JSON.stringify(scope.__tiers())})`);
+}
+
+/* ---------- 3b. the shared box only shows a ladder that is shared ----- */
+/*
+ * REPORTED BUG. Price one variant for a supplier, come back to price
+ * another, and the "Volume pricing (default for every variant)" box was
+ * filled from whichever row came first -- one variant's own prices,
+ * presented as the product-wide default. The save then made it true:
+ * every variant with no price of its own inherited that ladder, so
+ * quoting one variant wrote prices onto three that were never quoted.
+ */
+{
+  const fields = {};
+  const el = (id) => (fields[id] = fields[id] || { value: '', innerHTML: '' });
+  const four = [{ combo: { L: 'Short', M: 'Single' } }, { combo: { L: 'Short', M: 'Double' } },
+                { combo: { L: 'Long', M: 'Single' } }, { combo: { L: 'Long', M: 'Double' } }];
+  const build = (prices) => {
+    const env = {
+      data: { products: [{ id: 'P1', variants: four }], prices },
+      document: { getElementById: el },
+      tiersFromLegacyRow: fn.tiersFromLegacyRow,
+      tiersSignature: fn.tiersSignature,
+      renderPrTierUnitOptions: () => {}, renderPrTiers: () => {}, renderPrBulkVariantRows: () => {},
+    };
+    const s = compileScope([
+      'let prTiers = []; let prBulkVariantOverrides = []; let prBulkPackPrefill = null; let prBulkTiersPrefill = null;',
+      extractFunction(src, 'renderPrBulkVariants', 'index.html'),
+      'function __tiers(){ return prTiers; }',
+      'function __overrides(){ return prBulkVariantOverrides; }',
+      'function __tiersPrefill(){ return prBulkTiersPrefill; }',
+    ], env, ['renderPrBulkVariants', '__tiers', '__overrides', '__tiersPrefill']);
+    el('pr_product').value = 'P1';
+    el('pr_supplier').value = 'S1';
+    s.renderPrBulkVariants();
+    return s;
+  };
+
+  // Exactly the reported state: one of four variants quoted.
+  const one = build([{ id: 1, productId: 'P1', variantIdx: 0, supplierId: 'S1', packQty: 12, tiers: ladder([1, 9000], [12, 8000]) }]);
+  t.check(one.__tiers().length === 0,
+    `one variant priced out of four leaves the shared box empty (${JSON.stringify(one.__tiers())})`);
+  t.check(one.__overrides()[0] && one.__overrides()[0].length === 2,
+    'the quoted variant still shows its own ladder');
+  t.check(one.__overrides().slice(1).every((o) => o === null),
+    'and the three nobody quoted carry nothing at all');
+
+  // All four on the same rungs: that IS a shared default, so show it.
+  const same = ladder([1, 9000], [12, 8000]);
+  const all = build(four.map((v, i) => ({ id: i + 1, productId: 'P1', variantIdx: i, supplierId: 'S1', packQty: 12, tiers: same.map((x) => ({ ...x })) })));
+  t.check(all.__tiers().length === 2 && all.__tiers()[0].price === 9000,
+    'a ladder every variant really shares is pre-filled, which is what the box claims to be');
+  t.check(all.__tiersPrefill() === fn.tiersSignature(same),
+    'and the snapshot records it, so an untouched box can be told from a typed one');
+
+  // One of the four diverging is enough: there is no longer one default.
+  const mixed = build(four.map((v, i) => ({ id: i + 1, productId: 'P1', variantIdx: i, supplierId: 'S1', packQty: 12,
+    tiers: i === 2 ? ladder([1, 9500]) : same.map((x) => ({ ...x })) })));
+  t.check(mixed.__tiers().length === 0,
+    'one variant diverging means there is no shared default to show');
+
+  /* A supplier with nothing on file: an empty ladder is not a shared one,
+     and the snapshot must still be a string so "untouched" is comparable
+     rather than permanently unequal. */
+  const none = build([]);
+  t.check(none.__tiers().length === 0 && none.__tiersPrefill() === '',
+    `an unpriced product starts empty with a comparable snapshot (${JSON.stringify(none.__tiersPrefill())})`);
+}
+
+/* ---------- 3c. and a box merely SHOWING a ladder does not write it --- */
+{
+  const save = /getElementById\('pr_save'\)\.addEventListener\('click', \(\)=>\{([\s\S]*?)\n\}\);/.exec(src);
+  const body = save ? save[1] : '';
+  t.check(!!save, 'the pr_save handler is there to check');
+  t.check(/const effectiveTiers = prBulkVariantOverrides\[i\] \|\| \(tiersEdited \? prTiers : \[\]\);/.test(body),
+    'a variant with no price of its own inherits the shared ladder only when one was actually entered');
+  t.check(/const tiersEdited = prBulkTiersPrefill == null\s*\r?\n\s*\|\| tiersSignature\(prTiers\) !== prBulkTiersPrefill;/.test(body),
+    'and "entered" means the box differs from what was pre-filled into it');
+  t.check(!/const effectiveTiers = prBulkVariantOverrides\[i\] \|\| prTiers;/.test(body),
+    'the unguarded fallback that invented the prices is gone');
+}
+
+/* ---------- 3d. comparing ladders ------------------------------------- */
+{
+  const sig = fn.tiersSignature;
+  t.check(sig(ladder([1, 9000], [12, 8000])) === sig(ladder([12, 8000], [1, 9000])),
+    'the same rungs in a different order are the same ladder');
+  t.check(sig(ladder([1, 9000])) !== sig(ladder([1, 9500])),
+    'a different price is a different ladder');
+  t.check(sig(ladder([1, 9000])) !== sig(ladder([1, 9000], [12, 8000])),
+    'and so is an extra rung');
+  t.check(sig([]) === '' && sig(null) === '' && sig(undefined) === '',
+    'nothing signs as nothing, so an empty box compares cleanly');
 }
 
 /* ---------- 4. an inverted ladder is spotted -------------------------- */
