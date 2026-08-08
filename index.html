@@ -23536,6 +23536,15 @@ function generateVariants(){
     .map(a=>({name:a.name.trim(), values:a.values.split(',').map(v=>v.trim()).filter(Boolean)}))
     .filter(a=>a.name && a.values.length);
   if(attrs.length===0){ toast('Add at least one attribute with values first'); return; }
+  /* Generating the variants is the moment these stop being typing and
+     become the product's shape, so it is the moment they are worth
+     keeping for next time. */
+  const remembered = rememberDraftAttributes(attrs.map(a=>({ name: a.name, values: a.values.join(', ') })));
+  if(remembered){
+    saveData();
+    refreshPresetDatalists();
+    toast(remembered.message, 5000);
+  }
   let combos = [{}];
   attrs.forEach(attr=>{
     const next = [];
@@ -28021,6 +28030,64 @@ function rememberLocation(raw){
   }
   return val;
 }
+/* An attribute typed on a product joins the shop's list, the same way a
+   place typed on a customer does -- and for the same reason: the second
+   person to need "Colour" should get the first person's spelling, and
+   the values somebody typed once should be there to pick next time.
+
+   Two halves, because an attribute is a name AND a set of values. A name
+   already on file is matched case-insensitively and keeps ITS spelling
+   -- "colour" typed today does not rename the "Colour" on twenty
+   existing products. New values are merged into that attribute rather
+   than replacing them: adding Maroon to one product must not take Red
+   and Blue away from every other.
+
+   Returns what was actually added, so the caller can say so once for the
+   whole form instead of toasting per row. */
+function rememberAttribute(rawName, rawValues){
+  const name = String(rawName == null ? '' : rawName).trim().replace(/\s+/g, ' ');
+  if(!name) return null;
+  /* Deduped as it is parsed, not only against what is on file: "Red,
+     Teal, Teal" in one box is one Teal. Checking against the stored list
+     alone let a value repeated within a single box land twice. */
+  const values = [];
+  String(rawValues == null ? '' : rawValues)
+    .split(',').map(v=> v.trim().replace(/\s+/g, ' ')).filter(Boolean)
+    .forEach(v=>{ if(!values.some(x=> x.toLowerCase() === v.toLowerCase())) values.push(v); });
+  if(!Array.isArray(data.presetAttributes)) data.presetAttributes = [];
+
+  const existing = data.presetAttributes.find(a=>
+    String(a.name||'').toLowerCase() === name.toLowerCase());
+  if(!existing){
+    data.presetAttributes.push({ name, values: values.slice() });
+    data.presetAttributes.sort((a,b)=> String(a.name).localeCompare(String(b.name)));
+    return { name, added: true, newValues: values.slice() };
+  }
+  if(!Array.isArray(existing.values)) existing.values = [];
+  const newValues = values.filter(v=>
+    !existing.values.some(x=> String(x).toLowerCase() === v.toLowerCase()));
+  existing.values.push(...newValues);
+  // The attribute keeps its own spelling; only genuinely new values join.
+  return { name: existing.name, added: false, newValues };
+}
+/* Remembers every attribute on the form at once, and says what changed
+   in one sentence -- a toast per row would bury the product form under
+   its own housekeeping. */
+function rememberDraftAttributes(rows){
+  const added = [], grown = [];
+  (rows||[]).forEach(r=>{
+    const res = rememberAttribute(r.name, r.values);
+    if(!res) return;
+    if(res.added) added.push(res.name);
+    else if(res.newValues.length) grown.push(`${res.name} (+${res.newValues.length})`);
+  });
+  if(!added.length && !grown.length) return null;
+  const bits = [];
+  if(added.length) bits.push(added.join(', '));
+  if(grown.length) bits.push(grown.join(', '));
+  return { added, grown, message: `Saved to your attributes: ${bits.join(' · ')}` };
+}
+
 /* Wires a text input as a location field: suggests the list, and Enter
    commits whatever is typed.
 
