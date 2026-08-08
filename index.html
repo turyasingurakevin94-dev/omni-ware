@@ -4413,6 +4413,21 @@
   .mp-strip.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .mp-chip{all:unset;box-sizing:border-box;cursor:pointer;font-size:12px;padding:3px 9px;
     border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink);}
+  .mp-head-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .mp-search{max-width:260px;}
+  .mp-results{display:flex;flex-direction:column;margin-top:12px;border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;}
+  .mp-result{display:flex;align-items:center;gap:10px;padding:9px 12px;
+    border-bottom:1px solid var(--line);}
+  .mp-result:last-child{border-bottom:none;}
+  .mp-result-main{flex:1;min-width:0;}
+  .mp-result-name{font-size:13px;font-weight:600;}
+  .mp-result-sub{font-size:11.5px;color:var(--ink-soft);}
+  .mp-result-acts{display:flex;gap:6px;flex:0 0 auto;}
+  .mp-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .mp-dot.on{background:var(--ow-verdigris);}
+  .mp-dot.off{background:var(--ow-amber);}
+  .mp-results-more{padding:8px 12px;font-size:11.5px;color:var(--ink-soft);}
   .mp-marker{border-radius:50%;display:flex;align-items:center;justify-content:center;
     color:#fff;font-weight:700;font-family:'Inter',sans-serif;border:2px solid #fff;
     box-shadow:0 1px 3px rgba(20,26,33,0.35);}
@@ -5494,7 +5509,10 @@
             <button type="button" class="mp-layer" data-layer="suppliers">Suppliers</button>
             <button type="button" class="mp-layer" data-layer="deliveries">Deliveries</button>
           </div>
-          <div class="mp-head-right"><span id="mp_summary" class="mp-summary"></span></div>
+          <div class="mp-head-right">
+            <div class="search-bar mp-search"><input id="mp_search" placeholder="Search places to place or find..."></div>
+            <span id="mp_summary" class="mp-summary"></span>
+          </div>
         </div>
         <div class="mp-wrap">
           <div class="mp-canvas"><div id="mp_map"></div>
@@ -5502,6 +5520,7 @@
           </div>
           <aside class="mp-side" id="mp_side"></aside>
         </div>
+        <div id="mp_results"></div>
         <div id="mp_far"></div>
         <div id="mp_unpinned"></div>
       </div>
@@ -11535,6 +11554,51 @@ function deliveryMapRuns(){
   };
 }
 
+/* The place list, searched.
+
+   Unplaced FIRST, whatever the query: this list exists to make pinning
+   twenty places quick, and the ones still to do are the work. Within
+   each half, busiest first -- pinning the place holding thirteen
+   customers is worth more than the one holding one. */
+function mapPlaceSearch(rows, query){
+  const tokens = searchTokens(query);
+  /* No .slice() and no empty-query branch: filter() already returns a
+     fresh array, so sort() cannot reach the caller's rows, and
+     matchesAllTokens against no tokens is vacuously true, so an empty
+     box already shows everything. Both were belt on top of braces. */
+  return (rows||[])
+    .filter(r=> matchesAllTokens(String(r.name||'').toLowerCase(), tokens))
+    .sort((a,b)=>
+      (a.pin ? 1 : 0) - (b.pin ? 1 : 0)
+      || b.count - a.count
+      || String(a.name).localeCompare(String(b.name)));
+}
+/* Writing a pin, and taking one back.
+
+   Taking one back NULLS the coordinates rather than dropping the row:
+   the schema has lat/lng nullable precisely so a place can exist without
+   a position, and an update cannot be mistaken by the sync engine for
+   the kind of deletion this app has been bitten by. The place stays on
+   the list, unplaced, ready to be put somewhere better. */
+function mapSetPin(name, lat, lng){
+  const key = canonicalLocation(name);
+  if(!key) return null;
+  if(!Array.isArray(data.places)) data.places = [];
+  const row = data.places.find(x=> x.name === key);
+  // Six places is a little over ten centimetres here -- far past what a
+  // finger on a map can mean, and short enough to stay readable.
+  const at = { lat: Number(Number(lat).toFixed(6)), lng: Number(Number(lng).toFixed(6)) };
+  if(row){ row.lat = at.lat; row.lng = at.lng; } else { data.places.push({ name: key, lat: at.lat, lng: at.lng }); }
+  return at;
+}
+function mapClearPin(name){
+  const key = canonicalLocation(name);
+  const row = (data.places||[]).find(x=> x.name === key);
+  if(!row) return false;
+  row.lat = null; row.lng = null;
+  return true;
+}
+
 /* The colour a marker wears. Bands come straight from AGING_BANDS so the
    map and the Debtors list can never disagree about what "late" means. */
 const MAP_BAND_COLOURS = {
@@ -11613,6 +11677,7 @@ function renderMap(){
   }
 
   renderMapSide();
+  renderMapResults();
 
   const farEl = document.getElementById('mp_far');
   farEl.innerHTML = far.length
@@ -11630,10 +11695,9 @@ function renderMap(){
   const todo = document.getElementById('mp_unpinned');
   todo.innerHTML = unpinned.length
     ? `<div class="mp-strip todo"><span><b>${unpinned.length}</b> place${unpinned.length===1?'':'s'} not on the map yet — ${
-        esc(unpinned.slice(0,5).map(r=> r.name).join(', '))}${unpinned.length>5?'…':''}. Click a place, then click the map to put it there.</span>
-        ${unpinned.map(r=> `<button type="button" class="mp-chip mp-pin" data-name="${esc(r.name)}">Place ${esc(r.name)}</button>`).join('')}</div>`
+        esc(unpinned.slice(0,5).map(r=> r.name).join(', '))}${unpinned.length>5?'…':''}. Find them in the list below and press Place.</span>
+        </div>`
     : '';
-  todo.querySelectorAll('.mp-pin').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
 }
 
 /* The delivery board, drawn. One marker per destination, sized by how
@@ -11672,6 +11736,7 @@ function renderDeliveryMap(){
   }
 
   renderDeliverySide();
+  renderMapResults();
   document.getElementById('mp_far').innerHTML = '';
 
   /* Everything the map cannot show, said out loud. A run whose place has
@@ -11722,24 +11787,90 @@ function renderDeliverySide(){
    typing coordinates, and no geocoder -- there are no addresses here to
    give one. */
 let mpPinning = null;
+function mapCancelPin(){
+  if(!mpPinning) return;
+  mpPinning = null;
+  if(mpMap){ mpMap.getContainer().style.cursor = ''; mpMap.off('click', mapPinClick); }
+  renderMapResults();
+}
+function mapPinClick(e){
+  const key = canonicalLocation(mpPinning);
+  mpPinning = null;
+  if(mpMap) mpMap.getContainer().style.cursor = '';
+  if(!key) return;
+  mapSetPin(key, e.latlng.lat, e.latlng.lng);
+  saveData();
+  toast(`${key} placed`);
+  renderMap();
+}
+/* Arming the map: the NEXT click is this place's position. Only ever one
+   place is armed -- arming a second cancels the first, or two names race
+   for one click and whichever listener fired last wins silently. */
 function mapBeginPin(name){
   if(!mpMap){ toast('The map needs to load before a place can be put on it'); return; }
+  if(mpPinning) mapCancelPin();
   mpPinning = name;
-  toast(`Click the map where ${name} is`, 6000);
+  toast(`Click the map where ${name} is — or press Escape to stop`, 6000);
   mpMap.getContainer().style.cursor = 'crosshair';
-  mpMap.once('click', (e)=>{
-    mpMap.getContainer().style.cursor = '';
-    const key = canonicalLocation(mpPinning);
-    mpPinning = null;
-    if(!key) return;
-    if(!Array.isArray(data.places)) data.places = [];
-    const row = data.places.find(x=> x.name === key);
-    const lat = Number(e.latlng.lat.toFixed(6)), lng = Number(e.latlng.lng.toFixed(6));
-    if(row){ row.lat = lat; row.lng = lng; } else { data.places.push({ name: key, lat, lng }); }
+  mpMap.once('click', mapPinClick);
+  renderMapResults();
+}
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') mapCancelPin(); });
+
+/* Taking a pin back. Asked first, because the place disappears from the
+   map the moment it happens and the people at it go with it -- and named
+   in terms of what is lost rather than "are you sure". */
+function mapRemovePin(name){
+  const row = mapPlaceRows().find(r=> r.name === name);
+  const n = row ? row.count : 0;
+  if(!confirm(`Take ${name} off the map?\n\n${n ? `${n} record${n===1?'':'s'} there will stop showing` : 'Nothing is there yet'}, and the place goes back to the list to be put somewhere else.`)) return;
+  if(mapClearPin(name)){
     saveData();
-    toast(`${key} placed`);
+    toast(`${name} taken off the map`);
     renderMap();
-  });
+  }
+}
+
+/* The list under the map: every place, searchable, with what to do to it.
+   One control for both jobs -- finding a place you have, and placing one
+   you have not. */
+function renderMapResults(){
+  const el = document.getElementById('mp_results');
+  if(!el) return;
+  const q = document.getElementById('mp_search').value;
+  const all = mapPlaceSearch(mapPlaceRows(), q);
+  const tokens = searchTokens(q);
+  const shown = all.slice(0, 12);
+  if(!all.length){
+    el.innerHTML = `<div class="mp-results"><div class="mp-results-more">${
+      q.trim() ? 'No place matches that.' : 'No places on file yet.'}</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="mp-results">${shown.map(r=>`
+    <div class="mp-result">
+      <span class="mp-dot ${r.pin ? 'on' : 'off'}" title="${r.pin ? 'On the map' : 'Not placed yet'}"></span>
+      <div class="mp-result-main">
+        <div class="mp-result-name">${highlightTokens(r.name, tokens)}</div>
+        <div class="mp-result-sub">${r.customers.length} customer${r.customers.length===1?'':'s'} · ${r.suppliers.length} supplier${r.suppliers.length===1?'':'s'}${
+          r.owed > 0.5 ? ` · ${esc(fmtUGX(Math.round(r.owed)))} owed` : ''}</div>
+      </div>
+      <div class="mp-result-acts">
+        ${r.pin ? `<button type="button" class="mp-chip mp-go" data-name="${esc(r.name)}">Show</button>` : ''}
+        <button type="button" class="mp-chip mp-place" data-name="${esc(r.name)}">${
+          mpPinning === r.name ? 'Click the map…' : (r.pin ? 'Move' : 'Place')}</button>
+        ${r.pin ? `<button type="button" class="mp-chip mp-clear" data-name="${esc(r.name)}">Remove</button>` : ''}
+      </div>
+    </div>`).join('')}${all.length > shown.length
+      ? `<div class="mp-results-more">${all.length - shown.length} more — keep typing to narrow it.</div>` : ''}</div>`;
+
+  el.querySelectorAll('.mp-place').forEach(b=> b.addEventListener('click', ()=> mapBeginPin(b.dataset.name)));
+  el.querySelectorAll('.mp-clear').forEach(b=> b.addEventListener('click', ()=> mapRemovePin(b.dataset.name)));
+  el.querySelectorAll('.mp-go').forEach(b=> b.addEventListener('click', ()=>{
+    const r = mapPlaceRows().find(x=> x.name === b.dataset.name);
+    if(r && r.pin && mpMap) mpMap.setView([r.pin.lat, r.pin.lng], 15);
+    mpSelected = b.dataset.name;
+    if(mpLayer !== 'deliveries') renderMapSide();
+  }));
 }
 
 function renderMapSide(){
@@ -11775,6 +11906,7 @@ function renderMapSide(){
   }));
 }
 
+document.getElementById('mp_search').addEventListener('input', renderMapResults);
 document.getElementById('mp_layers').addEventListener('click', (e)=>{
   const b = e.target.closest('.mp-layer'); if(!b) return;
   mpLayer = b.dataset.layer;

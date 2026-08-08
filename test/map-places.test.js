@@ -331,4 +331,103 @@ const reset = () => {
     'and each order shows what is owed on it and who is taking it');
 }
 
+/* ---------- 10. finding a place, and moving its pin ------------------ *
+ * Twenty places have to be pinned by hand, so the list that makes that
+ * quick is part of the feature, not decoration. UNPLACED SORTS FIRST
+ * whatever the query -- those are the work -- and busiest first within
+ * each half, because pinning the place holding thirteen customers is
+ * worth more than the one holding one.
+ *
+ * And a pin must be movable. The first click of a rough map is a guess;
+ * a feature that can only ever be told once is a feature people stop
+ * trusting.
+ */
+{
+  const sData = { places: [] };
+  const sScope = compileScope([
+    extractFunction(src, 'searchTokens', 'index.html'),
+    extractFunction(src, 'matchesAllTokens', 'index.html'),
+    extractFunction(src, 'mapPlaceSearch', 'index.html'),
+    extractFunction(src, 'mapSetPin', 'index.html'),
+    extractFunction(src, 'mapClearPin', 'index.html'),
+  ], {
+    data: sData,
+    canonicalLocation: (raw) => String(raw == null ? '' : raw).trim(),
+  }, ['mapPlaceSearch', 'mapSetPin', 'mapClearPin']);
+
+  const rows = [
+    { name: 'Original Shauriyako', count: 23, pin: { lat: 0.311, lng: 32.576 } },
+    { name: 'Industrial Area', count: 13, pin: null },
+    { name: 'Bwaise', count: 3, pin: null },
+    { name: 'Katwe', count: 5, pin: { lat: 0.294, lng: 32.571 } },
+  ];
+
+  const all = sScope.mapPlaceSearch(rows, '');
+  eq(all[0].name, 'Industrial Area', 'the busiest UNPLACED place is first — that is the work');
+  eq(all[1].name, 'Bwaise', 'then the rest of the unplaced');
+  eq(all[2].name, 'Original Shauriyako', 'placed ones come after, busiest first');
+  eq(all.length, 4, 'and nothing is dropped');
+
+  eq(sScope.mapPlaceSearch(rows, 'bwa').length, 1, 'a fragment finds its place');
+  eq(sScope.mapPlaceSearch(rows, 'BWA')[0].name, 'Bwaise', 'however it is typed');
+  eq(sScope.mapPlaceSearch(rows, 'original shau')[0].name, 'Original Shauriyako',
+    'and several words all have to match');
+  eq(sScope.mapPlaceSearch(rows, 'zzz').length, 0, 'a miss is a miss');
+  /* The caller's array must not be reordered underneath it -- the map is
+     drawn from the same rows. */
+  eq(rows[0].name, 'Original Shauriyako', 'searching does not reorder the caller\'s own list');
+
+  /* Setting a pin, then MOVING it. */
+  sData.places = [];
+  const set = sScope.mapSetPin('Bwaise', 0.3476123456, 32.5619987654);
+  eq(sData.places.length, 1, 'placing a place nobody has placed adds it');
+  eq(set.lat, 0.347612, 'stored to six places — about ten centimetres, past what a finger can mean');
+  sScope.mapSetPin('Bwaise', 0.35, 32.56);
+  eq(sData.places.length, 1, 'moving it does not add a second row for the same place');
+  eq(sData.places[0].lat, 0.35, 'it moves the one that is there');
+
+  /* Taking it back NULLS the coordinates rather than dropping the row:
+     the schema allows a place with no position, and an update cannot be
+     mistaken by the sync engine for a deletion. */
+  eq(sScope.mapClearPin('Bwaise'), true, 'a pin can be taken back');
+  eq(sData.places.length, 1, 'and the place stays on the list, ready to be put somewhere better');
+  eq(sData.places[0].lat, null, 'with no position');
+  eq(sData.places[0].lng, null, 'on either axis — never half a pin');
+  eq(sScope.mapClearPin('Never Existed'), false, 'clearing a place that was never placed changes nothing');
+  eq(sScope.mapSetPin('', 1, 2), null, 'and a blank name is not a place');
+}
+
+/* ---------- 11. the search and the pin editing are wired ------------- */
+{
+  const wired2 = stripLineComments(src);
+  t.check(/id="mp_search"/.test(src) && /getElementById\('mp_search'\)\.addEventListener\('input', renderMapResults\);/.test(wired2),
+    'the search box narrows the list as it is typed');
+  const rr = extractFunction(src, 'renderMapResults', 'index.html');
+  t.check(/class="mp-chip mp-place"/.test(rr) && /r\.pin \? 'Move' : 'Place'/.test(rr),
+    'a placed place offers Move and an unplaced one offers Place — the same button, honest about which');
+  t.check(/r\.pin \? `<button type="button" class="mp-chip mp-clear"/.test(rr),
+    'and only a placed place can be removed');
+  t.check(/mpPinning === r\.name \? 'Click the map…'/.test(rr),
+    'the place being placed says so, so nobody wonders whether the click registered');
+
+  /* Only one place armed at a time, or two names race for one click and
+     whichever listener fired last wins silently. */
+  const begin = extractFunction(src, 'mapBeginPin', 'index.html');
+  t.check(/if\(mpPinning\) mapCancelPin\(\);/.test(begin),
+    'arming a second place cancels the first');
+  t.check(/mpMap\.once\('click', mapPinClick\);/.test(begin),
+    'and the map listens exactly once');
+  const cancel = extractFunction(src, 'mapCancelPin', 'index.html');
+  t.check(/mpMap\.off\('click', mapPinClick\)/.test(cancel),
+    'cancelling takes the listener off again, so a later click is not swallowed');
+  t.check(/if\(e\.key === 'Escape'\) mapCancelPin\(\);/.test(wired2),
+    'with Escape as the way out');
+
+  const rm = extractFunction(src, 'mapRemovePin', 'index.html');
+  t.check(/if\(!confirm\(/.test(rm) && /will stop showing/.test(rm),
+    'removing a pin asks first, and says what stops being shown');
+  t.check(/saveData\(\);/.test(rm) && /renderMap\(\);/.test(rm),
+    'then saves and redraws');
+}
+
 process.exit(t.done() ? 1 : 0);
