@@ -56,7 +56,7 @@ try {
     extractFunction(src, 'stashActiveCart', 'agent.html'),
     extractFunction(src, 'activateCartFor', 'agent.html'),
     extractFunction(src, 'clientsWithBaskets', 'agent.html'),
-    extractFunction(src, 'otherBasketCount', 'agent.html'),
+    'let unnamedCart = [];',
     extractFunction(src, 'draftBelongsTo', 'agent.html'),
     extractFunction(src, 'saveQuoteDraft', 'agent.html'),
     extractFunction(src, 'clearQuoteDraft', 'agent.html'),
@@ -75,7 +75,9 @@ try {
        client: chosenClient && chosenClient.id,
        address: fields.ag_delivery_address.value,
        shopDelivery: fields.ag_delivery_shop.checked,
-       others: otherBasketCount(),
+       // What the switcher would list. It replaced a bare count, so this
+       // reads the same fact the screen now reads.
+       others: clientsWithBaskets().length,
      }; }`,
   ], { localStorage, document: { getElementById: (id) => fields[id] }, fields },
   ['saveQuoteDraft', 'clearQuoteDraft', 'restoreQuoteDraft', 'selectClient',
@@ -139,7 +141,7 @@ if (s) {
     t.check(got.shopDelivery === false, 'nor the delivery mode that went with it');
     t.check(got.client === null, 'and nobody is pre-selected');
     t.check(got.others === 0,
-      'so the chip does not announce "other quotes in progress" for clients this agent has never heard of');
+      'so the switcher lists no orders in progress for clients this agent has never heard of');
   }
 
   /* ---------- 4. dropped, not merely ignored ------------------------- */

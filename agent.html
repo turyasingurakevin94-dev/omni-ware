@@ -327,7 +327,7 @@
   /* The quote switcher. Each tab names whose quote it is and how much is
      in it -- a count alone would say a quote exists without saying whose,
      which is the thing being replaced. */
-  .ag-quote-switch{margin-top:10px;}
+  .ag-quote-switch{margin-top:0;}
   .ag-quote-switch-label{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
     color:var(--ink-soft);margin-bottom:7px;}
   .ag-quote-tab{all:unset;box-sizing:border-box;cursor:pointer;flex-shrink:0;display:flex;flex-direction:column;gap:2px;
@@ -340,6 +340,11 @@
      answered by glancing rather than by remembering. */
   .ag-quote-tab.active{background:var(--accent-soft);border-color:var(--accent);}
   .ag-quote-tab.active .ag-quote-tab-name{color:var(--accent-dark);}
+  /* The way to start another, sitting at the end of the row where the
+     eye lands after reading the ones already open. Dashed, so it reads as
+     an empty slot rather than as one more order in progress. */
+  .ag-quote-tab-new{border-style:dashed;background:transparent;}
+  .ag-quote-tab-new .ag-quote-tab-name{color:var(--accent);}
   .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
   /* A gutter each side, so the sheet reads as a card lifted over the
@@ -1051,7 +1056,7 @@
     <div class="ag-pad">
       <div id="ag_sell_clientWrap" style="margin-bottom:12px;"></div>
       <div class="ag-quote-banner" id="ag_browse_quoteBanner">
-        <span><b id="ag_browse_quoteBannerCount">0</b> item(s) in your quote</span>
+        <span><b id="ag_browse_quoteBannerCount">0</b> item(s) in this order</span>
         <span>View quote &rarr;</span>
       </div>
       <div id="ag_catStripWrap"></div>
@@ -1821,32 +1826,39 @@ function adoptedCartFor(hadClient, inHand, clientRows){
 function quoteBasketSummaries(clients, cartsByClient, activeClientId, unnamedRows){
   const byId = new Map((clients||[]).map(c=> [String(c.id), c]));
   const out = [];
+  /* The open order is always listed, even with nothing in it yet. This
+     row is now the only place the customer's name appears, so an empty
+     basket that showed no tab would leave an agent adding items with
+     nothing on screen saying who they are for.
+
+     Other people's empty baskets are still left out: selecting a client
+     is how you look at one, so browsing three customers leaves empty
+     baskets behind each time, and listing those would claim orders in
+     progress that do not exist. */
   const loose = (unnamedRows||[]).length;
-  if(loose){
+  if(loose || activeClientId == null){
     out.push({ key: null, name: 'Not yet named', count: loose,
       active: activeClientId == null, unnamed: true });
   }
   Object.keys(cartsByClient||{}).forEach(k=>{
     const rows = cartsByClient[k] || [];
-    if(!rows.length) return;
+    const active = String(k) === String(activeClientId);
+    if(!rows.length && !active) return;
     const c = byId.get(String(k));
     out.push({ key: String(k), name: c ? c.name : 'Client no longer on file',
-      count: rows.length, active: String(k) === String(activeClientId), unnamed: false,
-      missing: !c });
+      count: rows.length, active, unnamed: false, missing: !c });
   });
   // The one being worked on first, then by name -- an agent looking for
   // Sarah scans for Sarah, and the open one is where the eye starts.
   return out.sort((a,b)=>
     (a.active === b.active ? String(a.name).localeCompare(String(b.name)) : (a.active ? -1 : 1)));
 }
+/* Counting the OTHER baskets used to be the whole of what an agent was
+   told -- "1 other quote in progress", a number with no name on it. The
+   switcher lists them instead, so the count is gone rather than left
+   sitting here looking like something the screen still reads. */
 function clientsWithBaskets(){
   return Object.keys(carts).filter(k => (carts[k]||[]).length > 0);
-}
-// Baskets waiting on OTHER clients -- what makes it safe to leave one and
-// come back, and the only reason an agent would know they exist.
-function otherBasketCount(){
-  const active = cartKey(chosenClient);
-  return clientsWithBaskets().filter(k => k !== active).length;
 }
 
 /* ================= OFFLINE RESILIENCE =================
@@ -5634,33 +5646,31 @@ function clientInitials(name){
 function renderSellClientChip(){
   const wrap = document.getElementById('ag_sell_clientWrap');
   if(!wrap) return;
-  // A basket left with another client is only useful if the agent knows it
-  // is there. Stated as a fact on the chip rather than a badge somewhere
-  // else, because this is the control that switches between them.
-  const head = chosenClient
-    ? `<div class="ag-chip"><div><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div></div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`
-    : `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div></div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
-
-  /* The switcher. Only when there is more than one quote to move between
-     -- a single row naming what you are already looking at is furniture. */
+  /* No "For: X" line above this. The active tab already carries the
+     customer's name, and saying it twice made the taller of the two look
+     like a heading for the other. This row is the whole control: which
+     orders are open, whose they are, which one you are adding to, and the
+     way to start another. */
   const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart);
-  const switcher = baskets.length > 1 ? `
+  const tabs = baskets.map(b=> `<button type="button" class="ag-quote-tab${b.active?' active':''}"
+      data-basket="${b.key==null?'':esc(b.key)}"${b.key==null?' data-unnamed="1"':''}>
+      <span class="ag-quote-tab-name">${esc(b.name)}</span>
+      <span class="ag-quote-tab-count">${b.count} item${b.count===1?'':'s'} in this order</span>
+    </button>`).join('');
+  wrap.innerHTML = `
     <div class="ag-quote-switch">
-      <div class="ag-quote-switch-label">Quotes in progress</div>
+      <div class="ag-quote-switch-label">Orders in Progress</div>
       <div class="ag-scroll-row">
-        ${baskets.map(b=> `<button type="button" class="ag-quote-tab${b.active?' active':''}"
-          data-basket="${b.key==null?'':esc(b.key)}"${b.key==null?' data-unnamed="1"':''}>
-          <span class="ag-quote-tab-name">${esc(b.name)}</span>
-          <span class="ag-quote-tab-count">${b.count} item${b.count===1?'':'s'}</span>
-        </button>`).join('')}
+        ${tabs}
+        <button type="button" class="ag-quote-tab ag-quote-tab-new" id="ag_sell_client_add">
+          <span class="ag-quote-tab-name">+ New order</span>
+          <span class="ag-quote-tab-count">pick a customer</span>
+        </button>
       </div>
-    </div>` : '';
+    </div>`;
+  document.getElementById('ag_sell_client_add').addEventListener('click', openNewQuoteClientSheet);
 
-  wrap.innerHTML = head + switcher;
-  const changeBtn = document.getElementById('ag_sell_client_change') || document.getElementById('ag_sell_client_add');
-  if(changeBtn) changeBtn.addEventListener('click', openNewQuoteClientSheet);
-
-  wrap.querySelectorAll('.ag-quote-tab').forEach(btn=> btn.addEventListener('click', ()=>{
+  wrap.querySelectorAll('.ag-quote-tab:not(.ag-quote-tab-new)').forEach(btn=> btn.addEventListener('click', ()=>{
     /* Switching only ever switches. The basket in hand is parked first --
        including the unnamed one, which is why it now has somewhere to be
        parked -- and then nothing is left in hand, so no items are claimed

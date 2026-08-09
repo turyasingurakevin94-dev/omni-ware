@@ -180,13 +180,29 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   /* A basket parked for a client whose record has since gone is still
      listed. One you cannot see is one you cannot empty, and it would
      count against the total for ever. */
-  const orphan = sum(clients, { C9: [1] }, null, []);
+  const orphan = sum(clients, { C9: [1] }, null, []).filter((b) => !b.unnamed);
   t.check(orphan.length === 1 && orphan[0].missing,
     'a basket whose client is no longer on file is still reachable');
 
   const render = extractFunction(src, 'renderSellClientChip', 'agent.html');
-  t.check(/baskets\.length > 1 \?/.test(render),
-    'the switcher appears only when there is more than one quote to move between');
+  /* The row is the WHOLE control now — no "For: X" line above it saying
+     the same name a second time, which made the taller of the two read as
+     a heading for the other. So it is always drawn, and always carries a
+     way to start another order. */
+  t.check(!/For: \$\{esc\(chosenClient\.name\)\}/.test(render) && !/No client yet/.test(render),
+    'the client is named once, on the open tab, and not again above it');
+  t.check(/Orders in Progress/.test(render),
+    'the row is headed for what it holds');
+  t.check(/class="ag-quote-tab ag-quote-tab-new" id="ag_sell_client_add"/.test(render)
+    && /\+ New order/.test(render),
+    'and ends with the way to start another, which is what the removed chip carried');
+  /* It sits in the same row and wears the same class, so it has to be
+     excluded from the switch handler — otherwise tapping it would try to
+     switch to an order with no id, on top of opening the picker. */
+  t.check(/wrap\.querySelectorAll\('\.ag-quote-tab:not\(\.ag-quote-tab-new\)'\)/.test(render),
+    'and is not itself treated as an order to switch to');
+  t.check(/\$\{b\.count\} item\$\{b\.count===1\?'':'s'\} in this order/.test(render),
+    'each tab says how much is in that order, in those words');
   /* The line that matters: switching parks and swaps, and never calls
      selectClient, which would adopt what is in hand. */
   t.check(render.includes("stashActiveCart();")

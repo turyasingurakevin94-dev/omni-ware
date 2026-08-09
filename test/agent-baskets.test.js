@@ -34,7 +34,8 @@ try {
       extractFunction(src, 'activateCartFor', 'agent.html'),
       extractFunction(src, 'adoptedCartFor', 'agent.html'),
       extractFunction(src, 'clientsWithBaskets', 'agent.html'),
-      extractFunction(src, 'otherBasketCount', 'agent.html'),
+      extractFunction(src, 'quoteBasketSummaries', 'agent.html'),
+      "const NAMULI = { id: 'c1', name: 'Namuli Hardware' }, MUKASA = { id: 'c2', name: 'Mukasa Stores' };",
       /* The moments that move a basket, lifted out of the DOM handlers
          they live in so the state machine can be exercised. Kept in step
          with the real ones by hand — a stand-in that drifts is worse than
@@ -57,8 +58,10 @@ try {
       `function unnamed(){ return unnamedCart.slice(); }`,
       `function resetAll(){ cart = []; carts = Object.create(null); chosenClient = null; unnamedCart = []; }`,
       `function state(){ return { cart: cart.slice(), carts: JSON.parse(JSON.stringify(carts)), client: chosenClient ? chosenClient.id : null }; }`,
+      // What the switcher row is built from -- the list that replaced the count.
+      `function summaries(){ return quoteBasketSummaries([NAMULI, MUKASA, {id:'c3',name:'Empty'}, {id:'c4',name:'Fresh Start'}], carts, chosenClient ? chosenClient.id : null, unnamedCart); }`,
     ],
-    {}, ['pick', 'switchTo', 'switchToUnnamed', 'change', 'submitted', 'add', 'unnamed', 'resetAll', 'state', 'otherBasketCount', 'clientsWithBaskets'],
+    {}, ['pick', 'switchTo', 'switchToUnnamed', 'change', 'submitted', 'add', 'unnamed', 'resetAll', 'state', 'summaries', 'clientsWithBaskets'],
   );
 } catch (e) { err = e; }
 t.check(!!s, `the basket helpers compile${err ? ` (${err.message})` : ''}`);
@@ -111,30 +114,41 @@ if (s) {
       'and nothing is left in hand');
   }
 
-  /* ---------- 4. what the agent is told ----------------------------- */
+  /* ---------- 4. what the agent is shown ---------------------------- */
+  /*
+   * This used to be a count -- "1 other quote in progress" -- which said
+   * a quote existed without saying whose. The switcher lists them by
+   * name, so what is pinned here is the list the screen reads.
+   */
   {
-    // Rebuild: Mukasa has one waiting, nobody chosen.
-    t.check(s.otherBasketCount() === 1,
-      'with no client chosen, the one waiting basket is counted as another');
-    s.pick(MUKASA);
-    t.check(s.otherBasketCount() === 0,
-      'once it is the active one it is no longer "another"');
-    s.pick(NAMULI);
-    t.check(s.otherBasketCount() === 1, 'and switching away counts it again');
+    const listed = () => s.summaries().map(b => b.name).sort().join(',');
+    const others = () => s.summaries().filter(b => !b.active && !b.unnamed).length;
 
-    // An empty basket is not a quote in progress and must not be advertised.
+    // Mukasa has one waiting, nobody chosen.
+    t.check(others() === 1, 'with no client chosen, the one waiting basket is listed as another');
+    s.pick(MUKASA);
+    t.check(others() === 0, 'once it is the active one it is no longer another');
+    s.pick(NAMULI);
+    t.check(others() === 1, 'and switching away lists it again');
+    t.check(listed().includes('Mukasa Stores'), 'by name, which is the whole point of the row');
+
+    /* An empty basket belonging to somebody ELSE is not an order in
+       progress. Selecting a client is how you look at one, so browsing
+       three customers leaves empty baskets behind each time, and listing
+       those would claim orders that do not exist. */
     s.pick({ id: 'c3', name: 'Empty' });
     t.check(!s.clientsWithBaskets().includes('c3'),
-      'a client with an empty basket is not listed as having one');
-
-    // Nor once the agent moves on from it. Selecting a client is how you
-    // look at one, so an agent browsing three customers leaves empty
-    // baskets behind each time; otherBasketCount is what the chip actually
-    // reads, and counting those would tell them they have quotes waiting
-    // that do not exist.
+      'a client with an empty basket is not recorded as having one');
     s.pick(MUKASA);
-    t.check(s.otherBasketCount() === 0,
-      `switching away from empty baskets does not turn them into quotes in progress (got ${s.otherBasketCount()})`);
+    t.check(others() === 0,
+      `switching away from empty baskets does not turn them into orders in progress (${listed()})`);
+
+    /* The ACTIVE one is listed even while empty, because the row is now
+       the only place the customer's name appears -- an agent adding items
+       to an order nothing on screen names is the thing this replaced. */
+    s.pick({ id: 'c4', name: 'Fresh Start' });
+    t.check(s.summaries().some(b => b.active && b.name === 'Fresh Start' && b.count === 0),
+      'while the open order is listed from the moment it is opened, empty or not');
   }
 }
 
