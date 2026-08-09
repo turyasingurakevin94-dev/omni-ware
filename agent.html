@@ -328,6 +328,18 @@
 
   .ag-overlay{position:fixed;inset:0;background:rgba(15,20,26,0.55);display:flex;align-items:flex-end;justify-content:center;z-index:400;}
   .ag-overlay-card{background:var(--panel);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;}
+  /* The sheet appears the instant an item is tapped and waits here for
+     the price. Tapping something and watching nothing happen for a
+     second reads as a dead button, and the second tap is the one that
+     gets people. */
+  .ag-overlay-loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:34px 20px;}
+  .ag-spinner{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line);
+    border-top-color:var(--accent);animation:ag-spin .7s linear infinite;}
+  @keyframes ag-spin{to{transform:rotate(360deg);}}
+  /* Left still rather than left spinning: the point is that something is
+     happening, and a ring that does not move still says "not yet". */
+  @media (prefers-reduced-motion: reduce){ .ag-spinner{animation:none;} }
+  .ag-loading-note{font-size:12.5px;color:var(--ink-soft);}
   @media (min-width:560px){
     .ag-overlay{align-items:center;padding:20px;}
     .ag-overlay-card{border-radius:20px;}
@@ -4921,6 +4933,25 @@ let addPanelOpening = false;
 async function openAddItemPanel(item){
   if(addPanelOpening) return;
   addPanelOpening = true;
+  /* The sheet goes up FIRST, holding a spinner, and the price fills it in
+     when it arrives. It used to be built only after the fetch came back,
+     so a tap on a slow connection did nothing visible at all -- no sheet,
+     no spinner, nothing -- and the natural response to that is to tap
+     again. It also gives the stray taps something to land on, which the
+     flag above was covering for on its own. */
+  const el = document.createElement('div');
+  el.className = 'ag-overlay';
+  el.innerHTML = `
+    <div class="ag-overlay-card ag-overlay-loading">
+      <div class="ag-spinner"></div>
+      <div class="ag-overlay-title" style="margin-bottom:0;">${esc(item.name)}</div>
+      ${item.variantLabel ? `<div class="ag-grid-variant">${esc(item.variantLabel)}</div>` : ''}
+      <div class="ag-loading-note">Getting today's price…</div>
+    </div>`;
+  // Wired now, not after the fetch: a sheet that cannot be dismissed
+  // while it is loading is a worse trap than the blank tap it replaced.
+  el.addEventListener('mousedown', (e)=>{ if(e.target===el && el.parentNode) el.remove(); });
+  document.body.appendChild(el);
   // Resolved before the panel ever appears, so quantity, the tier
   // ladder, the price field, and the Add button all show up populated
   // on the very first paint instead of a disabled/"Loading…" skeleton
@@ -4956,8 +4987,10 @@ async function openAddItemPanel(item){
     addPanelOpening = false;
   }
 
-  const el = document.createElement('div');
-  el.className = 'ag-overlay';
+  /* Dismissed while it was loading. The price arriving afterwards is not
+     a reason to put the sheet back up in front of somebody who has
+     already moved on. */
+  if(!el.parentNode) return;
   // Same lookup browseCardHTML uses -- this panel only ever gets a plain
   // catalog item, not one already carrying its promo/cluster status.
   const promo = promotedMap().get(`${item.productId}::${item.variantIdx==null?'':item.variantIdx}`);
@@ -4990,8 +5023,6 @@ async function openAddItemPanel(item){
       <div class="ag-price-guidance" id="ag_ai_guidance" style="display:none;"><span class="dot"></span><span id="ag_ai_guidance_text"></span></div>
       <button type="button" class="btn btn-accent btn-block" id="ag_ai_add_btn">Add to quote</button>
     </div>`;
-  document.body.appendChild(el);
-  el.addEventListener('mousedown', (e)=>{ if(e.target===el) document.body.removeChild(el); });
 
   const qtyEl = document.getElementById('ag_ai_qty');
   const unitEl = document.getElementById('ag_ai_qty_unit');
