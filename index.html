@@ -25217,10 +25217,17 @@ document.getElementById('p_save').addEventListener('click', ()=>{
       ? ((data.products.find(p=>p.id===editingProductId)||{}).createdAt || null)
       : new Date().toISOString(),
   };
-  let stockMoved = null;
+  let stockMoved = null, typeChange = null;
   if(editingProductId){
     const idx = data.products.findIndex(p=>p.id===editingProductId);
     const oldVariants = data.products[idx].variants || [];
+    /* Changing a product's shape moves its money out from under it. Asked
+       BEFORE anything is written, and only when there is something real
+       to lose -- a product usually changes shape before it is priced. */
+    typeChange = productTypeChangeImpact(data.prices, data.stock, editingProductId,
+      data.products[idx].type === 'variable', type === 'variable', oldVariants.length);
+    if(typeChange && typeChange.direction === 'toSimple'
+      && !confirm(productTypeChangeMessage(typeChange) + '\n\nGo ahead?')) return;
     data.products[idx] = record;
     // variants can be reordered or dropped by editing attributes/values --
     // remap each existing price entry's variantIdx to the same variant's
@@ -25256,9 +25263,15 @@ document.getElementById('p_save').addEventListener('click', ()=>{
   /* Stock on a variant that no longer exists has nothing left to belong
      to. Said out loud with the number, because the alternative is
      somebody finding the shortfall at a stock count months later. */
-  toast(stockMoved && stockMoved.droppedQty
-    ? `Product saved · ${stockMoved.droppedQty} in stock was on ${stockMoved.droppedVariants} variant${stockMoved.droppedVariants===1?'':'s'} you removed, and is no longer counted`
-    : 'Product saved', stockMoved && stockMoved.droppedQty ? 7000 : undefined);
+  /* Becoming variable destroys nothing, so it is reported rather than
+     asked about -- but it is reported, because otherwise the product
+     simply appears to have lost its price. */
+  const note = typeChange && typeChange.direction === 'toVariable'
+    ? productTypeChangeMessage(typeChange)
+    : (stockMoved && stockMoved.droppedQty
+      ? `${stockMoved.droppedQty} in stock was on ${stockMoved.droppedVariants} variant${stockMoved.droppedVariants===1?'':'s'} you removed, and is no longer counted`
+      : '');
+  toast(note ? `Product saved · ${note}` : 'Product saved', note ? 8000 : undefined);
   // Fire-and-forget cleanup of photos UPLOADED this session that didn't
   // end up being the saved one (product's or any variant's). Images this
   // save merely REPLACED are deliberately left alone now: they belong to
@@ -25299,6 +25312,54 @@ function stockKey(productId, variantIdx){ return (variantIdx==null || variantIdx
  *
  * Built into fresh maps rather than rewritten in place: 1->2 and 2->3
  * applied one at a time would have the first overwrite the second. */
+/* What changing a product between simple and variable would do to the
+   prices and stock already recorded against it.
+ *
+ * The two shapes keep their money in different places. A simple product's
+ * price row carries variantIdx null and its stock is keyed "P123"; a
+ * variable one's are keyed per variant, "P123::0". Neither reads the
+ * other's slot, so a conversion is never a relabelling:
+ *
+ *   simple -> variable   the old price and stock are STRANDED. They stay
+ *                        on file, but every variant reads as unpriced and
+ *                        empty, because nothing looks at the slot they
+ *                        are in. Recoverable by switching back.
+ *   variable -> simple   the per-variant rows are DELETED. There is no
+ *                        product-level slot for them to move to, and
+ *                        nothing to say which variant's price should
+ *                        become the product's.
+ *
+ * Returns null when there is nothing on file to lose, which is the
+ * ordinary case -- a product usually changes shape before it is priced. */
+function productTypeChangeImpact(prices, stock, productId, wasVariable, willBeVariable, oldVariantCount){
+  if(wasVariable === willBeVariable) return null;
+  const rows = (prices || []).filter(p=> p.productId === productId);
+  if(willBeVariable){
+    const priceCount = rows.filter(p=> p.variantIdx == null).length;
+    const stockQty = Number((stock || {})[productId]) || 0;
+    if(!priceCount && !stockQty) return null;
+    return { direction: 'toVariable', priceCount, stockQty };
+  }
+  const priceCount = rows.filter(p=> p.variantIdx != null).length;
+  let stockQty = 0;
+  for(let i = 0; i < (oldVariantCount || 0); i++){
+    stockQty += Number((stock || {})[stockKey(productId, i)]) || 0;
+  }
+  if(!priceCount && !stockQty) return null;
+  return { direction: 'toSimple', priceCount, stockQty };
+}
+/* The same facts as a sentence. Kept beside the counting so the wording
+   and the numbers cannot drift apart. */
+function productTypeChangeMessage(impact){
+  if(!impact) return '';
+  const bits = [];
+  if(impact.priceCount) bits.push(`${impact.priceCount} price ${impact.priceCount===1?'entry':'entries'}`);
+  if(impact.stockQty) bits.push(`${impact.stockQty} in stock`);
+  const what = bits.join(' and ');
+  return impact.direction === 'toSimple'
+    ? `Turning this back into a simple product deletes ${what} recorded against its variants. This cannot be undone.`
+    : `This product has ${what} recorded from before it had variants. That stays on file but will not show against any variant — you will need to price the variants separately.`;
+}
 /* Where each variant ends up when the one at `removedIdx` is taken out
    of a list of `count`. The removed one is deliberately absent rather
    than mapped anywhere -- it is what tells remapVariantStock that its

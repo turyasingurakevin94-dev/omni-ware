@@ -31,11 +31,10 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const store = { stock: {}, stockLots: {}, stockLog: [] };
-const scope = compileScope([
-  extractFunction(src, 'stockKey', 'index.html'),
-  extractFunction(src, 'variantRemovalIndexMap', 'index.html'),
-  extractFunction(src, 'remapVariantStock', 'index.html'),
-], { data: store }, ['stockKey', 'variantRemovalIndexMap', 'remapVariantStock']);
+const NAMES = ['stockKey', 'variantRemovalIndexMap', 'remapVariantStock',
+  'productTypeChangeImpact', 'productTypeChangeMessage'];
+const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')),
+  { data: store }, NAMES);
 
 const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want),
   `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -152,6 +151,74 @@ const seed = () => {
   eq(res.droppedQty, 40, 'the removed variant\'s stock is reported as no longer counted');
 }
 
+/* ---------- 4c. changing a product between simple and variable -------- */
+/*
+ * The two shapes keep their money in different places: a simple product's
+ * price row carries variantIdx null and its stock is keyed "P1", a
+ * variable one's are keyed per variant. Neither reads the other's slot,
+ * so converting is never a relabelling.
+ *
+ *   simple -> variable   the old price and stock are stranded: still on
+ *                        file, but every variant reads as unpriced and
+ *                        empty because nothing looks where they are.
+ *   variable -> simple   the per-variant rows are deleted outright, with
+ *                        nowhere to move to and nothing to say which
+ *                        variant's price should become the product's.
+ */
+{
+  const f = scope.productTypeChangeImpact;
+  const prices = [
+    { productId: 'P1', variantIdx: null },              // from its simple days
+    { productId: 'P1', variantIdx: 0 },
+    { productId: 'P1', variantIdx: 1 },
+    { productId: 'P2', variantIdx: 0 },                 // another product entirely
+  ];
+  const stock = { P1: 25, 'P1::0': 12, 'P1::1': 30, 'P2::0': 4 };
+
+  // Simple -> variable: what is about to be stranded is the product-level slot.
+  const up = f(prices, stock, 'P1', false, true, 0);
+  eq(up.direction, 'toVariable', 'gaining variants is recognised as its own kind of change');
+  eq(up.priceCount, 1, 'and counts the price that was recorded before there were variants');
+  eq(up.stockQty, 25, 'and the stock that was on the product itself');
+
+  // Variable -> simple: what is about to be deleted is everything per-variant.
+  const down = f(prices, stock, 'P1', true, false, 2);
+  eq(down.direction, 'toSimple', 'losing variants is the destructive direction');
+  eq(down.priceCount, 2, 'and counts every price entry that is about to go');
+  eq(down.stockQty, 42, 'and adds up the stock across all of them');
+
+  /* Neither direction may count another product's rows into the warning. */
+  eq(f(prices, stock, 'P2', true, false, 1).priceCount, 1, 'another product is counted on its own');
+  eq(f(prices, stock, 'P2', true, false, 1).stockQty, 4, 'with only its own stock');
+
+  // Nothing on file, nothing to warn about — the ordinary case.
+  eq(f([], {}, 'P1', false, true, 0), null, 'a product with nothing recorded raises nothing');
+  eq(f(prices, stock, 'P3', true, false, 2), null, 'and neither does one nobody has priced');
+  eq(f(prices, stock, 'P1', true, true, 2), null, 'staying variable is not a change');
+  eq(f(prices, stock, 'P1', false, false, 0), null, 'and neither is staying simple');
+}
+{
+  const msg = scope.productTypeChangeMessage;
+  const down = msg({ direction: 'toSimple', priceCount: 2, stockQty: 42 });
+  t.check(/deletes 2 price entries and 42 in stock/.test(down),
+    `the destructive direction says what goes, and how much (${down})`);
+  t.check(/cannot be undone/.test(down), 'and that it cannot be taken back');
+
+  const up = msg({ direction: 'toVariable', priceCount: 1, stockQty: 25 });
+  t.check(/stays on file/.test(up),
+    `the stranding direction says the data is not destroyed (${up})`);
+  t.check(/price the variants separately/.test(up), 'and what to do about it');
+  t.check(!/cannot be undone/.test(up), 'without borrowing the destructive wording');
+
+  // Singular and plural, and the halves that can be absent.
+  const one = msg({ direction: 'toSimple', priceCount: 1, stockQty: 0 });
+  t.check(/deletes 1 price entry recorded/.test(one) && !/in stock/.test(one),
+    `one entry reads as an entry, and stock is left out when there is none (${one})`);
+  t.check(/deletes 30 in stock/.test(msg({ direction: 'toSimple', priceCount: 0, stockQty: 30 })),
+    'and stock alone reads without a stray "and"');
+  eq(msg(null), '', 'nothing to say says nothing');
+}
+
 /* ---------- 5. wired into both paths that renumber -------------------- */
 {
   const save = /getElementById\('p_save'\)\.addEventListener\('click', \(\)=>\{([\s\S]*?)\n\}\);/.exec(src);
@@ -163,6 +230,18 @@ const seed = () => {
     'and works out where each variant went by matching its combo, exactly as the prices do');
   t.check(/in stock was on \$\{stockMoved\.droppedVariants\} variant/.test(body),
     'stock left with no variant to belong to is reported rather than quietly dropped');
+
+  /* Asked BEFORE anything is written, since it cannot be taken back. */
+  t.check(/typeChange = productTypeChangeImpact\(data\.prices, data\.stock, editingProductId,/.test(body),
+    'a change of product type is measured against what is already on file');
+  t.check(body.includes("if(typeChange && typeChange.direction === 'toSimple'")
+    && body.includes("&& !confirm(productTypeChangeMessage(typeChange) + '\\n\\nGo ahead?')) return;"),
+    'turning a priced variable product back into a simple one asks first, and abandons the save if refused');
+  t.check(body.indexOf('productTypeChangeImpact') < body.indexOf('data.products[idx] = record'),
+    'and asks before the record is overwritten, not after');
+  t.check(body.includes("const note = typeChange && typeChange.direction === 'toVariable'")
+    && body.includes("? productTypeChangeMessage(typeChange)"),
+    'while gaining variants is reported afterwards, having destroyed nothing');
 
   const del = extractFunction(src, 'deleteVariant', 'index.html');
   t.check(/remapVariantStock\(productId, variantRemovalIndexMap\(p\.variants\.length \+ 1, variantIdx\)\);/.test(del),
