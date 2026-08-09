@@ -231,6 +231,100 @@ const hint = (o) => fn.ipCashHint({ rows: ROWS, unit: 'Dozen', ...o });
     'nor does an item nobody has priced');
 }
 
+/* ---------- 4b. the quote being built is money already spent --------- */
+/*
+ * Reported on a four-line quote: the hint kept saying the money was
+ * there, because the only figure being weighed was the line in the
+ * popup. Every line already added is as spoken for as the orders on the
+ * board are -- 600,000 in the drawer against a quote costing 520,000
+ * leaves 80,000, not 600,000.
+ */
+{
+  // A loose-selling supplier and a carton-only one, so the difference
+  // between "what the line costs" and "what it takes out of the till"
+  // shows up in the sum.
+  const PRICE_ROWS = {
+    'P1::': [{ supplierId: 'S1', sname: 'Loose', wholesale: null, retail: 120000, packQty: 6, packUnit: 'Ctn', unit: 'Dozen', tiers: [] }],
+    'P2::': [{ supplierId: 'S2', sname: 'Cartons', wholesale: 75000, retail: null, packQty: 6, packUnit: 'Ctn', unit: 'Dozen', tiers: [] }],
+  };
+  const committed = (items) => compileScope(
+    ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'quoteCommittedCash']
+      .map((n) => extractFunction(src, n, 'index.html')),
+    {
+      data: { quote: { items } },
+      productPriceRows: (pid, vi) => PRICE_ROWS[`${pid}::${vi == null ? '' : vi}`] || [],
+    },
+    ['quoteCommittedCash'],
+  ).quoteCommittedCash();
+
+  t.check(committed([{ productId: 'P1', variantIdx: null, qty: 1, supplierId: 'S1', price: 120000 }]) === 120000,
+    'a line bought loose commits what the line costs');
+  t.check(committed([{ productId: 'P1', variantIdx: null, qty: 2, supplierId: 'S1', price: 120000 }]) === 240000,
+    'counted per unit, so two is two lots of money');
+
+  /* THE POINT. A carton bought to fill a one-dozen line takes the whole
+     carton out of the drawer; the other five dozen become stock. This is
+     deliberately NOT the "Costs you" total on the same screen -- that is
+     the cost of the goods on the order, which is right for the margin
+     and wrong for the till. Counting the share instead would have the
+     hint warn "this ties up 450,000" and then forget all but 75,000 of
+     it against the next line. */
+  t.check(committed([{ productId: 'P2', variantIdx: null, qty: 1, supplierId: 'S2', price: 75000 }]) === 450000,
+    'a line filled from a carton commits the carton, not its share of one');
+
+  /* Goods already on our own shelf are already paid for. This is the
+     rule orderLineIsBoughtIn() applies to a saved order, so the draft
+     and the board agree about what still has to be bought. */
+  t.check(committed([
+    { productId: 'P2', variantIdx: null, qty: 1, supplierId: '__stock__', price: 400000 },
+    { productId: 'P1', variantIdx: null, qty: 1, supplierId: 'S1', price: 120000 },
+  ]) === 120000, 'a line sold off our own shelf commits no cash');
+
+  // A supplier whose price has since come off file still leaves the
+  // quote costing what the line recorded, rather than nothing.
+  t.check(committed([{ productId: 'GONE', variantIdx: null, qty: 2, supplierId: 'S9', price: 60000 }]) === 120000,
+    'a line whose price is no longer on file falls back to what it recorded');
+
+  t.check(committed([]) === 0 && committed([{ productId: 'P1', qty: 1, price: 5000 }]) === 0,
+    'an empty quote, or a line with no supplier yet, commits nothing');
+  t.check(committed(undefined) === 0, 'and neither does a quote that does not exist yet');
+
+  // The reported case, end to end.
+  const AVAILABLE = 600000, COMMITTED = 520000;
+  const blind = hint({ selectedId: 'S096', qty: 1, available: AVAILABLE, committed: 0, cashKnown: true });
+  const seeing = hint({ selectedId: 'S096', qty: 1, available: AVAILABLE, committed: COMMITTED, cashKnown: true });
+  t.check(blind.level === 'note',
+    'with the quote uncounted, 470,000 against 600,000 looks affordable — the reported bug');
+  t.check(seeing.level === 'warn',
+    'counting it, 470,000 against the 80,000 actually left does not');
+  t.check(/You have 80,000 UGX free after the orders in progress and the 520,000 UGX this quote has to buy/.test(seeing.text),
+    `and the money is named for what it is net of (${seeing.text})`);
+  t.check(/free after the orders in progress\./.test(
+    hint({ selectedId: 'S038', qty: 1, available: AVAILABLE, committed: 0, cashKnown: true }).text),
+    'while an empty quote is not mentioned, there being nothing to mention');
+
+  /* The alternative has to fit what is ACTUALLY left, not the balance
+     before the quote -- offering a supplier who is also out of reach is
+     worse than offering none. */
+  const tight = hint({ selectedId: 'S096', qty: 1, available: AVAILABLE, committed: 550000, cashKnown: true });
+  t.check(!/Annet Lak can fill/.test(tight.text),
+    `with 50,000 left, the 102,000 alternative is not offered (${tight.text})`);
+  const roomy = hint({ selectedId: 'S096', qty: 1, available: AVAILABLE, committed: 400000, cashKnown: true });
+  t.check(/Annet Lak can fill this order for 102,000 UGX/.test(roomy.text),
+    'with 200,000 left, it is');
+
+  /* Overspent already. "You have -100,000 free" is not a sentence
+     anybody says out loud. */
+  const over = hint({ selectedId: 'S096', qty: 1, available: AVAILABLE, committed: 700000, cashKnown: true });
+  t.check(over.level === 'warn' && /This quote is already 100,000 UGX beyond what you have/.test(over.text),
+    `being past the balance is said as being past it (${over.text})`);
+  t.check(!/-100,000/.test(over.text), 'not as a negative amount of money free');
+
+  // Read from the basket on screen, at the moment the popup is drawn.
+  t.check(/committed: quoteCommittedCash\(\), cashKnown \}\);/.test(stage),
+    'the picker passes what the quote has committed');
+}
+
 /* ---------- 5. one definition of how much money there is ------------- */
 {
   t.check(/available: cashKnown \? cashPositionForBuying\(\)\.after : 0/.test(stage),

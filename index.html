@@ -14021,6 +14021,41 @@ function ipLineOutlay(row, qty){
   return { units, rate, cash: units * rate, forcedPack: units > qty, packQty };
 }
 
+/* What the quote being built has already committed to buying.
+
+   Every line added is money spoken for, and until this existed the hint
+   could not see any of it: a four-line quote costing 520,000 kept being
+   told the money was there, because the only figure being weighed was
+   the line currently in the popup.
+
+   Stock lines are left out: goods already on our own shelf are already
+   paid for and cost nothing more to acquire, which is the rule
+   orderLineIsBoughtIn() applies to a saved order.
+
+   Deliberately NOT the "Costs you" total under the table. That figure is
+   the cost of the goods on this order, which is the right basis for the
+   margin and the wrong one for the till: a carton bought to fill a
+   one-dozen line takes the whole carton's money out of the drawer, and
+   the other nine dozen become stock. Counting the line at its share
+   would have had the hint warn "this ties up 450,000" and then forget
+   all but 45,000 of it against the next line -- which is the same
+   blindness this was written to fix, one step further along.
+
+   Falls back to what the line records if the supplier's price has since
+   come off file, so a quote whose prices moved still costs something
+   rather than nothing. */
+function quoteCommittedCash(){
+  return ((data.quote && data.quote.items) || [])
+    .filter(it=> it && it.supplierId && it.supplierId !== '__stock__')
+    .reduce((s,it)=>{
+      const qty = Number(it.qty) || 0;
+      const row = productPriceRows(it.productId, it.variantIdx == null ? null : it.variantIdx)
+        .find(r=> r.supplierId === it.supplierId);
+      const out = row ? ipLineOutlay(row, qty) : null;
+      return s + (out ? out.cash : qty * (Number(it.price) || 0));
+    }, 0);
+}
+
 /* Can this line actually be paid for right now, and if not, who can fill
    it instead.
 
@@ -14057,25 +14092,45 @@ function ipCashHint(o){
     .filter(x=> x.out)
     .sort((a,b)=> a.out.cash - b.out.cash);
 
-  /* A shop that has never opened its Cash Book has no balance, which is
-     not the same as a balance of nothing. Saying "you cannot afford
-     this" on no evidence would be worse than saying nothing. */
   // The pack clause is the reason the number is bigger than the order,
   // so it is said wherever that number is said.
   const packClause = out.forcedPack ? `, one ${packName} being the least sold` : '';
 
+  /* A shop that has never recorded a cash balance has no balance, which
+     is not the same as a balance of nothing. Saying "you cannot afford
+     this" on no evidence would be worse than saying nothing. */
   if(!o.cashKnown){
     return { level: 'info',
       text: `${sel.sname} wants ${money(out.cash)} for ${amt(out.units)}${packClause}.`
         + ` Nothing is recorded in the Cash Book yet, so there is no balance to check it against.` };
   }
 
-  const left = o.available - out.cash;
+  /* What is left to spend: the balance after the orders already being
+     prepared, less what THIS quote has committed to buying so far. The
+     lines already added are as spent as the orders on the board are --
+     without them a four-line quote reported the same money free on its
+     fourth line as it had on its first. */
+  const committed = Math.max(0, Number(o.committed) || 0);
+  const free = o.available - committed;
+  /* The committed figure is named rather than just subtracted. It is
+     deliberately not the "Costs you" total on the same screen -- a line
+     filled from a carton commits the carton -- and an unexplained
+     balance that shrinks faster than the quote's own cost is exactly the
+     kind of number nobody trusts. */
+  const after = committed > 0
+    ? `after the orders in progress and the ${money(committed)} this quote has to buy`
+    : 'after the orders in progress';
+  const left = free - out.cash;
+
   if(left < 0){
-    const fits = alts.find(a=> a.out.cash <= o.available);
+    const fits = alts.find(a=> a.out.cash <= free);
     return { level: 'warn',
       text: `${sel.sname} needs ${money(out.cash)} for ${amt(out.units)}${packClause}.`
-        + ` You have ${money(o.available)} free after the orders in progress.`
+        // Already overspent reads as a negative amount of money free,
+        // which is not a sentence anybody says out loud.
+        + (free < 0
+          ? ` This quote is already ${money(-free)} beyond what you have.`
+          : ` You have ${money(free)} free ${after}.`)
         + (fits
           ? ` ${fits.name} can fill this order for ${money(fits.out.cash)}.`
           : ` No other supplier on file is within it either.`) };
@@ -14085,11 +14140,11 @@ function ipCashHint(o){
     const cheaper = alts.find(a=> a.out.cash < out.cash);
     return { level: 'note',
       text: `${amt(o.qty)} is under ${sel.sname}'s ${packName} of ${amt(out.packQty)}, so this ties up ${money(out.cash)}`
-        + ` and leaves ${amt(out.units - o.qty)} spare. ${money(left)} would still be free.`
+        + ` and leaves ${amt(out.units - o.qty)} spare. ${money(left)} would still be free ${after}.`
         + (cheaper ? ` ${cheaper.name} would need only ${money(cheaper.out.cash)}.` : '') };
   }
 
-  return { level: 'ok', text: `${money(out.cash)} now, ${money(left)} still free after the orders in progress.` };
+  return { level: 'ok', text: `${money(out.cash)} now, ${money(left)} still free ${after}.` };
 }
 
 function purchasePriceAtQty(row, qty){
@@ -15302,7 +15357,10 @@ function renderIpStage(){
     || Object.values(data.cashDays||{}).some(rec=>
         [rec && rec.opening, rec && rec.actual].some(m=> m && Object.values(m).some(v=> Number(v) > 0)));
   const cashHint = ipCashHint({ rows: ranked, selectedId: ipSelectedSupplierId, qty, unit,
-    available: cashKnown ? cashPositionForBuying().after : 0, cashKnown });
+    available: cashKnown ? cashPositionForBuying().after : 0,
+    // What the basket on screen has already spoken for. Every line added
+    // reduces what is left for the next one.
+    committed: quoteCommittedCash(), cashKnown });
 
   const qtyUnitOptionsHTML = `<option value="unit" ${ipQtyUnitMode==='unit'?'selected':''}>${esc(unit||'unit')}</option>` +
     (hasPack ? `<option value="pack" ${ipQtyUnitMode==='pack'?'selected':''}>${esc(packUnit)} (${packQty} ${esc(unit||'unit')})</option>` : '');
