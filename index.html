@@ -7813,7 +7813,7 @@
       <div id="ip_search_view" class="searchable-select">
         <div class="field" style="margin-bottom:12px;">
           <label>Search product</label>
-          <input type="text" id="ip_search" placeholder="Search by product name, ID or variant..." autocomplete="off">
+          <input type="text" id="ip_search" placeholder="Search by product name, ID, variant or supplier's code..." autocomplete="off">
         </div>
         <div id="ip_list"></div>
       </div>
@@ -14147,26 +14147,57 @@ function productDisplayLabel(p, variantIdx){
 // specific variant) at the top of its own variant list -- only the price
 // entry form asks for this, since picking it is what switches that form
 // into bulk mode (one row per variant) rather than picking one variant.
+/* Every code a supplier has given an item, keyed by the item.
+ *
+ * A supplier's code is written down precisely so it can be typed back in:
+ * the quote in your hand says CP-25H and nothing else does. But it lives
+ * on the price row rather than on the product, so the product search --
+ * which every picker in the app runs through -- could not see it, and
+ * recording one made it findable in the Price Registry and nowhere else.
+ *
+ * Built once per search rather than looked up per product, so a shop with
+ * a thousand price rows does not walk them for every item on screen. */
+function supplierSkuIndex(){
+  const idx = new Map();
+  (data.prices||[]).forEach(pr=>{
+    const sku = String(pr.supplierSku||'').trim().toLowerCase();
+    /* Size, not correctness: a blank one would only add a space to the
+       haystack, and an empty search has no tokens to match with anyway.
+       Most price rows carry no code, and there is no reason to hold an
+       entry for every one of them. */
+    if(!sku) return;
+    const key = pr.productId + '::' + (pr.variantIdx==null ? '' : pr.variantIdx);
+    const cur = idx.get(key);
+    if(cur) cur.push(sku); else idx.set(key, [sku]);
+  });
+  return idx;
+}
 function buildProductSuggestionEntries(tokens, opts){
   opts = opts || {};
   const entries = [];
+  const skus = supplierSkuIndex();
+  // The codes recorded against THIS line -- a variant is found by the code
+  // its own supplier gave it, not by one belonging to its neighbour.
+  const codesFor = (productId, variantIdx)=>
+    (skus.get(productId + '::' + (variantIdx==null ? '' : variantIdx)) || []).join(' ');
   data.products.forEach(p=>{
     if(p.type==='variable'){
       if(!p.variants || !p.variants.length){
-        const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
+        const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
         if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
         return;
       }
-      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
+      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
       if(opts.includeWholeProduct && (!tokens.length || matchesAllTokens(haystack, tokens))){
         entries.push({p, variantIdx:null, wholeProduct:true});
       }
       p.variants.forEach((v,idx)=>{
-        const vHaystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
+        const vHaystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase()
+          +' '+codesFor(p.id, idx);
         if(!tokens.length || matchesAllTokens(vHaystack, tokens)) entries.push({p, variantIdx:idx});
       });
     } else {
-      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
+      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
       if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
     }
   });
