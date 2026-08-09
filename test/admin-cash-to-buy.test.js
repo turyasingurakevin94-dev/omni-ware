@@ -51,6 +51,9 @@ const scope = compileScope([
   // orderPurchaseLines asks ipLineOutlay how many a pack-only supplier
   // will actually sell, so the collect-this quantity comes with it.
   extractFunction(src, 'ipLineOutlay', 'index.html'),
+  // A line already received is no longer a call on cash, so
+  // orderPurchaseLines asks whether it has been.
+  extractFunction(src, 'quoteLineReceived', 'index.html'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),

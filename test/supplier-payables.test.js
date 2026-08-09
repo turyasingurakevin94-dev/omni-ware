@@ -65,6 +65,7 @@ const FNS = [
   // pack-only supplier is a whole carton -- so the chain that works that
   // out comes with it.
   'tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn', 'quoteLineUnitsBought',
+  'quoteLineReceived',
   'purchaseInvoiceNumberLabel', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
   'purchaseInvoicePaymentStatusLabel', 'supplierName',
   'creditorOutstandingInvoices', 'creditorTotalOwed',

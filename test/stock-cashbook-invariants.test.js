@@ -72,6 +72,8 @@ const NAMES = [
   'stockKey', 'addStockLot', 'consumeStockLots', 'restoreStockLots', 'getFIFOUnitCost',
   'applyStockDelta', 'getStockQty',
   'applyQuoteStockDeduction', 'reverseQuoteStockDeduction',
+  // Both kinds of line that come off our own shelf.
+  'quoteLineReceived', 'quoteLineComesOffShelf',
   'addCashReceipt', 'addCashPayment', 'removeCashTxnsByIds',
 ];
 const fns = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);

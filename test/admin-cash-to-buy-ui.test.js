@@ -51,6 +51,12 @@ const scope = compileScope([
   // orderPurchaseLines asks ipLineOutlay how many a pack-only supplier
   // will actually sell, so the collect-this quantity comes with it.
   extractFunction(src, 'ipLineOutlay', 'index.html'),
+  // A line already received is no longer a call on cash, so
+  // orderPurchaseLines asks whether it has been.
+  extractFunction(src, 'quoteLineReceived', 'index.html'),
+  // The buying list's Receive control opens on what was sent for.
+  extractFunction(src, 'quoteLineExpected', 'index.html'),
+  extractFunction(src, 'quoteLineUnitsBought', 'index.html'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),
@@ -97,6 +103,10 @@ const scope = compileScope([
   // admin-shortfall-plan.test.js. Here it is only the thing the button
   // opens, so it is stubbed rather than dragging its scope in.
   openShortfallPlan: () => { modal.planOpened = true; },
+  /* Receiving is wired after the body is written, and is exercised in
+     full by goods-receiving.test.js. Here it is only a call the render
+     makes, and this file's document stub has no querySelectorAll. */
+  wireBuyingListReceiving: () => { modal.receivingWired = true; },
   document: {
     getElementById: () => ({
       set innerHTML(v) { modal.html = v; },
@@ -344,14 +354,15 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   const css = src.slice(src.indexOf('.bl-lines table{'), src.indexOf('.bl-item{'));
   t.check(/table-layout:fixed/.test(css),
     'the line tables are fixed-layout, so a long note in one run cannot move that run\'s columns');
-  t.check(['item', 'qty', 'unit', 'cost'].every((c) => new RegExp(`col\\.${c}\\{width:`).test(css)),
+  // recv is the Receive/Undo control, added with goods receiving.
+  t.check(['item', 'qty', 'unit', 'cost', 'recv'].every((c) => new RegExp(`col\\.${c}\\{width:`).test(css)),
     'with every column given a declared width');
 
   data.prices = [price()];
   data.savedQuotes = [order()];
   scope.openBuyingList();
   const cols = (modal.html.match(/<col class="/g) || []).length;
-  t.check(cols === 4, `and the table declares them (got ${cols} cols)`);
+  t.check(cols === 5, `and the table declares them (got ${cols} cols)`);
 }
 
 process.exit(t.done() ? 1 : 0);

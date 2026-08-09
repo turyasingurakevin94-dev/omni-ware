@@ -34,7 +34,7 @@ const LOOSE = { supplierId: 'S2', sname: 'Loose Trader', wholesale: null, retail
 const ROWS = { 'P1::4': [CARTONS], 'P2::': [LOOSE] };
 
 const NAMES = ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn',
-  'quoteLineUnitsBought', 'quoteLineSurplus'];
+  'quoteLineUnitsBought', 'quoteLineSurplus', 'quoteLineReceived'];
 let fn = null, err = null;
 try {
   fn = compileScope(
@@ -86,7 +86,10 @@ const line = (over) => Object.assign(
 /* ---------- 2. the supplier is billed for the carton ----------------- */
 {
   const gen = extractFunction(src, 'generatePurchaseInvoicesForQuote', 'index.html');
-  t.check(/qty: quoteLineUnitsBought\(it\), price: it\.price/.test(gen),
+  /* What was bought, for a line nobody has receipted. Where a receipt
+     exists it wins -- counted beats calculated, and goods-receiving.test.js
+     covers that half. */
+  t.check(/: quoteLineUnitsBought\(it\),/.test(gen),
     'the purchase invoice carries what was bought, not what was quoted');
   /* Billing the one dozen that left the shop while a carton left his
      would understate what is owed, and leave the other five sitting on
@@ -111,7 +114,8 @@ const line = (over) => Object.assign(
   const movements = [];
   const run = compileScope(
     ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn',
-      'quoteLineUnitsBought', 'quoteLineSurplus', 'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock']
+      'quoteLineUnitsBought', 'quoteLineSurplus', 'quoteLineReceived',
+      'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock']
       .map((n) => extractFunction(src, n, 'index.html')),
     {
       productPriceRows: (pid, vi) => ROWS[`${pid}::${vi == null ? '' : vi}`] || [],
@@ -192,9 +196,12 @@ const line = (over) => Object.assign(
 {
   const lines = extractFunction(src, 'orderPurchaseLines', 'index.html');
   t.check(/const out = best \? ipLineOutlay\(best, quotedQty\) : null;/.test(lines)
-    && /const qty = out \? out\.units : quotedQty;/.test(lines),
+    && /out \? out\.units : quotedQty/.test(lines),
     'the quantity to collect is the whole carton where the carton is the least sold');
-  t.check(/lineCost: unitCost==null \? null : unitCost \* qty,/.test(lines),
+  /* Once a line has been received the figure comes from the receipt
+     instead, and nothing more is owed on it -- goods-receiving.test.js
+     covers that half. */
+  t.check(/lineCost: received \? 0 : \(unitCost==null \? null : unitCost \* qty\),/.test(lines),
     'and the money to take follows it');
   /* The row shows qty x unit cost = line total. Leaving the cost on the
      carton while the quantity said one dozen would print a row that does

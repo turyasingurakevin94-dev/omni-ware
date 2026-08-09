@@ -3960,10 +3960,28 @@
      figures into each other and left the columns landing in different places
      from the run below it. */
   .bl-lines table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
-  .bl-lines col.item{width:46%;}
-  .bl-lines col.qty{width:16%;}
-  .bl-lines col.unit{width:18%;}
-  .bl-lines col.cost{width:20%;}
+  .bl-lines col.item{width:38%;}
+  .bl-lines col.qty{width:14%;}
+  .bl-lines col.unit{width:16%;}
+  .bl-lines col.cost{width:16%;}
+  .bl-lines col.recv{width:16%;}
+  /* A line already collected reads as done rather than as still to do --
+     it stays on the list because the trip is the trip, but it is no
+     longer money to take or a shop to visit. */
+  .bl-received{background:var(--ow-steel-050);}
+  .bl-received .bl-item{color:var(--ink-soft);}
+  .bl-recd{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--good);font-weight:600;margin-top:2px;}
+  .bl-recd svg{width:12px;height:12px;flex-shrink:0;}
+  .bl-paid{font-size:11.5px;color:var(--ink-soft);font-style:italic;}
+  .bl-receive, .bl-undo{
+    all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:700;
+    padding:5px 10px;border-radius:6px;white-space:nowrap;
+  }
+  .bl-receive{background:var(--accent);color:#fff;}
+  .bl-receive:hover{background:var(--ow-oxide-deep);}
+  .bl-undo{color:var(--ink-soft);border:1px solid var(--line);}
+  .bl-undo:hover{color:var(--ink);border-color:var(--ink-soft);}
+  .bl-receive:focus-visible, .bl-undo:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .bl-lines td.r,.bl-lines th.r{padding-left:6px;}
   .bl-lines th{
     text-align:left;font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
@@ -12066,11 +12084,17 @@ function orderPurchaseLines(q){
        The order's own quantity stays alongside it, since that is still
        what the customer is owed. */
     const out = best ? ipLineOutlay(best, quotedQty) : null;
-    const qty = out ? out.units : quotedQty;
+    const received = quoteLineReceived(it);
+    const qty = received ? Number(it.receivedQty) : (out ? out.units : quotedQty);
     return {
-      it, qty, quotedQty, best, unitCost,
+      it, qty, quotedQty, best, unitCost, received,
       surplus: Math.max(0, qty - quotedQty),
-      lineCost: unitCost==null ? null : unitCost * qty,
+      /* Nothing more to spend on a line already collected and paid for.
+         Left at its full cost it would keep counting against the balance
+         the item picker judges new lines by, so the shop would be told
+         it had less money than it does for as long as the order sat on
+         the board. */
+      lineCost: received ? 0 : (unitCost==null ? null : unitCost * qty),
       // The order was quoted on somebody; today's cheapest may be somebody
       // else. Worth saying, because the buyer is about to walk past one
       // supplier to reach another, and should know they meant to.
@@ -13859,18 +13883,31 @@ function openBuyingList(){
         <span class="bl-run-total">${fmtUGX(r.total)}</span>
       </div>
       <div class="bl-lines"><table>
-        <colgroup><col class="item"><col class="qty"><col class="unit"><col class="cost"></colgroup>
-        <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Cost</th></tr></thead>
+        <colgroup><col class="item"><col class="qty"><col class="unit"><col class="cost"><col class="recv"></colgroup>
+        <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Cost</th><th></th></tr></thead>
         <tbody>${r.lines.map(l=>{
           const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
-          return `<tr>
+          const exp = quoteLineExpected(l.it);
+          /* A receipt that did not match what was sent for is the whole
+             reason for writing one down, so the line says which way. */
+          const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
+          const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
+          return `<tr class="${l.received ? 'bl-received' : ''}">
             <td><div class="bl-item">${esc(l.it.productName || 'Item')}</div>
               ${l.movedFrom
                 ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
-                : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}</td>
+                : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
+              ${l.received ? `<div class="bl-recd">${ICON_CHECK}Received${
+                shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
+                paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}</td>
             <td class="r num">${esc(l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</td>
-            <td class="r num soft">${fmtUGX(l.unitCost)}</td>
-            <td class="r num">${fmtUGX(l.lineCost)}</td>
+            <td class="r num soft">${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</td>
+            <td class="r num">${l.received
+              ? `<span class="bl-paid">paid</span>`
+              : fmtUGX(l.lineCost)}</td>
+            <td class="r">${l.received
+              ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
+              : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -13895,7 +13932,58 @@ function openBuyingList(){
   // open and a listener bound to the old markup would be thrown away with it.
   const planBtn = document.getElementById('bl_plan_btn');
   if(planBtn) planBtn.addEventListener('click', openShortfallPlan);
+  wireBuyingListReceiving();
   openModal('buyingListModal');
+}
+
+/* Receiving, from the list somebody is holding when they get back.
+
+   Asked for on the line rather than assumed from it: the quantity and
+   the price both open on what was expected, and both can be corrected,
+   because the two things a delivery gets wrong are how much came and
+   what it cost. */
+function wireBuyingListReceiving(){
+  const findLine = (orderId, lineId)=>{
+    const q = data.savedQuotes.find(x=> String(x.id) === String(orderId));
+    const it = q && (q.items||[]).find(x=> String(x.lineId) === String(lineId));
+    return { q, it };
+  };
+  document.querySelectorAll('#buyingListBody .bl-receive').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const { q, it } = findLine(btn.dataset.order, btn.dataset.line);
+      if(!q || !it) return;
+      const exp = quoteLineExpected(it);
+      const unit = it.unit || 'unit';
+      const qty = prompt(`${it.productName || 'Item'}\nHow many ${unit} arrived?`, String(exp.qty));
+      if(qty === null) return;
+      const n = Number(qty);
+      if(!isFinite(n) || n <= 0){ toast('Nothing received — enter how many arrived'); return; }
+      const paid = prompt(`What did each ${unit} cost?`, String(exp.price));
+      if(paid === null) return;
+      const got = receiveQuoteLine(it, n, Number(paid), q);
+      if(!got){ toast('Nothing received'); return; }
+      saveData();
+      renderInventory();
+      openBuyingList();
+      const short = exp.qty - got;
+      toast(`${got} ${unit} received onto the shelf${short > 0 ? ` — ${short} short of the ${exp.qty} sent for` : ''}`,
+        short > 0 ? 6000 : undefined);
+    });
+  });
+  document.querySelectorAll('#buyingListBody .bl-undo').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const { q, it } = findLine(btn.dataset.undo, btn.dataset.line);
+      if(!q || !it) return;
+      // Named, because it takes goods back off a shelf somebody may have
+      // already counted.
+      if(!confirm(`Undo this receipt? ${it.receivedQty} ${it.unit || 'unit'} of ${it.productName || 'the item'} will come back off the shelf.`)) return;
+      const back = unreceiveQuoteLine(it);
+      saveData();
+      renderInventory();
+      openBuyingList();
+      toast(`Receipt undone — ${back} ${it.unit || 'unit'} taken back off`);
+    });
+  });
 }
 document.getElementById('buyingListClose').addEventListener('click', ()=>closeModal('buyingListModal'));
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
@@ -14076,6 +14164,37 @@ function quoteLineUnitsBought(it){
    is the `> 0` at the one place it is acted on. */
 function quoteLineSurplus(it){
   return quoteLineUnitsBought(it) - (Number(it && it.qty) || 0);
+}
+
+/* ---- Receiving -------------------------------------------------------
+
+   Until this, nothing in the app recorded what actually came back from
+   the supplier. The purchase invoice was built from the order, the cost
+   was the quoted one, and the pack surplus was worked out from a pack
+   size rather than counted. A supplier who sent five dozen instead of
+   six, or charged 480,000 instead of 470,000, went unnoticed.
+
+   Receiving is the moment somebody says what arrived and what it cost,
+   and it is recorded on the line rather than as a document of its own.
+   That is a deliberate limit: a trip covering three orders is still
+   three separate receipts here, and one payment across them stays
+   implicit. What it buys is that no new table, sync path or invoice key
+   has to change -- and it still catches the short delivery and the price
+   that moved, which is what the shop is actually blind to. ---- */
+function quoteLineReceived(it){
+  return !!(it && it.receivedAt && Number(it.receivedQty) > 0);
+}
+/* Whose goods are on our own shelf by the time the order is invoiced --
+   either it was quoted off the shelf to begin with, or it was bought in
+   and has since come through the door. Both leave the shop the same way,
+   so both are deducted the same way. */
+function quoteLineComesOffShelf(it){
+  return !!it && (it.supplierId === '__stock__' || quoteLineReceived(it));
+}
+// What a receiving form should open showing: what was expected, at what
+// was expected to be paid.
+function quoteLineExpected(it){
+  return { qty: quoteLineUnitsBought(it), price: Number(it && it.price) || 0 };
 }
 
 function quoteCommittedCash(){
@@ -18039,13 +18158,14 @@ async function generatePurchaseInvoicesForQuote(q){
     bySupplier[it.supplierId].push({
       productId: it.productId, variantIdx: it.variantIdx, productName: it.productName,
       unit: it.unit, packUnit: it.packUnit, packQty: it.packQty,
-      /* What was BOUGHT, which is a whole carton where the supplier sells
-         no less -- not what the customer was quoted. The invoice is what
-         is owed to that supplier, and billing him for the one dozen that
-         left the shop while a carton left his would understate the debt
-         and leave the other five dozen sitting on our shelf with no
-         purchase behind them. */
-      qty: quoteLineUnitsBought(it), price: it.price
+      /* What was RECEIVED where it has been, and otherwise what was
+         bought -- which is a whole carton where the supplier sells no
+         less, rather than what the customer was quoted. The invoice is
+         what is owed to that supplier, so counted beats calculated:
+         a short delivery or a price that moved is only known because
+         somebody wrote it down at the door. */
+      qty: quoteLineReceived(it) ? Number(it.receivedQty) : quoteLineUnitsBought(it),
+      price: quoteLineReceived(it) ? Number(it.receivedPrice) : it.price
     });
   });
   // Sequential rather than Promise.all: the numbers should follow the order
@@ -26477,7 +26597,14 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
 function applyQuoteStockDeduction(q){
   let shortfall = false;
   q.items.forEach(it=>{
-    if(it.supplierId!=='__stock__') return;
+    /* Both kinds of line leave the shop the same way. A line quoted off
+       the shelf always did; a bought-in line that has since been RECEIVED
+       does too, because receiving already put the whole delivery on the
+       shelf -- so the customer's share comes off here rather than being
+       netted out of what arrived. That is the difference between a stock
+       log that says "six in, one out" and one that only ever says
+       "five in". */
+    if(!quoteLineComesOffShelf(it)) return;
     const have = getStockQty(it.productId, it.variantIdx);
     const want = Number(it.qty)||0;
     const take = Math.min(have, want);
@@ -26495,12 +26622,51 @@ function applyQuoteStockDeduction(q){
 }
 function reverseQuoteStockDeduction(q){
   q.items.forEach(it=>{
-    if(it.supplierId!=='__stock__' || !it._stockTaken) return;
+    // Driven by what was actually taken rather than by what the line is
+    // today: receiving can be undone after invoicing, and the units still
+    // have to go back on the shelf they came off.
+    if(!it._stockTaken) return;
     applyStockDelta(it.productId, it.variantIdx, it._stockTaken, 'reversal', 'Reversed — quote un-invoiced',
       null, null, { restoreLots: it._stockLots });
     delete it._stockTaken;
     delete it._stockLots;
   });
+}
+
+/* Goods coming through the door.
+
+   The whole delivery goes on the shelf, not just the part the customer
+   is not taking: what arrived is what arrived, and the customer's share
+   comes back off when the order is invoiced. Two movements instead of
+   one, and the stock log finally tells the truth about an item -- six in
+   from Shafik, one out to Abraham -- rather than a bare five appearing
+   from nowhere days later.
+
+   Costed at what was actually PAID rather than what was quoted, so a
+   price that moved between quoting and buying reaches the margin figures
+   instead of being silently absorbed. */
+function receiveQuoteLine(it, qty, price, q){
+  const n = Math.max(0, Number(qty) || 0);
+  if(!orderLineIsBoughtIn(it) || !(n > 0)) return 0;
+  const unit = Number(price);
+  it.receivedQty = n;
+  it.receivedPrice = isFinite(unit) && unit >= 0 ? unit : (Number(it.price) || 0);
+  it.receivedAt = new Date().toISOString();
+  applyStockDelta(it.productId, it.variantIdx, n, 'restock',
+    `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
+    it.receivedPrice || null, it.supplierId);
+  return n;
+}
+/* Undoing a receipt, for the delivery that was recorded before it was
+   counted. Takes back exactly what was put on the shelf; applyStockDelta
+   clamps at zero, so units already sold on cannot be un-sold. */
+function unreceiveQuoteLine(it){
+  if(!quoteLineReceived(it)) return 0;
+  const n = Number(it.receivedQty) || 0;
+  applyStockDelta(it.productId, it.variantIdx, -n, 'reversal',
+    `Receipt undone — ${supplierName(it.supplierId)}`, null, null);
+  delete it.receivedQty; delete it.receivedPrice; delete it.receivedAt;
+  return n;
 }
 
 /* The other half of a pack that could not be broken.
@@ -26517,6 +26683,11 @@ function reverseQuoteStockDeduction(q){
 function applyQuoteSurplusToStock(q){
   let total = 0;
   q.items.forEach(it=>{
+    /* A received line has already had its whole delivery put on the
+       shelf, counted rather than calculated -- adding a surplus worked
+       out from the pack size on top of it would shelve the leftovers
+       twice. */
+    if(quoteLineReceived(it)) return;
     const surplus = quoteLineSurplus(it);
     if(!(surplus > 0)) return;
     it._surplusStocked = surplus;
