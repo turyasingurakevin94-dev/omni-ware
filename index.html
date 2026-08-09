@@ -15004,15 +15004,23 @@ function renderIpStage(){
     return;
   }
 
-  // Once staff picks a supplier it should stick through re-renders (price-card
-  // clicks, etc.) rather than snapping back to a default — only fall back to
-  // a default when nothing at all is currently selected. Default to "Our
-  // stock" whenever there's inventory on hand, since that's how a sale off
-  // the shelf should be recorded; only fall back to the cheapest supplier
-  // when there's nothing in stock to sell.
-  if(!ipSelectedSupplierId || (ipSelectedSupplierId!=='__stock__' && !staticRanked.some(r=>r.supplierId===ipSelectedSupplierId))){
-    ipSelectedSupplierId = stockQty>0 ? '__stock__' : (staticRanked[0] ? staticRanked[0].supplierId : null);
-  }
+  /* Once staff picks a supplier it should stick through re-renders
+     (price-card clicks, etc.) rather than snapping back to a default --
+     so only fall back to a default when nothing at all is currently
+     selected. WHICH default is decided further down, once the quantity
+     is known; all that is settled here is whether one is needed.
+
+     It used to be decided right here, from staticRanked[0] -- and
+     staticRanked is rankedPriceRows(), which sorts on the wholesale
+     column and treats "no wholesale price on file" as infinitely
+     expensive. So the cards said one supplier was BEST while the radio
+     was ticked against another, and the one it ticked could be dearer:
+     on WISEUP Tape Measure 3M/Plastic, Annet Lak at 26,000/dozen (retail
+     only) was ranked below Shafik Katwe at 28,000/dozen purely for
+     having no wholesale figure. Accepting the default paid 2,000/dozen
+     over the odds and cut the margin from 3,000 to 1,000. */
+  const needsDefaultSupplier = !ipSelectedSupplierId
+    || (ipSelectedSupplierId!=='__stock__' && !staticRanked.some(r=>r.supplierId===ipSelectedSupplierId));
   // Packing context has to be settled before a quantity can be read at all
   // (the quantity may be typed in packs), so it comes from the flat list.
   // Which row that is only matters when nothing is selected, and packing is
@@ -15046,6 +15054,18 @@ function renderIpStage(){
   // the same supplier as cheapest.
   const ranked = rankedPurchaseRowsAtQty(ipProductId, variantIdx, qty);
   const top3 = ranked.slice(0, 3);
+  /* The default, now that there is a quantity to judge it by, and from
+     the SAME ranking the cards are drawn from -- so the card wearing the
+     BEST badge is always the one the radio is ticked against. Two
+     orderings for one question is how the picker ended up recommending
+     a supplier it had itself labelled second.
+
+     "Our stock" still wins when there is stock, since that is how a sale
+     off the shelf should be recorded; the ranking only decides who to
+     buy from when there is nothing on the shelf to sell. */
+  if(needsDefaultSupplier){
+    ipSelectedSupplierId = stockQty>0 ? '__stock__' : (ranked[0] ? ranked[0].supplierId : null);
+  }
   const selectedRow = ranked.find(r=>r.supplierId===ipSelectedSupplierId) || null;
   // Prices and the recorded cost reference the selected supplier's row when
   // one is chosen, falling back to whoever is cheapest AT THIS QUANTITY
