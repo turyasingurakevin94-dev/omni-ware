@@ -129,6 +129,17 @@
 
   .ag-card{background:var(--panel);border:1px solid rgba(16,24,32,0.04);border-radius:20px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow-soft);}
   .ag-card-title{font-weight:800;margin-bottom:12px;font-size:14px;letter-spacing:-0.005em;}
+  /* A card's heading with an action alongside it. The title keeps its own
+     bottom margin, so the row is the only thing that changes. */
+  .ag-card-head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+  /* 44px of tap target around a 20px glyph -- a save button that has to be
+     aimed at is worse than the sentence it replaced. */
+  .ag-icon-action{all:unset;box-sizing:border-box;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;width:44px;height:44px;
+    margin:-11px -10px 0 0;border-radius:10px;color:var(--ink-soft);}
+  .ag-icon-action svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .ag-icon-action:hover{color:var(--accent);background:var(--accent-soft);}
 
   /* ---- Hero (Browse / Earnings) ---- */
   .ag-hero{
@@ -1298,7 +1309,18 @@
            follow whoever is chosen, and this says so rather than nagging. -->
       <div class="ag-unassigned-note" id="ag_cartUnassigned" style="display:none;"></div>
       <div class="ag-card">
-        <div class="ag-card-title">Items</div>
+        <!-- Saving as a Solution rides on the Items heading rather than
+             sitting under the table as a sentence. It acts on the items,
+             so it belongs beside their name; and a line of prose at the
+             foot of a long list is read as a footnote by anyone who has
+             scrolled past it. -->
+        <div class="ag-card-head-row">
+          <div class="ag-card-title">Items</div>
+          <button type="button" class="ag-icon-action" id="ag_save_solution_btn"
+            title="Save these items as a Solution" aria-label="Save these items as a Solution">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+          </button>
+        </div>
         <div class="ag-view-toggle">
           <button type="button" class="active" id="ag_quoteview_yours_btn" data-view="yours">Your view</button>
           <button type="button" id="ag_quoteview_client_btn" data-view="client">Client view</button>
@@ -1346,8 +1368,6 @@
           </div>
           <button type="button" class="btn btn-accent btn-block" id="ag_download_receipt_btn" style="margin-top:14px;">Download receipt</button>
         </div>
-
-        <span class="ag-save-solution-link" id="ag_save_solution_btn">Save these items as a Solution</span>
       </div>
 
       <!-- Collapsed to a one-line answer once it has one, and expanded by

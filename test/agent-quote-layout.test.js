@@ -107,6 +107,41 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'there is one Submit button, not one per section');
 }
 
+/* ---------- 3b. Save as Solution rides on the Items heading ---------- */
+/*
+ * It used to be a sentence under the table -- "Save these items as a
+ * Solution" -- which at the foot of a long list is read as a footnote by
+ * anyone who has scrolled past it. It acts on the items, so it now sits
+ * beside their name.
+ *
+ * The risk in trading words for a glyph is the tap target and the label.
+ * A 20px icon is a 20px thing to aim at unless the button around it is
+ * bigger, and an icon with no accessible name is unreachable by anyone
+ * not looking at it.
+ */
+{
+  t.check(!/Save these items as a Solution<\/span>/.test(src),
+    'the sentence under the table is gone');
+  t.check(src.includes('<div class="ag-card-head-row">')
+    && src.includes('<div class="ag-card-title">Items</div>')
+    && src.includes('<button type="button" class="ag-icon-action" id="ag_save_solution_btn"')
+    && src.indexOf('<div class="ag-card-head-row">') < src.indexOf('id="ag_save_solution_btn"'),
+    'and the action sits on the same line as Items');
+  t.check(/aria-label="Save these items as a Solution"/.test(src) && /title="Save these items as a Solution"/.test(src),
+    'carrying the words it replaced, for anyone not going by the picture');
+  /* 44px around a 20px glyph. Traded prose for an icon, so the icon has
+     to be at least as easy to hit as the sentence was. */
+  t.check(/\.ag-icon-action\{[^}]*width:44px;height:44px;/.test(src),
+    'with a full-sized tap target around it');
+  t.check(/\.ag-icon-action svg\{width:20px;height:20px;/.test(src),
+    'and a glyph that reads at a glance inside it');
+  // Same handler, same modal -- only where the control lives has changed.
+  t.check(/document\.getElementById\('ag_save_solution_btn'\)\.addEventListener\('click', openSaveSolutionModal\);/.test(code),
+    'opening the same sheet it always did');
+  t.check((src.match(/id="ag_save_solution_btn"/g) || []).length === 1,
+    'from one control, not two');
+}
+
 /* ---------- 4. what was deliberately NOT done ------------------------ */
 {
   /* Pinned here so the decision is not quietly reversed by someone who
