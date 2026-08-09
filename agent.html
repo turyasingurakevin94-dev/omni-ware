@@ -1981,6 +1981,16 @@ function saveQuoteDraft(){
     localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
       userId: currentUser && currentUser.id,
       carts, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
+      /* Items in hand with nobody named yet. stashActiveCart cannot park
+         them -- there is no key to park them under -- so without this the
+         only basket that does not survive closing the app is the one
+         nobody has claimed. Which is exactly what choosing a client used
+         to do to it, by another route.
+
+         Empty once a client is chosen, because from then on the basket
+         lives in `carts` and writing it twice would restore it twice.
+         The reading side has always handled this shape. */
+      cart: chosenClient ? [] : cart.slice(),
     }));
   }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
 }

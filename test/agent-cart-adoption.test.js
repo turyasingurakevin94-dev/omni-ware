@@ -107,6 +107,34 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'the agent is told what moved, and told when it joined a basket that already had items');
 }
 
+/* ---------- 5b. the unclaimed basket survives closing the app --------- */
+/*
+ * Every OTHER basket is written out under its client's key. One with
+ * nobody named has no key, so it was the only basket that did not survive
+ * a reload -- the same loss as the bug above, reached by closing the app
+ * instead of by choosing a client.
+ *
+ * The reading side already handled this shape; only the writing side had
+ * dropped it.
+ */
+{
+  const save = extractFunction(src, 'saveQuoteDraft', 'agent.html');
+  t.check(/cart: chosenClient \? \[\] : cart\.slice\(\),/.test(save),
+    'a basket with nobody named yet is written out on its own');
+  /* Empty once a client is chosen: from then on it lives in `carts`, and
+     writing it in both places would restore it in both places. */
+  t.check(/chosenClient \? \[\]/.test(save),
+    'and not written twice once it has an owner, which would double it on restore');
+  t.check(/carts, chosenClientId: chosenClient \? chosenClient\.id : null/.test(save),
+    'while every owned basket is still written under its client');
+
+  const restore = extractFunction(src, 'restoreQuoteDraft', 'agent.html');
+  t.check(/\} else if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length\)\{/.test(restore),
+    'and the reading side puts an unowned basket back in hand');
+  t.check(/Object\.keys\(draft\.carts\)\.forEach/.test(restore),
+    'with every client basket restored beside it, so several quotes survive together');
+}
+
 /* ---------- 6. the nudge, which is a statement not a barrier ---------- */
 {
   const tab = extractFunction(src, 'renderCartTab', 'agent.html');
