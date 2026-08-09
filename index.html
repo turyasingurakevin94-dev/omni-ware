@@ -3261,6 +3261,21 @@
   .q-sc-prices .price{color:var(--ink);font-weight:600;}
   .q-sc-sep{color:var(--line);}
 
+  /* Can this line be paid for today. Three weights, because the answer
+     has three shapes: it fits (quiet), it fits but ties up more money
+     than the order needs (worth noticing), or it does not fit and
+     somebody else can fill it (worth stopping for). */
+  .q-cash-hint{
+    display:flex;align-items:flex-start;gap:9px;border-radius:9px;padding:9px 11px;
+    margin:12px 0 8px;font-size:12px;line-height:1.5;border:1px solid transparent;
+  }
+  .q-cash-hint .q-ch-icon{width:15px;height:15px;flex-shrink:0;margin-top:1px;}
+  .q-cash-hint.ok{color:var(--ink-soft);padding:2px 0 0;margin:8px 0 6px;}
+  .q-cash-hint.ok .q-ch-icon{opacity:0.6;}
+  .q-cash-hint.info{background:var(--ow-steel-050);color:var(--ink-soft);border-color:var(--line);}
+  .q-cash-hint.note{background:var(--ow-amber-soft);color:var(--ow-amber-ink);border-color:rgba(180,130,20,0.28);}
+  .q-cash-hint.warn{background:#FCEFEF;color:#8C2F2F;border-color:#E7C3C3;font-weight:600;}
+
   .q-chosen-line{font-size:11px;color:var(--ink-soft);margin:0 0 4px;}
   .q-chosen-line strong{color:var(--ink);}
 
@@ -13966,6 +13981,117 @@ function tieredUnitPrice(row, qty, kind){
 // has nothing on file at all for this row. Used to rank suppliers by what
 // they'd actually charge for a specific purchase quantity, rather than by
 // their flat qty-1 rate.
+/* What acquiring `qty` from this supplier actually takes out of the till,
+   as against what a unit of it costs.
+
+   The two are the same number until a supplier quotes only by the pack.
+   WISEUP Tape Measure 7.5M/Plastic is the case that showed it: Shafik
+   Katwe at 470,000/Ctn of 6 Dozen is 78,333/dozen and genuinely the
+   cheapest per unit, but one dozen cannot be bought from him at all --
+   the smallest thing he sells is the carton. Serving a one-dozen order
+   through him means 470,000 down and five dozen left over; Annet Lak,
+   dearer per dozen at 102,000, wants 102,000.
+
+   `units` is what you end up holding, which is why it is returned rather
+   than folded into the cash figure: the surplus is stock, not a loss,
+   and saying so is the difference between a warning and a scolding. */
+function ipLineOutlay(row, qty){
+  if(!row || !(Number(qty) > 0)) return null;
+  const packQty = Number(row.packQty) || 0;
+  /* No retail price on file is what "does not break packs" looks like in
+     this data: the supplier quotes the carton and nothing smaller. So
+     whatever is wanted, what leaves his shop is a whole number of them.
+
+     Judged on the row rather than on the quantity, because it is a fact
+     about the supplier and not about this order. Reading it off the
+     quantity instead only rounded up BELOW a pack -- seven dozen from a
+     carton-only supplier priced as seven, which is a quantity he will
+     not sell. Without a pack size there is nothing to round to, so a
+     supplier who quotes no pack is taken at his word. */
+  const sellsLoose = row.retail != null;
+  const units = (!sellsLoose && packQty > 0) ? Math.ceil(qty / packQty) * packQty : qty;
+  // Resolved at what is actually being bought, not at what was asked
+  // for: rounding up to two cartons is buying two cartons, and any
+  // volume tier that lands on the way is genuinely earned.
+  const natural = (packQty > 0 && units >= packQty) ? 'wholesale' : 'retail';
+  const other = natural === 'wholesale' ? 'retail' : 'wholesale';
+  let rate = tieredUnitPrice(row, units, natural);
+  if(rate == null) rate = tieredUnitPrice(row, units, other);
+  if(rate == null) return null;
+  return { units, rate, cash: units * rate, forcedPack: units > qty, packQty };
+}
+
+/* Can this line actually be paid for right now, and if not, who can fill
+   it instead.
+
+   The picker ranks by unit price, which is the right answer to "who is
+   cheapest" and the wrong answer to "what can I buy today". A supplier
+   who is cheapest per dozen but sells only by the carton needs the whole
+   carton's money on the counter; a dearer one who sells loose needs a
+   fraction of it. When the drawer cannot cover the first, the second is
+   not a worse deal, it is the only deal.
+
+   `available` is cash on hand less what the orders already being
+   prepared still have to buy -- cashPositionForBuying().after, the same
+   figure the buying screen shows, so the two cannot disagree about how
+   much money there is.
+
+   Returns null when there is nothing to say: buying off our own shelf
+   costs no cash, and an unpriced supplier has no outlay to judge. */
+function ipCashHint(o){
+  const rows = o.rows || [];
+  const sel = rows.find(r=> r.supplierId === o.selectedId) || null;
+  if(!sel) return null;
+  const out = ipLineOutlay(sel, o.qty);
+  if(!out) return null;
+
+  const money = (n)=> fmtUGX(Math.round(n));
+  const amt = (n)=> `${Number(Math.round(n * 100) / 100).toLocaleString('en-UG')} ${o.unit || 'unit'}`;
+  const packName = sel.packUnit || 'pack';
+
+  // Everyone else who could fill the same order, cheapest cash first --
+  // cheapest in CASH, not per unit, which is the whole distinction.
+  const alts = rows
+    .filter(r=> r.supplierId !== sel.supplierId)
+    .map(r=> ({ name: r.sname, out: ipLineOutlay(r, o.qty) }))
+    .filter(x=> x.out)
+    .sort((a,b)=> a.out.cash - b.out.cash);
+
+  /* A shop that has never opened its Cash Book has no balance, which is
+     not the same as a balance of nothing. Saying "you cannot afford
+     this" on no evidence would be worse than saying nothing. */
+  // The pack clause is the reason the number is bigger than the order,
+  // so it is said wherever that number is said.
+  const packClause = out.forcedPack ? `, one ${packName} being the least sold` : '';
+
+  if(!o.cashKnown){
+    return { level: 'info',
+      text: `${sel.sname} wants ${money(out.cash)} for ${amt(out.units)}${packClause}.`
+        + ` Nothing is recorded in the Cash Book yet, so there is no balance to check it against.` };
+  }
+
+  const left = o.available - out.cash;
+  if(left < 0){
+    const fits = alts.find(a=> a.out.cash <= o.available);
+    return { level: 'warn',
+      text: `${sel.sname} needs ${money(out.cash)} for ${amt(out.units)}${packClause}.`
+        + ` You have ${money(o.available)} free after the orders in progress.`
+        + (fits
+          ? ` ${fits.name} can fill this order for ${money(fits.out.cash)}.`
+          : ` No other supplier on file is within it either.`) };
+  }
+
+  if(out.forcedPack){
+    const cheaper = alts.find(a=> a.out.cash < out.cash);
+    return { level: 'note',
+      text: `${amt(o.qty)} is under ${sel.sname}'s ${packName} of ${amt(out.packQty)}, so this ties up ${money(out.cash)}`
+        + ` and leaves ${amt(out.units - o.qty)} spare. ${money(left)} would still be free.`
+        + (cheaper ? ` ${cheaper.name} would need only ${money(cheaper.out.cash)}.` : '') };
+  }
+
+  return { level: 'ok', text: `${money(out.cash)} now, ${money(left)} still free after the orders in progress.` };
+}
+
 function purchasePriceAtQty(row, qty){
   const packQty = Number(row.packQty)||0;
   const natural = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
@@ -15160,6 +15286,24 @@ function renderIpStage(){
   const effectiveSuggested = effectiveRecType==='wholesale' ? suggWholesale : effectiveRecType==='retail' ? suggRetail : null;
   const sellStart = effectiveSuggested!=null ? Math.round(effectiveSuggested) : buyStart;
 
+  /* Whether the line can be paid for, and by whom if not. Computed here
+     rather than inside the hint so the cash position is read once per
+     render instead of once per candidate supplier -- it walks every
+     order on the board and every line on each. `__stock__` is excluded
+     by ipCashHint itself: goods already on the shelf are already paid
+     for, and cost nothing to acquire. */
+  /* "Known" means a figure has actually been recorded, not that the book
+     has been opened. A shop that has opened the Cash Book on two days
+     and typed nothing into it has an opening of 0/0/0 and no
+     transactions -- which is a book nobody has filled in, not an empty
+     drawer. Reading that as a balance would put a red "you cannot afford
+     this" under every line in the shop, on no evidence at all. */
+  const cashKnown = (data.cashTxns||[]).length > 0
+    || Object.values(data.cashDays||{}).some(rec=>
+        [rec && rec.opening, rec && rec.actual].some(m=> m && Object.values(m).some(v=> Number(v) > 0)));
+  const cashHint = ipCashHint({ rows: ranked, selectedId: ipSelectedSupplierId, qty, unit,
+    available: cashKnown ? cashPositionForBuying().after : 0, cashKnown });
+
   const qtyUnitOptionsHTML = `<option value="unit" ${ipQtyUnitMode==='unit'?'selected':''}>${esc(unit||'unit')}</option>` +
     (hasPack ? `<option value="pack" ${ipQtyUnitMode==='pack'?'selected':''}>${esc(packUnit)} (${packQty} ${esc(unit||'unit')})</option>` : '');
 
@@ -15214,6 +15358,15 @@ function renderIpStage(){
         ${(top3.length || stockCardHtml)? `<div class="q-section-label">Best suppliers for this item</div><div class="q-supplier-cards">${stockCardHtml}${cardsHtml}</div>` : `<div class="q-empty-hint">${oosNotice ? 'No supplier has this in stock right now — choose one below.' : 'No priced suppliers for this item yet — choose one below.'}</div>`}
       </div>
     </div>
+
+    ${cashHint ? `<div class="q-cash-hint ${cashHint.level}">
+      <svg class="q-ch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${
+        cashHint.level==='warn'
+          ? '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+          : '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'
+      }</svg>
+      <span>${esc(cashHint.text)}</span>
+    </div>` : ''}
 
     <div class="q-chosen-line">Buying from: <strong>${ipSelectedSupplierId? esc(supplierName(ipSelectedSupplierId)) : 'no supplier chosen'}</strong>${ipSelectedSupplierId==='__stock__'?` <span style="color:var(--ink-soft);font-weight:400;">(${stockQty} on hand)</span>`:''}</div>
 
