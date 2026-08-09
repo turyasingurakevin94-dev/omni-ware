@@ -32,17 +32,33 @@ try {
       'const cartKey = (client) => client ? String(client.id) : null;',
       extractFunction(src, 'stashActiveCart', 'agent.html'),
       extractFunction(src, 'activateCartFor', 'agent.html'),
+      extractFunction(src, 'adoptedCartFor', 'agent.html'),
       extractFunction(src, 'clientsWithBaskets', 'agent.html'),
       extractFunction(src, 'otherBasketCount', 'agent.html'),
-      // The three moments that move a basket, lifted out of the DOM
-      // handlers they live in so the state machine can be exercised.
-      `function pick(client){ if(cartKey(chosenClient)!==cartKey(client)) stashActiveCart(); chosenClient = client; activateCartFor(client); }`,
-      `function change(){ stashActiveCart(); chosenClient = null; cart = []; }`,
-      `function submitted(){ const k = cartKey(chosenClient); if(k) delete carts[k]; cart = []; chosenClient = null; }`,
+      /* The moments that move a basket, lifted out of the DOM handlers
+         they live in so the state machine can be exercised. Kept in step
+         with the real ones by hand — a stand-in that drifts is worse than
+         none, since it goes on passing about code that has changed
+         underneath it. */
+      `function pick(client){
+         const hadClient = !!cartKey(chosenClient);
+         const inHand = hadClient ? [] : cart.slice();
+         if(cartKey(chosenClient)!==cartKey(client)) stashActiveCart();
+         chosenClient = client; activateCartFor(client);
+         const merged = adoptedCartFor(hadClient, inHand, cart);
+         if(merged.adopted){ cart.length = 0; merged.rows.forEach(r=> cart.push(r)); unnamedCart = []; }
+       }`,
+      // The switcher: parks and swaps, and adopts nothing.
+      `function switchTo(client){ stashActiveCart(); chosenClient = client; activateCartFor(client); }`,
+      `function switchToUnnamed(){ stashActiveCart(); chosenClient = null; activateCartFor(null); }`,
+      `function change(){ stashActiveCart(); chosenClient = null; activateCartFor(null); }`,
+      `function submitted(){ const k = cartKey(chosenClient); if(k) delete carts[k]; chosenClient = null; activateCartFor(null); }`,
       `function add(item){ cart.push(item); }`,
+      `function unnamed(){ return unnamedCart.slice(); }`,
+      `function resetAll(){ cart = []; carts = Object.create(null); chosenClient = null; unnamedCart = []; }`,
       `function state(){ return { cart: cart.slice(), carts: JSON.parse(JSON.stringify(carts)), client: chosenClient ? chosenClient.id : null }; }`,
     ],
-    {}, ['pick', 'change', 'submitted', 'add', 'state', 'otherBasketCount', 'clientsWithBaskets'],
+    {}, ['pick', 'switchTo', 'switchToUnnamed', 'change', 'submitted', 'add', 'unnamed', 'resetAll', 'state', 'otherBasketCount', 'clientsWithBaskets'],
   );
 } catch (e) { err = e; }
 t.check(!!s, `the basket helpers compile${err ? ` (${err.message})` : ''}`);
@@ -122,14 +138,71 @@ if (s) {
   }
 }
 
+/* ---------- 4b. the basket nobody has claimed ------------------------ */
+/*
+ * Items added before a client is named live in a basket of their own. It
+ * has to behave like every other one: parkable, switchable, and never
+ * quietly emptied by something happening to a different quote.
+ *
+ * This is what makes the switcher safe. Tapping a client's tab means
+ * "show me theirs", so what is in hand has to go somewhere — and before
+ * this basket existed, the only options were to carry it along or drop
+ * it, both of which are the bug this file was written about.
+ */
+if (s) {
+  const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want),
+    `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+
+  s.resetAll();
+  s.pick(NAMULI); s.add('cement');
+  s.change();                                   // step away from Namuli
+  s.add('loose bolt'); s.add('loose nut');
+  eqJ(s.state().cart, ['loose bolt', 'loose nut'], 'items added with nobody named stay in hand');
+
+  s.switchTo(NAMULI);
+  eqJ(s.state().cart, ['cement'], 'switching to a client shows only their own basket');
+  eqJ(s.unnamed(), ['loose bolt', 'loose nut'],
+    'and the unclaimed basket is parked — not carried into theirs, and not dropped');
+
+  s.switchToUnnamed();
+  eqJ(s.state().cart, ['loose bolt', 'loose nut'], 'switching back returns the unclaimed basket');
+  eqJ(s.state().carts.c1, ['cement'], 'with the client\'s own still waiting');
+
+  /* Naming a client IS claiming them, so the picker adopts where the
+     switcher does not. */
+  s.resetAll();
+  s.add('loose bolt');
+  s.pick(NAMULI);
+  eqJ(s.state().cart, ['loose bolt'], 'choosing a client claims what was in hand');
+  eqJ(s.unnamed(), [],
+    'and empties the unclaimed basket, or the same items would sit in two places at once');
+
+  /* Submitting one client's order must not disturb a basket belonging to
+     nobody. A plain `cart = []` would detach the active basket from the
+     unclaimed one, and the next park would write the empty array over it. */
+  s.resetAll();
+  s.add('loose bolt');
+  s.switchTo(NAMULI); s.add('cement');
+  s.submitted();
+  eqJ(s.unnamed(), ['loose bolt'], 'submitting an order leaves the unclaimed basket alone');
+  eqJ(s.state().cart, ['loose bolt'], 'and hands it back, rather than a fresh empty one');
+  s.add('another');
+  eqJ(s.unnamed(), ['loose bolt', 'another'],
+    'so the next item lands in it rather than in an array nothing reads');
+}
+
 /* ---------- 5. wired into the three places it moves ------------------ */
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
   t.check(/if\(cartKey\(chosenClient\) !== cartKey\(client\)\) stashActiveCart\(\);/.test(code),
     'selecting a different client parks the basket first');
-  t.check(/stashActiveCart\(\);\s*chosenClient = null;\s*cart = \[\];/.test(code),
-    'Change parks the basket and empties the hand');
+  /* Change parks the client's basket and swaps in the unnamed one, which
+     is usually empty and is exactly what `cart = []` used to mean. The
+     difference is that anything genuinely waiting to be claimed comes
+     back instead of being replaced by a fresh array. */
+  t.check(/stashActiveCart\(\);\s*chosenClient = null;\s*activateCartFor\(null\);/.test(code),
+    'Change parks the basket and leaves the unnamed one in hand');
   t.check(/const k = cartKey\(chosenClient\);\s*if\(k\) delete carts\[k\];/.test(code),
     'and submitting deletes only that client\'s basket');
   // Every place that drops the chosen client must also empty the hand --
@@ -142,9 +215,20 @@ if (s) {
     // start empty, not a place either is cleared.
     .filter(i => !/let cart = \[\],\s*$/.test(code.slice(Math.max(0, i - 20), i)));
   t.check(sites.length >= 2, `every site that clears the client is examined (${sites.length})`);
+  /* The guarantee is that dropping the client never leaves the PREVIOUS
+     client's items in hand. There are now two ways to honour it: empty
+     the basket, or swap in the unnamed one — which activateCartFor(null)
+     does, now that the unnamed basket has somewhere to be kept. Either is
+     fine; doing neither is the bug. And both must park first, or what was
+     in hand is not carried anywhere, it is simply lost. */
   const unguarded = sites.filter(i => {
-    const near = code.slice(Math.max(0, i - 160), i + 160);
-    return !/cart = \[\];/.test(near);
+    const near = code.slice(Math.max(0, i - 200), i + 200);
+    const swapped = /cart = \[\];/.test(near) || /activateCartFor\(null\)/.test(near);
+    /* Parked, or deliberately deleted — resetCartAfterSubmit drops the
+       basket it has just sent, which is the one case where not keeping it
+       is the whole point. */
+    const accountedFor = /stashActiveCart\(\)/.test(near) || /delete carts\[k\]/.test(near);
+    return !(swapped && accountedFor);
   });
   t.check(unguarded.length === 0,
     `no site drops the client while leaving items in hand (${unguarded.length} unguarded)`);
@@ -162,10 +246,13 @@ if (s) {
     'the draft now stores every basket');
   t.check(/stashActiveCart\(\);\s*localStorage\.setItem\(QUOTE_DRAFT_KEY/.test(code),
     'and parks the active one first, or what is in hand is written under the wrong key');
-  t.check(/if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length && !carts\[String\(client\.id\)\]\)/.test(code),
+  /* Gated on the ABSENCE of `carts`, because in a current draft `cart` is
+     the unnamed basket and belongs to nobody — without that gate a client
+     whose own basket happened to be empty would silently inherit it. */
+  t.check(/if\(!draft\.carts && Array\.isArray\(draft\.cart\) && draft\.cart\.length && !carts\[String\(client\.id\)\]\)/.test(code),
     'a legacy single-cart draft is adopted into that client\'s basket');
-  t.check(/\} else if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length\)\{/.test(code),
-    'and a legacy draft with no client keeps its items in hand rather than dropping them');
+  t.check(/if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length && !unnamedCart\.length\)\{/.test(code),
+    'and a draft with no client keeps its items, in the unnamed basket rather than dropping them');
 }
 
 process.exit(t.done() ? 1 : 0);

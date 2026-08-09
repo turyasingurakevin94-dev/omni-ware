@@ -90,6 +90,10 @@ try {
     'function setAgentPaused(on){ agentPaused = !!on; applyPausedToCart(); }',
     extractFunction(src, 'applyPausedToCart', 'agent.html'),
     'const cartKey = (client) => client ? String(client.id) : null;',
+    // resetCartAfterSubmit returns to the unnamed basket rather than a
+    // fresh array, so the real one comes along.
+    'let unnamedCart = [];',
+    extractFunction(src, 'activateCartFor', 'agent.html'),
     extractFunction(src, 'isNetworkError', 'agent.html'),
     extractFunction(src, 'resetCartAfterSubmit', 'agent.html'),
     extractSubmitHandler(),

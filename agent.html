@@ -324,6 +324,22 @@
   .ag-chip-meta{font-size:12px;color:var(--ink-soft);}
       .ag-basket-waiting{color:var(--accent);font-weight:700;}
   .ag-chip-others{font-size:11px;font-weight:650;color:var(--accent);margin-top:2px;}
+  /* The quote switcher. Each tab names whose quote it is and how much is
+     in it -- a count alone would say a quote exists without saying whose,
+     which is the thing being replaced. */
+  .ag-quote-switch{margin-top:10px;}
+  .ag-quote-switch-label{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:7px;}
+  .ag-quote-tab{all:unset;box-sizing:border-box;cursor:pointer;flex-shrink:0;display:flex;flex-direction:column;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 13px;min-height:44px;
+    justify-content:center;max-width:190px;}
+  .ag-quote-tab-name{font-size:13px;font-weight:700;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ag-quote-tab-count{font-size:11.5px;color:var(--ink-soft);}
+  /* The open one carries the accent, so which quote you are adding to is
+     answered by glancing rather than by remembering. */
+  .ag-quote-tab.active{background:var(--accent-soft);border-color:var(--accent);}
+  .ag-quote-tab.active .ag-quote-tab-name{color:var(--accent-dark);}
   .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
   /* A gutter each side, so the sheet reads as a card lifted over the
@@ -1747,17 +1763,24 @@ let cart = [], chosenClient = null;
  */
 let carts = Object.create(null);
 const cartKey = (client) => client ? String(client.id) : null;
+/* The basket built before anybody was named. Held here rather than in
+   `carts`, which is keyed by client id and written out as such -- but
+   held all the same, so it can be parked and come back like any other.
+   Without somewhere to put it, switching to another client's quote could
+   only either carry it along or destroy it. */
+let unnamedCart = [];
 // Park the active basket against whoever it belongs to.
 function stashActiveCart(){
   const k = cartKey(chosenClient);
   if(k) carts[k] = cart;
+  else unnamedCart = cart;
 }
 // Make this client's basket the active one, creating an empty one if they
 // have never been quoted before. The array is stored by reference, so
 // every later cart.push() lands in the right client's basket.
 function activateCartFor(client){
   const k = cartKey(client);
-  if(!k){ cart = []; return; }
+  if(!k){ cart = unnamedCart; return; }
   if(!carts[k]) carts[k] = [];
   cart = carts[k];
 }
@@ -1782,6 +1805,39 @@ function adoptedCartFor(hadClient, inHand, clientRows){
   if(hadClient) return { rows: mine, adopted: 0, joined: 0 };
   if(!hand.length) return { rows: mine, adopted: 0, joined: 0 };
   return { rows: mine.concat(hand), adopted: hand.length, joined: mine.length };
+}
+/* Every quote in progress, as the switcher shows them: who it is for,
+   how much is in it, and which one is open.
+ *
+ * "1 other quote in progress" told an agent a quote existed without
+ * saying whose, so the only way to find it was to guess a name into the
+ * picker. A list of names is the difference between knowing something is
+ * there and being able to reach it.
+ *
+ * A client whose basket is parked but whose record has since gone is
+ * still listed, under their id -- a basket you cannot see is a basket you
+ * cannot empty, and it would sit there counting against the total for
+ * ever. */
+function quoteBasketSummaries(clients, cartsByClient, activeClientId, unnamedRows){
+  const byId = new Map((clients||[]).map(c=> [String(c.id), c]));
+  const out = [];
+  const loose = (unnamedRows||[]).length;
+  if(loose){
+    out.push({ key: null, name: 'Not yet named', count: loose,
+      active: activeClientId == null, unnamed: true });
+  }
+  Object.keys(cartsByClient||{}).forEach(k=>{
+    const rows = cartsByClient[k] || [];
+    if(!rows.length) return;
+    const c = byId.get(String(k));
+    out.push({ key: String(k), name: c ? c.name : 'Client no longer on file',
+      count: rows.length, active: String(k) === String(activeClientId), unnamed: false,
+      missing: !c });
+  });
+  // The one being worked on first, then by name -- an agent looking for
+  // Sarah scans for Sarah, and the open one is where the eye starts.
+  return out.sort((a,b)=>
+    (a.active === b.active ? String(a.name).localeCompare(String(b.name)) : (a.active ? -1 : 1)));
 }
 function clientsWithBaskets(){
   return Object.keys(carts).filter(k => (carts[k]||[]).length > 0);
@@ -1981,16 +2037,12 @@ function saveQuoteDraft(){
     localStorage.setItem(QUOTE_DRAFT_KEY, JSON.stringify({
       userId: currentUser && currentUser.id,
       carts, chosenClientId: chosenClient ? chosenClient.id : null, deliveryMode, deliveryAddress,
-      /* Items in hand with nobody named yet. stashActiveCart cannot park
-         them -- there is no key to park them under -- so without this the
-         only basket that does not survive closing the app is the one
-         nobody has claimed. Which is exactly what choosing a client used
-         to do to it, by another route.
-
-         Empty once a client is chosen, because from then on the basket
-         lives in `carts` and writing it twice would restore it twice.
+      /* The unnamed basket, which has no client id to be filed under and
+         so is not in `carts`. stashActiveCart above has just parked it
+         here, whether or not it is the active one, so this is written the
+         same way whichever quote the agent happens to be looking at.
          The reading side has always handled this shape. */
-      cart: chosenClient ? [] : cart.slice(),
+      cart: unnamedCart.slice(),
     }));
   }catch(_e){ /* storage full/unavailable -- the draft just won't survive a reload this time */ }
 }
@@ -2031,19 +2083,30 @@ function restoreQuoteDraft(){
     if(draft.chosenClientId!=null){
       const client = agentClients.find(c=>String(c.id)===String(draft.chosenClientId));
       if(client){
-        // A draft written before baskets were per-client holds a single
-        // `cart`. It belonged to whoever was chosen at the time, so it is
-        // adopted into that client's basket rather than dropped -- an
-        // agent mid-quote when the app updates does not lose their work.
-        if(Array.isArray(draft.cart) && draft.cart.length && !carts[String(client.id)]){
+        /* A draft written before baskets were per-client holds a single
+           `cart` and no `carts` at all. It belonged to whoever was chosen
+           at the time, so it is adopted into that client's basket rather
+           than dropped -- an agent mid-quote when the app updates does not
+           lose their work.
+
+           Gated on the ABSENCE of `carts`, because in a current draft
+           `cart` is the unnamed basket and belongs to nobody. Without
+           that, a client whose own basket happened to be empty would
+           silently inherit whatever was waiting to be claimed. */
+        if(!draft.carts && Array.isArray(draft.cart) && draft.cart.length && !carts[String(client.id)]){
           carts[String(client.id)] = draft.cart;
         }
         selectClient(client);
       }
-    } else if(Array.isArray(draft.cart) && draft.cart.length){
-      // Legacy draft with items but no client. There is no basket to put
-      // them in, so they stay in hand exactly as before.
-      cart = draft.cart;
+    }
+    /* The unnamed basket comes back whether or not a client was chosen:
+       an agent can have one waiting to be claimed while looking at
+       somebody else's quote. Set after the branch above, so a legacy
+       draft that adopted its loose items into a client does not then put
+       the same items back in the unnamed basket as well. */
+    if(Array.isArray(draft.cart) && draft.cart.length && !unnamedCart.length){
+      unnamedCart = draft.cart;
+      if(!chosenClient) cart = unnamedCart;
     }
     if(draft.deliveryMode==='shop_delivery'){
       document.getElementById('ag_delivery_shop').checked = true;
@@ -5501,10 +5564,15 @@ document.getElementById('ag_cart_browse_btn').addEventListener('click', ()=> swi
 function resetCartAfterSubmit(){
   // Only THIS client's basket is finished. Anyone else the agent has a
   // quote in progress for still has theirs.
+  /* Back to the unnamed basket rather than a fresh empty array. A plain
+     `cart = []` would leave `cart` disconnected from unnamedCart, and the
+     next park would then write that empty array over whatever was still
+     waiting to be claimed -- submitting one client's order would quietly
+     empty a basket belonging to nobody yet. */
   const k = cartKey(chosenClient);
   if(k) delete carts[k];
-  cart = [];
   chosenClient = null;
+  activateCartFor(null);
   document.getElementById('ag_client_search').value = '';
   document.getElementById('ag_client_suggestions').innerHTML = '';
   document.getElementById('ag_clientChosenWrap').style.display = 'none';
@@ -5520,6 +5588,41 @@ function resetCartAfterSubmit(){
   document.getElementById('ag_quoteview_yours_btn').click();
 }
 
+/* The Quote screen's own "who this is for" chip, and the way back out of
+   it. Shared by choosing a client and by switching to one, so the two
+   cannot drift into showing different things about the same state. */
+function showQuoteFor(client){
+  updateCartBadge();
+  renderCart();
+  document.getElementById('ag_clientPickWrap').style.display = 'none';
+  const wrap = document.getElementById('ag_clientChosenWrap');
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
+  saveQuoteDraft();
+  renderSellClientChip();
+  document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
+    // Keep the basket -- against the client it was built for, not in hand.
+    // This is the step that used to carry one customer's items into the
+    // next customer's order.
+    stashActiveCart();
+    chosenClient = null;
+    activateCartFor(null);
+    showQuoteUnassigned();
+  });
+}
+/* And the state with nobody named: the picker back on screen, and
+   whatever is in the unnamed basket in hand. */
+function showQuoteUnassigned(){
+  document.getElementById('ag_clientChosenWrap').style.display = 'none';
+  document.getElementById('ag_clientPickWrap').style.display = 'block';
+  document.getElementById('ag_client_search').value = '';
+  renderClientSuggestions('');
+  saveQuoteDraft();
+  renderSellClientChip();
+  updateCartBadge();
+  renderCart();
+  renderCartTab();
+}
 /* ---- Client picking ---- */
 function clientInitials(name){
   return (name||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
@@ -5534,17 +5637,53 @@ function renderSellClientChip(){
   // A basket left with another client is only useful if the agent knows it
   // is there. Stated as a fact on the chip rather than a badge somewhere
   // else, because this is the control that switches between them.
-  const others = otherBasketCount();
-  const otherNote = others
-    ? `<div class="ag-chip-others">${others} other quote${others===1?'':'s'} in progress</div>`
-    : '';
-  if(chosenClient){
-    wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div>${otherNote}</div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`;
-    document.getElementById('ag_sell_client_change').addEventListener('click', openNewQuoteClientSheet);
-  } else {
-    wrap.innerHTML = `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div>${otherNote}</div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
-    document.getElementById('ag_sell_client_add').addEventListener('click', openNewQuoteClientSheet);
-  }
+  const head = chosenClient
+    ? `<div class="ag-chip"><div><div class="ag-chip-name">For: ${esc(chosenClient.name)}</div></div><button type="button" class="ag-chip-change" id="ag_sell_client_change">Change</button></div>`
+    : `<div class="ag-chip" style="background:var(--panel);border:1px dashed var(--line);"><div><div class="ag-chip-name" style="color:var(--ink-soft);">No client yet</div></div><button type="button" class="ag-chip-change" id="ag_sell_client_add">+ Add client</button></div>`;
+
+  /* The switcher. Only when there is more than one quote to move between
+     -- a single row naming what you are already looking at is furniture. */
+  const baskets = quoteBasketSummaries(agentClients, carts, chosenClient ? chosenClient.id : null, unnamedCart);
+  const switcher = baskets.length > 1 ? `
+    <div class="ag-quote-switch">
+      <div class="ag-quote-switch-label">Quotes in progress</div>
+      <div class="ag-scroll-row">
+        ${baskets.map(b=> `<button type="button" class="ag-quote-tab${b.active?' active':''}"
+          data-basket="${b.key==null?'':esc(b.key)}"${b.key==null?' data-unnamed="1"':''}>
+          <span class="ag-quote-tab-name">${esc(b.name)}</span>
+          <span class="ag-quote-tab-count">${b.count} item${b.count===1?'':'s'}</span>
+        </button>`).join('')}
+      </div>
+    </div>` : '';
+
+  wrap.innerHTML = head + switcher;
+  const changeBtn = document.getElementById('ag_sell_client_change') || document.getElementById('ag_sell_client_add');
+  if(changeBtn) changeBtn.addEventListener('click', openNewQuoteClientSheet);
+
+  wrap.querySelectorAll('.ag-quote-tab').forEach(btn=> btn.addEventListener('click', ()=>{
+    /* Switching only ever switches. The basket in hand is parked first --
+       including the unnamed one, which is why it now has somewhere to be
+       parked -- and then nothing is left in hand, so no items are claimed
+       by a client merely for being looked at. */
+    if(btn.dataset.unnamed){
+      if(!chosenClient) return;
+      stashActiveCart();
+      chosenClient = null;
+      activateCartFor(null);
+      showQuoteUnassigned();
+      return;
+    }
+    const client = agentClients.find(c=> String(c.id) === String(btn.dataset.basket));
+    if(!client || (chosenClient && String(chosenClient.id) === String(client.id))) return;
+    /* Deliberately NOT selectClient: that is the "these items are for
+       them" gesture and adopts whatever is in hand. This one only moves
+       between quotes, so it parks and swaps and nothing changes owner. */
+    stashActiveCart();
+    chosenClient = client;
+    activateCartFor(client);
+    showQuoteFor(client);
+    renderCartTab();
+  }));
 }
 function renderClientSuggestions(query){
   const box = document.getElementById('ag_client_suggestions');
@@ -5595,35 +5734,16 @@ function selectClient(client){
   if(merged.adopted){
     cart.length = 0;
     merged.rows.forEach(r=> cart.push(r));
+    /* They have an owner now. Left in the unnamed basket as well they
+       would show up twice -- once under this client and once still
+       waiting to be claimed. */
+    unnamedCart = [];
     const n = merged.adopted;
     toast(merged.joined
       ? `${n} item${n===1?'':'s'} added to ${client.name}'s basket, which already had ${merged.joined}`
       : `${n} item${n===1?'':'s'} moved to ${client.name}`);
   }
-  updateCartBadge();
-  renderCart();
-  document.getElementById('ag_clientPickWrap').style.display = 'none';
-  const wrap = document.getElementById('ag_clientChosenWrap');
-  wrap.style.display = 'block';
-  wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
-  saveQuoteDraft();
-  renderSellClientChip();
-  document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
-    // Keep the basket -- against the client it was built for, not in hand.
-    // This is the step that used to carry one customer's items into the
-    // next customer's order.
-    stashActiveCart();
-    chosenClient = null;
-    cart = [];
-    wrap.style.display = 'none';
-    document.getElementById('ag_clientPickWrap').style.display = 'block';
-    document.getElementById('ag_client_search').value = '';
-    renderClientSuggestions('');
-    saveQuoteDraft();
-    renderSellClientChip();
-    updateCartBadge();
-    renderCart();
-  });
+  showQuoteFor(client);
 }
 
 // makeActive:false adds a client without making them the one the quote in

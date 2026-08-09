@@ -103,6 +103,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
   t.check(/adoptedCartFor\(hadClient, inHand, cart\)/.test(sel),
     'and the decision is the one this file tests, not made again in its own words');
+  /* Claimed means claimed. Left in the unnamed basket as well, the same
+     items would show under this client AND still waiting for one. */
+  t.check(/unnamedCart = \[\];/.test(sel),
+    'the unclaimed basket is emptied once its items have an owner');
   t.check(/moved to \$\{client\.name\}/.test(sel) && /which already had \$\{merged\.joined\}/.test(sel),
     'the agent is told what moved, and told when it joined a basket that already had items');
 }
@@ -119,20 +123,97 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  */
 {
   const save = extractFunction(src, 'saveQuoteDraft', 'agent.html');
-  t.check(/cart: chosenClient \? \[\] : cart\.slice\(\),/.test(save),
+  /* stashActiveCart above has just parked whatever is in hand, so the
+     unnamed basket is in unnamedCart whichever quote is open. Written
+     from there rather than from `cart`, so it is saved the same way while
+     the agent is looking at somebody else's quote. */
+  t.check(/cart: unnamedCart\.slice\(\),/.test(save),
     'a basket with nobody named yet is written out on its own');
-  /* Empty once a client is chosen: from then on it lives in `carts`, and
-     writing it in both places would restore it in both places. */
-  t.check(/chosenClient \? \[\]/.test(save),
-    'and not written twice once it has an owner, which would double it on restore');
+  t.check(/stashActiveCart\(\);/.test(save),
+    'after the active basket is parked, which is what puts it there');
   t.check(/carts, chosenClientId: chosenClient \? chosenClient\.id : null/.test(save),
     'while every owned basket is still written under its client');
 
   const restore = extractFunction(src, 'restoreQuoteDraft', 'agent.html');
-  t.check(/\} else if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length\)\{/.test(restore),
-    'and the reading side puts an unowned basket back in hand');
+  t.check(/if\(Array\.isArray\(draft\.cart\) && draft\.cart\.length && !unnamedCart\.length\)\{/.test(restore),
+    'and the reading side puts an unowned basket back where it belongs');
+  t.check(/if\(!chosenClient\) cart = unnamedCart;/.test(restore),
+    'making it the active one only when nobody was chosen');
   t.check(/Object\.keys\(draft\.carts\)\.forEach/.test(restore),
     'with every client basket restored beside it, so several quotes survive together');
+}
+
+/* ---------- 5c. the switcher: which quotes exist, and whose ---------- */
+/*
+ * "1 other quote in progress" said a quote existed without saying whose,
+ * so the only way to reach it was to guess a name into the picker. The
+ * switcher lists them by name with what is in each.
+ *
+ * THE TWO GESTURES ARE NOT THE SAME. Choosing a client from the picker
+ * means "these items are for them" and adopts whatever is in hand.
+ * Tapping a tab means "show me theirs" and must adopt nothing -- parking
+ * what is in hand instead, which is why the unnamed basket now has
+ * somewhere to be parked.
+ */
+{
+  const sum = (new Function(
+    extractFunction(src, 'quoteBasketSummaries', 'agent.html') + '\nreturn quoteBasketSummaries;'))();
+  const clients = [{ id: 'C1', name: 'Sarah' }, { id: 'C2', name: 'Musa' }];
+  const held = { C1: [1, 2, 3], C2: [1], C3: [] };
+
+  const open = sum(clients, held, 'C1', []);
+  t.check(open.map((b) => b.name).join(',') === 'Sarah,Musa',
+    'every quote in progress is listed by the client it is for');
+  t.check(open[0].active && open[0].count === 3,
+    'the one being worked on comes first, with what is in it');
+  t.check(open.every((b) => b.count > 0),
+    'and a client whose basket is empty is not listed as having a quote');
+
+  const loose = sum(clients, held, null, [1, 1]);
+  t.check(loose[0].unnamed && loose[0].name === 'Not yet named' && loose[0].active,
+    'a basket nobody has claimed is listed too, as the one in hand');
+  t.check(loose.filter((b) => b.unnamed).length === 1,
+    'exactly once, since there is only ever one of it');
+  t.check(sum(clients, held, 'C1', []).every((b) => !b.unnamed),
+    'and not at all when there is nothing waiting to be claimed');
+
+  /* A basket parked for a client whose record has since gone is still
+     listed. One you cannot see is one you cannot empty, and it would
+     count against the total for ever. */
+  const orphan = sum(clients, { C9: [1] }, null, []);
+  t.check(orphan.length === 1 && orphan[0].missing,
+    'a basket whose client is no longer on file is still reachable');
+
+  const render = extractFunction(src, 'renderSellClientChip', 'agent.html');
+  t.check(/baskets\.length > 1 \?/.test(render),
+    'the switcher appears only when there is more than one quote to move between');
+  /* The line that matters: switching parks and swaps, and never calls
+     selectClient, which would adopt what is in hand. */
+  t.check(render.includes("stashActiveCart();")
+    && render.includes("chosenClient = client;") && render.includes("activateCartFor(client);"),
+    'tapping a tab parks what is in hand and swaps in theirs');
+  t.check(!/selectClient\(client\)/.test(render),
+    'and does not go through selectClient, which would claim the loose items for them');
+  /* BOTH branches park first — the client one and the unnamed one. Either
+     alone would still let a basket be dropped on the way out. */
+  t.check((render.match(/stashActiveCart\(\);/g) || []).length === 2,
+    'and every branch of the switcher parks what is in hand before swapping');
+  t.check(/showQuoteFor\(client\)/.test(render) && /showQuoteUnassigned\(\)/.test(render),
+    'reusing the same chip rendering as choosing a client, so the two cannot disagree');
+}
+
+/* ---------- 5d. submitting one order leaves the others alone --------- */
+{
+  const reset = extractFunction(src, 'resetCartAfterSubmit', 'agent.html');
+  /* `cart = []` here would leave the active basket detached from the
+     unclaimed one, and the next park would write that empty array over
+     whatever was still waiting to be claimed. */
+  t.check(/activateCartFor\(null\);/.test(reset),
+    'after submitting, the unclaimed basket is handed back rather than a fresh empty array');
+  t.check(!/\bcart = \[\];/.test(reset),
+    'so sending one client\'s order cannot quietly empty a basket belonging to nobody');
+  t.check(/const k = cartKey\(chosenClient\);\s*\r?\n\s*if\(k\) delete carts\[k\];/.test(reset),
+    'while the basket that was actually sent is the only one discarded');
 }
 
 /* ---------- 6. the nudge, which is a statement not a barrier ---------- */
