@@ -49,11 +49,20 @@ const src = read('index.html');
 }
 
 /* ---------- 2. the fold itself --------------------------------------- */
+/*
+ * The mechanism lives in foldInstruction() and the page screens are one
+ * of its two callers -- the price form is the other. Kept as one function
+ * rather than two similar ones so a fix to the badge, the bubble or the
+ * tap behaviour cannot land in one place and miss the other.
+ */
 {
-  const fn = (/function foldPageInstructions\(\)[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(fn.length > 0, 'there is a function doing the folding');
+  const fn = extractFunction(src, 'foldInstruction', 'index.html');
+  const pageFn = extractFunction(src, 'foldPageInstructions', 'index.html');
+  t.check(fn.length > 0, 'there is one function doing the folding');
+  t.check(/foldInstruction\(h1, p, 'What this screen is for'\)/.test(pageFn),
+    'and the page screens go through it rather than carrying their own copy of it');
 
-  t.check(/bubble\.appendChild\(p\)/.test(fn),
+  t.check(/kept\.forEach\(p=> bubble\.appendChild\(p\)\)/.test(fn),
     'the original paragraph node is moved into the bubble, not read and retyped');
   t.check(!/textContent\s*=\s*p\.textContent/.test(fn) && !/innerHTML\s*=\s*p\.innerHTML/.test(fn),
     'so nothing is copied and any inline markup in the sentence survives');
@@ -61,15 +70,17 @@ const src = read('index.html');
   /* The trap this exists to avoid. The heading's textContent is the
      phone's title bar; putting the icon inside it renames every screen
      to "Executive Dashboardi A snapshot of profitability…". */
-  t.check(!/h1\.appendChild\(info\)/.test(fn),
+  t.check(!/title\.appendChild\(info\)/.test(fn) && !/h1\.appendChild\(info\)/.test(fn),
     'the "i" is never appended to the heading itself');
-  t.check(/row\.appendChild\(h1\)/.test(fn) && /row\.appendChild\(info\)/.test(fn),
+  t.check(/row\.appendChild\(title\)/.test(fn) && /row\.appendChild\(info\)/.test(fn),
     'they are siblings in a title row instead, leaving the heading text clean');
   t.check(/updateMobileTopbarTitle/.test(src) && /\.page-head h1/.test(src),
     'which is what the phone title bar still reads');
 
-  t.check(/if\(!p \|\| !h1 \|\| !p\.textContent\.trim\(\)\) return;/.test(fn),
+  t.check(/if\(!p \|\| !h1 \|\| !p\.textContent\.trim\(\)\) return;/.test(pageFn),
     'a screen with no description, or an empty one, is left alone rather than given an empty bubble');
+  t.check(/if\(!title \|\| !kept\.length\) return null;/.test(fn),
+    'and so is any heading handed nothing to fold');
 }
 
 /* ---------- 3. reachable by every kind of input ---------------------- */
@@ -82,7 +93,7 @@ const src = read('index.html');
   t.check(/\.page-info\.open \.page-info-bubble/.test(src),
     'and a tap, which is the only way a touch screen does');
 
-  const fn = (/function foldPageInstructions\(\)[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const fn = extractFunction(src, 'foldInstruction', 'index.html');
   t.check(/e\.stopPropagation\(\)/.test(fn),
     'the tap that opens it does not also reach the document handler that closes it');
   t.check(/document\.querySelectorAll\('\.page-info\.open'\)\.forEach\(x=>x\.classList\.remove\('open'\)\)/.test(fn),
@@ -95,16 +106,20 @@ const src = read('index.html');
 
 /* ---------- 4. it announces itself to a screen reader ---------------- */
 {
-  const fn = (/function foldPageInstructions\(\)[\s\S]*?\n\}/.exec(src) || [''])[0];
-  t.check(/setAttribute\('aria-label', 'What this screen is for'\)/.test(fn),
-    'the "i" has a name, because a lone letter is not one');
+  const fn = extractFunction(src, 'foldInstruction', 'index.html');
+  t.check(/setAttribute\('aria-label', label \|\| 'What this is for'\)/.test(fn)
+    && /'What this screen is for'/.test(extractFunction(src, 'foldPageInstructions', 'index.html')),
+    'the "i" has a name, because a lone letter is not one — and each caller says what its own is for');
   t.check(/setAttribute\('aria-describedby', id\)/.test(fn) && /bubble\.id = id/.test(fn),
     'and is tied to the text it reveals, so the description is read out rather than merely displayed');
   t.check(/setAttribute\('role', 'tooltip'\)/.test(fn), 'which is what the bubble declares itself to be');
 
-  // Ids have to be unique across twenty-three of them or aria-describedby
-  // points half the buttons at the same paragraph.
-  t.check(/'pageInfo' \+ \(\+\+n\)/.test(fn), 'each bubble gets its own id');
+  /* Ids have to be unique across twenty-three of them or aria-describedby
+     points half the buttons at the same paragraph. Counted on a
+     module-level tally rather than per call, or the price form's badges
+     would have started again at pageInfo1 and pointed a page's "i" at a
+     price note. */
+  t.check(/'pageInfo' \+ \(\+\+foldedInstructionCount\)/.test(fn), 'each bubble gets its own id');
 }
 
 /* ---------- 5. the bubble cannot leave the screen -------------------- */

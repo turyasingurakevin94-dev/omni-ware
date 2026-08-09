@@ -364,7 +364,10 @@
   .page-info-btn:hover{color:var(--accent);border-color:var(--accent);}
   .page-info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .page-info-bubble{
-    position:absolute;top:calc(100% + 8px);left:-6px;z-index:120;
+    /* --tip-left / --tip-arrow are set by placeInfoBubble() only when the
+       bubble would otherwise hang out of a scrolling box; everywhere else
+       these defaults are what applies. */
+    position:absolute;top:calc(100% + 8px);left:var(--tip-left, -6px);z-index:120;
     width:max-content;max-width:min(380px, calc(100vw - 48px));
     background:var(--navy);color:#E6EAEE;font-size:13px;line-height:1.5;
     padding:11px 13px;border-radius:9px;box-shadow:0 12px 30px rgba(10,15,20,0.32);
@@ -375,16 +378,40 @@
     pointer-events:none;
   }
   .page-info-bubble::before{
-    content:"";position:absolute;top:-5px;left:11px;width:10px;height:10px;
+    content:"";position:absolute;top:-5px;left:var(--tip-arrow, 11px);width:10px;height:10px;
     background:var(--navy);transform:rotate(45deg);
   }
-  .page-info-bubble p{margin:0;color:inherit;font-size:inherit;}
+  /* Whatever was moved in has to read on the dark bubble, <p> or not --
+     the price form folds a .field-hint div and two .pfx-note paragraphs
+     that carry their own colour, width and case. */
+  .page-info-bubble > *{
+    margin:0;color:inherit;font-size:inherit;line-height:inherit;
+    max-width:none;text-transform:none;letter-spacing:normal;font-weight:inherit;
+  }
+  /* Two notes folded into one bubble are two paragraphs, not one run-on. */
+  .page-info-bubble > * + *{margin-top:9px;}
   /* Hover and focus for a pointer and a keyboard; .open is what a tap
      sets, since a touch screen has no hover to offer. */
   .page-info-btn:hover + .page-info-bubble,
   .page-info-btn:focus-visible + .page-info-bubble,
   .page-info.open .page-info-bubble{opacity:1;visibility:visible;}
   @media (prefers-reduced-motion: reduce){ .page-info-bubble{transition:none;} }
+  /* Opened upward instead, for a badge low in a scrolling box. A page has
+     the rest of itself to grow into; a modal body 537px tall does not,
+     and the last step's bubble hung 108px past the bottom of the scroll
+     area where it was simply cut off. See placeInfoBubble(). */
+  .page-info.flip .page-info-bubble{top:auto;bottom:calc(100% + 8px);}
+  .page-info.flip .page-info-bubble::before{top:auto;bottom:-5px;}
+
+  /* A folded heading keeps its own type; the row only sets the badge
+     beside it. h1 is the page case, h3 the price form's step headings. */
+  .page-title-row h1, .page-title-row h3{margin-bottom:0;}
+  .page-title-row > label{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  /* A section label draws a dashed rule above itself. As a flex item it
+     would have drawn that rule under its own words only, so the row takes
+     the spacing and the rule over and the label goes bare. */
+  .page-title-row.ptr-section{margin:18px 0 8px;padding-top:16px;border-top:1px dashed var(--line);}
+  .page-title-row.ptr-section > .form-section-label{margin:0;padding-top:0;border-top:none;}
 
   .panel{
     background:var(--panel);border:1px solid var(--line);border-radius:12px;
@@ -7758,7 +7785,9 @@
                 <span class="pr-tier-at">charge</span>
                 <input type="number" id="pr_tier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
                 <select id="pr_tier_price_unit"></select>
-                <button type="button" id="pr_tier_add">+ Add tier</button>
+                <button type="button" class="btn-icon" id="pr_tier_add">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                  Add tier</button>
               </div>
             </div>
 
@@ -11272,49 +11301,176 @@ tabButtons.forEach(btn=>{
    heading's textContent for the phone's title bar, and an icon plus a
    paragraph of help nested inside it would have been appended to the
    name of every screen. */
+let foldedInstructionCount = 0;
+/* Puts `title` on a row with an "i" that reveals `notes` on hover, focus
+   or tap, and MOVES those paragraphs into it. The move is the point: the
+   copy stays exactly where it was written in the markup, keeps any inline
+   markup it carries, and whatever writes to it by id goes on working --
+   which is what lets a note the app rewrites live (the price form's
+   packing and pricing notes) sit inside a bubble at all. */
+function foldInstruction(title, notes, label){
+  const kept = (Array.isArray(notes) ? notes : [notes]).filter(Boolean);
+  if(!title || !kept.length) return null;
+
+  const row = document.createElement('div');
+  row.className = 'page-title-row'
+    + (title.classList.contains('form-section-label') ? ' ptr-section' : '');
+  title.parentNode.insertBefore(row, title);
+  row.appendChild(title);
+
+  const id = 'pageInfo' + (++foldedInstructionCount);
+  const info = document.createElement('span');
+  info.className = 'page-info';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'page-info-btn';
+  btn.textContent = 'i';
+  btn.setAttribute('aria-label', label || 'What this is for');
+  btn.setAttribute('aria-describedby', id);
+  const bubble = document.createElement('span');
+  bubble.className = 'page-info-bubble';
+  bubble.id = id;
+  bubble.setAttribute('role', 'tooltip');
+  kept.forEach(p=> bubble.appendChild(p));   // the original paragraphs, moved
+  info.appendChild(btn);
+  info.appendChild(bubble);
+  row.appendChild(info);
+
+  // A tap has no hover to offer, so it toggles instead. stopPropagation
+  // so the document handler below does not close it in the same click
+  // that opened it.
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const wasOpen = info.classList.contains('open');
+    document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
+    if(!wasOpen){ placeInfoBubble(info); info.classList.add('open'); }
+  });
+  /* Hover and focus reveal the bubble in CSS alone, so the side it opens
+     on has to be decided just before it appears rather than on the click
+     that only a tap performs. */
+  btn.addEventListener('mouseenter', ()=> placeInfoBubble(info));
+  btn.addEventListener('focus', ()=> placeInfoBubble(info));
+  return info;
+}
+
+/* Keeps the bubble inside the box it is opening in. Only a scrolling
+   container clips: a bubble on a page heading has the rest of the
+   document to grow into, so those are left exactly as they were.
+
+   Measured while hidden, which works because the bubble is hidden by
+   visibility rather than display and so still has a box -- the same
+   reason .page-info-bubble is written that way in the first place. */
+const TIP_EDGE_GAP = 8;
+function placeInfoBubble(info){
+  const bubble = info.querySelector('.page-info-bubble');
+  const box = info.closest('.modal-body');
+  if(!bubble || !box) return;
+  info.classList.remove('flip');
+  bubble.style.removeProperty('--tip-left');
+  bubble.style.removeProperty('--tip-arrow');
+
+  const boxBox = box.getBoundingClientRect();
+  const badge = info.getBoundingClientRect();
+  const b = bubble.getBoundingClientRect();
+
+  /* Sideways first. A badge that follows a long heading -- "Volume
+     pricing (default for every variant)" -- sits far enough right that a
+     380px bubble hanging off its left edge runs past the modal, where it
+     was simply cut off. Slide it back and take the arrow with it, so it
+     still points at the badge it belongs to. */
+  let left = -6;
+  const over = (badge.left + left + b.width) - (boxBox.right - TIP_EDGE_GAP);
+  if(over > 0) left -= over;
+  const under = (boxBox.left + TIP_EDGE_GAP) - (badge.left + left);
+  if(under > 0) left += under;
+  if(left !== -6){
+    bubble.style.setProperty('--tip-left', left + 'px');
+    // Held inside the bubble's own corners, so a heavily shifted bubble
+    // still shows an arrow rather than half of one at the edge.
+    const arrow = Math.max(8, Math.min(b.width - 18, badge.width/2 - left - 5));
+    bubble.style.setProperty('--tip-arrow', arrow + 'px');
+  }
+
+  // Then the side it opens on. Only flips if flipping actually helps -- a
+  // bubble taller than the space either way is better left as written.
+  const roomAbove = badge.top - boxBox.top;
+  if(b.bottom > boxBox.bottom && roomAbove > b.height + 12) info.classList.add('flip');
+}
+
+/* ---------------- Instructions on demand ----------------
+
+   Twenty-three screens each opened with a paragraph explaining itself,
+   above the work.
+
+   Deliberately NOT inside the <h1>. updateMobileTopbarTitle() reads that
+   heading's textContent for the phone's title bar, and an icon plus a
+   paragraph of help nested inside it would have been appended to the
+   name of every screen. */
 function foldPageInstructions(){
   let n = 0;
   document.querySelectorAll('.page-head').forEach(head=>{
     const p = head.querySelector(':scope > p');
     const h1 = head.querySelector('h1');
     if(!p || !h1 || !p.textContent.trim()) return;
-
-    const row = document.createElement('div');
-    row.className = 'page-title-row';
-    h1.parentNode.insertBefore(row, h1);
-    row.appendChild(h1);
-
-    const id = 'pageInfo' + (++n);
-    const info = document.createElement('span');
-    info.className = 'page-info';
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'page-info-btn';
-    btn.textContent = 'i';
-    btn.setAttribute('aria-label', 'What this screen is for');
-    btn.setAttribute('aria-describedby', id);
-    const bubble = document.createElement('span');
-    bubble.className = 'page-info-bubble';
-    bubble.id = id;
-    bubble.setAttribute('role', 'tooltip');
-    bubble.appendChild(p);           // the original paragraph, moved
-    info.appendChild(btn);
-    info.appendChild(bubble);
-    row.appendChild(info);
-
-    // A tap has no hover to offer, so it toggles instead. stopPropagation
-    // so the document handler below does not close it in the same click
-    // that opened it.
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const wasOpen = info.classList.contains('open');
-      document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
-      if(!wasOpen) info.classList.add('open');
-    });
+    if(foldInstruction(h1, p, 'What this screen is for')) n++;
   });
   return n;
 }
 foldPageInstructions();
+
+/* The price form said the same thing as those screens did, only more of
+   it: measured at 375px its three steps carried 747px of explanatory
+   prose against 980px of actual form -- 43% of everything you scrolled
+   past to enter one supplier's price. Same treatment, same mechanism,
+   one "i" per step heading.
+
+   Runs once at load rather than per open: these are the fixed section
+   headings of one modal in the markup, not something rebuilt per
+   product. The two notes the form rewrites live are moved, not copied,
+   so setPrBulkMode() keeps writing to them exactly as before. */
+function foldPriceFormInstructions(){
+  const q = (sel)=> document.querySelector(sel);
+  const step = (n)=> document.querySelector(`#priceModal .pfx-step:nth-child(${n}) .pfx-body`);
+
+  const s1 = step(1);
+  if(s1) foldInstruction(s1.querySelector('h3'), s1.querySelector('.pfx-note'), 'What this step is for');
+
+  /* Two notes, one bubble: the fixed explanation of how packing is
+     described, then the line setPrBulkMode rewrites per mode. They were
+     already saying one continuous thing from either side of the fields. */
+  const s2 = step(2);
+  if(s2) foldInstruction(s2.querySelector('h3'),
+    [s2.querySelector('.pfx-note:not(.pfx-quiet)'), document.getElementById('pr_pack_note')],
+    'How packing is described');
+
+  const s3 = step(3);
+  if(s3) foldInstruction(document.getElementById('pr_tiers_label_text'),
+    document.getElementById('pr_tiers_tip_text'), 'How pricing is entered');
+
+  // The bulk variant list carries its own instruction under its own
+  // heading, and is a section like any other.
+  const bulkLabel = q('#pr_bulk_wrap .form-section-label');
+  if(bulkLabel) foldInstruction(bulkLabel, q('#pr_bulk_wrap .pfx-note'), 'How to fill this list');
+
+  /* A field label rather than a section heading, but the same two lines
+     of prose under the same one input. Leaving it behind would have been
+     the only paragraph left standing in a form that had just lost four. */
+  const skuLabel = q('#pr_sku_field label');
+  if(skuLabel) foldInstruction(skuLabel, q('#pr_sku_field .field-hint'), "About the supplier's code");
+
+  refreshPriceFormTips();
+}
+/* An "i" with nothing behind it is worse than no "i": it invites a hover
+   that produces an empty box. The pricing note is written by
+   setPrBulkMode and is genuinely empty until it runs, so the badge
+   follows the text rather than being decided once at fold time. */
+function refreshPriceFormTips(){
+  document.querySelectorAll('#priceModal .page-info').forEach(info=>{
+    const bubble = info.querySelector('.page-info-bubble');
+    info.style.display = (bubble && bubble.textContent.trim()) ? '' : 'none';
+  });
+}
+foldPriceFormInstructions();
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
 });
@@ -25895,6 +26051,11 @@ function setPrBulkMode(on){
   document.getElementById('pr_tiers_tip_text').textContent = on
     ? 'Add a shared price breakpoint here once and every variant below follows it by default -- handy when this supplier discounts by volume the same way across the whole product. Whether a breakpoint counts as wholesale or retail is worked out from its own quantity against Units per pack above. Need one variant priced differently? Use "Customize for this variant" on its card below to give it its own ladder instead.'
     : 'Add a price for at least one quantity -- e.g. 20,000 each if bought loose. Add more breakpoints wherever this supplier\'s price actually changes with quantity, e.g. 300,000 per carton once buying by the carton, then 290,000 each once buying 20+ cartons. Whether a breakpoint counts as a wholesale or retail rate is worked out automatically from its own quantity against Units per pack above -- you don\'t need to sort them yourself.';
+  /* Both notes rewritten above now live inside "i" bubbles, and the
+     pricing one starts empty in the markup -- so the badge that reveals
+     it has to follow the text rather than having been decided once when
+     the form was folded at load. */
+  refreshPriceFormTips();
   if(on) renderPrBulkVariants();
   renderPrTierUnitOptions();
   renderPrTiers();
