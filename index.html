@@ -26160,7 +26160,15 @@ function productSearchHaystack(p, variantIdx){
    it in with the ancient ones would report a certainty the record does
    not support. It is also the only bucket that can be acted on
    immediately: put a date on it. */
+/* First in the list, so it is what the dropdown opens on: after entering
+   a price, the top of the screen is where you look to see it landed.
+
+   "Recently added" is not the same question as "most recently repriced"
+   below it. That one reads the Date updated field, which is when the
+   SUPPLIER quoted it and can be backdated to last week on purpose. This
+   one is the order the entries were actually made in. */
 const PRICE_SORTS = [
+  { key:'added',  label:'Recently added' },
   { key:'name',   label:'Product name' },
   { key:'oldest', label:'Least recently repriced' },
   { key:'newest', label:'Most recently repriced' },
@@ -26332,10 +26340,25 @@ function priceGroupsFor(rows, sortMode){
        old rather than being treated as ancient. */
     const dated = g.rows.map(r=> priceAgeDays(r.date)).filter(a=> a != null);
     const lastRepricedDays = dated.length ? Math.min(...dated) : null;
+    /* The most recently ENTERED row here, by id -- issued in sequence and
+       never reused, so a bigger one was written later. Taken as the
+       group's own recency, since a product's card comes to the top on the
+       strength of the newest quote added to it, not its oldest. */
+    const newestEntryId = g.rows.reduce((m, r)=>{
+      const n = Number(r.id);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, -Infinity);
 
     return { ...g, rows: priced.map(x=> x.r), buyOf: new Map(priced.map(x=> [x.r.id, x.buy])),
-      cheapestId, spread, lastRepricedDays };
+      cheapestId, spread, lastRepricedDays, newestEntryId };
   }).sort((a,b)=>{
+    /* Compared rather than subtracted: a group whose rows carry no usable
+       id ranks at negative infinity, and infinity minus infinity is a NaN
+       that a sort answers with an arbitrary order. */
+    if(sortMode === 'added'){
+      if(a.newestEntryId !== b.newestEntryId) return a.newestEntryId > b.newestEntryId ? -1 : 1;
+      return String(a.pname).localeCompare(String(b.pname));
+    }
     // Undated groups go last in both directions. They are not the oldest
     // and not the newest; they are unknown, and putting them at either
     // end would assert something the record does not say.
@@ -26465,7 +26488,7 @@ function priceGroupHTML(g, tokens){
   </section>`;
 }
 
-function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='name'){
+function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added'){
   populatePriceCategoryFilter(categoryFilter);
   const wrap = document.getElementById('pricesTableWrap');
   const strip = document.getElementById('pricesSummary');
