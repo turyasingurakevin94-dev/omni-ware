@@ -48,8 +48,12 @@ const modal = (/<div class="modal-overlay" id="productModal">[\s\S]*?\n<\/div>/.
     'p_markup_panel_title',
     'p_wholesale_markup_type', 'p_wholesale_markup_value',
     'p_retail_markup_type', 'p_retail_markup_value',
-    'p_agent_discount_wholesale', 'p_agent_discount_wholesale_hint', 'p_agent_discount_wholesale_warn',
-    'p_agent_discount_retail', 'p_agent_discount_retail_hint', 'p_agent_discount_retail_warn',
+    // The two _warn lines are gone by design, not by accident: the
+    // discount is a share of the margin now, so "this would price below
+    // cost" describes something the arithmetic can no longer do. See
+    // agent-discount-margin.test.js.
+    'p_agent_discount_wholesale', 'p_agent_discount_wholesale_hint',
+    'p_agent_discount_retail', 'p_agent_discount_retail_hint',
     'variantsSection', 'variantAttrsWrap', 'variantsListWrap',
     'v_add_attr_btn', 'v_generate_btn',
     'p_cancel', 'p_save', 'productFormTitle', 'productModalClose',

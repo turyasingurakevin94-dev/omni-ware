@@ -1177,7 +1177,6 @@
   .markup-rules-grid .form-section-label{margin-top:0;padding-top:0;border-top:none;}
   @media (max-width:640px){.markup-rules-grid{grid-template-columns:1fr;}}
   .agent-discount-hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
-  .agent-discount-warn{font-size:12px;color:var(--danger);margin-top:4px;font-weight:600;}
 
   .vf-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
     padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--ow-steel-050);}
@@ -6430,14 +6429,14 @@
             <div class="preset-pane" id="ppane-agent-discounts" style="display:none;">
               <header class="pset-head">
                 <h3>Agent terms</h3>
-                <p>What external sales agents get off your normal prices, and how long a product must sit in their cluster before it earns a bonus.</p>
+                <p>What share of your margin external sales agents get, and how long a product must sit in their cluster before it earns a bonus.</p>
               </header>
               <section class="pset-group">
-                <h4>Default discount</h4>
-                <p class="pset-note">Any product can override either one in its own edit form &mdash; this is the fallback when it does not. A discount can never push an agent's price below your cost, whatever is set here.</p>
+                <h4>Default share of margin</h4>
+                <p class="pset-note">A percentage of what you make on an item, not off its price &mdash; 50% gives an agent half your margin, 100% gives all of it and they pay exactly your cost. Below cost is not reachable, whatever is set here. Any product can override either one in its own edit form; this is the fallback when it does not.</p>
                 <div class="form-grid pset-fields">
-                  <div class="field"><label>Wholesale discount (%)</label><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 10"></div>
-                  <div class="field"><label>Retail discount (%)</label><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 8"></div>
+                  <div class="field"><label>Wholesale share of margin (%)</label><input type="number" id="preset_agent_discount_wholesale" min="0" max="100" step="any" placeholder="e.g. 40"></div>
+                  <div class="field"><label>Retail share of margin (%)</label><input type="number" id="preset_agent_discount_retail" min="0" max="100" step="any" placeholder="e.g. 30"></div>
                 </div>
               </section>
               <section class="pset-group">
@@ -7613,24 +7612,22 @@
         <div class="pf-pane" id="pfpane-agent" style="display:none;">
           <header class="pset-head">
             <h3>Agent discount override</h3>
-            <p>Leave blank to use the shop-wide default from Presets. This only affects the standalone agent app's floor price, never your own quotes — and a discount can never push an agent's price below your cost, whatever is typed here.</p>
+            <p>A share of your margin on this product, not a cut off its price: 50% gives an agent half of what you would have made, 100% gives all of it and they pay exactly your cost. They can never pay less than that. Leave blank to use the shop-wide default from Presets. Affects the standalone agent app only, never your own quotes.</p>
           </header>
           <div class="markup-rules-grid">
             <div>
-              <div class="form-section-label">Wholesale discount override (%)</div>
+              <div class="form-section-label">Wholesale — share of margin (%)</div>
               <div class="form-grid">
                 <div class="field"><input id="p_agent_discount_wholesale" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
               </div>
               <div class="agent-discount-hint" id="p_agent_discount_wholesale_hint"></div>
-              <div class="agent-discount-warn" id="p_agent_discount_wholesale_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
             </div>
             <div>
-              <div class="form-section-label">Retail discount override (%)</div>
+              <div class="form-section-label">Retail — share of margin (%)</div>
               <div class="form-grid">
                 <div class="field"><input id="p_agent_discount_retail" type="number" min="0" max="100" step="any" placeholder="Shop default"></div>
               </div>
               <div class="agent-discount-hint" id="p_agent_discount_retail_hint"></div>
-              <div class="agent-discount-warn" id="p_agent_discount_retail_warn" style="display:none;">This would price below cost -- it'll be capped automatically, but the number you've typed here isn't the real one.</div>
             </div>
           </div>
         </div>
@@ -23932,6 +23929,10 @@ function generateVariants(){
       wholesaleMarkupType:'percent', wholesaleMarkupValue:0, retailMarkupType:'percent', retailMarkupValue:0 };
   });
   renderVariantsList();
+  /* The agent-discount estimate reads its figures off a variant, and
+     regenerating renumbers them -- so an estimate left over from before
+     this click could name the wrong one. */
+  renderAgentDiscountHints();
   toast(`Generated ${draftVariants.length} variant${draftVariants.length===1?'':'s'}`);
 }
 document.getElementById('v_add_attr_btn').addEventListener('click', ()=>{
@@ -25210,14 +25211,20 @@ function deleteVariant(productId, variantIdx){
 // Makes sure a category (and sub-category) typed on a product also exists
 // in the presets list, so it's suggested for future products without a
 // separate trip to the Presets tab.
-// A live, best-effort estimate of how much agent discount the CURRENTLY
-// TYPED markup rule (even if not yet saved) can absorb before an agent's
-// floor price would dip to cost, based on the cheapest priced supplier
-// currently on file for this product. Only ever a heads-up -- the actual
-// guarantee is the runtime safety clamp inside the agent-catalog Edge
-// Function, which checks against real cost at the moment of sale, not
-// this snapshot. Silently does nothing until a Product ID is entered and
-// at least one price is on file for it, same as the item picker's own
+// What the discount actually hands over, in shillings, against the
+// CURRENTLY TYPED markup rule (even if not yet saved) and the cheapest
+// priced supplier on file for this product.
+//
+// A percentage of a margin is hard to feel: 40% of the margin on a 5%
+// markup and 40% on a 60% markup are wildly different amounts of money,
+// and the setting looks identical either way. So the estimate names the
+// margin, the amount given away, and what is left -- the three numbers
+// the decision is actually made on.
+//
+// Only ever a heads-up on today's cheapest supplier; the real figure is
+// recomputed against live cost at the moment of sale inside the two Edge
+// Functions. Silently does nothing until a Product ID is entered and at
+// least one price is on file for it, same as the item picker's own
 // "recommended price" cards.
 function renderAgentDiscountHints(){
   const id = document.getElementById('p_id').value.trim();
@@ -25226,23 +25233,69 @@ function renderAgentDiscountHints(){
     wholesaleMarkupValue: Number(document.getElementById('p_wholesale_markup_value').value)||0,
     retailMarkupType: document.getElementById('p_retail_markup_type').value,
     retailMarkupValue: Number(document.getElementById('p_retail_markup_value').value)||0,
+    // Carried so a variant with its own markup rule is estimated on that
+    // rule rather than on the product-level one it overrides -- the same
+    // precedence effectiveMarkupRule applies everywhere else.
+    variants: draftVariants,
   };
-  const best = id ? rankedPriceRows(id, null)[0] : null;
+  /* A variable product's prices hang off its variants, never off the
+     product itself, so asking for variantIdx null on one found nothing
+     and the estimate read "No price on file yet" on a product carrying
+     dozens of them. Fall back to the cheapest priced variant, and name
+     it, since which variant the figures came from changes what they
+     mean. The variant list being edited right now is the one to search:
+     a variant added in this session has no prices yet and is skipped, an
+     existing one still answers to its index. */
+  const variantCount = (draftVariants && draftVariants.length) || 0;
+  let best = id ? rankedPriceRows(id, null)[0] : null, fromVariant = null;
+  if(!best && id && variantCount){
+    for(let i=0;i<variantCount;i++){
+      const r = rankedPriceRows(id, i)[0];
+      if(!r) continue;
+      const cheaper = (a,b)=> (a.wholesale!=null?a.wholesale:(a.retail!=null?a.retail:Infinity))
+        < (b.wholesale!=null?b.wholesale:(b.retail!=null?b.retail:Infinity));
+      if(!best || cheaper(r,best)){ best = r; fromVariant = i; }
+    }
+  }
+  const fromCombo = fromVariant!=null && draftVariants[fromVariant] ? draftVariants[fromVariant].combo : null;
+  const where = fromVariant!=null
+    ? ((fromCombo && variantLabel(fromCombo)) || 'variant '+(fromVariant+1)) : null;
+  const variantNote = where ? ` Read off ${where}, the cheapest priced variant.` : '';
   ['wholesale','retail'].forEach(kind=>{
     const hintEl = document.getElementById('p_agent_discount_'+kind+'_hint');
-    const warnEl = document.getElementById('p_agent_discount_'+kind+'_warn');
     const inputEl = document.getElementById('p_agent_discount_'+kind);
     const cost = best ? best[kind] : null;
     if(cost==null){
-      hintEl.textContent = 'No price on file yet to estimate against.';
-      warnEl.style.display = 'none';
+      /* Two different silences, said differently: nothing priced at all,
+         versus a supplier who quoted one side of the curve and not the
+         other. The second is the common one -- most entries here carry a
+         wholesale figure and no retail -- and calling it "no price on
+         file" sent someone looking for a price that was already there. */
+      hintEl.textContent = best
+        ? `No ${kind} price on file${where ? ' for '+where : ''}, so there is nothing to estimate a ${kind} share against.`
+        : 'No price on file yet to estimate against.';
       return;
     }
-    const ourPrice = suggestedSellingPrice(draftProduct, cost, kind, null, Number(best.packQty)||0) ?? cost;
-    const ceiling = ourPrice>0 ? Math.max(0, (ourPrice-cost)/ourPrice*100) : 0;
-    hintEl.textContent = `Current markup allows up to ${ceiling.toFixed(1)}% off before hitting cost.`;
+    const ourPrice = suggestedSellingPrice(draftProduct, cost, kind, fromVariant, Number(best.packQty)||0) ?? cost;
+    const margin = ourPrice - cost;
+    // Nothing to share is worth saying out loud: without a markup rule an
+    // agent pays cost no matter what percentage is typed here, and a
+    // shilling figure of "0 given away" reads as a rounding artefact
+    // rather than as the reason.
+    if(margin<=0){
+      hintEl.textContent = 'No markup set for this tier, so there is no margin to share — an agent would pay cost.'+variantNote;
+      return;
+    }
+    // Blank means the shop-wide default applies, so the estimate shows
+    // what that default does rather than going quiet until something is
+    // typed -- blank is the normal state of this box.
     const typed = inputEl.value==='' ? null : Number(inputEl.value);
-    warnEl.style.display = (typed!=null && typed>ceiling) ? '' : 'none';
+    const pct = Math.min(100, Math.max(0, typed!=null ? (Number(typed)||0)
+      : Number(kind==='wholesale' ? data.presetAgentDiscountWholesalePct : data.presetAgentDiscountRetailPct)||0));
+    const given = margin * pct/100;
+    hintEl.textContent = `Margin here is ${fmtUGX(margin)}. `
+      + `${typed==null ? 'The shop default of ' : ''}${pct}% hands over ${fmtUGX(given)} of it — `
+      + `an agent pays ${fmtUGX(ourPrice-given)} and you keep ${fmtUGX(margin-given)}.`+variantNote;
   });
 }
 ['p_id','p_wholesale_markup_type','p_wholesale_markup_value','p_retail_markup_type','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>{
@@ -29231,13 +29284,13 @@ document.getElementById('preset_agent_discount_wholesale').addEventListener('cha
   data.presetAgentDiscountWholesalePct = Math.min(100, Math.max(0, Number(e.target.value)||0));
   e.target.value = data.presetAgentDiscountWholesalePct || '';
   saveData();
-  toast('Default agent wholesale discount updated');
+  toast('Default agent wholesale share of margin updated');
 });
 document.getElementById('preset_agent_discount_retail').addEventListener('change', (e)=>{
   data.presetAgentDiscountRetailPct = Math.min(100, Math.max(0, Number(e.target.value)||0));
   e.target.value = data.presetAgentDiscountRetailPct || '';
   saveData();
-  toast('Default agent retail discount updated');
+  toast('Default agent retail share of margin updated');
 });
 document.getElementById('preset_agent_cluster_wait_days').addEventListener('change', (e)=>{
   data.presetAgentClusterWaitDays = e.target.value==='' ? 7 : Math.max(0, Math.round(Number(e.target.value)||0));

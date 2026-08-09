@@ -84,7 +84,8 @@ if (f) {
     // Nothing that is not actually a drop may reach the shelf.
     t.check(f.volumeDropPct({ floorPrice: 4200, bestTierPrice: 4200 }) === 0, 'a flat ladder is no drop');
     t.check(f.volumeDropPct({ floorPrice: 4200, bestTierPrice: 5000 }) === 0,
-      'and a RISING ladder is not a saving -- reachable, since a floor price is max(cost, discounted)');
+      'and a RISING ladder is not a saving -- reachable whenever a bigger quantity crosses into a '
+      + 'wholesale tier whose markup is fatter than the retail one it left');
     t.check(f.volumeDropPct({}) === 0 && f.volumeDropPct(null) === 0, 'missing figures do not throw');
   }
 }

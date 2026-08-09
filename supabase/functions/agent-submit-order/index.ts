@@ -119,6 +119,14 @@ function pickBestPriceRow(rows: any[]): any | null {
   })[0];
 }
 
+// The agent's discount is a SHARE OF THE MARGIN between cost and our own
+// price, not a percentage off that price -- 50% hands the agent half of
+// what we would have made, 100% hands over all of it and the item changes
+// hands at exactly cost. Never below it. See agent-catalog's copy for why
+// it stopped being a percentage off the price.
+//
+// This is the copy that CHARGES, so it is the one that has to agree with
+// the shown figure; tier-pricing-parity compares the two line by line.
 function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
   if (!priceRow) return null;
   const packQty = Number(priceRow.pack_qty) || 0;
@@ -132,9 +140,16 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   if (costNum == null) return null;
   const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
-  const discounted = ourPrice * (1 - (discountPct || 0) / 100);
+  // A product with no markup rule has ourPrice == costNum above, so its
+  // margin is zero and no discount can find anything to give away -- the
+  // agent pays cost.
+  const margin = ourPrice - costNum;
+  const discounted = costNum + margin * (1 - (discountPct || 0) / 100);
   return {
     tier,
+    // An agent never gets an item below what it cost us. Stated here as
+    // well as in the formula, because this function is also called with
+    // percentages that never passed through resolveDiscountPcts' clamp.
     floorPrice: Math.max(costNum, discounted),
     cost: costNum,
     unit: priceRow.unit || "",
@@ -143,12 +158,17 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   };
 }
 
+// Held to 0-100, since the number is a share of the margin and a share
+// outside that range is not one. Neither column carries a constraint, so
+// this bounds what is on file rather than trusting the admin app's own
+// clamp on the way in.
 function resolveDiscountPcts(product: any, presets: any) {
-  const defaultWholesalePct = Number(presets?.agentDiscountWholesalePct) || 0;
-  const defaultRetailPct = Number(presets?.agentDiscountRetailPct) || 0;
+  const clamp = (v: number) => Math.min(100, Math.max(0, Number(v) || 0));
+  const defaultWholesalePct = clamp(presets?.agentDiscountWholesalePct);
+  const defaultRetailPct = clamp(presets?.agentDiscountRetailPct);
   return {
-    discountWholesalePct: product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct,
-    discountRetailPct: product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct,
+    discountWholesalePct: product.agent_discount_wholesale_pct != null ? clamp(product.agent_discount_wholesale_pct) : defaultWholesalePct,
+    discountRetailPct: product.agent_discount_retail_pct != null ? clamp(product.agent_discount_retail_pct) : defaultRetailPct,
   };
 }
 

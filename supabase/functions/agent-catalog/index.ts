@@ -18,8 +18,9 @@
 // deploy. If either copy ever needs to change, change both. This math
 // mirrors the admin app's own suggestedSellingPrice()/effectiveMarkupRule()
 // (index.html) exactly, so "our price" here means the same thing it means
-// everywhere else in the app -- an agent's discount is calculated off of
-// that real number, not a separately-invented one.
+// everywhere else in the app -- an agent's discount is a share of the
+// margin between that real number and cost, not of a separately-invented
+// one.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -128,9 +129,20 @@ function pickBestPriceRow(rows: any[]): any | null {
 
 // The core mechanic: quantity decides whether the wholesale or retail
 // tier applies (>= the supplier's own pack size unlocks wholesale), our
-// markup turns that tier's raw cost into "our price", the agent's
-// discount comes off of THAT -- and the result can never be pushed below
-// the actual cost for that tier, no matter what discount is configured.
+// markup turns that tier's raw cost into "our price", and the agent's
+// discount is a SHARE OF THE MARGIN between those two -- 50% hands the
+// agent half of what we would have made, 100% hands over all of it and
+// the item changes hands at exactly cost. Never below it.
+//
+// It used to be a percentage off "our price", which is a different and
+// worse thing: 50% off the price of an item carrying a 25% markup is far
+// more than the whole margin, so every such sale was a loss until the
+// clamp below caught it at cost -- and once the clamp was catching it,
+// the number the shop had typed no longer described what agents got.
+// Two products with different markups and the same discount % gave away
+// quite different amounts, and there was no way to read that off the
+// setting. As a share of margin, 40% means the same thing on every
+// product: we keep 60% of what we would have made.
 function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
   if (!priceRow) return null;
   const packQty = Number(priceRow.pack_qty) || 0;
@@ -144,9 +156,21 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   if (costNum == null) return null;
   const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
-  const discounted = ourPrice * (1 - (discountPct || 0) / 100);
+  // A product with no markup rule has ourPrice == costNum above, so its
+  // margin is zero and no discount can find anything to give away -- the
+  // agent pays cost. That is correct rather than a gap: a shop that has
+  // not said what it makes on an item has not said what it can afford to
+  // share on it either.
+  const margin = ourPrice - costNum;
+  const discounted = costNum + margin * (1 - (discountPct || 0) / 100);
   return {
     tier,
+    // The rule, stated once where the number is finally decided: an agent
+    // never gets an item below what it cost us. The line above cannot go
+    // under cost on its own for any discount between 0 and 100, which is
+    // all resolveDiscountPcts will hand over -- but this function is also
+    // called directly, and a figure written straight into the column by
+    // hand does not pass through that clamp.
     floorPrice: Math.max(costNum, discounted),
     // The shop's own markup-rule price for this tier, before the agent's
     // personal discount -- safe to expose (unlike `cost`), since it's not
@@ -213,12 +237,20 @@ function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct
 
 // Resolves the two agent-discount percentages that apply to a product:
 // its own per-product override if set, else the shop-wide preset default.
+//
+// Held to 0-100 because the number is a share of the margin, and a share
+// outside that range is not one: under 0 would charge an agent more than
+// the shop's own price, over 100 would sell below cost. The admin app
+// already clamps both boxes on save; this is the same bound applied to
+// what is actually on file, since neither column carries a constraint and
+// a figure typed straight into the database has never passed through it.
 function resolveDiscountPcts(product: any, presets: any) {
-  const defaultWholesalePct = Number(presets?.agentDiscountWholesalePct) || 0;
-  const defaultRetailPct = Number(presets?.agentDiscountRetailPct) || 0;
+  const clamp = (v: number) => Math.min(100, Math.max(0, Number(v) || 0));
+  const defaultWholesalePct = clamp(presets?.agentDiscountWholesalePct);
+  const defaultRetailPct = clamp(presets?.agentDiscountRetailPct);
   return {
-    discountWholesalePct: product.agent_discount_wholesale_pct != null ? Number(product.agent_discount_wholesale_pct) : defaultWholesalePct,
-    discountRetailPct: product.agent_discount_retail_pct != null ? Number(product.agent_discount_retail_pct) : defaultRetailPct,
+    discountWholesalePct: product.agent_discount_wholesale_pct != null ? clamp(product.agent_discount_wholesale_pct) : defaultWholesalePct,
+    discountRetailPct: product.agent_discount_retail_pct != null ? clamp(product.agent_discount_retail_pct) : defaultRetailPct,
   };
 }
 
