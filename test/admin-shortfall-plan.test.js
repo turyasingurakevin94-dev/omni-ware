@@ -64,6 +64,9 @@ const scope = compileScope([
   extractFunction(src, 'purchasePriceAtQty', 'index.html'),
   extractFunction(src, 'rankedPurchaseRowsAtQty', 'index.html'),
   extractFunction(src, 'orderLineIsBoughtIn', 'index.html'),
+  // orderPurchaseLines asks ipLineOutlay how many a pack-only supplier
+  // will actually sell, so the collect-this quantity comes with it.
+  extractFunction(src, 'ipLineOutlay', 'index.html'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),

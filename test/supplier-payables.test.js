@@ -54,9 +54,17 @@ const env = {
     data.nextPurchaseInvoiceId = id + 1;
     return id;
   },
+  /* No price rows in this fixture, so quoteLineUnitsBought falls back to
+     the quoted quantity -- which is what these invoices have always been
+     built on, and keeps this file about payables rather than packing. */
+  productPriceRows: () => [],
 };
 
 const FNS = [
+  // generatePurchaseInvoicesForQuote bills for what was BOUGHT, which on a
+  // pack-only supplier is a whole carton -- so the chain that works that
+  // out comes with it.
+  'tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn', 'quoteLineUnitsBought',
   'purchaseInvoiceNumberLabel', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
   'purchaseInvoicePaymentStatusLabel', 'supplierName',
   'creditorOutstandingInvoices', 'creditorTotalOwed',

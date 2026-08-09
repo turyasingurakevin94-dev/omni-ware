@@ -329,6 +329,11 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
         applyStockDelta: (productId, variantIdx, delta) => { seen.stockDeltas.push({ productId, delta }); },
         generatePurchaseInvoicesForQuote: async () => {},
         reverseQuoteStockDeduction: () => {},
+        /* Invoicing also puts any pack surplus on the shelf. Stubbed to
+           nothing: this file is about a short PICK, and the fixture has
+           no price rows for a pack size to come from. */
+        applyQuoteSurplusToStock: () => 0,
+        reverseQuoteSurplusToStock: () => {},
         removeCashTxnsByIds: () => {},
         removePurchaseInvoicesForQuote: () => {},
         uninvoiceReversalWarning: () => null,
