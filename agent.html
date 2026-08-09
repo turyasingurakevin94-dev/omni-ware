@@ -347,6 +347,40 @@
   .ag-quote-tab-new .ag-quote-tab-name{color:var(--accent);}
   .ag-chip-change{all:unset;cursor:pointer;color:var(--accent);font-size:12.5px;font-weight:700;}
 
+  /* ---- Quote screen: folding sections + a pinned Submit ----
+     The alternative considered was Items / Client / Delivery as tabs.
+     Measured at 375x812 the whole screen is 752px with one item and
+     886px with four, so tabs would add navigation to something that
+     barely scrolls -- and, worse, would hide what Submit requires: press
+     it on a Delivery tab with no client and the complaint is about a tab
+     you cannot see. Folding keeps the answer on screen and the pinned bar
+     is what actually helps the 25-item case, where the scrolling is
+     through the agent's own items and no tab would shorten it. */
+  .ag-fold{padding-top:0;padding-bottom:0;}
+  .ag-fold-head{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+    width:100%;padding:14px 0;min-height:44px;}
+  .ag-fold-head .ag-card-title{margin:0;flex-shrink:0;}
+  .ag-fold-answer{flex:1 1 auto;min-width:0;text-align:right;font-size:13px;color:var(--ink-soft);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* Nothing answered yet reads as a prompt rather than as a value. */
+  .ag-fold-answer.empty{color:var(--accent);font-weight:650;}
+  .ag-fold-caret{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;
+    color:var(--ink-soft);transition:transform .15s ease;}
+  .ag-fold.open .ag-fold-caret{transform:rotate(180deg);}
+  .ag-fold-body{padding-bottom:14px;}
+  .ag-fold:not(.open) .ag-fold-body{display:none;}
+  @media (prefers-reduced-motion: reduce){ .ag-fold-caret{transition:none;} }
+
+  .ag-submit-bar{position:sticky;bottom:0;z-index:30;display:flex;align-items:center;gap:12px;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));margin:0 -16px;}
+  .ag-submit-total{display:flex;flex-direction:column;line-height:1.15;flex-shrink:0;}
+  .ag-submit-total .lbl{font-size:11px;color:var(--ink-soft);}
+  .ag-submit-total b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .ag-submit-bar .btn{flex:1 1 auto;}
+  /* Keeps the last card clear of the bar when scrolled to the very end. */
+  .ag-submit-spacer{height:4px;}
+
   /* A gutter each side, so the sheet reads as a card lifted over the
      screen rather than as the screen itself. Padding on the backdrop
      rather than a margin on the card: the card is width:100% and would
@@ -1316,28 +1350,54 @@
         <span class="ag-save-solution-link" id="ag_save_solution_btn">Save these items as a Solution</span>
       </div>
 
-      <div class="ag-card">
-        <div class="ag-card-title">Client</div>
-        <div id="ag_clientChosenWrap" style="display:none;"></div>
-        <div id="ag_clientPickWrap">
-          <div class="ag-client-search-wrap">
-            <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
-            <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+      <!-- Collapsed to a one-line answer once it has one, and expanded by
+           tapping that line. The ANSWER stays on screen either way, which
+           is the difference between this and hiding the section behind a
+           tab: what Submit needs remains visible from here. -->
+      <div class="ag-card ag-fold" id="ag_clientCard">
+        <button type="button" class="ag-fold-head" id="ag_clientFoldHead">
+          <span class="ag-card-title">Client</span>
+          <span class="ag-fold-answer" id="ag_clientFoldAnswer"></span>
+          <svg class="ag-fold-caret icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="ag-fold-body" id="ag_clientFoldBody">
+          <div id="ag_clientChosenWrap" style="display:none;"></div>
+          <div id="ag_clientPickWrap">
+            <div class="ag-client-search-wrap">
+              <span class="ag-search-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></span>
+              <input type="text" id="ag_client_search" placeholder="Search your clients or add new..." autocomplete="off">
+            </div>
+            <div id="ag_client_suggestions"></div>
           </div>
-          <div id="ag_client_suggestions"></div>
         </div>
       </div>
 
-      <div class="ag-card">
-        <div class="ag-card-title">Delivery</div>
-        <label class="ag-radio-card" id="ag_delivery_pickup_label"><input type="radio" name="ag_delivery" id="ag_delivery_pickup" value="agent_pickup" checked> I'll pick it up myself</label>
-        <label class="ag-radio-card" id="ag_delivery_shop_label"><input type="radio" name="ag_delivery" id="ag_delivery_shop" value="shop_delivery"> Shop delivers</label>
-        <div id="ag_deliveryAddressWrap" style="display:none;">
-          <div class="field" style="margin-top:10px;"><label>Delivery address</label><input type="text" id="ag_delivery_address" placeholder="e.g. Plot 12, Ntinda Road"></div>
+      <div class="ag-card ag-fold" id="ag_deliveryCard">
+        <button type="button" class="ag-fold-head" id="ag_deliveryFoldHead">
+          <span class="ag-card-title">Delivery</span>
+          <span class="ag-fold-answer" id="ag_deliveryFoldAnswer"></span>
+          <svg class="ag-fold-caret icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="ag-fold-body" id="ag_deliveryFoldBody">
+          <label class="ag-radio-card" id="ag_delivery_pickup_label"><input type="radio" name="ag_delivery" id="ag_delivery_pickup" value="agent_pickup" checked> I'll pick it up myself</label>
+          <label class="ag-radio-card" id="ag_delivery_shop_label"><input type="radio" name="ag_delivery" id="ag_delivery_shop" value="shop_delivery"> Shop delivers</label>
+          <div id="ag_deliveryAddressWrap" style="display:none;">
+            <div class="field" style="margin-top:10px;"><label>Delivery address</label><input type="text" id="ag_delivery_address" placeholder="e.g. Plot 12, Ntinda Road"></div>
+          </div>
         </div>
       </div>
 
-      <button type="button" class="btn btn-accent btn-block" id="ag_submit_btn">Submit order</button>
+      <!-- Pinned, so Submit is one tap away from anywhere in a long quote
+           rather than a scroll to the bottom. The spacer keeps the last
+           card clear of it. -->
+      <div class="ag-submit-spacer"></div>
+      <div class="ag-submit-bar" id="ag_submitBar">
+        <div class="ag-submit-total">
+          <span class="lbl">Total</span>
+          <b id="ag_submitBarTotal">UGX 0</b>
+        </div>
+        <button type="button" class="btn btn-accent" id="ag_submit_btn">Submit order</button>
+      </div>
     </div>
   </div>
 
@@ -5329,6 +5389,10 @@ function renderCart(){
     </tr>`;
   }).join('');
   document.getElementById('ag_cartTotalValue').textContent = fmtUGX(total);
+  // The pinned bar shows the same figure, set from the same line, so the
+  // two cannot disagree about what is being sent.
+  const bar = document.getElementById('ag_submitBarTotal');
+  if(bar) bar.textContent = fmtUGX(total);
   document.getElementById('ag_cartProfitValue').textContent = fmtUGX(profit);
   wrap.querySelectorAll('.ag-cart-remove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -5376,6 +5440,8 @@ function renderCart(){
         }
       });
       document.getElementById('ag_cartTotalValue').textContent = fmtUGX(runningTotal);
+      const bar2 = document.getElementById('ag_submitBarTotal');
+      if(bar2) bar2.textContent = fmtUGX(runningTotal);
       document.getElementById('ag_cartProfitValue').textContent = fmtUGX(runningProfit);
     });
     input.addEventListener('change', ()=>{
@@ -5421,6 +5487,39 @@ document.querySelectorAll('.ag-view-toggle [data-view]').forEach(btn=>{
     if(view==='client') renderClientReceiptTable();
   });
 });
+/* What each folded section says while shut. Pure, because the wording is
+   the whole feature: a fold that hid its answer would be a tab with extra
+   steps, and the reason for folding rather than tabbing is that the
+   answer stays readable. Null means unanswered, which the caller shows as
+   a prompt rather than as a value. */
+function quoteFoldSummaries(client, deliveryMode, deliveryAddress){
+  const name = client && String(client.name || '').trim();
+  const addr = String(deliveryAddress || '').trim();
+  return {
+    client: name || null,
+    delivery: deliveryMode === 'shop_delivery'
+      // The address IS the answer for a shop delivery -- "Shop delivers"
+      // alone leaves the thing that can block the send out of sight.
+      ? (addr ? `Shop delivers · ${addr}` : null)
+      : "I'll pick it up myself",
+  };
+}
+/* Open when unanswered, shut when answered -- so a fold asks for what it
+   still needs and gets out of the way once it has it. Left alone once
+   somebody has opened or closed it by hand: overriding that would reopen
+   a section under the finger that just shut it. */
+function renderQuoteFolds(){
+  const mode = document.getElementById('ag_delivery_shop').checked ? 'shop_delivery' : 'agent_pickup';
+  const sums = quoteFoldSummaries(chosenClient, mode, document.getElementById('ag_delivery_address').value);
+  [['ag_clientCard','ag_clientFoldAnswer', sums.client, 'Choose a client'],
+   ['ag_deliveryCard','ag_deliveryFoldAnswer', sums.delivery, 'How does it get there?']].forEach(([cardId, ansId, answer, prompt])=>{
+    const card = document.getElementById(cardId), ans = document.getElementById(ansId);
+    if(!card || !ans) return;
+    ans.textContent = answer || prompt;
+    ans.classList.toggle('empty', !answer);
+    if(!card.dataset.touched) card.classList.toggle('open', !answer);
+  });
+}
 function renderCartTab(){
   const hasItems = cart.length > 0;
   document.getElementById('ag_cartEmptyState').style.display = hasItems ? 'none' : 'block';
@@ -5437,6 +5536,7 @@ function renderCartTab(){
       note.innerHTML = `${ICON_CLOCK}<span>No client chosen yet — these items will follow whoever you pick. You will need one before sending this quote.</span>`;
     }
   }
+  renderQuoteFolds();
   if(!hasItems) return;
   renderCart();
   // The client table only ever re-rendered when the toggle was clicked, so
@@ -5612,6 +5712,7 @@ function showQuoteFor(client){
   wrap.innerHTML = `<div class="ag-chip"><div><div class="ag-chip-name">${esc(client.name)}</div><div class="ag-chip-meta">${esc(client.phone||'')}</div></div><button type="button" class="ag-chip-change" id="ag_client_change_btn">Change</button></div>`;
   saveQuoteDraft();
   renderSellClientChip();
+  renderQuoteFolds();
   document.getElementById('ag_client_change_btn').addEventListener('click', ()=>{
     // Keep the basket -- against the client it was built for, not in hand.
     // This is the step that used to carry one customer's items into the
@@ -5631,6 +5732,7 @@ function showQuoteUnassigned(){
   renderClientSuggestions('');
   saveQuoteDraft();
   renderSellClientChip();
+  renderQuoteFolds();
   updateCartBadge();
   renderCart();
   renderCartTab();
@@ -5936,9 +6038,21 @@ document.querySelectorAll('input[name="ag_delivery"]').forEach(r=>{
     document.getElementById('ag_delivery_shop_label').classList.toggle('selected', document.getElementById('ag_delivery_shop').checked);
     document.getElementById('ag_deliveryAddressWrap').style.display = document.getElementById('ag_delivery_shop').checked ? 'block' : 'none';
     saveQuoteDraft();
+    renderQuoteFolds();
   });
 });
-document.getElementById('ag_delivery_address').addEventListener('input', saveQuoteDraft);
+document.getElementById('ag_delivery_address').addEventListener('input', ()=>{ saveQuoteDraft(); renderQuoteFolds(); });
+/* `touched` is what stops a fold reopening under the finger that just
+   shut it: after a deliberate tap the section stays as it was put, and
+   only the summary keeps updating. */
+[['ag_clientFoldHead','ag_clientCard'], ['ag_deliveryFoldHead','ag_deliveryCard']].forEach(([headId, cardId])=>{
+  const head = document.getElementById(headId), card = document.getElementById(cardId);
+  if(!head || !card) return;
+  head.addEventListener('click', ()=>{
+    card.dataset.touched = '1';
+    card.classList.toggle('open');
+  });
+});
 
 document.getElementById('ag_submit_btn').addEventListener('click', async ()=>{
   if(!chosenClient){ toast('Choose or add a client first'); return; }
