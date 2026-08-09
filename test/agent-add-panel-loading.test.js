@@ -74,6 +74,25 @@ const fn = extractFunction(src, 'openAddItemPanel', 'agent.html');
     'and the double-tap guard still opens and closes around the fetch');
 }
 
+/* ---------- 3b. the sheet is not the whole screen --------------------- */
+/*
+ * A gutter each side, so the sheet reads as a card lifted over the screen
+ * rather than as the screen itself.
+ *
+ * Padding on the backdrop, not a margin on the card: the card is
+ * width:100%, so a margin would push it that much past the right edge and
+ * put a horizontal scrollbar on a phone.
+ */
+{
+  t.check(/\.ag-overlay\{[^}]*padding:0 12px;[^}]*\}/.test(src),
+    'the sheet has a gutter each side rather than meeting the screen edges');
+  t.check(/\.ag-overlay\{[^}]*box-sizing:border-box;[^}]*\}/.test(src),
+    'and the backdrop still covers the screen, the gutter coming out of it rather than off it');
+  t.check(/\.ag-overlay-card\{[^}]*width:100%;/.test(src)
+    && !/\.ag-overlay-card\{[^}]*margin:0 12px/.test(src),
+    'the card keeps its full width inside that, rather than a margin it would overflow by');
+}
+
 /* ---------- 4. the spinner itself ------------------------------------- */
 {
   t.check(/\.ag-spinner\{[^}]*animation:ag-spin/.test(src) && /@keyframes ag-spin/.test(src),
