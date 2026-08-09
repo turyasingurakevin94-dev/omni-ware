@@ -364,10 +364,7 @@
   .page-info-btn:hover{color:var(--accent);border-color:var(--accent);}
   .page-info-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .page-info-bubble{
-    /* --tip-left / --tip-arrow are set by placeInfoBubble() only when the
-       bubble would otherwise hang out of a scrolling box; everywhere else
-       these defaults are what applies. */
-    position:absolute;top:calc(100% + 8px);left:var(--tip-left, -6px);z-index:120;
+    position:absolute;top:calc(100% + 8px);left:-6px;z-index:120;
     width:max-content;max-width:min(380px, calc(100vw - 48px));
     background:var(--navy);color:#E6EAEE;font-size:13px;line-height:1.5;
     padding:11px 13px;border-radius:9px;box-shadow:0 12px 30px rgba(10,15,20,0.32);
@@ -396,11 +393,21 @@
   .page-info-btn:focus-visible + .page-info-bubble,
   .page-info.open .page-info-bubble{opacity:1;visibility:visible;}
   @media (prefers-reduced-motion: reduce){ .page-info-bubble{transition:none;} }
-  /* Opened upward instead, for a badge low in a scrolling box. A page has
-     the rest of itself to grow into; a modal body 537px tall does not,
-     and the last step's bubble hung 108px past the bottom of the scroll
-     area where it was simply cut off. See placeInfoBubble(). */
-  .page-info.flip .page-info-bubble{top:auto;bottom:calc(100% + 8px);}
+  /* Inside a modal the bubble is placed against the VIEWPORT, by
+     placeInfoBubble(), so a scrolling body cannot clip it. Anchoring it
+     to its heading and picking a side works until a panel is shorter
+     than the bubble -- the product form's Photo panel is 116px tall and
+     carries a 100px bubble, so neither side fitted and something had to
+     be cut off. A page heading keeps the plain absolute placement above:
+     it has the rest of the document to grow into. */
+  /* Both carry `auto` as a fallback rather than going bare. A var() that
+     resolves to nothing is not ignored -- it invalidates the whole
+     declaration at computed-value time -- so a bubble whose coordinates
+     had not arrived would have been positioned by whatever `top` and
+     `left` happened to inherit. `auto` is the initial value, so this
+     spells out the fallthrough instead of leaving it to chance. */
+  .page-info-bubble.tip-fixed{position:fixed;top:var(--tip-y, auto);left:var(--tip-x, auto);}
+  /* Opened upward: the arrow moves to the bottom edge to follow it. */
   .page-info.flip .page-info-bubble::before{top:auto;bottom:-5px;}
 
   /* A folded heading keeps its own type; the row only sets the badge
@@ -11353,9 +11360,17 @@ function foldInstruction(title, notes, label){
   return info;
 }
 
-/* Keeps the bubble inside the box it is opening in. Only a scrolling
-   container clips: a bubble on a page heading has the rest of the
-   document to grow into, so those are left exactly as they were.
+/* Places a bubble that is opening inside a modal, against the viewport
+   rather than against its own heading. A page heading is left alone
+   entirely: it has the rest of the document to grow into, and moving it
+   would only put it somewhere less expected.
+
+   Anchoring to the heading and choosing a side was the first attempt. It
+   holds until a panel is shorter than the bubble -- the product form's
+   Photo panel is 116px carrying a 100px bubble, so there was no room
+   below it and none above it either, and picking a side only chose which
+   edge to be cut off at. Positioned against the viewport, the modal's
+   own scrolling stops being able to clip it at all.
 
    Measured while hidden, which works because the bubble is hidden by
    visibility rather than display and so still has a box -- the same
@@ -11363,38 +11378,33 @@ function foldInstruction(title, notes, label){
 const TIP_EDGE_GAP = 8;
 function placeInfoBubble(info){
   const bubble = info.querySelector('.page-info-bubble');
-  const box = info.closest('.modal-body');
-  if(!bubble || !box) return;
-  info.classList.remove('flip');
-  bubble.style.removeProperty('--tip-left');
-  bubble.style.removeProperty('--tip-arrow');
-
-  const boxBox = box.getBoundingClientRect();
+  if(!bubble || !info.closest('.modal-body')) return;
+  bubble.classList.add('tip-fixed');
+  /* All three coordinates below are written on every call, so there is
+     nothing to clear first -- a bubble reused by a second badge is fully
+     described by this pass rather than partly by the last one. `flip` is
+     the exception and is toggled rather than added, for the same reason. */
   const badge = info.getBoundingClientRect();
   const b = bubble.getBoundingClientRect();
 
-  /* Sideways first. A badge that follows a long heading -- "Volume
-     pricing (default for every variant)" -- sits far enough right that a
-     380px bubble hanging off its left edge runs past the modal, where it
-     was simply cut off. Slide it back and take the arrow with it, so it
-     still points at the badge it belongs to. */
-  let left = -6;
-  const over = (badge.left + left + b.width) - (boxBox.right - TIP_EDGE_GAP);
-  if(over > 0) left -= over;
-  const under = (boxBox.left + TIP_EDGE_GAP) - (badge.left + left);
-  if(under > 0) left += under;
-  if(left !== -6){
-    bubble.style.setProperty('--tip-left', left + 'px');
-    // Held inside the bubble's own corners, so a heavily shifted bubble
-    // still shows an arrow rather than half of one at the edge.
-    const arrow = Math.max(8, Math.min(b.width - 18, badge.width/2 - left - 5));
-    bubble.style.setProperty('--tip-arrow', arrow + 'px');
-  }
+  // Below the badge, or above it when the viewport has no room below and
+  // does have room above. Flipping into a top edge is not a fix.
+  const below = badge.bottom + 8;
+  const above = badge.top - 8 - b.height;
+  const flip = (below + b.height > innerHeight - TIP_EDGE_GAP) && above >= TIP_EDGE_GAP;
+  bubble.style.setProperty('--tip-y', (flip ? above : below) + 'px');
 
-  // Then the side it opens on. Only flips if flipping actually helps -- a
-  // bubble taller than the space either way is better left as written.
-  const roomAbove = badge.top - boxBox.top;
-  if(b.bottom > boxBox.bottom && roomAbove > b.height + 12) info.classList.add('flip');
+  /* Sideways: a badge following a long heading -- "Volume pricing
+     (default for every variant)" -- sits far enough right that a 380px
+     bubble hanging off its left edge runs off the screen. */
+  const x = Math.max(TIP_EDGE_GAP, Math.min(badge.left - 6, innerWidth - TIP_EDGE_GAP - b.width));
+  bubble.style.setProperty('--tip-x', x + 'px');
+  // The arrow follows the badge, held inside the bubble's own corners so
+  // a heavily shifted bubble still shows a whole one.
+  bubble.style.setProperty('--tip-arrow',
+    Math.max(8, Math.min(b.width - 18, badge.left + badge.width/2 - x - 5)) + 'px');
+
+  info.classList.toggle('flip', flip);
 }
 
 /* ---------------- Instructions on demand ----------------
@@ -11458,19 +11468,58 @@ function foldPriceFormInstructions(){
   const skuLabel = q('#pr_sku_field label');
   if(skuLabel) foldInstruction(skuLabel, q('#pr_sku_field .field-hint'), "About the supplier's code");
 
-  refreshPriceFormTips();
+  refreshInstructionTips('#priceModal');
 }
+
+/* The add-product form said the same thing on five panels. Photo was
+   84px of prose in a 172px panel and Agent terms 113px in 323px -- read
+   once, scrolled past thereafter.
+
+   Folded per panel rather than per form, because the rail shows one at a
+   time: the "i" belongs beside the heading of whichever panel you are
+   actually looking at. Photo's two sentences -- what the photo is for,
+   and where it comes from -- share one bubble; a second badge in a
+   172px panel would have been worse than the paragraph. */
+function foldProductFormInstructions(){
+  const pane = (id)=> document.getElementById('pfpane-'+id);
+  const foldPane = (id, label, extra)=>{
+    const p = pane(id);
+    if(!p) return;
+    const head = p.querySelector('.pset-head');
+    if(!head) return;
+    foldInstruction(head.querySelector('h3'),
+      [head.querySelector('p')].concat(extra ? [p.querySelector(extra)] : []), label);
+  };
+  foldPane('basics',   'What goes in Basics');
+  foldPane('photo',    'What the photo is for', '.img-upload-hint');
+  foldPane('pricing',  'What a markup rule does');
+  foldPane('agent',    'What the agent discount does');
+  foldPane('variants', 'How variants work');
+
+  /* Two field hints, folded onto their own labels the same way the price
+     form's supplier-code hint is. p_id_hint is deliberately left alone:
+     "Generated automatically" is the state of a disabled box, not an
+     instruction, and resetProductForm/editProduct show and hide it. */
+  [['p_short_desc', 'About the short description'], ['p_notes', 'What notes are for']].forEach(([id, label])=>{
+    const field = document.getElementById(id)?.closest('.field');
+    if(field) foldInstruction(field.querySelector('label'), field.querySelector('.field-hint'), label);
+  });
+
+  refreshInstructionTips('#productModal');
+}
+
 /* An "i" with nothing behind it is worse than no "i": it invites a hover
-   that produces an empty box. The pricing note is written by
+   that produces an empty box. The price form's pricing note is written by
    setPrBulkMode and is genuinely empty until it runs, so the badge
    follows the text rather than being decided once at fold time. */
-function refreshPriceFormTips(){
-  document.querySelectorAll('#priceModal .page-info').forEach(info=>{
+function refreshInstructionTips(root){
+  document.querySelectorAll(root + ' .page-info').forEach(info=>{
     const bubble = info.querySelector('.page-info-bubble');
     info.style.display = (bubble && bubble.textContent.trim()) ? '' : 'none';
   });
 }
 foldPriceFormInstructions();
+foldProductFormInstructions();
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
 });
@@ -26055,7 +26104,7 @@ function setPrBulkMode(on){
      pricing one starts empty in the markup -- so the badge that reveals
      it has to follow the text rather than having been decided once when
      the form was folded at load. */
-  refreshPriceFormTips();
+  refreshInstructionTips('#priceModal');
   if(on) renderPrBulkVariants();
   renderPrTierUnitOptions();
   renderPrTiers();

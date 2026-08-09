@@ -137,4 +137,154 @@ const src = read('index.html');
     'and cannot swallow a click meant for whatever sits underneath it');
 }
 
+/* ---------- 6. a bubble opening inside a modal ----------------------- */
+/*
+ * Page headings keep the plain absolute placement: they have the rest of
+ * the document to grow into. A bubble inside a modal does not -- the
+ * body scrolls, and `overflow-y:auto` clips whatever leaves it.
+ *
+ * Anchoring to the heading and choosing a side was the first attempt,
+ * and it holds right up until a panel is shorter than the bubble. The
+ * product form's Photo panel is 116px carrying a 100px bubble: no room
+ * below, none above, and picking a side only chose which edge to be cut
+ * off at. Placed against the viewport instead, the modal's scrolling
+ * cannot reach it.
+ *
+ * Run rather than read, because reading cannot tell an offset that is
+ * applied from one computed and thrown away.
+ */
+{
+  const VW = 375, VH = 812;
+  const { placeInfoBubble } = compileScope(
+    [extractFunction(src, 'placeInfoBubble', 'index.html')],
+    { TIP_EDGE_GAP: 8, innerWidth: VW, innerHeight: VH }, ['placeInfoBubble'],
+  );
+
+  const stub = ({ badgeLeft, badgeTop, w = 327, h = 120, inModal = true }) => {
+    const badge = { left: badgeLeft, top: badgeTop, bottom: badgeTop + 19, width: 19 };
+    const props = {}, classes = new Set(), bubbleClasses = new Set();
+    const bubble = {
+      classList: { add: (c) => bubbleClasses.add(c), remove: (c) => bubbleClasses.delete(c), contains: (c) => bubbleClasses.has(c) },
+      style: { setProperty: (k, v) => { props[k] = v; }, removeProperty: (k) => { delete props[k]; } },
+      getBoundingClientRect: () => ({ width: w, height: h }),
+    };
+    return {
+      info: {
+        classList: {
+          add: (c) => classes.add(c), remove: (c) => classes.delete(c),
+          contains: (c) => classes.has(c),
+          toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)),
+        },
+        querySelector: () => bubble,
+        closest: (sel) => (inModal && sel === '.modal-body' ? {} : null),
+        getBoundingClientRect: () => badge,
+      },
+      props, classes, bubbleClasses, badge, w, h,
+    };
+  };
+  const num = (v) => (v == null ? null : parseFloat(v));
+
+  // Room below: sits under the badge, left-aligned to it as the CSS would.
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: 200 });
+    placeInfoBubble(s.info);
+    t.check(s.bubbleClasses.has('tip-fixed'), 'a bubble inside a modal is placed against the viewport');
+    t.check(num(s.props['--tip-y']) === s.badge.bottom + 8, 'below its badge when there is room');
+    t.check(num(s.props['--tip-x']) === s.badge.left - 6, 'and lined up with it');
+    t.check(!s.classes.has('flip'), 'without flipping');
+  }
+
+  // No room below, room above: opens upward and the arrow follows.
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: 700 });
+    placeInfoBubble(s.info);
+    t.check(s.classes.has('flip') && num(s.props['--tip-y']) === s.badge.top - 8 - s.h,
+      'above it when the screen has no room below');
+    t.check(/\.page-info\.flip \.page-info-bubble::before\{top:auto;bottom:-5px;\}/.test(src),
+      'and the arrow moves to the bottom edge to follow it');
+  }
+
+  /* Low on the screen AND taller than the room above it -- the Photo
+     panel's shape. Flipping would only move which edge is cut off, so it
+     stays below and hangs out of the scroll box, which being fixed it is
+     allowed to do. */
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: 700, h: 750 });
+    placeInfoBubble(s.info);
+    t.check(!s.classes.has('flip') && num(s.props['--tip-y']) === s.badge.bottom + 8,
+      'a bubble too tall for either side is not flipped into the opposite edge');
+  }
+
+  // Off the right: a badge after a long heading.
+  {
+    const s = stub({ badgeLeft: 330, badgeTop: 200 });
+    placeInfoBubble(s.info);
+    const x = num(s.props['--tip-x']);
+    t.check(x + s.w === VW - 8, `it slides back until its right edge clears the screen (${x})`);
+    const arrow = num(s.props['--tip-arrow']);
+    t.check(Math.round(x + arrow) === Math.round(s.badge.left + s.badge.width / 2 - 5),
+      'and the arrow moves with it, landing over the badge it belongs to');
+  }
+
+  // Far enough that keeping the arrow on the badge would push it off the end.
+  {
+    const s = stub({ badgeLeft: 370, badgeTop: 200 });
+    placeInfoBubble(s.info);
+    const arrow = num(s.props['--tip-arrow']);
+    t.check(arrow >= 8 && arrow <= s.w - 18,
+      `the arrow stops at the bubble's own corner rather than sliding off it (${arrow})`);
+  }
+
+  // Off the left.
+  {
+    const s = stub({ badgeLeft: 2, badgeTop: 200 });
+    placeInfoBubble(s.info);
+    t.check(num(s.props['--tip-x']) === 8, 'and one pushed off the left comes back the same way');
+  }
+
+  /* Reused across badges. Every coordinate is written on every call, so
+     what has to be checked is the one thing that is a class rather than
+     a value: a flip left set by a low badge would flip the next one. */
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: 200 });
+    s.classes.add('flip');
+    s.props['--tip-x'] = '-999px'; s.props['--tip-y'] = '-999px'; s.props['--tip-arrow'] = '-999px';
+    placeInfoBubble(s.info);
+    t.check(!s.classes.has('flip'), 'a flip is undone rather than carried into the next badge');
+    t.check(num(s.props['--tip-x']) === s.badge.left - 6
+      && num(s.props['--tip-y']) === s.badge.bottom + 8
+      && num(s.props['--tip-arrow']) !== -999,
+      'and every coordinate is rewritten rather than left where the last one put it');
+  }
+
+  // A page heading is left exactly as the stylesheet wrote it.
+  {
+    const s = stub({ badgeLeft: 330, badgeTop: 700, inModal: false });
+    placeInfoBubble(s.info);
+    t.check(Object.keys(s.props).length === 0 && !s.classes.has('flip') && !s.bubbleClasses.has('tip-fixed'),
+      'a badge outside a scrolling box is not touched at all');
+  }
+
+  t.check(/\.page-info-bubble\.tip-fixed\{position:fixed;top:var\(--tip-y, auto\);left:var\(--tip-x, auto\);\}/.test(src),
+    'and the class it sets is what actually pins the bubble to those coordinates');
+  /* A bare var() that resolves to nothing invalidates the whole
+     declaration rather than being skipped, so both carry the fallback
+     they would otherwise have taken by accident. */
+  t.check(!/var\(--tip-[xy]\)/.test(src),
+    'with a fallback, so a coordinate that never arrives does not invalidate the placement');
+}
+
+/* ---------- 7. placed before it is revealed, by every route ---------- */
+{
+  const fold = extractFunction(src, 'foldInstruction', 'index.html');
+  // Hover and focus reveal it in CSS alone, so the placement cannot wait
+  // for the click that only a tap performs.
+  ['mouseenter', 'focus'].forEach((ev) => {
+    t.check(new RegExp(`addEventListener\\('${ev}', \\(\\)=> placeInfoBubble\\(info\\)\\)`).test(fold),
+      `placed before ${ev} reveals it`);
+  });
+  t.check(/if\(!wasOpen\)\{ placeInfoBubble\(info\); info\.classList\.add\('open'\); \}/.test(fold),
+    'and before a tap opens it');
+}
+
 process.exit(t.done() ? 1 : 0);
