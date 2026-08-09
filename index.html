@@ -3235,6 +3235,26 @@
   .a5-page .r-sig-line{flex:1;border-bottom:1px solid #000;height:12px;}
   .receipt .r-foot{font-size:10.5px;margin-top:10px;}
 
+  /* Receipt printer setup (screen).
+
+     The preview is monospaced and never wrapped. A receipt is laid out in
+     character cells and its whole point is that the columns line up; a
+     preview that reflows to the width of a dialog is showing something the
+     printer will not do, so it scrolls sideways instead. */
+  .prn-status{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;color:var(--ink);}
+  .prn-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-soft);flex:none;}
+  .prn-dot.on{background:var(--good);}
+  .prn-dot.err{background:var(--danger);}
+  .prn-hint{margin:6px 0 0;font-size:12px;color:var(--ink-soft);line-height:1.45;}
+  .prn-hint:empty{display:none;}
+  .prn-hint.prn-hint-error{color:var(--danger);}
+  .prn-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .prn-preview-head{margin:16px 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-soft);}
+  .prn-preview{margin:0;padding:12px;background:#fff;border:1px dashed var(--line);border-radius:8px;
+    font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11.5px;line-height:1.35;color:#000;
+    white-space:pre;overflow-x:auto;max-height:320px;}
+
   /* Saved quotes list (screen) */
   .q-saved-hint{margin:4px 0 14px;font-size:12.5px;color:var(--ink-soft);}
   .sq-select-all-label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-soft);font-weight:600;cursor:pointer;}
@@ -4816,6 +4836,7 @@
     <div class="mms-group">
       <div class="mms-group-label">Settings</div>
       <button type="button" class="mms-item" data-tab="presets">Presets</button>
+      <button type="button" class="mms-item" id="mmsPrinterBtn">Receipt printer</button>
       <button type="button" class="mms-item" id="mmsExportBtn">Export backup</button>
       <button type="button" class="mms-item" id="mmsImportBtn">Import backup</button>
       <button type="button" class="mms-item mms-item-danger" id="mmsClearBtn">Clear all data</button>
@@ -4959,6 +4980,9 @@
         <button type="button" data-tab="presets">
           <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <span class="nav-label">Presets</span></button>
+        <button type="button" id="printerSetupBtn">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/><circle cx="17.5" cy="12" r=".8"/></svg>
+          <span class="nav-label">Receipt printer</span></button>
         <div class="tb-sep"></div>
         <button type="button" id="exportBtn">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -7439,6 +7463,80 @@
   </div>
 </div>
 
+<!-- RECEIPT PRINTER MODAL
+
+     Setting up a thermal printer is three questions, and this asks them in
+     the order they can be answered: is it connected, is the paper the width
+     we think it is, and does what comes out look right. The preview is the
+     third question answered without burning a roll of paper to find out --
+     and it is rendered from the same layout the printer gets, so it cannot
+     flatter the result. -->
+<div class="modal-overlay" id="printerModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Receipt printer</h2>
+      <button class="modal-close" id="printerModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="prn-status" id="prn_status">
+        <span class="prn-dot" id="prn_dot"></span>
+        <span id="prn_status_text">Not connected</span>
+      </div>
+      <p class="prn-hint" id="prn_hint"></p>
+
+      <div class="prn-actions">
+        <button type="button" class="btn btn-accent" id="prn_connect_serial">Connect over Bluetooth (COM port)</button>
+        <button type="button" class="btn btn-ghost" id="prn_connect_ble">Connect over Bluetooth LE</button>
+        <button type="button" class="btn btn-ghost" id="prn_disconnect">Disconnect</button>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px;">
+        <div class="field">
+          <label>Paper</label>
+          <select id="prn_paper"></select>
+        </div>
+        <div class="field">
+          <label>Character set</label>
+          <select id="prn_codepage">
+            <option value="cp437">CP437 — safe everywhere</option>
+            <option value="cp1252">CP1252 — accented names</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Cutter</label>
+          <select id="prn_cutter">
+            <option value="yes">The printer cuts the paper</option>
+            <option value="no">No cutter — feed instead</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Counter sales</label>
+          <select id="prn_auto">
+            <option value="yes">Print a receipt automatically</option>
+            <option value="no">Only print when asked</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="prn-actions" style="margin-top:14px;">
+        <button type="button" class="btn btn-ghost" id="prn_selftest">Print self-test</button>
+        <button type="button" class="btn btn-ghost" id="prn_sample">Print sample receipt</button>
+      </div>
+      <p class="prn-hint">The self-test ends with a ruler. If its last few characters wrap onto a
+        second line, the printer is narrower than the paper setting above — change it and print again.</p>
+
+      <div class="prn-preview-head">What comes out</div>
+      <pre class="prn-preview" id="prn_preview"></pre>
+      <p class="prn-hint" id="prn_error"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="prn_close">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- PURCHASE INVOICE PAYMENT MODAL -->
 <div class="modal-overlay" id="piPaymentModal">
   <div class="modal">
@@ -8080,6 +8178,16 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="shared-worker.js"></script>
+<!-- The 80mm thermal printer driver. Five files rather than one because
+     each is separately useful -- the encoder is testable without a printer,
+     the layout is testable without a browser -- and they are loaded in
+     dependency order: the encoder first, the thing that drives it last.
+     See drivers/README.md. -->
+<script src="drivers/escpos.js"></script>
+<script src="drivers/profiles.js"></script>
+<script src="drivers/receipt.js"></script>
+<script src="drivers/transports.js"></script>
+<script src="drivers/printer.js"></script>
 <script>
 // Supabase appends #...&type=invite (or type=recovery) to the redirect URL
 // when a login session was established from an invite/password-reset email
@@ -9163,6 +9271,274 @@ function clearInjectedPrintStyles(){
     if(el) el.remove();
   });
 }
+
+/* ================= THE 80mm THERMAL PRINTER =====================
+
+   Everything above prints through the browser's own dialog onto A5. That
+   is right for a quotation and wrong for a receipt: a customer standing at
+   a counter wants a strip of paper now, not a sheet with a page dialog in
+   front of it.
+
+   So a receipt has a second route -- straight out of the page and down a
+   Bluetooth link to the printer, as ESC/POS bytes. The driver is in
+   drivers/; this is the app's side of it: what a receipt is made of, when
+   one is printed, and the one screen where the printer is set up.
+
+   The A5 route is untouched. The two do not compete: a quotation still
+   goes to paper through the dialog, and a receipt goes to the till roll if
+   there is one and to the dialog if there is not. */
+
+let thermalPrinter = null;
+
+/* Created on first use rather than at load.
+
+   The constructor reads localStorage, and the driver scripts are ordinary
+   <script src> tags -- if one of them ever fails to load (a stale cache, a
+   half-finished deploy), building the printer at load time would throw
+   inside the app's main script block and take the whole page down with it.
+   A shop that cannot print is inconvenienced; a shop whose app will not
+   open is closed. */
+function getThermalPrinter(){
+  if(thermalPrinter) return thermalPrinter;
+  if(typeof ThermalPrinter === 'undefined') return null;
+  try { thermalPrinter = new ThermalPrinter(); } catch(e){ return null; }
+  return thermalPrinter;
+}
+
+function thermalIsConnected(){
+  const p = getThermalPrinter();
+  return !!(p && p.isConnected());
+}
+
+/* Whether a counter sale prints itself.
+
+   Kept beside the printer's own settings rather than in the shop data,
+   because it is a fact about this counter's hardware and not about the
+   business -- the same shop's tablet in the store room has no printer and
+   should not be waiting for one. */
+function thermalAutoPrintCounterSales(){
+  const p = getThermalPrinter();
+  return !!(p && p.settings.autoPrintCounterSale);
+}
+
+/* ---- a saved quote, as a receipt ----
+
+   Reads exactly what the invoice screen reads -- savedQuoteTotal,
+   quoteItemSellPrice, invoiceNumberLabel -- so the paper and the screen
+   cannot show different money. Recomputing any of it here is how a receipt
+   ends up disagreeing with the invoice it was printed from. */
+function receiptDocForQuote(q, opts){
+  const o = opts || {};
+  const total = savedQuoteTotal(q);
+  const paid = Number(q.amountPaid) || 0;
+  const due = total - paid;
+
+  const meta = [
+    { label: 'Date', value: q.invoicedAt || q.date || todayISO() },
+    { label: q.invoiced ? 'Invoice' : 'Quote', value: q.invoiced ? invoiceNumberLabel(q) : String(q.id) },
+  ];
+  if(q.client && q.client.name) meta.push({ label: 'Customer', value: q.client.name });
+  if(q.client && q.client.phone) meta.push({ label: 'Phone', value: q.client.phone });
+  if(o.servedBy) meta.push({ label: 'Served by', value: o.servedBy });
+
+  const totals = [];
+  // Only shown when it says something. A subtotal identical to the total,
+  // and a zero balance on a sale paid in full, are two lines of noise on a
+  // receipt that has to be read at a glance.
+  if(paid > 0 && Math.abs(paid - total) >= 1) totals.push({ label: 'Paid', value: Math.round(paid) });
+  if(due >= 1) totals.push({ label: 'Balance due', value: Math.round(due) });
+  if(o.cashGiven && o.cashGiven > total) {
+    totals.push({ label: 'Cash', value: Math.round(o.cashGiven) });
+    totals.push({ label: 'Change', value: Math.round(o.cashGiven - total) });
+  }
+  totals.push({ label: 'Total', value: Math.round(total), emphasis: true });
+
+  const footer = [];
+  if(q.voided) footer.push('*** VOIDED — THIS SALE HAS BEEN CANCELLED ***');
+  footer.push('Thank you for your business');
+  if(due >= 1) footer.push('Goods remain ours until paid for in full');
+
+  return {
+    shop: { name: printedShopName(), lines: [] },
+    title: q.voided ? 'Voided' : (q.invoiced ? 'Receipt' : 'Quotation'),
+    meta,
+    items: (q.items || []).map(it=>({
+      name: it.name || it.productName || '',
+      /* Only when the packing says something the row does not.
+         quoteItemPackingLabel falls back to "Per Bag", which on a receipt
+         sits directly above a line reading "20 Bag" -- a whole line of
+         paper, on every item, to repeat the word next to it. How many are
+         in a carton is worth the line; the unit on its own is not. */
+      note: (it.packQty && it.packUnit) ? quoteItemPackingLabel(it) : '',
+      qty: it.qty,
+      unit: it.unit || '',
+      rate: quoteItemSellPrice(it),
+    })),
+    totals,
+    footer,
+    currency: 'UGX',
+  };
+}
+
+/* Prints, and says what happened rather than throwing at a till operator.
+
+   Every failure here is one of about four things and each has a different
+   answer, so the toast names the answer instead of the exception. A
+   printer that is simply not set up opens the setup screen, because that
+   is what the person pressing the button was going to do next anyway. */
+function printThermalReceipt(q, opts){
+  const printer = getThermalPrinter();
+  if(!printer){
+    toast('The printer driver did not load — reload the page');
+    return Promise.resolve(false);
+  }
+  if(!printer.isConnected()){
+    // A port granted earlier reopens with no dialog, so this is worth one
+    // attempt before giving up and asking.
+    return printer.reconnect().catch(()=>null).then(()=>{
+      if(printer.isConnected()) return printThermalReceipt(q, opts);
+      if(!(opts && opts.quiet)){
+        toast('No receipt printer connected — set one up first');
+        openPrinterModal();
+      }
+      return false;
+    });
+  }
+  return printer.printReceipt(receiptDocForQuote(q, opts)).then(()=>{
+    if(!(opts && opts.quiet)) toast('Receipt printed');
+    return true;
+  }, (err)=>{
+    toast('Printer: ' + (err && err.message ? err.message : 'could not print'));
+    return false;
+  });
+}
+
+/* ---- the setup screen ---- */
+
+const PRINTER_SAMPLE_DOC = {
+  shop: { name: 'Omni-Ware', lines: [] },
+  title: 'Receipt',
+  meta: [{ label: 'Date', value: '' }, { label: 'Invoice', value: 'INV-0001' }, { label: 'Customer', value: 'Walk-in' }],
+  items: [
+    { name: 'Cement (Tororo 50kg)', qty: 20, unit: 'Bag', rate: 34000 },
+    { name: 'Black Wall Plug 8mm', note: 'box of 100', qty: 3, unit: 'Box', rate: 12500 },
+  ],
+  totals: [{ label: 'Total', value: 717500, emphasis: true }],
+  footer: ['Thank you for your business'],
+  currency: 'UGX',
+};
+
+function printerSampleDoc(){
+  // Dated today and headed with the real shop name, so the preview is a
+  // preview of this shop's receipt rather than of the driver's.
+  const doc = JSON.parse(JSON.stringify(PRINTER_SAMPLE_DOC));
+  doc.shop.name = printedShopName();
+  doc.meta[0].value = todayISO();
+  return doc;
+}
+
+function openPrinterModal(){
+  const printer = getThermalPrinter();
+  if(!printer){ toast('The printer driver did not load — reload the page'); return; }
+  const paper = document.getElementById('prn_paper');
+  if(paper && !paper.options.length){
+    PrinterProfiles.paperList().forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p.key; opt.textContent = p.label;
+      paper.appendChild(opt);
+    });
+  }
+  paper.value = printer.settings.paper;
+  document.getElementById('prn_codepage').value = printer.settings.codepage;
+  document.getElementById('prn_cutter').value = printer.settings.cutter ? 'yes' : 'no';
+  document.getElementById('prn_auto').value = printer.settings.autoPrintCounterSale ? 'yes' : 'no';
+  document.getElementById('prn_error').textContent = '';
+  renderPrinterModal();
+  openModal('printerModal');
+  // Silent: a port the shop granted last week reopens without a dialog,
+  // and failing means only that nobody has picked a printer yet.
+  printer.reconnect().catch(()=>{}).then(renderPrinterModal);
+}
+
+function renderPrinterModal(){
+  const printer = getThermalPrinter();
+  if(!printer || !document.getElementById('printerModal')) return;
+  const state = printer.state();
+
+  document.getElementById('prn_dot').className = 'prn-dot' + (state.connected ? ' on' : (state.error ? ' err' : ''));
+  document.getElementById('prn_status_text').textContent = state.connected
+    ? `Connected — ${state.label || state.transport} · ${state.columns} columns`
+    : 'Not connected';
+
+  // The hint is where the difference between the two Bluetooth stacks
+  // gets explained, because it is the thing that wastes an afternoon: a
+  // Classic printer never appears in the LE chooser, and waiting for it
+  // to looks exactly like a printer that is switched off.
+  const support = ThermalPrinter.support();
+  const hint = document.getElementById('prn_hint');
+  if(!support.serial && !support.bluetooth){
+    hint.textContent = 'This browser cannot talk to a printer directly. Use Chrome or Edge, over https or localhost.';
+  } else if(state.connected){
+    hint.textContent = 'Receipts print here instead of going to the page print dialog.';
+  } else {
+    hint.textContent = 'Most 80mm counter printers are Bluetooth Classic: pair the printer in Windows first, '
+      + 'then connect to its outgoing COM port. Only the small battery printers use Bluetooth LE.';
+  }
+
+  document.getElementById('prn_connect_serial').disabled = !support.serial;
+  document.getElementById('prn_connect_ble').disabled = !support.bluetooth;
+  document.getElementById('prn_disconnect').disabled = !state.connected;
+  document.getElementById('prn_selftest').disabled = !state.connected;
+  document.getElementById('prn_sample').disabled = !state.connected;
+
+  document.getElementById('prn_preview').textContent = printer.previewReceipt(printerSampleDoc());
+}
+
+function printerModalError(err){
+  const el = document.getElementById('prn_error');
+  if(!el) return;
+  el.className = 'prn-hint prn-hint-error';
+  el.textContent = err && err.message ? err.message : String(err || '');
+}
+
+document.getElementById('printerSetupBtn').addEventListener('click', openPrinterModal);
+document.getElementById('mmsPrinterBtn').addEventListener('click', ()=>{
+  closeMobileMoreSheet();
+  openPrinterModal();
+});
+document.getElementById('printerModalClose').addEventListener('click', ()=>closeModal('printerModal'));
+document.getElementById('prn_close').addEventListener('click', ()=>closeModal('printerModal'));
+
+document.getElementById('prn_connect_serial').addEventListener('click', ()=>{
+  document.getElementById('prn_error').textContent = '';
+  getThermalPrinter().connect('serial').then(renderPrinterModal, (err)=>{ printerModalError(err); renderPrinterModal(); });
+});
+document.getElementById('prn_connect_ble').addEventListener('click', ()=>{
+  document.getElementById('prn_error').textContent = '';
+  getThermalPrinter().connect('bluetooth').then(renderPrinterModal, (err)=>{ printerModalError(err); renderPrinterModal(); });
+});
+document.getElementById('prn_disconnect').addEventListener('click', ()=>{
+  getThermalPrinter().disconnect().then(renderPrinterModal);
+});
+
+['prn_paper','prn_codepage','prn_cutter','prn_auto'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    getThermalPrinter().update({
+      paper: document.getElementById('prn_paper').value,
+      codepage: document.getElementById('prn_codepage').value,
+      cutter: document.getElementById('prn_cutter').value === 'yes',
+      autoPrintCounterSale: document.getElementById('prn_auto').value === 'yes',
+    });
+    renderPrinterModal();
+  });
+});
+
+document.getElementById('prn_selftest').addEventListener('click', ()=>{
+  getThermalPrinter().selfTest().then(()=>toast('Self-test sent'), printerModalError);
+});
+document.getElementById('prn_sample').addEventListener('click', ()=>{
+  getThermalPrinter().printReceipt(printerSampleDoc()).then(()=>toast('Sample sent'), printerModalError);
+});
 
 let data = null;
 let myStaff = null;
@@ -16897,6 +17273,7 @@ function renderInvoices(filter=''){
     const status = invoicePaymentStatusLabel(q);
     const notesLabel = (q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '';
     const actionsHtml = `<button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
+      <button type="button" class="pc-icon-btn inv-doc-receipt" data-id="${q.id}" title="Print receipt (80mm till roll)"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h10v18l-2.5-1.6L12 21l-2.5-1.6L7 21z"/><path d="M10 8h4M10 12h4"/></svg></button>
       <button type="button" class="pc-icon-btn inv-doc-receive" data-id="${q.id}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
       <button type="button" class="pc-icon-btn danger inv-doc-void" data-id="${q.id}" title="${q.voided?'Unvoid invoice':'Void invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
 
@@ -16992,6 +17369,14 @@ function renderInvoices(filter=''){
   wrap.querySelectorAll('.inv-doc-print').forEach(btn=>btn.addEventListener('click', ()=>{
     const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
     if(q) printQuotesA5([q]);
+  }));
+  // The same invoice on the till roll. A separate button rather than a
+  // smarter one: which of the two you want depends on who is standing
+  // there, and an A5 button that silently prints 80mm because a printer
+  // happens to be plugged in is a button nobody can rely on.
+  wrap.querySelectorAll('.inv-doc-receipt').forEach(btn=>btn.addEventListener('click', ()=>{
+    const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
+    if(q) printThermalReceipt(q);
   }));
   wrap.querySelectorAll('.inv-doc-view').forEach(btn=>btn.addEventListener('click', ()=>{
     const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
@@ -28695,6 +29080,20 @@ async function saveCashTxn(column){
     toast(res.shortfall
       ? 'Sale recorded — more was sold than the shelf had, so part of it has no cost on file'
       : 'Sale recorded — stock, revenue and the cash book all updated');
+
+    /* The customer is standing at the counter, so the receipt goes out
+       now and without being asked for.
+
+       Deliberately after the sale is saved and the screens redrawn, and
+       deliberately not awaited: a printer that is switched off must not
+       hold up a sale that has already happened, and a sale that is
+       recorded with no receipt is recoverable in a way that the reverse
+       is not. `quiet` because the toast above has already said the useful
+       thing -- the till does not need a second one per sale telling it
+       the paper came out. */
+    if(thermalAutoPrintCounterSales()){
+      printThermalReceipt(res.quote, { quiet: true, cashGiven: amount });
+    }
     return;
   }
 

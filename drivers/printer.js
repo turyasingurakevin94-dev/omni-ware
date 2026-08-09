@@ -71,6 +71,12 @@
       cutter: saved.cutter === undefined ? true : !!saved.cutter,
       drawer: !!saved.drawer,
       name: saved.name || '',
+      // A fact about this counter's hardware, not about the business: the
+      // same shop's tablet in the store room has no printer and should not
+      // be waiting for one. So it lives with the printer's settings, which
+      // are per-device, rather than with the shop's data, which is not.
+      autoPrintCounterSale: saved.autoPrintCounterSale === undefined
+        ? true : !!saved.autoPrintCounterSale,
     };
     this.transport = null;
     this.queue = Promise.resolve();
