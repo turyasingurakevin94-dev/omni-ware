@@ -35,8 +35,17 @@ function lineAt(src, offset) {
   return src.slice(0, offset).split(/\r?\n/).length;
 }
 
-const HTML_FILES = ['index.html', 'agent.html', 'worker.html', 'catalogue.html'];
-const JS_FILES = ['shared-worker.js', 'worker-www/shared-worker.js'];
+const HTML_FILES = ['index.html', 'agent.html', 'worker.html', 'catalogue.html',
+  // The printer setup page. It is the page someone opens when the printer
+  // will not print, which is the worst moment to find out it does not load.
+  'drivers/print-test.html'];
+const JS_FILES = ['shared-worker.js', 'worker-www/shared-worker.js',
+  // The thermal printer driver. Its own tests require() these, so a syntax
+  // error would fail there too -- but only after this check has named the
+  // file and the line, which is the difference between a diagnosis and a
+  // stack trace.
+  'drivers/escpos.js', 'drivers/profiles.js', 'drivers/receipt.js',
+  'drivers/transports.js', 'drivers/printer.js', 'tools/thermal-print.js'];
 
 for (const file of HTML_FILES) {
   const src = read(file);
@@ -57,7 +66,10 @@ for (const file of HTML_FILES) {
 
 for (const file of JS_FILES) {
   let err = null;
-  try { new Function(read(file)); } catch (e) { err = e; }
+  // The shebang goes first. Node strips it when it runs a file; new Function
+  // does not, and rejects the '#' -- so a perfectly good command-line script
+  // would fail this check for the one reason that says nothing about it.
+  try { new Function(read(file).replace(/^#![^\n]*\n/, '\n')); } catch (e) { err = e; }
   t.check(!err, err ? `${file} does not parse — ${err.message}` : `${file} parses`);
 }
 

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Omni-Ware — thermal printer setup</title>
+<!--
+  The page you open when the printer will not print.
+
+  Everything the driver can do is on one screen: connect over either
+  Bluetooth stack, pick the paper, see exactly what will be sent, and send
+  it. Nothing here talks to the app or to the network, so a printer can be
+  proved working (or proved not) without anything else in the way.
+
+  Open it over http://localhost or https://. Serial and Bluetooth both need
+  a secure context; a page opened from a network share will show its buttons
+  and then refuse, which reads like a broken printer.
+-->
+<style>
+  :root{ --ink:#14161a; --soft:#5a6270; --line:#dfe3ea; --bg:#f6f7f9; --accent:#0f62fe; --bad:#c0392b; --good:#1e7a45; }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);
+       font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1020px;margin:0 auto;display:grid;gap:18px;grid-template-columns:1fr 420px;}
+  header{grid-column:1/-1;}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{color:var(--soft);margin:0;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin:0 0 12px;}
+  label{display:block;font-size:12px;color:var(--soft);margin:10px 0 4px;}
+  select,input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;}
+  button{padding:9px 14px;border-radius:7px;border:1px solid var(--line);background:#fff;font:inherit;
+         font-weight:600;cursor:pointer;}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .status{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:10px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#c6ccd6;}
+  .dot.on{background:var(--good);} .dot.err{background:var(--bad);}
+  pre{margin:0;font:12px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;overflow:auto;}
+  .paper{background:#fff;border:1px dashed #b9c0cb;border-radius:4px;padding:12px;max-height:460px;overflow:auto;}
+  .hex{max-height:180px;overflow:auto;color:var(--soft);}
+  .note{font-size:12px;color:var(--soft);margin-top:10px;}
+  .err{color:var(--bad);}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Thermal printer setup</h1>
+    <p class="sub">80mm ESC/POS over Bluetooth. Pair the printer in Windows first, then connect to its outgoing COM port below.</p>
+  </header>
+
+  <div class="card">
+    <h2>Connection</h2>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Not connected</span></div>
+    <div class="row">
+      <button class="primary" id="btnSerial">Connect via COM port</button>
+      <button id="btnBle">Connect via Bluetooth LE</button>
+      <button id="btnFile">Save to file instead</button>
+      <button id="btnDisconnect">Disconnect</button>
+    </div>
+    <p class="note" id="support"></p>
+
+    <h2 style="margin-top:20px;">Paper</h2>
+    <label for="paper">Profile</label>
+    <select id="paper"></select>
+    <label for="columns">Columns (override — leave blank for the profile's own)</label>
+    <input id="columns" type="number" min="16" max="96" placeholder="48">
+    <label for="codepage">Character set</label>
+    <select id="codepage">
+      <option value="cp437">CP437 — safe everywhere</option>
+      <option value="cp1252">CP1252 — Western European accents</option>
+      <option value="cp850">CP850 — folded to ASCII</option>
+    </select>
+    <label for="baud">Baud rate (COM port only)</label>
+    <select id="baud"></select>
+    <div class="row" style="margin-top:12px;">
+      <label style="margin:0;display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="cutter" checked style="width:auto;"> Printer has a cutter
+      </label>
+    </div>
+
+    <h2 style="margin-top:20px;">Print</h2>
+    <div class="row">
+      <button class="primary" id="btnSelfTest">Print self-test</button>
+      <button id="btnReceipt">Print sample receipt</button>
+      <button id="btnDrawer">Kick cash drawer</button>
+    </div>
+    <p class="note">Start with the self-test. The ruler line on it ends at the column count the printer really has —
+      if it wraps onto a second line, choose a narrower profile above and try again.</p>
+    <p class="note err" id="error"></p>
+  </div>
+
+  <div class="card">
+    <h2>What will be printed</h2>
+    <div class="paper"><pre id="preview"></pre></div>
+    <h2 style="margin-top:16px;">Bytes on the wire</h2>
+    <pre class="hex" id="hex"></pre>
+  </div>
+</div>
+
+<script src="escpos.js"></script>
+<script src="profiles.js"></script>
+<script src="receipt.js"></script>
+<script src="transports.js"></script>
+<script src="printer.js"></script>
+<script>
+(function(){
+  'use strict';
+  var printer = new ThermalPrinter();
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---- the sample receipt. Deliberately awkward: a name long enough to
+     wrap, an em dash, a note line, and a total large enough to test the
+     money column. A sample that fits comfortably proves nothing. ---- */
+  var SAMPLE = {
+    shop: { name: 'Omni-Ware', lines: ['Nakawa, Kampala', 'Tel 0700 000 000'] },
+    title: 'Receipt',
+    meta: [
+      { label: 'Date', value: new Date().toISOString().slice(0,10) },
+      { label: 'Receipt No', value: 'TEST-0001' },
+      { label: 'Customer', value: 'Walk-in' },
+    ],
+    items: [
+      { name: 'Cement (Tororo 50kg)', qty: 20, unit: 'Bag', rate: 34000 },
+      { name: 'Black Wall Plug 8mm — box of 100', note: 'ordered in on request', qty: 3, unit: 'Box', rate: 12500 },
+      { name: 'Roofing nails 4"', qty: 5, unit: 'Kg', rate: 9000 },
+    ],
+    totals: [
+      { label: 'Subtotal', value: 762500 },
+      { label: 'Paid (cash)', value: 800000 },
+      { label: 'Change', value: 37500 },
+      { label: 'Total', value: 762500, emphasis: true },
+    ],
+    signatures: ['Served by'],
+    footer: ['Thank you for your business', 'Goods once sold are not returnable'],
+  };
+
+  /* ---- settings UI ---- */
+  PrinterProfiles.paperList().forEach(function(p){
+    var o = document.createElement('option'); o.value = p.key; o.textContent = p.label; $('paper').appendChild(o);
+  });
+  PrinterProfiles.SERIAL_BAUD_CHOICES.forEach(function(b){
+    var o = document.createElement('option'); o.value = b; o.textContent = b; $('baud').appendChild(o);
+  });
+
+  function readSettings(){
+    printer.update({
+      paper: $('paper').value,
+      columns: $('columns').value ? Number($('columns').value) : null,
+      codepage: $('codepage').value,
+      baudRate: Number($('baud').value),
+      cutter: $('cutter').checked,
+    });
+    render();
+  }
+  ['paper','columns','codepage','baud','cutter'].forEach(function(id){
+    $(id).addEventListener('change', readSettings);
+  });
+
+  function writeSettings(){
+    $('paper').value = printer.settings.paper;
+    $('columns').value = printer.settings.columns || '';
+    $('codepage').value = printer.settings.codepage;
+    $('baud').value = printer.settings.baudRate;
+    $('cutter').checked = printer.settings.cutter;
+  }
+
+  /* ---- preview + hex. Both come from the same render the printer gets,
+     so what is on screen is what is on the wire. ---- */
+  function render(){
+    $('preview').textContent = printer.previewReceipt(SAMPLE);
+    var bytes = ThermalReceipt.render(SAMPLE, printer.profile());
+    var out = [], line = [];
+    for (var i = 0; i < bytes.length; i++){
+      line.push(('0' + bytes[i].toString(16)).slice(-2));
+      if (line.length === 16){ out.push(line.join(' ')); line = []; }
+    }
+    if (line.length) out.push(line.join(' '));
+    $('hex').textContent = bytes.length + ' bytes\n' + out.join('\n');
+  }
+
+  function status(){
+    var s = printer.state();
+    $('dot').className = 'dot' + (s.connected ? ' on' : (s.error ? ' err' : ''));
+    $('statusText').textContent = s.connected
+      ? 'Connected — ' + (s.label || s.transport) + ' · ' + s.columns + ' columns'
+      : 'Not connected';
+    $('btnDisconnect').disabled = !s.connected;
+    ['btnSelfTest','btnReceipt','btnDrawer'].forEach(function(id){ $(id).disabled = !s.connected; });
+  }
+  printer.onChange(status);
+
+  function fail(e){ $('error').textContent = e && e.message ? e.message : String(e); }
+  function clearError(){ $('error').textContent = ''; }
+
+  $('btnSerial').addEventListener('click', function(){ clearError(); printer.connect('serial').catch(fail); });
+  $('btnBle').addEventListener('click', function(){ clearError(); printer.connect('bluetooth').catch(fail); });
+  $('btnFile').addEventListener('click', function(){ clearError(); printer.connect('file').catch(fail); });
+  $('btnDisconnect').addEventListener('click', function(){ printer.disconnect(); });
+  $('btnSelfTest').addEventListener('click', function(){ clearError(); printer.selfTest().catch(fail); });
+  $('btnReceipt').addEventListener('click', function(){ clearError(); printer.printReceipt(SAMPLE).catch(fail); });
+  $('btnDrawer').addEventListener('click', function(){ clearError(); printer.openDrawer().catch(fail); });
+
+  var support = ThermalPrinter.support();
+  var missing = [];
+  if (!support.serial) missing.push('Web Serial (COM ports)');
+  if (!support.bluetooth) missing.push('Web Bluetooth (LE)');
+  $('support').textContent = missing.length
+    ? 'This browser does not offer: ' + missing.join(', ') + '. Chrome or Edge on Windows offers both.'
+    : 'Web Serial and Web Bluetooth are both available in this browser.';
+  if (!support.secureContext) {
+    $('support').textContent += ' The page is not in a secure context — serve it over http://localhost or https://.';
+  }
+  $('btnSerial').disabled = !support.serial;
+  $('btnBle').disabled = !support.bluetooth;
+
+  writeSettings();
+  render();
+  status();
+  // A port granted earlier reopens without a dialog. Failing is normal and
+  // silent: it just means the user has not picked a printer yet.
+  printer.reconnect().catch(function(){});
+})();
+</script>
+</body>
+</html>
