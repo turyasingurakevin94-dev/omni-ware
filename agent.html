@@ -345,6 +345,9 @@
      happening, and a ring that does not move still says "not yet". */
   @media (prefers-reduced-motion: reduce){ .ag-spinner{animation:none;} }
   .ag-loading-note{font-size:12.5px;color:var(--ink-soft);}
+  .ag-unassigned-note{display:flex;align-items:flex-start;gap:8px;background:var(--bonus-bg);color:var(--ink);
+    border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.4;margin-bottom:12px;}
+  .ag-unassigned-note svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;margin-top:1px;}
   @media (min-width:560px){
     .ag-overlay{align-items:center;padding:20px;}
     .ag-overlay-card{border-radius:20px;}
@@ -1235,6 +1238,10 @@
     </div>
 
     <div id="ag_cartContent">
+      <!-- Shown only while a basket has items and nobody has been named
+           for it. Informative, not a blocker: the items are safe and will
+           follow whoever is chosen, and this says so rather than nagging. -->
+      <div class="ag-unassigned-note" id="ag_cartUnassigned" style="display:none;"></div>
       <div class="ag-card">
         <div class="ag-card-title">Items</div>
         <div class="ag-view-toggle">
@@ -1753,6 +1760,28 @@ function activateCartFor(client){
   if(!k){ cart = []; return; }
   if(!carts[k]) carts[k] = [];
   cart = carts[k];
+}
+/* What becomes of the basket in hand at the moment a client is finally
+   named.
+ *
+ * Items added before anyone was chosen have nowhere to be parked --
+ * cartKey(null) is null, so stashActiveCart() cannot store them and
+ * activateCartFor() then swapped `cart` for the newly chosen client's
+ * empty basket. The items an agent had just built up in front of a
+ * customer simply vanished, and choosing the client is the very step
+ * that did it.
+ *
+ * Naming a client IS the act of saying who those items are for, so they
+ * move across. Appended to whatever that client already had rather than
+ * replacing it: a basket parked for them earlier is theirs too, and
+ * throwing either side away is the fault being fixed. */
+function adoptedCartFor(hadClient, inHand, clientRows){
+  const hand = inHand || [], mine = clientRows || [];
+  // Switching BETWEEN clients: the basket in hand already had an owner
+  // and stashActiveCart has parked it with them. Nothing to adopt.
+  if(hadClient) return { rows: mine, adopted: 0, joined: 0 };
+  if(!hand.length) return { rows: mine, adopted: 0, joined: 0 };
+  return { rows: mine.concat(hand), adopted: hand.length, joined: mine.length };
 }
 function clientsWithBaskets(){
   return Object.keys(carts).filter(k => (carts[k]||[]).length > 0);
@@ -5311,6 +5340,18 @@ function renderCartTab(){
   const hasItems = cart.length > 0;
   document.getElementById('ag_cartEmptyState').style.display = hasItems ? 'none' : 'block';
   document.getElementById('ag_cartContent').style.display = hasItems ? 'block' : 'none';
+  /* Says what is true rather than telling anybody off: the items are
+     safe, they will follow whoever is chosen, and a client is needed
+     before this can be sent. Choosing first is easier; choosing later no
+     longer costs anything. */
+  const note = document.getElementById('ag_cartUnassigned');
+  if(note){
+    const unassigned = hasItems && !chosenClient;
+    note.style.display = unassigned ? 'flex' : 'none';
+    if(unassigned){
+      note.innerHTML = `${ICON_CLOCK}<span>No client chosen yet — these items will follow whoever you pick. You will need one before sending this quote.</span>`;
+    }
+  }
   if(!hasItems) return;
   renderCart();
   // The client table only ever re-rendered when the toggle was clicked, so
@@ -5528,11 +5569,27 @@ document.getElementById('ag_client_search').addEventListener('focus', e=>renderC
 
 function selectClient(client){
   if(!client) return;
+  /* Taken before anything is swapped. With nobody chosen yet this is the
+     unowned basket, which is the one that used to be lost here. */
+  const hadClient = !!cartKey(chosenClient);
+  const inHand = hadClient ? [] : cart.slice();
   // Park whatever is in hand against the client it was built for BEFORE
   // switching, or it follows the agent to the next customer.
   if(cartKey(chosenClient) !== cartKey(client)) stashActiveCart();
   chosenClient = client;
   activateCartFor(client);
+  /* `cart` is now this client's own array, held by reference in `carts`.
+     Refilled in place rather than reassigned, so the two do not drift
+     apart and later pushes still land in the right basket. */
+  const merged = adoptedCartFor(hadClient, inHand, cart);
+  if(merged.adopted){
+    cart.length = 0;
+    merged.rows.forEach(r=> cart.push(r));
+    const n = merged.adopted;
+    toast(merged.joined
+      ? `${n} item${n===1?'':'s'} added to ${client.name}'s basket, which already had ${merged.joined}`
+      : `${n} item${n===1?'':'s'} moved to ${client.name}`);
+  }
   updateCartBadge();
   renderCart();
   document.getElementById('ag_clientPickWrap').style.display = 'none';
