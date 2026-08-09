@@ -25093,7 +25093,11 @@ function deleteVariant(productId, variantIdx){
   const v = p.variants[variantIdx]; if(!v) return;
   const affectedPrices = data.prices.filter(pr=>pr.productId===productId && pr.variantIdx===variantIdx).length;
   const priceWarning = affectedPrices ? ` This will also remove ${affectedPrices} price ${affectedPrices===1?'entry':'entries'} recorded for it.` : '';
-  if(!confirm(`Delete the "${Object.values(v.combo).join(' / ')}" variant? The rest of this product's variants are unaffected.${priceWarning}`)) return;
+  // Named before the fact, not counted after it: stock on a variant being
+  // deleted is stock that stops being counted anywhere.
+  const stockHere = getStockQty(productId, variantIdx);
+  const stockWarning = stockHere ? ` ${stockHere} currently in stock against it will no longer be counted.` : '';
+  if(!confirm(`Delete the "${Object.values(v.combo).join(' / ')}" variant? The rest of this product's variants are unaffected.${priceWarning}${stockWarning}`)) return;
   p.variants.splice(variantIdx, 1);
   // price entries are tied to a variant by index -- drop the ones for the
   // deleted variant, and shift down any that pointed past it, so a later
@@ -25102,7 +25106,16 @@ function deleteVariant(productId, variantIdx){
   data.prices.forEach(pr=>{
     if(pr.productId===productId && pr.variantIdx!=null && pr.variantIdx>variantIdx) pr.variantIdx--;
   });
-  saveData(); triggerProductsRender(); toast('Variant deleted');
+  /* Stock shifts down with them. It is keyed by position, so deleting the
+     second of three variants used to leave the third one's count sitting
+     on the second's key -- the deleted variant's stock became its
+     neighbour's, and the neighbour's became nobody's. */
+  // p.variants has already had the deleted one spliced out, so the list
+  // being remapped FROM was one longer.
+  remapVariantStock(productId, variantRemovalIndexMap(p.variants.length + 1, variantIdx));
+  saveData(); triggerProductsRender();
+  toast(stockHere ? `Variant deleted · ${stockHere} in stock is no longer counted` : 'Variant deleted',
+    stockHere ? 6000 : undefined);
   // The photo stays in the media library ("used nowhere" if this was its
   // only user), same as deleteProduct() above.
 }
@@ -25204,6 +25217,7 @@ document.getElementById('p_save').addEventListener('click', ()=>{
       ? ((data.products.find(p=>p.id===editingProductId)||{}).createdAt || null)
       : new Date().toISOString(),
   };
+  let stockMoved = null;
   if(editingProductId){
     const idx = data.products.findIndex(p=>p.id===editingProductId);
     const oldVariants = data.products[idx].variants || [];
@@ -25224,13 +25238,27 @@ document.getElementById('p_save').addEventListener('click', ()=>{
         pr.variantIdx = newIdx;
         return true;
       });
+      /* And the stock with them. It is keyed by position, so without this
+         adding a size to the top of the list left every count one variant
+         out -- the shelf figures said one thing and the shelf another. */
+      const oldToNew = new Map();
+      oldVariants.forEach((v,i)=>{
+        const newIdx = newIndexBySig[JSON.stringify(v.combo)];
+        if(newIdx!==undefined) oldToNew.set(i, newIdx);
+      });
+      stockMoved = remapVariantStock(id, oldToNew);
     }
   } else {
     data.products.push(record);
   }
   ensurePresetCategory(record.category, record.subcategory);
   saveData(); closeModal('productModal'); resetProductForm(); triggerProductsRender(); renderPresets();
-  toast('Product saved');
+  /* Stock on a variant that no longer exists has nothing left to belong
+     to. Said out loud with the number, because the alternative is
+     somebody finding the shortfall at a stock count months later. */
+  toast(stockMoved && stockMoved.droppedQty
+    ? `Product saved · ${stockMoved.droppedQty} in stock was on ${stockMoved.droppedVariants} variant${stockMoved.droppedVariants===1?'':'s'} you removed, and is no longer counted`
+    : 'Product saved', stockMoved && stockMoved.droppedQty ? 7000 : undefined);
   // Fire-and-forget cleanup of photos UPLOADED this session that didn't
   // end up being the saved one (product's or any variant's). Images this
   // save merely REPLACED are deliberately left alone now: they belong to
@@ -25253,6 +25281,65 @@ function supplierName(id){ if(id==='__stock__') return 'Our stock'; const s = da
 
 /* ---------------- Inventory / stock ---------------- */
 function stockKey(productId, variantIdx){ return (variantIdx==null || variantIdx==='') ? productId : `${productId}::${variantIdx}`; }
+/* Move a product's stock when its variants change position.
+ *
+ * Price rows carry the variant's combo and are remapped by matching it.
+ * Stock is not: the count, its FIFO cost lots and its log are all keyed
+ * by POSITION (productId::3), so anything that renumbers the variants
+ * leaves them pointing at whichever variant now sits in that slot.
+ * Adding a size to the top of the list handed one variant's stock to
+ * another -- silently, and in the direction that matters, since the
+ * quantity that walked out of the shop is now recorded against the wrong
+ * thing.
+ *
+ * `oldToNew` maps each old position to its new one, leaving out variants
+ * that no longer exist. Their stock cannot belong to anything, so it is
+ * dropped and the count returned for the caller to report -- vanishing
+ * inventory is worth a sentence.
+ *
+ * Built into fresh maps rather than rewritten in place: 1->2 and 2->3
+ * applied one at a time would have the first overwrite the second. */
+/* Where each variant ends up when the one at `removedIdx` is taken out
+   of a list of `count`. The removed one is deliberately absent rather
+   than mapped anywhere -- it is what tells remapVariantStock that its
+   stock has nothing left to belong to. */
+function variantRemovalIndexMap(count, removedIdx){
+  const map = new Map();
+  for(let i=0; i<count; i++){
+    if(i === removedIdx) continue;
+    map.set(i, i > removedIdx ? i-1 : i);
+  }
+  return map;
+}
+function remapVariantStock(productId, oldToNew){
+  let droppedQty = 0, droppedVariants = 0;
+  const reindex = (obj, onDrop)=>{
+    const out = {};
+    Object.keys(obj || {}).forEach(k=>{
+      const sep = k.lastIndexOf('::');
+      const isThis = sep > 0 && k.slice(0, sep) === productId && /^\d+$/.test(k.slice(sep+2));
+      if(!isThis){ out[k] = obj[k]; return; }
+      const newIdx = oldToNew.get(Number(k.slice(sep+2)));
+      if(newIdx === undefined){ if(onDrop) onDrop(obj[k]); return; }
+      out[stockKey(productId, newIdx)] = obj[k];
+    });
+    return out;
+  };
+  data.stock = reindex(data.stock, (qty)=>{
+    if(Number(qty)) { droppedQty += Number(qty); droppedVariants++; }
+  });
+  data.stockLots = reindex(data.stockLots);
+  // The log is history: its rows are re-pointed so they stay attached to
+  // the variant they describe, never deleted.
+  (data.stockLog || []).forEach(l=>{
+    if(l.productId !== productId || l.variantIdx == null) return;
+    const newIdx = oldToNew.get(Number(l.variantIdx));
+    if(newIdx === undefined) return;
+    l.variantIdx = newIdx;
+    l.key = stockKey(productId, newIdx);
+  });
+  return { droppedQty, droppedVariants };
+}
 function getStockQty(productId, variantIdx){ return Number(data.stock[stockKey(productId, variantIdx)]) || 0; }
 // Our-stock purchase cost — tracked as FIFO lots per stock item. Each lot is
 // {qty, cost} in the order it was purchased; a purchase pushes a new lot
