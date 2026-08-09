@@ -316,7 +316,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const fn = (/function getFilteredPriceRows[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/priceRowMatchesAge\(r, ageFilter\)/.test(fn),
     'the age filter is applied where every caller gets it');
-  t.check((code.match(/getFilteredPriceRows\(filter, supplierFilter, categoryFilter, ageFilter\)/g) || []).length === 2,
+  // The stock filter joined the other four; both callers still pass the
+  // SAME set, which is what this has always been pinning.
+  t.check((code.match(/getFilteredPriceRows\(filter, supplierFilter, categoryFilter, ageFilter, stockFilter\)/g) || []).length === 2,
     'so the list and the printout ask for the same rows');
 
   // A filtered printout under a plain heading is a partial registry that

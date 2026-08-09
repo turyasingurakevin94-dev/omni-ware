@@ -138,7 +138,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const list = /const PRICE_SORTS = \[([\s\S]*?)\];/.exec(code);
   t.check(!!list && /^\s*\{ key:'added'/.test(list[1].split('\n').filter((l) => l.trim())[0]),
     'and first, so the dropdown opens on it — which is what makes it the default');
-  t.check(/function renderPrices\(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added'\)/.test(code),
+  t.check(/function renderPrices\(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added'/.test(code),
     'and the render agrees, rather than defaulting to something the dropdown never says');
   /* Built from the list, so an option cannot exist that the sort does not
      handle — the reason the dropdown is generated rather than written out. */

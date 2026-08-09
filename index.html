@@ -5934,6 +5934,9 @@
             <input type="hidden" id="pr_supplier_filter">
             <div class="suggestions" id="pr_supplier_filter_suggestions"></div>
           </div>
+          <div class="field p-toolbar-filter"><label>Stock</label>
+            <select id="pr_stock_filter"></select>
+          </div>
           <div class="field p-toolbar-filter"><label>Last updated</label>
             <select id="pr_age_filter"></select>
           </div>
@@ -26173,6 +26176,26 @@ const PRICE_SORTS = [
   { key:'oldest', label:'Least recently repriced' },
   { key:'newest', label:'Most recently repriced' },
 ];
+/* Out of stock is a fact about ONE supplier's row, not about the item:
+   the flag is set on a quote, and a product is only unobtainable when
+   every quote on it is flagged. So this filters rows, and a card that
+   keeps only its flagged rows is answering "who is out", which is the
+   question somebody with a customer waiting is asking. */
+const PRICE_STOCK_FILTERS = [
+  { key:'',    label:'In and out of stock' },
+  { key:'out', label:'Out of stock' },
+  { key:'in',  label:'In stock' },
+];
+function priceRowMatchesStock(r, key){
+  const out = !!(r && r.outOfStock);
+  if(key === 'out') return out;
+  if(key === 'in') return !out;
+  /* Anything else keeps everything. A key nobody recognises must not
+     quietly behave like one of the two real ones -- hiding half the
+     registry on the strength of a value the dropdown cannot produce is
+     worse than ignoring it. */
+  return true;
+}
 const PRICE_AGE_BUCKETS = [
   { key:'',        label:'Any age' },
   { key:'30',      label:'Over 30 days old' },
@@ -26190,7 +26213,7 @@ function priceRowMatchesAge(r, ageFilter){
   return age > Number(ageFilter);
 }
 
-function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', ageFilter=''){
+function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', ageFilter='', stockFilter=''){
   let rows = data.prices.map(pr => {
     const product = data.products.find(p=>p.id===pr.productId);
     const pname = product ? productVariantLabel(product, pr.variantIdx) : productName(pr.productId);
@@ -26214,6 +26237,9 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', a
   // showing only stale quotes would be a different document wearing the
   // same heading.
   if(ageFilter) rows = rows.filter(r=> priceRowMatchesAge(r, ageFilter));
+  // Here rather than in the renderer, same as the age filter above: the
+  // printout has to carry the rows the screen is showing.
+  if(stockFilter) rows = rows.filter(r=> priceRowMatchesStock(r, stockFilter));
   rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id-a.id));
   return rows;
 }
@@ -26259,7 +26285,8 @@ function triggerPricesRender(){
     document.getElementById('pr_supplier_filter').value,
     document.getElementById('pr_category_filter').value,
     document.getElementById('pr_age_filter').value,
-    document.getElementById('pr_sort').value
+    document.getElementById('pr_sort').value,
+    document.getElementById('pr_stock_filter').value
   );
 }
 
@@ -26268,13 +26295,17 @@ function triggerPricesRender(){
 (function buildPriceControls(){
   const age = document.getElementById('pr_age_filter');
   const sort = document.getElementById('pr_sort');
-  if(!age || !sort) return;
+  const stock = document.getElementById('pr_stock_filter');
+  if(!age || !sort || !stock) return;
   age.innerHTML = PRICE_AGE_BUCKETS.map(b=>
     `<option value="${esc(b.key)}">${esc(b.label)}</option>`).join('');
   sort.innerHTML = PRICE_SORTS.map(s=>
     `<option value="${esc(s.key)}">${esc(s.label)}</option>`).join('');
+  stock.innerHTML = PRICE_STOCK_FILTERS.map(f=>
+    `<option value="${esc(f.key)}">${esc(f.label)}</option>`).join('');
   age.addEventListener('change', triggerPricesRender);
   sort.addEventListener('change', triggerPricesRender);
+  stock.addEventListener('change', triggerPricesRender);
 })();
 
 /* ================= THE PRICE REGISTRY ================================
@@ -26488,12 +26519,12 @@ function priceGroupHTML(g, tokens){
   </section>`;
 }
 
-function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added'){
+function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter='', sortMode='added', stockFilter=''){
   populatePriceCategoryFilter(categoryFilter);
   const wrap = document.getElementById('pricesTableWrap');
   const strip = document.getElementById('pricesSummary');
   const tokens = searchTokens(filter);
-  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter);
+  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter, stockFilter);
 
   const s = priceRegistryStats(rows);
   const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
@@ -26508,10 +26539,15 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
 
   if(rows.length===0){
     const bucket = PRICE_AGE_BUCKETS.find(b=> b.key === ageFilter);
+    /* Named, because "no matches" on a screen with a filter set reads as
+       an empty registry rather than as good news -- and "nothing is out
+       of stock" IS good news, worth saying in those words. */
     wrap.innerHTML = data.prices.length===0
       ? '<div class="empty">No price entries yet. Add one above.</div>'
-      // Named, because "no matches" on a screen with an age filter set
-      // reads as an empty registry rather than as good news.
+      : stockFilter === 'out'
+        ? '<div class="empty">Nothing is marked out of stock — every quote that matches your other filters is available.</div>'
+      : stockFilter === 'in'
+        ? '<div class="empty">Everything matching your other filters is marked out of stock.</div>'
       : ageFilter
         ? `<div class="empty">Nothing is ${esc((bucket ? bucket.label : '').toLowerCase())} — every quote that matches your other filters is fresher than that.</div>`
         : '<div class="empty">No price entries match your search.</div>';
@@ -26859,7 +26895,8 @@ document.getElementById('pr_print').addEventListener('click', ()=>{
   const supplierFilter = document.getElementById('pr_supplier_filter').value;
   const categoryFilter = document.getElementById('pr_category_filter').value;
   const ageFilter = document.getElementById('pr_age_filter').value;
-  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter);
+  const stockFilter = document.getElementById('pr_stock_filter').value;
+  const rows = getFilteredPriceRows(filter, supplierFilter, categoryFilter, ageFilter, stockFilter);
   const printArea = document.getElementById('printArea');
   if(rows.length===0){ toast('No results to print'); return; }
   clearInjectedPrintStyles();
@@ -26868,7 +26905,10 @@ document.getElementById('pr_print').addEventListener('click', ()=>{
   // stale quotes printed under a plain "Price Registry" heading is a
   // partial registry that reads like the whole one.
   const ageBucket = PRICE_AGE_BUCKETS.find(b=> b.key === ageFilter);
-  const titleBits = [filter?`search: "${esc(filter)}"`:'', categoryFilter?`category: ${esc(categoryFilter)}`:'', supplierLabel?`supplier: ${esc(supplierLabel)}`:'', (ageFilter && ageBucket)?esc(ageBucket.label.toLowerCase()):''].filter(Boolean).join(', ');
+  // A sheet of only the out-of-stock quotes under a plain heading is the
+  // same trap as a sheet of only stale ones.
+  const stockBucket = PRICE_STOCK_FILTERS.find(f=> f.key === stockFilter);
+  const titleBits = [filter?`search: "${esc(filter)}"`:'', categoryFilter?`category: ${esc(categoryFilter)}`:'', supplierLabel?`supplier: ${esc(supplierLabel)}`:'', (ageFilter && ageBucket)?esc(ageBucket.label.toLowerCase()):'', (stockFilter && stockBucket)?esc(stockBucket.label.toLowerCase()):''].filter(Boolean).join(', ');
   printArea.innerHTML = `
     <h2>Price Registry${titleBits? ' — '+titleBits : ''}</h2>
     <div class="print-meta">Printed ${new Date().toLocaleString('en-UG')} — ${rows.length} record${rows.length===1?'':'s'}</div>
