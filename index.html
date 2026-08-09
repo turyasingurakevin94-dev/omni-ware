@@ -3407,6 +3407,12 @@
   .sq-location-row .icon{width:12px;height:12px;flex-shrink:0;}
   .sq-card-meta-rows{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
   .sq-meta-row{font-size:12px;color:var(--ink-soft);}
+  /* Waiting on goods is the normal state of the Awaiting Goods stage, so
+     it reads as a countdown rather than as an alarm -- and turns when the
+     last one lands, because that is the moment anything can happen. */
+  .sq-goods-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .sq-goods-row svg{width:14px;height:14px;flex-shrink:0;}
+  .sq-goods-row.in{color:var(--good);font-weight:600;}
   .sq-assignee-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
   .sq-assignee-icon{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
   .sq-assignee-icon.prep{animation:sq-box-sort 1.3s ease-in-out infinite;}
@@ -8716,16 +8722,25 @@ function seedData(){
 }
 
 // The four stages a saved quote moves through, shown as columns of cards.
+/* The shop is a fulfilment centre, not a shopfront that happens to hold
+   stock: goods bought for an order come IN to the shop first, and are
+   picked from the shop afterwards. Awaiting Goods is that first leg.
+
+   Before it existed, an order went straight to Being Prepared the moment
+   it left Draft, and a worker could accept a pick for goods still sitting
+   in Shafik's shop -- their card even told them to go and get it from
+   there, which is a different job in a different part of town. */
 const SQ_STATUSES = {
-  draft:            { label:'Step 1. Draft',            color:'#9AA4AC' },
-  preparing:        { label:'Step 2. Being Prepared',    color:'#D9922B' },
-  pending_delivery: { label:'Step 3. Pending Delivery',  color:'#2F7FBF' },
-  completed:        { label:'Step 4. Completed',         color:'#3A9A5C' }
+  draft:            { label:'Step 1. Draft',             color:'#9AA4AC' },
+  awaiting_goods:   { label:'Step 2. Awaiting Goods',    color:'#8A6FC4' },
+  preparing:        { label:'Step 3. Being Prepared',    color:'#D9922B' },
+  pending_delivery: { label:'Step 4. Pending Delivery',  color:'#2F7FBF' },
+  completed:        { label:'Step 5. Completed',         color:'#3A9A5C' }
 };
-const SQ_STATUS_ORDER = ['draft','preparing','pending_delivery','completed'];
+const SQ_STATUS_ORDER = ['draft','awaiting_goods','preparing','pending_delivery','completed'];
 // Short labels for the fixed top-right reminder bar (SQ_STATUSES' own labels
 // carry a "Step N." prefix meant for the board columns, not this compact view).
-const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', preparing:'Being Prepared', pending_delivery:'Pending Delivery', completed:'Completed'};
+const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', awaiting_goods:'Awaiting Goods', preparing:'Being Prepared', pending_delivery:'Pending Delivery', completed:'Completed'};
 
 // SQ_BOARD_HIDE_AFTER_MS / quoteAgedOffBoard() now live in shared-worker.js
 // (loaded before this script), shared with the worker app.
@@ -12063,9 +12078,6 @@ function rankedPurchaseRowsAtQty(productId, variantIdx=null, qty=0){
    question this answers is how much cash to take to market now. Through
    rankedPurchaseRowsAtQty(), so the supplier named here is the one the item
    picker would name for the same quantity. ---- */
-function orderLineIsBoughtIn(it){
-  return !!(it && it.supplierId && it.supplierId !== '__stock__');
-}
 
 // One row per line that has to be bought, carrying today's best price and
 // who it is from. `best` is null when nothing on file can price it: that
@@ -12114,7 +12126,15 @@ function orderUnpricedLines(q){
 // inflate the figure; anything past Being Prepared has been picked, so
 // whatever had to be bought for it already was.
 function beingPreparedOrders(){
-  return (data.savedQuotes||[]).filter(q=> q.status==='preparing' && !q.voided && !quoteAgedOffBoard(q));
+  /* Both working stages, because the question this answers is "what is
+     still to be bought" and that is now spread across two of them.
+     Awaiting Goods is where an order sits precisely BECAUSE something has
+     not been fetched; Being Prepared keeps its place for the orders that
+     were already there when this stage arrived, and for the odd line
+     un-received underneath one. A line already collected zeroes its own
+     cost (orderPurchaseLines), so nothing is counted twice. */
+  return (data.savedQuotes||[]).filter(q=>
+    (q.status==='awaiting_goods' || q.status==='preparing') && !q.voided && !quoteAgedOffBoard(q));
 }
 
 // The same money regrouped by who to go to, because that is how it is
@@ -14181,16 +14201,10 @@ function quoteLineSurplus(it){
    implicit. What it buys is that no new table, sync path or invoice key
    has to change -- and it still catches the short delivery and the price
    that moved, which is what the shop is actually blind to. ---- */
-function quoteLineReceived(it){
-  return !!(it && it.receivedAt && Number(it.receivedQty) > 0);
-}
 /* Whose goods are on our own shelf by the time the order is invoiced --
    either it was quoted off the shelf to begin with, or it was bought in
    and has since come through the door. Both leave the shop the same way,
    so both are deducted the same way. */
-function quoteLineComesOffShelf(it){
-  return !!it && (it.supplierId === '__stock__' || quoteLineReceived(it));
-}
 // What a receiving form should open showing: what was expected, at what
 // was expected to be paid.
 function quoteLineExpected(it){
@@ -16459,6 +16473,25 @@ document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>c
 // step -- keyed by the destination status. A forward move whose
 // destination isn't listed here (or any backward move) proceeds
 // immediately, same as before this existed.
+/* How much of an order is still out, for the card of an order waiting on
+   it. Reads as a countdown to being pickable rather than as a warning:
+   waiting for goods is the normal state of this stage, and only the last
+   line landing changes what anyone can do. */
+function orderGoodsRowHTML(q){
+  if(!q || (q.status !== 'awaiting_goods' && !orderAwaitsGoods(q))) return '';
+  const p = orderGoodsProgress(q);
+  if(!p.total) return '';
+  const allIn = p.received >= p.total;
+  return `<div class="sq-goods-row ${allIn ? 'in' : ''}" title="${allIn
+    ? 'Everything has arrived — this order can be picked'
+    : 'Waiting on goods from a supplier'}">
+    ${allIn ? ICON_CHECK : ICON_TRUCK}
+    <span>${allIn
+      ? 'All items in — ready to prepare'
+      : `${p.received} of ${p.total} item${p.total===1?'':'s'} in`}</span>
+  </div>`;
+}
+
 const STAGE_ASSIGNMENT_ROLE = { preparing: 'worker', pending_delivery: 'delivery' };
 const STAGE_ASSIGNMENT_FIELD = { worker: 'assignedWorkerId', delivery: 'assignedDeliveryId' };
 
@@ -16506,11 +16539,28 @@ function stepSavedQuoteStatus(id, dir){
   // silently resets the order to 'draft' -- stepping backward already
   // bailed out, so only one direction was ever wrong.
   if(idx < 0) return;
-  const nextIdx = idx + dir;
+  let nextIdx = idx + dir;
   if(nextIdx < 0 || nextIdx >= SQ_STATUS_ORDER.length) return;
-  const toStatus = SQ_STATUS_ORDER[nextIdx];
+  let toStatus = SQ_STATUS_ORDER[nextIdx];
+  /* An order with nothing to collect has no waiting to do, so it steps
+     over Awaiting Goods in both directions -- a stage that exists for
+     goods coming in should not detain an order being filled entirely off
+     our own shelf. */
+  if(toStatus==='awaiting_goods' && !orderAwaitsGoods(q)){
+    nextIdx += dir;
+    if(nextIdx < 0 || nextIdx >= SQ_STATUS_ORDER.length) return;
+    toStatus = SQ_STATUS_ORDER[nextIdx];
+  }
   if(dir>0 && toStatus==='preparing' && agentPaymentBlocksPreparing(q)){
     promptAgentPrepayment(q);
+    return;
+  }
+  /* The gate, on the one move it guards. Said with the count rather than
+     as a flat refusal: what the admin needs to know is how much is still
+     out, and going to look for that is the next thing they would do. */
+  if(dir>0 && toStatus==='preparing' && orderAwaitsGoods(q)){
+    const left = orderIncomingLines(q).length;
+    toast(`${left} item${left===1?'':'s'} still to come in — receive ${left===1?'it':'them'} before this can be picked`, 5000);
     return;
   }
   if(dir>0){
@@ -17389,6 +17439,7 @@ function renderSavedQuotes(){
           <div class="sq-card-meta-rows">
             ${orderMetaRowHTML(q)}
             ${orderCashStripHTML(q)}
+            ${orderGoodsRowHTML(q)}
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && !orderNeedsDelivery(q)) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
@@ -17448,7 +17499,11 @@ function renderSavedQuotes(){
           <span class="sq-col-count">${group.length}</span>
           ${status==='preparing' ? pickupRunsIconHTML(group) : ''}
         </div>
-        ${status==='preparing' ? cashToBuyBannerHTML(group) : ''}
+        ${/* The money to go and buy belongs beside the orders waiting for
+             it. It sat on Being Prepared because that used to be where an
+             order went the moment it left Draft -- now that there is a
+             stage for goods still out, that is where the buying is. */
+          status==='awaiting_goods' ? cashToBuyBannerHTML(group) : ''}
         ${status==='pending_delivery' ? deliveryRunsBannerHTML(group) : ''}
         <div class="sq-col-body">
           ${group.length===0 ? '<div class="sq-col-empty">No quotes here</div>' : group.map(cardHTML).join('')}

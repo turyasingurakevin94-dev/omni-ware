@@ -47,13 +47,13 @@ const scope = compileScope([
   extractFunction(src, 'tieredUnitPrice', 'index.html'),
   extractFunction(src, 'purchasePriceAtQty', 'index.html'),
   extractFunction(src, 'rankedPurchaseRowsAtQty', 'index.html'),
-  extractFunction(src, 'orderLineIsBoughtIn', 'index.html'),
+  extractFunction(read('shared-worker.js'), 'orderLineIsBoughtIn', 'shared-worker.js'),
   // orderPurchaseLines asks ipLineOutlay how many a pack-only supplier
   // will actually sell, so the collect-this quantity comes with it.
   extractFunction(src, 'ipLineOutlay', 'index.html'),
   // A line already received is no longer a call on cash, so
   // orderPurchaseLines asks whether it has been.
-  extractFunction(src, 'quoteLineReceived', 'index.html'),
+  extractFunction(read('shared-worker.js'), 'quoteLineReceived', 'shared-worker.js'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),

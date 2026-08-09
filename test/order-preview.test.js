@@ -35,7 +35,7 @@ const scope = compileScope([
   extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
   extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html'),
   extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html'),
-  extractFunction(src, 'orderLineIsBoughtIn', 'index.html'),
+  extractFunction(read('shared-worker.js'), 'orderLineIsBoughtIn', 'shared-worker.js'),
   extractDeclaration(worker, 'PICK_ANSWERED', 'shared-worker.js'),
   extractFunction(worker, 'itemPickAnswered', 'shared-worker.js'),
   extractFunction(worker, 'itemOrderedQty', 'shared-worker.js'),
@@ -132,15 +132,16 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 {
   const html = scope.orderPreviewStepsHTML(order([stockLine()], { status: 'pending_delivery' }));
   const states = [...html.matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]);
-  t.check(states.join(',') === 'done,done,now,todo',
+  // Five steps since Awaiting Goods was inserted after Draft.
+  t.check(states.join(',') === 'done,done,done,now,todo',
     `the steps behind it are done, the one it is in is now, the rest to come (got ${states.join(',')})`);
 
   const first = scope.orderPreviewStepsHTML(order([stockLine()], { status: 'draft' }));
-  t.check([...first.matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]).join(',') === 'now,todo,todo,todo',
+  t.check([...first.matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]).join(',') === 'now,todo,todo,todo,todo',
     'a draft has nothing behind it');
 
   const last = scope.orderPreviewStepsHTML(order([stockLine()], { status: 'completed' }));
-  t.check([...last.matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]).join(',') === 'done,done,done,now',
+  t.check([...last.matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]).join(',') === 'done,done,done,done,now',
     'and a completed order has nothing left');
 
   // Only the step it is in says how long it has been there; the others

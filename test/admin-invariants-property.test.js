@@ -100,7 +100,13 @@ const NAMES = [
   'orderReversalParts', 'deleteQuoteWarning', 'removePurchaseInvoicesForQuote', 'deleteSavedQuote',
 ];
 let fns = null, err = null;
-try { fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')), env, NAMES); }
+/* Three of these moved to shared-worker.js when Awaiting Goods
+   arrived: both apps have to agree about whether an order's goods
+   are in, so the rule lives where both can read it. */
+const SHARED_HOME = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineComesOffShelf'];
+const fnSrc = (n) => (SHARED_HOME.includes(n) ? read('shared-worker.js') : src);
+const fnFile = (n) => (SHARED_HOME.includes(n) ? 'shared-worker.js' : 'index.html');
+try { fns = compileScope(NAMES.map(n => extractFunction(fnSrc(n), n, fnFile(n))), env, NAMES); }
 catch (e) { err = e; }
 t.check(!!fns, `the admin's money and stock routines compile together${err ? ` (${err.message})` : ''}`);
 

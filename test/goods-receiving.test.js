@@ -28,6 +28,11 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('goods receiving');
 const src = read('index.html');
+/* Three of these live in shared-worker.js: both apps have to agree
+   about whether an order's goods are in. */
+const SHARED_HOME = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineComesOffShelf'];
+const fnSrc = (n) => (SHARED_HOME.includes(n) ? read('shared-worker.js') : src);
+const fnFile = (n) => (SHARED_HOME.includes(n) ? 'shared-worker.js' : 'index.html');
 
 const CARTONS = { supplierId: 'S1', sname: 'Shafik Katwe', wholesale: 78333, retail: null,
   packQty: 6, packUnit: 'Ctn', unit: 'Dozen', tiers: [] };
@@ -39,7 +44,7 @@ const NAMES = ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBo
 
 let movements = [];
 const build = () => compileScope(
-  NAMES.map((n) => extractFunction(src, n, 'index.html')),
+  NAMES.map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
   {
     productPriceRows: (pid, vi) => (pid === 'P1' && vi === 0 ? [CARTONS] : []),
     supplierName: (id) => (id === 'S1' ? 'Shafik Katwe' : id),

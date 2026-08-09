@@ -996,6 +996,16 @@ function acceptOrderAssignment(orderId){
     toast(`Finish ${open.client.name || 'the order you have open'} first — you can only pick one order at a time`, 5000);
     return;
   }
+  /* Nothing can be picked that has not arrived. This was reachable and
+     wrong in the most wasteful way: a worker accepted the pick, walked
+     the shelves for goods still in a supplier's shop, and recorded a
+     short pick against a delivery that had simply not happened. The
+     admin's board then read the order as picked and short. */
+  if(goodsBlockPreparing(q)){
+    const left = orderIncomingLines(q).length;
+    toast(`${left} item${left===1?'':'s'} on this order ${left===1?'has':'have'} not arrived yet — it cannot be picked until they are in`, 5000);
+    return;
+  }
   q.pickingStatus = 'in_progress';
   q.workerAcceptedAt = Date.now();
   q.pickCursor = 0;
@@ -1100,6 +1110,49 @@ function orderHasPickShortfall(q){
   return pickShortfallLines(q).length > 0;
 }
 
+/* ---------------- Where an order's goods are ----------------
+
+   Both apps have to agree about this, which is why it lives here. The
+   admin board decides whether an order may be prepared at all; the
+   worker app decides whether to offer the pick and where to send
+   somebody for it. Two copies of that rule would eventually disagree,
+   and the way it would show is a worker sent across town for goods
+   already sitting on the shelf behind them. */
+function orderLineIsBoughtIn(it){
+  return !!(it && it.supplierId && it.supplierId !== '__stock__');
+}
+function quoteLineReceived(it){
+  return !!(it && it.receivedAt && Number(it.receivedQty) > 0);
+}
+// Whose goods are on our own shelf: quoted from stock, or bought in and
+// since come through the door.
+function quoteLineComesOffShelf(it){
+  return !!it && (it.supplierId === '__stock__' || quoteLineReceived(it));
+}
+// Still out at a supplier, and so still to be collected.
+function orderIncomingLines(q){
+  return (((q && q.items) || [])).filter(it=> orderLineIsBoughtIn(it) && !quoteLineReceived(it));
+}
+function orderAwaitsGoods(q){ return orderIncomingLines(q).length > 0; }
+// How far along the collecting is, for a card that has to say so at a
+// glance. Counts LINES rather than units: "3 of 5 items in" is what
+// decides whether anyone can start picking, and a part-delivered line is
+// not in.
+function orderGoodsProgress(q){
+  const bought = (((q && q.items) || [])).filter(orderLineIsBoughtIn);
+  return { received: bought.filter(quoteLineReceived).length, total: bought.length };
+}
+/* The gate. An order cannot be picked while any of it is still in
+   somebody else's shop -- the picker would be sent for goods that are
+   not there, and a short pick would be recorded against a delivery that
+   simply had not happened yet.
+
+   Draft is exempt: nothing is being picked there, and an order still
+   being written should not be blocked by goods nobody has gone for. */
+function goodsBlockPreparing(q){
+  return !!q && q.status !== 'draft' && orderAwaitsGoods(q);
+}
+
 function timeOfDayGreeting(){
   const h = new Date().getHours();
   if(h < 12) return 'Good morning';
@@ -1112,7 +1165,13 @@ function timeOfDayGreeting(){
 // '__stock__' or unset means the shop's own shelf stock, anything else is a
 // real supplier row to source it from.
 function pickItemSourceLabel(it){
-  if(!it.supplierId || it.supplierId==='__stock__') return 'Shop';
+  /* Once the goods have been collected they are HERE, so this says so.
+     It used to read the line's supplier and nothing else, and went on
+     directing the picker to Shafik's shop in Katwe for a carton standing
+     on our own shelf -- a different job, in a different part of town,
+     for goods already paid for and counted in. */
+  if(quoteLineComesOffShelf(it)) return 'Shop';
+  if(!it.supplierId) return 'Shop';
   const sup = (data.suppliers||[]).find(s=>s.id===it.supplierId);
   if(!sup) return it.supplierName || 'Supplier';
   // The worker is standing in that part of town looking for a door:
@@ -1627,7 +1686,12 @@ function autoAssignNextOrder(workerId){
   // "waiting since", and re-saving a quote deliberately does not reset it.
   const waitingSince = (q)=> q.stageEnteredAt || new Date(q.savedAt||0).getTime() || 0;
   const next = data.savedQuotes
-    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing') && !agentPaymentBlocksPreparing(q))
+    /* awaiting_goods is deliberately NOT in this list, and the goods gate
+       covers a preparing order whose delivery was undone underneath it:
+       handing somebody a pick they cannot walk is worse than handing them
+       nothing, because they find out at the shelf. */
+    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing')
+      && !agentPaymentBlocksPreparing(q) && !goodsBlockPreparing(q))
     .sort((a,b)=> waitingSince(a) - waitingSince(b))[0];
   if(!next) return;
   next.assignedWorkerId = workerId;

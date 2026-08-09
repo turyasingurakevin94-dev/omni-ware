@@ -73,7 +73,13 @@ const FNS = [
   'removePurchaseInvoicesForQuote', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning',
   'savedQuoteTotal', 'invoiceBalanceDue',
 ];
-const fn = compileScope(FNS.map((n) => extractFunction(adminSrc, n, 'index.html')), env, FNS);
+/* Three of these moved to shared-worker.js when Awaiting Goods
+   arrived: both apps have to agree about whether an order's goods
+   are in, so the rule lives where both can read it. */
+const SHARED_HOME = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineComesOffShelf'];
+const fnSrc = (n) => (SHARED_HOME.includes(n) ? read('shared-worker.js') : adminSrc);
+const fnFile = (n) => (SHARED_HOME.includes(n) ? 'shared-worker.js' : 'index.html');
+const fn = compileScope(FNS.map((n) => extractFunction(fnSrc(n), n, fnFile(n))), env, FNS);
 
 const inv = (id, supplierId, total, paid, extra) => Object.assign({
   id, supplierId, supplierName: 'Supplier ' + supplierId, quoteId: null,

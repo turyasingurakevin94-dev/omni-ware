@@ -44,6 +44,14 @@ const scope = compileScope([
   "const STAGE_ASSIGNMENT_ROLE = { preparing:'worker', pending_delivery:'delivery' };",
   "const STAGE_ASSIGNMENT_FIELD = { worker:'assignedWorkerId', delivery:'assignedDeliveryId' };",
   extractFunction(sharedJs, 'resetPickingProgress', 'shared-worker.js'),
+  // Awaiting Goods: an order cannot be picked while any of it is still
+  // in a supplier's shop, so the rule that decides that comes too.
+  extractFunction(sharedJs, 'orderLineIsBoughtIn', 'shared-worker.js'),
+  extractFunction(sharedJs, 'quoteLineReceived', 'shared-worker.js'),
+  extractFunction(sharedJs, 'quoteLineComesOffShelf', 'shared-worker.js'),
+  extractFunction(sharedJs, 'orderIncomingLines', 'shared-worker.js'),
+  extractFunction(sharedJs, 'orderAwaitsGoods', 'shared-worker.js'),
+  extractFunction(sharedJs, 'goodsBlockPreparing', 'shared-worker.js'),
   extractFunction(indexHtml, 'stepSavedQuoteStatus', 'index.html'),
 ], {
   data,

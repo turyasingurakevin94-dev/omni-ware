@@ -33,6 +33,14 @@ let saved = 0;
 const scope = compileScope([
   extractDeclaration(sharedJs, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
   extractFunction(sharedJs, 'quoteAgedOffBoard', 'shared-worker.js'),
+  // Awaiting Goods: an order cannot be picked while any of it is still
+  // in a supplier's shop, so the rule that decides that comes too.
+  extractFunction(sharedJs, 'orderLineIsBoughtIn', 'shared-worker.js'),
+  extractFunction(sharedJs, 'quoteLineReceived', 'shared-worker.js'),
+  extractFunction(sharedJs, 'quoteLineComesOffShelf', 'shared-worker.js'),
+  extractFunction(sharedJs, 'orderIncomingLines', 'shared-worker.js'),
+  extractFunction(sharedJs, 'orderAwaitsGoods', 'shared-worker.js'),
+  extractFunction(sharedJs, 'goodsBlockPreparing', 'shared-worker.js'),
   extractFunction(sharedJs, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
   extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js'),
 ], {

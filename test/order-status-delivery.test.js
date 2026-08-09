@@ -57,6 +57,14 @@ const scope = compileScope(
     extractDeclaration(adminSrc, 'STAGE_ASSIGNMENT_FIELD', 'index.html'),
     extractDeclaration(workerSrc, 'SQ_BOARD_HIDE_AFTER_MS', 'shared-worker.js'),
     extractFunction(workerSrc, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
+    // Awaiting Goods: an order cannot be picked while any of it is still
+    // in a supplier's shop, so the rule that decides that comes too.
+    extractFunction(workerSrc, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(workerSrc, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(workerSrc, 'quoteLineComesOffShelf', 'shared-worker.js'),
+    extractFunction(workerSrc, 'orderIncomingLines', 'shared-worker.js'),
+    extractFunction(workerSrc, 'orderAwaitsGoods', 'shared-worker.js'),
+    extractFunction(workerSrc, 'goodsBlockPreparing', 'shared-worker.js'),
     extractFunction(workerSrc, 'quoteAgedOffBoard', 'shared-worker.js'),
     // Stepping backward across Being Prepared retires the pick with the
     // assignment -- see test/worker-pick-reset.test.js.

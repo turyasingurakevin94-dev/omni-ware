@@ -408,8 +408,11 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   t.check(/\$\{status==='pending_delivery' \? deliveryRunsBannerHTML\(group\) : ''\}/.test(code),
     'the banner sits over Pending Delivery, where the question is asked');
-  t.check(/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(code),
-    'and the cash banner still sits over Being Prepared');
+  /* The cash banner moved to Awaiting Goods when that stage arrived: the
+     money to go and buy belongs beside the orders waiting for it, and by
+     Being Prepared the goods are in by definition. */
+  t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(code),
+    'and the cash banner sits over Awaiting Goods, where the buying is still to do');
   t.check(/if\(runsBanner\) runsBanner\.addEventListener\('click', openDeliveryRuns\)/.test(code),
     'tapping it opens the runs');
   t.check(/id="deliveryRunsBody"/.test(code) && /id="deliveryRunsModal"/.test(code),

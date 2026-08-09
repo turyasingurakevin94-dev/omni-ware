@@ -215,7 +215,10 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
   /* The label the collecting worker reads, from the shared code both
      apps run. */
   const lscope = compileScope(
-    [extractFunction(read('shared-worker.js'), 'pickItemSourceLabel', 'shared-worker.js')],
+    // pickItemSourceLabel now says "Shop" for goods already collected,
+    // so the test for that comes with it.
+    ['quoteLineReceived', 'quoteLineComesOffShelf', 'pickItemSourceLabel']
+      .map((n) => extractFunction(read('shared-worker.js'), n, 'shared-worker.js')),
     { data }, ['pickItemSourceLabel']);
   data.suppliers = [
     { id: 'SP1', name: 'Katwe Iron Works', location: 'Katwe', shopNo: 'B12' },

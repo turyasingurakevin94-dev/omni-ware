@@ -27,6 +27,11 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('quote pack surplus');
 const src = read('index.html');
+/* Three of these live in shared-worker.js: both apps have to agree
+   about whether an order's goods are in. */
+const SHARED_HOME = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineComesOffShelf'];
+const fnSrc = (n) => (SHARED_HOME.includes(n) ? read('shared-worker.js') : src);
+const fnFile = (n) => (SHARED_HOME.includes(n) ? 'shared-worker.js' : 'index.html');
 
 // Sells only by the carton of six; and one who sells loose.
 const CARTONS = { supplierId: 'S1', sname: 'Cartons Only', wholesale: 78333, retail: null, packQty: 6, packUnit: 'Ctn', unit: 'Dozen', tiers: [] };
@@ -38,7 +43,7 @@ const NAMES = ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBo
 let fn = null, err = null;
 try {
   fn = compileScope(
-    NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    NAMES.map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
     { productPriceRows: (pid, vi) => ROWS[`${pid}::${vi == null ? '' : vi}`] || [] },
     NAMES,
   );
@@ -116,7 +121,7 @@ const line = (over) => Object.assign(
     ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBoughtIn',
       'quoteLineUnitsBought', 'quoteLineSurplus', 'quoteLineReceived',
       'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock']
-      .map((n) => extractFunction(src, n, 'index.html')),
+      .map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
     {
       productPriceRows: (pid, vi) => ROWS[`${pid}::${vi == null ? '' : vi}`] || [],
       supplierName: (id) => ({ S1: 'Cartons Only', S2: 'Loose Trader' }[id] || id),

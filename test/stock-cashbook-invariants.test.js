@@ -76,7 +76,13 @@ const NAMES = [
   'quoteLineReceived', 'quoteLineComesOffShelf',
   'addCashReceipt', 'addCashPayment', 'removeCashTxnsByIds',
 ];
-const fns = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
+/* Three of these moved to shared-worker.js when Awaiting Goods
+   arrived: both apps have to agree about whether an order's goods
+   are in, so the rule lives where both can read it. */
+const SHARED_HOME = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineComesOffShelf'];
+const fnSrc = (n) => (SHARED_HOME.includes(n) ? read('shared-worker.js') : src);
+const fnFile = (n) => (SHARED_HOME.includes(n) ? 'shared-worker.js' : 'index.html');
+const fns = compileScope(NAMES.map((n) => extractFunction(fnSrc(n), n, fnFile(n))), env, NAMES);
 const {
   getFIFOUnitCost, applyStockDelta, getStockQty,
   applyQuoteStockDeduction, reverseQuoteStockDeduction,

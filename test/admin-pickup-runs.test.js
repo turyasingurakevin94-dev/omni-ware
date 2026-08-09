@@ -219,8 +219,12 @@ const reset = () => {
     'the icon sits on the Being Prepared column, where the buying is decided');
   t.check(/class="sq-col-head"[\s\S]{0,400}pickupRunsIconHTML/.test(src),
     'on the column head, so it costs no vertical space at all');
-  t.check(/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(src),
-    'and the cash banner keeps the top of the column to itself');
+  /* The cash banner is on the Awaiting Goods column now -- the buying is
+     what that stage is waiting on -- so this column's head is the icon's
+     alone. */
+  t.check(!/\$\{status==='preparing' \? cashToBuyBannerHTML\(group\) : ''\}/.test(src)
+    && /status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(src),
+    'and the cash banner has moved to Awaiting Goods, leaving this column head to the icon');
 
   // A bare pictogram is a guessing game. The count is on the face of it
   // and everything the old banner said is in the title and the label.
