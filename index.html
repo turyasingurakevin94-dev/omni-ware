@@ -123,37 +123,82 @@
     display:flex;align-items:center;gap:10px;flex-shrink:0;
     padding:0;margin:0 18px 0 0;border:0;overflow:visible;
   }
-  /* height:100% here as well as on the group. A percentage height needs a
-     definite one to resolve against, and this row -- not the bar -- is
-     the group's parent; without it the group stayed content-height and
-     the menu's `top:100%` still measured from the button. */
-  .topbar-nav{display:flex;align-items:center;gap:2px;padding:0;min-width:0;flex-direction:row;height:100%;}
+  /* Where you are. The rail says it too, but the rail is a long column
+     and the answer is easier to catch on a short line at the top than by
+     finding the one filled row in twenty-seven. Reads "Money / Who owes
+     you" -- the section as well as the screen, because the section is
+     what the rail groups by and what search results are labelled with. */
+  .tb-where{
+    display:flex;align-items:baseline;gap:7px;flex-shrink:0;min-width:0;
+    font-size:13px;color:#fff;font-weight:600;white-space:nowrap;
+  }
+  .tb-where .tbw-group{color:#8E9BA8;font-weight:500;}
+  .tb-where .tbw-sep{color:#5A6774;}
+  .tb-where:empty{display:none;}
+
+  /* Search. Sized so it is obviously a field rather than a button, and
+     placed left-of-centre where a page title would be -- it is answering
+     the same question ("what am I looking at, and what else is there").
+     The shortcut is printed in it because a shortcut nobody is told
+     about is one nobody uses. */
+  .tb-search{position:relative;flex:0 1 320px;min-width:150px;margin-left:22px;}
+  .tb-search input{
+    all:unset;box-sizing:border-box;width:100%;padding:7px 62px 7px 32px;border-radius:8px;
+    background:rgba(255,255,255,0.09);border:1px solid transparent;
+    font-size:13px;color:#fff;font-family:inherit;
+  }
+  .tb-search input::placeholder{color:#8E9BA8;}
+  .tb-search input:hover{background:rgba(255,255,255,0.13);}
+  .tb-search input:focus{background:rgba(255,255,255,0.15);border-color:var(--accent);}
+  .tb-search-icon{
+    position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;
+    fill:none;stroke:#8E9BA8;stroke-width:2;stroke-linecap:round;pointer-events:none;
+  }
+  .tb-kbd{
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8E9BA8;
+    border:1px solid rgba(255,255,255,0.18);border-radius:4px;padding:2px 5px;line-height:1;
+  }
+  .tb-search input:focus ~ .tb-kbd{display:none;}
+  .tb-results{
+    display:none;position:absolute;top:calc(100% + 7px);left:0;right:0;min-width:280px;
+    background:var(--navy);border:1px solid rgba(255,255,255,0.15);border-radius:11px;
+    padding:6px;box-shadow:0 16px 38px rgba(10,15,20,0.42);z-index:70;
+    max-height:min(420px, calc(100vh - var(--topbar-h) - 24px));overflow-y:auto;
+  }
+  .tb-results.show{display:block;}
+  .tb-results button{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+    padding:8px 10px;border-radius:7px;font-size:13px;color:#C7CFD8;width:100%;
+  }
+  .tb-results button .nav-icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .tb-results button .tbr-group{margin-left:auto;font-size:11px;color:#7C8894;padding-left:12px;}
+  /* One highlight, driven by the keyboard cursor rather than by :hover --
+     two highlighted rows, one under the pointer and one under the arrow
+     keys, is worse than none. */
+  .tb-results button.cursor{background:var(--accent);color:#fff;}
+  .tb-results button.cursor .tbr-group{color:rgba(255,255,255,0.75);}
+  .tb-results .tbr-empty{padding:10px 10px 12px;font-size:12.5px;color:#8E9BA8;}
+  .tb-results mark{background:transparent;color:#fff;font-weight:700;}
+  .tb-results button.cursor mark{color:#fff;text-decoration:underline;}
+
   /* Full height so the menu's `top:100%` measures from the BAR's edge
      rather than the button's -- otherwise the panel opens five pixels up
      inside the bar it is hanging from. */
   .tb-group{position:relative;flex-shrink:0;height:100%;display:flex;align-items:center;}
-  .topbar-nav button.tb-top{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
-    padding:8px 11px;border-radius:8px;font-size:13.5px;font-weight:600;color:#C7CFD8;
-    white-space:nowrap;
+  /* One icon, not a heading. There is exactly one of these left: the
+     bar's job is now actions, and its only menu holds the four that act
+     on the whole shop rather than on a screen. */
+  .topbar button.tb-iconbtn{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;width:34px;height:34px;border-radius:8px;color:#C7CFD8;
   }
-  .topbar-nav button.tb-top:hover{background:rgba(255,255,255,0.09);color:#fff;}
-  .topbar-nav button.tb-top:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .tb-group.open > button.tb-top{background:rgba(255,255,255,0.12);color:#fff;}
-  /* The heading of the group holding the screen you are on. Underlined
-     rather than filled, so it never competes with the filled active row
-     inside the menu itself. */
-  /* .active as well as .here: Dashboard is a destination ON the bar rather
-     than inside a menu, so it is never "the group holding where you are".
-     It also needs its own rule -- the shared `nav button.active` fill is
-     outranked by this block's `all:unset`, so without this the one item
-     you can reach straight from the bar was the one that never showed it
-     was the screen you were on. */
-  .topbar-nav button.tb-top.here,
-  .topbar-nav button.tb-top.active{color:#fff;box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0;}
-  .tb-caret{width:11px;height:11px;opacity:0.55;fill:none;stroke:currentColor;stroke-width:2.4;
-    stroke-linecap:round;stroke-linejoin:round;transition:transform .15s ease;}
-  .tb-group.open .tb-caret{transform:rotate(180deg);}
+  .topbar button.tb-iconbtn .nav-icon{width:17px;height:17px;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .topbar button.tb-iconbtn:hover{background:rgba(255,255,255,0.09);color:#fff;}
+  .topbar button.tb-iconbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .tb-group.open > button.tb-iconbtn{background:rgba(255,255,255,0.14);color:#fff;}
   .tb-menu{
     display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:212px;
     background:var(--navy);border:1px solid rgba(255,255,255,0.15);border-radius:11px;
@@ -171,7 +216,6 @@
     stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .tb-menu button:hover{background:rgba(255,255,255,0.09);color:#fff;}
   .tb-menu button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-  .tb-menu button.active{background:var(--accent);color:#fff;font-weight:700;}
   .tb-menu .tb-sep{height:1px;background:rgba(255,255,255,0.13);margin:5px 4px;}
   .tb-menu .tb-danger{color:#E08B8B;}
   .tb-spacer{flex:1;min-width:8px;}
@@ -193,23 +237,25 @@
 
      It sheds width instead of disappearing now. The label goes first --
      the dot carries the stage and the number carries the news, and every
-     item names itself in a title so the colours never have to be learnt.
-     Then the padding closes up, on the counts and the menu headings
-     together, because both are competing for the same row. */
+     item names itself in a title so the colours never have to be learnt. */
   /* gap is restated because the widget's own narrow-screen rule closes it
      to 0 at 1180px. That was written for the phone copy, where the items
      are tiny; here it leaves the dot touching its number. */
   @media (max-width:1400px){ .topbar .osb-label{display:none;} .topbar .osb-item{gap:6px;} }
-  @media (max-width:1120px){
+  @media (max-width:1180px){
     .topbar .osb-item{padding:0 8px;}
-    .topbar-nav button.tb-top{padding:8px 8px;}
+    /* The breadcrumb goes before the search does: the rail is already
+       showing where you are, and search is the only way to reach a
+       screen without scrolling to it. */
+    .tb-where{display:none;}
+    .tb-search{margin-left:12px;flex-basis:240px;}
     .topbar .brand .tag{font-size:14px;}
     .topbar .brand{margin-right:10px;}
   }
   /* Below this the brand wordmark goes too, leaving the mark itself. The
      bar is hidden entirely under 820px, where the phone's own copy of
      these counts takes over inside the mobile topbar. */
-  @media (max-width:960px){ .topbar .brand-text{display:none;} }
+  @media (max-width:960px){ .topbar .brand-text{display:none;} .tb-kbd{display:none;} }
 
   /* Sidebar */
   .sidebar{
@@ -227,9 +273,19 @@
      horizontal scrollbar under the sidebar. */
   .sidebar-scroll{
     flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
-    scrollbar-width:none;-ms-overflow-style:none;
+    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.22) transparent;
   }
-  .sidebar-scroll::-webkit-scrollbar{display:none;}
+  /* The scrollbar was hidden while this rail held six items and never
+     scrolled. It holds the whole map now and genuinely does, so hiding
+     the one thing that says "there is more below" would have recreated
+     the problem the redesign was for -- in a column instead of a menu. */
+  .sidebar-scroll::-webkit-scrollbar{width:8px;}
+  .sidebar-scroll::-webkit-scrollbar-thumb{
+    background:rgba(255,255,255,0.2);border-radius:8px;
+    border:2px solid transparent;background-clip:content-box;
+  }
+  .sidebar-scroll:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.34);background-clip:content-box;}
+  .sidebar-scroll::-webkit-scrollbar-track{background:transparent;}
   .brand{display:flex;align-items:center;gap:11px;padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:14px;overflow:hidden;}
   .brand-mark{
     width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;
@@ -242,9 +298,12 @@
     line-height:1.15;
   }
   .brand .sub{font-size:11px;color:#9AA7B4;margin-top:4px;letter-spacing:0.2px;}
-  nav{display:flex;flex-direction:column;gap:2px;padding:0 10px;}
+  nav{display:flex;flex-direction:column;gap:1px;padding:0 10px 10px;}
+  /* 9px of vertical padding rather than 11: twenty-seven rows and six
+     headings have to fit a laptop without the list becoming the reason
+     you scroll. Still a 34px row, well above a comfortable target. */
   nav button{
-    all:unset;box-sizing:border-box;cursor:pointer;padding:11px 12px;border-radius:8px;font-size:13.5px;
+    all:unset;box-sizing:border-box;cursor:pointer;padding:9px 12px;border-radius:8px;font-size:13.5px;
     font-weight:500;color:#C7CFD8;display:flex;align-items:center;gap:11px;width:100%;
     white-space:nowrap;overflow:hidden;
   }
@@ -268,13 +327,39 @@
   .nav-submenu button{padding:9px 11px;font-size:13px;}
   .nav-item.active > .nav-parent-btn{background:var(--accent);color:#fff;font-weight:700;}
 
+  /* The heading is the whole argument for a list this long. Without it
+     twenty-seven rows are a wall; with it they are six short lists you
+     can skip past by name. */
+  /* Each section is its own block so its heading can stick within it and
+     be pushed out by the next one. Sticky elements only stay inside
+     their containing block, so with all six headings sharing `nav` as a
+     parent every one that scrolled past stayed pinned at the top --
+     six headings stacked on top of each other, which is worse than
+     none. */
+  .nav-group{display:flex;flex-direction:column;gap:1px;}
   .nav-section-label{
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
-    color:#7C8894;padding:14px 12px 6px;white-space:nowrap;overflow:hidden;
+    color:#7C8894;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
+    /* Sticky because the list is taller than the rail: scrolled into the
+       middle of Money, the heading that says so has already gone past.
+       The background is the sidebar's own, or the rows would show
+       through the heading as they slide under it. */
+    position:sticky;top:0;z-index:1;background:var(--navy);
   }
   .nav-section-label:first-child{padding-top:2px;}
 
-  .sidebar-foot{margin-top:auto;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;gap:2px;}
+  /* A count on the row it belongs to. Only drawn when there is something
+     to say -- a badge reading 0 is a badge you learn to ignore, and then
+     so is the one reading 4. */
+  .nav-badge{
+    margin-left:auto;flex-shrink:0;font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;
+    background:rgba(255,255,255,0.14);color:#E4EAF0;border-radius:20px;padding:2px 7px;line-height:1.35;
+  }
+  nav button.active .nav-badge{background:rgba(255,255,255,0.25);color:#fff;}
+  .nav-badge[hidden]{display:none;}
+
+  .sidebar-foot{flex-shrink:0;padding:12px 10px;border-top:1px solid rgba(255,255,255,0.12);display:flex;flex-direction:column;gap:2px;}
   .sidebar-foot button{
     all:unset;box-sizing:border-box;cursor:pointer;font-size:12px;color:#9AA7B4;display:flex;align-items:center;
     gap:10px;padding:8px 12px;border-radius:7px;width:100%;white-space:nowrap;overflow:hidden;
@@ -290,16 +375,29 @@
   .collapse-toggle:hover{color:var(--ink);}
   .collapse-toggle .icon{width:13px;height:13px;transition:transform .18s ease;}
 
-  .sidebar.collapsed .brand{justify-content:center;padding:0 0 16px;}
-  .sidebar.collapsed .brand-text{display:none;}
   /* Only hide labels on the collapsed rail itself -- NOT inside .nav-submenu,
      which is a separate always-expanded flyout panel positioned by JS and
      must keep showing its text regardless of the rail's collapsed state. */
-  .sidebar.collapsed > .sidebar-scroll > nav > button > .nav-label,
+  .sidebar.collapsed .sidebar-scroll .nav-label,
   .sidebar.collapsed .nav-parent-btn > .nav-label{display:none;}
-  .sidebar.collapsed .nav-section-label{display:none;}
-  .sidebar.collapsed nav > button,
-  .sidebar.collapsed .nav-parent-btn{justify-content:center;padding:11px;}
+  /* A collapsed heading keeps its job by becoming the rule it was
+     already implying. Hiding it outright would have run six groups of
+     icons together into one column of twenty-seven, which is the wall
+     the headings exist to break up. */
+  .sidebar.collapsed .nav-section-label{
+    font-size:0;padding:9px 12px 8px;height:0;overflow:visible;position:relative;
+  }
+  .sidebar.collapsed .nav-section-label::before{
+    content:"";position:absolute;left:12px;right:12px;top:8px;height:1px;
+    background:rgba(255,255,255,0.14);
+  }
+  .sidebar.collapsed .nav-section-label:first-child{padding-top:0;}
+  .sidebar.collapsed .nav-section-label:first-child::before{display:none;}
+  .sidebar.collapsed nav button,
+  .sidebar.collapsed .nav-parent-btn{justify-content:center;padding:9px;}
+  /* The count would have nothing to sit beside. The title on each button
+     still carries it for a pointer, and expanding brings it back. */
+  .sidebar.collapsed .nav-badge{display:none;}
   .sidebar.collapsed .sidebar-foot button{justify-content:center;padding:9px;}
   .sidebar.collapsed .collapse-toggle .icon{transform:rotate(180deg);}
 
@@ -4787,41 +4885,51 @@
     </button>
   </div>
   <div class="mms-body">
+    <!-- The same six sections as the rail, under the same names, holding
+         the same screens. They used to be five different ones (Sales,
+         Catalog, People, Reports, Settings) with their own idea of where
+         a supplier or a debtor belonged -- so the shop learnt one filing
+         system on the desktop and a second on the phone. The four the
+         bottom bar already carries are left out rather than repeated. -->
     <div class="mms-group">
-      <div class="mms-group-label">Sales</div>
-      <button type="button" class="mms-item" data-tab="quote">Add New Quote</button>
+      <div class="mms-group-label">Sell</div>
+      <button type="button" class="mms-item" data-tab="quote">New quote</button>
       <button type="button" class="mms-item" data-tab="invoices">Invoices</button>
-      <button type="button" class="mms-item" data-tab="compare">Compare Prices</button>
+      <button type="button" class="mms-item" data-tab="customers">Customers</button>
+      <button type="button" class="mms-item" data-tab="agents">Sales agents</button>
       <button type="button" class="mms-item" data-tab="whatsapp">WhatsApp</button>
     </div>
     <div class="mms-group">
-      <div class="mms-group-label">Catalog</div>
+      <div class="mms-group-label">Buy</div>
+      <button type="button" class="mms-item" data-tab="compare">Compare prices</button>
+      <button type="button" class="mms-item" data-tab="suppliers">Suppliers</button>
+      <button type="button" class="mms-item" data-tab="purchase-invoices">Purchase invoices</button>
+    </div>
+    <div class="mms-group">
+      <div class="mms-group-label">Catalogue</div>
       <button type="button" class="mms-item" data-tab="products">Products</button>
-      <button type="button" class="mms-item" data-tab="prices">Price Registry</button>
+      <button type="button" class="mms-item" data-tab="prices">Price registry</button>
       <button type="button" class="mms-item" data-tab="media">Media</button>
     </div>
     <div class="mms-group">
-      <div class="mms-group-label">People</div>
-      <button type="button" class="mms-item" data-tab="customers">Customers</button>
-      <button type="button" class="mms-item" data-tab="staff">Staff</button>
-      <button type="button" class="mms-item" data-tab="agents">Sales Agents</button>
-      <button type="button" class="mms-item" data-tab="suppliers">Suppliers</button>
-      <button type="button" class="mms-item" data-tab="purchase-invoices">Purchase invoices</button>
-      <button type="button" class="mms-item" id="mmsWorkerViewBtn" data-tab="worker" style="display:none;">Worker view</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Reports</div>
-      <button type="button" class="mms-item" data-tab="analytics-sales">Sales Analytics</button>
-      <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase Analytics</button>
+      <div class="mms-group-label">Money</div>
+      <button type="button" class="mms-item" data-tab="analytics-debtors">Who owes you</button>
+      <button type="button" class="mms-item" data-tab="analytics-creditors">Who you owe</button>
+      <button type="button" class="mms-item" data-tab="statements">Statements</button>
+      <button type="button" class="mms-item" data-tab="payroll">Payroll &amp; rent</button>
       <button type="button" class="mms-item" data-tab="assets">Assets</button>
       <button type="button" class="mms-item" data-tab="loans">Loans</button>
-      <button type="button" class="mms-item" data-tab="payroll">Payroll &amp; rent</button>
-      <button type="button" class="mms-item" data-tab="statements">Statements</button>
-      <button type="button" class="mms-item" data-tab="analytics-debtors">Debtors List</button>
-      <button type="button" class="mms-item" data-tab="analytics-creditors">Creditors List</button>
     </div>
     <div class="mms-group">
-      <div class="mms-group-label">Settings</div>
+      <div class="mms-group-label">Insight</div>
+      <button type="button" class="mms-item" data-tab="analytics-sales">Sales analytics</button>
+      <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase analytics</button>
+      <button type="button" class="mms-item" data-tab="map">Map</button>
+    </div>
+    <div class="mms-group">
+      <div class="mms-group-label">Setup</div>
+      <button type="button" class="mms-item" data-tab="staff">Staff</button>
+      <button type="button" class="mms-item" id="mmsWorkerViewBtn" data-tab="worker" style="display:none;">Worker view</button>
       <button type="button" class="mms-item" data-tab="presets">Presets</button>
       <button type="button" class="mms-item" id="mmsExportBtn">Export backup</button>
       <button type="button" class="mms-item" id="mmsImportBtn">Import backup</button>
@@ -4842,190 +4950,218 @@
       <div class="tag">OMNI-WARE</div>
     </div>
   </div>
-  <nav class="topbar-nav" id="topbarNav">
-    <div class="tb-group">
-      <button type="button" class="tb-top" data-tab="dashboard">Dashboard</button>
-    </div>
 
-    <div class="tb-group" data-group="sell">
-      <button type="button" class="tb-top" data-menu="sell">Sell
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="quote" title="Add New Quote (press Q)">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-          <span class="nav-label">New quote</span></button>
-        <button type="button" data-tab="quote-saved">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <span class="nav-label">Order tracking</span></button>
-        <button type="button" data-tab="invoices">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg>
-          <span class="nav-label">Invoices</span></button>
-        <div class="tb-sep"></div>
-        <button type="button" data-tab="customers">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span class="nav-label">Customers</span></button>
-        <button type="button" data-tab="agents">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span class="nav-label">Sales agents</span></button>
-        <button type="button" data-tab="whatsapp">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.5-1.5 2 1-1 2c-4.5.5-9.5-4.5-9-9l2-1 1 2z"/></svg>
-          <span class="nav-label">WhatsApp</span></button>
-      </div>
-    </div>
+  <!-- The bar stopped being a second navigation. It carries the three
+       things that are not a destination: where you are, a way to get
+       anywhere by name, and the actions that act on the whole shop.
 
-    <div class="tb-group" data-group="buy">
-      <button type="button" class="tb-top" data-menu="buy">Buy
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="compare">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
-          <span class="nav-label">Compare prices</span></button>
-        <button type="button" data-tab="suppliers">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
-          <span class="nav-label">Suppliers</span></button>
-        <button type="button" data-tab="purchase-invoices">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-          <span class="nav-label">Purchase invoices</span></button>
-      </div>
-    </div>
+       Search matters more here than it looks. Several screens are
+       deliberately named for the question they answer rather than the
+       table they draw -- "Who owes you", not "Debtors list" -- which
+       reads better and is harder to find by scanning. Typing the word
+       you already have in your head finds it either way. -->
+  <div class="tb-where" id="tbWhere"></div>
 
-    <div class="tb-group" data-group="money">
-      <button type="button" class="tb-top" data-menu="money">Money
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="cashbook" title="Cash Book (press C)">
-          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
-          <span class="nav-label">Cash book</span></button>
-        <button type="button" data-tab="analytics-debtors">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span class="nav-label">Who owes you</span></button>
-        <button type="button" data-tab="analytics-creditors">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
-          <span class="nav-label">Who you owe</span></button>
-        <div class="tb-sep"></div>
-        <button type="button" data-tab="statements" title="Profit, position and cash flow">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-4M12 18v-7M16 18v-2"/></svg>
-          <span class="nav-label">Statements</span></button>
-        <button type="button" data-tab="assets" title="What the shop owns and uses">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h2l1.5-5h11L19 17h2"/><circle cx="7.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/><path d="M8 12V7h8v5"/></svg>
-          <span class="nav-label">Assets</span></button>
-        <button type="button" data-tab="loans" title="Money the shop has borrowed">
-          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
-          <span class="nav-label">Loans</span></button>
-        <button type="button" data-tab="map" title="Where your customers and suppliers are">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"/></svg>
-        <span class="nav-label">Map</span></button>
-      <button type="button" data-tab="payroll" title="Wages and rent — what is due and what is owed">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
-          <span class="nav-label">Payroll &amp; rent</span></button>
-      </div>
-    </div>
+  <div class="tb-search" id="tbSearch">
+    <svg class="tb-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" id="navSearch" placeholder="Search screens" autocomplete="off"
+      role="combobox" aria-expanded="false" aria-controls="navSearchResults" aria-label="Search screens">
+    <kbd class="tb-kbd" id="tbSearchKbd">Ctrl K</kbd>
+    <div class="tb-results" id="navSearchResults" role="listbox" aria-label="Screens"></div>
+  </div>
 
-    <div class="tb-group" data-group="pricebook">
-      <button type="button" class="tb-top" data-menu="pricebook">Price book
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="products" title="Products (press P)">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-          <span class="nav-label">Products</span></button>
-        <button type="button" data-tab="prices" title="Price Registry (press R)">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
-          <span class="nav-label">Price registry</span></button>
-        <button type="button" data-tab="inventory">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
-          <span class="nav-label">Inventory</span></button>
-        <button type="button" data-tab="media">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
-          <span class="nav-label">Media</span></button>
-      </div>
-    </div>
-
-    <div class="tb-group" data-group="insight">
-      <button type="button" class="tb-top" data-menu="insight">Insight
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="analytics-sales">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
-          <span class="nav-label">Sales analytics</span></button>
-        <button type="button" data-tab="analytics-purchase">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 9l4 5 3-3 5 7"/></svg>
-          <span class="nav-label">Purchase analytics</span></button>
-      </div>
-    </div>
-
-    <div class="tb-group tb-right" data-group="setup">
-      <button type="button" class="tb-top" data-menu="setup">Setup
-        <svg class="tb-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="tb-menu">
-        <button type="button" data-tab="staff">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
-          <span class="nav-label">Staff</span></button>
-        <button type="button" data-tab="worker" id="workerTopbarItem" style="display:none;">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-          <span class="nav-label">Worker view</span></button>
-        <button type="button" data-tab="presets">
-          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span class="nav-label">Presets</span></button>
-        <div class="tb-sep"></div>
-        <button type="button" id="exportBtn">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-          <span class="nav-label">Export backup</span></button>
-        <button type="button" id="importBtn">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 8l5-5 5 5"/><path d="M12 3v12"/></svg>
-          <span class="nav-label">Import backup</span></button>
-        <div class="tb-sep"></div>
-        <button type="button" id="tbSignoutBtn">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-          <span class="nav-label">Sign out</span></button>
-        <button type="button" id="clearBtn" class="tb-danger">
-          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          <span class="nav-label">Clear all data</span></button>
-      </div>
-    </div>
-  </nav>
   <div class="tb-spacer"></div>
   <div class="order-status-bar" id="orderStatusBar" title="Click to view the Order tracking board"></div>
+
+  <!-- Actions, not destinations. Everything you can navigate to is in
+       the rail; what is left here acts on the shop as a whole, which is
+       why it is one icon rather than a heading in a row of headings. -->
+  <div class="tb-group tb-right" data-group="setup">
+    <button type="button" class="tb-top tb-iconbtn" data-menu="setup"
+      title="Backup and account" aria-label="Backup and account" aria-haspopup="menu" aria-expanded="false">
+      <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="tb-menu" role="menu">
+      <button type="button" id="exportBtn">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span class="nav-label">Export backup</span></button>
+      <button type="button" id="importBtn">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 8l5-5 5 5"/><path d="M12 3v12"/></svg>
+        <span class="nav-label">Import backup</span></button>
+      <div class="tb-sep"></div>
+      <button type="button" id="tbSignoutBtn">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span class="nav-label">Sign out</span></button>
+      <button type="button" id="clearBtn" class="tb-danger">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+        <span class="nav-label">Clear all data</span></button>
+    </div>
+  </div>
 </header>
 
 <div class="app">
   <aside class="sidebar" id="sidebar">
+   <!-- The whole map, in one column, with nothing behind a hover.
+
+        It used to be split: six shortcuts here, twenty-one destinations
+        inside six drop-down menus on the bar above. That cost twice.
+        Every one of those six was ALSO in a menu, so the same screen had
+        two homes and neither was the real one -- and the other twenty-one
+        could only be found by remembering which menu they were in and
+        opening it.
+
+        So the rail took the map and the bar took the actions. Sections
+        are headed rather than hidden: the heading is what tells you the
+        list below it is a list, and which job it belongs to. It scrolls,
+        which is the price of showing everything and is cheaper than
+        hunting.
+
+        The brand is deliberately NOT in this column. It was here once,
+        and .sidebar-scroll being a flex column meant a list taller than
+        the viewport squeezed every child with the default flex-shrink:1
+        -- the 34px mark was crushed to 18px inside overflow:hidden and
+        clipped in half. This list is long by design now, so the only
+        things sharing the column with it are the scroll box and a footer
+        pinned outside it. -->
    <div class="sidebar-scroll">
     <nav>
-      <!-- The day's rail, not the map.
-           Everything lives in the top bar now; these are the six screens a
-           shop actually opens every day, kept one click away without
-           reading past fourteen it does not need this minute. The order is
-           the shape of a day: see where you stand, take the order, watch
-           it move, take the money, chase what is owed, check the shelf. -->
-      <button data-tab="dashboard" title="Dashboard">
+      <button data-tab="dashboard" title="Dashboard" data-keywords="home overview summary">
         <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>
         <span class="nav-label">Dashboard</span>
       </button>
-      <button data-tab="quote" title="Add New Quote (press Q)">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-        <span class="nav-label">New quote</span>
-      </button>
-      <button data-tab="quote-saved" title="Order tracking">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <span class="nav-label">Order tracking</span>
-      </button>
-      <button data-tab="cashbook" title="Cash Book (press C)">
-        <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
-        <span class="nav-label">Cash book</span>
-      </button>
-      <button data-tab="analytics-debtors" title="Who owes you">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <span class="nav-label">Who owes you</span>
-      </button>
-      <button data-tab="inventory" title="Inventory">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
-        <span class="nav-label">Inventory</span>
-      </button>
-      <button data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-        <span class="nav-label">Worker view</span>
-      </button>
+      <div class="nav-group">
+        <div class="nav-section-label">Sell</div>
+        <button data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          <span class="nav-label">New quote</span>
+        </button>
+        <button data-tab="quote-saved" title="Order tracking" data-keywords="saved quotes orders board stages">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span class="nav-label">Order tracking</span>
+          <b class="nav-badge" id="navBadgeOrders" hidden></b>
+        </button>
+        <button data-tab="invoices" title="Invoices" data-keywords="bills receipts">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17h8M8 13h4"/></svg>
+          <span class="nav-label">Invoices</span>
+        </button>
+        <button data-tab="customers" title="Customers" data-keywords="clients buyers contacts">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span class="nav-label">Customers</span>
+        </button>
+        <button data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="nav-label">Sales agents</span>
+        </button>
+        <button data-tab="whatsapp" title="WhatsApp" data-keywords="broadcast message catalogue send">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 9.5c.5 2.5 3 5 5.5 5.5l1.5-1.5 2 1-1 2c-4.5.5-9.5-4.5-9-9l2-1 1 2z"/></svg>
+          <span class="nav-label">WhatsApp</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-section-label">Buy</div>
+        <button data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
+          <span class="nav-label">Compare prices</span>
+        </button>
+        <button data-tab="suppliers" title="Suppliers" data-keywords="vendors wholesalers">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
+          <span class="nav-label">Suppliers</span>
+        </button>
+        <button data-tab="purchase-invoices" title="Purchase invoices" data-keywords="supplier bills payables goods received">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+          <span class="nav-label">Purchase invoices</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-section-label">Catalogue</div>
+        <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          <span class="nav-label">Products</span>
+        </button>
+        <button data-tab="prices" title="Price Registry (press R)" data-keywords="cost wholesale retail tiers registry">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
+          <span class="nav-label">Price registry</span>
+        </button>
+        <button data-tab="inventory" title="Inventory" data-keywords="stock shelf count lots">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
+          <span class="nav-label">Inventory</span>
+        </button>
+        <button data-tab="media" title="Media" data-keywords="photos images library files">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+          <span class="nav-label">Media</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-section-label">Money</div>
+        <button data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
+          <span class="nav-label">Cash book</span>
+        </button>
+        <!-- Named for what they answer, not for the table they draw. The
+             old names are kept as search keywords so the word an
+             accountant would type still finds them. -->
+        <button data-tab="analytics-debtors" title="Who owes you" data-keywords="debtors receivables credit owing">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="nav-label">Who owes you</span>
+          <b class="nav-badge" id="navBadgeDebtors" hidden></b>
+        </button>
+        <button data-tab="analytics-creditors" title="Who you owe" data-keywords="creditors payables owed suppliers">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M7 19h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H18"/></svg>
+          <span class="nav-label">Who you owe</span>
+        </button>
+        <button data-tab="statements" title="Profit, position and cash flow" data-keywords="profit loss balance sheet cash flow accounts">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-4M12 18v-7M16 18v-2"/></svg>
+          <span class="nav-label">Statements</span>
+        </button>
+        <button data-tab="payroll" title="Wages and rent — what is due and what is owed" data-keywords="wages salary rent staff pay">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/><path d="M12 12h.01"/></svg>
+          <span class="nav-label">Payroll &amp; rent</span>
+        </button>
+        <button data-tab="assets" title="What the shop owns and uses" data-keywords="equipment vehicles depreciation owns">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17h2l1.5-5h11L19 17h2"/><circle cx="7.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/><path d="M8 12V7h8v5"/></svg>
+          <span class="nav-label">Assets</span>
+        </button>
+        <button data-tab="loans" title="Money the shop has borrowed" data-keywords="borrowed debt repayment bank">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>
+          <span class="nav-label">Loans</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-section-label">Insight</div>
+        <button data-tab="analytics-sales" title="Sales analytics" data-keywords="demand trends best sellers reports">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+          <span class="nav-label">Sales analytics</span>
+        </button>
+        <button data-tab="analytics-purchase" title="Purchase analytics" data-keywords="spend supplier reports buying">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 9l4 5 3-3 5 7"/></svg>
+          <span class="nav-label">Purchase analytics</span>
+        </button>
+        <!-- Moved out of Money. It answers "where are they", which is a
+             question you study, not a figure you act on. -->
+        <button data-tab="map" title="Where your customers and suppliers are" data-keywords="places locations geography where">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 20l-5.5 2.5V6L9 3.5m0 16.5l6-2.5m-6 2.5V3.5m6 14l5.5 2.5V4l-5.5-2.5m0 16V1.5m0 0L9 3.5"/></svg>
+          <span class="nav-label">Map</span>
+        </button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-section-label">Setup</div>
+        <button data-tab="staff" title="Staff" data-keywords="employees team users workers">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
+          <span class="nav-label">Staff</span>
+        </button>
+        <button data-tab="worker" id="workerNavItem" title="Worker view" style="display:none;" data-keywords="pick pack shop floor">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          <span class="nav-label">Worker view</span>
+        </button>
+        <button data-tab="presets" title="Presets" data-keywords="settings categories units defaults options">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="nav-label">Presets</span>
+        </button>
+      </div>
     </nav>
+   </div>
+    <!-- Outside .sidebar-scroll on purpose: a map long enough to scroll
+         would otherwise put signing out at the bottom of the scroll. -->
     <div class="sidebar-foot">
       <input type="file" id="importFile" accept="application/json" style="display:none;">
       <button type="button" id="adminSignoutBtn" class="nav-parent-btn" title="Sign out" style="width:100%;">
@@ -5033,7 +5169,6 @@
         <span class="nav-label">Sign out</span>
       </button>
     </div>
-   </div>
     <button class="collapse-toggle" id="collapseToggle" title="Collapse sidebar">
       <svg class="icon" viewBox="0 0 24 24"><path d="M11 6l-6 6 6 6"/><path d="M19 6l-6 6 6 6"/></svg>
     </button>
@@ -11249,7 +11384,13 @@ function goToTab(tab){
   // lit only whichever appeared first in the document, so the sidebar
   // showed no active row for anything the top bar also carried.
   [...tabButtons].filter(b=>b.dataset.tab===tab).forEach(b=>b.classList.add('active'));
-  markTopbarGroup(tab);
+  updateTopbarWhere(tab);
+  /* The rail is taller than the viewport, so the row that just became
+     the active one can easily be off-screen -- which is how a nav that
+     shows everything still manages to show you nothing. `nearest` so a
+     row already in view is not yanked to the middle for no reason. */
+  const railRow = document.querySelector(`#sidebar nav button[data-tab="${tab}"]`);
+  if(railRow) railRow.scrollIntoView({block:'nearest'});
   document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
   document.getElementById('tab-'+tab).style.display='block';
   updateMobileTopbarTitle(tab);
@@ -11528,17 +11669,27 @@ document.addEventListener('keydown', (e)=>{
   document.querySelectorAll('.page-info.open').forEach(x=>x.classList.remove('open'));
 });
 
-/* ---------------- Top bar menus ----------------
-   The destinations live in menus, but every menu's HEADING is on screen
-   at all times. That is the whole difference from the hover flyouts this
-   app used to have and which were removed for hiding things: there, both
-   the destination and any clue it existed were behind a hover.
+/* ---------------- Top bar ----------------
+   The bar used to be the map: six drop-down menus holding twenty-one
+   screens, with six more repeated on the rail below. Every destination
+   worth reaching was therefore behind a click that revealed a list, and
+   six of them had two homes with no way to tell which was the real one.
+
+   The rail took the map. What is left up here is the three things that
+   are not a destination -- where you are, a way to reach anything by
+   name, and the actions that act on the whole shop rather than on a
+   screen. The one menu that remains holds only those actions.
 
    Click to open rather than hover, so a menu never appears under a
    pointer merely passing over it on the way somewhere else. */
 const tbGroups = [...document.querySelectorAll('.tb-group[data-group]')];
 function closeTopbarMenus(except){
-  tbGroups.forEach(g=>{ if(g!==except) g.classList.remove('open'); });
+  tbGroups.forEach(g=>{
+    if(g===except) return;
+    g.classList.remove('open');
+    const b = g.querySelector('button.tb-top');
+    if(b) b.setAttribute('aria-expanded', 'false');
+  });
 }
 tbGroups.forEach(g=>{
   const top = g.querySelector('button.tb-top');
@@ -11546,12 +11697,15 @@ tbGroups.forEach(g=>{
     e.stopPropagation();
     const wasOpen = g.classList.contains('open');
     closeTopbarMenus();
-    if(!wasOpen) g.classList.add('open');
+    if(!wasOpen){ g.classList.add('open'); top.setAttribute('aria-expanded', 'true'); }
   });
   // Picking something closes the menu it was picked from. The click that
   // navigates has already been handled by tabButtons above, or by the
   // action buttons' own listeners.
-  g.querySelector('.tb-menu').addEventListener('click', ()=> g.classList.remove('open'));
+  g.querySelector('.tb-menu').addEventListener('click', ()=>{
+    g.classList.remove('open');
+    top.setAttribute('aria-expanded', 'false');
+  });
 });
 document.addEventListener('click', ()=> closeTopbarMenus());
 document.addEventListener('keydown', (e)=>{
@@ -11560,20 +11714,194 @@ document.addEventListener('keydown', (e)=>{
   if(!open) return;
   // Returns focus to the heading rather than leaving it on a button that
   // is no longer visible, which would strand a keyboard user.
-  open.classList.remove('open');
+  closeTopbarMenus();
   open.querySelector('button.tb-top').focus();
 });
 
-/* Underlines the heading of the group holding the screen you are on, so
-   the top bar says where you are even while every menu is shut. */
-function markTopbarGroup(tab){
-  tbGroups.forEach(g=>{
-    const holdsIt = !!g.querySelector(`.tb-menu button[data-tab="${tab}"]`);
-    g.querySelector('button.tb-top').classList.toggle('here', holdsIt);
+/* ---------------- The map, read off the rail ----------------
+
+   Built from the DOM rather than written out again here. The rail is
+   already the list of every destination and which section it belongs to;
+   a second copy in the script would be free to drift from it, and the
+   first symptom would be a screen that search cannot find or a
+   breadcrumb naming the wrong section. */
+function buildNavIndex(){
+  const out = [];
+  let group = '';
+  /* Selected in document order across both shapes rather than by walking
+     children: a section is wrapped in its own .nav-group so its heading
+     can stick within it, while Dashboard sits directly under nav with no
+     section at all. A `> *` walk saw the six wrappers and none of what
+     was inside them. */
+  [...document.querySelectorAll('#sidebar nav .nav-section-label, #sidebar nav button[data-tab]')].forEach(el=>{
+    if(el.classList.contains('nav-section-label')){ group = el.textContent.trim(); return; }
+    const tab = el.dataset && el.dataset.tab;
+    if(!tab) return;
+    const label = (el.querySelector('.nav-label')||{}).textContent || tab;
+    out.push({
+      tab, group,
+      label: label.trim(),
+      // The title says what the screen answers and the keywords carry the
+      // words it used to be called -- "debtors" still finds "Who owes
+      // you", which is the whole reason those labels could be renamed.
+      hint: (el.getAttribute('title')||'').trim(),
+      /* Name, section and keywords -- deliberately NOT the title. Four
+         of those read "(press Q)", "(press P)", "(press R)", "(press C)",
+         so typing "pres" for Presets returned Presets and then four
+         screens whose only connection was a keyboard shortcut. Whatever
+         a title says worth searching for is in the keywords instead. */
+      terms: [label, group, el.dataset.keywords||''].join(' ').toLowerCase(),
+      icon: (el.querySelector('.nav-icon')||{}).outerHTML || '',
+      el,
+    });
   });
+  return out;
+}
+let NAV_INDEX = buildNavIndex();
+
+/* Where you are, on the bar. The rail marks it too, but finding one
+   filled row among twenty-seven is work the bar can save. */
+function updateTopbarWhere(tab){
+  const el = document.getElementById('tbWhere');
+  if(!el) return;
+  const hit = NAV_INDEX.find(x=> x.tab === tab);
+  if(!hit){ el.textContent = ''; return; }
+  el.innerHTML = hit.group
+    ? `<span class="tbw-group">${esc(hit.group)}</span><span class="tbw-sep">/</span><span>${esc(hit.label)}</span>`
+    : `<span>${esc(hit.label)}</span>`;
 }
 
-// Sign out is offered in both places it is looked for -- the Setup menu
+/* ---------------- Search ----------------
+
+   Every screen is on the rail, so this is not a way to reach something
+   otherwise hidden -- it is a way to reach it without reading. It earns
+   its place twice over on the screens deliberately named for the
+   question they answer: "Who owes you" is a better name than "Debtors
+   list" and a worse thing to scan for, and typing either finds it. */
+const navSearchInput = document.getElementById('navSearch');
+const navSearchResults = document.getElementById('navSearchResults');
+let navSearchHits = [], navSearchCursor = -1;
+
+// Every term has to appear somewhere, in any order -- "sales an" finds
+// Sales analytics, and so does "an sales".
+function navSearchMatches(q){
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length) return [];
+  return NAV_INDEX
+    // Worker view is hidden unless this login is a staff member; search
+    // must not offer a screen the rail is deliberately not showing.
+    .filter(x=> x.el.style.display !== 'none')
+    .filter(x=> terms.every(t=> x.terms.includes(t)))
+    /* A match on the name beats a match on a keyword. Typing "stock"
+       should land on Inventory, whose own name it is not, above the
+       three screens that merely mention stock in their description. */
+    .map(x=> ({ ...x, rank: x.label.toLowerCase().startsWith(terms[0]) ? 0
+      : x.label.toLowerCase().includes(terms[0]) ? 1 : 2 }))
+    .sort((a,b)=> a.rank - b.rank)
+    .slice(0, 8);
+}
+
+function renderNavSearch(){
+  const q = navSearchInput.value.trim();
+  if(!q){ closeNavSearch(); return; }
+  navSearchHits = navSearchMatches(q);
+  navSearchCursor = navSearchHits.length ? 0 : -1;
+  navSearchResults.innerHTML = navSearchHits.length
+    ? navSearchHits.map((x,i)=>
+        `<button type="button" role="option" data-i="${i}" class="${i===0?'cursor':''}">
+          ${x.icon}<span>${highlightTokens(x.label, q.toLowerCase().split(/\s+/).filter(Boolean))}</span>
+          ${x.group ? `<span class="tbr-group">${esc(x.group)}</span>` : ''}
+        </button>`).join('')
+    : `<div class="tbr-empty">Nothing called “${esc(q)}”.</div>`;
+  navSearchResults.classList.add('show');
+  navSearchInput.setAttribute('aria-expanded', 'true');
+}
+function closeNavSearch(){
+  navSearchResults.classList.remove('show');
+  navSearchResults.innerHTML = '';
+  navSearchInput.setAttribute('aria-expanded', 'false');
+  navSearchHits = []; navSearchCursor = -1;
+}
+function moveNavSearchCursor(step){
+  if(!navSearchHits.length) return;
+  navSearchCursor = (navSearchCursor + step + navSearchHits.length) % navSearchHits.length;
+  [...navSearchResults.querySelectorAll('button')].forEach((b,i)=>
+    b.classList.toggle('cursor', i === navSearchCursor));
+  const cur = navSearchResults.querySelector('button.cursor');
+  if(cur) cur.scrollIntoView({block:'nearest'});
+}
+function goToNavSearchHit(i){
+  const hit = navSearchHits[i];
+  if(!hit) return;
+  navSearchInput.value = '';
+  closeNavSearch();
+  navSearchInput.blur();
+  goToTab(hit.tab);
+}
+
+navSearchInput.addEventListener('input', renderNavSearch);
+navSearchInput.addEventListener('focus', ()=>{ if(navSearchInput.value.trim()) renderNavSearch(); });
+navSearchInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowDown'){ e.preventDefault(); moveNavSearchCursor(1); }
+  else if(e.key === 'ArrowUp'){ e.preventDefault(); moveNavSearchCursor(-1); }
+  else if(e.key === 'Enter'){ e.preventDefault(); goToNavSearchHit(navSearchCursor); }
+  else if(e.key === 'Escape'){
+    /* First press clears what was typed, second gives the field up. A
+       single Escape that did both would throw away a search because the
+       results were not the ones wanted. */
+    e.stopPropagation();
+    if(navSearchInput.value){ navSearchInput.value = ''; closeNavSearch(); }
+    else navSearchInput.blur();
+  }
+});
+navSearchResults.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-i]');
+  if(btn) goToNavSearchHit(Number(btn.dataset.i));
+});
+navSearchResults.addEventListener('mousemove', (e)=>{
+  const btn = e.target.closest('button[data-i]');
+  if(!btn) return;
+  navSearchCursor = Number(btn.dataset.i);
+  [...navSearchResults.querySelectorAll('button')].forEach((b,i)=>
+    b.classList.toggle('cursor', i === navSearchCursor));
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#tbSearch')) closeNavSearch();
+});
+/* Ctrl+K / Cmd+K. Deliberately NOT a bare letter: the app already binds
+   Q, C, P and R to screens, and those are guarded against firing while
+   something is being typed into -- a bare key for search would have to
+   work from inside a field, which is exactly where it must not. */
+document.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')){
+    e.preventDefault();
+    navSearchInput.focus();
+    navSearchInput.select();
+  }
+});
+// Mac prints ⌘K; Ctrl K on the same keyboard is a different chord.
+if(/Mac|iPhone|iPad/.test(navigator.platform || '')){
+  const kbd = document.getElementById('tbSearchKbd');
+  if(kbd) kbd.textContent = '⌘K';
+}
+
+/* ---------------- Counts on the rail ----------------
+   Two figures worth carrying to where the screen is chosen rather than
+   waiting inside it: how many orders are on the board, and how many
+   customers owe money. Both are drawn only when non-zero -- a row of
+   zeroes teaches you to stop reading the badges. */
+function setNavBadge(id, n, label){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const show = Number(n) > 0;
+  el.hidden = !show;
+  if(show){
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.title = `${n} ${label}`;
+  }
+}
+
+// Sign out is offered in both places it is looked for -- the actions menu
 // and the foot of the rail. One handler, on the original button.
 document.getElementById('tbSignoutBtn').addEventListener('click', ()=>{
   document.getElementById('adminSignoutBtn').click();
@@ -16601,6 +16929,10 @@ function updateOrderStatusBar(){
     const el = document.getElementById(id);
     if(el) el.innerHTML = html;
   });
+  /* The same figure, carried to where the screen is chosen. The bar
+     breaks it down by stage; the rail only says how many there are,
+     which is what decides whether to open the board at all. */
+  setNavBadge('navBadgeOrders', quotes.length, 'orders on the board');
 }
 ['orderStatusBar','orderStatusBarMobile'].forEach(id=>{
   const el = document.getElementById(id);
@@ -22187,6 +22519,13 @@ function customerDebtProgress(c){
      is a later change to the walk -- a credit note, or a payment allowed
      to overrun its charges -- putting a bar past its own track. */
   return { charged, owed, paid, reason: null, pct: Math.max(0, Math.min(1, paid / charged)) };
+}
+/* How many customers actually owe something. Counted off debAllRows()
+   rather than off whatever the list is currently filtered to -- the
+   badge answers "is there anything to chase", which a search typed into
+   that screen must not change. */
+function updateDebtorsNavBadge(){
+  setNavBadge('navBadgeDebtors', debAllRows().filter(r=> r.debt > 0).length, 'customers owing');
 }
 function debRowsForList(filter=''){
   const hideNoDebt = document.getElementById('deb_hide_no_debt').checked;
@@ -34537,6 +34876,12 @@ function renderAll(){
   triggerPricesRender();
   refreshCompareDropdown();
   renderInventory();
+  /* The rail's two counts. Refreshed here rather than only from the
+     screens they describe -- a badge that appears the first time you
+     open the board is a badge that was not there when it would have
+     told you to open it. */
+  updateOrderStatusBar();
+  updateDebtorsNavBadge();
   if(document.getElementById('tab-dashboard').style.display !== 'none') renderDashboard();
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
 }
@@ -34572,9 +34917,15 @@ async function boot(){
   myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
   const forcedWorkerMode = !!myStaff && currentMemberRole==='staff';
   if(myStaff){
+    /* Two surfaces now, not three: the rail carries every destination,
+       so the bar has no copy of this one to reveal. The phone's own
+       sheet is the other. Both, or a worker-enabled shop finds the
+       screen missing on whichever was forgotten. */
     document.getElementById('workerNavItem').style.display = '';
-    document.getElementById('workerTopbarItem').style.display = '';
     document.getElementById('mmsWorkerViewBtn').style.display = '';
+    // The rail is read once at load to build the map, and this row was
+    // hidden then -- so search would never find it without a rebuild.
+    NAV_INDEX = buildNavIndex();
     // Whether the "Enable notifications" card should show is based on
     // having an actual saved subscription row, not on the browser's
     // Notification.permission -- that can be "granted" (e.g. after the
