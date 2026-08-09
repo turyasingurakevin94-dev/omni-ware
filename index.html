@@ -24014,10 +24014,46 @@ function productSearchText(p){
   return (p.name+' '+p.category+' '+(p.subcategory||'')+' '+p.id+' '
     +(p.shortDescription||'')+' '+(p.notes||'')).toLowerCase();
 }
+/* Newest first, so the product just added is at the top -- which is where
+   somebody looks straight after adding it. Before this the list came out
+   in whatever order the server happened to return, which was neither
+   alphabetical nor by age and so was no order at all.
+ *
+ * A product with no recorded date cannot be shown to be new, so it sorts
+ * below every dated one rather than being guessed into the middle. Among
+ * equal dates -- and among the undated -- the ID decides, because IDs are
+ * issued in sequence: that keeps "newest first" meaningful on a shop
+ * whose products all predate the date column.
+ *
+ * The `!==` guard before each comparison is what keeps this safe. An
+ * undated product ranks at negative infinity, and infinity minus infinity
+ * is NaN -- which a sort accepts without complaint and answers with an
+ * arbitrary order, looking exactly like the missing sort this replaces.
+ * The guard rules out the equal case first, so by the time either rank is
+ * read only one side can be infinite and no subtraction here could
+ * produce a NaN. The comparisons are written out for reading, not for
+ * safety; the guard is the safety. */
+function productRecencyRank(p){
+  const t = (p && p.createdAt) ? new Date(p.createdAt).getTime() : NaN;
+  return isNaN(t) ? -Infinity : t;
+}
+function productIdNumber(p){
+  const m = /^[A-Za-z]*(\d+)$/.exec(String((p && p.id) || ''));
+  return m ? Number(m[1]) : -Infinity;
+}
+function compareProductsNewestFirst(a, b){
+  const ra = productRecencyRank(a), rb = productRecencyRank(b);
+  if(ra !== rb) return ra > rb ? -1 : 1;
+  const ia = productIdNumber(a), ib = productIdNumber(b);
+  if(ia !== ib) return ia > ib ? -1 : 1;
+  return 0;
+}
 function productRowsForList(filter='', categoryFilter='', supplierFilter='', pricedFilter='', addedFilter=''){
   const tokens = searchTokens(filter);
   const rows = [];
-  data.products.forEach(p=>{
+  /* Sorted before the walk, not after it, so a product's variants stay
+     together underneath it instead of being scattered through the list. */
+  data.products.slice().sort(compareProductsNewestFirst).forEach(p=>{
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
     const matchesSupplier = !supplierFilter || data.prices.some(pr=>pr.productId===p.id && pr.supplierId===supplierFilter);
     // When a product was added is a fact about the PRODUCT, so it keeps

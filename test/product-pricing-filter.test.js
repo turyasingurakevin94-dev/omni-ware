@@ -40,6 +40,9 @@ const scope = compileScope([
   extractFunction(src, 'productAddedDaysAgo', 'index.html'),
   extractFunction(src, 'productMatchesAddedBand', 'index.html'),
   extractFunction(src, 'productSearchText', 'index.html'),
+  extractFunction(src, 'productRecencyRank', 'index.html'),
+  extractFunction(src, 'productIdNumber', 'index.html'),
+  extractFunction(src, 'compareProductsNewestFirst', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -57,7 +60,12 @@ const variable = (id, name, category, variants) =>
 const price = (n, productId, variantIdx) =>
   ({ id: n, productId, variantIdx, supplierId: 'S1', retail: 1000, tiers: [] });
 const label = (r) => r.p.id + (r.kind === 'variant' ? '/' + r.idx : (r.kind === 'variable-empty' ? '/none' : ''));
-const list = (priced) => scope.productRowsForList('', '', '', priced).map(label);
+/* Sorted before comparing: these checks are about WHICH lines a filter
+   keeps, not what order they come out in. The list itself is newest-first
+   now (see test/product-order.test.js), and pinning that order here would
+   make every one of these fail the next time the ordering is touched, for
+   a reason none of them is about. */
+const list = (priced) => scope.productRowsForList('', '', '', priced).map(label).sort();
 
 /* ---------- 1. the two halves and the thing in neither -------------- */
 {

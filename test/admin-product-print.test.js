@@ -28,7 +28,8 @@ try {
   ({ productRowsForList: rowsFor } = compileScope(
     [extractDeclaration(src, 'PRODUCT_ADDED_BANDS', 'index.html')].concat(
       ['searchTokens', 'matchesAllTokens', 'variantLabel', 'todayISO', 'daysSinceDate',
-        'productAddedDaysAgo', 'productMatchesAddedBand', 'productSearchText', 'productRowsForList']
+        'productAddedDaysAgo', 'productMatchesAddedBand', 'productSearchText',
+        'productRecencyRank', 'productIdNumber', 'compareProductsNewestFirst', 'productRowsForList']
         .map(n => extractFunction(src, n, 'index.html'))),
     { data: store }, ['productRowsForList'],
   ));
