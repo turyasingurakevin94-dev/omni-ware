@@ -1141,6 +1141,15 @@
      step 2 and not step 4: a breakpoint is read as wholesale or retail by
      comparing it against the pack size, so the pack size has to be
      settled first. */
+  /* A code, so it reads as one: monospaced and quiet, never competing
+     with the supplier's name beside it. */
+  .prc-sku{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+    color:var(--ink-soft);background:var(--ow-steel-050);border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px;white-space:nowrap;}
+  .pr-bulk-sku-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .pr-bulk-sku-row label{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .pr-bulk-sku-row input{flex:1 1 auto;min-width:0;padding:6px 8px;border:1px solid var(--line);
+    border-radius:6px;font-size:12px;font-family:inherit;}
   .pr-bulk-pack-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;}
   .pr-bulk-pack-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
   .pr-bulk-pack-toggle:hover{text-decoration:underline;}
@@ -5918,7 +5927,7 @@
           </div>
         </div>
         <div class="p-toolbar">
-          <div class="field p-toolbar-search"><input id="pr_search" placeholder="Search by product, variant, supplier, or ID..."></div>
+          <div class="field p-toolbar-search"><input id="pr_search" placeholder="Search by product, variant, supplier, supplier's code, or ID..."></div>
           <div class="field p-toolbar-filter"><label>Category</label><select id="pr_category_filter"><option value="">All categories</option></select></div>
           <div class="field p-toolbar-filter searchable-select"><label>Supplier</label>
             <input type="text" id="pr_supplier_filter_search" placeholder="All suppliers" autocomplete="off">
@@ -7716,6 +7725,13 @@
             <h3>How this supplier quotes it</h3>
             <p class="pfx-note">Leave Pack unit and Units per pack blank if it is only ever quoted by the single unit. Unit&nbsp;=&nbsp;Kg, Pack&nbsp;unit&nbsp;=&nbsp;Bag, Units&nbsp;per&nbsp;pack&nbsp;=&nbsp;25 reads as &ldquo;25 Kg / Bag&rdquo;. This is asked before the prices because a breakpoint is read as wholesale or retail by comparing its quantity against the pack size.</p>
             <div class="form-grid">
+              <!-- Hidden in bulk mode: a supplier gives each variant its
+                   own code, so there it belongs on the variant cards. -->
+              <div class="field" id="pr_sku_field" style="grid-column:1/-1;">
+                <label>Supplier's code for it</label>
+                <input id="pr_supplier_sku" placeholder="optional — e.g. RUN-SC-10">
+                <div class="field-hint">What this supplier calls it on their own quotes and invoices. Two suppliers rarely use the same code for the same item.</div>
+              </div>
               <div class="field"><label>Unit</label><input id="pr_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre"></div>
               <div class="field"><label>Pack unit</label><input id="pr_pack_unit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin"></div>
               <div class="field"><label>Units per pack</label><input id="pr_pack_qty" type="number" min="0" step="any" placeholder="e.g. 25"></div>
@@ -8625,6 +8641,7 @@ async function loadData(shopId){
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
       priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
+      supplierSku: pr.supplier_sku || '',
       outOfStockSince: pr.out_of_stock_since || null,
       tiers: Array.isArray(pr.tiers) ? pr.tiers : []
     })),
@@ -8794,6 +8811,7 @@ function buildSyncRows(d, shopId){
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
       wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
       price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
+      supplier_sku: pr.supplierSku || null,
       out_of_stock_since: pr.outOfStockSince || null,
       tiers: pr.tiers||[]
     })),
@@ -25559,6 +25577,9 @@ let prBulkTiersPrefill = null;
 // the rest. null means "follow the default above" -- the common case, and
 // the reason the default exists at all.
 let prBulkPackOverrides = [];
+/* The supplier's own code for each variant. Always per variant and never
+   shared: a code that named more than one item would not be a code. */
+let prBulkSkus = [];
 // The packing values renderPrBulkVariants() pre-filled, so a bulk save can
 // tell a deliberate change from an untouched pre-fill. See the note there.
 let prBulkPackPrefill = null;
@@ -25740,6 +25761,7 @@ function setPrBulkMode(on){
   /* The old note sent anyone with a differently-packed variant out of
      this form and into one modal per variant. They can now say so on the
      variant's own card, so the note says where. */
+  document.getElementById('pr_sku_field').style.display = on ? 'none' : '';
   document.getElementById('pr_pack_note').textContent = on
     ? 'This is the default: every variant below follows it. A variant this supplier packs differently gets its own — use "Set packing for this variant" on its card.'
     : 'Leave Pack unit and Units per pack blank if this is only ever quoted by the single unit.';
@@ -25829,6 +25851,7 @@ function renderPrBulkVariants(){
      packing on its own card -- which is the whole point: a supplier who
      sells the 10" in tens and the 20" in fives can now be recorded in one
      save instead of one modal per variant. */
+  prBulkSkus = variantRows0.map(r=> (r && r.supplierSku) ? r.supplierSku : '');
   prBulkPackOverrides = variantRows0.map(r=> (r && !packTrulyShared)
     ? { unit: r.unit||'', packUnit: r.packUnit||'', packQty: r.packQty ? String(r.packQty) : '' }
     : null);
@@ -25934,6 +25957,12 @@ function renderPrBulkVariantRows(){
     const packSummary = pk.packUnit && pk.packQty
       ? `${pk.packQty} ${esc(pk.unit||'unit')} / ${esc(pk.packUnit)}`
       : (pk.unit ? `sold by the ${esc(pk.unit)}` : 'no packing set');
+    const skuHTML = `
+      <div class="pr-bulk-sku-row">
+        <label for="pr_bulk_sku_${i}">Supplier's code</label>
+        <input type="text" id="pr_bulk_sku_${i}" class="pr-bulk-sku" data-idx="${i}"
+          placeholder="optional" value="${esc(prBulkSkus[i]||'')}">
+      </div>`;
     const packHTML = `
       <div class="pr-bulk-pack-head">
         <span class="pr-bulk-tier-status">${packOverride ? 'Own packing' : 'Uses default packing above'}${packOverride ? '' : ` — ${packSummary}`}</span>
@@ -25949,6 +25978,7 @@ function renderPrBulkVariantRows(){
       <div class="variant-card-head" style="border-bottom:none;margin-bottom:10px;padding-bottom:0;">
         <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo||{}).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
       </div>
+      ${skuHTML}
       ${packHTML}
       <div class="pr-bulk-tier-head">
         <span class="pr-bulk-tier-status">${override ? 'Custom pricing for this variant' : 'Uses shared volume pricing above'}</span>
@@ -25979,6 +26009,9 @@ function renderPrBulkVariantRows(){
   }));
   wrap.querySelectorAll('.pr-bulk-tier-add').forEach(btn=>btn.addEventListener('click', e=>{
     addBulkVariantTier(Number(e.currentTarget.dataset.idx));
+  }));
+  wrap.querySelectorAll('.pr-bulk-sku').forEach(inp=> inp.addEventListener('input', e=>{
+    prBulkSkus[Number(e.currentTarget.dataset.idx)] = e.currentTarget.value;
   }));
   wrap.querySelectorAll('.pr-bulk-pack-toggle').forEach(btn=>btn.addEventListener('click', e=>{
     toggleBulkVariantPacking(Number(e.currentTarget.dataset.idx));
@@ -26126,7 +26159,10 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', a
     rows = rows.filter(r => {
       const product = data.products.find(p=>p.id===r.productId);
       const haystack = product ? productSearchHaystack(product, r.variantIdx) : (r.pname+' '+r.sname).toLowerCase();
-      return matchesAllTokens(haystack+' '+r.sname.toLowerCase(), tokens);
+      /* The supplier's own code is in here because reading it off their
+         invoice and typing it in is the reason for recording it: the
+         quote in your hand says RUN-SC-10 and nothing else does. */
+      return matchesAllTokens(haystack+' '+r.sname.toLowerCase()+' '+String(r.supplierSku||'').toLowerCase(), tokens);
     });
   }
   // Applied here rather than in the renderer so the printout carries the
@@ -26300,6 +26336,7 @@ function priceRegistryRowHTML(g, r, tokens){
     <div class="reg-supplier">
       ${isBest ? `<span class="reg-best" title="Cheapest to buy one from, of those in stock">Cheapest</span>` : ''}
       <span class="reg-sname">${highlightTokens(r.sname, tokens)}</span>
+      ${r.supplierSku ? `<span class="prc-sku" title="This supplier's own code for it">${highlightTokens(r.supplierSku, tokens)}</span>` : ''}
       ${r.outOfStock ? `<span class="prc-oos-pill" title="Left out of best-supplier recommendations">Out of stock</span>` : ''}
       ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
         : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand here">By hand</span>` : ''}
@@ -26355,6 +26392,7 @@ function priceCardHTML(r, tokens){
     <div class="prc-supplier">
       <svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>
       ${highlightTokens(r.sname, tokens)}
+      ${r.supplierSku ? `<span class="prc-sku" title="This supplier's own code for it">${highlightTokens(r.supplierSku, tokens)}</span>` : ''}
     </div>
     <div class="prc-prices">
       <div class="prc-price-box"><span>Wholesale</span><b>${fmtUGXPerUnit(r.wholesale, r.unit)}</b></div>
@@ -26496,6 +26534,7 @@ function editPrice(id){
   selectPrProduct(r.productId, r.variantIdx==null ? null : r.variantIdx);
   selectPrSupplier(r.supplierId);
   document.getElementById('pr_date').value = r.date;
+  document.getElementById('pr_supplier_sku').value = r.supplierSku || '';
   document.getElementById('pr_unit').value = r.unit || '';
   document.getElementById('pr_pack_unit').value = r.packUnit || '';
   document.getElementById('pr_pack_qty').value = r.packQty || '';
@@ -26519,6 +26558,7 @@ function resetPriceForm(){
   setPrBulkMode(false);
   selectPrSupplier('');
   document.getElementById('pr_date').value = todayISO();
+  document.getElementById('pr_supplier_sku').value = '';
   document.getElementById('pr_unit').value = '';
   document.getElementById('pr_pack_unit').value = '';
   document.getElementById('pr_pack_qty').value = '';
@@ -26675,6 +26715,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
         productId, variantIdx:i, supplierId,
         wholesale: derived.wholesale, retail: derived.retail,
         date, unit: rowUnit, packUnit: rowPackUnit, packQty: rowPackQty, priceSource:'manual',
+        supplierSku: String(prBulkSkus[i]||'').trim(),
         tiers: effectiveTiers.map(t=>({...t}))
       };
       data.prices = data.prices.filter(p=>!dups.includes(p));
@@ -26708,6 +26749,7 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     packUnit: document.getElementById('pr_pack_unit').value.trim(),
     packQty,
     priceSource: 'manual',
+    supplierSku: document.getElementById('pr_supplier_sku').value.trim(),
     tiers: prTiers.slice()
   };
   if(editingPriceId){
