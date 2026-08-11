@@ -3413,6 +3413,7 @@
   .sq-goods-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
   .sq-goods-row svg{width:14px;height:14px;flex-shrink:0;}
   .sq-goods-row.in{color:var(--good);font-weight:600;}
+  .sq-goods-row.short{color:var(--warn-ink);font-weight:600;}
   .sq-assignee-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
   .sq-assignee-icon{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
   .sq-assignee-icon.prep{animation:sq-box-sort 1.3s ease-in-out infinite;}
@@ -4013,6 +4014,12 @@
   .bl-received .bl-item{color:var(--ink-soft);}
   .bl-recd{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--good);font-weight:600;margin-top:2px;}
   .bl-recd svg{width:12px;height:12px;flex-shrink:0;}
+  /* Something arrived but not all of it: still live work, so it keeps
+     the ordinary row weight rather than the greyed-out finished look,
+     and carries a warning stripe so it is findable in a long run. */
+  .bl-short{background:var(--ow-amber-soft);box-shadow:inset 3px 0 0 var(--ow-amber);}
+  .bl-owed{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--warn-ink);font-weight:600;margin-top:2px;}
+  .bl-owed svg{width:12px;height:12px;flex-shrink:0;}
   .bl-paid{font-size:11.5px;color:var(--ink-soft);font-style:italic;}
   .bl-receive, .bl-undo{
     all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:700;
@@ -4580,6 +4587,11 @@
   .wv-carousel-variant{font-size:14px;font-weight:700;color:var(--accent-ink);text-align:center;margin-top:2px;}
   .wv-carousel-qty-label{font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-top:8px;}
   .wv-carousel-qty{font-family:'Archivo Black',sans-serif;font-size:28px;color:var(--ink);text-align:center;margin-top:3px;letter-spacing:.3px;}
+  /* A delivery that came up short, said on the picker's own card. Amber
+     rather than red: the goods that did arrive are still to be picked,
+     so this is a caution to read before hunting, not a stop. */
+  .wv-carousel-owed{display:flex;align-items:center;justify-content:center;gap:5px;margin:0 12px;padding:5px 8px;border-radius:8px;background:var(--ow-amber-soft,#FBEFD9);color:var(--warn-ink);font-size:11.5px;font-weight:700;text-align:center;}
+  .wv-carousel-owed svg{width:13px;height:13px;flex-shrink:0;}
   .wv-carousel-source{margin-top:12px;border-top:2px dotted var(--line);background:#DCEEFB;text-align:center;padding:9px 16px 11px;border-radius:0 0 20px 20px;}
   .wv-carousel-source-label{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
   .wv-carousel-source-value{font-size:14.5px;font-weight:700;color:var(--ink);margin-top:2px;}
@@ -12191,15 +12203,27 @@ function orderPurchaseLines(q){
     const out = best ? ipLineOutlay(best, quotedQty) : null;
     const received = quoteLineReceived(it);
     const qty = received ? Number(it.receivedQty) : (out ? out.units : quotedQty);
+    /* What is still to be fetched. A line that came back short is not
+       finished business: the customer is still owed the difference, and
+       treating it as collected dropped it off this list entirely, so the
+       only record that six dozen never arrived was a number on a trip
+       nobody reopens. It stays here, at the outstanding quantity, so
+       "Send someone" can go back for the rest. */
+    const shortfall = quoteLineShortfall(it);
+    const outstanding = received ? shortfall : qty;
     return {
-      it, qty, quotedQty, best, unitCost, received,
+      it, qty, quotedQty, best, unitCost, received, shortfall,
+      // A short line is outstanding again, so it is not "done" for the
+      // purposes of anything that asks whether there is buying left.
+      settled: received && shortfall === 0,
       surplus: Math.max(0, qty - quotedQty),
       /* Nothing more to spend on a line already collected and paid for.
          Left at its full cost it would keep counting against the balance
          the item picker judges new lines by, so the shop would be told
          it had less money than it does for as long as the order sat on
-         the board. */
-      lineCost: received ? 0 : (unitCost==null ? null : unitCost * qty),
+         the board. A shortfall is the exception: that money IS still to
+         be spent, and pretending otherwise overstates what is free. */
+      lineCost: unitCost==null ? null : unitCost * outstanding,
       // The order was quoted on somebody; today's cheapest may be somebody
       // else. Worth saying, because the buyer is about to walk past one
       // supplier to reach another, and should know they meant to.
@@ -13997,7 +14021,7 @@ function openBuyingList(){
         ${/* One journey, one job. Offered only while something on this run
              is not already on somebody's list -- a second trip for the
              same carton sends two people for one thing. */
-          r.lines.some(l=> !l.received && !lineIsOnATrip(l.order.id, l.it.lineId))
+          r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId))
             ? `<button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>` : ''}
       </div>
       ${blRunTripsHTML(r)}
@@ -14011,22 +14035,31 @@ function openBuyingList(){
              reason for writing one down, so the line says which way. */
           const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
           const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
-          return `<tr class="${l.received ? 'bl-received' : ''}">
+          /* Received in full is finished business; received short is
+             not. The row used to draw both the same way -- struck
+             through, "paid", Undo only -- so the one case that still
+             needed somebody to act looked exactly like the case that
+             needed nobody. */
+          return `<tr class="${l.settled ? 'bl-received' : (l.shortfall ? 'bl-short' : '')}">
             <td><div class="bl-item">${esc(l.it.productName || 'Item')}</div>
               ${l.movedFrom
                 ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
                 : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
-              ${l.received ? `<div class="bl-recd">${ICON_CHECK}Received${
+              ${l.received ? `<div class="bl-recd">${ICON_CHECK}${Number(l.it.receivedQty)} received${
                 shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
-                paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}</td>
-            <td class="r num">${esc(l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</td>
+                paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}
+              ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${l.shortfall}${l.it.unit ? ' ' + esc(l.it.unit) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}</td>
+            <td class="r num">${esc(l.shortfall || l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</td>
             <td class="r num soft">${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</td>
-            <td class="r num">${l.received
+            <td class="r num">${l.settled
               ? `<span class="bl-paid">paid</span>`
               : fmtUGX(l.lineCost)}</td>
-            <td class="r">${l.received
-              ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
-              : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</td>
+            <td class="r">${l.shortfall
+              ? `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive rest</button>
+                 <button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
+              : l.received
+                ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
+                : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -14159,20 +14192,30 @@ function wireBuyingListReceiving(){
       if(!q || !it) return;
       const exp = quoteLineExpected(it);
       const unit = it.unit || 'unit';
-      const qty = prompt(`${it.productName || 'Item'}\nHow many ${unit} arrived?`, String(exp.qty));
+      /* Topping up a line that came back short asks for THIS delivery,
+         not the running total, and offers the outstanding amount as the
+         answer -- because the person at the door is counting what is in
+         front of them, not doing arithmetic against an earlier trip. */
+      const owed = quoteLineShortfall(it);
+      const topUp = owed > 0;
+      const qty = prompt(`${it.productName || 'Item'}\n${topUp
+        ? `${it.receivedQty} already in, ${owed} ${unit} still owed.\nHow many ${unit} arrived this time?`
+        : `How many ${unit} arrived?`}`, String(topUp ? owed : exp.qty));
       if(qty === null) return;
       const n = Number(qty);
       if(!isFinite(n) || n <= 0){ toast('Nothing received — enter how many arrived'); return; }
-      const paid = prompt(`What did each ${unit} cost?`, String(exp.price));
+      const paid = prompt(`What did each ${unit} cost?`, String(topUp ? (Number(it.receivedPrice) || exp.price) : exp.price));
       if(paid === null) return;
       const got = receiveQuoteLine(it, n, Number(paid), q);
       if(!got){ toast('Nothing received'); return; }
       saveData();
       renderInventory();
       openBuyingList();
-      const short = exp.qty - got;
-      toast(`${got} ${unit} received onto the shelf${short > 0 ? ` — ${short} short of the ${exp.qty} sent for` : ''}`,
-        short > 0 ? 6000 : undefined);
+      const stillOwed = quoteLineShortfall(it);
+      toast(`${got} ${unit} received onto the shelf${stillOwed > 0
+        ? ` — still ${stillOwed} short for ${quoteClientName(q)}`
+        : (topUp ? ' — this line is now complete' : '')}`,
+        stillOwed > 0 ? 6000 : undefined);
     });
   });
   // Send someone for a whole run.
@@ -16706,6 +16749,26 @@ function orderGoodsRowHTML(q){
   const p = orderGoodsProgress(q);
   if(!p.total) return '';
   const allIn = p.received >= p.total;
+  /* Said before "ready to prepare", because it is the more important
+     fact. An order where everything has arrived but one line came back
+     four dozen against ten is not ready for anything -- and it used to
+     read as fully in, which sent the picker for six dozen that were
+     never delivered and put the shortfall on them. */
+  if(p.short){
+    const shortLines = orderShortLines(q);
+    /* Named in full when it is one line, because "6 Dozen short of
+       Hinges" is actionable and "1 line short" is a prompt to go
+       looking. Not summed across lines: six dozen plus two cartons is
+       not eight of anything. */
+    const detail = shortLines.length === 1
+      ? `${quoteLineShortfall(shortLines[0]).toLocaleString('en-UG')}${shortLines[0].unit ? ' ' + shortLines[0].unit : ''} short of ${shortLines[0].productName || 'an item'}`
+      : `${p.short} lines short`;
+    const stillComing = p.total - p.received;
+    return `<div class="sq-goods-row short" title="Less arrived than was ordered — send someone for the rest, or amend the order">
+      ${ICON_WARN}
+      <span>${esc(detail)}${stillComing ? ` · ${stillComing} still coming` : ''}</span>
+    </div>`;
+  }
   return `<div class="sq-goods-row ${allIn ? 'in' : ''}" title="${allIn
     ? 'Everything has arrived — this order can be picked'
     : 'Waiting on goods from a supplier'}">
@@ -26960,7 +27023,19 @@ function receiveQuoteLine(it, qty, price, q){
   const n = Math.max(0, Number(qty) || 0);
   if(!orderLineIsBoughtIn(it) || !(n > 0)) return 0;
   const unit = Number(price);
-  it.receivedQty = n;
+  /* ADDS to whatever already came, rather than replacing it. A line that
+     came back four dozen short is fetched again, and that second trip
+     confirming `6` used to overwrite the 4 with 6 -- the shelf got both
+     deliveries (the delta below is always just this receipt) while the
+     line claimed six of the ten had ever turned up, so it stayed short
+     forever and the buying list kept sending people back for goods
+     already in the building.
+
+     Correcting a wrong number is a different act with its own control:
+     the row offers Undo, which reverses the whole receipt and lets it be
+     entered again from nothing. */
+  const already = Number(it.receivedQty) || 0;
+  it.receivedQty = already + n;
   it.receivedPrice = isFinite(unit) && unit >= 0 ? unit : (Number(it.price) || 0);
   it.receivedAt = new Date().toISOString();
   applyStockDelta(it.productId, it.variantIdx, n, 'restock',

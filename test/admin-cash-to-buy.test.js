@@ -54,6 +54,7 @@ const scope = compileScope([
   // A line already received is no longer a call on cash, so
   // orderPurchaseLines asks whether it has been.
   extractFunction(read('shared-worker.js'), 'quoteLineReceived', 'shared-worker.js'),
+  extractFunction(read('shared-worker.js'), 'quoteLineShortfall', 'shared-worker.js'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),
@@ -222,6 +223,43 @@ const world = (prices, orders) => {
   t.check(scope.orderCashToBuy(q) === 0 && scope.orderPurchaseLines(q).length === 0,
     'an order entirely off our own shelf needs no cash at all');
   t.check(scope.buyingListRuns([q]).length === 0, 'and puts nobody on the buying list');
+}
+
+/* ---------- what a receipt does to the money still to spend ----------
+ *
+ * Run rather than read. Three other files assert the shape of this
+ * expression by regex; this is the one that proves the arithmetic, and
+ * it is the arithmetic the item picker's affordability hint is built on.
+ *
+ * A line received IN FULL costs nothing more. A line received SHORT is
+ * the case that used to be lumped in with it: the shop was told the
+ * money was already spent, so it believed it had less to buy with than
+ * it did, on goods it had not actually bought.
+ */
+{
+  const q = order({ items: [line({ qty: 10 })] });
+  const it = q.items[0];
+
+  /* The fixture's row has no pack size, so it sits on the retail tier
+     at 12,000 -- the point here is what a receipt does to the figure,
+     not which tier the figure came from. */
+  t.check(scope.orderCashToBuy(q) === 120000,
+    `ten bags is 120,000 to find (${scope.orderCashToBuy(q)})`);
+
+  // Four arrive.
+  Object.assign(it, { receivedQty: 4, receivedPrice: 10000, receivedAt: '2026-08-11T19:00:00Z' });
+  const [shortLine] = scope.orderPurchaseLines(q);
+  t.check(shortLine.shortfall === 6 && shortLine.settled === false,
+    `six are still owed, so the line is not settled (${JSON.stringify([shortLine.shortfall, shortLine.settled])})`);
+  t.check(scope.orderCashToBuy(q) === 72000,
+    `and only the six still to buy count against the balance (${scope.orderCashToBuy(q)})`);
+
+  // The rest turns up.
+  it.receivedQty = 10;
+  const [doneLine] = scope.orderPurchaseLines(q);
+  t.check(doneLine.shortfall === 0 && doneLine.settled === true, 'now it is settled');
+  t.check(scope.orderCashToBuy(q) === 0,
+    `and nothing more is owed on it (${scope.orderCashToBuy(q)})`);
 }
 
 process.exit(t.done() ? 1 : 0);

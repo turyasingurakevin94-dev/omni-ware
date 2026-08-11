@@ -1198,13 +1198,38 @@ function orderIncomingLines(q){
   return (((q && q.items) || [])).filter(it=> orderLineIsBoughtIn(it) && !quoteLineReceived(it));
 }
 function orderAwaitsGoods(q){ return orderIncomingLines(q).length > 0; }
+
+/* How much of what the CUSTOMER is owed did not turn up.
+
+   Measured against it.qty and deliberately not against the pack-rounded
+   purchase: a one-dozen line filled from a six-dozen carton that came
+   back with three is not short at all -- the customer's dozen is there,
+   and the shelf simply got less surplus than planned. Judging it by the
+   carton would have called a perfectly filled order short on every
+   pack-forced line in the shop.
+
+   quoteLineReceived answers "did anything arrive", which is a different
+   question and was standing in for this one. Four dozen arriving against
+   an order for ten read as a line fully in: the board said "All items in
+   -- ready to prepare", the gate opened, and the picker was sent to a
+   shelf holding four. Nothing anywhere named the missing six. */
+function quoteLineShortfall(it){
+  if(!orderLineIsBoughtIn(it) || !quoteLineReceived(it)) return 0;
+  return Math.max(0, (Number(it.qty) || 0) - (Number(it.receivedQty) || 0));
+}
+function orderShortLines(q){
+  return (((q && q.items) || [])).filter(it=> quoteLineShortfall(it) > 0);
+}
 // How far along the collecting is, for a card that has to say so at a
 // glance. Counts LINES rather than units: "3 of 5 items in" is what
-// decides whether anyone can start picking, and a part-delivered line is
-// not in.
+// decides whether anyone can start picking. `short` is counted apart
+// from `received` rather than deducted from it, because a short line HAS
+// arrived -- there is simply less of it than was ordered, and that is a
+// thing to say out loud rather than a reason to keep waiting.
 function orderGoodsProgress(q){
   const bought = (((q && q.items) || [])).filter(orderLineIsBoughtIn);
-  return { received: bought.filter(quoteLineReceived).length, total: bought.length };
+  return { received: bought.filter(quoteLineReceived).length, total: bought.length,
+    short: bought.filter(it=> quoteLineShortfall(it) > 0).length };
 }
 /* The gate. An order cannot be picked while any of it is still in
    somebody else's shop -- the picker would be sent for goods that are
@@ -1372,6 +1397,11 @@ function pickItemVariantLabel(it, product){
 }
 
 const ICON_CHECK_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+/* Its own copy rather than the host's: index.html has an ICON_WARN and
+   worker.html does not, so reaching for the global would have drawn on
+   the admin's screen and thrown on the phone -- which is the one of the
+   two where a picker is actually standing at a shelf. */
+const ICON_WARN_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
 // A carton with a minus on it: fewer in the box than the order asks for.
 // Deliberately not a warning triangle -- the admin board already uses one of
 // those for a shortfall needing a decision, and this is the picker simply
@@ -1480,6 +1510,15 @@ function renderWorkerPickStepper(q){
           <div class="wv-carousel-qty-label">${esc(qtyLabel)}</div>
           <div class="wv-carousel-qty">${esc(qty)}${unit ? ` <span class="u">${esc(unit)}</span>` : ''}</div>
         </div>
+        ${/* Said before they start looking. The delivery came up short,
+              so the shelf has never held the full quantity above -- and
+              without this the picker hunts for goods that were never
+              delivered and then records the gap as their own failure to
+              find them, which is a different fact about a different
+              person. */
+          quoteLineShortfall(it) > 0
+            ? `<div class="wv-carousel-owed">${ICON_WARN_SMALL}Only ${esc(String(it.receivedQty))} arrived — ${esc(String(quoteLineShortfall(it)))} short</div>`
+            : ''}
         <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
         <button type="button" class="wv-carousel-short" data-act="short" aria-label="${isShort ? 'Change the number found' : 'Record that you could not find them all'}" title="${isShort ? 'Change the number found' : 'Couldn’t find them all?'}">${ICON_SHORT_PICK}</button>
       </div>

@@ -262,7 +262,7 @@ const trip = (over) => Object.assign({
      file-wide, where createCollectionTripFromRun's dedupe filter carries
      the same words and would satisfy the check with the button's own
      guard deleted. */
-  t.check(/r\.lines\.some\(l=> !l\.received && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\)/.test(src),
+  t.check(/r\.lines\.some\(l=> !l\.settled && !lineIsOnATrip\(l\.order\.id, l\.it\.lineId\)\)/.test(src),
     'Send someone is offered only while something is not already on a list');
 
   const wv = extractFunction(shared, 'renderWorkerTrips', 'shared-worker.js');

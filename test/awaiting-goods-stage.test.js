@@ -156,8 +156,8 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
      arrived, and a line can be un-received underneath one. Double
      counting is prevented by a collected line costing zero, not by
      leaving a stage out. */
-  t.check(/lineCost: received \? 0 :/.test(extractFunction(src, 'orderPurchaseLines', 'index.html')),
-    'without counting a collected line twice');
+  t.check(/const outstanding = received \? shortfall : qty;/.test(extractFunction(src, 'orderPurchaseLines', 'index.html')),
+    'without counting a collected line twice — what is left to spend is the shortfall, which is nothing when it all arrived');
 
   t.check(/status==='awaiting_goods' \? cashToBuyBannerHTML\(group\) : ''/.test(src),
     'and the money to go and buy sits over the column waiting for it');

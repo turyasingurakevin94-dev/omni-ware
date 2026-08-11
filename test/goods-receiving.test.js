@@ -206,8 +206,9 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
      line would keep counting against it for as long as the order sat on
      the board, and the shop would be told it had less money than it
      does. */
-  t.check(/lineCost: received \? 0 : \(unitCost==null \? null : unitCost \* qty\),/.test(lines),
-    'and nothing more is owed on it, so it stops eating the balance');
+  t.check(/const outstanding = received \? shortfall : qty;/.test(lines)
+    && /lineCost: unitCost==null \? null : unitCost \* outstanding,/.test(lines),
+    'and nothing more is owed on a line received IN FULL, so it stops eating the balance');
   t.check(/received,/.test(lines), 'with the fact of it carried through for the list to show');
 }
 

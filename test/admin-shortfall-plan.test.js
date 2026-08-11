@@ -70,6 +70,7 @@ const scope = compileScope([
   // A line already received is no longer a call on cash, so
   // orderPurchaseLines asks whether it has been.
   extractFunction(read('shared-worker.js'), 'quoteLineReceived', 'shared-worker.js'),
+  extractFunction(read('shared-worker.js'), 'quoteLineShortfall', 'shared-worker.js'),
   extractFunction(src, 'orderPurchaseLines', 'index.html'),
   extractFunction(src, 'orderCashToBuy', 'index.html'),
   extractFunction(src, 'orderUnpricedLines', 'index.html'),

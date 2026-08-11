@@ -54,6 +54,7 @@ const scope = compileScope([
   // A line already received is no longer a call on cash, so
   // orderPurchaseLines asks whether it has been.
   extractFunction(read('shared-worker.js'), 'quoteLineReceived', 'shared-worker.js'),
+  extractFunction(read('shared-worker.js'), 'quoteLineShortfall', 'shared-worker.js'),
   // The buying list's Receive control opens on what was sent for.
   extractFunction(src, 'quoteLineExpected', 'index.html'),
   extractFunction(src, 'quoteLineUnitsBought', 'index.html'),

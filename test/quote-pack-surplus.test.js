@@ -206,7 +206,8 @@ const line = (over) => Object.assign(
   /* Once a line has been received the figure comes from the receipt
      instead, and nothing more is owed on it -- goods-receiving.test.js
      covers that half. */
-  t.check(/lineCost: received \? 0 : \(unitCost==null \? null : unitCost \* qty\),/.test(lines),
+  t.check(/const outstanding = received \? shortfall : qty;/.test(lines)
+    && /lineCost: unitCost==null \? null : unitCost \* outstanding,/.test(lines),
     'and the money to take follows it');
   /* The row shows qty x unit cost = line total. Leaving the cost on the
      carton while the quantity said one dozen would print a row that does
