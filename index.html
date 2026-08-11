@@ -4005,6 +4005,15 @@
     all:unset;box-sizing:border-box;cursor:pointer;padding:5px 10px;border-radius:6px;
     font-size:11.5px;font-weight:700;color:var(--ink-soft);border:1px solid var(--line);white-space:nowrap;
   }
+  /* Deliberately the quietest control on the strip. Calling a trip off
+     is the rare answer, and it sits next to Check in, which is the
+     common one -- a mis-tap there loses somebody's recorded delivery. */
+  .bl-trip-void{
+    all:unset;box-sizing:border-box;cursor:pointer;padding:5px 8px;border-radius:6px;
+    font-size:11px;font-weight:600;color:var(--ink-soft);opacity:.65;white-space:nowrap;
+  }
+  .bl-trip-void:hover{opacity:1;color:var(--danger);}
+  .bl-trip-void:focus-visible{outline:2px solid var(--danger);outline-offset:1px;opacity:1;}
   .bl-trip-act:hover{color:var(--ink);border-color:var(--ink-soft);}
   .bl-trip-act.primary{background:var(--accent);color:#fff;border-color:transparent;}
   .bl-trip-act.primary:hover{background:var(--ow-oxide-deep);}
@@ -14113,8 +14122,17 @@ function blRunTripsHTML(run){
           <span class="bl-trip-count">${tripLines(t).length} line${tripLines(t).length===1?'':'s'}</span></div>
         ${short.length ? `<div class="bl-trip-short">${short.length} came back short</div>` : ''}
       </div>
-      ${t.status==='open' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Assign</button>` : ''}
+      ${/* Assigned but not yet accepted means nobody has gone anywhere,
+            so handing it to somebody else is free. Once they have
+            accepted they are out, and taking it off them is a phone
+            call, not a button. */
+        t.status==='open' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Assign</button>`
+        : t.status==='assigned' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Hand to someone else</button>`
+        : ''}
       ${t.status==='collected' ? `<button type="button" class="bl-trip-act primary" data-confirm="${esc(t.id)}">Check in</button>` : ''}
+      ${/* The way out. Without it a trip nobody will ever run keeps its
+            lines off every future list for good. */
+        `<button type="button" class="bl-trip-void" data-void="${esc(t.id)}" title="Call this trip off — its items go back on the list">Call off</button>`}
     </div>`;
   }).join('')}</div>`;
 }
@@ -14152,6 +14170,54 @@ function createCollectionTripFromRun(run){
    list's own Receive button uses, so a trip and a hand-received line
    land in exactly the same state: stock in at what was paid, the order
    line marked received, the supplier billed for what arrived. */
+/* Calling a trip off.
+
+   `voided` was in the table and read by tripIsLive from the start, and
+   nothing ever wrote it -- so a trip made by mistake, or handed to
+   somebody who then left, sat there for good. That is not merely untidy:
+   lineIsOnATrip made every line on it unsendable, so "Send someone"
+   stayed hidden for that whole run and the only way left to get the
+   goods on the shelf was to receive them by hand.
+
+   Kept out of the worker app deliberately, like confirming. Calling off
+   somebody else's journey is not a thing to do from a stale snapshot.
+
+   A confirmed trip is not voidable: its goods are already on the shelf
+   and its supplier already billed, and hiding the record of that would
+   leave stock nothing accounts for. Undo the receipts instead. */
+function voidCollectionTrip(tripId){
+  const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
+  if(!trip || trip.voided || trip.status === 'confirmed') return false;
+  /* `voided` only. There is no voided_at column in 0070, and a field
+     the sync mapper does not carry would sit in memory looking like a
+     record until the next refresh quietly dropped it. If the time is
+     ever wanted, it wants a migration, not a property. */
+  trip.voided = true;
+  return true;
+}
+
+/* Letting go of a trip whose worker is gone.
+
+   deleteStaff already does this for orders, for a reason spelled out at
+   length there: an assignment pointing at somebody who no longer exists
+   is invisible to every worker's app, and no screen can move it. A trip
+   had exactly the same hole and none of the cure.
+
+   Back to `open` rather than voided, because the job still needs doing
+   -- and everything the departed worker already recorded is kept, since
+   they may well have collected before they left and somebody will want
+   to know what they said. */
+function releaseTripsForStaff(staffId){
+  return (data.collectionTrips||[]).filter(t=>{
+    if(!tripIsLive(t) || String(t.assignedWorkerId) !== String(staffId)) return false;
+    t.assignedWorkerId = null;
+    t.status = 'open';
+    t.assignedAt = null;
+    t.acceptedAt = null;
+    return true;
+  }).length;
+}
+
 function confirmCollectionTrip(tripId){
   const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
   if(!trip || trip.status === 'confirmed') return null;
@@ -14235,6 +14301,24 @@ function wireBuyingListReceiving(){
   // mean a person is how the wrong person gets sent.
   document.querySelectorAll('#buyingListBody [data-assign]').forEach(btn=>{
     btn.addEventListener('click', ()=> openAssignTripModal(btn.dataset.assign));
+  });
+  // Call one off.
+  document.querySelectorAll('#buyingListBody [data-void]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.void);
+      if(!trip) return;
+      const who = trip.assignedWorkerId ? staffName(trip.assignedWorkerId) : null;
+      const n = tripLines(trip).length;
+      /* Named before it happens: somebody may already be on their way,
+         and the lines going back on the list is the part that is easy to
+         miss. */
+      if(!confirm(`Call off the trip to ${supplierName(trip.supplierId)}?\n\n`
+        + `${n} line${n===1?'':'s'} ${n===1?'goes':'go'} back on the buying list${who ? `, and ${who} is no longer going` : ''}.`)) return;
+      if(!voidCollectionTrip(trip.id)){ toast('That trip has already been checked in'); return; }
+      saveData();
+      openBuyingList();
+      toast(`Trip to ${supplierName(trip.supplierId)} called off — ${n} line${n===1?'':'s'} back on the list`);
+    });
   });
   // Check in what came back. The one act that puts goods on the shelf.
   document.querySelectorAll('#buyingListBody [data-confirm]').forEach(btn=>{
@@ -16951,11 +17035,16 @@ function openAssignStaffModal(orderId, toStatus, role){
    to the order-stage flow, and the rows here carry their own handler. */
 function openAssignTripModal(tripId){
   const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
-  if(!trip || trip.status !== 'open') return;
-  const candidates = (data.staff||[]).filter(s=> !s.unavailable);
-  if(candidates.length===0){ toast('Add somebody in the Staff tab first'); return; }
+  /* Open, or handed out and not yet accepted -- in both of those nobody
+     has gone anywhere, so naming somebody else costs nothing. Once the
+     status is `collecting` they are out with the shop's money, and
+     quietly reassigning underneath them would leave two people believing
+     the same errand is theirs. */
+  if(!trip || trip.voided || (trip.status !== 'open' && trip.status !== 'assigned')) return;
+  const candidates = (data.staff||[]).filter(s=> !s.unavailable && String(s.id) !== String(trip.assignedWorkerId));
+  if(candidates.length===0){ toast(trip.assignedWorkerId ? 'Nobody else available to send' : 'Add somebody in the Staff tab first'); return; }
   pendingAssign = null;
-  document.getElementById('assignStaffModalTitle').textContent = 'Send who to collect?';
+  document.getElementById('assignStaffModalTitle').textContent = trip.assignedWorkerId ? 'Hand this trip to who?' : 'Send who to collect?';
   document.getElementById('assignStaffHint').textContent =
     `Choose who is going to ${supplierName(trip.supplierId)} for ${tripLines(trip).length} line${tripLines(trip).length===1?'':'s'}.`;
   const listWrap = document.getElementById('assignStaffList');
@@ -20961,6 +21050,12 @@ function deleteStaff(id){
   // which throws away a finished pick to correct somebody's name.
   const delivering = live.filter(q=>q.assignedDeliveryId===id && q.status==='pending_delivery');
   const releasing = picking.concat(delivering);
+  /* And a trip they were sent on. Same hole exactly: tripsForWorker
+     matches on staff id, so the trip vanishes from every phone, while
+     the buying list keeps its lines off any future run because
+     lineIsOnATrip still counts it as live. Counted here so the warning
+     can say so before the deletion, not after. */
+  const trips = (data.collectionTrips||[]).filter(t=> tripIsLive(t) && String(t.assignedWorkerId) === String(id));
   /* Wages already raised for them: a month with money recorded against it
      stays -- it explains cash that actually left, same as rent keeps its
      raised months. But a due with nothing paid is only a demand, and a
@@ -20972,9 +21067,12 @@ function deleteStaff(id){
   const wageNote = ghostDues.length
     ? ` ${ghostDues.length} unpaid wage month${ghostDues.length===1?'':'s'} raised for them come${ghostDues.length===1?'s':''} off the payroll${keptDues?'; months with money already recorded stay on record':''}.`
     : keptDues ? ' Wage months with money already recorded stay on record.' : '';
+  const tripNote = trips.length
+    ? ` ${trips.length} collection trip${trips.length===1?'':'s'} they were sent on go${trips.length===1?'es':''} back on the list for somebody else, keeping whatever they already reported.`
+    : '';
   const msg = (releasing.length
     ? `Delete this staff member? ${releasing.length} order${releasing.length===1?'':'s'} they are working on will go back to the board for someone else. Orders they have already finished keep their name.`
-    : 'Delete this staff member? Orders they have already finished will keep showing their name.') + wageNote;
+    : 'Delete this staff member? Orders they have already finished will keep showing their name.') + tripNote + wageNote;
   if(!confirm(msg)) return;
   picking.forEach(q=>{
     q.assignedWorkerId = null;
@@ -20983,6 +21081,7 @@ function deleteStaff(id){
   // Only the assignment: the pick is done and stays done, or the order would
   // go back for a re-pick because its driver left.
   delivering.forEach(q=>{ q.assignedDeliveryId = null; });
+  const releasedTrips = releaseTripsForStaff(id);
   data.staff = data.staff.filter(s=>s.id!==id);
   if(ghostDues.length){
     const gone = new Set(ghostDues.map(d=> d.id));
@@ -20990,8 +21089,15 @@ function deleteStaff(id){
   }
   saveData(); renderStaff();
   refreshAdminOrderBoardIfOpen();
-  toast(releasing.length
-    ? `Staff member deleted — ${releasing.length} order${releasing.length===1?'':'s'} released for reassignment`
+  /* Built from what actually happened rather than templated around
+     orders, which read "0 orders and 1 trip released" for a worker who
+     was out collecting and picking nothing. */
+  const freed = [
+    releasing.length ? `${releasing.length} order${releasing.length===1?'':'s'}` : '',
+    releasedTrips ? `${releasedTrips} trip${releasedTrips===1?'':'s'}` : '',
+  ].filter(Boolean);
+  toast(freed.length
+    ? `Staff member deleted — ${freed.join(' and ')} released for reassignment`
     : 'Staff member deleted');
 }
 document.getElementById('ls_refresh').addEventListener('click', loadLoginSessions);

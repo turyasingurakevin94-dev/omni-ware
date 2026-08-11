@@ -381,9 +381,12 @@ const trip = (over) => Object.assign({
 /* ---------- 8. assigning is a modal, not a numbered prompt ----------- */
 {
   const fn = extractFunction(src, 'openAssignTripModal', 'index.html');
-  t.check(/if\(!trip \|\| trip\.status !== 'open'\) return;/.test(fn),
-    'only an open trip can be assigned');
-  t.check(/filter\(s=> !s\.unavailable\)/.test(fn),
+  /* Widened in section 10 below: a trip handed out but not yet accepted
+     can still be passed on, since nobody has gone anywhere. The narrow
+     'open' check this used to pin is now one half of that condition. */
+  t.check(/trip\.status !== 'open' && trip\.status !== 'assigned'/.test(fn),
+    'a trip somebody is already out on cannot be assigned');
+  t.check(/filter\(s=> !s\.unavailable/.test(fn),
     'to somebody actually available');
   t.check(/pendingAssign = null;/.test(fn),
     'without tripping the order-stage flow that shares the modal');
@@ -391,6 +394,121 @@ const trip = (over) => Object.assign({
     'and picking a row assigns with a timestamp');
   t.check(/openAssignTripModal\(btn\.dataset\.assign\)/.test(src) && !/const pick = prompt\(/.test(src),
     'the buying list opens it, and the numbered prompt is gone');
+}
+
+/* ---------- 9. the way out ------------------------------------------- */
+/*
+ * `voided` sat in the table and in tripIsLive from the first commit, and
+ * nothing ever wrote it. A trip made by mistake, or handed to somebody
+ * who then left the shop, stayed live for good -- and because
+ * lineIsOnATrip counts a live trip, every line on it was unsendable, so
+ * "Send someone" stayed hidden for that whole run. The only way left to
+ * get those goods on the shelf was to receive them by hand.
+ */
+{
+  const adminNames = ['voidCollectionTrip', 'releaseTripsForStaff'];
+  const make = (state) => compileScope(
+    [...adminNames.map((n) => extractFunction(src, n, 'index.html')),
+      extractFunction(shared, 'tripIsLive', 'shared-worker.js')],
+    { data: state }, [...adminNames, 'tripIsLive'],
+  );
+
+  // Calling one off.
+  const s = { collectionTrips: [trip({ status: 'assigned' })] };
+  const sc = make(s);
+  t.check(sc.voidCollectionTrip('TRIP-1') === true && s.collectionTrips[0].voided === true,
+    'a trip can be called off');
+  t.check(sc.tripIsLive(s.collectionTrips[0]) === false,
+    'which takes it off every list — so its lines are sendable again');
+  t.check(sc.voidCollectionTrip('TRIP-1') === false,
+    'and calling off what is already called off changes nothing');
+
+  /* A confirmed trip's goods are on the shelf and its supplier is
+     billed. Hiding that record would leave stock nothing accounts for,
+     so the way back is undoing the receipts, not voiding the journey. */
+  const done = { collectionTrips: [trip({ status: 'confirmed' })] };
+  t.check(make(done).voidCollectionTrip('TRIP-1') === false && !done.collectionTrips[0].voided,
+    'a trip already checked in cannot be called off');
+
+  /* voided_at is not a column in 0070, so writing one would put a field
+     in memory that looks like a record until the next refresh drops it. */
+  const fn = extractFunction(src, 'voidCollectionTrip', 'index.html');
+  t.check(!/voidedAt/.test(fn),
+    'and nothing is recorded that the table has nowhere to put');
+
+  /* The control itself. A model that can call a trip off with no button
+     to reach it is the same dead end as having no model at all -- and
+     nothing here noticed until a mutant deleted the button and every
+     test still passed. Offered on EVERY live trip, whatever its state,
+     because the trip that most needs calling off is the one nobody is
+     going to finish. */
+  t.check(/data-void="\$\{esc\(t\.id\)\}"/.test(src) && /Call off<\/button>/.test(src),
+    'the strip offers a way to call one off');
+  t.check(/#buyingListBody \[data-void\]/.test(src) && /voidCollectionTrip\(trip\.id\)/.test(src),
+    'and it is wired to the model rather than being decoration');
+  /* Confirmed first, naming what happens: somebody may already be on
+     their way, and the lines returning to the list is the easy part to
+     miss. */
+  const wire = extractFunction(src, 'wireBuyingListReceiving', 'index.html');
+  t.check(/if\(!confirm\(`Call off the trip to \$\{supplierName\(trip\.supplierId\)\}/.test(wire),
+    'asking before it happens, naming the supplier');
+  t.check(/back on the buying list/.test(wire) && /is no longer going/.test(wire),
+    'and saying both of the things that change');
+  // "1 line go back" was what the first draft actually printed.
+  t.check(/n===1\?'goes':'go'/.test(wire),
+    'in English that survives a single line');
+
+  // Losing the worker.
+  const gone = { collectionTrips: [
+    trip({ id: 'T-theirs', status: 'collecting', assignedWorkerId: 'W1',
+      lines: [{ orderId: 'QA', lineId: 1, qty: 6, expectedPrice: 78333, gotQty: 6, gotPrice: 80000 }] }),
+    trip({ id: 'T-else', status: 'assigned', assignedWorkerId: 'W9' }),
+    trip({ id: 'T-done', status: 'confirmed', assignedWorkerId: 'W1' }),
+  ] };
+  const gc = make(gone);
+  t.check(gc.releaseTripsForStaff('W1') === 1, 'deleting a worker releases the trip they were out on');
+  const [theirs, other, finished] = gone.collectionTrips;
+  t.check(theirs.status === 'open' && theirs.assignedWorkerId === null,
+    'back on the list for somebody else, rather than stranded pointing at a ghost');
+  t.check(theirs.voided !== true,
+    'and NOT voided — the job still needs doing');
+  /* They may well have collected before they left, and somebody will
+     want to know what they said. */
+  t.check(theirs.lines[0].gotQty === 6 && theirs.lines[0].gotPrice === 80000,
+    'whatever they already reported is kept');
+  t.check(theirs.assignedAt === null && theirs.acceptedAt === null,
+    'while the times that belonged to their run are cleared');
+  t.check(other.assignedWorkerId === 'W9' && finished.assignedWorkerId === 'W1',
+    'somebody else’s trip and a finished one are both left alone');
+
+  // deleteStaff has to actually call it, and say so first.
+  const del = extractFunction(src, 'deleteStaff', 'index.html');
+  t.check(/const releasedTrips = releaseTripsForStaff\(id\);/.test(del),
+    'deleteStaff releases them');
+  t.check(/tripIsLive\(t\) && String\(t\.assignedWorkerId\) === String\(id\)/.test(del)
+    && /collection trip\$\{trips\.length===1\?'':'s'\}/.test(del),
+    'and the warning says how many before anything is deleted');
+  /* Built from what happened, not templated around orders: a worker out
+     collecting and picking nothing used to be reported as "0 orders and
+     1 trip released". */
+  t.check(/releasing\.length \? `\$\{releasing\.length\} order/.test(del)
+    && /\.filter\(Boolean\)/.test(del) && /freed\.join\(' and '\)/.test(del),
+    'and what was freed is named only where there is something to name');
+}
+
+/* ---------- 10. handing a trip on ------------------------------------ */
+{
+  const fn = extractFunction(src, 'openAssignTripModal', 'index.html');
+  t.check(/trip\.status !== 'open' && trip\.status !== 'assigned'/.test(fn),
+    'a trip handed out but not yet accepted can still go to somebody else — nobody has moved');
+  t.check(/trip\.voided/.test(fn),
+    'a called-off trip cannot be assigned');
+  t.check(/String\(s\.id\) !== String\(trip\.assignedWorkerId\)/.test(fn),
+    'and the person already holding it is not offered as the new one');
+  // Once they are out with the shop's money it is a phone call, not a button.
+  t.check(/t\.status==='assigned' \? `<button type="button" class="bl-trip-act" data-assign=/.test(src)
+    && !/t\.status==='collecting' \? `<button type="button" class="bl-trip-act" data-assign=/.test(src),
+    'the button is offered before they accept and withdrawn once they are out');
 }
 
 process.exit(t.done() ? 1 : 0);

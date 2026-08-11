@@ -77,6 +77,9 @@ const SOURCES = [
   extractFunction(adminHtml, 'stepSavedQuoteStatus', 'index.html'),
   extractFunction(adminHtml, 'orderNeedsWorker', 'index.html'),
   extractFunction(adminHtml, 'orderNeedsDelivery', 'index.html'),
+  // Trips go back on the list when their worker is deleted.
+  extractFunction(read('shared-worker.js'), 'tripIsLive', 'shared-worker.js'),
+  extractFunction(adminHtml, 'releaseTripsForStaff', 'index.html'),
   extractFunction(adminHtml, 'deleteStaff', 'index.html'),
 ];
 const NAMES = ['myWorkerOrders', 'acceptOrderAssignment', 'denyOrderAssignment',

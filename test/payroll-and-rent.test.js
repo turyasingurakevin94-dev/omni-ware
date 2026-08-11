@@ -495,7 +495,12 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
 {
   const confirms = [];
   const dsData = { staff: [], dues: [], savedQuotes: [] };
-  const dsScope = compileScope([extractFunction(src, 'deleteStaff', 'index.html')], {
+  const dsScope = compileScope([
+    /* deleteStaff releases the collection trips the departing worker
+       was sent on, the same way it releases their orders. */
+    extractFunction(read('shared-worker.js'), 'tripIsLive', 'shared-worker.js'),
+    extractFunction(src, 'releaseTripsForStaff', 'index.html'),
+    extractFunction(src, 'deleteStaff', 'index.html')], {
     data: dsData,
     confirm: (m) => { confirms.push(String(m)); return true; },
     saveData: () => {}, renderStaff: () => {}, toast: () => {},
