@@ -14187,25 +14187,11 @@ function wireBuyingListReceiving(){
       toast(`Trip made for ${supplierName(run.supplierId)} — ${trip.lines.length} line${trip.lines.length===1?'':'s'}. Assign somebody to it.`, 5000);
     });
   });
-  // Give it to a worker.
+  // Give it to a worker, through the same modal every other assignment
+  // uses -- a numbered prompt() was the first version, and typing "2" to
+  // mean a person is how the wrong person gets sent.
   document.querySelectorAll('#buyingListBody [data-assign]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.assign);
-      if(!trip) return;
-      const staff = (data.staff||[]).filter(s=> !s.unavailable);
-      if(!staff.length){ toast('Nobody on staff to send'); return; }
-      const pick = prompt(`Who is going to ${supplierName(trip.supplierId)}?\n\n`
-        + staff.map((s,i)=> `${i+1}. ${s.name}`).join('\n'), '1');
-      if(pick === null) return;
-      const chosen = staff[Number(pick) - 1];
-      if(!chosen){ toast('Nobody chosen'); return; }
-      trip.assignedWorkerId = chosen.id;
-      trip.status = 'assigned';
-      trip.assignedAt = new Date().toISOString();
-      saveData();
-      openBuyingList();
-      toast(`${chosen.name} is going to ${supplierName(trip.supplierId)}`);
-    });
+    btn.addEventListener('click', ()=> openAssignTripModal(btn.dataset.assign));
   });
   // Check in what came back. The one act that puts goods on the shelf.
   document.querySelectorAll('#buyingListBody [data-confirm]').forEach(btn=>{
@@ -16897,6 +16883,38 @@ function openAssignStaffModal(orderId, toStatus, role){
   });
   openModal('assignStaffModal');
 }
+/* Sending somebody on a collection trip, through the same modal every
+   other assignment uses. pendingAssign stays null: that variable belongs
+   to the order-stage flow, and the rows here carry their own handler. */
+function openAssignTripModal(tripId){
+  const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
+  if(!trip || trip.status !== 'open') return;
+  const candidates = (data.staff||[]).filter(s=> !s.unavailable);
+  if(candidates.length===0){ toast('Add somebody in the Staff tab first'); return; }
+  pendingAssign = null;
+  document.getElementById('assignStaffModalTitle').textContent = 'Send who to collect?';
+  document.getElementById('assignStaffHint').textContent =
+    `Choose who is going to ${supplierName(trip.supplierId)} for ${tripLines(trip).length} line${tripLines(trip).length===1?'':'s'}.`;
+  const listWrap = document.getElementById('assignStaffList');
+  listWrap.innerHTML = `<div class="assign-staff-list">${candidates.map(s=>`
+    <div class="assign-staff-row" data-id="${esc(s.id)}">
+      <span class="assign-staff-name">${esc(s.name)}</span>
+      ${s.phone ? `<span class="assign-staff-phone">${esc(s.phone)}</span>` : ''}
+    </div>`).join('')}</div>`;
+  listWrap.querySelectorAll('.assign-staff-row').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      trip.assignedWorkerId = row.dataset.id;
+      trip.status = 'assigned';
+      trip.assignedAt = new Date().toISOString();
+      saveData();
+      closeModal('assignStaffModal');
+      openBuyingList();
+      toast(`${staffName(row.dataset.id)} is going to ${supplierName(trip.supplierId)}`);
+    });
+  });
+  openModal('assignStaffModal');
+}
+
 function closeAssignStaffModal(){
   pendingAssign = null;
   closeModal('assignStaffModal');

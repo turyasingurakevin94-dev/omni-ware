@@ -276,4 +276,121 @@ const trip = (over) => Object.assign({
     'and hand-in stays disabled until every line is answered');
 }
 
+/* ---------- 7. the standalone worker app carries trips --------------- */
+/*
+ * The first cut only worked inside the admin's Worker-view tab: the
+ * standalone app never loaded collection_trips, so data.collectionTrips
+ * was undefined, the trip card never rendered, and an accept tapped in a
+ * market saved nothing. The whole feature, invisible exactly where it
+ * was for.
+ */
+{
+  const wsrc = read('worker.html');
+
+  t.check(/sb\.from\('collection_trips'\)\.select\('\*'\)\.eq\('shop_id', shopId\)/.test(wsrc),
+    'the worker app loads trips with everything else');
+  t.check(/collectionTripsR && !collectionTripsR\.error && collectionTripsR\.data/.test(wsrc),
+    'tolerating the table not existing yet, same as the admin');
+  t.check(/collectionTrips: \(d\.collectionTrips\|\|\[\]\)\.map\(t=>\(\{/.test(wsrc),
+    'and builds sync rows for them');
+
+  /* The merge: this app saves from a snapshot that can be hours old, so
+     it lays only what it owns onto the server's row. */
+  const moves = (/const TRIP_WORKER_STATUS_MOVES = \{[\s\S]*?\};/.exec(wsrc) || [''])[0];
+  t.check(/assigned: \['collecting'\]/.test(moves) && /collecting: \['collected'\]/.test(moves),
+    'the worker may take a trip and bring it back, and nothing else');
+  t.check(!/collected:/.test(moves.replace("collecting: ['collected']", '')),
+    'confirming is not a move it can make');
+
+  /* Run, not read. The assertion that mergeTripGot keys by order line
+     used to be a regex over its source, which the Map it builds
+     satisfies on its own -- so rewriting the lookup to go by index left
+     the text intact and the test green. The only way to tell a key
+     match from a position match is to hand it lines in a different
+     order and look at where the answers land. */
+  {
+    const mergeScope = compileScope([extractFunction(wsrc, 'mergeTripGot', 'worker.html')], {}, ['mergeTripGot']);
+    // The worker answered QA and QB; the admin has since reordered the
+    // trip and added a third line.
+    const local = [
+      { orderId: 'QA', lineId: 1, qty: 6, gotQty: 6, gotPrice: 80000 },
+      { orderId: 'QB', lineId: 1, qty: 2, gotQty: 0, gotPrice: null },
+    ];
+    const server = [
+      { orderId: 'QB', lineId: 1, qty: 2 },
+      { orderId: 'QC', lineId: 3, qty: 9 },
+      { orderId: 'QA', lineId: 1, qty: 6 },
+    ];
+    const merged = mergeScope.mergeTripGot(server, local);
+    t.check(merged.length === 3, 'the merge keeps the admin’s line list, not the snapshot’s');
+    t.check(merged[0].gotQty === 0 && merged[2].gotQty === 6 && merged[2].gotPrice === 80000,
+      `each answer follows its own order line across a reorder (${JSON.stringify(merged.map(m => m.gotQty))})`);
+    t.check(merged[1].gotQty === undefined,
+      'and a line the worker never saw is left unanswered, not handed somebody else’s count');
+  }
+
+  const mergeTrips = extractFunction(wsrc, 'mergeTripsOntoServerRows', 'worker.html');
+  t.check(/moves\.includes\(local\.status\) \? local\.status : server\.status/.test(mergeTrips),
+    'a stale status cannot drag a trip backward');
+  t.check(/lines: mergeTripGot\(server\.lines, local\.lines\)/.test(mergeTrips),
+    "and the admin's idea of what to fetch always wins over the snapshot");
+
+  const save = extractFunction(wsrc, 'saveData', 'worker.html');
+  t.check(/addDiffOps\(ops, 'collectionTrips', 'collection_trips', 'id', shopId, rows\.collectionTrips, \{neverDelete:true\}\)/.test(save),
+    'trips ride the same save, and this app can never delete one');
+  t.check(/rows\.collectionTrips = \[\];/.test(save),
+    'a missing table drops the trip ops, not the pick save they ride with');
+
+  /* The refresh guard. A worker who has just typed "5 of 6 at 80,000"
+     must not have it swapped out from under them by the poll. */
+  {
+    const runUnsaved = (dataState, synced) => compileScope(
+      [extractFunction(wsrc, 'hasUnsavedWork', 'worker.html')],
+      { currentShopId: 'SHOP', data: dataState, lastSynced: synced, WORKER_OWNED_KEYS: [] },
+      ['hasUnsavedWork'],
+    ).hasUnsavedWork();
+
+    const synced = (over) => ({ collectionTrips: { 'TRIP-1': Object.assign({
+      id: 'TRIP-1', status: 'collecting',
+      lines: [{ orderId: 'QA', lineId: 1, gotQty: null, gotPrice: null }],
+    }, over) } });
+    const live = (over) => ({ savedQuotes: [], collectionTrips: [Object.assign({
+      id: 'TRIP-1', status: 'collecting',
+      lines: [{ orderId: 'QA', lineId: 1, gotQty: null, gotPrice: null }],
+    }, over)] });
+
+    t.check(runUnsaved(live(), synced()) === false,
+      'a trip that matches what was sent is not unsaved work');
+    t.check(runUnsaved(live({ lines: [{ orderId: 'QA', lineId: 1, gotQty: 5, gotPrice: 80000 }] }), synced()) === true,
+      'but a delivery just typed in holds the refresh off, exactly as an unsaved pick does');
+    t.check(runUnsaved(live({ status: 'collected' }), synced()) === true,
+      'and so does a hand-in that has not reached the server');
+    /* A trip this app has never synced would otherwise read as unsaved
+       forever, holding off every refresh -- the exact failure the picks
+       guard above already had to be fixed for once. */
+    t.check(runUnsaved(live({ id: 'TRIP-NEW' }), synced()) === false,
+      'while a trip this app never synced is not its work to protect');
+  }
+
+  // And every lastSynced snapshot carries trips, or the diff would read
+  // the missing key as "delete everything".
+  const snapshots = (wsrc.match(/keyRowsById\((?:rows0|freshRows)\.collectionTrips, 'id'\)/g) || []).length;
+  t.check(snapshots === 2, `both lastSynced sites snapshot trips (${snapshots})`);
+}
+
+/* ---------- 8. assigning is a modal, not a numbered prompt ----------- */
+{
+  const fn = extractFunction(src, 'openAssignTripModal', 'index.html');
+  t.check(/if\(!trip \|\| trip\.status !== 'open'\) return;/.test(fn),
+    'only an open trip can be assigned');
+  t.check(/filter\(s=> !s\.unavailable\)/.test(fn),
+    'to somebody actually available');
+  t.check(/pendingAssign = null;/.test(fn),
+    'without tripping the order-stage flow that shares the modal');
+  t.check(/trip\.status = 'assigned';[\s\S]*?trip\.assignedAt = /.test(fn),
+    'and picking a row assigns with a timestamp');
+  t.check(/openAssignTripModal\(btn\.dataset\.assign\)/.test(src) && !/const pick = prompt\(/.test(src),
+    'the buying list opens it, and the numbered prompt is gone');
+}
+
 process.exit(t.done() ? 1 : 0);

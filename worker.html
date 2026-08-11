@@ -560,7 +560,7 @@ function showNoShopScreen(){
 // unassigned one). Stock, cash, customers, prices and purchase invoices
 // are all admin-only concerns this app never touches.
 async function loadWorkerData(shopId){
-  const [staffR, agentsR, suppliersR, productsR, savedQuotesR, settingsR] = await Promise.all([
+  const [staffR, agentsR, suppliersR, productsR, savedQuotesR, settingsR, collectionTripsR] = await Promise.all([
     sb.from('staff').select('*').eq('shop_id', shopId),
     sb.from('agents').select('id, payment_term').eq('shop_id', shopId),
     sb.from('suppliers').select('*').eq('shop_id', shopId),
@@ -577,8 +577,14 @@ async function loadWorkerData(shopId){
     // table above, and maybeSingle so a shop that has never saved settings
     // reads as null rather than an error.
     sb.from('app_settings').select('presets').eq('shop_id', shopId).maybeSingle(),
+    sb.from('collection_trips').select('*').eq('shop_id', shopId),
   ]);
   [staffR, agentsR, suppliersR, productsR, savedQuotesR, settingsR].forEach(r=>{ if(r.error) throw r.error; });
+  /* collection_trips is deliberately not in the throw list: the app
+     deploys on a push and migrations are applied by hand, so there is a
+     window where the table does not exist -- and a worker's whole shift
+     must not fail over a feature nothing else depends on. */
+  const collectionTripRows = (collectionTripsR && !collectionTripsR.error && collectionTripsR.data) || [];
 
   return {
     staff: (staffR.data||[]).map(s=>({id:s.id, name:s.name, phone:s.phone, role:s.role, notes:s.notes, unavailable:!!s.unavailable, userId:s.user_id||null})),
@@ -588,6 +594,12 @@ async function loadWorkerData(shopId){
     // resolveProductImage guards on this being present, so an empty list
     // just means it stops at the product's own photo, exactly as before.
     presetCategories: ((settingsR.data && settingsR.data.presets) || {}).categories || [],
+    collectionTrips: collectionTripRows.map(r=>({
+      id:r.id, supplierId:r.supplier_id, status:r.status,
+      assignedWorkerId:r.assigned_worker_id, createdAt:r.created_at, assignedAt:r.assigned_at,
+      acceptedAt:r.accepted_at, collectedAt:r.collected_at, confirmedAt:r.confirmed_at,
+      note:r.note||'', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
+    })),
     savedQuotes: (savedQuotesR.data||[]).map(q=>({
       id:q.id, status:q.status||'draft', invoiced:!!q.invoiced, invoicedAt:q.invoiced_at,
       invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
@@ -608,6 +620,14 @@ function buildWorkerSyncRows(d, shopId){
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
       payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null}
+    })),
+    collectionTrips: (d.collectionTrips||[]).map(t=>({
+      id:t.id, shop_id:shopId, supplier_id:t.supplierId, status:t.status||'open',
+      assigned_worker_id: t.assignedWorkerId||null,
+      created_at: t.createdAt||null, assigned_at: t.assignedAt||null,
+      accepted_at: t.acceptedAt||null, collected_at: t.collectedAt||null,
+      confirmed_at: t.confirmedAt||null,
+      note: t.note||null, lines: t.lines||[], voided: !!t.voided,
     })),
   };
 }
@@ -692,6 +712,54 @@ async function mergeOntoServerRows(shopId, rows){
   });
 }
 
+/* The trip fields this app may write, and the only status moves it may
+   make -- the same shape as WORKER_OWNED_KEYS and WORKER_STATUS_MOVES
+   above, for the same reason: this app saves from a snapshot that can be
+   hours old, and everything it does not own must come back from the
+   server's row rather than from memory.
+
+   The worker owns: taking the trip (assigned -> collecting), coming back
+   (collecting -> collected), the two timestamps those set, and what each
+   line came back with. The admin owns everything else -- who the trip is
+   for, who it is assigned to, what to fetch, confirming, voiding. */
+const TRIP_WORKER_STATUS_MOVES = {
+  assigned: ['collecting'],
+  collecting: ['collected'],
+};
+/* got* is laid onto the SERVER's lines, matched by the order line each
+   one points at -- never by index. If the admin rebuilt the trip while
+   the worker was out, an index match would attach "6 came back" to
+   whatever line now sits in that position. A line the server no longer
+   has simply drops its answer; the goods question is re-asked by whoever
+   checks in. */
+function mergeTripGot(serverLines, localLines){
+  if(!Array.isArray(serverLines)) return localLines || [];
+  const local = new Map((localLines||[]).map(l=>[`${l.orderId}::${l.lineId}`, l]));
+  return serverLines.map(sl=>{
+    const ll = local.get(`${sl.orderId}::${sl.lineId}`);
+    return ll ? {...sl, gotQty: ll.gotQty, gotPrice: ll.gotPrice} : sl;
+  });
+}
+async function mergeTripsOntoServerRows(shopId, rows){
+  const { data: current, error } = await sb.from('collection_trips')
+    .select('*').eq('shop_id', shopId).in('id', rows.map(r=>r.id));
+  if(error) throw error;
+  const byId = new Map((current||[]).map(r=>[String(r.id), r]));
+  return rows.map(local=>{
+    const server = byId.get(String(local.id));
+    if(!server) return local;   // not on the server at all -- nothing to preserve
+    const moves = TRIP_WORKER_STATUS_MOVES[server.status] || [];
+    const status = moves.includes(local.status) ? local.status : server.status;
+    return {
+      ...server,
+      status,
+      accepted_at: local.accepted_at || server.accepted_at,
+      collected_at: local.collected_at || server.collected_at,
+      lines: mergeTripGot(server.lines, local.lines),
+    };
+  });
+}
+
 async function saveData(){
   const shopId = currentShopId;
   if(!data.savedQuotes) data.savedQuotes = [];
@@ -726,6 +794,26 @@ async function saveData(){
     // right order to prevent exactly that (boot, the background refresh, a
     // notification tap); this makes a fourth getting it wrong survivable.
     addDiffOps(ops, 'savedQuotes', 'saved_quotes', 'id', shopId, rows.savedQuotes, {neverDelete:true});
+    /* Trips ride the same save, under the same rules: only the rows that
+       moved are re-read and merged, and this app can never delete one. */
+    const prevTrips = (lastSynced && lastSynced.collectionTrips) || {};
+    const changedTrips = (rows.collectionTrips||[]).filter(r=> JSON.stringify(r) !== JSON.stringify(prevTrips[String(r.id)]));
+    if(changedTrips.length){
+      try{
+        const merged = await mergeTripsOntoServerRows(shopId, changedTrips);
+        const mergedById = new Map(merged.map(r=>[String(r.id), r]));
+        rows.collectionTrips = rows.collectionTrips.map(r=> mergedById.get(String(r.id)) || r);
+      }catch(err){
+        /* The table may not exist yet (see loadWorkerData). Trips then
+           stay local-only; the pick sync above must not be held hostage
+           to that, so this drops the trip ops rather than the save. */
+        console.error('Could not re-read trips before saving:', err);
+        rows.collectionTrips = [];
+      }
+    }
+    if(rows.collectionTrips && rows.collectionTrips.length){
+      addDiffOps(ops, 'collectionTrips', 'collection_trips', 'id', shopId, rows.collectionTrips, {neverDelete:true});
+    }
     if(!ops.length) return;
 
     const results = await Promise.all(ops.map(op=> op.run()));
@@ -781,6 +869,23 @@ let workerSaveInFlight = false;
 // down, and nothing else this app is allowed to write.
 function hasUnsavedWork(){
   if(!currentShopId || !data || !data.savedQuotes) return false;
+  /* Trip answers count too. A refresh replaces `data` wholesale, and a
+     worker standing in a market who has just typed "5 of 6 at 80,000"
+     must not have it swapped out from under them by the poll -- the same
+     protection picks already get, for the same field-recorded work. Only
+     the parts this app owns are compared, since everything else is the
+     server's to change under us. */
+  const prevTrips = (lastSynced && lastSynced.collectionTrips) || {};
+  const tripDirty = (data.collectionTrips||[]).some(t=>{
+    const was = prevTrips[String(t.id)];
+    if(!was) return false;   // a trip this app never synced is not its work
+    if(was.status !== t.status) return true;
+    const mine = t.lines || [], theirs = was.lines || [];
+    return mine.some((l, i)=> theirs[i]
+      && (JSON.stringify(l.gotQty ?? null) !== JSON.stringify(theirs[i].gotQty ?? null)
+        || JSON.stringify(l.gotPrice ?? null) !== JSON.stringify(theirs[i].gotPrice ?? null)));
+  });
+  if(tripDirty) return true;
   const prev = (lastSynced && lastSynced.savedQuotes) || {};
   return data.savedQuotes.some(q=>{
     const was = prev[String(q.id)];
@@ -840,7 +945,9 @@ async function refreshWorkerData(opts){
     // states is not a stale render -- it is a delete instruction. Same
     // reason the admin app's poll is ordered this way.
     const fresh = await loadWorkerData(currentShopId);
-    const freshSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(fresh, currentShopId).savedQuotes, 'id') };
+    const freshRows = buildWorkerSyncRows(fresh, currentShopId);
+    const freshSynced = { savedQuotes: keyRowsById(freshRows.savedQuotes, 'id'),
+      collectionTrips: keyRowsById(freshRows.collectionTrips, 'id') };
     data = fresh;
     lastSynced = freshSynced;
     // An admin can edit staff too -- being marked unavailable, or having the
@@ -872,7 +979,9 @@ async function boot(){
   try{
     await ensureAuthAndShop();
     data = await loadWorkerData(currentShopId);
-    lastSynced = { savedQuotes: keyRowsById(buildWorkerSyncRows(data, currentShopId).savedQuotes, 'id') };
+    { const rows0 = buildWorkerSyncRows(data, currentShopId);
+      lastSynced = { savedQuotes: keyRowsById(rows0.savedQuotes, 'id'),
+        collectionTrips: keyRowsById(rows0.collectionTrips, 'id') }; }
   } catch(e){
     console.error('Failed to start app:', e);
     const el = ensureAuthOverlay();
