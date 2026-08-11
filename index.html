@@ -14220,7 +14220,19 @@ function releaseTripsForStaff(staffId){
 
 function confirmCollectionTrip(tripId){
   const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
-  if(!trip || trip.status === 'confirmed') return null;
+  /* Only a trip somebody has actually come back from. `collected` is
+     the one state where every line has been answered, which is what
+     there is to check in.
+
+     Refusing the rest is not belt-and-braces on the button. Confirming
+     a trip nobody had reported on received nothing -- every line was
+     skipped for having no answer -- marked it confirmed and took it off
+     every list, so the journey silently stopped existing while the
+     goods were still sitting in Shafik's shop. The lines did at least
+     return to the buying list, but the only sign anything had gone
+     wrong was a "0 items received" that read like a delivery of
+     nothing. */
+  if(!trip || trip.voided || trip.status !== 'collected') return null;
   let received = 0, lines = 0, missing = 0;
   tripLines(trip).forEach(l=>{
     const got = tripLineGot(l);
@@ -16931,7 +16943,15 @@ function stepSavedQuoteStatus(id, dir){
      out, and going to look for that is the next thing they would do. */
   if(dir>0 && toStatus==='preparing' && orderAwaitsGoods(q)){
     const left = orderIncomingLines(q).length;
-    toast(`${left} item${left===1?'':'s'} still to come in — receive ${left===1?'it':'them'} before this can be picked`, 5000);
+    /* Names the state and then the next thing to do about it. It used
+       to say only "receive them", which was the whole story before
+       trips existed and is now the second half of it: somebody has to
+       go and fetch the goods before there is anything to receive, and
+       the buying list is where that is arranged. */
+    const onTheirWay = orderIncomingLines(q).filter(it=> lineIsOnATrip(q.id, it.lineId)).length;
+    toast(onTheirWay === left
+      ? `${left} item${left===1?'':'s'} still on the way — check ${left===1?'it':'them'} in from the buying list when ${left===1?'it arrives':'they arrive'}`
+      : `${left} item${left===1?'':'s'} still to come in — send someone for ${left===1?'it':'them'} from the buying list`, 5000);
     return;
   }
   if(dir>0){

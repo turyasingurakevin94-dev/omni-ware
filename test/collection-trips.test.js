@@ -220,8 +220,46 @@ const trip = (over) => Object.assign({
     'a line whose order was amended away is counted and reported, not silently dropped');
   t.check(/trip\.status = 'confirmed';/.test(conf) && /trip\.confirmedAt = /.test(conf),
     'and the trip is closed with a time');
-  t.check(/if\(!trip \|\| trip\.status === 'confirmed'\) return null;/.test(conf),
-    'a trip cannot be confirmed twice — that would shelve the goods twice');
+  /* Widened from refusing only `confirmed` to admitting only
+     `collected`, which is the one state where somebody has come back
+     and every line has been answered.
+
+     The old rule let a trip nobody had reported on be checked in: every
+     line was skipped for having no answer, so it received nothing,
+     marked itself confirmed and left every list -- the journey silently
+     stopped existing while the goods were still in the supplier's shop.
+     The lines did return to the buying list, so it was recoverable, but
+     the only sign was a "0 items received" that read like a delivery of
+     nothing. Only the button's own gating had ever prevented it. */
+  t.check(/if\(!trip \|\| trip\.voided \|\| trip\.status !== 'collected'\) return null;/.test(conf),
+    'only a trip somebody has come back from can be checked in — and never twice');
+
+  // Run, since that is the claim.
+  const confirmables = ['open', 'assigned', 'collecting', 'collected', 'confirmed'].map((status) => {
+    const st = { collectionTrips: [trip({ status, lines: [
+      { orderId: 'QA', lineId: 1, qty: 6, expectedPrice: 78333, gotQty: 6, gotPrice: 80000 },
+    ] })], savedQuotes: [] };
+    const sc = compileScope(
+      [extractFunction(src, 'confirmCollectionTrip', 'index.html'),
+        extractFunction(shared, 'tripLines', 'shared-worker.js'),
+        extractFunction(shared, 'tripLineGot', 'shared-worker.js')],
+      { data: st, receiveQuoteLine: (it, n) => n, supplierName: () => 'Shafik' },
+      ['confirmCollectionTrip'],
+    );
+    return `${status}:${sc.confirmCollectionTrip('TRIP-1') ? 'yes' : 'no'}`;
+  }).join(' ');
+  t.check(confirmables === 'open:no assigned:no collecting:no collected:yes confirmed:no',
+    `checking in is offered from exactly one state (${confirmables})`);
+
+  const voided = { collectionTrips: [trip({ status: 'collected', voided: true })], savedQuotes: [] };
+  t.check(compileScope(
+    [extractFunction(src, 'confirmCollectionTrip', 'index.html'),
+      extractFunction(shared, 'tripLines', 'shared-worker.js'),
+      extractFunction(shared, 'tripLineGot', 'shared-worker.js')],
+    { data: voided, receiveQuoteLine: (it, n) => n, supplierName: () => 'Shafik' },
+    ['confirmCollectionTrip'],
+  ).confirmCollectionTrip('TRIP-1') === null,
+    'and a trip called off after it came back cannot be checked in behind the call-off');
 
   // The worker app cannot reach this: it lives in index.html only.
   t.check(!/function confirmCollectionTrip/.test(shared),

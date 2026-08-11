@@ -113,6 +113,43 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   const step = extractFunction(src, 'stepSavedQuoteStatus', 'index.html');
   t.check(/if\(dir>0 && toStatus==='preparing' && orderAwaitsGoods\(q\)\)\{/.test(step),
     'and the board will not move an order into Being Prepared over it');
+  /* Refusing is half an answer. The refusal used to say only "receive
+     them", which was the whole story before trips existed and is now
+     the second half of it -- somebody has to go and fetch the goods
+     before there is anything to receive, and which of those two is next
+     depends on whether anyone has already been sent. */
+  t.check(/lineIsOnATrip\(q\.id, it\.lineId\)/.test(step),
+    'and asks whether somebody is already out for them before saying what to do');
+  /* Run, not read: both sentences are in the source whichever branch
+     actually fires, so wiring the condition to a constant left every
+     regex above green while the board told the admin the opposite of
+     what to do. */
+  const said = (onATrip) => {
+    const toasts = [];
+    const st = { savedQuotes: [{ id: 'QX', status: 'awaiting_goods', client: { name: 'Abraham' },
+      items: [{ lineId: 1, productId: 'P2', supplierId: 'S1', qty: 10, price: 300000 }] }] };
+    compileScope([
+      extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html'),
+      ...['orderLineIsBoughtIn', 'quoteLineReceived', 'orderIncomingLines', 'orderAwaitsGoods']
+        .map((n) => extractFunction(shared, n, 'shared-worker.js')),
+      extractFunction(src, 'stepSavedQuoteStatus', 'index.html'),
+    ], {
+      data: st,
+      toast: (m) => toasts.push(m),
+      lineIsOnATrip: () => onATrip,
+      agentPaymentBlocksPreparing: () => false,
+    }, ['stepSavedQuoteStatus']).stepSavedQuoteStatus('QX', 1);
+    return { text: toasts[0] || '', status: st.savedQuotes[0].status };
+  };
+
+  const nobodySent = said(false);
+  t.check(/send someone for it from the buying list/.test(nobodySent.text),
+    `nobody sent yet: go and arrange it (${nobodySent.text})`);
+  const alreadyOut = said(true);
+  t.check(/still on the way — check it in from the buying list/.test(alreadyOut.text),
+    `already out: wait and check it in, not send somebody a second time (${alreadyOut.text})`);
+  t.check(nobodySent.status === 'awaiting_goods' && alreadyOut.status === 'awaiting_goods',
+    'and either way the order does not move');
 }
 
 /* ---------- 4. an order with nothing to collect steps over it -------- */
