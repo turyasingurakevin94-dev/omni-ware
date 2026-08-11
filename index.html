@@ -18618,18 +18618,34 @@ async function generatePurchaseInvoicesForQuote(q){
   (q.items||[]).forEach(it=>{
     if(!it.supplierId || it.supplierId==='__stock__') return;
     if(!bySupplier[it.supplierId]) bySupplier[it.supplierId] = [];
-    bySupplier[it.supplierId].push({
+    const base = {
       productId: it.productId, variantIdx: it.variantIdx, productName: it.productName,
       unit: it.unit, packUnit: it.packUnit, packQty: it.packQty,
-      /* What was RECEIVED where it has been, and otherwise what was
-         bought -- which is a whole carton where the supplier sells no
-         less, rather than what the customer was quoted. The invoice is
-         what is owed to that supplier, so counted beats calculated:
-         a short delivery or a price that moved is only known because
-         somebody wrote it down at the door. */
-      qty: quoteLineReceived(it) ? Number(it.receivedQty) : quoteLineUnitsBought(it),
-      price: quoteLineReceived(it) ? Number(it.receivedPrice) : it.price
-    });
+    };
+    /* What was RECEIVED where it has been, and otherwise what was
+       bought -- which is a whole carton where the supplier sells no
+       less, rather than what the customer was quoted. The invoice is
+       what is owed to that supplier, so counted beats calculated:
+       a short delivery or a price that moved is only known because
+       somebody wrote it down at the door.
+
+       A line delivered twice bills as two, each at the price actually
+       paid for it. The total is a sum of qty x price, so one line
+       carrying the last price would charge the whole quantity at it. */
+    /* quoteLineReceived is strictly redundant here -- receiveQuoteLine
+       writes receivedAt and pushes an arrival together, and
+       unreceiveQuoteLine deletes both, so the two cannot come apart.
+       Kept anyway, and deliberately: every other branch below asks the
+       same question, and this would otherwise be the one place in the
+       function that bills off a raw field instead of the shared answer.
+       A mutant removing it survives, and that is the reason. */
+    const arrivals = quoteLineReceived(it) && Array.isArray(it.receipts) && it.receipts.length > 1
+      ? it.receipts.filter(r=> (Number(r.qty)||0) > 0)
+        .map(r=> ({ ...base, qty: Number(r.qty), price: Number(r.price) }))
+      : [{ ...base,
+        qty: quoteLineReceived(it) ? Number(it.receivedQty) : quoteLineUnitsBought(it),
+        price: quoteLineReceived(it) ? Number(it.receivedPrice) : it.price }];
+    arrivals.forEach(a=> bySupplier[it.supplierId].push(a));
   });
   // Sequential rather than Promise.all: the numbers should follow the order
   // the suppliers appear on the order, and racing them would interleave.
@@ -27143,6 +27159,18 @@ function receiveQuoteLine(it, qty, price, q){
   const already = Number(it.receivedQty) || 0;
   it.receivedQty = already + n;
   it.receivedPrice = isFinite(unit) && unit >= 0 ? unit : (Number(it.price) || 0);
+  /* Each delivery kept as its own event, because each was bought at its
+     own price. The supplier's invoice is built by multiplying qty by
+     price, so collapsing two deliveries into one line and one price
+     bills the whole quantity at whichever came last: four at 300,000
+     followed by six at 310,000 was asking for 3,100,000 against a real
+     3,060,000. Two arrivals are two lines on the bill, which is what a
+     supplier's own invoice would show anyway.
+
+     Lives on the order item, which syncs as jsonb inside the order's
+     payload -- so this needs no migration and no column. */
+  if(!Array.isArray(it.receipts)) it.receipts = [];
+  it.receipts.push({ qty: n, price: it.receivedPrice, at: new Date().toISOString() });
   it.receivedAt = new Date().toISOString();
   applyStockDelta(it.productId, it.variantIdx, n, 'restock',
     `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
@@ -27158,6 +27186,9 @@ function unreceiveQuoteLine(it){
   applyStockDelta(it.productId, it.variantIdx, -n, 'reversal',
     `Receipt undone — ${supplierName(it.supplierId)}`, null, null);
   delete it.receivedQty; delete it.receivedPrice; delete it.receivedAt;
+  // Every arrival goes with it, or the next receipt would append to a
+  // history whose goods have just been taken back off the shelf.
+  delete it.receipts;
   return n;
 }
 

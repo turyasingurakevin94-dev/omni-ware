@@ -146,6 +146,23 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
   t.check(deltas.join(',') === '4,6',
     `the shelf got each delivery once, never the running total (${deltas.join(',')})`);
 
+  /* Both arrivals kept, each with what was actually paid for it. The
+     supplier's invoice multiplies qty by price, so a list that reset on
+     every receipt -- or held the running total instead of the delivery
+     -- would bill the whole quantity at whichever came last. Run rather
+     than read: the push line is identical either way. */
+  t.check((it.receipts || []).length === 2,
+    `both arrivals are on the line, not just the last (${(it.receipts || []).length})`);
+  t.check(it.receipts.map((r) => `${r.qty}@${r.price}`).join(' ') === '4@300000 6@300000',
+    `each carrying its own quantity, not the running total (${it.receipts.map((r) => r.qty).join(',')})`);
+  t.check(it.receipts.every((r) => !!r.at),
+    'and when it turned up');
+
+  // Undoing takes the arrivals with it, so the next receipt starts clean.
+  const it3 = line();
+  recv.receiveQuoteLine(it3, 4, 300000, q);
+  t.check((it3.receipts || []).length === 1, 'a fresh line records its first arrival');
+
   // Nothing arriving is not a receipt at all.
   const it2 = line();
   t.check(recv.receiveQuoteLine(it2, 0, 300000, q) === 0 && it2.receivedQty === undefined,

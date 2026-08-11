@@ -190,9 +190,26 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
   /* Counted beats calculated. A short delivery billed at the carton is
      money the shop does not owe, and a price rise billed at the quote is
      money it does. */
-  const total = compileScope([extractFunction(src, 'purchaseInvoiceTotal', 'index.html')], {}, ['purchaseInvoiceTotal'])
-    .purchaseInvoiceTotal({ items: [{ qty: 5, price: 80000 }] });
-  t.check(total === 400000, `so five at 80,000 is what is owed (${total})`);
+  const totalOf = (items) => compileScope([extractFunction(src, 'purchaseInvoiceTotal', 'index.html')], {}, ['purchaseInvoiceTotal'])
+    .purchaseInvoiceTotal({ items });
+  t.check(totalOf([{ qty: 5, price: 80000 }]) === 400000,
+    `so five at 80,000 is what is owed (${totalOf([{ qty: 5, price: 80000 }])})`);
+
+  /* A line delivered twice, at two prices. The total is a sum of
+     qty x price, so one line carrying one price can only ever bill the
+     whole quantity at it -- four at 300,000 then six at 310,000 asked
+     for 3,100,000 against a real 3,060,000, and the 40,000 was invented
+     by the arithmetic rather than agreed with anybody. Two arrivals go
+     on as two lines, which is what the supplier's own bill would show. */
+  t.check(/it\.receipts\.filter\(r=> \(Number\(r\.qty\)\|\|0\) > 0\)/.test(gen)
+    && /qty: Number\(r\.qty\), price: Number\(r\.price\)/.test(gen),
+    'a line delivered more than once bills each arrival at its own price');
+  t.check(totalOf([{ qty: 4, price: 300000 }, { qty: 6, price: 310000 }]) === 3060000,
+    `so the two together owe 3,060,000, not 3,100,000 (${totalOf([{ qty: 4, price: 300000 }, { qty: 6, price: 310000 }])})`);
+  /* One arrival stays one line: splitting every receipt would put a
+     second line on every ordinary invoice for no reason. */
+  t.check(/it\.receipts\.length > 1/.test(gen),
+    'while a line that arrived once is still a single line');
 }
 
 /* ---------- 7. a collected line is no longer a call on cash ---------- */
@@ -222,9 +239,24 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
   t.check(!/unreceiveQuoteLine/.test(toggle),
     'un-invoicing does not un-receive: the delivery happened either way');
 
-  // No new table, no new sync path -- the stated limit of this shape.
-  t.check(!/receipts/.test(extractFunction(src, 'receiveQuoteLine', 'index.html')),
-    'a receipt is fields on the line rather than a record of its own');
+  /* No new table and no new sync path -- still the limit of this shape,
+     and what that limit was always about.
+
+     The arrivals themselves ARE now listed, which the first cut of this
+     file ruled out. Receiving twice made it necessary: the supplier's
+     invoice multiplies qty by price, so one line holding one price
+     billed the whole quantity at whichever delivery came last. The list
+     lives on the order item, inside the payload jsonb that already
+     round-trips, so the limit is untouched -- what changed is a claim
+     about the data, not about the plumbing. */
+  const recv = extractFunction(src, 'receiveQuoteLine', 'index.html');
+  t.check(/it\.receipts\.push\(\{ qty: n, price: it\.receivedPrice/.test(recv),
+    'each arrival is recorded with what was paid for it');
+  t.check(!/sb\.from\(/.test(recv) && !/purchaseReceipts|data\.receipts/.test(src),
+    'without a table or a top-level collection of its own');
+  // And taking the delivery back takes its history with it.
+  t.check(/delete it\.receipts;/.test(extractFunction(src, 'unreceiveQuoteLine', 'index.html')),
+    'undoing a receipt clears the arrivals too, so the next one does not append to ghosts');
   t.check(!/addDiffOps\(ops, 'receipts'/.test(src) && !/sel\('receipts'\)/.test(src),
     'so nothing was added to the sync path');
 }
