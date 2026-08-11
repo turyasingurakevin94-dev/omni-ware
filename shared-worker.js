@@ -873,8 +873,72 @@ function renderWorkerView(){
         </div>`;
     }
   }
+  renderWorkerTrips();
   renderWorkerPendingList(pending, !!active);
   renderWorkerPickStepper(active);
+}
+
+/* Trips, above the picking. A worker who has been sent out is not on the
+   shop floor, and what they need on their phone in Katwe is the list in
+   their hand -- not the order they will pick when they get back.
+
+   Rendered into the pending wrap's own container so a host page that
+   predates trips (an older APK still on somebody's phone) simply does not
+   show them, rather than throwing on a missing element. */
+function renderWorkerTrips(){
+  const wrap = document.getElementById('wv_tripsWrap');
+  if(!wrap) return;
+  const trips = tripsForWorker(myStaff && myStaff.id);
+  if(!trips.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = trips.map(trip=>{
+    const sup = (data.suppliers||[]).find(s=> s.id === trip.supplierId);
+    const where = sup ? [sup.location, sup.shopNo ? 'Shop ' + sup.shopNo : ''].filter(Boolean).join(' · ') : '';
+    const lines = tripLines(trip);
+    const answered = lines.filter(l=> tripLineGot(l) != null).length;
+    return `<div class="wv-trip" data-trip="${esc(trip.id)}">
+      <div class="wv-trip-head">
+        <div>
+          <div class="wv-trip-label">${esc(TRIP_STATUS_LABELS[trip.status] || trip.status)}</div>
+          <div class="wv-trip-name">${esc(sup ? sup.name : 'Supplier')}</div>
+          ${where ? `<div class="wv-trip-where">${esc(where)}</div>` : ''}
+        </div>
+        ${trip.status==='assigned'
+          ? `<button type="button" class="wv-trip-accept" data-accept="${esc(trip.id)}">Accept</button>`
+          : `<div class="wv-trip-progress">${answered} of ${lines.length}</div>`}
+      </div>
+      ${trip.status==='collecting' ? `<div class="wv-trip-lines">${lines.map((l,i)=>{
+        const got = tripLineGot(l);
+        const short = got != null && got < (Number(l.qty)||0);
+        return `<button type="button" class="wv-trip-line ${got==null?'':(short?'short':'done')}"
+          data-trip="${esc(trip.id)}" data-idx="${i}">
+          <span class="wv-trip-item">${esc(l.productName)}</span>
+          <span class="wv-trip-qty">${got==null
+            ? `${esc(l.qty)} ${esc(l.unit||'')}`
+            : `${got} of ${esc(l.qty)} ${esc(l.unit||'')}`}</span>
+          <span class="wv-trip-for">for ${esc(l.clientName||'an order')}</span>
+        </button>`;
+      }).join('')}</div>
+      <button type="button" class="wv-trip-finish" data-finish="${esc(trip.id)}"
+        ${answered < lines.length ? 'disabled' : ''}>Hand in what I got</button>` : ''}
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-accept]').forEach(b=> b.addEventListener('click', ()=>{
+    if(acceptCollectionTrip(b.dataset.accept)) renderWorkerView();
+  }));
+  wrap.querySelectorAll('[data-finish]').forEach(b=> b.addEventListener('click', ()=>{
+    if(finishCollectionTrip(b.dataset.finish)) renderWorkerView();
+  }));
+  wrap.querySelectorAll('.wv-trip-line').forEach(b=> b.addEventListener('click', ()=>{
+    const trip = (data.collectionTrips||[]).find(x=> x.id === b.dataset.trip);
+    const l = trip && tripLines(trip)[Number(b.dataset.idx)];
+    if(!l) return;
+    const got = prompt(`${l.productName}\nHow many ${l.unit||'units'} did you get?`, String(l.qty));
+    if(got === null) return;
+    const paid = prompt(`What did each ${l.unit||'unit'} cost?`, String(l.expectedPrice == null ? '' : l.expectedPrice));
+    if(paid === null) return;
+    if(setTripLineGot(b.dataset.trip, Number(b.dataset.idx), got, paid)) renderWorkerView();
+  }));
 }
 
 // "Requested 12 min ago" etc, from the real timestamp set when an order
@@ -1151,6 +1215,123 @@ function orderGoodsProgress(q){
    being written should not be blocked by goods nobody has gone for. */
 function goodsBlockPreparing(q){
   return !!q && q.status !== 'draft' && orderAwaitsGoods(q);
+}
+
+/* ---------------- Collection trips ----------------
+
+   Somebody going to a supplier to fetch goods. Per SUPPLIER rather than
+   per order, because that is the shape of the real thing: one journey to
+   Shafik covers lines from three different orders and is settled with one
+   payment. Per order would have sent the same worker to the same shop
+   three times.
+
+   The lifecycle, and who moves it:
+
+     open       the admin made it from the buying list
+     assigned   the admin gave it to a worker
+     collecting the worker accepted it on their device
+     collected  the worker is back, and has said what they got
+     confirmed  the ADMIN checked it in -- and only this puts goods on
+                the shelf
+
+   That last line is the whole safety boundary. The worker app saves from
+   a snapshot that can be hours old, which is why it may write so little
+   of an order (WORKER_OWNED_KEYS); letting it write stock and supplier
+   debt would be a much larger trust than it has today. So a worker
+   reports what came back, and confirming it is a deliberate act by
+   somebody looking at the goods. */
+const TRIP_STATUS_ORDER = ['open','assigned','collecting','collected','confirmed'];
+const TRIP_STATUS_LABELS = {
+  open:'To send', assigned:'Sent', collecting:'Out collecting',
+  collected:'Back — to check in', confirmed:'Checked in',
+};
+function tripIsLive(t){ return !!t && !t.voided && t.status !== 'confirmed'; }
+function tripLines(t){ return ((t && t.lines) || []); }
+// What a worker is holding when they get back, or null while they are
+// still out -- the same "answered vs not" shape a pick uses.
+function tripLineGot(l){
+  const n = Number(l && l.gotQty);
+  return (l && l.gotQty != null && isFinite(n) && n >= 0) ? n : null;
+}
+function tripAllAnswered(t){
+  const lines = tripLines(t);
+  return lines.length > 0 && lines.every(l=> tripLineGot(l) != null);
+}
+// Lines that came back short of what the trip was sent for. Both numbers,
+// like a short pick, because the two together are what somebody has to
+// decide about.
+function tripShortLines(t){
+  return tripLines(t)
+    .map((l, idx)=>({ l, idx, sent: Number(l.qty)||0, got: tripLineGot(l) }))
+    .filter(r=> r.got != null && r.got < r.sent);
+}
+function tripsForWorker(workerId){
+  return ((typeof data !== 'undefined' && data.collectionTrips) || [])
+    .filter(t=> tripIsLive(t) && String(t.assignedWorkerId) === String(workerId));
+}
+// Every trip a line is already on, so the buying list never sends two
+// people for the same carton.
+function tripsCoveringLine(orderId, lineId){
+  return ((typeof data !== 'undefined' && data.collectionTrips) || [])
+    .filter(t=> tripIsLive(t) && tripLines(t).some(l=>
+      String(l.orderId) === String(orderId) && String(l.lineId) === String(lineId)));
+}
+function lineIsOnATrip(orderId, lineId){ return tripsCoveringLine(orderId, lineId).length > 0; }
+
+/* The worker's half of a trip. Three acts and no more: take it, say what
+   came back, hand it in. None of them touches stock -- that is checking
+   in, and it happens in the admin app where somebody is looking at the
+   goods. */
+function acceptCollectionTrip(tripId){
+  const t = (data.collectionTrips||[]).find(x=> x.id === tripId);
+  if(!t || t.status !== 'assigned') return false;
+  if(String(t.assignedWorkerId) !== String(myStaff && myStaff.id)){
+    toast('That trip has been passed to somebody else');
+    return false;
+  }
+  t.status = 'collecting';
+  t.acceptedAt = Date.now() && new Date().toISOString();
+  saveData();
+  return true;
+}
+// What came back for one line. Left null it means "not answered yet",
+// which is what keeps a half-filled trip from being handed in.
+function setTripLineGot(tripId, idx, qty, price){
+  const t = (data.collectionTrips||[]).find(x=> x.id === tripId);
+  const l = t && tripLines(t)[idx];
+  if(!l) return false;
+  const n = Number(qty);
+  if(!isFinite(n) || n < 0) return false;
+  l.gotQty = n;
+  /* Blank first, then Number. Number('') is 0, so testing the number
+     alone recorded a price nobody typed as a price of nothing -- and the
+     lot would have been shelved at zero cost, poisoning every margin
+     figure downstream. Blank means unsaid, and unsaid falls back to what
+     the trip expected to pay. */
+  const blank = price == null || String(price).trim() === '';
+  const p = Number(price);
+  l.gotPrice = (!blank && isFinite(p) && p >= 0) ? p
+    : (l.expectedPrice == null ? null : Number(l.expectedPrice));
+  saveData();
+  return true;
+}
+/* Handing it in. Every line has to have been answered first -- a trip
+   handed in half-answered would be checked in by somebody in the shop
+   who has no way of knowing whether the blank lines mean "none came" or
+   "nobody said". Zero is a real answer here and says the first. */
+function finishCollectionTrip(tripId){
+  const t = (data.collectionTrips||[]).find(x=> x.id === tripId);
+  if(!t || t.status !== 'collecting') return false;
+  if(!tripAllAnswered(t)){
+    const left = tripLines(t).filter(l=> tripLineGot(l) == null).length;
+    toast(`Say what came back for ${left} more line${left===1?'':'s'} first — 0 is an answer`, 5000);
+    return false;
+  }
+  t.status = 'collected';
+  t.collectedAt = new Date().toISOString();
+  saveData();
+  toast('Handed in — the shop will check it in');
+  return true;
 }
 
 function timeOfDayGreeting(){

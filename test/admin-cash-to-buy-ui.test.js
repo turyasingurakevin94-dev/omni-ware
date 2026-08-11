@@ -96,7 +96,7 @@ const scope = compileScope([
   ICON_SHELF: '<svg data-i="shelf"></svg>', ICON_PURCHASE: '<svg data-i="purchase"></svg>',
   ICON_CASH: '<svg data-i="cash"></svg>', ICON_MOMO: '<svg data-i="momo"></svg>',
   ICON_BANK: '<svg data-i="bank"></svg>', ICON_CHECK: '<svg data-i="check"></svg>',
-  ICON_PLAN: '<svg data-i="plan"></svg>',
+  ICON_PLAN: '<svg data-i="plan"></svg>', ICON_TRUCK: '<svg data-i="truck"></svg>',
   todayISO: () => '2026-08-03',
   openModal: (id) => { modal.opened = id; },
   // The plan modal is this file's neighbour, exercised in full by
@@ -107,6 +107,12 @@ const scope = compileScope([
      full by goods-receiving.test.js. Here it is only a call the render
      makes, and this file's document stub has no querySelectorAll. */
   wireBuyingListReceiving: () => { modal.receivingWired = true; },
+  /* Collection trips live in shared-worker.js and are exercised by their
+     own file. Here they only decide whether a run offers "Send someone",
+     and this fixture has no trips -- so nothing is on one, and the run's
+     own trip strip renders empty. */
+  lineIsOnATrip: () => false,
+  blRunTripsHTML: () => '',
   document: {
     getElementById: () => ({
       set innerHTML(v) { modal.html = v; },
