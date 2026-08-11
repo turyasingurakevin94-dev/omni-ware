@@ -62,6 +62,63 @@ const src = read('index.html');
   t.check(/foldInstruction\(h1, p, 'What this screen is for'\)/.test(pageFn),
     'and the page screens go through it rather than carrying their own copy of it');
 
+  /* Presets is eight panes of settings, each opening with a sentence
+     about what its list is for. The panes are short -- Categories is a
+     text box and a list of chips -- so the explanation was routinely
+     taller than the thing it explained, and on a phone the control sat
+     below the fold. Same mechanism, one more caller. */
+  const presetFn = extractFunction(src, 'foldPresetInstructions', 'index.html');
+  t.check(/foldInstruction\(h3, p, 'What this list is for'\)/.test(presetFn),
+    'the preset panes go through the same function too');
+  /* Scoped to the tab. .pset-head is ALSO the product form's pane
+     heading, so an unscoped query reaches into the modal and refolds its
+     five panes under the generic label -- losing "What a markup rule
+     does" and "How variants work". It reads correctly unscoped only
+     because foldProductFormInstructions happens to run first and takes
+     its paragraphs with it, an ordering nobody declared. */
+  t.check(/querySelectorAll\('#tab-presets \.pset-head'\)/.test(presetFn),
+    'scoped to the Presets tab, since the product form uses the same class');
+  t.check(/foldPresetInstructions\(\);/.test(src), 'and it is actually called');
+  // Its own label, so the badge says something specific to a settings list.
+  t.check(!/'What this screen is for'/.test(presetFn),
+    'with a label about the list rather than about the screen');
+  /* An empty paragraph is still a node, so foldInstruction's own
+     `filter(Boolean)` would happily fold one and leave a badge opening
+     onto nothing. refreshInstructionTips hides those, but it is only run
+     for the two modals -- a blank badge on Presets would simply sit
+     there. */
+  t.check(/if\(!p \|\| !h3 \|\| !p\.textContent\.trim\(\)\) return;/.test(presetFn),
+    'and a pane whose paragraph is empty gets no badge at all');
+  /* :scope, so only the paragraph belonging to the header is taken. The
+     panes below it are full of explanatory <p>s -- pset-note and the
+     agent-terms hints -- and an unscoped query would hoist whichever
+     came first into the bubble and leave the heading's own sentence in
+     place. */
+  t.check(/const p = head\.querySelector\(':scope > p'\);/.test(presetFn),
+    'taking the header’s own paragraph rather than the first one anywhere in the pane');
+
+  /* The row centres its children, so a heading still carrying the bottom
+     margin it needed while a paragraph sat under it pulls the badge up
+     off the text it belongs to. The h1 rule has always existed for this;
+     Presets' headings are h3. */
+  t.check(/\.page-title-row h1, \.page-title-row h3\{margin-bottom:0;\}/.test(src),
+    'and the h3 drops its margin inside the row, like the h1 does');
+  /* Which loses on Presets without help: `.pset-head h3` has the same
+     specificity and comes later in the file, so the generic rule above
+     was silently doing nothing there and the badge sat 2px high on all
+     eight. Scoped rather than reordered, because the price form depends
+     on the rule above staying where it is. */
+  t.check(/\.pset-head \.page-title-row h3\{margin-bottom:0;\}/.test(src),
+    'with a more specific rule where .pset-head h3 would otherwise win');
+  /* Both indexes checked for existence first: `indexOf` returns -1 for a
+     rule that is not there, and -1 is less than everything, so the
+     ordering check below passed happily on a stylesheet missing the very
+     rule it is about. */
+  const competing = src.indexOf('.pset-head h3{font-size:16px');
+  const scoped = src.indexOf('.pset-head .page-title-row h3{');
+  t.check(competing >= 0 && scoped >= 0 && competing < scoped,
+    `declared after the rule it has to beat, so order alone would not do it (${competing}, ${scoped})`);
+
   t.check(/kept\.forEach\(p=> bubble\.appendChild\(p\)\)/.test(fn),
     'the original paragraph node is moved into the bubble, not read and retyped');
   t.check(!/textContent\s*=\s*p\.textContent/.test(fn) && !/innerHTML\s*=\s*p\.innerHTML/.test(fn),
@@ -179,7 +236,7 @@ const src = read('index.html');
         closest: (sel) => (inModal && sel === '.modal-body' ? {} : null),
         getBoundingClientRect: () => badge,
       },
-      props, classes, bubbleClasses, badge, w, h,
+      props, classes, bubbleClasses, badge, w, h, bubble,
     };
   };
   const num = (v) => (v == null ? null : parseFloat(v));
@@ -242,6 +299,54 @@ const src = read('index.html');
     t.check(num(s.props['--tip-x']) === 8, 'and one pushed off the left comes back the same way');
   }
 
+  /* ---- and a badge on the page rather than in a modal --------------
+   *
+   * These were excluded from placement entirely, on the reasoning that a
+   * page heading has the rest of the document to grow into. True
+   * vertically, and it is still left alone there. Sideways it was simply
+   * wrong: the bubble hangs off the badge's left edge and is up to 380px
+   * wide, so on a 375px phone every badge sitting right of about a third
+   * of the way across ran its text off the screen, and the page does not
+   * scroll sideways to reach it. Presets alone has nine.
+   *
+   * Clamped through `left` rather than a fixed coordinate, so the
+   * vertical behaviour it was right about does not change.
+   */
+  {
+    const s = stub({ badgeLeft: 330, badgeTop: 200, inModal: false });
+    placeInfoBubble(s.info);
+    t.check(!s.bubbleClasses.has('tip-fixed'),
+      'a page bubble stays in the document flow rather than being pinned to the viewport');
+    t.check(s.props['--tip-y'] === undefined && !s.classes.has('flip'),
+      'and is not moved vertically at all — it has the page to grow into');
+    const left = num(s.bubble.style.left);
+    t.check(Math.round(s.badge.left + left + s.w) === VW - 8,
+      `while sideways it slides back until its right edge clears the screen (${left})`);
+    const arrow = num(s.props['--tip-arrow']);
+    t.check(Math.round(s.badge.left + left + arrow) === Math.round(s.badge.left + s.badge.width / 2 - 5),
+      'with the arrow following, still over the badge it belongs to');
+  }
+
+  // A page badge with room to spare keeps exactly the offset the CSS gives it.
+  {
+    const s = stub({ badgeLeft: 40, badgeTop: 200, inModal: false });
+    placeInfoBubble(s.info);
+    t.check(num(s.bubble.style.left) === -6,
+      `nothing is moved when it already fits (${s.bubble.style.left})`);
+  }
+
+  /* And off the left, which the same clamp has to hold. A badge at x=2
+     would otherwise be given left:-6 and open four pixels off the screen
+     -- the mirror of the case above, and easy to lose because every
+     Presets badge in the real page sits well right of it. */
+  {
+    const s = stub({ badgeLeft: 2, badgeTop: 200, inModal: false });
+    placeInfoBubble(s.info);
+    const left = num(s.bubble.style.left);
+    t.check(s.badge.left + left === 8,
+      `a page bubble pushed off the left comes back too (${s.badge.left + left})`);
+  }
+
   /* Reused across badges. Every coordinate is written on every call, so
      what has to be checked is the one thing that is a class rather than
      a value: a flip left set by a low badge would flip the next one. */
@@ -257,12 +362,17 @@ const src = read('index.html');
       'and every coordinate is rewritten rather than left where the last one put it');
   }
 
-  // A page heading is left exactly as the stylesheet wrote it.
+  /* A page heading is left where the stylesheet put it VERTICALLY, even
+     sitting low on the screen. This used to assert it was not touched at
+     all, which was the horizontal bug above hiding behind a true
+     statement about the vertical. */
   {
     const s = stub({ badgeLeft: 330, badgeTop: 700, inModal: false });
     placeInfoBubble(s.info);
-    t.check(Object.keys(s.props).length === 0 && !s.classes.has('flip') && !s.bubbleClasses.has('tip-fixed'),
-      'a badge outside a scrolling box is not touched at all');
+    t.check(s.props['--tip-y'] === undefined && !s.classes.has('flip') && !s.bubbleClasses.has('tip-fixed'),
+      'a badge outside a scrolling box is never moved up, flipped, or pinned');
+    t.check(Object.keys(s.props).join() === '--tip-arrow',
+      `and the only property it writes is the one the sideways clamp needs (${Object.keys(s.props).join() || 'none'})`);
   }
 
   t.check(/\.page-info-bubble\.tip-fixed\{position:fixed;top:var\(--tip-y, auto\);left:var\(--tip-x, auto\);\}/.test(src),
