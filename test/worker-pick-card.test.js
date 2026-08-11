@@ -13,9 +13,9 @@
  * Two real defects came out of reading this card properly:
  *
  *   - The quantity label was the literal string "Pack" regardless of what
- *     was shown. `unit` falls back to the base unit when an item has no
- *     packUnit, so a card announced "Pack / 3 pc" for something not sold
- *     in packs at all.
+ *     was shown. That was fixed to follow packUnit, and later again --
+ *     see section 1 -- when it turned out the number was never a count of
+ *     packs in the first place, so no card should ever have said "Pack".
  *   - The done badge used --accent. After the shared palette landed that
  *     is oxide, the action colour, so "already picked" and "press this"
  *     were the same colour. Done is verdigris.
@@ -30,26 +30,43 @@ const css = read('worker.html');
 const strip = (s) => s.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 const code = strip(js);
 
-/* ---------- 1. the label says what the number actually is ------------ */
+/* ---------- 1. the number is in the unit it is counted in ------------ */
+/*
+ * This section used to assert the opposite, and the earlier reading was
+ * wrong about the data rather than about the design.
+ *
+ * it.qty is ALWAYS in base units. ipComputeQty multiplies a pack entry
+ * out by packQty before the line is ever written, so choosing "2
+ * cartons" of something sold by the dozen stores 12, not 2. Pairing that
+ * number with packUnit printed "12 Ctn" for twelve dozen, and a picker
+ * reading that pulls twelve cartons -- six times the order, on the one
+ * card built specifically to stop that error. The buying list had always
+ * shown it.unit for the same number, so the two screens disagreed about
+ * what a line was.
+ *
+ * With the number always a count of units, "Pack" has nothing left to
+ * mean here. Pack size is a purchasing fact; it belongs on the buying
+ * list, next to what has to be fetched, not on the card of somebody
+ * counting goods off a shelf.
+ */
 {
-  t.check(/const qtyLabel = it\.packUnit \? 'Pack' : 'Quantity';/.test(code),
-    'the label follows whether a pack unit exists, not the fallback');
+  t.check(/const unit = it\.unit \|\| it\.packUnit \|\| '';/.test(code),
+    'the card shows the line’s own unit, the same one the buying list shows');
+  t.check(/const qtyLabel = 'Quantity';/.test(code),
+    'and calls it a quantity, because that is what the number is');
   t.check(/class="wv-carousel-qty-label">\$\{esc\(qtyLabel\)\}/.test(code),
-    'and is rendered from that rather than hard-coded');
-  t.check(!/wv-carousel-qty-label">Pack</.test(code),
-    'the literal "Pack" label is gone');
+    'still rendered through the variable rather than hard-coded into the markup');
 
   // The rule itself, on the case that was wrong.
-  const label = (packUnit) => packUnit ? 'Pack' : 'Quantity';
-  t.check(label('ctn') === 'Pack', 'an item sold in cartons is a pack');
-  t.check(label(null) === 'Quantity', 'one with no pack unit is not');
-  t.check(label('') === 'Quantity', 'nor is one with an empty pack unit');
-
-  // And the unit shown still follows the existing fallback, unchanged.
-  const unitFor = (it) => it.packUnit || it.unit || '';
-  t.check(unitFor({ packUnit: 'ctn', unit: 'pc' }) === 'ctn', 'a pack item shows its pack unit');
-  t.check(unitFor({ unit: 'pc' }) === 'pc', 'a loose item shows its base unit');
-  t.check(unitFor({}) === '', 'and an item with neither shows nothing rather than "undefined"');
+  const unitFor = (it) => it.unit || it.packUnit || '';
+  t.check(unitFor({ packUnit: 'Ctn', unit: 'Dozen' }) === 'Dozen',
+    'twelve of something sold by the dozen reads as dozens, not as cartons');
+  t.check(unitFor({ unit: 'pc' }) === 'pc', 'a loose item still shows its base unit');
+  /* Nothing writes a line with only a packUnit -- ipAddToQuote takes
+     `unit` from the price row alongside it -- but a row from an older
+     save is better read as its pack than as nothing at all. */
+  t.check(unitFor({ packUnit: 'Ctn' }) === 'Ctn', 'a line with only a pack unit falls back to it');
+  t.check(unitFor({}) === '', 'and one with neither shows nothing rather than "undefined"');
 }
 
 /* ---------- 2. the unit does not steal weight from the digits -------- */

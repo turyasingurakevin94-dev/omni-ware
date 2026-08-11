@@ -1220,6 +1220,28 @@ function quoteLineShortfall(it){
 function orderShortLines(q){
   return (((q && q.items) || [])).filter(it=> quoteLineShortfall(it) > 0);
 }
+
+/* The other side of the same subtraction: what of the delivery is NOT
+   this customer's.
+
+   A supplier who sells nothing smaller than a carton turns an order for
+   one dozen into a purchase of six, and all six go on the shelf when
+   they are checked in. Five of them are the shop's. The picker,
+   standing in front of an open carton with a card that says "1 Dozen",
+   has no way to tell that from a delivery of six they are meant to hand
+   over -- and handing over the carton gives away five dozen the shop
+   paid for.
+
+   Counted from what actually arrived rather than worked out from the
+   pack size, for the same reason the shortfall is: index.html's
+   quoteLineSurplus answers the planning question before anything has
+   turned up, and this answers what is really on the shelf now.
+   A short delivery has no surplus and a surplus is never short, so the
+   two can never both have something to say. */
+function quoteLineShelfShare(it){
+  if(!quoteLineReceived(it)) return 0;
+  return Math.max(0, (Number(it.receivedQty) || 0) - (Number(it.qty) || 0));
+}
 // How far along the collecting is, for a card that has to say so at a
 // glance. Counts LINES rather than units: "3 of 5 items in" is what
 // decides whether anyone can start picking. `short` is counted apart
@@ -1450,12 +1472,23 @@ function renderWorkerPickStepper(q){
     const isShort = answered && picked < itemOrderedQty(it);
     const isDone = answered && !isShort;
     const qty = it.qty!=null ? it.qty : '';
-    const unit = it.packUnit || it.unit || '';
-    // The label followed the fallback above, not the outcome: an item with
-    // no packUnit falls back to its base unit and was still announced as
-    // "Pack", so a card read "Pack / 3 pc" for something that is not sold
-    // in packs at all.
-    const qtyLabel = it.packUnit ? 'Pack' : 'Quantity';
+    /* The line's OWN unit. it.qty is always in base units -- ipComputeQty
+       multiplies a pack entry out by packQty before the line is written,
+       so choosing "2 cartons" of something sold by the dozen stores 12,
+       not 2 -- and pairing that number with packUnit printed "12 Ctn"
+       for twelve dozen. A picker reading that pulls twelve cartons: six
+       times the order, which is exactly the mistake this card is built
+       to prevent.
+
+       The buying list has always shown it.unit for the same number, so
+       the two screens disagreed about what a line was; this is the one
+       that was wrong. */
+    const unit = it.unit || it.packUnit || '';
+    // Which leaves nothing for "Pack" to mean here: the number is a count
+    // of units in every case, whether or not the supplier sells them in
+    // packs. Pack size is a purchasing fact and belongs on the buying
+    // list, not on the card of somebody counting goods off a shelf.
+    const qtyLabel = 'Quantity';
     const variant = pickItemVariantLabel(it, product);
     // The variant's own photo, not the product's. Every other caller of
     // ipStageThumbHTML passes the index; this one did not, so a picker
@@ -1518,7 +1551,16 @@ function renderWorkerPickStepper(q){
               person. */
           quoteLineShortfall(it) > 0
             ? `<div class="wv-carousel-owed">${ICON_WARN_SMALL}Only ${esc(String(it.receivedQty))} arrived — ${esc(String(quoteLineShortfall(it)))} short</div>`
-            : ''}
+            : /* The pack the shop could not buy less than. Says the
+                 whole delivery first, because that is what is standing
+                 in front of them, and then how much of it is not going
+                 out -- an open carton of six against a card reading
+                 "1 Dozen" is otherwise indistinguishable from a
+                 delivery meant to be handed over whole. Only ever one
+                 of these two lines: a short delivery has no surplus. */
+              quoteLineShelfShare(it) > 0
+                ? `<div class="wv-carousel-kept">${esc(String(it.receivedQty))}${unit ? ' ' + esc(unit) : ''} came in — ${esc(String(quoteLineShelfShare(it)))} ${quoteLineShelfShare(it)===1 ? 'stays' : 'stay'} on the shelf</div>`
+                : ''}
         <div class="wv-carousel-source"><div class="wv-carousel-source-label">Pick From:</div><div class="wv-carousel-source-value">${esc(pickItemSourceLabel(it))}</div></div>
         <button type="button" class="wv-carousel-short" data-act="short" aria-label="${isShort ? 'Change the number found' : 'Record that you could not find them all'}" title="${isShort ? 'Change the number found' : 'Couldn’t find them all?'}">${ICON_SHORT_PICK}</button>
       </div>

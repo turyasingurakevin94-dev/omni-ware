@@ -44,8 +44,8 @@ const shared = read('shared-worker.js');
 /* ---------- 1. the shortfall itself ---------------------------------- */
 
 const SHARED_NAMES = ['orderLineIsBoughtIn', 'quoteLineReceived', 'quoteLineShortfall',
-  'orderShortLines', 'orderIncomingLines', 'orderAwaitsGoods', 'orderGoodsProgress',
-  'goodsBlockPreparing', 'quoteLineComesOffShelf'];
+  'quoteLineShelfShare', 'orderShortLines', 'orderIncomingLines', 'orderAwaitsGoods',
+  'orderGoodsProgress', 'goodsBlockPreparing', 'quoteLineComesOffShelf'];
 const scope = compileScope(
   SHARED_NAMES.map((n) => extractFunction(shared, n, 'shared-worker.js')),
   {}, SHARED_NAMES,
@@ -231,6 +231,33 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
   const stepper = extractFunction(shared, 'renderWorkerPickStepper', 'shared-worker.js');
   t.check(/quoteLineShortfall\(it\) > 0/.test(stepper) && /wv-carousel-owed/.test(stepper),
     'the pick card warns the picker before they start looking');
+
+  /* The other side of the same subtraction. A supplier who sells nothing
+     smaller than a carton turns an order for one dozen into a purchase
+     of six, and all six are on the shelf once they are checked in. The
+     picker, standing at an open carton with a card reading "1 Dozen",
+     cannot otherwise tell that from a delivery of six meant to go out
+     whole -- and handing the carton over gives away five dozen. */
+  t.check(scope.quoteLineShelfShare(line({ qty: 1, unit: 'Dozen', ...arrived(6) })) === 5,
+    'six arriving against an order for one leaves five for the shop');
+  t.check(scope.quoteLineShelfShare(line({ qty: 1, unit: 'Dozen' })) === 0,
+    'nothing arrived, nothing kept — the carton is still at the supplier');
+  t.check(scope.quoteLineShelfShare(line(arrived(4))) === 0,
+    'and a delivery that came up SHORT keeps nothing back');
+  /* One slot on the card, and they can never contend for it: shortfall
+     is qty - received and shelf share is received - qty, so at most one
+     of the two is ever positive. */
+  const both = [line(arrived(4)), line(arrived(10)), line({ qty: 1, unit: 'Dozen', ...arrived(6) })]
+    .filter((l) => scope.quoteLineShortfall(l) > 0 && scope.quoteLineShelfShare(l) > 0);
+  t.check(both.length === 0, 'a line is never both short and holding a surplus');
+
+  t.check(/quoteLineShelfShare\(it\) > 0/.test(stepper) && /wv-carousel-kept/.test(stepper),
+    'the card says what stays behind');
+  t.check(/came in — \$\{esc\(String\(quoteLineShelfShare\(it\)\)\)\} \$\{quoteLineShelfShare\(it\)===1 \? 'stays' : 'stay'\}/.test(stepper),
+    'naming the whole delivery first, since that is what is in front of them');
+  // Only one of the two lines can render: the surplus is the else of the shortfall.
+  t.check(stepper.indexOf('wv-carousel-owed') < stepper.indexOf('wv-carousel-kept'),
+    'and the short warning wins the slot, being the one that costs a customer');
   t.check(/\$\{ICON_WARN_SMALL\}/.test(stepper) && /const ICON_WARN_SMALL = /.test(shared),
     'using an icon the shared file owns — worker.html has no ICON_WARN to borrow, and would throw reaching for one');
 
