@@ -549,4 +549,87 @@ const trip = (over) => Object.assign({
     'the button is offered before they accept and withdrawn once they are out');
 }
 
+/* ---------- 11. a trip whose reason left the board ------------------- */
+/*
+ * The trip strips hang off the buying list's runs, and the runs are
+ * built from the orders being prepared. So stepping an order back to
+ * Draft while somebody was out took its supplier's run away and the trip
+ * with it -- while tripIsLive still held, so lineIsOnATrip still locked
+ * the line and no second trip could be made for it either.
+ *
+ * Kevin standing in the shop with three hundred thousand shillings of
+ * hinges, and nowhere in the app to check them in, call the trip off, or
+ * send anybody again. The same one-way door voiding was built to open,
+ * reached this time by an entirely ordinary action rather than a
+ * mistake: a trip is a job in flight and a person out of the building,
+ * and it does not stop existing because the reason for it changed.
+ */
+{
+  const fn = extractFunction(src, 'blStrandedTripsHTML', 'index.html');
+  t.check(/tripIsLive\(t\) && !onBoard\.has\(String\(t\.supplierId\)\)/.test(fn),
+    'live trips with no run of their own are listed anyway');
+  t.check(/blRunTripsHTML\(\{ supplierId: sid \}\)/.test(fn),
+    'through the same strip, so they carry the same Assign, Check in and Call off');
+  // A finished or called-off trip is not stranded, it is done.
+  t.check(/tripIsLive\(t\)/.test(fn) && !/t\.status !== 'confirmed'/.test(fn),
+    'while a confirmed or called-off one is simply finished, not stranded');
+  t.check(/\$\{blStrandedTripsHTML\(runs\)\}/.test(src),
+    'and the buying list renders them');
+
+  // Run it: one trip to a supplier the board no longer mentions.
+  const state = { collectionTrips: [
+    trip({ id: 'T-live', supplierId: 'S9', status: 'collected' }),
+    trip({ id: 'T-onboard', supplierId: 'S1' }),
+    trip({ id: 'T-done', supplierId: 'S8', status: 'confirmed' }),
+    trip({ id: 'T-off', supplierId: 'S7', voided: true }),
+  ] };
+  const scope = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripShortLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
+    extractFunction(src, 'blRunTripsHTML', 'index.html'),
+    extractFunction(src, 'blStrandedTripsHTML', 'index.html'),
+  ], {
+    data: state, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
+    staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
+    TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
+  }, ['blStrandedTripsHTML']);
+
+  const html = scope.blStrandedTripsHTML([{ supplierId: 'S1' }]);
+  t.check(/T-live/.test(html), 'the trip whose order left the board is shown');
+  t.check(!/T-onboard/.test(html), 'the one still under its own run is not repeated');
+  t.check(!/T-done/.test(html) && !/T-off/.test(html),
+    'and neither a finished trip nor a called-off one is dragged back');
+  t.check(/data-confirm="T-live"/.test(html) && /data-void="T-live"/.test(html),
+    'with the goods checkable in and the trip callable off from there');
+  t.check(/1 collection still out/.test(html),
+    `counted in the heading (${(/(\d+) collection/.exec(html) || [])[0]})`);
+
+  // Nothing stranded, nothing said.
+  t.check(scope.blStrandedTripsHTML([{ supplierId: 'S9' }, { supplierId: 'S1' }]) === '',
+    'and the whole section is absent when every live trip has a run');
+
+  /* Ids compared as strings, the way every other id comparison in this
+     codebase is. A run carrying a number and a trip carrying the same id
+     as text is the same supplier, and matching by identity would call it
+     stranded while its own run sat directly above -- the trip listed
+     twice, and an amber panel saying somebody is out when nobody is. */
+  const mixed = { collectionTrips: [trip({ id: 'T-num', supplierId: '5' })] };
+  const mixedScope = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripShortLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
+    extractFunction(src, 'blRunTripsHTML', 'index.html'),
+    extractFunction(src, 'blStrandedTripsHTML', 'index.html'),
+  ], {
+    data: mixed, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
+    staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
+    TRIP_STATUS_LABELS: { assigned: 'Sent' },
+  }, ['blStrandedTripsHTML']);
+  t.check(mixedScope.blStrandedTripsHTML([{ supplierId: 5 }]) === '',
+    'so a run whose id is a number covers a trip whose id is the same digits as text');
+}
+
 process.exit(t.done() ? 1 : 0);

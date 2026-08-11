@@ -114,6 +114,9 @@ const scope = compileScope([
      own trip strip renders empty. */
   lineIsOnATrip: () => false,
   blRunTripsHTML: () => '',
+  // Collections still out whose orders have left the board. Not what this
+  // file is about; collection-trips.test.js owns it.
+  blStrandedTripsHTML: () => '',
   document: {
     getElementById: () => ({
       set innerHTML(v) { modal.html = v; },

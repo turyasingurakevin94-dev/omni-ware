@@ -4012,6 +4012,14 @@
     all:unset;box-sizing:border-box;cursor:pointer;padding:5px 8px;border-radius:6px;
     font-size:11px;font-weight:600;color:var(--ink-soft);opacity:.65;white-space:nowrap;
   }
+  /* Somebody is out and the board has forgotten why. Amber rather than
+     red: nothing is broken, but it is the one thing on this screen that
+     will not resolve itself. */
+  .bl-stranded{margin-top:14px;border:1px solid var(--ow-amber);border-radius:10px;overflow:hidden;}
+  .bl-stranded-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:9px 11px;background:var(--ow-amber-soft);color:var(--warn-ink);font-size:12px;}
+  .bl-stranded-head svg{width:15px;height:15px;flex-shrink:0;}
+  .bl-stranded-head span{flex:1 1 100%;font-weight:500;opacity:.85;}
+  .bl-stranded .bl-trips{margin:0;padding:8px 10px;}
   .bl-trip-void:hover{opacity:1;color:var(--danger);}
   .bl-trip-void:focus-visible{outline:2px solid var(--danger);outline-offset:1px;opacity:1;}
   .bl-trip-act:hover{color:var(--ink);border-color:var(--ink-soft);}
@@ -14086,6 +14094,7 @@ function openBuyingList(){
     </div>
     ${cashPositionHTML(orders)}
     ${runs.length ? runs.map(runHTML).join('') : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
+    ${blStrandedTripsHTML(runs)}
     ${unpriced.length ? `<div class="bl-gap">
       ${ICON_WARN}
       <div><b>${unpriced.length} line${unpriced.length===1?'':'s'} with no supplier price on file</b>
@@ -14139,6 +14148,37 @@ function blRunTripsHTML(run){
         `<button type="button" class="bl-trip-void" data-void="${esc(t.id)}" title="Call this trip off — its items go back on the list">Call off</button>`}
     </div>`;
   }).join('')}</div>`;
+}
+
+/* Trips whose reason has left the board.
+
+   A run is built from the orders being prepared, and the trip strips
+   hang off the runs -- so an order stepped back to Draft while somebody
+   was out took its supplier's run away and the trip with it. The trip
+   stayed live, which meant lineIsOnATrip still held its line, so the
+   line could not be put on another trip either: Kevin standing in the
+   shop with three hundred thousand shillings of hinges, and nowhere in
+   the app to check them in, call the trip off, or send anyone again.
+
+   The same one-way door voiding was built to open, reached by an
+   entirely ordinary action rather than by a mistake. A trip is a job in
+   flight and a person out of the building; it does not stop existing
+   because the reason for it changed, so it is listed here whatever the
+   board is doing. */
+function blStrandedTripsHTML(runs){
+  const onBoard = new Set((runs||[]).map(r=> String(r.supplierId)));
+  const stranded = (data.collectionTrips||[])
+    .filter(t=> tripIsLive(t) && !onBoard.has(String(t.supplierId)));
+  if(!stranded.length) return '';
+  const bySupplier = {};
+  stranded.forEach(t=>{ const k = String(t.supplierId); (bySupplier[k] = bySupplier[k] || []).push(t); });
+  return `<div class="bl-stranded">
+    <div class="bl-stranded-head">${ICON_WARN}
+      <b>${stranded.length} collection${stranded.length===1?'':'s'} still out with nothing on the list</b>
+      <span>The orders they were for have moved off the board. Check them in if the goods arrived, or call them off.</span>
+    </div>
+    ${Object.keys(bySupplier).map(sid=> blRunTripsHTML({ supplierId: sid })).join('')}
+  </div>`;
 }
 
 function createCollectionTripFromRun(run){
