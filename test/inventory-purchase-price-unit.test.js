@@ -41,8 +41,12 @@ const src = read('index.html');
 // packQty -- so a source-reading check run against the raw file would be
 // satisfied by the prose EXPLAINING the code rather than by the code. Both
 // comment forms go, or the assertions below prove nothing.
+// The lookbehind guards against `accept="image/*"` in the media picker,
+// whose `/*` opens a block comment a naive stripper does not close for
+// another 104,248 characters — blinding every check to the markup in
+// between. A real opener is not preceded by a word character or a quote.
 const stripComments = (s) => s
-  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, ' ')
   .split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const scope = compileScope([

@@ -275,8 +275,16 @@ if (scope) {
     'and drawn in one place');
   t.check(!/dash_threatList/.test(code),
     'the second panel that re-drew the same array is gone, not merely hidden');
-  t.check(!/Everything flagged/.test(code.replace(/<!--[\s\S]*?-->/g, '')),
-    'and so is its heading');
+  /* Both comment forms stripped, not just HTML. The check is that the
+     HEADING is gone from the markup; prose is free to name the thing it
+     removed, and two comments now do -- the one where the panel stood,
+     and one on the compare page warning against making the same mistake
+     there. A check that forbids explaining a removal is a check that
+     pressures the next person to delete the explanation. */
+  const noComments = code
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '');
+  t.check(!/Everything flagged/.test(noComments), 'and so is its heading');
   t.check(!/threatCardHTML/.test(code) && !/class="threat-card/.test(code),
     'along with the card kind that existed only to show one list a second way');
 

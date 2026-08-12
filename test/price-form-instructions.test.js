@@ -44,7 +44,12 @@ const modal = (/<div class="modal-overlay" id="priceModal">[\s\S]*?\n<\/div>/.ex
   const notes = (modal.match(/class="pfx-note/g) || []).length;
   const hints = (modal.match(/class="field-hint"/g) || []).length;
   t.check(notes === 5, `the five step notes are still written in the markup (${notes})`);
-  t.check(hints === 1, `along with the one field hint (${hints})`);
+  /* Two now. The second belongs to "Pieces in one unit", added so the
+     comparison page can weigh a Box of one brand against a Pack of
+     another; its hint is the only place that explains why a shop would
+     ever fill it in. Counted rather than loosened to >=1, because the
+     point of this check is that a hint is never orphaned by a fold. */
+  t.check(hints === 2, `along with the two field hints (${hints})`);
 
   const fn = extractFunction(src, 'foldPriceFormInstructions', 'index.html');
   t.check(fn.length > 0, 'and something folds them');

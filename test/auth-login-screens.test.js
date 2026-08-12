@@ -43,7 +43,9 @@ const workerHtml = read('worker.html');
 const agentHtml = read('agent.html');
 
 const stripComments = (s) => s
-  .replace(/\/\*[\s\S]*?\*\//g, '')
+  // Lookbehind: `accept="image/*"` is not a comment opener, and treating
+  // it as one hides 104,248 characters of markup from every check below.
+  .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
   .split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 /* ---------- 1. which app am I ----------------------------------------- */

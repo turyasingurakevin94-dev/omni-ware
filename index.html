@@ -2147,6 +2147,53 @@
     background:var(--bg);border:1px solid var(--line);color:var(--ink-soft);}
   .cmp-note.warn{background:var(--ow-amber-soft);border-color:#EBD9B4;color:var(--ow-amber-ink);}
 
+  /* ---- One product against several ------------------------------------
+     Rival products are chips rather than a multi-select: the whole list
+     is four or five items, they are toggled repeatedly while reading, and
+     a closed dropdown hides which ones are on. */
+  .cmp-rivals{background:var(--ow-steel-050);border:1px solid var(--line);border-radius:11px;
+    padding:11px 13px;margin-bottom:14px;}
+  .cmp-rivals-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px;}
+  .cmp-rivals-label{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink-soft);}
+  .cmp-rivals-hint{font-size:11.5px;color:var(--ink-soft);}
+  .cmp-rival-chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .cmp-rival-chip{
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    background:#fff;color:var(--ink-soft);border:1px solid var(--line);
+    border-radius:20px;padding:5px 13px;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .cmp-rival-chip:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .cmp-rival-chip.on{background:var(--ow-ink-900);border-color:var(--ow-ink-900);color:#fff;}
+
+  .cmp-x-wrap{margin-bottom:10px;}
+  .cmp-x-table{width:100%;border-collapse:collapse;}
+  .cmp-x-table th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
+    color:var(--ink-soft);font-weight:700;padding:8px 12px;border-bottom:1px solid var(--line);
+    vertical-align:bottom;white-space:nowrap;
+  }
+  .cmp-x-table th.cmp-x-subject{color:var(--ink);}
+  .cmp-x-tag{display:block;font-size:9.5px;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;}
+  .cmp-x-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  .cmp-x-label{font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  /* The basis is the most important word in the row: it says whether the
+     comparison beside it means anything. Never the same colour as a
+     price, so it cannot be skimmed as one. */
+  .cmp-x-basis{display:block;margin-top:3px;font-size:10px;font-weight:700;letter-spacing:0.5px;
+    text-transform:uppercase;color:var(--good);}
+  .cmp-x-basis.pack, .cmp-x-basis.unit{color:var(--ow-amber-ink);}
+  .cmp-x-basis.none{color:var(--ink-soft);}
+  .cmp-x-why{margin-top:4px;font-size:11px;font-weight:400;line-height:1.45;color:var(--ink-soft);
+    white-space:normal;max-width:230px;}
+  .cmp-x-price{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:700;color:var(--ink);}
+  .cmp-x-price i{font-style:normal;font-size:11px;font-weight:600;color:var(--ink-soft);margin-left:2px;}
+  .cmp-x-sup{font-size:12px;font-weight:600;color:var(--ink);margin-top:2px;}
+  .cmp-x-meta{font-size:11px;color:var(--ink-soft);margin-top:2px;font-variant-numeric:tabular-nums;}
+  .cmp-x-table td.best{background:var(--ow-verdigris-soft);}
+  .cmp-x-table td.best .cmp-x-price{color:var(--good);}
+  .cmp-x-table td.best .tag-badge{margin-top:6px;}
+
   .cmp-sup{font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
   .cmp-per{font-size:11px;color:var(--ink-soft);font-weight:400;}
   .cmp-none{color:var(--ink-soft);font-size:12px;}
@@ -7153,6 +7200,17 @@
           </div>
         </div>
         <div class="info-banner" id="cmp_variant_hint" style="display:none;"></div>
+        <!-- Ranking suppliers of ONE product and ranking DIFFERENT
+             products are different questions, so they are different
+             views. Add a rival and the page switches; remove them all
+             and it goes back. -->
+        <div class="cmp-rivals" id="cmp_rivals_bar" style="display:none;">
+          <div class="cmp-rivals-head">
+            <span class="cmp-rivals-label">Compare against</span>
+            <span class="cmp-rivals-hint" id="cmp_rivals_hint"></span>
+          </div>
+          <div class="cmp-rival-chips" id="cmp_rival_chips"></div>
+        </div>
         <div id="compareResults"></div>
       </div>
     </section>
@@ -8399,6 +8457,11 @@
               <div class="field"><label>Unit</label><input id="pr_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre"></div>
               <div class="field"><label>Pack unit</label><input id="pr_pack_unit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin"></div>
               <div class="field"><label>Units per pack</label><input id="pr_pack_qty" type="number" min="0" step="any" placeholder="e.g. 25"></div>
+              <div class="field" style="grid-column:1/-1;">
+                <label>Pieces in one unit</label>
+                <input id="pr_pieces_per_unit" type="number" min="0" step="any" placeholder="optional — e.g. 100">
+                <div class="field-hint">Only needed to compare this against a RIVAL product. One supplier quotes a Box and another a Pack; without this, nothing can say which is cheaper per screw. Leave blank if you don't know — it is reported as unknown, never guessed.</div>
+              </div>
             </div>
             <!-- Rewritten by setPrBulkMode for each mode; this is the
                  single-entry wording, so the stale sentence is never on
@@ -9322,6 +9385,9 @@ async function loadData(shopId){
       supplierId:pr.supplier_id,
       wholesale: pr.wholesale==null?null:Number(pr.wholesale), retail: pr.retail==null?null:Number(pr.retail),
       date:pr.date, unit:pr.unit||'', packUnit:pr.pack_unit||'', packQty:Number(pr.pack_qty)||0,
+      // `|| 0` would turn "not recorded" into a zero that divides. Absence
+      // has to survive the round trip as absence.
+      piecesPerUnit: pr.pieces_per_unit == null ? null : Number(pr.pieces_per_unit),
       priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
       supplierSku: pr.supplier_sku || '',
       outOfStockSince: pr.out_of_stock_since || null,
@@ -9522,6 +9588,7 @@ function buildSyncRows(d, shopId){
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
       wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
+      pieces_per_unit: pr.piecesPerUnit == null ? null : Number(pr.piecesPerUnit),
       price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
       supplier_sku: pr.supplierSku || null,
       out_of_stock_since: pr.outOfStockSince || null,
@@ -29516,6 +29583,9 @@ function editPrice(id){
   document.getElementById('pr_unit').value = r.unit || '';
   document.getElementById('pr_pack_unit').value = r.packUnit || '';
   document.getElementById('pr_pack_qty').value = r.packQty || '';
+  // `|| ''` is right here and wrong for a price: 0 pieces is not a real
+  // reading, so blanking it is the same as not having it.
+  document.getElementById('pr_pieces_per_unit').value = r.piecesPerUnit || '';
   prTiers = tiersFromLegacyRow(r);
   renderPrTierUnitOptions();
   renderPrTiers();
@@ -29540,6 +29610,7 @@ function resetPriceForm(){
   document.getElementById('pr_unit').value = '';
   document.getElementById('pr_pack_unit').value = '';
   document.getElementById('pr_pack_qty').value = '';
+  document.getElementById('pr_pieces_per_unit').value = '';
   document.getElementById('priceFormTitle').textContent = 'Add price entry';
   renderPrTierUnitOptions();
   renderPrTiers();
@@ -29726,6 +29797,10 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     unit: document.getElementById('pr_unit').value.trim(),
     packUnit: document.getElementById('pr_pack_unit').value.trim(),
     packQty,
+    // Blank stays NULL. Zero would be a claim (and an unusable one -- it
+    // divides), and 1 would silently make every unpriced-by-piece row look
+    // comparable when it is not.
+    piecesPerUnit: prPiecesPerUnitValue(),
     priceSource: 'manual',
     supplierSku: document.getElementById('pr_supplier_sku').value.trim(),
     tiers: prTiers.slice()
@@ -29873,6 +29948,9 @@ function selectCompareProduct(id, variantIdx=null){
 document.getElementById('cmp_search').addEventListener('input', (e)=>{
   document.getElementById('cmp_product').value = '';
   document.getElementById('cmp_variant').value = '';
+  // Rivals belong to the product they were picked against. Carrying them
+  // to the next subject would compare screws with hinges.
+  cmpRivalIds = [];
   document.getElementById('cmp_variant_hint').style.display = 'none';
   cmpSuggestionsList(e.target.value);
   renderCompare();
@@ -29925,6 +30003,213 @@ function suggestedSellingPrice(product, basePrice, kind, variantIdx=null, packQt
    list uses, so the two screens cannot name different suppliers for the
    same purchase. */
 
+/* ================= COMPARING DIFFERENT PRODUCTS ====================
+
+   Ranking suppliers of ONE product is easy: they are all quoting the same
+   thing, so the cheapest number wins. Ranking DIFFERENT products against
+   each other is not, and the shop's own data says why.
+
+   Fasteners / Self Drilling, as it stands today:
+
+     RIDER        quoted per Box    5 Box  per Ctn   Haidery
+     SJS          quoted per Pack   8 Pack per Ctn   SJS Enersol
+     Flat Head    quoted per Box   20 Box  per Ctn   SJS Enersol
+     PATTA        quoted per Ctn    no pack size     Susan Patta
+
+   "44,000 a Box" against "38,500 a Pack" is not a comparison, because
+   nothing on file says how many screws are in either. Sorting those two
+   numbers produces an answer that looks authoritative and is worth
+   nothing -- the same shape as a carton price entered as a unit price,
+   which cost this shop 1.76m in phantom supplier debt this morning.
+
+   So there are three bases, and each row is compared on the best one it
+   can actually support:
+
+     piece    exact. Needs piecesPerUnit on BOTH rows. The only basis on
+              which different brands are truly comparable.
+     pack     both rows priced per pack of the same pack unit. Honest
+              arithmetic, but a carton of 5 and a carton of 8 are not the
+              same carton, so it is offered as a comparison of what one
+              carton costs, not of value.
+     unit     both rows quote the same unit name. Same caveat, weaker.
+
+   A pair with no shared basis is NOT ranked. It is listed and labelled,
+   because "these cannot be compared until you record pieces per unit" is
+   a true and useful answer, and a number would be a false one. */
+
+// One row's figures, on every basis it can support. Nulls are honest
+// absences and every consumer must treat them as "unknown", never zero.
+function cmpBasisFigures(row, qty){
+  if(!row) return null;
+  const unitPrice = purchasePriceAtQty(row, qty);
+  if(unitPrice == null) return null;
+  const packQty = Number(row.packQty) || 0;
+  const pieces = row.piecesPerUnit == null ? null : Number(row.piecesPerUnit);
+  const piecesOk = pieces != null && pieces > 0;
+  return {
+    unit: row.unit || '',
+    packUnit: row.packUnit || '',
+    packQty,
+    unitPrice,
+    // Only when there IS a pack. A packQty of 0 or 1 means the unit is
+    // the pack, and multiplying by it would invent a carton price.
+    packPrice: packQty > 1 ? unitPrice * packQty : null,
+    piecesPerUnit: piecesOk ? pieces : null,
+    piecePrice: piecesOk ? unitPrice / pieces : null,
+    piecesPerPack: (piecesOk && packQty > 1) ? pieces * packQty : null,
+  };
+}
+
+/* The best basis two rows genuinely share, strongest first, or null.
+
+   Unit and pack names are compared case-insensitively and trimmed --
+   "Ctn" and "ctn" are the same carton, and this shop's own data holds
+   both. They are NOT otherwise normalised: "Box" and "Pack" stay
+   different, because they are. */
+const cmpUnitKey = (s)=> String(s || '').trim().toLowerCase();
+function cmpSharedBasis(a, b){
+  if(!a || !b) return null;
+  if(a.piecePrice != null && b.piecePrice != null) return 'piece';
+  if(a.packPrice != null && b.packPrice != null
+     && cmpUnitKey(a.packUnit) && cmpUnitKey(a.packUnit) === cmpUnitKey(b.packUnit)) return 'pack';
+  if(cmpUnitKey(a.unit) && cmpUnitKey(a.unit) === cmpUnitKey(b.unit)) return 'unit';
+  return null;
+}
+const CMP_BASIS_FIELD = { piece: 'piecePrice', pack: 'packPrice', unit: 'unitPrice' };
+/* The basis every entry in a set shares. Weakest wins: a set is only
+   comparable on a basis ALL of it supports, so one row missing its pieces
+   drops the whole row of the grid to pack or unit rather than letting a
+   subset be ranked as though it were the field. */
+function cmpBasisForSet(figuresList){
+  const live = figuresList.filter(Boolean);
+  if(live.length < 2) return null;
+  let basis = null;
+  for(let i = 1; i < live.length; i++){
+    const shared = cmpSharedBasis(live[0], live[i]);
+    if(!shared) return null;
+    if(basis == null) basis = shared;
+    // piece > pack > unit; keep the weakest any pair falls back to.
+    else if(['piece','pack','unit'].indexOf(shared) > ['piece','pack','unit'].indexOf(basis)) basis = shared;
+  }
+  // A basis every PAIR shares is not yet a basis the SET shares -- three
+  // rows can agree pairwise on different things. Confirm against the
+  // chosen one before returning it.
+  const field = CMP_BASIS_FIELD[basis];
+  if(!field || live.some(f=> f[field] == null)) return null;
+  if(basis === 'pack' && new Set(live.map(f=> cmpUnitKey(f.packUnit))).size !== 1) return null;
+  if(basis === 'unit' && new Set(live.map(f=> cmpUnitKey(f.unit))).size !== 1) return null;
+  return basis;
+}
+
+/* Variant labels matched across products.
+
+   RIDER and SJS both name their sizes 1", 1.5", 2", 2.5", 3", so those
+   line up exactly and that is the comparison worth having. Flat Head
+   names the same sizes 4.2*19 / 4.2*25, which matches nothing here --
+   listed as unmatched rather than paired up by position, because the
+   third row of one product is not "the same size as" the third row of
+   another and pretending otherwise would compare a 19mm screw with a 2"
+   one. */
+const cmpVariantKey = (label)=> String(label || '').trim().toLowerCase().replace(/\s+/g, '');
+function cmpVariantRowsFor(product){
+  if(!product) return [{ variantIdx: null, label: '' }];
+  const vs = product.variants || [];
+  if(!vs.length) return [{ variantIdx: null, label: '' }];
+  return vs.map((v, i)=> ({ variantIdx: i, label: variantLabel(v.combo) }));
+}
+
+/* The whole comparison: one subject product against any number of rivals,
+   variant row by variant row.
+
+   Returns a model and renders nothing, so the arithmetic that decides
+   which supplier a shop pays can be tested without a browser. */
+function cmpMatrix(subjectId, rivalIds, qty){
+  const ids = [subjectId, ...(rivalIds || []).filter(id=> id && id !== subjectId)];
+  const products = ids.map(id=> data.products.find(p=> p.id === id)).filter(Boolean);
+  if(!products.length) return { products: [], rows: [], unmatched: [] };
+
+  // The cheapest supplier for this product+variant at this quantity, which
+  // is the same question the single-product view already answers -- reused
+  // rather than re-derived so the two screens cannot disagree.
+  const bestRowFor = (productId, variantIdx)=>{
+    const ranked = rankedPurchaseRowsAtQty(productId, variantIdx, qty)
+      .filter(r=> r.purchasePrice != null);
+    return ranked[0] || null;
+  };
+  const cellFor = (product, variantIdx)=>{
+    if(variantIdx === undefined) return null;
+    const row = bestRowFor(product.id, variantIdx);
+    if(!row) return null;
+    return { productId: product.id, supplierId: row.supplierId, sname: supplierName(row.supplierId),
+             row, figures: cmpBasisFigures(row, qty), date: row.date };
+  };
+
+  const variantsByProduct = products.map(cmpVariantRowsFor);
+  const subjectVariants = variantsByProduct[0];
+
+  const rows = subjectVariants.map((sv)=>{
+    const cells = products.map((p, pi)=>{
+      if(pi === 0) return cellFor(p, sv.variantIdx);
+      // Matched by LABEL, never by position.
+      const match = variantsByProduct[pi].find(rv=> cmpVariantKey(rv.label) === cmpVariantKey(sv.label));
+      return match ? cellFor(p, match.variantIdx) : null;
+    });
+    const figures = cells.map(c=> c && c.figures);
+    const basis = cmpBasisForSet(figures);
+    let bestIndex = null;
+    if(basis){
+      const field = CMP_BASIS_FIELD[basis];
+      let bestVal = Infinity;
+      figures.forEach((f, i)=>{ if(f && f[field] != null && f[field] < bestVal){ bestVal = f[field]; bestIndex = i; } });
+      // A tie is not a winner. Two suppliers at the same price is a real
+      // outcome and badging one of them "BEST" invents a reason to prefer it.
+      const winners = figures.filter(f=> f && f[field] === bestVal).length;
+      if(winners > 1) bestIndex = null;
+    }
+    return { label: sv.label, cells, basis, bestIndex,
+             reason: basis ? null : cmpNoBasisReason(figures) };
+  });
+
+  /* Rival sizes the subject has no equivalent of. Reported rather than
+     dropped: "SJS also sells a 4\" and you do not stock one" is a thing
+     worth knowing, and silently omitting it makes the grid look complete
+     when it is not. */
+  const subjectKeys = new Set(subjectVariants.map(v=> cmpVariantKey(v.label)));
+  const unmatched = products.slice(1).map((p, i)=>{
+    const labels = variantsByProduct[i + 1]
+      .filter(v=> !subjectKeys.has(cmpVariantKey(v.label)))
+      .map(v=> v.label).filter(Boolean);
+    return labels.length ? { productId: p.id, name: p.name, labels } : null;
+  }).filter(Boolean);
+
+  return { products, rows, unmatched };
+}
+
+/* Why a row could not be ranked, in the words that say what to do about
+   it. "Not comparable" on its own is a shrug; this names the missing
+   fact, and the missing fact is nearly always pieces per unit. */
+function cmpNoBasisReason(figures){
+  const live = figures.filter(Boolean);
+  if(live.length < 2) return 'Only one of these has a price at this quantity.';
+  const missingPieces = live.filter(f=> f.piecePrice == null).length;
+  const units = [...new Set(live.map(f=> cmpUnitKey(f.unit)))];
+  if(units.length > 1 && missingPieces){
+    const names = [...new Set(live.map(f=> f.unit).filter(Boolean))].join(' vs ');
+    return `Quoted in different units (${names}). Record pieces in one unit on ${missingPieces === 1 ? 'the one missing it' : 'these rows'} to compare them per piece.`;
+  }
+  return 'No shared basis — record pieces in one unit to compare these per piece.';
+}
+
+// Blank is NULL, not zero: zero divides, and "not recorded" is not a
+// quantity. Same rule as invPurchasePriceValue's empty price.
+function prPiecesPerUnitValue(){
+  const el = document.getElementById('pr_pieces_per_unit');
+  const raw = el ? el.value : '';
+  if(raw === '' || raw == null) return null;
+  const n = Number(raw);
+  return (isNaN(n) || n <= 0) ? null : n;
+}
+
 function cmpQty(){
   const v = Number(document.getElementById('cmp_qty').value);
   return v > 0 ? v : 1;
@@ -29953,10 +30238,108 @@ function cmpNextBreak(row, qty){
     more: Number(better.minQty) - qty, saving: now - Number(better.price) };
 }
 
+/* Products a buyer would actually weigh against this one: the same
+   category and subcategory, priced, and not the subject itself. Offered
+   rather than imposed -- a shop knows better than a category field which
+   two brands really compete. */
+function cmpRivalCandidates(subjectId){
+  const subject = data.products.find(p=> p.id === subjectId);
+  if(!subject) return [];
+  const pricedIds = new Set((data.prices||[]).map(r=> r.productId));
+  return (data.products||[]).filter(p=>
+    p.id !== subjectId && pricedIds.has(p.id)
+    && (p.category||'') === (subject.category||'')
+    && (p.subcategory||'') === (subject.subcategory||''));
+}
+let cmpRivalIds = [];
+function cmpRenderRivalBar(subjectId){
+  const bar = document.getElementById('cmp_rivals_bar');
+  const chips = document.getElementById('cmp_rival_chips');
+  const hint = document.getElementById('cmp_rivals_hint');
+  if(!bar || !chips) return;
+  const candidates = cmpRivalCandidates(subjectId);
+  if(!subjectId || !candidates.length){ bar.style.display = 'none'; cmpRivalIds = []; return; }
+  bar.style.display = '';
+  const subject = data.products.find(p=> p.id === subjectId);
+  hint.textContent = `${candidates.length} other ${candidates.length===1?'product':'products'} in ${(subject.category||'this category')}${subject.subcategory?' / '+subject.subcategory:''}`;
+  chips.innerHTML = candidates.map(p=>{
+    const on = cmpRivalIds.includes(p.id);
+    return `<button type="button" class="cmp-rival-chip${on?' on':''}" data-rival="${esc(p.id)}" aria-pressed="${on?'true':'false'}">${esc(p.name)}</button>`;
+  }).join('');
+  chips.querySelectorAll('[data-rival]').forEach(btn=> btn.addEventListener('click', ()=>{
+    const id = btn.getAttribute('data-rival');
+    cmpRivalIds = cmpRivalIds.includes(id) ? cmpRivalIds.filter(x=> x !== id) : cmpRivalIds.concat(id);
+    renderCompare();
+  }));
+}
+
+const CMP_BASIS_LABEL = {
+  piece: { label: 'per piece', note: 'Exact — both quote a recorded number of pieces.' },
+  pack:  { label: 'per pack',  note: 'What one pack costs. Packs of different sizes are still different packs.' },
+  unit:  { label: 'per unit',  note: 'Same unit name on both. Says what one costs, not what it is worth.' },
+};
+function cmpCellHTML(cell, basis, isBest){
+  if(!cell) return '<td class="cmp-x"><span class="cmp-none">—</span></td>';
+  const f = cell.figures;
+  if(!f) return `<td class="cmp-x"><span class="cmp-none">no price at this qty</span></td>`;
+  const field = basis ? CMP_BASIS_FIELD[basis] : null;
+  const headline = field && f[field] != null ? f[field] : f.unitPrice;
+  const headlineUnit = basis === 'piece' ? 'pc' : (basis === 'pack' ? (f.packUnit || 'pack') : (f.unit || 'unit'));
+  const packing = f.packQty > 1 && f.packUnit
+    ? `${esc(String(f.packQty))} ${esc(f.unit || 'unit')} / ${esc(f.packUnit)}`
+    : 'no pack size';
+  return `<td class="cmp-x${isBest ? ' best' : ''}">
+    <div class="cmp-x-price">${esc(fmtUGX(Math.round(headline * 100) / 100))}<i>/${esc(headlineUnit)}</i></div>
+    <div class="cmp-x-sup">${esc(cell.sname)}</div>
+    <div class="cmp-x-meta">${esc(fmtUGX(Math.round(f.unitPrice)))} / ${esc(f.unit || 'unit')}${
+      f.packPrice != null ? ` · ${esc(fmtUGX(Math.round(f.packPrice)))} / ${esc(f.packUnit)}` : ''}</div>
+    <div class="cmp-x-meta">${packing}${f.piecesPerUnit != null ? ` · ${esc(String(f.piecesPerUnit))} pcs / ${esc(f.unit||'unit')}` : ''}</div>
+    ${isBest ? '<span class="tag-badge"><span class="dot"></span>CHEAPEST</span>' : ''}
+  </td>`;
+}
+/* The cross-product view. Replaces the supplier ranking rather than
+   sitting beside it: they answer different questions, and showing both at
+   once would be the "Everything flagged" mistake again. */
+function cmpRenderMatrix(wrap, subjectId, qty){
+  const m = cmpMatrix(subjectId, cmpRivalIds, qty);
+  const head = m.products.map((p,i)=>
+    `<th class="${i===0?'cmp-x-subject':''}">${esc(p.name)}${i===0?'<span class="cmp-x-tag">yours</span>':''}</th>`).join('');
+
+  const bodyRows = m.rows.map(r=>{
+    const b = r.basis ? CMP_BASIS_LABEL[r.basis] : null;
+    return `<tr>
+      <td class="cmp-x-label">${esc(r.label || '—')}
+        ${b ? `<span class="cmp-x-basis ${esc(r.basis)}" title="${esc(b.note)}">${esc(b.label)}</span>`
+            : '<span class="cmp-x-basis none">not comparable</span>'}
+        ${r.reason ? `<div class="cmp-x-why">${esc(r.reason)}</div>` : ''}
+      </td>
+      ${r.cells.map((c,i)=> cmpCellHTML(c, r.basis, r.bestIndex === i)).join('')}
+    </tr>`;
+  }).join('');
+
+  const unmatched = m.unmatched.length
+    ? `<div class="cmp-note">${m.unmatched.map(u=>
+        `<b>${esc(u.name)}</b> also has ${esc(u.labels.join(', '))} — no size of yours matches ${u.labels.length===1?'it':'them'} by name.`).join('<br>')}</div>`
+    : '';
+  const rankable = m.rows.filter(r=> r.basis).length;
+  const note = `<div class="cmp-note${rankable ? '' : ' warn'}">${
+    rankable === m.rows.length
+      ? `All ${m.rows.length} size${m.rows.length===1?'':'s'} compared on a shared basis.`
+      : `${rankable} of ${m.rows.length} size${m.rows.length===1?'':'s'} could be ranked. The rest are quoted in units that cannot be weighed against each other until pieces per unit is recorded in the Price Registry.`}</div>`;
+
+  wrap.innerHTML = `${note}
+    <div class="an-scroll cmp-x-wrap"><table class="cmp-x-table">
+      <thead><tr><th>Size</th>${head}</tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table></div>${unmatched}`;
+}
+
 function renderCompare(){
   const productId = document.getElementById('cmp_product').value;
   const wrap = document.getElementById('compareResults');
+  cmpRenderRivalBar(productId);
   if(!productId){ wrap.innerHTML = '<div class="empty">Search and choose a product above to see who to buy it from.</div>'; return; }
+  if(cmpRivalIds.length){ cmpRenderMatrix(wrap, productId, cmpQty()); return; }
   const product = data.products.find(x=>x.id===productId);
   const variantRaw = document.getElementById('cmp_variant').value;
   const variantIdx = variantRaw==='' ? null : Number(variantRaw);

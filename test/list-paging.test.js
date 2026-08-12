@@ -31,8 +31,12 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 
 const t = createReporter('list paging');
 const src = read('index.html');
+// The lookbehind guards against `accept="image/*"` in the media picker,
+// whose `/*` opens a block comment a naive stripper does not close for
+// another 104,248 characters — blinding every check to the markup in
+// between. A real opener is not preceded by a word character or a quote.
 const stripComments = (s) => s
-  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, ' ')
   .split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 const code = stripComments(src);
 
