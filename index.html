@@ -3317,6 +3317,16 @@
   .q-rec-card.selected .q-rec-icon{color:var(--good);}
   .q-rec-card.selected .q-rec-use{color:var(--good);text-decoration:none;}
   .q-rec-card.selected .q-rec-use:hover{color:var(--good);}
+  /* What we already told this client. Leads the pair, because holding a
+     price is the decision this card exists to make easy. */
+  .q-rec-when{font-size:10px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .q-rec-card.q-rec-last .q-rec-icon{color:var(--ink-soft);}
+  .q-rec-card.q-rec-last.selected .q-rec-icon{color:var(--good);}
+  /* Below today's cost: honouring it would sell at a loss, so it is
+     offered but never chosen for you, and it says why. */
+  .q-rec-card.q-rec-under{border-color:var(--ow-amber);background:var(--ow-amber-soft);}
+  .q-rec-card.q-rec-under .q-rec-label, .q-rec-card.q-rec-under .q-rec-when{color:var(--warn-ink);}
+  .q-rec-card.q-rec-under .q-rec-icon{color:var(--ow-amber);}
 
   .q-section-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);margin:0 0 5px;}
 
@@ -15482,6 +15492,53 @@ function customerPurchaseHistory(nameLower){
   });
   return [...map.values()].sort((a,b)=> b.timesOrdered - a.timesOrdered || b.lastOrderedAt.localeCompare(a.lastOrderedAt));
 }
+/* ================= WHAT WE CHARGED THIS CLIENT BEFORE ===============
+
+   A shop quotes the same client the same item twice and says a
+   different number, because the supplier's price moved or a different
+   rep did the second call. The client does not see a supplier's price
+   list -- they see a shop that charged them 160,000 in July and
+   175,000 in August, and they feel worked over. Nothing on this screen
+   used to know what we had already told them.
+
+   Nothing new is stored: every saved order already holds its lines with
+   what the client was charged, and the client name is already how
+   customerPurchaseHistory above matches them. This is a lookup over the
+   orders that exist.
+
+   Read through quoteItemSellPrice, which is the single function every
+   client-facing document uses -- the printed quotation, the client copy,
+   the WhatsApp message and the invoice. What this returns is therefore
+   the number on the paper the client is holding, not a second opinion
+   about it.
+
+   The quote being edited is excluded: an order is not its own history. */
+function lastPriceToClient(nameLower, productId, variantIdx){
+  if(!nameLower || !productId) return null;
+  const wantIdx = variantIdx==null ? null : Number(variantIdx);
+  let best = null;
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided) return;
+    if(((q.client&&q.client.name)||'').trim().toLowerCase() !== nameLower) return;
+    if(q.id === data.quote.savedId) return;
+    (q.items||[]).forEach(it=>{
+      if(it.productId !== productId) return;
+      const vi = it.variantIdx==null ? null : Number(it.variantIdx);
+      if(vi !== wantIdx) return;
+      const price = quoteItemSellPrice(it);
+      if(!(price > 0)) return;
+      const at = q.savedAt || '';
+      /* >= so that among orders saved in the same instant the later one
+         in the list wins, rather than the comparison silently keeping
+         whichever happened to be walked first. */
+      if(!best || at >= best.at){
+        best = { price, at, qty: Number(it.qty)||0, unit: it.unit||'', orderId: q.id };
+      }
+    });
+  });
+  return best;
+}
+
 // Horizontally-scrollable chip strip of what this client usually buys --
 // tapping the + jumps straight into the item picker's supplier/price stage
 // for that product (not a raw re-add of the old line), so the quote always
@@ -16322,9 +16379,32 @@ function renderIpStage(){
   // manual "Use wholesale/retail" click (ipSelectedRecType) overrides this
   // until the next qty/supplier change resets it back to automatic.
   const naturalRecType = (packQty>0 && qty>=packQty) ? 'wholesale' : 'retail';
+
+  /* What we last told THIS client about THIS item. Nothing on this
+     screen used to know, so the same client could be quoted two
+     different numbers a month apart and be given no reason for it. */
+  const clientNameLower = ((data.quote.client && data.quote.client.name) || '').trim().toLowerCase();
+  const lastToClient = lastPriceToClient(clientNameLower, ipProductId, variantIdx);
+  /* Whether honouring it would now sell at a loss. Costs move; a price
+     promised in July can be under today's cost by August, and holding a
+     price is worth doing right up to the point it costs the shop money.
+     Compared against buyStart's own inputs rather than buyStart itself,
+     which is computed further down. */
+  const lastCovers = lastToClient
+    ? lastToClient.price >= ipLineBuyPrice(ipSelectedSupplierId, refRow, qty, stockCost)
+    : false;
+
   let effectiveRecType = ipSelectedRecType;
   if(!effectiveRecType){
-    if(naturalRecType==='wholesale' && suggWholesale!=null) effectiveRecType = 'wholesale';
+    /* The remembered price leads when it still covers cost. That IS the
+       feature: a client who is quoted the same number they were quoted
+       last time is a client who trusts the shop, and the alternative --
+       recommending a fresh figure every call -- is exactly the drift
+       that makes them feel worked over. The cost floor is the one thing
+       that overrides it, because no promise is worth selling at a loss;
+       when it fires, the card says so rather than quietly re-pricing. */
+    if(lastToClient && lastCovers) effectiveRecType = 'last';
+    else if(naturalRecType==='wholesale' && suggWholesale!=null) effectiveRecType = 'wholesale';
     else if(naturalRecType==='retail' && suggRetail!=null) effectiveRecType = 'retail';
     else if(suggWholesale!=null) effectiveRecType = 'wholesale';
     else if(suggRetail!=null) effectiveRecType = 'retail';
@@ -16385,7 +16465,10 @@ function renderIpStage(){
   // this quantity unless manually overridden by clicking a card. Stays a
   // normal editable field either way -- typing over it doesn't get
   // clobbered until the next qty/supplier change re-renders this stage.
-  const effectiveSuggested = effectiveRecType==='wholesale' ? suggWholesale : effectiveRecType==='retail' ? suggRetail : null;
+  const effectiveSuggested = effectiveRecType==='wholesale' ? suggWholesale
+    : effectiveRecType==='retail' ? suggRetail
+    : effectiveRecType==='last' ? (lastToClient ? lastToClient.price : null)
+    : null;
   const sellStart = effectiveSuggested!=null ? Math.round(effectiveSuggested) : buyStart;
 
   /* Whether the line can be paid for, and by whom if not. Computed here
@@ -16440,6 +16523,15 @@ function renderIpStage(){
       <div class="q-stage-col q-stage-col-left">
         <div class="q-section-label">Recommended prices</div>
         <div class="q-rec-cards">
+          ${lastToClient ? `<div class="q-rec-card q-rec-last ${effectiveRecType==='last'?'selected':''} ${lastCovers?'':'q-rec-under'}" data-use="last" role="button" tabindex="0" title="${lastCovers ? 'The price this client was last given for this item' : 'This is now below what the item costs you — charging it would sell at a loss'}">
+            <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+            <div class="q-rec-info">
+              <span class="q-rec-label">Last given to ${esc(quoteClientName(data.quote) || 'this client')}</span>
+              <span class="q-rec-value">${fmtPriceCompact(lastToClient.price, unit)}</span>
+              <span class="q-rec-when">${esc(lastToClient.qty)} ${esc(lastToClient.unit || unit || '')} · ${esc(savedAgoLabel(lastToClient.at))}${lastCovers ? '' : ' · below today’s cost'}</span>
+            </div>
+            <span class="q-rec-use">${effectiveRecType==='last'?'✓ Using':'Use →'}</span>
+          </div>` : ''}
           <div class="q-rec-card ${effectiveRecType==='wholesale'?'selected':''} ${suggWholesale==null?'q-rec-disabled':''}" data-use="wholesale" role="button" tabindex="${suggWholesale==null?'-1':'0'}">
             <svg class="q-rec-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
             <div class="q-rec-info">
@@ -16529,7 +16621,10 @@ function renderIpStage(){
   }
   function ipSelectRecCard(card){
     const type = card.dataset.use;
-    const val = type==='wholesale' ? suggWholesale : suggRetail;
+    const val = type==='wholesale' ? suggWholesale
+      : type==='retail' ? suggRetail
+      : type==='last' ? (lastToClient ? lastToClient.price : null)
+      : null;
     if(val==null) return;
     // Recommended prices advise what to charge the client — they set
     // this popup's one price field, which is saved as Sell @.
