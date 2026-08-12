@@ -55,7 +55,13 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   // Every pane the rail points at has to exist, or clicking it shows
   // nothing and the previous pane stays up.
   const tabs = [...section.matchAll(/data-ptab="([a-z-]+)"/g)].map((m) => m[1]);
-  t.check(tabs.length === 8, `all eight settings are still reachable (${tabs.length})`);
+  /* Counted against the PANES rather than against a literal, which went
+     stale the first time a setting was added (Shop identity, the ninth).
+     What matters is that the rail and the body agree -- a hardcoded
+     number only ever fails the person adding the next pane. */
+  const panes = [...section.matchAll(/id="ppane-([a-z-]+)"/g)].map((m) => m[1]);
+  t.check(tabs.length >= 8 && tabs.length === panes.length,
+    `every setting is reachable, and nothing is stranded (${tabs.length} tabs, ${panes.length} panes)`);
   const orphans = tabs.filter((k) => !new RegExp(`id="ppane-${k}"`).test(section));
   t.check(orphans.length === 0,
     `each one has a pane to open${orphans.length ? ` (missing ppane-${orphans.join(', ppane-')})` : ''}`);
@@ -137,7 +143,8 @@ const section = (/<section id="tab-presets"[\s\S]*?\n    <\/section>/.exec(src) 
   // Every pane leads with what it is and what it feeds, rather than a
   // bare hint paragraph above an input.
   const heads = (section.match(/class="pset-head"/g) || []).length;
-  t.check(heads === 8, `each of the eight panes introduces itself (${heads})`);
+  const paneCount = (section.match(/id="ppane-/g) || []).length;
+  t.check(heads === paneCount, `every pane introduces itself (${heads} heads, ${paneCount} panes)`);
 }
 
 /* ---------- 5. the old chrome is gone -------------------------------- */

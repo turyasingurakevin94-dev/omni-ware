@@ -1131,6 +1131,10 @@
   .pset-group h4{font-size:10.5px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
     color:var(--accent);margin:0 0 6px;}
   .pset-note{margin:0 0 10px;font-size:12px;color:var(--ink-soft);line-height:1.5;max-width:62ch;}
+  .pset-note code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--ow-steel-050);border:1px solid var(--line);border-radius:5px;padding:1px 5px;}
+  .pset-toggle-row{display:flex;align-items:flex-start;gap:9px;margin:4px 0 14px;font-size:12.5px;line-height:1.5;cursor:pointer;max-width:62ch;}
+  .pset-toggle-row input{margin-top:2px;flex-shrink:0;width:15px;height:15px;accent-color:var(--navy);}
+  .pset-toggle-note{color:var(--ink-soft);font-size:12px;}
   .pset-fields{max-width:420px;}
   @media (max-width:820px){
     .pset-shell{grid-template-columns:1fr;}
@@ -3447,18 +3451,44 @@
   .q-add-row .q-other-field select{width:100%;padding:6px 8px;font-size:12px;}
   .q-add-row .btn{padding:8px 16px;font-size:13px;}
 
-  /* 80mm receipt (built into #printArea, only shown via window.print) */
-  .receipt{font-family:'IBM Plex Mono',monospace;color:#000;}
+  /* ---- The 80mm thermal receipt -------------------------------------
+
+     Built into #printArea and only ever seen through window.print().
+     This block existed for a long time rendering NOTHING -- a complete
+     class vocabulary with no markup behind it, while three of its
+     children had been quietly salvaged into .a5-page below. It is alive
+     again, and every rule in it is now on paper somebody holds.
+
+     Two hardware facts shape all of it. A thermal head is one bit, so
+     there is no grey anywhere here -- a grey rule is dithered dots and
+     prints as a smear. And 72mm of printable width is about 32
+     monospace characters, so nothing assumes a line can hold both a
+     product name and its arithmetic. */
+  .receipt{
+    font-family:'IBM Plex Mono',monospace;color:#000;background:#fff;
+    width:72mm;font-size:11px;line-height:1.45;
+  }
+  .receipt *{color:#000 !important;}
   .receipt .r-center{text-align:center;}
-  .receipt .r-shop{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:0.3px;}
+  .receipt .r-shop{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:1px;}
   .receipt .r-sub{font-size:10.5px;margin-top:2px;}
-  .receipt .r-line{border-top:1px dashed #000;margin:8px 0;}
+  /* Solid brackets a claim -- the shop, and the total. Dashed groups a
+     zone. Two weights is all this paper can carry. */
+  .receipt .r-rule{border-top:1px solid #000;margin:7px 0 5px;}
+  .receipt .r-line{border-top:1px dashed #000;margin:5px 0;}
+  .receipt .r-row{display:flex;justify-content:space-between;gap:8px;}
   .receipt .r-meta div{font-size:11px;margin:2px 0;}
-  .receipt .r-item{margin:8px 0;}
-  .receipt .r-item-name{font-weight:700;font-size:11.5px;}
-  .receipt .r-item-row{display:flex;justify-content:space-between;font-size:11px;margin-top:2px;}
-  .receipt .r-item-supplier{font-size:10px;color:#333;margin-top:1px;}
-  .receipt .r-total-row{display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-top:4px;}
+  .receipt .r-item{margin:4px 0;}
+  .receipt .r-item-name{font-weight:700;font-size:11px;}
+  /* The name owns its line, the sum is indented under it, and the money
+     column is the one thing that never wraps. */
+  .receipt .r-item-row{display:flex;justify-content:space-between;font-size:11px;padding-left:9px;gap:8px;}
+  .receipt .r-item-row span:last-child{white-space:nowrap;}
+  .receipt .r-item-supplier{font-size:10px;margin-top:1px;}
+  /* The only large element on the paper. */
+  .receipt .r-total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:3px;}
+  .receipt .r-ccy{text-align:right;font-size:9.5px;}
+  .receipt .r-docref{letter-spacing:1px;}
   .receipt .r-signature-block{margin:16px 0 12px;}
   .receipt .r-sig-row{display:flex;align-items:flex-end;gap:8px;font-size:11px;margin:14px 0;}
   .receipt .r-sig-row span:first-child{flex:none;white-space:nowrap;}
@@ -3467,7 +3497,7 @@
   .a5-page .r-sig-row{display:flex;align-items:flex-end;gap:8px;font-size:12px;margin:14px 0;}
   .a5-page .r-sig-row span:first-child{flex:none;white-space:nowrap;}
   .a5-page .r-sig-line{flex:1;border-bottom:1px solid #000;height:12px;}
-  .receipt .r-foot{font-size:10.5px;margin-top:10px;}
+  .receipt .r-foot{font-size:10.5px;margin-top:8px;}
 
   /* Saved quotes list (screen) */
   .q-saved-hint{margin:4px 0 14px;font-size:12.5px;color:var(--ink-soft);}
@@ -6935,6 +6965,10 @@
             <div class="pset-nav-group">The board</div>
             <button type="button" class="preset-tab" data-ptab="order-tracking">
               <span>Order timing</span></button>
+
+            <div class="pset-nav-group">On paper</div>
+            <button type="button" class="preset-tab" data-ptab="shop-identity">
+              <span>Shop identity</span></button>
           </nav>
 
           <div class="pset-body">
@@ -7039,6 +7073,36 @@
                 <p>If an order sits in one of these steps on the Order Tracking board longer than its limit, its card gets a blinking warning flag. Leave a step blank or 0 to turn its warning off.</p>
               </header>
               <div class="form-grid pset-fields" id="presetOrderLimitsWrap"></div>
+            </div>
+
+            <div class="preset-pane" id="ppane-shop-identity" style="display:none;">
+              <header class="pset-head">
+                <h3>Shop identity</h3>
+                <p>What prints at the top of a receipt. Until now every printout carried the shop's name and nothing else — a receipt handed across the counter has to say where it came from and how to come back. Leave a field blank and its line simply does not print.</p>
+              </header>
+              <div class="form-grid pset-fields">
+                <div class="field" style="grid-column:1/-1;"><label>Shop name</label>
+                  <input type="text" id="preset_shop_name" placeholder="e.g. Telagon Hardware"></div>
+                <div class="field" style="grid-column:1/-1;"><label>Address</label>
+                  <input type="text" id="preset_shop_address" placeholder="e.g. Jesco House Room JHB08"></div>
+                <div class="field"><label>Phone</label>
+                  <input type="text" id="preset_shop_phone" placeholder="e.g. 0754 333419"></div>
+                <div class="field"><label>TIN <span style="font-weight:400;color:var(--ink-soft);">(optional)</span></label>
+                  <input type="text" id="preset_shop_tin" placeholder="leave blank to omit the line"></div>
+                <div class="field" style="grid-column:1/-1;"><label>Receipt footer</label>
+                  <textarea id="preset_receipt_footer" rows="2" placeholder="Thank you for your business"></textarea></div>
+              </div>
+              <label class="pset-toggle-row">
+                <input type="checkbox" id="preset_auto_print_receipt">
+                <span><b>Print a receipt automatically when a payment is received</b><br>
+                  <span class="pset-toggle-note">Paper comes out the moment money is recorded, the way a till does. Turn it off on a day spent reconciling rather than trading.</span></span>
+              </label>
+              <div class="pset-note">
+                <b>To print with no dialog</b>, make a desktop shortcut to Chrome with <code>--kiosk-printing</code> after the program path, and open the app from it. Receipts then go straight to the default printer. Set the 80mm thermal printer as the Windows default first.
+              </div>
+              <div class="pset-note">
+                <b>Paper:</b> 80mm roll, 72mm printed. The receipt is only as long as its contents, so short sales use short paper.
+              </div>
             </div>
           </div>
         </div>
@@ -9367,6 +9431,24 @@ async function loadData(shopId){
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
+    /* Who the shop is, on paper. printedShopName() has been the entire
+       letterhead of all fourteen printouts -- a name and nothing else.
+       A receipt handed across a counter has to say where it came from
+       and how to come back, which is a different job from a name.
+
+       Seeded rather than left blank so a receipt prints correctly the
+       day this ships; the seed only fills what is still unset, so it
+       can never overwrite something the shop has typed. */
+    presetShopLegalName: presets.shopLegalName != null ? presets.shopLegalName : 'Telagon Hardware',
+    presetShopAddress: presets.shopAddress != null ? presets.shopAddress : 'Jesco House Room JHB08',
+    presetShopPhone: presets.shopPhone != null ? presets.shopPhone : (presets.waPhone || ''),
+    presetShopTin: presets.shopTin || '',
+    presetReceiptFooter: presets.receiptFooter != null ? presets.receiptFooter
+      : 'Thank you for your business\nGoods once sold are not returnable without this receipt',
+    // Paper comes out on its own when money is received. Off is a
+    // setting, not a code change -- some days a shop is reconciling
+    // rather than trading and does not want a metre of receipts.
+    presetAutoPrintReceipt: presets.autoPrintReceipt !== false,
     // UGX per marketing message, for the pre-send estimate. A local
     // guess the shop corrects from its own Meta bill -- labelled as an
     // estimate everywhere it appears.
@@ -9531,7 +9613,10 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate, idCounters:d.idCounters||{}},
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+        shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
+        shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
+        idCounters:d.idCounters||{}},
       quote_draft: d.quote
     }
   };
@@ -9731,6 +9816,26 @@ let currentShopName = null;
 // a document with a blank letterhead is worse than one with ours.
 function printedShopName(){ return currentShopName || 'Omni-Ware'; }
 
+/* What goes at the top of a receipt.
+
+   The name still comes from printedShopName() so the other fourteen
+   printouts are untouched by this -- but the shop can override it,
+   because the name it trades under is not always the name its Supabase
+   row was created with.
+
+   Every field below the name is optional and renders only when filled:
+   an unset TIN must cost a blank line, not print one. */
+function shopIdentity(){
+  const d = data || {};
+  return {
+    name: (d.presetShopLegalName || '').trim() || printedShopName(),
+    address: (d.presetShopAddress || '').trim(),
+    phone: (d.presetShopPhone || '').trim(),
+    tin: (d.presetShopTin || '').trim(),
+    footer: (d.presetReceiptFooter || '').trim(),
+  };
+}
+
 /* Every A5 printout in this app injects a <style> carrying its own @page
    and removes it again on afterprint. afterprint is not reliable --
    cancelling the dialog skips it on several platforms, and closing the
@@ -9746,7 +9851,7 @@ function printedShopName(){ return currentShopName || 'Omni-Ware'; }
 
    So the sheets are cleared BEFORE each print rather than only after
    one. Cheap, and it does not depend on an event that may never come. */
-const INJECTED_PRINT_STYLE_IDS = ['receiptPrintStyle', 'clientQuotePrintStyle', 'a5PrintStyle', 'piA5PrintStyle'];
+const INJECTED_PRINT_STYLE_IDS = ['receiptPrintStyle', 'clientQuotePrintStyle', 'a5PrintStyle', 'piA5PrintStyle', 'receipt80PrintStyle'];
 function clearInjectedPrintStyles(){
   INJECTED_PRINT_STYLE_IDS.forEach(id=>{
     const el = document.getElementById(id);
@@ -9865,6 +9970,7 @@ function fmtShortDate(iso){
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>';
+const ICON_PRINT_SMALL = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>';
 const ICON_PLUS_SM = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
 // Shown instead of a delete button on a ledger entry that mirrors an
 // invoice -- the row is a derived record, so the invoice is where it changes.
@@ -18950,6 +19056,7 @@ function renderInvoices(filter=''){
     const notesLabel = (q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '';
     const actionsHtml = `<button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
       <button type="button" class="pc-icon-btn inv-doc-receive" data-id="${q.id}" title="Receive payment"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
+      <button type="button" class="pc-icon-btn inv-doc-receipt" data-id="${q.id}" title="Print 80mm receipt"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2h12v18l-2.5-1.6L13 20l-2.5-1.6L8 20l-2-1.3V2Z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg></button>
       <button type="button" class="pc-icon-btn danger inv-doc-void" data-id="${q.id}" title="${q.voided?'Unvoid invoice':'Void invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
 
     cardsArr.push(`<div class="pi-card ${q.voided?'pi-card-voided':''}" data-id="${q.id}">
@@ -19052,6 +19159,13 @@ function renderInvoices(filter=''){
   wrap.querySelectorAll('.inv-doc-receive').forEach(btn=>btn.addEventListener('click', ()=>{
     openInvoicePaymentModal(Number(btn.dataset.id));
   }));
+  /* No payment argument: the whole sale, listing every payment on it --
+     what somebody asks for when they want "the receipt" rather than the
+     receipt for one particular instalment. */
+  wrap.querySelectorAll('.inv-doc-receipt').forEach(btn=>btn.addEventListener('click', ()=>{
+    const q = data.savedQuotes.find(x=>x.id===Number(btn.dataset.id));
+    if(q) printReceipt(q, null, null);
+  }));
   wrap.querySelectorAll('.inv-doc-void').forEach(btn=>btn.addEventListener('click', ()=>{
     toggleInvoiceVoided(Number(btn.dataset.id));
   }));
@@ -19112,11 +19226,20 @@ function renderInvPaymentHistory(q){
   hist.innerHTML = (q.payments&&q.payments.length)
     ? q.payments.map((p,i)=>({p,i})).reverse().map(({p,i})=>`
       <div class="cc-history-row">
-        <span>${esc(p.date)} — ${esc(p.note||'Payment')}</span>
+        <span>${esc(p.date)} — ${esc(paymentMethodLabel(p) || p.note || 'Payment')}</span>
         <span class="amt payment">${fmtUGX(Math.round(p.amount))}</span>
+        <button type="button" class="q-remove-icon inv-pay-print" data-idx="${i}" title="Print this receipt again">${ICON_PRINT_SMALL}</button>
         <button type="button" class="q-remove-icon inv-pay-del" data-idx="${i}" title="Remove this payment">${ICON_TRASH}</button>
       </div>`).join('')
     : '<div class="cc-history-empty">No payments recorded yet.</div>';
+  /* Paper is lost, spilled on, and asked for again a week later. Every
+     payment can be reprinted, and a reprint carries the number it
+     carried the first time -- two pieces of paper claiming to be the
+     same receipt must BE the same receipt. */
+  hist.querySelectorAll('.inv-pay-print').forEach(btn=>btn.addEventListener('click', ()=>{
+    const idx = Number(btn.dataset.idx);
+    printReceipt(q, (q.payments||[])[idx], idx);
+  }));
   hist.querySelectorAll('.inv-pay-del').forEach(btn=>btn.addEventListener('click', ()=>{
     removeInvoicePayment(invPaymentId, Number(btn.dataset.idx));
   }));
@@ -19155,6 +19278,143 @@ function removeInvoicePayment(id, idx){
 function resetInvoicePaymentForm(){ invPaymentId = null; }
 document.getElementById('invPaymentModalClose').addEventListener('click', ()=> closeModalAndReset('invPaymentModal', resetInvoicePaymentForm));
 document.getElementById('ip_cancel').addEventListener('click', ()=> closeModalAndReset('invPaymentModal', resetInvoicePaymentForm));
+
+/* ================= THE 80mm RECEIPT ================================
+
+   Paper handed across the counter at the moment money changes hands.
+   Everything here is arithmetic that already exists -- savedQuoteTotal,
+   invoiceBalanceDue, quoteItemSellPrice -- so the paper and the screen
+   cannot disagree about a figure. Nothing is recomputed.
+
+   Design constraints come from the hardware, not from taste:
+
+     one-bit head    A thermal head is on or off. There is no grey; a
+                     grey rule is dithered dots and prints as a smear.
+                     Every glyph and rule here is pure black.
+     ~32 characters  72mm of printable width in monospace. An item name
+                     and its arithmetic cannot share a line, so they do
+                     not try to -- the name owns a line and the sum is
+                     indented beneath it. The money column never breaks.
+     two rule weights  Solid brackets the shop and the total; dashed
+                     separates zones. A third weight is noise here.
+     one large thing The total. Everything else sits at one size, so the
+                     eye lands on the figure with nothing competing. */
+
+// Plain digits. fmtUGX appends " UGX" to every figure, which on 32
+// characters would spend a tenth of the width saying the same word nine
+// times -- the receipt says it once, under the total.
+function receiptNum(n){ return Number(n||0).toLocaleString('en-UG'); }
+
+/* A receipt's own number.
+
+   Deliberately NOT a global counter. A counter would need either a
+   server round-trip at the exact moment somebody is waiting for paper,
+   or a block allocator that leaves gaps in a number printed on a money
+   document. Derived instead from what already identifies the payment:
+   its invoice and its position on it. R-0152-1 is the first payment on
+   INV-0152 -- unique without any counter, impossible to gap, and
+   self-describing to anybody holding two pieces of paper.
+
+   New payments carry an id so the number survives a LATER payment being
+   reversed; old ones predate that field and fall back to their index,
+   which is what they have. */
+function receiptNumberLabel(q, payment, idx){
+  const n = (payment && payment.id != null) ? payment.id : (Number(idx)||0) + 1;
+  return 'R-' + String(q.id).padStart(4,'0') + '-' + n;
+}
+// Per invoice, not global: one more than the highest already on this
+// order. No counter to persist, no server call, and reversing a payment
+// never renumbers the ones beside it.
+function nextPaymentId(q){
+  return ((q.payments||[]).reduce((m,p)=> Math.max(m, Number(p.id)||0), 0)) + 1;
+}
+function paymentMethodLabel(payment){
+  const acc = (ACCOUNTS||[]).find(a=> a.key === (payment && payment.method));
+  return acc ? acc.label : '';
+}
+
+/* One payment's receipt, or the whole sale's when payment is null.
+
+   With a payment it is a RECEIPT for that money. Without one it is the
+   same document listing every payment on the invoice -- what the
+   Invoices tab reprints, and what a counter sale prints. */
+function buildReceiptHTML(q, payment, idx){
+  const shop = shopIdentity();
+  const items = (q.items||[]).filter(it=> (Number(it.qty)||0) > 0);
+  const total = savedQuoteTotal(q);
+  const balance = invoiceBalanceDue(q);
+  const paidAll = (q.payments||[]);
+  const when = new Date();
+  const time = String(when.getHours()).padStart(2,'0') + ':' + String(when.getMinutes()).padStart(2,'0');
+  // Only when somebody is actually signed in as staff. An unset field
+  // must cost no line at all -- see every optional row below.
+  const servedBy = (typeof myStaff !== 'undefined' && myStaff && myStaff.name) ? myStaff.name : '';
+
+  const row = (l, r)=> `<div class="r-row"><span>${l}</span><span>${r}</span></div>`;
+
+  return `<div class="receipt">
+    <div class="r-center">
+      <div class="r-shop">${esc(shop.name)}</div>
+      ${shop.address ? `<div class="r-sub">${esc(shop.address)}</div>` : ''}
+      ${shop.phone ? `<div class="r-sub">Tel ${esc(shop.phone)}</div>` : ''}
+      ${shop.tin ? `<div class="r-sub">TIN ${esc(shop.tin)}</div>` : ''}
+    </div>
+    <div class="r-rule"></div>
+    ${row(payment ? 'RECEIPT' : 'SALE', `<b>${payment ? esc(receiptNumberLabel(q, payment, idx)) : esc(invoiceNumberLabel(q))}</b>`)}
+    ${payment ? row('Invoice', esc(invoiceNumberLabel(q))) : ''}
+    ${row(esc(fmtShortDate(todayISO())), esc(time))}
+    ${servedBy ? row('Served by', esc(servedBy)) : ''}
+    <div class="r-line"></div>
+    ${row('Client', `<b>${esc(quoteClientName(q))}</b>`)}
+    <div class="r-line"></div>
+    ${items.map(it=>{
+      const qty = Number(it.qty)||0;
+      const each = quoteItemSellPrice(it);
+      return `<div class="r-item">
+        <div class="r-item-name">${esc(it.productName || 'Item')}</div>
+        <div class="r-item-row"><span>${esc(qty)} ${esc(it.unit||'')} &times; ${receiptNum(each)}</span><span>${receiptNum(qty*each)}</span></div>
+      </div>`;
+    }).join('')}
+    <div class="r-line"></div>
+    ${row(`${items.length} item${items.length===1?'':'s'}`, receiptNum(total))}
+    <div class="r-rule"></div>
+    <div class="r-total-row"><span>TOTAL</span><span>${receiptNum(total)}</span></div>
+    <div class="r-ccy">UGX</div>
+    ${paidAll.length ? `<div class="r-line"></div>
+      ${paidAll.map(pm=>{
+        const label = paymentMethodLabel(pm);
+        return row(`Paid${label?' &mdash; '+esc(label):''}`, receiptNum(pm.amount));
+      }).join('')}` : ''}
+    ${balance > 0 ? row('<b>BALANCE DUE</b>', `<b>${receiptNum(balance)}</b>`) : ''}
+    ${shop.footer ? `<div class="r-rule"></div>
+      <div class="r-center r-foot">${shop.footer.split('\n').map(l=> esc(l)).join('<br>')}</div>` : ''}
+    <div class="r-center r-foot r-docref">${esc(invoiceNumberLabel(q))}</div>
+  </div>`;
+}
+
+/* Put it on paper.
+
+   Clears any sheet a previous print left behind BEFORE injecting its own
+   -- @page does not cascade by specificity, the last one in document
+   order wins, and afterprint is not reliable enough to be the only
+   cleanup (the reasoning is written out at clearInjectedPrintStyles).
+   Then empties #printArea, which the A5 paths never do and which matters
+   now that two page geometries are in play. */
+function printReceipt(q, payment, idx){
+  if(!q) return;
+  clearInjectedPrintStyles();
+  const area = document.getElementById('printArea');
+  area.innerHTML = buildReceiptHTML(q, payment, idx);
+  const st = document.createElement('style');
+  st.id = 'receipt80PrintStyle';
+  // auto height, not a fixed page: a receipt is exactly as long as its
+  // content, and a fixed page feeds blank paper after every short sale.
+  st.textContent = '@page{size:80mm auto;margin:3mm;}';
+  document.head.appendChild(st);
+  window.print();
+  area.innerHTML = '';
+}
+
 document.getElementById('ip_save').addEventListener('click', ()=>{
   const q = data.savedQuotes.find(x=>x.id===invPaymentId);
   if(!q) return;
@@ -19164,7 +19424,12 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   const account = document.getElementById('ip_account').value;
   if(!q.payments) q.payments = [];
   const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`);
-  q.payments.push({date: todayISO(), amount, note, cashTxnId});
+  /* `method` is the account the form already asked for and used to
+     throw away -- a receipt that says how the money arrived settles an
+     argument months later. `id` is what makes this payment's receipt
+     number survive a LATER payment being reversed. */
+  const payment = {date: todayISO(), amount, note, cashTxnId, method: account, id: nextPaymentId(q)};
+  q.payments.push(payment);
   q.amountPaid = (Number(q.amountPaid)||0) + amount;
   syncInvoiceDebtCharge(q);
   saveData();
@@ -19174,6 +19439,11 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
   toast('Payment recorded');
+  /* Money in, paper out -- the supermarket moment, and the only one that
+     prints without being asked. Last, so a printer that is off or a
+     dialog that is cancelled cannot cost the shop the payment record
+     itself: everything above has already been saved. */
+  if(data.presetAutoPrintReceipt) printReceipt(q, payment, q.payments.length-1);
 });
 
 document.getElementById('inv_doc_search').addEventListener('input', e=>renderInvoices(e.target.value));
@@ -31121,6 +31391,13 @@ function renderCbSummary(){
 }
 
 document.getElementById('cb_print').addEventListener('click', ()=>{
+  /* The one #printArea path that never cleared the sheet a previous
+     print left behind. Latent while every injected sheet was A5 -- a
+     cancelled quote print merely made the day report A5 too. Now that a
+     receipt injects an 80mm page, the leftover turns the cash book into
+     a 72mm column with its right half off the paper. Same call every
+     other path already makes; reasoning at clearInjectedPrintStyles. */
+  clearInjectedPrintStyles();
   const date = currentCbDate();
   const rec = getDayRecord(date);
   const rows = data.cashTxns.filter(t=>t.date===date).sort((a,b)=> (a.time||'').localeCompare(b.time||''));
@@ -31637,7 +31914,40 @@ function renderPresetCounts(){
   });
 }
 
+/* The Shop identity pane. Written on input rather than on a Save
+   button, like every other preset on this screen -- there is no "apply"
+   step anywhere else here and adding one only for this pane would be a
+   second grammar to learn. */
+function renderPresetShopIdentity(){
+  const set = (id, val)=>{ const el = document.getElementById(id); if(el) el.value = val || ''; };
+  set('preset_shop_name', data.presetShopLegalName);
+  set('preset_shop_address', data.presetShopAddress);
+  set('preset_shop_phone', data.presetShopPhone);
+  set('preset_shop_tin', data.presetShopTin);
+  set('preset_receipt_footer', data.presetReceiptFooter);
+  const auto = document.getElementById('preset_auto_print_receipt');
+  if(auto) auto.checked = !!data.presetAutoPrintReceipt;
+}
+{
+  const bind = (id, key)=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', ()=>{ data[key] = el.value; saveData(); });
+  };
+  bind('preset_shop_name', 'presetShopLegalName');
+  bind('preset_shop_address', 'presetShopAddress');
+  bind('preset_shop_phone', 'presetShopPhone');
+  bind('preset_shop_tin', 'presetShopTin');
+  bind('preset_receipt_footer', 'presetReceiptFooter');
+  const auto = document.getElementById('preset_auto_print_receipt');
+  if(auto) auto.addEventListener('change', ()=>{
+    data.presetAutoPrintReceipt = auto.checked;
+    saveData();
+    toast(auto.checked ? 'Receipts will print automatically on payment' : 'Automatic receipt printing is off');
+  });
+}
+
 function renderPresets(){
+  renderPresetShopIdentity();
   renderPresetCategories();
   renderPresetUnits();
   renderPresetLocations();
