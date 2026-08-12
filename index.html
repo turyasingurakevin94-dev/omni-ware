@@ -58,7 +58,7 @@
     --line: var(--ow-rule);
     --accent: var(--ow-oxide);
     /* NOT text on the accent -- this is the dark ink used on light amber
-       warning pills (.threat-pill.warn, .dash-badge.warn). White here
+       warnings (.dash-badge.warn, .dash-alert-band.warn). White here
        would make those unreadable. worker.html's same-named token means
        the opposite, which is why these are aliased per file. */
     --accent-ink: var(--ow-amber-ink);
@@ -727,7 +727,6 @@
   .dash-alert-detail{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
   .dash-alert-action{font-size:12px;font-weight:700;color:var(--ink);margin-top:1px;}
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
-  .dash-alert-more{align-self:center;font-size:12px;color:var(--ink-soft);padding:10px;}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
     background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
 
@@ -750,9 +749,6 @@
   .vital-sub .trend-up{color:var(--good);font-weight:700;}
   .vital-sub .trend-down{color:var(--danger);font-weight:700;}
 
-  .dash-two-col{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start;}
-  @media (max-width:980px){ .dash-two-col{grid-template-columns:1fr;} }
-
   .dash-panel-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px;}
   .dash-panel-title h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;}
   .dash-panel-note{font-size:12px;color:var(--ink-soft);margin:0 0 16px 0;}
@@ -762,22 +758,12 @@
   .cashbridge-legend span{display:inline-flex;align-items:center;gap:6px;}
   .cashbridge-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
 
-  .threat-list{display:flex;flex-direction:column;gap:10px;}
-  .threat-card{
-    border:1px solid var(--line);border-left:4px solid var(--ink-soft);border-radius:9px;
-    padding:12px 14px;background:#FBFCFD;
-  }
-  .threat-card.crit{border-left-color:var(--danger);}
-  .threat-card.warn{border-left-color:var(--accent);}
-  .threat-card.info{border-left-color:#3B82C4;}
-  .threat-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
-  .threat-card-head strong{font-size:13px;color:var(--ink);}
-  .threat-pill{font-size:10px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;padding:2px 8px;border-radius:20px;}
-  .threat-pill.crit{background:#FBE7E3;color:var(--danger);}
-  .threat-pill.warn{background:#FDF0D9;color:var(--accent-ink);}
-  .threat-pill.info{background:#E3EEF8;color:#255C86;}
-  .threat-card-body{font-size:12.5px;color:var(--ink-soft);}
-  .threat-card-body b{color:var(--ink);}
+  /* .threat-list / .threat-card / .threat-pill went with the "Everything
+     flagged" panel: it rendered the same alerts the panel at the top of
+     the page renders, so its card was a second look for one list. The one
+     flag that used it -- the detached-agent check -- is a .dash-alert now,
+     which is what the list it joins is made of.
+     .threat-empty stays: Top performers still uses it. */
   .threat-empty{padding:16px;text-align:center;color:var(--ink-soft);font-size:13px;background:#FBFCFD;border:1px dashed var(--line);border-radius:9px;}
 
   .dash-trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
@@ -5652,23 +5638,25 @@
         <div class="dash-panel-title"><h2>What needs you today</h2></div>
         <p class="dash-panel-note" id="dash_actionNote"></p>
         <div class="dash-action-list" id="dash_actionList"></div>
+        <!-- Outside the grid: the list is auto-fit columns, and a button
+             inside it would be laid out as another card. -->
+        <div id="dash_actionMore"></div>
       </div>
 
       <!-- 1. VITAL SIGNS -->
       <div class="vital-grid" id="dash_vitalGrid"></div>
 
-      <!-- 2 & 3. FINANCIAL HEALTH + INVENTORY THREATS -->
-      <div class="dash-two-col">
-        <div class="panel">
-          <div class="dash-panel-title"><h2>Cash In vs Cash Out</h2></div>
-          <p class="dash-panel-note" id="dash_cashbridge_note"></p>
-          <div id="dash_cashbridge"></div>
-        </div>
-        <div class="panel">
-          <div class="dash-panel-title"><h2>Everything flagged</h2></div>
-          <p class="dash-panel-note">The same list in full, in the same order — the top of it is what needs you today.</p>
-          <div class="threat-list" id="dash_threatList"></div>
-        </div>
+      <!-- 2. FINANCIAL HEALTH.
+           "Everything flagged" used to sit beside this. Its own note said
+           what it was: "the same list in full, in the same order — the top
+           of it is what needs you today". Same array, same card function,
+           so the top five were drawn twice, verbatim, one screen apart,
+           and a reader had to compare them to discover they were the same.
+           It is one ranked list now, with the rest one press away. -->
+      <div class="panel">
+        <div class="dash-panel-title"><h2>Cash In vs Cash Out</h2></div>
+        <p class="dash-panel-note" id="dash_cashbridge_note"></p>
+        <div id="dash_cashbridge"></div>
       </div>
 
       <!-- 4. REVENUE & DEMAND TRENDS -->
@@ -9975,7 +9963,10 @@ function fmtUGXPerUnitPack(n, row){
    One delegated listener rather than a wiring step each renderer has to
    remember, because a renderer that forgets draws a button that does
    nothing and looks broken. */
-const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24 };
+// dashAlerts is five rather than twenty-four: it is a ranked to-do list on
+// the first screen of the app, not a grid to browse. The other four are
+// grids somebody scans.
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -10002,6 +9993,7 @@ const LIST_PAGE_RERENDER = {
   products: ()=> triggerProductsRender(),
   customers: ()=> renderCustomers(document.getElementById('c_search').value),
   suppliers: ()=> renderSuppliers(document.getElementById('s_search').value),
+  dashAlerts: ()=> renderDashboard(),
 };
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest ? e.target.closest('[data-list-more]') : null;
@@ -36834,7 +36826,7 @@ function dashQuadrantSVG(items){
 // nothing. Flagged crit when it doesn't, because the money is real and
 // the agent cannot see it: three such orders were worth UGX 1.9m.
 async function checkDetachedAgentOrders(cardHTML){
-  const list = document.getElementById('dash_threatList');
+  const list = document.getElementById('dash_actionList');
   if(!list || !currentShopId) return;
   let rows;
   try{
@@ -36858,7 +36850,10 @@ async function checkDetachedAgentOrders(cardHTML){
         + `lost their agent link, so the agent who sold them cannot see them and earns nothing from them. `
         + `They look normal from here — that is why this is checked rather than spotted.`
   });
-  const empty = list.querySelector('.threat-empty');
+  // "Nothing needs you right now" is not true once this has found
+  // something, so it is replaced rather than appended to. Otherwise the
+  // card goes to the FRONT: it is a `now` flag and the list is ranked.
+  const empty = list.querySelector('.dash-allclear');
   if(empty) list.innerHTML = card; else list.insertAdjacentHTML('afterbegin', card);
 }
 
@@ -37219,36 +37214,41 @@ function renderDashboard(){
       <div class="dash-alert-action">${esc(a.action)}</div>
     </div>`;
   };
-  /* Capped at five. A list that runs to twenty is a list nobody reads,
-     and the whole point of ranking them was that the top of it is where
-     somebody should start. The rest are still on the page, below. */
-  const TOP = 5;
+  /* Five, then the rest on request. A list that runs to twenty is a list
+     nobody reads, and the whole point of ranking them was that the top is
+     where somebody should start.
+
+     They used to be "still on the page, below" -- in a second panel that
+     re-rendered the WHOLE array, so the five up here were also the first
+     five down there. Two panels, one list, and the duplication was only
+     discoverable by reading both and noticing. Now the rest arrive in
+     place, under the same ranking, from the same array. */
   const urgent = alerts.filter(a=> a.band === 'now' || a.band === 'soon');
   document.getElementById('dash_actionList').innerHTML = alerts.length
-    ? alerts.slice(0, TOP).map(alertCardHTML).join('')
-      + (alerts.length > TOP ? `<div class="dash-alert-more">${alerts.length - TOP} more below.</div>` : '')
+    ? listPageSlice('dashAlerts', alerts).map(alertCardHTML).join('')
     : `<div class="dash-allclear">Nothing needs you right now. Nothing is running out, nobody is overdue, and the money adds up.</div>`;
+  document.getElementById('dash_actionMore').innerHTML =
+    listMoreButtonHTML('dashAlerts', alerts.length, 'flags');
   document.getElementById('dash_actionNote').textContent = alerts.length
     ? (urgent.length
       ? `${urgent.length} ${urgent.length===1?'thing has':'things have'} a deadline. Ranked by when they bite, then by what is on them.`
       : 'Nothing has a deadline today — these are the things quietly costing money.')
     : '';
 
-  // The same alerts, all of them, as the evidence below the answer.
-  document.getElementById('dash_threatList').innerHTML = alerts.length
-    ? alerts.map(alertCardHTML).join('')
-    : `<div class="threat-empty">No active risk flags right now.</div>`;
-  const threatCardHTML = t=>`
-    <div class="threat-card ${t.level}">
-      <div class="threat-card-head"><strong>${esc(t.title)}</strong><span class="threat-pill ${t.level}">${t.level}</span></div>
-      <div class="threat-card-body">${t.body}</div>
-    </div>`;
-  // Asks the database separately, because this is the one flag that cannot
-  // be worked out from what the admin app loads: a detached order is
-  // indistinguishable from an ordinary walk-in order here, and only the
-  // payment rows can tell them apart. Appended when it answers rather than
-  // holding up the rest of the dashboard.
-  checkDetachedAgentOrders(threatCardHTML);
+  /* Asks the database separately, because this is the one flag that cannot
+     be worked out from what the admin app loads: a detached order is
+     indistinguishable from an ordinary walk-in order here, and only the
+     payment rows can tell them apart. Appended when it answers rather than
+     holding up the rest of the dashboard.
+
+     Built as an alert rather than a card of its own kind, because it now
+     joins the one ranked list instead of a panel beside it. It carries the
+     'now' band: money the agent who sold it cannot see is not a thing to
+     get to eventually. */
+  checkDetachedAgentOrders((t)=> alertCardHTML({
+    band: 'now', money: 0, title: t.title, detail: t.body,
+    action: 'Open each order and set its agent again.',
+  }));
 
   // Demand trajectory
   const trend = dashDemandTrendData();

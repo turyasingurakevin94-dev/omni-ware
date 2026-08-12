@@ -215,9 +215,17 @@ const sql = files.map((f) => fs.readFileSync(path.join(MIG, f), 'utf8')).join('\
 {
   // The check is worthless if the dashboard never asks.
   const admin = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  /* Pinned on the CALL existing, not on what it is handed. It used to be
+     `checkDetachedAgentOrders(threatCardHTML)`, and threatCardHTML went
+     with the "Everything flagged" panel -- which was the only place this
+     flag was ever rendered. Losing a duplicate panel must not quietly
+     lose the one check that had nowhere else to go, so what matters is
+     that the dashboard still asks and still draws the answer. */
   t.check(/async function checkDetachedAgentOrders\(/.test(admin)
-    && /checkDetachedAgentOrders\(threatCardHTML\)/.test(admin),
-    'the Threat Monitor actually runs the check');
+    && /checkDetachedAgentOrders\(/.test(admin.replace(/async function checkDetachedAgentOrders\(/, '')),
+    'the dashboard actually runs the detached-agent check');
+  t.check(/checkDetachedAgentOrders\(\(t\)=> alertCardHTML\(/.test(admin),
+    'and renders its answer as one of the ranked alerts, where the list somebody reads is');
   const fnBody = extractFunction(admin, 'checkDetachedAgentOrders', 'index.html');
   // Scoped to the catch block itself. Matching "a return exists somewhere
   // after the catch" passes on any function with a later return, which is

@@ -254,17 +254,52 @@ if (scope) {
   eq(byId(v, 'stockout:P001').money, 0, 'and a variant’s earnings are not credited to the plain product');
 }
 
-/* ---------- 8. one list, shown twice ---------------------------------- */
+/* ---------- 8. one list, shown ONCE ----------------------------------- */
+/*
+ * This used to be titled "one list, shown twice", and that was the whole
+ * problem. "What needs you today" drew alerts.slice(0, 5); "Everything
+ * flagged", a panel and most of a screen below it, drew the SAME array
+ * through the SAME card function. The top five appeared twice, verbatim.
+ * Its own note admitted it -- "the same list in full, in the same order --
+ * the top of it is what needs you today" -- which is a caption explaining
+ * why a reader should ignore half of what they are looking at.
+ *
+ * Reported as: the two "seem to be duplicative". They were identical.
+ *
+ * One list now, five deep, the rest one press away through the same
+ * paging every long page in this app uses.
+ */
 {
   t.check(/const alerts = dashAlerts\(\{/.test(render), 'the alerts are built once');
   t.check(/dash_actionList'\)\.innerHTML = alerts\.length/.test(render),
-    'the block at the top of the page is drawn from them');
-  t.check(/dash_threatList'\)\.innerHTML = alerts\.length[\s\S]{0,120}?alerts\.map\(alertCardHTML\)/.test(render),
-    'and so is the panel below, so the two cannot drift apart');
-  /* A list of twenty is a list nobody reads. The point of ranking them
-     was that the top is where somebody starts. */
-  t.check(/alerts\.slice\(0, TOP\)/.test(render), 'the top block is capped');
-  t.check(/alerts\.length - TOP\} more below/.test(render), 'and says how many it is not showing');
+    'and drawn in one place');
+  t.check(!/dash_threatList/.test(code),
+    'the second panel that re-drew the same array is gone, not merely hidden');
+  t.check(!/Everything flagged/.test(code.replace(/<!--[\s\S]*?-->/g, '')),
+    'and so is its heading');
+  t.check(!/threatCardHTML/.test(code) && !/class="threat-card/.test(code),
+    'along with the card kind that existed only to show one list a second way');
+
+  /* A list of twenty is a list nobody reads. The point of ranking them was
+     that the top is where somebody starts -- so the cap stays, and what it
+     hides is now reachable in place rather than duplicated below. */
+  t.check(/listPageSlice\('dashAlerts', alerts\)\.map\(alertCardHTML\)/.test(render),
+    'the top block is still capped, through the shared paging');
+  t.check(/listMoreButtonHTML\('dashAlerts', alerts\.length, 'flags'\)/.test(render),
+    'and says how many there are in total rather than how many it is hiding');
+  t.check(/dashAlerts: 5\b/.test(code),
+    'five, because this is a to-do list on the first screen, not a grid to browse');
+  t.check(/dashAlerts: \(\)=> renderDashboard\(\)/.test(code),
+    'and the control is wired, so pressing it does something');
+
+  // The detached-agent check had the removed panel as its only home.
+  t.check(/checkDetachedAgentOrders\(\(t\)=> alertCardHTML\(\{/.test(render),
+    'the one flag that lived in that panel joins the ranked list instead of being lost with it');
+  t.check(/const list = document\.getElementById\('dash_actionList'\);/.test(code),
+    'appending to the list that still exists');
+  t.check(/band: 'now'/.test(render),
+    "and carrying a band, because money an agent cannot see is not a thing to get to eventually");
+
   t.check(!/threats\.push\(/.test(code),
     'and the old unsorted, uncapped threat list is gone rather than left running beside it');
 
