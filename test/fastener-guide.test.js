@@ -34,6 +34,10 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 const t = createReporter('fastener guide');
 const src = read('index.html');
 
+// compileScope binds `data` to this very object, so filling it here is
+// what the compiled fgCatalogueHits sees.
+const FIXTURE = { products: [] };
+
 const scope = compileScope([
   extractDeclaration(src, 'METRIC_BOLTS', 'index.html'),
   extractDeclaration(src, 'SCREW_GAUGES', 'index.html'),
@@ -48,14 +52,26 @@ const scope = compileScope([
   extractFunction(src, 'fgMmToInch', 'index.html'),
   extractFunction(src, 'fgNearestFraction', 'index.html'),
   extractFunction(src, 'fgTradeMm', 'index.html'),
+  extractFunction(src, 'fgTradeByMm', 'index.html'),
   extractFunction(src, 'fgGaugeToMm', 'index.html'),
   extractFunction(src, 'fgMmToGauge', 'index.html'),
+  extractFunction(src, 'fgSecondNumber', 'index.html'),
+  extractFunction(src, 'fgCatalogueHits', 'index.html'),
   extractFunction(src, 'fgSpannerForBolt', 'index.html'),
   extractFunction(src, 'fgBoltsForSpanner', 'index.html'),
   extractFunction(src, 'fgRouteQuery', 'index.html'),
   extractFunction(src, 'fgBias', 'index.html'),
-], {}, ['fgParseFraction', 'fgParseLengthInput', 'fgInchToMm', 'fgMmToInch', 'fgNearestFraction',
-  'fgTradeMm', 'fgGaugeToMm', 'fgMmToGauge', 'fgSpannerForBolt', 'fgBoltsForSpanner', 'fgRouteQuery', 'fgGcd']);
+], {
+  // fgCatalogueHits reads the shop's own catalogue through the same
+  // helpers the Products search uses, so the count it prints and the
+  // jump it offers can never disagree.
+  data: FIXTURE,
+  searchTokens: (q) => String(q || '').trim().toLowerCase().split(/\s+/).filter(Boolean),
+  matchesAllTokens: (hay, tokens) => tokens.every((tk) => hay.includes(tk)),
+  variantLabel: (combo) => Object.values(combo || {}).join(' / '),
+}, ['fgParseFraction', 'fgParseLengthInput', 'fgInchToMm', 'fgMmToInch', 'fgNearestFraction',
+  'fgTradeMm', 'fgTradeByMm', 'fgGaugeToMm', 'fgMmToGauge', 'fgSpannerForBolt', 'fgBoltsForSpanner', 'fgRouteQuery',
+  'fgGcd', 'fgSecondNumber', 'fgCatalogueHits']);
 
 // Re-extract the literals for direct row access.
 /* eslint-disable no-eval */
@@ -147,6 +163,23 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     'the whole ladder reads exactly as the shelf does');
   eq(scope.fgTradeMm(1.5).tradeMm, 38, 'an inch-and-a-half is sold as 38');
   eq(scope.fgTradeMm(0.9), null, 'and 0.9" is not quietly called an inch');
+
+  /* The ladder read the other way. 50mm is a two-inch screw on every
+     shelf; the nearest sixteenth calls it 1 15/16, which is closer
+     arithmetically and is a thing nobody has ever asked for. */
+  eq(scope.fgTradeByMm(50).inchLabel, '2"', '50mm is named by the rung it is sold as');
+  eq(scope.fgTradeByMm(75).inchLabel, '3"', 'and so is 75');
+  eq(scope.fgTradeByMm(51), null, 'a figure that is not a rung is not given one');
+  // By value, not identity: the scope and T are two separate evaluations
+  // of the same declaration, so their rows are equal and never the same
+  // object.
+  t.check(T.TRADE_LENGTHS.every((r) => {
+    const found = scope.fgTradeByMm(r.tradeMm);
+    return found && found.inchLabel === r.inchLabel;
+  }), 'every rung is findable by its own millimetre figure');
+  // The nearest-sixteenth answer for 50mm is the one this exists to beat.
+  eq(scope.fgNearestFraction(scope.fgMmToInch(50), 16).label, '1 15/16',
+    'which is what the sixteenths would have called it');
 }
 
 /* ---------- 4. plugs and rivets ---------------------------------------- */
@@ -252,6 +285,24 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
   eq(JSON.stringify(kinds('M8')), JSON.stringify(['bolt']), 'M8 is a bolt and only a bolt');
   eq(R('M8')[0].row.size, 'M8', 'the right bolt');
   eq(R('m10x1.25')[0].pitchTyped, 1.25, 'a typed pitch travels with the card');
+
+  /* "M8x50" and "M8x1.25" are the same shape and mean opposite things.
+     The second number was read as a pitch either way, so an M8x50 -- how
+     every invoice in this trade writes a 50mm bolt -- produced a
+     confident warning that its nut would not fit an M8. False, and
+     exactly the kind of wrong a counter repeats out loud. */
+  eq(R('M8x50')[0].lengthTyped, 50, 'M8x50 is a fifty-millimetre bolt');
+  eq(R('M8x50')[0].pitchTyped, null, 'and NOT a bolt with a pitch of fifty');
+  eq(R('M8x1')[0].pitchTyped, 1, 'while M8x1 is still the fine pitch it is');
+  eq(R('M8x1')[0].lengthTyped, null, 'and is not mistaken for a one-millimetre bolt');
+  eq(R('M20x25')[0].lengthTyped, 25, 'a 25mm M20 reads as a length');
+  /* The split follows EACH SIZE'S own coarse pitch, and the big sizes
+     are where that matters: M30's standard coarse thread is 3.5, past
+     any plausible global cutoff, while a 3.5mm-long M30 bolt is absurd.
+     A single hard-coded threshold gets this exactly backwards. */
+  eq(R('M30x3.5')[0].pitchTyped, 3.5, 'M30x3.5 is M30’s own coarse pitch');
+  eq(R('M30x3.5')[0].lengthTyped, null, 'and not a three-and-a-half-millimetre bolt');
+  eq(R('M4x3')[0].lengthTyped, 3, 'while 3 on an M4 is a length — no M4 has a 3mm pitch');
   t.check(!kinds('8mm').includes('bolt'),
     '8mm is NEVER a bolt -- the M-prefix/mm-suffix collision, pinned');
   /* The digit-after-m requirement protects "8mm" even unanchored; what
@@ -294,7 +345,45 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
   t.check(kinds('6').includes('plug'), 'and 6 offers the wall plug the shop actually stocks');
 }
 
-/* ---------- 10. the page is wired, not merely defined ------------------ */
+/* ---------- 10. the shop's own answer ---------------------------------- */
+/*
+ * The chart is generic. The question behind it is almost always "and do
+ * we have it?", so the card answers both -- counted over PRODUCTS,
+ * because a five-size product is one thing on the shelf, and read from
+ * the same text the Products search reads so the count and the jump the
+ * card offers can never disagree.
+ */
+{
+  FIXTURE.products = [
+    { id:'P1', name:'Anchor Bolts M8*100', category:'Fasteners', subcategory:'Anchors', variants:[] },
+    { id:'P2', name:'Wood Screws 8*50 / 25kgs', category:'Fasteners', subcategory:'Wood Screws', variants:[] },
+    { id:'P3', name:'Wood Screws 8*100 / 25kgs', category:'Fasteners', subcategory:'Wood Screws', variants:[] },
+    { id:'P4', name:'Wood Screws 8*150 / 25kgs', category:'Fasteners', subcategory:'Wood Screws', variants:[] },
+    { id:'P5', name:'RIDER Self Drilling Screws', category:'Fasteners', subcategory:'Self Drilling',
+      variants:[{ combo:{ Size:'1"' } }, { combo:{ Size:'1.5"' } }] },
+    { id:'P6', name:'Hinges', category:'Furniture', subcategory:'Hinges', variants:[] },
+  ];
+  const H = scope.fgCatalogueHits;
+
+  eq(H('M8').count, 1, 'the M8 card finds the shop’s one M8 line');
+  eq(H('M8').names[0], 'Anchor Bolts M8*100', 'and names it');
+  eq(H('8*').count, 4, 'the gauge-8 card finds every 8* line, including the anchor bolt written the same way');
+  eq(H('8*').names.length, 3, 'but names at most three — a card is not a search results page');
+
+  // Counted over PRODUCTS. A five-size product is one thing on the shelf,
+  // and counting variants would report six of something there is one of.
+  eq(H('RIDER').count, 1, 'a multi-variant product counts once, not once per size');
+  // Variant labels are still searched, so a size that lives only on a
+  // variant is findable.
+  eq(H('1.5"').count, 1, 'while a size that exists only as a variant label is still found');
+
+  eq(H('M30').count, 0, 'a size the shop does not carry says so with a zero');
+  eq(H('').count, 0, 'and an empty term claims nothing rather than everything');
+  FIXTURE.products = [];
+  eq(H('M8').count, 0, 'an empty catalogue is not an error');
+}
+
+/* ---------- 11. the page is wired, not merely defined ------------------ */
 {
   const stripped = src
     .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, ' ')
@@ -314,6 +403,39 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     'find-in-catalogue jumps AND renders -- goToTab’s chain has no products line');
   t.check(/getElementById\('p_category_filter'\)\.value = '';/.test(stripped),
     'and clears the category filter so the hits it promises are not hidden by one');
+
+  /* The four reference charts share one panel now -- thirty-four rows of
+     table below the part of the page anyone uses was the same "long list
+     buries the thing you came for" the stock log and price registry were
+     just cured of. Charts are consulted, not scanned, so one at a time. */
+  t.check(/id="fg_ref_chips"/.test(stripped) && /id="fg_ref_body"/.test(stripped),
+    'the reference charts share one panel');
+  t.check(!/id="fg_lengths"/.test(stripped) && !/id="fg_plugs"/.test(stripped),
+    'rather than four panels stacked below the search');
+  const clickHandler = (/getElementById\('tab-fasteners'\)\.addEventListener\('click',[\s\S]*?\n\}\);/.exec(stripped) || [''])[0];
+  t.check(/data-fg-ref/.test(clickHandler) && /fgRenderRefPanel\(\)/.test(clickHandler),
+    'and switching between them is wired through the same delegated listener');
+
+  // The empty state teaches what the box accepts; the examples must fill
+  // it AND route, or they are decoration.
+  t.check(/data-fg-example/.test(clickHandler) && /fgRenderResults\(\)/.test(clickHandler),
+    'the example chips fill the box and route it');
+  t.check(/const FG_EXAMPLES = \[[^\]]*'M8x50'/.test(stripped),
+    'and one of them is M8x50, the shape that used to be read as a pitch');
+
+  // The shop's own answer has to be ON the cards, not merely computable.
+  t.check(/\$\{fgStockLineHTML\(r\.size\)\}/.test(stripped),
+    'the bolt card says what the shop holds in that size');
+  t.check(/\$\{fgStockLineHTML\(`\$\{r\.gauge\}\*`\)\}/.test(stripped),
+    'and so does the screw card, in the catalogue’s own gauge spelling');
+  t.check(/lengthTyped != null/.test(stripped),
+    'and a typed length is answered rather than warned about');
+  // Both cards must consult the ladder, or one of them goes back to
+  // calling a 2" screw "1 15/16".
+  t.check(/const lenTrade = entry\.lengthTyped != null \? fgTradeByMm\(entry\.lengthTyped\) : null;/.test(stripped),
+    'the bolt card names a typed length by the rung it is sold as');
+  t.check(/const trade = fgTradeByMm\(c\.mm\) \|\| fgTradeMm\(frac\.num \/ frac\.den\);/.test(stripped),
+    'and the length card reads the ladder from whichever end it was typed');
 }
 
 process.exit(t.done() ? 1 : 0);

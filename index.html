@@ -5337,9 +5337,13 @@
   /* The assumption a bare-number interpretation rests on. Small but
      first, because the card is only true IF the caption is. */
   .fg-interp{font-size:11.5px;font-style:italic;color:var(--ink-soft);}
-  .fg-spec{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink-soft);
-    border-bottom:1px dashed var(--ow-steel-100);padding-bottom:4px;}
-  .fg-spec b{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;}
+  .fg-spec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:12.5px;
+    color:var(--ink-soft);border-bottom:1px dashed var(--ow-steel-100);padding-bottom:4px;}
+  /* The label may wrap; the FIGURE may not. "8.4 × 16 × 1.6 mm" broken
+     across two lines with the unit stranded below reads as two numbers,
+     and this page's whole job is being read correctly at a glance. */
+  .fg-spec > span{min-width:0;}
+  .fg-spec b{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
   .fg-note{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
   .fg-warn{font-size:11.5px;line-height:1.45;color:var(--danger);font-weight:600;}
   .fg-chip-flow{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
@@ -5361,6 +5365,16 @@
     font-weight:700;padding:7px 10px;border-bottom:1px solid var(--line);}
   .fg-table td{padding:7px 10px;border-bottom:1px solid var(--ow-steel-100);font-size:13px;color:var(--ink-soft);}
   .fg-table td b{color:var(--ink);}
+  /* The shop's own answer sits inside the card, marked as the one line
+     that is about THIS shop rather than about the standard. */
+  .fg-stock{font-size:11.5px;line-height:1.45;color:var(--ink);
+    background:var(--ow-verdigris-soft);border-radius:7px;padding:6px 9px;}
+  .fg-stock b{font-variant-numeric:tabular-nums;}
+  .fg-examples{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
+  .fg-examples > span{font-size:11.5px;color:var(--ink-soft);}
+  /* The examples row is the empty state, so it must not sit in the card
+     grid's columns -- it is one line of chips, not a card. */
+  .fg-results:has(.fg-examples){display:block;}
 </style>
 </head>
 <body class="app-loading">
@@ -7288,20 +7302,9 @@
         <div class="fg-results" id="fg_screw_card"></div>
       </div>
       <div class="panel">
-        <h2>Lengths — inches to millimetres</h2>
-        <div id="fg_lengths"></div>
-      </div>
-      <div class="panel">
-        <h2>Wall plugs</h2>
-        <div id="fg_plugs"></div>
-      </div>
-      <div class="panel">
-        <h2>Rivets</h2>
-        <div id="fg_rivets"></div>
-      </div>
-      <div class="panel">
-        <h2>Imperial hex bolts</h2>
-        <div id="fg_imphex"></div>
+        <h2>Reference charts</h2>
+        <div class="fg-chip-flow" id="fg_ref_chips"></div>
+        <div id="fg_ref_body"></div>
       </div>
     </section>
 
@@ -37965,6 +37968,14 @@ function fgTradeMm(inch){
   return TRADE_LENGTHS.find(r=> Math.abs(r.inch - inch) <= 1e-6) || null;
 }
 
+/* The rung of the ladder sold AT this millimetre figure, the reverse of
+   fgTradeMm. 50mm is a two-inch screw on every shelf in the country; the
+   nearest sixteenth calls it 1 15/16, which is arithmetically closer and
+   a thing nobody has ever walked in and asked for. */
+function fgTradeByMm(mm){
+  return TRADE_LENGTHS.find(r=> r.tradeMm === Number(mm)) || null;
+}
+
 function fgGaugeToMm(gauge){
   const row = SCREW_GAUGES.find(r=> r.gauge === Number(gauge));
   return row ? row.dia : null;
@@ -37980,6 +37991,40 @@ function fgMmToGauge(mm){
   let best = null;
   SCREW_GAUGES.forEach(r=>{ const d = Math.abs(r.dia - v); if(d <= 0.35 && (!best || d < best.d)) best = { r, d }; });
   return best ? { gauge: best.r.gauge, exact: best.d < 0.05, diffMm: Math.round((v - best.r.dia) * 100) / 100 } : null;
+}
+
+/* "M8x1.25" and "M8x50" are the same shape and mean opposite things: the
+   first is a thread pitch, the second a bolt LENGTH -- and the second is
+   how every invoice and every customer in this trade writes it. Reading
+   50 as a pitch produced a confident warning that an M8x50's nut would
+   not fit an M8, which is false and is exactly the kind of wrong a
+   counter repeats out loud.
+
+   A metric coarse pitch is never more than about an eighth of the
+   diameter, and fine pitches are finer still, so anything past half
+   again the coarse pitch is a length. On M8 that puts the line at
+   1.875: x1, x1.25 and x1.5 read as pitches, x50 reads as 50mm long. */
+function fgSecondNumber(row, n){
+  if(n == null) return { pitchTyped: null, lengthTyped: null };
+  return n <= row.pitch * 1.5
+    ? { pitchTyped: n, lengthTyped: null }
+    : { pitchTyped: null, lengthTyped: n };
+}
+
+/* What the shop actually holds in this size. The chart is generic; the
+   question behind it is nearly always "and do we have it?", so the card
+   answers both. Counted over products rather than variants, because a
+   five-size product is one thing on the shelf, and it reads the same
+   text the Products search reads so the count and the jump agree. */
+function fgCatalogueHits(term){
+  const tokens = searchTokens(term);
+  if(!tokens.length) return { count: 0, names: [] };
+  const hits = (data.products || []).filter(p=>{
+    const hay = `${p.name} ${p.category || ''} ${p.subcategory || ''} `
+      + (p.variants || []).map(v=> variantLabel(v.combo)).join(' ');
+    return matchesAllTokens(hay.toLowerCase(), tokens);
+  });
+  return { count: hits.length, names: hits.slice(0, 3).map(p=> p.name) };
 }
 
 function fgSpannerForBolt(size){
@@ -38027,7 +38072,8 @@ function fgRouteQuery(q){
   let m = /^m\s*(\d+(?:\.\d+)?)\s*(?:[x×]\s*(\d+(?:\.\d+)?))?$/.exec(s);
   if(m){
     const row = METRIC_BOLTS.find(r=> r.dia === Number(m[1]));
-    return row ? [{ kind:'bolt', row, pitchTyped: m[2] != null ? Number(m[2]) : null }] : [];
+    if(!row) return [];
+    return [Object.assign({ kind:'bolt', row }, fgSecondNumber(row, m[2] == null ? null : Number(m[2])))];
   }
   m = /^#\s*(\d+)$/.exec(s) || /^(\d+)\s*(?:g|ga|gauge)$/.exec(s);
   if(m){
@@ -38082,21 +38128,39 @@ function fgSpecRow(label, value){ return `<div class="fg-spec"><span>${esc(label
 function fgFindChip(term, label){
   return `<button type="button" class="fg-find" data-fg-find="${esc(term)}">${esc(label || `Find “${term}” in catalogue`)}</button>`;
 }
+// The shop's own answer, above the generic one. Silence would read as
+// "we have none"; saying so plainly is the useful half of the answer.
+function fgStockLineHTML(term){
+  const h = fgCatalogueHits(term);
+  if(!h.count) return `<div class="fg-note">Nothing in your catalogue matches “${esc(term)}”.</div>`;
+  return `<div class="fg-stock"><b>${h.count}</b> in your catalogue — ${esc(h.names.join(', '))}${h.count > h.names.length ? '…' : ''}</div>`;
+}
 
 function fgBoltCardHTML(entry){
   const r = entry.row;
   const af = r.afIso === r.afDin ? `${r.afIso} mm` : `${r.afIso} mm ISO · ${r.afDin} mm DIN`;
   const pitchNote = entry.pitchTyped != null && entry.pitchTyped !== r.pitch
     ? `<div class="fg-warn">${esc(`${r.size}×${entry.pitchTyped} is a FINE pitch — its nut will not fit a standard ${r.size}×${r.pitch} bolt.`)}</div>` : '';
+  // A typed length is the commonest thing after the size itself, so it
+  // gets answered in both systems rather than merely echoed back.
+  const lenTrade = entry.lengthTyped != null ? fgTradeByMm(entry.lengthTyped) : null;
+  const lenRow = entry.lengthTyped != null
+    ? fgSpecRow('Length', esc(lenTrade
+        ? `${entry.lengthTyped} mm — sold as ${lenTrade.inchLabel}`
+        : `${entry.lengthTyped} mm ≈ ${fgNearestFraction(fgMmToInch(entry.lengthTyped), 16).label}″`)) : '';
+  const title = entry.lengthTyped != null ? `${r.size} × ${entry.lengthTyped}` : r.size;
   return `<div class="pi-card fg-card">
-    <div class="fg-card-head"><b>${esc(r.size)}</b><span>bolt &amp; nut</span></div>
+    <div class="fg-card-head"><b>${esc(title)}</b><span>bolt &amp; nut</span></div>
+    ${lenRow}
     ${fgSpecRow('Spanner', esc(af))}
-    ${fgSpecRow('Thread pitch', esc(`${r.pitch} mm coarse${r.fine.length ? ` · fine: ${r.fine.join(', ')}` : ''}`))}
+    ${fgSpecRow('Thread pitch', esc(`${r.pitch} mm coarse`))}
+    ${r.fine.length ? fgSpecRow('Fine pitches', esc(r.fine.map(f=> `${f} mm`).join(' · '))) : ''}
     ${fgSpecRow('Washer (ISO 7089)', esc(`${r.washerId} × ${r.washerOd} × ${r.washerT} mm`))}
     ${fgSpecRow('Tap drill', esc(`${r.tapDrill} mm`))}
     ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
     ${r.fine.length ? `<div class="fg-note">A fine-pitch nut (${esc(r.size)}×${r.fine.join('/')}) will not thread onto a coarse bolt — match the pitch, not just the size.</div>` : ''}
     ${pitchNote}
+    ${fgStockLineHTML(r.size)}
     ${fgFindChip(r.size)}
   </div>`;
 }
@@ -38111,20 +38175,28 @@ function fgScrewCardHTML(entry){
     ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
     ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
     ${fgSpecRow('Wall plug', esc(`${r.plugMm} mm`))}
+    ${fgStockLineHTML(`${r.gauge}*`)}
     <div class="fg-chip-row">${fgFindChip(`${r.gauge}*`)}${fgFindChip(metricName)}</div>
   </div>`;
 }
 function fgLengthCardHTML(c){
   const frac = fgNearestFraction(c.inch, 16);
-  const rough = Math.abs(frac.errorMm) > 0.05;
-  const trade = fgTradeMm(frac.num / frac.den);
+  /* A figure that IS a rung of the ladder is named by that rung, in
+     whichever direction it was typed. Falling back to the nearest
+     sixteenth only when the ladder has nothing keeps the card speaking
+     the shelf's language instead of the calculator's. */
+  const trade = fgTradeByMm(c.mm) || fgTradeMm(frac.num / frac.den);
+  const inchLabel = trade ? trade.inchLabel : `${frac.label}″`;
+  const exactMm = fgInchToMm(trade ? trade.inch : frac.num / frac.den);
+  const offBy = exactMm - c.mm;
+  const rough = Math.abs(offBy) > 0.05;
   const main = c.unit === 'in'
-    ? `${esc(frac.label)}″ = ${esc(fgMmStr(c.mm))} mm`
-    : `${esc(fgMmStr(c.mm))} mm ${rough ? '≈' : '='} ${esc(frac.label)}″`;
+    ? `${esc(inchLabel)} = ${esc(fgMmStr(c.mm))} mm`
+    : `${esc(fgMmStr(c.mm))} mm ${rough ? '≈' : '='} ${esc(inchLabel)}`;
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${main}</b><span>length</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[c.assumed])}</div>` : ''}
-    ${rough ? fgSpecRow('Exactly', esc(`${frac.label}″ = ${fgMmStr(fgInchToMm(frac.num / frac.den))} mm — ${fgMmStr(Math.abs(frac.errorMm))} mm ${frac.errorMm > 0 ? 'under' : 'over'} what you typed`)) : ''}
+    ${rough ? fgSpecRow('Exactly', esc(`${inchLabel} = ${fgMmStr(exactMm)} mm — ${fgMmStr(Math.abs(offBy))} mm ${offBy > 0 ? 'over' : 'under'} what you typed`)) : ''}
     ${fgSpecRow('Decimal', esc(`${(Math.round(c.inch * 1000) / 1000)}″`))}
     ${trade ? fgSpecRow('Sold as', esc(`${trade.inchLabel} / ${trade.tradeMm} mm on the shelf`)) : ''}
   </div>`;
@@ -38134,6 +38206,10 @@ function fgSpannerCardHTML(c){
     <div class="fg-card-head"><b>${esc(String(c.af))} mm spanner</b><span>fits</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.spanner)}</div>` : ''}
     ${c.bolts.map(b=> fgSpecRow(b.size + ' bolt/nut', esc(b.std))).join('')}
+    ${(()=>{ // A mixed spanner drawer is the norm here; say which imperial one is close enough to try.
+      const imp = IMPERIAL_HEX.find(r=> Math.abs(r.afMm - c.af) <= 0.45);
+      return imp ? fgSpecRow('Imperial near-match', esc(`${imp.afLabel} = ${imp.afMm} mm`)) : '';
+    })()}
     ${c.bolts.some(b=> b.std !== 'ISO & DIN') ? '<div class="fg-note">ISO and DIN heads differ at this size — the other standard takes the neighbouring spanner.</div>' : ''}
   </div>`;
 }
@@ -38169,11 +38245,20 @@ const FG_CARD_BUILDERS = {
   spanner: fgSpannerCardHTML, plug: fgPlugCardHTML, rivet: fgRivetCardHTML, imphex: fgImpHexCardHTML,
 };
 
+/* An empty box teaches nobody what it accepts. These are the five shapes
+   the router understands, as one press each -- which is also how the
+   person who has never used the page finds out that a bare number gets
+   more than one answer. */
+const FG_EXAMPLES = ['M8', 'M8x50', '#8', '38mm', '1 1/2', '13'];
 function fgRenderResults(){
   const q = document.getElementById('fg_q').value;
   const wrap = document.getElementById('fg_results');
+  if(!String(q).trim()){
+    wrap.innerHTML = `<div class="fg-examples"><span>Try</span>${
+      FG_EXAMPLES.map(x=>`<button type="button" class="fg-chip" data-fg-example="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
+    return;
+  }
   const cards = fgRouteQuery(q);
-  if(!String(q).trim()){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = cards.length
     ? cards.map(c=> (FG_CARD_BUILDERS[c.kind] || (()=>''))(c)).join('')
     : '<div class="empty">Nothing matched. Try a size like “M8”, “#8”, “38mm” or “1 1/2”.</div>';
@@ -38195,29 +38280,38 @@ function fgRenderScrewPanel(){
   const row = SCREW_GAUGES.find(r=> r.gauge === fgSelectedGauge);
   document.getElementById('fg_screw_card').innerHTML = row ? fgScrewCardHTML({ row }) : '';
 }
+/* The four reference charts, one at a time.
+
+   All four at once was four panels and about thirty-four rows of table
+   below the part of the page anyone actually uses -- the same "long list
+   pushes the thing you came for off the top" that the stock log and the
+   price registry were just cured of. They are charts to consult, not
+   feeds to scan, so only the one being consulted is on screen. */
+const FG_REF_TABLES = [
+  {key:'lengths', label:'Lengths', head:['Inches', 'Exact mm', 'Sold as'],
+   rows: ()=> TRADE_LENGTHS.map(r=> [esc(r.inchLabel), esc(fgMmStr(fgInchToMm(r.inch))), `<b>${esc(String(r.tradeMm))} mm</b>`])},
+  {key:'plugs', label:'Wall plugs', head:['Plug', 'Colour', 'Masonry drill', 'Takes screws'],
+   rows: ()=> WALL_PLUGS.map(r=> [`<b>${esc(String(r.size))} mm</b>`, esc(r.colour || '—'), `${esc(String(r.drill))} mm`,
+     esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm coach screws`)])},
+  {key:'rivets', label:'Rivets', head:['Rivet', 'Inch name', 'Drill bit', 'Lengths'],
+   rows: ()=> RIVETS.map(r=> [`<b>${esc(String(r.dia))} mm</b>`, esc(r.inchLabel), `${esc(String(r.drill))} mm`, esc(r.gripNote)])},
+  {key:'imphex', label:'Imperial hex', head:['Thread', 'Spanner (AF)', 'mm', 'Metric spanner'],
+   rows: ()=> IMPERIAL_HEX.map(r=> [`<b>${esc(r.thread)}</b>`, esc(r.afLabel), esc(String(r.afMm)), esc(r.metricNote)])},
+];
+let fgRefTable = 'lengths';
+function fgRenderRefPanel(){
+  document.getElementById('fg_ref_chips').innerHTML = FG_REF_TABLES.map(t=>
+    `<button type="button" class="fg-chip${t.key === fgRefTable ? ' on' : ''}" data-fg-ref="${esc(t.key)}" aria-pressed="${t.key === fgRefTable}">${esc(t.label)}</button>`).join('');
+  const def = FG_REF_TABLES.find(t=> t.key === fgRefTable) || FG_REF_TABLES[0];
+  document.getElementById('fg_ref_body').innerHTML = `<div class="an-scroll"><table class="fg-table">
+    <thead><tr>${def.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${def.rows().map(cells=>`<tr>${cells.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
 function renderFasteners(){
   fgRenderBoltPanel();
   fgRenderScrewPanel();
-  // The static tables never change, so they are built once and kept.
-  const lengths = document.getElementById('fg_lengths');
-  if(!lengths.innerHTML){
-    lengths.innerHTML = `<div class="an-scroll"><table class="fg-table">
-      <thead><tr><th>Inches</th><th>Exact mm</th><th>Sold as</th></tr></thead>
-      <tbody>${TRADE_LENGTHS.map(r=>`<tr><td>${esc(r.inchLabel)}</td><td>${esc(fgMmStr(fgInchToMm(r.inch)))}</td><td><b>${esc(String(r.tradeMm))} mm</b></td></tr>`).join('')}</tbody>
-    </table></div>`;
-    document.getElementById('fg_plugs').innerHTML = `<div class="an-scroll"><table class="fg-table">
-      <thead><tr><th>Plug</th><th>Colour</th><th>Masonry drill</th><th>Takes screws</th></tr></thead>
-      <tbody>${WALL_PLUGS.map(r=>`<tr><td><b>${esc(String(r.size))} mm</b></td><td>${esc(r.colour || '—')}</td><td>${esc(String(r.drill))} mm</td><td>${esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm coach screws`)}</td></tr>`).join('')}</tbody>
-    </table></div>`;
-    document.getElementById('fg_rivets').innerHTML = `<div class="an-scroll"><table class="fg-table">
-      <thead><tr><th>Rivet</th><th>Inch name</th><th>Drill bit</th><th>Lengths</th></tr></thead>
-      <tbody>${RIVETS.map(r=>`<tr><td><b>${esc(String(r.dia))} mm</b></td><td>${esc(r.inchLabel)}</td><td>${esc(String(r.drill))} mm</td><td>${esc(r.gripNote)}</td></tr>`).join('')}</tbody>
-    </table></div>`;
-    document.getElementById('fg_imphex').innerHTML = `<div class="an-scroll"><table class="fg-table">
-      <thead><tr><th>Thread</th><th>Spanner (AF)</th><th>mm</th><th>Metric spanner</th></tr></thead>
-      <tbody>${IMPERIAL_HEX.map(r=>`<tr><td><b>${esc(r.thread)}</b></td><td>${esc(r.afLabel)}</td><td>${esc(String(r.afMm))}</td><td>${esc(r.metricNote)}</td></tr>`).join('')}</tbody>
-    </table></div>`;
-  }
+  fgRenderRefPanel();
   fgRenderResults();
 }
 
@@ -38230,6 +38324,16 @@ document.getElementById('tab-fasteners').addEventListener('click', (e)=>{
   if(bolt){ fgSelectedBolt = bolt.getAttribute('data-fg-bolt'); fgRenderBoltPanel(); return; }
   const gauge = e.target.closest('[data-fg-gauge]');
   if(gauge){ fgSelectedGauge = Number(gauge.getAttribute('data-fg-gauge')); fgRenderScrewPanel(); return; }
+  const ref = e.target.closest('[data-fg-ref]');
+  if(ref){ fgRefTable = ref.getAttribute('data-fg-ref'); fgRenderRefPanel(); return; }
+  const ex = e.target.closest('[data-fg-example]');
+  if(ex){
+    const box = document.getElementById('fg_q');
+    box.value = ex.getAttribute('data-fg-example');
+    fgRenderResults();
+    box.focus();
+    return;
+  }
   const find = e.target.closest('[data-fg-find]');
   if(find){
     // Straight to the catalogue, filtered to the translated term. The
