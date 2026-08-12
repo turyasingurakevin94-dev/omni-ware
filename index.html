@@ -15960,11 +15960,20 @@ function ipComputeQty(rawQty, unitMode, packQty){
 function ipSuggestionPriceNote(p, variantIdx){
   const best = rankedPriceRows(p.id, variantIdx)[0];
   if(!best) return '<span class="ip-price-none">No price on file</span>';
+  /* The tier the supplier actually offers, not a hardcoded one. The
+     first cut always asked the RETAIL rule -- and half this shop's
+     catalogue is carton-only, priced wholesale with a wholesale markup
+     rule and no retail anything. Every one of those products showed the
+     amber "no markup rule" warning while carrying a perfectly good rule
+     for the tier it is actually sold at. A supplier with a retail price
+     is asked the retail rule; one who sells only whole packs is asked
+     the wholesale rule against the wholesale cost. */
+  const kind = best.retail!=null ? 'retail' : 'wholesale';
   const cost = best.retail!=null ? best.retail : best.wholesale;
   const packQty = Number(best.packQty)||0;
-  const sell = suggestedSellingPrice(p, cost, 'retail', variantIdx, packQty);
+  const sell = suggestedSellingPrice(p, cost, kind, variantIdx, packQty);
   if(sell==null){
-    return `<span class="ip-price-norule" title="No markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(cost, best.unit)} · no markup rule</span>`;
+    return `<span class="ip-price-norule" title="No ${kind} markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(cost, best.unit)} · no markup rule</span>`;
   }
   return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>`;
 }

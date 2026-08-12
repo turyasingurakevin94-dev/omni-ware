@@ -78,6 +78,24 @@ const src = read('index.html');
   t.check(/No price on file/.test(scope.ipSuggestionPriceNote(ghost, null)),
     'no price rows at all still reads as exactly that');
 
+  /* The Mulper shape, reported from the running shop: a carton-only
+     supplier (wholesale price, retail null) and a WHOLESALE markup rule
+     -- the house norm on half this catalogue. The first cut hardcoded
+     the retail tier and painted every such product with the amber
+     "no markup rule" warning while it carried a perfectly good rule for
+     the tier it is actually sold at. */
+  data.prices.push({ id: 3, productId: 'P4', variantIdx: null, supplierId: 'S1',
+    wholesale: 150000, retail: null, packQty: 0, unit: 'Ctn', tiers: [], outOfStock: false });
+  const cartonOnly = { id: 'P4', name: 'Normal Mulper', wholesaleMarkupType: 'fixed', wholesaleMarkupValue: 10000 };
+  const carton = scope.ipSuggestionPriceNote(cartonOnly, null);
+  t.check(/ip-price-sell/.test(carton) && /160,000/.test(carton),
+    `a carton-only product is asked its WHOLESALE rule — 150,000 + 10,000 sells at 160,000 (${carton.replace(/<[^>]*>/g, '')})`);
+  /* And one genuinely without a rule for its own tier still warns --
+     naming which tier is missing, so the fix lands on the right field. */
+  const cartonBare = scope.ipSuggestionPriceNote({ id: 'P4', name: 'Bare Carton' }, null);
+  t.check(/ip-price-norule/.test(cartonBare) && /No wholesale markup rule/.test(cartonBare),
+    'a carton-only product with no wholesale rule warns about the wholesale rule, not the retail one');
+
   t.check(/14 in stock/.test(scope.ipSuggestionStockNote(ruled, null)),
     'the row says what the shelf can cover');
   t.check(/out of stock/.test(scope.ipSuggestionStockNote(bare, null)),
