@@ -2995,6 +2995,14 @@
   .q-client-ac-divider{border-top:1px solid var(--line);margin-top:6px;}
 
   .quote-layout{display:flex;flex-direction:column;gap:12px;}
+  .q-empty-doc{
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:34px 16px 38px;text-align:center;color:var(--ink-soft);
+  }
+  .q-empty-doc > .icon{width:26px;height:26px;opacity:.5;}
+  .q-empty-doc-title{font-size:14px;font-weight:700;color:var(--ink);}
+  .q-empty-doc-hint{font-size:12px;}
+  .q-empty-doc-hint b{font-family:'IBM Plex Mono',monospace;background:var(--ow-steel-050);border:1px solid var(--line);border-radius:5px;padding:0 6px;}
   /* The document's front door. A real search field, not a + icon: on a
      call the gesture is click-type-Enter, and the affordance should
      look like what it is. */
@@ -3117,8 +3125,11 @@
   /* Two stacked facts now, not one line: how often they have bought, and
      where they stand. The container carries no chrome of its own so each
      block reads as itself. */
+  /* Inside the band: a full-width bottom line under the three fields,
+     separated by a hairline so the band reads as header-then-context. */
   .q-client-history{
-    display:none;flex-direction:column;align-items:stretch;margin-top:6px;
+    display:none;flex-direction:column;align-items:stretch;
+    flex-basis:100%;margin-top:2px;padding-top:8px;border-top:1px solid var(--ow-rule-soft, var(--line));
     font-size:12px;color:var(--ink-soft);
   }
   .q-client-history.show{display:flex;}
@@ -3130,7 +3141,7 @@
      client with prior orders is typed/selected. Horizontally scrollable
      chips (not a dropdown/table) so it stays glanceable on a live call and
      never fights the client-name autocomplete for vertical space. */
-  .q-client-usual{display:none;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:2px;}
+  .q-client-usual{display:none;gap:8px;flex-basis:100%;margin-top:2px;overflow-x:auto;padding-bottom:2px;}
   .q-client-usual.show{display:flex;}
   .q-usual-chip{
     flex:0 0 auto;display:flex;align-items:center;gap:8px;background:var(--panel);
@@ -5659,9 +5670,13 @@
           </div>
           <div class="field"><label>Phone</label><input type="text" id="q_client_phone" placeholder="e.g. 0700 000 000"></div>
           <div class="field"><label>Date</label><input type="date" id="q_date"></div>
+          <!-- What the shop knows about this client, on the same band that
+               names them -- two loose strips floating under the header
+               were the last of the old form's islands. Both keep their
+               ids and their render functions; only the address changed. -->
+          <div class="q-client-history" id="q_client_history"></div>
+          <div class="q-client-usual" id="q_client_usual"></div>
         </div>
-        <div class="q-client-history" id="q_client_history"></div>
-        <div class="q-client-usual" id="q_client_usual"></div>
       </div>
 
       <div class="quote-layout">
@@ -16643,6 +16658,26 @@ function renderQuoteItems(){
      printed quotation, the WhatsApp message and the client copy all
      totalled the sell. Measured on a three-line quote: the screen said
      3,845,000 and every document the client received said 4,806,250. */
+  /* An empty quote used to render the full grid anyway: eight column
+     headers over nothing and three footer rows all reading 0 UGX --
+     zeros presented as an account. An empty document is an invitation
+     to act, and the one act that starts a quote is adding an item. The
+     add buttons keep their ids so the wiring below binds either way. */
+  if(items.length===0){
+    wrap.innerHTML = `<div class="q-empty-doc">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <div class="q-empty-doc-title">No items yet</div>
+      <div class="q-empty-doc-hint">Search above to add the first one — or press <b>/</b> to jump to the search.</div>
+      <button type="button" class="qc-add-card" id="q_add_card_btn" style="display:none;"></button>
+      <button type="button" class="q-add-icon" id="q_add_row_btn" style="display:none;"></button>
+      <div class="q-add-row-placeholder" style="display:none;"></div>
+    </div>`;
+    renderQuoteFinbar(0, 0, 0);
+    wrap.querySelector('#q_add_row_btn').addEventListener('click', openItemPicker);
+    wrap.querySelector('.q-add-row-placeholder').addEventListener('click', openItemPicker);
+    wrap.querySelector('#q_add_card_btn').addEventListener('click', openItemPicker);
+    return;
+  }
   wrap.innerHTML = `<div class="qp-items-table-wrap"><table><thead><tr>
     <th class="q-gutter-th"></th><th>Item</th><th>Qty</th><th>Price each</th><th>Line total</th>
     <th class="q-shop-first q-supplier-th">Supplier</th><th>Buy @</th><th>Margin</th>

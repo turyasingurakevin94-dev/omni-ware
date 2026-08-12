@@ -150,4 +150,32 @@ const src = read('index.html');
     'and grow their affordance when the hand arrives');
 }
 
+/* ---------- 6. an empty quote invites, and the band knows the client -- */
+{
+  const items = extractFunction(src, 'renderQuoteItems', 'index.html');
+  /* Eight column headers over nothing and three footer rows all reading
+     0 UGX -- zeros presented as an account. An empty document is an
+     invitation to the one act that starts a quote. */
+  t.check(/if\(items\.length===0\)\{\s*wrap\.innerHTML = `<div class="q-empty-doc">/.test(items),
+    'an empty quote renders an invitation, not a table of zero totals');
+  t.check(/Search above to add the first one/.test(items) && /press <b>\/<\/b>/.test(items),
+    'that points at the search and teaches the shortcut');
+  t.check(/renderQuoteFinbar\(0, 0, 0\);/.test(items),
+    'while the bar still shows its zeros — it is the constant surface');
+  /* The add buttons keep their ids in the empty branch too, hidden, so
+     the wiring binds either way instead of throwing on a null. */
+  t.check((items.match(/id="q_add_card_btn"/g) || []).length === 2,
+    'and the add entries exist in both branches for the wiring to find');
+
+  /* The client context strips live INSIDE the header band now. The
+     distinguishing fact is what sits between the date field and the
+     history strip: the old markup closed the band there (an extra
+     </div>), the new one flows straight on -- so the assertion is
+     "nothing closes in between", not "both appear somewhere near". */
+  t.check(/id="q_date"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-client-history"/.test(src),
+    'history and usual-buys are the band’s own bottom line, not islands under it');
+  t.check(/id="q_client_usual"><\/div>\s*<\/div>/.test(src),
+    'and the band closes after them, holding all five pieces');
+}
+
 process.exit(t.done() ? 1 : 0);
