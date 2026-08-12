@@ -521,4 +521,21 @@ const INDEX = railIndex();
     'and the phone override is written after the rail rule it overrides');
 }
 
+/* ---------- a header full of buttons still fits the phone -------------
+ *
+ * Reported from a phone: "Add product" hung 55px past the right edge of
+ * its panel with its label cut in half. .btn-row was display:flex with
+ * no wrap, and the Products header carries three controls -- Print list,
+ * the price-mode group, Add product -- which together are wider than a
+ * phone.
+ *
+ * A button nobody can reach is worse than a button on a second line, and
+ * wrapping costs nothing at any width where they already fit.
+ */
+{
+  const rowRule = (/\.btn-row\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/display:flex/.test(rowRule) && /flex-wrap:wrap/.test(rowRule),
+    `a row of buttons wraps rather than running off the panel (${rowRule})`);
+}
+
 process.exit(t.done() ? 1 : 0);

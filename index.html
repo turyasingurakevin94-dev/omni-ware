@@ -548,7 +548,12 @@
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
   .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
   .btn-ghost.danger:hover{border-color:var(--danger);color:var(--danger);}
-  .btn-row{display:flex;gap:10px;margin-top:4px;}
+  /* Wraps. Three controls in a header row -- Print list, the price-mode
+     group, Add product -- are wider than a phone, and without this the
+     last one simply hung 55px past the panel with its label cut in half.
+     A button nobody can reach is worse than a button on a second line,
+     and wrapping costs nothing at any width where they already fit. */
+  .btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;}
   .btn-icon{display:inline-flex;align-items:center;gap:8px;}
   .btn-icon .icon{width:15px;height:15px;}
 
@@ -3233,6 +3238,9 @@
   .qp-margin-pill-lg.good{background:var(--good-bg);color:var(--good);}
   .qp-margin-pill-lg.warn{background:#FCEACB;color:var(--accent-ink);}
   .qp-margin-pill-lg.danger{background:#F7D9D3;color:var(--danger);}
+  /* Nothing on the quote yet. Grey says "no reading", where red said
+     "this quote loses money" about a form nobody had filled in. */
+  .qp-margin-pill-lg.quiet{background:var(--ow-steel-050);color:var(--ink-soft);}
 
   /* WhatsApp quick-send button */
   .qp-tbtn-whatsapp{background:#E6F6EC;border-color:#BFE6CC;color:#1E7B3E;}
@@ -17349,8 +17357,18 @@ function renderQuoteFinbar(grandBuy, grandSell, profit){
   const bar = document.getElementById('q_finbar');
   if(!bar) return;
   const marginPct = grandSell>0 ? (profit/grandSell*100) : 0;
+  /* An EMPTY quote is not a losing one. With nothing on it every figure
+     is zero, and zero scored as danger painted a red 0% across the
+     bottom of a form nobody had started filling in yet -- red is this
+     app's grammar for something being wrong, and the only thing wrong
+     was that the rep had just opened the screen.
+
+     Nothing bought and nothing sold is the empty case; anything priced
+     that still keeps nothing is a real warning and keeps its red. */
+  const empty = grandSell <= 0 && grandBuy <= 0;
   let pillClass = 'good';
-  if(grandSell<=0 || profit<=0) pillClass = 'danger';
+  if(empty) pillClass = 'quiet';
+  else if(grandSell<=0 || profit<=0) pillClass = 'danger';
   else if(marginPct < 10) pillClass = 'warn';
   /* Lives on the sticky bar now, beside the actions: the figure the
      admin reads aloud leads, the shop's own line sits under it at a
@@ -17363,7 +17381,7 @@ function renderQuoteFinbar(grandBuy, grandSell, profit){
       <div class="qp-says-value">${fmtUGX(grandSell)}</div>
     </div>
     <div class="qp-shopline">
-      <span>You keep <b style="color:${profit<0?'var(--danger)':'var(--good)'};">${fmtUGX(profit)}</b></span>
+      <span>You keep <b style="color:${empty ? 'var(--ink-soft)' : (profit<0?'var(--danger)':'var(--good)')};">${fmtUGX(profit)}</b></span>
       <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
     </div>
   `;

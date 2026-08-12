@@ -131,6 +131,26 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'shown only while the quote tab is, since fixed position ignores tab visibility');
   t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:86px;\}/.test(src),
     'while the document reserves the bar’s height so the last row is never buried under it');
+
+  /* AN EMPTY QUOTE IS NOT A LOSING ONE. With nothing on it every figure
+     is zero, and `grandSell<=0 || profit<=0` scored that as danger --
+     painting a red 0% across the bottom of a form nobody had started.
+     Red is this app's grammar for something being wrong, and the only
+     thing wrong was that the rep had opened the screen.
+
+     The distinction is bought and sold BOTH being nothing. A quote that
+     has been priced and still keeps nothing is a real warning and must
+     stay red: that is the case this bar exists to catch. */
+  t.check(/const empty = grandSell <= 0 && grandBuy <= 0;/.test(bar),
+    'an empty quote is told apart from a losing one by there being no cost either');
+  t.check(/if\(empty\) pillClass = 'quiet';/.test(bar),
+    'and reads as no reading rather than as a loss');
+  t.check(/else if\(grandSell<=0 \|\| profit<=0\) pillClass = 'danger';/.test(bar),
+    'while a priced quote that keeps nothing is still red — the warning is not disarmed');
+  t.check(/\.qp-margin-pill-lg\.quiet\{background:var\(--ow-steel-050\);color:var\(--ink-soft\);\}/.test(src),
+    'the quiet pill is grey, not a colour that means anything');
+  t.check(/color:\$\{empty \? 'var\(--ink-soft\)' :/.test(bar),
+    'and "You keep 0" goes grey with it rather than reporting zero in profit-green');
 }
 
 /* ---------- 5. the mobile card says the same thing ------------------- *
