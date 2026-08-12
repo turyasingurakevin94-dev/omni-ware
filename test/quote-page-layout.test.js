@@ -144,6 +144,36 @@ const src = read('index.html');
   // The old chip toolbar is gone as a component, not merely restyled.
   t.check(!/\.qp-tbtn\{/.test(src) && !/class="qp-toolbar"/.test(src),
     'the icon-over-label chip toolbar no longer exists');
+
+  /* ICON-ONLY SECONDARIES. Labelled, the three of them plus Save were
+     wider than a phone and wrapped to a second row -- the bar ate 150px
+     of a screen whose whole job is the quote above it.
+
+     A control with no text still has to say what it is, so each carries
+     an aria-label, and each is 40px square because a picture is not a
+     smaller target than a word. */
+  const iconBtns = ['q_print_quote_btn', 'q_whatsapp_btn', 'q_more_btn'];
+  iconBtns.forEach((id) => {
+    const el = (new RegExp(`<button[^>]*id="${id}"[^>]*>`)).exec(bar);
+    t.check(el && /aria-label="[^"]+"/.test(el[0]), `${id} is named for anything not reading the picture`);
+    t.check(el && /title="[^"]+"/.test(el[0]), `and keeps the long explanation on hover`);
+  });
+  // The labels are gone from the markup, not merely hidden with CSS --
+  // a hidden label still costs layout in some engines and reads out twice.
+  t.check(!/>\s*Client copy\s*<\/button>/.test(bar) && !/>\s*WhatsApp\s*<\/button>/.test(bar),
+    'and the words themselves are gone rather than hidden');
+
+  const btnRule = (/\.qbar-btn\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/min-width:40px/.test(btnRule) && /min-height:40px/.test(btnRule),
+    'an icon-only button is still a thumb-sized target');
+  const saveRule = (/\.qbar-save\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/min-height:40px/.test(saveRule),
+    'and Save matches it, so the row sits on one line');
+
+  /* Save keeps its words. It is the commit, on a money document, and it
+     is the one control on this bar worth the space. */
+  t.check(/id="q_save_btn"[^>]*>[\s\S]{0,200}?Save quote/.test(bar),
+    'Save quote is still labelled — an unlabelled commit is not a saving worth making');
 }
 
 /* ---------- 4. the bar exists exactly when the page does ------------- */
