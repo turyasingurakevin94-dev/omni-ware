@@ -9953,6 +9953,71 @@ function fmtUGXPerUnitPack(n, row){
   return fmtUGXPerUnit(n, row ? row.unit : '');
 }
 // esc() now lives in shared-worker.js.
+
+/* ---- Long lists show a page, and say how many there really are -------
+
+   The stock log got this first, because it was the one that got noticed.
+   It is not the worst: the Price Registry renders every row it has --
+   276 of them today, and it only ever grows, because a price entry is
+   never deleted, it is superseded. Products, Customers and Suppliers are
+   the same shape. Each of those pages puts its filters and a summary
+   strip at the top, and then buries them under a grid tall enough that
+   getting back to the search box is a scroll.
+
+   THE PAGE IS TAKEN LAST, OVER ROWS ALREADY FILTERED, SORTED AND
+   GROUPED. Every count, summary and total on these pages is computed
+   over the FULL filtered set and must stay that way -- a summary that
+   silently described the visible page instead of the search would be
+   worse than a long list, because a long list is at least honest.
+   listPageSlice takes rows and returns rows; it is given nothing that
+   could tempt a caller to total it.
+
+   One delegated listener rather than a wiring step each renderer has to
+   remember, because a renderer that forgets draws a button that does
+   nothing and looks broken. */
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24 };
+const LIST_PAGE_DEFAULT = 24;
+// Sticky per list, and deliberately NOT reset when the filter changes:
+// somebody who has asked to see everything has asked about the list, not
+// about one search of it.
+const listPageExpanded = {};
+
+function listPageSize(id){ return LIST_PAGE_SIZES[id] || LIST_PAGE_DEFAULT; }
+function listPageSlice(id, rows){
+  return listPageExpanded[id] ? rows : rows.slice(0, listPageSize(id));
+}
+/* The control, or nothing when the list already fits. `total` is what
+   matched, so the label promises exactly what pressing it delivers --
+   unlike the stock log's, which has a hard cap above it to apologise for.
+   These pages have no cap: showing all of them means all of them. */
+function listMoreButtonHTML(id, total, noun){
+  if(total <= listPageSize(id)) return '';
+  const label = listPageExpanded[id] ? 'Show fewer' : `Show all ${total} ${noun}`;
+  return `<div class="log-more-row">
+    <button type="button" class="btn btn-ghost" data-list-more="${esc(id)}" aria-expanded="${listPageExpanded[id] ? 'true' : 'false'}">${label}</button>
+  </div>`;
+}
+const LIST_PAGE_RERENDER = {
+  prices: ()=> triggerPricesRender(),
+  products: ()=> triggerProductsRender(),
+  customers: ()=> renderCustomers(document.getElementById('c_search').value),
+  suppliers: ()=> renderSuppliers(document.getElementById('s_search').value),
+};
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest ? e.target.closest('[data-list-more]') : null;
+  if(!btn) return;
+  const id = btn.getAttribute('data-list-more');
+  const panel = btn.closest('.panel');
+  listPageExpanded[id] = !listPageExpanded[id];
+  const again = LIST_PAGE_RERENDER[id];
+  if(again) again();
+  // Collapsing from the bottom of a long grid would leave the viewport
+  // below the panel, reading as the page having jumped somewhere else.
+  if(!listPageExpanded[id] && panel){
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    panel.scrollIntoView({block:'start', behavior: reducedMotion ? 'auto' : 'smooth'});
+  }
+});
 // Renders a stored YYYY-MM-DD date as a relative "N days ago" label
 // (used in the Price Registry so entries show their age at a glance).
 function daysAgoLabel(dateStr){
@@ -21294,7 +21359,9 @@ function renderSuppliers(filter=''){
       : '<div class="empty">No suppliers or priced products match your search.</div>';
     return;
   }
-  wrap.innerHTML = `<div class="supplier-grid">${rows.map(s=>supplierCardHTML(s, matchMap.get(s.id))).join('')}</div>`;
+  wrap.innerHTML = `<div class="supplier-grid">${
+    listPageSlice('suppliers', rows).map(s=>supplierCardHTML(s, matchMap.get(s.id))).join('')}</div>`
+    + listMoreButtonHTML('suppliers', rows.length, 'suppliers');
 }
 function editSupplier(id){
   const s = data.suppliers.find(x=>x.id===id); if(!s) return;
@@ -23732,7 +23799,9 @@ function renderCustomers(filter=''){
       : '<div class="empty">No customers match your search.</div>';
     return;
   }
-  wrap.innerHTML = `<div class="customer-grid">${rows.map(c=>customerCardHTML(c)).join('')}</div>`;
+  wrap.innerHTML = `<div class="customer-grid">${
+    listPageSlice('customers', rows).map(c=>customerCardHTML(c)).join('')}</div>`
+    + listMoreButtonHTML('customers', rows.length, 'customers');
 }
 
 /* Delegated once on the wrapper rather than bound per card, because the
@@ -26887,7 +26956,9 @@ function renderProducts(filter='', categoryFilter='', supplierFilter='', pricedF
   // No column heading: a card labels each figure where it stands, and a
   // heading strip over a grid of cards would point at nothing.
   wrap.innerHTML = rows.length
-    ? heldNote + `<div class="price-grid">${rows.map(r=> productLineHTML(r, tokens)).join('')}</div>`
+    ? heldNote + `<div class="price-grid">${
+        listPageSlice('products', rows).map(r=> productLineHTML(r, tokens)).join('')}</div>`
+      + listMoreButtonHTML('products', rows.length, 'product lines')
     : heldNote + `<div class="empty">${
         pricedFilter === 'unpriced' ? 'Every line that matches has a price on file.'
         : pricedFilter === 'priced' ? 'Nothing that matches has been priced yet.'
@@ -29378,8 +29449,12 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
      It also leaves a product's competing quotes consecutive in the grid,
      which is the one thing the grouped layout had that a plain card
      grid never did. */
+  // Sliced AFTER grouping, so the page keeps a product's competing quotes
+  // consecutive instead of cutting a comparison in half at the boundary.
+  const ordered = priceGroupsFor(rows, sortMode).flatMap(g=> g.rows);
   wrap.innerHTML = `<div class="price-grid">${
-    priceGroupsFor(rows, sortMode).flatMap(g=> g.rows).map(r=> priceCardHTML(r, tokens)).join('')}</div>`;
+    listPageSlice('prices', ordered).map(r=> priceCardHTML(r, tokens)).join('')}</div>`
+    + listMoreButtonHTML('prices', ordered.length, 'price entries');
 }
 // A price entry saved before the single-list rework (or one that's only
 // ever had flat wholesale/retail typed, never a tier) has no `tiers` of

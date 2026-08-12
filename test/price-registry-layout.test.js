@@ -199,9 +199,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'through priceGroupsFor, so the chosen sort still applies');
   /* And a product's competing quotes stay consecutive in the grid, which
      is the one thing the grouped layout had that a plain card grid did
-     not. Flattening the groups keeps it for free. */
-  t.check(/\.flatMap\(g=> g\.rows\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
-    'and one product\'s quotes land next to each other rather than scattered by date');
+     not. Flattening the groups keeps it for free.
+
+     This was one expression until the registry started showing a page of
+     twenty-four rather than all 276. The chain is now broken over a
+     binding and a slice, so the check is on the ORDER SURVIVING that
+     journey rather than on its punctuation: the flattened groups go into
+     `ordered`, and the only thing between `ordered` and the cards is the
+     page. Anything else inserted there -- a re-sort, a filter, a second
+     grouping -- fails this. */
+  t.check(/const ordered = priceGroupsFor\(rows, sortMode\)\.flatMap\(g=> g\.rows\);/.test(code),
+    'the flattened groups are what gets rendered');
+  t.check(/listPageSlice\('prices', ordered\)\.map\(r=> priceCardHTML\(r, tokens\)\)/.test(code),
+    'and one product\'s quotes land next to each other rather than scattered by date — nothing but the page sits between grouping and drawing');
 
   /* .price-card and .price-grid are NOT dead with it: the agent
      promotions and the commission claims still build on them. Removing
