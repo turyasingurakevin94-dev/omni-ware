@@ -217,9 +217,26 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(figures(scope.orderCashStripHTML(order({ items: [line({ qty: 3 })] }))).pop() === 99000,
     'and the figure follows -- three at 33,000, not three at the pack rate we have not earned');
 
+  /* What the client pays moved OFF the meta row and onto the name row,
+     right-aligned in mono -- who and how much are the two facts a board
+     is scanned for, and buried mid-row the figure read like a timestamp.
+     The meta row must not carry it any more (two money figures on one
+     card is how the buy cost gets read as the sell price), and the name
+     row must. */
   const sell = scope.orderMetaRowHTML(order({ items: [line({ qty: 10, sellPrice: 45000 })] }));
-  t.check(figures(sell)[0] === 450000,
-    'the card still shows what the client pays, which is a different number on the same row');
+  t.check(figures(sell).every((n) => n !== 450000),
+    'the sell total is no longer buried in the meta row');
+  t.check(/class="sq-client-total" title="What the client pays">\$\{fmtUGX\(savedQuoteTotal\(q\)\)\}/.test(read('index.html')),
+    'it sits on the name row instead, right-aligned against the name');
+
+  /* A line received in full costs 0 more, and a strip reading
+     "To buy · 1 line · 1 supplier · 0 UGX" is a claim that there is
+     buying to do on an order whose buying is finished. Run with a
+     received fixture, because the guard is one line a mutant deletes. */
+  const done = order({ items: [line({ qty: 10,
+    receivedQty: 10, receivedPrice: 10000, receivedAt: '2026-08-03T09:00:00Z' })] });
+  t.check(scope.orderCashStripHTML(done) === '',
+    'an order whose goods are all in shows no cash strip at all');
 }
 
 /* ---------- 4. the banner is a glance, not a report ------------------- */
@@ -285,7 +302,7 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   const q = order({ items: [line(), line({ supplierId: '__stock__' }), line({ supplierId: '__stock__' })] });
   const meta = scope.orderMetaRowHTML(q);
 
-  t.check(/data-i="clock"/.test(meta) && /data-i="items"/.test(meta) && /data-i="money"/.test(meta),
+  t.check(/data-i="clock"/.test(meta) && /data-i="items"/.test(meta),
     'the meta row is icons, not sentences -- the card is scanned, not read');
   t.check(/2 from stock/.test(meta) && /data-i="shelf"/.test(meta),
     'and says how much of the order is already on our shelf');

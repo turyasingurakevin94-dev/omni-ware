@@ -3481,7 +3481,11 @@
      scrolling a long column. */
   .sq-col-head{display:flex;align-items:center;gap:8px;padding:6px 2px 10px;}
   .sq-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .sq-col-title{font-size:11.5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:var(--ink);}
+  /* Quiet on purpose, and the short name only: "STEP 2. AWAITING GOODS"
+     restated what the rail directly above already numbers and colours,
+     so every stage announced itself twice in two lines. The head only
+     anchors a column to its colour while the strip is scrolled. */
+  .sq-col-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;color:var(--ink-soft);}
   .sq-col-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-soft);background:#EEF1F3;border-radius:999px;padding:1px 8px;}
   .sq-col-body{display:flex;flex-direction:column;gap:10px;min-height:8px;}
   /* Quiet, so empty steps recede and the columns with work carry the
@@ -3512,7 +3516,13 @@
   .sq-card-top{display:flex;align-items:flex-start;gap:8px;}
   .sq-card-check{margin-top:2px;flex-shrink:0;}
   .sq-card-info{flex:1;min-width:0;}
-  .sq-card .sq-client{font-size:13px;line-height:1.35;}
+  /* Who and how much: the two facts a board is scanned for, on one
+     line, the figure in mono against the right edge. It used to be an
+     icon-prefixed entry midway down the meta row, indistinguishable at
+     a glance from the timestamp. */
+  .sq-card .sq-client{font-size:13px;line-height:1.35;display:flex;align-items:baseline;gap:8px;}
+  .sq-client-name{flex:1;min-width:0;}
+  .sq-client-total{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);}
   .sq-location-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
   .sq-location-row .icon{width:12px;height:12px;flex-shrink:0;}
   .sq-card-meta-rows{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
@@ -3550,11 +3560,14 @@
   .sq-cash-line.gap{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   /* The step's figure, above the cards. A button because it opens the
      buying list -- what looks pressable has to be pressable. */
+  /* A summary, not an alarm. The full amber fill out-shouted every card
+     in the column -- semantic colour stays on the icon and the figure,
+     and the panel itself goes neutral so the cards carry the eye. */
   .sq-cash{
     all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;
-    background:var(--ow-amber-soft);border-radius:12px;padding:11px 13px;margin:0 0 10px;
+    background:var(--ow-steel-050);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;
   }
-  .sq-cash:hover{background:#F7E6C6;}
+  .sq-cash:hover{border-color:var(--ink-soft);}
   .sq-cash:focus-visible{outline:2px solid var(--ow-amber);outline-offset:2px;}
   .sq-cash-top{display:flex;align-items:center;gap:7px;}
   .sq-cash-top .icon{width:17px;height:17px;color:var(--ow-amber-ink);flex-shrink:0;}
@@ -3609,7 +3622,7 @@
   .pr-supplier-head{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin-bottom:5px;}
   .pr-supplier-head b{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .pr-supplier-head .icon{width:14px;height:14px;color:var(--ink-soft);}
-  .sq-cash.sq-runs{border-color:#BFD9D1;background:var(--ow-verdigris-soft);}
+  .sq-cash.sq-runs{border-color:var(--line);background:var(--ow-steel-050);}
   .sq-cash.sq-runs .sq-cash-top .icon{color:var(--ow-verdigris);}
   .sq-cash.sq-runs .sq-cash-fig{color:var(--ow-verdigris);}
   .sq-cash-note{
@@ -4240,9 +4253,12 @@
      and three labels this long overflow a phone, so wrap here only. */
   #pickShortModal .modal-foot{flex-wrap:wrap;}
   .sq-card-actions-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px;}
+  /* Ghost at rest: two bordered circles per card made sixty rings on a
+     thirty-card board. The border appears on hover, where it means
+     something. Hit area unchanged. */
   .sq-stage-arrow{
     all:unset;box-sizing:border-box;flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
-    border-radius:50%;border:1px solid var(--line);color:var(--ink-soft);cursor:pointer;
+    border-radius:50%;border:1px solid transparent;color:var(--ink-soft);cursor:pointer;
   }
   .sq-stage-arrow .icon{width:15px;height:15px;}
   .sq-stage-arrow:hover:not(:disabled){background:#F5F7F8;color:var(--ink);border-color:var(--ink-soft);}
@@ -13573,7 +13589,6 @@ function orderMetaRowHTML(q){
   return `<div class="sq-meta">
     <span title="In this step for">${ICON_CLOCK}${esc(savedAgoLabel(q.stageEnteredAt || q.savedAt))}</span>
     <span title="${items} line${items===1?'':'s'} — open the order to see what they are">${ICON_ITEMS}${items}</span>
-    <span title="What the client pays">${ICON_MONEY}${fmtUGX(savedQuoteTotal(q))}</span>
     ${fromStock ? `<span class="stocked" title="${fromStock} line${fromStock===1?'':'s'} already on our shelf">${ICON_SHELF}${fromStock} from stock</span>` : ''}
   </div>`;
 }
@@ -13727,6 +13742,11 @@ function orderCashStripHTML(q){
     return `<div class="sq-cash-line gap" title="No supplier price on file for these lines">
       ${ICON_WARN}<span>${unpriced} line${unpriced===1?'':'s'} with no price on file</span></div>`;
   }
+  /* Everything already collected and paid for costs 0 more -- and a strip
+     reading "To buy - 1 line - 1 supplier - 0 UGX" is a claim that there
+     is buying to do, on an order whose buying is finished. Nothing left
+     to spend is nothing to say. */
+  if(!(total > 0)) return '';
   return `<div class="sq-cash-line" title="Priced at today's cheapest supplier">
     ${ICON_WALLET}<span>To buy · ${priced.length} line${priced.length===1?'':'s'} · ${suppliers} supplier${suppliers===1?'':'s'}${unpriced?` · ${unpriced} unpriced`:''}</span>
     <b>${fmtUGX(total)}</b></div>`;
@@ -18057,6 +18077,11 @@ setInterval(()=>{
 }, 60000);
 
 let sqActiveMobileStep = 'draft'; // which .sq-col the phone step-switcher currently shows
+/* Where the strip is scrolled to. The 60s poll re-renders the board by
+   replacing its HTML, and a fresh element starts at scrollLeft 0 -- so an
+   admin reading Completed was yanked back to Drafts every minute. Written
+   by the scroll listener, put back after every render. */
+let sqBoardScrollLeft = 0;
 function renderSavedQuotes(){
   ensureQuote();
   updateOrderStatusBar();
@@ -18110,7 +18135,7 @@ function renderSavedQuotes(){
       <div class="sq-card-top">
         <input type="checkbox" class="sq-check sq-card-check" data-id="${q.id}">
         <div class="sq-card-info">
-          <div class="sq-client">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}</div>
+          <div class="sq-client"><span class="sq-client-name">${esc(q.client.name || 'Unnamed client')}${q.id===data.quote.savedId? ' <span style="font-weight:600;color:var(--ink-soft);">(editing)</span>' : ''}${q.originAgentId ? ` <span class="st-status-pill agent" title="Placed through the agent app -- the name shown is the agent's, not the end client's">Agent order</span>` : ''}</span><span class="sq-client-total" title="What the client pays">${fmtUGX(savedQuoteTotal(q))}</span></div>
           ${location ? `<div class="sq-location-row"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>${esc(location)}</span></div>` : ''}
           <div class="sq-card-meta-rows">
             ${orderMetaRowHTML(q)}
@@ -18175,7 +18200,7 @@ function renderSavedQuotes(){
       <div class="sq-col${status===sqActiveMobileStep?' is-active-step':''}" data-status="${status}">
         <div class="sq-col-head">
           <span class="sq-col-dot" style="background:${SQ_STATUSES[status].color};"></span>
-          <span class="sq-col-title">${esc(SQ_STATUSES[status].label)}</span>
+          <span class="sq-col-title">${esc(ORDER_STATUS_SHORT_LABELS[status])}</span>
           <span class="sq-col-count">${group.length}</span>
           ${status==='preparing' ? pickupRunsIconHTML(group) : ''}
         </div>
@@ -18263,7 +18288,11 @@ function renderSavedQuotes(){
     boardEl.classList.toggle('can-left', boardEl.scrollLeft > 4);
     boardEl.classList.toggle('can-right', boardEl.scrollLeft < boardEl.scrollWidth - boardEl.clientWidth - 4);
   };
-  boardEl.addEventListener('scroll', updateEdgeFades, {passive:true});
+  boardEl.addEventListener('scroll', ()=>{ sqBoardScrollLeft = boardEl.scrollLeft; updateEdgeFades(); }, {passive:true});
+  /* Instantly, not smoothly: this is restoring where the admin already
+     was, and a re-render that visibly slides is a re-render that draws
+     attention to itself sixty times an hour. */
+  if(sqBoardScrollLeft) boardEl.scrollLeft = sqBoardScrollLeft;
   updateEdgeFades();
 
   /* Drag-to-pan on the column background -- the gesture a desktop mouse

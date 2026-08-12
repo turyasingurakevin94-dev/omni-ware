@@ -216,4 +216,41 @@ const src = read('index.html');
   }
 }
 
+/* ---------- 8. the strip keeps its place --------------------------- */
+/*
+ * The 60s poll re-renders the board by replacing its HTML, and a fresh
+ * element starts at scrollLeft 0 -- so an admin reading Completed was
+ * yanked back to Drafts every minute, which was reported from the
+ * running shop within hours of the strip landing.
+ */
+{
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(/let sqBoardScrollLeft = 0;/.test(src),
+    'the scroll position lives outside the render, like the active step does');
+  t.check(/sqBoardScrollLeft = boardEl\.scrollLeft; updateEdgeFades\(\);/.test(render),
+    'written by the scroll listener as the admin moves');
+  t.check(/if\(sqBoardScrollLeft\) boardEl\.scrollLeft = sqBoardScrollLeft;/.test(render),
+    'and put back after every render, so the poll stops teleporting the board');
+  /* lastIndexOf: the string also appears inside the scroll listener,
+     which sits earlier in the source than the restore. The call that
+     matters is the immediate one at the end of the wiring. */
+  t.check(render.indexOf('boardEl.scrollLeft = sqBoardScrollLeft') < render.lastIndexOf('updateEdgeFades();'),
+    'restored before the fades are computed, so they describe the restored position');
+}
+
+/* ---------- 9. one number, said once --------------------------------- */
+{
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(/sq-col-title">\$\{esc\(ORDER_STATUS_SHORT_LABELS\[status\]\)\}/.test(render),
+    'the column head carries the short name — the rail directly above already numbers it');
+  t.check(!/sq-col-title">\$\{esc\(SQ_STATUSES\[status\]\.label\)\}/.test(render),
+    'not the "Step N." long label that restated the rail in caps');
+  /* The sell total moved from mid-meta-row to the name row: who and how
+     much are the two facts a board is scanned for. */
+  t.check(/sq-client-total" title="What the client pays">\$\{fmtUGX\(savedQuoteTotal\(q\)\)\}/.test(render),
+    'the total sits right-aligned on the name row');
+  t.check(!/ICON_MONEY\}\$\{fmtUGX\(savedQuoteTotal\(q\)\)/.test(extractFunction(src, 'orderMetaRowHTML', 'index.html')),
+    'and is gone from the meta row, where it read like a timestamp');
+}
+
 process.exit(t.done() ? 1 : 0);
