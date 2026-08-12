@@ -480,8 +480,12 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
   t.check(/id="tab-fasteners"/.test(stripped), 'the section exists');
   t.check(/data-tab="fasteners"[^>]*data-keywords="[^"]*spanner/.test(stripped),
     'the rail button exists and nav search will find "spanner"');
-  t.check(/class="mms-item" data-tab="fasteners"/.test(stripped),
-    'and the phone More sheet carries it too');
+  /* The phone sheet is generated from the rail (mmsRenderDestinations
+     walks NAV_INDEX), so a rail entry IS a phone entry -- there is no
+     second list to add it to. Checked as one destination on one rail
+     rather than as two copies agreeing. */
+  t.check(!/class="mms-item" data-tab=/.test(stripped),
+    'and the phone sheet carries it by being generated from that rail, not by a second copy');
   t.check(/if\(tab==='fasteners'\) renderFasteners\(\);/.test(stripped),
     'entering the tab renders it');
   t.check(/getElementById\('fg_q'\)\.addEventListener\('input', fgRenderResults\)/.test(stripped),

@@ -1398,8 +1398,19 @@
   .sc-details .sc-row .icon{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--ink-soft);}
   .sc-details .sc-row span{color:var(--ink);}
   .sc-notes{font-size:12px;color:var(--ink-soft);font-style:italic;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-  .sc-stats{display:flex;gap:8px;padding-top:11px;border-top:1px solid var(--line);}
-  .sc-stat{flex:1;display:flex;flex-direction:column;gap:2px;}
+  /* Wraps, and each figure claims a readable minimum rather than an
+     equal share. Four stats splitting a 342px phone panel got 78px each,
+     and "21,597,253 UGX" at 16px monospace needs about 120 -- flex:1
+     with no basis will not shrink below its content, so the fourth
+     figure simply hung off the panel. Loans lost "916,667 BEHIND
+     SCHEDULE" and Assets lost "CHARGED THIS YEAR", which is the one
+     number on each screen somebody is looking for.
+
+     130px basis puts two on a phone row and keeps all four on one line
+     anywhere wider. Shared by every card in the app that carries a
+     figure strip, so all of them stop clipping at once. */
+  .sc-stats{display:flex;flex-wrap:wrap;gap:8px;padding-top:11px;border-top:1px solid var(--line);}
+  .sc-stat{flex:1 1 130px;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .sc-stat b{font-size:16px;color:var(--ink);font-family:'IBM Plex Mono',monospace;line-height:1;}
   .sc-stat span{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
   .sc-stat.best b{color:var(--good);}
@@ -1478,6 +1489,21 @@
     .rost-who{grid-area:who;} .rost-state{grid-area:state;}
     .rost-stats{grid-area:stats;padding-top:4px;border-top:1px solid var(--ow-rule-soft);}
     .rost-actions{grid-area:actions;justify-content:flex-end;}
+  }
+  /* Those two minimums add up to 310px plus a 16px gap, inside a phone
+     panel with 280px of room -- so every staff row hung 48px off the
+     right and took its last action button with it. The name column may
+     shrink instead; the status chip takes only what it needs. */
+  @media (max-width:620px){
+    .rost-row{grid-template-columns:minmax(0,1fr) auto;}
+    /* Four filter chips are wider than the screen and cannot wrap
+       mid-word, so the strip scrolls rather than being cut at
+       "Unavailable". */
+    .rost-filters, .rost-period{overflow-x:auto;max-width:100%;scrollbar-width:none;}
+    .rost-filters::-webkit-scrollbar, .rost-period::-webkit-scrollbar{display:none;}
+    .rost-search{min-width:0;flex:1 1 100%;}
+    /* Five icon buttons on a 280px row wrap rather than run off it. */
+    .rost-actions{flex-wrap:wrap;}
   }
   .staff-card-unavailable{background:#FAFAFA;opacity:0.75;}
   .staff-card-unavailable:hover{opacity:1;}
@@ -4105,7 +4131,11 @@
   .st-delta.up{color:var(--ow-verdigris);background:var(--ow-verdigris-soft);}
   .st-delta.down{color:var(--ow-crimson);background:var(--ow-crimson-soft);}
 
-  .st-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
+  /* min() so the track can go below 300px when the screen has less than
+     that to give. A bare minmax(300px,1fr) is a floor the grid honours
+     even when it overflows, which is how the profit-and-loss column ran
+     6px past its panel and clipped the "changed" badges off every row. */
+  .st-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:18px;}
   .st-doc{border:1px solid var(--line);border-radius:12px;padding:16px 18px 14px;background:var(--panel);}
   .st-doc-wide{max-width:760px;}
   .st-doc-flag{border-color:#E4CFA6;background:#FEFCF7;}
@@ -4811,8 +4841,28 @@
   }
   .mms-title{font-family:'Archivo Black',sans-serif;font-size:17px;color:var(--ink);}
   .mms-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-  .mms-group{margin-bottom:18px;}
-  .mms-group-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;padding:0 4px 8px;}
+  .mms-group{margin-bottom:14px;}
+  .mms-group-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;padding:0 4px 6px;}
+  /* Tiles, three across. Twenty-odd destinations as full-width rows was
+     about 1,400px of scrolling to reach Setup; as tiles the whole map is
+     roughly one screen, which is what a menu is for. Three columns
+     because the longest label -- "Purchase analytics" -- still breaks
+     into two readable lines at that width, and four would break it into
+     three. */
+  .mms-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .mms-tile{
+    all:unset;box-sizing:border-box;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;
+    text-align:center;min-height:76px;padding:11px 5px 9px;border-radius:12px;
+    background:var(--ow-steel-050);border:1px solid transparent;color:var(--ink);
+  }
+  .mms-tile .nav-icon{
+    width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;
+    stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--ink-soft);
+  }
+  .mms-tile span{font-size:11.5px;font-weight:600;line-height:1.3;}
+  .mms-tile:active{background:var(--ow-steel-100);border-color:var(--line);}
+  .mms-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .mms-item{
     all:unset;box-sizing:border-box;display:block;width:100%;padding:14px 12px;font-size:14.5px;
     color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line);
@@ -5518,53 +5568,19 @@
     </button>
   </div>
   <div class="mms-body">
-    <!-- The same six sections as the rail, under the same names, holding
-         the same screens. They used to be five different ones (Sales,
-         Catalog, People, Reports, Settings) with their own idea of where
-         a supplier or a debtor belonged -- so the shop learnt one filing
-         system on the desktop and a second on the phone. The four the
-         bottom bar already carries are left out rather than repeated. -->
+    <!-- Destinations are BUILT from the rail (mmsRenderDestinations), not
+         written out again here. This was a hand-kept copy of twenty-odd
+         rows, which is how it came to be the one list with no icons on
+         it: the rail carries one per screen and the copy carried none,
+         so the phone got a wall of same-sized words to read while the
+         desktop got a glance. Reading the rail also ends the drift --
+         adding a screen used to mean remembering two lists, and the
+         worker row needed its own reveal in each. -->
+    <div id="mms_dest"></div>
+    <!-- Actions, not destinations, so they keep the row shape and stay
+         written down: they have no rail entry to be read off. -->
     <div class="mms-group">
-      <div class="mms-group-label">Sell</div>
-      <button type="button" class="mms-item" data-tab="quote">New quote</button>
-      <button type="button" class="mms-item" data-tab="invoices">Invoices</button>
-      <button type="button" class="mms-item" data-tab="customers">Customers</button>
-      <button type="button" class="mms-item" data-tab="agents">Sales agents</button>
-      <button type="button" class="mms-item" data-tab="whatsapp">WhatsApp</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Buy</div>
-      <button type="button" class="mms-item" data-tab="compare">Compare prices</button>
-      <button type="button" class="mms-item" data-tab="suppliers">Suppliers</button>
-      <button type="button" class="mms-item" data-tab="purchase-invoices">Purchase invoices</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Catalogue</div>
-      <button type="button" class="mms-item" data-tab="products">Products</button>
-      <button type="button" class="mms-item" data-tab="prices">Price registry</button>
-      <button type="button" class="mms-item" data-tab="media">Media</button>
-      <button type="button" class="mms-item" data-tab="fasteners">Fastener guide</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Money</div>
-      <button type="button" class="mms-item" data-tab="analytics-debtors">Who owes you</button>
-      <button type="button" class="mms-item" data-tab="analytics-creditors">Who you owe</button>
-      <button type="button" class="mms-item" data-tab="statements">Statements</button>
-      <button type="button" class="mms-item" data-tab="payroll">Payroll &amp; rent</button>
-      <button type="button" class="mms-item" data-tab="assets">Assets</button>
-      <button type="button" class="mms-item" data-tab="loans">Loans</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Insight</div>
-      <button type="button" class="mms-item" data-tab="analytics-sales">Sales analytics</button>
-      <button type="button" class="mms-item" data-tab="analytics-purchase">Purchase analytics</button>
-      <button type="button" class="mms-item" data-tab="map">Map</button>
-    </div>
-    <div class="mms-group">
-      <div class="mms-group-label">Setup</div>
-      <button type="button" class="mms-item" data-tab="staff">Staff</button>
-      <button type="button" class="mms-item" id="mmsWorkerViewBtn" data-tab="worker" style="display:none;">Worker view</button>
-      <button type="button" class="mms-item" data-tab="presets">Presets</button>
+      <div class="mms-group-label">Backup</div>
       <button type="button" class="mms-item" id="mmsExportBtn">Export backup</button>
       <button type="button" class="mms-item" id="mmsImportBtn">Import backup</button>
       <button type="button" class="mms-item mms-item-danger" id="mmsClearBtn">Clear all data</button>
@@ -12898,15 +12914,53 @@ function updateMobileTopbarTitle(tab){
 }
 updateMobileTopbarTitle('quote'); // matches the tab that's active by default in the static HTML
 document.getElementById('mobileFab').addEventListener('click', ()=> goToTab('quote'));
-function openMobileMoreSheet(){ document.getElementById('mobileMoreSheet').classList.add('show'); }
+function openMobileMoreSheet(){
+  mmsRenderDestinations();
+  document.getElementById('mobileMoreSheet').classList.add('show');
+}
 function closeMobileMoreSheet(){ document.getElementById('mobileMoreSheet').classList.remove('show'); }
 document.getElementById('mobileMoreBtn').addEventListener('click', openMobileMoreSheet);
 document.getElementById('mobileMoreClose').addEventListener('click', closeMobileMoreSheet);
-document.querySelectorAll('.mms-item[data-tab]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    goToTab(btn.dataset.tab);
-    closeMobileMoreSheet();
+
+/* The four the bottom bar already carries. Repeating them here would put
+   two doors on one room, which is the thing the rail rework removed. */
+const MMS_BAR_TABS = ['dashboard', 'quote-saved', 'inventory', 'cashbook'];
+/* Drawn from NAV_INDEX, which is itself read off the rail. Icons come
+   with it -- the copy this replaces had none, so the phone read a wall
+   of same-sized words while the desktop got a glance -- and so does the
+   grouping, so the two never disagree about which section a screen is
+   in. Rebuilt on every open rather than once, because NAV_INDEX is
+   rebuilt when the worker row is revealed. */
+function mmsRenderDestinations(){
+  const wrap = document.getElementById('mms_dest');
+  if(!wrap || typeof NAV_INDEX === 'undefined') return;
+  const groups = [];
+  NAV_INDEX.forEach(entry=>{
+    if(MMS_BAR_TABS.includes(entry.tab)) return;
+    // A rail row hidden by an inline style is not a destination yet --
+    // the worker view before a worker login has revealed it. Checked on
+    // the button's own style rather than on whether it is on screen,
+    // because on a phone the whole rail is display:none.
+    if(entry.el && entry.el.style && entry.el.style.display === 'none') return;
+    let g = groups.find(x=> x.name === entry.group);
+    if(!g) groups.push(g = { name: entry.group, items: [] });
+    g.items.push(entry);
   });
+  wrap.innerHTML = groups.map(g=>`
+    <div class="mms-group">
+      ${g.name ? `<div class="mms-group-label">${esc(g.name)}</div>` : ''}
+      <div class="mms-grid">${g.items.map(it=>
+        `<button type="button" class="mms-tile" data-tab="${esc(it.tab)}">${it.icon}<span>${esc(it.label)}</span></button>`
+      ).join('')}</div>
+    </div>`).join('');
+}
+/* Delegated: the tiles are built on each open, and a listener bound to
+   the markup that was there at parse time would be bound to nothing. */
+document.getElementById('mobileMoreSheet').addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-tab]');
+  if(!btn) return;
+  goToTab(btn.dataset.tab);
+  closeMobileMoreSheet();
 });
 // Export/Import/Clear have no data-tab (they're actions, not tabs) --
 // proxy the click to the real desktop buttons rather than duplicating
@@ -38760,14 +38814,15 @@ async function boot(){
   myStaff = data.staff.find(s=>s.userId===currentUser.id) || null;
   const forcedWorkerMode = !!myStaff && currentMemberRole==='staff';
   if(myStaff){
-    /* Two surfaces now, not three: the rail carries every destination,
-       so the bar has no copy of this one to reveal. The phone's own
-       sheet is the other. Both, or a worker-enabled shop finds the
-       screen missing on whichever was forgotten. */
+    /* ONE surface now. The rail carries every destination, the phone's
+       sheet is generated from the rail, and the bar has no copy -- so
+       revealing the rail row reveals the screen everywhere it appears.
+       This used to reveal two buttons by id, and a worker-enabled shop
+       lost the screen on whichever was forgotten. */
     document.getElementById('workerNavItem').style.display = '';
-    document.getElementById('mmsWorkerViewBtn').style.display = '';
     // The rail is read once at load to build the map, and this row was
-    // hidden then -- so search would never find it without a rebuild.
+    // hidden then -- so neither search nor the phone sheet would find it
+    // without a rebuild.
     NAV_INDEX = buildNavIndex();
     // Whether the "Enable notifications" card should show is based on
     // having an actual saved subscription row, not on the browser's

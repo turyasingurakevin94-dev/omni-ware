@@ -204,8 +204,11 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
 /* ---------- 8. all of it is REACHED ---------------------------------- */
 {
   t.check(/if\(tab==='media'\) renderMedia\(\);/.test(src), 'the Media tab renders on entry');
-  t.check((src.match(/data-tab="media"/g) || []).length >= 2,
-    'and can be reached from both the topbar and the phone sheet');
+  /* One rail entry is enough now: the phone sheet is generated from the
+     rail, so a screen listed once is reachable on both. Counting two
+     copies was counting the duplicate that has since been removed. */
+  t.check((src.match(/data-tab="media"/g) || []).length >= 1,
+    'and is on the rail, which is what the phone sheet is built from');
   /* Anchored to the start of the line: `if(false) await backfill...`
      still CONTAINS the call, and this has to fail on it. */
   t.check(/\n    await backfillMediaLibrary\(\);/.test(src), 'boot runs the backfill');

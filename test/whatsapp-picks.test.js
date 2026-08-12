@@ -300,8 +300,11 @@ const THU = '2026-08-06', MON = '2026-08-03';
 /* ---------- 10. all of it is REACHED ---------------------------------- */
 {
   t.check(/if\(tab==='whatsapp'\)\{ renderWhatsApp\(\); renderWaInsights\(\); waInboxEnter\(\); \}/.test(src), 'the tab renders on entry');
-  t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 2,
-    'reachable from the topbar and the phone sheet');
+  /* One rail entry is enough now: the phone sheet is generated from the
+     rail, so a screen listed once is reachable on both. Counting two
+     copies was counting the duplicate that has since been removed. */
+  t.check((src.match(/data-tab="whatsapp"/g) || []).length >= 1,
+    'on the rail, which is what the phone sheet is built from');
 
   const posted = (/wp_posted'\)\.addEventListener\('click', \(\)=>\{[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/allocRowId\('waPost'\)/.test(posted) && /date: todayISO\(\)/.test(posted),

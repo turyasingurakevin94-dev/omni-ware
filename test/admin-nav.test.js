@@ -173,26 +173,55 @@ const INDEX = railIndex();
 }
 
 /* ---------- 4. the rail and the phone agree -------------------------- */
+/*
+ * This used to compare two hand-written lists and report the difference.
+ * The sheet is now GENERATED from the rail -- mmsRenderDestinations
+ * walks NAV_INDEX, which buildNavIndex reads off the rail -- so parity
+ * is structural rather than checked, and the check is that the
+ * generation is what it claims to be.
+ *
+ * That change is what put an icon on every phone destination: the
+ * hand-kept copy carried none, because nobody was going to paste
+ * twenty-four SVGs into it and keep them right.
+ */
 {
-  const railTabs = new Set(tabsIn(rail));
-  const phoneTabs = new Set([...tabsIn(sheet), ...tabsIn(bottomNav)]);
-  const strandedOnDesktop = [...railTabs].filter((x) => !phoneTabs.has(x));
-  const strandedOnPhone = [...phoneTabs].filter((x) => !railTabs.has(x));
-  t.check(strandedOnDesktop.length === 0,
-    `every screen on the rail is reachable on a phone${strandedOnDesktop.length ? ` (missing: ${strandedOnDesktop.join(', ')})` : ''}`);
-  t.check(strandedOnPhone.length === 0,
-    `and the phone offers nothing the rail does not${strandedOnPhone.length ? ` (extra: ${strandedOnPhone.join(', ')})` : ''}`);
+  const gen = extractFunction(src, 'mmsRenderDestinations', 'index.html');
+  t.check(/NAV_INDEX\.forEach/.test(gen),
+    'the phone sheet is built from the rail index, not from a second list');
+  t.check(!/<button type="button" class="mms-item" data-tab=/.test(sheet),
+    'and no hand-written destination rows survive in the markup to drift from it');
+  t.check(/it\.icon/.test(gen) && /class="mms-tile"/.test(gen),
+    'every destination carries the rail’s own icon');
+  t.check(/g\.name/.test(gen) && /mms-group-label/.test(gen),
+    'and the rail’s own section names, so the two cannot file a screen differently');
 
-  /* Same names for the same groups. The sheet used to file by Sales /
-     Catalog / People / Reports / Settings while the bar filed by Sell /
-     Buy / Money / Price book / Insight -- so a supplier was under
-     "People" on a phone and "Buy" on a desktop, and the shop had to
-     learn both. */
-  const sheetGroups = [...sheet.matchAll(/<div class="mms-group-label">([^<]+)<\/div>/g)].map((m) => m[1].trim());
-  const railGroups = [...new Set(INDEX.map((x) => x.group))].filter(Boolean);
-  const foreign = sheetGroups.filter((g) => !railGroups.includes(g));
-  t.check(foreign.length === 0,
-    `the phone files under the same section names${foreign.length ? ` (its own: ${foreign.join(', ')})` : ` (${sheetGroups.join(', ')})`}`);
+  /* The four the bar already carries are the only exclusion, and it is
+     named rather than left as a coincidence of what somebody remembered
+     to leave out. */
+  const barTabs = tabsIn(bottomNav);
+  const excluded = (/const MMS_BAR_TABS = \[([^\]]*)\]/.exec(src) || ['', ''])[1]
+    .split(',').map((s) => s.trim().replace(/'/g, '')).filter(Boolean);
+  t.check(JSON.stringify(excluded.slice().sort()) === JSON.stringify(barTabs.slice().sort()),
+    `the sheet leaves out exactly what the bar carries (${excluded.join(', ')} vs ${barTabs.join(', ')})`);
+  t.check(/MMS_BAR_TABS\.includes\(entry\.tab\)/.test(gen),
+    'and applies that list rather than repeating a screen on two surfaces');
+
+  /* Worker view sits on the rail hidden until a login turns out to be
+     staff. Generated blindly, the sheet would offer it to every shop.
+     Tested on the BUTTON'S OWN inline style, not on whether it is on
+     screen: on a phone the entire rail is display:none, so anything
+     asking "is this visible" would drop every destination there is. */
+  t.check(/entry\.el && entry\.el\.style && entry\.el\.style\.display === 'none'/.test(gen),
+    'a rail row hidden until a worker signs in is not offered as a destination');
+  t.check(!/offsetParent|checkVisibility|getComputedStyle\(entry\.el\)/.test(gen),
+    'and it does not ask whether the rail is on screen, which on a phone it never is');
+
+  /* Generated markup needs a delegated listener: one bound at parse time
+     would be bound to nothing, and every tile would be dead. */
+  t.check(/getElementById\('mobileMoreSheet'\)\.addEventListener\('click'/.test(src),
+    'the tiles are wired by delegation, since they do not exist at parse time');
+  t.check(/mmsRenderDestinations\(\);\s*\r?\n\s*document\.getElementById\('mobileMoreSheet'\)\.classList\.add\('show'\)/.test(src),
+    'and rebuilt on every open, so a newly revealed screen appears without a reload');
 }
 
 /* ---------- 5. the column that squeezed the logo --------------------- */
@@ -279,10 +308,16 @@ const INDEX = railIndex();
   // index built at load does not have it and has to be built again.
   t.check(/NAV_INDEX = buildNavIndex\(\);/.test(src.slice(src.indexOf("workerNavItem').style.display"))),
     'the index is rebuilt when worker view is revealed, or search would never find it');
-  // Two surfaces to reveal it on now, not three. Missing one leaves a
-  // worker-enabled shop with the screen hidden on that device only.
-  const reveal = (/workerNavItem'\)\.style\.display[\s\S]{0,600}?mmsWorkerViewBtn'\)\.style\.display/.exec(src) || [''])[0];
-  t.check(reveal.length > 0, 'the rail and the phone sheet are revealed together');
+  /* ONE surface to reveal it on now. The sheet reads the rail, so
+     revealing the rail row reveals the screen everywhere -- this used to
+     reveal two buttons by id, and a worker-enabled shop lost the screen
+     on whichever was forgotten. The second id is gone, and nothing may
+     reach for it. */
+  t.check(!/mmsWorkerViewBtn/.test(src),
+    'the phone sheet has no second worker button to forget');
+  const reveal = (/workerNavItem'\)\.style\.display[\s\S]{0,400}?NAV_INDEX = buildNavIndex\(\);/.exec(src) || [''])[0];
+  t.check(reveal.length > 0,
+    'revealing the rail row rebuilds the index, which is what the phone sheet reads');
 }
 
 /* ---------- 7. search, run against the real rail --------------------- */
@@ -425,8 +460,13 @@ const INDEX = railIndex();
 {
   // Rearranging markup breaks navigation by removing an id, and the
   // failure is a throw on boot rather than anything visible in a diff.
-  ['workerNavItem', 'mmsWorkerViewBtn', 'adminSignoutBtn', 'tbSignoutBtn', 'orderStatusBar',
-    'collapseToggle', 'navSearch', 'navSearchResults', 'tbWhere']
+  /* mmsWorkerViewBtn is deliberately NOT on this list any more. The
+     phone sheet is generated from the rail, so worker view has one
+     reveal rather than two, and an id that no longer exists cannot be
+     the one somebody forgets. */
+  ['workerNavItem', 'adminSignoutBtn', 'tbSignoutBtn', 'orderStatusBar',
+    'collapseToggle', 'navSearch', 'navSearchResults', 'tbWhere',
+    'mms_dest', 'mmsExportBtn', 'mmsImportBtn', 'mmsClearBtn']
     .forEach((id) => {
       t.check(new RegExp(`id="${id}"`).test(src), `#${id} exists in the markup`);
       // Not every one is fetched by a literal getElementById: the two
