@@ -3493,7 +3493,6 @@
   /* The only large element on the paper. */
   .receipt .r-total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:3px;}
   .receipt .r-ccy{text-align:right;font-size:9.5px;}
-  .receipt .r-docref{letter-spacing:1px;}
   .receipt .r-signature-block{margin:16px 0 12px;}
   .receipt .r-sig-row{display:flex;align-items:flex-end;gap:8px;font-size:11px;margin:14px 0;}
   .receipt .r-sig-row span:first-child{flex:none;white-space:nowrap;}
@@ -19391,9 +19390,13 @@ function buildReceiptHTML(q, payment, idx){
         return row(`Paid${label?' &mdash; '+esc(label):''}`, receiptNum(pm.amount));
       }).join('')}` : ''}
     ${balance > 0 ? row('<b>BALANCE DUE</b>', `<b>${receiptNum(balance)}</b>`) : ''}
+    ${/* The footer is the LAST thing on the paper. A document reference
+          used to sit below it, repeating the invoice number already
+          printed three rows from the top -- 6.1mm of roll, measured,
+          for a fact the receipt had already made. On A4 a repeated
+          reference is free; on a roll it is bought by the metre. */''}
     ${shop.footer ? `<div class="r-rule"></div>
       <div class="r-center r-foot">${shop.footer.split('\n').map(l=> esc(l)).join('<br>')}</div>` : ''}
-    <div class="r-center r-foot r-docref">${esc(invoiceNumberLabel(q))}</div>
   </div>`;
 }
 
@@ -19423,14 +19426,27 @@ function receiptPageHeightMM(area){
   if(!el) return 200;
   const prev = area.getAttribute('style') || '';
   area.setAttribute('style', 'display:block;position:absolute;left:-9999px;top:0;width:80mm;');
-  const px = el.getBoundingClientRect().height;
+  /* To the bottom edge of the LAST CHILD rather than the height of the
+     box around them.
+
+     Measured, those are currently the SAME number: .receipt carries no
+     bottom padding and its last child no bottom margin, so the container
+     already ends at the last ink. This buys zero millimetres today and
+     is kept because it is the definition that STAYS true -- give the
+     footer a bottom margin, or the receipt a padding-bottom, and a
+     container's height silently starts including paper nothing prints
+     on. The last child's bottom edge is the last ink, whatever the box
+     around it grows into. */
+  const box = el.getBoundingClientRect();
+  const last = el.lastElementChild;
+  const px = (last ? last.getBoundingClientRect().bottom : box.bottom) - box.top;
   area.setAttribute('style', prev);
-  // 96 CSS px to the inch. Rounded UP, because a page half a millimetre
-  // short of its content spills a second, almost-empty sheet.
-  // +2, not +6: with no page margin the sheet is the content plus a
-  // hair. What is left below the last line on the real roll is the
-  // printer's own head-to-cutter gap, which no CSS can reclaim.
-  return Math.max(40, Math.ceil(px / 96 * 25.4) + 2);
+  // 96 CSS px to the inch. Rounded UP by a single millimetre: a page
+  // even a fraction short of its content spills a second, almost-empty
+  // sheet, which costs far more roll than the millimetre saves.
+  // What remains below the cut on real paper is the printer's own
+  // head-to-cutter gap, which no CSS can reclaim.
+  return Math.max(40, Math.ceil(px / 96 * 25.4) + 1);
 }
 function printReceipt(q, payment, idx){
   if(!q) return;

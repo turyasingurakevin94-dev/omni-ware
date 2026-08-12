@@ -212,6 +212,26 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
     'rounded UP — a page half a millimetre short spills a second, almost-empty sheet');
   t.check(/Math\.max\(40,/.test(measure) && /if\(!el\) return 200;/.test(measure),
     'with a floor, and a sane fallback if the receipt somehow did not render');
+  /* Measured to the LAST CHILD's bottom edge, not the container's
+     height. Those are the same number today -- .receipt has no bottom
+     padding and its last child no bottom margin, verified at 100.8mm
+     both ways in the running app -- so this has no behaviour to observe
+     and is pinned by shape instead. It is the definition that stays
+     true the moment a footer grows a margin, which is exactly when a
+     container's height quietly starts including paper nothing prints
+     on. */
+  t.check(/const last = el\.lastElementChild;/.test(measure)
+    && /last \? last\.getBoundingClientRect\(\)\.bottom : box\.bottom/.test(measure),
+    'the page ends at the last child’s bottom edge — the last ink, whatever the box grows into');
+  /* And nothing sits below the footer. A document reference used to,
+     repeating the invoice number already three rows from the top: 6.1mm
+     of roll, measured, for a fact the paper had already stated. */
+  const build = extractFunction(src, 'buildReceiptHTML', 'index.html');
+  const tail = build.slice(build.lastIndexOf('shop.footer'));
+  t.check(!/invoiceNumberLabel/.test(tail),
+    'and the footer is the last thing printed — no reference repeated below it');
+  t.check((makeScope().buildReceiptHTML(order(), null, null).match(/INV-0152/g) || []).length === 1,
+    'so the invoice number reaches the paper exactly once');
   t.check(/clearInjectedPrintStyles\(\);/.test(fn),
     'any sheet a previous print left behind is cleared first — @page does not cascade by specificity');
   t.check(/area\.innerHTML = '';/.test(fn),
