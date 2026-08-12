@@ -3421,7 +3421,7 @@
      after the first draws its own segment back to the previous node, so
      the track follows the step count. */
   .sq-stepper-step + .sq-stepper-step::before{
-    content:'';position:absolute;top:17px;right:50%;width:100%;height:2px;
+    content:'';position:absolute;top:18px;right:calc(50% + 16px);width:calc(100% - 32px);height:2px;
     background:var(--line);z-index:-1;
   }
   .sq-stepper-node{
@@ -3459,10 +3459,11 @@
   .sq-stepper-step.in-view .sq-stepper-label{color:var(--ink);font-weight:700;}
   @keyframes sq-node-pulse{0%{transform:scale(1);}45%{transform:scale(1.3);}100%{transform:scale(1);}}
   .sq-stepper-step.pulse .sq-stepper-node{animation:sq-node-pulse .45s ease;}
-  /* The rail row carries the board's own controls, so the panel needs no
-     heading row of its own above it. */
-  .sq-rail-row{display:flex;align-items:flex-start;gap:12px;}
-  .sq-rail-row .btn-row{margin-top:6px;flex-shrink:0;}
+  /* The rail owns the panel's full width -- steps spread evenly across
+     it. Select all / Print sit OUTSIDE the panel, on a slim toolbar row
+     under the page head, so they neither squeeze the rail nor restate a
+     heading. */
+  .sq-board-tools{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:-4px 0 8px;}
   /* Fades on the clipped edge(s): the universal "there is more" cue,
      written by the scroll handler as .can-left/.can-right so a board that
      fits whole carries none. */
@@ -3471,13 +3472,14 @@
   .sq-board.can-left.can-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);}
   .sq-board.panning{cursor:grabbing;user-select:none;}
   .sq-col{display:flex;flex-direction:column;min-width:0;scroll-snap-align:start;}
-  /* Below the sticky rail, so the step name and count hold while the
-     column's cards scroll under them. --sq-rail-h is measured and written
-     by renderSavedQuotes, since the rail wraps at some widths. */
-  .sq-col-head{
-    display:flex;align-items:center;gap:8px;padding:6px 2px 10px;
-    position:sticky;top:calc(var(--topbar-h) + var(--sq-rail-h,58px));z-index:20;background:var(--panel);
-  }
+  /* NOT sticky, and it cannot be: overflow-x:auto makes .sq-board a
+     scroll container, and position:sticky pins against the nearest one
+     -- so a sticky head here answers to the board, not the page, and
+     since the board never scrolls vertically it just sat displaced over
+     the cards. The rail above IS sticky (it lives outside the strip),
+     and it carries the same step names and counts, so nothing is lost
+     scrolling a long column. */
+  .sq-col-head{display:flex;align-items:center;gap:8px;padding:6px 2px 10px;}
   .sq-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .sq-col-title{font-size:11.5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:var(--ink);}
   .sq-col-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-soft);background:#EEF1F3;border-radius:999px;padding:1px 8px;}
@@ -4576,7 +4578,6 @@
        be wrong again the next time one is added; a class set from
        SQ_STATUS_ORDER cannot be. */
     .sq-stepper{top:var(--mobile-topbar-h);}
-    .sq-col-head{top:calc(var(--mobile-topbar-h) + var(--sq-rail-h,58px));}
     .sq-board{grid-auto-columns:100%;scroll-snap-type:none;}
     .sq-board .sq-col:not(.is-active-step){display:none;}
     /* One column fills the width, so there is never anything clipped to
@@ -5603,21 +5604,19 @@
         <p>Come back and edit a saved quote, track it through prep and delivery, or select several to print together — each prints on its own A5 page.</p>
       </div>
 
+      <!-- Outside the panel, so the rail inside it gets the full width for
+           its steps. A slim right-aligned row, not a heading: the page
+           head above already says what this screen is. -->
+      <div class="sq-board-tools">
+        <label class="sq-select-all-label"><input type="checkbox" id="sq_select_all"> Select all</label>
+        <button class="btn btn-accent btn-icon" id="sq_print_selected_btn" title="Print selected (A5)">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+          <span class="btn-label">Print selected (A5)</span>
+        </button>
+      </div>
+
       <div class="panel qp-panel">
-        <!-- No heading row: the page head above already says Order
-             tracking, and a third restatement inside the panel pushed the
-             board down for nothing. The step rail is the panel's own top
-             row, and renderSavedQuotes puts Select all / Print beside it. -->
-        <div class="sq-rail-row">
-          <div id="sqStepperMount" style="flex:1;min-width:0;"></div>
-          <div class="btn-row" style="margin-top:0;">
-            <label class="sq-select-all-label"><input type="checkbox" id="sq_select_all"> Select all</label>
-            <button class="btn btn-accent btn-icon" id="sq_print_selected_btn" title="Print selected (A5)">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-              <span class="btn-label">Print selected (A5)</span>
-            </button>
-          </div>
-        </div>
+        <div id="sqStepperMount"></div>
         <div id="savedQuotesWrap"></div>
       </div>
     </section>
@@ -18213,13 +18212,6 @@ function renderSavedQuotes(){
   const railSteps = railMount ? [...railMount.querySelectorAll('.sq-stepper-step')] : [];
   const isPhoneBoard = ()=> matchMedia('(max-width: 820px)').matches;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* The column heads stick below the rail, and the rail's height depends
-     on how its labels wrap -- measured, not assumed. */
-  if(railMount && railMount.firstElementChild){
-    document.documentElement.style.setProperty('--sq-rail-h',
-      railMount.firstElementChild.getBoundingClientRect().height + 'px');
-  }
 
   const setActiveStep = (status)=>{
     sqActiveMobileStep = status;

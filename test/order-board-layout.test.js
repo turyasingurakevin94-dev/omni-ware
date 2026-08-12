@@ -67,8 +67,14 @@ const src = read('index.html');
 
 /* ---------- 4. the rail is the board's own top row ------------------- */
 {
-  t.check(/<div id="sqStepperMount"/.test(src) && /class="sq-rail-row"/.test(src),
-    'the rail mounts on the panel top row, beside Select all and Print');
+  /* The rail owns the panel's full width; Select all / Print live on a
+     slim toolbar row OUTSIDE the panel. The first cut put them on the
+     rail's own row, which squeezed five steps into whatever the print
+     button left over. */
+  t.check(/<div id="sqStepperMount"><\/div>\s*<div id="savedQuotesWrap">/.test(src),
+    'the rail mounts inside the panel, full width, directly above the board');
+  t.check(/class="sq-board-tools">\s*<label class="sq-select-all-label">/.test(src),
+    'with Select all and Print on their own row outside the panel');
   t.check(!/<h2 style="margin-bottom:0;">Order tracking<\/h2>/.test(src),
     'and the third restatement of the page title inside the panel is gone');
   // Sticky at every width, below whichever topbar the width shows.
@@ -77,12 +83,24 @@ const src = read('index.html');
     'the rail sticks below the desktop topbar');
   t.check(/\.sq-stepper\{top:var\(--mobile-topbar-h\);\}/.test(src),
     'and below the mobile one on a phone');
+  /* The column heads must NOT be sticky, and the constraint is physical:
+     overflow-x:auto makes .sq-board a scroll container, and sticky pins
+     against the NEAREST scrolling ancestor -- so a sticky head answers
+     to the board, which never scrolls vertically, and simply sat
+     displaced over the first card of every column. The rail lives
+     outside the strip and carries the same names and counts. */
   const colHead = (/\.sq-col-head\{[\s\S]*?\}/.exec(src) || [''])[0];
-  t.check(/position:sticky/.test(colHead) && /--sq-rail-h/.test(colHead),
-    'column heads stick under the rail, at a measured rail height rather than a guessed one');
+  t.check(!/position:sticky/.test(colHead) && !/--sq-rail-h/.test(colHead),
+    'column heads stay in flow — sticky cannot work inside the scroll container');
   const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
-  t.check(/setProperty\('--sq-rail-h',/.test(render),
-    'which the renderer writes after measuring, since the labels wrap at some widths');
+  t.check(!/--sq-rail-h/.test(render),
+    'and nothing measures a rail height nothing reads');
+  /* The connector segments span between node EDGES. Centre-to-centre
+     they crossed the neighbouring circle -- and no z-index can fix that,
+     because each step is its own stacking context, so a later step's
+     ::before paints over the whole of an earlier sibling, node and all. */
+  t.check(/right:calc\(50% \+ 16px\);width:calc\(100% - 32px\)/.test(src),
+    'the connector stops at the node edges instead of running through the circles');
 }
 
 /* ---------- 5. what needs chasing, from the rail --------------------- */
