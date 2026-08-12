@@ -38069,43 +38069,81 @@ function fgRouteQuery(q){
   }).join(' ');
   if(!s) return [];
 
-  let m = /^m\s*(\d+(?:\.\d+)?)\s*(?:[x×]\s*(\d+(?:\.\d+)?))?$/.exec(s);
+  // `*` is a multiplication sign in this trade -- the shop's own
+  // catalogue writes "Anchor Bolts M8*100" and "Wood Screws 8*50".
+  let m = /^m\s*(\d+(?:\.\d+)?)\s*(?:[*x×]\s*(\d+(?:\.\d+)?))?$/.exec(s);
   if(m){
     const row = METRIC_BOLTS.find(r=> r.dia === Number(m[1]));
     if(!row) return [];
     return [Object.assign({ kind:'bolt', row }, fgSecondNumber(row, m[2] == null ? null : Number(m[2])))];
   }
-  m = /^#\s*(\d+)$/.exec(s) || /^(\d+)\s*(?:g|ga|gauge)$/.exec(s);
+  /* "#8", "8g", "no 8", "number 8", "gauge 8" -- a gauge is spoken far
+     more often than it is written with a hash, and the counter types
+     what was said. */
+  m = /^(?:#|no\.?|number|gauge|ga)\s*(\d+)$/.exec(s) || /^(\d+)\s*(?:g|ga|gauge)$/.exec(s);
   if(m){
     const row = SCREW_GAUGES.find(r=> r.gauge === Number(m[1]));
     return row ? [{ kind:'screw', row }] : [];
   }
 
+  /* "4.2*25", "8*50", "4*13" -- diameter-by-length, which is how the box
+     lid reads and how this catalogue names its own screws. Returning
+     nothing for the shop's own product names was the single largest hole
+     in the page.
+
+     The first number is genuinely ambiguous whenever it is a small whole
+     number: "4*13" is 4mm in this catalogue's Truss Head, while "8*50"
+     is gauge 8 in its Wood Screws. So both readings are offered, exact
+     before approximate -- a number that IS a gauge leads, and a
+     millimetre figure that merely rounds to one follows. */
+  m = /^(\d+(?:\.\d+)?)\s*[*x×]\s*(\d+(?:\.\d+)?)$/.exec(s);
+  if(m){
+    const first = Number(m[1]), lengthMm = Number(m[2]);
+    const out = [];
+    const asGauge = SCREW_GAUGES.find(r=> r.gauge === first);
+    if(asGauge) out.push({ kind:'screw', row: asGauge, lengthTyped: lengthMm, assumed: asGauge && !Number.isInteger(first) ? null : 'gauge' });
+    const asMm = fgMmToGauge(first);
+    if(asMm){
+      const row = SCREW_GAUGES.find(r=> r.gauge === asMm.gauge);
+      // Only worth a second card if it is a DIFFERENT screw from the
+      // gauge reading; 4.2 is the #8 either way.
+      if(!asGauge || asMm.gauge !== asGauge.gauge){
+        out.push({ kind:'screw', row, lengthTyped: lengthMm, diaMm: first, assumed: asGauge ? 'mm' : null });
+      }
+    }
+    return out;
+  }
+
   const len = fgParseLengthInput(s);
   if(!len) return [];
-  const out = [];
-  if(len.unit === 'mm'){
-    out.push({ kind:'length', mm: len.value, inch: fgMmToInch(len.value), assumed: null, unit:'mm' });
-  } else if(len.unit === 'in'){
-    out.push({ kind:'length', mm: fgInchToMm(len.value), inch: len.value, assumed: null, unit:'in' });
+  /* Every cross-check below runs on the MILLIMETRE value, whatever was
+     typed. The inch branch used to return early, so "3/16" -- the name
+     printed on the rivet box this shop sells -- found a length and never
+     the rivet. A size is the same size in either language. */
+  const mmVal = len.unit === 'in' ? fgInchToMm(len.value) : len.value;
+  const inchVal = len.unit === 'in' ? len.value : fgMmToInch(len.value);
+  // A bare number gets every honest reading, in a fixed priority order so
+  // the page is deterministic. Millimetres first, in a metric country.
+  const out = [{ kind:'length', mm: mmVal, inch: inchVal,
+                 assumed: len.unit == null ? 'mm' : null, unit: len.unit === 'in' ? 'in' : 'mm' }];
+  if(len.unit === 'in'){
     const hex = IMPERIAL_HEX.find(r=> Math.abs(r.threadIn - len.value) <= 0.001);
     if(hex) out.push({ kind:'imphex', row: hex });
-    return fgBias(out, bias);
-  } else {
-    // A bare number: every reading it could honestly have, in a fixed
-    // priority order so the page is deterministic. mm first, because
-    // this is a metric-counter country.
-    out.push({ kind:'length', mm: len.value, inch: fgMmToInch(len.value), assumed:'mm', unit:'mm' });
   }
-  const bolts = fgBoltsForSpanner(len.value);
-  if(bolts.length) out.push({ kind:'spanner', af: len.value, bolts, assumed: len.unit ? null : 'spanner' });
+  const bolts = fgBoltsForSpanner(mmVal);
+  if(bolts.length) out.push({ kind:'spanner', af: mmVal, bolts, assumed: len.unit ? null : 'spanner' });
   if(len.unit == null){
     const g = SCREW_GAUGES.find(r=> r.gauge === len.value);
     if(g) out.push({ kind:'screw', row: g, assumed:'gauge' });
   }
-  const plug = WALL_PLUGS.find(r=> r.size === len.value);
+  const plug = WALL_PLUGS.find(r=> Math.abs(r.size - mmVal) <= 0.05);
   if(plug) out.push({ kind:'plug', row: plug, assumed: len.unit ? null : 'plug' });
-  const rivet = RIVETS.find(r=> Math.abs(r.dia - len.value) <= 0.05);
+  /* 0.06, not 0.05: a quarter-inch rivet is 6.35mm against a table entry
+     of 6.4, which is 0.05 apart in arithmetic and a hair MORE than that
+     in floating point, so the tighter bound silently dropped the one
+     size whose inch name is printed on the box. The table advertises
+     those inch names, so every one of them has to resolve -- pinned. */
+  const rivet = RIVETS.find(r=> Math.abs(r.dia - mmVal) <= 0.06);
   if(rivet) out.push({ kind:'rivet', row: rivet, assumed: len.unit ? null : 'rivet' });
   if(len.unit == null && len.value <= 12){
     out.push({ kind:'length', mm: fgInchToMm(len.value), inch: len.value, assumed:'in', unit:'in' });
@@ -38123,6 +38161,9 @@ const FG_ASSUME_CAPTIONS = {
   mm: 'If that’s millimetres…', in: 'If that’s inches…', spanner: 'If that’s a spanner size…',
   gauge: 'If that’s a screw gauge…', plug: 'If that’s a wall plug…', rivet: 'If that’s a rivet…',
 };
+// The examples the empty box teaches, including the catalogue's own
+// diameter-by-length naming.
+const FG_EXAMPLES = ['M8x50', '4.2*25', '#8', '38mm', '1 1/2', '13'];
 function fgMmStr(n){ return (Math.round(n * 100) / 100).toLocaleString('en-UG'); }
 function fgSpecRow(label, value){ return `<div class="fg-spec"><span>${esc(label)}</span><b>${value}</b></div>`; }
 function fgFindChip(term, label){
@@ -38167,10 +38208,22 @@ function fgBoltCardHTML(entry){
 function fgScrewCardHTML(entry){
   const r = entry.row;
   const metricName = `${r.dia}`.replace(/\.0$/, '');
+  const len = entry.lengthTyped;
+  const lenTrade = len != null ? fgTradeByMm(len) : null;
+  const title = len != null ? `#${r.gauge} × ${len}` : `#${r.gauge}`;
+  /* A typed diameter that only ROUNDS to this gauge says so. "4*13" is
+     sold as the #8, whose true diameter is 4.2 -- close enough to buy,
+     and not the same number, which the card must not quietly overwrite. */
+  const diaNote = entry.diaMm != null && entry.diaMm !== r.dia
+    ? `<div class="fg-note">${esc(`${entry.diaMm} mm is sold as the #${r.gauge} (${r.dia} mm).`)}</div>` : '';
   return `<div class="pi-card fg-card">
-    <div class="fg-card-head"><b>#${r.gauge}</b><span>screw · ${esc(String(r.dia))} mm</span></div>
-    ${entry.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.gauge)}</div>` : ''}
-    ${fgSpecRow('Also written as', esc(`${Math.round(r.dia)}×length or ${r.dia}×length (mm)`))}
+    <div class="fg-card-head"><b>${esc(title)}</b><span>screw · ${esc(String(r.dia))} mm</span></div>
+    ${entry.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[entry.assumed] || FG_ASSUME_CAPTIONS.gauge)}</div>` : ''}
+    ${len != null ? fgSpecRow('Length', esc(lenTrade
+        ? `${len} mm — sold as ${lenTrade.inchLabel}`
+        : `${len} mm ≈ ${fgNearestFraction(fgMmToInch(len), 16).label}″`)) : ''}
+    ${diaNote}
+    ${fgSpecRow('Written as', esc(`${Math.round(r.dia)}×len or ${r.dia}×len`))}
     ${fgSpecRow('Pilot drill — softwood', esc(`${r.pilotSoft} mm`))}
     ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
     ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
@@ -38245,11 +38298,10 @@ const FG_CARD_BUILDERS = {
   spanner: fgSpannerCardHTML, plug: fgPlugCardHTML, rivet: fgRivetCardHTML, imphex: fgImpHexCardHTML,
 };
 
-/* An empty box teaches nobody what it accepts. These are the five shapes
-   the router understands, as one press each -- which is also how the
-   person who has never used the page finds out that a bare number gets
-   more than one answer. */
-const FG_EXAMPLES = ['M8', 'M8x50', '#8', '38mm', '1 1/2', '13'];
+/* An empty box teaches nobody what it accepts. FG_EXAMPLES is the shapes
+   the router understands, one press each -- which is also how somebody
+   who has never used the page discovers that a bare number gets more
+   than one answer. */
 function fgRenderResults(){
   const q = document.getElementById('fg_q').value;
   const wrap = document.getElementById('fg_results');
@@ -38259,9 +38311,15 @@ function fgRenderResults(){
     return;
   }
   const cards = fgRouteQuery(q);
+  /* Typing "4.2*25" passes through "4.", "4.2" and "4.2*" on the way.
+     Those are not failures, they are somebody mid-keystroke, and
+     flashing "nothing matched" at each one is the page telling a person
+     with a slow thumb that they are wrong. A query ending in a separator
+     waits quietly for the rest. */
+  const stillTyping = /[*x×\/\-.,\s]$/i.test(q.trim());
   wrap.innerHTML = cards.length
     ? cards.map(c=> (FG_CARD_BUILDERS[c.kind] || (()=>''))(c)).join('')
-    : '<div class="empty">Nothing matched. Try a size like “M8”, “#8”, “38mm” or “1 1/2”.</div>';
+    : (stillTyping ? '' : '<div class="empty">Nothing matched. Try a size like “M8”, “4.2*25”, “#8” or “1 1/2”.</div>');
 }
 
 let fgSelectedBolt = 'M8';

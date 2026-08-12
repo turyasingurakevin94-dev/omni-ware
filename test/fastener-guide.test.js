@@ -313,6 +313,38 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     'and neither is the transposed typo mm8 -- the anchor is what stops it');
   eq(JSON.stringify(kinds('#8')), JSON.stringify(['screw']), '#8 is a screw');
   eq(JSON.stringify(kinds('8g')), JSON.stringify(['screw']), 'and so is 8g');
+  /* A gauge is spoken far more often than it is written with a hash, and
+     the counter types what the customer said. */
+  ['no 8', 'no. 8', 'number 8', 'gauge 8'].forEach((q)=>{
+    eq(JSON.stringify(kinds(q)), JSON.stringify(['screw']), `"${q}" is a screw`);
+    eq(R(q)[0].row.gauge, 8, `and the right one`);
+  });
+
+  /* THE CATALOGUE'S OWN NAMING. "Wood Screws 8*50", "Truss Head 4*13",
+     "RIDER 4.2*25" -- diameter-by-length is how the box lid reads and
+     how this shop names its own products, and the page used to answer
+     every one of them with nothing at all. */
+  eq(R('4.2*25')[0].row.gauge, 8, '4.2*25 is the number-8');
+  eq(R('4.2*25')[0].lengthTyped, 25, 'twenty-five millimetres long');
+  eq(R('4.2*25').length, 1, 'and 4.2 is unambiguous, so it gets one card');
+  eq(R('4.2x25')[0].row.gauge, 8, 'the x form reads the same');
+  eq(R('8*50')[0].row.gauge, 8, '8*50 is a gauge-8 by fifty');
+  eq(R('8*50')[0].lengthTyped, 50, 'with its length');
+  eq(R('M8*100')[0].kind, 'bolt', 'and M8*100 is a bolt — the star multiplies there too');
+  eq(R('M8*100')[0].lengthTyped, 100, 'a hundred millimetres of it');
+
+  /* A small whole number is genuinely ambiguous: "4*13" is 4mm in this
+     catalogue's Truss Head and gauge-4 in anyone's screw box. Both, exact
+     reading first -- a number that IS a gauge leads, a millimetre figure
+     that merely rounds to one follows. */
+  const four = R('4*13');
+  eq(four.length, 2, '4*13 is ambiguous and says so with two cards');
+  eq(four[0].row.gauge, 4, 'the exact gauge reading leads');
+  eq(four[0].assumed, 'gauge', 'captioned as an assumption');
+  eq(four[1].row.gauge, 8, 'and the millimetre reading follows');
+  eq(four[1].diaMm, 4, 'carrying the 4 that was typed, so the card can say it is sold as the 4.2');
+  eq(four[1].assumed, 'mm', 'also captioned');
+  eq(R('20*50').length, 0, 'while a first number that is neither gauge nor diameter claims nothing');
   eq(JSON.stringify(kinds('m8 nut')), JSON.stringify(['bolt']), 'noise words fall away');
 
   /* The core honesty: a bare 13 means several things at this counter,
@@ -342,6 +374,18 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
   t.check(kinds('3/8').includes('imphex'),
     'an inch fraction that is also a UNC thread offers the imperial hex card');
   t.check(kinds('4.8').includes('rivet'), '4.8 offers the rivet it names');
+  /* Every rivet's own INCH name has to find it. The table prints those
+     names, and the inch branch used to return before the rivet check ran
+     -- so "3/16", the name on the box this shop sells, found a length
+     and never the rivet. A size is the same size in either language.
+     1/4" is the tight one: 6.35 against a 6.4 entry is 0.05 apart in
+     arithmetic and a hair more in floating point. */
+  let missed = 0;
+  T.RIVETS.forEach((r)=>{
+    const got = R(r.inchLabel).filter((c)=> c.kind === 'rivet' && c.row.dia === r.dia);
+    if(!got.length){ missed++; t.fail(`the ${r.inchLabel} rivet is not found by its own inch name`); }
+  });
+  if(!missed) t.pass('every rivet is found by the inch name printed on its own box (4 sizes)');
   t.check(kinds('6').includes('plug'), 'and 6 offers the wall plug the shop actually stocks');
 }
 
@@ -436,6 +480,17 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     'the bolt card names a typed length by the rung it is sold as');
   t.check(/const trade = fgTradeByMm\(c\.mm\) \|\| fgTradeMm\(frac\.num \/ frac\.den\);/.test(stripped),
     'and the length card reads the ladder from whichever end it was typed');
+  // Three cards name lengths now, and each needs its own check -- two of
+  // them passing is not evidence about the third.
+  t.check(/const lenTrade = len != null \? fgTradeByMm\(len\) : null;/.test(stripped),
+    'and so does the screw card, for the length in "8*50"');
+
+  /* Typing "4.2*25" passes through "4.", "4.2" and "4.2*". None of those
+     is a failure and none should be told it is. */
+  t.check(/const stillTyping = \/\[\*x×\\\/\\-\.,\\s\]\$\/i\.test\(q\.trim\(\)\);/.test(stripped),
+    'a half-typed size waits quietly instead of being called wrong');
+  t.check(/stillTyping \? '' :/.test(stripped),
+    'and only a finished one that matches nothing gets the message');
 }
 
 process.exit(t.done() ? 1 : 0);
