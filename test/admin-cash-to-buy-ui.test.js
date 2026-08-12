@@ -392,4 +392,51 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(cols === 5, `and the table declares them (got ${cols} cols)`);
 }
 
+/* ---------- the same table on a phone ---------------------------------
+ *
+ * Those percentages are of about 331px on a phone, which leaves the unit
+ * column 53px to print "12,250 UGX" into and the action column 53px for
+ * a Receive button. table-layout:fixed does not clip, so both ran
+ * straight over their neighbours: reported off a real phone as
+ * "12,250 245,000" printed on top of each other, with Receive hanging
+ * off the edge and "Send someone" cut off the run header.
+ *
+ * overflow-x:auto was already on the scroller and never engaged, because
+ * a table at width:100% never exceeds its own container. A minimum width
+ * is what turns a scroller into one.
+ */
+{
+  const phone = (/@media \(max-width:620px\)\{[\s\S]*?\n  \}/.exec(src.slice(src.indexOf('.bl-lines col.recv'))) || [''])[0];
+  t.check(/\.bl-lines table\{min-width:\d+px;\}/.test(phone),
+    'the table is given a real minimum width, so its scroller actually scrolls instead of the cells colliding');
+  t.check(/\.bl-run-head\{flex-wrap:wrap;\}/.test(phone),
+    'and the run header wraps, so "Send someone" drops to its own line rather than off the right edge');
+
+  /* Re-cut for the narrow case: a product name may wrap over two lines,
+     a money figure may not, so the item column gives width to the ones
+     printing figures and to the action. */
+  const share = (c) => { const m = new RegExp(`\\.bl-lines col\\.${c}\\{width:(\\d+)%`).exec(phone); return m ? Number(m[1]) : null; };
+  const wide = { item: 38, qty: 14, unit: 16, cost: 16, recv: 16 };
+  t.check(share('item') < wide.item, `the item column gives up width on a phone (${share('item')}% vs ${wide.item}%)`);
+  t.check(share('unit') > wide.unit && share('cost') > wide.cost && share('recv') > wide.recv,
+    `and the figure and action columns take it (${share('unit')}/${share('cost')}/${share('recv')}%)`);
+  const total = ['item', 'qty', 'unit', 'cost', 'recv'].reduce((s, c) => s + share(c), 0);
+  t.check(total === 100, `the phone shares still add up to a whole table (${total}%)`);
+
+  /* Order matters. These carry the same specificity as the rules they
+     override, so written earlier in the sheet they would lose on source
+     order and the phone layout would not move at all -- which is exactly
+     how the first attempt at the quote-stage header failed. */
+  /* Compared as POSITIONS of the two competing declarations. An earlier
+     version searched for the media query starting at the base rule's own
+     index, which returns a later index by construction and so could
+     never fail. */
+  const baseItem = src.indexOf('.bl-lines col.item{width:38%;}');
+  const phoneItem = src.indexOf('.bl-lines col.item{width:30%;}');
+  t.check(baseItem >= 0 && phoneItem >= 0,
+    'both the desktop and phone item widths are declared');
+  t.check(phoneItem > baseItem,
+    `and the phone one is written after the desktop one it overrides (${phoneItem} vs ${baseItem})`);
+}
+
 process.exit(t.done() ? 1 : 0);

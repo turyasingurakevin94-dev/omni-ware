@@ -4333,6 +4333,32 @@
   .bl-lines col.unit{width:16%;}
   .bl-lines col.cost{width:16%;}
   .bl-lines col.recv{width:16%;}
+  /* On a phone these percentages are of about 331px, which gives the
+     unit column 53px to print "12,250 UGX" in and the action column 53px
+     for a Receive button. table-layout:fixed does not clip, so both ran
+     straight over their neighbours -- the reported "12,250 245,000"
+     printed on top of each other, and Receive hanging off the edge.
+     overflow-x:auto was already here and never engaged, because a table
+     at width:100% never exceeds its own scroller.
+
+     So the table gets a real minimum width and the scroller starts
+     working, and the shares are re-cut for the narrow case: the item
+     name can wrap over two lines, a money figure cannot. AFTER the rules
+     above, deliberately -- equal specificity is decided by order, which
+     is what silently defeated the same fix on the quote stage. */
+  @media (max-width:620px){
+    .bl-lines table{min-width:520px;}
+    .bl-lines col.item{width:30%;}
+    .bl-lines col.qty{width:12%;}
+    .bl-lines col.unit{width:18%;}
+    .bl-lines col.cost{width:18%;}
+    .bl-lines col.recv{width:22%;}
+    /* And the run header stops shouldering "Send someone" off the right
+       edge: supplier name, place and total on one line, the action on
+       its own. */
+    .bl-run-head{flex-wrap:wrap;}
+    .bl-run-head .bl-send{margin-left:auto;}
+  }
   /* A line already collected reads as done rather than as still to do --
      it stays on the list because the trip is the trip, but it is no
      longer money to take or a shop to visit. */
@@ -4729,7 +4755,16 @@
   }
   .mbn-icon{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .mbn-label{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .mbn-btn.active{color:var(--accent-ink);}
+  /* The bar is a <nav> on purpose, so goToTab's `nav button[data-tab]`
+     finds it -- which also means the sidebar's
+     `nav button.active{background:var(--accent);color:#fff}` reaches it
+     and paints a red tile behind the selected tab. This rule carries two
+     classes and so wins the colour, which set amber INK on that red:
+     dark olive on oxide, the worst contrast on the phone. The bar is
+     white and a selected tab is marked by colour, not by a tile, so the
+     tile is turned off here rather than the text being made to survive
+     it. */
+  .mbn-btn.active{background:transparent;color:var(--accent);}
   .mbn-btn.active .mbn-icon{color:var(--accent);}
   .mobile-fab{
     /* `all:unset` resets display too, so it has to be re-stated as none

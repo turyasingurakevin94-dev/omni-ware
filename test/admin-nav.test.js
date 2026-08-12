@@ -484,4 +484,41 @@ const INDEX = railIndex();
     'and both are set at load, not only once the screen they describe is opened');
 }
 
+/* ---------- the phone bar's selected tab is readable ------------------
+ *
+ * The bar is a <nav> deliberately, so goToTab's `nav button[data-tab]`
+ * selector finds it without a second wiring step. The cost of that is
+ * that the rail's own `nav button.active{background:var(--accent);
+ * color:#fff}` reaches it too, and painted an oxide-red tile behind the
+ * selected tab. `.mbn-btn.active` carries two classes and so won the
+ * COLOUR back -- to amber ink, which was written for text on a light
+ * amber panel. Dark olive on red: reported off a phone, and the worst
+ * contrast in the app.
+ *
+ * The tile is turned off rather than the text being made to survive it,
+ * because the bar is white and a selected tab in a white bar is marked
+ * by colour.
+ */
+{
+  const activeRule = (/\.mbn-btn\.active\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/background:transparent/.test(activeRule),
+    'the phone bar cancels the rail tile it inherits from the bare `nav button.active` selector');
+  t.check(!/--accent-ink/.test(activeRule),
+    'and does not use the ink meant for light amber, which is what made it olive-on-red');
+  t.check(/color:var\(--accent\)/.test(activeRule),
+    'the selected tab is marked in the accent, on the bar’s own white');
+
+  /* The rail is the thing that rule belongs to and must be untouched:
+     white on oxide there is correct and is what the sidebar has always
+     looked like. */
+  t.check(/nav button\.active\{background:var\(--accent\);color:#fff;font-weight:700;\}/.test(src),
+    'while the rail keeps its own white-on-oxide row');
+
+  /* Order matters: the override has to come after the rule it cancels.
+     Equal specificity is decided by source order, and the same fix
+     written earlier in the sheet is a fix that does nothing. */
+  t.check(src.indexOf('.mbn-btn.active{') > src.indexOf('nav button.active{'),
+    'and the phone override is written after the rail rule it overrides');
+}
+
 process.exit(t.done() ? 1 : 0);
