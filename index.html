@@ -5316,6 +5316,51 @@
   .wa-tab.active{color:var(--ink);border-bottom-color:var(--accent);}
   .wa-tab-badge{background:var(--accent);color:#fff;border-radius:999px;font-size:10.5px;font-weight:700;
     padding:1px 7px;min-width:12px;text-align:center;}
+
+  /* ---- Fastener guide -------------------------------------------------
+     Used mid-conversation at the counter, so the search box is the whole
+     point of the page and sized like it. Cards collapse to one column on
+     a phone via the grid's own minmax. .fg-chip copies the
+     .cmp-rival-chip pattern rather than borrowing the class -- a compare
+     restyle must not silently restyle this page. */
+  .fg-hero input{
+    width:100%;box-sizing:border-box;padding:14px 16px;font-size:17px;font-weight:600;
+    border:1px solid var(--line);border-radius:11px;background:#fff;font-family:inherit;color:var(--ink);
+  }
+  .fg-hero{margin-bottom:14px;}
+  .fg-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+  .fg-results:empty{display:none;}
+  .fg-card{gap:7px;}
+  .fg-card-head{display:flex;align-items:baseline;gap:8px;}
+  .fg-card-head b{font-size:17px;color:var(--ink);}
+  .fg-card-head span{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  /* The assumption a bare-number interpretation rests on. Small but
+     first, because the card is only true IF the caption is. */
+  .fg-interp{font-size:11.5px;font-style:italic;color:var(--ink-soft);}
+  .fg-spec{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink-soft);
+    border-bottom:1px dashed var(--ow-steel-100);padding-bottom:4px;}
+  .fg-spec b{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;}
+  .fg-note{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  .fg-warn{font-size:11.5px;line-height:1.45;color:var(--danger);font-weight:600;}
+  .fg-chip-flow{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
+  .fg-chip{
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    background:#fff;color:var(--ink-soft);border:1px solid var(--line);
+    border-radius:20px;padding:5px 13px;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .fg-chip:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .fg-chip.on{background:var(--ow-ink-900);border-color:var(--ow-ink-900);color:#fff;}
+  .fg-find{
+    font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;align-self:flex-start;
+    background:var(--ow-steel-050);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 10px;
+  }
+  .fg-find:hover{border-color:var(--ink-soft);}
+  .fg-chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+  .fg-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+  .fg-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);
+    font-weight:700;padding:7px 10px;border-bottom:1px solid var(--line);}
+  .fg-table td{padding:7px 10px;border-bottom:1px solid var(--ow-steel-100);font-size:13px;color:var(--ink-soft);}
+  .fg-table td b{color:var(--ink);}
 </style>
 </head>
 <body class="app-loading">
@@ -5388,6 +5433,7 @@
       <button type="button" class="mms-item" data-tab="products">Products</button>
       <button type="button" class="mms-item" data-tab="prices">Price registry</button>
       <button type="button" class="mms-item" data-tab="media">Media</button>
+      <button type="button" class="mms-item" data-tab="fasteners">Fastener guide</button>
     </div>
     <div class="mms-group">
       <div class="mms-group-label">Money</div>
@@ -5567,6 +5613,10 @@
         <button data-tab="media" title="Media" data-keywords="photos images library files">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
           <span class="nav-label">Media</span>
+        </button>
+        <button data-tab="fasteners" title="Fastener guide" data-keywords="convert conversion mm inch inches spanner wrench nut bolt washer thread pitch gauge screw pilot drill plug rivet size chart">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9z"/><circle cx="12" cy="12" r="3.2"/></svg>
+          <span class="nav-label">Fastener guide</span>
         </button>
       </div>
       <div class="nav-group">
@@ -7212,6 +7262,46 @@
           <div class="cmp-rival-chips" id="cmp_rival_chips"></div>
         </div>
         <div id="compareResults"></div>
+      </div>
+    </section>
+
+    <!-- FASTENER GUIDE -->
+    <section id="tab-fasteners" style="display:none;">
+      <div class="page-head">
+        <h1>Fastener guide</h1>
+        <p>The counter chart: mm to inches, which spanner turns which nut, which drill, plug and washer go with which bolt or screw — in both naming systems the catalogue already uses.</p>
+      </div>
+      <div class="panel">
+        <div class="fg-hero">
+          <input id="fg_q" placeholder="Type a size — M8, #8, 38mm, 1 1/2, 13…" autocomplete="off" inputmode="text">
+        </div>
+        <div class="fg-results" id="fg_results"></div>
+      </div>
+      <div class="panel">
+        <h2>Bolts &amp; nuts</h2>
+        <div class="fg-chip-flow" id="fg_bolt_chips"></div>
+        <div class="fg-results" id="fg_bolt_card"></div>
+      </div>
+      <div class="panel">
+        <h2>Wood &amp; self-drilling screws</h2>
+        <div class="fg-chip-flow" id="fg_screw_chips"></div>
+        <div class="fg-results" id="fg_screw_card"></div>
+      </div>
+      <div class="panel">
+        <h2>Lengths — inches to millimetres</h2>
+        <div id="fg_lengths"></div>
+      </div>
+      <div class="panel">
+        <h2>Wall plugs</h2>
+        <div id="fg_plugs"></div>
+      </div>
+      <div class="panel">
+        <h2>Rivets</h2>
+        <div id="fg_rivets"></div>
+      </div>
+      <div class="panel">
+        <h2>Imperial hex bolts</h2>
+        <div id="fg_imphex"></div>
       </div>
     </section>
 
@@ -12120,6 +12210,7 @@ function goToTab(tab){
   if(tab==='media') renderMedia();
   if(tab==='whatsapp'){ renderWhatsApp(); renderWaInsights(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
+  if(tab==='fasteners') renderFasteners();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
@@ -37674,6 +37765,483 @@ function renderDashboard(){
   ` : `<div class="threat-empty">No sales in this window yet.</div>`;
 }
 document.getElementById('dash_range_preset').addEventListener('change', renderDashboard);
+
+/* ================= FASTENER GUIDE =================
+
+   A printed workshop chart, in code. The shop sells the same screw under
+   two naming systems at once -- "Truss Head 4*19" is metric millimetres,
+   "Black Screws 8* 3/4" is gauge-and-inch -- and the person at the
+   counter is the translator. A customer asks for "one-and-a-half-inch
+   number eight"; the supplier's invoice says 4.2x38. This page is that
+   translation, plus the fit questions a fastener counter answers all
+   day: which spanner turns an M8 nut, which drill makes the hole an M8
+   passes through, which plug takes a number-10 screw.
+
+   Everything here is a curated constant. Nothing is computed that a
+   standard specifies (spanner flats, washer bores, trade lengths), and
+   nothing is specified that arithmetic can derive (exact inch<->mm runs
+   through 25.4 in one place). A wrong number on this page sells someone
+   the wrong drill bit, so the tables carry their sources in comments and
+   the tests pin the rows exactly. */
+
+/* One row per metric size, M3-M30. Spanner flats from ISO 4017/4032 AND
+   DIN 931/933/934 -- both circulate here (imports arrive from China,
+   India and Europe), and they disagree at four sizes, so the page says
+   both rather than picking a winner. Washers are ISO 7089 normal series
+   (id x od x thickness). Tap drills are dia minus pitch ROUNDED TO A
+   STOCK BIT (M8's exact figure is 6.75; no shop sells a 6.75 bit), so
+   the invariant is a tolerance, not an equation. Clearance drills are
+   ISO 273 medium fit. `fine` lists the fine pitches actually traded --
+   an M8x1 nut does NOT fit an M8x1.25 bolt, which is the whole reason
+   the pitch is printed. */
+const METRIC_BOLTS = [
+  {size:'M3',  dia:3,  pitch:0.5,  fine:[],           afIso:5.5, afDin:5.5, washerId:3.2,  washerOd:7,  washerT:0.5, tapDrill:2.5,  clearDrill:3.4},
+  {size:'M4',  dia:4,  pitch:0.7,  fine:[],           afIso:7,   afDin:7,   washerId:4.3,  washerOd:9,  washerT:0.8, tapDrill:3.3,  clearDrill:4.5},
+  {size:'M5',  dia:5,  pitch:0.8,  fine:[],           afIso:8,   afDin:8,   washerId:5.3,  washerOd:10, washerT:1,   tapDrill:4.2,  clearDrill:5.5},
+  {size:'M6',  dia:6,  pitch:1,    fine:[0.75],       afIso:10,  afDin:10,  washerId:6.4,  washerOd:12, washerT:1.6, tapDrill:5,    clearDrill:6.6},
+  {size:'M8',  dia:8,  pitch:1.25, fine:[1],          afIso:13,  afDin:13,  washerId:8.4,  washerOd:16, washerT:1.6, tapDrill:6.8,  clearDrill:9},
+  {size:'M10', dia:10, pitch:1.5,  fine:[1.25, 1],    afIso:16,  afDin:17,  washerId:10.5, washerOd:20, washerT:2,   tapDrill:8.5,  clearDrill:11},
+  {size:'M12', dia:12, pitch:1.75, fine:[1.5, 1.25],  afIso:18,  afDin:19,  washerId:13,   washerOd:24, washerT:2.5, tapDrill:10.2, clearDrill:13.5},
+  {size:'M14', dia:14, pitch:2,    fine:[1.5],        afIso:21,  afDin:22,  washerId:15,   washerOd:28, washerT:2.5, tapDrill:12,   clearDrill:15.5},
+  {size:'M16', dia:16, pitch:2,    fine:[1.5],        afIso:24,  afDin:24,  washerId:17,   washerOd:30, washerT:3,   tapDrill:14,   clearDrill:17.5},
+  {size:'M18', dia:18, pitch:2.5,  fine:[2, 1.5],     afIso:27,  afDin:27,  washerId:19,   washerOd:34, washerT:3,   tapDrill:15.5, clearDrill:20},
+  {size:'M20', dia:20, pitch:2.5,  fine:[2, 1.5],     afIso:30,  afDin:30,  washerId:21,   washerOd:37, washerT:3,   tapDrill:17.5, clearDrill:22},
+  {size:'M22', dia:22, pitch:2.5,  fine:[1.5],        afIso:34,  afDin:32,  washerId:23,   washerOd:39, washerT:3,   tapDrill:19.5, clearDrill:24},
+  {size:'M24', dia:24, pitch:3,    fine:[2],          afIso:36,  afDin:36,  washerId:25,   washerOd:44, washerT:4,   tapDrill:21,   clearDrill:26},
+  {size:'M27', dia:27, pitch:3,    fine:[2],          afIso:41,  afDin:41,  washerId:28,   washerOd:50, washerT:4,   tapDrill:24,   clearDrill:30},
+  {size:'M30', dia:30, pitch:3.5,  fine:[2],          afIso:46,  afDin:46,  washerId:31,   washerOd:56, washerT:4,   tapDrill:26.5, clearDrill:33},
+];
+
+/* Wood/chipboard/self-drilling screw gauges, #4-#14: the bridge between
+   the catalogue's own two naming schemes. Diameters are the imperial
+   gauge formula (0.060" + 0.013" per gauge) rounded to the trade
+   half-millimetre everyone actually says: a number-8 IS the 4.2, and the
+   "4*13" chipboard naming rounds the same screw to 4. Pilot drills are
+   the joinery rule of thumb -- softwood takes the smaller bit because
+   the wood gives; hardwood splits instead, so it gets a bigger one.
+   plugMm pairs the gauge with the wall plug that takes it. */
+const SCREW_GAUGES = [
+  {gauge:4,  dia:2.9, pilotSoft:1.5, pilotHard:2,   clearDrill:3.5, plugMm:5},
+  {gauge:6,  dia:3.5, pilotSoft:2,   pilotHard:2.5, clearDrill:4,   plugMm:5},
+  {gauge:8,  dia:4.2, pilotSoft:2,   pilotHard:3,   clearDrill:4.5, plugMm:6},
+  {gauge:10, dia:4.8, pilotSoft:2.5, pilotHard:3.5, clearDrill:5,   plugMm:7},
+  {gauge:12, dia:5.5, pilotSoft:3,   pilotHard:4,   clearDrill:6,   plugMm:8},
+  {gauge:14, dia:6.3, pilotSoft:3.5, pilotHard:4.5, clearDrill:6.5, plugMm:10},
+];
+
+/* The screw-length ladder as the trade actually rounds it. 2.5 inches is
+   63.5mm and nobody has ever sold a 63.5mm screw -- the shelf says 65.
+   Exact conversion lives in fgInchToMm; this table is the ROUNDING, which
+   is convention, not arithmetic, and so has to be written down. */
+const TRADE_LENGTHS = [
+  {inchLabel:'1/4"',   inch:0.25,  tradeMm:6},
+  {inchLabel:'3/8"',   inch:0.375, tradeMm:10},
+  {inchLabel:'1/2"',   inch:0.5,   tradeMm:13},
+  {inchLabel:'5/8"',   inch:0.625, tradeMm:16},
+  {inchLabel:'3/4"',   inch:0.75,  tradeMm:19},
+  {inchLabel:'7/8"',   inch:0.875, tradeMm:22},
+  {inchLabel:'1"',     inch:1,     tradeMm:25},
+  {inchLabel:'1 1/4"', inch:1.25,  tradeMm:32},
+  {inchLabel:'1 1/2"', inch:1.5,   tradeMm:38},
+  {inchLabel:'1 3/4"', inch:1.75,  tradeMm:45},
+  {inchLabel:'2"',     inch:2,     tradeMm:50},
+  {inchLabel:'2 1/2"', inch:2.5,   tradeMm:65},
+  {inchLabel:'3"',     inch:3,     tradeMm:75},
+  {inchLabel:'3 1/2"', inch:3.5,   tradeMm:90},
+  {inchLabel:'4"',     inch:4,     tradeMm:100},
+  {inchLabel:'5"',     inch:5,     tradeMm:125},
+  {inchLabel:'6"',     inch:6,     tradeMm:150},
+];
+
+/* Wall plugs: the size IS the masonry drill bit, which is the one fact
+   that stops a wobbling plug. Colours are the common UK-style convention
+   only -- makers differ, so the card says the millimetre and treats the
+   colour as a nickname. Gauge ranges beyond #14 (the 12mm plug takes
+   coach screws) are left null rather than stretched. */
+const WALL_PLUGS = [
+  {size:5,  colour:'Yellow', drill:5,  gaugeMin:4,    gaugeMax:8,    screwMmMin:3,   screwMmMax:4},
+  {size:6,  colour:'Red',    drill:6,  gaugeMin:6,    gaugeMax:10,   screwMmMin:3.5, screwMmMax:5},
+  {size:7,  colour:'Brown',  drill:7,  gaugeMin:8,    gaugeMax:12,   screwMmMin:4,   screwMmMax:5.5},
+  {size:8,  colour:'',       drill:8,  gaugeMin:10,   gaugeMax:14,   screwMmMin:4.5, screwMmMax:6},
+  {size:10, colour:'Blue',   drill:10, gaugeMin:12,   gaugeMax:14,   screwMmMin:5.5, screwMmMax:8},
+  {size:12, colour:'',       drill:12, gaugeMin:null, gaugeMax:null, screwMmMin:8,   screwMmMax:10},
+];
+
+/* Blind (pop) rivets. The drill is a whisker over the body -- too tight
+   and the rivet will not seat, too loose and it spins. Lengths: pick
+   roughly the grip (total sheet thickness) plus one-and-a-half diameters. */
+const RIVETS = [
+  {dia:3.2, inchLabel:'1/8"',  drill:3.3, gripNote:'lengths 6–12 mm typical'},
+  {dia:4,   inchLabel:'5/32"', drill:4.1, gripNote:'lengths 6–14 mm typical'},
+  {dia:4.8, inchLabel:'3/16"', drill:4.9, gripNote:'lengths 8–18 mm typical'},
+  {dia:6.4, inchLabel:'1/4"',  drill:6.5, gripNote:'lengths 10–25 mm typical'},
+];
+
+/* Imperial hex bolts (UNC, ASME B18.2.1 heads) still turn up on older
+   machines and imported equipment, in a shop whose spanners are metric.
+   The note answers the question actually being asked: which metric
+   spanner gets you home. threadIn duplicates the fraction as a number so
+   a typed "3/8" can find its row without parsing the label. */
+const IMPERIAL_HEX = [
+  {thread:'1/4"-20 UNC',  threadIn:0.25,   afLabel:'7/16"',   afMm:11.11, metricNote:'11 mm — snug fit'},
+  {thread:'5/16"-18 UNC', threadIn:0.3125, afLabel:'1/2"',    afMm:12.7,  metricNote:'13 mm — slightly loose; 1/2" is exact'},
+  {thread:'3/8"-16 UNC',  threadIn:0.375,  afLabel:'9/16"',   afMm:14.29, metricNote:'14 mm — snug fit'},
+  {thread:'7/16"-14 UNC', threadIn:0.4375, afLabel:'5/8"',    afMm:15.88, metricNote:'16 mm — slightly loose'},
+  {thread:'1/2"-13 UNC',  threadIn:0.5,    afLabel:'3/4"',    afMm:19.05, metricNote:'19 mm — snug fit'},
+  {thread:'5/8"-11 UNC',  threadIn:0.625,  afLabel:'15/16"',  afMm:23.81, metricNote:'24 mm — slightly loose'},
+  {thread:'3/4"-10 UNC',  threadIn:0.75,   afLabel:'1 1/8"',  afMm:28.58, metricNote:'29 mm if you have it; an adjustable otherwise'},
+];
+
+function fgGcd(a, b){ a = Math.abs(a); b = Math.abs(b); while(b){ const t = a % b; a = b; b = t; } return a || 1; }
+
+/* "1 1/2", "1-1/2", "1½", "3/8", "1.5" -> a number, or null for
+   anything else. Unicode vulgar fractions are what a phone keyboard
+   offers, so they parse rather than failing the person with the better
+   keyboard. A zero denominator is nonsense, not zero. */
+function fgParseFraction(s){
+  let str = String(s == null ? '' : s).trim()
+    .replace(/¼/g, ' 1/4').replace(/½/g, ' 1/2').replace(/¾/g, ' 3/4')
+    .replace(/⅛/g, ' 1/8').replace(/⅜/g, ' 3/8').replace(/⅝/g, ' 5/8').replace(/⅞/g, ' 7/8')
+    .trim();
+  /* The whole-number part REQUIRES a separator before a fraction. With
+     it optional, "15/16" backtracked into "1" + "5/16" and read as
+     1.3125 -- a parser inventing a whole inch out of the first digit of
+     a numerator. Two anchored patterns, no backtracking ambiguity. */
+  const fm = /^(?:(\d+(?:\.\d+)?)[\s-]+)?(\d+)\s*\/\s*(\d+)$/.exec(str);
+  if(fm){
+    const den = Number(fm[3]);
+    if(!(den > 0)) return null;
+    return (fm[1] != null ? Number(fm[1]) : 0) + Number(fm[2]) / den;
+  }
+  return /^\d+(?:\.\d+)?$/.test(str) ? Number(str) : null;
+}
+
+/* What was typed, split into a value and what unit it claimed. A bare
+   number claims NOTHING -- the router turns that honesty into multiple
+   interpretation cards rather than guessing here. A bare fraction is
+   inches, because nobody has ever said "three-eighths of a millimetre"
+   at a hardware counter. Commas are rejected outright: "1,5" is a
+   decimal comma to some hands and a thousands separator to others, and
+   misreading it either way sells the wrong screw. */
+function fgParseLengthInput(raw){
+  let s = String(raw == null ? '' : raw).trim().toLowerCase();
+  if(!s || s.indexOf(',') >= 0) return null;
+  let unit = null;
+  if(/(mm|millimetres?|millimeters?)$/.test(s)){ unit = 'mm'; s = s.replace(/(mm|millimetres?|millimeters?)$/, '').trim(); }
+  else if(/(inches|inch|in|["″”]|'')$/.test(s)){ unit = 'in'; s = s.replace(/(inches|inch|in|["″”]|'')$/, '').trim(); }
+  const hadFraction = /[\/¼½¾⅛⅜⅝⅞]/.test(s);
+  const v = fgParseFraction(s);
+  if(v == null || !(v > 0)) return null;
+  if(unit == null && hadFraction) unit = 'in';
+  return { value: v, unit };
+}
+
+function fgInchToMm(inch){ return inch * 25.4; }
+function fgMmToInch(mm){ return mm / 25.4; }
+
+/* The nearest workable fraction of an inch, reduced, with the error it
+   carries -- because 38mm is NOT 1 1/2", it is 0.1mm short of it, and a
+   page that prints the fraction without the error is teaching people the
+   two are equal. The renderer shows "≈" whenever errorMm is worth
+   saying. */
+function fgNearestFraction(inch, den){
+  const d = den || 16;
+  let num = Math.round(inch * d);
+  let g = fgGcd(num, d);
+  const rn = num / g, rd = d / g;
+  const whole = Math.floor(rn / rd);
+  const rem = rn - whole * rd;
+  const label = rem === 0 ? String(whole) : (whole > 0 ? `${whole} ${rem}/${rd}` : `${rn}/${rd}`);
+  const valueIn = rn / rd;
+  return { num: rn, den: rd, label, errorIn: inch - valueIn, errorMm: (inch - valueIn) * 25.4 };
+}
+
+/* The trade ladder row this inch figure is sold as, or null when it is
+   not a ladder size. The tolerance is FLOAT FUZZ ONLY: callers pass
+   exact rationals (typed fractions, reduced sixteenths), so anything
+   further off than rounding error is genuinely not a ladder size --
+   a 1/32" tolerance here quietly called 0.9" a seven-eighths. */
+function fgTradeMm(inch){
+  return TRADE_LENGTHS.find(r=> Math.abs(r.inch - inch) <= 1e-6) || null;
+}
+
+function fgGaugeToMm(gauge){
+  const row = SCREW_GAUGES.find(r=> r.gauge === Number(gauge));
+  return row ? row.dia : null;
+}
+/* Nearest gauge within 0.35mm -- half the smallest gap between gauges,
+   so no diameter can honestly claim two of them; a tie at the exact
+   midpoint goes to the smaller gauge, deterministically. `exact` marks a
+   trade-exact naming (4.2 IS a number-8) as opposed to the chipboard
+   rounding (4.0 is a number-8 with 0.2 to spare). */
+function fgMmToGauge(mm){
+  const v = Number(mm);
+  if(!(v > 0)) return null;
+  let best = null;
+  SCREW_GAUGES.forEach(r=>{ const d = Math.abs(r.dia - v); if(d <= 0.35 && (!best || d < best.d)) best = { r, d }; });
+  return best ? { gauge: best.r.gauge, exact: best.d < 0.05, diffMm: Math.round((v - best.r.dia) * 100) / 100 } : null;
+}
+
+function fgSpannerForBolt(size){
+  const key = String(size).trim().toUpperCase().replace(/^(\d)/, 'M$1');
+  const row = METRIC_BOLTS.find(r=> r.size === key);
+  return row ? { size: row.size, afIso: row.afIso, afDin: row.afDin } : null;
+}
+// Which bolts a spanner of this across-flats turns. Both columns are
+// searched because the shop's shelves hold both standards, and the card
+// says WHICH standard so a 17mm answer does not surprise an ISO bolt.
+function fgBoltsForSpanner(afMm){
+  const af = Number(afMm);
+  const out = [];
+  METRIC_BOLTS.forEach(r=>{
+    const iso = Math.abs(r.afIso - af) <= 0.01, din = Math.abs(r.afDin - af) <= 0.01;
+    if(iso || din) out.push({ size: r.size, std: iso && din ? 'ISO & DIN' : (iso ? 'ISO' : 'DIN') });
+  });
+  return out;
+}
+
+/* The smart-search brain: text in, an ARRAY of typed interpretations
+   out, and no DOM anywhere near it. The array is the honesty: a bare
+   "13" genuinely means several things at a fastener counter, and the
+   page shows each with its assumption spelled out instead of guessing.
+   Kinds are a closed set the renderer whitelists: bolt, screw, length,
+   spanner, plug, rivet, imphex.
+
+   The bolt pattern is anchored M-then-digit, so "M8" is a bolt and
+   "8mm" NEVER is -- the classic prefix/suffix collision, pinned by test. */
+function fgRouteQuery(q){
+  let s = String(q == null ? '' : q).trim().toLowerCase();
+  if(!s) return [];
+  // Words that name a KIND bias the order of interpretation cards but
+  // are not sizes themselves: "13 spanner" puts the spanner card first.
+  let bias = null;
+  const noise = { spanner:'spanner', wrench:'spanner', bolt:'bolt', bolts:'bolt', nut:'bolt', nuts:'bolt',
+    washer:'bolt', washers:'bolt', screw:'screw', screws:'screw', plug:'plug', plugs:'plug',
+    rivet:'rivet', rivets:'rivet', drill:null, bit:null };
+  s = s.split(/\s+/).filter(w=>{
+    if(w in noise){ if(noise[w]) bias = noise[w]; return false; }
+    return true;
+  }).join(' ');
+  if(!s) return [];
+
+  let m = /^m\s*(\d+(?:\.\d+)?)\s*(?:[x×]\s*(\d+(?:\.\d+)?))?$/.exec(s);
+  if(m){
+    const row = METRIC_BOLTS.find(r=> r.dia === Number(m[1]));
+    return row ? [{ kind:'bolt', row, pitchTyped: m[2] != null ? Number(m[2]) : null }] : [];
+  }
+  m = /^#\s*(\d+)$/.exec(s) || /^(\d+)\s*(?:g|ga|gauge)$/.exec(s);
+  if(m){
+    const row = SCREW_GAUGES.find(r=> r.gauge === Number(m[1]));
+    return row ? [{ kind:'screw', row }] : [];
+  }
+
+  const len = fgParseLengthInput(s);
+  if(!len) return [];
+  const out = [];
+  if(len.unit === 'mm'){
+    out.push({ kind:'length', mm: len.value, inch: fgMmToInch(len.value), assumed: null, unit:'mm' });
+  } else if(len.unit === 'in'){
+    out.push({ kind:'length', mm: fgInchToMm(len.value), inch: len.value, assumed: null, unit:'in' });
+    const hex = IMPERIAL_HEX.find(r=> Math.abs(r.threadIn - len.value) <= 0.001);
+    if(hex) out.push({ kind:'imphex', row: hex });
+    return fgBias(out, bias);
+  } else {
+    // A bare number: every reading it could honestly have, in a fixed
+    // priority order so the page is deterministic. mm first, because
+    // this is a metric-counter country.
+    out.push({ kind:'length', mm: len.value, inch: fgMmToInch(len.value), assumed:'mm', unit:'mm' });
+  }
+  const bolts = fgBoltsForSpanner(len.value);
+  if(bolts.length) out.push({ kind:'spanner', af: len.value, bolts, assumed: len.unit ? null : 'spanner' });
+  if(len.unit == null){
+    const g = SCREW_GAUGES.find(r=> r.gauge === len.value);
+    if(g) out.push({ kind:'screw', row: g, assumed:'gauge' });
+  }
+  const plug = WALL_PLUGS.find(r=> r.size === len.value);
+  if(plug) out.push({ kind:'plug', row: plug, assumed: len.unit ? null : 'plug' });
+  const rivet = RIVETS.find(r=> Math.abs(r.dia - len.value) <= 0.05);
+  if(rivet) out.push({ kind:'rivet', row: rivet, assumed: len.unit ? null : 'rivet' });
+  if(len.unit == null && len.value <= 12){
+    out.push({ kind:'length', mm: fgInchToMm(len.value), inch: len.value, assumed:'in', unit:'in' });
+  }
+  return fgBias(out, bias);
+}
+// Stable: matching kinds move to the front, everything else keeps its order.
+function fgBias(cards, bias){
+  if(!bias) return cards;
+  return cards.filter(c=> c.kind === bias).concat(cards.filter(c=> c.kind !== bias));
+}
+
+/* ---- rendering ---- */
+const FG_ASSUME_CAPTIONS = {
+  mm: 'If that’s millimetres…', in: 'If that’s inches…', spanner: 'If that’s a spanner size…',
+  gauge: 'If that’s a screw gauge…', plug: 'If that’s a wall plug…', rivet: 'If that’s a rivet…',
+};
+function fgMmStr(n){ return (Math.round(n * 100) / 100).toLocaleString('en-UG'); }
+function fgSpecRow(label, value){ return `<div class="fg-spec"><span>${esc(label)}</span><b>${value}</b></div>`; }
+function fgFindChip(term, label){
+  return `<button type="button" class="fg-find" data-fg-find="${esc(term)}">${esc(label || `Find “${term}” in catalogue`)}</button>`;
+}
+
+function fgBoltCardHTML(entry){
+  const r = entry.row;
+  const af = r.afIso === r.afDin ? `${r.afIso} mm` : `${r.afIso} mm ISO · ${r.afDin} mm DIN`;
+  const pitchNote = entry.pitchTyped != null && entry.pitchTyped !== r.pitch
+    ? `<div class="fg-warn">${esc(`${r.size}×${entry.pitchTyped} is a FINE pitch — its nut will not fit a standard ${r.size}×${r.pitch} bolt.`)}</div>` : '';
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${esc(r.size)}</b><span>bolt &amp; nut</span></div>
+    ${fgSpecRow('Spanner', esc(af))}
+    ${fgSpecRow('Thread pitch', esc(`${r.pitch} mm coarse${r.fine.length ? ` · fine: ${r.fine.join(', ')}` : ''}`))}
+    ${fgSpecRow('Washer (ISO 7089)', esc(`${r.washerId} × ${r.washerOd} × ${r.washerT} mm`))}
+    ${fgSpecRow('Tap drill', esc(`${r.tapDrill} mm`))}
+    ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
+    ${r.fine.length ? `<div class="fg-note">A fine-pitch nut (${esc(r.size)}×${r.fine.join('/')}) will not thread onto a coarse bolt — match the pitch, not just the size.</div>` : ''}
+    ${pitchNote}
+    ${fgFindChip(r.size)}
+  </div>`;
+}
+function fgScrewCardHTML(entry){
+  const r = entry.row;
+  const metricName = `${r.dia}`.replace(/\.0$/, '');
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>#${r.gauge}</b><span>screw · ${esc(String(r.dia))} mm</span></div>
+    ${entry.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.gauge)}</div>` : ''}
+    ${fgSpecRow('Also written as', esc(`${Math.round(r.dia)}×length or ${r.dia}×length (mm)`))}
+    ${fgSpecRow('Pilot drill — softwood', esc(`${r.pilotSoft} mm`))}
+    ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
+    ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
+    ${fgSpecRow('Wall plug', esc(`${r.plugMm} mm`))}
+    <div class="fg-chip-row">${fgFindChip(`${r.gauge}*`)}${fgFindChip(metricName)}</div>
+  </div>`;
+}
+function fgLengthCardHTML(c){
+  const frac = fgNearestFraction(c.inch, 16);
+  const rough = Math.abs(frac.errorMm) > 0.05;
+  const trade = fgTradeMm(frac.num / frac.den);
+  const main = c.unit === 'in'
+    ? `${esc(frac.label)}″ = ${esc(fgMmStr(c.mm))} mm`
+    : `${esc(fgMmStr(c.mm))} mm ${rough ? '≈' : '='} ${esc(frac.label)}″`;
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${main}</b><span>length</span></div>
+    ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[c.assumed])}</div>` : ''}
+    ${rough ? fgSpecRow('Exactly', esc(`${frac.label}″ = ${fgMmStr(fgInchToMm(frac.num / frac.den))} mm — ${fgMmStr(Math.abs(frac.errorMm))} mm ${frac.errorMm > 0 ? 'under' : 'over'} what you typed`)) : ''}
+    ${fgSpecRow('Decimal', esc(`${(Math.round(c.inch * 1000) / 1000)}″`))}
+    ${trade ? fgSpecRow('Sold as', esc(`${trade.inchLabel} / ${trade.tradeMm} mm on the shelf`)) : ''}
+  </div>`;
+}
+function fgSpannerCardHTML(c){
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${esc(String(c.af))} mm spanner</b><span>fits</span></div>
+    ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.spanner)}</div>` : ''}
+    ${c.bolts.map(b=> fgSpecRow(b.size + ' bolt/nut', esc(b.std))).join('')}
+    ${c.bolts.some(b=> b.std !== 'ISO & DIN') ? '<div class="fg-note">ISO and DIN heads differ at this size — the other standard takes the neighbouring spanner.</div>' : ''}
+  </div>`;
+}
+function fgPlugCardHTML(c){
+  const r = c.row;
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${esc(String(r.size))} mm plug</b><span>${esc(r.colour ? r.colour.toLowerCase() : 'wall plug')}</span></div>
+    ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.plug)}</div>` : ''}
+    ${fgSpecRow('Masonry drill', esc(`${r.drill} mm — same as the plug`))}
+    ${fgSpecRow('Takes screws', esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm (coach screws)`))}
+    <div class="fg-note">Colours vary by maker — the millimetre is the truth.</div>
+  </div>`;
+}
+function fgRivetCardHTML(c){
+  const r = c.row;
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${esc(String(r.dia))} mm rivet</b><span>${esc(r.inchLabel)}</span></div>
+    ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.rivet)}</div>` : ''}
+    ${fgSpecRow('Drill bit', esc(`${r.drill} mm`))}
+    ${fgSpecRow('Length', esc(`grip (total thickness) + 1.5 × diameter — ${r.gripNote}`))}
+  </div>`;
+}
+function fgImpHexCardHTML(c){
+  const r = c.row;
+  return `<div class="pi-card fg-card">
+    <div class="fg-card-head"><b>${esc(r.thread)}</b><span>imperial hex</span></div>
+    ${fgSpecRow('Spanner (AF)', esc(`${r.afLabel} = ${r.afMm} mm`))}
+    ${fgSpecRow('Metric spanner', esc(r.metricNote))}
+  </div>`;
+}
+const FG_CARD_BUILDERS = {
+  bolt: fgBoltCardHTML, screw: fgScrewCardHTML, length: fgLengthCardHTML,
+  spanner: fgSpannerCardHTML, plug: fgPlugCardHTML, rivet: fgRivetCardHTML, imphex: fgImpHexCardHTML,
+};
+
+function fgRenderResults(){
+  const q = document.getElementById('fg_q').value;
+  const wrap = document.getElementById('fg_results');
+  const cards = fgRouteQuery(q);
+  if(!String(q).trim()){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = cards.length
+    ? cards.map(c=> (FG_CARD_BUILDERS[c.kind] || (()=>''))(c)).join('')
+    : '<div class="empty">Nothing matched. Try a size like “M8”, “#8”, “38mm” or “1 1/2”.</div>';
+}
+
+let fgSelectedBolt = 'M8';
+let fgSelectedGauge = 8;
+function fgRenderBoltPanel(){
+  const chips = document.getElementById('fg_bolt_chips');
+  chips.innerHTML = METRIC_BOLTS.map(r=>
+    `<button type="button" class="fg-chip${r.size === fgSelectedBolt ? ' on' : ''}" data-fg-bolt="${esc(r.size)}" aria-pressed="${r.size === fgSelectedBolt}">${esc(r.size)}</button>`).join('');
+  const row = METRIC_BOLTS.find(r=> r.size === fgSelectedBolt);
+  document.getElementById('fg_bolt_card').innerHTML = row ? fgBoltCardHTML({ row, pitchTyped: null }) : '';
+}
+function fgRenderScrewPanel(){
+  const chips = document.getElementById('fg_screw_chips');
+  chips.innerHTML = SCREW_GAUGES.map(r=>
+    `<button type="button" class="fg-chip${r.gauge === fgSelectedGauge ? ' on' : ''}" data-fg-gauge="${r.gauge}" aria-pressed="${r.gauge === fgSelectedGauge}">#${r.gauge}</button>`).join('');
+  const row = SCREW_GAUGES.find(r=> r.gauge === fgSelectedGauge);
+  document.getElementById('fg_screw_card').innerHTML = row ? fgScrewCardHTML({ row }) : '';
+}
+function renderFasteners(){
+  fgRenderBoltPanel();
+  fgRenderScrewPanel();
+  // The static tables never change, so they are built once and kept.
+  const lengths = document.getElementById('fg_lengths');
+  if(!lengths.innerHTML){
+    lengths.innerHTML = `<div class="an-scroll"><table class="fg-table">
+      <thead><tr><th>Inches</th><th>Exact mm</th><th>Sold as</th></tr></thead>
+      <tbody>${TRADE_LENGTHS.map(r=>`<tr><td>${esc(r.inchLabel)}</td><td>${esc(fgMmStr(fgInchToMm(r.inch)))}</td><td><b>${esc(String(r.tradeMm))} mm</b></td></tr>`).join('')}</tbody>
+    </table></div>`;
+    document.getElementById('fg_plugs').innerHTML = `<div class="an-scroll"><table class="fg-table">
+      <thead><tr><th>Plug</th><th>Colour</th><th>Masonry drill</th><th>Takes screws</th></tr></thead>
+      <tbody>${WALL_PLUGS.map(r=>`<tr><td><b>${esc(String(r.size))} mm</b></td><td>${esc(r.colour || '—')}</td><td>${esc(String(r.drill))} mm</td><td>${esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm coach screws`)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+    document.getElementById('fg_rivets').innerHTML = `<div class="an-scroll"><table class="fg-table">
+      <thead><tr><th>Rivet</th><th>Inch name</th><th>Drill bit</th><th>Lengths</th></tr></thead>
+      <tbody>${RIVETS.map(r=>`<tr><td><b>${esc(String(r.dia))} mm</b></td><td>${esc(r.inchLabel)}</td><td>${esc(String(r.drill))} mm</td><td>${esc(r.gripNote)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+    document.getElementById('fg_imphex').innerHTML = `<div class="an-scroll"><table class="fg-table">
+      <thead><tr><th>Thread</th><th>Spanner (AF)</th><th>mm</th><th>Metric spanner</th></tr></thead>
+      <tbody>${IMPERIAL_HEX.map(r=>`<tr><td><b>${esc(r.thread)}</b></td><td>${esc(r.afLabel)}</td><td>${esc(String(r.afMm))}</td><td>${esc(r.metricNote)}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+  fgRenderResults();
+}
+
+// One listener for every chip and find-button the tab will ever hold --
+// the cards are rebuilt on each render, and per-card rebinding is how a
+// button quietly stops working after the third redraw.
+document.getElementById('fg_q').addEventListener('input', fgRenderResults);
+document.getElementById('tab-fasteners').addEventListener('click', (e)=>{
+  const bolt = e.target.closest('[data-fg-bolt]');
+  if(bolt){ fgSelectedBolt = bolt.getAttribute('data-fg-bolt'); fgRenderBoltPanel(); return; }
+  const gauge = e.target.closest('[data-fg-gauge]');
+  if(gauge){ fgSelectedGauge = Number(gauge.getAttribute('data-fg-gauge')); fgRenderScrewPanel(); return; }
+  const find = e.target.closest('[data-fg-find]');
+  if(find){
+    // Straight to the catalogue, filtered to the translated term. The
+    // category filter is cleared because a lingering one would hide the
+    // very hits the jump exists to show; goToTab's chain has no products
+    // line, so the render is triggered explicitly.
+    document.getElementById('p_search').value = find.getAttribute('data-fg-find');
+    document.getElementById('p_category_filter').value = '';
+    goToTab('products');
+    triggerProductsRender();
+  }
+});
 
 function renderAll(){
   renderPresets();

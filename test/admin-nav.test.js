@@ -81,7 +81,7 @@ const INDEX = railIndex();
   const EVERY_TAB = [
     'dashboard', 'quote', 'quote-saved', 'invoices', 'customers', 'agents', 'whatsapp',
     'compare', 'suppliers', 'purchase-invoices',
-    'products', 'prices', 'inventory', 'media',
+    'products', 'prices', 'inventory', 'media', 'fasteners',
     'cashbook', 'analytics-debtors', 'analytics-creditors', 'statements', 'payroll', 'assets', 'loans',
     'analytics-sales', 'analytics-purchase', 'map',
     'staff', 'worker', 'presets',
