@@ -3463,7 +3463,7 @@
      it. Select all / Print sit OUTSIDE the panel, on a slim toolbar row
      under the page head, so they neither squeeze the rail nor restate a
      heading. */
-  .sq-board-tools{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:-4px 0 8px;}
+  .sq-board-tools{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:-10px 0 10px;}
   /* Fades on the clipped edge(s): the universal "there is more" cue,
      written by the scroll handler as .can-left/.can-right so a board that
      fits whole carries none. */
@@ -3471,7 +3471,14 @@
   .sq-board.can-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px);mask-image:linear-gradient(90deg,transparent,#000 36px);}
   .sq-board.can-left.can-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);}
   .sq-board.panning{cursor:grabbing;user-select:none;}
-  .sq-col{display:flex;flex-direction:column;min-width:0;scroll-snap-align:start;}
+  /* A lane, not a bare track. Cards floating on the panel white were
+     grouped by nothing but a 9px dot, so five columns read as one loose
+     scatter -- the quiet contained background is what makes a board read
+     as lanes of work. Cards stay white on top of it. */
+  .sq-col{
+    display:flex;flex-direction:column;min-width:0;scroll-snap-align:start;
+    background:var(--ow-steel-050);border-radius:12px;padding:8px 8px 10px;
+  }
   /* NOT sticky, and it cannot be: overflow-x:auto makes .sq-board a
      scroll container, and position:sticky pins against the nearest one
      -- so a sticky head here answers to the board, not the page, and
@@ -3479,19 +3486,19 @@
      the cards. The rail above IS sticky (it lives outside the strip),
      and it carries the same step names and counts, so nothing is lost
      scrolling a long column. */
-  .sq-col-head{display:flex;align-items:center;gap:8px;padding:6px 2px 10px;}
+  .sq-col-head{display:flex;align-items:center;gap:8px;padding:2px 4px 8px;}
   .sq-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   /* Quiet on purpose, and the short name only: "STEP 2. AWAITING GOODS"
      restated what the rail directly above already numbers and colours,
      so every stage announced itself twice in two lines. The head only
      anchors a column to its colour while the strip is scrolled. */
   .sq-col-title{font-size:10.5px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;color:var(--ink-soft);}
-  .sq-col-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-soft);background:#EEF1F3;border-radius:999px;padding:1px 8px;}
+  .sq-col-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-soft);background:var(--panel);border-radius:999px;padding:1px 8px;}
   .sq-col-body{display:flex;flex-direction:column;gap:10px;min-height:8px;}
-  /* Quiet, so empty steps recede and the columns with work carry the
-     eye -- a full-weight dashed box made five empty columns as loud as
-     five full ones. */
-  .sq-col-empty{font-size:11.5px;color:var(--ink-soft);opacity:.45;padding:8px 0;border:1px dashed var(--line);border-radius:10px;text-align:center;}
+  /* The lane itself is the empty container now, so the dashed box that
+     used to stand in for one is gone -- an empty lane is just its own
+     quiet ground with a word in it. */
+  .sq-col-empty{font-size:11.5px;color:var(--ink-soft);opacity:.55;padding:14px 0 8px;text-align:center;}
   .sq-card{
     background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px;
     border-left:3px solid var(--sq-accent,var(--line));
@@ -3514,7 +3521,15 @@
     50%{opacity:0.55;box-shadow:0 0 0 5px rgba(192,57,43,0);}
   }
   .sq-card-top{display:flex;align-items:flex-start;gap:8px;}
-  .sq-card-check{margin-top:2px;flex-shrink:0;}
+  /* Present but quiet: a full-strength checkbox on every card is thirty
+     bright squares nobody is usually selecting. Full ink on hover, and
+     whenever it is actually checked. */
+  .sq-card-check{margin-top:2px;flex-shrink:0;width:15px;height:15px;accent-color:var(--navy);opacity:.55;}
+  .sq-card:hover .sq-card-check, .sq-card-check:checked{opacity:1;}
+  /* Status pills inside a card drop the shout: uppercase tracking at
+     10.5px next to 11.5px body rows read as a heading in the wrong
+     place. The pill component keeps its look everywhere else. */
+  .sq-card .st-status-pill{text-transform:none;letter-spacing:0;font-size:10px;padding:2px 7px;}
   .sq-card-info{flex:1;min-width:0;}
   /* Who and how much: the two facts a board is scanned for, on one
      line, the figure in mono against the right edge. It used to be an
@@ -3525,16 +3540,19 @@
   .sq-client-total{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);}
   .sq-location-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
   .sq-location-row .icon{width:12px;height:12px;flex-shrink:0;}
-  .sq-card-meta-rows{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+  /* One gap governs the stack. The rows used to each carry their own
+     margin-top on top of this gap, so spacing depended on which rows an
+     order happened to have. */
+  .sq-card-meta-rows{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
   .sq-meta-row{font-size:12px;color:var(--ink-soft);}
   /* Waiting on goods is the normal state of the Awaiting Goods stage, so
      it reads as a countdown rather than as an alarm -- and turns when the
      last one lands, because that is the moment anything can happen. */
-  .sq-goods-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .sq-goods-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
   .sq-goods-row svg{width:14px;height:14px;flex-shrink:0;}
   .sq-goods-row.in{color:var(--good);font-weight:600;}
   .sq-goods-row.short{color:var(--warn-ink);font-weight:600;}
-  .sq-assignee-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .sq-assignee-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
   .sq-assignee-icon{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
   .sq-assignee-icon.prep{animation:sq-box-sort 1.3s ease-in-out infinite;}
   .sq-assignee-icon.delivery{animation:sq-moto-ride 0.9s ease-in-out infinite;}
@@ -3565,7 +3583,7 @@
      and the panel itself goes neutral so the cards carry the eye. */
   .sq-cash{
     all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;
-    background:var(--ow-steel-050);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;
   }
   .sq-cash:hover{border-color:var(--ink-soft);}
   .sq-cash:focus-visible{outline:2px solid var(--ow-amber);outline-offset:2px;}
@@ -3622,7 +3640,7 @@
   .pr-supplier-head{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;margin-bottom:5px;}
   .pr-supplier-head b{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .pr-supplier-head .icon{width:14px;height:14px;color:var(--ink-soft);}
-  .sq-cash.sq-runs{border-color:var(--line);background:var(--ow-steel-050);}
+  .sq-cash.sq-runs{border-color:var(--line);background:var(--panel);}
   .sq-cash.sq-runs .sq-cash-top .icon{color:var(--ow-verdigris);}
   .sq-cash.sq-runs .sq-cash-fig{color:var(--ow-verdigris);}
   .sq-cash-note{

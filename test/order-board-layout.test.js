@@ -253,4 +253,39 @@ const src = read('index.html');
     'and is gone from the meta row, where it read like a timestamp');
 }
 
+/* ---------- 10. lanes ------------------------------------------------ */
+/*
+ * Cards floating on the panel white were grouped by nothing but a 9px
+ * dot, so five columns read as one loose scatter. The column is a quiet
+ * contained lane; the cards, the banners and the count pill sit white on
+ * top of it. Contrast between the layers is the whole point, so the
+ * assertions here are about things DIFFERING.
+ */
+{
+  const lane = (/\.sq-col\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:var\(--ow-steel-050\)/.test(lane) && /border-radius:12px/.test(lane),
+    'the column is a contained lane');
+  const card = (/\.sq-card\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:#fff/.test(card),
+    'with the cards white on top of it, not steel on steel');
+  const banner = (/\.sq-cash\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/background:var\(--panel\)/.test(banner) && !/background:var\(--ow-steel-050\)/.test(banner),
+    'and the banners white too — steel on a steel lane is an invisible container');
+  t.check(/\.sq-col-empty\{[^}]*text-align:center/.test(src) && !/\.sq-col-empty\{[^}]*dashed/.test(src),
+    'an empty lane is its own quiet ground — the dashed stand-in box is gone');
+}
+
+/* ---------- 11. one rhythm, quiet controls --------------------------- */
+{
+  t.check(/\.sq-card-meta-rows\{display:flex;flex-direction:column;gap:4px/.test(src),
+    'one gap governs the card’s stack of rows');
+  t.check(!/\.sq-goods-row\{[^}]*margin-top/.test(src) && !/\.sq-assignee-row\{[^}]*margin-top/.test(src),
+    'and the rows no longer each carry their own margin on top of it');
+  t.check(/\.sq-card-check\{[^}]*opacity:\.55/.test(src)
+    && /\.sq-card:hover \.sq-card-check, \.sq-card-check:checked\{opacity:1;\}/.test(src),
+    'the checkbox rests quiet and wakes on hover — and is always full when actually checked');
+  t.check(/\.sq-card \.st-status-pill\{text-transform:none/.test(src),
+    'status pills inside a card drop the uppercase shout, without touching the pill anywhere else');
+}
+
 process.exit(t.done() ? 1 : 0);
