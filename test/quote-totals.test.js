@@ -99,7 +99,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
 
 /* ---------- 4. the client's figure leads ----------------------------- */
 {
-  t.check(/The client pays<\/div>/.test(bar), 'the summary opens with the client’s figure');
+  t.check(/Client pays<\/div>/.test(bar), 'the summary opens with the client’s figure');
   t.check(/qp-says-value">\$\{fmtUGX\(grandSell\)\}/.test(bar), 'and that figure is the sell total');
   /* It used to be one of four equal cells labelled "Total sell" -- the
      jargon on a screen whose whole job is a sentence somebody speaks. */
@@ -107,13 +107,30 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
   // old label, and should.
   t.check(!/qp-finbar-label">Total sell/.test(code) && !/qp-finbar-cell/.test(bar),
     'not one of four equal cells labelled in jargon');
-  t.check(/Costs you <b>\$\{fmtUGX\(grandBuy\)\}/.test(bar) && /You keep <b/.test(bar),
-    'with the shop’s economics under it, quieter');
-  /* Above the items. With fifteen lines on a quote the total was off the
-     bottom of the screen at the moment somebody was being asked for it. */
+  /* "You keep" stays on the bar; "Costs you" deliberately does not any
+     more. The bar is glanced at mid-call -- pays and keeps are the two
+     numbers that decision needs, the cost is derivable, and the full
+     three-line account still lives in the table footer above (section 2
+     pins it there). */
+  t.check(/You keep <b/.test(bar), 'with what the shop keeps under it, quieter');
+  /* Checked against the TEMPLATE, not the whole function -- the comment
+     explaining why "Costs you" left quotes the phrase, and should. */
+  t.check(!/Costs you <b>/.test(bar),
+    'and no third figure — the bar is a glance, the footer is the account');
+  /* The finbar used to sit ABOVE the items so the total stayed on
+     screen; the real fix is stronger — the whole summary now rides a
+     bar fixed to the viewport bottom (#q_stickybar), fused with the
+     quote's actions, so it can NEVER scroll away however long the quote
+     grows. The items panel therefore no longer contains it. */
+  t.check(/<div class="q-stickybar" id="q_stickybar">\s*<div class="qp-finbar" id="q_finbar">/.test(src),
+    'the summary rides the sticky bar at the viewport bottom');
   const panel = (/<div class="panel qp-panel qp-items-panel">[\s\S]*?<\/div>\n        <\/div>/.exec(src) || [''])[0];
-  t.check(panel.indexOf('id="q_finbar"') < panel.indexOf('id="q_itemsWrap"'),
-    'and it sits above the items rather than below them');
+  t.check(!/id="q_finbar"/.test(panel),
+    'and is out of the items panel entirely — pinned to the screen, not to a scroll position');
+  t.check(/body\.on-quote-tab \.q-stickybar\{display:flex;\}/.test(src),
+    'shown only while the quote tab is, since fixed position ignores tab visibility');
+  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:86px;\}/.test(src),
+    'while the document reserves the bar’s height so the last row is never buried under it');
 }
 
 /* ---------- 5. the mobile card says the same thing ------------------- *

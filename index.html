@@ -552,30 +552,53 @@
   .btn-icon{display:inline-flex;align-items:center;gap:8px;}
   .btn-icon .icon{width:15px;height:15px;}
 
-  /* Compact icon toolbar (used for Clear / Save / Print actions on the
-     Add New Quote panel) -- icon on top, short label underneath, with the
-     full description available as a tooltip via the title attribute. */
-  .qp-toolbar{display:flex;gap:6px;margin-top:4px;}
-  .qp-tbtn{
-    all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:4px;padding:8px 13px;border-radius:9px;
-    min-width:60px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);
-    transition:border-color .12s ease,color .12s ease,background .12s ease;
+  /* The sticky quote bar: the figure the admin reads aloud and the
+     actions on the finished quote, fused on one bar fixed to the
+     viewport bottom -- present only while the quote tab is (the
+     body.on-quote-tab class, set at the tab switch). The old toolbar
+     was five icon-over-label chips in the panel head: app-launcher
+     grammar, and the total lived a scroll away from the Save. */
+  .q-stickybar{
+    position:fixed;left:var(--sidebar-w);right:0;bottom:0;z-index:40;
+    display:none;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:9px 22px calc(9px + env(safe-area-inset-bottom, 0px));
+    background:var(--panel);border-top:1px solid var(--line);
+    box-shadow:0 -4px 16px rgba(20,30,40,0.06);
   }
-  .qp-tbtn .icon{width:18px;height:18px;}
-  .qp-tbtn span{font-size:10px;font-weight:700;letter-spacing:0.2px;white-space:nowrap;}
-  .qp-tbtn:hover{border-color:var(--ink-soft);color:var(--ink);background:#F7F9FB;}
-  .qp-tbtn.qp-tbtn-danger:hover{border-color:var(--danger);color:var(--danger);}
-  .qp-tbtn.qp-tbtn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .qp-tbtn.qp-tbtn-accent:hover{background:var(--ow-oxide-deep);border-color:var(--ow-oxide-deep);color:#fff;}
-  /* Save is the main thing a rep does on this screen, so it gets the
-     strongest visual weight of the group. */
-  .qp-tbtn.qp-tbtn-primary{background:var(--navy);border-color:var(--navy);color:#fff;}
-  .qp-tbtn.qp-tbtn-primary:hover{background:#2c3946;border-color:#2c3946;color:#fff;}
-  /* Thin separator between the "do something with this quote" buttons and
-     the destructive Clear action, so Clear reads as its own zone rather
-     than "one more button in the row" a new rep might tap by habit. */
-  .qp-toolbar-divider{width:1px;align-self:stretch;background:var(--line);margin:2px 4px;}
+  body.on-quote-tab .q-stickybar{display:flex;}
+  /* The document must end above the bar, not under it. */
+  body.on-quote-tab .quote-layout{padding-bottom:86px;}
+  .q-stickybar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  .qbar-btn{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+    font-size:12.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;
+  }
+  .qbar-btn:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .qbar-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .qbar-btn .icon{width:14px;height:14px;flex-shrink:0;}
+  .qbar-save{
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    padding:8px 18px;border-radius:8px;background:var(--accent);color:#fff;
+    font-size:13px;font-weight:700;white-space:nowrap;
+  }
+  .qbar-save:hover{filter:brightness(1.07);}
+  .qbar-save:focus-visible{outline:2px solid var(--navy);outline-offset:2px;}
+  .qbar-save .icon{width:15px;height:15px;}
+  .q-more-wrap{position:relative;}
+  .q-more-menu{
+    position:absolute;bottom:calc(100% + 6px);right:0;min-width:180px;z-index:50;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 8px 24px rgba(20,30,40,0.14);padding:5px;
+  }
+  .q-more-item{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;
+    width:100%;padding:8px 10px;border-radius:7px;font-size:12.5px;font-weight:600;color:var(--ink);
+  }
+  .q-more-item:hover{background:var(--ow-steel-050);}
+  .q-more-item .icon{width:14px;height:14px;color:var(--ink-soft);}
+  .q-more-item.danger{color:var(--danger);}
+  .q-more-item.danger .icon{color:var(--danger);}
 
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
   th{
@@ -2877,11 +2900,20 @@
 
   /* ===== New Quote — split workspace layout ===== */
   .qp-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px;}
-  .qp-client-inline{display:flex;gap:10px;flex-wrap:wrap;}
-  .qp-client-inline .field{gap:4px;}
-  .qp-client-inline .field label{font-size:10.5px;}
-  .qp-client-inline input{width:150px;padding:7px 10px;font-size:13px;}
-  .qp-client-inline input#q_date{width:130px;}
+  /* A document header, not three floating form fields: one bordered
+     band that says whose order this is and when, set once at the top of
+     the call. The inputs stretch to the band instead of being 150px
+     islands in white space. */
+  .qp-client-inline{
+    display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;
+  }
+  .qp-client-inline .field{gap:3px;flex:1;min-width:150px;}
+  .qp-client-inline .field:first-child{flex:2;min-width:200px;}
+  .qp-client-inline .field label{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);font-weight:700;}
+  .qp-client-inline input{width:100%;padding:7px 10px;font-size:13px;}
+  .qp-client-inline input#q_date{width:100%;}
   .q-client-ac-wrap{position:relative;}
   .q-client-ac-dropdown{
     position:absolute;top:calc(100% + 6px);left:0;z-index:40;width:260px;
@@ -2963,13 +2995,43 @@
   .q-client-ac-divider{border-top:1px solid var(--line);margin-top:6px;}
 
   .quote-layout{display:flex;flex-direction:column;gap:12px;}
+  /* The document's front door. A real search field, not a + icon: on a
+     call the gesture is click-type-Enter, and the affordance should
+     look like what it is. */
+  .q-item-search-wrap{
+    position:relative;display:flex;align-items:center;gap:9px;
+    border:1px solid var(--line);border-radius:9px;padding:8px 13px;margin-bottom:10px;
+    background:#FBFCFD;transition:border-color .15s ease;
+  }
+  .q-item-search-wrap:focus-within{border-color:var(--accent);background:#fff;}
+  .q-item-search-wrap > .icon{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
+  #q_item_search{all:unset;flex:1;min-width:0;font-size:13.5px;color:var(--ink);}
+  #q_item_search::placeholder{color:var(--ink-soft);opacity:.8;}
+  .q-item-search-hint{font-size:10.5px;color:var(--ink-soft);opacity:0;transition:opacity .15s ease;white-space:nowrap;}
+  .q-item-search-wrap:focus-within .q-item-search-hint{opacity:.8;}
+  .q-item-search-dd{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 10px 28px rgba(20,30,40,0.14);max-height:340px;overflow-y:auto;
+  }
   .qp-panel{padding:14px 16px;margin-bottom:0;}
   .qp-panel h2{margin-bottom:8px;}
   .qp-items-panel #q_itemsWrap{margin-top:8px;}
 
   /* Spreadsheet-style quote grid: numbered rows, a green + to add an item
      via the picker modal, a red - to remove a populated row. */
-  .qp-items-panel table{font-size:12.5px;table-layout:fixed;}
+  .qp-items-panel table{font-size:12.5px;table-layout:fixed;font-variant-numeric:tabular-nums;}
+  /* Column headers in the board's grammar -- labels, not shouting. */
+  .qp-items-panel th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-soft);font-weight:700;}
+  /* An editable document, not a form grid: inputs rest borderless on
+     the row and grow their affordance when the hand arrives. */
+  .qp-items-panel td input[type="number"], .qp-items-panel td input[type="text"]{
+    background:transparent;border-color:transparent;transition:border-color .12s ease, background .12s ease;
+  }
+  .qp-items-panel tr:hover td input[type="number"], .qp-items-panel tr:hover td input[type="text"],
+  .qp-items-panel td input:focus{background:#fff;border-color:var(--line);}
+  .qp-items-panel td input:focus{border-color:var(--accent);}
+  .q-line-total{font-weight:700;}
   .qp-items-panel th{padding:7px 8px;}
   .qp-items-panel td{padding:7px 8px;vertical-align:middle;}
   .q-gutter-th{width:38px;}
@@ -3089,16 +3151,17 @@
      answer rather than one of four equal cells. Everything the shop
      needs sits under it, quieter, and is never mistaken for the
      price. */
-  .qp-finbar{
-    display:flex;flex-direction:column;gap:5px;margin:0 0 14px;padding:13px 16px;
-    border:1px solid var(--line);border-radius:10px;background:var(--panel);
-  }
-  .qp-says{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;}
-  .qp-says-label{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--ink-soft);}
-  .qp-says-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:26px;
+  /* The sticky bar's left half. It was a bordered panel block sitting
+     ABOVE the items and pushing them down; on the bar it is two quiet
+     lines: the figure the admin reads aloud, and under it -- at a size
+     the client across the counter cannot read -- what the shop keeps. */
+  .qp-finbar{display:flex;flex-direction:column;gap:1px;}
+  .qp-says{display:flex;align-items:baseline;gap:10px;}
+  .qp-says-label{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--ink-soft);}
+  .qp-says-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:20px;
     line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums;}
   .qp-shopline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-    font-size:12.5px;color:var(--ink-soft);padding-top:6px;border-top:1px solid var(--ow-rule-soft);}
+    font-size:11.5px;color:var(--ink-soft);}
   .qp-shopline b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
   .qp-shopline-sep{color:var(--ow-ink-400);}
 
@@ -3136,6 +3199,18 @@
   .ip-thumb-placeholder{width:34px;height:34px;border-radius:6px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
   .ip-thumb-placeholder .icon{width:15px;height:15px;}
   #ip_item-price, #ip_list .ip-item-price{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap;}
+  /* The figure the admin is about to say out loud reads at full ink; the
+     tiny "sell" tag keeps it honest about which price it is. */
+  .ip-price-sell{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+  .ip-price-sell i{font-style:normal;font-size:9.5px;color:var(--ink-soft);font-weight:600;margin-left:4px;}
+  /* A cost shown because no markup rule exists to turn it into a sell --
+     caution colour, so it prompts fixing the product instead of being
+     read to the client as the price. */
+  .ip-price-norule{color:var(--warn-ink);font-size:11px;}
+  .ip-price-none{font-size:11px;}
+  .ip-stock{font-size:10.5px;color:var(--ink-soft);font-weight:600;white-space:nowrap;}
+  .ip-stock.none{color:var(--warn-ink);}
+  .ip-list-note{padding:7px 12px;font-size:10.5px;color:var(--ink-soft);border-top:1px solid var(--line);}
 
   /* Item picker modal — stage view (recommended prices, best suppliers,
      summary) shown after picking a product from the search list */
@@ -4632,17 +4707,16 @@
        than the viewport (a button row, a wide table) scrolls within
        itself instead. */
     html, body{overflow-x:hidden;}
-    .qp-toolbar{overflow-x:auto;padding-bottom:2px;}
-    .qp-tbtn{flex-shrink:0;}
+    /* The sticky bar spans the full width on a phone (no sidebar) and
+       lets its two halves wrap; the save button stays reachable by a
+       thumb. */
+    .q-stickybar{left:0;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px));}
+    .q-stickybar-actions{margin-left:0;width:100%;justify-content:flex-end;flex-wrap:wrap;}
+    body.on-quote-tab .quote-layout{padding-bottom:132px;}
     /* Add New Quote: swap the 8-column table for stacked cards -- there's
        no way to fit Item/Qty/Supplier/Buy/Sell/Margin/Total in ~340px. */
     .qp-items-table-wrap{display:none;}
     .qp-items-cards{display:flex;}
-    .qp-finbar{display:grid;grid-template-columns:1fr 1fr;}
-    .qp-finbar-cell{border-bottom:1px solid var(--line);}
-    .qp-finbar-cell.buy, .qp-finbar-cell.margin{border-right:none;}
-    .qp-finbar-cell.profit, .qp-finbar-cell.margin{border-bottom:none;}
-    .qp-finbar-cell.margin{flex-direction:row;align-items:center;justify-content:space-between;}
     .q-rec-value{font-size:14px;}
     /* Purchase Invoices / Invoices: swap the ledger table for stacked cards. */
     .pi-table-wrap{display:none;}
@@ -5592,45 +5666,59 @@
 
       <div class="quote-layout">
         <div class="panel qp-panel qp-items-panel">
-          <div class="panel-head-row">
-            <h2 style="margin-bottom:0;">Quoted items</h2>
-            <div class="qp-toolbar" style="margin-top:0;">
-              <!-- 1. Commit the quote — the one thing a rep does first,
-                   so it's the strongest (dark, filled) button and sits
-                   left-most in the natural left-to-right flow. -->
-              <button class="qp-tbtn qp-tbtn-primary" id="q_save_btn" title="Save this quote">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
-                <span>Save</span>
-              </button>
-              <!-- 2. Output group — everything a rep does with a finished
-                   quote (print or send it somewhere), kept together since
-                   they're all "get this quote out" actions. -->
-              <button class="qp-tbtn" id="q_print_quote_btn" title="Print client quotation — item, packing, qty, sell price and total (no supplier or buy price)">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-                <span>Client copy</span>
-              </button>
-              <button class="qp-tbtn qp-tbtn-accent" id="q_print_btn" title="Print supplier receipt — item, packing, supplier, qty, buy price and total (internal use)">
+          <!-- The document's own front door: search, type, pick. The
+               picker modal (suppliers, recommended prices, cash hint)
+               still does the deciding — this is only the faster way in.
+               The + row inside the table remains as the second door. -->
+          <div class="q-item-search-wrap">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="q_item_search" placeholder="Add item — search name, SKU or supplier code…" autocomplete="off">
+            <span class="q-item-search-hint">Enter adds the top result</span>
+            <div class="q-item-search-dd" id="q_item_search_dd" style="display:none;"></div>
+          </div>
+          <div id="q_itemsWrap"></div>
+        </div>
+      </div>
+
+      <!-- The money and the actions, fused and always at hand. The total
+           used to sit above the items pushing them down; the actions were
+           a strip of icon chips in the panel head. On a call the admin
+           reads the figure aloud and then acts on the quote — so the
+           figure and the actions share one bar that never scrolls away.
+           Fixed to the viewport, shown only while this tab is active
+           (body.on-quote-tab, set by the tab switch). -->
+      <div class="q-stickybar" id="q_stickybar">
+        <div class="qp-finbar" id="q_finbar"></div>
+        <div class="q-stickybar-actions">
+          <button class="qbar-btn" id="q_print_quote_btn" title="Print client quotation — item, packing, qty, sell price and total (no supplier or buy price)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+            Client copy
+          </button>
+          <button class="qbar-btn" id="q_whatsapp_btn" title="Open WhatsApp with the client's quote pre-filled (client's phone number, no cost/margin info)">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            WhatsApp
+          </button>
+          <!-- The occasional actions live one press away, and the
+               destructive one gets distance AND keeps its confirm. -->
+          <div class="q-more-wrap">
+            <button class="qbar-btn q-more-btn" id="q_more_btn" title="More actions" aria-haspopup="true" aria-expanded="false">
+              <svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+            </button>
+            <div class="q-more-menu" id="q_more_menu" style="display:none;">
+              <button class="q-more-item" id="q_print_btn" title="Print supplier receipt — item, packing, supplier, qty, buy price and total (internal use)">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
-                <span>Supplier copy</span>
+                Supplier copy
               </button>
-              <button class="qp-tbtn qp-tbtn-whatsapp" id="q_whatsapp_btn" title="Open WhatsApp with the client's quote pre-filled (client's phone number, no cost/margin info)">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                <span>WhatsApp</span>
-              </button>
-              <!-- 3. Divider isolates the destructive action so it never
-                   reads as "just another output button" in the row. -->
-              <div class="qp-toolbar-divider" aria-hidden="true"></div>
-              <button class="qp-tbtn qp-tbtn-danger" id="q_clear_btn" title="Clear all items and start a new quote">
+              <button class="q-more-item danger" id="q_clear_btn" title="Clear all items and start a new quote">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13"/></svg>
-                <span>Clear</span>
+                Clear quote
               </button>
             </div>
           </div>
-          <!-- Above the items, not below them. With fifteen lines on a
-               quote the total was off the bottom of the screen at exactly
-               the moment somebody was being asked for it. -->
-          <div class="qp-finbar" id="q_finbar"></div>
-          <div id="q_itemsWrap"></div>
+          <button class="qbar-save" id="q_save_btn" title="Save this quote (Ctrl+S)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            Save quote
+          </button>
         </div>
       </div>
     </section>
@@ -9874,6 +9962,13 @@ function navShortcutsBlocked(e){
 document.addEventListener('keydown', (e)=>{
   if(navShortcutsBlocked(e)) return;
   const key = e.key.toLowerCase();
+  /* "/" drops the cursor into the quote's item search when that page is
+     open -- the call gesture, without reaching for the mouse. Same
+     guard set as the nav keys: never while typing, never over a modal. */
+  if(e.key==='/' && document.body.classList.contains('on-quote-tab')){
+    const el = document.getElementById('q_item_search');
+    if(el){ e.preventDefault(); el.focus(); return; }
+  }
   if(key==='q'){ e.preventDefault(); goToTab('quote'); return; }
   if(key==='r'){ e.preventDefault(); goToTab('prices'); return; }
   if(key==='c'){ e.preventDefault(); goToTab('cashbook'); return; }
@@ -11733,6 +11828,10 @@ function goToTab(tab){
   // it matters now the rail carries counts -- a count is a claim about
   // current data, so it has to be made against current data.
   if(tab==='presets') renderPresets();
+  /* The sticky totals bar is fixed to the viewport, so it must exist
+     only while this tab does -- gated by a body class the bar's CSS
+     reads, set here where every tab switch already passes. */
+  document.body.classList.toggle('on-quote-tab', tab==='quote');
   if(tab==='quote') renderQuoteAll();
   if(tab==='quote-saved') renderSavedQuotes();
   if(tab==='invoices') renderInvoices(document.getElementById('inv_doc_search').value);
@@ -15819,6 +15918,39 @@ function ipComputeQty(rawQty, unitMode, packQty){
   return Math.max(1, unitMode==='pack' && packQty>0 ? raw*packQty : raw);
 }
 
+/* What a suggestion row says about money.
+
+   It used to say the cheapest supplier's raw buy figure -- no tier, no
+   markup -- which on this page is exactly backwards: the admin is on a
+   call, and the number on the screen is the number they are about to
+   say out loud. Every suggestion now quotes the recommended SELL price,
+   through the same markup rules every other sell surface uses; the
+   cost and the supplier belong one step later, in the picker stage.
+
+   A product with a price but NO markup rule is the honest edge:
+   quoteSuggestedPrice falls back to the cost silently, and showing that
+   here would put the cost on the call after all -- labelled as a sell.
+   So suggestedSellingPrice is asked directly (it returns null when no
+   rule exists), and the row says "cost X · no markup rule" in caution
+   colour, which is a prompt to fix the product rather than a lie. */
+function ipSuggestionPriceNote(p, variantIdx){
+  const best = rankedPriceRows(p.id, variantIdx)[0];
+  if(!best) return '<span class="ip-price-none">No price on file</span>';
+  const cost = best.retail!=null ? best.retail : best.wholesale;
+  const packQty = Number(best.packQty)||0;
+  const sell = suggestedSellingPrice(p, cost, 'retail', variantIdx, packQty);
+  if(sell==null){
+    return `<span class="ip-price-norule" title="No markup rule on this product — set one in Products and this becomes a sell price">cost ${fmtUGXPerUnit(cost, best.unit)} · no markup rule</span>`;
+  }
+  return `<span class="ip-price-sell">${fmtUGXPerUnit(Math.round(sell), best.unit)}<i>sell</i></span>`;
+}
+// "14 in stock" / "out of stock", said where the choosing happens --
+// whether the shelf can cover it decides what the admin promises.
+function ipSuggestionStockNote(p, variantIdx){
+  const n = getStockQty(p.id, variantIdx==null ? null : variantIdx);
+  return n > 0 ? `<span class="ip-stock">${n} in stock</span>`
+               : '<span class="ip-stock none">out of stock</span>';
+}
 function ipRenderList(query){
   const tokens = searchTokens(query);
   const list = document.getElementById('ip_list');
@@ -15833,12 +15965,12 @@ function ipRenderList(query){
   }
   list.innerHTML = entries.map(entry=>{
     const {p, variantIdx} = entry;
-    const best = rankedPriceRows(p.id, variantIdx)[0];
-    const priceNote = best ? fmtUGXPerUnit(best.retail!=null?best.retail:best.wholesale, best.unit) : 'No price on file';
+    const priceNote = ipSuggestionPriceNote(p, variantIdx);
+    const stockNote = ipSuggestionStockNote(p, variantIdx);
     if(variantIdx==null){
       return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}">
         ${ipThumbHTML(p, variantIdx)}
-        <div class="ip-item-main"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)}</div>
+        <div class="ip-item-main"><span class="sid">${highlightTokens(p.id, tokens)}</span>${highlightTokens(p.name, tokens)} ${stockNote}</div>
         <div class="ip-item-price">${priceNote}</div>
       </div>`;
     }
@@ -15846,11 +15978,12 @@ function ipRenderList(query){
     const idLabel = v.sku ? v.sku : `${p.id}-${variantIdx+1}`;
     return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}" data-vidx="${variantIdx}">
       ${ipThumbHTML(p, variantIdx)}
-      <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)}
+      <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)} ${stockNote}
       <div class="suggestion-variant-note">${highlightTokens(variantLabel(v.combo), tokens)}</div></div>
       <div class="ip-item-price">${priceNote}</div>
     </div>`;
-  }).join('');
+  }).join('')
+  + `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`;
 }
 function ipShowSearchView(){
   ipProductId = null; ipVariantIdx = null; ipSelectedSupplierId = null; ipSelectedRecType = null;
@@ -15873,6 +16006,97 @@ document.getElementById('ip_list').addEventListener('mousedown', (e)=>{
   if(sel) ipSelectProduct(sel.id, sel.variantIdx);
 });
 document.getElementById('itemPickerModalClose').addEventListener('click', ()=> closeModal('itemPickerModal'));
+
+/* ---------------- The document's own search bar ----------------
+
+   The primary way in on a call: click, type, pick -- the same entries,
+   the same row markup and the same sell-price note as the picker's own
+   list, rendered into a dropdown under the input. Choosing an entry
+   hands over to the picker STAGE exactly the way the usual-buys chips
+   already do, so suppliers, recommended prices and the cash hint are
+   unchanged. Enter takes the top result, because the top result is the
+   best match and a call does not wait for a mouse. */
+function renderQuoteItemSearchDd(query){
+  const dd = document.getElementById('q_item_search_dd');
+  if(!dd) return;
+  const q = String(query||'').trim();
+  if(!q){ dd.style.display='none'; dd.innerHTML=''; return; }
+  const entries = buildProductSuggestionEntries(searchTokens(q)).slice(0, 8);
+  if(!entries.length){
+    dd.innerHTML = '<div class="suggestion-empty">No matching products.</div>';
+    dd.style.display = 'block';
+    return;
+  }
+  const tokens = searchTokens(q);
+  dd.innerHTML = entries.map(({p, variantIdx})=>{
+    const idLabel = variantIdx==null ? p.id
+      : (p.variants[variantIdx].sku || `${p.id}-${variantIdx+1}`);
+    return `<div class="suggestion-item ip-item" data-id="${esc(p.id)}"${variantIdx==null?'':` data-vidx="${variantIdx}"`}>
+      ${ipThumbHTML(p, variantIdx)}
+      <div class="ip-item-main"><span class="sid">${highlightTokens(idLabel, tokens)}</span>${highlightTokens(p.name, tokens)} ${ipSuggestionStockNote(p, variantIdx)}
+      ${variantIdx==null?'':`<div class="suggestion-variant-note">${highlightTokens(variantLabel(p.variants[variantIdx].combo), tokens)}</div>`}</div>
+      <div class="ip-item-price">${ipSuggestionPriceNote(p, variantIdx)}</div>
+    </div>`;
+  }).join('')
+  + `<div class="ip-list-note">Sell prices — costs and suppliers appear after you pick the item.</div>`;
+  dd.style.display = 'block';
+}
+function quoteItemSearchPick(sel){
+  if(!sel) return;
+  const input = document.getElementById('q_item_search');
+  const dd = document.getElementById('q_item_search_dd');
+  if(input) input.value = '';
+  if(dd){ dd.style.display='none'; dd.innerHTML=''; }
+  openModal('itemPickerModal');
+  ipSelectProduct(sel.id, sel.variantIdx);
+}
+{
+  const input = document.getElementById('q_item_search');
+  const dd = document.getElementById('q_item_search_dd');
+  if(input && dd){
+    input.addEventListener('input', ()=> renderQuoteItemSearchDd(input.value));
+    input.addEventListener('focus', ()=> renderQuoteItemSearchDd(input.value));
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        const top = dd.querySelector('.suggestion-item');
+        if(top) quoteItemSearchPick({ id: top.dataset.id,
+          variantIdx: (top.dataset.vidx===undefined || top.dataset.vidx==='') ? null : Number(top.dataset.vidx) });
+      }
+      if(e.key === 'Escape'){ dd.style.display='none'; input.blur(); }
+    });
+    // mousedown, not click: the input's blur must not close the dropdown
+    // before the pick lands -- same reason ip_list binds mousedown.
+    dd.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      quoteItemSearchPick(readSuggestionSelection(e));
+    });
+    document.addEventListener('mousedown', (e)=>{
+      if(!e.target.closest('.q-item-search-wrap')) { dd.style.display='none'; }
+    });
+  }
+}
+
+/* The ⋯ menu on the sticky bar: the occasional actions, one press away.
+   Clear keeps its confirm inside its own handler -- distance AND a
+   question, because it destroys a quote mid-call. */
+{
+  const btn = document.getElementById('q_more_btn');
+  const menu = document.getElementById('q_more_menu');
+  if(btn && menu){
+    const close = ()=>{ menu.style.display='none'; btn.setAttribute('aria-expanded','false'); };
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const open = menu.style.display !== 'none';
+      if(open) close();
+      else { menu.style.display='block'; btn.setAttribute('aria-expanded','true'); }
+    });
+    menu.addEventListener('click', ()=> close());
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('.q-more-wrap')) close();
+    });
+  }
+}
 
 // ipStageThumbHTML() now lives in shared-worker.js.
 function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
@@ -16532,14 +16756,17 @@ function renderQuoteFinbar(grandBuy, grandSell, profit){
   let pillClass = 'good';
   if(grandSell<=0 || profit<=0) pillClass = 'danger';
   else if(marginPct < 10) pillClass = 'warn';
+  /* Lives on the sticky bar now, beside the actions: the figure the
+     admin reads aloud leads, the shop's own line sits under it at a
+     size the client across the counter cannot read. "Costs you" is
+     deliberately NOT here any more -- it is derivable (pays minus
+     keep), and the bar is glanced at, not studied. */
   bar.innerHTML = `
     <div class="qp-says">
-      <div class="qp-says-label">The client pays</div>
+      <div class="qp-says-label">Client pays</div>
       <div class="qp-says-value">${fmtUGX(grandSell)}</div>
     </div>
     <div class="qp-shopline">
-      <span>Costs you <b>${fmtUGX(grandBuy)}</b></span>
-      <span class="qp-shopline-sep">&middot;</span>
       <span>You keep <b style="color:${profit<0?'var(--danger)':'var(--good)'};">${fmtUGX(profit)}</b></span>
       <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
     </div>
@@ -36386,6 +36613,12 @@ async function boot(){
     goToTab('worker');
   } else {
     renderAll();
+    /* The quote tab is the one visible-by-default in the raw HTML, and a
+       boot that lands there never passes through goToTab -- which is the
+       only writer of the class the sticky quote bar's CSS reads. Seeded
+       here so the bar exists on first paint; a saved tab below goes
+       through goToTab and corrects it. */
+    document.body.classList.add('on-quote-tab');
     // Land back on whatever tab was open before the last reload, instead
     // of always showing Add Quote (the tab that's simply visible-by-
     // default in the raw HTML) -- renderAll() already rendered every
