@@ -3376,27 +3376,124 @@
   .sq-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
   .sq-actions{display:flex;gap:6px;flex-shrink:0;}
 
-  /* Saved quotes — status board (cards grouped into columns) */
-  .sq-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start;}
-  @media (max-width:980px){ .sq-board{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  @media (max-width:620px){ .sq-board{grid-template-columns:1fr;} }
-  /* Phone-only step switcher above the board -- a connected stepper (not a
-     scrolling pill row) so all 4 steps are always visible with zero
-     horizontal scroll. See @media max-width:820px for the full ruleset and
-     for the rules that actually hide all but the active .sq-col. */
-  .sq-stepper{display:none;}
-  .sq-col{display:flex;flex-direction:column;min-width:0;}
-  .sq-col-head{display:flex;align-items:center;gap:8px;padding:0 2px 10px;}
+  /* Saved quotes — status board (cards grouped into columns).
+
+     A STRIP, not a wrapping grid. grid-template-columns:repeat(4,...) was
+     written when there were four stages; Awaiting Goods made it five, and
+     the fifth track wrapped to a second row below the whole board -- the
+     column count was baked into three separate places, and this is the
+     one that made the breakage visible. grid-auto-flow:column takes the
+     count from the markup, so a sixth stage can never wrap it again.
+
+     minmax(270px,1fr): 1fr expands the tracks when the panel has room --
+     a wide screen fits all five with nothing to scroll -- and 270px holds
+     the floor when it does not, at which point the strip scrolls sideways
+     with snap and the rail above becomes the scrubber. 270 because the
+     cards carry up to nine rows of mixed signals, and at the 168px the old
+     grid squeezed them to, their content already overflowed. */
+  .sq-board{
+    display:grid;grid-auto-flow:column;grid-auto-columns:minmax(270px,1fr);
+    gap:14px;align-items:start;
+    overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;scroll-padding-left:2px;
+    padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+  }
+  .sq-board::-webkit-scrollbar{height:6px;}
+  .sq-board::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px;}
+  .sq-board::-webkit-scrollbar-thumb:hover{background:var(--ink-soft);}
+  /* The step rail: pipeline overview and scrubber in one. Shown at every
+     width -- it was phone-only, and on desktop a move's destination could
+     be off-screen with nothing anywhere saying where the card went. On a
+     phone (max-width:620px below) it additionally filters the board to
+     one column. Sticky, so the counts and the scrubber survive scrolling
+     a long column. */
+  .sq-stepper{
+    display:flex;position:sticky;top:var(--topbar-h);z-index:30;background:var(--panel);
+    padding:6px 2px 8px;margin-bottom:8px;flex:1;min-width:0;
+  }
+  .sq-stepper-step{
+    all:unset;box-sizing:border-box;position:relative;z-index:1;flex:1 1 0;min-width:0;
+    display:flex;flex-direction:column;align-items:center;gap:4px;padding:2px 2px 4px;cursor:pointer;
+  }
+  /* The connector, drawn per step rather than as one bar with hardcoded
+     12.5% insets -- those were half of a quarter, i.e. four steps baked
+     into the line exactly as they were baked into the grid. Each step
+     after the first draws its own segment back to the previous node, so
+     the track follows the step count. */
+  .sq-stepper-step + .sq-stepper-step::before{
+    content:'';position:absolute;top:17px;right:50%;width:100%;height:2px;
+    background:var(--line);z-index:-1;
+  }
+  .sq-stepper-node{
+    position:relative;width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--panel);border:1.5px solid var(--pill-accent,var(--line));
+    transition:background .15s ease,transform .15s ease;
+  }
+  .sq-stepper-num{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--pill-accent,var(--ink-soft));}
+  .sq-stepper-step.active .sq-stepper-node,
+  .sq-stepper-step.in-view .sq-stepper-node{background:var(--pill-accent,var(--navy));}
+  .sq-stepper-step.active .sq-stepper-num,
+  .sq-stepper-step.in-view .sq-stepper-num{color:#fff;}
+  .sq-stepper-step:focus-visible .sq-stepper-node{outline:2px solid var(--pill-accent,var(--accent));outline-offset:2px;}
+  .sq-stepper-count{
+    position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
+    background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--panel);
+  }
+  .sq-stepper-step.active .sq-stepper-count{background:var(--pill-accent,var(--ink));}
+  /* Orders in this step needing a person or past their stage limit --
+     "what needs chasing" answerable from the rail without reading a card. */
+  .sq-stepper-warn{
+    position:absolute;bottom:-6px;right:-8px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
+    background:var(--ow-amber-soft);color:var(--warn-ink);font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    gap:1px;box-shadow:0 0 0 2px var(--panel);
+  }
+  .sq-stepper-warn .icon{width:9px;height:9px;stroke-width:3;}
+  .sq-stepper-label{
+    font-size:9.5px;line-height:1.15;font-weight:600;color:var(--ink-soft);text-align:center;
+    white-space:normal;overflow-wrap:anywhere;max-width:100%;
+  }
+  .sq-stepper-step.active .sq-stepper-label,
+  .sq-stepper-step.in-view .sq-stepper-label{color:var(--ink);font-weight:700;}
+  @keyframes sq-node-pulse{0%{transform:scale(1);}45%{transform:scale(1.3);}100%{transform:scale(1);}}
+  .sq-stepper-step.pulse .sq-stepper-node{animation:sq-node-pulse .45s ease;}
+  /* The rail row carries the board's own controls, so the panel needs no
+     heading row of its own above it. */
+  .sq-rail-row{display:flex;align-items:flex-start;gap:12px;}
+  .sq-rail-row .btn-row{margin-top:6px;flex-shrink:0;}
+  /* Fades on the clipped edge(s): the universal "there is more" cue,
+     written by the scroll handler as .can-left/.can-right so a board that
+     fits whole carries none. */
+  .sq-board.can-right{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);}
+  .sq-board.can-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px);mask-image:linear-gradient(90deg,transparent,#000 36px);}
+  .sq-board.can-left.can-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);}
+  .sq-board.panning{cursor:grabbing;user-select:none;}
+  .sq-col{display:flex;flex-direction:column;min-width:0;scroll-snap-align:start;}
+  /* Below the sticky rail, so the step name and count hold while the
+     column's cards scroll under them. --sq-rail-h is measured and written
+     by renderSavedQuotes, since the rail wraps at some widths. */
+  .sq-col-head{
+    display:flex;align-items:center;gap:8px;padding:6px 2px 10px;
+    position:sticky;top:calc(var(--topbar-h) + var(--sq-rail-h,58px));z-index:20;background:var(--panel);
+  }
   .sq-col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .sq-col-title{font-size:11.5px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;color:var(--ink);}
   .sq-col-count{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-soft);background:#EEF1F3;border-radius:999px;padding:1px 8px;}
   .sq-col-body{display:flex;flex-direction:column;gap:10px;min-height:8px;}
-  .sq-col-empty{font-size:12px;color:var(--ink-soft);padding:10px 0;border:1px dashed var(--line);border-radius:10px;text-align:center;}
+  /* Quiet, so empty steps recede and the columns with work carry the
+     eye -- a full-weight dashed box made five empty columns as loud as
+     five full ones. */
+  .sq-col-empty{font-size:11.5px;color:var(--ink-soft);opacity:.45;padding:8px 0;border:1px dashed var(--line);border-radius:10px;text-align:center;}
   .sq-card{
     background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 13px;
     border-left:3px solid var(--sq-accent,var(--line));
-    position:relative;
+    position:relative;transition:border-color .15s ease;
   }
+  /* Hover is a border shift only -- no shadow, no lift; the app is flat.
+     The icon row wakes with it (see .sq-card-icons below). */
+  .sq-card:hover, .sq-card:focus-within{border-color:var(--ink-soft);border-left-color:var(--sq-accent,var(--line));}
   /* Flags a card that's stayed in its current step past the limit set
      under Presets > Order Tracking. Blinks so it stands out on the board
      without having to compare timestamps by eye. */
@@ -4148,7 +4245,13 @@
   .sq-stage-arrow .icon{width:15px;height:15px;}
   .sq-stage-arrow:hover:not(:disabled){background:#F5F7F8;color:var(--ink);border-color:var(--ink-soft);}
   .sq-stage-arrow:disabled{opacity:0.3;cursor:default;}
-  .sq-card-icons{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;}
+  /* At rest the eye/edit/delete row sits back, so a board of thirty
+     cards reads as names and figures rather than ninety grey buttons.
+     The stage arrows stay full strength: moving is the primary act on
+     this page. Full ink returns on hover or on keyboard focus within the
+     card, so nothing is hidden from either kind of user. */
+  .sq-card-icons{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;opacity:.55;transition:opacity .15s ease;}
+  .sq-card:hover .sq-card-icons, .sq-card:focus-within .sq-card-icons{opacity:1;}
   .sq-invoice-btn{border-color:var(--accent);color:#b97a12;}
   .sq-invoice-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
   .sq-invoice-btn.is-invoiced{border-color:var(--good);color:var(--good);background:var(--good-bg);}
@@ -4462,39 +4565,23 @@
        switched via a connected stepper -- 4 equal flex:1 columns with no
        overflow-x anywhere, so it can never need horizontal scroll no
        matter how narrow the phone or how long a label gets. */
-    .sq-stepper{display:flex;position:relative;margin-bottom:16px;padding:4px 2px 0;}
-    .sq-stepper::before{
-      content:'';position:absolute;top:21px;left:12.5%;right:12.5%;height:2px;
-      background:var(--line);z-index:0;
-    }
-    .sq-stepper-step{
-      all:unset;box-sizing:border-box;position:relative;z-index:1;flex:1 1 0;min-width:0;
-      display:flex;flex-direction:column;align-items:center;gap:5px;padding:2px 2px 4px;cursor:pointer;
-    }
-    .sq-stepper-node{
-      position:relative;width:26px;height:26px;border-radius:50%;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;
-      background:var(--panel);border:1.5px solid var(--pill-accent,var(--line));transition:background .15s ease;
-    }
-    .sq-stepper-num{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--pill-accent,var(--ink-soft));}
-    .sq-stepper-step.active .sq-stepper-node{background:var(--pill-accent,var(--navy));}
-    .sq-stepper-step.active .sq-stepper-num{color:#fff;}
-    .sq-stepper-count{
-      position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;
-      background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;
-      display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--panel);
-    }
-    .sq-stepper-step.active .sq-stepper-count{background:var(--pill-accent,var(--ink));}
-    .sq-stepper-label{
-      font-size:9.5px;line-height:1.15;font-weight:600;color:var(--ink-soft);text-align:center;
-      white-space:normal;overflow-wrap:anywhere;max-width:100%;
-    }
-    .sq-stepper-step.active .sq-stepper-label{color:var(--ink);font-weight:700;}
-    .sq-board{grid-template-columns:1fr !important;}
-    .sq-board[data-active-step="draft"] .sq-col:not([data-status="draft"]){display:none;}
-    .sq-board[data-active-step="preparing"] .sq-col:not([data-status="preparing"]){display:none;}
-    .sq-board[data-active-step="pending_delivery"] .sq-col:not([data-status="pending_delivery"]){display:none;}
-    .sq-board[data-active-step="completed"] .sq-col:not([data-status="completed"]){display:none;}
+    /* The rail's full ruleset now lives at the top level -- it is shown
+       at every width. Here, only what a phone changes: the board stops
+       being a strip and shows exactly the ACTIVE column, chosen by a
+       class the renderer sets.
+
+       The old rules here named each status by hand -- and when Awaiting
+       Goods was added, nobody added its rule, so tapping its step showed
+       every column stacked. A list that must enumerate the stages will
+       be wrong again the next time one is added; a class set from
+       SQ_STATUS_ORDER cannot be. */
+    .sq-stepper{top:var(--mobile-topbar-h);}
+    .sq-col-head{top:calc(var(--mobile-topbar-h) + var(--sq-rail-h,58px));}
+    .sq-board{grid-auto-columns:100%;scroll-snap-type:none;}
+    .sq-board .sq-col:not(.is-active-step){display:none;}
+    /* One column fills the width, so there is never anything clipped to
+       fade toward. */
+    .sq-board.can-left,.sq-board.can-right,.sq-board.can-left.can-right{-webkit-mask-image:none;mask-image:none;}
     /* Safety net: nothing on a phone-width layout should be able to force
        the whole page to scroll sideways. Anything that's naturally wider
        than the viewport (a button row, a wide table) scrolls within
@@ -5517,8 +5604,12 @@
       </div>
 
       <div class="panel qp-panel">
-        <div class="panel-head-row">
-          <h2 style="margin-bottom:0;">Order tracking</h2>
+        <!-- No heading row: the page head above already says Order
+             tracking, and a third restatement inside the panel pushed the
+             board down for nothing. The step rail is the panel's own top
+             row, and renderSavedQuotes puts Select all / Print beside it. -->
+        <div class="sq-rail-row">
+          <div id="sqStepperMount" style="flex:1;min-width:0;"></div>
           <div class="btn-row" style="margin-top:0;">
             <label class="sq-select-all-label"><input type="checkbox" id="sq_select_all"> Select all</label>
             <button class="btn btn-accent btn-icon" id="sq_print_selected_btn" title="Print selected (A5)">
@@ -16884,10 +16975,38 @@ function setSavedQuoteStatus(id, status){
      && q.pickingStatus && q.pickingStatus!=='done'){
     q.pickingStatus = 'done';
   }
-  if(q.status!==status) q.stageEnteredAt = Date.now();
+  const moved = q.status!==status;
+  if(moved) q.stageEnteredAt = Date.now();
   q.status = status;
   saveData();
   renderSavedQuotes();
+  /* Where it went, said out loud -- see announceOrderMove. Here rather
+     than in the arrow handlers, because this is the one place a status
+     actually changes: the assign-staff modal and the agent-prepay path
+     land here too, and their moves were just as silent. */
+  if(moved) announceOrderMove(q, status);
+}
+
+/* A move gave no feedback at all: the card vanished from one column and
+   reappeared in another that could be entirely off-screen, and the admin
+   was left counting columns to find it. Now the toast names the
+   destination, its rail node pulses once with the new count, and the
+   strip slides the destination column into view if it is not already.
+   Its own function so the many tests that compile setSavedQuoteStatus
+   stub one collaborator instead of the whole DOM. */
+function announceOrderMove(q, status){
+  toast(`${(q.client && q.client.name) || 'Order'} → ${SQ_STATUSES[status].label.replace(/^Step \d+\. /,'')}`);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stepEl = document.querySelector(`#sqStepperMount .sq-stepper-step[data-status="${status}"]`);
+  if(stepEl){
+    stepEl.classList.remove('pulse');
+    void stepEl.offsetWidth;   // restart the animation when two moves land in one breath
+    if(!reduced) stepEl.classList.add('pulse');
+  }
+  const col = document.querySelector(`.sq-board .sq-col[data-status="${status}"]`);
+  if(col && !matchMedia('(max-width: 820px)').matches){
+    col.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', inline:'nearest', block:'nearest'});
+  }
 }
 
 // agentPaymentBlocksPreparing() lives in shared-worker.js -- also needed
@@ -17952,12 +18071,17 @@ function renderSavedQuotes(){
   allQuotes.forEach(q=>{ if(!q.stageEnteredAt){ q.stageEnteredAt = Date.now(); backfilled = true; } });
   if(backfilled) saveData();
   const quotes = allQuotes.filter(q=>!quoteAgedOffBoard(q));
+  /* The rail is cleared on the empty branches too, or it would keep the
+     counts of whatever the board showed last. */
+  const clearRail = ()=>{ const m = document.getElementById('sqStepperMount'); if(m) m.innerHTML = ''; };
   if(allQuotes.length===0){
+    clearRail();
     wrap.innerHTML = '<div class="empty">No orders yet — build a quote above and click "Save quote".</div>';
     document.getElementById('sq_select_all').checked = false;
     return;
   }
   if(quotes.length===0){
+    clearRail();
     wrap.innerHTML = '<div class="empty">No active quotes right now — invoiced orders move to the Invoices tab 24 hours after invoicing. Check the Invoices tab to view them.</div>';
     document.getElementById('sq_select_all').checked = false;
     return;
@@ -17967,9 +18091,19 @@ function renderSavedQuotes(){
   // there before its card should flag as overdue. 0/blank leaves that
   // step's warning off.
   const stageLimits = data.presetOrderStageLimits || {};
+  /* One rule, read by the card's blinking flag AND the rail's per-step
+     roll-up, so the two can never disagree about what is overdue. */
+  const orderIsOverdue = (q)=>{
+    const limitMin = Number(stageLimits[q.status])||0;
+    return limitMin>0 && !!q.stageEnteredAt && (Date.now() - q.stageEnteredAt) > limitMin*60000;
+  };
+  /* An order stuck for a PERSON rather than for time: nobody preparing,
+     or nobody delivering. Counted on the rail beside the overdue ones,
+     because both are the "needs chasing" question. */
+  const orderNeedsSomebody = (q)=> orderNeedsWorker(q) || orderNeedsDelivery(q);
   const cardHTML = (q)=>{
     const limitMin = Number(stageLimits[q.status])||0;
-    const overdue = limitMin>0 && q.stageEnteredAt && (Date.now() - q.stageEnteredAt) > limitMin*60000;
+    const overdue = orderIsOverdue(q);
     const location = orderCustomerLocation(q);
     return `
     <div class="sq-card" data-id="${q.id}" style="--sq-accent:${SQ_STATUSES[q.status].color};">
@@ -18015,18 +18149,22 @@ function renderSavedQuotes(){
     </div>`;
   };
 
-  // Phone-only step switcher: a connected 4-step stepper (dot/number + live
-  // count + short label) so the whole pipeline is visible at once with zero
-  // horizontal scrolling, and tapping a step filters the card list below to
-  // just that stage. Desktop ignores this entirely and shows all 4 columns
-  // side by side as before.
+  /* The step rail: the whole pipeline in one row at EVERY width, and the
+     scrubber for the board below it. On a phone tapping a step filters
+     the board to that column; on a desktop it slides the strip there.
+     The amber marker is the "needs chasing" roll-up -- orders past their
+     stage limit or waiting on a person -- so the question the admin
+     visits this page to ask is answered before a single card is read. */
   const pillsHtml = `<div class="sq-stepper" role="tablist" aria-label="Order tracking steps">${SQ_STATUS_ORDER.map((status,i)=>{
-    const count = quotes.filter(q=>q.status===status).length;
+    const group = quotes.filter(q=>q.status===status);
+    const count = group.length;
+    const warn = group.filter(q=> orderIsOverdue(q) || orderNeedsSomebody(q)).length;
     const active = status===sqActiveMobileStep;
     return `<button type="button" class="sq-stepper-step${active?' active':''}" data-status="${status}" role="tab" aria-selected="${active}" style="--pill-accent:${SQ_STATUSES[status].color};">
       <span class="sq-stepper-node">
         <span class="sq-stepper-num">${i+1}</span>
         ${count>0 ? `<span class="sq-stepper-count">${count}</span>` : ''}
+        ${warn>0 ? `<span class="sq-stepper-warn" title="${warn} order${warn===1?'':'s'} here need${warn===1?'s':''} chasing — overdue or waiting on a person">${ICON_WARN}${warn}</span>` : ''}
       </span>
       <span class="sq-stepper-label">${esc(ORDER_STATUS_SHORT_LABELS[status])}</span>
     </button>`;
@@ -18035,7 +18173,7 @@ function renderSavedQuotes(){
   const boardHtml = `<div class="sq-board" data-active-step="${sqActiveMobileStep}">${SQ_STATUS_ORDER.map(status=>{
     const group = quotes.filter(q=>q.status===status);
     return `
-      <div class="sq-col" data-status="${status}">
+      <div class="sq-col${status===sqActiveMobileStep?' is-active-step':''}" data-status="${status}">
         <div class="sq-col-head">
           <span class="sq-col-dot" style="background:${SQ_STATUSES[status].color};"></span>
           <span class="sq-col-title">${esc(SQ_STATUSES[status].label)}</span>
@@ -18064,16 +18202,100 @@ function renderSavedQuotes(){
      supplier chips intact, and the column gets its 157px back. They wrap
      back to stacked below 560px, where side by side would mean shrinking
      the figures to fit. */
-  wrap.innerHTML = pillsHtml + boardHtml;
-  wrap.querySelectorAll('.sq-stepper-step').forEach(step=>step.addEventListener('click', ()=>{
-    sqActiveMobileStep = step.dataset.status;
-    wrap.querySelectorAll('.sq-stepper-step').forEach(s=>{
-      const isActive = s===step;
-      s.classList.toggle('active', isActive);
-      s.setAttribute('aria-selected', isActive);
+  /* The rail lives on the panel's own top row, beside Select all and
+     Print -- the board's controls on the board's overview, and one less
+     heading row above the cards. The mount survives re-renders; only its
+     contents are replaced. */
+  const railMount = document.getElementById('sqStepperMount');
+  if(railMount) railMount.innerHTML = pillsHtml;
+  wrap.innerHTML = boardHtml;
+  const boardEl = wrap.querySelector('.sq-board');
+  const railSteps = railMount ? [...railMount.querySelectorAll('.sq-stepper-step')] : [];
+  const isPhoneBoard = ()=> matchMedia('(max-width: 820px)').matches;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* The column heads stick below the rail, and the rail's height depends
+     on how its labels wrap -- measured, not assumed. */
+  if(railMount && railMount.firstElementChild){
+    document.documentElement.style.setProperty('--sq-rail-h',
+      railMount.firstElementChild.getBoundingClientRect().height + 'px');
+  }
+
+  const setActiveStep = (status)=>{
+    sqActiveMobileStep = status;
+    railSteps.forEach(st=>{
+      const isActive = st.dataset.status===status;
+      st.classList.toggle('active', isActive);
+      st.setAttribute('aria-selected', isActive);
     });
-    wrap.querySelector('.sq-board').dataset.activeStep = sqActiveMobileStep;
+    boardEl.dataset.activeStep = status;
+    boardEl.querySelectorAll('.sq-col').forEach(col=>
+      col.classList.toggle('is-active-step', col.dataset.status===status));
+  };
+  railSteps.forEach(step=>step.addEventListener('click', ()=>{
+    setActiveStep(step.dataset.status);
+    /* On a phone the rail FILTERS; on a desktop the board is a strip and
+       the rail is its scrubber, so a click slides the column into view. */
+    if(!isPhoneBoard()){
+      const col = boardEl.querySelector(`.sq-col[data-status="${step.dataset.status}"]`);
+      if(col) col.scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth', inline:'start', block:'nearest'});
+    }
   }));
+  /* Roving arrows across the rail: the board is the page a keyboard user
+     lives on, and five tab-stops for one control is four too many. */
+  railSteps.forEach((step,i)=>step.addEventListener('keydown', (e)=>{
+    if(e.key!=='ArrowRight' && e.key!=='ArrowLeft') return;
+    e.preventDefault();
+    const to = railSteps[i + (e.key==='ArrowRight' ? 1 : -1)];
+    if(to){ to.focus(); to.click(); }
+  }));
+
+  /* Which steps are actually on screen, marked back onto the rail as the
+     strip slides -- the scrubber tracks the content, not only the other
+     way round. Root margin trims the snap gutter so a column counts once
+     it is substantially visible. */
+  if(!isPhoneBoard() && 'IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        const st = railSteps.find(x=> x.dataset.status===en.target.dataset.status);
+        if(st) st.classList.toggle('in-view', en.isIntersecting);
+      });
+    }, {root: boardEl, threshold: 0.6});
+    boardEl.querySelectorAll('.sq-col').forEach(col=> io.observe(col));
+  }
+
+  /* Fades on whichever edge is clipping a column -- the cue that the
+     strip slides. Recomputed on scroll and once now, so a board that
+     fits whole never carries one. */
+  const updateEdgeFades = ()=>{
+    boardEl.classList.toggle('can-left', boardEl.scrollLeft > 4);
+    boardEl.classList.toggle('can-right', boardEl.scrollLeft < boardEl.scrollWidth - boardEl.clientWidth - 4);
+  };
+  boardEl.addEventListener('scroll', updateEdgeFades, {passive:true});
+  updateEdgeFades();
+
+  /* Drag-to-pan on the column background -- the gesture a desktop mouse
+     needs, having no horizontal wheel. Never from a card, a button or a
+     checkbox, and a 4px threshold so an ordinary click still clicks. */
+  let sqPan = null;
+  boardEl.addEventListener('pointerdown', (e)=>{
+    if(e.button !== 0) return;
+    if(e.target.closest('.sq-card') || e.target.closest('button') || e.target.closest('input') || e.target.closest('label')) return;
+    sqPan = { x: e.clientX, left: boardEl.scrollLeft, moved: false };
+  });
+  boardEl.addEventListener('pointermove', (e)=>{
+    if(!sqPan) return;
+    const dx = e.clientX - sqPan.x;
+    if(!sqPan.moved && Math.abs(dx) > 4){
+      sqPan.moved = true;
+      boardEl.classList.add('panning');
+      boardEl.setPointerCapture(e.pointerId);
+    }
+    if(sqPan.moved) boardEl.scrollLeft = sqPan.left - dx;
+  });
+  const sqPanEnd = ()=>{ sqPan = null; boardEl.classList.remove('panning'); };
+  boardEl.addEventListener('pointerup', sqPanEnd);
+  boardEl.addEventListener('pointercancel', sqPanEnd);
 
   // Re-assigning an order nobody is on. A worker declining one clears the
   // assignment but leaves it in Being Prepared, and until now the board had

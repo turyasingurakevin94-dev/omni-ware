@@ -41,6 +41,9 @@ const env = {
   data,
   saveData: () => {},
   renderSavedQuotes: () => {},
+  // Move feedback (toast + rail pulse + scroll) is DOM work, stubbed
+  // as the one collaborator it was extracted to be.
+  announceOrderMove: () => {},
   // Both gates divert instead of advancing; recording that is how the tests
   // tell "blocked" apart from "moved".
   promptAgentPrepayment: (q) => { calls.prompted = q.id; },

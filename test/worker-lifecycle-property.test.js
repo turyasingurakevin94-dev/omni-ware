@@ -94,6 +94,9 @@ const scope = compileScope(SOURCES.concat(['function __setMyStaff(s){ myStaff = 
   saveData: () => {},
   renderWorkerView: () => {},
   renderSavedQuotes: () => {},
+  // Move feedback (toast + rail pulse + scroll) is DOM work, stubbed
+  // as the one collaborator it was extracted to be.
+  announceOrderMove: () => {},
   renderStaff: () => {},
   refreshAdminOrderBoardIfOpen: () => {},
   toast: (m) => { seen.toasts.push(m); },
