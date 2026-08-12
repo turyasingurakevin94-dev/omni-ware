@@ -534,6 +534,30 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
      is a failure and none should be told it is. */
   t.check(/const stillTyping = \/\[\*x×\\\/\\-\.,\\s\]\$\/i\.test\(q\.trim\(\)\);/.test(stripped),
     'a half-typed size waits quietly instead of being called wrong');
+
+  /* Layout. auto-FILL reserved a column per 260px and left a single card
+     marooned at 287px inside 1183px of panel -- and a single card is the
+     commonest result this page produces. auto-FIT collapses the tracks
+     nothing occupies. */
+  const css = (src.match(/<style[^>]*>[\s\S]*?<\/style>/g) || []).join('\n');
+  t.check(/\.fg-results\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(260px,1fr\)\);/.test(css),
+    'one card takes the width of the panel rather than a quarter of it');
+  /* Which then makes a label/value pair span the whole panel, and the eye
+     loses the line between them. The specs flow into as many ~220px
+     columns as fit -- one on a phone, three or four on a monitor. */
+  t.check(/\.fg-specs\{columns:220px;/.test(css),
+    'and its figures column up instead of stretching across the width');
+  t.check(/\.fg-spec\{break-inside:avoid;/.test(css),
+    'without a row being split down the middle by a column break');
+  // Every card type must use the wrapper, or one of them stretches.
+  const builders = ['fgBoltCardHTML', 'fgScrewCardHTML', 'fgLengthCardHTML', 'fgSpannerCardHTML',
+    'fgPlugCardHTML', 'fgRivetCardHTML', 'fgImpHexCardHTML'];
+  const missing = builders.filter((b)=>{
+    const body = (new RegExp('function ' + b + '\\([\\s\\S]*?\\n\\}')).exec(stripped);
+    return !body || !/class="fg-specs"/.test(body[0]);
+  });
+  t.check(missing.length === 0,
+    `every card type columns its specs${missing.length ? ` (missing: ${missing.join(', ')})` : ` (${builders.length} builders)`}`);
   t.check(/stillTyping \? '' :/.test(stripped),
     'and only a finished one that matches nothing gets the message');
 }

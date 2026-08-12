@@ -5328,9 +5328,21 @@
     border:1px solid var(--line);border-radius:11px;background:#fff;font-family:inherit;color:var(--ink);
   }
   .fg-hero{margin-bottom:14px;}
-  .fg-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+  /* auto-FIT, not auto-fill: a single card is the commonest result on
+     this page, and auto-fill reserved four empty columns beside it,
+     leaving one 287px card marooned in 1183px of panel. auto-fit
+     collapses the tracks nothing occupies, so one card takes the width,
+     two share it, four sit in a row. */
+  .fg-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
   .fg-results:empty{display:none;}
   .fg-card{gap:7px;}
+  /* Which makes the card as wide as the panel, and a label/value pair
+     stretched across 1100px is unreadable -- the eye loses the line
+     between them. So the specs flow into as many ~220px columns as fit:
+     one on a phone, three or four on a monitor, and the pairing stays
+     tight at every width. */
+  .fg-specs{columns:220px;column-gap:20px;}
+  .fg-spec{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:6px;}
   .fg-card-head{display:flex;align-items:baseline;gap:8px;}
   .fg-card-head b{font-size:17px;color:var(--ink);}
   .fg-card-head span{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
@@ -38219,13 +38231,15 @@ function fgBoltCardHTML(entry){
   const title = entry.lengthTyped != null ? `${r.size} × ${entry.lengthTyped}` : r.size;
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(title)}</b><span>bolt &amp; nut</span></div>
-    ${lenRow}
-    ${fgSpecRow('Spanner', esc(af))}
-    ${fgSpecRow('Thread pitch', esc(`${r.pitch} mm coarse`))}
-    ${r.fine.length ? fgSpecRow('Fine pitches', esc(r.fine.map(f=> `${f} mm`).join(' · '))) : ''}
-    ${fgSpecRow('Washer (ISO 7089)', esc(`${r.washerId} × ${r.washerOd} × ${r.washerT} mm`))}
-    ${fgSpecRow('Tap drill', esc(`${r.tapDrill} mm`))}
-    ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
+    <div class="fg-specs">
+      ${lenRow}
+      ${fgSpecRow('Spanner', esc(af))}
+      ${fgSpecRow('Thread pitch', esc(`${r.pitch} mm coarse`))}
+      ${r.fine.length ? fgSpecRow('Fine pitches', esc(r.fine.map(f=> `${f} mm`).join(' · '))) : ''}
+      ${fgSpecRow('Washer (ISO 7089)', esc(`${r.washerId} × ${r.washerOd} × ${r.washerT} mm`))}
+      ${fgSpecRow('Tap drill', esc(`${r.tapDrill} mm`))}
+      ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
+    </div>
     ${r.fine.length ? `<div class="fg-note">A fine-pitch nut (${esc(r.size)}×${r.fine.join('/')}) will not thread onto a coarse bolt — match the pitch, not just the size.</div>` : ''}
     ${pitchNote}
     ${fgStockLineHTML(r.size)}
@@ -38246,15 +38260,17 @@ function fgScrewCardHTML(entry){
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(title)}</b><span>screw · ${esc(String(r.dia))} mm</span></div>
     ${entry.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[entry.assumed] || FG_ASSUME_CAPTIONS.gauge)}</div>` : ''}
-    ${len != null ? fgSpecRow('Length', esc(lenTrade
-        ? `${len} mm — sold as ${lenTrade.inchLabel}`
-        : `${len} mm ≈ ${fgNearestFraction(fgMmToInch(len), 16).label}″`)) : ''}
+    <div class="fg-specs">
+      ${len != null ? fgSpecRow('Length', esc(lenTrade
+          ? `${len} mm — sold as ${lenTrade.inchLabel}`
+          : `${len} mm ≈ ${fgNearestFraction(fgMmToInch(len), 16).label}″`)) : ''}
+      ${fgSpecRow('Written as', esc(`${Math.round(r.dia)}×len or ${r.dia}×len`))}
+      ${fgSpecRow('Pilot drill — softwood', esc(`${r.pilotSoft} mm`))}
+      ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
+      ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
+      ${fgSpecRow('Wall plug', esc(`${r.plugMm} mm`))}
+    </div>
     ${diaNote}
-    ${fgSpecRow('Written as', esc(`${Math.round(r.dia)}×len or ${r.dia}×len`))}
-    ${fgSpecRow('Pilot drill — softwood', esc(`${r.pilotSoft} mm`))}
-    ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
-    ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
-    ${fgSpecRow('Wall plug', esc(`${r.plugMm} mm`))}
     ${fgStockLineHTML([`${r.gauge}*`, `${r.dia}*`])}
     <div class="fg-chip-row">${fgFindChip(`${r.gauge}*`)}${fgFindChip(metricName)}</div>
   </div>`;
@@ -38276,20 +38292,24 @@ function fgLengthCardHTML(c){
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${main}</b><span>length</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[c.assumed])}</div>` : ''}
-    ${rough ? fgSpecRow('Exactly', esc(`${inchLabel} = ${fgMmStr(exactMm)} mm — ${fgMmStr(Math.abs(offBy))} mm ${offBy > 0 ? 'over' : 'under'} what you typed`)) : ''}
-    ${fgSpecRow('Decimal', esc(`${(Math.round(c.inch * 1000) / 1000)}″`))}
-    ${trade ? fgSpecRow('Sold as', esc(`${trade.inchLabel} / ${trade.tradeMm} mm on the shelf`)) : ''}
+    <div class="fg-specs">
+      ${rough ? fgSpecRow('Exactly', esc(`${inchLabel} = ${fgMmStr(exactMm)} mm — ${fgMmStr(Math.abs(offBy))} mm ${offBy > 0 ? 'over' : 'under'} what you typed`)) : ''}
+      ${fgSpecRow('Decimal', esc(`${(Math.round(c.inch * 1000) / 1000)}″`))}
+      ${trade ? fgSpecRow('Sold as', esc(`${trade.inchLabel} / ${trade.tradeMm} mm on the shelf`)) : ''}
+    </div>
   </div>`;
 }
 function fgSpannerCardHTML(c){
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(String(c.af))} mm spanner</b><span>fits</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.spanner)}</div>` : ''}
-    ${c.bolts.map(b=> fgSpecRow(b.size + ' bolt/nut', esc(b.std))).join('')}
-    ${(()=>{ // A mixed spanner drawer is the norm here; say which imperial one is close enough to try.
-      const imp = IMPERIAL_HEX.find(r=> Math.abs(r.afMm - c.af) <= 0.45);
-      return imp ? fgSpecRow('Imperial near-match', esc(`${imp.afLabel} = ${imp.afMm} mm`)) : '';
-    })()}
+    <div class="fg-specs">
+      ${c.bolts.map(b=> fgSpecRow(b.size + ' bolt/nut', esc(b.std))).join('')}
+      ${(()=>{ // A mixed spanner drawer is the norm here; say which imperial one is close enough to try.
+        const imp = IMPERIAL_HEX.find(r=> Math.abs(r.afMm - c.af) <= 0.45);
+        return imp ? fgSpecRow('Imperial near-match', esc(`${imp.afLabel} = ${imp.afMm} mm`)) : '';
+      })()}
+    </div>
     ${c.bolts.some(b=> b.std !== 'ISO & DIN') ? '<div class="fg-note">ISO and DIN heads differ at this size — the other standard takes the neighbouring spanner.</div>' : ''}
   </div>`;
 }
@@ -38298,8 +38318,10 @@ function fgPlugCardHTML(c){
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(String(r.size))} mm plug</b><span>${esc(r.colour ? r.colour.toLowerCase() : 'wall plug')}</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.plug)}</div>` : ''}
-    ${fgSpecRow('Masonry drill', esc(`${r.drill} mm — same as the plug`))}
-    ${fgSpecRow('Takes screws', esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm (coach screws)`))}
+    <div class="fg-specs">
+      ${fgSpecRow('Masonry drill', esc(`${r.drill} mm — same as the plug`))}
+      ${fgSpecRow('Takes screws', esc(r.gaugeMin != null ? `#${r.gaugeMin}–#${r.gaugeMax} (${r.screwMmMin}–${r.screwMmMax} mm)` : `${r.screwMmMin}–${r.screwMmMax} mm (coach screws)`))}
+    </div>
     <div class="fg-note">Colours vary by maker — the millimetre is the truth.</div>
   </div>`;
 }
@@ -38308,16 +38330,20 @@ function fgRivetCardHTML(c){
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(String(r.dia))} mm rivet</b><span>${esc(r.inchLabel)}</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS.rivet)}</div>` : ''}
-    ${fgSpecRow('Drill bit', esc(`${r.drill} mm`))}
-    ${fgSpecRow('Length', esc(`grip (total thickness) + 1.5 × diameter — ${r.gripNote}`))}
+    <div class="fg-specs">
+      ${fgSpecRow('Drill bit', esc(`${r.drill} mm`))}
+      ${fgSpecRow('Length', esc(`grip (total thickness) + 1.5 × diameter — ${r.gripNote}`))}
+    </div>
   </div>`;
 }
 function fgImpHexCardHTML(c){
   const r = c.row;
   return `<div class="pi-card fg-card">
     <div class="fg-card-head"><b>${esc(r.thread)}</b><span>imperial hex</span></div>
-    ${fgSpecRow('Spanner (AF)', esc(`${r.afLabel} = ${r.afMm} mm`))}
-    ${fgSpecRow('Metric spanner', esc(r.metricNote))}
+    <div class="fg-specs">
+      ${fgSpecRow('Spanner (AF)', esc(`${r.afLabel} = ${r.afMm} mm`))}
+      ${fgSpecRow('Metric spanner', esc(r.metricNote))}
+    </div>
   </div>`;
 }
 const FG_CARD_BUILDERS = {
