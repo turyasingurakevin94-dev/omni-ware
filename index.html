@@ -3011,7 +3011,7 @@
     border:1px solid var(--line);border-radius:9px;padding:8px 13px;margin-bottom:10px;
     background:#FBFCFD;transition:border-color .15s ease;
   }
-  .q-item-search-wrap:focus-within{border-color:var(--accent);background:#fff;}
+  .q-item-search-wrap:focus-within{border-color:var(--navy);background:#fff;}
   .q-item-search-wrap > .icon{width:15px;height:15px;color:var(--ink-soft);flex-shrink:0;}
   #q_item_search{all:unset;flex:1;min-width:0;font-size:13.5px;color:var(--ink);}
   #q_item_search::placeholder{color:var(--ink-soft);opacity:.8;}
@@ -3038,7 +3038,7 @@
   }
   .qp-items-panel tr:hover td input[type="number"], .qp-items-panel tr:hover td input[type="text"],
   .qp-items-panel td input:focus{background:#fff;border-color:var(--line);}
-  .qp-items-panel td input:focus{border-color:var(--accent);}
+  .qp-items-panel td input:focus{border-color:var(--navy);}
   .q-line-total{font-weight:700;}
   .qp-items-panel th{padding:7px 8px;}
   .qp-items-panel td{padding:7px 8px;vertical-align:middle;}
@@ -3203,13 +3203,13 @@
      Also reused by the Compare Prices search box (#cmp_suggestions) so its
      suggestions show a product thumbnail too. */
   #ip_list{max-height:380px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
-  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;}
-  #ip_list .ip-item-main, #cmp_suggestions .ip-item-main{flex:1;min-width:0;}
-  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item{gap:11px;}
+  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;}
+  #ip_list .ip-item-main, #cmp_suggestions .ip-item-main, .q-item-search-dd .ip-item-main{flex:1;min-width:0;}
+  #ip_list .suggestion-item, #cmp_suggestions .suggestion-item, .q-item-search-dd .suggestion-item{gap:11px;}
   .ip-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--line);background:#F3F5F7;}
   .ip-thumb-placeholder{width:34px;height:34px;border-radius:6px;flex-shrink:0;border:1px dashed var(--line);background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;}
   .ip-thumb-placeholder .icon{width:15px;height:15px;}
-  #ip_item-price, #ip_list .ip-item-price{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap;}
+  #ip_item-price, #ip_list .ip-item-price, .q-item-search-dd .ip-item-price{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap;}
   /* The figure the admin is about to say out loud reads at full ink; the
      tiny "sell" tag keeps it honest about which price it is. */
   .ip-price-sell{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
@@ -4721,9 +4721,14 @@
     /* The sticky bar spans the full width on a phone (no sidebar) and
        lets its two halves wrap; the save button stays reachable by a
        thumb. */
-    .q-stickybar{left:0;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom, 0px));}
+    /* Above the bottom nav, not underneath it: both are fixed to the
+       bottom, and without the offset the nav covered the bar's second
+       line. The FAB's one job is opening this very page, so it yields
+       while the page is open instead of floating over the totals. */
+    .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));gap:8px;padding:8px 12px;}
+    body.on-quote-tab .mobile-fab{display:none;}
     .q-stickybar-actions{margin-left:0;width:100%;justify-content:flex-end;flex-wrap:wrap;}
-    body.on-quote-tab .quote-layout{padding-bottom:132px;}
+    body.on-quote-tab .quote-layout{padding-bottom:150px;}
     /* Add New Quote: swap the 8-column table for stacked cards -- there's
        no way to fit Item/Qty/Supplier/Buy/Sell/Margin/Total in ~340px. */
     .qp-items-table-wrap{display:none;}
@@ -5689,7 +5694,11 @@
             <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="q_item_search" placeholder="Add item — search name, SKU or supplier code…" autocomplete="off">
             <span class="q-item-search-hint">Enter adds the top result</span>
-            <div class="q-item-search-dd" id="q_item_search_dd" style="display:none;"></div>
+            <!-- searchable-select: membership in the scope that styles
+                 suggestion rows everywhere else (hover, sid, variant
+                 notes) -- the first cut reused the MARKUP but not the
+                 scope, and the rows rendered as an unstyled stack. -->
+            <div class="q-item-search-dd searchable-select" id="q_item_search_dd" style="display:none;"></div>
           </div>
           <div id="q_itemsWrap"></div>
         </div>

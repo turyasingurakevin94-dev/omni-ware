@@ -146,8 +146,13 @@ const src = read('index.html');
     'every figure in the grid sits in tabular digits');
   t.check(/\.qp-items-panel td input\[type="number"\], \.qp-items-panel td input\[type="text"\]\{\s*background:transparent;border-color:transparent/.test(src),
     'inputs rest quiet on the row — an editable document, not a form grid');
-  t.check(/\.qp-items-panel tr:hover td input/.test(src) && /\.qp-items-panel td input:focus\{border-color:var\(--accent\)/.test(src),
-    'and grow their affordance when the hand arrives');
+  /* Focus is attention, not alarm: this app's accent is oxide RED, and
+     a red ring around a focused input is the universal grammar of a
+     validation error. Focus rings on this page are navy. */
+  t.check(/\.qp-items-panel tr:hover td input/.test(src) && /\.qp-items-panel td input:focus\{border-color:var\(--navy\)/.test(src),
+    'and grow their affordance when the hand arrives — in navy, since a red ring reads as an error');
+  t.check(/\.q-item-search-wrap:focus-within\{border-color:var\(--navy\)/.test(src),
+    'the search field focuses in navy for the same reason');
 }
 
 /* ---------- 6. an empty quote invites, and the band knows the client -- */
@@ -176,6 +181,34 @@ const src = read('index.html');
     'history and usual-buys are the band’s own bottom line, not islands under it');
   t.check(/id="q_client_usual"><\/div>\s*<\/div>/.test(src),
     'and the band closes after them, holding all five pieces');
+}
+
+/* ---------- 7. the dropdown is a member, not a copy ------------------ */
+/*
+ * The first shipped cut reused the picker's row MARKUP but none of its
+ * styling scopes, and the rows rendered as an unstyled stack -- thumbs
+ * on their own lines, names glued to SKUs, prices floating. The fix is
+ * membership: the dropdown joins the two scopes that style suggestion
+ * rows everywhere else, so there is one truth and no copy to drift.
+ */
+{
+  t.check(/class="q-item-search-dd searchable-select" id="q_item_search_dd"/.test(src),
+    'the dropdown carries the searchable-select scope — hover, sid spacing, variant notes');
+  t.check(/#ip_list \.suggestion-item, #cmp_suggestions \.suggestion-item, \.q-item-search-dd \.suggestion-item\{display:flex/.test(src),
+    'and joins the picker list’s own flex-row rule rather than duplicating it');
+  t.check(/#ip_list \.ip-item-main, #cmp_suggestions \.ip-item-main, \.q-item-search-dd \.ip-item-main\{flex:1/.test(src)
+    && /, \.q-item-search-dd \.ip-item-price\{flex-shrink:0/.test(src),
+    'name and price cells included, so the row lays out like every other suggestion row');
+}
+
+/* ---------- 8. the phone bar respects the bottom nav ----------------- */
+{
+  t.check(/\.q-stickybar\{left:0;bottom:calc\(var\(--mobile-bottomnav-h\) \+ env\(safe-area-inset-bottom, 0px\)\)/.test(src),
+    'on a phone the bar sits ABOVE the bottom nav — both are fixed to the bottom, and the nav covered it');
+  t.check(/body\.on-quote-tab \.mobile-fab\{display:none;\}/.test(src),
+    'and the FAB — whose only job is opening this page — yields while the page is open');
+  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:150px;\}/.test(src),
+    'with the reserve covering nav plus bar so the last row clears both');
 }
 
 process.exit(t.done() ? 1 : 0);
