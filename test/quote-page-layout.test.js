@@ -229,4 +229,26 @@ const src = read('index.html');
     'with the reserve covering nav plus bar so the last row clears both');
 }
 
+/* ---------- 9. the picker stage speaks the page's grammar ------------ */
+/*
+ * The stage is where the two decisions get made -- what to charge, who
+ * to buy from -- and it feeds the page that was just redesigned, so it
+ * speaks the same language: one filled accent commits the surface, the
+ * one price field says WHICH price it is, and the palette is the house
+ * steel rather than a stray blue.
+ */
+{
+  t.check(/<button class="qbar-save" id="ip_add_btn">/.test(src),
+    'Add to quote is the same primary as Save quote — one grammar for the commit');
+  t.check(/\.q-add-row \.qbar-save\{margin-left:auto;\}/.test(src),
+    'sitting against the right edge like Save does on the bar');
+  t.check(/<label>Sell price each \(UGX\)<\/label>/.test(src),
+    'the one price field names itself the SELL price — sell and buy kept trading clothes');
+  t.check(/title="What the client pays per \$\{esc\(unit\|\|'unit'\)\} — the buy cost is recorded automatically/.test(src),
+    'and its tooltip says where the buy cost comes from, so nobody types a cost into it');
+  t.check(/\.q-stage-summary\{[\s\S]{0,200}?background:var\(--ow-steel-050\)/.test(src)
+    && !/#EAF3FC/.test(src),
+    "the summary panel is house steel — the one blue panel read as somebody else's component");
+}
+
 process.exit(t.done() ? 1 : 0);

@@ -1821,8 +1821,10 @@
   .prc-unit{font-size:11px;color:var(--ink-soft);font-weight:500;}
   .prc-tiers-note{display:flex;align-items:flex-start;gap:5px;font-size:11px;color:var(--ink-soft);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.5;}
   .prc-tiers-note .icon{width:12px;height:12px;flex-shrink:0;margin-top:2px;color:var(--accent-ink);}
+  /* Steel like everything else -- this and the picker stage's summary
+     were the app's only two blue panels, one component painted twice. */
   .prc-summary{
-    font-size:10.5px;color:#3E6FA6;background:#EAF3FC;padding:5px 9px;border-radius:6px;
+    font-size:10.5px;color:var(--ink-soft);background:var(--ow-steel-050);padding:5px 9px;border-radius:6px;
     line-height:1.5;margin:2px 0 2px;display:block;
   }
   .prc-summary div+div{margin-top:1px;}
@@ -3238,7 +3240,7 @@
      to numbers it had already produced. */
   .q-qty-row{
     display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;
-    background:#F7F9FB;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;
+    background:var(--ow-steel-050);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:8px;
   }
   .q-qty-field{flex-shrink:0;gap:3px;}
   .q-qty-field:last-child{flex:1;min-width:110px;}
@@ -3321,8 +3323,10 @@
   .q-stage-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;align-items:start;}
   @media (max-width:760px){ .q-stage-columns{grid-template-columns:1fr;} }
   .q-stage-col-left{display:flex;flex-direction:column;min-width:0;}
+  /* Steel, not the old blue: this app's palette is steel and amber, and
+     the one blue panel in the flow read as somebody else's component. */
   .q-stage-summary{
-    font-size:11px;color:#3E6FA6;background:#EAF3FC;padding:7px 10px;border-radius:7px;
+    font-size:11px;color:var(--ink-soft);background:var(--ow-steel-050);padding:7px 10px;border-radius:7px;
     line-height:1.5;margin-top:8px;
   }
   .q-stage-head .q-stage-summary{flex:1;min-width:0;margin-top:0;}
@@ -3424,6 +3428,9 @@
 
   /* Other supplier + qty + price + add — one packed row */
   .q-add-row{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--line);}
+  /* The commit sits against the right edge, like Save on the quote bar --
+     the same action grammar in the modal as on the page it feeds. */
+  .q-add-row .qbar-save{margin-left:auto;}
   .q-add-row .field{flex:0 0 auto;gap:3px;}
   .q-add-row .field label{font-size:10px;}
   .q-add-row .q-other-field{flex:1;min-width:130px;}
@@ -16421,8 +16428,8 @@ function renderIpStage(){
         </div>
       </div>
       <div class="field q-qty-field">
-        <label>Price each (UGX)</label>
-        <input type="number" id="ip_price" min="0" step="any" value="${sellStart}">
+        <label>Sell price each (UGX)</label>
+        <input type="number" id="ip_price" min="0" step="any" value="${sellStart}" title="What the client pays per ${esc(unit||'unit')} — the buy cost is recorded automatically from the chosen supplier">
       </div>
     </div>
 
@@ -16474,7 +16481,10 @@ function renderIpStage(){
         <input type="hidden" id="ip_other_supplier">
         <div class="suggestions" id="ip_other_supplier_suggestions"></div>
       </div>` : ''}
-      <button class="btn btn-accent" id="ip_add_btn">Add to quote</button>
+      <button class="qbar-save" id="ip_add_btn">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Add to quote
+      </button>
     </div>
   </div>`;
 
