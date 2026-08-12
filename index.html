@@ -3322,7 +3322,13 @@
     background:#F7F9FB;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
   }
   .q-stage-thumb-placeholder .icon{width:19px;height:19px;}
-  .q-stage-name{font-weight:700;font-size:15.5px;flex-shrink:0;padding-top:3px;align-self:center;}
+  /* NOT flex-shrink:0. A product name is as long as somebody typed it --
+     "RIDER Self Drilling Screws — 1"" is 234px -- and refusing to shrink
+     it took the whole row, squeezed the meta block beside it to 29
+     pixels (one word per line, down the screen) and pushed the modal
+     21px wider than the phone it was on. The name may wrap; it may not
+     push everything else off the edge. */
+  .q-stage-name{font-weight:700;font-size:15.5px;min-width:0;overflow-wrap:anywhere;padding-top:3px;align-self:center;}
   .q-meta-pills{display:flex;gap:5px;flex-wrap:wrap;}
   .q-meta-pill{
     font-size:10px;font-weight:700;color:var(--ink-soft);background:#EEF1F3;padding:2px 7px;
@@ -3401,6 +3407,17 @@
   }
   .q-stage-head .q-stage-summary{flex:1;min-width:0;margin-top:0;}
   .q-stage-summary div+div{margin-top:1px;}
+  /* AFTER the rule above, deliberately. `.q-stage-head .q-stage-summary`
+     carries the same specificity as this one, so written earlier it lost
+     the cascade in silence: flex-basis went back to 0%, the meta block
+     stayed 29px wide and the phone layout did not move at all.
+     Same breakpoint as .q-stage-columns, so the whole stage goes
+     single-file at one width rather than half of it collapsing first. */
+  @media (max-width:760px){
+    .q-stage-head{flex-wrap:wrap;}
+    .q-stage-head .q-stage-summary{flex:1 1 100%;}
+    .q-stage-name{align-self:flex-start;}
+  }
   .q-stage-col-right{min-width:0;}
 
   /* Supplier cards — vertical stack, cheapest on top. Capped with its own

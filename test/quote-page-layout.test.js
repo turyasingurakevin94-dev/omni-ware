@@ -251,4 +251,42 @@ const src = read('index.html');
     "the summary panel is house steel — the one blue panel read as somebody else's component");
 }
 
+/* ---------- the stage header on a phone ------------------------------
+ *
+ * Reported from a real phone: the meta block beside the product name had
+ * collapsed to ONE WORD WIDE, running down the screen a word at a time,
+ * and the modal scrolled sideways with "Back to search" and "QUANTITY"
+ * clipped off the left.
+ *
+ * One cause. `.q-stage-name` was flex-shrink:0, so a name as long as
+ * somebody typed it -- "RIDER Self Drilling Screws — 1"" measures 234px
+ * -- took the row whole, left the summary 29 pixels, and pushed the
+ * modal body to 396px inside a 375px phone.
+ */
+{
+  t.check(!/\.q-stage-name\{[^}]*flex-shrink:0/.test(src),
+    'the product name may shrink — refusing to left the meta block 29px wide and the modal wider than the phone');
+  t.check(/\.q-stage-name\{[^}]*min-width:0/.test(src),
+    'and may shrink past its content, which is what min-width:0 is for in a flex row');
+
+  /* CASCADE ORDER, pinned. The override below carries the SAME
+     specificity as the base rule, so written before it, it lost in
+     silence -- flex-basis went back to 0%, the meta block stayed 29px
+     and the phone layout did not move at all. The first fix for this bug
+     changed nothing for exactly that reason. */
+  const base = src.indexOf('.q-stage-head .q-stage-summary{flex:1;');
+  const override = src.indexOf('.q-stage-head .q-stage-summary{flex:1 1 100%;}');
+  t.check(base >= 0 && override >= 0, 'both the base rule and the phone override exist');
+  t.check(override > base,
+    'and the override is written AFTER the rule it overrides — equal specificity is decided by order');
+
+  const mq = (/@media \(max-width:760px\)\{[\s\S]*?\n  \}/.exec(src.slice(base)) || [''])[0];
+  t.check(/\.q-stage-head\{flex-wrap:wrap;\}/.test(mq),
+    'on a phone the header wraps');
+  t.check(/\.q-stage-head \.q-stage-summary\{flex:1 1 100%;\}/.test(mq),
+    'so the meta block takes a row of its own rather than a sliver of one');
+  t.check(/max-width:760px/.test(mq),
+    'at the same width the columns below it collapse — the stage goes single-file all at once');
+}
+
 process.exit(t.done() ? 1 : 0);
