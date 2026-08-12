@@ -5323,6 +5323,12 @@
      a phone via the grid's own minmax. .fg-chip copies the
      .cmp-rival-chip pattern rather than borrowing the class -- a compare
      restyle must not silently restyle this page. */
+  /* Housekeeping for the signed-in list. Quiet: these are maintenance
+     actions beside a list somebody is reading, not the point of it. */
+  .ls-tidy-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;}
+  .ls-tidy-row .btn{padding:6px 12px;font-size:12px;}
+  .ls-tidy-note{font-size:11.5px;line-height:1.45;color:var(--ink-soft);flex:1 1 220px;min-width:0;}
+
   .fg-hero input{
     width:100%;box-sizing:border-box;padding:14px 16px;font-size:17px;font-weight:600;
     border:1px solid var(--line);border-radius:11px;background:#fff;font-family:inherit;color:var(--ink);
@@ -6386,7 +6392,9 @@
             Refresh
           </button>
         </div>
+        <div class="ls-tidy" id="ls_tidy"></div>
         <div id="ls_list"></div>
+        <div id="ls_more"></div>
       </div>
       <div class="panel">
         <div class="rost-bar">
@@ -10144,7 +10152,7 @@ function fmtUGXPerUnitPack(n, row){
 // dashAlerts is five rather than twenty-four: it is a ranked to-do list on
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
-const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5 };
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -10172,6 +10180,9 @@ const LIST_PAGE_RERENDER = {
   customers: ()=> renderCustomers(document.getElementById('c_search').value),
   suppliers: ()=> renderSuppliers(document.getElementById('s_search').value),
   dashAlerts: ()=> renderDashboard(),
+  // Redraws from rows already in hand -- expanding the list must not
+  // re-query the server.
+  sessions: ()=> renderLoginSessions(),
 };
 document.addEventListener('click', (e)=>{
   const btn = e.target.closest ? e.target.closest('[data-list-more]') : null;
@@ -22131,6 +22142,70 @@ function lsWhoName(row, staffList, myUserId){
 }
 /* Newest first, but anything still live floats above anything that is
    not: the rows worth acting on are the ones signed in NOW. */
+/* ---- Housekeeping ---------------------------------------------------
+
+   The list grows because `device_id` is minted per browser profile and
+   kept in its own localStorage: a cleared cache, a second browser, a
+   reinstalled worker app, all arrive as new devices. Six people had
+   twenty rows across fifteen devices, ten of them the owner's own.
+
+   Two different jobs, deliberately separate buttons:
+
+   SIGN OUT stale devices -- the security one. Sets revoked_at, which is
+   what the device reads on its next beat to sign itself out.
+
+   REMOVE old records -- the tidying one, and it may only ever touch rows
+   that were NEVER revoked.
+
+   THAT RESTRICTION IS NOT FUSSINESS. owTouchSession looks its row up and
+   INSERTS a fresh one when it finds none. So deleting a revoked row that
+   the device has not yet come back to read hands that device a clean
+   registration on its next visit -- signed in again, by the act of
+   tidying up the record that had signed it out. And the row cannot tell
+   us it was read: the beat returns early on a revoked row without
+   touching last_seen_at, precisely so a revoked device cannot keep its
+   own session looking alive. So a revoked row is kept, always. */
+const LS_STALE_DAYS = 7;
+const LS_PURGE_DAYS = 30;
+const lsDaysSince = (iso, nowMs)=>{
+  const t = Date.parse(iso || '');
+  return isNaN(t) ? null : (nowMs - t) / 86400000;
+};
+// Signed in, not signed out, and not heard from in a week.
+function lsStaleRows(rows, nowMs){
+  return (rows || []).filter(r=>{
+    if(r.revoked_at) return false;
+    const d = lsDaysSince(r.last_seen_at, nowMs);
+    return d != null && d >= LS_STALE_DAYS;
+  });
+}
+/* Your own account, signed in somewhere that is not the device in your
+   hand. This is what actually fills the list: device_id is minted per
+   browser profile, so one person's cleared cache, second browser and
+   reinstalled app are three devices. Eleven of this shop's twenty rows
+   were the owner's, across ten devices, one of which was the one being
+   read from.
+
+   Matched on the DEVICE, not the row, so a second app on the machine you
+   are holding is not counted as somewhere else. */
+function lsMyOtherRows(rows, myUserId, myDeviceId){
+  if(!myUserId || !myDeviceId) return [];
+  return (rows || []).filter(r=> !r.revoked_at
+    && String(r.user_id) === String(myUserId)
+    && r.device_id !== myDeviceId);
+}
+
+/* Records safe to delete: old, and never revoked. A revoked row is the
+   instruction that signs a device out and is never a candidate, however
+   old it gets. */
+function lsPurgeableRows(rows, nowMs){
+  return (rows || []).filter(r=>{
+    if(r.revoked_at) return false;
+    const d = lsDaysSince(r.last_seen_at, nowMs);
+    return d != null && d >= LS_PURGE_DAYS;
+  });
+}
+
 function lsSortRows(rows, nowMs){
   return (rows||[]).slice().sort((a,b)=>{
     const la = lsIsLive(a, nowMs), lb = lsIsLive(b, nowMs);
@@ -22167,11 +22242,18 @@ function renderLoginSessions(){
   const mine = typeof owDeviceId === 'function' ? owDeviceId() : null;
   const myUser = currentUser ? currentUser.id : null;
   const rows = lsSortRows(lsRows, now);
+  const tidy = document.getElementById('ls_tidy');
+  const more = document.getElementById('ls_more');
   if(!rows.length){
     wrap.innerHTML = '<div class="wa-empty">Nothing signed in yet. Devices appear here the moment somebody signs in.</div>';
+    if(tidy) tidy.innerHTML = '';
+    if(more) more.innerHTML = '';
     return;
   }
-  wrap.innerHTML = rows.map(r=>{
+  if(tidy) tidy.innerHTML = lsTidyBarHTML(rows, now);
+  if(more) more.innerHTML = listMoreButtonHTML('sessions', rows.length, 'devices');
+  // Live devices sort first, so the page always shows what is online now.
+  wrap.innerHTML = listPageSlice('sessions', rows).map(r=>{
     const isMe = mine && r.device_id === mine && String(r.user_id) === String(myUser);
     const live = lsIsLive(r, now);
     const seen = lsAgo(r.last_seen_at, now);
@@ -22210,6 +22292,69 @@ function renderLoginSessions(){
       toast('Could not sign that device out: ' + ((e && e.message) || e));
     }
   }));
+
+  const mineOut = document.getElementById('ls_signout_mine');
+  if(mineOut) mineOut.addEventListener('click', async ()=>{
+    const others = lsMyOtherRows(lsRows, myUser, mine);
+    if(!others.length) return;
+    if(!confirm(`Sign out your account on ${others.length} other device${others.length===1?'':'s'}?`
+      + '\n\nThe device you are using now stays signed in. Each of the others stops within a minute.')) return;
+    try {
+      const { error } = await sb.from('login_sessions')
+        .update({ revoked_at: new Date().toISOString() }).in('id', others.map(r=> r.id));
+      if(error) throw error;
+      toast(`Signed out ${others.length} of your other device${others.length===1?'':'s'}`);
+      await loadLoginSessions();
+    } catch(e){ toast('Could not sign those out: ' + ((e && e.message) || e)); }
+  });
+
+  const bulkOut = document.getElementById('ls_signout_stale');
+  if(bulkOut) bulkOut.addEventListener('click', async ()=>{
+    const stale = lsStaleRows(lsRows, Date.now());
+    if(!stale.length) return;
+    if(!confirm(`Sign out ${stale.length} device${stale.length===1?'':'s'} not used in ${LS_STALE_DAYS} days?`
+      + '\n\nEach stops within a minute of coming back online. Anyone who knows the password can sign in again — remove them from Staff to stop that.')) return;
+    try {
+      const { error } = await sb.from('login_sessions')
+        .update({ revoked_at: new Date().toISOString() }).in('id', stale.map(r=> r.id));
+      if(error) throw error;
+      toast(`Signed out ${stale.length} device${stale.length===1?'':'s'}`);
+      await loadLoginSessions();
+    } catch(e){ toast('Could not sign those devices out: ' + ((e && e.message) || e)); }
+  });
+
+  const purge = document.getElementById('ls_purge');
+  if(purge) purge.addEventListener('click', async ()=>{
+    const old = lsPurgeableRows(lsRows, Date.now());
+    if(!old.length) return;
+    if(!confirm(`Remove ${old.length} record${old.length===1?'':'s'} for devices not seen in ${LS_PURGE_DAYS} days?`
+      + '\n\nThis clears the history only. None of them was ever signed out, so if one of those devices comes back it simply appears here again.'
+      + '\n\nDevices you HAVE signed out are never removed — deleting that record is what would let them back in.')) return;
+    try {
+      const { error } = await sb.from('login_sessions').delete().in('id', old.map(r=> r.id));
+      if(error) throw error;
+      toast(`Removed ${old.length} old record${old.length===1?'':'s'}`);
+      await loadLoginSessions();
+    } catch(e){ toast('Could not remove those records: ' + ((e && e.message) || e)); }
+  });
+}
+
+/* The housekeeping bar. Each button appears only when it has something to
+   do and says how much -- a control that is always there and usually
+   does nothing teaches people to press it without reading. */
+function lsTidyBarHTML(rows, nowMs){
+  const stale = lsStaleRows(rows, nowMs).length;
+  const old = lsPurgeableRows(rows, nowMs).length;
+  const revoked = rows.filter(r=> r.revoked_at).length;
+  const mineElsewhere = lsMyOtherRows(rows, currentUser && currentUser.id,
+    typeof owDeviceId === 'function' ? owDeviceId() : null).length;
+  if(!stale && !old && !mineElsewhere) return '';
+  return `<div class="ls-tidy-row">
+    ${mineElsewhere ? `<button type="button" class="btn btn-ghost" id="ls_signout_mine">Sign out my other ${mineElsewhere} device${mineElsewhere===1?'':'s'}</button>` : ''}
+    ${stale ? `<button type="button" class="btn btn-ghost" id="ls_signout_stale">Sign out ${stale} not used in ${LS_STALE_DAYS} days</button>` : ''}
+    ${old ? `<button type="button" class="btn btn-ghost" id="ls_purge">Remove ${old} record${old===1?'':'s'} older than ${LS_PURGE_DAYS} days</button>` : ''}
+    ${revoked ? `<span class="ls-tidy-note">${revoked} signed-out record${revoked===1?'':'s'} kept — removing one would let that device register again.</span>` : ''}
+  </div>`;
 }
 
 function renderStaff(filter=''){

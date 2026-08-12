@@ -228,4 +228,110 @@ const agoMin = (m) => new Date(NOW - m * 60000).toISOString();
     'one row per person per device per app — a monitor, not a log that grows forever');
 }
 
+/* ---------- 6. tidying the list cannot undo a sign-out ----------------
+ *
+ * One row per person per device per app is not one row per person: a
+ * device_id is minted per browser profile, so one owner's cleared cache,
+ * second browser and reinstalled app arrive as three devices. Reported
+ * at twenty rows across fifteen devices, eleven of them the owner's.
+ *
+ * THE TRAP IN TIDYING IT UP: owTouchSession looks its row up and INSERTS
+ * a fresh one when it finds none. So deleting a REVOKED row that its
+ * device has not yet come back to read hands that device a clean
+ * registration on its next visit -- signed in again, by the act of
+ * clearing away the record that had signed it out.
+ *
+ * And the row cannot tell us whether it was read: the beat returns early
+ * on a revoked row WITHOUT touching last_seen_at, deliberately, so a
+ * revoked device cannot keep its own session looking alive. There is no
+ * signal to wait for. So a revoked row is kept, always, and only the
+ * sign-out path may ever touch one.
+ */
+{
+  const HOUSE = ['lsDaysSince', 'lsStaleRows', 'lsPurgeableRows', 'lsMyOtherRows'];
+  const house = compileScope([
+    extractDeclaration(src, 'LS_STALE_DAYS', 'index.html'),
+    extractDeclaration(src, 'LS_PURGE_DAYS', 'index.html'),
+    extractDeclaration(src, 'lsDaysSince', 'index.html'),
+    ...HOUSE.slice(1).map((n) => extractFunction(src, n, 'index.html')),
+  ], {}, HOUSE);
+
+  const agoDays = (d) => new Date(NOW - d * 86400000).toISOString();
+  const row = (over) => Object.assign({
+    id: 1, user_id: 'U1', device_id: 'D1', app: 'admin',
+    last_seen_at: agoDays(0), revoked_at: null,
+  }, over);
+
+  /* The rule, stated three ways, because it is the one that matters. */
+  const revokedOld = row({ id: 9, revoked_at: agoDays(40), last_seen_at: agoDays(40) });
+  t.check(house.lsPurgeableRows([revokedOld], NOW).length === 0,
+    'a signed-out record is never deleted, however old — deleting it invites that device back in');
+  t.check(house.lsStaleRows([revokedOld], NOW).length === 0,
+    'nor is it offered for signing out again, which it already is');
+  t.check(house.lsMyOtherRows([revokedOld], 'U1', 'D2').length === 0,
+    'and it is not swept up by signing your own other devices out');
+
+  // Stale: signed in, never signed out, not heard from in a week.
+  const quiet = row({ id: 2, last_seen_at: agoDays(9) });
+  const recent = row({ id: 3, last_seen_at: agoDays(2) });
+  t.check(house.lsStaleRows([quiet, recent], NOW).map((r) => r.id).join() === '2',
+    'a device unheard-of for over a week is stale; one seen two days ago is not');
+  t.check(house.lsPurgeableRows([quiet], NOW).length === 0,
+    'and stale is not old enough to delete — signing out and forgetting are different acts');
+  t.check(house.lsPurgeableRows([row({ id: 4, last_seen_at: agoDays(40) })], NOW).length === 1,
+    'a month of silence, never signed out, is a record worth clearing');
+
+  /* Your own account elsewhere -- what actually fills this list. Matched
+     on the DEVICE, so a second app on the machine in your hand is not
+     "somewhere else", and never on somebody else's account. */
+  const rows = [
+    row({ id: 10, user_id: 'ME', device_id: 'HERE', app: 'admin' }),
+    row({ id: 11, user_id: 'ME', device_id: 'HERE', app: 'worker' }),
+    row({ id: 12, user_id: 'ME', device_id: 'THERE' }),
+    row({ id: 13, user_id: 'ME', device_id: 'GONE', revoked_at: agoDays(1) }),
+    row({ id: 14, user_id: 'SOMEBODY_ELSE', device_id: 'THEIRS' }),
+  ];
+  const others = house.lsMyOtherRows(rows, 'ME', 'HERE');
+  t.check(others.map((r) => r.id).join() === '12',
+    `only your own account, on a device that is not this one (${others.map((r) => r.id).join() || 'none'})`);
+  t.check(!others.some((r) => r.device_id === 'HERE'),
+    'the machine you are holding keeps every one of its sessions, including a second app on it');
+  t.check(!others.some((r) => r.user_id !== 'ME'),
+    'and nobody else is signed out by a button that says "my"');
+  t.check(house.lsMyOtherRows(rows, null, 'HERE').length === 0
+    && house.lsMyOtherRows(rows, 'ME', null).length === 0,
+    'not knowing who or where you are signs nobody out, rather than everybody');
+
+  // An unreadable timestamp is not "long ago".
+  t.check(house.lsDaysSince('not a date', NOW) === null, 'an unreadable timestamp measures nothing');
+  t.check(house.lsStaleRows([row({ last_seen_at: null })], NOW).length === 0,
+    'so a row with no last-seen is never swept up as stale');
+
+  /* Wiring: each control must reach the right list, and the delete must
+     reach the purgeable one specifically. */
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(/id="ls_signout_mine"/.test(code) && /lsMyOtherRows\(lsRows, myUser, mine\)/.test(code),
+    'the "my other devices" button signs out your own, elsewhere');
+  t.check(/\.delete\(\)\.in\('id', old\.map\(r=> r\.id\)\)/.test(code)
+    && /const old = lsPurgeableRows\(lsRows, Date\.now\(\)\);/.test(code),
+    'and the only delete on this page runs over lsPurgeableRows — never over the whole list');
+  /* Scoped to deletes on THIS table. An unscoped search for
+     ".delete().eq('shop_id'" matched stock_lots, wa_numbers and
+     agent_promotions -- three legitimate deletes with nothing to do with
+     sessions -- and failed while the session code was correct. A check
+     that reads the wrong subject proves nothing about the right one. */
+  const sessionDeletes = [...code.matchAll(/from\('login_sessions'\)[\s\S]{0,160}?\.delete\(\)([^\n;]*)/g)]
+    .map((m) => m[1]);
+  t.check(sessionDeletes.length === 1,
+    `there is exactly one place that deletes a session row (${sessionDeletes.length})`);
+  t.check(sessionDeletes.every((d) => /\.in\('id',/.test(d)),
+    'and it names the exact rows by id — never a shop-wide or unfiltered sweep');
+  t.check(/removing one would let that device register again/.test(code),
+    'and the screen says why the signed-out records are kept');
+
+  // The list is paged like every other long list in the app.
+  t.check(/sessions: 6/.test(code) && /listPageSlice\('sessions', rows\)/.test(code),
+    'the list shows a page, with live devices sorted first so the page is the useful end');
+}
+
 process.exit(t.done() ? 1 : 0);
