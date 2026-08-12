@@ -3395,7 +3395,6 @@
     display:grid;grid-auto-flow:column;grid-auto-columns:minmax(270px,1fr);
     gap:14px;align-items:start;
     overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain;
-    scroll-snap-type:x proximity;scroll-padding-left:2px;
     padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--line) transparent;
   }
   .sq-board::-webkit-scrollbar{height:6px;}
@@ -3452,7 +3451,7 @@
   }
   .sq-stepper-warn .icon{width:9px;height:9px;stroke-width:3;}
   .sq-stepper-label{
-    font-size:9.5px;line-height:1.15;font-weight:600;color:var(--ink-soft);text-align:center;
+    font-size:10px;line-height:1.15;font-weight:600;color:var(--ink-soft);text-align:center;
     white-space:normal;overflow-wrap:anywhere;max-width:100%;
   }
   .sq-stepper-step.active .sq-stepper-label,
@@ -3475,10 +3474,21 @@
      grouped by nothing but a 9px dot, so five columns read as one loose
      scatter -- the quiet contained background is what makes a board read
      as lanes of work. Cards stay white on top of it. */
+  /* No scroll-snap, and it is load-bearing that there is none: Chrome
+     re-snaps PROGRAMMATIC scroll positions to the snap grid, and the
+     snap grid only knows lane-starts-at-board-edge -- so with snap on,
+     clicking a rail node had its under-the-node alignment yanked
+     straight back to an edge. Free scroll, drag-to-pan and the rail are
+     the navigation, which is also how every kanban the admin has used
+     before behaves. */
   .sq-col{
-    display:flex;flex-direction:column;min-width:0;scroll-snap-align:start;
+    display:flex;flex-direction:column;min-width:0;
     background:var(--ow-steel-050);border-radius:12px;padding:8px 8px 10px;
+    box-shadow:inset 0 0 0 0 transparent;transition:box-shadow .25s ease;
   }
+  /* The answer to a rail click: the lane that just slid under the node
+     acknowledges itself in the step's own colour, then lets go. */
+  .sq-col.lane-flash{box-shadow:inset 0 0 0 2px var(--lane-accent,var(--ink-soft));}
   /* NOT sticky, and it cannot be: overflow-x:auto makes .sq-board a
      scroll container, and position:sticky pins against the nearest one
      -- so a sticky head here answers to the board, not the page, and
@@ -4612,7 +4622,7 @@
        be wrong again the next time one is added; a class set from
        SQ_STATUS_ORDER cannot be. */
     .sq-stepper{top:var(--mobile-topbar-h);}
-    .sq-board{grid-auto-columns:100%;scroll-snap-type:none;}
+    .sq-board{grid-auto-columns:100%;}
     .sq-board .sq-col:not(.is-active-step){display:none;}
     /* One column fills the width, so there is never anything clipped to
        fade toward. */
@@ -18215,7 +18225,7 @@ function renderSavedQuotes(){
   const boardHtml = `<div class="sq-board" data-active-step="${sqActiveMobileStep}">${SQ_STATUS_ORDER.map(status=>{
     const group = quotes.filter(q=>q.status===status);
     return `
-      <div class="sq-col${status===sqActiveMobileStep?' is-active-step':''}" data-status="${status}">
+      <div class="sq-col${status===sqActiveMobileStep?' is-active-step':''}" data-status="${status}" style="--lane-accent:${SQ_STATUSES[status].color};">
         <div class="sq-col-head">
           <span class="sq-col-dot" style="background:${SQ_STATUSES[status].color};"></span>
           <span class="sq-col-title">${esc(ORDER_STATUS_SHORT_LABELS[status])}</span>
@@ -18270,10 +18280,30 @@ function renderSavedQuotes(){
   railSteps.forEach(step=>step.addEventListener('click', ()=>{
     setActiveStep(step.dataset.status);
     /* On a phone the rail FILTERS; on a desktop the board is a strip and
-       the rail is its scrubber, so a click slides the column into view. */
+       the rail is its scrubber -- and a scrubber puts the thing you
+       touched UNDER your finger. scrollIntoView(start) slid the lane to
+       the board's far-left edge, so clicking the middle node moved the
+       lane away from the cursor that asked for it. The lane's left edge
+       now lands under the clicked node's left edge, clamped to what the
+       strip can actually scroll -- the end lanes settle as close as the
+       edges allow. */
     if(!isPhoneBoard()){
       const col = boardEl.querySelector(`.sq-col[data-status="${step.dataset.status}"]`);
-      if(col) col.scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth', inline:'start', block:'nearest'});
+      if(col){
+        const boardRect = boardEl.getBoundingClientRect();
+        const colLeft = col.getBoundingClientRect().left - boardRect.left + boardEl.scrollLeft;
+        const nodeX = step.getBoundingClientRect().left - boardRect.left;
+        const target = Math.max(0, Math.min(colLeft - nodeX, boardEl.scrollWidth - boardEl.clientWidth));
+        boardEl.scrollTo({left: target, behavior: reducedMotion ? 'auto' : 'smooth'});
+        /* And the lane answers, so the eye finds it at the end of the
+           slide: a one-breath inset ring in the step's own colour. */
+        if(!reducedMotion){
+          col.classList.remove('lane-flash');
+          void col.offsetWidth;
+          col.classList.add('lane-flash');
+          setTimeout(()=> col.classList.remove('lane-flash'), 900);
+        }
+      }
     }
   }));
   /* Roving arrows across the rail: the board is the page a keyboard user

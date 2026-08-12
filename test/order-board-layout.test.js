@@ -31,8 +31,15 @@ const src = read('index.html');
     'columns flow sideways from the markup — the track count is not declared anywhere');
   t.check(/grid-auto-columns:minmax\(270px,1fr\)/.test(board),
     '1fr expands them on a wide screen, 270px holds the floor on a narrow one');
-  t.check(/overflow-x:auto/.test(board) && /scroll-snap-type:x proximity/.test(board),
-    'and past the floor the strip scrolls with snap rather than wrapping');
+  t.check(/overflow-x:auto/.test(board),
+    'and past the floor the strip scrolls rather than wrapping');
+  /* NO snap, and its absence is load-bearing: Chrome re-snaps
+     PROGRAMMATIC scroll positions to the snap grid, and the grid only
+     knows lane-starts-at-board-edge -- so with snap on, clicking a rail
+     node had its under-the-node alignment yanked straight back to an
+     edge. Verified live: with snap, scrollLeft = 100 read back 0. */
+  t.check(!/scroll-snap/.test(board) && !/scroll-snap-align/.test((/\.sq-col\{[\s\S]*?\}/.exec(src)||[''])[0]),
+    'with no scroll-snap anywhere on the strip — snap re-snaps programmatic alignment to the edges');
   t.check(!/grid-template-columns:repeat\(\d/.test(src.replace(/\/\*[\s\S]*?\*\//g, '').split('.sq-board')[1] || ''),
     'no fixed track count survives anywhere near the board');
   /* The regression itself, by name -- scoped to the board's own rule,
@@ -196,6 +203,18 @@ const src = read('index.html');
     'one predicate decides which, at the same 820px the stylesheet uses');
   t.check(/if\(!isPhoneBoard\(\)\)\{\s*const col = boardEl\.querySelector/.test(render),
     'clicking a step slides the strip only when it is a strip');
+  /* A scrubber puts the thing you touched UNDER your finger.
+     scrollIntoView(start) slid the lane to the board's far-left edge,
+     away from the cursor that asked for it. */
+  t.check(/const nodeX = step\.getBoundingClientRect\(\)\.left - boardRect\.left;/.test(render)
+    && /Math\.max\(0, Math\.min\(colLeft - nodeX, boardEl\.scrollWidth - boardEl\.clientWidth\)\)/.test(render),
+    'a clicked step pulls its lane under the node, clamped to what the strip can scroll');
+  t.check(!/scrollIntoView\(\{behavior: reducedMotion \? 'auto' : 'smooth', inline:'start'/.test(render),
+    'and the far-edge scrollIntoView is gone from the click path');
+  t.check(/col\.classList\.add\('lane-flash'\)/.test(render) && /if\(!reducedMotion\)\{/.test(render),
+    'the lane answers with a one-breath flash — skipped under reduced motion');
+  t.check(/--lane-accent:\$\{SQ_STATUSES\[status\]\.color\}/.test(render),
+    "in the step's own colour, carried by the lane");
   // Roving arrows across the rail.
   t.check(/e\.key!=='ArrowRight' && e\.key!=='ArrowLeft'/.test(render),
     'arrow keys walk the rail');
