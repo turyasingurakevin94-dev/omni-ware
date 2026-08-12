@@ -56,6 +56,7 @@ const scope = compileScope([
   extractFunction(src, 'fgGaugeToMm', 'index.html'),
   extractFunction(src, 'fgMmToGauge', 'index.html'),
   extractFunction(src, 'fgSecondNumber', 'index.html'),
+  extractFunction(src, 'fgSizeRegex', 'index.html'),
   extractFunction(src, 'fgCatalogueHits', 'index.html'),
   extractFunction(src, 'fgSpannerForBolt', 'index.html'),
   extractFunction(src, 'fgBoltsForSpanner', 'index.html'),
@@ -393,9 +394,22 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
 /*
  * The chart is generic. The question behind it is almost always "and do
  * we have it?", so the card answers both -- counted over PRODUCTS,
- * because a five-size product is one thing on the shelf, and read from
- * the same text the Products search reads so the count and the jump the
- * card offers can never disagree.
+ * because a five-size product is one thing on the shelf.
+ *
+ * Two things this got wrong before they were pinned:
+ *
+ *   a bare substring counted "M8*100" as a gauge-8 screw, because "8*"
+ *   sits inside it. It is an M8 anchor bolt. The count said three where
+ *   the shop held two, with a number, which is a confident lie.
+ *
+ *   and counting ONE spelling reported half the shelf: a number-8 lives
+ *   here as both "8*50" and "4.2*25", which is the very confusion this
+ *   whole page exists to settle.
+ *
+ * The Products search the card also offers a jump to is a general text
+ * search and is deliberately more generous than this. That is not a
+ * disagreement to fix: a search box showing a near miss is helpful, a
+ * COUNT including one is wrong.
  */
 {
   FIXTURE.products = [
@@ -404,15 +418,46 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     { id:'P3', name:'Wood Screws 8*100 / 25kgs', category:'Fasteners', subcategory:'Wood Screws', variants:[] },
     { id:'P4', name:'Wood Screws 8*150 / 25kgs', category:'Fasteners', subcategory:'Wood Screws', variants:[] },
     { id:'P5', name:'RIDER Self Drilling Screws', category:'Fasteners', subcategory:'Self Drilling',
-      variants:[{ combo:{ Size:'1"' } }, { combo:{ Size:'1.5"' } }] },
+      variants:[{ combo:{ Size:'4.2*25' } }, { combo:{ Size:'1.5"' } }] },
     { id:'P6', name:'Hinges', category:'Furniture', subcategory:'Hinges', variants:[] },
+    // The bigger sizes exist so "M1" has something to be wrongly found
+    // inside. Without them the trailing-digit guard could be deleted and
+    // every check would still pass.
+    { id:'P7', name:'Nuts', category:'Fasteners', subcategory:'Nuts',
+      variants:[{ combo:{ Size:'M10' } }, { combo:{ Size:'M16' } }] },
   ];
   const H = scope.fgCatalogueHits;
 
   eq(H('M8').count, 1, 'the M8 card finds the shop’s one M8 line');
   eq(H('M8').names[0], 'Anchor Bolts M8*100', 'and names it');
-  eq(H('8*').count, 4, 'the gauge-8 card finds every 8* line, including the anchor bolt written the same way');
-  eq(H('8*').names.length, 3, 'but names at most three — a card is not a search results page');
+
+  /* A size is only that size when nothing alphanumeric runs into it.
+     "8*" sits inside "M8*100" -- an M8 anchor bolt, not a gauge-8 screw
+     -- and counting it told the counter it held three where it held
+     two. */
+  // Three Wood Screws lines carry "8*"; the anchor bolt only contains it.
+  eq(H('8*').count, 3, 'the gauge-8 count excludes the M8 bolt that merely contains "8*"');
+  t.check(!H('8*').names.includes('Anchor Bolts M8*100'), 'and does not name it');
+  eq(H('M10').count, 1, 'M10 finds the line that carries it');
+  eq(H('M1').count, 0, 'and "M1" is not found inside the M10 and M16 sitting right there');
+
+  /* Counted across every spelling the shelf uses, deduped by product.
+     A number-8 is stocked here as both "8*50" and "4.2*25"; one spelling
+     reports half the shelf while sounding certain. */
+  eq(H('4.2*').count, 1, 'the millimetre spelling finds its own line');
+  eq(H('4.2*').names[0], 'RIDER Self Drilling Screws', 'which is the one named in millimetres');
+  eq(H(['8*', '4.2*']).count, 4, 'and both spellings together find the whole shelf');
+  eq(H(['8*', '8*']).count, 3, 'while the same spelling twice counts each product once');
+  /* A blank term must claim NOTHING, not everything. Without the guard
+     the regex body is empty, `(^|[^0-9a-z])` matches at the start of
+     every string, and the card announces the entire catalogue as being
+     that size -- the most confident possible way to be wrong. */
+  eq(H(['', null]).count, 0, 'a list of nothing claims nothing');
+  eq(H('').count, 0, 'and neither does an empty term');
+  eq(H('   ').count, 0, 'nor whitespace');
+  t.check(H('').count !== FIXTURE.products.length,
+    'least of all the whole catalogue, which is what an ungated blank matches');
+  eq(H(['8*', '4.2*']).names.length, 3, 'names are capped — a card is not a search results page');
 
   // Counted over PRODUCTS. A five-size product is one thing on the shelf,
   // and counting variants would report six of something there is one of.
@@ -470,8 +515,8 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
   // The shop's own answer has to be ON the cards, not merely computable.
   t.check(/\$\{fgStockLineHTML\(r\.size\)\}/.test(stripped),
     'the bolt card says what the shop holds in that size');
-  t.check(/\$\{fgStockLineHTML\(`\$\{r\.gauge\}\*`\)\}/.test(stripped),
-    'and so does the screw card, in the catalogue’s own gauge spelling');
+  t.check(/\$\{fgStockLineHTML\(\[`\$\{r\.gauge\}\*`, `\$\{r\.dia\}\*`\]\)\}/.test(stripped),
+    'and the screw card counts BOTH of the catalogue’s spellings, or it reports half the shelf');
   t.check(/lengthTyped != null/.test(stripped),
     'and a typed length is answered rather than warned about');
   // Both cards must consult the ladder, or one of them goes back to

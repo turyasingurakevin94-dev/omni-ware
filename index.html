@@ -38011,18 +38011,44 @@ function fgSecondNumber(row, n){
     : { pitchTyped: null, lengthTyped: n };
 }
 
+/* A size matched at a BOUNDARY rather than as a bare substring.
+
+   "8*" occurs inside "M8*100", which is an M8 anchor bolt and not a
+   gauge-8 screw -- so a plain substring count told the counter it held
+   three gauge-8 lines when it held two. A size is only that size when
+   nothing alphanumeric runs into it from the left.
+
+   The trailing guard applies only when the term ends in a digit, so
+   "M8" cannot match "M80" while "8*" still matches "8*50". */
+function fgSizeRegex(term){
+  const body = String(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^0-9a-z])' + body + (/\d$/.test(term) ? '(?![0-9])' : ''), 'i');
+}
+
 /* What the shop actually holds in this size. The chart is generic; the
    question behind it is nearly always "and do we have it?", so the card
-   answers both. Counted over products rather than variants, because a
-   five-size product is one thing on the shelf, and it reads the same
-   text the Products search reads so the count and the jump agree. */
-function fgCatalogueHits(term){
-  const tokens = searchTokens(term);
-  if(!tokens.length) return { count: 0, names: [] };
+   answers both.
+
+   Counted over products rather than variants, because a five-size
+   product is one thing on the shelf. The Products search this card also
+   offers a jump to is a general text search and is deliberately more
+   generous than this -- a search box that shows a near miss is helpful,
+   a COUNT that includes one is wrong. */
+function fgCatalogueHits(terms){
+  /* Takes several spellings, because that is the whole problem this page
+     exists for: a number-8 screw is shelved here as BOTH "8*50" and
+     "4.2*25", and a card that counted one spelling would report half of
+     what the shop holds -- while telling the counter, with a number,
+     that it had looked. Deduped by product, so a line matching both
+     spellings is still one thing on the shelf. */
+  const list = (Array.isArray(terms) ? terms : [terms])
+    .map(x=> String(x == null ? '' : x).trim()).filter(Boolean);
+  if(!list.length) return { count: 0, names: [] };
+  const res = list.map(fgSizeRegex);
   const hits = (data.products || []).filter(p=>{
     const hay = `${p.name} ${p.category || ''} ${p.subcategory || ''} `
       + (p.variants || []).map(v=> variantLabel(v.combo)).join(' ');
-    return matchesAllTokens(hay.toLowerCase(), tokens);
+    return res.some(re=> re.test(hay));
   });
   return { count: hits.length, names: hits.slice(0, 3).map(p=> p.name) };
 }
@@ -38171,9 +38197,10 @@ function fgFindChip(term, label){
 }
 // The shop's own answer, above the generic one. Silence would read as
 // "we have none"; saying so plainly is the useful half of the answer.
-function fgStockLineHTML(term){
-  const h = fgCatalogueHits(term);
-  if(!h.count) return `<div class="fg-note">Nothing in your catalogue matches “${esc(term)}”.</div>`;
+function fgStockLineHTML(terms){
+  const list = Array.isArray(terms) ? terms : [terms];
+  const h = fgCatalogueHits(list);
+  if(!h.count) return `<div class="fg-note">Nothing in your catalogue matches ${esc(list.map(x=>`“${x}”`).join(' or '))}.</div>`;
   return `<div class="fg-stock"><b>${h.count}</b> in your catalogue — ${esc(h.names.join(', '))}${h.count > h.names.length ? '…' : ''}</div>`;
 }
 
@@ -38228,7 +38255,7 @@ function fgScrewCardHTML(entry){
     ${fgSpecRow('Pilot drill — hardwood', esc(`${r.pilotHard} mm`))}
     ${fgSpecRow('Clearance drill', esc(`${r.clearDrill} mm`))}
     ${fgSpecRow('Wall plug', esc(`${r.plugMm} mm`))}
-    ${fgStockLineHTML(`${r.gauge}*`)}
+    ${fgStockLineHTML([`${r.gauge}*`, `${r.dia}*`])}
     <div class="fg-chip-row">${fgFindChip(`${r.gauge}*`)}${fgFindChip(metricName)}</div>
   </div>`;
 }
