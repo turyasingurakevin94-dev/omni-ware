@@ -277,12 +277,31 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
     'after the payment is saved, so a printer that is off cannot cost the shop the record');
   t.check(/presetAutoPrintReceipt: presets\.autoPrintReceipt !== false/.test(src),
     'on by default, and a setting rather than a code change');
-  /* The seeded identity fills only what is still UNSET. A seed that
-     assigns unconditionally would overwrite the shop's own name on
-     every single load, silently, forever. */
-  t.check(/presetShopLegalName: presets\.shopLegalName != null \? presets\.shopLegalName : 'Telagon Hardware'/.test(src)
-    && /presetShopAddress: presets\.shopAddress != null \? presets\.shopAddress/.test(src),
-    'and the seeded shop identity never overwrites a value the shop has typed');
+  /* The identity fields carry no shop's name in the code.
+     They were seeded with 'Telagon Hardware' / 'Jesco House Room JHB08'
+     while this was being built, guarded so the seed only filled what was
+     unset. The guard was the right shape and the seed was still wrong:
+     this app is installed by more than one shop, and a default that is
+     another business's real name and real room number is a letterhead
+     lying in wait for whoever installs next. Nothing is lost by dropping
+     it -- shopIdentity() falls back to the name the shop registered
+     under, and the address and phone lines simply do not render until
+     somebody fills them in. */
+  t.check(/presetShopLegalName: presets\.shopLegalName \|\| ''/.test(src)
+    && /presetShopAddress: presets\.shopAddress \|\| ''/.test(src),
+    'the shop identity comes from the shop, with no name seeded into the code');
+  // Placeholders are exempt, deliberately. A greyed-out "e.g. Telagon
+  // Hardware" is a hint that shows an empty field what kind of thing goes
+  // in it; it is never read, never stored and never printed. What must not
+  // exist is a real business's name as a VALUE -- something that becomes
+  // data, or reaches paper, without anyone typing it.
+  const withoutHints = src.replace(/placeholder="[^"]*"/g, '');
+  t.check(!/Telagon|Jesco/.test(withoutHints),
+    'and no real business name or address survives as a value anywhere in the file');
+  // Dropping the seed must not leave a receipt with a blank letterhead.
+  const identity = (/function shopIdentity\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/name: \(d\.presetShopLegalName \|\| ''\)\.trim\(\) \|\| printedShopName\(\)/.test(identity),
+    'a shop that has typed no legal name still gets a letterhead, from the name it registered under');
   t.check(/id="preset_auto_print_receipt"/.test(src), 'with a switch in Shop identity');
   // Reprints exist, and reuse the number rather than minting a new one.
   t.check(/class="q-remove-icon inv-pay-print"/.test(src) && /printReceipt\(q, \(q\.payments\|\|\[\]\)\[idx\], idx\)/.test(src),

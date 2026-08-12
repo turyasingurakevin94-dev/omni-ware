@@ -3256,6 +3256,24 @@
     font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;background:#fff;
   }
   .q-qty-input-group select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;font-family:inherit;background:#fff;}
+  /* The per-unit figure a per-pack price converts to -- i.e. exactly what
+     gets written to the lot cost and the price book. Quiet, because it is
+     confirmation rather than a warning, but monospaced and full width so
+     a figure five times bigger than expected is impossible to skim past.
+     Empty until there is a conversion to report, and collapses to nothing
+     when there isn't. */
+  .q-price-per-unit{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    color:var(--ink-soft);letter-spacing:-0.1px;
+  }
+  .q-price-per-unit:empty{display:none;}
+  /* The row default is flex-end, which aligns two label+input fields by
+     their inputs. A field that also carries a conversion note underneath
+     is taller, so flex-end would push the OTHER field's input down to
+     meet its bottom edge -- and the note appears and disappears with the
+     price unit, so the quantity box would jump every time. Tops instead:
+     the note hangs below without moving anything. */
+  .q-qty-row-noted{align-items:flex-start;}
   .q-qty-field:last-child > input{
     padding:6px 9px;border:1px solid var(--line);border-radius:7px;
     font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;background:#fff;
@@ -9440,11 +9458,17 @@ async function loadData(shopId){
        A receipt handed across a counter has to say where it came from
        and how to come back, which is a different job from a name.
 
-       Seeded rather than left blank so a receipt prints correctly the
-       day this ships; the seed only fills what is still unset, so it
-       can never overwrite something the shop has typed. */
-    presetShopLegalName: presets.shopLegalName != null ? presets.shopLegalName : 'Telagon Hardware',
-    presetShopAddress: presets.shopAddress != null ? presets.shopAddress : 'Jesco House Room JHB08',
+       NOT seeded with a name and address any more. The first cut shipped
+       one shop's real details as the default for every shop, which the
+       next shop to sign up would have inherited and printed on its own
+       receipts. Shop-specific data does not belong in code.
+
+       Nothing is lost by dropping it: shopIdentity() already falls back
+       to the name the shop registered under, which is a better default
+       than another shop's name could ever be, and the address and phone
+       lines simply do not render until somebody fills them in. */
+    presetShopLegalName: presets.shopLegalName || '',
+    presetShopAddress: presets.shopAddress || '',
     presetShopPhone: presets.shopPhone != null ? presets.shopPhone : (presets.waPhone || ''),
     presetShopTin: presets.shopTin || '',
     presetReceiptFooter: presets.receiptFooter != null ? presets.receiptFooter
@@ -32645,6 +32669,15 @@ let invPurchaseSupplierId = null; // sticky supplier selection within the purcha
 // into the real base-unit quantity suppliers get ranked and priced by.
 let invPurchaseQtyRaw = '';
 let invPurchaseQtyUnitMode = 'unit';
+// The price is stored per BASE unit everywhere downstream -- the FIFO lot
+// cost, the price registry row, the purchase invoice line. But a supplier
+// quoting a carton says "220,000 a carton", not "44,000 a box", so a field
+// that can only accept the per-unit figure is a field that gets the carton
+// figure typed into it. That happened: 220,000 went in as the per-Box cost
+// of RIDER screws, and one shelf read 2,200,000 where it held 440,000.
+// So the price carries its own unit, exactly as the quantity does, and is
+// divided down before anything stores it.
+let invPurchasePriceUnitMode = 'unit';
 
 function invRenderList(query){
   const tokens = searchTokens(query);
@@ -32678,7 +32711,7 @@ function invRenderList(query){
 }
 function invShowSearchView(){
   invProductId = null; invVariantIdx = null; invPresetAction = null; invPurchaseSupplierId = null;
-  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit';
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
   document.getElementById('invModalTitle').textContent = 'Adjust stock';
   document.getElementById('inv_stage_view').style.display = 'none';
   document.getElementById('inv_stage_view').innerHTML = '';
@@ -32704,7 +32737,7 @@ function invSelectProduct(id, variantIdx=null, action=null){
   invVariantIdx = variantIdx==null ? null : Number(variantIdx);
   invPresetAction = action;
   invPurchaseSupplierId = null;
-  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit';
+  invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
   document.getElementById('invModalTitle').textContent = action==='purchase' ? 'Purchase stock' : 'Adjust stock';
   document.getElementById('inv_search_view').style.display = 'none';
   document.getElementById('inv_stage_view').style.display = 'block';
@@ -32801,6 +32834,37 @@ function invPurchaseQtyValue(rawQty, unitMode, packQty){
   const raw = Number(rawQty)||0;
   return unitMode==='pack' && packQty>0 ? raw*packQty : raw;
 }
+/* The typed price, converted to the per-base-unit figure everything
+   downstream stores. The mirror image of invPurchaseQtyValue: a quantity
+   in packs MULTIPLIES up to base units, a price per pack DIVIDES down to
+   them. Same conversion the Price Registry's tier editor already does
+   (pr_tier_price_unit), so the two routes into the price book agree.
+
+   An empty field stays null rather than becoming 0 -- "I don't know what
+   this cost" and "this cost nothing" are different claims, and only one
+   of them should be written into a lot cost. */
+function invPurchasePriceValue(rawPrice, unitMode, packQty){
+  if(rawPrice==='' || rawPrice==null) return null;
+  const raw = Number(rawPrice);
+  if(isNaN(raw)) return null;
+  return unitMode==='pack' && packQty>0 ? raw/packQty : raw;
+}
+/* Shown under the price field whenever the price is being given per pack:
+   the per-unit figure that will actually be written to the lot cost and
+   the price book.
+
+   The point is that the conversion is never invisible. The supplier's
+   number and the shop's number are both on screen at once, so a carton
+   price typed while the selector says "per Box" is contradicted by a line
+   reading five times what anyone expects, before Save is pressed rather
+   than a month later on a stock report. */
+function invPurchasePriceNote(rawPrice, unit, packQty){
+  if(invPurchasePriceUnitMode!=='pack' || !(packQty>0)) return '';
+  const per = invPurchasePriceValue(rawPrice, 'pack', packQty);
+  if(per==null) return '';
+  const shown = Math.round(per*100)/100;
+  return `= ${shown.toLocaleString('en-UG')} UGX per ${esc(unit||'unit')}`;
+}
 // Purchase (restock) stage — shows the cheapest suppliers for the quantity
 // actually being bought (re-ranked live as that quantity crosses a volume
 // breakpoint) as horizontal cards, then quantity + price-purchased-at
@@ -32822,6 +32886,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   const unit = contextRow ? (contextRow.unit||'') : '';
   const hasPack = packQty>0 && !!packUnit;
   if(invPurchaseQtyUnitMode==='pack' && !hasPack) invPurchaseQtyUnitMode = 'unit';
+  if(invPurchasePriceUnitMode==='pack' && !hasPack) invPurchasePriceUnitMode = 'unit';
   const qty = invPurchaseQtyValue(invPurchaseQtyRaw, invPurchaseQtyUnitMode, packQty);
 
   // Suppliers are ranked by what they'd actually charge for THIS quantity
@@ -32835,7 +32900,12 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     invPurchaseSupplierId = top3.length ? top3[0].supplierId : null;
   }
   const selectedRow = top3.find(r=>r.supplierId===invPurchaseSupplierId) || null;
-  const startPrice = selectedRow && selectedRow.purchasePrice!=null ? Math.round(selectedRow.purchasePrice) : '';
+  // Auto-filled in whatever unit the price field is currently ASKING for.
+  // Filling it with the per-unit figure while the label said "per Ctn"
+  // would be the same trap wearing the opposite mask.
+  const priceInPack = invPurchasePriceUnitMode==='pack' && packQty>0;
+  const startPrice = selectedRow && selectedRow.purchasePrice!=null
+    ? Math.round(selectedRow.purchasePrice * (priceInPack ? packQty : 1)) : '';
 
   const rankLabels = ['BEST', '2ND', '3RD'];
   const cardsHtml = top3.map((r,i)=>{
@@ -32853,6 +32923,8 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
 
   const qtyUnitOptionsHTML = `<option value="unit" ${invPurchaseQtyUnitMode==='unit'?'selected':''}>${esc(unit||'unit')}</option>` +
     (hasPack ? `<option value="pack" ${invPurchaseQtyUnitMode==='pack'?'selected':''}>${esc(packUnit)} (${packQty} ${esc(unit||'unit')})</option>` : '');
+  const priceUnitOptionsHTML = `<option value="unit" ${invPurchasePriceUnitMode==='unit'?'selected':''}>per ${esc(unit||'unit')}</option>` +
+    (hasPack ? `<option value="pack" ${invPurchasePriceUnitMode==='pack'?'selected':''}>per ${esc(packUnit)}</option>` : '');
 
   wrap.innerHTML = `${backBtn}<div class="q-stage">
     <div class="q-stage-head"><div class="q-stage-name">${esc(displayName)}</div></div>
@@ -32863,7 +32935,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
          <div class="q-supplier-cards-h">${cardsHtml}</div>`
       : `<div class="q-empty-hint" style="margin-top:14px;">No priced suppliers for this item yet — add prices in the Price Registry tab.</div>`}
 
-    <div class="q-qty-row" style="margin-top:14px;">
+    <div class="q-qty-row q-qty-row-noted" style="margin-top:14px;">
       <div class="field q-qty-field">
         <label>Quantity purchased</label>
         <div class="q-qty-input-group">
@@ -32872,8 +32944,12 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
         </div>
       </div>
       <div class="field q-qty-field">
-        <label>Price purchased at (UGX per ${esc(unit||'unit')})</label>
-        <input type="number" id="inv_purchase_price" min="0" step="any" value="${startPrice}">
+        <label>Price purchased at (UGX)</label>
+        <div class="q-qty-input-group">
+          <input type="number" id="inv_purchase_price" min="0" step="any" value="${startPrice}">
+          <select id="inv_purchase_price_unit">${priceUnitOptionsHTML}</select>
+        </div>
+        <div class="q-price-per-unit" id="inv_purchase_price_note">${invPurchasePriceNote(startPrice, unit, packQty)}</div>
       </div>
     </div>
     <div class="q-chosen-line" id="inv_purchase_preview">New stock will be: <strong>${Math.max(0, current + qty)}</strong></div>
@@ -32912,17 +32988,43 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
   };
   qtyInput.addEventListener('change', handleQtyChange);
-  qtyUnitSel.addEventListener('change', handleQtyChange);
+  // Switching what you're COUNTING in switches what you're quoted in: buy
+  // in cartons and the supplier's price is a carton price. The price unit
+  // follows the quantity unit rather than sitting on its own default,
+  // because the default is what nobody reads. It stays overridable -- the
+  // selector below is still live -- for the shop that buys a carton and
+  // thinks in boxes.
+  qtyUnitSel.addEventListener('change', ()=>{
+    invPurchasePriceUnitMode = qtyUnitSel.value;
+    handleQtyChange();
+  });
+
+  const priceInput = document.getElementById('inv_purchase_price');
+  const priceUnitSel = document.getElementById('inv_purchase_price_unit');
+  const refreshPriceNote = ()=>{
+    document.getElementById('inv_purchase_price_note').innerHTML =
+      invPurchasePriceNote(priceInput.value, unit, packQty);
+  };
+  priceInput.addEventListener('input', refreshPriceNote);
+  priceUnitSel.addEventListener('change', ()=>{
+    // Re-render so the auto-filled figure is restated in the newly chosen
+    // unit. Without this the number sitting in the field silently changes
+    // meaning -- 44,000 per Box becoming a claim of 44,000 per Ctn.
+    invPurchasePriceUnitMode = priceUnitSel.value;
+    renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
+  });
 
   document.getElementById('inv_purchase_save_btn').addEventListener('click', async ()=>{
     const q = invPurchaseQtyValue(qtyInput.value, qtyUnitSel.value, packQty);
     if(q<=0){ toast('Enter a quantity greater than 0'); return; }
-    const priceRaw = document.getElementById('inv_purchase_price').value;
-    const price = priceRaw==='' ? null : Number(priceRaw);
+    const price = invPurchasePriceValue(priceInput.value, priceUnitSel.value, packQty);
     const supplierLabel = invPurchaseSupplierId ? supplierName(invPurchaseSupplierId) : '';
     let note = supplierLabel ? `Purchased from ${supplierLabel}` : 'Purchased';
     if(qtyUnitSel.value==='pack' && packQty>0) note += ` — ${qtyInput.value} ${packUnit}`;
-    if(price!=null) note += ` @ ${fmtUGX(price)} each`;
+    // Names the unit. "@ 220,000 each" was true of a carton and false of a
+    // box and did not say which, so the log could not settle the question
+    // it was the only record of.
+    if(price!=null) note += ` @ ${fmtUGX(price)} per ${unit||'unit'}`;
     // Buying at a different price than what's on file for this supplier
     // means their price has changed -- keep the Price Registry current
     // instead of letting it go stale.
