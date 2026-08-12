@@ -189,8 +189,18 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
      seven-centimetre receipt then fed fourteen centimetres of blank roll
      after it, every sale. The page is measured and cut to the content
      instead. */
-  t.check(/@page\{size:80mm \$\{receiptPageHeightMM\(area\)\}mm;margin:3mm;\}/.test(fn),
+  t.check(/@page\{size:80mm \$\{receiptPageHeightMM\(area\)\}mm;margin:0;\}/.test(fn),
     'the page is cut to the content, not left to a driver’s fixed sheet');
+  /* margin:0 is load-bearing, learned from a printed receipt. A @page
+     margin OFFSETS the content: 3mm of it pushed a 72mm receipt to span
+     3..75mm across a head that reaches 72mm, and the last character of
+     every right-aligned figure was cut off -- a printed 265,000 read as
+     265,00. It also added its bottom margin to the roll. */
+  t.check(!/margin:3mm/.test(fn),
+    'with no page margin, which offset the content past the print head and fed extra roll');
+  const css = (/\.receipt\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/width:72mm/.test(css) && /box-sizing:border-box/.test(css) && /padding:2mm/.test(css),
+    'the receipt owns the full 72mm the head can reach, its inset taken from inside');
   // Against the CODE: the comment explaining why auto was abandoned
   // quotes the phrase, and should.
   t.check(!/size:80mm auto/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')),

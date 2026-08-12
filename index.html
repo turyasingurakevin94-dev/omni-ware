@@ -3464,9 +3464,14 @@
      prints as a smear. And 72mm of printable width is about 32
      monospace characters, so nothing assumes a line can hold both a
      product name and its arithmetic. */
+  /* 72mm is what an 80mm head can actually reach, and the receipt owns
+     that whole span -- border-box, so the 2mm inset comes out of the
+     72mm rather than being added to it. Getting this wrong by 3mm is
+     what clipped the last digit off every total. */
   .receipt{
     font-family:'IBM Plex Mono',monospace;color:#000;background:#fff;
-    width:72mm;font-size:11px;line-height:1.45;
+    width:72mm;box-sizing:border-box;padding:2mm 2mm 0;
+    font-size:11px;line-height:1.45;
   }
   .receipt *{color:#000 !important;}
   .receipt .r-center{text-align:center;}
@@ -19422,7 +19427,10 @@ function receiptPageHeightMM(area){
   area.setAttribute('style', prev);
   // 96 CSS px to the inch. Rounded UP, because a page half a millimetre
   // short of its content spills a second, almost-empty sheet.
-  return Math.max(40, Math.ceil(px / 96 * 25.4) + 6);
+  // +2, not +6: with no page margin the sheet is the content plus a
+  // hair. What is left below the last line on the real roll is the
+  // printer's own head-to-cutter gap, which no CSS can reclaim.
+  return Math.max(40, Math.ceil(px / 96 * 25.4) + 2);
 }
 function printReceipt(q, payment, idx){
   if(!q) return;
@@ -19431,7 +19439,14 @@ function printReceipt(q, payment, idx){
   area.innerHTML = buildReceiptHTML(q, payment, idx);
   const st = document.createElement('style');
   st.id = 'receipt80PrintStyle';
-  st.textContent = `@page{size:80mm ${receiptPageHeightMM(area)}mm;margin:3mm;}`;
+  /* margin:0, and the receipt carries its own inset instead.
+     A @page margin does two harmful things on a thermal roll. It
+     OFFSETS the content -- 3mm of margin pushed a 72mm receipt to span
+     3..75mm across a head that can only reach 72mm, which clipped the
+     last character off every right-aligned figure (a printed 265,000
+     reading as 265,00). And it adds its bottom margin to the paper fed
+     after the last line, on a roll where every millimetre is bought. */
+  st.textContent = `@page{size:80mm ${receiptPageHeightMM(area)}mm;margin:0;}`;
   document.head.appendChild(st);
   window.print();
   area.innerHTML = '';
