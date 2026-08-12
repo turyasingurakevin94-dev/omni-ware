@@ -5355,7 +5355,13 @@
      across two lines with the unit stranded below reads as two numbers,
      and this page's whole job is being read correctly at a glance. */
   .fg-spec > span{min-width:0;}
-  .fg-spec b{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+  /* NOT white-space:nowrap. That was here to stop "8.4 × 16 × 1.6 mm"
+     dropping its unit onto a second line, and it did -- while making any
+     value too long to fit unable to shrink, so it overflowed straight
+     through the label and printed on top of it. The unit is held to its
+     number by a non-breaking space in fgSpecRow instead, which fixes the
+     narrow problem without creating a wider one. */
+  .fg-spec b{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;min-width:0;}
   .fg-note{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
   .fg-warn{font-size:11.5px;line-height:1.45;color:var(--danger);font-weight:600;}
   .fg-chip-flow{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;}
@@ -38203,7 +38209,15 @@ const FG_ASSUME_CAPTIONS = {
 // diameter-by-length naming.
 const FG_EXAMPLES = ['M8x50', '4.2*25', '#8', '38mm', '1 1/2', '13'];
 function fgMmStr(n){ return (Math.round(n * 100) / 100).toLocaleString('en-UG'); }
-function fgSpecRow(label, value){ return `<div class="fg-spec"><span>${esc(label)}</span><b>${value}</b></div>`; }
+/* A unit stays with its number. "1.6 mm" wrapping to leave "mm" alone on
+   the next line reads as a separate figure, which on a page of figures
+   is the one thing that must not happen -- so the space before a unit is
+   non-breaking, and everything else is free to wrap rather than
+   overflowing the row. */
+function fgSpecRow(label, value){
+  const glued = String(value).replace(/ (mm|pcs?|″)\b/g, ' $1');
+  return `<div class="fg-spec"><span>${esc(label)}</span><b>${glued}</b></div>`;
+}
 function fgFindChip(term, label){
   return `<button type="button" class="fg-find" data-fg-find="${esc(term)}">${esc(label || `Find “${term}” in catalogue`)}</button>`;
 }
@@ -38293,10 +38307,14 @@ function fgLengthCardHTML(c){
     <div class="fg-card-head"><b>${main}</b><span>length</span></div>
     ${c.assumed ? `<div class="fg-interp">${esc(FG_ASSUME_CAPTIONS[c.assumed])}</div>` : ''}
     <div class="fg-specs">
-      ${rough ? fgSpecRow('Exactly', esc(`${inchLabel} = ${fgMmStr(exactMm)} mm — ${fgMmStr(Math.abs(offBy))} mm ${offBy > 0 ? 'over' : 'under'} what you typed`)) : ''}
       ${fgSpecRow('Decimal', esc(`${(Math.round(c.inch * 1000) / 1000)}″`))}
       ${trade ? fgSpecRow('Sold as', esc(`${trade.inchLabel} / ${trade.tradeMm} mm on the shelf`)) : ''}
     </div>
+    ${/* A sentence, not a figure. Right-aligned in a value slot it read
+          as a measurement that had overflowed its own row; as prose it
+          reads as what it is -- the difference between the fraction and
+          what was actually typed. */ ''}
+    ${rough ? `<div class="fg-note">Exactly: ${esc(`${inchLabel} = ${fgMmStr(exactMm)} mm, which is ${fgMmStr(Math.abs(offBy))} mm ${offBy > 0 ? 'over' : 'under'} what you typed.`)}</div>` : ''}
   </div>`;
 }
 function fgSpannerCardHTML(c){

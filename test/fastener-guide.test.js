@@ -549,6 +549,31 @@ const inc = (arr, msg) => t.check(arr.every((v, i) => i === 0 || v > arr[i - 1])
     'and its figures column up instead of stretching across the width');
   t.check(/\.fg-spec\{break-inside:avoid;/.test(css),
     'without a row being split down the middle by a column break');
+
+  /* A value must be able to SHRINK. white-space:nowrap was added to keep
+     "8.4 × 16 × 1.6 mm" from dropping its unit onto a second line, and it
+     did -- while making any value too long to fit unable to wrap, so it
+     overflowed straight through its own label and printed on top of it.
+     Reported from a phone: "Ex9c13/16" = 249.24 mm — 0.76 mm unde…".
+     The unit is held to its number by a non-breaking space instead. */
+  t.check(!/\.fg-spec b\{[^}]*white-space:nowrap/.test(css),
+    'a long value wraps rather than overflowing through its label');
+  t.check(/\.fg-spec b\{[^}]*min-width:0/.test(css),
+    'and can shrink inside its row');
+  const specFn = (/function fgSpecRow\([\s\S]*?\n\}/.exec(stripped) || [''])[0];
+  t.check(/\\u00A0| /.test(specFn),
+    'while a unit stays joined to its number by a non-breaking space');
+  t.check(/replace\(\/ \(mm\|pcs\?\|″\)/.test(specFn),
+    'covering mm, pieces and inches — the units this page prints');
+
+  /* And a sentence is not a figure. The "Exactly" line is prose about
+     the difference between a fraction and what was typed; right-aligned
+     in a value slot it read as a measurement that had burst its row. */
+  const lengthCard = (/function fgLengthCardHTML\([\s\S]*?\n\}/.exec(stripped) || [''])[0];
+  t.check(/<div class="fg-note">Exactly:/.test(lengthCard),
+    'the exact-difference sentence is prose, not a right-aligned value');
+  t.check(!/fgSpecRow\('Exactly'/.test(lengthCard),
+    'and no longer pretends to be a figure');
   // Every card type must use the wrapper, or one of them stretches.
   const builders = ['fgBoltCardHTML', 'fgScrewCardHTML', 'fgLengthCardHTML', 'fgSpannerCardHTML',
     'fgPlugCardHTML', 'fgRivetCardHTML', 'fgImpHexCardHTML'];
