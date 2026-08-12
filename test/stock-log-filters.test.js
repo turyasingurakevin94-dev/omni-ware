@@ -228,4 +228,68 @@ const reset = () => {
     'the cap is stated, so it is never mistaken for the whole answer');
 }
 
+/* ---------- 8. a day's trading does not bury the page ---------------- */
+/*
+ * The fifty-row cap stops the log being unbounded. It does not stop it
+ * being long, and it sits underneath the stock table that is the reason
+ * anyone opened this screen -- so an ordinary day of movements pushes the
+ * thing you came to read off the top. Reported as "the list is becoming so
+ * prolonged, it will soon affect the view", and measured in the running
+ * app at 3707px of panel for 24 movements.
+ *
+ * So a page inside the cap, with everything else one press away.
+ */
+{
+  const page = Number((/const STOCK_LOG_PAGE = (\d+);/.exec(code) || [])[1]);
+  t.check(page > 0 && page < 50,
+    `a page smaller than the cap exists (STOCK_LOG_PAGE = ${page})`);
+
+  // The page is applied in the RENDERER, over the capped rows -- not
+  // inside stockLogRowsFor. Pushing it down into the query would make
+  // `total` and the in/out/net figures describe ten movements instead of
+  // every one that matched, which is the bug section 6 exists to prevent.
+  const render = (/function renderStockLog\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/rows: capped/.test(render) && /capped\.slice\(0, STOCK_LOG_PAGE\)/.test(render),
+    'the page is taken from the capped rows in the renderer');
+  t.check(/const entries = stockLogShowAll \? capped : capped\.slice\(0, STOCK_LOG_PAGE\);/.test(render),
+    'and expanding shows the capped set rather than re-querying');
+  t.check(!/STOCK_LOG_PAGE/.test((/function stockLogRowsFor[\s\S]*?\n\}/.exec(code) || [''])[0]),
+    'the query itself knows nothing about the page, so total and the totals still cover every match');
+
+  // Section 6 proved the count line totals `all`. That must still hold now
+  // that a second, smaller slice exists to accidentally total instead.
+  t.check(/const t = stockLogTotals\(all\);/.test(render),
+    'the in/out/net figures still cover everything that matched, not the ten on screen');
+
+  // The control, and what it promises.
+  const btn = (/function stockLogMoreButtonHTML[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(btn.length > 0, 'the expand control is its own function');
+  t.check(/if\(available <= STOCK_LOG_PAGE\) return '';/.test(btn),
+    'a list that already fits gets no button at all');
+  t.check(/total > available/.test(btn) && /Show the \$\{available\} most recent/.test(btn),
+    'and when more matched than the cap can reach, it offers what it can rather than promising all of them');
+  t.check(/'Show fewer'/.test(btn), 'expanded, it offers the way back');
+  t.check(/aria-expanded="\$\{stockLogShowAll \? 'true' : 'false'\}"/.test(btn),
+    'and says which state it is in for anything not reading the label');
+
+  /* Everything above describes a function. None of it proves the renderer
+     calls it, or that pressing the result does anything -- the same gap
+     that let a conversion line pass every check while nothing listened to
+     the field it converted. So: rendered, wired, and acted on. */
+  t.check(/\$\{stockLogMoreButtonHTML\(capped\.length, total\)\}/.test(render),
+    'the renderer puts the control on the page, told what it can reach and what really matched');
+  const handler = (/moreBtn\.addEventListener\('click',[\s\S]*?\n  \}\);/.exec(render) || [''])[0];
+  t.check(handler.length > 0, 'and the button is wired to something');
+  t.check(/stockLogShowAll = !stockLogShowAll;/.test(handler),
+    'which flips the state rather than pinning it open');
+  t.check(/stockLogShowAll = !stockLogShowAll;\s*\r?\n\s*renderStockLog\(\);/.test(handler),
+    'and redraws, so the press has a visible effect');
+
+  // Sticky, or the minute poll would collapse the list while it is read.
+  t.check(/^let stockLogShowAll = false;$/m.test(code),
+    'the expanded state is module-level, so a re-render does not fold it back up');
+  t.check(!/stockLogShowAll = false;[\s\S]{0,200}renderStockLog\(\)/.test(render),
+    'and nothing resets it on the way into a render');
+}
+
 process.exit(t.done() ? 1 : 0);

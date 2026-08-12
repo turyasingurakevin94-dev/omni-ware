@@ -1964,6 +1964,11 @@
   .log-net b{font-weight:700;}
   .log-net .up{color:var(--good);}
   .log-net .down{color:var(--danger);}
+  /* The expand control. Centred and quiet: it is the end of a list, not a
+     call to action, and it sits directly under the last row so it reads as
+     the continuation of one rather than the start of something else. */
+  .log-more-row{display:flex;justify-content:center;margin-top:12px;}
+  .log-more-row .btn{padding:6px 16px;font-size:12px;}
   .inv-qty-wrap{font-variant-numeric:tabular-nums;}
   .variance-ok{color:var(--good);font-weight:700;}
   .variance-bad{color:var(--danger);font-weight:700;}
@@ -32504,6 +32509,20 @@ const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'
    the item somebody is looking for. Filter first, then cap, then say how
    many were found so the cap is never mistaken for the answer. */
 const STOCK_LOG_LIMIT = 50;
+/* How many of those fifty are on screen before anyone asks for more.
+   The cap stops the log being unbounded; it does not stop it being long.
+   Fifty movements is most of a screen on its own, sitting under a stock
+   table that is the reason the page was opened -- so a day's ordinary
+   trading pushes the thing you came to read off the top.
+
+   Ten is about a morning's work: enough that the last few movements are
+   visible without scrolling at all, and the count beside the heading
+   still says how many matched, so the short list is never mistaken for
+   the whole record. Everything else is one press away. */
+const STOCK_LOG_PAGE = 10;
+// Sticky across re-renders (the poll redraws this panel every minute), or
+// expanding the list would collapse itself while being read.
+let stockLogShowAll = false;
 
 /* Both dropdowns are built from what the log ACTUALLY contains, not from
    every category or every movement type the app knows about. Offering a
@@ -32597,8 +32616,13 @@ function renderStockLog(){
   const typeEl = document.getElementById('inv_log_type');
   populateStockLogFilters(catEl ? catEl.value : '', typeEl ? typeEl.value : '');
 
-  const { total, all, rows: entries } = stockLogRowsFor(
+  const { total, all, rows: capped } = stockLogRowsFor(
     searchEl ? searchEl.value : '', catEl ? catEl.value : '', typeEl ? typeEl.value : '');
+  // The page sits INSIDE the cap, so the count line below still compares
+  // what is on screen against everything that matched -- which is what
+  // makes "showing 10 of 47" true rather than a second cap nobody was told
+  // about.
+  const entries = stockLogShowAll ? capped : capped.slice(0, STOCK_LOG_PAGE);
 
   const countEl = document.getElementById('invLogCount');
   if(countEl){
@@ -32654,7 +32678,41 @@ function renderStockLog(){
       <td>${esc(e.note||'')}</td>
     </tr>`).join('')}
   </tbody></table></div>
-  <div class="pi-cards">${cardsHtml}</div>`;
+  <div class="pi-cards">${cardsHtml}</div>
+  ${stockLogMoreButtonHTML(capped.length, total)}`;
+
+  const moreBtn = document.getElementById('inv_log_more');
+  if(moreBtn) moreBtn.addEventListener('click', ()=>{
+    stockLogShowAll = !stockLogShowAll;
+    renderStockLog();
+    // Collapsing from the bottom of a long list would leave the viewport
+    // somewhere below the panel, looking like the page had jumped. Put the
+    // heading back in view instead.
+    if(!stockLogShowAll){
+      const panel = document.getElementById('invLogWrap');
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if(panel && panel.closest('.panel')) panel.closest('.panel').scrollIntoView({block:'start', behavior: reducedMotion ? 'auto' : 'smooth'});
+    }
+  });
+}
+
+/* The expand control, or nothing at all when the list already fits.
+
+   Says what pressing it will actually show. `available` is what survives
+   the fifty-row cap, so on a log with three hundred matching movements
+   this offers the fifty it can reach rather than promising all of them
+   and delivering a fifth -- the count beside the heading is what carries
+   the true total. */
+function stockLogMoreButtonHTML(available, total){
+  if(available <= STOCK_LOG_PAGE) return '';
+  const label = stockLogShowAll
+    ? 'Show fewer'
+    : (total > available
+        ? `Show the ${available} most recent`
+        : `Show all ${available} movements`);
+  return `<div class="log-more-row">
+    <button type="button" class="btn btn-ghost" id="inv_log_more" aria-expanded="${stockLogShowAll ? 'true' : 'false'}">${label}</button>
+  </div>`;
 }
 
 /* Add/adjust-stock modal — search step mirrors the quote item picker's
