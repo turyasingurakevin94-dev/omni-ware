@@ -19400,6 +19400,30 @@ function buildReceiptHTML(q, payment, idx){
    cleanup (the reasoning is written out at clearInjectedPrintStyles).
    Then empties #printArea, which the A5 paths never do and which matters
    now that two page geometries are in play. */
+/* How tall the page has to be, in mm.
+
+   `size:80mm auto` was the first attempt and it does not do what it
+   reads like: the driver ignores the auto and offers its own fixed
+   sheets instead -- this printer's shortest is 80x210mm. A seven-
+   centimetre receipt then feeds fourteen centimetres of blank roll
+   after it, every sale, for ever.
+
+   So the page is cut to the content: lay the receipt out, measure it,
+   and set the sheet to exactly that. #printArea is display:none on
+   screen and a hidden element has no height, so it is measured off to
+   one side -- positioned out of view rather than merely invisible,
+   because visibility:hidden would still reserve space in the page. */
+function receiptPageHeightMM(area){
+  const el = area.querySelector('.receipt');
+  if(!el) return 200;
+  const prev = area.getAttribute('style') || '';
+  area.setAttribute('style', 'display:block;position:absolute;left:-9999px;top:0;width:80mm;');
+  const px = el.getBoundingClientRect().height;
+  area.setAttribute('style', prev);
+  // 96 CSS px to the inch. Rounded UP, because a page half a millimetre
+  // short of its content spills a second, almost-empty sheet.
+  return Math.max(40, Math.ceil(px / 96 * 25.4) + 6);
+}
 function printReceipt(q, payment, idx){
   if(!q) return;
   clearInjectedPrintStyles();
@@ -19407,9 +19431,7 @@ function printReceipt(q, payment, idx){
   area.innerHTML = buildReceiptHTML(q, payment, idx);
   const st = document.createElement('style');
   st.id = 'receipt80PrintStyle';
-  // auto height, not a fixed page: a receipt is exactly as long as its
-  // content, and a fixed page feeds blank paper after every short sale.
-  st.textContent = '@page{size:80mm auto;margin:3mm;}';
+  st.textContent = `@page{size:80mm ${receiptPageHeightMM(area)}mm;margin:3mm;}`;
   document.head.appendChild(st);
   window.print();
   area.innerHTML = '';

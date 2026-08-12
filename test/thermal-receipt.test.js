@@ -183,8 +183,25 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
 /* ---------- 7. the printer plumbing ---------------------------------- */
 {
   const fn = extractFunction(src, 'printReceipt', 'index.html');
-  t.check(/@page\{size:80mm auto;margin:3mm;\}/.test(fn),
-    'the page is 80mm wide and AUTO tall — a fixed height feeds blank paper after every short sale');
+  /* `size:80mm auto` was the first attempt and the print preview showed
+     it does not do what it reads like: the driver ignores the auto and
+     offers its own fixed sheets, the shortest here being 80x210mm. A
+     seven-centimetre receipt then fed fourteen centimetres of blank roll
+     after it, every sale. The page is measured and cut to the content
+     instead. */
+  t.check(/@page\{size:80mm \$\{receiptPageHeightMM\(area\)\}mm;margin:3mm;\}/.test(fn),
+    'the page is cut to the content, not left to a driver’s fixed sheet');
+  // Against the CODE: the comment explaining why auto was abandoned
+  // quotes the phrase, and should.
+  t.check(!/size:80mm auto/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'and nothing still asks for an auto height the driver will not honour');
+  const measure = extractFunction(src, 'receiptPageHeightMM', 'index.html');
+  t.check(/left:-9999px/.test(measure),
+    'measured off to one side, since #printArea is display:none and a hidden element has no height');
+  t.check(/Math\.ceil\(px \/ 96 \* 25\.4\)/.test(measure),
+    'rounded UP — a page half a millimetre short spills a second, almost-empty sheet');
+  t.check(/Math\.max\(40,/.test(measure) && /if\(!el\) return 200;/.test(measure),
+    'with a floor, and a sane fallback if the receipt somehow did not render');
   t.check(/clearInjectedPrintStyles\(\);/.test(fn),
     'any sheet a previous print left behind is cleared first — @page does not cascade by specificity');
   t.check(/area\.innerHTML = '';/.test(fn),
