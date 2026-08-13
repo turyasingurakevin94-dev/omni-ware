@@ -5697,6 +5697,22 @@
   /* Three short exclusive answers, shown all at once instead of hidden
      behind a select that truncated every one of them. */
   .sf-field-wide{grid-column:1/-1;}
+  .sf-var-row{align-items:end;margin-bottom:6px;}
+  .sf-var-row .pc-icon-btn{margin-bottom:4px;}
+  .sf-ask-variant{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink);white-space:nowrap;}
+  /* Which sizes were asked for. Six asks is a reason to stock the item;
+     five of them being 14 inch is a reason to stock the 14 inch and
+     leave the rest, and a single count cannot say that. */
+  .sf-vdemand{margin-top:10px;}
+  .sf-vdemand-head{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
+    color:var(--ink-soft);font-weight:600;opacity:0.85;margin-bottom:6px;}
+  .sf-vdemand-row{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:2px 0;}
+  .sf-vdemand-name{flex:0 0 74px;font-weight:600;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sf-vdemand-bar{flex:1 1 auto;height:7px;border-radius:999px;background:var(--ow-rule-soft);overflow:hidden;}
+  .sf-vdemand-bar i{display:block;height:100%;background:var(--accent);border-radius:999px;}
+  .sf-vdemand-n{flex:0 0 auto;font-variant-numeric:tabular-nums;color:var(--ink-soft);font-weight:700;}
   /* width:max-content rather than inline-flex -- a broader .field rule
      wins on display and stretched the control to the full row, leaving
      its border running 459px past the last option. */
@@ -7786,6 +7802,7 @@
      ask that never joins the rest of their history. -->
 <datalist id="dl_sourcing_customers"></datalist>
 <datalist id="dl_sourcing_suppliers"></datalist>
+<datalist id="dl_sourcing_variants"></datalist>
 <datalist id="dl_attribute_names"></datalist>
 
 <div class="toast" id="toast"></div>
@@ -8572,6 +8589,7 @@
         <div class="form-grid">
           <div class="field"><label>Who asked (optional)</label><input type="text" id="sl_ask_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
           <div class="field"><label>Their phone (optional)</label><input type="text" id="sl_ask_phone" autocomplete="off"></div>
+          <div class="field"><label>Which size (optional)</label><input type="text" id="sl_ask_variant" placeholder="e.g. 14&quot;" autocomplete="off"></div>
           <div class="field"><label>How many (optional)</label><input type="number" id="sl_ask_qty" min="0" step="any"></div>
         </div>
       </div>
@@ -8596,6 +8614,13 @@
             <label>Notes</label>
             <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
           </div>
+          <!-- Most of what this shop sells comes in sizes, so the item
+               being researched is usually a list. Written here because
+               the first person to ask usually names one, and it grows as
+               the research finds the rest. -->
+          <label class="sf-rung-label">Does it come in sizes or types?</label>
+          <div id="sl_var_attrs"></div>
+          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">Add a size or type list</button>
         </section>
         <section class="sf-sec" data-sec="assign">
           <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
@@ -8611,6 +8636,10 @@
             <div class="form-grid">
               <div class="field"><label>Who asked</label><input type="text" id="sl_ask2_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
               <div class="field"><label>Their phone</label><input type="text" id="sl_ask2_phone" autocomplete="off"></div>
+              <!-- People name the size when they ask for these, and which
+                   size they asked for is what says which sizes are worth
+                   stocking -- not merely whether the item is. -->
+              <div class="field"><label>Which size</label><input type="text" id="sl_ask2_variant" list="dl_sourcing_variants" placeholder="optional — e.g. 14&quot;" autocomplete="off"></div>
               <div class="field"><label>How many</label><input type="number" id="sl_ask2_qty" min="0" step="any"></div>
             </div>
             <div class="btn-row">
@@ -10094,7 +10123,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -10102,7 +10131,8 @@ async function loadData(shopId){
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
-    sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads')
+    sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
+    sb.from('sourcing_leads').select('variant_attrs').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -10113,6 +10143,14 @@ async function loadData(shopId){
      nothing else depends on. A shop with no table has no trips, which is
      also true of a shop that has simply never made one. */
   const collectionTripRows = (collectionTripsR && !collectionTripsR.error && collectionTripsR.data) || [];
+  /* Whether the sizes column EXISTS yet. Reads survive a missing column
+     on their own -- the mapper just sees undefined -- but a write does
+     not: PostgREST rejects the whole upsert for one unknown column, so
+     every sourcing lead would fail to save between this deploying and
+     the migration being applied by hand. Probed rather than assumed, and
+     re-probed by the 30-second refresh, so it starts persisting on its
+     own within half a minute of 0073 landing. */
+  sourcingVariantColumn = !(variantColR && variantColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
 
@@ -10284,6 +10322,7 @@ async function loadData(shopId){
       graduatedAt:r.graduated_at, createdAt:r.created_at,
       stageEnteredAt: r.stage_entered_at==null ? null : Number(r.stage_entered_at),
       requests: Array.isArray(r.requests) ? r.requests : [],
+      variantAttrs: Array.isArray(r.variant_attrs) ? r.variant_attrs : [],
       candidates: Array.isArray(r.candidates) ? r.candidates : [],
       voided: !!r.voided, droppedReason:r.dropped_reason||'', droppedAt:r.dropped_at,
     })),
@@ -10352,6 +10391,8 @@ async function loadData(shopId){
 }
 
 let lastSynced = {};
+// Set by loadData: see the probe there for why a write cannot assume it.
+let sourcingVariantColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -10491,6 +10532,7 @@ function buildSyncRows(d, shopId){
       created_at: l.createdAt||null,
       stage_entered_at: l.stageEnteredAt==null ? null : Number(l.stageEnteredAt),
       requests: l.requests||[], candidates: l.candidates||[],
+      ...(sourcingVariantColumn ? {variant_attrs: l.variantAttrs||[]} : {}),
       voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
     })),
     waPosts: (d.waPosts||[]).map(w=>({
@@ -34262,6 +34304,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
         if(l.voided === undefined) l.voided = false;
         if(!Array.isArray(l.requests)) l.requests = [];
         if(!Array.isArray(l.candidates)) l.candidates = [];
+        if(!Array.isArray(l.variantAttrs)) l.variantAttrs = [];
         if(!l.status || !SOURCING_STATUSES[l.status]) l.status = 'asked';
         if(!l.stageEnteredAt) l.stageEnteredAt = l.createdAt ? new Date(l.createdAt).getTime() : Date.now();
       });
@@ -39359,6 +39402,70 @@ function leadDistinctAskers(l){
   return seen.size;
 }
 function leadAskCount(l){ return ((l && l.requests) || []).length; }
+
+/* ---------------- The sizes it comes in ----------------
+   Most of what this shop sells is variable -- 58 of 84 products, some
+   with 22 variants -- so an item researched as one thing usually turns
+   out to be a list: runners in six lengths, sofa legs in three heights
+   and three finishes. Same shape products already use, so graduation can
+   hand it straight over.
+
+   The per-size PRICES are deliberately not here. One indicative ladder
+   per supplier answers the question this board asks -- is it worth
+   stocking, and from whom -- and pricing twenty-two rows is what the
+   Price Registry's bulk form already does. */
+function leadVariantAttrs(l){
+  return ((l && l.variantAttrs) || [])
+    .map(a=>({name: String(a.name||'').trim(),
+      values: (Array.isArray(a.values) ? a.values : String(a.values||'').split(','))
+        .map(v=> String(v).trim()).filter(Boolean)}))
+    .filter(a=> a.name && a.values.length);
+}
+function leadHasVariants(l){ return leadVariantAttrs(l).length > 0; }
+/* The matrix, crossed exactly as the product form crosses it, so what
+   the funnel promises and what the product becomes are the same list. */
+function leadVariantCombos(l){
+  const attrs = leadVariantAttrs(l);
+  if(!attrs.length) return [];
+  let combos = [{}];
+  attrs.forEach(attr=>{
+    const next = [];
+    combos.forEach(c=> attr.values.forEach(v=> next.push({...c, [attr.name]: v})));
+    combos = next;
+  });
+  return combos;
+}
+/* Every size anybody has named, for the picker on an ask -- drawn from
+   the attribute lists AND from what people have already asked for, since
+   the second is how the first usually gets written. */
+function leadVariantChoices(l){
+  const seen = [];
+  leadVariantAttrs(l).forEach(a=> a.values.forEach(v=>{ if(!seen.includes(v)) seen.push(v); }));
+  ((l && l.requests) || []).forEach(r=>{
+    const v = String(r.variant||'').trim();
+    if(v && !seen.includes(v)) seen.push(v);
+  });
+  return seen;
+}
+/* Which SIZES people asked for, biggest demand first. The shop was asked
+   for runners six times, but if five of those were 14 inch that is the
+   one worth stocking -- a count on the item alone cannot say so. Asks
+   that named no size are counted separately rather than spread across
+   the sizes, which would be inventing demand nobody expressed. */
+function leadDemandByVariant(l){
+  const tally = {};
+  let unspecified = 0;
+  ((l && l.requests) || []).forEach(r=>{
+    const v = String(r.variant||'').trim();
+    if(!v){ unspecified++; return; }
+    tally[v] = (tally[v] || 0) + 1;
+  });
+  return {
+    rows: Object.entries(tally).map(([variant, asks])=> ({variant, asks}))
+      .sort((a,b)=> b.asks - a.asks || a.variant.localeCompare(b.variant)),
+    unspecified,
+  };
+}
 /* The name typed at capture wins the customer record's: it is what the
    person actually said, and a lead captured from a walk-in has no
    customer id to look up at all. */
@@ -39562,6 +39669,7 @@ function captureSourcingLead(req){
     customerId: (req && req.customerId) || null,
     customerName: String((req && req.customerName) || '').trim(),
     phone: String((req && req.phone) || '').trim(),
+    variant: String((req && req.variant) || '').trim(),
     qty: (req && req.qty!=null && req.qty!=='') ? Number(req.qty) : null,
     orderId: (req && req.orderId) || null,
     conversationId: (req && req.conversationId) || null,
@@ -39581,7 +39689,7 @@ function captureSourcingLead(req){
     createdAt: new Date().toISOString(),
     stageEnteredAt: Date.now(),
     productId: null, graduatedAt: null,
-    requests: [ask], candidates: [],
+    requests: [ask], candidates: [], variantAttrs: [],
   };
   sourcingLeadsAll().push(lead);
   return {lead, isNew: true, wasDropped: false};
@@ -39753,15 +39861,29 @@ async function graduateSourcingLead(leadId, form){
      product sharing an id owns another product's prices and stock. */
   const productId = firstFreeEntityId('P', 3, data.products,
     await issueEntityId('product', 'P', 3, data.products));
+  /* The shape the research found. Seven products in ten here are
+     variable, so a funnel that could only ever make a simple one made
+     the wrong thing most of the time. The matrix is crossed by
+     leadVariantCombos, which crosses it exactly as the product form
+     does -- so what the lead promised and what the product became are
+     the same list. */
+  const attrs = leadVariantAttrs(lead);
+  const combos = leadVariantCombos(lead);
   const record = {
-    id: productId, name, type: 'simple',
+    id: productId, name, type: attrs.length ? 'variable' : 'simple',
     category: String((form && form.category) || '').trim(),
     subcategory: String((form && form.subcategory) || '').trim(),
     notes: lead.notes || '', shortDescription: '', image: null,
     wholesaleMarkupType: 'percent', wholesaleMarkupValue: 0,
     retailMarkupType: 'percent', retailMarkupValue: 0,
     agentDiscountWholesalePct: null, agentDiscountRetailPct: null,
-    variantAttributes: [], variants: [],
+    variantAttributes: attrs,
+    variants: combos.map(combo=>({
+      sku: Object.values(combo).join('-').toUpperCase().replace(/\s+/g,''),
+      combo, image: null,
+      wholesaleMarkupType:'percent', wholesaleMarkupValue:0,
+      retailMarkupType:'percent', retailMarkupValue:0,
+    })),
     createdAt: new Date().toISOString(),
   };
   data.products.push(record);
@@ -39781,6 +39903,23 @@ async function graduateSourcingLead(leadId, form){
     return {productId, priceId: null};
   }
   const packQty = Number(form && form.packQty) || 0;
+  /* A variable product's prices are a matrix -- twenty-two rows for
+     Runners -- and the Price Registry's bulk form already exists to fill
+     one. Writing a single price row here would put one figure against
+     one variant and leave twenty-one blank, which is a worse lie than
+     leaving it unpriced. So the product is made, and the form built for
+     the job is opened against it with the winning supplier and the
+     ladder the research found already in place. */
+  if(record.type === 'variable'){
+    renderSourcing(); renderSourcingBadge(); triggerProductsRender(); renderPresets();
+    openBulkPricingFor(productId, supplierId, {
+      unit: String((form && form.unit) || '').trim(),
+      packUnit: String((form && form.packUnit) || '').trim(),
+      packQty, tiers,
+    });
+    toast(`${name} is now a product with ${record.variants.length} variants — set their prices here.`, 9000);
+    return {productId, priceId: null, handedOff: true};
+  }
   /* Derived, never typed -- the same rule Compare Prices, quote
      suggestions and agent pricing all read these two flat fields under.
      Carrying the WHOLE ladder is what lets this produce a real bulk rate:
@@ -40081,9 +40220,15 @@ function openSourcingLead(id){
   document.getElementById('dl_sourcing_suppliers').innerHTML =
     (data.suppliers||[]).map(s=> `<option value="${esc(s.name)}"></option>`).join('');
   if(!l){
-    ['sl_ask_name','sl_ask_phone','sl_ask_qty'].forEach(k=> document.getElementById(k).value = '');
+    ['sl_ask_name','sl_ask_phone','sl_ask_qty','sl_ask_variant'].forEach(k=> document.getElementById(k).value = '');
+    slVarAttrs = [];
+    renderSlVarAttrs();
   } else {
     document.getElementById('sl_notes').value = l.notes || '';
+    slVarAttrs = leadVariantAttrs(l).map(a=>({name:a.name, values:a.values.join(', ')}));
+    renderSlVarAttrs();
+    document.getElementById('dl_sourcing_variants').innerHTML =
+      leadVariantChoices(l).map(v=> `<option value="${esc(v)}"></option>`).join('');
     const sel = document.getElementById('sl_staff');
     sel.innerHTML = '<option value="">Nobody yet</option>'
       + (data.staff||[]).map(s=> `<option value="${esc(s.id)}"${String(l.assignedStaffId)===String(s.id)?' selected':''}>${esc(s.name)}</option>`).join('');
@@ -40144,12 +40289,14 @@ function renderSourcingLeadBody(l){
       return `
       <div class="sf-ask">
         <span class="sf-ask-who${who ? '' : ' unknown'}">${esc(who || 'No name taken')}</span>
+        ${r.variant ? `<span class="sf-ask-variant">${esc(r.variant)}</span>` : ''}
         <span class="sf-ask-qty">${r.qty ? esc(String(r.qty)) : ''}</span>
         <span class="sf-ask-src">${esc(SOURCING_SOURCE_LABELS[r.source] || r.source || '')}</span>
         <span class="sf-ask-when">${esc(String(r.at||'').slice(0,10))}</span>
       </div>`;
     }).join('')}</div>
-    <p class="preset-hint">${leadDistinctAskers(l)} different ${leadDistinctAskers(l)===1?'person has':'people have'} asked, ${reqs.length} time${reqs.length===1?'':'s'} in all.</p>`
+    <p class="preset-hint">${leadDistinctAskers(l)} different ${leadDistinctAskers(l)===1?'person has':'people have'} asked, ${reqs.length} time${reqs.length===1?'':'s'} in all.</p>
+    ${sourcingDemandByVariantHTML(l)}`
     : '<p class="preset-hint">Nobody recorded yet.</p>';
 
   const cands = l.candidates || [];
@@ -40269,6 +40416,26 @@ function sourcingCompareHTML(l){
   </div>`;
 }
 const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', sourcing:'added here'};
+/* Which SIZES were asked for. Six asks for runners is a reason to stock
+   runners; five of those six being 14 inch is a reason to stock the 14
+   inch and leave the rest, and only this says so. Drawn only when
+   somebody actually named a size -- a bar chart of one row labelled
+   "unspecified" tells nobody anything. */
+function sourcingDemandByVariantHTML(l){
+  const d = leadDemandByVariant(l);
+  if(!d.rows.length) return '';
+  const top = d.rows[0].asks;
+  return `<div class="sf-vdemand">
+    <div class="sf-vdemand-head">Which ones they asked for</div>
+    ${d.rows.map(r=>`
+      <div class="sf-vdemand-row">
+        <span class="sf-vdemand-name">${esc(r.variant)}</span>
+        <span class="sf-vdemand-bar"><i style="width:${Math.round(r.asks/top*100)}%"></i></span>
+        <span class="sf-vdemand-n">${r.asks}</span>
+      </div>`).join('')}
+    ${d.unspecified ? `<p class="preset-hint">${d.unspecified} ${d.unspecified===1?'ask':'asks'} named no size.</p>` : ''}
+  </div>`;
+}
 
 /* ---------------- What each step actually asks for ----------------
    Five stages' worth of form shown at once is a form nobody reads. Each
@@ -40342,6 +40509,35 @@ function sourcingStepGuide(l){
    back for it. */
 function sourcingWantsPriceForm(l){
   return !!l && !l.voided && l.status !== 'asked' && l.status !== 'looking';
+}
+/* Hands a freshly graduated variable product to the Price Registry with
+   the research already in it. selectPrProduct with NO variant index is
+   what puts that form into bulk mode -- one card per variant, each
+   following the shared ladder until somebody overrides it -- so this
+   only has to fill in what the funnel learned and open it. */
+function openBulkPricingFor(productId, supplierId, packing){
+  closeModal('sourcingLeadModal');
+  closeModal('sourcingGraduateModal');
+  goToTab('prices');
+  refreshPriceDropdowns();
+  resetPriceForm();
+  selectPrProduct(productId, null);
+  /* selectPrSupplier re-derives the shared ladder from whatever that
+     supplier already has on file for this product -- which for one
+     created seconds ago is nothing, so it clears it. Everything the
+     funnel learned therefore goes in AFTER, and the cards are redrawn
+     with renderPrBulkVariantRows, which repaints them from the current
+     ladder instead of working the ladder out again and wiping it. */
+  selectPrSupplier(supplierId);
+  document.getElementById('pr_unit').value = packing.unit || '';
+  document.getElementById('pr_pack_unit').value = packing.packUnit || '';
+  document.getElementById('pr_pack_qty').value = packing.packQty || '';
+  prTiers = (packing.tiers || []).map(t=>({...t}));
+  renderPrTierUnitOptions();
+  renderPrTiers();
+  renderPrBulkVariantRows();
+  document.getElementById('priceFormTitle').textContent = 'Price every variant';
+  openModal('priceModal');
 }
 /* The funnel's own stage rail, through the shared builder the order
    preview uses -- one stepper, two pipelines, so the two screens cannot
@@ -40589,6 +40785,7 @@ document.getElementById('sl_save').addEventListener('click', async ()=>{
       customerId: asker.customerId,
       customerName: asker.customerName,
       phone: asker.phone,
+      variant: document.getElementById('sl_ask_variant').value.trim(),
       qty: document.getElementById('sl_ask_qty').value,
     });
     if(!res) return;
@@ -40601,6 +40798,7 @@ document.getElementById('sl_save').addEventListener('click', async ()=>{
   if(!l){ closeModal('sourcingLeadModal'); return; }
   l.name = name;
   l.notes = document.getElementById('sl_notes').value.trim();
+  l.variantAttrs = slVarParsed();
   l.assignedStaffId = document.getElementById('sl_staff').value || null;
   saveData();
   closeModal('sourcingLeadModal');
@@ -40645,6 +40843,10 @@ async function sourcingResolveAsker(rawName, rawPhone){
   toast(`"${name}" added to your customers`);
   return {customerId:id, customerName:name, phone};
 }
+document.getElementById('sl_var_add').addEventListener('click', ()=>{
+  slVarAttrs.push({name:'', values:''});
+  renderSlVarAttrs();
+});
 document.getElementById('sl_add_ask').addEventListener('click', ()=>{
   document.getElementById('sl_ask_form').style.display = '';
   document.getElementById('sl_add_ask').style.display = 'none';
@@ -40653,7 +40855,7 @@ document.getElementById('sl_add_ask').addEventListener('click', ()=>{
 function slAskFormClose(){
   document.getElementById('sl_ask_form').style.display = 'none';
   document.getElementById('sl_add_ask').style.display = '';
-  ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty'].forEach(k=> document.getElementById(k).value = '');
+  ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty','sl_ask2_variant'].forEach(k=> document.getElementById(k).value = '');
 }
 document.getElementById('sl_ask2_cancel').addEventListener('click', ()=> slAskFormClose());
 document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
@@ -40666,6 +40868,7 @@ document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
   l.requests = l.requests || [];
   l.requests.push({at: new Date().toISOString(), source:'sourcing',
     customerId: asker.customerId, customerName: asker.customerName, phone: asker.phone,
+    variant: document.getElementById('sl_ask2_variant').value.trim(),
     qty: qtyRaw==='' ? null : Number(qtyRaw), orderId:null, conversationId:null, note:''});
   slAskFormClose();
   saveData();
@@ -40695,6 +40898,47 @@ function slSetRole(v){
   const want = document.querySelector(`#sl_c_role_seg input[value="${v || 'supplier'}"]`)
     || document.querySelector('#sl_c_role_seg input[value="supplier"]');
   if(want) want.checked = true;
+}
+/* The size lists being edited, values held as the comma string the
+   person is typing -- the same working shape draftVariantAttrs uses on
+   the product form, parsed only when it is saved. */
+let slVarAttrs = [];
+function renderSlVarAttrs(){
+  const wrap = document.getElementById('sl_var_attrs');
+  wrap.innerHTML = slVarAttrs.length === 0
+    ? '<p class="preset-hint">No — it is one thing, one price.</p>'
+    : slVarAttrs.map((a,i)=>`
+      <div class="form-grid sf-var-row">
+        <div class="field"><label>Called</label>
+          <input type="text" class="sf-var-name" data-i="${i}" list="dl_attribute_names" placeholder="e.g. Size" value="${esc(a.name)}"></div>
+        <div class="field sf-field-wide"><label>The ones it comes in, separated by commas</label>
+          <input type="text" class="sf-var-values" data-i="${i}" placeholder='e.g. 10", 12", 14", 16"' value="${esc(a.values)}"></div>
+        <button type="button" class="pc-icon-btn danger sf-var-del" data-i="${i}" title="Remove this list">${ICON_TRASH}</button>
+      </div>`).join('')
+      + `<p class="preset-hint">${slVarCount()} in all — that is what the product will be created with.</p>`;
+  wrap.querySelectorAll('.sf-var-name').forEach(el=> el.addEventListener('input', e=>{
+    slVarAttrs[Number(e.target.dataset.i)].name = e.target.value; }));
+  wrap.querySelectorAll('.sf-var-values').forEach(el=> el.addEventListener('input', e=>{
+    slVarAttrs[Number(e.target.dataset.i)].values = e.target.value;
+    // The count is the whole point of showing them: two lists of six is
+    // thirty-six variants, which is worth seeing before you agree to it.
+    const note = wrap.querySelector('p.preset-hint');
+    if(note) note.textContent = `${slVarCount()} in all — that is what the product will be created with.`;
+  }));
+  wrap.querySelectorAll('.sf-var-del').forEach(el=> el.addEventListener('click', e=>{
+    slVarAttrs.splice(Number(e.currentTarget.dataset.i), 1);
+    renderSlVarAttrs();
+  }));
+}
+function slVarParsed(){
+  return slVarAttrs
+    .map(a=>({name: String(a.name||'').trim(),
+      values: String(a.values||'').split(',').map(v=> v.trim()).filter(Boolean)}))
+    .filter(a=> a.name && a.values.length);
+}
+function slVarCount(){
+  const attrs = slVarParsed();
+  return attrs.length ? attrs.reduce((n,a)=> n * a.values.length, 1) : 0;
 }
 function slCandFormMode(){
   const editing = !!editingCandidateId;

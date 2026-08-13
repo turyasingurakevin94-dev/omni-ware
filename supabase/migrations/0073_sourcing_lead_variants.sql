@@ -1,0 +1,28 @@
+-- The sizes an item being sourced comes in.
+--
+-- Most of what this shop sells is variable: 58 of its 84 products carry
+-- variants, some of them 22 or 38 -- runners in six lengths across four
+-- types, sofa legs in three heights and three finishes. Researching one
+-- of those is still ONE job (one trip, one supplier, one importer), but
+-- it discovers a list: "they come in 10 to 20 inch".
+--
+-- Without this the funnel could only ever graduate a `simple` product
+-- with one price, which is the wrong shape for seven items in ten.
+--
+--   variant_attrs -- [{name, values:[...]}], the same shape products
+--     already use for variantAttributes. Usually one attribute ("Size":
+--     10", 12", 14"...); crossed when there are two, exactly as the
+--     product form crosses them into a matrix.
+--
+-- The per-size PRICES deliberately do not live here. A candidate holds
+-- one indicative ladder, because the question this board answers is
+-- "is it worth stocking, and from whom" -- and pricing twenty-two rows
+-- is what the Price Registry's bulk form already exists to do. On
+-- graduation the product is created with these attributes and that form
+-- is opened against it, pre-filled with the winning supplier.
+--
+-- Which size each person asked for rides in requests[] instead: it needs
+-- no column, and it is what says WHICH sizes are worth stocking rather
+-- than merely whether the item is.
+alter table sourcing_leads
+  add column if not exists variant_attrs jsonb not null default '[]'::jsonb;

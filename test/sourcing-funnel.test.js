@@ -86,6 +86,7 @@ const env = {
   openSourcingLead: (id) => calls.opened.push(id),
   triggerProductsRender: () => {},
   triggerPricesRender: () => {},
+  openBulkPricingFor: (productId, supplierId, packing) => { calls.bulk = {productId, supplierId, packing}; },
   renderPresets: () => {},
   allocRowId: () => nextRowId++,
   esc: (s) => String(s),
@@ -136,6 +137,11 @@ const sources = [
   extractFunction(src, 'candidateHasPrice', 'index.html'),
   extractFunction(src, 'candidateUnitPriceAt', 'index.html'),
   extractFunction(src, 'candidateLowestRung', 'index.html'),
+  extractFunction(src, 'leadVariantAttrs', 'index.html'),
+  extractFunction(src, 'leadHasVariants', 'index.html'),
+  extractFunction(src, 'leadVariantCombos', 'index.html'),
+  extractFunction(src, 'leadVariantChoices', 'index.html'),
+  extractFunction(src, 'leadDemandByVariant', 'index.html'),
   extractFunction(src, 'leadDemandQty', 'index.html'),
   extractFunction(src, 'sourcingRankedAt', 'index.html'),
   extractFunction(src, 'sourcingBestAt', 'index.html'),
@@ -172,6 +178,7 @@ const S = compileScope(sources, env, [
   'deriveWholesaleRetail', 'sourcingLeadById',
   'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
+  'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
   'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
   'applyCandidateFields',
 ]);
@@ -902,6 +909,81 @@ async function main() {
     'the form is lifted out BEFORE the list is rebuilt and put back after, or it is destroyed mid-edit');
 }
 
+/* ---------- 3g. the sizes it comes in --------------------------------- */
+{
+  /* Seven products in ten in this shop are variable -- runners in six
+     lengths across four types, sofa legs in three heights and three
+     finishes. A funnel that could only ever make a `simple` product made
+     the wrong shape most of the time. */
+  resetAll();
+  const sized = (attrs, reqs) => lead({ variantAttrs: attrs, requests: reqs || [] });
+
+  eq(S.leadHasVariants(lead()), false, 'an item with no size list is one thing at one price');
+  const runners = sized([{ name: 'Size', values: ['10"', '12"', '14"'] }]);
+  eq(S.leadHasVariants(runners), true, 'and one with a size list is not');
+  eq(S.leadVariantCombos(runners).length, 3, 'three sizes are three variants');
+
+  // Two lists CROSS, exactly as the product form crosses them.
+  const crossed = sized([
+    { name: 'Type', values: ['Soft Close', 'Ordinary'] },
+    { name: 'Size', values: ['10"', '12"', '14"'] },
+  ]);
+  eq(S.leadVariantCombos(crossed).length, 6, 'two lists cross into a matrix, not a concatenation');
+  eq(JSON.stringify(S.leadVariantCombos(crossed)[0]), JSON.stringify({ Type: 'Soft Close', Size: '10"' }),
+    'and each variant carries every attribute, which is what the product model reads');
+
+  // Junk in the list is not a size.
+  eq(S.leadVariantAttrs(sized([{ name: '', values: ['10"'] }])).length, 0, 'an unnamed list is not a list');
+  eq(S.leadVariantAttrs(sized([{ name: 'Size', values: [] }])).length, 0, 'and a named one with nothing in it is not either');
+  eq(S.leadVariantAttrs(sized([{ name: 'Size', values: ['10"', '  ', '12"'] }]))[0].values.length, 2,
+    'blanks between the commas are dropped');
+
+  /* WHICH size people asked for. Six asks for runners is a reason to
+     stock runners; five of those being 14 inch is a reason to stock the
+     14 inch and leave the rest -- and a count on the item cannot say so. */
+  const asked = sized([{ name: 'Size', values: ['10"', '14"'] }], [
+    ask({ customerId: 'C1', variant: '14"' }), ask({ customerId: 'C2', variant: '14"' }),
+    ask({ customerId: 'C5', variant: '14"' }),
+    ask({ customerId: 'C3', variant: '10"' }), ask({ customerId: 'C4' }),
+  ]);
+  const d = S.leadDemandByVariant(asked);
+  eq(d.rows.length, 2, 'the breakdown has a row per size somebody named');
+  eq(d.rows[0].variant, '14"', 'most-asked first, which is the one worth stocking');
+  eq(d.rows[0].asks, 3, 'counted per size');
+  eq(d.unspecified, 1,
+    'and an ask that named no size is counted apart, not spread across the sizes as demand nobody expressed');
+  eq(S.leadDemandByVariant(lead()).rows.length, 0, 'nothing asked for, nothing to break down');
+
+  // The picker offers sizes from the list AND ones people have asked for,
+  // since the second is how the first usually gets written.
+  const choices = S.leadVariantChoices(sized([{ name: 'Size', values: ['10"'] }],
+    [ask({ variant: '18"' }), ask({ variant: '10"' })]));
+  t.check(choices.includes('10"') && choices.includes('18"'), 'the size picker offers both what is listed and what was asked for');
+  eq(choices.filter((v) => v === '10"').length, 1, 'without repeating one that is on both');
+
+  // The size has to survive CAPTURE, or every door records a sizeless ask.
+  resetAll();
+  const cap = S.captureSourcingLead({ name: 'drawer runners', variant: ' 14" ', customerId: 'C1' });
+  eq(cap.lead.requests[0].variant, '14"', 'the size a door captured travels onto the ask, trimmed');
+  eq(S.captureSourcingLead({ name: 'drawer runners', customerId: 'C2' }).lead.requests[1].variant, '',
+    'and an ask that named none records none rather than undefined');
+
+  /* THE ORDER of the handoff. selectPrSupplier re-derives the shared
+     ladder from what that supplier already has for this product -- which
+     for one created seconds ago is nothing, so it clears it. Everything
+     the funnel learned must go in AFTER, and the cards must be redrawn by
+     the function that repaints from the current ladder rather than the
+     one that works it out again. Both were wrong first time: the form
+     opened with the price blank. */
+  const handoff = extractFunction(src, 'openBulkPricingFor', 'index.html');
+  const iSup = handoff.indexOf('selectPrSupplier(');
+  const iTiers = handoff.indexOf('prTiers =');
+  t.check(iSup > -1 && iTiers > iSup,
+    'the researched ladder is put in AFTER the supplier is chosen, or choosing the supplier wipes it');
+  t.check(/renderPrBulkVariantRows\(\)/.test(handoff) && !/renderPrBulkVariants\(\)/.test(handoff),
+    'and the cards are repainted from that ladder, not rebuilt by re-deriving it');
+}
+
 /* ---------- 4. needs chasing: one rule, read three ways -------------- */
 {
   resetAll();
@@ -1095,6 +1177,43 @@ async function main() {
   eq(new Set(data.suppliers.map((s) => s.id)).size, data.suppliers.length,
     'and the same for the supplier it created');
 
+  /* --- a lead with sizes graduates into a VARIABLE product, and its
+     prices are a matrix the Price Registry's bulk form exists to fill.
+     Writing one price row here would put a figure against one variant
+     and leave the other twenty-one blank, which is worse than leaving it
+     unpriced. */
+  resetAll([lead({ status: 'priced', name: 'Runners',
+    variantAttrs: [{ name: 'Type', values: ['Soft Close', 'Ordinary'] },
+      { name: 'Size', values: ['10"', '12"', '14"'] }],
+    candidates: [cand({ tiers: rungs([1, 8000]), unit: 'Pc' })] })]);
+  calls.bulk = null;
+  const varOut = await S.graduateSourcingLead('SRC-1', {
+    name: 'Runners', supplierName: 'Roto', tiers: rungs([1, 8000]), unit: 'Pc',
+  });
+  const madeProduct = data.products[0];
+  eq(madeProduct.type, 'variable', 'a lead with sizes makes a variable product');
+  eq(madeProduct.variants.length, 6, 'with one variant per combination of its lists');
+  eq(madeProduct.variantAttributes.length, 2, 'carrying the attributes the research recorded');
+  t.check(!!madeProduct.variants[0].sku, 'and each variant gets a sku, as the product form gives them');
+  eq(data.prices.length, 0,
+    'NO single price row is written — one figure against one of six variants is worse than none');
+  eq(varOut.priceId, null, 'and the caller is told there is no price yet');
+  eq(varOut.handedOff, true, 'because it was handed to the form built for a matrix');
+  t.check(!!calls.bulk && calls.bulk.productId === madeProduct.id,
+    'which is opened against the product just created');
+  eq(calls.bulk.supplierId, data.suppliers[0].id, 'with the supplier the comparison chose');
+  eq(JSON.stringify(calls.bulk.packing.tiers), JSON.stringify(rungs([1, 8000])),
+    'and the ladder the research found, so nothing is retyped');
+  eq(data.sourcingLeads[0].status, 'listed', 'the lead is listed — the product exists');
+
+  // A lead with no sizes still takes the single-price path.
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] })]);
+  calls.bulk = null;
+  await S.graduateSourcingLead('SRC-1', { name: 'One thing', supplierName: 'S', tiers: rungs([1, 900]) });
+  eq(data.products[0].type, 'simple', 'an item with no sizes is still a simple product');
+  eq(data.prices.length, 1, 'and still gets its one price written here');
+  eq(calls.bulk, null, 'with no detour through the bulk form');
+
   // --- the gate: phase one did not reach the server
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
   saveLands = false;
@@ -1272,6 +1391,21 @@ async function main() {
       `and ${fn} is one of the counts it refreshes — all three go stale the same way`));
   t.check(/refreshNavBadges\(\)/.test(extractFunction(src, 'renderAll', 'index.html')),
     'and a full render still refreshes them too');
+
+  /* Reads survive a column that is not there yet -- the mapper sees
+     undefined. WRITES do not: PostgREST rejects the whole upsert for one
+     unknown column, so every sourcing lead would fail to save between
+     this deploying and 0073 being applied by hand. Verified against the
+     live database, which rejected it. */
+  t.check(/sb\.from\('sourcing_leads'\)\.select\('variant_attrs'\)\.limit\(1\)/.test(src),
+    'the sizes column is probed at load rather than assumed');
+  t.check(/sourcingVariantColumn = !\(variantColR && variantColR\.error\);/.test(src),
+    'and the answer recorded, re-probed by every refresh so it heals itself once the migration lands');
+  t.check(/\.\.\.\(sourcingVariantColumn \? \{variant_attrs: l\.variantAttrs\|\|\[\]\} : \{\}\)/.test(src),
+    'and the field is left out of the write until it exists, or one missing column fails the whole save');
+  const mig73 = read('supabase/migrations/0073_sourcing_lead_variants.sql');
+  t.check(/add column if not exists variant_attrs jsonb/.test(mig73),
+    'the migration adds it idempotently');
 
   const mig = read('supabase/migrations/0072_sourcing_leads.sql');
   t.check(/create table sourcing_leads/.test(mig), 'the migration creates the table');
