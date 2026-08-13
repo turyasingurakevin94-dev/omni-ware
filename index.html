@@ -5603,6 +5603,65 @@
   /* The examples row is the empty state, so it must not sit in the card
      grid's columns -- it is one line of chips, not a card. */
   .fg-results:has(.fg-examples){display:block;}
+
+  /* ---------------- Sourcing funnel ----------------
+     Only what the order board does not already carry. The board, the
+     rail, the lanes, the cards and the phone one-lane view all come free
+     from the .sq-* set above, which names no status and so does not care
+     which of the two boards is emitting it. Nothing here may name a
+     sourcing stage either -- a status in a selector is what pins a board
+     to one set of lanes. */
+  .sf-facts{display:flex;flex-wrap:wrap;gap:5px;}
+  .sf-fact{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;
+    padding:2px 7px;border-radius:999px;border:1px solid var(--line);
+    color:var(--ink-soft);background:var(--ow-steel-050,transparent);}
+  .sf-fact .icon{width:11px;height:11px;stroke-width:2.6;}
+  /* A known fact takes the card's own stage colour, so the row fills up
+     left to right as the research lands -- the "how far have we got"
+     answer, in the same hue the lane is already using. */
+  .sf-fact.got{color:var(--sq-accent);border-color:color-mix(in srgb, var(--sq-accent) 45%, transparent);
+    background:color-mix(in srgb, var(--sq-accent) 10%, transparent);}
+  .sf-ask-count{font-size:11px;font-weight:700;color:var(--ink-soft);white-space:nowrap;}
+  .sf-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11.5px;color:var(--ink-soft);}
+  .sf-days{font-variant-numeric:tabular-nums;}
+  .sf-who{font-weight:600;}
+  .sf-warn{display:inline-flex;}
+  .sf-warn .icon{width:13px;height:13px;}
+  .sf-listed-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;color:var(--sq-accent);}
+  .sf-graduate-btn{font-size:11.5px;padding:5px 10px;white-space:nowrap;}
+  .sf-sub{font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);
+    font-weight:700;margin:16px 0 8px;}
+  .sf-list{display:flex;flex-direction:column;gap:1px;}
+  .sf-list-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 9px;
+    border-radius:7px;background:var(--ow-steel-050,transparent);font-size:12.5px;}
+  .sf-list-row:nth-child(odd){background:transparent;}
+  .sf-list-main{font-weight:600;color:var(--ink);}
+  .sf-list-qty{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;}
+  .sf-list-qty.muted{color:var(--ink-soft);font-weight:400;font-style:italic;}
+  .sf-list-src,.sf-list-when{color:var(--ink-soft);font-size:11.5px;}
+  .sf-list-row .pc-icon-btn{margin-left:auto;}
+  .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
+  .sf-add-ask{font-size:12px;padding:5px 10px;}
+  .sf-modal-facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;--sq-accent:var(--accent);}
+  .sf-pick{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;cursor:pointer;margin-bottom:6px;}
+  .sf-pick:has(input:checked){border-color:var(--accent);background:var(--ow-verdigris-soft);}
+  .sf-pick-name{font-weight:600;}
+  .sf-pick-price{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;}
+  .sf-pick-new{font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
+  .sf-dropped{margin-top:18px;}
+  .sf-dropped-row{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:9px 10px;
+    border-top:1px solid var(--line);font-size:12.5px;}
+  .sf-dropped-name{font-weight:600;color:var(--ink);}
+  .sf-dropped-why{color:var(--ink-soft);font-style:italic;}
+  .sf-dropped-row .btn{margin-left:auto;}
+  /* The capture block on an empty product search: the door into the
+     funnel, at the moment somebody has just proved the shop has nothing
+     to sell them. */
+  .sf-capture{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:10px 12px;
+    border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);}
+  .sf-capture b{color:var(--ink);}
+  .sf-capture .btn{margin-left:auto;white-space:nowrap;}
 </style>
 </head>
 <body class="app-loading">
@@ -5794,6 +5853,11 @@
         <button data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
           <span class="nav-label">Compare prices</span>
+        </button>
+        <button data-tab="sourcing" title="Sourcing" data-keywords="source research find importer unknown item request wanted funnel we dont sell it yet">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></svg>
+          <span class="nav-label">Sourcing</span>
+          <b class="nav-badge" id="navBadgeSourcing" hidden></b>
         </button>
         <button data-tab="suppliers" title="Suppliers" data-keywords="vendors wholesalers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6h6v6"/></svg>
@@ -7482,6 +7546,22 @@
       </div>
     </section>
 
+    <!-- SOURCING FUNNEL -->
+    <section id="tab-sourcing" style="display:none;">
+      <div class="page-head">
+        <h1>Sourcing</h1>
+        <p>Items clients have asked for that the shop does not sell yet. Each one moves left to right as the research lands — who has it, what it costs, how it is packed — until it can be added to the catalogue as a real product.</p>
+      </div>
+      <div class="panel qp-panel">
+        <div class="sq-board-tools">
+          <button type="button" class="btn btn-accent" id="src_add_btn">Add an item to source</button>
+          <label class="sq-select-all-label sf-dropped-label"><input type="checkbox" id="src_show_dropped"> Show dropped</label>
+        </div>
+        <div id="sourcingStepperMount"></div>
+        <div id="sourcingWrap"></div>
+      </div>
+    </section>
+
     <!-- FASTENER GUIDE -->
     <section id="tab-fasteners" style="display:none;">
       <div class="page-head">
@@ -8275,6 +8355,116 @@
     <div class="modal-foot">
       <button class="btn btn-ghost" id="agentPrepayCancel">Cancel</button>
       <button class="btn btn-accent" id="agentPrepayConfirm">Mark as paid &amp; continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOURCING LEAD MODAL -->
+<div class="modal-overlay" id="sourcingLeadModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="sourcingLeadModalTitle">Sourcing an item</h2>
+      <button class="modal-close" id="sourcingLeadModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>What is the item</label>
+        <input type="text" id="sl_name" placeholder="e.g. 4 inch sofa legs, chrome" autocomplete="off">
+      </div>
+      <!-- New leads only: the person who asked, captured with the item so
+           the demand ledger starts with the ask that caused it rather
+           than with an anonymous row. -->
+      <div id="sl_first_ask">
+        <div class="form-grid">
+          <div class="field"><label>Who asked (optional)</label><input type="text" id="sl_ask_name" autocomplete="off"></div>
+          <div class="field"><label>Their phone (optional)</label><input type="text" id="sl_ask_phone" autocomplete="off"></div>
+          <div class="field"><label>How many (optional)</label><input type="number" id="sl_ask_qty" min="0" step="any"></div>
+        </div>
+      </div>
+      <div id="sl_open_body" style="display:none;">
+        <div class="sf-modal-facts" id="sl_facts"></div>
+        <div class="form-grid">
+          <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
+          <div class="field"><label>Stage</label><input type="text" id="sl_stage" readonly></div>
+        </div>
+        <h3 class="sf-sub">Who has asked for it</h3>
+        <div id="sl_requests"></div>
+        <button type="button" class="btn btn-ghost sf-add-ask" id="sl_add_ask">Somebody else asked</button>
+        <h3 class="sf-sub">What the research turned up</h3>
+        <div id="sl_candidates"></div>
+        <div class="sf-cand-form" id="sl_cand_form">
+          <div class="form-grid">
+            <div class="field"><label>Who</label><input type="text" id="sl_c_name" placeholder="Supplier or importer name" autocomplete="off"></div>
+            <div class="field"><label>They are the</label>
+              <select id="sl_c_role">
+                <option value="supplier">Supplier — we buy from them</option>
+                <option value="importer">Importer — they bring it in</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+            <div class="field"><label>Phone</label><input type="text" id="sl_c_phone" autocomplete="off"></div>
+            <div class="field"><label>Where</label><input type="text" id="sl_c_where" placeholder="e.g. Kikuubo" autocomplete="off"></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Price</label><input type="number" id="sl_c_price" min="0" step="any"></div>
+            <div class="field"><label>Per</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
+            <div class="field"><label>Pack of</label><input type="number" id="sl_c_packqty" min="0" step="any"></div>
+            <div class="field"><label>Pack called</label><input type="text" id="sl_c_packunit" placeholder="Ctn" autocomplete="off"></div>
+            <div class="field"><label>Least they sell</label><input type="number" id="sl_c_moq" min="0" step="any"></div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
+        </div>
+        <div class="field">
+          <label>Notes</label>
+          <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost danger" id="sl_drop" style="display:none;">Drop this</button>
+      <button class="btn btn-ghost" id="sl_undrop" style="display:none;">Put it back</button>
+      <button class="btn btn-ghost" id="sl_cancel">Close</button>
+      <button class="btn btn-accent" id="sl_save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOURCING GRADUATION MODAL -->
+<div class="modal-overlay" id="sourcingGraduateModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Add it to what we sell</h2>
+      <button class="modal-close" id="sourcingGraduateModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint">This creates the product, then its first price entry. The markups are left at the product form's defaults — set them from the Products tab once you have decided the margin.</p>
+      <div class="field"><label>Product name</label><input type="text" id="sg_name" autocomplete="off"></div>
+      <div class="form-grid">
+        <div class="field"><label>Category</label><input type="text" id="sg_category" list="sg_category_list" autocomplete="off"><datalist id="sg_category_list"></datalist></div>
+        <div class="field"><label>Subcategory</label><input type="text" id="sg_subcategory" autocomplete="off"></div>
+      </div>
+      <div class="field">
+        <label>Buying it from</label>
+        <div id="sg_candidates"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Price</label><input type="number" id="sg_price" min="0" step="any"></div>
+        <div class="field"><label>Per</label><input type="text" id="sg_unit" autocomplete="off"></div>
+        <div class="field"><label>From this many</label><input type="number" id="sg_minqty" min="1" step="any"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Pack of</label><input type="number" id="sg_packqty" min="0" step="any"></div>
+        <div class="field"><label>Pack called</label><input type="text" id="sg_packunit" autocomplete="off"></div>
+      </div>
+      <p class="preset-hint" id="sg_price_note"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="sg_cancel">Cancel</button>
+      <button class="btn btn-accent" id="sg_confirm">Create the product</button>
     </div>
   </div>
 </div>
@@ -9557,6 +9747,21 @@ const SQ_STATUS_ORDER = ['draft','awaiting_goods','preparing','pending_delivery'
 // carry a "Step N." prefix meant for the board columns, not this compact view).
 const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', awaiting_goods:'Awaiting Goods', preparing:'Being Prepared', pending_delivery:'Pending Delivery', completed:'Completed'};
 
+/* ---------------- The sourcing funnel ----------------
+   An item a client asked for that the shop does not sell, and how far the
+   research on it has got. Same five-lane shape as the order board and the
+   same palette meanings -- grey is untouched, green is finished -- so the
+   two boards read the same way without having to be learned twice. */
+const SOURCING_STATUSES = {
+  asked:   { label:'Step 1. Asked For',   color:'#9AA4AC' },
+  looking: { label:'Step 2. Looking',     color:'#2F7FBF' },
+  sourced: { label:'Step 3. Source Found',color:'#8A6FC4' },
+  priced:  { label:'Step 4. Priced',      color:'#D9922B' },
+  listed:  { label:'Step 5. Listed',      color:'#3A9A5C' }
+};
+const SOURCING_STATUS_ORDER = ['asked','looking','sourced','priced','listed'];
+const SOURCING_SHORT_LABELS = {asked:'Asked For', looking:'Looking', sourced:'Source Found', priced:'Priced', listed:'Listed'};
+
 // SQ_BOARD_HIDE_AFTER_MS / quoteAgedOffBoard() now live in shared-worker.js
 // (loaded before this script), shared with the worker app.
 
@@ -9597,7 +9802,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -9605,7 +9810,7 @@ async function loadData(shopId){
     sb.from('app_settings').select('*').eq('shop_id', shopId).maybeSingle(),
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
-    sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips')
+    sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads')
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -9616,6 +9821,8 @@ async function loadData(shopId){
      nothing else depends on. A shop with no table has no trips, which is
      also true of a shop that has simply never made one. */
   const collectionTripRows = (collectionTripsR && !collectionTripsR.error && collectionTripsR.data) || [];
+  // sourcing_leads is out of the list for the same reason.
+  const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -9778,6 +9985,15 @@ async function loadData(shopId){
       assignedWorkerId:r.assigned_worker_id, createdAt:r.created_at, assignedAt:r.assigned_at,
       acceptedAt:r.accepted_at, collectedAt:r.collected_at, confirmedAt:r.confirmed_at,
       note:r.note||'', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
+    })),
+    sourcingLeads: sourcingLeadRows.map(r=>({
+      id:r.id, name:r.name||'', notes:r.notes||'', status:r.status,
+      assignedStaffId:r.assigned_staff_id, productId:r.product_id,
+      graduatedAt:r.graduated_at, createdAt:r.created_at,
+      stageEnteredAt: r.stage_entered_at==null ? null : Number(r.stage_entered_at),
+      requests: Array.isArray(r.requests) ? r.requests : [],
+      candidates: Array.isArray(r.candidates) ? r.candidates : [],
+      voided: !!r.voided, droppedReason:r.dropped_reason||'', droppedAt:r.dropped_at,
     })),
     waPosts: (waPostsR.data||[]).map(w=>({
       id:w.id, date:w.date, productId:w.product_id,
@@ -9976,6 +10192,15 @@ function buildSyncRows(d, shopId){
       confirmed_at: t.confirmedAt||null,
       note: t.note||null, lines: t.lines||[], voided: !!t.voided,
     })),
+    sourcingLeads: (d.sourcingLeads||[]).map(l=>({
+      id:l.id, shop_id:shopId, name:l.name||'', notes:l.notes||null,
+      status:l.status||'asked', assigned_staff_id: l.assignedStaffId||null,
+      product_id: l.productId||null, graduated_at: l.graduatedAt||null,
+      created_at: l.createdAt||null,
+      stage_entered_at: l.stageEnteredAt==null ? null : Number(l.stageEnteredAt),
+      requests: l.requests||[], candidates: l.candidates||[],
+      voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
+    })),
     waPosts: (d.waPosts||[]).map(w=>({
       id:w.id, shop_id:shopId, date:w.date, product_id:w.productId,
       variant_idx: w.variantIdx==null ? null : w.variantIdx,
@@ -10050,6 +10275,7 @@ function buildLastSynced(d, shopId){
     waPosts: keyRowsById(rows.waPosts, 'id'),
     places: keyRowsById(rows.places, 'name'),
     collectionTrips: keyRowsById(rows.collectionTrips, 'id'),
+    sourcingLeads: keyRowsById(rows.sourcingLeads, 'id'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -10136,7 +10362,7 @@ async function saveData(){
      collections sit this save out entirely (addDiffOps refuses them):
      declining to speak for a collection is recoverable, deleting it is
      not. debtLog rides customers, so an absent customers benches both. */
-  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
+  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','sourcingLeads','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
   if(absent.includes('customers')) absent.push('debtLog');
   syncAbsentCollections = absent.length ? new Set(absent) : null;
   if(absent.length) console.error(`REFUSING to sync ${absent.length} absent collection(s) — a partial data object is not an instruction to empty the shop: ${absent.join(', ')}`);
@@ -10169,6 +10395,7 @@ async function saveData(){
   addDiffOps(ops, 'waPosts', 'wa_posts', 'id', shopId, rows.waPosts);
   addDiffOps(ops, 'places', 'places', 'name', shopId, rows.places);
   addDiffOps(ops, 'collectionTrips', 'collection_trips', 'id', shopId, rows.collectionTrips);
+  addDiffOps(ops, 'sourcingLeads', 'sourcing_leads', 'id', shopId, rows.sourcingLeads);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -11954,6 +12181,28 @@ function waRenderInbox(){
                   <button type="button" class="btn btn-ghost" id="wa_suggest_edit">Edit first</button>
                 </div>
               </div>`;
+            } else {
+              /* waQuoteMatch returning null IS "a customer asked for
+                 something we do not sell" -- and this branch rendered
+                 nothing at all, so the ask died in the thread. One
+                 deliberate tap, never automatic: every "hi", "how much?"
+                 and wrong number would otherwise mint a lead and turn
+                 the funnel into a spam folder inside a day. */
+              const asked = (lastIn.body||'').trim().slice(0, 80);
+              const known = findSourcingLeadByText(asked);
+              suggestion = `<div class="wa-suggest" data-wamid="${esc(lastIn.wamid)}">
+                <div class="wa-suggest-head">${known
+                  ? `Nothing in the catalogue matches — already being sourced as “${esc(known.name)}”`
+                  : 'Nothing in the catalogue matches — start sourcing it?'}
+                  <button type="button" class="wa-suggest-x" title="Dismiss">✕</button></div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>What are they asking for</label>
+                  <input type="text" id="wa_src_name" value="${esc(known ? known.name : asked)}" autocomplete="off">
+                </div>
+                <div class="btn-row" style="margin-top:8px;">
+                  <button type="button" class="btn btn-accent" id="wa_src_add">${known ? 'Add this ask' : 'Add to Sourcing'}</button>
+                </div>
+              </div>`;
             }
           }
         }
@@ -12030,6 +12279,29 @@ function waRenderInbox(){
       // the server's own window check waiting at the end of it.
       waSendReply(replyText);
       waInbox.dismissed[wamid] = true;
+    });
+    /* The third capture door. This is where repeat demand is cheapest to
+       see -- three different numbers asking the same thing across a week
+       -- so the conversation's identity travels with the ask. */
+    const srcBtn = sug.querySelector('#wa_src_add');
+    if(srcBtn) srcBtn.addEventListener('click', ()=>{
+      const field = sug.querySelector('#wa_src_name');
+      const name = field ? field.value.trim() : '';
+      if(!name){ toast('Say what they are asking for'); return; }
+      const conv = (waInbox.convs||[]).find(c=> String(c.id) === String(waInbox.active));
+      // waMatchCustomer is how the rest of the inbox turns a wa_id into a
+      // customer on file -- the same rule here, so an ask from a known
+      // number counts as that customer rather than as a stranger.
+      const cust = conv ? waMatchCustomer(conv.wa_id) : null;
+      captureSourcingLeadAndSave({
+        name, source: 'whatsapp',
+        customerId: cust ? cust.id : null,
+        customerName: cust ? cust.name : (conv ? waConvTitle(conv) : ''),
+        phone: (conv && conv.wa_id) || '',
+        conversationId: waInbox.active,
+      });
+      waInbox.dismissed[wamid] = true;
+      waRenderInbox();
     });
     const editBtn2 = sug.querySelector('#wa_suggest_edit');
     if(editBtn2) editBtn2.addEventListener('click', ()=>{
@@ -12420,6 +12692,7 @@ function goToTab(tab){
   if(tab==='whatsapp'){ renderWhatsApp(); renderWaInsights(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
+  if(tab==='sourcing') renderSourcing();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
@@ -17020,12 +17293,20 @@ function ipRenderList(query){
   const tokens = searchTokens(query);
   const list = document.getElementById('ip_list');
   if(data.products.length===0){
+    // An EMPTY CATALOGUE, not an unknown item -- deliberately no sourcing
+    // block here: nothing has been searched for yet.
     list.innerHTML = '<div class="suggestion-empty">No products yet — add one in the Products tab first.</div>';
     return;
   }
   const entries = buildProductSuggestionEntries(tokens);
   if(entries.length===0){
-    list.innerHTML = '<div class="suggestion-empty">No matching products.</div>';
+    /* A search that finds nothing IS the shop being asked for something
+       it does not sell -- the exact moment the sourcing funnel exists to
+       catch, and until now the moment where the trail went cold. The
+       block is INLINE rather than a modal: the admin is mid-quote with a
+       customer on the phone, and a modal that steals the picker is a
+       modal they dismiss. */
+    list.innerHTML = '<div class="suggestion-empty">No matching products.</div>' + sourcingCaptureBlockHTML(query);
     return;
   }
   list.innerHTML = entries.map(entry=>{
@@ -17067,6 +17348,10 @@ function openItemPicker(){
 document.getElementById('ip_search').addEventListener('input', (e)=> ipRenderList(e.target.value));
 document.getElementById('ip_list').addEventListener('mousedown', (e)=>{
   if(e.target.closest('.img-zoomable')) return;
+  // mousedown like the picks around it, so the input's blur cannot close
+  // the list out from under the press.
+  const cap = e.target.closest('[data-src-capture]');
+  if(cap){ e.preventDefault(); captureFromQuoteSearch(cap.dataset.srcCapture); ipRenderList(document.getElementById('ip_search').value); return; }
   const sel = readSuggestionSelection(e);
   if(sel) ipSelectProduct(sel.id, sel.variantIdx);
 });
@@ -17088,7 +17373,9 @@ function renderQuoteItemSearchDd(query){
   if(!q){ dd.style.display='none'; dd.innerHTML=''; return; }
   const entries = buildProductSuggestionEntries(searchTokens(q)).slice(0, 8);
   if(!entries.length){
-    dd.innerHTML = '<div class="suggestion-empty">No matching products.</div>';
+    // The same door, on the bar this page's own comment calls the primary
+    // way in on a call. Hooking only the modal would fit half a door.
+    dd.innerHTML = '<div class="suggestion-empty">No matching products.</div>' + sourcingCaptureBlockHTML(q);
     dd.style.display = 'block';
     return;
   }
@@ -17134,6 +17421,8 @@ function quoteItemSearchPick(sel){
     // before the pick lands -- same reason ip_list binds mousedown.
     dd.addEventListener('mousedown', (e)=>{
       e.preventDefault();
+      const cap = e.target.closest('[data-src-capture]');
+      if(cap){ captureFromQuoteSearch(cap.dataset.srcCapture); renderQuoteItemSearchDd(input.value); return; }
       quoteItemSearchPick(readSuggestionSelection(e));
     });
     document.addEventListener('mousedown', (e)=>{
@@ -18450,7 +18739,12 @@ function announceOrderMove(q, status){
     void stepEl.offsetWidth;   // restart the animation when two moves land in one breath
     if(!reduced) stepEl.classList.add('pulse');
   }
-  const col = document.querySelector(`.sq-board .sq-col[data-status="${status}"]`);
+  /* Scoped to the ORDERS board. The sourcing funnel emits the same .sq-*
+     markup on purpose -- that is how it inherits this board's whole look
+     -- and both sections are in the DOM at once (hidden, not removed), so
+     an unscoped [data-status] would be a lane-name collision waiting for
+     the first stage the two boards happen to share. */
+  const col = document.querySelector(`#savedQuotesWrap .sq-board .sq-col[data-status="${status}"]`);
   if(col && !matchMedia('(max-width: 820px)').matches){
     col.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', inline:'nearest', block:'nearest'});
   }
@@ -19876,12 +20170,15 @@ function renderSavedQuotes(){
   document.getElementById('sq_select_all').checked = false;
 }
 
+/* Scoped to this board's own wrap. Unscoped, "select all" reached into
+   any other .sq-* board on the page -- and the sourcing funnel reuses
+   these class names deliberately, so the reach would have been real. */
 document.getElementById('sq_select_all').addEventListener('change', (e)=>{
-  document.querySelectorAll('.sq-check').forEach(cb=>{ cb.checked = e.target.checked; });
+  document.querySelectorAll('#savedQuotesWrap .sq-check').forEach(cb=>{ cb.checked = e.target.checked; });
 });
 
 document.getElementById('sq_print_selected_btn').addEventListener('click', ()=>{
-  const ids = [...document.querySelectorAll('.sq-check:checked')].map(cb=>Number(cb.dataset.id));
+  const ids = [...document.querySelectorAll('#savedQuotesWrap .sq-check:checked')].map(cb=>Number(cb.dataset.id));
   if(ids.length===0){ toast('Select at least one saved quote to print'); return; }
   const quotes = data.savedQuotes.filter(q=>ids.includes(q.id));
   printQuotesA5(quotes);
@@ -33649,6 +33946,19 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
           pr.packQty = product && product.packQty ? product.packQty : 0;
         }
       });
+      /* A backup taken before the sourcing funnel existed has no such
+         collection at all. Left undefined it is ABSENT rather than empty,
+         and saveData rightly benches an absent collection on every save
+         from then on -- so the restore would quietly cost the shop its
+         sourcing board until somebody reloaded. */
+      if(!data.sourcingLeads) data.sourcingLeads = [];
+      data.sourcingLeads.forEach(l=>{
+        if(l.voided === undefined) l.voided = false;
+        if(!Array.isArray(l.requests)) l.requests = [];
+        if(!Array.isArray(l.candidates)) l.candidates = [];
+        if(!l.status || !SOURCING_STATUSES[l.status]) l.status = 'asked';
+        if(!l.stageEnteredAt) l.stageEnteredAt = l.createdAt ? new Date(l.createdAt).getTime() : Date.now();
+      });
       __owAllowMassDelete = true;
       saveData();
       __owAllowMassDelete = false;
@@ -33675,7 +33985,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
     quote:{client:{name:'',phone:''}, date: todayISO(), items:[], savedId:null}, nextQuoteLineId:1,
     savedQuotes:[], nextSavedQuoteId:1, purchaseInvoices:[], supplierCommissions:[],
     fixedAssets:[], loans:[], rentAgreements:[], dues:[], media:[], mediaFolders:[], waPosts:[],
-    places:[], collectionTrips:[],
+    places:[], collectionTrips:[], sourcingLeads:[],
     presetCategories: seedData().presetCategories, presetUnits: seedData().presetUnits,
     presetIncomeCategories: seedData().presetIncomeCategories, presetExpenseCategories: seedData().presetExpenseCategories,
     presetAttributes: seedData().presetAttributes, seeded:false};
@@ -38695,6 +39005,878 @@ function renderDashboard(){
 }
 document.getElementById('dash_range_preset').addEventListener('change', renderDashboard);
 
+/* ================= SOURCING FUNNEL =================
+
+   A client asks for something the shop has never stocked. Somebody has to
+   find out who imports it, which supplier actually has it, what it costs
+   and how it is packed -- and until now that chase lived in one person's
+   head and in WhatsApp scrollback. It got dropped, or researched twice,
+   and the number that should decide whether to stock the thing at all --
+   how many DIFFERENT customers have asked for it -- was never counted.
+
+   Same five-lane board as Order Tracking, deliberately: it emits the same
+   .sq-* class names, so it inherits that board's whole visual system --
+   the rail, the sliding strip, the one-lane phone view -- rather than
+   carrying a second copy of ~330 lines of CSS that nothing would pin. */
+
+function sourcingLeadsAll(){ return data.sourcingLeads || (data.sourcingLeads = []); }
+function sourcingLeadById(id){ return sourcingLeadsAll().find(l=> l.id===id) || null; }
+
+/* One number, dialled the way Uganda dials it, so "+256 701 234 567",
+   "0701234567" and "701234567" are one person rather than three. */
+function sourcingPhoneKey(phone){
+  let d = String(phone||'').replace(/[^0-9]/g, '');
+  if(!d) return '';
+  if(d.startsWith('0')) d = '256' + d.slice(1);
+  else if(!d.startsWith('256')) d = '256' + d;
+  return d;
+}
+
+/* How many DIFFERENT people have asked -- not how many times it has been
+   asked for. Five asks from one customer is not the signal five customers
+   are, and a stored counter could never tell the two apart afterwards, so
+   both figures are derived from the ledger every time.
+
+   An ask carrying no identity at all counts as its own person: nothing
+   says it was the same one, and quietly folding them together would
+   under-report the only demand the shop can see. */
+function leadDistinctAskers(l){
+  const seen = new Set();
+  ((l && l.requests) || []).forEach((r, i)=>{
+    const phone = sourcingPhoneKey(r.phone);
+    const name = String(r.customerName||'').trim().toLowerCase();
+    if(r.customerId) seen.add('c:' + String(r.customerId));
+    else if(phone) seen.add('p:' + phone);
+    else if(name) seen.add('n:' + name);
+    else seen.add('anon:' + i);
+  });
+  return seen.size;
+}
+function leadAskCount(l){ return ((l && l.requests) || []).length; }
+/* The name typed at capture wins the customer record's: it is what the
+   person actually said, and a lead captured from a walk-in has no
+   customer id to look up at all. */
+/* ---------------- The capture block on an empty search ----------------
+   Says which of the two things is true -- nobody has ever asked for this,
+   or three people already have -- because those want different actions
+   from the person reading it. */
+function sourcingCaptureBlockHTML(query){
+  const q = String(query||'').trim();
+  if(!q) return '';
+  const found = findSourcingLeadByText(q);
+  if(!found){
+    return `<div class="sf-capture"><span>Nobody stocks <b>${esc(q)}</b> yet.</span>
+      <button type="button" class="btn btn-ghost" data-src-capture="${esc(q)}">Start sourcing it</button></div>`;
+  }
+  const n = leadDistinctAskers(found);
+  const stage = SOURCING_SHORT_LABELS[found.status];
+  return `<div class="sf-capture"><span>Already being sourced — <b>${esc(found.name)}</b>, ${found.voided ? 'dropped' : esc(stage).toLowerCase()}, ${n} ${n===1?'person has':'people have'} asked.</span>
+    <button type="button" class="btn btn-ghost" data-src-capture="${esc(q)}">Add this ask</button></div>`;
+}
+/* Both quote doors carry the client on the quote being built, so the
+   demand ledger records WHO asked rather than only that somebody did. */
+function captureFromQuoteSearch(query){
+  const nameEl = document.getElementById('q_client_name');
+  const phoneEl = document.getElementById('q_client_phone');
+  return captureSourcingLeadAndSave({
+    name: query, source: 'quote',
+    customerId: (data.quote && data.quote.customerId) || null,
+    customerName: nameEl ? nameEl.value.trim() : '',
+    phone: phoneEl ? phoneEl.value.trim() : '',
+    orderId: (data.quote && data.quote.savedId) || null,
+  });
+}
+function sourcingAskerName(r){
+  const typed = String((r && r.customerName) || '').trim();
+  if(typed) return typed;
+  if(!r || !r.customerId) return '';
+  const c = (data.customers||[]).find(x=> String(x.id) === String(r.customerId));
+  return c ? c.name : '';
+}
+function leadLastAskedAt(l){
+  const times = ((l && l.requests) || []).map(r=> new Date(r.at).getTime()).filter(t=> !isNaN(t));
+  return times.length ? Math.max(...times) : null;
+}
+
+/* The four facts the shop said it needs before an item can be sold:
+   importer, supplier, price, packing. This is the "how far have we
+   reached" answer in its literal form -- and the SAME helper the stage
+   gates read, so the ticks on a card and the stage it is allowed into can
+   never disagree about what is actually known.
+
+   importer and supplier are separate because they are separate: the
+   importer brings it into the country and sets the floor price, the
+   supplier in Kikuubo is who you actually buy from, and knowing only one
+   of them is a half-finished job. A candidate with no role recorded is
+   read as a supplier -- that is what "we found somewhere selling it"
+   means without further qualification. */
+function leadCandidateNames(c){ return !!(c && (c.supplierId || String(c.supplierName||'').trim())); }
+function leadFacts(l){
+  const cands = (l && l.candidates) || [];
+  return {
+    importer: cands.some(c=> leadCandidateNames(c) && (c.role==='importer' || c.role==='both')),
+    supplier: cands.some(c=> leadCandidateNames(c) && (c.role==='supplier' || c.role==='both' || !c.role)),
+    price:    cands.some(c=> Number(c.quotedPrice) > 0),
+    packing:  cands.some(c=> Number(c.packQty) > 0 && !!String(c.packUnit||'').trim()),
+  };
+}
+const SOURCING_FACT_LABELS = {importer:'Importer', supplier:'Supplier', price:'Price', packing:'Packing'};
+const SOURCING_FACT_ORDER = ['importer','supplier','price','packing'];
+
+/* A lead sitting too long where it is, and a lead nobody is researching.
+   Both are the "needs chasing" question, and both are read by the card
+   flag AND the rail's roll-up from here, so the two cannot drift. */
+function leadIsStalled(l, nowMs){
+  const limits = data.presetSourcingStageLimits || {};
+  const limitDays = Number(limits[l && l.status]) || 0;
+  return limitDays > 0 && !!(l && l.stageEnteredAt)
+    && ((nowMs==null ? Date.now() : nowMs) - l.stageEnteredAt) > limitDays*86400000;
+}
+function leadNeedsSomebody(l){
+  if(!l || l.status !== 'looking') return false;
+  if(!l.assignedStaffId) return true;
+  return !(data.staff||[]).some(s=> String(s.id) === String(l.assignedStaffId));
+}
+
+/* ---------------- Capture: the three doors, one lock ----------------
+   The quote item picker, the quote page's own search bar and the
+   WhatsApp inbox all arrive here. A second lead for the same item is
+   exactly how the repeat-demand signal gets destroyed, so the matching
+   rule lives in ONE place rather than three times over. */
+function findSourcingLeadByText(text){
+  const tokens = searchTokens(text);
+  if(!tokens.length) return null;
+  const scored = sourcingLeadsAll().map(l=>{
+    const hay = searchTokens(l.name);
+    if(!hay.length) return {l, hit:0};
+    const hit = tokens.filter(t=> hay.some(h=> h.includes(t) || t.includes(h))).length;
+    return {l, hit: hit / tokens.length};
+  }).filter(x=> x.hit >= 0.6);
+  if(!scored.length) return null;
+  /* A live lead wins a dropped one on an equal match: the open chase is
+     the one the new ask belongs to. */
+  scored.sort((a,b)=> (b.hit - a.hit) || ((a.l.voided?1:0) - (b.l.voided?1:0)));
+  return scored[0].l;
+}
+function captureSourcingLead(req){
+  const name = String((req && req.name) || '').trim();
+  if(!name) return null;
+  const ask = {
+    at: new Date().toISOString(),
+    source: (req && req.source) || 'sourcing',
+    customerId: (req && req.customerId) || null,
+    customerName: String((req && req.customerName) || '').trim(),
+    phone: String((req && req.phone) || '').trim(),
+    qty: (req && req.qty!=null && req.qty!=='') ? Number(req.qty) : null,
+    orderId: (req && req.orderId) || null,
+    conversationId: (req && req.conversationId) || null,
+    note: String((req && req.note) || '').trim(),
+  };
+  const found = findSourcingLeadByText(name);
+  if(found){
+    found.requests = found.requests || [];
+    found.requests.push(ask);
+    return {lead: found, isNew: false, wasDropped: !!found.voided};
+  }
+  const lead = {
+    id: 'SRC-' + Date.now().toString(36).toUpperCase(),
+    name, notes: '', status: 'asked', voided: false,
+    droppedReason: '', droppedAt: null,
+    assignedStaffId: null,
+    createdAt: new Date().toISOString(),
+    stageEnteredAt: Date.now(),
+    productId: null, graduatedAt: null,
+    requests: [ask], candidates: [],
+  };
+  sourcingLeadsAll().push(lead);
+  return {lead, isNew: true, wasDropped: false};
+}
+/* What to say back, in one place, because all three doors say it. The
+   dropped case is the one worth spelling out: "you dropped this in March,
+   and three people have asked since" is the whole reason dropped leads
+   are kept rather than deleted. */
+function sourcingCaptureToast(res){
+  if(!res) return '';
+  const n = leadDistinctAskers(res.lead);
+  const nth = n===1 ? 'first' : (n===2 ? '2nd' : (n===3 ? '3rd' : n + 'th'));
+  if(res.wasDropped) return `You dropped “${res.lead.name}” — ${n} ${n===1?'person has':'people have'} now asked. It is back on the Sourcing board to look at again.`;
+  if(res.isNew) return `Added to Sourcing — nobody has looked into “${res.lead.name}” yet.`;
+  return `Already on the Sourcing board — that is the ${nth} person to ask for “${res.lead.name}”.`;
+}
+/* Capturing from a door is a real write, and the toast tells the truth
+   about a lead the shop can now act on -- so a dropped one comes back
+   rather than sitting invisible while people keep asking. */
+function captureSourcingLeadAndSave(req){
+  const res = captureSourcingLead(req);
+  if(!res) return null;
+  if(res.wasDropped){
+    res.lead.voided = false;
+    res.lead.droppedAt = null;
+  }
+  saveData();
+  renderSourcingBadge();
+  if(document.getElementById('tab-sourcing').style.display !== 'none') renderSourcing();
+  toast(sourcingCaptureToast(res), 7000);
+  return res;
+}
+
+/* ---------------- Stages ----------------
+   The board must not be able to claim something the data does not show. A
+   funnel whose stage names are aspirations is one nobody trusts by month
+   two, and the question the shop opens this page to ask is how far each
+   item has ACTUALLY got. Every gate is a fact from leadFacts(). */
+const SOURCING_GATES = {
+  sourced: {
+    test: (l)=>{ const f = leadFacts(l); return f.supplier || f.importer; },
+    missing: 'Add who has it first — a supplier, or the importer. That is what “Source Found” means.'
+  },
+  priced: {
+    test: (l)=> leadFacts(l).price,
+    missing: 'Add what it costs first. A lead cannot reach “Priced” with no price on it.'
+  },
+  listed: {
+    /* Never by the arrow. `listed` is stamped by graduation and nowhere
+       else, always together with a productId -- a lead sitting in Listed
+       with no product would be this board's biggest lie: it would say the
+       shop stocks the thing while the catalogue disagreed. */
+    test: ()=> false,
+    missing: 'Use “Add it to what we sell” — a listed item has to be a real product.'
+  },
+};
+function sourcingGateBlock(l, status){
+  const gate = SOURCING_GATES[status];
+  if(!gate) return '';
+  return gate.test(l) ? '' : gate.missing;
+}
+function setSourcingStatus(id, status){
+  const l = sourcingLeadById(id);
+  if(!l || !SOURCING_STATUSES[status]) return false;
+  /* Forward only. Stepping BACK is correcting a claim, and a gate on the
+     retreat traps a wrongly-advanced card there forever. */
+  const forward = SOURCING_STATUS_ORDER.indexOf(status) > SOURCING_STATUS_ORDER.indexOf(l.status);
+  if(forward){
+    const blocked = sourcingGateBlock(l, status);
+    if(blocked){ toast(blocked, 7000); openSourcingLead(id); return false; }
+  }
+  const moved = l.status !== status;
+  /* Leaving Listed un-claims the product but never deletes it: destroying
+     a catalogue row -- with its prices and its stock -- on a mis-click is
+     not recoverable, and the product is not wrong just because the lead
+     was moved back. */
+  if(moved && l.status === 'listed'){ l.productId = null; l.graduatedAt = null; }
+  if(moved) l.stageEnteredAt = Date.now();
+  l.status = status;
+  saveData();
+  renderSourcing();
+  renderSourcingBadge();
+  if(moved) toast(`${l.name} → ${SOURCING_STATUSES[status].label.replace(/^Step \d+\. /,'')}`);
+  return true;
+}
+function stepSourcingStatus(id, dir){
+  const l = sourcingLeadById(id);
+  if(!l) return false;
+  const i = SOURCING_STATUS_ORDER.indexOf(l.status) + dir;
+  if(i < 0 || i >= SOURCING_STATUS_ORDER.length) return false;
+  return setSourcingStatus(id, SOURCING_STATUS_ORDER[i]);
+}
+/* Dropped, not deleted. The research and the demand ledger are the asset:
+   the next person to ask is exactly why they are kept, and "the only
+   importer wants 40 cartons" is a lesson nobody should learn twice. */
+function dropSourcingLead(id, reason){
+  const l = sourcingLeadById(id);
+  if(!l) return false;
+  if(l.status === 'listed'){
+    toast('This one is already a product — dropping it would hide the record of a catalogue row nothing else accounts for. Move it back a step first.', 8000);
+    return false;
+  }
+  l.voided = true;
+  l.droppedReason = String(reason||'').trim();
+  l.droppedAt = new Date().toISOString();
+  saveData();
+  renderSourcing();
+  renderSourcingBadge();
+  return true;
+}
+function undropSourcingLead(id){
+  const l = sourcingLeadById(id);
+  if(!l || !l.voided) return false;
+  l.voided = false;
+  l.droppedAt = null;
+  saveData();
+  renderSourcing();
+  renderSourcingBadge();
+  return true;
+}
+
+/* ---------------- Graduation ----------------
+   TWO saves, deliberately. saveData() fires every op at once through
+   Promise.all, and `prices` carries a real foreign key to `products` --
+   so a product and its price row pushed in the same save race that key,
+   and the price upsert loses often enough to matter.
+
+   The gate between them is lastSynced: addDiffOps' commit() runs only for
+   ops whose run() came back without an error, so lastSynced.products[id]
+   IS the sync engine's own record that the row reached Supabase. No new
+   plumbing, and honest offline -- phase one does not land, phase two does
+   not fire, and the admin is told in words instead of being handed a sync
+   failure for a price that was never valid to send. */
+async function graduateSourcingLead(leadId, form){
+  const lead = sourcingLeadById(leadId);
+  if(!lead) return null;
+  const name = String((form && form.name) || lead.name || '').trim();
+  if(!name){ toast('The product needs a name'); return null; }
+  const price = Number(form && form.price) || 0;
+  if(price <= 0){ toast('The product needs a price — that is what “Priced” recorded'); return null; }
+
+  /* --- phase one: the entities with no foreign key between them.
+
+     Ids come from issueEntityId, the same server-side allocator the
+     product and supplier forms use, NOT from firstFreeEntityId's
+     lowest-free slot. This shop's ids are monotonic and retired ones are
+     never handed out again -- and they must not be: a purchase invoice
+     line, a stock log entry or an old order still pointing at a deleted
+     P001 would silently attach itself to whatever took the id next. */
+  let supplierId = (form && form.supplierId) || null;
+  if(!supplierId){
+    const supName = String((form && form.supplierName) || '').trim();
+    if(!supName){ toast('Say who we are buying it from'); return null; }
+    supplierId = await issueEntityId('supplier', 'S', 3, data.suppliers);
+    data.suppliers.push({id: supplierId, name: supName,
+      phone: String((form && form.supplierPhone)||'').trim(),
+      location: String((form && form.supplierWhere)||'').trim(),
+      notes: `Found while sourcing ${name}`});
+  }
+  const productId = await issueEntityId('product', 'P', 3, data.products);
+  const record = {
+    id: productId, name, type: 'simple',
+    category: String((form && form.category) || '').trim(),
+    subcategory: String((form && form.subcategory) || '').trim(),
+    notes: lead.notes || '', shortDescription: '', image: null,
+    wholesaleMarkupType: 'percent', wholesaleMarkupValue: 0,
+    retailMarkupType: 'percent', retailMarkupValue: 0,
+    agentDiscountWholesalePct: null, agentDiscountRetailPct: null,
+    variantAttributes: [], variants: [],
+    createdAt: new Date().toISOString(),
+  };
+  data.products.push(record);
+  ensurePresetCategory(record.category, record.subcategory);
+  lead.productId = productId;
+  lead.graduatedAt = new Date().toISOString();
+  if(lead.status !== 'listed') lead.stageEnteredAt = Date.now();
+  lead.status = 'listed';
+  await saveData();
+
+  // --- phase two: the price row, only if phase one actually landed
+  const landed = lastSynced && lastSynced.products && lastSynced.products[String(productId)]
+              && lastSynced.suppliers && lastSynced.suppliers[String(supplierId)];
+  if(!landed){
+    renderSourcing(); renderSourcingBadge(); triggerProductsRender(); renderPresets();
+    toast(`${name} is now a product — add its price from the Price Registry once the sync catches up.`, 9000);
+    return {productId, priceId: null};
+  }
+  const packQty = Number(form && form.packQty) || 0;
+  const tiers = [{minQty: Math.max(1, Number(form && form.minQty) || 1), price}];
+  // Derived, never typed -- the same rule Compare Prices, quote
+  // suggestions and agent pricing all read these two flat fields under.
+  const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
+  const priceId = allocRowId('price');
+  data.prices.push({
+    id: priceId, productId, variantIdx: null, supplierId,
+    wholesale, retail, date: todayISO(),
+    unit: String((form && form.unit) || '').trim(),
+    packUnit: String((form && form.packUnit) || '').trim(),
+    packQty, piecesPerUnit: null, priceSource: 'manual', supplierSku: '',
+    tiers, outOfStock: false, outOfStockSince: null,
+  });
+  saveData();
+  renderSourcing(); renderSourcingBadge(); triggerProductsRender(); triggerPricesRender(); renderPresets();
+  toast(`${name} is now a product, priced from ${supplierName(supplierId)}.`, 7000);
+  return {productId, priceId};
+}
+
+/* ---------------- The board ---------------- */
+let sourcingActiveMobileStep = 'asked';
+let sourcingBoardScrollLeft = 0;
+let sourcingShowDropped = false;
+
+function sourcingBoardLeads(){
+  return sourcingLeadsAll().filter(l=> !l.voided);
+}
+function renderSourcingBadge(){
+  // Live leads that are not yet a product: the work outstanding. Drawn from
+  // renderAll as well as from this page, because a badge that only appears
+  // once you open the screen was not there when it would have told you to.
+  setNavBadge('navBadgeSourcing',
+    sourcingBoardLeads().filter(l=> l.status !== 'listed').length,
+    'items still being sourced');
+}
+
+function sourcingFactsHTML(l){
+  const f = leadFacts(l);
+  return `<div class="sf-facts" title="What we know so far">${SOURCING_FACT_ORDER.map(k=>
+    `<span class="sf-fact${f[k]?' got':''}">${f[k]
+      ? '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'
+      : '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>'
+    }${esc(SOURCING_FACT_LABELS[k])}</span>`).join('')}</div>`;
+}
+function sourcingDaysHere(l, nowMs){
+  if(!l.stageEnteredAt) return '';
+  const days = Math.floor(((nowMs==null?Date.now():nowMs) - l.stageEnteredAt) / 86400000);
+  return days >= 1 ? `${days}d here` : 'today';
+}
+
+function renderSourcing(){
+  const wrap = document.getElementById('sourcingWrap');
+  if(!wrap) return;
+  const railMount = document.getElementById('sourcingStepperMount');
+  const clearRail = ()=>{ if(railMount) railMount.innerHTML = ''; };
+  const all = sourcingLeadsAll();
+  const dropped = all.filter(l=> l.voided);
+  const leads = sourcingBoardLeads();
+  const now = Date.now();
+
+  const droppedLabel = document.querySelector('.sf-dropped-label');
+  if(droppedLabel) droppedLabel.style.display = dropped.length ? '' : 'none';
+
+  if(all.length === 0){
+    clearRail();
+    wrap.innerHTML = '<div class="empty">Nothing being sourced yet. When a client asks for something you do not sell, add it here — or capture it straight from the quote search or the WhatsApp inbox when nothing matches.</div>';
+    return;
+  }
+  if(leads.length === 0 && !sourcingShowDropped){
+    clearRail();
+    wrap.innerHTML = `<div class="empty">Every item has been dropped. Tick “Show dropped” to see the ${dropped.length} you set aside — nothing here is ever deleted, so the next person to ask starts from what you already found.</div>`;
+    return;
+  }
+
+  const cardHTML = (l)=>{
+    const stalled = leadIsStalled(l, now);
+    const needs = leadNeedsSomebody(l);
+    const askers = leadDistinctAskers(l);
+    const asks = leadAskCount(l);
+    const limits = data.presetSourcingStageLimits || {};
+    const limitDays = Number(limits[l.status]) || 0;
+    return `
+    <div class="sq-card sf-card" data-lead="${esc(l.id)}" style="--sq-accent:${SOURCING_STATUSES[l.status].color};">
+      ${stalled ? `<span class="sq-overdue-flag" title="In ${esc(SOURCING_STATUSES[l.status].label)} for over ${limitDays} day${limitDays===1?'':'s'}">${ICON_WARN}</span>` : ''}
+      <div class="sq-card-top">
+        <div class="sq-card-info">
+          <div class="sq-client"><span class="sq-client-name">${esc(l.name)}</span><span class="sf-ask-count" title="${asks} ask${asks===1?'':'s'} from ${askers} ${askers===1?'person':'people'}">${askers} asked</span></div>
+          <div class="sq-card-meta-rows">
+            ${sourcingFactsHTML(l)}
+            <div class="sf-meta-row">
+              <span class="sf-days">${esc(sourcingDaysHere(l, now))}</span>
+              ${l.assignedStaffId && !needs ? `<span class="sf-who" title="Researching it">${esc(staffName(l.assignedStaffId))}</span>` : ''}
+            </div>
+            ${needs ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is researching this"><span class="sf-warn">${ICON_WARN}</span><span class="sq-assignee-name">${l.assignedStaffId ? 'Given to someone no longer on staff' : 'Nobody looking into it'}</span></div>` : ''}
+            ${l.status==='listed' && l.productId ? `<div class="sf-meta-row"><span class="sf-listed-id">Now ${esc(l.productId)}</span></div>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="sq-card-actions-row">
+        <button type="button" class="sq-stage-arrow sq-stage-prev" data-lead-prev="${esc(l.id)}" ${SOURCING_STATUS_ORDER.indexOf(l.status)===0?'disabled':''} title="Move back">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="sq-card-icons">
+          <button type="button" class="pc-icon-btn" data-lead-open="${esc(l.id)}" title="Check in on this one">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          ${l.status==='priced' ? `<button type="button" class="btn btn-accent sf-graduate-btn" data-lead-graduate="${esc(l.id)}" title="Create the product and its first price">Add it to what we sell</button>` : ''}
+        </div>
+        <button type="button" class="sq-stage-arrow sq-stage-next" data-lead-next="${esc(l.id)}" ${SOURCING_STATUS_ORDER.indexOf(l.status)>=SOURCING_STATUS_ORDER.length-2?'disabled':''} title="Move forward">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  };
+
+  const pillsHtml = `<div class="sq-stepper" role="tablist" aria-label="Sourcing steps">${SOURCING_STATUS_ORDER.map((status,i)=>{
+    const group = leads.filter(l=> l.status===status);
+    const count = group.length;
+    const warn = group.filter(l=> leadIsStalled(l, now) || leadNeedsSomebody(l)).length;
+    const active = status===sourcingActiveMobileStep;
+    return `<button type="button" class="sq-stepper-step${active?' active':''}" data-status="${status}" role="tab" aria-selected="${active}" style="--pill-accent:${SOURCING_STATUSES[status].color};">
+      <span class="sq-stepper-node">
+        <span class="sq-stepper-num">${i+1}</span>
+        ${count>0 ? `<span class="sq-stepper-count">${count}</span>` : ''}
+        ${warn>0 ? `<span class="sq-stepper-warn" title="${warn} item${warn===1?'':'s'} here need${warn===1?'s':''} chasing — sitting too long, or nobody researching">${ICON_WARN}${warn}</span>` : ''}
+      </span>
+      <span class="sq-stepper-label">${esc(SOURCING_SHORT_LABELS[status])}</span>
+    </button>`;
+  }).join('')}</div>`;
+
+  const boardHtml = `<div class="sq-board" data-active-step="${sourcingActiveMobileStep}">${SOURCING_STATUS_ORDER.map(status=>{
+    const group = leads.filter(l=> l.status===status);
+    return `
+      <div class="sq-col${status===sourcingActiveMobileStep?' is-active-step':''}" data-status="${status}" style="--lane-accent:${SOURCING_STATUSES[status].color};">
+        <div class="sq-col-head">
+          <span class="sq-col-dot" style="background:${SOURCING_STATUSES[status].color};"></span>
+          <span class="sq-col-title">${esc(SOURCING_SHORT_LABELS[status])}</span>
+          <span class="sq-col-count">${group.length}</span>
+        </div>
+        <div class="sq-col-body">
+          ${group.length===0 ? '<div class="sq-col-empty">Nothing here</div>' : group.map(cardHTML).join('')}
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+
+  /* Dropped items live BELOW the board rather than in a lane of their
+     own: they are not a stage of the funnel, they are what left it. */
+  const droppedHtml = (sourcingShowDropped && dropped.length) ? `
+    <div class="sf-dropped">
+      <h3 class="sf-sub">Dropped — kept, not deleted</h3>
+      ${dropped.map(l=>`
+        <div class="sf-dropped-row" data-lead="${esc(l.id)}">
+          <span class="sf-dropped-name">${esc(l.name)}</span>
+          <span class="st-status-pill" style="--pill-accent:${SOURCING_STATUSES[l.status].color};">${esc(SOURCING_SHORT_LABELS[l.status])}</span>
+          <span class="sf-ask-count">${leadDistinctAskers(l)} asked</span>
+          ${l.droppedReason ? `<span class="sf-dropped-why">${esc(l.droppedReason)}</span>` : ''}
+          <button type="button" class="btn btn-ghost" data-lead-open="${esc(l.id)}">Open</button>
+        </div>`).join('')}
+    </div>` : '';
+
+  if(railMount) railMount.innerHTML = pillsHtml;
+  wrap.innerHTML = boardHtml + droppedHtml;
+  const boardEl = wrap.querySelector('.sq-board');
+  const railSteps = railMount ? [...railMount.querySelectorAll('.sq-stepper-step')] : [];
+  wireSourcingBoard(boardEl, railSteps);
+}
+
+/* The strip's own behaviour -- the rail as its scrubber, roving arrows,
+   edge fades, drag-to-pan. A near-twin of the order board's, which is
+   still an inline closure inside renderSavedQuotes and pinned there by a
+   dozen source-text assertions; pulling BOTH onto one implementation is a
+   refactor of the most heavily-tested code in the file and belongs in its
+   own diff, not smuggled inside a new feature. */
+function wireSourcingBoard(boardEl, railSteps){
+  if(!boardEl) return;
+  const isPhoneBoard = ()=> matchMedia('(max-width: 820px)').matches;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const setActiveStep = (status)=>{
+    sourcingActiveMobileStep = status;
+    railSteps.forEach(st=>{
+      const isActive = st.dataset.status===status;
+      st.classList.toggle('active', isActive);
+      st.setAttribute('aria-selected', isActive);
+    });
+    boardEl.dataset.activeStep = status;
+    boardEl.querySelectorAll('.sq-col').forEach(col=>
+      col.classList.toggle('is-active-step', col.dataset.status===status));
+  };
+  railSteps.forEach(step=> step.addEventListener('click', ()=>{
+    setActiveStep(step.dataset.status);
+    if(!isPhoneBoard()){
+      const col = boardEl.querySelector(`.sq-col[data-status="${step.dataset.status}"]`);
+      if(col){
+        const boardRect = boardEl.getBoundingClientRect();
+        const colLeft = col.getBoundingClientRect().left - boardRect.left + boardEl.scrollLeft;
+        const nodeX = step.getBoundingClientRect().left - boardRect.left;
+        const target = Math.max(0, Math.min(colLeft - nodeX, boardEl.scrollWidth - boardEl.clientWidth));
+        boardEl.scrollTo({left: target, behavior: reducedMotion ? 'auto' : 'smooth'});
+        if(!reducedMotion){
+          col.classList.remove('lane-flash');
+          void col.offsetWidth;
+          col.classList.add('lane-flash');
+          setTimeout(()=> col.classList.remove('lane-flash'), 900);
+        }
+      }
+    }
+  }));
+  railSteps.forEach((step,i)=> step.addEventListener('keydown', (e)=>{
+    if(e.key!=='ArrowRight' && e.key!=='ArrowLeft') return;
+    e.preventDefault();
+    const to = railSteps[i + (e.key==='ArrowRight' ? 1 : -1)];
+    if(to){ to.focus(); to.click(); }
+  }));
+  if(!isPhoneBoard() && 'IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        const st = railSteps.find(x=> x.dataset.status===en.target.dataset.status);
+        if(st) st.classList.toggle('in-view', en.isIntersecting);
+      });
+    }, {root: boardEl, threshold: 0.6});
+    boardEl.querySelectorAll('.sq-col').forEach(col=> io.observe(col));
+  }
+  const updateEdgeFades = ()=>{
+    boardEl.classList.toggle('can-left', boardEl.scrollLeft > 4);
+    boardEl.classList.toggle('can-right', boardEl.scrollLeft < boardEl.scrollWidth - boardEl.clientWidth - 4);
+  };
+  boardEl.addEventListener('scroll', ()=>{ sourcingBoardScrollLeft = boardEl.scrollLeft; updateEdgeFades(); }, {passive:true});
+  if(sourcingBoardScrollLeft) boardEl.scrollLeft = sourcingBoardScrollLeft;
+  updateEdgeFades();
+  let pan = null;
+  boardEl.addEventListener('pointerdown', (e)=>{
+    if(e.button !== 0) return;
+    if(e.target.closest('.sq-card') || e.target.closest('button') || e.target.closest('input') || e.target.closest('label')) return;
+    pan = { x: e.clientX, left: boardEl.scrollLeft, moved: false };
+  });
+  boardEl.addEventListener('pointermove', (e)=>{
+    if(!pan) return;
+    const dx = e.clientX - pan.x;
+    if(!pan.moved && Math.abs(dx) > 4){
+      pan.moved = true;
+      boardEl.classList.add('panning');
+      boardEl.setPointerCapture(e.pointerId);
+    }
+    if(pan.moved) boardEl.scrollLeft = pan.left - dx;
+  });
+  const panEnd = ()=>{ pan = null; boardEl.classList.remove('panning'); };
+  boardEl.addEventListener('pointerup', panEnd);
+  boardEl.addEventListener('pointercancel', panEnd);
+}
+
+/* ---------------- The lead's own screen ----------------
+   "One can check in to see how far they have reached for any given item":
+   who has asked, what the research found, and what is still missing. */
+let editingSourcingLeadId = null;
+function openSourcingLead(id){
+  editingSourcingLeadId = id || null;
+  const l = id ? sourcingLeadById(id) : null;
+  document.getElementById('sourcingLeadModalTitle').textContent = l ? 'Sourcing an item' : 'Add an item to source';
+  document.getElementById('sl_name').value = l ? l.name : '';
+  document.getElementById('sl_first_ask').style.display = l ? 'none' : '';
+  document.getElementById('sl_open_body').style.display = l ? '' : 'none';
+  document.getElementById('sl_drop').style.display = (l && !l.voided) ? '' : 'none';
+  document.getElementById('sl_undrop').style.display = (l && l.voided) ? '' : 'none';
+  if(!l){
+    ['sl_ask_name','sl_ask_phone','sl_ask_qty'].forEach(k=> document.getElementById(k).value = '');
+  } else {
+    document.getElementById('sl_notes').value = l.notes || '';
+    document.getElementById('sl_stage').value = SOURCING_STATUSES[l.status].label.replace(/^Step \d+\. /,'')
+      + (l.voided ? ' — dropped' : '');
+    const sel = document.getElementById('sl_staff');
+    sel.innerHTML = '<option value="">Nobody yet</option>'
+      + (data.staff||[]).map(s=> `<option value="${esc(s.id)}"${String(l.assignedStaffId)===String(s.id)?' selected':''}>${esc(s.name)}</option>`).join('');
+    renderSourcingLeadBody(l);
+  }
+  openModal('sourcingLeadModal');
+}
+function renderSourcingLeadBody(l){
+  const f = leadFacts(l);
+  document.getElementById('sl_facts').innerHTML = SOURCING_FACT_ORDER.map(k=>
+    `<span class="sf-fact${f[k]?' got':''}">${f[k]
+      ? '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'
+      : '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>'
+    }${esc(SOURCING_FACT_LABELS[k])}</span>`).join('');
+
+  const reqs = l.requests || [];
+  document.getElementById('sl_requests').innerHTML = reqs.length ? `
+    <div class="sf-list">${reqs.slice().reverse().map(r=>`
+      <div class="sf-list-row">
+        <span class="sf-list-main">${esc(r.customerName || sourcingAskerName(r) || 'Somebody')}</span>
+        ${r.qty ? `<span class="sf-list-qty">${r.qty}</span>` : ''}
+        <span class="sf-list-src">${esc(SOURCING_SOURCE_LABELS[r.source] || r.source || '')}</span>
+        <span class="sf-list-when">${esc(String(r.at||'').slice(0,10))}</span>
+      </div>`).join('')}</div>
+    <p class="preset-hint">${leadDistinctAskers(l)} different ${leadDistinctAskers(l)===1?'person has':'people have'} asked, ${reqs.length} time${reqs.length===1?'':'s'} in all.</p>`
+    : '<p class="preset-hint">Nobody recorded yet.</p>';
+
+  const cands = l.candidates || [];
+  document.getElementById('sl_candidates').innerHTML = cands.length ? `
+    <div class="sf-list">${cands.map(c=>`
+      <div class="sf-list-row">
+        <span class="sf-list-main">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
+        <span class="st-status-pill">${esc(c.role==='importer'?'Importer':(c.role==='both'?'Importer & supplier':'Supplier'))}</span>
+        ${Number(c.quotedPrice)>0 ? `<span class="sf-list-qty">${fmtUGX(c.quotedPrice)}${c.unit?'/'+esc(c.unit):''}</span>` : '<span class="sf-list-qty muted">no price yet</span>'}
+        ${Number(c.packQty)>0 && c.packUnit ? `<span class="sf-list-src">${c.packQty} per ${esc(c.packUnit)}</span>` : ''}
+        ${c.where ? `<span class="sf-list-when">${esc(c.where)}</span>` : ''}
+        <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
+      </div>`).join('')}</div>`
+    : '<p class="preset-hint">Nothing found yet. Add who has it, and what they want for it.</p>';
+}
+const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', sourcing:'added here'};
+
+/* ---------------- Graduation form ---------------- */
+let graduatingLeadId = null;
+let graduateCandidateId = null;
+function openSourcingGraduate(leadId){
+  const l = sourcingLeadById(leadId);
+  if(!l) return;
+  const priced = (l.candidates||[]).filter(c=> Number(c.quotedPrice) > 0);
+  if(!priced.length){ toast('Add a price first — there is nothing to buy it at.'); openSourcingLead(leadId); return; }
+  graduatingLeadId = leadId;
+  graduateCandidateId = priced[0].id;
+  document.getElementById('sg_name').value = l.name || '';
+  document.getElementById('sg_category').value = '';
+  document.getElementById('sg_subcategory').value = '';
+  document.getElementById('sg_category_list').innerHTML =
+    (data.presetCategories||[]).map(c=> `<option value="${esc(c.name)}"></option>`).join('');
+  renderGraduateCandidates(priced);
+  fillGraduateFromCandidate(priced.find(c=> c.id===graduateCandidateId));
+  openModal('sourcingGraduateModal');
+}
+function renderGraduateCandidates(priced){
+  document.getElementById('sg_candidates').innerHTML = priced.map(c=>`
+    <label class="sf-pick">
+      <input type="radio" name="sg_cand" value="${esc(c.id)}"${c.id===graduateCandidateId?' checked':''}>
+      <span class="sf-pick-name">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
+      <span class="sf-pick-price">${fmtUGX(c.quotedPrice)}${c.unit?'/'+esc(c.unit):''}</span>
+      ${c.supplierId ? '' : '<span class="sf-pick-new">new supplier</span>'}
+    </label>`).join('');
+}
+function fillGraduateFromCandidate(c){
+  if(!c) return;
+  document.getElementById('sg_price').value = Number(c.quotedPrice) || '';
+  document.getElementById('sg_unit').value = c.unit || '';
+  document.getElementById('sg_minqty').value = Math.max(1, Number(c.moq) || 1);
+  document.getElementById('sg_packqty').value = Number(c.packQty) || '';
+  document.getElementById('sg_packunit').value = c.packUnit || '';
+  const packQty = Number(c.packQty) || 0;
+  document.getElementById('sg_price_note').textContent = packQty > 0
+    ? `This price becomes the retail rate. The bulk rate is left blank until somebody records a price at ${packQty}+ — a figure nobody has quoted is not one to invent.`
+    : 'This price becomes the retail rate. Add a pack size later if they also sell it by the carton.';
+}
+
+/* ---------------- Wiring ---------------- */
+document.getElementById('src_add_btn').addEventListener('click', ()=> openSourcingLead(null));
+document.getElementById('src_show_dropped').addEventListener('change', (e)=>{
+  sourcingShowDropped = e.target.checked;
+  renderSourcing();
+});
+document.getElementById('tab-sourcing').addEventListener('click', (e)=>{
+  const open = e.target.closest('[data-lead-open]');
+  if(open){ openSourcingLead(open.dataset.leadOpen); return; }
+  const grad = e.target.closest('[data-lead-graduate]');
+  if(grad){ openSourcingGraduate(grad.dataset.leadGraduate); return; }
+  const next = e.target.closest('[data-lead-next]');
+  if(next){ stepSourcingStatus(next.dataset.leadNext, 1); return; }
+  const prev = e.target.closest('[data-lead-prev]');
+  if(prev){ stepSourcingStatus(prev.dataset.leadPrev, -1); return; }
+});
+document.getElementById('sourcingLeadModalClose').addEventListener('click', ()=> closeModal('sourcingLeadModal'));
+document.getElementById('sl_cancel').addEventListener('click', ()=> closeModal('sourcingLeadModal'));
+document.getElementById('sl_save').addEventListener('click', ()=>{
+  const name = document.getElementById('sl_name').value.trim();
+  if(!name){ toast('What is the item?'); return; }
+  if(!editingSourcingLeadId){
+    const res = captureSourcingLeadAndSave({
+      name, source: 'sourcing',
+      customerName: document.getElementById('sl_ask_name').value.trim(),
+      phone: document.getElementById('sl_ask_phone').value.trim(),
+      qty: document.getElementById('sl_ask_qty').value,
+    });
+    if(!res) return;
+    // Straight into the one that already exists rather than a second card
+    // for the same item -- which is exactly how the demand count is lost.
+    openSourcingLead(res.lead.id);
+    return;
+  }
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l){ closeModal('sourcingLeadModal'); return; }
+  l.name = name;
+  l.notes = document.getElementById('sl_notes').value.trim();
+  l.assignedStaffId = document.getElementById('sl_staff').value || null;
+  saveData();
+  closeModal('sourcingLeadModal');
+  renderSourcing();
+  renderSourcingBadge();
+  toast('Saved');
+});
+document.getElementById('sl_add_ask').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  const who = prompt('Who asked for it? (a name, or leave blank)');
+  if(who === null) return;
+  const phone = prompt('Their phone, if you have it') || '';
+  l.requests = l.requests || [];
+  l.requests.push({at: new Date().toISOString(), source:'sourcing', customerId:null,
+    customerName: who.trim(), phone: phone.trim(), qty:null, orderId:null, conversationId:null, note:''});
+  saveData();
+  renderSourcingLeadBody(l);
+  renderSourcing();
+});
+document.getElementById('sl_add_cand').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  const who = document.getElementById('sl_c_name').value.trim();
+  if(!who){ toast('Who has it?'); return; }
+  const existing = (data.suppliers||[]).find(s=> (s.name||'').trim().toLowerCase() === who.toLowerCase());
+  l.candidates = l.candidates || [];
+  l.candidates.push({
+    id: 'C' + Date.now().toString(36).toUpperCase(),
+    role: document.getElementById('sl_c_role').value,
+    supplierId: existing ? existing.id : null,
+    supplierName: existing ? existing.name : who,
+    phone: document.getElementById('sl_c_phone').value.trim(),
+    where: document.getElementById('sl_c_where').value.trim(),
+    quotedPrice: Number(document.getElementById('sl_c_price').value) || 0,
+    unit: document.getElementById('sl_c_unit').value.trim(),
+    packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
+    packUnit: document.getElementById('sl_c_packunit').value.trim(),
+    moq: Number(document.getElementById('sl_c_moq').value) || 0,
+    leadTimeDays: null, note: '', at: new Date().toISOString(),
+  });
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_price','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_moq']
+    .forEach(k=> document.getElementById(k).value = '');
+  saveData();
+  renderSourcingLeadBody(l);
+  renderSourcing();
+});
+document.getElementById('sl_candidates').addEventListener('click', (e)=>{
+  const del = e.target.closest('[data-cand-del]');
+  if(!del) return;
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  l.candidates = (l.candidates||[]).filter(c=> c.id !== del.dataset.candDel);
+  saveData();
+  renderSourcingLeadBody(l);
+  renderSourcing();
+});
+document.getElementById('sl_drop').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  /* The reason is asked for, not optional-by-omission: "we dropped this"
+     without "because the only importer wants 40 cartons" is a lesson
+     learned twice. */
+  const why = prompt(`Why are you dropping “${l.name}”?\n\nIt is kept, not deleted — if somebody asks again you will see this note and everything already found.`);
+  if(why === null) return;
+  if(!why.trim()){ toast('Say why — that note is the whole point of keeping it'); return; }
+  if(dropSourcingLead(l.id, why)) closeModal('sourcingLeadModal');
+});
+document.getElementById('sl_undrop').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  if(undropSourcingLead(l.id)) closeModal('sourcingLeadModal');
+});
+document.getElementById('sourcingGraduateModalClose').addEventListener('click', ()=> closeModal('sourcingGraduateModal'));
+document.getElementById('sg_cancel').addEventListener('click', ()=> closeModal('sourcingGraduateModal'));
+document.getElementById('sg_candidates').addEventListener('change', (e)=>{
+  if(e.target.name !== 'sg_cand') return;
+  graduateCandidateId = e.target.value;
+  const l = sourcingLeadById(graduatingLeadId);
+  if(l) fillGraduateFromCandidate((l.candidates||[]).find(c=> c.id===graduateCandidateId));
+});
+document.getElementById('sg_confirm').addEventListener('click', async ()=>{
+  const l = sourcingLeadById(graduatingLeadId);
+  if(!l) return;
+  const c = (l.candidates||[]).find(x=> x.id===graduateCandidateId) || {};
+  const btn = document.getElementById('sg_confirm');
+  btn.disabled = true;
+  try{
+    const out = await graduateSourcingLead(l.id, {
+      name: document.getElementById('sg_name').value.trim(),
+      category: document.getElementById('sg_category').value.trim(),
+      subcategory: document.getElementById('sg_subcategory').value.trim(),
+      supplierId: c.supplierId || null,
+      supplierName: c.supplierName || '',
+      supplierPhone: c.phone || '',
+      supplierWhere: c.where || '',
+      price: document.getElementById('sg_price').value,
+      minQty: document.getElementById('sg_minqty').value,
+      unit: document.getElementById('sg_unit').value.trim(),
+      packQty: document.getElementById('sg_packqty').value,
+      packUnit: document.getElementById('sg_packunit').value.trim(),
+    });
+    if(out) closeModal('sourcingGraduateModal');
+  } finally { btn.disabled = false; }
+});
+/* "12d here" and the stalled flag age on their own, the way the order
+   board's do -- and only while this is the tab actually being looked at. */
+setInterval(()=>{
+  const tab = document.getElementById('tab-sourcing');
+  if(tab && tab.style.display !== 'none') renderSourcing();
+}, 60000);
+
 /* ================= FASTENER GUIDE =================
 
    A printed workshop chart, in code. The shop sells the same screw under
@@ -39397,14 +40579,16 @@ function renderAll(){
   triggerPricesRender();
   refreshCompareDropdown();
   renderInventory();
-  /* The rail's two counts. Refreshed here rather than only from the
-     screens they describe -- a badge that appears the first time you
-     open the board is a badge that was not there when it would have
-     told you to open it. */
+  /* The rail's counts. Refreshed here rather than only from the screens
+     they describe -- a badge that appears the first time you open the
+     board is a badge that was not there when it would have told you to
+     open it. */
   updateOrderStatusBar();
   updateDebtorsNavBadge();
+  renderSourcingBadge();
   if(document.getElementById('tab-dashboard').style.display !== 'none') renderDashboard();
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
+  if(document.getElementById('tab-sourcing').style.display !== 'none') renderSourcing();
 }
 async function boot(){
   try{
