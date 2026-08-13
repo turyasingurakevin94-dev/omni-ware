@@ -195,4 +195,85 @@ const reset = () => { data.stock = {}; data.stockLots = {}; };
     'and the dropdown is built from that list rather than written out twice');
 }
 
+/* ---------- searching without finishing the words -------------------- */
+/*
+ * Asked for: find things without typing them out in full. Substring
+ * matching already handled a prefix ("cem" finds Cement), so what was
+ * missing was the letters somebody actually leaves out under pressure --
+ * "sndppr", "rdr", "slfdrl".
+ *
+ * TWO PASSES, STRICT FIRST, and the order is the whole design. A
+ * subsequence match is generous enough to be useless on its own: it puts
+ * half the catalogue behind every query and buries the exact hit. Run
+ * only when the strict pass finds NOTHING, it costs precision nothing
+ * and appears exactly when the alternative was "no products match".
+ *
+ * And it is anchored to a word start. Free-floating, "rdr" is a
+ * subsequence of "t-r-uss hea-d sc-r-ews", so the first version of this
+ * offered Truss Head Screws to somebody hunting RIDER.
+ */
+{
+  const sub = compileScope(
+    [extractFunction(src, 'matchesSubsequence', 'index.html')], {}, ['matchesSubsequence']
+  ).matchesSubsequence;
+
+  t.check(sub('rider self drilling screws', 'rdr'), 'dropped letters still find the product');
+  t.check(sub('indasa rhynolite sandpaper rolls', 'sndppr'), 'and so do heavily dropped ones');
+  t.check(sub('rider self drilling screws', 'slfdrl'), 'a word run together with the next one matches');
+  t.check(sub('cement hima', 'cement'), 'and the whole word obviously does');
+
+  /* The anchor, pinned by the case that broke it. */
+  t.check(!sub('truss head screws', 'rdr'),
+    'but letters picked out of the MIDDLE of three different words do not — that is not an abbreviation, it is a coincidence');
+  t.check(sub('window rollers big', 'wrb'),
+    'while letters taken from the START of each word are exactly what an abbreviation is');
+
+  /* Too short to mean anything. "ae" is a subsequence of most of the
+     catalogue, and a search that returns everything is worse than one
+     that returns nothing. */
+  t.check(!sub('cement hima', 'ce'), 'two letters is not a search');
+  t.check(!sub('cement hima', 'c'), 'nor is one');
+
+  /* EVERY letter has to land. Anchoring the first one and then giving up
+     would match any word beginning with the right letter -- "cxyz" would
+     find Cement. The short-token guard hides this: a two-letter probe
+     never reaches the loop, so the case has to be long enough to anchor
+     and still fail. */
+  t.check(!sub('cement hima', 'cxyz'),
+    'a word that starts right but continues wrong is not a match');
+  t.check(!sub('rider self drilling screws', 'rdrz'),
+    'and one trailing letter that is not there is enough to rule it out');
+
+  // Order and wiring, read off the source: strict must be tried first
+  // and the loose pass must only run on an empty result.
+  const fn = (/function allProductVariantEntries\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const strict = collect\(\(hay\)=> matchesAllTokens\(hay, tokens\)\);/.test(fn),
+    'the strict pass runs first');
+  t.check(/if\(strict\.length \|\| !tokens\.length[\s\S]*?\) return strict;/.test(fn),
+    'and wins outright whenever it found anything at all');
+  t.check(/return collect\(\(hay\)=> tokens\.every\(tk=> matchesSubsequence\(hay, tk\)\)\);/.test(fn),
+    'the loose pass is the fallback, and every word typed must still match');
+
+  /* Hide no stock is on by default -- and that turns a search for
+     something out of stock into an empty screen. Saying "no matching
+     products" there is a lie: the product matched perfectly well. */
+  t.check(/id="inv_hide_zero" checked/.test(code),
+    'the shelf filter starts on, so the screen opens on what is actually there');
+  /* Checked as an ORDER, not as two lines that exist. Both survive being
+     swapped, and swapped they make hiddenByZero permanently zero -- the
+     count is taken from the already-filtered list, so the screen goes
+     back to claiming nothing matched. */
+  const render = (/function renderInventory\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const countedAt = render.indexOf('const foundBeforeHideZero = entries.length;');
+  const filteredAt = render.indexOf('if(hideZero) entries = entries.filter(');
+  t.check(countedAt > -1 && filteredAt > -1 && countedAt < filteredAt,
+    `what the search found is counted BEFORE the shelf filter takes a view (${countedAt} < ${filteredAt})`);
+  t.check(/const hiddenByZero = foundBeforeHideZero - entries\.length;/.test(render),
+    'and the difference is what the empty state reports');
+  t.check(/hiddenByZero > 0/.test(code) && /nothing on the shelf/.test(code),
+    'and an empty result names the filter that emptied it rather than denying the match');
+  t.check(/id="inv_show_zero"/.test(code) && /checked = false;\s*\r?\n\s*renderInventory\(\);/.test(code),
+    'with one press to lift it');
+}
+
 process.exit(t.done() ? 1 : 0);

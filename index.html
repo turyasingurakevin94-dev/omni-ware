@@ -6738,7 +6738,11 @@
           <div class="field p-toolbar-filter"><label>Sort by</label>
             <select id="inv_sort"></select>
           </div>
-          <label class="p-toolbar-checkbox"><input type="checkbox" id="inv_hide_zero">Hide no stock</label>
+          <!-- On by default. This screen answers "what is on the shelf",
+               and a shop with 300 sellable lines and 5 in stock opened it
+               to 295 rows of nothing. The box is right there for the days
+               the question is the other one. -->
+          <label class="p-toolbar-checkbox"><input type="checkbox" id="inv_hide_zero" checked>Hide no stock</label>
         </div>
         <div id="invSummary"></div>
         <div id="invTableWrap"></div>
@@ -33130,25 +33134,69 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
 // Flattened list of every product (one entry) or, for variable products,
 // every variant (one entry each) — mirrors buildProductSuggestionEntries
 // but returns everything (no 30-item cap), since this drives the main table.
-function allProductVariantEntries(tokens){
-  const entries = [];
-  data.products.forEach(p=>{
-    if(p.type==='variable'){
-      if(!p.variants || !p.variants.length){
-        const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
-        if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
-        return;
-      }
-      p.variants.forEach((v,idx)=>{
-        const haystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase();
-        if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:idx});
-      });
-    } else {
-      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase();
-      if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
+/* The letters of `token`, in order, somewhere in `haystack` -- gaps
+   allowed. "sndppr" finds Sandpaper, "rdr" finds RIDER, "slfdrl" finds
+   Self Drilling. It is how somebody types at a counter with one thumb
+   and a customer waiting.
+
+   THREE LETTERS MINIMUM, because this is a very loose test: "ae" is a
+   subsequence of almost every product name in the catalogue, and a
+   two-letter search that returned everything would be worse than one
+   that returned nothing. */
+function matchesSubsequence(haystack, token){
+  if(token.length < 3) return false;
+  /* ANCHORED TO A WORD START. A free-floating subsequence is far too
+     generous to be useful: "rdr" is a subsequence of "t-r-uss hea-d
+     sc-r-ews", so the first version of this offered Truss Head Screws to
+     somebody hunting RIDER. Requiring the first letter to begin a word
+     throws that out while keeping every abbreviation worth having --
+     "rdr" still finds RIDER, "sndppr" still finds Sandpaper. */
+  for(let start = 0; start < haystack.length; start++){
+    if(haystack[start] !== token[0]) continue;
+    const prev = start > 0 ? haystack[start - 1] : ' ';
+    if(/[a-z0-9]/.test(prev)) continue;          // mid-word: not an anchor
+    let i = 1;
+    for(let h = start + 1; h < haystack.length && i < token.length; h++){
+      if(haystack[h] === token[i]) i++;
     }
-  });
-  return entries;
+    if(i === token.length) return true;
+  }
+  return false;
+}
+
+/* Every product+variant a search matches.
+
+   Two passes, and the ORDER MATTERS. The strict pass is what it has
+   always been: each word typed must appear inside the text somewhere, so
+   "cem" finds Cement and "self drill" finds Self Drilling Screws. Only
+   when that finds NOTHING does the loose pass run, matching each word as
+   a subsequence.
+
+   Loose second rather than loose always, because subsequence matching is
+   generous enough to be useless on its own -- it would put half the
+   catalogue behind every query and bury the exact hit the shop wanted.
+   Falling back only on an empty result means precision is never traded
+   away, and the looseness appears exactly when the alternative is "no
+   products match". */
+function allProductVariantEntries(tokens, opts){
+  const collect = (test)=>{
+    const entries = [];
+    data.products.forEach(p=>{
+      const push = (variantIdx, haystack)=>{
+        if(!tokens.length || test(haystack)) entries.push({p, variantIdx});
+      };
+      if(p.type==='variable' && p.variants && p.variants.length){
+        p.variants.forEach((v,idx)=> push(idx,
+          (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase()));
+      } else {
+        push(null, (p.name+' '+(p.category||'')+' '+p.id).toLowerCase());
+      }
+    });
+    return entries;
+  };
+  const strict = collect((hay)=> matchesAllTokens(hay, tokens));
+  if(strict.length || !tokens.length || (opts && opts.strictOnly)) return strict;
+  return collect((hay)=> tokens.every(tk=> matchesSubsequence(hay, tk)));
 }
 
 function populateInventoryCategoryFilter(selectedCategory){
@@ -33253,7 +33301,14 @@ function renderInventory(){
   const tokens = searchTokens(searchEl ? searchEl.value : '');
   let entries = allProductVariantEntries(tokens);
   if(categoryFilter) entries = entries.filter(({p})=>p.category===categoryFilter);
+  /* How many the search actually found, before the shelf filter took a
+     view. Searching is asking for one thing by name, and answering
+     "nothing" when the thing is on file and merely out of stock is the
+     screen refusing to say what it knows -- so the count is kept and the
+     empty state below says which filter emptied it. */
+  const foundBeforeHideZero = entries.length;
   if(hideZero) entries = entries.filter(({p, variantIdx})=>getStockQty(p.id, variantIdx)>0);
+  const hiddenByZero = foundBeforeHideZero - entries.length;
 
   const lines = sortInventoryLines(
     entries.map(({p, variantIdx})=> inventoryLineFor(p, variantIdx)), sortMode);
@@ -33274,7 +33329,20 @@ function renderInventory(){
   if(data.products.length===0){
     wrap.innerHTML = '<div class="empty">No products yet — add products in the Products tab first, then track their stock here.</div>';
   } else if(lines.length===0){
-    wrap.innerHTML = '<div class="empty">No matching products.</div>';
+    /* Naming the filter that emptied the screen, and offering to lift
+       it. "No matching products" was a lie whenever the product matched
+       perfectly well and simply had none on the shelf -- which, with
+       Hide no stock on by default, is most of a search for something the
+       shop has run out of. */
+    wrap.innerHTML = hiddenByZero > 0
+      ? `<div class="empty">${esc(`${hiddenByZero} ${hiddenByZero===1?'line matches':'lines match'} — ${hiddenByZero===1?'it has':'they have'} nothing on the shelf.`)}
+           <button type="button" class="btn btn-ghost" id="inv_show_zero">Show them anyway</button></div>`
+      : '<div class="empty">No matching products.</div>';
+    const showBtn = document.getElementById('inv_show_zero');
+    if(showBtn) showBtn.addEventListener('click', ()=>{
+      document.getElementById('inv_hide_zero').checked = false;
+      renderInventory();
+    });
   } else {
     const cards = lines.map((l)=>{
       const { p, variantIdx, qty, unitCost, costUnit, packsLabel } = l;
