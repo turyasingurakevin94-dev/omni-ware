@@ -21,7 +21,7 @@
  *
  * Run: node test/admin-reassign-declined.test.js   (or: npm test)
  */
-const { read, extractFunction, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, createReporter } = require('./_extract');
 
 const t = createReporter('admin reassign declined');
 const admin = read('index.html');
@@ -159,8 +159,15 @@ const shared = read('shared-worker.js');
   t.check(/if\(!q \|\| q\.status!=='pending_delivery'\) return false;/.test(needs),
     'only asked of an order out for delivery');
   t.check(/if\(!q\.assignedDeliveryId\) return true;/.test(needs), 'nobody named needs one');
-  t.check(/if\(q\.assignedDeliveryId==='__agent__'\) return false;/.test(needs),
-    "an agent collecting their own order is not a driver who can go missing");
+  /* Was pinned on the '__agent__' literal. There are two of these now --
+     an agent collecting their own, and a client sending their own person
+     -- so the question is asked of the SET rather than of one member of
+     it, and adding a third carrier does not need this line edited. */
+  t.check(/if\(deliveryIsSelfCarried\(q\)\) return false;/.test(needs),
+    'somebody outside the shop carrying it is not a driver who can go missing');
+  const carriers = extractDeclaration(admin, 'DELIVERY_SELF_CARRIERS', 'index.html');
+  t.check(/__agent__:/.test(carriers) && /__client__:/.test(carriers),
+    'and both the agent and the client are in that set');
   t.check(/return !\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedDeliveryId\);/.test(needs),
     'and a driver no longer on staff needs replacing');
 

@@ -4424,6 +4424,20 @@
   .bl-send:hover{background:var(--ow-oxide-deep);}
   .bl-send svg{width:13px;height:13px;}
   .bl-send:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* The quieter of the two: sending somebody is the shop spending an
+     errand, so it keeps the filled button. This one only records what
+     the supplier is already doing. */
+  .bl-bringing{
+    all:unset;box-sizing:border-box;cursor:pointer;white-space:nowrap;
+    padding:6px 12px;border-radius:8px;border:1px solid var(--line);
+    font-size:12px;font-weight:600;color:var(--ink-soft);
+  }
+  .bl-bringing:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .bl-bringing:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* Not a red "somebody is out with our money" trip -- a supplier
+     delivery is somebody else's errand, so it reads as steady rather
+     than as something to chase. */
+  .bl-trip.by-supplier{background:var(--ow-steel-050);border-color:var(--line);}
   .bl-trips{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;}
   .bl-trip{
     display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;
@@ -14911,7 +14925,8 @@ function openBuyingList(){
              is not already on somebody's list -- a second trip for the
              same carton sends two people for one thing. */
           r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId))
-            ? `<button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>` : ''}
+            ? `<button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>
+               <button type="button" class="bl-bringing" data-bringing="${esc(r.supplierId)}" title="This supplier is delivering — nobody of ours goes out">They’re delivering</button>` : ''}
       </div>
       ${blRunTripsHTML(r)}
       <div class="bl-lines"><table>
@@ -14993,12 +15008,13 @@ function blRunTripsHTML(run){
     .filter(t=> tripIsLive(t) && String(t.supplierId) === String(run.supplierId));
   if(!trips.length) return '';
   return `<div class="bl-trips">${trips.map(t=>{
-    const who = t.assignedWorkerId ? staffName(t.assignedWorkerId) : 'nobody yet';
+    const who = tripCarrierLabel(t);
+    const bySupplier = tripIsSupplierDelivered(t);
     const short = tripShortLines(t);
-    return `<div class="bl-trip ${t.status}">
+    return `<div class="bl-trip ${t.status}${bySupplier ? ' by-supplier' : ''}">
       ${ICON_TRUCK}
       <div class="bl-trip-body">
-        <div class="bl-trip-top"><b>${esc(TRIP_STATUS_LABELS[t.status] || t.status)}</b>
+        <div class="bl-trip-top"><b>${esc(tripStatusLabel(t))}</b>
           <span class="bl-trip-who">${esc(who)}</span>
           <span class="bl-trip-count">${tripLines(t).length} line${tripLines(t).length===1?'':'s'}</span></div>
         ${short.length ? `<div class="bl-trip-short">${short.length} came back short</div>` : ''}
@@ -15006,11 +15022,16 @@ function blRunTripsHTML(run){
       ${/* Assigned but not yet accepted means nobody has gone anywhere,
             so handing it to somebody else is free. Once they have
             accepted they are out, and taking it off them is a phone
-            call, not a button. */
-        t.status==='open' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Assign</button>`
+            call, not a button.
+
+            Neither is offered for a supplier delivery: there is nobody
+            of ours on it to hand it to, and reassigning it to a worker
+            would send somebody to fetch what is already being brought. */
+        bySupplier ? ''
+        : t.status==='open' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Assign</button>`
         : t.status==='assigned' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Hand to someone else</button>`
         : ''}
-      ${t.status==='collected' ? `<button type="button" class="bl-trip-act primary" data-confirm="${esc(t.id)}">Check in</button>` : ''}
+      ${tripCanCheckIn(t) ? `<button type="button" class="bl-trip-act primary" data-confirm="${esc(t.id)}">Check in</button>` : ''}
       ${/* The way out. Without it a trip nobody will ever run keeps its
             lines off every future list for good. */
         `<button type="button" class="bl-trip-void" data-void="${esc(t.id)}" title="Call this trip off — its items go back on the list">Call off</button>`}
@@ -15049,7 +15070,37 @@ function blStrandedTripsHTML(runs){
   </div>`;
 }
 
-function createCollectionTripFromRun(run){
+/* The supplier is bringing it, so nobody of ours goes anywhere.
+
+   The same sentinel idea as the delivery side, on the other end of the
+   journey. It is still a TRIP -- the goods are in motion, the lines are
+   spoken for, and they get checked in against what was expected exactly
+   as a collected trip does -- so it reuses the whole lifecycle rather
+   than growing a parallel one. What it is not is a job for a worker, so
+   it carries no staff id and is never offered to one: tripsForWorker
+   matches on a real staff id and a sentinel matches nobody. */
+const TRIP_SUPPLIER_CARRIER = '__supplier__';
+function tripIsSupplierDelivered(t){
+  return !!t && String(t.assignedWorkerId) === TRIP_SUPPLIER_CARRIER;
+}
+function tripCarrierLabel(t){
+  if(tripIsSupplierDelivered(t)) return 'Supplier delivering';
+  return t && t.assignedWorkerId ? staffName(t.assignedWorkerId) : 'nobody yet';
+}
+// "Out collecting" is false when nobody of ours went out.
+function tripStatusLabel(t){
+  if(tripIsSupplierDelivered(t) && t.status === 'collecting') return 'On its way here';
+  return TRIP_STATUS_LABELS[t.status] || t.status;
+}
+/* Ready to check in: our own person back with the goods, or a supplier
+   delivery that has arrived. A worker trip needs somebody to say they
+   are back first; a supplier delivery announces itself by turning up at
+   the door, so the one press is the check-in. */
+function tripCanCheckIn(t){
+  return !!t && (t.status === 'collected' || (tripIsSupplierDelivered(t) && t.status === 'collecting'));
+}
+
+function createCollectionTripFromRun(run, opts){
   const lines = (run.lines||[])
     // A line already on somebody's list is not put on a second one.
     .filter(l=> !lineIsOnATrip(l.order.id, l.it.lineId))
@@ -15063,11 +15114,18 @@ function createCollectionTripFromRun(run){
       gotQty: null, gotPrice: null,
     }));
   if(!lines.length) return null;
+  const bySupplier = !!(opts && opts.supplierDelivers);
+  const now = new Date().toISOString();
   const trip = {
     id: 'TRIP-' + Date.now().toString(36).toUpperCase(),
-    supplierId: run.supplierId, status: 'open',
-    assignedWorkerId: null, createdAt: new Date().toISOString(),
-    assignedAt: null, acceptedAt: null, collectedAt: null, confirmedAt: null,
+    supplierId: run.supplierId,
+    // A supplier delivery starts already in motion: there is no "to
+    // send" for a journey nobody here is making.
+    status: bySupplier ? 'collecting' : 'open',
+    assignedWorkerId: bySupplier ? TRIP_SUPPLIER_CARRIER : null,
+    createdAt: now,
+    assignedAt: bySupplier ? now : null,
+    acceptedAt: null, collectedAt: null, confirmedAt: null,
     note: '', lines, voided: false,
   };
   (data.collectionTrips ||= []).push(trip);
@@ -15218,6 +15276,20 @@ function wireBuyingListReceiving(){
       saveData();
       openBuyingList();
       toast(`Trip made for ${supplierName(run.supplierId)} — ${trip.lines.length} line${trip.lines.length===1?'':'s'}. Assign somebody to it.`, 5000);
+    });
+  });
+  /* The supplier is bringing it. Same trip, same check-in, nobody of
+     ours sent -- so the lines stop appearing on the "send someone" list
+     without anybody having to remember they are already spoken for. */
+  document.querySelectorAll('#buyingListBody [data-bringing]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const run = buyingListRuns(beingPreparedOrders()).find(r=> String(r.supplierId) === btn.dataset.bringing);
+      if(!run) return;
+      const trip = createCollectionTripFromRun(run, {supplierDelivers:true});
+      if(!trip){ toast('Everything on this run is already on somebody\'s list'); return; }
+      saveData();
+      openBuyingList();
+      toast(`${supplierName(run.supplierId)} is delivering ${trip.lines.length} line${trip.lines.length===1?'':'s'} — check them in when they arrive.`, 5000);
     });
   });
   // Give it to a worker, through the same modal every other assignment
@@ -17904,9 +17976,32 @@ function orderCustomerLocation(q){
 // self-pickup agent order's assignedDeliveryId gets set to instead (no
 // shop delivery staff involved at all), which staffName() would otherwise
 // render as "(removed staff)".
+/* Somebody who is not ours is carrying it.
+
+   An order does not always need one of our people. An agent collects
+   their own; a client sends a boy with a bicycle. In both cases the
+   order is genuinely on its way and the shop has assigned nobody -- but
+   "nobody assigned" already means "this still needs a person", so
+   without a way to say WHY there is no assignee, a client-collected
+   order sits in Pending Delivery being counted as work outstanding for
+   as long as it takes somebody to notice.
+
+   Sentinels rather than a separate flag, because assignedDeliveryId is
+   already the field every screen reads to answer "who has it" -- a
+   parallel boolean would have to be checked everywhere too, and the
+   first screen that forgot would go back to nagging. '__agent__' was
+   here first and this is the same idea under one roof. */
+const DELIVERY_SELF_CARRIERS = {
+  __agent__:  'Agent pickup',
+  __client__: 'Client’s own person',
+};
+function deliveryIsSelfCarried(q){
+  return !!q && Object.prototype.hasOwnProperty.call(DELIVERY_SELF_CARRIERS, String(q.assignedDeliveryId));
+}
+// staffName() resolves a real staff id; a sentinel resolves to what it
+// means, so no screen ever prints '__client__' at a customer.
 function deliveryAssigneeLabel(q){
-  if(q.assignedDeliveryId==='__agent__') return 'Agent pickup';
-  return staffName(q.assignedDeliveryId);
+  return DELIVERY_SELF_CARRIERS[String(q.assignedDeliveryId)] || staffName(q.assignedDeliveryId);
 }
 
 function setSavedQuoteStatus(id, status){
@@ -18102,9 +18197,10 @@ function orderNeedsWorker(q){
 function orderNeedsDelivery(q){
   if(!q || q.status!=='pending_delivery') return false;
   if(!q.assignedDeliveryId) return true;
-  // The agent is collecting it themselves. Not a staff member, so not
+  // Somebody outside the shop is carrying it -- an agent collecting
+  // their own, or the client's own person. Not a staff member, so not
   // somebody who can stop being one.
-  if(q.assignedDeliveryId==='__agent__') return false;
+  if(deliveryIsSelfCarried(q)) return false;
   return !(data.staff||[]).some(s=>s.id===q.assignedDeliveryId);
 }
 
@@ -18206,20 +18302,33 @@ function stepSavedQuoteStatus(id, dir){
 let pendingAssign = null; // {orderId, toStatus, role}
 function openAssignStaffModal(orderId, toStatus, role){
   const candidates = (data.staff||[]).filter(s=>staffEligibleForRole(s, role) && !s.unavailable);
-  if(candidates.length===0){
+  /* A delivery has a way out that a pick does not: the client can send
+     their own person. So the "no staff" refusal only applies where a
+     staff member is genuinely the only answer -- refusing here would
+     have made "the client is collecting it" impossible to record in a
+     shop with no delivery staff, which is exactly the shop most likely
+     to need it. */
+  const selfCarry = role === 'delivery';
+  if(candidates.length===0 && !selfCarry){
     toast(`Add a ${STAFF_ROLE_LABELS[role]} in the Staff tab first`);
     return;
   }
   pendingAssign = {orderId, toStatus, role};
   const q = data.savedQuotes.find(x=>x.id===orderId);
   document.getElementById('assignStaffModalTitle').textContent = `Assign ${STAFF_ROLE_LABELS[role]}`;
-  document.getElementById('assignStaffHint').textContent = `Choose who's moving "${q ? (q.client.name||'this order') : 'this order'}" to ${SQ_STATUSES[toStatus].label}.`;
+  document.getElementById('assignStaffHint').textContent = candidates.length
+    ? `Choose who's moving "${q ? (q.client.name||'this order') : 'this order'}" to ${SQ_STATUSES[toStatus].label}.`
+    : `Nobody on the delivery list is free — but "${q ? (q.client.name||'this order') : 'this order'}" can still go out with the client's own person.`;
   const listWrap = document.getElementById('assignStaffList');
   listWrap.innerHTML = `<div class="assign-staff-list">${candidates.map(s=>`
     <div class="assign-staff-row" data-id="${esc(s.id)}">
       <span class="assign-staff-name">${esc(s.name)}${(role==='delivery' && s.role==='worker') ? ' <span class="assign-staff-tag">worker</span>' : ''}</span>
       ${s.phone ? `<span class="assign-staff-phone">${esc(s.phone)}</span>` : ''}
-    </div>`).join('')}</div>`;
+    </div>`).join('')}${selfCarry ? `
+    <div class="assign-staff-row assign-staff-self" data-id="__client__">
+      <span class="assign-staff-name">The client is sending their own person</span>
+      <span class="assign-staff-phone">no one of ours goes out</span>
+    </div>` : ''}</div>`;
   listWrap.querySelectorAll('.assign-staff-row').forEach(row=>{
     row.addEventListener('click', ()=>{
       if(!pendingAssign) return;

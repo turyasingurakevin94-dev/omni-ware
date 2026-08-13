@@ -76,6 +76,10 @@ const SOURCES = [
   extractFunction(adminHtml, 'setSavedQuoteStatus', 'index.html'),
   extractFunction(adminHtml, 'stepSavedQuoteStatus', 'index.html'),
   extractFunction(adminHtml, 'orderNeedsWorker', 'index.html'),
+  // orderNeedsDelivery asks this whether somebody outside the shop
+  // is carrying it, so the scope has to hold it too.
+  extractDeclaration(adminHtml, 'DELIVERY_SELF_CARRIERS', 'index.html'),
+  extractFunction(adminHtml, 'deliveryIsSelfCarried', 'index.html'),
   extractFunction(adminHtml, 'orderNeedsDelivery', 'index.html'),
   // Trips go back on the list when their worker is deleted.
   extractFunction(read('shared-worker.js'), 'tripIsLive', 'shared-worker.js'),

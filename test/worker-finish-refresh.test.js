@@ -145,8 +145,14 @@ const load = (over) => {
   // alarm for the rest of its life, and an alarm that is always on is one
   // nobody reads.
   const needs = extractFunction(indexHtml, 'orderNeedsDelivery', 'index.html');
-  t.check(/assignedDeliveryId==='__agent__'\) return false/.test(needs),
+  /* Read through the set rather than off the '__agent__' literal: a
+     second self-carrier joined it (the client sending their own person),
+     and what this test cares about is that the sentinel is treated as
+     settled, not which sentinel it is. */
+  t.check(/if\(deliveryIsSelfCarried\(q\)\) return false;/.test(needs),
     'the admin board reads the sentinel as settled rather than missing');
+  t.check(/__agent__:/.test(indexHtml.slice(indexHtml.indexOf('DELIVERY_SELF_CARRIERS'), indexHtml.indexOf('DELIVERY_SELF_CARRIERS') + 220)),
+    'and the agent sentinel this file writes is one of the set it is read through');
   t.check(/if\(!q\.assignedDeliveryId\) return true/.test(needs),
     'while a shop-delivery order with nobody on it is exactly what it asks about');
 }

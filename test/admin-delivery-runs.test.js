@@ -47,6 +47,10 @@ const scope = compileScope([
   extractFunction(src, 'orderIsCollected', 'index.html'),
   extractFunction(src, 'orderDestination', 'index.html'),
   extractFunction(src, 'destinationKey', 'index.html'),
+  // orderNeedsDelivery asks this whether somebody outside the shop
+  // is carrying it, so the scope has to hold it too.
+  extractDeclaration(src, 'DELIVERY_SELF_CARRIERS', 'index.html'),
+  extractFunction(src, 'deliveryIsSelfCarried', 'index.html'),
   extractFunction(src, 'orderNeedsDelivery', 'index.html'),
   extractFunction(src, 'deliveryRuns', 'index.html'),
   extractFunction(src, 'pendingDeliveryOrders', 'index.html'),

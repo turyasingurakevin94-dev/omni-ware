@@ -590,6 +590,13 @@ const trip = (over) => Object.assign({
     extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
     extractFunction(src, 'blStrandedTripsHTML', 'index.html'),
+    // blRunTripsHTML asks these who is carrying the trip and whether it
+    // can be checked in, so the scope has to hold them too.
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'tripCarrierLabel', 'index.html'),
+    extractFunction(src, 'tripStatusLabel', 'index.html'),
+    extractFunction(src, 'tripCanCheckIn', 'index.html'),
   ], {
     data: state, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
@@ -623,6 +630,13 @@ const trip = (over) => Object.assign({
     extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
     extractFunction(src, 'blStrandedTripsHTML', 'index.html'),
+    // blRunTripsHTML asks these who is carrying the trip and whether it
+    // can be checked in, so the scope has to hold them too.
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'tripCarrierLabel', 'index.html'),
+    extractFunction(src, 'tripStatusLabel', 'index.html'),
+    extractFunction(src, 'tripCanCheckIn', 'index.html'),
   ], {
     data: mixed, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
@@ -630,6 +644,201 @@ const trip = (over) => Object.assign({
   }, ['blStrandedTripsHTML']);
   t.check(mixedScope.blStrandedTripsHTML([{ supplierId: 5 }]) === '',
     'so a run whose id is a number covers a trip whose id is the same digits as text');
+}
+
+/* ---------- when the supplier brings it themselves -------------------
+ *
+ * Not every journey is one of ours to make. A supplier who delivers
+ * removes the errand, but the goods are still in motion and the lines
+ * are still spoken for -- so it is the same TRIP, checked in against
+ * what was expected exactly as a collected one is, carrying a sentinel
+ * where a staff id would go instead of growing a parallel lifecycle
+ * beside it.
+ *
+ * WHAT MUST NOT HAPPEN is a worker ever seeing it. tripsForWorker
+ * matches on a real staff id, so a sentinel matches nobody -- and that
+ * is asserted here rather than assumed, because the day it stops being
+ * true is the day somebody is sent to fetch what is already being
+ * brought to the door.
+ */
+{
+  const NAMES = ['tripIsSupplierDelivered', 'tripCarrierLabel', 'tripStatusLabel',
+    'tripCanCheckIn', 'createCollectionTripFromRun'];
+  const state = { collectionTrips: [] };
+  const admin = compileScope([
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractDeclaration(shared, 'TRIP_STATUS_LABELS', 'shared-worker.js'),
+    ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    extractFunction(shared, 'tripsForWorker', 'shared-worker.js'),
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'lineIsOnATrip', 'shared-worker.js'),
+    extractFunction(shared, 'tripsCoveringLine', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+  ], {
+    data: state,
+    staffName: (id) => `Staff ${id}`,
+    quoteClientName: () => 'A client',
+  }, NAMES.concat(['tripsForWorker', 'lineIsOnATrip']));
+
+  const run = { supplierId: 'S1', lines: [
+    { order: { id: 1 }, it: { lineId: 'L1', productId: 'P1', productName: 'Hinges', unit: 'Ctn' }, qty: 3, unitCost: 1000 },
+  ] };
+
+  const ours = admin.createCollectionTripFromRun(run);
+  state.collectionTrips = [];
+  const theirs = admin.createCollectionTripFromRun(run, { supplierDelivers: true });
+
+  /* The two differ in exactly one thing -- who is carrying it. */
+  t.check(ours.assignedWorkerId === null && ours.status === 'open',
+    'a trip of ours starts unassigned and waiting to be sent');
+  t.check(theirs.assignedWorkerId === '__supplier__',
+    'a supplier delivery carries the sentinel where a staff id would go');
+  t.check(theirs.status === 'collecting',
+    'and starts already in motion — there is no "to send" for a journey nobody here is making');
+  t.check(theirs.lines.length === ours.lines.length,
+    'the lines are the same either way, so the goods are checked in against the same expectation');
+
+  t.check(admin.tripIsSupplierDelivered(theirs) && !admin.tripIsSupplierDelivered(ours),
+    'the two are told apart by the carrier, not by the status');
+  t.check(admin.tripCarrierLabel(theirs) === 'Supplier delivering',
+    `and the sentinel is never printed raw (${admin.tripCarrierLabel(theirs)})`);
+  t.check(admin.tripCarrierLabel(ours) === 'nobody yet',
+    'while one of ours with nobody on it still says so');
+  t.check(admin.tripCarrierLabel({ assignedWorkerId: 'W1' }) === 'Staff W1',
+    'and a real worker is still named');
+
+  t.check(admin.tripStatusLabel(theirs) === 'On its way here',
+    `"Out collecting" is false when nobody of ours went out (${admin.tripStatusLabel(theirs)})`);
+  t.check(admin.tripStatusLabel({ ...ours, status: 'collecting' }) === 'Out collecting',
+    'but it is still the right words for a trip somebody is actually on');
+
+  /* Check-in: a worker has to say they are back first, a supplier
+     delivery announces itself by arriving. */
+  t.check(admin.tripCanCheckIn(theirs), 'a supplier delivery can be checked in the moment it lands');
+  t.check(!admin.tripCanCheckIn({ ...ours, status: 'collecting' }),
+    'one of ours cannot, until whoever is out says they are back');
+  t.check(admin.tripCanCheckIn({ ...ours, status: 'collected' }),
+    'which is what "collected" means');
+
+  /* The one that matters.
+
+     tripsForWorker takes ONE argument and reads data.collectionTrips
+     itself. Called with two, it filtered against an array and returned
+     nothing -- so "no worker is ever offered a supplier delivery" passed
+     while proving nothing at all. The second assertion is what caught
+     it: a check that must find something is the one that tells you the
+     first check was looking. */
+  state.collectionTrips = [theirs];
+  t.check(admin.tripsForWorker('W1').length === 0,
+    'no worker is ever offered a supplier delivery');
+  t.check(admin.tripsForWorker('__supplier__').length === 1,
+    'and the sentinel is only ever matched by itself, so the filter is doing real work');
+  state.collectionTrips = [ours];
+  t.check(admin.tripsForWorker('W1').length === 0 && admin.tripsForWorker(null).length === 1,
+    'while an unassigned trip of ours is still nobody’s until it is handed out');
+  t.check(admin.lineIsOnATrip(1, 'L1'),
+    'its lines are spoken for, so nobody is sent for what is already coming');
+
+  /* And the strip itself. Everything above is arithmetic; this is what
+     the admin can actually press, which is where "no worker is offered
+     it" either holds or quietly stops holding. */
+  const stripState = { collectionTrips: [] };
+  const strip = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripShortLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'tripCarrierLabel', 'index.html'),
+    extractFunction(src, 'tripStatusLabel', 'index.html'),
+    extractFunction(src, 'tripCanCheckIn', 'index.html'),
+    extractFunction(src, 'blRunTripsHTML', 'index.html'),
+  ], {
+    data: stripState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin',
+    TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
+  }, ['blRunTripsHTML']);
+
+  stripState.collectionTrips = [theirs];
+  const theirHTML = strip.blRunTripsHTML({ supplierId: 'S1' });
+  t.check(!/data-assign=/.test(theirHTML),
+    'the strip offers no way to hand a supplier delivery to a worker — that would send somebody for what is already coming');
+  t.check(/data-confirm=/.test(theirHTML), 'but it can be checked in the moment it arrives');
+  t.check(/data-void=/.test(theirHTML), 'and called off, like any other trip');
+  t.check(/Supplier delivering/.test(theirHTML) && !/__supplier__/.test(theirHTML),
+    'and it names the carrier in words, never as the sentinel');
+
+  stripState.collectionTrips = [{ ...ours, status: 'open' }];
+  t.check(/data-assign=/.test(strip.blRunTripsHTML({ supplierId: 'S1' })),
+    'while one of ours still offers Assign, so the guard tells the two apart rather than hiding the button for everyone');
+
+  /* The guard is checked in the statuses where Assign WOULD otherwise be
+     drawn. A supplier trip is created as 'collecting', where no trip of
+     any kind offers Assign -- so testing it there proved nothing, and
+     the guard could be deleted with every check still green. It exists
+     to hold whatever status a supplier delivery ends up in, so that is
+     what is asked of it. */
+  ['open', 'assigned'].forEach((status) => {
+    stripState.collectionTrips = [{ ...theirs, status }];
+    t.check(!/data-assign=/.test(strip.blRunTripsHTML({ supplierId: 'S1' })),
+      `a supplier delivery sitting at "${status}" still offers nobody of ours to send`);
+  });
+
+  /* The button that starts it, and what it starts. Source-read, because
+     the run head is built inside the buying list render. */
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(/data-bringing="\$\{esc\(r\.supplierId\)\}"/.test(code),
+    'the run head offers "they’re delivering" beside "send someone"');
+  t.check(/createCollectionTripFromRun\(run, \{supplierDelivers:true\}\)/.test(code),
+    'and pressing it makes a SUPPLIER trip — an ordinary one would put the run straight back on the send-somebody list');
+}
+
+/* ---------- when the client sends their own person ------------------- */
+/*
+ * The same idea at the other end. An order carried by somebody who is
+ * not ours has no assignee AND needs none -- and "no assignee" already
+ * meant "this still needs a person", so without a way to say why, a
+ * client-collected order sat in Pending Delivery counted as outstanding
+ * work until somebody noticed.
+ */
+{
+  const NAMES = ['deliveryIsSelfCarried', 'deliveryAssigneeLabel', 'orderNeedsDelivery'];
+  const state = { staff: [{ id: 'D1', name: 'Musa' }] };
+  const s = compileScope([
+    extractDeclaration(src, 'DELIVERY_SELF_CARRIERS', 'index.html'),
+    ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+  ], { data: state, staffName: (id) => (state.staff.find((x) => x.id === id) || {}).name || '' }, NAMES);
+
+  const at = (assignedDeliveryId) => ({ status: 'pending_delivery', assignedDeliveryId });
+
+  t.check(s.deliveryAssigneeLabel(at('__client__')) === 'Client’s own person',
+    `the sentinel resolves to words, never to '__client__' in front of a customer`);
+  t.check(!s.orderNeedsDelivery(at('__client__')),
+    'and the order stops being counted as needing one of ours');
+  t.check(!s.orderNeedsDelivery(at('__agent__')) && s.deliveryAssigneeLabel(at('__agent__')) === 'Agent pickup',
+    'the agent case that was here first still behaves exactly as it did');
+  t.check(!s.orderNeedsDelivery(at('D1')),
+    'a real staff member still counts as covered');
+  t.check(s.orderNeedsDelivery(at(null)),
+    'nobody at all still needs somebody — which is the whole distinction');
+  t.check(s.orderNeedsDelivery(at('D-DELETED')),
+    'and an assignee who has left the shop needs replacing');
+
+  // A stale sentinel outside Pending Delivery is not a delivery at all.
+  t.check(!s.orderNeedsDelivery({ status: 'preparing', assignedDeliveryId: null }),
+    'an order not yet at the delivery step is not waiting for a driver');
+
+  /* The modal is where this is chosen, and it used to refuse to open at
+     all when no delivery staff existed -- which would have made "the
+     client is collecting it" impossible to record in exactly the shop
+     most likely to need it. */
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  const modal = (/function openAssignStaffModal\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const selfCarry = role === 'delivery';/.test(modal)
+    && /if\(candidates\.length===0 && !selfCarry\)/.test(modal),
+    'the no-staff refusal no longer applies to a delivery, which has a way out');
+  t.check(/data-id="__client__"/.test(modal),
+    'and the option is offered in the same list as the people');
 }
 
 process.exit(t.done() ? 1 : 0);
