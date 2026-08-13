@@ -5641,6 +5641,32 @@
   .sf-list-src,.sf-list-when{color:var(--ink-soft);font-size:11.5px;}
   .sf-list-row .pc-icon-btn{margin-left:auto;}
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
+  /* The price ladder: rungs on the candidate, and the comparison drawn
+     from them at a quantity. */
+  .sf-rung-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
+    color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
+  .sf-rung-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;}
+  .sf-rung-row input{flex:1 1 80px;min-width:0;}
+  .sf-rung-row select{flex:0 1 auto;}
+  .sf-rungs{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+  .sf-rung{font-size:11px;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink-soft);white-space:nowrap;}
+  .sf-rung.muted{font-style:italic;border-style:dashed;}
+  .sf-compare{margin-top:10px;padding:10px 12px;border-radius:9px;background:var(--ow-verdigris-soft);}
+  .sf-compare-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12.5px;
+    color:var(--ink-soft);font-weight:600;margin-bottom:8px;}
+  .sf-compare-head input{width:84px;flex:0 0 auto;}
+  .sf-compare-why{font-size:11px;font-weight:700;color:var(--ink-soft);}
+  .sf-compare-rows{display:flex;flex-direction:column;gap:2px;}
+  .sf-compare-row{display:flex;align-items:center;gap:10px;font-size:12.5px;
+    font-variant-numeric:tabular-nums;padding:3px 0;color:var(--ink-soft);}
+  /* The cheapest at THIS quantity, which is a different supplier at a
+     different quantity -- so the mark is on the row, not on the card. */
+  .sf-compare-row.win{color:var(--ink);font-weight:700;}
+  .sf-compare-who{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sf-compare-each{flex:0 0 auto;}
+  .sf-compare-total{flex:0 0 auto;min-width:88px;text-align:right;}
+  .sf-pick-at{font-size:10.5px;font-weight:600;color:var(--ink-soft);}
   .sf-add-ask{font-size:12px;padding:5px 10px;}
   .sf-modal-facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;--sq-accent:var(--accent);}
   .sf-pick{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);
@@ -8408,12 +8434,24 @@
             <div class="field"><label>Where</label><input type="text" id="sl_c_where" placeholder="e.g. Kikuubo" autocomplete="off"></div>
           </div>
           <div class="form-grid">
-            <div class="field"><label>Price</label><input type="number" id="sl_c_price" min="0" step="any"></div>
-            <div class="field"><label>Per</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
+            <div class="field"><label>Sold by the</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
             <div class="field"><label>Pack of</label><input type="number" id="sl_c_packqty" min="0" step="any"></div>
             <div class="field"><label>Pack called</label><input type="text" id="sl_c_packunit" placeholder="Ctn" autocomplete="off"></div>
-            <div class="field"><label>Least they sell</label><input type="number" id="sl_c_moq" min="0" step="any"></div>
           </div>
+          <!-- The price is a LADDER, not a figure. A supplier who says
+               "15,000 each, 13,500 by the carton, 12,000 from five" has
+               given three answers, and which one applies depends entirely
+               on how much you buy -- so all three are recorded, and the
+               comparison between suppliers is asked at a quantity. -->
+          <label class="sf-rung-label">What they charge — add a rung for each price break</label>
+          <div class="sf-rung-row">
+            <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="From">
+            <select id="sl_c_tier_qty_unit"><option value="unit">pieces</option><option value="pack">packs</option></select>
+            <input type="number" id="sl_c_tier_price" min="0" step="any" placeholder="at">
+            <select id="sl_c_tier_price_unit"><option value="unit">each</option><option value="pack">per pack</option></select>
+            <button type="button" class="btn btn-ghost" id="sl_c_tier_add">Add rung</button>
+          </div>
+          <div id="sl_c_tiers_wrap"></div>
           <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
         </div>
         <div class="field">
@@ -8452,14 +8490,16 @@
         <div id="sg_candidates"></div>
       </div>
       <div class="form-grid">
-        <div class="field"><label>Price</label><input type="number" id="sg_price" min="0" step="any"></div>
-        <div class="field"><label>Per</label><input type="text" id="sg_unit" autocomplete="off"></div>
-        <div class="field"><label>From this many</label><input type="number" id="sg_minqty" min="1" step="any"></div>
-      </div>
-      <div class="form-grid">
+        <div class="field"><label>Sold by the</label><input type="text" id="sg_unit" autocomplete="off"></div>
         <div class="field"><label>Pack of</label><input type="number" id="sg_packqty" min="0" step="any"></div>
         <div class="field"><label>Pack called</label><input type="text" id="sg_packunit" autocomplete="off"></div>
       </div>
+      <!-- The ladder is carried across whole and shown rather than
+           retyped. Retyping a price is how a price gets retyped wrong,
+           and this one was already agreed with the supplier during the
+           research. -->
+      <label class="sf-rung-label">The price ladder this becomes</label>
+      <div id="sg_ladder"></div>
       <p class="preset-hint" id="sg_price_note"></p>
     </div>
     <div class="modal-foot">
@@ -39116,12 +39156,101 @@ function leadFacts(l){
   return {
     importer: cands.some(c=> leadCandidateNames(c) && (c.role==='importer' || c.role==='both')),
     supplier: cands.some(c=> leadCandidateNames(c) && (c.role==='supplier' || c.role==='both' || !c.role)),
-    price:    cands.some(c=> Number(c.quotedPrice) > 0),
+    price:    cands.some(candidateHasPrice),
     packing:  cands.some(c=> Number(c.packQty) > 0 && !!String(c.packUnit||'').trim()),
   };
 }
 const SOURCING_FACT_LABELS = {importer:'Importer', supplier:'Supplier', price:'Price', packing:'Packing'};
 const SOURCING_FACT_ORDER = ['importer','supplier','price','packing'];
+
+/* ---------------- What a candidate actually charges ----------------
+   A supplier quoting "15,000 each, 13,500 by the carton, 12,000 from
+   five cartons" has given three answers, and which one is true depends
+   entirely on how much you buy. So a candidate carries a LADDER in the
+   shape the price registry already uses -- {minQty, price}, minQty always
+   in base units -- and every comparison is asked at a quantity.
+
+   Candidates recorded before the ladder existed carry a single
+   quotedPrice at a moq instead. Read as a one-rung ladder rather than
+   migrated, exactly as tiersFromLegacyRow does for price rows: the old
+   shape stays readable and nothing has to be rewritten in place. */
+function candidateTiers(c){
+  if(c && Array.isArray(c.tiers) && c.tiers.length){
+    return c.tiers.map(t=>({minQty: Number(t.minQty)||0, price: Number(t.price)||0}))
+      .filter(t=> t.price > 0)
+      .sort((a,b)=> a.minQty - b.minQty);
+  }
+  const p = Number(c && c.quotedPrice) || 0;
+  if(p <= 0) return [];
+  return [{minQty: Math.max(1, Number(c && c.moq) || 1), price: p}];
+}
+function candidateHasPrice(c){ return candidateTiers(c).length > 0; }
+/* The highest rung this quantity clears -- the same rule tieredUnitPrice
+   settles a price row on, so a supplier cannot look cheaper here than
+   they will once the item is actually in the registry. Below the lowest
+   rung there is NO price: a supplier who starts at a carton has not
+   quoted you for one piece, and inventing that figure is how a quote
+   goes out under cost. */
+function candidateUnitPriceAt(c, qty){
+  const n = Number(qty) || 0;
+  let best = null, bestMinQty = -1;
+  candidateTiers(c).forEach(t=>{
+    if(n >= t.minQty && t.minQty > bestMinQty){ best = t.price; bestMinQty = t.minQty; }
+  });
+  return best;
+}
+function candidateLowestRung(c){ const t = candidateTiers(c); return t.length ? t[0] : null; }
+/* How much the shop is actually likely to buy: what the people who asked
+   said they wanted. The demand ledger already carries it per ask, so the
+   quantity the comparison is made at is the shop's own, not a guess. */
+function leadDemandQty(l){
+  return ((l && l.requests) || []).reduce((sum, r)=> sum + (Number(r.qty) || 0), 0);
+}
+/* Who to buy from AT A QUANTITY, and what the next-best would have cost.
+   Ranked on what they would actually charge for that many, because the
+   cheapest supplier CHANGES with quantity -- that is what a volume tier
+   is, and ranking on the qty-1 rate is how a bulk order goes to the wrong
+   supplier. Candidates with no rung the quantity clears are not ranked:
+   they have not quoted for this order, which is different from being
+   expensive. */
+function sourcingRankedAt(l, qty){
+  return ((l && l.candidates) || [])
+    .map(c=> ({candidate: c, unitPrice: candidateUnitPriceAt(c, qty)}))
+    .filter(x=> x.unitPrice != null)
+    .sort((a,b)=> a.unitPrice - b.unitPrice);
+}
+function sourcingBestAt(l, qty){
+  const ranked = sourcingRankedAt(l, qty);
+  if(!ranked.length) return null;
+  const best = ranked[0];
+  /* The NEXT ONE DOWN THE RANKING, not the next dearer price. When two
+     suppliers charge the same, choosing one of them saves nothing -- and
+     measuring against the next DIFFERENT price would announce a saving
+     for a choice that has an identical alternative sitting beside it. */
+  const runnerUp = ranked[1] || null;
+  return {
+    candidate: best.candidate,
+    unitPrice: best.unitPrice,
+    total: best.unitPrice * (Number(qty)||0),
+    // What choosing them saves over the next one down, which is the
+    // figure that says whether the difference is worth a second trip.
+    savesPerUnit: runnerUp ? runnerUp.unitPrice - best.unitPrice : 0,
+    runnerUp: runnerUp ? runnerUp.candidate : null,
+    tied: ranked.filter(x=> x.unitPrice === best.unitPrice).length > 1,
+  };
+}
+/* Which candidate the graduation form should arrive pre-picked on: the
+   one who is cheapest AT THE QUANTITY PEOPLE ASKED FOR, not the one
+   cheapest by the piece. Its own function so the form and the research
+   screen cannot end up recommending different suppliers, and so the rule
+   can be tested without a form to drive. */
+function sourcingDefaultGraduateCandidate(l, priced){
+  const list = priced || ((l && l.candidates) || []).filter(candidateHasPrice);
+  if(!list.length) return null;
+  const demand = leadDemandQty(l);
+  const best = sourcingBestAt(l, demand > 0 ? demand : 1);
+  return (best && best.candidate) || list[0];
+}
 
 /* A lead sitting too long where it is, and a lead nobody is researching.
    Both are the "needs chasing" question, and both are read by the card
@@ -39325,8 +39454,14 @@ async function graduateSourcingLead(leadId, form){
   if(!lead) return null;
   const name = String((form && form.name) || lead.name || '').trim();
   if(!name){ toast('The product needs a name'); return null; }
-  const price = Number(form && form.price) || 0;
-  if(price <= 0){ toast('The product needs a price — that is what “Priced” recorded'); return null; }
+  /* The whole ladder the research recorded, carried across rather than
+     retyped -- retyping a price is how a price gets retyped wrong, and
+     this one was already agreed with the supplier. */
+  const tiers = (Array.isArray(form && form.tiers) ? form.tiers : [])
+    .map(t=>({minQty: Math.max(1, Number(t.minQty)||1), price: Number(t.price)||0}))
+    .filter(t=> t.price > 0)
+    .sort((a,b)=> a.minQty - b.minQty);
+  if(!tiers.length){ toast('The product needs a price — that is what “Priced” recorded'); return null; }
 
   /* --- phase one: the entities with no foreign key between them.
 
@@ -39375,9 +39510,10 @@ async function graduateSourcingLead(leadId, form){
     return {productId, priceId: null};
   }
   const packQty = Number(form && form.packQty) || 0;
-  const tiers = [{minQty: Math.max(1, Number(form && form.minQty) || 1), price}];
-  // Derived, never typed -- the same rule Compare Prices, quote
-  // suggestions and agent pricing all read these two flat fields under.
+  /* Derived, never typed -- the same rule Compare Prices, quote
+     suggestions and agent pricing all read these two flat fields under.
+     Carrying the WHOLE ladder is what lets this produce a real bulk rate:
+     a single rung at qty 1 could only ever leave wholesale null. */
   const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
   const priceId = allocRowId('price');
   data.prices.push({
@@ -39638,6 +39774,15 @@ function openSourcingLead(id){
   document.getElementById('sl_open_body').style.display = l ? '' : 'none';
   document.getElementById('sl_drop').style.display = (l && !l.voided) ? '' : 'none';
   document.getElementById('sl_undrop').style.display = (l && l.voided) ? '' : 'none';
+  /* Both drafts start empty on every open. A half-typed ladder left over
+     from the last lead would attach itself to this one's next candidate,
+     and a compare quantity left over would answer this lead's question at
+     the previous lead's order size. */
+  slCandTiers = [];
+  sourcingCompareQty = null;
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
+    .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
+  renderSlCandTiers();
   if(!l){
     ['sl_ask_name','sl_ask_phone','sl_ask_qty'].forEach(k=> document.getElementById(k).value = '');
   } else {
@@ -39673,16 +39818,71 @@ function renderSourcingLeadBody(l){
 
   const cands = l.candidates || [];
   document.getElementById('sl_candidates').innerHTML = cands.length ? `
-    <div class="sf-list">${cands.map(c=>`
-      <div class="sf-list-row">
+    <div class="sf-list">${cands.map(c=>{
+      const rungs = candidateTiers(c);
+      return `
+      <div class="sf-list-row sf-cand">
         <span class="sf-list-main">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
         <span class="st-status-pill">${esc(c.role==='importer'?'Importer':(c.role==='both'?'Importer & supplier':'Supplier'))}</span>
-        ${Number(c.quotedPrice)>0 ? `<span class="sf-list-qty">${fmtUGX(c.quotedPrice)}${c.unit?'/'+esc(c.unit):''}</span>` : '<span class="sf-list-qty muted">no price yet</span>'}
         ${Number(c.packQty)>0 && c.packUnit ? `<span class="sf-list-src">${c.packQty} per ${esc(c.packUnit)}</span>` : ''}
         ${c.where ? `<span class="sf-list-when">${esc(c.where)}</span>` : ''}
         <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
-      </div>`).join('')}</div>`
+        <div class="sf-rungs">${rungs.length
+          ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingRungLabel(t, c))}</span>`).join('')
+          : '<span class="sf-rung muted">no price yet</span>'}</div>
+      </div>`;
+    }).join('')}</div>
+    ${sourcingCompareHTML(l)}`
     : '<p class="preset-hint">Nothing found yet. Add who has it, and what they want for it.</p>';
+}
+/* One rung, said the way the counter says it: by the carton when the
+   threshold is a whole number of cartons, by the piece otherwise --
+   the same rule prTierChipLabel uses on the price form. */
+function sourcingRungLabel(t, c){
+  const packQty = Number(c && c.packQty) || 0;
+  const packUnit = String((c && c.packUnit) || '').trim();
+  const unit = String((c && c.unit) || '').trim() || 'pcs';
+  const qtyLabel = (packQty > 0 && packUnit && t.minQty > 0 && t.minQty % packQty === 0)
+    ? `${t.minQty/packQty} ${packUnit}`
+    : `${t.minQty} ${unit}`;
+  return `${qtyLabel}+: ${fmtUGX(t.price)}/${unit}`;
+}
+/* The answer the research is FOR: at the quantity people have actually
+   asked for, who is cheapest and by how much. Asked at a quantity because
+   the answer changes with it -- ranking on the qty-1 rate is how a carton
+   order goes to the supplier who is only cheapest by the piece. */
+let sourcingCompareQty = null;
+function sourcingCompareHTML(l){
+  const demand = leadDemandQty(l);
+  const qty = sourcingCompareQty != null ? sourcingCompareQty : (demand > 0 ? demand : 1);
+  const ranked = sourcingRankedAt(l, qty);
+  const best = sourcingBestAt(l, qty);
+  const unit = ((l.candidates||[]).find(c=> c.unit) || {}).unit || 'pcs';
+  return `<div class="sf-compare">
+    <div class="sf-compare-head">
+      <label for="sl_cmp_qty">If we buy</label>
+      <input type="number" id="sl_cmp_qty" min="1" step="any" value="${esc(String(qty))}">
+      <span>${esc(unit)}</span>
+      ${demand > 0 ? `<span class="sf-compare-why" title="Added up from what the people who asked said they wanted">${demand} asked for</span>` : ''}
+    </div>
+    ${!ranked.length
+      ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)} yet — every rung on file starts higher than that.</p>`
+      : `<div class="sf-compare-rows">${ranked.map((x,i)=>`
+          <div class="sf-compare-row${i===0?' win':''}">
+            <span class="sf-compare-who">${esc(x.candidate.supplierId ? supplierName(x.candidate.supplierId) : (x.candidate.supplierName||'Somebody'))}</span>
+            <span class="sf-compare-each">${fmtUGX(x.unitPrice)}/${esc(unit)}</span>
+            <span class="sf-compare-total">${fmtUGX(x.unitPrice * qty)}</span>
+          </div>`).join('')}</div>
+        ${/* The tie is checked FIRST. Announcing a saving for a choice
+             that has an identical alternative sitting beside it is worse
+             than saying nothing -- it reads as a reason to prefer one
+             supplier when the price gives none. */
+          best && best.tied
+          ? '<p class="preset-hint">Two of them charge the same at this quantity — pick on where they are, or how soon they can supply.</p>'
+          : (best && best.savesPerUnit > 0
+            ? `<p class="preset-hint">${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))} saves ${fmtUGX(best.savesPerUnit)} a ${esc(unit)} — ${fmtUGX(best.savesPerUnit * qty)} on ${esc(String(qty))}.</p>`
+            : '')}`}
+  </div>`;
 }
 const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', sourcing:'added here'};
 
@@ -39692,39 +39892,73 @@ let graduateCandidateId = null;
 function openSourcingGraduate(leadId){
   const l = sourcingLeadById(leadId);
   if(!l) return;
-  const priced = (l.candidates||[]).filter(c=> Number(c.quotedPrice) > 0);
+  const priced = (l.candidates||[]).filter(candidateHasPrice);
   if(!priced.length){ toast('Add a price first — there is nothing to buy it at.'); openSourcingLead(leadId); return; }
   graduatingLeadId = leadId;
-  graduateCandidateId = priced[0].id;
+  /* Pre-picked on what they would charge for the quantity people have
+     actually asked for, not on their by-the-piece rate -- the same
+     question the research screen answers, so the two cannot recommend
+     different suppliers. */
+  const demand = leadDemandQty(l);
+  graduateCandidateId = sourcingDefaultGraduateCandidate(l, priced).id;
   document.getElementById('sg_name').value = l.name || '';
   document.getElementById('sg_category').value = '';
   document.getElementById('sg_subcategory').value = '';
   document.getElementById('sg_category_list').innerHTML =
     (data.presetCategories||[]).map(c=> `<option value="${esc(c.name)}"></option>`).join('');
-  renderGraduateCandidates(priced);
+  renderGraduateCandidates(priced, demand);
   fillGraduateFromCandidate(priced.find(c=> c.id===graduateCandidateId));
   openModal('sourcingGraduateModal');
 }
-function renderGraduateCandidates(priced){
-  document.getElementById('sg_candidates').innerHTML = priced.map(c=>`
+function renderGraduateCandidates(priced, demand){
+  const qty = demand > 0 ? demand : 1;
+  document.getElementById('sg_candidates').innerHTML = priced.map(c=>{
+    const at = candidateUnitPriceAt(c, qty);
+    const low = candidateLowestRung(c);
+    return `
     <label class="sf-pick">
       <input type="radio" name="sg_cand" value="${esc(c.id)}"${c.id===graduateCandidateId?' checked':''}>
       <span class="sf-pick-name">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
-      <span class="sf-pick-price">${fmtUGX(c.quotedPrice)}${c.unit?'/'+esc(c.unit):''}</span>
+      <span class="sf-pick-price">${at != null
+        ? `${fmtUGX(at)}${c.unit?'/'+esc(c.unit):''}<span class="sf-pick-at"> at ${qty}</span>`
+        : `<span class="sf-pick-at">starts at ${low ? low.minQty : '?'}${c.unit?' '+esc(c.unit):''}</span>`}</span>
       ${c.supplierId ? '' : '<span class="sf-pick-new">new supplier</span>'}
-    </label>`).join('');
+    </label>`;
+  }).join('');
 }
 function fillGraduateFromCandidate(c){
   if(!c) return;
-  document.getElementById('sg_price').value = Number(c.quotedPrice) || '';
   document.getElementById('sg_unit').value = c.unit || '';
-  document.getElementById('sg_minqty').value = Math.max(1, Number(c.moq) || 1);
   document.getElementById('sg_packqty').value = Number(c.packQty) || '';
   document.getElementById('sg_packunit').value = c.packUnit || '';
-  const packQty = Number(c.packQty) || 0;
-  document.getElementById('sg_price_note').textContent = packQty > 0
-    ? `This price becomes the retail rate. The bulk rate is left blank until somebody records a price at ${packQty}+ — a figure nobody has quoted is not one to invent.`
-    : 'This price becomes the retail rate. Add a pack size later if they also sell it by the carton.';
+  renderGraduateLadder();
+}
+/* What the ladder will actually become once it is a price row, worked out
+   with the registry's own deriveWholesaleRetail rather than described --
+   so what this screen promises and what the Price Registry then shows are
+   the same two numbers. Re-run whenever the pack size changes, because
+   the pack size is what decides which rungs count as bulk. */
+function renderGraduateLadder(){
+  const l = sourcingLeadById(graduatingLeadId);
+  const c = l && (l.candidates||[]).find(x=> x.id===graduateCandidateId);
+  const wrap = document.getElementById('sg_ladder');
+  const note = document.getElementById('sg_price_note');
+  if(!c){ wrap.innerHTML = ''; note.textContent = ''; return; }
+  const packQty = Number(document.getElementById('sg_packqty').value) || 0;
+  const packUnit = document.getElementById('sg_packunit').value.trim();
+  const unit = document.getElementById('sg_unit').value.trim() || 'pcs';
+  const tiers = candidateTiers(c);
+  wrap.innerHTML = `<div class="preset-chip-flow">${tiers.map(t=>
+    `<span class="preset-chip">${esc(sourcingRungLabel(t, {unit, packQty, packUnit}))}</span>`).join('')}</div>`;
+  const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
+  const parts = [];
+  parts.push(retail != null ? `Retail rate ${fmtUGX(retail)}/${unit}` : 'No retail rate — every rung needs a full pack');
+  parts.push(wholesale != null
+    ? `bulk rate ${fmtUGX(wholesale)}/${unit} from ${packQty}+`
+    : (packQty > 0
+      ? `no bulk rate — nobody has quoted a price at ${packQty}+, and a figure nobody has quoted is not one to invent`
+      : 'no bulk rate — set a pack size and record what a full pack costs'));
+  note.textContent = parts.join(' · ') + '.';
 }
 
 /* ---------------- Wiring ---------------- */
@@ -39785,6 +40019,57 @@ document.getElementById('sl_add_ask').addEventListener('click', ()=>{
   renderSourcingLeadBody(l);
   renderSourcing();
 });
+/* The ladder being typed for the candidate not yet added. Its own draft,
+   the way prTiers is the price form's -- a rung is committed by a button
+   and the candidate by another, and the two must not race. */
+let slCandTiers = [];
+function renderSlCandTiers(){
+  const unit = document.getElementById('sl_c_unit').value.trim() || 'pcs';
+  const packQty = Number(document.getElementById('sl_c_packqty').value) || 0;
+  const packUnit = document.getElementById('sl_c_packunit').value.trim();
+  const wrap = document.getElementById('sl_c_tiers_wrap');
+  wrap.innerHTML = slCandTiers.length === 0
+    ? '<p class="preset-hint">No rungs yet — add at least one, or this is somebody who has it but has not priced it.</p>'
+    : `<div class="preset-chip-flow">${slCandTiers.map((t,i)=>
+        `<span class="preset-chip">${esc(sourcingRungLabel(t, {unit, packQty, packUnit}))}<button type="button" class="pr-tier-remove" data-rung="${i}" title="Remove rung"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
+  wrap.querySelectorAll('[data-rung]').forEach(b=> b.addEventListener('click', ()=>{
+    slCandTiers.splice(Number(b.dataset.rung), 1);
+    renderSlCandTiers();
+  }));
+}
+document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
+  const packQty = Number(document.getElementById('sl_c_packqty').value) || 0;
+  // The SAME converter the price form commits its tiers through, so "2
+  // cartons at 300,000 a carton" means the identical pair of numbers on
+  // both screens rather than two nearly-right ones.
+  const entry = pendingTierEntry(
+    document.getElementById('sl_c_tier_qty').value,
+    document.getElementById('sl_c_tier_price').value,
+    document.getElementById('sl_c_tier_qty_unit').value,
+    document.getElementById('sl_c_tier_price_unit').value,
+    packQty);
+  if(!entry){ toast('Type the quantity and the price for this rung'); return; }
+  if(entry.missing){ toast(`That rung is missing its ${entry.missing}`); return; }
+  if(document.getElementById('sl_c_tier_qty_unit').value === 'pack' && packQty <= 0){
+    toast('Say how many are in a pack first, or enter the quantity in pieces'); return;
+  }
+  if(slCandTiers.some(t=> t.minQty === entry.tier.minQty)){ toast('There is already a rung at that quantity'); return; }
+  slCandTiers.push(entry.tier);
+  slCandTiers.sort((a,b)=> a.minQty - b.minQty);
+  document.getElementById('sl_c_tier_qty').value = '';
+  document.getElementById('sl_c_tier_price').value = '';
+  renderSlCandTiers();
+  /* Flagged while the two figures are still on screen and easy to swap
+     back -- not blocked, because a supplier genuinely can price that way.
+     The same warning the price form gives, for the same reason. */
+  const bad = invertedTierPairs(slCandTiers);
+  if(bad.length){
+    const [lo, hi] = bad[bad.length-1];
+    toast(`Check this — ${hi.minQty}+ costs ${fmtUGX(hi.price)} each but ${lo.minQty}+ only costs ${fmtUGX(lo.price)}, so buying more costs more`, 6000);
+  }
+});
+['sl_c_unit','sl_c_packqty','sl_c_packunit'].forEach(k=>
+  document.getElementById(k).addEventListener('input', renderSlCandTiers));
 document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   const l = sourcingLeadById(editingSourcingLeadId);
   if(!l) return;
@@ -39799,18 +40084,31 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     supplierName: existing ? existing.name : who,
     phone: document.getElementById('sl_c_phone').value.trim(),
     where: document.getElementById('sl_c_where').value.trim(),
-    quotedPrice: Number(document.getElementById('sl_c_price').value) || 0,
+    // The whole ladder, sorted. The lowest rung IS the least they will
+    // sell at a price, so there is no separate MOQ to fall out of step
+    // with it.
+    tiers: slCandTiers.map(t=>({...t})),
     unit: document.getElementById('sl_c_unit').value.trim(),
     packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
     packUnit: document.getElementById('sl_c_packunit').value.trim(),
-    moq: Number(document.getElementById('sl_c_moq').value) || 0,
     leadTimeDays: null, note: '', at: new Date().toISOString(),
   });
-  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_price','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_moq']
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
     .forEach(k=> document.getElementById(k).value = '');
+  slCandTiers = [];
+  renderSlCandTiers();
   saveData();
   renderSourcingLeadBody(l);
   renderSourcing();
+});
+document.getElementById('sl_candidates').addEventListener('input', (e)=>{
+  if(e.target.id !== 'sl_cmp_qty') return;
+  const n = Number(e.target.value);
+  sourcingCompareQty = n > 0 ? n : null;
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(l) renderSourcingLeadBody(l);
+  const el = document.getElementById('sl_cmp_qty');
+  if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 });
 document.getElementById('sl_candidates').addEventListener('click', (e)=>{
   const del = e.target.closest('[data-cand-del]');
@@ -39846,6 +40144,11 @@ document.getElementById('sg_candidates').addEventListener('change', (e)=>{
   const l = sourcingLeadById(graduatingLeadId);
   if(l) fillGraduateFromCandidate((l.candidates||[]).find(c=> c.id===graduateCandidateId));
 });
+// The pack size decides which rungs count as bulk, so the two derived
+// rates have to be re-worked the moment it changes -- not left showing
+// what they were before.
+['sg_packqty','sg_packunit','sg_unit'].forEach(k=>
+  document.getElementById(k).addEventListener('input', renderGraduateLadder));
 document.getElementById('sg_confirm').addEventListener('click', async ()=>{
   const l = sourcingLeadById(graduatingLeadId);
   if(!l) return;
@@ -39861,8 +40164,7 @@ document.getElementById('sg_confirm').addEventListener('click', async ()=>{
       supplierName: c.supplierName || '',
       supplierPhone: c.phone || '',
       supplierWhere: c.where || '',
-      price: document.getElementById('sg_price').value,
-      minQty: document.getElementById('sg_minqty').value,
+      tiers: candidateTiers(c),
       unit: document.getElementById('sg_unit').value.trim(),
       packQty: document.getElementById('sg_packqty').value,
       packUnit: document.getElementById('sg_packunit').value.trim(),

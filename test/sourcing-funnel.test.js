@@ -120,6 +120,14 @@ const sources = [
   extractFunction(src, 'leadDistinctAskers', 'index.html'),
   extractFunction(src, 'leadAskCount', 'index.html'),
   extractFunction(src, 'leadCandidateNames', 'index.html'),
+  extractFunction(src, 'candidateTiers', 'index.html'),
+  extractFunction(src, 'candidateHasPrice', 'index.html'),
+  extractFunction(src, 'candidateUnitPriceAt', 'index.html'),
+  extractFunction(src, 'candidateLowestRung', 'index.html'),
+  extractFunction(src, 'leadDemandQty', 'index.html'),
+  extractFunction(src, 'sourcingRankedAt', 'index.html'),
+  extractFunction(src, 'sourcingBestAt', 'index.html'),
+  extractFunction(src, 'sourcingDefaultGraduateCandidate', 'index.html'),
   extractFunction(src, 'leadFacts', 'index.html'),
   extractFunction(src, 'leadIsStalled', 'index.html'),
   extractFunction(src, 'leadNeedsSomebody', 'index.html'),
@@ -141,6 +149,8 @@ const S = compileScope(sources, env, [
   'stepSourcingStatus', 'dropSourcingLead', 'undropSourcingLead',
   'graduateSourcingLead', 'sourcingBoardLeads', 'renderSourcingBadge',
   'deriveWholesaleRetail', 'sourcingLeadById',
+  'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
+  'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
 ]);
 
 const lead = (over) => Object.assign({
@@ -155,9 +165,10 @@ const ask = (over) => Object.assign({
 }, over || {});
 const cand = (over) => Object.assign({
   id: 'C1', role: 'supplier', supplierId: null, supplierName: 'Shafik', phone: '',
-  where: '', quotedPrice: 0, unit: 'Pc', packQty: 0, packUnit: '', moq: 0,
+  where: '', tiers: [], unit: 'Pc', packQty: 0, packUnit: '',
   leadTimeDays: null, note: '', at: '2026-08-01T00:00:00.000Z',
 }, over || {});
+const rungs = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }));
 
 // graduateSourcingLead is async (it awaits the first save before it will
 // push the price row), and this file is CommonJS -- so the whole run sits
@@ -249,13 +260,117 @@ async function main() {
   eq(S.leadFacts(lead({ candidates: [cand({ supplierName: '   ', supplierId: null })] })).supplier, false,
     'but a nameless candidate names nobody');
 
-  eq(S.leadFacts(lead({ candidates: [cand({ quotedPrice: 0 })] })).price, false,
-    'a zero is not a price');
-  eq(S.leadFacts(lead({ candidates: [cand({ quotedPrice: 12000 })] })).price, true, 'a figure is');
+  eq(S.leadFacts(lead({ candidates: [cand({ tiers: [] })] })).price, false,
+    'no ladder is no price');
+  eq(S.leadFacts(lead({ candidates: [cand({ tiers: rungs([1, 0]) })] })).price, false,
+    'and a rung of zero is not a price — an empty ladder cannot tell that rule from its absence');
+  eq(S.candidateHasPrice(cand({ tiers: rungs([12, 0], [1, 0]) })), false,
+    'however many rungs of nothing there are');
+  eq(S.leadFacts(lead({ candidates: [cand({ tiers: rungs([1,12000]) })] })).price, true, 'a figure is');
   eq(S.leadFacts(lead({ candidates: [cand({ packQty: 12, packUnit: '' })] })).packing, false,
     'a pack size with nothing to call it is not packing');
   eq(S.leadFacts(lead({ candidates: [cand({ packQty: 12, packUnit: 'Ctn' })] })).packing, true,
     'twelve to a carton is');
+}
+
+/* ---------- 3b. volume pricing: the answer depends on the quantity --- */
+{
+  resetAll();
+  // Legacy candidates read as a one-rung ladder rather than being rewritten.
+  eq(JSON.stringify(S.candidateTiers({ quotedPrice: 12000, moq: 6 })),
+    JSON.stringify([{ minQty: 6, price: 12000 }]),
+    'a candidate recorded before ladders existed still reads as a ladder');
+  eq(S.candidateTiers({ quotedPrice: 0 }).length, 0, 'and one with no figure has no rungs');
+  eq(S.candidateTiers({ tiers: rungs([12, 13500], [1, 15000]) })[0].minQty, 1,
+    'rungs come back sorted, whatever order they were typed in');
+  eq(S.candidateTiers({ tiers: rungs([1, 0], [12, 13500]) }).length, 1,
+    'a rung with no price is not a rung');
+
+  const ladder = cand({ tiers: rungs([1, 15000], [12, 13500], [60, 12000]) });
+  eq(S.candidateUnitPriceAt(ladder, 1), 15000, 'one piece pays the by-the-piece rate');
+  eq(S.candidateUnitPriceAt(ladder, 11), 15000, 'and so does eleven — a break is a break');
+  eq(S.candidateUnitPriceAt(ladder, 12), 13500, 'twelve clears the carton rung');
+  eq(S.candidateUnitPriceAt(ladder, 59), 13500, 'fifty-nine still sits on it');
+  eq(S.candidateUnitPriceAt(ladder, 60), 12000, 'sixty clears the next');
+  eq(S.candidateUnitPriceAt(ladder, 5000), 12000, 'and nothing above the top rung goes cheaper');
+
+  /* Below the lowest rung there is NO price. A supplier who starts at a
+     carton has not quoted for one piece, and inventing that figure is
+     how a quote goes out under cost. */
+  eq(S.candidateUnitPriceAt(cand({ tiers: rungs([12, 13500]) }), 5), null,
+    'a supplier who starts at a carton has not quoted for five pieces');
+
+  /* The whole point: who is cheapest CHANGES with the quantity. Meggo is
+     dearer by the piece and cheaper by the carton, so ranking on the
+     qty-1 rate would send a carton order to the wrong shop. */
+  const l = lead({ candidates: [
+    cand({ id: 'A', supplierName: 'Shafik', tiers: rungs([1, 15000], [12, 14800]) }),
+    cand({ id: 'B', supplierName: 'Meggo', tiers: rungs([1, 16000], [12, 12000]) }),
+  ] });
+  eq(S.sourcingBestAt(l, 1).candidate.supplierName, 'Shafik', 'by the piece, Shafik wins');
+  eq(S.sourcingBestAt(l, 12).candidate.supplierName, 'Meggo',
+    'by the carton it is Meggo — which a single quoted figure per supplier could never have shown');
+  eq(S.sourcingBestAt(l, 12).savesPerUnit, 2800, 'and the gap is the figure that says whether it is worth the trip');
+  eq(S.sourcingBestAt(l, 12).total, 144000, 'costed at the quantity actually being bought');
+
+  eq(S.sourcingRankedAt(l, 12).length, 2, 'both are ranked when both have quoted');
+  const partial = lead({ candidates: [
+    cand({ id: 'A', supplierName: 'Shafik', tiers: rungs([1, 15000]) }),
+    cand({ id: 'B', supplierName: 'Bulk only', tiers: rungs([100, 9000]) }),
+  ] });
+  eq(S.sourcingRankedAt(partial, 10).length, 1,
+    'somebody who only sells by the hundred is left out of a ten-piece comparison — not quoted is not the same as expensive');
+  eq(S.sourcingRankedAt(partial, 100)[0].candidate.supplierName, 'Bulk only',
+    'and wins it at a hundred');
+  eq(S.sourcingBestAt(lead({ candidates: [] }), 10), null, 'nobody quoted, no answer');
+
+  /* A tie with a THIRD, dearer supplier behind it. Two cheapest at the
+     same price and one above them: choosing either of the two saves
+     nothing, and measuring the saving against the next DIFFERENT price
+     would announce one — a reason to prefer a supplier when the price
+     gives none. Two candidates alone cannot tell the two rules apart. */
+  const tie = lead({ candidates: [
+    cand({ id: 'A', supplierName: 'One', tiers: rungs([1, 15000]) }),
+    cand({ id: 'B', supplierName: 'Two', tiers: rungs([1, 15000]) }),
+    cand({ id: 'C', supplierName: 'Three', tiers: rungs([1, 16000]) }),
+  ] });
+  t.check(S.sourcingBestAt(tie, 1).tied, 'a genuine tie is reported as one rather than settled by list order');
+  eq(S.sourcingBestAt(tie, 1).savesPerUnit, 0,
+    'and saves NOTHING, because an identical alternative is sitting beside it');
+  eq(S.sourcingBestAt(tie, 1).runnerUp.supplierName, 'Two', 'the runner-up is the next one down the ranking');
+  // With no tie, the saving is real and is the gap to the next one down.
+  const clear = lead({ candidates: [
+    cand({ id: 'A', supplierName: 'One', tiers: rungs([1, 15000]) }),
+    cand({ id: 'B', supplierName: 'Two', tiers: rungs([1, 16000]) }),
+    cand({ id: 'C', supplierName: 'Three', tiers: rungs([1, 20000]) }),
+  ] });
+  eq(S.sourcingBestAt(clear, 1).savesPerUnit, 1000,
+    'a real gap is measured against the next one down, not the dearest on the list');
+  t.check(!S.sourcingBestAt(clear, 1).tied, 'and nothing is called a tie that is not one');
+
+  /* The graduation form arrives pre-picked on the same answer this screen
+     gives, or the two recommend different suppliers. Pre-picking on the
+     by-the-piece rate is how a carton order goes to the wrong shop. */
+  const volume = lead({
+    requests: [ask({ qty: 12 })],
+    candidates: [
+      cand({ id: 'A', supplierName: 'Shafik', tiers: rungs([1, 15000], [12, 14800]) }),
+      cand({ id: 'B', supplierName: 'Meggo', tiers: rungs([1, 16000], [12, 12000]) }),
+    ] });
+  eq(S.sourcingDefaultGraduateCandidate(volume).supplierName, 'Meggo',
+    'graduation pre-picks whoever is cheapest at the quantity asked for, not by the piece');
+  eq(S.sourcingDefaultGraduateCandidate(volume).id, S.sourcingBestAt(volume, 12).candidate.id,
+    'which is the same supplier the research screen names — one rule, both screens');
+  const noDemand = lead({ candidates: volume.candidates });
+  eq(S.sourcingDefaultGraduateCandidate(noDemand).supplierName, 'Shafik',
+    'with nobody having named a quantity it falls back to one, and Shafik is cheapest there');
+  eq(S.sourcingDefaultGraduateCandidate(lead()), null, 'and with nobody priced there is nothing to pick');
+
+  /* The quantity the comparison runs at is the shop's own: the demand
+     ledger already records what each person asked for. */
+  eq(S.leadDemandQty(lead({ requests: [ask({ qty: 20 }), ask({ qty: 5 }), ask({ qty: null })] })), 25,
+    'demand is what the people who asked said they wanted, ignoring the ones who did not say');
+  eq(S.leadDemandQty(lead()), 0, 'and nobody asking for a number is no number');
 }
 
 /* ---------- 4. needs chasing: one rule, read three ways -------------- */
@@ -297,7 +412,7 @@ async function main() {
 
   eq(S.setSourcingStatus('SRC-1', 'priced'), false, 'with no figure on file it cannot be priced');
   eq(data.sourcingLeads[0].status, 'sourced', 'and again it does not move');
-  data.sourcingLeads[0].candidates.push(cand({ id: 'C2', quotedPrice: 15000 }));
+  data.sourcingLeads[0].candidates.push(cand({ id: 'C2', tiers: rungs([1,15000]) }));
   eq(S.setSourcingStatus('SRC-1', 'priced'), true, 'a quoted figure opens it');
 
   /* `listed` is stamped by graduation and NOWHERE else. A lead sitting in
@@ -369,10 +484,11 @@ async function main() {
 {
   // --- the happy path
   resetAll([lead({ status: 'priced', name: 'Sofa Legs Chrome 4"',
-    candidates: [cand({ quotedPrice: 15000, unit: 'Pc', packQty: 12, packUnit: 'Ctn', moq: 1 })] })]);
+    candidates: [cand({ tiers: rungs([1,15000],[12,13500],[60,12000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' })] })]);
   const out = await S.graduateSourcingLead('SRC-1', {
     name: 'Sofa Legs Chrome 4"', category: 'Furniture Fittings', subcategory: 'Legs',
-    supplierId: null, supplierName: 'Shafik', price: 15000, minQty: 1,
+    supplierId: null, supplierName: 'Shafik',
+    tiers: S.candidateTiers(data.sourcingLeads[0].candidates[0]),
     unit: 'Pc', packQty: 12, packUnit: 'Ctn',
   });
   t.check(!!out && !!out.productId, 'graduation returns the product it created');
@@ -393,18 +509,42 @@ async function main() {
   const derived = S.deriveWholesaleRetail(pr.tiers, pr.packQty);
   eq(pr.retail, derived.retail, 'retail is DERIVED from the ladder, exactly as the price form does it');
   eq(pr.wholesale, derived.wholesale, 'and so is wholesale');
-  eq(pr.wholesale, null,
-    'which leaves the bulk rate blank — nobody quoted a carton price, and inventing one is not this feature\'s business');
+  /* The whole ladder crosses over, which is what finally gives the
+     product a REAL bulk rate. A single rung at qty 1 -- what graduation
+     used to write -- could only ever leave wholesale null, so every item
+     that came through this door arrived with no carton price at all. */
+  eq(pr.tiers.length, 3, 'all three rungs cross over, not just the one somebody retyped');
+  eq(pr.retail, 15000, 'the by-the-piece rate becomes retail');
+  eq(pr.wholesale, 13500, 'and the carton rate becomes a real bulk rate');
+  eq(JSON.stringify(pr.tiers), JSON.stringify(rungs([1,15000],[12,13500],[60,12000])),
+    'in the registry\'s own {minQty, price} shape, sorted');
+
+  // A supplier who only sells by the carton has no retail rate, and one
+  // is not invented for them.
+  resetAll([lead({ status: 'priced',
+    candidates: [cand({ tiers: rungs([12,13500]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' })] })]);
+  await S.graduateSourcingLead('SRC-1', { name: 'Bulk only', supplierName: 'Meggo',
+    tiers: rungs([12,13500]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' });
+  eq(data.prices[0].retail, null, 'nobody quoted a single piece, so there is no retail rate to claim');
+  eq(data.prices[0].wholesale, 13500, 'only the bulk one they actually gave');
+
+  // And graduation still refuses a ladder with nothing on it.
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,900]) })] })]);
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: [] }), null,
+    'an empty ladder is no price at all');
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: rungs([1,0]) }), null,
+    'and a rung of zero is not a price either');
+  eq(data.products.length, 0, 'neither of which created anything');
 
   /* --- ids. Not merely "unused right now": this shop issues them
      monotonically and never hands a retired one back, because a purchase
      invoice line or a stock log entry still pointing at a deleted P001
      would silently attach itself to whatever took the id next. The
      lowest-FREE-slot rule would do exactly that. */
-  resetAll([lead({ status: 'priced', candidates: [cand({ quotedPrice: 900 })] })]);
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,900]) })] })]);
   data.products = [{ id: 'P007', name: 'Something else' }];   // P001..P006 retired
   data.suppliers = [{ id: 'S004', name: 'Someone else' }];
-  await S.graduateSourcingLead('SRC-1', { name: 'New thing', supplierName: 'Shafik', price: 900, minQty: 1 });
+  await S.graduateSourcingLead('SRC-1', { name: 'New thing', supplierName: 'Shafik', tiers: rungs([1,900]) });
   eq(data.products.length, 2, 'the existing product is untouched');
   eq(data.products[1].id, 'P008',
     'the new product takes the NEXT id, not the lowest free one — retired ids stay retired');
@@ -412,10 +552,10 @@ async function main() {
   eq(data.idCounters.product, 8, 'with the counter moved on, so the next form does not propose it again');
 
   // --- the gate: phase one did not reach the server
-  resetAll([lead({ status: 'priced', candidates: [cand({ quotedPrice: 15000 })] })]);
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
   saveLands = false;
   const off = await S.graduateSourcingLead('SRC-1', {
-    name: 'Sofa Legs', supplierName: 'Shafik', price: 15000, minQty: 1, unit: 'Pc',
+    name: 'Sofa Legs', supplierName: 'Shafik', tiers: rungs([1,15000]), unit: 'Pc',
   });
   eq(calls.saves, 1, 'the second save never happens');
   eq(data.prices.length, 0,
@@ -427,12 +567,12 @@ async function main() {
     'the product WAS created, so the lead is honest about being listed');
 
   // --- graduation refuses what it cannot make sense of
-  resetAll([lead({ status: 'priced', candidates: [cand({ quotedPrice: 15000 })] })]);
-  eq(await S.graduateSourcingLead('SRC-1', { name: '  ', supplierName: 'S', price: 100 }), null,
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
+  eq(await S.graduateSourcingLead('SRC-1', { name: '  ', supplierName: 'S', tiers: rungs([1,100]) }), null,
     'a product with no name is refused');
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', price: 0 }), null,
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: [] }), null,
     'and one with no price — "Priced" recorded a figure, so there is one to carry');
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: '  ', price: 100 }), null,
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: '  ', tiers: rungs([1,100]) }), null,
     'and one with nobody to buy it from');
   eq(data.products.length, 0, 'none of which created anything');
 }
@@ -517,6 +657,18 @@ async function main() {
   // Every door goes through the one function, or the dedupe rule drifts.
   const doors = (code.match(/captureSourcingLeadAndSave\(/g) || []).length;
   t.check(doors >= 3, `all three doors call the one capture function (${doors} call sites)`);
+
+  /* A rung typed on the research screen and a tier typed on the price
+     form have to convert identically. "2 cartons at 300,000 a carton"
+     means 24 pieces at 12,500 each on BOTH screens or neither -- and a
+     carton price stored as a unit price is exactly the 5x inflation this
+     shop has already been bitten by once. Read from the handler, because
+     it is DOM code the compiled scope cannot drive. */
+  const rungHandler = (/getElementById\('sl_c_tier_add'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  t.check(/pendingTierEntry\(/.test(rungHandler),
+    'the candidate ladder commits through the price form\'s own converter, not a second copy of the rule');
+  t.check(/invertedTierPairs\(slCandTiers\)/.test(rungHandler),
+    'and warns on a rung where buying MORE costs more, while the two figures are still on screen');
 }
 
 /* ---------- 10. registered with the sync engine ---------------------- */

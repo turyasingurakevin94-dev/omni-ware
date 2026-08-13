@@ -33,12 +33,27 @@
 --     stored count cannot tell the two apart afterwards.
 --
 --   candidates -- what the research turned up, one entry per lead found:
---     {id, role, supplierId, supplierName, phone, where, quotedPrice,
---      unit, packQty, packUnit, moq, leadTimeDays, note, at}
+--     {id, role, supplierId, supplierName, phone, where, unit, packQty,
+--      packUnit, tiers, leadTimeDays, note, at}
 --     role is 'importer' | 'supplier' | 'both'. The distinction is real
 --     here: the importer brings it into the country and sets the floor
 --     price, the supplier in Kikuubo is who you actually buy from, and
 --     knowing only one of them is a half-finished job.
+--
+--     tiers is a price LADDER in the shape the prices table already uses
+--     -- [{minQty, price}], minQty always in the base unit -- because a
+--     supplier saying "15,000 each, 13,500 by the carton, 12,000 from
+--     five" has given three answers and which one is true depends
+--     entirely on how much you buy. One figure per supplier would decide
+--     who to buy from on the by-the-piece rate and send a carton order to
+--     the wrong shop. The ladder is carried into the price row whole at
+--     graduation, which is also what lets the product get a real bulk
+--     rate rather than a blank one.
+--
+--     Candidates recorded before the ladder existed carry a single
+--     quotedPrice at a moq. Those are READ as a one-rung ladder rather
+--     than rewritten, the same way tiersFromLegacyRow handles pre-tier
+--     price rows.
 create table sourcing_leads (
   id text not null,
   shop_id uuid not null references shops(id) on delete cascade,
