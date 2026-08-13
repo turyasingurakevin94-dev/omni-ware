@@ -142,6 +142,8 @@ const sources = [
   extractFunction(src, 'sourcingDefaultGraduateCandidate', 'index.html'),
   extractDeclaration(src, 'SOURCING_STEP_GUIDE', 'index.html'),
   extractDeclaration(src, 'SOURCING_DROPPED_GUIDE', 'index.html'),
+  'let sourcingViewStep = null;',
+  extractFunction(src, 'sourcingViewedStep', 'index.html'),
   extractFunction(src, 'sourcingStepGuide', 'index.html'),
   extractFunction(src, 'sourcingWantsPriceForm', 'index.html'),
   extractFunction(src, 'sourcingWantsCompare', 'index.html'),
@@ -170,7 +172,7 @@ const S = compileScope(sources, env, [
   'deriveWholesaleRetail', 'sourcingLeadById',
   'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
-  'sourcingStepGuide', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
+  'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
   'applyCandidateFields',
 ]);
 
@@ -398,36 +400,36 @@ async function main() {
 {
   resetAll();
   const guide = (status, over) => S.sourcingStepGuide(lead(Object.assign({ status }, over || {})));
-  const blocks = (status, over) => { const g = guide(status, over); return { show: g.show, fold: g.fold }; };
 
-  /* Nothing has been researched at Asked For, so a research panel is
-     four empty boxes asking to be ignored -- it is not drawn at all,
-     which is different from being folded. */
-  t.check(!blocks('asked').show.includes('research') && !blocks('asked').fold.includes('research'),
-    'Asked For does not draw a research panel for research nobody has done');
-  t.check(blocks('asked').show.includes('demand') && blocks('asked').show.includes('assign'),
-    'it asks the two things that step is actually for: who asked, and who will look');
-  t.check(!blocks('asked').show.includes('facts') && !blocks('asked').fold.includes('facts'),
-    'and it does not show four empty ticks as a progress bar');
+  /* Each step shows its OWN task and nothing else. Keeping the earlier
+     steps' answers on screen -- dimmed or otherwise -- is a screen the
+     steps were not needed for; what an earlier step recorded is reached
+     by going BACK to it, which the rail does. */
+  eq(guide('asked').show.join(), 'identity,demand', 'Asked For asks what it is and who wants it');
+  eq(guide('looking').show.join(), 'assign,research', 'Looking asks who is on it and who has it');
+  eq(guide('sourced').show.join(), 'research', 'Source Found asks only for their prices');
+  eq(guide('priced').show.join(), 'compare', 'Priced asks only who to buy from');
+  eq(guide('listed').show.join(), 'outcome', 'and Listed says only what it became');
 
-  t.check(blocks('looking').show.includes('research'), 'Looking is about finding who has it');
-  t.check(blocks('looking').fold.includes('demand'),
-    'and folds the ask list away — reachable, not competing for attention');
-  t.check(blocks('priced').show.includes('demand'),
-    'Priced brings the demand back, because it is what decides whether to stock the thing at all');
-  t.check(blocks('listed').fold.includes('research') && !blocks('listed').show.includes('research'),
-    'a listed item keeps its research as history rather than as a job');
-
-  // Every stage is covered, and every block named is one the DOM has.
-  const KNOWN = ['facts', 'assign', 'demand', 'research', 'notes'];
+  // No step carries another step's block, or the steps stop meaning anything.
+  const seen = {};
   ['asked', 'looking', 'sourced', 'priced', 'listed'].forEach((s) => {
     const g = guide(s);
     t.check(!!g && !!g.need, `${s} says what it is for`);
-    [...g.show, ...g.fold].forEach((k) =>
-      t.check(KNOWN.includes(k), `${s} names only real blocks (${k})`));
-    t.check(g.show.every((k) => !g.fold.includes(k)),
-      `${s} does not both show and fold the same block`);
+    t.check(!('fold' in g), `${s} folds nothing — a step shows its task or does not show it`);
+    g.show.forEach((k) => { (seen[k] = seen[k] || []).push(s); });
   });
+  Object.keys(seen).forEach((k) => {
+    // `research` is deliberately on two steps: finding who has it and
+    // pricing them are two tasks against one list.
+    const allowed = k === 'research' ? 2 : 1;
+    t.check(seen[k].length <= allowed,
+      `${k} belongs to one step, not several (${seen[k].join(', ')})`);
+  });
+
+  // Every block a step names is one the modal actually carries.
+  const KNOWN = ['identity', 'assign', 'demand', 'research', 'compare', 'outcome'];
+  Object.keys(seen).forEach((k) => t.check(KNOWN.includes(k), `${k} is a real block`));
   // Every block the guide can name exists in the modal, or a step would
   // silently ask for something the screen cannot draw.
   KNOWN.forEach((k) => t.check(new RegExp(`data-sec="${k}"`).test(src),
@@ -437,7 +439,8 @@ async function main() {
      nothing is hidden. */
   const dropped = S.sourcingStepGuide(lead({ status: 'sourced', voided: true }));
   eq(dropped.cta, '', 'a dropped lead asks for nothing');
-  eq(dropped.show.length, 0, 'and promotes nothing over anything else');
+  t.check(dropped.show.includes('identity') && dropped.show.includes('research'),
+    'but keeps everything it found readable — it is a record, not a job');
   t.check(/put it back/i.test(dropped.need), 'while saying it can come back');
   eq(guide('listed').cta, '', 'and a listed one is finished, so it has no next step either');
 
@@ -481,11 +484,12 @@ async function main() {
       has(c) { return this._s.has(c); } },
   });
   const ids = ['sl_need', 'sl_cand_form', 'sl_research_head', 'sl_price_block',
-    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body'];
-  const view = (l) => {
+    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body', 'sl_revisit'];
+  // `at` is the step being looked BACK at, or undefined for "the one it is on".
+  const view = (l, at) => {
     const nodes = {};
     ids.forEach((i) => { nodes[i] = el(); });
-    const secs = ['facts', 'assign', 'demand', 'research', 'notes'].map((k) => {
+    const secs = ['identity', 'assign', 'demand', 'research', 'compare', 'outcome'].map((k) => {
       const s = el(); s.dataset = { sec: k }; return s;
     });
     const scope = compileScope([
@@ -498,17 +502,22 @@ async function main() {
       extractFunction(src, 'candidateHasPrice', 'index.html'),
       extractFunction(src, 'leadFacts', 'index.html'),
       extractFunction(src, 'sourcingGateBlock', 'index.html'),
+      'let sourcingViewStep = null;',
+      extractFunction(src, 'sourcingViewedStep', 'index.html'),
       extractFunction(src, 'sourcingStepGuide', 'index.html'),
       extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
+      extractDeclaration(src, 'SOURCING_SHORT_LABELS', 'index.html'),
       extractFunction(src, 'sourcingWantsPriceForm', 'index.html'),
       extractFunction(src, 'applySourcingStepView', 'index.html'),
-    ], { document: { getElementById: (i) => nodes[i], querySelectorAll: () => secs } },
-    ['applySourcingStepView']);
+      'function __look(s){ sourcingViewStep = s; }',
+    ], { document: { getElementById: (i) => nodes[i], querySelectorAll: () => secs },
+      esc: (s) => String(s == null ? '' : s) },
+    ['applySourcingStepView', '__look']);
+    scope.__look(at || null);
     scope.applySourcingStepView(l);
     const state = {};
     secs.forEach((s) => {
-      state[s.dataset.sec] = s.style.display === 'none' ? 'hidden'
-        : (s.classList.has('folded') ? 'folded' : 'shown');
+      state[s.dataset.sec] = s.style.display === 'none' ? 'hidden' : 'shown';
     });
     return { secs: state, nodes };
   };
@@ -525,11 +534,12 @@ async function main() {
   const asked = view(lead({ status: 'asked' }));
   eq(asked.secs.research, 'hidden', 'Asked For really does leave the research panel off the screen');
   eq(asked.secs.demand, 'shown', 'and really does put the ask list up');
-  t.check(/Decide who will/.test(asked.nodes.sl_need.textContent), 'and says what the step is for');
+  t.check(/who wants it/.test(asked.nodes.sl_need.textContent), 'and says what the step is for');
 
   const looking = view(lead({ status: 'looking' }));
-  eq(looking.secs.demand, 'folded',
-    'a folded block is FOLDED, not hidden — what another step recorded stays reachable');
+  eq(looking.secs.demand, 'hidden',
+    'an earlier step\'s block is GONE from this one, not parked on it — that is what makes it a step');
+  eq(looking.secs.identity, 'hidden', 'and so is the one before that');
   eq(looking.secs.research, 'shown', 'while the step\'s own question is the one in front of you');
   eq(looking.nodes.sl_price_block.open, false, 'and Looking leads with who has it, not the price');
   /* The button says what is missing BEFORE it is pressed. A gate that
@@ -557,7 +567,43 @@ async function main() {
   const gone = view(lead({ status: 'sourced', voided: true }));
   eq(gone.nodes.sl_cand_form.style.display, 'none', 'nor does a dropped one take new research');
   eq(gone.nodes.sl_cta_row.style.display, 'none', 'and it asks for nothing');
-  eq(gone.secs.research, 'folded', 'while keeping everything already found');
+  eq(gone.secs.research, 'shown', 'while keeping everything already found readable');
+
+  /* Going BACK is what replaces folding: an earlier step is reached by
+     asking for it, and then shows ITS task, with the finish line put
+     away because that step was finished already. */
+  const at = lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] });
+  const back = view(at, 'asked');
+  eq(back.secs.identity, 'shown', 'stepping back shows that step\'s own work');
+  eq(back.secs.compare, 'hidden', 'and puts the current step\'s away');
+  eq(back.nodes.sl_cta_row.style.display, 'none',
+    'with no finish line — an earlier step is being corrected, not completed');
+  eq(back.nodes.sl_revisit.style.display, '', 'and it says plainly that this is a step being looked back at');
+  eq(accentOf(back), '#9AA4AC', 'wearing the colour of the step being looked at, not the one it is on');
+  // A step it has NOT reached has nothing to show, so asking for it is refused.
+  const ahead = view(lead({ status: 'asked' }), 'priced');
+  eq(ahead.secs.demand, 'shown', 'a step it has not reached cannot be jumped to');
+  eq(ahead.nodes.sl_revisit.style.display, 'none', 'so nothing claims to be looking back');
+
+  /* The rail is the WAY BACK, which is what earns the right to show one
+     step at a time. Three wiring facts, read from the source because the
+     compiled scope cannot click a rail node.
+
+     The middle one is a bug that shipped in this shape once already: the
+     back button was bound from the rail's setup, which runs BEFORE
+     applySourcingStepView creates it, so it was drawn and did nothing. */
+  const nav = extractFunction(src, 'wireSourcingRailNav', 'index.html');
+  t.check(/i <= at/.test(nav) && /addEventListener\('click'/.test(nav),
+    'every step the lead has reached is a button back into that step');
+  t.check(/const reachable = l\.voided \? true : i <= at;/.test(nav),
+    'and the ones ahead are not, because there is nothing there to do yet');
+  const applyFn = extractFunction(src, 'applySourcingStepView', 'index.html');
+  t.check(/sl_back_to_now[\s\S]{0,400}addEventListener\('click'/.test(applyFn),
+    'the way back is bound where it is made, or it is drawn and does nothing');
+  t.check(!/sl_back_to_now/.test(nav),
+    'and not from the rail setup, which runs before that button exists');
+  t.check(/sourcingViewStep = null;/.test(extractFunction(src, 'openSourcingLead', 'index.html')),
+    'opening a lead lands on the step it is ON, not wherever the last one was being read back');
 
   /* Opening a lead has to LAND on the rail. The overlay hides by opacity
      rather than display:none, so a field that held focus when the modal

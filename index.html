@@ -5678,11 +5678,17 @@
     padding:10px 13px;border-radius:9px;border-left:3px solid var(--stage-accent,var(--accent));
     background:color-mix(in srgb, var(--stage-accent,var(--accent)) 9%, transparent);}
   .sf-sec{margin-bottom:4px;}
-  /* A block belonging to another step: present, reachable, and not
-     competing for attention with the one being asked for. */
-  .sf-sec.folded{opacity:0.62;border-top:1px solid var(--line);padding-top:8px;margin-top:12px;}
-  .sf-sec.folded:hover,.sf-sec.folded:focus-within{opacity:1;}
-  .sf-sec.folded .sf-sub{font-size:11px;}
+  /* Steps the lead has actually reached are the way back into the work
+     they recorded. The ones ahead are not: there is nothing there yet. */
+  #sl_steps .op-step.navigable{cursor:pointer;}
+  #sl_steps .op-step.navigable:hover{border-color:var(--op-accent);}
+  #sl_steps .op-step.navigable:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* Which step is being LOOKED AT, which is not always the one it is on. */
+  #sl_steps .op-step.viewing{opacity:1;box-shadow:inset 0 0 0 2px var(--op-accent);}
+  .sf-revisit{font-size:12.5px;color:var(--ink-soft);margin:-8px 0 14px;}
+  .sf-link{background:none;border:0;padding:0;font:inherit;color:var(--accent);
+    font-weight:600;cursor:pointer;text-decoration:underline;}
+  .sf-outcome-name{font-size:15px;font-weight:700;margin-bottom:2px;}
   .sf-cta-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;
     padding-top:14px;border-top:1px solid var(--line);}
   .sf-cta-why{font-size:12px;color:var(--ink-soft);flex:1 1 160px;min-width:0;}
@@ -8475,15 +8481,23 @@
         <!-- The same stage rail the order preview draws, for the same
              reason: "which step is it in" is only half the question, and
              the half nobody asks is which ones are still to come. -->
+        <!-- The rail is also how you go BACK. Every step at or before the
+             one it is on is a button: the previous step's work is one
+             click away rather than parked, dimmed, on top of this one. -->
         <div id="sl_steps"></div>
         <div class="op-facts" id="sl_head_facts"></div>
         <!-- What THIS step is for, and the one thing that finishes it.
-             Five stages' worth of form shown at once is a form nobody
-             reads; a step that asks for one thing gets answered. -->
+             A step shows its OWN task and nothing else -- a screen that
+             keeps the answers the earlier steps already found is a screen
+             the steps were not needed for. -->
         <p class="sf-need" id="sl_need"></p>
-        <section class="sf-sec" data-sec="facts">
-          <label class="sf-rung-label">What we know so far</label>
-          <div class="sf-modal-facts" id="sl_facts"></div>
+        <p class="sf-revisit" id="sl_revisit" style="display:none;"></p>
+        <section class="sf-sec" data-sec="identity">
+          <div id="sl_name_slot"></div>
+          <div class="field">
+            <label>Notes</label>
+            <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
+          </div>
         </section>
         <section class="sf-sec" data-sec="assign">
           <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
@@ -8560,12 +8574,11 @@
           </div>
         </div>
         </section>
-        <section class="sf-sec" data-sec="notes">
-          <div id="sl_name_slot"></div>
-          <div class="field">
-            <label>Notes</label>
-            <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
-          </div>
+        <section class="sf-sec" data-sec="compare">
+          <div id="sl_compare"></div>
+        </section>
+        <section class="sf-sec" data-sec="outcome">
+          <div id="sl_outcome"></div>
         </section>
         <!-- The step's own finish line, on the step's own screen. Sending
              somebody back to the card's arrow to advance what they just
@@ -14883,7 +14896,7 @@ function stageStepsHTML(statusOrder, statuses, shortLabels, current, sinceLabel)
        modal leaves no room for "Pending Delivery" -- so the full name is
        one hover away rather than lost. Wrapping them all to two lines
        instead would cost every step the height to spare one. */
-    return `<li class="op-step ${state}" style="--op-accent:${statuses[s].color};" title="${esc(shortLabels[s])}">
+    return `<li class="op-step ${state}" data-status="${esc(s)}" style="--op-accent:${statuses[s].color};" title="${esc(shortLabels[s])}">
       <span class="op-step-dot">${i < at ? '✓' : i+1}</span>
       <span class="op-step-label">${esc(shortLabels[s])}</span>
       ${i === at ? `<span class="op-step-since">${esc(sinceLabel)}</span>` : ''}
@@ -39930,6 +39943,9 @@ function openSourcingLead(id){
      and a compare quantity left over would answer this lead's question at
      the previous lead's order size. */
   sourcingCompareQty = null;
+  // Opening a lead lands on the step it is ON, never on wherever the last
+  // lead was being looked back at.
+  sourcingViewStep = null;
   slCandFormClear();
   // The shop's own records, so a supplier or customer already on file is
   // picked rather than re-typed into a name nothing can be linked to.
@@ -39974,14 +39990,22 @@ function renderSourcingLeadBody(l){
   document.getElementById('sourcingLeadModalTitle').textContent =
     `${l.name} — ${SOURCING_SHORT_LABELS[l.status]}${l.voided ? ' (dropped)' : ''}`;
   document.getElementById('sl_steps').innerHTML = sourcingStepsHTML(l);
+  wireSourcingRailNav(l);
   document.getElementById('sl_head_facts').innerHTML = sourcingHeadFactsHTML(l);
   applySourcingStepView(l);
-  const f = leadFacts(l);
-  document.getElementById('sl_facts').innerHTML = SOURCING_FACT_ORDER.map(k=>
-    `<span class="sf-fact${f[k]?' got':''}">${f[k]
-      ? '<svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>'
-      : '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>'
-    }${esc(SOURCING_FACT_LABELS[k])}</span>`).join('');
+  document.getElementById('sl_compare').innerHTML = sourcingCompareHTML(l);
+  document.getElementById('sl_outcome').innerHTML = sourcingOutcomeHTML(l);
+  const prod = document.getElementById('sl_open_product');
+  if(prod) prod.addEventListener('click', ()=>{
+    closeModal('sourcingLeadModal');
+    document.getElementById('pr_search').value = l.productId;
+    goToTab('prices');
+    triggerPricesRender();
+  });
+  /* The four ticks are gone from here. They summarise what earlier steps
+     already found, which is exactly the clutter a step-at-a-time screen
+     is for removing -- and the rail above says how far it has got. They
+     stay on the board card, where there is no rail to say it. */
 
   const reqs = l.requests || [];
   document.getElementById('sl_requests').innerHTML = reqs.length ? `
@@ -40016,8 +40040,7 @@ function renderSourcingLeadBody(l){
              them rather than leaving it to be discovered. */
           : `<button type="button" class="sf-rung sf-rung-add" data-cand-edit="${esc(c.id)}">No price yet — add what they charge</button>`}</div>
       </div>`;
-    }).join('')}</div>
-    ${sourcingCompareHTML(l)}`
+    }).join('')}</div>`
     : '<p class="preset-hint">Nothing found yet. Add who has it, and what they want for it.</p>';
 }
 /* One rung, said the way the counter says it: by the carton when the
@@ -40095,50 +40118,58 @@ const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', 
    ignored. */
 const SOURCING_STEP_GUIDE = {
   asked: {
-    need: 'Nobody has looked into this yet. Decide who will.',
-    show: ['demand','assign','notes'],
-    fold: [],
+    need: 'Somebody asked for this. Record what it is and who wants it.',
+    show: ['identity','demand'],
     cta: 'Somebody is looking into it',
     ctaWhy: 'Moves it to Looking.',
   },
   looking: {
     need: 'Find who has it — a supplier, or the importer who brings it into the country.',
-    show: ['assign','research','notes'],
-    fold: ['facts','demand'],
+    show: ['assign','research'],
     cta: 'We have found who has it',
     ctaWhy: 'Needs at least one supplier or importer on file.',
   },
   sourced: {
     need: 'Now get their prices. Add a rung for each price break they quote you.',
-    show: ['research','facts','notes'],
-    fold: ['assign','demand'],
+    show: ['research'],
     cta: 'We have the prices',
     ctaWhy: 'Needs a price on at least one of them.',
   },
   priced: {
     need: 'Decide whether it is worth stocking, and who to buy it from.',
-    show: ['demand','research','facts','notes'],
-    fold: ['assign'],
+    show: ['compare'],
     cta: 'Add it to what we sell',
     ctaWhy: 'Creates the product and its first price.',
   },
   listed: {
     need: 'It is one of our products now.',
-    show: ['facts','notes'],
-    fold: ['demand','research'],
+    show: ['outcome'],
     cta: '',
     ctaWhy: '',
   },
 };
-/* A dropped lead is a record, not a job. Everything stays reachable and
-   nothing is asked for. */
+/* A dropped lead is not on a step, so there is no one task to show and
+   nothing is asked for. The rail still walks its history. */
 const SOURCING_DROPPED_GUIDE = {
   need: 'This one was dropped. Everything found is kept — put it back if it is worth another look.',
-  show: [], fold: ['facts','demand','research','notes'], cta: '', ctaWhy: '',
+  show: ['identity','demand','research'], cta: '', ctaWhy: '',
 };
+/* Which step's task the screen is SHOWING, which is not always the step
+   the lead is on: the rail walks back into the work already done, and a
+   step being revisited shows that step's task rather than a dimmed copy
+   of it stacked under the current one. Null means "the one it is on". */
+let sourcingViewStep = null;
+function sourcingViewedStep(l){
+  if(!l) return 'asked';
+  const at = SOURCING_STATUS_ORDER.indexOf(l.status);
+  const want = SOURCING_STATUS_ORDER.indexOf(sourcingViewStep);
+  // Never a step it has not reached: there is nothing there to do yet,
+  // and pretending otherwise is how a stage gets skipped.
+  return (want > -1 && want <= at) ? sourcingViewStep : l.status;
+}
 function sourcingStepGuide(l){
   if(l && l.voided) return SOURCING_DROPPED_GUIDE;
-  return SOURCING_STEP_GUIDE[l && l.status] || SOURCING_STEP_GUIDE.asked;
+  return SOURCING_STEP_GUIDE[sourcingViewedStep(l)] || SOURCING_STEP_GUIDE.asked;
 }
 /* The price half of the research form belongs to Source Found, not to
    Looking -- but it is folded rather than withheld, because a researcher
@@ -40162,16 +40193,29 @@ function sourcingStepsHTML(l){
    "what does this step ask for" is answerable by reading one table. */
 function applySourcingStepView(l){
   const guide = sourcingStepGuide(l);
+  const viewing = sourcingViewedStep(l);
+  const revisiting = !l.voided && viewing !== l.status;
   document.getElementById('sl_need').textContent = guide.need;
-  // The step's colour, handed to the body so the instruction and the lit
-  // node on the rail read as the same subject.
+  /* Says plainly that this is an earlier step being looked at, with the
+     way back. Without it, a screen showing Asked For's task while the
+     lead sits in Priced is a screen that has lied about where it is. */
+  const rev = document.getElementById('sl_revisit');
+  rev.style.display = revisiting ? '' : 'none';
+  if(revisiting){
+    rev.innerHTML = `Looking back at <b>${esc(SOURCING_SHORT_LABELS[viewing])}</b>. `
+      + `<button type="button" class="sf-link" id="sl_back_to_now">Back to ${esc(SOURCING_SHORT_LABELS[l.status])}</button>`;
+    /* Bound HERE, where the button is made. Wiring it from the rail's
+       setup ran before this line had created it, so the way back was
+       drawn and did nothing. */
+    const back = document.getElementById('sl_back_to_now');
+    if(back) back.addEventListener('click', ()=>{ sourcingViewStep = null; renderSourcingLeadBody(l); });
+  }
+  // The colour of the step being LOOKED AT, so the instruction and the
+  // node it belongs to on the rail read as the same subject.
   document.getElementById('sl_open_body').style.setProperty('--stage-accent',
-    l.voided ? 'var(--ink-soft)' : SOURCING_STATUSES[l.status].color);
+    l.voided ? 'var(--ink-soft)' : SOURCING_STATUSES[viewing].color);
   document.querySelectorAll('#sl_open_body .sf-sec').forEach(sec=>{
-    const key = sec.dataset.sec;
-    const folded = guide.fold.includes(key);
-    sec.style.display = (guide.show.includes(key) || folded) ? '' : 'none';
-    sec.classList.toggle('folded', folded);
+    sec.style.display = guide.show.includes(sec.dataset.sec) ? '' : 'none';
   });
   // The research form is for doing research. On a dropped or listed lead
   // the panel is history, so the form that adds to it goes away.
@@ -40185,9 +40229,13 @@ function applySourcingStepView(l){
   document.getElementById('sl_price_summary').textContent = priceBlock.open
     ? 'What they charge' : 'They quoted a price too — add it now';
 
+  /* The finish line belongs to the step the lead is ON. Revisiting an
+     earlier one is for correcting what it recorded, not for finishing a
+     step that was finished already. */
   const row = document.getElementById('sl_cta_row');
-  row.style.display = guide.cta ? 'flex' : 'none';
-  if(guide.cta){
+  const showCta = !!guide.cta && !revisiting;
+  row.style.display = showCta ? 'flex' : 'none';
+  if(showCta){
     document.getElementById('sl_cta').textContent = guide.cta;
     /* The gate says what is missing BEFORE the button is pressed, rather
        than refusing afterwards -- the step can then be finished instead
@@ -40197,6 +40245,47 @@ function applySourcingStepView(l){
     document.getElementById('sl_cta').disabled = !!blocked;
     document.getElementById('sl_cta_why').textContent = blocked || guide.ctaWhy;
   }
+}
+/* The rail is the way back. Every step the lead has actually reached is a
+   button that shows that step's task again; the ones ahead are not, since
+   there is nothing there to do yet. This is what lets each step show only
+   its own work -- "where is the thing I recorded earlier" has an answer
+   that is not "still on the screen, greyed out". */
+function wireSourcingRailNav(l){
+  const at = SOURCING_STATUS_ORDER.indexOf(l.status);
+  const viewing = sourcingViewedStep(l);
+  document.querySelectorAll('#sl_steps .op-step').forEach(step=>{
+    const i = SOURCING_STATUS_ORDER.indexOf(step.dataset.status);
+    const reachable = l.voided ? true : i <= at;
+    step.classList.toggle('viewing', step.dataset.status === viewing);
+    step.classList.toggle('navigable', reachable);
+    if(!reachable) return;
+    step.setAttribute('role', 'button');
+    step.setAttribute('tabindex', '0');
+    const go = ()=>{
+      sourcingViewStep = step.dataset.status;
+      renderSourcingLeadBody(l);
+    };
+    step.addEventListener('click', go);
+    step.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); }
+    });
+  });
+}
+/* What a listed item became: the step's whole content, because that is
+   all Listed has to say. */
+function sourcingOutcomeHTML(l){
+  if(l.status !== 'listed') return '';
+  const p = (data.products||[]).find(x=> x.id === l.productId);
+  if(!l.productId || !p){
+    return `<p class="preset-hint">This is marked as listed but the product behind it is gone. Step it back to Priced and add it again.</p>`;
+  }
+  const rows = (data.prices||[]).filter(pr=> pr.productId === l.productId);
+  return `<div class="sf-outcome">
+    <div class="sf-outcome-name">${esc(p.name)} <span class="sf-listed-id">${esc(p.id)}</span></div>
+    <div class="preset-hint">${esc(p.category||'No category')}${p.subcategory?` · ${esc(p.subcategory)}`:''} · ${rows.length} price${rows.length===1?'':'s'} on file.</div>
+    <button type="button" class="btn btn-ghost" id="sl_open_product">Open it in the Price Registry</button>
+  </div>`;
 }
 function sourcingHeadFactsHTML(l){
   const askers = leadDistinctAskers(l);
@@ -40550,7 +40639,7 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   toast(`${verb} ${fields.supplierName}`);
 });
 document.getElementById('sl_cand_cancel').addEventListener('click', ()=> slCandFormClear());
-document.getElementById('sl_candidates').addEventListener('input', (e)=>{
+document.getElementById('sl_compare').addEventListener('input', (e)=>{
   if(e.target.id !== 'sl_cmp_qty') return;
   const n = Number(e.target.value);
   sourcingCompareQty = n > 0 ? n : null;
