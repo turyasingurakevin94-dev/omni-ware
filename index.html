@@ -15433,7 +15433,7 @@ function confirmCollectionTrip(tripId){
      wrong was a "0 items received" that read like a delivery of
      nothing. */
   if(!trip || trip.voided || trip.status !== 'collected') return null;
-  let received = 0, lines = 0, missing = 0;
+  let received = 0, lines = 0, missing = 0, moved = 0;
   tripLines(trip).forEach(l=>{
     const got = tripLineGot(l);
     if(!(got > 0)) return;
@@ -15444,12 +15444,46 @@ function confirmCollectionTrip(tripId){
     // but nothing here knows what to do with them -- so they are counted
     // and reported rather than silently dropped on a shelf.
     if(!it){ missing++; return; }
+    /* Who the goods actually came from. A trip is one supplier, and the
+       run it was built from is grouped by TODAY'S cheapest -- which is
+       often not who the line was quoted against. Left alone, the whole
+       journey was billed to the supplier on the order: somebody walks
+       to Meggo, and Dooba gets the invoice.
+
+       No question here, because a trip is already the record of where
+       somebody went. */
+    if(setLineSupplier(it, trip.supplierId)) moved++;
     received += receiveQuoteLine(it, got, l.gotPrice == null ? l.expectedPrice : l.gotPrice, q);
     lines++;
   });
   trip.status = 'confirmed';
   trip.confirmedAt = new Date().toISOString();
-  return { received, lines, missing };
+  return { received, lines, missing, moved };
+}
+
+/* Where a line's goods actually came from.
+
+   The supplier on an order line is who it was QUOTED against. The
+   buying list re-ranks every line against today's prices and will say
+   "cheaper here than Dooba" -- but that was advice and nothing wrote it
+   back, so buying at the cheaper shop still billed the quoted one.
+   Reported from the shop: the run said Meggo, the invoice said Dooba.
+
+   Both things that read a line's supplier follow from this one field --
+   generatePurchaseInvoicesForQuote groups the bill by it, and
+   applyStockDelta attributes the FIFO lot to it -- so correcting it
+   here corrects the money and the shelf together.
+
+   `it.price` is deliberately untouched: that is what the quote was
+   built on and what the customer's margin was struck against. What was
+   actually paid arrives as receivedPrice, which is what the invoice
+   bills. */
+function setLineSupplier(it, supplierId){
+  if(!it || !supplierId || supplierId === '__stock__') return false;
+  if(String(it.supplierId) === String(supplierId)) return false;
+  it.supplierId = supplierId;
+  it.supplierName = supplierName(supplierId);
+  return true;
 }
 
 /* Receiving, from the list somebody is holding when they get back.
@@ -15468,22 +15502,53 @@ function wireBuyingListReceiving(){
     btn.addEventListener('click', ()=>{
       const { q, it } = findLine(btn.dataset.order, btn.dataset.line);
       if(!q || !it) return;
+      /* WHO FIRST, because the price default follows from it.
+
+         Nobody has recorded where these goods came from -- unlike a
+         trip, which is itself that record -- so if today's cheapest is
+         not who the line was quoted against, this is the one moment
+         somebody knows the answer. Asked only when the two differ:
+         a question with one true answer is a question not worth
+         asking. */
+      const runLine = orderPurchaseLines(q).find(x=> String(x.it.lineId) === String(it.lineId));
+      const cheaper = runLine && runLine.best && String(runLine.best.supplierId) !== String(it.supplierId)
+        ? runLine.best.supplierId : null;
+      let boughtFrom = it.supplierId;
+      if(cheaper){
+        boughtFrom = confirm(`Where did this actually come from?\n\n`
+          + `OK — ${supplierName(cheaper)} (cheaper today at ${fmtUGX(runLine.unitCost)} each)\n`
+          + `Cancel — ${supplierName(it.supplierId)}, who the order was quoted against\n\n`
+          + `Whoever you pick is who gets billed for it.`)
+          ? cheaper : it.supplierId;
+      }
+      const switching = String(boughtFrom) !== String(it.supplierId);
       const exp = quoteLineExpected(it);
       const unit = it.unit || 'unit';
+      /* The price to open on follows the supplier just chosen.
+         quoteLineExpected reports what the line was QUOTED at, so
+         buying at the cheaper shop and taking the offered figure would
+         have recorded the dearer one's price against them -- the exact
+         mix-up this whole control exists to stop, moved one field
+         along. */
+      const expPrice = switching ? runLine.unitCost : exp.price;
       /* Topping up a line that came back short asks for THIS delivery,
          not the running total, and offers the outstanding amount as the
          answer -- because the person at the door is counting what is in
          front of them, not doing arithmetic against an earlier trip. */
       const owed = quoteLineShortfall(it);
       const topUp = owed > 0;
-      const qty = prompt(`${it.productName || 'Item'}\n${topUp
+      const qty = prompt(`${it.productName || 'Item'}${switching ? `\nFrom ${supplierName(boughtFrom)}` : ''}\n${topUp
         ? `${it.receivedQty} already in, ${owed} ${unit} still owed.\nHow many ${unit} arrived this time?`
         : `How many ${unit} arrived?`}`, String(topUp ? owed : exp.qty));
       if(qty === null) return;
       const n = Number(qty);
       if(!isFinite(n) || n <= 0){ toast('Nothing received — enter how many arrived'); return; }
-      const paid = prompt(`What did each ${unit} cost?`, String(topUp ? (Number(it.receivedPrice) || exp.price) : exp.price));
+      const paid = prompt(`What did each ${unit} cost?`, String(topUp ? (Number(it.receivedPrice) || expPrice) : expPrice));
       if(paid === null) return;
+      /* Only now. Written before the prompts, a cancelled receipt would
+         still have moved the line's supplier -- a bill quietly
+         reassigned by a question somebody backed out of. */
+      const movedSupplier = setLineSupplier(it, boughtFrom);
       const got = receiveQuoteLine(it, n, Number(paid), q);
       if(!got){ toast('Nothing received'); return; }
       /* A supplier delivery is finished when its last line is in --
@@ -15495,11 +15560,12 @@ function wireBuyingListReceiving(){
       renderInventory();
       openBuyingList();
       const stillOwed = quoteLineShortfall(it);
-      toast(`${got} ${unit} received onto the shelf${stillOwed > 0
+      toast(`${got} ${unit} received onto the shelf${
+        movedSupplier ? ` — now billed to ${supplierName(it.supplierId)}` : ''}${stillOwed > 0
         ? ` — still ${stillOwed} short for ${quoteClientName(q)}`
         : (topUp ? ' — this line is now complete' : '')}${
         closed ? ` · ${closed} supplier ${closed===1?'delivery':'deliveries'} now complete` : ''}`,
-        stillOwed > 0 ? 6000 : undefined);
+        (stillOwed > 0 || movedSupplier) ? 6000 : undefined);
     });
   });
   // Send someone for a whole run.

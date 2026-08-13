@@ -261,4 +261,94 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
     'so nothing was added to the sync path');
 }
 
+/* ---------- who the goods actually came from -------------------------
+ *
+ * Reported from the shop: the buying list said Parker Engine was cheaper
+ * at Meggo, and the purchase invoice billed Dooba.
+ *
+ * Both were telling the truth about different things. The supplier on an
+ * order line is who it was QUOTED against; the buying list re-ranks
+ * against today's prices and only ADVISES. Nothing wrote the advice
+ * back, so buying at the cheaper shop still billed the quoted one -- and
+ * the same field decides the FIFO lot, so the shelf was misattributed
+ * too.
+ *
+ * Two ways goods arrive, and only one of them is a question. A trip IS
+ * the record of where somebody went, so its supplier is simply applied.
+ * A line received at the counter has no such record, so it is asked --
+ * and only when today's cheapest differs, because a question with one
+ * true answer is not worth asking.
+ */
+{
+  const NAMES2 = ['setLineSupplier'];
+  const s = compileScope(
+    NAMES2.map((n) => extractFunction(src, n, 'index.html')),
+    { supplierName: (id) => ({ S1: 'Dooba', S2: 'Meggo' }[id] || id) },
+    NAMES2,
+  );
+
+  const line = () => ({ supplierId: 'S1', supplierName: 'Dooba', price: 25000, qty: 1 });
+
+  const same = line();
+  t.check(s.setLineSupplier(same, 'S1') === false,
+    'naming the supplier it already has is not a move');
+  t.check(s.setLineSupplier(line(), '__stock__') === false,
+    'and our own shelf is not a supplier to bill');
+  t.check(s.setLineSupplier(line(), null) === false && s.setLineSupplier(line(), '') === false,
+    'nor is nothing at all — a blank must never blank the line');
+
+  const moved = line();
+  t.check(s.setLineSupplier(moved, 'S2') === true, 'a real move reports that it moved');
+  t.check(moved.supplierId === 'S2' && moved.supplierName === 'Meggo',
+    'writing both the id and the name, as the quote editor does');
+  /* The quoted price is what the customer's margin was struck against
+     and is NOT rewritten. What was actually paid arrives separately, as
+     receivedPrice, and that is what the invoice bills. */
+  t.check(moved.price === 25000, 'and leaving the quoted price alone');
+
+  /* The trip path applies it without asking, because the trip already
+     says where somebody went. */
+  const confirmFn = extractFunction(src, 'confirmCollectionTrip', 'index.html');
+  t.check(/if\(setLineSupplier\(it, trip\.supplierId\)\) moved\+\+;/.test(confirmFn),
+    'checking a trip in bills its lines to the supplier that trip went to');
+  t.check(/return \{ received, lines, missing, moved \};/.test(confirmFn),
+    'and reports how many it moved');
+
+  /* The counter path asks, and only when there is something to ask. */
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(/String\(runLine\.best\.supplierId\) !== String\(it\.supplierId\)\s*\r?\n?\s*\? runLine\.best\.supplierId : null;/.test(code),
+    'the question is only raised when today’s cheapest is somebody else');
+  t.check(/Whoever you pick is who gets billed for it/.test(code),
+    'and says what picking one does');
+  /* The question is actually reached. Checking that the words exist in
+     the file says nothing about whether anything runs them -- the same
+     hole as an updater nothing calls. */
+  t.check(/if\(cheaper\)\{\s*\r?\n\s*boughtFrom = confirm\(/.test(code),
+    'the ask is guarded by there being a cheaper supplier, and runs when there is');
+  /* And BOTH answers land somewhere. The Cancel arm has to be the
+     quoted supplier; pointing both arms at the cheaper one would move
+     the bill however the shop answered, which is worse than never
+     asking -- it would look like consent. */
+  t.check(/\? cheaper : it\.supplierId;/.test(code),
+    'Cancel keeps the supplier the order was quoted against');
+
+  /* Order of operations, twice over. The price default has to follow the
+     supplier just chosen, or taking the offered figure records the
+     dearer shop's price against the cheaper one. */
+  t.check(/const expPrice = switching \? runLine\.unitCost : exp\.price;/.test(code),
+    'the price opens on the chosen supplier’s figure, not the quoted one');
+  /* And the write has to come after both prompts, or backing out of a
+     receipt still reassigns the bill. */
+  const askAt = code.indexOf('const switching = String(boughtFrom)');
+  const writeAt = code.indexOf('const movedSupplier = setLineSupplier(it, boughtFrom);');
+  const receiveAt = code.indexOf('const got = receiveQuoteLine(it, n, Number(paid), q);');
+  const qtyCancelAt = code.indexOf("if(qty === null) return;");
+  const priceCancelAt = code.indexOf("if(paid === null) return;");
+  t.check(askAt > -1 && writeAt > askAt, 'the supplier is chosen before it is written');
+  t.check(writeAt > qtyCancelAt && writeAt > priceCancelAt,
+    'and written only after both prompts survive — a cancelled receipt moves nobody’s bill');
+  t.check(receiveAt > writeAt,
+    'with the goods received against the supplier that was just settled on');
+}
+
 process.exit(t.done() ? 1 : 0);
