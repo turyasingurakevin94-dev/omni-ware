@@ -522,6 +522,59 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
     'below the figures rather than above them, which is the demotion the report asked for');
 }
 
+/* ---------- 12. and when there is nothing left to buy ----------------- */
+/*
+ * The finished state, which read worse than the working one. Every line
+ * received, so the block said:
+ *
+ *   TO BUY 0  from  ON HAND 1,150,000  leaves  LEFT AFTER 1,150,000
+ *   Enough on hand for everything on this board
+ *
+ * -- an affordability verdict on a bill of nothing, true the way "you
+ * can afford to buy no cement" is true. And each supplier card
+ * headlined "0 UGX", which reads as a price rather than as a run that
+ * is done.
+ */
+{
+  data.prices = [price()];
+  data.savedQuotes = [order({ items: [
+    line({ receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
+  ] })];
+  scope.openBuyingList();
+
+  t.check(/class="bl-verdict done"/.test(modal.html),
+    'a board with nothing left to buy gets its own state');
+  t.check(/Nothing left to buy/.test(modal.html),
+    'and says that, rather than pronouncing on whether it can afford nothing');
+  t.check(!/bl-fig-label/.test(modal.html),
+    'the three figures are gone — subtracting nothing from the float says nothing');
+  t.check(/on hand/.test(modal.html),
+    'while what the shop is holding is still worth a glance');
+
+  /* The card for a run with nothing left to spend on it. */
+  t.check(/class="dr-card bl-card done"/.test(modal.html),
+    'and its supplier card is marked finished');
+  t.check(/class="bl-card-done">All in</.test(modal.html),
+    'reading "All in" rather than a price of zero');
+  t.check(!/class="bl-send"/.test(modal.html),
+    'with nobody offered to be sent, because there is nothing to fetch');
+
+  /* A run only half in is NOT finished, or the card would go quiet while
+     money was still owed. */
+  data.savedQuotes = [order({ items: [
+    line({ receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
+    line({ productName: 'Cement (still coming)' }),
+  ] })];
+  scope.openBuyingList();
+  t.check(!/bl-card done/.test(modal.html),
+    'one line still to come keeps the card live');
+  t.check(!/bl-verdict done/.test(modal.html) && /bl-fig-label/.test(modal.html),
+    'and the figures come back, because there is buying left to afford');
+
+  data.savedQuotes = [order()];
+  scope.openBuyingList();
+}
+
 
 
 process.exit(t.done() ? 1 : 0);

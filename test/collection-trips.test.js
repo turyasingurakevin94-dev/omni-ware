@@ -597,6 +597,10 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'tripCarrierLabel', 'index.html'),
     extractFunction(src, 'tripStatusLabel', 'index.html'),
     extractFunction(src, 'tripCanCheckIn', 'index.html'),
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(src, 'tripGoodsAllIn', 'index.html'),
   ], {
     data: state, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
@@ -637,6 +641,10 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'tripCarrierLabel', 'index.html'),
     extractFunction(src, 'tripStatusLabel', 'index.html'),
     extractFunction(src, 'tripCanCheckIn', 'index.html'),
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(src, 'tripGoodsAllIn', 'index.html'),
   ], {
     data: mixed, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
@@ -769,6 +777,11 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'tripCarrierLabel', 'index.html'),
     extractFunction(src, 'tripStatusLabel', 'index.html'),
     extractFunction(src, 'tripCanCheckIn', 'index.html'),
+    // blRunTripsHTML asks this whether a worker's trip is already home.
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(src, 'tripGoodsAllIn', 'index.html'),
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
   ], {
     data: stripState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin',
@@ -828,8 +841,11 @@ const trip = (over) => Object.assign({
     extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
     extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
     extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    // The auto-close asks the same "has it all arrived?" question the
+    // strip asks, so the two can never disagree about what arrived means.
+    extractFunction(src, 'tripGoodsAllIn', 'index.html'),
     extractFunction(src, 'closeArrivedSupplierTrips', 'index.html'),
-  ], { data: closeState }, ['closeArrivedSupplierTrips']);
+  ], { data: closeState }, ['closeArrivedSupplierTrips', 'tripGoodsAllIn']);
 
   const mkOrder = (over) => ({ id: 7, items: [
     { lineId: 'A', supplierId: 'S1', qty: 10 }, { lineId: 'B', supplierId: 'S1', qty: 5 },
@@ -908,6 +924,87 @@ const trip = (over) => Object.assign({
   // Called where the goods actually land.
   t.check(/const closed = closeArrivedSupplierTrips\(\);/.test(code),
     'the receive handler closes whatever that delivery completed');
+
+  /* ---- a worker's trip whose goods arrived another way ---- */
+  /*
+   * Seen on the shop's own screen: Kevin's trip reading "Sent · Kevin
+   * Moses · 2 lines" with both of those lines showing "40 received" and
+   * "paid" underneath it. The lines had been taken in at the counter
+   * rather than checked in through the trip, so the strip went on saying
+   * somebody was out with goods that were already on the shelf.
+   *
+   * SAID, NOT CLOSED, and the difference matters. A supplier delivery
+   * closes itself because nobody is carrying it. A person may genuinely
+   * still be out -- waiting on the rest of an order, or on their way
+   * back -- and retiring their trip under them would destroy the shop's
+   * only record that they are out at all.
+   */
+  const railState = { collectionTrips: [], savedQuotes: [] };
+  const rail = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripShortLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripLineGot', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'tripCarrierLabel', 'index.html'),
+    extractFunction(src, 'tripStatusLabel', 'index.html'),
+    extractFunction(src, 'tripCanCheckIn', 'index.html'),
+    extractFunction(src, 'tripGoodsAllIn', 'index.html'),
+    extractFunction(src, 'blRunTripsHTML', 'index.html'),
+  ], {
+    data: railState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin Moses',
+    TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
+  }, ['blRunTripsHTML', 'tripGoodsAllIn']);
+
+  const railOrder = (over) => ({ id: 7, items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10 }, { lineId: 'B', supplierId: 'S1', qty: 5 },
+  ], ...over });
+  const railTrip = (over) => ({ id: 'K', supplierId: 'S1', status: 'assigned',
+    assignedWorkerId: 'W1', voided: false,
+    lines: [{ orderId: 7, lineId: 'A' }, { orderId: 7, lineId: 'B' }], ...over });
+
+  railState.savedQuotes = [railOrder()];
+  railState.collectionTrips = [railTrip()];
+  t.check(!rail.tripGoodsAllIn(railState.collectionTrips[0]),
+    'a trip whose goods have not arrived is not "already in"');
+  const notInHTML = rail.blRunTripsHTML({ supplierId: 'S1' });
+  t.check(!/already in/.test(notInHTML), 'and its strip says nothing of the sort');
+  /* Nor does it borrow the supplier delivery's instruction. The two
+     hints answer different questions -- one tells you where to record
+     goods, the other tells you a journey is moot -- and a worker trip
+     showing "receive each line below" would be telling somebody to take
+     in goods that are still in a van. */
+  t.check(!/Receive each line below/.test(notInHTML),
+    'and a worker trip is never given the supplier delivery’s instruction');
+
+  railState.savedQuotes = [railOrder({ items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10, receivedAt: 'x', receivedQty: 10 },
+    { lineId: 'B', supplierId: 'S1', qty: 5, receivedAt: 'x', receivedQty: 5 },
+  ] })];
+  const inHTML = rail.blRunTripsHTML({ supplierId: 'S1' });
+  t.check(rail.tripGoodsAllIn(railState.collectionTrips[0]), 'every line in makes it so');
+  t.check(/Everything on this trip is already in/.test(inHTML),
+    'and the strip stops claiming somebody is out with goods that are on the shelf');
+  t.check(/data-void=/.test(inHTML),
+    'while Call off stays a human decision — they may still be out there');
+  t.check(railState.collectionTrips[0].status === 'assigned',
+    'and nothing has closed the trip behind their back');
+
+  // A supplier delivery gets its own words, not these.
+  railState.collectionTrips = [railTrip({ assignedWorkerId: '__supplier__', status: 'collecting' })];
+  const supHTML = rail.blRunTripsHTML({ supplierId: 'S1' });
+  t.check(/Receive each line below/.test(supHTML) && !/already in/.test(supHTML),
+    'a supplier delivery is told what to do, not what somebody else should decide');
+
+  /* One predicate, two callers. closeArrivedSupplierTrips asks the same
+     question, so the delivery that closes and the trip that only says so
+     can never disagree about what "arrived" means. */
+  t.check(/if\(tripGoodsAllIn\(t\)\)\{/.test(code),
+    'the auto-close reads the same predicate as the strip');
 }
 
 /* ---------- when the client sends their own person ------------------- */
