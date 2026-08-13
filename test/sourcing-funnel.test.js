@@ -484,8 +484,8 @@ async function main() {
       has(c) { return this._s.has(c); } },
   });
   const ids = ['sl_need', 'sl_cand_form', 'sl_research_head', 'sl_price_block',
-    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body', 'sl_revisit',
-    'sl_add_block', 'sl_add_summary'];
+    'sl_price_summary', 'sl_cta', 'sl_cta_why', 'sl_open_body', 'sl_revisit',
+    'sl_add_block', 'sl_add_summary', 'sl_save'];
   // `at` is the step being looked BACK at, or undefined for "the one it is on".
   const view = (l, at) => {
     const nodes = {};
@@ -527,8 +527,18 @@ async function main() {
      node on the rail above it read as the same subject rather than two
      notices sharing a screen. */
   const accentOf = (v) => v.nodes.sl_open_body.style.getPropertyValue('--stage-accent');
-  eq(accentOf(view(lead({ status: 'priced' }))), '#D9922B', 'the instruction wears the step\'s colour');
-  eq(accentOf(view(lead({ status: 'listed' }))), '#3A9A5C', 'a different step, a different colour');
+  /* Read off the app's own constant rather than a copied hex: the claim
+     is WHICH STEP's colour is used, and a hex here would only break the
+     next time the palette is touched. */
+  const STATUS_COLOURS = JSON.parse(JSON.stringify(
+    compileScope([extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
+      'function __c(){ return SOURCING_STATUSES; }'], {}, ['__c']).__c()));
+  eq(accentOf(view(lead({ status: 'priced' }))), STATUS_COLOURS.priced.color,
+    'the instruction wears the step\'s colour');
+  eq(accentOf(view(lead({ status: 'listed' }))), STATUS_COLOURS.listed.color,
+    'a different step, a different colour');
+  t.check(STATUS_COLOURS.priced.color !== STATUS_COLOURS.listed.color,
+    'and those really are different colours, so the check above can tell them apart');
   t.check(/ink-soft/.test(accentOf(view(lead({ status: 'priced', voided: true })))),
     'and a dropped lead wears none of them — it is not on a step any more');
 
@@ -565,16 +575,24 @@ async function main() {
 
   const priced = view(lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] }));
   eq(priced.nodes.sl_cta.disabled, false, 'Priced is never gated — its button graduates rather than steps');
-  t.check(/Add it to what we sell/.test(priced.nodes.sl_cta.textContent),
+  t.check(/catalogue/i.test(priced.nodes.sl_cta.textContent),
     'and says what it will do');
+  /* Short enough for a phone footer, where this button sits beside Close
+     and Drop this. The long form lives in the sentence above it. */
+  ['asked', 'looking', 'sourced', 'priced'].forEach((s) => {
+    const label = S.sourcingStepGuide(lead({ status: s })).cta;
+    t.check(label.length <= 20, `the ${s} button label fits a phone footer ("${label}")`);
+  });
+  eq(priced.nodes.sl_save.style.display, 'none',
+    'and an existing lead shows no Save — its fields write themselves as they change');
 
   const listed = view(lead({ status: 'listed', productId: 'P1' }));
-  eq(listed.nodes.sl_cta_row.style.display, 'none', 'a listed item is offered no next step');
+  eq(listed.nodes.sl_cta.style.display, 'none', 'a listed item is offered no next step');
   eq(listed.nodes.sl_cand_form.style.display, 'none',
     'and its research panel becomes history, not a form to add to');
   const gone = view(lead({ status: 'sourced', voided: true }));
   eq(gone.nodes.sl_cand_form.style.display, 'none', 'nor does a dropped one take new research');
-  eq(gone.nodes.sl_cta_row.style.display, 'none', 'and it asks for nothing');
+  eq(gone.nodes.sl_cta.style.display, 'none', 'and it asks for nothing');
   eq(gone.secs.research, 'shown', 'while keeping everything already found readable');
 
   /* Going BACK is what replaces folding: an earlier step is reached by
@@ -584,10 +602,13 @@ async function main() {
   const back = view(at, 'asked');
   eq(back.secs.identity, 'shown', 'stepping back shows that step\'s own work');
   eq(back.secs.compare, 'hidden', 'and puts the current step\'s away');
-  eq(back.nodes.sl_cta_row.style.display, 'none',
+  eq(back.nodes.sl_cta.style.display, 'none',
     'with no finish line — an earlier step is being corrected, not completed');
   eq(back.nodes.sl_revisit.style.display, '', 'and it says plainly that this is a step being looked back at');
-  eq(accentOf(back), '#9AA4AC', 'wearing the colour of the step being looked at, not the one it is on');
+  eq(accentOf(back), STATUS_COLOURS.asked.color,
+    'wearing the colour of the step being looked at, not the one it is on');
+  t.check(STATUS_COLOURS.asked.color !== STATUS_COLOURS.priced.color,
+    'which is a different colour from the step it is on, so that check means something');
   // A step it has NOT reached has nothing to show, so asking for it is refused.
   const ahead = view(lead({ status: 'asked' }), 'priced');
   eq(ahead.secs.demand, 'shown', 'a step it has not reached cannot be jumped to');
@@ -612,6 +633,30 @@ async function main() {
     'and not from the rail setup, which runs before that button exists');
   t.check(/sourcingViewStep = null;/.test(extractFunction(src, 'openSourcingLead', 'index.html')),
     'opening a lead lands on the step it is ON, not wherever the last one was being read back');
+
+  /* The one action that matters has to be reachable on a phone, where the
+     body scrolls and the footer does not. It was in the body, below the
+     fold, while Close and Drop this sat pinned above it. */
+  const foot = (/<div class="modal-foot">[\s\S]*?<\/div>/.exec(
+    (/<div class="modal-overlay" id="sourcingLeadModal">[\s\S]*?\n<\/div>/.exec(src) || [''])[0]) || [''])[0];
+  t.check(/id="sl_cta"/.test(foot) && /btn-accent/.test(foot),
+    'the step\'s button is in the footer, and is the one primary there');
+  t.check((foot.match(/btn-accent/g) || []).length === 1,
+    'the only one — two filled buttons in a footer is two primaries');
+
+  /* Which is only safe because the fields save themselves; otherwise
+     Close would silently discard what was typed. */
+  const autosave = (/\['sl_name','sl_notes','sl_staff'\]\.forEach[\s\S]*?\n\}\);/.exec(src) || [''])[0];
+  t.check(/addEventListener\('change'/.test(autosave) && /saveData\(\);/.test(autosave),
+    'an existing lead\'s fields write themselves as they change');
+  t.check(/if\(name\) l\.name = name;/.test(autosave),
+    'and a name cleared to blank does not wipe the item on the way past');
+
+  /* The live step has to read as live at any hue -- both boards make
+     their first stage grey, so this cannot rest on colour alone. */
+  const nowRule = (/\.op-step\.now\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/box-shadow/.test(nowRule) && /background:var\(--panel\)/.test(nowRule),
+    'the step it is on lifts off the page rather than relying on a hue it may not have');
 
   /* Opening a lead has to LAND on the rail. The overlay hides by opacity
      rather than display:none, so a field that held focus when the modal

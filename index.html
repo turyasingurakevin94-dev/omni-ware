@@ -1602,7 +1602,8 @@
     padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);}
   .op-step-dot{width:21px;height:21px;border-radius:50%;flex-shrink:0;display:flex;
     align-items:center;justify-content:center;font-size:11px;font-weight:700;
-    background:var(--ow-rule-soft);color:var(--ink-soft);}
+    background:var(--ow-rule-soft);color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;}
   .op-step-label{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .op-step-since{font-size:11px;color:var(--ink-soft);margin-left:auto;white-space:nowrap;}
   .op-step.done .op-step-dot{background:var(--good);color:#fff;}
@@ -1618,7 +1619,17 @@
      the steps two to a row with a 46% basis, and a shorthand here would
      reset that basis to 0 and leave the wrap ragged -- one step alone on
      the last row at full width. */
-  .op-step.now{flex-grow:1.5;flex-wrap:wrap;border-color:var(--op-accent);box-shadow:inset 0 0 0 1px var(--op-accent);}
+  /* The step it is ON has to read as active whatever its hue, and the
+     first stage of both boards is deliberately grey -- so this cannot be
+     carried by colour alone. Tinting it made things worse: the live step
+     came out LIGHTER than the flat grey ones beside it, which reads as
+     the disabled one. It lifts instead -- white card, coloured ring, a
+     little shadow -- against the flat cards of the steps around it, and
+     that works at any hue including none. */
+  .op-step.now{flex-grow:1.5;flex-wrap:wrap;background:var(--panel);
+    border-color:var(--op-accent);
+    box-shadow:inset 0 0 0 1.5px var(--op-accent), 0 1px 4px rgba(20,23,27,0.10);}
+  .op-step.now .op-step-label{color:var(--ink);font-weight:700;}
   .op-step.now .op-step-since{flex-basis:100%;margin-left:29px;margin-top:1px;}
   .op-step.now .op-step-dot{background:var(--op-accent);color:#fff;}
   .op-step.todo{opacity:0.55;}
@@ -5646,10 +5657,30 @@
      signposts, not headlines. */
   .sf-sub{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);
     font-weight:600;opacity:0.85;margin:18px 0 8px;}
+  /* Who asked, in columns: names read down the left, quantities line up
+     on their own figures, dates sit right and stay out of the way. */
+  .sf-asks{display:flex;flex-direction:column;border:1px solid var(--ow-rule-soft);border-radius:9px;overflow:hidden;}
+  .sf-ask{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;
+    gap:12px;padding:9px 12px;font-size:12.5px;}
+  .sf-ask + .sf-ask{border-top:1px solid var(--ow-rule-soft);}
+  .sf-ask-who{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sf-ask-who.unknown{font-weight:400;font-style:italic;color:var(--ink-soft);}
+  .sf-ask-qty{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;min-width:26px;text-align:right;}
+  .sf-ask-src{font-size:11px;color:var(--ink-soft);}
+  .sf-ask-when{font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  @media (max-width:520px){
+    /* The date is the first thing worth losing when the row cannot hold
+       four columns -- the order they are listed in already says it. */
+    .sf-ask{grid-template-columns:minmax(0,1fr) auto auto;}
+    .sf-ask-when{display:none;}
+  }
   .sf-list{display:flex;flex-direction:column;gap:1px;}
-  .sf-list-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 9px;
-    border-radius:7px;background:var(--ow-steel-050,transparent);font-size:12.5px;}
-  .sf-list-row:nth-child(odd){background:transparent;}
+  .sf-list-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;
+    font-size:12.5px;background:transparent;}
+  .sf-list-row + .sf-list-row{border-top:1px solid var(--ow-rule-soft);}
+  /* One bordered card holding the suppliers, so the list has an edge and
+     the row that opens has something to open inside. */
+  #sl_candidates .sf-list{border:1px solid var(--ow-rule-soft);border-radius:9px;overflow:hidden;gap:0;}
   .sf-list-main{font-weight:600;color:var(--ink);}
   .sf-list-qty{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;}
   .sf-list-qty.muted{color:var(--ink-soft);font-weight:400;font-style:italic;}
@@ -5699,9 +5730,12 @@
   .sf-link{background:none;border:0;padding:0;font:inherit;color:var(--accent);
     font-weight:600;cursor:pointer;text-decoration:underline;}
   .sf-outcome-name{font-size:15px;font-weight:700;margin-bottom:2px;}
-  .sf-cta-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;
-    padding-top:14px;border-top:1px solid var(--line);}
-  .sf-cta-why{font-size:12px;color:var(--ink-soft);flex:1 1 160px;min-width:0;}
+  /* The one primary action on the screen, set apart from the fields above
+     it so the step reads as: here is the task, here is what finishes it. */
+  /* The sentence under the step's instruction saying what its button will
+     do -- or what is missing before it can. */
+  .sf-cta-why{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:-8px 0 16px;}
+  .sf-foot-left{margin-right:auto;}
   #sl_price_block > summary{cursor:pointer;font-size:11px;text-transform:uppercase;
     letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
   #sl_price_block[open] > summary{margin-bottom:2px;}
@@ -8600,20 +8634,24 @@
         <section class="sf-sec" data-sec="outcome">
           <div id="sl_outcome"></div>
         </section>
-        <!-- The step's own finish line, on the step's own screen. Sending
-             somebody back to the card's arrow to advance what they just
-             finished is how a two-click job becomes a four-click one. -->
-        <div class="sf-cta-row" id="sl_cta_row" style="display:none;">
-          <button type="button" class="btn btn-accent" id="sl_cta"></button>
-          <span class="sf-cta-why" id="sl_cta_why"></span>
-        </div>
+        <!-- The sentence that explains the step's finish line. The BUTTON
+             itself is in the footer: on a phone this body scrolls, and
+             the one action that matters was below the fold while three
+             secondary buttons sat pinned above it. -->
+        <p class="sf-cta-why" id="sl_cta_why" style="display:none;"></p>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost danger" id="sl_drop" style="display:none;">Drop this</button>
-      <button class="btn btn-ghost" id="sl_undrop" style="display:none;">Put it back</button>
+      <!-- The step's own action is the primary one and lives in the body
+           with the sentence explaining it. These are the quiet ones, and
+           the destructive one is pushed away from the safe ones rather
+           than sitting shoulder to shoulder with Close. -->
+      <button class="btn btn-ghost danger sf-foot-left" id="sl_drop" style="display:none;">Drop this</button>
+      <button class="btn btn-ghost sf-foot-left" id="sl_undrop" style="display:none;">Put it back</button>
       <button class="btn btn-ghost" id="sl_cancel">Close</button>
-      <button class="btn btn-accent" id="sl_save">Save</button>
+      <button class="btn btn-ghost" id="sl_save">Save</button>
+      <!-- The step's finish line, where a phone can always reach it. -->
+      <button class="btn btn-accent" id="sl_cta" style="display:none;"></button>
     </div>
   </div>
 </div>
@@ -9942,7 +9980,9 @@ const ORDER_STATUS_SHORT_LABELS = {draft:'Drafts', awaiting_goods:'Awaiting Good
    same palette meanings -- grey is untouched, green is finished -- so the
    two boards read the same way without having to be learned twice. */
 const SOURCING_STATUSES = {
-  asked:   { label:'Step 1. Asked For',   color:'#9AA4AC' },
+  /* Deeper than the order board's matching grey: this one has to hold a
+     visible ring around the live step, and #9AA4AC on white does not. */
+  asked:   { label:'Step 1. Asked For',   color:'#77828C' },
   looking: { label:'Step 2. Looking',     color:'#2F7FBF' },
   sourced: { label:'Step 3. Source Found',color:'#8A6FC4' },
   priced:  { label:'Step 4. Priced',      color:'#D9922B' },
@@ -39955,6 +39995,10 @@ function openSourcingLead(id){
     nameLabel.textContent = 'What is the item';
   }
   document.getElementById('sl_first_ask').style.display = l ? 'none' : '';
+  // Shown for a NEW lead, where it is the create button; an existing
+  // lead's fields save themselves and applySourcingStepView hides it.
+  document.getElementById('sl_save').style.display = l ? 'none' : '';
+  document.getElementById('sl_save').textContent = 'Add it';
   document.getElementById('sl_open_body').style.display = l ? '' : 'none';
   document.getElementById('sl_drop').style.display = (l && !l.voided) ? '' : 'none';
   document.getElementById('sl_undrop').style.display = (l && l.voided) ? '' : 'none';
@@ -40028,14 +40072,20 @@ function renderSourcingLeadBody(l){
      stay on the board card, where there is no rail to say it. */
 
   const reqs = l.requests || [];
+  /* A record per row rather than a run of loose words: who, how many,
+     where the ask came from, when -- each in its own column so a dozen of
+     them can be read down instead of across. */
   document.getElementById('sl_requests').innerHTML = reqs.length ? `
-    <div class="sf-list">${reqs.slice().reverse().map(r=>`
-      <div class="sf-list-row">
-        <span class="sf-list-main">${esc(r.customerName || sourcingAskerName(r) || 'Somebody')}</span>
-        ${r.qty ? `<span class="sf-list-qty">${r.qty}</span>` : ''}
-        <span class="sf-list-src">${esc(SOURCING_SOURCE_LABELS[r.source] || r.source || '')}</span>
-        <span class="sf-list-when">${esc(String(r.at||'').slice(0,10))}</span>
-      </div>`).join('')}</div>
+    <div class="sf-asks">${reqs.slice().reverse().map(r=>{
+      const who = r.customerName || sourcingAskerName(r);
+      return `
+      <div class="sf-ask">
+        <span class="sf-ask-who${who ? '' : ' unknown'}">${esc(who || 'No name taken')}</span>
+        <span class="sf-ask-qty">${r.qty ? esc(String(r.qty)) : ''}</span>
+        <span class="sf-ask-src">${esc(SOURCING_SOURCE_LABELS[r.source] || r.source || '')}</span>
+        <span class="sf-ask-when">${esc(String(r.at||'').slice(0,10))}</span>
+      </div>`;
+    }).join('')}</div>
     <p class="preset-hint">${leadDistinctAskers(l)} different ${leadDistinctAskers(l)===1?'person has':'people have'} asked, ${reqs.length} time${reqs.length===1?'':'s'} in all.</p>`
     : '<p class="preset-hint">Nobody recorded yet.</p>';
 
@@ -40152,25 +40202,25 @@ const SOURCING_STEP_GUIDE = {
   asked: {
     need: 'Somebody asked for this. Record what it is and who wants it.',
     show: ['identity','demand'],
-    cta: 'Somebody is looking into it',
-    ctaWhy: 'Moves it to Looking.',
+    cta: 'Start looking',
+    ctaWhy: 'Somebody is looking into it — moves it to Looking.',
   },
   looking: {
     need: 'Find who has it — a supplier, or the importer who brings it into the country.',
     show: ['assign','research'],
-    cta: 'We have found who has it',
+    cta: 'Source found',
     ctaWhy: 'Needs at least one supplier or importer on file.',
   },
   sourced: {
     need: 'Now get their prices. Add a rung for each price break they quote you.',
     show: ['research'],
-    cta: 'We have the prices',
+    cta: 'Prices are in',
     ctaWhy: 'Needs a price on at least one of them.',
   },
   priced: {
     need: 'Decide whether it is worth stocking, and who to buy it from.',
     show: ['compare'],
-    cta: 'Add it to what we sell',
+    cta: 'Add to catalogue',
     ctaWhy: 'Creates the product and its first price.',
   },
   listed: {
@@ -40274,11 +40324,17 @@ function applySourcingStepView(l){
   /* The finish line belongs to the step the lead is ON. Revisiting an
      earlier one is for correcting what it recorded, not for finishing a
      step that was finished already. */
-  const row = document.getElementById('sl_cta_row');
+  /* Save is for CREATING a lead. Once one exists its fields write
+     themselves as they are changed, so an explicit Save is a fourth
+     button competing for a phone's footer with the one that matters. */
+  document.getElementById('sl_save').style.display = 'none';
+  const why = document.getElementById('sl_cta_why');
+  const btn = document.getElementById('sl_cta');
   const showCta = !!guide.cta && !revisiting;
-  row.style.display = showCta ? 'flex' : 'none';
+  why.style.display = showCta ? '' : 'none';
+  btn.style.display = showCta ? '' : 'none';
   if(showCta){
-    document.getElementById('sl_cta').textContent = guide.cta;
+    btn.textContent = guide.cta;
     /* The gate says what is missing BEFORE the button is pressed, rather
        than refusing afterwards -- the step can then be finished instead
        of merely attempted. */
@@ -40703,6 +40759,24 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   toast(`${verb} ${fields.supplierName}`);
 });
 document.getElementById('sl_cand_cancel').addEventListener('click', ()=> slCandFormClear());
+/* An existing lead's own fields write themselves as they are changed --
+   on `change`, so it is one save per edit rather than one per keystroke.
+   Close now means close, not "discard what I just typed", which is what
+   it quietly meant while these needed a Save button they shared a footer
+   with the step's own action. */
+['sl_name','sl_notes','sl_staff'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    const l = sourcingLeadById(editingSourcingLeadId);
+    if(!l) return;
+    const name = document.getElementById('sl_name').value.trim();
+    if(name) l.name = name;
+    l.notes = document.getElementById('sl_notes').value.trim();
+    l.assignedStaffId = document.getElementById('sl_staff').value || null;
+    saveData();
+    renderSourcingLeadBody(l);
+    renderSourcing();
+  });
+});
 document.getElementById('sl_compare').addEventListener('input', (e)=>{
   if(e.target.id !== 'sl_cmp_qty') return;
   const n = Number(e.target.value);
