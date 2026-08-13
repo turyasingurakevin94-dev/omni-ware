@@ -256,4 +256,85 @@ const reset = () => {
     'guarded, since a board with nothing to buy renders no track at all');
 }
 
+/* ---------- a shop you have no reason to enter is not a stop ---------
+ *
+ * This screen is a walking order: which places, in which order, carrying
+ * how much. A line already bought and on the shelf is none of those
+ * things, and leaving it in produced an errand for nothing -- reported
+ * from the shop as "2 places to reach · 0 UGX to spend", with every
+ * place, supplier and line under it also reading 0 UGX.
+ *
+ * The buying list keeps those lines deliberately, because there is still
+ * an Undo to offer there if a receipt was wrong. Nothing on this screen
+ * can act on one, so it is dropped -- and COUNTED, because "nothing here
+ * has to be bought in" and "all of it has already arrived" are different
+ * facts and only one of them means the buying is done.
+ */
+{
+  data.suppliers = [{ id: 'S1', name: 'Dooba', location: 'Nakasero' },
+    { id: 'S2', name: 'Meggo', location: 'Jesco House' }];
+  const ln = (o) => Object.assign({
+    it: { productName: 'Chrome Pipe', unit: 'Pcs' }, qty: 40,
+    best: { supplierId: 'S1' }, lineCost: 262000, settled: false }, o);
+
+  purchaseLines.clear();
+  purchaseLines.set(1, [ln(), ln({ best: { supplierId: 'S2' }, lineCost: 420000 })]);
+  const live = scope.pickupRuns([{ id: 1 }]);
+  t.check(live.runs.length === 2 && live.settled === 0,
+    'two places to reach while there is buying to do');
+
+  // Every line already in.
+  purchaseLines.set(1, [ln({ settled: true, lineCost: 0 }),
+    ln({ best: { supplierId: 'S2' }, settled: true, lineCost: 0 })]);
+  const done = scope.pickupRuns([{ id: 1 }]);
+  t.check(done.runs.length === 0,
+    'and nowhere to reach once they are all on the shelf — not two places worth nothing');
+  t.check(done.settled === 2,
+    `with the count kept, so the screen can say why it is empty (${done.settled})`);
+
+  // Half and half: the finished one drops out, the live one stays.
+  purchaseLines.set(1, [ln({ settled: true, lineCost: 0 }),
+    ln({ best: { supplierId: 'S2' }, lineCost: 420000 })]);
+  const half = scope.pickupRuns([{ id: 1 }]);
+  t.check(half.runs.length === 1 && half.runs[0].label === 'Jesco House',
+    'a place whose goods are in drops off the route while the other stays on it');
+  t.check(half.runs[0].total === 420000,
+    'and the money to carry is only what is still to be bought');
+  t.check(half.settled === 1, 'the dropped one still counted');
+
+  /* A settled line is dropped BEFORE the unpriced check, so a line that
+     is both already-in and never-priced does not get reported as a
+     pricing gap somebody needs to fix. */
+  purchaseLines.set(1, [ln({ settled: true, lineCost: null, best: null })]);
+  const both = scope.pickupRuns([{ id: 1 }]);
+  t.check(both.unpriced.length === 0 && both.settled === 1,
+    'a line already in is not also reported as missing a price');
+}
+
+/* ---------- and the screen says which silence it is ------------------- */
+{
+  t.check(/Nowhere to go — all \$\{settled\} bought-in line/.test(src),
+    'an empty route says the goods have arrived, not that there was never anything to buy');
+  t.check(/Nothing on the board has to be bought in/.test(src),
+    'while a board that genuinely buys nothing still says that');
+  t.check(/const \{ runs, noLocation, unpriced, settled \} = pickupRuns\(orders\);/.test(src),
+    'which needs the count, so the modal reads it');
+
+  /* "0 places to reach · 0 UGX to spend" sat directly above the sentence
+     explaining there is nowhere to go -- the same fact twice, the second
+     time in figures that mean nothing. */
+  t.check(/cards\.length \? `<div class="bl-top">/.test(src),
+    'and the journey header only appears when there is a journey');
+
+  /* The line reads "<product> · <qty> <unit>", so an ellipsis lands on
+     the quantity: "Chrome Pipe — 19mm - Light · 40…" tells somebody in a
+     shop everything except how many to ask for. */
+  const nameCss = (/\.dr-order-name\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(!/text-overflow:ellipsis/.test(nameCss),
+    `the item line is not truncated (${nameCss.replace(/\s+/g, ' ')})`);
+  t.check(!/white-space:nowrap/.test(nameCss), 'it is allowed to wrap');
+  t.check(/overflow-wrap:anywhere/.test(nameCss),
+    'and a single unbroken product code still breaks rather than escaping the card');
+}
+
 process.exit(t.done() ? 1 : 0);

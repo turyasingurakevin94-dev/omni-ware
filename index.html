@@ -3993,9 +3993,14 @@
   }
   .dr-order:first-child{border-top:0;}
   .dr-order-main{min-width:0;}
+  /* Wraps rather than truncates. The line reads "<product> · <qty>
+     <unit>", so the ellipsis fell on the quantity -- "Chrome Pipe —
+     19mm - Light · 40…" tells somebody standing in a shop everything
+     except how many to ask for, which is the one thing they came with.
+     Two lines of text is cheaper than a second trip. */
   .dr-order-name{
-    font-size:12.5px;font-weight:700;color:var(--ink);
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.35;
+    overflow-wrap:anywhere;
   }
   .dr-order-sub{font-size:10.5px;color:var(--ow-ink-400);margin-top:1px;}
   .dr-order-side{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
@@ -14048,9 +14053,20 @@ function pickupRuns(orders){
   const byPlace = new Map();
   const byLocationless = new Map();
   const unpriced = [];
+  let settled = 0;
 
   (orders||[]).forEach(q=>{
     orderPurchaseLines(q).forEach(l=>{
+      /* Already bought and on the shelf. This screen is a walking order
+         -- which places, in which order, carrying how much -- and a shop
+         you have no reason to enter is not a stop on it. Left in, a
+         board whose buying was finished still offered "2 places to
+         reach" and "0 UGX to spend", which is an errand for nothing.
+
+         The buying list keeps these lines, deliberately: there is still
+         an Undo to offer there if a receipt was wrong. Nothing here can
+         act on one. */
+      if(l.settled){ settled++; return; }
       // No price on file means no supplier was ranked, so there is
       // nowhere to send anybody. Held aside and named rather than
       // dropped: a line missing from a buying trip is how an order comes
@@ -14092,6 +14108,11 @@ function pickupRuns(orders){
       .sort((a,b)=> b.suppliers.length - a.suppliers.length || b.total - a.total),
     noLocation: [...byLocationless.values()].map(shape).sort((a,b)=> b.total - a.total),
     unpriced,
+    /* How many were left out for being already in. Carried so the empty
+       state can tell the two silences apart: "nothing on this board has
+       to be bought in" and "all of it has already arrived" are different
+       facts, and only one of them means the buying is done. */
+    settled,
   };
 }
 
@@ -14747,7 +14768,7 @@ function pickupRunsIconHTML(group){
 
 function openPickupRuns(){
   const orders = beingPreparedOrders();
-  const { runs, noLocation, unpriced } = pickupRuns(orders);
+  const { runs, noLocation, unpriced, settled } = pickupRuns(orders);
 
   const lineRow = (l)=>`<li class="dr-order">
     <div class="dr-order-main">
@@ -14809,10 +14830,14 @@ function openPickupRuns(){
 
   const totalCash = runs.reduce((s,r)=> s + r.total, 0) + noLocation.reduce((s,r)=> s + r.total, 0);
   document.getElementById('pickupRunsBody').innerHTML = `
-    <div class="bl-top">
+    ${/* Only when there is a journey to describe. "0 places to reach ·
+         0 UGX to spend" over an empty list is a heading for nothing,
+         and it sat directly above the sentence explaining that there is
+         nowhere to go -- saying it twice, the second time in figures. */
+      cards.length ? `<div class="bl-top">
       <span class="bl-top-label">${runs.length} place${runs.length===1?'':'s'} to reach</span>
       <span class="bl-top-fig">${fmtUGX(Math.round(totalCash))} to spend</span>
-    </div>
+    </div>` : ''}
     ${cards.length ? `
     <div class="dr-carousel">
       <button type="button" class="dr-nav prev" id="pr_prev" aria-label="Previous place">
@@ -14826,7 +14851,9 @@ function openPickupRuns(){
       </button>
     </div>
     <p class="dr-hint">Slide sideways for the next place${runs.length>1 ? ' — the places worth the most stops come first' : ''}.</p>`
-    : `<p class="preset-hint">Nothing on the board has to be bought in.</p>`}`;
+    : `<p class="preset-hint">${settled
+        ? `Nowhere to go — all ${settled} bought-in line${settled===1?'':'s'} on this board ${settled===1?'has':'have'} already arrived.`
+        : 'Nothing on the board has to be bought in.'}</p>`}`;
 
   wireRunCarousel('pr_track', 'pr_prev', 'pr_next');
   openModal('pickupRunsModal');
