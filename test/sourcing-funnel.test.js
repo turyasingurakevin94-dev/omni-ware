@@ -128,6 +128,11 @@ const sources = [
   extractFunction(src, 'sourcingRankedAt', 'index.html'),
   extractFunction(src, 'sourcingBestAt', 'index.html'),
   extractFunction(src, 'sourcingDefaultGraduateCandidate', 'index.html'),
+  extractDeclaration(src, 'SOURCING_STEP_GUIDE', 'index.html'),
+  extractDeclaration(src, 'SOURCING_DROPPED_GUIDE', 'index.html'),
+  extractFunction(src, 'sourcingStepGuide', 'index.html'),
+  extractFunction(src, 'sourcingWantsPriceForm', 'index.html'),
+  extractFunction(src, 'sourcingWantsCompare', 'index.html'),
   extractFunction(src, 'leadFacts', 'index.html'),
   extractFunction(src, 'leadIsStalled', 'index.html'),
   extractFunction(src, 'leadNeedsSomebody', 'index.html'),
@@ -151,6 +156,7 @@ const S = compileScope(sources, env, [
   'deriveWholesaleRetail', 'sourcingLeadById',
   'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
+  'sourcingStepGuide', 'sourcingWantsPriceForm', 'sourcingWantsCompare',
 ]);
 
 const lead = (over) => Object.assign({
@@ -371,6 +377,169 @@ async function main() {
   eq(S.leadDemandQty(lead({ requests: [ask({ qty: 20 }), ask({ qty: 5 }), ask({ qty: null })] })), 25,
     'demand is what the people who asked said they wanted, ignoring the ones who did not say');
   eq(S.leadDemandQty(lead()), 0, 'and nobody asking for a number is no number');
+}
+
+/* ---------- 3c. each step asks for one thing -------------------------- */
+{
+  resetAll();
+  const guide = (status, over) => S.sourcingStepGuide(lead(Object.assign({ status }, over || {})));
+  const blocks = (status, over) => { const g = guide(status, over); return { show: g.show, fold: g.fold }; };
+
+  /* Nothing has been researched at Asked For, so a research panel is
+     four empty boxes asking to be ignored -- it is not drawn at all,
+     which is different from being folded. */
+  t.check(!blocks('asked').show.includes('research') && !blocks('asked').fold.includes('research'),
+    'Asked For does not draw a research panel for research nobody has done');
+  t.check(blocks('asked').show.includes('demand') && blocks('asked').show.includes('assign'),
+    'it asks the two things that step is actually for: who asked, and who will look');
+  t.check(!blocks('asked').show.includes('facts') && !blocks('asked').fold.includes('facts'),
+    'and it does not show four empty ticks as a progress bar');
+
+  t.check(blocks('looking').show.includes('research'), 'Looking is about finding who has it');
+  t.check(blocks('looking').fold.includes('demand'),
+    'and folds the ask list away — reachable, not competing for attention');
+  t.check(blocks('priced').show.includes('demand'),
+    'Priced brings the demand back, because it is what decides whether to stock the thing at all');
+  t.check(blocks('listed').fold.includes('research') && !blocks('listed').show.includes('research'),
+    'a listed item keeps its research as history rather than as a job');
+
+  // Every stage is covered, and every block named is one the DOM has.
+  const KNOWN = ['facts', 'assign', 'demand', 'research', 'notes'];
+  ['asked', 'looking', 'sourced', 'priced', 'listed'].forEach((s) => {
+    const g = guide(s);
+    t.check(!!g && !!g.need, `${s} says what it is for`);
+    [...g.show, ...g.fold].forEach((k) =>
+      t.check(KNOWN.includes(k), `${s} names only real blocks (${k})`));
+    t.check(g.show.every((k) => !g.fold.includes(k)),
+      `${s} does not both show and fold the same block`);
+  });
+  // Every block the guide can name exists in the modal, or a step would
+  // silently ask for something the screen cannot draw.
+  KNOWN.forEach((k) => t.check(new RegExp(`data-sec="${k}"`).test(src),
+    `the modal actually carries the ${k} block`));
+
+  /* A dropped lead is a record, not a job: nothing is asked for and
+     nothing is hidden. */
+  const dropped = S.sourcingStepGuide(lead({ status: 'sourced', voided: true }));
+  eq(dropped.cta, '', 'a dropped lead asks for nothing');
+  eq(dropped.show.length, 0, 'and promotes nothing over anything else');
+  t.check(/put it back/i.test(dropped.need), 'while saying it can come back');
+  eq(guide('listed').cta, '', 'and a listed one is finished, so it has no next step either');
+
+  /* The price half of the research form belongs to Source Found. Folded
+     at Looking rather than withheld -- a researcher given the price in
+     the same breath should not have to come back for it. */
+  eq(S.sourcingWantsPriceForm(lead({ status: 'looking' })), false,
+    'Looking leads with WHO has it, not what they charge');
+  eq(S.sourcingWantsPriceForm(lead({ status: 'sourced' })), true, 'Source Found opens the price half');
+  eq(S.sourcingWantsPriceForm(lead({ status: 'sourced', voided: true })), false,
+    'and a dropped lead is not asking for prices');
+
+  /* The comparison is the deciding step's question. Earlier than that it
+     appears only once there are two prices to weigh -- a one-row table
+     tells you nothing you did not just type. */
+  const one = [cand({ id: 'A', tiers: rungs([1, 15000]) })];
+  const two = [cand({ id: 'A', tiers: rungs([1, 15000]) }), cand({ id: 'B', tiers: rungs([1, 16000]) })];
+  eq(S.sourcingWantsCompare(lead({ status: 'sourced', candidates: one })), false,
+    'one price is not a comparison');
+  eq(S.sourcingWantsCompare(lead({ status: 'sourced', candidates: two })), true,
+    'two are, and it appears the moment there is something to weigh');
+  eq(S.sourcingWantsCompare(lead({ status: 'priced', candidates: one })), true,
+    'and at Priced it is always drawn — with one supplier it still costs the order');
+  eq(S.sourcingWantsCompare(lead({ status: 'listed', candidates: two })), false,
+    'a listed item has already been decided');
+  eq(S.sourcingWantsCompare(lead({ status: 'priced', candidates: two, voided: true })), false,
+    'and so has a dropped one');
+}
+
+/* ---------- 3d. and the screen actually obeys the table -------------- */
+{
+  /* applySourcingStepView is the half that DOES the folding, and a right
+     table applied wrongly looks exactly like a right screen until you
+     open it. Driven against a fake document rather than read, so
+     "folded" has to really mean present-but-quiet and not hidden. */
+  const el = () => ({
+    style: {}, textContent: '', disabled: false, open: false,
+    classList: { _s: new Set(),
+      toggle(c, on) { on ? this._s.add(c) : this._s.delete(c); },
+      has(c) { return this._s.has(c); } },
+  });
+  const ids = ['sl_need', 'sl_cand_form', 'sl_research_head', 'sl_price_block',
+    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why'];
+  const view = (l) => {
+    const nodes = {};
+    ids.forEach((i) => { nodes[i] = el(); });
+    const secs = ['facts', 'assign', 'demand', 'research', 'notes'].map((k) => {
+      const s = el(); s.dataset = { sec: k }; return s;
+    });
+    const scope = compileScope([
+      extractDeclaration(src, 'SOURCING_STATUS_ORDER', 'index.html'),
+      extractDeclaration(src, 'SOURCING_STEP_GUIDE', 'index.html'),
+      extractDeclaration(src, 'SOURCING_DROPPED_GUIDE', 'index.html'),
+      extractDeclaration(src, 'SOURCING_GATES', 'index.html'),
+      extractFunction(src, 'leadCandidateNames', 'index.html'),
+      extractFunction(src, 'candidateTiers', 'index.html'),
+      extractFunction(src, 'candidateHasPrice', 'index.html'),
+      extractFunction(src, 'leadFacts', 'index.html'),
+      extractFunction(src, 'sourcingGateBlock', 'index.html'),
+      extractFunction(src, 'sourcingStepGuide', 'index.html'),
+      extractFunction(src, 'sourcingWantsPriceForm', 'index.html'),
+      extractFunction(src, 'applySourcingStepView', 'index.html'),
+    ], { document: { getElementById: (i) => nodes[i], querySelectorAll: () => secs } },
+    ['applySourcingStepView']);
+    scope.applySourcingStepView(l);
+    const state = {};
+    secs.forEach((s) => {
+      state[s.dataset.sec] = s.style.display === 'none' ? 'hidden'
+        : (s.classList.has('folded') ? 'folded' : 'shown');
+    });
+    return { secs: state, nodes };
+  };
+
+  const asked = view(lead({ status: 'asked' }));
+  eq(asked.secs.research, 'hidden', 'Asked For really does leave the research panel off the screen');
+  eq(asked.secs.demand, 'shown', 'and really does put the ask list up');
+  t.check(/Decide who will/.test(asked.nodes.sl_need.textContent), 'and says what the step is for');
+
+  const looking = view(lead({ status: 'looking' }));
+  eq(looking.secs.demand, 'folded',
+    'a folded block is FOLDED, not hidden — what another step recorded stays reachable');
+  eq(looking.secs.research, 'shown', 'while the step\'s own question is the one in front of you');
+  eq(looking.nodes.sl_price_block.open, false, 'and Looking leads with who has it, not the price');
+  /* The button says what is missing BEFORE it is pressed. A gate that
+     only refuses afterwards leaves the step attempted, not finished. */
+  eq(looking.nodes.sl_cta.disabled, true, 'with nobody found the step cannot be finished');
+  t.check(/supplier, or the importer/.test(looking.nodes.sl_cta_why.textContent),
+    'and the button says so instead of waiting to refuse');
+
+  const found = view(lead({ status: 'looking', candidates: [cand({ supplierName: 'Shafik' })] }));
+  eq(found.nodes.sl_cta.disabled, false, 'once somebody is found the step can be finished');
+
+  const sourced = view(lead({ status: 'sourced', candidates: [cand({ supplierName: 'Shafik' })] }));
+  eq(sourced.nodes.sl_price_block.open, true, 'Source Found opens the price half');
+  eq(sourced.nodes.sl_cta.disabled, true, 'and will not move on without one');
+
+  const priced = view(lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] }));
+  eq(priced.nodes.sl_cta.disabled, false, 'Priced is never gated — its button graduates rather than steps');
+  t.check(/Add it to what we sell/.test(priced.nodes.sl_cta.textContent),
+    'and says what it will do');
+
+  const listed = view(lead({ status: 'listed', productId: 'P1' }));
+  eq(listed.nodes.sl_cta_row.style.display, 'none', 'a listed item is offered no next step');
+  eq(listed.nodes.sl_cand_form.style.display, 'none',
+    'and its research panel becomes history, not a form to add to');
+  const gone = view(lead({ status: 'sourced', voided: true }));
+  eq(gone.nodes.sl_cand_form.style.display, 'none', 'nor does a dropped one take new research');
+  eq(gone.nodes.sl_cta_row.style.display, 'none', 'and it asks for nothing');
+  eq(gone.secs.research, 'folded', 'while keeping everything already found');
+
+  /* Priced finishes by GRADUATING, not by stepping a stage -- `listed` is
+     stamped by graduation and nowhere else. Read from the handler, which
+     is DOM wiring the compiled scope cannot drive. */
+  const cta = (/getElementById\('sl_cta'\)\.addEventListener[\s\S]*?\n\}\);/.exec(src) || [''])[0];
+  t.check(/status === 'priced'[\s\S]{0,120}openSourcingGraduate/.test(cta),
+    'the Priced button opens graduation rather than trying to step into Listed');
+  t.check(/stepSourcingStatus\(l\.id, 1\)/.test(cta), 'and every other step moves one stage on');
 }
 
 /* ---------- 4. needs chasing: one rule, read three ways -------------- */

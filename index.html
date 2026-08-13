@@ -5651,6 +5651,21 @@
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
   /* The price ladder: rungs on the candidate, and the comparison drawn
      from them at a quantity. */
+  /* What this step is asking for, said once at the top. */
+  .sf-need{font-size:13.5px;line-height:1.5;color:var(--ink);margin:0 0 14px;
+    padding:10px 12px;border-radius:9px;background:var(--ow-verdigris-soft);}
+  .sf-sec{margin-bottom:4px;}
+  /* A block belonging to another step: present, reachable, and not
+     competing for attention with the one being asked for. */
+  .sf-sec.folded{opacity:0.62;border-top:1px solid var(--line);padding-top:8px;margin-top:12px;}
+  .sf-sec.folded:hover,.sf-sec.folded:focus-within{opacity:1;}
+  .sf-sec.folded .sf-sub{font-size:11px;}
+  .sf-cta-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;
+    padding-top:14px;border-top:1px solid var(--line);}
+  .sf-cta-why{font-size:12px;color:var(--ink-soft);flex:1 1 160px;min-width:0;}
+  #sl_price_block > summary{cursor:pointer;font-size:11px;text-transform:uppercase;
+    letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
+  #sl_price_block[open] > summary{margin-bottom:2px;}
   .sf-rung-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
     color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
   .sf-rung-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;}
@@ -8423,13 +8438,24 @@
              the half nobody asks is which ones are still to come. -->
         <div id="sl_steps"></div>
         <div class="op-facts" id="sl_head_facts"></div>
-        <label class="sf-rung-label">What we know so far</label>
-        <div class="sf-modal-facts" id="sl_facts"></div>
-        <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
-        <h3 class="sf-sub">Who has asked for it</h3>
-        <div id="sl_requests"></div>
-        <button type="button" class="btn btn-ghost sf-add-ask" id="sl_add_ask">Somebody else asked</button>
-        <h3 class="sf-sub">What the research turned up</h3>
+        <!-- What THIS step is for, and the one thing that finishes it.
+             Five stages' worth of form shown at once is a form nobody
+             reads; a step that asks for one thing gets answered. -->
+        <p class="sf-need" id="sl_need"></p>
+        <section class="sf-sec" data-sec="facts">
+          <label class="sf-rung-label">What we know so far</label>
+          <div class="sf-modal-facts" id="sl_facts"></div>
+        </section>
+        <section class="sf-sec" data-sec="assign">
+          <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
+        </section>
+        <section class="sf-sec" data-sec="demand">
+          <h3 class="sf-sub">Who has asked for it</h3>
+          <div id="sl_requests"></div>
+          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_add_ask">Somebody else asked</button>
+        </section>
+        <section class="sf-sec" data-sec="research">
+        <h3 class="sf-sub" id="sl_research_head">What the research turned up</h3>
         <div id="sl_candidates"></div>
         <div class="sf-cand-form" id="sl_cand_form">
           <div class="form-grid">
@@ -8444,30 +8470,48 @@
             <div class="field"><label>Phone</label><input type="text" id="sl_c_phone" autocomplete="off"></div>
             <div class="field"><label>Where</label><input type="text" id="sl_c_where" placeholder="e.g. Kikuubo" autocomplete="off"></div>
           </div>
-          <div class="form-grid">
-            <div class="field"><label>Sold by the</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
-            <div class="field"><label>Pack of</label><input type="number" id="sl_c_packqty" min="0" step="any"></div>
-            <div class="field"><label>Pack called</label><input type="text" id="sl_c_packunit" placeholder="Ctn" autocomplete="off"></div>
-          </div>
-          <!-- The price is a LADDER, not a figure. A supplier who says
-               "15,000 each, 13,500 by the carton, 12,000 from five" has
-               given three answers, and which one applies depends entirely
-               on how much you buy -- so all three are recorded, and the
-               comparison between suppliers is asked at a quantity. -->
-          <label class="sf-rung-label">What they charge — add a rung for each price break</label>
-          <div class="sf-rung-row">
-            <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="From">
-            <select id="sl_c_tier_qty_unit"><option value="unit">pieces</option><option value="pack">packs</option></select>
-            <input type="number" id="sl_c_tier_price" min="0" step="any" placeholder="at">
-            <select id="sl_c_tier_price_unit"><option value="unit">each</option><option value="pack">per pack</option></select>
-            <button type="button" class="btn btn-ghost" id="sl_c_tier_add">Add rung</button>
-          </div>
-          <div id="sl_c_tiers_wrap"></div>
+          <!-- Finding WHO has it and finding out WHAT THEY CHARGE are two
+               different steps' questions, so the price half folds away
+               while the step is still about the first one. Folded, not
+               removed: a researcher who was given the price in the same
+               breath should not have to come back for it. -->
+          <details id="sl_price_block">
+            <summary id="sl_price_summary">They quoted a price too — add it now</summary>
+            <div class="form-grid">
+              <div class="field"><label>Sold by the</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
+              <div class="field"><label>Pack of</label><input type="number" id="sl_c_packqty" min="0" step="any"></div>
+              <div class="field"><label>Pack called</label><input type="text" id="sl_c_packunit" placeholder="Ctn" autocomplete="off"></div>
+            </div>
+            <!-- The price is a LADDER, not a figure. A supplier who says
+                 "15,000 each, 13,500 by the carton, 12,000 from five" has
+                 given three answers, and which one applies depends
+                 entirely on how much you buy -- so all three are
+                 recorded, and the comparison is asked at a quantity. -->
+            <label class="sf-rung-label">What they charge — add a rung for each price break</label>
+            <div class="sf-rung-row">
+              <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="From">
+              <select id="sl_c_tier_qty_unit"><option value="unit">pieces</option><option value="pack">packs</option></select>
+              <input type="number" id="sl_c_tier_price" min="0" step="any" placeholder="at">
+              <select id="sl_c_tier_price_unit"><option value="unit">each</option><option value="pack">per pack</option></select>
+              <button type="button" class="btn btn-ghost" id="sl_c_tier_add">Add rung</button>
+            </div>
+            <div id="sl_c_tiers_wrap"></div>
+          </details>
           <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
         </div>
-        <div class="field">
-          <label>Notes</label>
-          <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
+        </section>
+        <section class="sf-sec" data-sec="notes">
+          <div class="field">
+            <label>Notes</label>
+            <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
+          </div>
+        </section>
+        <!-- The step's own finish line, on the step's own screen. Sending
+             somebody back to the card's arrow to advance what they just
+             finished is how a two-click job becomes a four-click one. -->
+        <div class="sf-cta-row" id="sl_cta_row" style="display:none;">
+          <button type="button" class="btn btn-accent" id="sl_cta"></button>
+          <span class="sf-cta-why" id="sl_cta_why"></span>
         </div>
       </div>
     </div>
@@ -39828,6 +39872,7 @@ function renderSourcingLeadBody(l){
     `${l.name} — ${SOURCING_SHORT_LABELS[l.status]}${l.voided ? ' (dropped)' : ''}`;
   document.getElementById('sl_steps').innerHTML = sourcingStepsHTML(l);
   document.getElementById('sl_head_facts').innerHTML = sourcingHeadFactsHTML(l);
+  applySourcingStepView(l);
   const f = leadFacts(l);
   document.getElementById('sl_facts').innerHTML = SOURCING_FACT_ORDER.map(k=>
     `<span class="sf-fact${f[k]?' got':''}">${f[k]
@@ -39883,7 +39928,18 @@ function sourcingRungLabel(t, c){
    the answer changes with it -- ranking on the qty-1 rate is how a carton
    order goes to the supplier who is only cheapest by the piece. */
 let sourcingCompareQty = null;
+/* "Who do we buy from" is the DECIDING step's question, so at Priced it
+   is always drawn -- with one supplier it still costs the order. Earlier
+   than that it appears only once there are two prices to weigh, because
+   until then it is a table with one row telling you nothing you did not
+   just type. Never on a dropped or listed lead: that decision is made. */
+function sourcingWantsCompare(l){
+  if(!l || l.voided || l.status === 'listed') return false;
+  if(l.status === 'priced') return true;
+  return (l.candidates||[]).filter(candidateHasPrice).length >= 2;
+}
 function sourcingCompareHTML(l){
+  if(!sourcingWantsCompare(l)) return '';
   const demand = leadDemandQty(l);
   const qty = sourcingCompareQty != null ? sourcingCompareQty : (demand > 0 ? demand : 1);
   const ranked = sourcingRankedAt(l, qty);
@@ -39916,6 +39972,72 @@ function sourcingCompareHTML(l){
   </div>`;
 }
 const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', sourcing:'added here'};
+
+/* ---------------- What each step actually asks for ----------------
+   Five stages' worth of form shown at once is a form nobody reads. Each
+   step gets the blocks its own question needs, the ones belonging to
+   other steps fold away, and the step's finish line sits on the step's
+   own screen.
+
+   `show` is expanded, `fold` is present but collapsed -- available to
+   somebody who wants it, silent to somebody who does not. Anything named
+   in neither is not drawn at all: at Asked For nobody has researched
+   anything, so a research panel is four empty boxes asking to be
+   ignored. */
+const SOURCING_STEP_GUIDE = {
+  asked: {
+    need: 'Nobody has looked into this yet. Decide who will.',
+    show: ['demand','assign','notes'],
+    fold: [],
+    cta: 'Somebody is looking into it',
+    ctaWhy: 'Moves it to Looking.',
+  },
+  looking: {
+    need: 'Find who has it — a supplier, or the importer who brings it into the country.',
+    show: ['assign','research','notes'],
+    fold: ['facts','demand'],
+    cta: 'We have found who has it',
+    ctaWhy: 'Needs at least one supplier or importer on file.',
+  },
+  sourced: {
+    need: 'Now get their prices. Add a rung for each price break they quote you.',
+    show: ['research','facts','notes'],
+    fold: ['assign','demand'],
+    cta: 'We have the prices',
+    ctaWhy: 'Needs a price on at least one of them.',
+  },
+  priced: {
+    need: 'Decide whether it is worth stocking, and who to buy it from.',
+    show: ['demand','research','facts','notes'],
+    fold: ['assign'],
+    cta: 'Add it to what we sell',
+    ctaWhy: 'Creates the product and its first price.',
+  },
+  listed: {
+    need: 'It is one of our products now.',
+    show: ['facts','notes'],
+    fold: ['demand','research'],
+    cta: '',
+    ctaWhy: '',
+  },
+};
+/* A dropped lead is a record, not a job. Everything stays reachable and
+   nothing is asked for. */
+const SOURCING_DROPPED_GUIDE = {
+  need: 'This one was dropped. Everything found is kept — put it back if it is worth another look.',
+  show: [], fold: ['facts','demand','research','notes'], cta: '', ctaWhy: '',
+};
+function sourcingStepGuide(l){
+  if(l && l.voided) return SOURCING_DROPPED_GUIDE;
+  return SOURCING_STEP_GUIDE[l && l.status] || SOURCING_STEP_GUIDE.asked;
+}
+/* The price half of the research form belongs to Source Found, not to
+   Looking -- but it is folded rather than withheld, because a researcher
+   who was given the price in the same breath should not have to come
+   back for it. */
+function sourcingWantsPriceForm(l){
+  return !!l && !l.voided && l.status !== 'asked' && l.status !== 'looking';
+}
 /* The funnel's own stage rail, through the shared builder the order
    preview uses -- one stepper, two pipelines, so the two screens cannot
    drift into looking like different products. */
@@ -39926,6 +40048,43 @@ function sourcingStepsHTML(l){
 /* The chips under the rail, answering what the order preview's own facts
    row answers: who is on it, how many have asked, and -- when it has left
    the funnel -- what became of it. */
+/* Shows the step its own question and folds the rest away. Driven off
+   SOURCING_STEP_GUIDE rather than a run of if(status===...) branches, so
+   "what does this step ask for" is answerable by reading one table. */
+function applySourcingStepView(l){
+  const guide = sourcingStepGuide(l);
+  document.getElementById('sl_need').textContent = guide.need;
+  document.querySelectorAll('#sl_open_body .sf-sec').forEach(sec=>{
+    const key = sec.dataset.sec;
+    const folded = guide.fold.includes(key);
+    sec.style.display = (guide.show.includes(key) || folded) ? '' : 'none';
+    sec.classList.toggle('folded', folded);
+  });
+  // The research form is for doing research. On a dropped or listed lead
+  // the panel is history, so the form that adds to it goes away.
+  const form = document.getElementById('sl_cand_form');
+  const editable = !l.voided && l.status !== 'listed';
+  form.style.display = editable ? '' : 'none';
+  document.getElementById('sl_research_head').textContent =
+    editable ? 'What the research turned up' : 'What the research found';
+  const priceBlock = document.getElementById('sl_price_block');
+  priceBlock.open = sourcingWantsPriceForm(l);
+  document.getElementById('sl_price_summary').textContent = priceBlock.open
+    ? 'What they charge' : 'They quoted a price too — add it now';
+
+  const row = document.getElementById('sl_cta_row');
+  row.style.display = guide.cta ? 'flex' : 'none';
+  if(guide.cta){
+    document.getElementById('sl_cta').textContent = guide.cta;
+    /* The gate says what is missing BEFORE the button is pressed, rather
+       than refusing afterwards -- the step can then be finished instead
+       of merely attempted. */
+    const nextStatus = SOURCING_STATUS_ORDER[SOURCING_STATUS_ORDER.indexOf(l.status) + 1];
+    const blocked = l.status === 'priced' ? '' : sourcingGateBlock(l, nextStatus);
+    document.getElementById('sl_cta').disabled = !!blocked;
+    document.getElementById('sl_cta_why').textContent = blocked || guide.ctaWhy;
+  }
+}
 function sourcingHeadFactsHTML(l){
   const askers = leadDistinctAskers(l);
   const asks = leadAskCount(l);
@@ -40059,6 +40218,14 @@ document.getElementById('sl_save').addEventListener('click', ()=>{
   renderSourcing();
   renderSourcingBadge();
   toast('Saved');
+});
+document.getElementById('sl_cta').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  // Priced is the one step whose finish is not a stage move: `listed` is
+  // stamped by graduation and nowhere else.
+  if(l.status === 'priced'){ closeModal('sourcingLeadModal'); openSourcingGraduate(l.id); return; }
+  if(stepSourcingStatus(l.id, 1)) renderSourcingLeadBody(sourcingLeadById(l.id));
 });
 document.getElementById('sl_add_ask').addEventListener('click', ()=>{
   const l = sourcingLeadById(editingSourcingLeadId);
