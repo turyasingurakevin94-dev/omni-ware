@@ -223,4 +223,132 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
     'and it turns when the last one lands');
 }
 
+/* ---------- 8. and WHO is bringing it -------------------------------- */
+/*
+ * "2 of 5 items in" says how far along, never whether the other three
+ * are moving. An order somebody is out collecting and an order nobody
+ * has arranged anything for looked identical on the board, and the
+ * second only surfaced when a client rang to ask. The trips were
+ * recorded and the buying list showed them; the screen somebody actually
+ * watches did not.
+ *
+ * THE ROW THAT MATTERS IS THE ABSENCE. Everything else on the card
+ * reports progress; "Nobody sent for 2 items" reports that there is
+ * none, which is why it is the one that is a button.
+ */
+{
+  const NAMES2 = ['orderLiveTrips', 'orderLinesWithNobodySent', 'orderTripsRowHTML'];
+  const state = { collectionTrips: [], suppliers: [{ id: 'S1', name: 'Shafik Katwe' }] };
+  const scope = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'tripsCoveringLine', 'shared-worker.js'),
+    extractFunction(shared, 'lineIsOnATrip', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'orderIncomingLines', 'shared-worker.js'),
+    extractFunction(shared, 'orderAwaitsGoods', 'shared-worker.js'),
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'tripCarrierLabel', 'index.html'),
+    extractFunction(src, 'tripStatusLabel', 'index.html'),
+    ...NAMES2.map((n) => extractFunction(src, n, 'index.html')),
+  ], {
+    data: state, esc: (s) => String(s), ICON_TRUCK: '', ICON_WARN: '',
+    staffName: () => 'Abudu', supplierName: () => 'Shafik Katwe',
+    TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
+  }, NAMES2);
+
+  const order = { id: 7, items: [
+    { lineId: 'A', supplierId: 'S1', productName: 'Hinges' },
+    { lineId: 'B', supplierId: 'S1', productName: 'Runners' },
+  ] };
+  const tripOver = (over) => Object.assign({
+    id: 'T1', supplierId: 'S1', status: 'collecting', assignedWorkerId: 'W1', voided: false,
+    lines: [{ orderId: 7, lineId: 'A' }, { orderId: 7, lineId: 'B' }],
+  }, over);
+
+  // Nothing arranged.
+  state.collectionTrips = [];
+  const gap = scope.orderTripsRowHTML(order);
+  t.check(scope.orderLinesWithNobodySent(order).length === 2, 'both lines are on nobody\'s list');
+  t.check(/Nobody sent for 2 items/.test(gap), `and the card says so (${gap.replace(/<[^>]+>/g, '').trim()})`);
+  t.check(/data-trip-gap="7"/.test(gap) && /<button/.test(gap),
+    'as the one line on the card you can press, because there is somewhere to go about it');
+
+  // One of ours is out.
+  state.collectionTrips = [tripOver({})];
+  const ours = scope.orderTripsRowHTML(order);
+  t.check(/Abudu/.test(ours) && /out collecting/.test(ours), 'a worker out is named, with what they are doing');
+  t.check(!/Nobody sent/.test(ours), 'and nothing is reported as unarranged once it is on a list');
+  t.check((ours.match(/sq-goods-row trip/g) || []).length === 1,
+    'one journey covering two of this order\'s lines is ONE row — printing it twice would read as two people out');
+  t.check(/2 items of this order/.test(ours),
+    'saying how much of THIS order it covers, since a run carries other orders too');
+
+  /* And that count is only ours. A run to Shafik carries lines from
+     three different orders -- that is the whole reason trips are per
+     supplier -- so counting the trip's lines instead of this order's
+     lines would tell each card the journey is bigger than its share of
+     it. A fixture whose trip carries only this order cannot tell the
+     two apart, which is how this passed while counting everything. */
+  state.collectionTrips = [tripOver({ lines: [
+    { orderId: 7, lineId: 'A' }, { orderId: 7, lineId: 'B' },
+    { orderId: 42, lineId: 'X' }, { orderId: 42, lineId: 'Y' }, { orderId: 99, lineId: 'Z' },
+  ] })];
+  const shared5 = scope.orderTripsRowHTML(order);
+  t.check(/2 items of this order/.test(shared5) && !/5 items/.test(shared5),
+    `a run of five lines reports the two that are ours (${(shared5.match(/\d+ items? of this order/) || [])[0]})`);
+
+  // The supplier is bringing it.
+  state.collectionTrips = [tripOver({ assignedWorkerId: '__supplier__' })];
+  const theirs = scope.orderTripsRowHTML(order);
+  t.check(/Supplier delivering/.test(theirs) && /on its way here/.test(theirs),
+    'a supplier delivery says so in the same place');
+  t.check(!/__supplier__/.test(theirs), 'and never leaks the sentinel onto the board');
+
+  /* Half arranged is the case that would be easiest to get wrong: a trip
+     exists, so an early return would call the whole order covered and
+     the other line would wait for a journey nobody ever makes. */
+  state.collectionTrips = [tripOver({ lines: [{ orderId: 7, lineId: 'A' }] })];
+  const half = scope.orderTripsRowHTML(order);
+  t.check(/Abudu/.test(half) && /Nobody sent for 1 item/.test(half),
+    'a trip covering some of it shows the trip AND flags the rest');
+  t.check(/1 item of this order/.test(half), 'counting only the lines it actually carries');
+
+  // Somebody else's trip is not this order's business.
+  state.collectionTrips = [tripOver({ lines: [{ orderId: 99, lineId: 'Z' }] })];
+  t.check(scope.orderLiveTrips(order).length === 0
+    && /Nobody sent for 2 items/.test(scope.orderTripsRowHTML(order)),
+    'a trip carrying another order entirely covers nothing here');
+
+  // Nothing outstanding, nothing said.
+  const settled = { id: 8, items: [{ lineId: 'A', supplierId: '__stock__' }] };
+  t.check(scope.orderTripsRowHTML(settled) === '',
+    'an order with nothing on its way says nothing at all');
+  const gotIt = { id: 9, items: [{ lineId: 'A', supplierId: 'S1', receivedAt: 'x', receivedQty: 3 }] };
+  state.collectionTrips = [];
+  t.check(scope.orderTripsRowHTML(gotIt) === '',
+    'and neither does one whose goods have already come through the door');
+
+  /* The guard earns its place here specifically. A trip stays live until
+     it is checked IN, so an order whose goods have arrived can still be
+     on a live trip -- and without the awaits-goods test the card would
+     go on announcing that somebody is out fetching what is already on
+     the shelf. Every other fixture returns empty for a second reason
+     (no trips, no gap), which is why this one is needed to see it. */
+  state.collectionTrips = [tripOver({ lines: [{ orderId: 9, lineId: 'A' }] })];
+  t.check(scope.orderLiveTrips(gotIt).length === 1,
+    'the trip is still live, because live means "not yet checked in"');
+  t.check(scope.orderTripsRowHTML(gotIt) === '',
+    'but the card stays silent — the goods are here, whatever the paperwork still says');
+
+  // Drawn on the card, and wired.
+  t.check(src.includes('${orderTripsRowHTML(q)}')
+    && src.indexOf('${orderGoodsRowHTML(q)}') < src.indexOf('${orderTripsRowHTML(q)}'),
+    'the card draws it directly under the count it explains');
+  t.check(/querySelectorAll\('\[data-trip-gap\]'\)\.forEach\(btn=>btn\.addEventListener\('click', openBuyingList\)\)/.test(src),
+    'and the button opens the buying list, where somebody actually gets sent');
+}
+
 process.exit(t.done() ? 1 : 0);

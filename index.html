@@ -3818,6 +3818,20 @@
   .sq-goods-row svg{width:14px;height:14px;flex-shrink:0;}
   .sq-goods-row.in{color:var(--good);font-weight:600;}
   .sq-goods-row.short{color:var(--warn-ink);font-weight:600;}
+  /* A journey in progress is ordinary news, so it reads at the same
+     weight as the goods count above it. */
+  .sq-goods-row.trip{color:var(--ink-soft);}
+  .sq-goods-row.trip.by-supplier svg{color:var(--good);}
+  /* Nothing arranged is the opposite -- the one line on this card that
+     reports an absence rather than progress, and the only one that is a
+     button, because there is somewhere to go about it. */
+  .sq-goods-row.nobody-sent{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:600;color:var(--warn-ink);
+  }
+  .sq-goods-row.nobody-sent svg{width:14px;height:14px;flex-shrink:0;}
+  .sq-goods-row.nobody-sent:hover{text-decoration:underline;}
+  .sq-goods-row.nobody-sent:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .sq-assignee-row{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
   .sq-assignee-icon{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
   .sq-assignee-icon.prep{animation:sq-box-sort 1.3s ease-in-out infinite;}
@@ -18165,6 +18179,58 @@ function orderGoodsRowHTML(q){
   </div>`;
 }
 
+/* WHO is fetching what this order is waiting on.
+
+   The goods row already says "2 of 5 items in". It has never said
+   whether the other three are on their way, and that is the difference
+   between an order that is progressing and one that is stuck: the two
+   look identical on the board, and the stuck one only surfaces when a
+   client rings to ask. The trips are recorded, the buying list shows
+   them, and the board -- the screen somebody actually watches -- did
+   not.
+
+   Deduped by trip, not listed per line: one journey to Shafik covering
+   three of this order's lines is one thing happening, and printing it
+   three times would read as three people out. */
+function orderLiveTrips(q){
+  const seen = [], out = [];
+  ((q && q.items) || []).forEach(it=>{
+    tripsCoveringLine(q.id, it.lineId).forEach(t=>{
+      if(seen.indexOf(t.id) < 0){ seen.push(t.id); out.push(t); }
+    });
+  });
+  return out;
+}
+// Still out at a supplier and on nobody's list -- the ones no journey
+// exists for yet.
+function orderLinesWithNobodySent(q){
+  return orderIncomingLines(q).filter(it=> !lineIsOnATrip(q.id, it.lineId));
+}
+function orderTripsRowHTML(q){
+  if(!q || !orderAwaitsGoods(q)) return '';
+  const trips = orderLiveTrips(q);
+  const nobody = orderLinesWithNobodySent(q);
+  if(!trips.length && !nobody.length) return '';
+  return trips.map(t=>{
+    const mine = tripLines(t).filter(l=> String(l.orderId) === String(q.id)).length;
+    return `<div class="sq-goods-row trip${tripIsSupplierDelivered(t) ? ' by-supplier' : ''}"
+      title="${esc(`${tripStatusLabel(t)} — ${supplierName(t.supplierId)}`)}">
+      ${ICON_TRUCK}
+      <span>${esc(tripCarrierLabel(t))} · ${esc(tripStatusLabel(t).toLowerCase())}${
+        mine ? ` · ${mine} item${mine===1?'':'s'} of this order` : ''}</span>
+    </div>`;
+  }).join('') + (nobody.length
+    /* The one worth interrupting for. Everything else on this card
+       reports progress; this reports its absence, so it carries the
+       warning colour and a way straight to the list where somebody gets
+       sent. */
+    ? `<button type="button" class="sq-goods-row nobody-sent" data-trip-gap="${q.id}"
+         title="Nothing has been arranged for these items — open the buying list">
+        ${ICON_WARN}<span>Nobody sent for ${nobody.length} item${nobody.length===1?'':'s'}</span>
+      </button>`
+    : '');
+}
+
 const STAGE_ASSIGNMENT_ROLE = { preparing: 'worker', pending_delivery: 'delivery' };
 const STAGE_ASSIGNMENT_FIELD = { worker: 'assignedWorkerId', delivery: 'assignedDeliveryId' };
 
@@ -19192,6 +19258,7 @@ function renderSavedQuotes(){
             ${orderMetaRowHTML(q)}
             ${orderCashStripHTML(q)}
             ${orderGoodsRowHTML(q)}
+            ${orderTripsRowHTML(q)}
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
             ${orderNeedsWorker(q) ? `<div class="sq-assignee-row sq-unassigned" title="Nobody is preparing this order">${ICON_WARN}<span class="sq-assignee-name">${q.assignedWorkerId ? 'Assigned to someone no longer on staff' : 'Nobody assigned'}</span><button type="button" class="sq-assign-btn" data-id="${q.id}">Assign</button></div>` : ''}
             ${(q.status==='pending_delivery' && !orderNeedsDelivery(q)) ? `<div class="sq-assignee-row" title="Being delivered by">${ICON_DELIVERY_ANIM}<span class="sq-assignee-name">${esc(deliveryAssigneeLabel(q))}</span></div>` : ''}
@@ -19410,6 +19477,9 @@ function renderSavedQuotes(){
   // does not reset how long the order has been waiting to go out.
   wrap.querySelectorAll('.sq-assign-delivery-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'pending_delivery', 'delivery')));
   wrap.querySelectorAll('.sq-short-flag').forEach(btn=>btn.addEventListener('click', ()=>openPickShortfallModal(Number(btn.dataset.id), false)));
+  // Straight to where somebody gets sent, rather than telling the admin
+  // to go and find it.
+  wrap.querySelectorAll('[data-trip-gap]').forEach(btn=>btn.addEventListener('click', openBuyingList));
   /* The eye, and only the eye. The card body opened the preview too for a
      while, and on a board that is dragged, selected and stepped through
      it meant the panel appeared on clicks nobody meant as a request to
