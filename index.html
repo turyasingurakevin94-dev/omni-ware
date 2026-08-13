@@ -4299,26 +4299,48 @@
 
   /* Cash position. Sits between the total and the supplier runs because it
      is the question you ask after seeing the total and before setting off. */
-  .bl-cash{
-    margin:12px 0 4px;padding:12px 13px;border-radius:10px;
-    background:var(--ow-steel-050);border:1px solid var(--ow-rule-soft);
+  /* THE VERDICT, and the only tinted block on the screen.
+
+     Grey was doing two jobs here: it wrapped the cash answer AND every
+     supplier run below it, so at a glance the most important thing on
+     the modal looked like one more container of details. Colour now
+     carries the meaning -- green when the money covers the buying, red
+     when it does not -- and the supplier cards are plain white, so the
+     two can never be mistaken for each other. */
+  .bl-verdict{
+    margin:12px 0 6px;padding:13px 15px;border-radius:12px;
+    background:var(--ow-verdigris-soft);border:1px solid #BFD9D1;
   }
-  .bl-cash.short{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
-  .bl-cash-accounts{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;}
-  .bl-cash-acct{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);}
-  .bl-cash-acct .icon{width:14px;height:14px;flex-shrink:0;}
+  .bl-verdict.short{background:var(--ow-crimson-soft);border-color:#E7C3BF;}
+  /* Cost, money and gap on one line, because a gap means nothing
+     without the two numbers it came from. */
+  .bl-verdict-figs{display:flex;align-items:flex-end;flex-wrap:wrap;gap:6px 14px;}
+  .bl-fig{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .bl-fig-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .bl-fig-val{
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:700;color:var(--ink);line-height:1.1;
+  }
+  /* The answer is bigger than the two figures it is drawn from. */
+  .bl-fig.strong .bl-fig-val{font-size:19px;}
+  .bl-verdict.short .bl-fig.strong .bl-fig-val{color:var(--ow-crimson);}
+  .bl-verdict:not(.short) .bl-fig.strong .bl-fig-val{color:var(--good);}
+  .bl-fig-op{font-size:11px;color:var(--ink-soft);padding-bottom:3px;}
+  .bl-verdict-say{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11px;}
+  .bl-verdict-main{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--ink);}
+  .bl-verdict-main .icon{width:16px;height:16px;flex-shrink:0;color:var(--good);}
+  .bl-verdict.short .bl-verdict-main .icon{color:var(--ow-crimson);}
+  /* The split, kept and demoted. True -- money in the bank does not buy
+     cement from a yard that wants cash -- but not the headline it was
+     laid out as. */
+  .bl-verdict-accounts{
+    display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px;padding-top:9px;
+    border-top:1px solid rgba(20,30,40,0.08);
+  }
+  .bl-cash-acct{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);}
+  .bl-cash-acct .icon{width:13px;height:13px;flex-shrink:0;}
   .bl-cash-acct b{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
-  .bl-cash-acct.total{margin-left:auto;padding-left:14px;border-left:1px solid var(--line);}
-  .bl-cash-acct.total .bl-cash-acct-label{font-weight:700;color:var(--ink);}
-  .bl-cash-verdict{
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-    margin-top:11px;padding-top:10px;border-top:1px solid var(--ow-rule-soft);
-  }
-  .bl-cash-verdict-main{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink);}
-  .bl-cash-verdict-main .icon{width:16px;height:16px;flex-shrink:0;color:var(--good);}
-  .bl-cash.short .bl-cash-verdict-main .icon{color:var(--ow-crimson);}
-  .bl-cash-verdict-main b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
-  .bl-cash-plan{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:7px 12px;}
+  .bl-cash-plan{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:7px 12px;}
   .bl-cash-plan .icon{width:15px;height:15px;}
   .bl-cash-note{margin-top:8px;font-size:11.5px;color:var(--ow-amber-ink);}
 
@@ -4386,43 +4408,40 @@
     margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
     color:var(--ink);font-variant-numeric:tabular-nums;
   }
-  .bl-lines{width:100%;overflow-x:auto;}
-  /* Fixed, with declared widths: auto layout sizes each run's table from its
-     own contents, so a long "quoted on ..." note in one run pushed its
-     figures into each other and left the columns landing in different places
-     from the run below it. */
-  .bl-lines table{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
-  .bl-lines col.item{width:38%;}
-  .bl-lines col.qty{width:14%;}
-  .bl-lines col.unit{width:16%;}
-  .bl-lines col.cost{width:16%;}
-  .bl-lines col.recv{width:16%;}
-  /* On a phone these percentages are of about 331px, which gives the
-     unit column 53px to print "12,250 UGX" in and the action column 53px
-     for a Receive button. table-layout:fixed does not clip, so both ran
-     straight over their neighbours -- the reported "12,250 245,000"
-     printed on top of each other, and Receive hanging off the edge.
-     overflow-x:auto was already here and never engaged, because a table
-     at width:100% never exceeds its own scroller.
-
-     So the table gets a real minimum width and the scroller starts
-     working, and the shares are re-cut for the narrow case: the item
-     name can wrap over two lines, a money figure cannot. AFTER the rules
-     above, deliberately -- equal specificity is decided by order, which
-     is what silently defeated the same fix on the quote stage. */
-  @media (max-width:620px){
-    .bl-lines table{min-width:520px;}
-    .bl-lines col.item{width:30%;}
-    .bl-lines col.qty{width:12%;}
-    .bl-lines col.unit{width:18%;}
-    .bl-lines col.cost{width:18%;}
-    .bl-lines col.recv{width:22%;}
-    /* And the run header stops shouldering "Send someone" off the right
-       edge: supplier name, place and total on one line, the action on
-       its own. */
-    .bl-run-head{flex-wrap:wrap;}
-    .bl-run-head .bl-send{margin-left:auto;}
+  /* The lines, as a list. They were a five-column fixed table, which is
+     what made a run need the full width of the modal -- and on a phone
+     those columns collided at 331px and needed a minimum width and a
+     sideways scroll of their own before they could be read. A list has
+     no columns to collide, so the card is free to be narrow enough to
+     sit in the track with its neighbours. */
+  /* A supplier card in the shared run track. Wider than the pickup and
+     delivery cards because each line here carries a figure and a control
+     rather than just a name. */
+  .bl-card{flex-basis:clamp(268px, 80%, 340px);padding:13px 14px;}
+  .bl-card-head{display:flex;align-items:flex-start;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--line);}
+  .bl-card-who{display:flex;align-items:flex-start;gap:7px;min-width:0;flex:1;}
+  .bl-card-who .icon{width:16px;height:16px;flex-shrink:0;color:var(--ink-soft);margin-top:2px;}
+  .bl-card-name-wrap{min-width:0;}
+  .bl-card-name{font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;}
+  .bl-card-loc{font-size:11.5px;color:var(--ow-ink-400);margin-top:1px;}
+  .bl-card-total{
+    font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;
+    color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;
   }
+  .bl-card-foot{display:flex;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line);}
+
+  .bl-items{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px;}
+  .bl-item-row{padding:8px 0;border-top:1px solid var(--ow-rule-soft);}
+  .bl-item-row:first-child{border-top:none;}
+  .bl-item-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .bl-item-line.sub{margin-top:3px;}
+  .bl-item-cost{
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:700;color:var(--ink);flex-shrink:0;
+  }
+  .bl-item-qty{font-size:11.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .bl-item-each{color:var(--ow-ink-400);}
+  .bl-item-act{display:flex;gap:6px;flex-shrink:0;}
   /* A line already collected reads as done rather than as still to do --
      it stays on the list because the trip is the trip, but it is no
      longer money to take or a shop to visit. */
@@ -4431,8 +4450,9 @@
      gone yet" is asked -- and the answer belongs beside the list they
      would otherwise send a second person with. */
   .bl-send{
-    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-    margin-left:10px;padding:5px 11px;border-radius:6px;font-size:11.5px;font-weight:700;
+    all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;
+    justify-content:center;gap:6px;flex:1 1 auto;
+    padding:8px 11px;border-radius:8px;font-size:11.5px;font-weight:700;
     background:var(--accent);color:#fff;white-space:nowrap;
   }
   .bl-send:hover{background:var(--ow-oxide-deep);}
@@ -4443,8 +4463,9 @@
      the supplier is already doing. */
   .bl-bringing{
     all:unset;box-sizing:border-box;cursor:pointer;white-space:nowrap;
-    padding:6px 12px;border-radius:8px;border:1px solid var(--line);
-    font-size:12px;font-weight:600;color:var(--ink-soft);
+    display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;
+    padding:8px 11px;border-radius:8px;border:1px solid var(--line);
+    font-size:11.5px;font-weight:600;color:var(--ink-soft);
   }
   .bl-bringing:hover{border-color:var(--ink-soft);color:var(--ink);}
   .bl-bringing:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -4453,15 +4474,23 @@
      than as something to chase. */
   .bl-trip.by-supplier{background:var(--ow-steel-050);border-color:var(--line);}
   .bl-trips{display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;}
+  /* Wraps in two bands rather than one row: the strip now lives inside a
+     ~300px card instead of the full width of the modal, and a row of
+     icon + status + name + count + two buttons cannot be read at that
+     width -- the name broke over two lines with "1 line" stranded
+     underneath it. So the words take the first band and the controls
+     take the second, full width, where they are also easier to hit. */
   .bl-trip{
-    display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;
     background:var(--ow-steel-050);border:1px solid var(--line);font-size:12px;
   }
   .bl-trip svg{width:15px;height:15px;flex-shrink:0;color:var(--ink-soft);}
-  .bl-trip-body{flex:1;min-width:0;}
-  .bl-trip-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .bl-trip-body{flex:1 1 60%;min-width:0;}
+  .bl-trip-top{display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap;}
   .bl-trip-who{color:var(--ink-soft);}
-  .bl-trip-count{color:var(--ow-ink-400);font-size:11px;margin-left:auto;}
+  .bl-trip-count{color:var(--ow-ink-400);font-size:11px;}
+  /* The controls, on their own line and sharing it. */
+  .bl-trip .bl-trip-act, .bl-trip .bl-trip-void{flex:1 1 auto;text-align:center;}
   .bl-trip-short{font-size:11.5px;color:var(--ow-amber-ink);font-weight:600;margin-top:2px;}
   /* Back and waiting to be checked in is the one state somebody has to
      act on, so it is the one that carries colour. */
@@ -14482,32 +14511,58 @@ function orderCashStripHTML(q){
 function cashPositionHTML(orders){
   const pos = cashPositionForBuying(orders);
   const short = pos.short > 0;
-  return `<div class="bl-cash${short?' short':''}">
-    <div class="bl-cash-accounts">
-      ${pos.byAccount.map(a=>`
-        <div class="bl-cash-acct">
-          ${ {cash:ICON_CASH, momo:ICON_MOMO, bank:ICON_BANK}[a.key] || ICON_WALLET }
-          <span class="bl-cash-acct-label">${esc(a.label)}</span>
-          <b>${fmtUGX(a.amount)}</b>
-        </div>`).join('')}
-      <div class="bl-cash-acct total">
-        <span class="bl-cash-acct-label">On hand</span>
-        <b>${fmtUGX(pos.onHand)}</b>
+  /* THE ANSWER FIRST, and the two numbers it is made of beside it.
+
+     What this screen is really asked is "can we afford the buying?", and
+     the answer used to be the third thing on it: the cost sat in a
+     header, the money sat in a card of account chips, and the verdict
+     sat under those chips as a sentence. Three places for one thought,
+     with the account split -- true but secondary -- given the most room.
+
+     So the cost, the money and the gap stand together as one line of
+     figures, because a gap only means anything next to the two numbers
+     it came from. The verdict says which way it went, in colour: this
+     block is the only tinted thing on the screen, so it can never be
+     mistaken for another supplier card. Grey for a good answer was the
+     other half of that problem -- it made the verdict look like one more
+     container rather than the point of the screen. */
+  return `<div class="bl-verdict${short?' short':' ok'}">
+    <div class="bl-verdict-figs">
+      <div class="bl-fig">
+        <span class="bl-fig-label">To buy</span>
+        <b class="bl-fig-val">${fmtUGX(pos.needed)}</b>
+      </div>
+      <span class="bl-fig-op">from</span>
+      <div class="bl-fig">
+        <span class="bl-fig-label">On hand</span>
+        <b class="bl-fig-val">${fmtUGX(pos.onHand)}</b>
+      </div>
+      <span class="bl-fig-op">leaves</span>
+      <div class="bl-fig strong">
+        <span class="bl-fig-label">${short ? 'Short by' : 'Left after'}</span>
+        <b class="bl-fig-val">${fmtUGX(short ? pos.short : pos.after)}</b>
       </div>
     </div>
-    <div class="bl-cash-verdict">
-      <div class="bl-cash-verdict-main">
-        ${short ? ICON_WARN : ICON_CHECK}
-        <span>${short
-          ? `Short by <b>${fmtUGX(pos.short)}</b> for everything on this board`
-          : `Enough on hand — <b>${fmtUGX(pos.after)}</b> left after buying`}</span>
-      </div>
+    <div class="bl-verdict-say">
+      <span class="bl-verdict-main">${short ? ICON_WARN : ICON_CHECK}<span>${short
+        ? 'Not enough for everything on this board'
+        : 'Enough on hand for everything on this board'}</span></span>
       <button type="button" class="btn btn-ghost bl-cash-plan" id="bl_plan_btn"
         title="${short ? 'What to do about the shortfall' : 'Which orders to buy for first'}">
         ${ICON_PLAN}<span>${short ? 'How to cover it' : 'What to buy first'}</span>
       </button>
     </div>
-    ${pos.unpricedLines ? `<div class="bl-cash-note">${pos.unpricedLines} unpriced line${pos.unpricedLines===1?'':'s'} not counted in the figure above, so the real need may be higher.</div>` : ''}
+    ${/* Still here, still true, and now plainly secondary: 600,000 in the
+         bank does not buy cement from a yard that wants cash this
+         morning, so the split has to be readable -- it just is not the
+         headline it was laid out as. */''}
+    <div class="bl-verdict-accounts">
+      ${pos.byAccount.map(a=>`<span class="bl-cash-acct">
+        ${ {cash:ICON_CASH, momo:ICON_MOMO, bank:ICON_BANK}[a.key] || ICON_WALLET }
+        <span class="bl-cash-acct-label">${esc(a.label)}</span><b>${fmtUGX(a.amount)}</b>
+      </span>`).join('')}
+    </div>
+    ${pos.unpricedLines ? `<div class="bl-cash-note">${pos.unpricedLines} unpriced line${pos.unpricedLines===1?'':'s'} not counted above, so the real need may be higher.</div>` : ''}
   </div>`;
 }
 
@@ -14927,61 +14982,77 @@ function openBuyingList(){
   const unpriced = [];
   orders.forEach(q=> orderUnpricedLines(q).forEach(l=> unpriced.push({order:q, line:l})));
 
+  /* One supplier, one card, and the cards slide sideways -- the same
+     shape Pickup Runs and Delivery Runs already use for exactly this
+     thought. Stacking them was this screen's own invention: three
+     suppliers meant three full-width blocks and a scroll to see whether
+     there was a fourth, while the two neighbouring screens answered the
+     same question in one gesture.
+
+     The lines were a five-column table, which is what forced that
+     width. A table also cannot fit a phone -- its columns collided at
+     331px and needed a minimum width and a sideways scroll of their own
+     to be readable at all. A list of lines has no columns to collide,
+     so the card can be narrow enough to sit in a track. */
   const runHTML = (r)=>{
     const sup = data.suppliers.find(s=>s.id===r.supplierId);
-    return `<div class="bl-run">
-      <div class="bl-run-head">
-        ${ICON_STORE}
-        <span class="bl-run-name">${esc(supplierName(r.supplierId))}</span>
-        ${sup && sup.location ? `<span class="bl-run-loc">${esc(sup.location)}${sup.shopNo ? ' · Shop ' + esc(sup.shopNo) : ''}</span>` : ''}
-        <span class="bl-run-total">${fmtUGX(r.total)}</span>
-        ${/* One journey, one job. Offered only while something on this run
-             is not already on somebody's list -- a second trip for the
-             same carton sends two people for one thing. */
-          r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId))
-            ? `<button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>
-               <button type="button" class="bl-bringing" data-bringing="${esc(r.supplierId)}" title="This supplier is delivering — nobody of ours goes out">They’re delivering</button>` : ''}
-      </div>
+    const canSend = r.lines.some(l=> !l.settled && !lineIsOnATrip(l.order.id, l.it.lineId));
+    return `<article class="dr-card bl-card">
+      <header class="bl-card-head">
+        <div class="bl-card-who">
+          ${ICON_STORE}
+          <div class="bl-card-name-wrap">
+            <div class="bl-card-name">${esc(supplierName(r.supplierId))}</div>
+            ${sup && sup.location ? `<div class="bl-card-loc">${esc(sup.location)}${sup.shopNo ? ' · Shop ' + esc(sup.shopNo) : ''}</div>` : ''}
+          </div>
+        </div>
+        <div class="bl-card-total">${fmtUGX(r.total)}</div>
+      </header>
       ${blRunTripsHTML(r)}
-      <div class="bl-lines"><table>
-        <colgroup><col class="item"><col class="qty"><col class="unit"><col class="cost"><col class="recv"></colgroup>
-        <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit</th><th class="r">Cost</th><th></th></tr></thead>
-        <tbody>${r.lines.map(l=>{
-          const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
-          const exp = quoteLineExpected(l.it);
-          /* A receipt that did not match what was sent for is the whole
-             reason for writing one down, so the line says which way. */
-          const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
-          const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
-          /* Received in full is finished business; received short is
-             not. The row used to draw both the same way -- struck
-             through, "paid", Undo only -- so the one case that still
-             needed somebody to act looked exactly like the case that
-             needed nobody. */
-          return `<tr class="${l.settled ? 'bl-received' : (l.shortfall ? 'bl-short' : '')}">
-            <td><div class="bl-item">${esc(l.it.productName || 'Item')}</div>
-              ${l.movedFrom
-                ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
-                : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
-              ${l.received ? `<div class="bl-recd">${ICON_CHECK}${Number(l.it.receivedQty)} received${
-                shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
-                paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}
-              ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${l.shortfall}${l.it.unit ? ' ' + esc(l.it.unit) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}</td>
-            <td class="r num">${esc(l.shortfall || l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</td>
-            <td class="r num soft">${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</td>
-            <td class="r num">${l.settled
-              ? `<span class="bl-paid">paid</span>`
-              : fmtUGX(l.lineCost)}</td>
-            <td class="r">${l.shortfall
+      <ul class="bl-items">${r.lines.map(l=>{
+        const saving = l.movedFrom ? (l.quotedUnitCost - l.unitCost) : 0;
+        const exp = quoteLineExpected(l.it);
+        /* A receipt that did not match what was sent for is the whole
+           reason for writing one down, so the line says which way. */
+        const shortBy = l.received ? exp.qty - Number(l.it.receivedQty) : 0;
+        const paidMore = l.received ? Number(l.it.receivedPrice) - exp.price : 0;
+        /* Received in full is finished business; received short is not.
+           The row used to draw both the same way -- struck through,
+           "paid", Undo only -- so the one case that still needed
+           somebody to act looked exactly like the case that needed
+           nobody. */
+        return `<li class="bl-item-row ${l.settled ? 'bl-received' : (l.shortfall ? 'bl-short' : '')}">
+          <div class="bl-item-line">
+            <div class="bl-item">${esc(l.it.productName || 'Item')}</div>
+            <div class="bl-item-cost">${l.settled ? `<span class="bl-paid">paid</span>` : fmtUGX(l.lineCost)}</div>
+          </div>
+          <div class="bl-item-line sub">
+            <div class="bl-item-qty">${esc(l.shortfall || l.qty)}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}
+              <span class="bl-item-each">@ ${fmtUGX(l.received ? Number(l.it.receivedPrice) : l.unitCost)}</span></div>
+            <div class="bl-item-act">${l.shortfall
               ? `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive rest</button>
                  <button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
               : l.received
                 ? `<button type="button" class="bl-undo" data-undo="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Undo</button>`
-                : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table></div>
-    </div>`;
+                : `<button type="button" class="bl-receive" data-order="${esc(l.order.id)}" data-line="${esc(l.it.lineId)}">Receive</button>`}</div>
+          </div>
+          ${l.movedFrom
+            ? `<div class="bl-moved">${ICON_PURCHASE}quoted on ${esc(supplierName(l.movedFrom))}${saving>0 ? ` · ${fmtUGX(saving)} cheaper here` : ''}</div>`
+            : `<div class="bl-for">${esc(quoteClientName(l.order))}</div>`}
+          ${l.received ? `<div class="bl-recd">${ICON_CHECK}${Number(l.it.receivedQty)} received${
+            shortBy > 0 ? ` · ${shortBy} short of the ${exp.qty} sent for` : ''}${
+            paidMore ? ` · ${fmtUGX(Math.abs(paidMore))} ${paidMore>0?'more':'less'} per ${esc(l.it.unit||'unit')} than quoted` : ''}</div>` : ''}
+          ${l.shortfall ? `<div class="bl-owed">${ICON_WARN}${l.shortfall}${l.it.unit ? ' ' + esc(l.it.unit) : ''} still owed to ${esc(quoteClientName(l.order))}</div>` : ''}
+        </li>`;
+      }).join('')}</ul>
+      ${/* One journey, one job. Offered only while something on this run
+           is not already on somebody's list -- a second trip for the
+           same carton sends two people for one thing. */
+        canSend ? `<footer class="bl-card-foot">
+          <button type="button" class="bl-send" data-run="${esc(r.supplierId)}">${ICON_TRUCK}Send someone</button>
+          <button type="button" class="bl-bringing" data-bringing="${esc(r.supplierId)}" title="This supplier is delivering — nobody of ours goes out">They’re delivering</button>
+        </footer>` : ''}
+    </article>`;
   };
 
   document.getElementById('buyingListBody').innerHTML = `
@@ -14990,7 +15061,20 @@ function openBuyingList(){
       <span class="bl-top-fig">${fmtUGX(total)}</span>
     </div>
     ${cashPositionHTML(orders)}
-    ${runs.length ? runs.map(runHTML).join('') : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
+    ${runs.length ? `
+    <div class="dr-carousel">
+      <button type="button" class="dr-nav prev" id="bl_prev" aria-label="Previous supplier">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="dr-track" id="bl_track" tabindex="0" role="group" aria-label="Suppliers to buy from, scroll sideways">
+        ${runs.map(runHTML).join('')}
+      </div>
+      <button type="button" class="dr-nav next" id="bl_next" aria-label="Next supplier">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <p class="dr-hint">Slide sideways for the next supplier${runs.length>1 ? ' — the biggest bills come first' : ''}.</p>`
+      : `<p class="preset-hint">Nothing to buy — every line on the board is coming off our own shelf.</p>`}
     ${blStrandedTripsHTML(runs)}
     ${unpriced.length ? `<div class="bl-gap">
       ${ICON_WARN}
@@ -15003,6 +15087,8 @@ function openBuyingList(){
   // open and a listener bound to the old markup would be thrown away with it.
   const planBtn = document.getElementById('bl_plan_btn');
   if(planBtn) planBtn.addEventListener('click', openShortfallPlan);
+  // The same carousel the other two run modals use, wired the same way.
+  if(runs.length) wireRunCarousel('bl_track', 'bl_prev', 'bl_next');
   wireBuyingListReceiving();
   openModal('buyingListModal');
 }

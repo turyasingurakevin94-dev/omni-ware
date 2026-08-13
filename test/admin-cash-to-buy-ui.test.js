@@ -85,6 +85,10 @@ const scope = compileScope([
   extractFunction(src, 'openBuyingList', 'index.html'),
 ], {
   data,
+  // The carousel is DOM plumbing shared with the two run modals; this
+  // scope has no DOM, so it is stubbed and its wiring pinned on the
+  // source instead.
+  wireRunCarousel: () => {},
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || String(id),
   esc: (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
@@ -373,70 +377,151 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(modal.opened === 'buyingListModal', 'and the list is what gets opened');
 }
 
-/* ---------- 10. the columns land in the same place on every run ------- */
+/* ---------- 10. one supplier, one card, sliding sideways --------------
+ *
+ * This replaces two sections that pinned a five-column table and then
+ * the minimum width and re-cut column shares it needed to survive a
+ * phone. Both were defending a shape that should not have been here:
+ * Pickup Runs and Delivery Runs already answer "which places, and what
+ * do they cost" as cards in a horizontal track, and this screen answered
+ * the same question by stacking full-width blocks -- so three suppliers
+ * meant a scroll to discover whether there was a fourth.
+ *
+ * The table was what forced that width, and on a phone its columns
+ * collided at 331px: "12,250 245,000" printed over each other with
+ * Receive hanging off the edge. A minimum width made that scrollable.
+ * A LIST HAS NO COLUMNS TO COLLIDE, so the card is narrow enough to sit
+ * in the track and the phone problem stops existing rather than being
+ * made navigable.
+ */
 {
-  // Auto table layout sizes each run's table from its own contents, so a run
-  // carrying a long "quoted on ..." note put its figures in different places
-  // from the run below it, and on a narrow column ran them together.
-  const css = src.slice(src.indexOf('.bl-lines table{'), src.indexOf('.bl-item{'));
-  t.check(/table-layout:fixed/.test(css),
-    'the line tables are fixed-layout, so a long note in one run cannot move that run\'s columns');
-  // recv is the Receive/Undo control, added with goods receiving.
-  t.check(['item', 'qty', 'unit', 'cost', 'recv'].every((c) => new RegExp(`col\\.${c}\\{width:`).test(css)),
-    'with every column given a declared width');
-
   data.prices = [price()];
   data.savedQuotes = [order()];
   scope.openBuyingList();
-  const cols = (modal.html.match(/<col class="/g) || []).length;
-  t.check(cols === 5, `and the table declares them (got ${cols} cols)`);
+
+  t.check(!/<table/.test(modal.html),
+    'the run no longer draws a table — that was the thing forcing a full-width block');
+  t.check(/class="dr-carousel"/.test(modal.html) && /class="dr-track" id="bl_track"/.test(modal.html),
+    'the suppliers sit in the same track the pickup and delivery runs use');
+  t.check(/class="dr-card bl-card"/.test(modal.html),
+    'and carry the shared card class, so one change of that pattern moves all three screens');
+  t.check(/id="bl_prev"/.test(modal.html) && /id="bl_next"/.test(modal.html),
+    'with the same arrows');
+  t.check(/wireRunCarousel\('bl_track', 'bl_prev', 'bl_next'\)/.test(src),
+    'wired by the shared helper rather than a second copy of the scrolling');
+  t.check(/Slide sideways for the next supplier/.test(modal.html),
+    'and says so, the way the other two do');
+
+  // The card still carries everything the table row did.
+  t.check(/class="bl-items"/.test(modal.html), 'the lines are a list');
+  t.check(/class="bl-item-cost"/.test(modal.html) && /class="bl-item-qty"/.test(modal.html),
+    'still showing what each line costs and how much of it there is');
+  t.check(/class="bl-receive"/.test(modal.html), 'and still offering to receive it');
+
+  /* Every branch of that control, not just the common one. Blanking the
+     shortfall test still leaves a plain "Receive" on an unreceived line,
+     so checking only for the class passed on a card that had lost the
+     two states somebody actually has to act on. */
+  /* Both lines on P1, the product this fixture actually prices. A line
+     with no supplier price has a null lineCost and is dropped before it
+     reaches a card, so pointing the second one at unpriced P2 tested a
+     row that was never rendered. */
+  data.savedQuotes = [order({ items: [
+    line({ receivedAt: '2026-08-03', receivedQty: 4, receivedPrice: 10000 }),    // 4 of 10 came
+    line({ productName: 'Cement (second line)', receivedAt: '2026-08-03', receivedQty: 10, receivedPrice: 10000 }),
+  ] })];
+  scope.openBuyingList();
+  t.check(/Receive rest/.test(modal.html),
+    'a line that came back short offers to receive the rest');
+  t.check(/class="bl-undo"/.test(modal.html),
+    'and a line already received offers to undo it');
+  t.check(/class="bl-item-row bl-short"/.test(modal.html)
+    && /class="bl-item-row bl-received"/.test(modal.html),
+    'with the two drawn differently — short still needs somebody, received in full does not');
+
+  data.savedQuotes = [order()];
+  scope.openBuyingList();
+  t.check(/class="bl-send"/.test(modal.html) && /class="bl-bringing"/.test(modal.html),
+    'with both ways of getting the goods in the card footer');
+
+  /* Every table rule is gone rather than left behind unused. Named by
+     their own selector, not by a bare property: "table-layout:fixed"
+     also belongs to the quote items panel and the shortfall plan, so
+     searching for the property alone failed on two tables that are
+     still very much alive. */
+  ['.bl-lines{', '.bl-lines table{', '.bl-lines col.item{', '.bl-lines col.recv{'].forEach((dead) => {
+    t.check(!src.includes(dead), `the dead rule "${dead}" is removed, not orphaned`);
+  });
+  t.check(!/\.bl-lines table\{min-width/.test(src),
+    'and so is the phone minimum-width that existed only to make those columns scrollable');
+
+  /* And the card's own width is what keeps it on a phone, rather than a
+     scroller inside a scroller. */
+  const cardCss = (/\.bl-card\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/flex-basis:clamp\(/.test(cardCss),
+    `the card is sized by clamp so it fits a phone and a monitor alike (${cardCss})`);
 }
 
-/* ---------- the same table on a phone ---------------------------------
+/* ---------- 11. the answer is the headline, and it is not grey -------- */
+/*
+ * Reported: "the most important hint 'Enough on hand' is buried in a card
+ * with a lot of other details", and "you emphasised what the trips would
+ * cost, but you do not show it alongside the shortfall in our cash
+ * position side by side".
  *
- * Those percentages are of about 331px on a phone, which leaves the unit
- * column 53px to print "12,250 UGX" into and the action column 53px for
- * a Receive button. table-layout:fixed does not clip, so both ran
- * straight over their neighbours: reported off a real phone as
- * "12,250 245,000" printed on top of each other, with Receive hanging
- * off the edge and "Send someone" cut off the run header.
+ * Both true. The cost sat in the modal header, the money sat in a row of
+ * account chips, and the verdict sat underneath those chips as a
+ * sentence -- three places for one thought, with the account split given
+ * the most room. A gap means nothing without the two numbers it came
+ * from, so those two and the gap are now one line of figures.
  *
- * overflow-x:auto was already on the scroller and never engaged, because
- * a table at width:100% never exceeds its own container. A minimum width
- * is what turns a scroller into one.
+ * And the block was grey, the same grey as every supplier block below
+ * it, so the answer looked like one more container of details.
  */
 {
-  const phone = (/@media \(max-width:620px\)\{[\s\S]*?\n  \}/.exec(src.slice(src.indexOf('.bl-lines col.recv'))) || [''])[0];
-  t.check(/\.bl-lines table\{min-width:\d+px;\}/.test(phone),
-    'the table is given a real minimum width, so its scroller actually scrolls instead of the cells colliding');
-  t.check(/\.bl-run-head\{flex-wrap:wrap;\}/.test(phone),
-    'and the run header wraps, so "Send someone" drops to its own line rather than off the right edge');
+  data.prices = [price()];
+  data.savedQuotes = [order()];
+  scope.openBuyingList();
 
-  /* Re-cut for the narrow case: a product name may wrap over two lines,
-     a money figure may not, so the item column gives width to the ones
-     printing figures and to the action. */
-  const share = (c) => { const m = new RegExp(`\\.bl-lines col\\.${c}\\{width:(\\d+)%`).exec(phone); return m ? Number(m[1]) : null; };
-  const wide = { item: 38, qty: 14, unit: 16, cost: 16, recv: 16 };
-  t.check(share('item') < wide.item, `the item column gives up width on a phone (${share('item')}% vs ${wide.item}%)`);
-  t.check(share('unit') > wide.unit && share('cost') > wide.cost && share('recv') > wide.recv,
-    `and the figure and action columns take it (${share('unit')}/${share('cost')}/${share('recv')}%)`);
-  const total = ['item', 'qty', 'unit', 'cost', 'recv'].reduce((s, c) => s + share(c), 0);
-  t.check(total === 100, `the phone shares still add up to a whole table (${total}%)`);
+  t.check(/class="bl-verdict/.test(modal.html), 'the cash answer is its own block');
+  const figs = [...modal.html.matchAll(/class="bl-fig-label">([^<]+)</g)].map((m) => m[1]);
+  t.check(figs.length === 3, `three figures, side by side (${figs.join(' / ')})`);
+  t.check(/To buy/.test(figs[0]) && /On hand/.test(figs[1]),
+    'the cost and the money it comes out of, in that order');
+  /* Tied to the arithmetic rather than accepting either word. An
+     alternation -- /Left after|Short by/ -- passes whichever the code
+     prints, so a version that called a shortfall "Left after" satisfied
+     it. This fixture holds no cash, so the third figure is a shortfall
+     and must say so. */
+  const pos = scope.cashPositionForBuying(scope.beingPreparedOrders());
+  t.check(pos.short > 0, `the fixture is short of cash, which is what makes this readable (${pos.short})`);
+  t.check(figs[2] === 'Short by',
+    `so the third figure is named as a shortfall, not as money left over (${figs[2]})`);
+  t.check(/class="bl-verdict short"/.test(modal.html), 'and the block carries the shortfall state');
+  t.check(/Not enough for everything on this board/.test(modal.html),
+    'with the verdict saying which way it went');
+  t.check(/class="bl-fig strong"/.test(modal.html),
+    'the answer drawn larger than the two figures it is derived from');
 
-  /* Order matters. These carry the same specificity as the rules they
-     override, so written earlier in the sheet they would lose on source
-     order and the phone layout would not move at all -- which is exactly
-     how the first attempt at the quote-stage header failed. */
-  /* Compared as POSITIONS of the two competing declarations. An earlier
-     version searched for the media query starting at the base rule's own
-     index, which returns a later index by construction and so could
-     never fail. */
-  const baseItem = src.indexOf('.bl-lines col.item{width:38%;}');
-  const phoneItem = src.indexOf('.bl-lines col.item{width:30%;}');
-  t.check(baseItem >= 0 && phoneItem >= 0,
-    'both the desktop and phone item widths are declared');
-  t.check(phoneItem > baseItem,
-    `and the phone one is written after the desktop one it overrides (${phoneItem} vs ${baseItem})`);
+  /* Colour carries the verdict, and is the reason it can never be
+     mistaken for a supplier card. */
+  const verdictCss = (/\.bl-verdict\{[\s\S]*?\}/.exec(src) || [''])[0];
+  t.check(/verdigris-soft/.test(verdictCss),
+    'a good answer is tinted, not grey — grey is what made it look like another container');
+  t.check(/\.bl-verdict\.short\{background:var\(--ow-crimson-soft\)/.test(src),
+    'and a bad one is red');
+  t.check(!/\.bl-verdict\{[^}]*ow-steel-050/.test(src),
+    'neither state uses the neutral grey the run cards sit on');
+
+  // The split is kept, because money in the bank does not buy cement for
+  // cash -- but it is no longer the biggest thing in the block.
+  t.check(/class="bl-verdict-accounts"/.test(modal.html), 'the account split is still shown');
+  const accountsAt = modal.html.indexOf('bl-verdict-accounts');
+  const figsAt = modal.html.indexOf('bl-verdict-figs');
+  t.check(figsAt > -1 && accountsAt > figsAt,
+    'below the figures rather than above them, which is the demotion the report asked for');
 }
+
+
 
 process.exit(t.done() ? 1 : 0);
