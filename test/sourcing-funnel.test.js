@@ -619,6 +619,32 @@ async function main() {
 
   // Both the rail and the lanes are built from the same order, so a stage
   // cannot appear in one and not the other.
+  /* The lead's own screen answers "where has this got to" with the SAME
+     stage rail the order preview draws -- one builder, two pipelines, so
+     the two screens cannot drift into looking like different products.
+     Run, not read: the rail must mark what is behind, what it is on, and
+     what is still to come. */
+  const steps = compileScope([
+    extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
+    extractDeclaration(src, 'SOURCING_STATUS_ORDER', 'index.html'),
+    extractDeclaration(src, 'SOURCING_SHORT_LABELS', 'index.html'),
+    extractFunction(src, 'stageStepsHTML', 'index.html'),
+    extractFunction(src, 'sourcingStepsHTML', 'index.html'),
+  ], { esc: (s) => String(s == null ? '' : s), savedAgoLabel: () => '2 days ago' },
+  ['sourcingStepsHTML']);
+  const statesFor = (status) => [...steps.sourcingStepsHTML({ status, stageEnteredAt: 1 })
+    .matchAll(/class="op-step (\w+)"/g)].map((m) => m[1]).join(',');
+  eq(statesFor('asked'), 'now,todo,todo,todo,todo', 'a brand-new item has the whole funnel ahead of it');
+  eq(statesFor('sourced'), 'done,done,now,todo,todo', 'a sourced one shows what is behind and what is left');
+  eq(statesFor('listed'), 'done,done,done,done,now', 'and a listed one has nothing left to come');
+  eq((steps.sourcingStepsHTML({ status: 'sourced', stageEnteredAt: 1 }).match(/op-step-since/g) || []).length, 1,
+    'only the step it is actually on says how long it has been there');
+  t.check(/stageStepsHTML\(SOURCING_STATUS_ORDER, SOURCING_STATUSES, SOURCING_SHORT_LABELS/.test(src)
+    && /stageStepsHTML\(SQ_STATUS_ORDER, SQ_STATUSES, ORDER_STATUS_SHORT_LABELS/.test(src),
+    'both pipelines hand their own constants to the one shared builder');
+  t.check(/sl_steps'\)\.innerHTML = sourcingStepsHTML\(l\)/.test(src),
+    'and the rail is redrawn with the body, so it cannot lag a change that just made the next stage reachable');
+
   const render = extractFunction(src, 'renderSourcing', 'index.html');
   t.check((render.match(/SOURCING_STATUS_ORDER\.map\(/g) || []).length >= 2,
     'the rail and the board are both generated from SOURCING_STATUS_ORDER');

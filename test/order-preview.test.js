@@ -42,6 +42,12 @@ const scope = compileScope([
   extractFunction(worker, 'itemPickedQty', 'shared-worker.js'),
   extractFunction(src, 'orderPreviewLines', 'index.html'),
   extractFunction(src, 'orderPreviewSummary', 'index.html'),
+  /* The rail itself is shared with the sourcing funnel -- one stepper,
+     two pipelines -- so orderPreviewStepsHTML is now the thin call that
+     hands it this pipeline's constants. The assertions below are on the
+     OUTPUT and are unchanged by that; only the collaborator had to join
+     the scope. */
+  extractFunction(src, 'stageStepsHTML', 'index.html'),
   extractFunction(src, 'orderPreviewStepsHTML', 'index.html'),
 ], {
   data,
