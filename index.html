@@ -1614,7 +1614,11 @@
      five steps in a modal the two do not fit on one line at any share of
      the width, so the elapsed time drops underneath instead of competing
      for it, and the step gets a little extra room besides. */
-  .op-step.now{flex:1.5;flex-wrap:wrap;border-color:var(--op-accent);box-shadow:inset 0 0 0 1px var(--op-accent);}
+  /* flex-GROW only, not the whole shorthand: the phone rule below pairs
+     the steps two to a row with a 46% basis, and a shorthand here would
+     reset that basis to 0 and leave the wrap ragged -- one step alone on
+     the last row at full width. */
+  .op-step.now{flex-grow:1.5;flex-wrap:wrap;border-color:var(--op-accent);box-shadow:inset 0 0 0 1px var(--op-accent);}
   .op-step.now .op-step-since{flex-basis:100%;margin-left:29px;margin-top:1px;}
   .op-step.now .op-step-dot{background:var(--op-accent);color:#fff;}
   .op-step.todo{opacity:0.55;}
@@ -5637,8 +5641,11 @@
   .sf-warn .icon{width:13px;height:13px;}
   .sf-listed-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:700;color:var(--sq-accent);}
   .sf-graduate-btn{font-size:11.5px;padding:5px 10px;white-space:nowrap;}
-  .sf-sub{font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);
-    font-weight:700;margin:16px 0 8px;}
+  /* Three of these stack up in one short scroll, and at 12px/700 caps
+     each one shouted as loudly as the step's own instruction. They are
+     signposts, not headlines. */
+  .sf-sub{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);
+    font-weight:600;opacity:0.85;margin:18px 0 8px;}
   .sf-list{display:flex;flex-direction:column;gap:1px;}
   .sf-list-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:7px 9px;
     border-radius:7px;background:var(--ow-steel-050,transparent);font-size:12.5px;}
@@ -5651,9 +5658,13 @@
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
   /* The price ladder: rungs on the candidate, and the comparison drawn
      from them at a quantity. */
-  /* What this step is asking for, said once at the top. */
-  .sf-need{font-size:13.5px;line-height:1.5;color:var(--ink);margin:0 0 14px;
-    padding:10px 12px;border-radius:9px;background:var(--ow-verdigris-soft);}
+  /* What this step is asking for, said once at the top -- wearing the
+     step's own colour, so the instruction and the lit node on the rail
+     above it are visibly the same subject rather than two notices that
+     happen to share a screen. */
+  .sf-need{font-size:13.5px;line-height:1.5;color:var(--ink);margin:0 0 16px;
+    padding:10px 13px;border-radius:9px;border-left:3px solid var(--stage-accent,var(--accent));
+    background:color-mix(in srgb, var(--stage-accent,var(--accent)) 9%, transparent);}
   .sf-sec{margin-bottom:4px;}
   /* A block belonging to another step: present, reachable, and not
      competing for attention with the one being asked for. */
@@ -5691,7 +5702,11 @@
   .sf-compare-total{flex:0 0 auto;min-width:88px;text-align:right;}
   .sf-pick-at{font-size:10.5px;font-weight:600;color:var(--ink-soft);}
   .sf-add-ask{font-size:12px;padding:5px 10px;}
-  .sf-modal-facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;--sq-accent:var(--accent);}
+  /* On the board a known fact wears the lane's colour, which is what
+     makes the row fill up as the research lands. In here all four turning
+     the brand's red read as four alarms; a fact that is IN is settled, so
+     it wears the settled colour instead. */
+  .sf-modal-facts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;--sq-accent:var(--good);}
   .sf-pick{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);
     border-radius:8px;cursor:pointer;margin-bottom:6px;}
   .sf-pick:has(input:checked){border-color:var(--accent);background:var(--ow-verdigris-soft);}
@@ -8418,7 +8433,13 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="field">
+      <!-- On a NEW lead this is the whole question, so it leads. On an
+           existing one the heading already says the name, and an edit box
+           for something nobody came here to edit has no business above
+           the rail -- so it is moved down beside the notes. Relocated
+           rather than duplicated: two inputs for one value is how the two
+           come to disagree. -->
+      <div class="field" id="sl_name_field">
         <label>What is the item</label>
         <input type="text" id="sl_name" placeholder="e.g. 4 inch sofa legs, chrome" autocomplete="off">
       </div>
@@ -8487,7 +8508,7 @@
                  given three answers, and which one applies depends
                  entirely on how much you buy -- so all three are
                  recorded, and the comparison is asked at a quantity. -->
-            <label class="sf-rung-label">What they charge — add a rung for each price break</label>
+            <label class="sf-rung-label">Add a rung for each price break they quote</label>
             <div class="sf-rung-row">
               <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="From">
               <select id="sl_c_tier_qty_unit"><option value="unit">pieces</option><option value="pack">packs</option></select>
@@ -8501,6 +8522,7 @@
         </div>
         </section>
         <section class="sf-sec" data-sec="notes">
+          <div id="sl_name_slot"></div>
           <div class="field">
             <label>Notes</label>
             <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
@@ -14818,7 +14840,11 @@ function stageStepsHTML(statusOrder, statuses, shortLabels, current, sinceLabel)
   const at = statusOrder.indexOf(current);
   return `<ol class="op-steps">${statusOrder.map((s,i)=>{
     const state = i < at ? 'done' : (i === at ? 'now' : 'todo');
-    return `<li class="op-step ${state}" style="--op-accent:${statuses[s].color};">
+    /* The label truncates on the steps nobody is on -- five of them in a
+       modal leaves no room for "Pending Delivery" -- so the full name is
+       one hover away rather than lost. Wrapping them all to two lines
+       instead would cost every step the height to spare one. */
+    return `<li class="op-step ${state}" style="--op-accent:${statuses[s].color};" title="${esc(shortLabels[s])}">
       <span class="op-step-dot">${i < at ? '✓' : i+1}</span>
       <span class="op-step-label">${esc(shortLabels[s])}</span>
       ${i === at ? `<span class="op-step-since">${esc(sinceLabel)}</span>` : ''}
@@ -39839,6 +39865,18 @@ function openSourcingLead(id){
     ? `${l.name} — ${SOURCING_SHORT_LABELS[l.status]}${l.voided ? ' (dropped)' : ''}`
     : 'Add an item to source';
   document.getElementById('sl_name').value = l ? l.name : '';
+  /* The one name input, moved to where its mode wants it: leading on a
+     new lead, tucked beside the notes on an existing one so the rail is
+     the first thing the screen says. */
+  const nameField = document.getElementById('sl_name_field');
+  const nameLabel = nameField.querySelector('label');
+  if(l){
+    document.getElementById('sl_name_slot').appendChild(nameField);
+    nameLabel.textContent = 'Item name';
+  } else {
+    document.querySelector('#sourcingLeadModal .modal-body').prepend(nameField);
+    nameLabel.textContent = 'What is the item';
+  }
   document.getElementById('sl_first_ask').style.display = l ? 'none' : '';
   document.getElementById('sl_open_body').style.display = l ? '' : 'none';
   document.getElementById('sl_drop').style.display = (l && !l.voided) ? '' : 'none';
@@ -39862,6 +39900,24 @@ function openSourcingLead(id){
     renderSourcingLeadBody(l);
   }
   openModal('sourcingLeadModal');
+  /* Back to the top -- AFTER the modal is shown, and after letting go of
+     whatever inside it still held focus.
+
+     Both halves are needed. Setting scrollTop while the modal is hidden
+     does nothing (no visible overflow means no scroll to reset), and the
+     overlay hides by opacity rather than display:none -- so a field that
+     had focus when it closed still has it when it reopens, and the
+     browser scrolls that field back into view, overriding the reset. The
+     symptom was a lead opening halfway down its own research form with
+     the rail, the thing the screen is for, above the fold. A silently
+     focused phone box is also an open invitation to the browser to
+     autofill somebody's number into a supplier record. */
+  const modalEl = document.getElementById('sourcingLeadModal');
+  if(modalEl.contains(document.activeElement) && document.activeElement.blur) document.activeElement.blur();
+  const body = modalEl.querySelector('.modal-body');
+  if(body) body.scrollTop = 0;
+  // A new lead has exactly one question, so put the cursor in it.
+  if(!l) setTimeout(()=> document.getElementById('sl_name').focus(), 30);
 }
 function renderSourcingLeadBody(l){
   /* Drawn here rather than only on open, because adding a candidate
@@ -40054,6 +40110,10 @@ function sourcingStepsHTML(l){
 function applySourcingStepView(l){
   const guide = sourcingStepGuide(l);
   document.getElementById('sl_need').textContent = guide.need;
+  // The step's colour, handed to the body so the instruction and the lit
+  // node on the rail read as the same subject.
+  document.getElementById('sl_open_body').style.setProperty('--stage-accent',
+    l.voided ? 'var(--ink-soft)' : SOURCING_STATUSES[l.status].color);
   document.querySelectorAll('#sl_open_body .sf-sec').forEach(sec=>{
     const key = sec.dataset.sec;
     const folded = guide.fold.includes(key);

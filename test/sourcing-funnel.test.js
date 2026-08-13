@@ -459,13 +459,14 @@ async function main() {
      open it. Driven against a fake document rather than read, so
      "folded" has to really mean present-but-quiet and not hidden. */
   const el = () => ({
-    style: {}, textContent: '', disabled: false, open: false,
+    textContent: '', disabled: false, open: false,
+    style: { _p: {}, setProperty(k, v) { this._p[k] = v; }, getPropertyValue(k) { return this._p[k]; } },
     classList: { _s: new Set(),
       toggle(c, on) { on ? this._s.add(c) : this._s.delete(c); },
       has(c) { return this._s.has(c); } },
   });
   const ids = ['sl_need', 'sl_cand_form', 'sl_research_head', 'sl_price_block',
-    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why'];
+    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body'];
   const view = (l) => {
     const nodes = {};
     ids.forEach((i) => { nodes[i] = el(); });
@@ -483,6 +484,7 @@ async function main() {
       extractFunction(src, 'leadFacts', 'index.html'),
       extractFunction(src, 'sourcingGateBlock', 'index.html'),
       extractFunction(src, 'sourcingStepGuide', 'index.html'),
+      extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
       extractFunction(src, 'sourcingWantsPriceForm', 'index.html'),
       extractFunction(src, 'applySourcingStepView', 'index.html'),
     ], { document: { getElementById: (i) => nodes[i], querySelectorAll: () => secs } },
@@ -495,6 +497,15 @@ async function main() {
     });
     return { secs: state, nodes };
   };
+
+  /* The step's instruction wears the step's own colour, so it and the lit
+     node on the rail above it read as the same subject rather than two
+     notices sharing a screen. */
+  const accentOf = (v) => v.nodes.sl_open_body.style.getPropertyValue('--stage-accent');
+  eq(accentOf(view(lead({ status: 'priced' }))), '#D9922B', 'the instruction wears the step\'s colour');
+  eq(accentOf(view(lead({ status: 'listed' }))), '#3A9A5C', 'a different step, a different colour');
+  t.check(/ink-soft/.test(accentOf(view(lead({ status: 'priced', voided: true })))),
+    'and a dropped lead wears none of them — it is not on a step any more');
 
   const asked = view(lead({ status: 'asked' }));
   eq(asked.secs.research, 'hidden', 'Asked For really does leave the research panel off the screen');
@@ -532,6 +543,23 @@ async function main() {
   eq(gone.nodes.sl_cand_form.style.display, 'none', 'nor does a dropped one take new research');
   eq(gone.nodes.sl_cta_row.style.display, 'none', 'and it asks for nothing');
   eq(gone.secs.research, 'folded', 'while keeping everything already found');
+
+  /* Opening a lead has to LAND on the rail. The overlay hides by opacity
+     rather than display:none, so a field that held focus when the modal
+     closed still holds it when it reopens -- and the browser scrolls that
+     field back into view, overriding a scroll reset. Both halves are read
+     from openSourcingLead, and the order matters: a reset applied while
+     the modal is still hidden resets nothing. */
+  const open = extractFunction(src, 'openSourcingLead', 'index.html');
+  const iShow = open.indexOf("openModal('sourcingLeadModal')");
+  const iBlur = open.indexOf('.blur()');
+  const iScroll = open.indexOf('scrollTop = 0');
+  t.check(iShow > -1 && iBlur > iShow && iScroll > iShow,
+    'focus is released and the scroll reset AFTER the modal is shown, not before');
+  t.check(/contains\(document\.activeElement\)/.test(open),
+    'and only focus left inside this modal is taken away');
+  t.check(/if\(!l\) setTimeout\(\(\)=> document\.getElementById\('sl_name'\)\.focus\(\)/.test(open),
+    'a new lead puts the cursor in the one question it asks');
 
   /* Priced finishes by GRADUATING, not by stepping a stage -- `listed` is
      stamped by graduation and nowhere else. Read from the handler, which
