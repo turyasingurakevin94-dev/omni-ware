@@ -40868,6 +40868,22 @@ document.getElementById('tab-fasteners').addEventListener('click', (e)=>{
   }
 });
 
+/* The rail's counts -- refreshed here rather than only from the screens
+   they describe, because a badge that appears the first time you open the
+   board is a badge that was not there when it would have told you to open
+   it.
+
+   Its own function because renderAll() is NOT the only thing that has to
+   call it. The 30-second background refresh replaces `data` wholesale and
+   then redraws through goToTab(), which renders one screen and no badges
+   at all -- so a debt taken on another device, or an item somebody else
+   put into Sourcing, sat uncounted on this rail until the page was
+   reloaded. Found by watching a real lead arrive from another tab. */
+function refreshNavBadges(){
+  updateOrderStatusBar();
+  updateDebtorsNavBadge();
+  renderSourcingBadge();
+}
 function renderAll(){
   renderPresets();
   renderQuoteAll();
@@ -40881,13 +40897,7 @@ function renderAll(){
   triggerPricesRender();
   refreshCompareDropdown();
   renderInventory();
-  /* The rail's counts. Refreshed here rather than only from the screens
-     they describe -- a badge that appears the first time you open the
-     board is a badge that was not there when it would have told you to
-     open it. */
-  updateOrderStatusBar();
-  updateDebtorsNavBadge();
-  renderSourcingBadge();
+  refreshNavBadges();
   if(document.getElementById('tab-dashboard').style.display !== 'none') renderDashboard();
   if(document.getElementById('tab-cashbook').style.display !== 'none') initCashBook();
   if(document.getElementById('tab-sourcing').style.display !== 'none') renderSourcing();
@@ -41015,6 +41025,9 @@ async function pollForUpdatesNow(){
     data = fresh;
     lastSynced = freshSynced;
     goToTab(currentActiveTab);
+    // goToTab redraws ONE screen. The rail's counts describe collections
+    // this refresh may have just changed underneath every other screen.
+    refreshNavBadges();
   } catch(err){
     console.error('Background refresh failed:', err);
   }

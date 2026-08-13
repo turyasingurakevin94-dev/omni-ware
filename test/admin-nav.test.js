@@ -519,9 +519,19 @@ const INDEX = railIndex();
      screen must not change. */
   t.check(/debAllRows\(\)\.filter\(r=> r\.debt > 0\)/.test(extractFunction(src, 'updateDebtorsNavBadge', 'index.html')),
     'from every debtor, not from whatever that screen is filtered to');
-  t.check(/updateDebtorsNavBadge\(\);/.test(extractFunction(src, 'renderAll', 'index.html'))
-    && /updateOrderStatusBar\(\);/.test(extractFunction(src, 'renderAll', 'index.html')),
+  /* Every count goes through refreshNavBadges(), and BOTH the full render
+     and the 30-second background refresh call it. The poll used to redraw
+     through goToTab() alone -- one screen, no badges -- so a debt taken on
+     another device sat uncounted on this rail until the page was reloaded.
+     Asserted on the helper rather than on renderAll's literal calls, so
+     the claim survives the counts being grouped. */
+  const navBadges = extractFunction(src, 'refreshNavBadges', 'index.html');
+  t.check(/updateDebtorsNavBadge\(\);/.test(navBadges) && /updateOrderStatusBar\(\);/.test(navBadges),
+    'every rail count is refreshed from one place');
+  t.check(/refreshNavBadges\(\);/.test(extractFunction(src, 'renderAll', 'index.html')),
     'and both are set at load, not only once the screen they describe is opened');
+  t.check(/refreshNavBadges\(\);/.test(extractFunction(src, 'pollForUpdatesNow', 'index.html')),
+    'and again after a background refresh, which replaces the data every count is drawn from');
 }
 
 /* ---------- the phone bar's selected tab is readable ------------------

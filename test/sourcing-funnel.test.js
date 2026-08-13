@@ -688,6 +688,21 @@ async function main() {
   t.check(/if\(!data\.sourcingLeads\) data\.sourcingLeads = \[\];/.test(src),
     'and back-filled on restore, so a backup taken before this feature does not bench it for good');
 
+  /* The 30-second background refresh replaces `data` wholesale and then
+     redraws through goToTab(), which renders ONE screen and no badges at
+     all -- so a lead somebody else put into Sourcing sat uncounted on
+     this rail until the page was reloaded. Read from the poll's own
+     source, because the bug was that the call was absent from it. */
+  const poll = extractFunction(src, 'pollForUpdatesNow', 'index.html');
+  t.check(/refreshNavBadges\(\)/.test(poll),
+    'the background refresh re-counts the rail badges, not just the visible screen');
+  const badges = extractFunction(src, 'refreshNavBadges', 'index.html');
+  ['updateOrderStatusBar', 'updateDebtorsNavBadge', 'renderSourcingBadge'].forEach((fn) =>
+    t.check(new RegExp(`${fn}\\(\\)`).test(badges),
+      `and ${fn} is one of the counts it refreshes — all three go stale the same way`));
+  t.check(/refreshNavBadges\(\)/.test(extractFunction(src, 'renderAll', 'index.html')),
+    'and a full render still refreshes them too');
+
   const mig = read('supabase/migrations/0072_sourcing_leads.sql');
   t.check(/create table sourcing_leads/.test(mig), 'the migration creates the table');
   t.check(/primary key \(shop_id, id\)/.test(mig), 'keyed by shop and the client-minted id');
