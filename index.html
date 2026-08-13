@@ -5656,6 +5656,18 @@
   .sf-list-src,.sf-list-when{color:var(--ink-soft);font-size:11.5px;}
   .sf-list-row .pc-icon-btn{margin-left:auto;}
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
+  /* Changing a supplier already on the list rather than adding another:
+     a solid edge so it is obvious the form is pointed at one of the rows
+     above rather than at a blank. */
+  .sf-cand-form.editing{border-style:solid;border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 4%, transparent);}
+  .sf-cand-acts{display:inline-flex;gap:2px;margin-left:auto;}
+  /* Somebody found but not priced is the Source Found step's whole job,
+     so the gap is a button rather than a label about a gap. */
+  .sf-rung-add{cursor:pointer;border-style:dashed;color:var(--accent);
+    border-color:color-mix(in srgb, var(--accent) 45%, transparent);
+    background:transparent;font-family:inherit;font-weight:600;}
+  .sf-rung-add:hover{background:color-mix(in srgb, var(--accent) 8%, transparent);}
   /* The price ladder: rungs on the candidate, and the comparison drawn
      from them at a quantity. */
   /* What this step is asking for, said once at the top -- wearing the
@@ -7664,6 +7676,12 @@
 <datalist id="dl_expense_categories"></datalist>
 <datalist id="dl_units"></datalist>
 <datalist id="dl_locations"></datalist>
+<!-- Sourcing picks from the shop's own records rather than re-typing a
+     name that already exists: a supplier typed by hand is a supplier the
+     candidate cannot be linked to, and a customer typed by hand is an
+     ask that never joins the rest of their history. -->
+<datalist id="dl_sourcing_customers"></datalist>
+<datalist id="dl_sourcing_suppliers"></datalist>
 <datalist id="dl_attribute_names"></datalist>
 
 <div class="toast" id="toast"></div>
@@ -8448,7 +8466,7 @@
            than with an anonymous row. -->
       <div id="sl_first_ask">
         <div class="form-grid">
-          <div class="field"><label>Who asked (optional)</label><input type="text" id="sl_ask_name" autocomplete="off"></div>
+          <div class="field"><label>Who asked (optional)</label><input type="text" id="sl_ask_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
           <div class="field"><label>Their phone (optional)</label><input type="text" id="sl_ask_phone" autocomplete="off"></div>
           <div class="field"><label>How many (optional)</label><input type="number" id="sl_ask_qty" min="0" step="any"></div>
         </div>
@@ -8474,13 +8492,27 @@
           <h3 class="sf-sub">Who has asked for it</h3>
           <div id="sl_requests"></div>
           <button type="button" class="btn btn-ghost sf-add-ask" id="sl_add_ask">Somebody else asked</button>
+          <!-- An inline row rather than the pair of prompt() boxes this
+               replaces: a prompt cannot offer the customer list, so every
+               ask was a hand-typed name that linked to nobody. -->
+          <div class="sf-cand-form" id="sl_ask_form" style="display:none;">
+            <div class="form-grid">
+              <div class="field"><label>Who asked</label><input type="text" id="sl_ask2_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
+              <div class="field"><label>Their phone</label><input type="text" id="sl_ask2_phone" autocomplete="off"></div>
+              <div class="field"><label>How many</label><input type="number" id="sl_ask2_qty" min="0" step="any"></div>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-ghost" id="sl_ask2_add">Add this ask</button>
+              <button type="button" class="btn btn-ghost" id="sl_ask2_cancel">Cancel</button>
+            </div>
+          </div>
         </section>
         <section class="sf-sec" data-sec="research">
         <h3 class="sf-sub" id="sl_research_head">What the research turned up</h3>
         <div id="sl_candidates"></div>
         <div class="sf-cand-form" id="sl_cand_form">
           <div class="form-grid">
-            <div class="field"><label>Who</label><input type="text" id="sl_c_name" placeholder="Supplier or importer name" autocomplete="off"></div>
+            <div class="field"><label>Who</label><input type="text" id="sl_c_name" list="dl_sourcing_suppliers" placeholder="Pick a supplier, or type a new one" autocomplete="off"></div>
             <div class="field"><label>They are the</label>
               <select id="sl_c_role">
                 <option value="supplier">Supplier — we buy from them</option>
@@ -8489,7 +8521,7 @@
               </select>
             </div>
             <div class="field"><label>Phone</label><input type="text" id="sl_c_phone" autocomplete="off"></div>
-            <div class="field"><label>Where</label><input type="text" id="sl_c_where" placeholder="e.g. Kikuubo" autocomplete="off"></div>
+            <div class="field"><label>Where</label><input type="text" id="sl_c_where" list="dl_locations" placeholder="Choose a place, or type a new one" autocomplete="off"></div>
           </div>
           <!-- Finding WHO has it and finding out WHAT THEY CHARGE are two
                different steps' questions, so the price half folds away
@@ -8498,10 +8530,14 @@
                breath should not have to come back for it. -->
           <details id="sl_price_block">
             <summary id="sl_price_summary">They quoted a price too — add it now</summary>
+            <!-- The same three fields the Price Registry asks for, in its
+                 order and under its names -- this ladder becomes a price
+                 row, and two screens describing one packing differently
+                 is how a carton price ends up stored per piece. -->
             <div class="form-grid">
-              <div class="field"><label>Sold by the</label><input type="text" id="sl_c_unit" placeholder="Pc" autocomplete="off"></div>
-              <div class="field"><label>Pack of</label><input type="number" id="sl_c_packqty" min="0" step="any"></div>
-              <div class="field"><label>Pack called</label><input type="text" id="sl_c_packunit" placeholder="Ctn" autocomplete="off"></div>
+              <div class="field"><label>Unit</label><input type="text" id="sl_c_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre" autocomplete="off"></div>
+              <div class="field"><label>Pack unit</label><input type="text" id="sl_c_packunit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin" autocomplete="off"></div>
+              <div class="field"><label>Units per pack</label><input type="number" id="sl_c_packqty" min="0" step="any" placeholder="e.g. 25"></div>
             </div>
             <!-- The price is a LADDER, not a figure. A supplier who says
                  "15,000 each, 13,500 by the carton, 12,000 from five" has
@@ -8518,7 +8554,10 @@
             </div>
             <div id="sl_c_tiers_wrap"></div>
           </details>
-          <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
+            <button type="button" class="btn btn-ghost" id="sl_cand_cancel" style="display:none;">Cancel</button>
+          </div>
         </div>
         </section>
         <section class="sf-sec" data-sec="notes">
@@ -39566,13 +39605,18 @@ async function graduateSourcingLead(leadId, form){
   if(!supplierId){
     const supName = String((form && form.supplierName) || '').trim();
     if(!supName){ toast('Say who we are buying it from'); return null; }
-    supplierId = await issueEntityId('supplier', 'S', 3, data.suppliers);
+    supplierId = firstFreeEntityId('S', 3, data.suppliers,
+      await issueEntityId('supplier', 'S', 3, data.suppliers));
     data.suppliers.push({id: supplierId, name: supName,
       phone: String((form && form.supplierPhone)||'').trim(),
       location: String((form && form.supplierWhere)||'').trim(),
       notes: `Found while sourcing ${name}`});
   }
-  const productId = await issueEntityId('product', 'P', 3, data.products);
+  /* Guarded against what is already on file, not merely issued: two
+     graduations in the same breath can be handed the same number, and a
+     product sharing an id owns another product's prices and stock. */
+  const productId = firstFreeEntityId('P', 3, data.products,
+    await issueEntityId('product', 'P', 3, data.products));
   const record = {
     id: productId, name, type: 'simple',
     category: String((form && form.category) || '').trim(),
@@ -39885,11 +39929,14 @@ function openSourcingLead(id){
      from the last lead would attach itself to this one's next candidate,
      and a compare quantity left over would answer this lead's question at
      the previous lead's order size. */
-  slCandTiers = [];
   sourcingCompareQty = null;
-  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
-    .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
-  renderSlCandTiers();
+  slCandFormClear();
+  // The shop's own records, so a supplier or customer already on file is
+  // picked rather than re-typed into a name nothing can be linked to.
+  document.getElementById('dl_sourcing_customers').innerHTML =
+    (data.customers||[]).map(c=> `<option value="${esc(c.name)}"></option>`).join('');
+  document.getElementById('dl_sourcing_suppliers').innerHTML =
+    (data.suppliers||[]).map(s=> `<option value="${esc(s.name)}"></option>`).join('');
   if(!l){
     ['sl_ask_name','sl_ask_phone','sl_ask_qty'].forEach(k=> document.getElementById(k).value = '');
   } else {
@@ -39958,10 +40005,16 @@ function renderSourcingLeadBody(l){
         <span class="st-status-pill">${esc(c.role==='importer'?'Importer':(c.role==='both'?'Importer & supplier':'Supplier'))}</span>
         ${Number(c.packQty)>0 && c.packUnit ? `<span class="sf-list-src">${c.packQty} per ${esc(c.packUnit)}</span>` : ''}
         ${c.where ? `<span class="sf-list-when">${esc(c.where)}</span>` : ''}
-        <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
+        <span class="sf-cand-acts">
+          <button type="button" class="pc-icon-btn" data-cand-edit="${esc(c.id)}" title="Change what we know about them">${ICON_EDIT}</button>
+          <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
+        </span>
         <div class="sf-rungs">${rungs.length
           ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingRungLabel(t, c))}</span>`).join('')
-          : '<span class="sf-rung muted">no price yet</span>'}</div>
+          /* Somebody found and not yet priced is the whole point of the
+             Source Found step, so the row itself offers the way to price
+             them rather than leaving it to be discovered. */
+          : `<button type="button" class="sf-rung sf-rung-add" data-cand-edit="${esc(c.id)}">No price yet — add what they charge</button>`}</div>
       </div>`;
     }).join('')}</div>
     ${sourcingCompareHTML(l)}`
@@ -40252,14 +40305,20 @@ document.getElementById('tab-sourcing').addEventListener('click', (e)=>{
 });
 document.getElementById('sourcingLeadModalClose').addEventListener('click', ()=> closeModal('sourcingLeadModal'));
 document.getElementById('sl_cancel').addEventListener('click', ()=> closeModal('sourcingLeadModal'));
-document.getElementById('sl_save').addEventListener('click', ()=>{
+document.getElementById('sl_save').addEventListener('click', async ()=>{
   const name = document.getElementById('sl_name').value.trim();
   if(!name){ toast('What is the item?'); return; }
   if(!editingSourcingLeadId){
+    // Through the same resolver the add-ask row uses, so the first ask is
+    // linked to a customer on file exactly like every one after it.
+    const asker = await sourcingResolveAsker(
+      document.getElementById('sl_ask_name').value,
+      document.getElementById('sl_ask_phone').value);
     const res = captureSourcingLeadAndSave({
       name, source: 'sourcing',
-      customerName: document.getElementById('sl_ask_name').value.trim(),
-      phone: document.getElementById('sl_ask_phone').value.trim(),
+      customerId: asker.customerId,
+      customerName: asker.customerName,
+      phone: asker.phone,
       qty: document.getElementById('sl_ask_qty').value,
     });
     if(!res) return;
@@ -40287,23 +40346,132 @@ document.getElementById('sl_cta').addEventListener('click', ()=>{
   if(l.status === 'priced'){ closeModal('sourcingLeadModal'); openSourcingGraduate(l.id); return; }
   if(stepSourcingStatus(l.id, 1)) renderSourcingLeadBody(sourcingLeadById(l.id));
 });
+/* A name that matches a customer on file LINKS to them, so the ask joins
+   the rest of that customer's history rather than sitting as loose text
+   that nothing can be counted against. A name that does not, and comes
+   with a phone, BECOMES a customer -- the same "type it and it joins the
+   records" rule locations already follow. Without a phone it stays as
+   typed: a walk-in who gave only a first name is not a customer record
+   worth creating, and inventing one would fill the list with people
+   nobody can ring back. */
+async function sourcingResolveAsker(rawName, rawPhone){
+  const name = String(rawName||'').trim();
+  const phone = String(rawPhone||'').trim();
+  if(!name) return {customerId:null, customerName:'', phone};
+  const hit = (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === name.toLowerCase());
+  if(hit) return {customerId: hit.id, customerName: hit.name, phone: phone || hit.phone || ''};
+  if(!phone) return {customerId:null, customerName:name, phone:''};
+  /* Issued, THEN guarded -- the same two steps p_save takes. The
+     allocator can hand the same number to two callers that ask within a
+     breath of each other (it did, in live testing: two asks added
+     seconds apart both came back C113, and the list ended up with two
+     different people under one id -- a customer whose debt and history
+     belong to somebody else). Taken is not a dead end: take the next
+     free one and carry on. */
+  const issued = await issueEntityId('customer', 'C', 3, data.customers);
+  const id = firstFreeEntityId('C', 3, data.customers, issued);
+  (data.customers ||= []).push({id, name, phone, phone2:'', location:'', debt:0,
+    notes:'Added from a sourcing request', debtLog:[]});
+  toast(`"${name}" added to your customers`);
+  return {customerId:id, customerName:name, phone};
+}
 document.getElementById('sl_add_ask').addEventListener('click', ()=>{
+  document.getElementById('sl_ask_form').style.display = '';
+  document.getElementById('sl_add_ask').style.display = 'none';
+  document.getElementById('sl_ask2_name').focus();
+});
+function slAskFormClose(){
+  document.getElementById('sl_ask_form').style.display = 'none';
+  document.getElementById('sl_add_ask').style.display = '';
+  ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty'].forEach(k=> document.getElementById(k).value = '');
+}
+document.getElementById('sl_ask2_cancel').addEventListener('click', ()=> slAskFormClose());
+document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
   const l = sourcingLeadById(editingSourcingLeadId);
   if(!l) return;
-  const who = prompt('Who asked for it? (a name, or leave blank)');
-  if(who === null) return;
-  const phone = prompt('Their phone, if you have it') || '';
+  const who = document.getElementById('sl_ask2_name').value.trim();
+  if(!who){ toast('Who asked for it?'); return; }
+  const qtyRaw = document.getElementById('sl_ask2_qty').value;
+  const asker = await sourcingResolveAsker(who, document.getElementById('sl_ask2_phone').value);
   l.requests = l.requests || [];
-  l.requests.push({at: new Date().toISOString(), source:'sourcing', customerId:null,
-    customerName: who.trim(), phone: phone.trim(), qty:null, orderId:null, conversationId:null, note:''});
+  l.requests.push({at: new Date().toISOString(), source:'sourcing',
+    customerId: asker.customerId, customerName: asker.customerName, phone: asker.phone,
+    qty: qtyRaw==='' ? null : Number(qtyRaw), orderId:null, conversationId:null, note:''});
+  slAskFormClose();
   saveData();
   renderSourcingLeadBody(l);
   renderSourcing();
+  renderSourcingBadge();
 });
 /* The ladder being typed for the candidate not yet added. Its own draft,
    the way prTiers is the price form's -- a rung is committed by a button
    and the candidate by another, and the two must not race. */
 let slCandTiers = [];
+/* Which candidate the form is CHANGING, or null when it is adding a new
+   one. Without this the form could only ever add: a supplier recorded at
+   Looking with no price -- exactly what that step asks you to record --
+   could never be given one afterwards, and the next step told you to get
+   their prices with nowhere to put them. */
+let editingCandidateId = null;
+function slCandFormMode(){
+  const editing = !!editingCandidateId;
+  document.getElementById('sl_add_cand').textContent = editing ? 'Save changes' : 'Add what you found';
+  document.getElementById('sl_cand_cancel').style.display = editing ? '' : 'none';
+  document.getElementById('sl_cand_form').classList.toggle('editing', editing);
+}
+function slCandFormClear(){
+  editingCandidateId = null;
+  slCandTiers = [];
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
+    .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
+  document.getElementById('sl_c_role').value = 'supplier';
+  renderSlCandTiers();
+  slCandFormMode();
+}
+/* Writes the form's fields onto the lead: onto the candidate being
+   edited when there is one, as a new candidate otherwise. Returns whether
+   it CHANGED one, so the caller can say which it did.
+
+   Its own function because this is the rule that makes the Source Found
+   step possible at all -- a supplier recorded at Looking with no price
+   has to be able to gain one later, and gaining one must change that row
+   rather than add a second for the same shop, which the comparison would
+   then count twice. */
+function applyCandidateFields(l, editingId, fields){
+  l.candidates = l.candidates || [];
+  const editing = editingId && l.candidates.find(c=> c.id === editingId);
+  if(editing){
+    // Keeps its id and the date it was first found: this is the same
+    // supplier with more known about them, not a new one.
+    Object.assign(editing, fields);
+    return true;
+  }
+  l.candidates.push(Object.assign({
+    id: 'C' + Date.now().toString(36).toUpperCase(),
+    leadTimeDays: null, note: '', at: new Date().toISOString(),
+  }, fields));
+  return false;
+}
+function slCandFormLoad(c){
+  if(!c) return;
+  editingCandidateId = c.id;
+  document.getElementById('sl_c_name').value = c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'');
+  document.getElementById('sl_c_role').value = c.role || 'supplier';
+  document.getElementById('sl_c_phone').value = c.phone || '';
+  document.getElementById('sl_c_where').value = c.where || '';
+  document.getElementById('sl_c_unit').value = c.unit || '';
+  document.getElementById('sl_c_packqty').value = Number(c.packQty) || '';
+  document.getElementById('sl_c_packunit').value = c.packUnit || '';
+  slCandTiers = candidateTiers(c).map(t=>({...t}));
+  renderSlCandTiers();
+  slCandFormMode();
+  // The price is what they came back for, so open the half that holds it
+  // whatever the step would otherwise have folded away.
+  const block = document.getElementById('sl_price_block');
+  block.open = true;
+  block.scrollIntoView({block:'nearest'});
+  document.getElementById('sl_c_tier_qty').focus();
+}
 function renderSlCandTiers(){
   const unit = document.getElementById('sl_c_unit').value.trim() || 'pcs';
   const packQty = Number(document.getElementById('sl_c_packqty').value) || 0;
@@ -40357,14 +40525,15 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   const who = document.getElementById('sl_c_name').value.trim();
   if(!who){ toast('Who has it?'); return; }
   const existing = (data.suppliers||[]).find(s=> (s.name||'').trim().toLowerCase() === who.toLowerCase());
-  l.candidates = l.candidates || [];
-  l.candidates.push({
-    id: 'C' + Date.now().toString(36).toUpperCase(),
+  // Joins the shop's places the way a location typed on a customer does,
+  // so the second person to type it gets the first person's spelling.
+  const where = rememberLocation(document.getElementById('sl_c_where').value);
+  const fields = {
     role: document.getElementById('sl_c_role').value,
     supplierId: existing ? existing.id : null,
     supplierName: existing ? existing.name : who,
     phone: document.getElementById('sl_c_phone').value.trim(),
-    where: document.getElementById('sl_c_where').value.trim(),
+    where,
     // The whole ladder, sorted. The lowest rung IS the least they will
     // sell at a price, so there is no separate MOQ to fall out of step
     // with it.
@@ -40372,16 +40541,15 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     unit: document.getElementById('sl_c_unit').value.trim(),
     packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
     packUnit: document.getElementById('sl_c_packunit').value.trim(),
-    leadTimeDays: null, note: '', at: new Date().toISOString(),
-  });
-  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
-    .forEach(k=> document.getElementById(k).value = '');
-  slCandTiers = [];
-  renderSlCandTiers();
+  };
+  const verb = applyCandidateFields(l, editingCandidateId, fields) ? 'Updated' : 'Added';
+  slCandFormClear();
   saveData();
   renderSourcingLeadBody(l);
   renderSourcing();
+  toast(`${verb} ${fields.supplierName}`);
 });
+document.getElementById('sl_cand_cancel').addEventListener('click', ()=> slCandFormClear());
 document.getElementById('sl_candidates').addEventListener('input', (e)=>{
   if(e.target.id !== 'sl_cmp_qty') return;
   const n = Number(e.target.value);
@@ -40392,10 +40560,19 @@ document.getElementById('sl_candidates').addEventListener('input', (e)=>{
   if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 });
 document.getElementById('sl_candidates').addEventListener('click', (e)=>{
-  const del = e.target.closest('[data-cand-del]');
-  if(!del) return;
   const l = sourcingLeadById(editingSourcingLeadId);
   if(!l) return;
+  const edit = e.target.closest('[data-cand-edit]');
+  if(edit){
+    slCandFormLoad((l.candidates||[]).find(c=> c.id === edit.dataset.candEdit));
+    return;
+  }
+  const del = e.target.closest('[data-cand-del]');
+  if(!del) return;
+  // Editing the row that is being deleted would leave the form pointing
+  // at a candidate that no longer exists, and its next save would add it
+  // back as a new one.
+  if(editingCandidateId === del.dataset.candDel) slCandFormClear();
   l.candidates = (l.candidates||[]).filter(c=> c.id !== del.dataset.candDel);
   saveData();
   renderSourcingLeadBody(l);

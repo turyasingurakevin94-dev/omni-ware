@@ -44,6 +44,7 @@ const lastSynced = {};
 const calls = { saves: 0, toasts: [], badges: [], renders: 0, opened: [] };
 let saveLands = true;             // does the stubbed save reach "the server"
 let nextRowId = 900;
+let forcedId = null;              // {prefix: id} — makes the allocator repeat itself
 
 function resetAll(leads) {
   data.sourcingLeads = leads || [];
@@ -93,7 +94,17 @@ const env = {
   // No server here, so issueEntityId takes its documented offline fallback
   // -- the local monotonic counter, which is the path that has to be right
   // anyway when the shop is on a bad connection.
-  sb: { rpc: () => Promise.resolve({ data: null, error: { message: 'offline' } }) },
+  /* No server here, so issueEntityId normally takes its documented
+     offline fallback -- the local monotonic counter, the path that has to
+     be right anyway on a bad connection. `forcedId` makes it hand back a
+     FIXED id instead, which is how the collision below is reproduced:
+     the allocator repeating itself is exactly what happened live. */
+  sb: { rpc: (_fn, args) => {
+    const want = forcedId && forcedId[(args && args.p_prefix) || ''];
+    return Promise.resolve(want
+      ? { data: want, error: null }
+      : { data: null, error: { message: 'offline' } });
+  } },
   currentShopId: 'shop-test',
   console: { warn: () => {}, error: () => {} },
 };
@@ -109,6 +120,7 @@ const sources = [
   // exactly the bug this file exists to refuse.
   extractFunction(src, 'searchTokens', 'index.html'),
   extractFunction(src, 'todayISO', 'index.html'),
+  extractFunction(src, 'firstFreeEntityId', 'index.html'),
   extractFunction(src, 'nextEntityId', 'index.html'),
   extractFunction(src, 'issueEntityId', 'index.html'),
   extractFunction(src, 'ensurePresetCategory', 'index.html'),
@@ -146,6 +158,8 @@ const sources = [
   extractFunction(src, 'graduateSourcingLead', 'index.html'),
   extractFunction(src, 'sourcingBoardLeads', 'index.html'),
   extractFunction(src, 'renderSourcingBadge', 'index.html'),
+  extractFunction(src, 'sourcingResolveAsker', 'index.html'),
+  extractFunction(src, 'applyCandidateFields', 'index.html'),
 ];
 const S = compileScope(sources, env, [
   'sourcingPhoneKey', 'leadDistinctAskers', 'leadAskCount', 'leadFacts',
@@ -156,7 +170,8 @@ const S = compileScope(sources, env, [
   'deriveWholesaleRetail', 'sourcingLeadById',
   'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
-  'sourcingStepGuide', 'sourcingWantsPriceForm', 'sourcingWantsCompare',
+  'sourcingStepGuide', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
+  'applyCandidateFields',
 ]);
 
 const lead = (over) => Object.assign({
@@ -570,6 +585,132 @@ async function main() {
   t.check(/stepSourcingStatus\(l\.id, 1\)/.test(cta), 'and every other step moves one stage on');
 }
 
+/* ---------- 3e. who asked, linked to the records ---------------------- */
+{
+  resetAll();
+  data.customers = [{ id: 'C001', name: 'Sarah Namono', phone: '0700111222' }];
+
+  // A name already on file LINKS, so the ask joins that customer's history.
+  const hit = await S.sourcingResolveAsker('sarah namono', '');
+  eq(hit.customerId, 'C001', 'a name already on file is matched however it is cased');
+  eq(hit.phone, '0700111222', 'and brings their number with it when none was typed');
+  eq((await S.sourcingResolveAsker('Sarah Namono', '0755000111')).phone, '0755000111',
+    'while a number typed now wins over the one on file');
+
+  // A new name with no way to ring them back is NOT worth a record.
+  const loose = await S.sourcingResolveAsker('Walk-in Julius', '');
+  eq(loose.customerId, null, 'a walk-in who left no number is not made into a customer');
+  eq(loose.customerName, 'Walk-in Julius', 'but the ask still records who it was');
+  eq(data.customers.length, 1, 'and nothing was added to the records');
+
+  // A new name WITH a number joins the records, the way a typed location does.
+  const made = await S.sourcingResolveAsker('Brand New Buyer', '0700123123');
+  eq(data.customers.length, 2, 'a new name with a number becomes a customer');
+  eq(data.customers[1].id, made.customerId, 'and the ask points at the record it created');
+  t.check(calls.toasts.some((m) => /added to your customers/i.test(m)), 'and says so rather than doing it silently');
+  eq((await S.sourcingResolveAsker('brand new buyer', '')).customerId, made.customerId,
+    'asked for again, it matches the record instead of making a second one');
+
+  eq((await S.sourcingResolveAsker('   ', '0700111')).customerId, null, 'no name is nobody');
+
+  /* THE ID COLLISION. issueEntityId can hand the same number to two
+     callers that ask within a breath of each other -- it did, in live
+     testing: two asks seconds apart both came back C113 and the customer
+     list ended up holding two different people under one id, which is a
+     customer whose debt and history belong to somebody else. The issued
+     id is guarded against what is already on file, the way p_save guards
+     the one its form was given. */
+  resetAll();
+  forcedId = { C: 'C113' };                // the allocator hands back the same id twice
+  const a = await S.sourcingResolveAsker('First Person', '0700000001');
+  const b = await S.sourcingResolveAsker('Second Person', '0700000002');
+  forcedId = null;
+  eq(a.customerId, 'C113', 'the first caller takes the id it was issued');
+  t.check(b.customerId !== a.customerId,
+    `and the second does NOT take it again (${a.customerId} vs ${b.customerId})`);
+  eq(new Set(data.customers.map((c) => c.id)).size, data.customers.length,
+    'so no two customers share an id');
+  eq(data.customers.find((c) => c.id === a.customerId).name, 'First Person',
+    'and each id still names the person it was created for');
+}
+
+/* ---------- 3f. pricing somebody you already found -------------------- */
+{
+  /* The Source Found step tells you to get their prices. Before this the
+     form could only ADD, so a supplier recorded at Looking with no price
+     -- exactly what that step asks you to record -- could never be given
+     one, and the next step's instruction pointed at nowhere. */
+  resetAll();
+  const l = lead({ status: 'sourced', candidates: [
+    cand({ id: 'SJS', supplierName: 'sjs', where: 'kikuubo', tiers: [] }),
+  ] });
+  data.sourcingLeads = [l];
+  eq(S.candidateHasPrice(l.candidates[0]), false, 'sjs was found but not priced');
+
+  const priced = { supplierName: 'sjs', role: 'supplier', where: 'kikuubo', phone: '',
+    supplierId: null, unit: 'Pc', packUnit: 'Ctn', packQty: 12,
+    tiers: rungs([1, 9000], [12, 8000]) };
+  eq(S.applyCandidateFields(l, 'SJS', priced), true, 'saving with a candidate selected CHANGES it');
+  eq(l.candidates.length, 1, 'so there is still ONE row for that shop, not two');
+  eq(l.candidates[0].id, 'SJS', 'keeping its id');
+  eq(l.candidates[0].at, '2026-08-01T00:00:00.000Z', 'and the date it was first found');
+  eq(S.candidateHasPrice(l.candidates[0]), true, 'and now it has a price');
+  eq(S.leadFacts(l).price, true, 'which is what unlocks the next step');
+
+  eq(S.applyCandidateFields(l, null, Object.assign({}, priced, { supplierName: 'Meggo' })), false,
+    'saving with nothing selected adds a new one');
+  eq(l.candidates.length, 2, 'so a genuinely different supplier is its own row');
+  // An id that no longer exists must not silently update the wrong row.
+  eq(S.applyCandidateFields(l, 'GONE', Object.assign({}, priced, { supplierName: 'Third' })), false,
+    'and an id that is no longer on the list adds rather than overwriting somebody else');
+  eq(l.candidates.length, 3, 'as its own row');
+
+  /* Two rows for one shop would let the comparison rank the same
+     supplier twice, which is the practical cost of getting this wrong. */
+  const twice = lead({ candidates: [
+    cand({ id: 'A', supplierName: 'sjs', tiers: rungs([1, 9000]) }),
+    cand({ id: 'B', supplierName: 'sjs', tiers: rungs([1, 9000]) }),
+  ] });
+  eq(S.sourcingRankedAt(twice, 1).length, 2,
+    'two rows for one shop really would be ranked twice — which is why editing must not create one');
+
+  /* The form has to SAY which it is about to do, or "Add what you found"
+     sits above a form pointed at a row and the next press reads as a
+     second supplier. Run against a fake DOM, not read. */
+  const nodes = {};
+  ['sl_add_cand', 'sl_cand_cancel', 'sl_cand_form'].forEach((i)=>{
+    nodes[i] = { textContent: '', style: {},
+      classList: { _s: new Set(), toggle(c, on) { on ? this._s.add(c) : this._s.delete(c); },
+        has(c) { return this._s.has(c); } } };
+  });
+  const mode = compileScope([
+    'let editingCandidateId = null;',
+    extractFunction(src, 'slCandFormMode', 'index.html'),
+    'function __set(v){ editingCandidateId = v; }',
+  ], { document: { getElementById: (i)=> nodes[i] } }, ['slCandFormMode', '__set']);
+  mode.__set('SJS'); mode.slCandFormMode();
+  eq(nodes.sl_add_cand.textContent, 'Save changes', 'with a row selected the button says it will change it');
+  eq(nodes.sl_cand_cancel.style.display, '', 'and there is a way out of editing');
+  t.check(nodes.sl_cand_form.classList.has('editing'), 'and the form is visibly pointed at a row');
+  mode.__set(null); mode.slCandFormMode();
+  eq(nodes.sl_add_cand.textContent, 'Add what you found', 'with none selected it says it will add');
+  eq(nodes.sl_cand_cancel.style.display, 'none', 'and the way out is put away');
+  t.check(!nodes.sl_cand_form.classList.has('editing'), 'and the form looks like a blank again');
+
+  /* Two guards that live in click handlers, read from the handlers
+     themselves because the compiled scope cannot drive a click. */
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  // 'click' by name: sl_candidates carries an 'input' listener too (the
+  // compare quantity), and slicing on the element alone takes whichever
+  // comes first in the file.
+  const delHandler = (/getElementById\('sl_candidates'\)\.addEventListener\('click'[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  t.check(/editingCandidateId === del\.dataset\.candDel\) slCandFormClear\(\)/.test(delHandler),
+    'deleting the row being edited clears the form, or its next save adds the deleted row straight back');
+  const addHandler = (/getElementById\('sl_add_cand'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  t.check(/rememberLocation\(document\.getElementById\('sl_c_where'\)/.test(addHandler),
+    'a place typed on a candidate joins the shop\'s places, so "kikuubo" and "Kikuubo" stay one place');
+}
+
 /* ---------- 4. needs chasing: one rule, read three ways -------------- */
 {
   resetAll();
@@ -747,6 +888,21 @@ async function main() {
     'the new product takes the NEXT id, not the lowest free one — retired ids stay retired');
   eq(data.suppliers[1].id, 'S005', 'and so does the new supplier');
   eq(data.idCounters.product, 8, 'with the counter moved on, so the next form does not propose it again');
+
+  /* --- the allocator repeating itself, on graduation's two entities. A
+     product sharing an id owns another product's prices and stock; a
+     supplier sharing one owns their invoices. */
+  resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] })]);
+  data.products = [{ id: 'P050', name: 'Already here' }];
+  data.suppliers = [{ id: 'S050', name: 'Already here' }];
+  forcedId = { P: 'P050', S: 'S050' };
+  await S.graduateSourcingLead('SRC-1', { name: 'New thing', supplierName: 'Brand new', tiers: rungs([1, 900]) });
+  forcedId = null;
+  eq(new Set(data.products.map((p) => p.id)).size, data.products.length,
+    'a re-issued product id is stepped over rather than taken, so no two products share one');
+  t.check(data.products[1].id !== 'P050', `and the new product is not the old one (${data.products[1].id})`);
+  eq(new Set(data.suppliers.map((s) => s.id)).size, data.suppliers.length,
+    'and the same for the supplier it created');
 
   // --- the gate: phase one did not reach the server
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
