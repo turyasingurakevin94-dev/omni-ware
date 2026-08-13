@@ -547,6 +547,14 @@
   .btn-accent:hover{background:var(--ow-oxide-deep);}
   .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
   .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  /* .btn had no disabled state at all, so a disabled one sat there at
+     full strength with a pointer cursor, inviting a press it would
+     ignore. The icon buttons and the day picker have carried this for
+     ages (.pc-icon-btn[disabled], .cb-daybtn[disabled]); the shape the
+     rest of the app's buttons use never did. */
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-accent:disabled:hover{background:var(--accent);}
+  .btn-ghost:disabled:hover{border-color:var(--line);color:var(--ink-soft);}
   .btn-ghost.danger:hover{border-color:var(--danger);color:var(--danger);}
   /* Wraps. Three controls in a header row -- Print list, the price-mode
      group, Add product -- are wider than a phone, and without this the
@@ -5686,6 +5694,21 @@
   .sf-list-qty.muted{color:var(--ink-soft);font-weight:400;font-style:italic;}
   .sf-list-src,.sf-list-when{color:var(--ink-soft);font-size:11.5px;}
   .sf-list-row .pc-icon-btn{margin-left:auto;}
+  /* Three short exclusive answers, shown all at once instead of hidden
+     behind a select that truncated every one of them. */
+  .sf-field-wide{grid-column:1/-1;}
+  /* width:max-content rather than inline-flex -- a broader .field rule
+     wins on display and stretched the control to the full row, leaving
+     its border running 459px past the last option. */
+  .sf-seg{display:inline-flex;width:max-content;max-width:100%;
+    border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);}
+  .sf-seg label{position:relative;margin:0;}
+  .sf-seg input{position:absolute;opacity:0;width:100%;height:100%;left:0;top:0;margin:0;cursor:pointer;}
+  .sf-seg span{display:block;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;white-space:nowrap;}
+  .sf-seg label + label span{border-left:1px solid var(--line);}
+  .sf-seg input:checked + span{background:var(--accent);color:#fff;}
+  .sf-seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:-2px;}
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
   /* Changing a supplier already on the list rather than adding another:
      a solid edge so it is obvious the form is pointed at one of the rows
@@ -5700,9 +5723,6 @@
   .sf-list-row.sf-cand.open{background:color-mix(in srgb, var(--accent) 5%, transparent);
     box-shadow:inset 2px 0 0 var(--accent);}
   .sf-cand-editor .sf-cand-form{margin-top:10px;}
-  #sl_add_block > summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:600;
-    padding:8px 0;list-style:revert;}
-  #sl_add_block[open] > summary{margin-bottom:2px;}
   /* Somebody found but not priced is the Source Found step's whole job,
      so the gap is a button rather than a label about a gap. */
   .sf-rung-add{cursor:pointer;border-style:dashed;color:var(--accent);
@@ -5736,9 +5756,20 @@
      do -- or what is missing before it can. */
   .sf-cta-why{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:-8px 0 16px;}
   .sf-foot-left{margin-right:auto;}
-  #sl_price_block > summary{cursor:pointer;font-size:11px;text-transform:uppercase;
-    letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
-  #sl_price_block[open] > summary{margin-bottom:2px;}
+  /* ONE disclosure style for both of this screen's folds. They had two --
+     an accent-red one with a native triangle and a grey uppercase one --
+     which read as two different kinds of control doing the same job. The
+     native marker is replaced by a chevron that turns, so the affordance
+     is the same size and weight in both places. */
+  .sf-fold > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;
+    font-size:12.5px;font-weight:600;color:var(--ink-soft);padding:9px 0;user-select:none;}
+  .sf-fold > summary::-webkit-details-marker{display:none;}
+  .sf-fold > summary::before{content:'';width:7px;height:7px;flex:0 0 auto;
+    border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+    transform:rotate(-45deg);transition:transform 120ms ease;margin-left:2px;}
+  .sf-fold[open] > summary::before{transform:rotate(45deg);}
+  .sf-fold > summary:hover{color:var(--ink);}
+  .sf-fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
   .sf-rung-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
     color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
   .sf-rung-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;}
@@ -8574,29 +8605,38 @@
              form is just the widest thing on screen. The form itself is
              moved into whichever row is being edited, so with a dozen
              suppliers you type under the one you clicked. -->
-        <details id="sl_add_block">
+        <details class="sf-fold" id="sl_add_block">
           <summary id="sl_add_summary">Somebody else has it — add them</summary>
           <div id="sl_add_slot"></div>
         </details>
         <div class="sf-cand-form" id="sl_cand_form">
           <div class="form-grid">
             <div class="field"><label>Who</label><input type="text" id="sl_c_name" list="dl_sourcing_suppliers" placeholder="Pick a supplier, or type a new one" autocomplete="off"></div>
-            <div class="field"><label>They are the</label>
-              <select id="sl_c_role">
-                <option value="supplier">Supplier — we buy from them</option>
-                <option value="importer">Importer — they bring it in</option>
-                <option value="both">Both</option>
-              </select>
-            </div>
+            <!-- Three short, mutually exclusive answers read better as a
+                 segmented control than as a select, which truncated all
+                 three of them to "Supplier — we buy from t…". On its own
+                 row because it carries a hint: sharing a row with plain
+                 inputs made that row 89px against their 56 and left the
+                 whole grid ragged. -->
             <div class="field"><label>Phone</label><input type="text" id="sl_c_phone" autocomplete="off"></div>
             <div class="field"><label>Where</label><input type="text" id="sl_c_where" list="dl_locations" placeholder="Choose a place, or type a new one" autocomplete="off"></div>
+            <!-- Last, so the three plain inputs fill one even row and this
+                 takes the next one whole. -->
+            <div class="field sf-field-wide"><label>They are the</label>
+              <div class="sf-seg" id="sl_c_role_seg">
+                <label><input type="radio" name="sl_c_role_r" value="supplier" checked><span>Supplier</span></label>
+                <label><input type="radio" name="sl_c_role_r" value="importer"><span>Importer</span></label>
+                <label><input type="radio" name="sl_c_role_r" value="both"><span>Both</span></label>
+              </div>
+              <div class="field-hint">The importer brings it into the country; the supplier is who you buy from.</div>
+            </div>
           </div>
           <!-- Finding WHO has it and finding out WHAT THEY CHARGE are two
                different steps' questions, so the price half folds away
                while the step is still about the first one. Folded, not
                removed: a researcher who was given the price in the same
                breath should not have to come back for it. -->
-          <details id="sl_price_block">
+          <details class="sf-fold" id="sl_price_block">
             <summary id="sl_price_summary">They quoted a price too — add it now</summary>
             <!-- The same three fields the Price Registry asks for, in its
                  order and under its names -- this ladder becomes a price
@@ -40121,7 +40161,10 @@ function renderSourcingLeadBody(l){
         <div class="sf-cand-editor" data-editor="${esc(c.id)}"></div>
       </div>`;
     }).join('')}</div>`
-    : '<p class="preset-hint">Nothing found yet. Add who has it, and what they want for it.</p>';
+    /* The fold immediately below already says "Add who has it", so this
+       says only that there is nothing yet -- an empty state and the
+       control that fills it should not give the same instruction twice. */
+    : '<p class="preset-hint">Nothing found yet.</p>';
   // The rows exist again, so the form can go back to the one being edited.
   slCandFormPlace();
 }
@@ -40600,6 +40643,19 @@ let slCandTiers = [];
    could never be given one afterwards, and the next step told you to get
    their prices with nowhere to put them. */
 let editingCandidateId = null;
+/* The role is a segmented control rather than a select, so reading and
+   writing it goes through these two rather than a .value -- and falls
+   back to supplier, which is what "we found somewhere selling it" means
+   without further qualification. */
+function slRoleValue(){
+  const on = document.querySelector('#sl_c_role_seg input:checked');
+  return on ? on.value : 'supplier';
+}
+function slSetRole(v){
+  const want = document.querySelector(`#sl_c_role_seg input[value="${v || 'supplier'}"]`)
+    || document.querySelector('#sl_c_role_seg input[value="supplier"]');
+  if(want) want.checked = true;
+}
 function slCandFormMode(){
   const editing = !!editingCandidateId;
   document.getElementById('sl_add_cand').textContent = editing ? 'Save changes' : 'Add what you found';
@@ -40626,7 +40682,7 @@ function slCandFormClear(){
   slCandTiers = [];
   ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
     .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
-  document.getElementById('sl_c_role').value = 'supplier';
+  slSetRole('supplier');
   renderSlCandTiers();
   slCandFormMode();
 }
@@ -40658,7 +40714,7 @@ function slCandFormLoad(c){
   if(!c) return;
   editingCandidateId = c.id;
   document.getElementById('sl_c_name').value = c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'');
-  document.getElementById('sl_c_role').value = c.role || 'supplier';
+  slSetRole(c.role || 'supplier');
   document.getElementById('sl_c_phone').value = c.phone || '';
   document.getElementById('sl_c_where').value = c.where || '';
   document.getElementById('sl_c_unit').value = c.unit || '';
@@ -40738,7 +40794,7 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   // so the second person to type it gets the first person's spelling.
   const where = rememberLocation(document.getElementById('sl_c_where').value);
   const fields = {
-    role: document.getElementById('sl_c_role').value,
+    role: slRoleValue(),
     supplierId: existing ? existing.id : null,
     supplierName: existing ? existing.name : who,
     phone: document.getElementById('sl_c_phone').value.trim(),

@@ -652,6 +652,33 @@ async function main() {
   t.check(/if\(name\) l\.name = name;/.test(autosave),
     'and a name cleared to blank does not wipe the item on the way past');
 
+  /* The role is three short exclusive answers. As a select every one of
+     them truncated ("Supplier — we buy from t…"), so it is a segmented
+     control -- which means it has no .value and reads through helpers. */
+  t.check(/id="sl_c_role_seg"/.test(src) && !/id="sl_c_role"/.test(src),
+    'the role is a segmented control, not a select that truncates all three options');
+  const roleGet = extractFunction(src, 'slRoleValue', 'index.html');
+  t.check(/input:checked/.test(roleGet) && /'supplier'/.test(roleGet),
+    'reading it takes the checked one, falling back to supplier');
+  t.check(/slRoleValue\(\)/.test(src) && /slSetRole\(/.test(src),
+    'and every read and write goes through those, not through a .value that no longer exists');
+
+  /* A disabled button that looks pressable invites a press it will
+     ignore. .btn had no disabled state at all -- the icon buttons have
+     carried one for ages. */
+  const btnDisabled = (/\.btn:disabled\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/opacity/.test(btnDisabled) && /not-allowed/.test(btnDisabled),
+    'a disabled button looks and behaves disabled');
+
+  /* One disclosure style for both folds on this screen. They had two --
+     an accent-red one with a native triangle and a grey uppercase one --
+     which read as two different controls doing one job. */
+  t.check((src.match(/<details class="sf-fold"/g) || []).length === 2,
+    'both folds on this screen share one style');
+  const foldRule = (/\.sf-fold > summary\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/list-style:none/.test(foldRule),
+    'with the native marker replaced rather than left to differ between browsers');
+
   /* The live step has to read as live at any hue -- both boards make
      their first stage grey, so this cannot rest on colour alone. */
   const nowRule = (/\.op-step\.now\{[^}]*\}/.exec(src) || [''])[0];
