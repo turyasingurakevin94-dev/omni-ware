@@ -5697,8 +5697,6 @@
   /* Three short exclusive answers, shown all at once instead of hidden
      behind a select that truncated every one of them. */
   .sf-field-wide{grid-column:1/-1;}
-  .sf-var-row{align-items:end;margin-bottom:6px;}
-  .sf-var-row .pc-icon-btn{margin-bottom:4px;}
   .sf-ask-variant{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;
     border:1px solid var(--line);color:var(--ink);white-space:nowrap;}
   /* Which sizes were asked for. Six asks is a reason to stock the item;
@@ -8620,7 +8618,8 @@
                the research finds the rest. -->
           <label class="sf-rung-label">Does it come in sizes or types?</label>
           <div id="sl_var_attrs"></div>
-          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">Add a size or type list</button>
+          <p class="preset-hint" id="sl_var_count"></p>
+          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">+ Add attribute</button>
         </section>
         <section class="sf-sec" data-sec="assign">
           <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
@@ -28001,13 +28000,27 @@ let draftVariants = [];       // [{sku:'RED-S', combo:{Color:'Red', Size:'S'}}]
 let draftProductImage = null; // Storage URL of the uploaded product photo, or null
 let sessionUploadedMediaIds = [];    // media rows uploaded during this modal session, not yet committed to anything
 
-function renderVariantAttrRows(){
-  const wrap = document.getElementById('variantAttrsWrap');
-  if(draftVariantAttrs.length===0){
-    wrap.innerHTML = '<div class="variants-empty">No attributes yet. Click "Add attribute" to define options like Color or Size.</div>';
+/* Called bare by the product modal, and with an options bag by the
+   sourcing funnel, which needs the same editor against its own array and
+   its own container. Shared rather than copied: the copy the funnel had
+   first lacked the preset auto-fill below, which is the part that makes
+   this worth using -- typing "Colour" filling in the colours the shop
+   has used before is most of the value. */
+function renderVariantAttrRows(opts){
+  /* Named `rows`, not shadowing rows: that is a top-level
+     `let`, so it is not on window, and a same-named const cannot read it
+     in its own initialiser. */
+  const rows = (opts && opts.rows) || draftVariantAttrs;
+  const wrap = document.getElementById((opts && opts.wrapId) || 'variantAttrsWrap');
+  const redraw = ()=> renderVariantAttrRows(opts);
+  const changed = ()=>{ if(opts && opts.onChange) opts.onChange(); };
+  if(rows.length===0){
+    wrap.innerHTML = `<div class="variants-empty">${esc((opts && opts.emptyText)
+      || 'No attributes yet. Click "Add attribute" to define options like Color or Size.')}</div>`;
+    changed();
     return;
   }
-  wrap.innerHTML = draftVariantAttrs.map((row,i)=>`
+  wrap.innerHTML = rows.map((row,i)=>`
     <div class="variant-attr-row" data-idx="${i}">
       <div class="field"><label>Attribute name</label><input class="va-name" list="dl_attribute_names" data-idx="${i}" value="${esc(row.name)}" placeholder="e.g. Color"></div>
       <div class="field" style="flex:1.6;"><label>Values (comma-separated)</label><input class="va-values" data-idx="${i}" value="${esc(row.values)}" placeholder="e.g. Red, Blue, Green"></div>
@@ -28015,21 +28028,24 @@ function renderVariantAttrRows(){
     </div>`).join('');
   wrap.querySelectorAll('.va-name').forEach(inp=>inp.addEventListener('input', e=>{
     const idx = Number(e.target.dataset.idx);
-    draftVariantAttrs[idx].name = e.target.value;
+    rows[idx].name = e.target.value;
     // if the name matches a preset attribute and values haven't been typed yet, suggest its values
     const preset = (data.presetAttributes||[]).find(a=>a.name.toLowerCase()===e.target.value.trim().toLowerCase());
-    if(preset && !draftVariantAttrs[idx].values){
-      draftVariantAttrs[idx].values = preset.values.join(', ');
+    if(preset && !rows[idx].values){
+      rows[idx].values = preset.values.join(', ');
       const valuesInput = wrap.querySelector(`.va-values[data-idx="${idx}"]`);
-      if(valuesInput) valuesInput.value = draftVariantAttrs[idx].values;
+      if(valuesInput) valuesInput.value = rows[idx].values;
     }
+    changed();
   }));
   wrap.querySelectorAll('.va-values').forEach(inp=>inp.addEventListener('input', e=>{
-    draftVariantAttrs[Number(e.target.dataset.idx)].values = e.target.value;
+    rows[Number(e.target.dataset.idx)].values = e.target.value;
+    changed();
   }));
   wrap.querySelectorAll('.va-remove').forEach(btn=>btn.addEventListener('click', e=>{
-    draftVariantAttrs.splice(Number(e.currentTarget.dataset.idx), 1);
-    renderVariantAttrRows();
+    rows.splice(Number(e.currentTarget.dataset.idx), 1);
+    redraw();
+    changed();
   }));
 }
 /* Everything a variant can be searched by: its attribute names and
@@ -40903,32 +40919,31 @@ function slSetRole(v){
    person is typing -- the same working shape draftVariantAttrs uses on
    the product form, parsed only when it is saved. */
 let slVarAttrs = [];
+/* The product modal's own attribute editor, pointed at this lead's list.
+   The copy that stood here first was a worse one -- no preset auto-fill,
+   which is the part that earns it: typing "Colour" filling in the
+   colours the shop has used before. And it had no way to SAVE, because
+   the footer button it relied on is hidden on an existing lead. Writing
+   through onChange is what fixes that: the list saves as it is typed,
+   like the name, the notes and the assignee beside it. */
 function renderSlVarAttrs(){
-  const wrap = document.getElementById('sl_var_attrs');
-  wrap.innerHTML = slVarAttrs.length === 0
-    ? '<p class="preset-hint">No — it is one thing, one price.</p>'
-    : slVarAttrs.map((a,i)=>`
-      <div class="form-grid sf-var-row">
-        <div class="field"><label>Called</label>
-          <input type="text" class="sf-var-name" data-i="${i}" list="dl_attribute_names" placeholder="e.g. Size" value="${esc(a.name)}"></div>
-        <div class="field sf-field-wide"><label>The ones it comes in, separated by commas</label>
-          <input type="text" class="sf-var-values" data-i="${i}" placeholder='e.g. 10", 12", 14", 16"' value="${esc(a.values)}"></div>
-        <button type="button" class="pc-icon-btn danger sf-var-del" data-i="${i}" title="Remove this list">${ICON_TRASH}</button>
-      </div>`).join('')
-      + `<p class="preset-hint">${slVarCount()} in all — that is what the product will be created with.</p>`;
-  wrap.querySelectorAll('.sf-var-name').forEach(el=> el.addEventListener('input', e=>{
-    slVarAttrs[Number(e.target.dataset.i)].name = e.target.value; }));
-  wrap.querySelectorAll('.sf-var-values').forEach(el=> el.addEventListener('input', e=>{
-    slVarAttrs[Number(e.target.dataset.i)].values = e.target.value;
-    // The count is the whole point of showing them: two lists of six is
-    // thirty-six variants, which is worth seeing before you agree to it.
-    const note = wrap.querySelector('p.preset-hint');
-    if(note) note.textContent = `${slVarCount()} in all — that is what the product will be created with.`;
-  }));
-  wrap.querySelectorAll('.sf-var-del').forEach(el=> el.addEventListener('click', e=>{
-    slVarAttrs.splice(Number(e.currentTarget.dataset.i), 1);
-    renderSlVarAttrs();
-  }));
+  renderVariantAttrRows({
+    rows: slVarAttrs,
+    wrapId: 'sl_var_attrs',
+    emptyText: 'No — it is one thing at one price. Add a list if it comes in sizes or types.',
+    onChange: saveSlVarAttrs,
+  });
+}
+function saveSlVarAttrs(){
+  // The count is worth seeing before you agree to it: two lists of six is
+  // thirty-six variants, and that is what the product becomes.
+  const note = document.getElementById('sl_var_count');
+  const n = slVarCount();
+  note.textContent = n ? `${n} in all — that is what the product will be created with.` : '';
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  l.variantAttrs = slVarParsed();
+  saveData();
 }
 function slVarParsed(){
   return slVarAttrs

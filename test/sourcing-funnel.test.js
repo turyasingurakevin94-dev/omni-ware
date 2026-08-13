@@ -968,6 +968,28 @@ async function main() {
   eq(S.captureSourcingLead({ name: 'drawer runners', customerId: 'C2' }).lead.requests[1].variant, '',
     'and an ask that named none records none rather than undefined');
 
+  /* The size lists use the PRODUCT MODAL's attribute editor, not a
+     second one. The copy that stood here first lacked its preset
+     auto-fill -- typing "Colour" filling in the colours the shop has
+     used before -- which is the part that earns the control. */
+  t.check(/renderVariantAttrRows\(\{[\s\S]{0,200}wrapId: 'sl_var_attrs'/.test(src),
+    'the funnel drives the product modal\'s own attribute editor');
+  t.check(!/class="sf-var-name"/.test(src) && !/class="sf-var-values"/.test(src),
+    'and keeps no second copy of it');
+  const attrEditor = extractFunction(src, 'renderVariantAttrRows', 'index.html');
+  t.check(/presetAttributes/.test(attrEditor),
+    'so both screens get the preset auto-fill, which is why it was worth sharing');
+  t.check(/const rows = \(opts && opts\.rows\) \|\| draftVariantAttrs;/.test(attrEditor),
+    'pointed at whichever list its caller passes, defaulting to the product form\'s');
+
+  /* And the list SAVES. The footer button it used to rely on is hidden
+     on an existing lead, so the sizes were typed and lost -- it writes
+     through onChange now, like the name, notes and assignee beside it. */
+  t.check(/onChange: saveSlVarAttrs/.test(src), 'the editor reports changes');
+  const saveVar = extractFunction(src, 'saveSlVarAttrs', 'index.html');
+  t.check(/l\.variantAttrs = slVarParsed\(\);/.test(saveVar) && /saveData\(\);/.test(saveVar),
+    'and each change is written to the lead and saved, with no button to press');
+
   /* THE ORDER of the handoff. selectPrSupplier re-derives the shared
      ladder from what that supplier already has for this product -- which
      for one created seconds ago is nothing, so it clears it. Everything
