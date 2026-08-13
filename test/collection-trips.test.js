@@ -714,7 +714,23 @@ const trip = (over) => Object.assign({
 
   /* Check-in: a worker has to say they are back first, a supplier
      delivery announces itself by arriving. */
-  t.check(admin.tripCanCheckIn(theirs), 'a supplier delivery can be checked in the moment it lands');
+  /* REVERSED, and the old assertion was defending a bug I shipped.
+     "A supplier delivery can be checked in the moment it lands" sounds
+     right and is not: check-in reads each line's ANSWER and shelves that
+     many, and a supplier delivery has no worker to give those answers --
+     so it counted nothing. Worse, confirmCollectionTrip refuses any trip
+     that is not `collected`, which a supplier delivery never is, so the
+     button did nothing at all. Reported from the shop as "Check in 0
+     lines from Dooba Enterprises Ltd", with OK doing nothing.
+
+     Its goods go on the shelf line by line through the ordinary Receive
+     control, and the trip closes itself when the last one is in. */
+  t.check(!admin.tripCanCheckIn(theirs),
+    'a supplier delivery is never "ready to check in" — it has no answers to check');
+  t.check(!admin.tripCanCheckIn({ ...theirs, status: 'collecting' })
+    && !admin.tripCanCheckIn({ ...theirs, status: 'assigned' })
+    && !admin.tripCanCheckIn({ ...theirs, status: 'open' }),
+    'in any state it can be in');
   t.check(!admin.tripCanCheckIn({ ...ours, status: 'collecting' }),
     'one of ours cannot, until whoever is out says they are back');
   t.check(admin.tripCanCheckIn({ ...ours, status: 'collected' }),
@@ -763,7 +779,10 @@ const trip = (over) => Object.assign({
   const theirHTML = strip.blRunTripsHTML({ supplierId: 'S1' });
   t.check(!/data-assign=/.test(theirHTML),
     'the strip offers no way to hand a supplier delivery to a worker — that would send somebody for what is already coming');
-  t.check(/data-confirm=/.test(theirHTML), 'but it can be checked in the moment it arrives');
+  t.check(!/data-confirm=/.test(theirHTML),
+    'the strip offers no Check in either — an inert button is worse than none');
+  t.check(/Receive each line below as it arrives/.test(theirHTML),
+    'and says where its goods are actually recorded instead');
   t.check(/data-void=/.test(theirHTML), 'and called off, like any other trip');
   t.check(/Supplier delivering/.test(theirHTML) && !/__supplier__/.test(theirHTML),
     'and it names the carrier in words, never as the sentinel');
@@ -791,6 +810,104 @@ const trip = (over) => Object.assign({
     'the run head offers "they’re delivering" beside "send someone"');
   t.check(/createCollectionTripFromRun\(run, \{supplierDelivers:true\}\)/.test(code),
     'and pressing it makes a SUPPLIER trip — an ordinary one would put the run straight back on the send-somebody list');
+
+  /* ---- and the journey ends when the goods are here ---- */
+  /*
+   * The half that was missing. A worker's trip is retired by handing it
+   * in; a supplier delivery has nobody to hand it in, so without this it
+   * would sit on the list claiming to be on its way long after the van
+   * had gone -- and its lines would stay spoken for, so nobody could be
+   * sent for anything that never turned up.
+   */
+  const closeState = { collectionTrips: [], savedQuotes: [] };
+  const closeScope = compileScope([
+    extractFunction(shared, 'tripIsLive', 'shared-worker.js'),
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineReceived', 'shared-worker.js'),
+    extractFunction(shared, 'quoteLineShortfall', 'shared-worker.js'),
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    extractFunction(src, 'closeArrivedSupplierTrips', 'index.html'),
+  ], { data: closeState }, ['closeArrivedSupplierTrips']);
+
+  const mkOrder = (over) => ({ id: 7, items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10 }, { lineId: 'B', supplierId: 'S1', qty: 5 },
+  ], ...over });
+  const mkTrip = (over) => ({ id: 'T', supplierId: 'S1', status: 'collecting',
+    assignedWorkerId: '__supplier__', voided: false,
+    lines: [{ orderId: 7, lineId: 'A' }, { orderId: 7, lineId: 'B' }], ...over });
+
+  // Nothing received yet.
+  closeState.savedQuotes = [mkOrder()];
+  closeState.collectionTrips = [mkTrip()];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0
+    && closeState.collectionTrips[0].status === 'collecting',
+    'a delivery with nothing received yet stays open');
+
+  // Half received is still half out.
+  closeState.savedQuotes = [mkOrder({ items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10, receivedAt: 'x', receivedQty: 10 },
+    { lineId: 'B', supplierId: 'S1', qty: 5 },
+  ] })];
+  closeState.collectionTrips = [mkTrip()];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0,
+    'and one line in is not the van emptied');
+
+  // A line that came SHORT is not a line that arrived.
+  closeState.savedQuotes = [mkOrder({ items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10, receivedAt: 'x', receivedQty: 10 },
+    { lineId: 'B', supplierId: 'S1', qty: 5, receivedAt: 'x', receivedQty: 2 },
+  ] })];
+  closeState.collectionTrips = [mkTrip()];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0,
+    'a line three short of what was ordered keeps the delivery open — the rest is still owed');
+
+  // Everything in.
+  closeState.savedQuotes = [mkOrder({ items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10, receivedAt: 'x', receivedQty: 10 },
+    { lineId: 'B', supplierId: 'S1', qty: 5, receivedAt: 'x', receivedQty: 5 },
+  ] })];
+  closeState.collectionTrips = [mkTrip()];
+  t.check(closeScope.closeArrivedSupplierTrips() === 1
+    && closeState.collectionTrips[0].status === 'confirmed'
+    && !!closeState.collectionTrips[0].confirmedAt,
+    'the last line in closes the delivery, with the time it happened');
+
+  /* A worker's trip is closed by confirmCollectionTrip, which is also
+     what puts its goods on the shelf. This must never touch one, or a
+     journey would be retired without its goods ever being shelved. */
+  closeState.collectionTrips = [mkTrip({ assignedWorkerId: 'W1' })];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0
+    && closeState.collectionTrips[0].status === 'collecting',
+    'and a worker’s trip is never closed this way, however much of it has arrived');
+
+  /* A delivery already closed is not closed again. Without the liveness
+     test it would be re-confirmed on every later receipt, moving the
+     time it happened forward each time -- so the record of when the
+     goods actually arrived would drift to whenever the shop last took a
+     delivery from anybody. */
+  closeState.savedQuotes = [mkOrder({ items: [
+    { lineId: 'A', supplierId: 'S1', qty: 10, receivedAt: 'x', receivedQty: 10 },
+    { lineId: 'B', supplierId: 'S1', qty: 5, receivedAt: 'x', receivedQty: 5 },
+  ] })];
+  closeState.collectionTrips = [mkTrip({ status: 'confirmed', confirmedAt: '2026-08-01T09:00:00Z' })];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0,
+    'a delivery already checked in is not counted again');
+  t.check(closeState.collectionTrips[0].confirmedAt === '2026-08-01T09:00:00Z',
+    'and the time it actually arrived is not moved forward');
+
+  /* An empty one never closes on its own, because `every` over nothing
+     is true -- a trip made with no lines would confirm itself the
+     instant anybody received anything, anywhere. */
+  closeState.collectionTrips = [mkTrip({ lines: [] })];
+  t.check(closeScope.closeArrivedSupplierTrips() === 0
+    && closeState.collectionTrips[0].status === 'collecting',
+    'and a delivery carrying nothing does not declare itself arrived');
+
+  // Called where the goods actually land.
+  t.check(/const closed = closeArrivedSupplierTrips\(\);/.test(code),
+    'the receive handler closes whatever that delivery completed');
 }
 
 /* ---------- when the client sends their own person ------------------- */

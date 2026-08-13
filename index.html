@@ -4500,6 +4500,7 @@
   .bl-trip-count{color:var(--ow-ink-400);font-size:11px;}
   /* The controls, on their own line and sharing it. */
   .bl-trip .bl-trip-act, .bl-trip .bl-trip-void{flex:1 1 auto;text-align:center;}
+  .bl-trip-hint{flex:1 1 100%;font-size:11px;color:var(--ink-soft);line-height:1.4;}
   .bl-trip-short{font-size:11.5px;color:var(--ow-amber-ink);font-weight:600;margin-top:2px;}
   /* Back and waiting to be checked in is the one state somebody has to
      act on, so it is the one that carries colour. */
@@ -15141,6 +15142,10 @@ function blRunTripsHTML(run){
         : t.status==='assigned' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Hand to someone else</button>`
         : ''}
       ${tripCanCheckIn(t) ? `<button type="button" class="bl-trip-act primary" data-confirm="${esc(t.id)}">Check in</button>` : ''}
+      ${/* Nothing to press on a supplier delivery: its lines are received
+            below, one at a time, as they come off the van. Saying so
+            beats an inert button. */
+        bySupplier ? '<span class="bl-trip-hint">Receive each line below as it arrives</span>' : ''}
       ${/* The way out. Without it a trip nobody will ever run keeps its
             lines off every future list for good. */
         `<button type="button" class="bl-trip-void" data-void="${esc(t.id)}" title="Call this trip off — its items go back on the list">Call off</button>`}
@@ -15201,12 +15206,51 @@ function tripStatusLabel(t){
   if(tripIsSupplierDelivered(t) && t.status === 'collecting') return 'On its way here';
   return TRIP_STATUS_LABELS[t.status] || t.status;
 }
-/* Ready to check in: our own person back with the goods, or a supplier
-   delivery that has arrived. A worker trip needs somebody to say they
-   are back first; a supplier delivery announces itself by turning up at
-   the door, so the one press is the check-in. */
+/* Ready to check in: somebody of ours is back, and has said what they
+   came back with. `collected` is the only state where every line has an
+   answer, which is what there is to check in.
+
+   A SUPPLIER DELIVERY IS NEVER READY, and offering it the button was
+   wrong. Check-in reads each line's answer and puts that many on the
+   shelf; a supplier delivery has no worker to give those answers, so it
+   counted nothing, and confirmCollectionTrip refuses a trip that is not
+   `collected` anyway -- so the button did nothing at all. Reported as
+   "Check in 0 lines from Dooba", and pressing OK was silent.
+
+   Its goods are recorded line by line as they land, through the same
+   Receive control every other line uses, and the trip closes itself
+   when the last one is in. See closeArrivedSupplierTrips. */
 function tripCanCheckIn(t){
-  return !!t && (t.status === 'collected' || (tripIsSupplierDelivered(t) && t.status === 'collecting'));
+  return !!t && t.status === 'collected';
+}
+
+/* Closing a supplier delivery once its goods are actually here.
+
+   Only supplier trips. A worker's trip is closed by confirmCollectionTrip
+   -- which is also what puts its goods on the shelf -- and that must stay
+   the one door for it. By the time this runs the shelf work has already
+   happened, line by line, so this only retires the record. */
+function closeArrivedSupplierTrips(){
+  let closed = 0;
+  (data.collectionTrips||[]).forEach(t=>{
+    if(!tripIsLive(t) || !tripIsSupplierDelivered(t)) return;
+    const lines = tripLines(t);
+    if(!lines.length) return;
+    const allIn = lines.every(l=>{
+      const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(l.orderId));
+      const it = q && (q.items||[]).find(x=> String(x.lineId) === String(l.lineId));
+      // A line whose order has been amended away is not a reason to keep
+      // the journey open -- there is nothing left to wait for.
+      if(!it) return true;
+      return quoteLineReceived(it) && quoteLineShortfall(it) === 0;
+    });
+    if(allIn){
+      t.status = 'confirmed';
+      t.confirmedAt = new Date().toISOString();
+      closed++;
+    }
+  });
+  return closed;
 }
 
 function createCollectionTripFromRun(run, opts){
@@ -15365,13 +15409,19 @@ function wireBuyingListReceiving(){
       if(paid === null) return;
       const got = receiveQuoteLine(it, n, Number(paid), q);
       if(!got){ toast('Nothing received'); return; }
+      /* A supplier delivery is finished when its last line is in --
+         there is no worker to hand it back, so nothing else would ever
+         retire it and it would sit on the list claiming to be on its
+         way after the van had gone. */
+      const closed = closeArrivedSupplierTrips();
       saveData();
       renderInventory();
       openBuyingList();
       const stillOwed = quoteLineShortfall(it);
       toast(`${got} ${unit} received onto the shelf${stillOwed > 0
         ? ` — still ${stillOwed} short for ${quoteClientName(q)}`
-        : (topUp ? ' — this line is now complete' : '')}`,
+        : (topUp ? ' — this line is now complete' : '')}${
+        closed ? ` · ${closed} supplier ${closed===1?'delivery':'deliveries'} now complete` : ''}`,
         stillOwed > 0 ? 6000 : undefined);
     });
   });
