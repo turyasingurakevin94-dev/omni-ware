@@ -785,6 +785,7 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
   ], {
     data: stripState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin',
+    supplierName: () => 'Shafik Katwe',
     TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
   }, ['blRunTripsHTML']);
 
@@ -957,6 +958,7 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
   ], {
     data: railState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin Moses',
+    supplierName: () => 'Shafik Katwe',
     TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
   }, ['blRunTripsHTML', 'tripGoodsAllIn']);
 
@@ -1005,6 +1007,101 @@ const trip = (over) => Object.assign({
      can never disagree about what "arrived" means. */
   t.check(/if\(tripGoodsAllIn\(t\)\)\{/.test(code),
     'the auto-close reads the same predicate as the strip');
+}
+
+/* ---------- telling the supplier what is coming for ------------------
+ *
+ * A WhatsApp deep link rather than the Cloud API, and that is a choice
+ * with a reason. Business-initiated messages outside a 24-hour window
+ * only travel as approved templates, and the one this shop owns is
+ * `shop_update` -- category MARKETING, footer "Reply STOP to opt out of
+ * promotions". A supplier who taps STOP to stop adverts would then be
+ * unreachable for the message saying somebody is on their way. A pick
+ * list is a UTILITY message and would need its own approved template;
+ * a link needs none, costs nothing, and puts a human in front of
+ * anything leaving the shop.
+ */
+{
+  const NAMES3 = ['waComposeUrl', 'supplierTripMessage'];
+  const msgState = { suppliers: [{ id: 'S1', name: 'Dooba', phone: '0701240819' }] };
+  const msg = compileScope([
+    extractFunction(shared, 'tripLines', 'shared-worker.js'),
+    extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
+    extractFunction(src, 'tripIsSupplierDelivered', 'index.html'),
+    ...NAMES3.map((n) => extractFunction(src, n, 'index.html')),
+  ], {
+    data: msgState,
+    supplierName: () => 'Dooba',
+    staffName: (id) => (id === 'W1' ? 'Kevin Moses' : id),
+  }, NAMES3);
+
+  const t2 = (over) => Object.assign({
+    id: 'T', supplierId: 'S1', status: 'assigned', assignedWorkerId: 'W1', voided: false,
+    lines: [
+      { productName: 'Chrome Pipe — 19mm - Light', qty: 40, unit: 'Pcs' },
+      { productName: 'Chrome Pipe — 25mm - Light', qty: 20, unit: 'Pcs' },
+    ],
+  }, over);
+
+  const ours = msg.supplierTripMessage(t2());
+
+  /* THE ITEMS MUST BE TELLABLE APART. The first version used the aligned
+     monospace table the other WhatsApp messages use -- 14-character
+     columns -- which rendered both of these as "Chrome Pipe —…". A pick
+     list whose two lines read identically is worse than none, because
+     somebody acts on it and brings back the wrong pipe. */
+  t.check(/19mm/.test(ours) && /25mm/.test(ours),
+    'two products that differ only late in the name are still told apart');
+  t.check(!/…/.test(ours), 'nothing in the list is truncated');
+  t.check(/40 Pcs/.test(ours) && /20 Pcs/.test(ours), 'each carries its quantity and unit');
+
+  // No prices. The shop is about to negotiate with the reader.
+  t.check(!/UGX/.test(ours) && !/\d{1,3},\d{3}/.test(ours),
+    'and no price, which is the shop’s position and not the supplier’s business');
+
+  // Who is coming, when it is known.
+  t.check(/Kevin Moses/.test(ours), 'the person collecting is named');
+  t.check(!/Kevin Moses/.test(msg.supplierTripMessage(t2({ assignedWorkerId: null }))),
+    'and not guessed at before anybody is assigned');
+  t.check(/send someone shortly/.test(msg.supplierTripMessage(t2({ assignedWorkerId: null }))),
+    'which is said plainly instead');
+
+  /* Two journeys, two messages. Telling a supplier who is loading their
+     own van that you are "coming to collect" sends them to wait at a
+     counter. */
+  const theirs = msg.supplierTripMessage(t2({ assignedWorkerId: '__supplier__', status: 'collecting' }));
+  t.check(/Please deliver/.test(theirs) && !/coming to collect/.test(theirs),
+    'a supplier delivery is asked to bring it, not told we are coming');
+  t.check(/coming to collect/.test(ours) && !/Please deliver/.test(ours),
+    'and a trip of ours is the other way round');
+  t.check(!/will collect/.test(theirs),
+    'with nobody of ours named on a journey nobody of ours is making');
+
+  /* The number. One rule, shared with the client-quote sender, because
+     two readings of "does a leading 0 mean 256" is how one of them dials
+     a number the other would not. */
+  t.check(msg.waComposeUrl('0701240819', 'x').startsWith('https://wa.me/256701240819?text='),
+    'a local number is dialled as Ugandan');
+  t.check(msg.waComposeUrl('256701240819', 'x').startsWith('https://wa.me/256701240819?'),
+    'one already in full is left alone rather than prefixed twice');
+  t.check(msg.waComposeUrl('+256 701 240 819', 'x').startsWith('https://wa.me/256701240819?'),
+    'and spacing and a plus are ignored');
+  t.check(msg.waComposeUrl('', 'hello').startsWith('https://wa.me/?text='),
+    'no number still opens WhatsApp with the message, rather than losing what was written');
+  t.check(/text=hello$/.test(msg.waComposeUrl('', 'hello')), 'carrying the text with it');
+
+  // Used by both senders, so there is only one rule.
+  const code2 = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check((code2.match(/waComposeUrl\(/g) || []).length >= 3,
+    'the client quote and the supplier notice both go through it');
+  t.check(!/phoneDigits\.startsWith\('0'\)/.test(code2),
+    'and the inline copy it replaced is gone, not left beside it');
+
+  // Offered on the strip, and wired.
+  t.check(/data-tell="\$\{esc\(t\.id\)\}"/.test(code2), 'every trip offers to tell its supplier');
+  t.check(/window\.open\(supplierTripWaUrl\(trip\), '_blank'\);/.test(code2), 'which opens the link');
+  t.check(/No phone number for \$\{supplierName\(trip\.supplierId\)\}/.test(code2),
+    'and a supplier with no number on file is named rather than silently opening a chooser');
 }
 
 /* ---------- when the client sends their own person ------------------- */

@@ -15200,6 +15200,14 @@ function blRunTripsHTML(run){
         : t.status==='open' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Assign</button>`
         : t.status==='assigned' ? `<button type="button" class="bl-trip-act" data-assign="${esc(t.id)}">Hand to someone else</button>`
         : ''}
+      ${/* Opens WhatsApp with the list written, to that supplier's own
+            number. A press rather than an automatic send: this goes out
+            of the shop to a trading relationship, and the Cloud API
+            could not carry it anyway without a new approved template --
+            the one that exists is a MARKETING template whose opt-out
+            would then silence operational messages too. */
+        `<button type="button" class="bl-trip-act" data-tell="${esc(t.id)}"
+          title="Open WhatsApp with this list ready to send to ${esc(supplierName(t.supplierId))}">Tell supplier</button>`}
       ${tripCanCheckIn(t) ? `<button type="button" class="bl-trip-act primary" data-confirm="${esc(t.id)}">Check in</button>` : ''}
       ${/* Nothing to press on a supplier delivery: its lines are received
             below, one at a time, as they come off the van. Saying so
@@ -15461,6 +15469,58 @@ function confirmCollectionTrip(tripId){
   return { received, lines, missing, moved };
 }
 
+/* What to tell a supplier about a journey.
+
+   NO PRICES, deliberately. The internal supplier copy carries buy
+   prices because it is internal; this goes to the person you are about
+   to negotiate with, and naming what you expect to pay before you
+   arrive concedes the position. They know their own price. What they
+   cannot know is what you want and who is coming for it.
+
+   Two journeys, two messages. A trip of ours is "we are coming"; a
+   supplier delivery is "please bring" -- sending the second one "we are
+   coming to collect" would have somebody waiting at a counter for goods
+   already loaded on their own van.
+
+   Who is coming is named when it is known, and left out rather than
+   guessed when it is not: a supplier told to expect Kevin and handed
+   goods to somebody else has a reason to stop and ring. */
+function supplierTripMessage(trip){
+  if(!trip) return '';
+  const bySupplier = tripIsSupplierDelivered(trip);
+  /* Plain lines, NOT the aligned monospace table the other WhatsApp
+     messages use. Those columns are 14 characters wide, which turned
+     "Chrome Pipe — 19mm - Light" and "Chrome Pipe — 25mm - Light" into
+     two identical rows reading "Chrome Pipe —…" -- a pick list whose
+     items cannot be told apart is worse than no pick list, because
+     somebody acts on it. The name is the whole message here, so it is
+     never cut, and plain lines wrap on a narrow phone where a fixed
+     table would not. */
+  const rows = tripLines(trip).map(l=>{
+    const qty = Number(l.qty) || 0;
+    return `• ${l.productName || 'Item'} — ${qty}${l.unit ? ' ' + l.unit : ''}`;
+  });
+  const carrier = (!bySupplier && trip.assignedWorkerId) ? staffName(trip.assignedWorkerId) : '';
+  const closing = bySupplier
+    ? 'Please let us know when it is on the way. Thank you.'
+    : (carrier
+      ? `*${carrier}* will collect. Please have it ready.`
+      : 'We will send someone shortly. Please have it ready.');
+  return [
+    `Hello *${supplierName(trip.supplierId)}*,`,
+    '',
+    bySupplier ? 'Please deliver the following to us:' : 'We are coming to collect the following:',
+    '',
+    ...rows,
+    '',
+    closing,
+  ].join('\n');
+}
+function supplierTripWaUrl(trip){
+  const sup = (data.suppliers||[]).find(s=> String(s.id) === String(trip && trip.supplierId));
+  return waComposeUrl(sup && sup.phone, supplierTripMessage(trip));
+}
+
 /* Where a line's goods actually came from.
 
    The supplier on an order line is who it was QUOTED against. The
@@ -15599,6 +15659,21 @@ function wireBuyingListReceiving(){
   // mean a person is how the wrong person gets sent.
   document.querySelectorAll('#buyingListBody [data-assign]').forEach(btn=>{
     btn.addEventListener('click', ()=> openAssignTripModal(btn.dataset.assign));
+  });
+  // Tell the supplier what somebody is coming for, or what to bring.
+  document.querySelectorAll('#buyingListBody [data-tell]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const trip = (data.collectionTrips||[]).find(t=> t.id === btn.dataset.tell);
+      if(!trip) return;
+      const sup = (data.suppliers||[]).find(s=> String(s.id) === String(trip.supplierId));
+      /* Named, because the alternative is a chooser opening on a message
+         whose recipient the shop then has to remember. Nine of the
+         forty-two suppliers have no number on file. */
+      if(!sup || !(sup.phone||'').trim()){
+        toast(`No phone number for ${supplierName(trip.supplierId)} — WhatsApp will ask who to send it to. Add one on their supplier record to open the chat directly.`, 6500);
+      }
+      window.open(supplierTripWaUrl(trip), '_blank');
+    });
   });
   // Call one off.
   document.querySelectorAll('#buyingListBody [data-void]').forEach(btn=>{
@@ -17995,6 +18070,27 @@ function waAbbrUnit(unit){
   return suffix ? `${abbr}${suffix.replace(/[()]/g,'')}` : abbr;
 }
 // Left-pads/truncates for a fixed-width monospace column.
+/* A wa.me link with the text already written.
+
+   The country rule lives here once. It was inline in the client-quote
+   sender, and the supplier notice needs exactly the same reading of a
+   Ugandan number -- two copies of "does a leading 0 mean 256" is how
+   one of them comes to dial a number the other would not.
+
+   Distinct from cfNormalisedPhone, which keeps the last nine digits to
+   decide whether two customers are one person. That is a matching key
+   and would not dial.
+
+   A blank number still opens WhatsApp with the message ready, so the
+   sender picks the chat by hand rather than losing what was written. */
+function waComposeUrl(phone, msg){
+  let d = String(phone || '').replace(/[^0-9]/g, '');
+  if(d.startsWith('0')) d = '256' + d.slice(1);
+  else if(d && !d.startsWith('256')) d = '256' + d;
+  return d ? `https://wa.me/${d}?text=${encodeURIComponent(msg)}`
+           : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+}
+
 function waPadEnd(s,n){ s=String(s); return s.length>=n ? s.slice(0,n-1)+'…' : s+' '.repeat(n-s.length); }
 // Right-aligns, but NEVER truncates — a clipped number is a wrong number,
 // so values are allowed to push the row wider rather than lose a digit.
@@ -18046,14 +18142,7 @@ document.getElementById('q_whatsapp_btn').addEventListener('click', ()=>{
     'Thank you for your enquiry.'
   ].join('\n');
 
-  let phoneDigits = (data.quote.client.phone||'').replace(/[^0-9]/g,'');
-  if(phoneDigits.startsWith('0')) phoneDigits = '256' + phoneDigits.slice(1);
-  else if(phoneDigits && !phoneDigits.startsWith('256')) phoneDigits = '256' + phoneDigits;
-
-  const url = phoneDigits
-    ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(msg)}`
-    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  window.open(waComposeUrl(data.quote.client.phone, msg), '_blank');
 });
 
 // Builds the internal sales-group version of a just-saved quote: item name
