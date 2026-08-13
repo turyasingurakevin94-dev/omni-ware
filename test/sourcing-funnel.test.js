@@ -484,7 +484,8 @@ async function main() {
       has(c) { return this._s.has(c); } },
   });
   const ids = ['sl_need', 'sl_cand_form', 'sl_research_head', 'sl_price_block',
-    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body', 'sl_revisit'];
+    'sl_price_summary', 'sl_cta_row', 'sl_cta', 'sl_cta_why', 'sl_open_body', 'sl_revisit',
+    'sl_add_block', 'sl_add_summary'];
   // `at` is the step being looked BACK at, or undefined for "the one it is on".
   const view = (l, at) => {
     const nodes = {};
@@ -502,7 +503,7 @@ async function main() {
       extractFunction(src, 'candidateHasPrice', 'index.html'),
       extractFunction(src, 'leadFacts', 'index.html'),
       extractFunction(src, 'sourcingGateBlock', 'index.html'),
-      'let sourcingViewStep = null;',
+      'let sourcingViewStep = null; let editingCandidateId = null;',
       extractFunction(src, 'sourcingViewedStep', 'index.html'),
       extractFunction(src, 'sourcingStepGuide', 'index.html'),
       extractDeclaration(src, 'SOURCING_STATUSES', 'index.html'),
@@ -550,10 +551,17 @@ async function main() {
 
   const found = view(lead({ status: 'looking', candidates: [cand({ supplierName: 'Shafik' })] }));
   eq(found.nodes.sl_cta.disabled, false, 'once somebody is found the step can be finished');
+  eq(found.nodes.sl_add_block.open, true,
+    'Looking stands the add-a-supplier form open — adding is that step\'s job');
 
   const sourced = view(lead({ status: 'sourced', candidates: [cand({ supplierName: 'Shafik' })] }));
   eq(sourced.nodes.sl_price_block.open, true, 'Source Found opens the price half');
   eq(sourced.nodes.sl_cta.disabled, true, 'and will not move on without one');
+  /* By Source Found the suppliers are already on the list and the job is
+     pricing THEM. A blank supplier form is the widest thing on the
+     screen, so it folds -- reachable, not in the way. */
+  eq(sourced.nodes.sl_add_block.open, false,
+    'Source Found folds it away — the job there is pricing the people already found');
 
   const priced = view(lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] }));
   eq(priced.nodes.sl_cta.disabled, false, 'Priced is never gated — its button graduates rather than steps');
@@ -731,6 +739,9 @@ async function main() {
   });
   const mode = compileScope([
     'let editingCandidateId = null;',
+    // The placement half is DOM-only; the mode half is what says which
+    // job the form is doing, and that is what this checks.
+    'function slCandFormPlace(){}',
     extractFunction(src, 'slCandFormMode', 'index.html'),
     'function __set(v){ editingCandidateId = v; }',
   ], { document: { getElementById: (i)=> nodes[i] } }, ['slCandFormMode', '__set']);
@@ -755,6 +766,27 @@ async function main() {
   const addHandler = (/getElementById\('sl_add_cand'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
   t.check(/rememberLocation\(document\.getElementById\('sl_c_where'\)/.test(addHandler),
     'a place typed on a candidate joins the shop\'s places, so "kikuubo" and "Kikuubo" stay one place');
+
+  /* The form OPENS INSIDE the row being edited, so with a dozen
+     suppliers you type under the one you clicked -- and pressing the
+     same row again puts it away. */
+  t.check(/editingCandidateId === edit\.dataset\.candEdit\) slCandFormClear\(\);/.test(delHandler),
+    'the edit button is a toggle — pressing it on the open row closes it');
+  const place = extractFunction(src, 'slCandFormPlace', 'index.html');
+  t.check(/data-editor=/.test(place) && /sl_add_slot/.test(place),
+    'the one form is moved to the row being edited, or to the add fold when adding');
+
+  /* THE ORDER THAT MATTERS. The form is a live element carrying this
+     screen's listeners, and while a row is open it lives inside the list.
+     Rebuilding the list with innerHTML while it is in there destroys it
+     and every listener with it -- the next press would do nothing at all
+     -- so it is lifted out first and put back after. */
+  const bodyFn = extractFunction(src, 'renderSourcingLeadBody', 'index.html');
+  const iPark = bodyFn.indexOf("sl_add_slot').appendChild");
+  const iWipe = bodyFn.indexOf("sl_candidates').innerHTML");
+  const iBack = bodyFn.indexOf('slCandFormPlace()');
+  t.check(iPark > -1 && iWipe > -1 && iBack > -1 && iPark < iWipe && iWipe < iBack,
+    'the form is lifted out BEFORE the list is rebuilt and put back after, or it is destroyed mid-edit');
 }
 
 /* ---------- 4. needs chasing: one rule, read three ways -------------- */

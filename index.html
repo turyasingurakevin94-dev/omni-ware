@@ -5662,6 +5662,16 @@
   .sf-cand-form.editing{border-style:solid;border-color:var(--accent);
     background:color-mix(in srgb, var(--accent) 4%, transparent);}
   .sf-cand-acts{display:inline-flex;gap:2px;margin-left:auto;}
+  /* The row being edited: the form drops open underneath it, so with a
+     dozen suppliers you type under the one you clicked. */
+  .sf-cand-editor{flex-basis:100%;}
+  .sf-cand-editor:empty{display:none;}
+  .sf-list-row.sf-cand.open{background:color-mix(in srgb, var(--accent) 5%, transparent);
+    box-shadow:inset 2px 0 0 var(--accent);}
+  .sf-cand-editor .sf-cand-form{margin-top:10px;}
+  #sl_add_block > summary{cursor:pointer;font-size:12px;color:var(--accent);font-weight:600;
+    padding:8px 0;list-style:revert;}
+  #sl_add_block[open] > summary{margin-bottom:2px;}
   /* Somebody found but not priced is the Source Found step's whole job,
      so the gap is a button rather than a label about a gap. */
   .sf-rung-add{cursor:pointer;border-style:dashed;color:var(--accent);
@@ -8524,6 +8534,16 @@
         <section class="sf-sec" data-sec="research">
         <h3 class="sf-sub" id="sl_research_head">What the research turned up</h3>
         <div id="sl_candidates"></div>
+        <!-- Adding somebody NEW is Looking's task, so this stands open
+             there and folds away at Source Found, where the job is
+             pricing the people already on the list above and a blank
+             form is just the widest thing on screen. The form itself is
+             moved into whichever row is being edited, so with a dozen
+             suppliers you type under the one you clicked. -->
+        <details id="sl_add_block">
+          <summary id="sl_add_summary">Somebody else has it — add them</summary>
+          <div id="sl_add_slot"></div>
+        </details>
         <div class="sf-cand-form" id="sl_cand_form">
           <div class="form-grid">
             <div class="field"><label>Who</label><input type="text" id="sl_c_name" list="dl_sourcing_suppliers" placeholder="Pick a supplier, or type a new one" autocomplete="off"></div>
@@ -40020,17 +40040,23 @@ function renderSourcingLeadBody(l){
     : '<p class="preset-hint">Nobody recorded yet.</p>';
 
   const cands = l.candidates || [];
+  /* The form is a live element whose children carry the listeners this
+     screen is wired with. It sits INSIDE a row while that row is being
+     edited, so it has to be lifted out before the list is rebuilt --
+     innerHTML on its parent would destroy it and every listener with it,
+     and the next press would do nothing. Put back straight after. */
+  document.getElementById('sl_add_slot').appendChild(document.getElementById('sl_cand_form'));
   document.getElementById('sl_candidates').innerHTML = cands.length ? `
     <div class="sf-list">${cands.map(c=>{
       const rungs = candidateTiers(c);
       return `
-      <div class="sf-list-row sf-cand">
+      <div class="sf-list-row sf-cand${editingCandidateId===c.id ? ' open' : ''}" data-cand-row="${esc(c.id)}">
         <span class="sf-list-main">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
         <span class="st-status-pill">${esc(c.role==='importer'?'Importer':(c.role==='both'?'Importer & supplier':'Supplier'))}</span>
         ${Number(c.packQty)>0 && c.packUnit ? `<span class="sf-list-src">${c.packQty} per ${esc(c.packUnit)}</span>` : ''}
         ${c.where ? `<span class="sf-list-when">${esc(c.where)}</span>` : ''}
         <span class="sf-cand-acts">
-          <button type="button" class="pc-icon-btn" data-cand-edit="${esc(c.id)}" title="Change what we know about them">${ICON_EDIT}</button>
+          <button type="button" class="pc-icon-btn" data-cand-edit="${esc(c.id)}" aria-expanded="${editingCandidateId===c.id ? 'true' : 'false'}" title="${editingCandidateId===c.id ? 'Close this one' : 'Change what we know about them'}">${ICON_EDIT}</button>
           <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
         </span>
         <div class="sf-rungs">${rungs.length
@@ -40039,9 +40065,15 @@ function renderSourcingLeadBody(l){
              Source Found step, so the row itself offers the way to price
              them rather than leaving it to be discovered. */
           : `<button type="button" class="sf-rung sf-rung-add" data-cand-edit="${esc(c.id)}">No price yet — add what they charge</button>`}</div>
+        <!-- Where the form goes when this row is the one being edited.
+             One form, moved to the row you clicked, rather than a dozen
+             copies or one at the bottom you have to scroll to. -->
+        <div class="sf-cand-editor" data-editor="${esc(c.id)}"></div>
       </div>`;
     }).join('')}</div>`
     : '<p class="preset-hint">Nothing found yet. Add who has it, and what they want for it.</p>';
+  // The rows exist again, so the form can go back to the one being edited.
+  slCandFormPlace();
 }
 /* One rung, said the way the counter says it: by the carton when the
    threshold is a whole number of cartons, by the piece otherwise --
@@ -40225,9 +40257,19 @@ function applySourcingStepView(l){
   document.getElementById('sl_research_head').textContent =
     editable ? 'What the research turned up' : 'What the research found';
   const priceBlock = document.getElementById('sl_price_block');
-  priceBlock.open = sourcingWantsPriceForm(l);
+  priceBlock.open = sourcingWantsPriceForm(l) || !!editingCandidateId;
   document.getElementById('sl_price_summary').textContent = priceBlock.open
     ? 'What they charge' : 'They quoted a price too — add it now';
+  /* Adding somebody NEW is Looking's task, so the fold stands open there.
+     At Source Found the job is pricing the people already on the list, and
+     a blank supplier form is the widest thing on the screen -- folded, so
+     the rows it is about are what you see. It opens on its own while a row
+     is being edited, because that is where the form has gone. */
+  const addBlock = document.getElementById('sl_add_block');
+  addBlock.open = (viewing === 'looking') && !editingCandidateId;
+  addBlock.style.display = editingCandidateId ? 'none' : '';
+  document.getElementById('sl_add_summary').textContent = (l.candidates||[]).length
+    ? 'Somebody else has it — add them' : 'Add who has it';
 
   /* The finish line belongs to the step the lead is ON. Revisiting an
      earlier one is for correcting what it recorded, not for finishing a
@@ -40507,6 +40549,21 @@ function slCandFormMode(){
   document.getElementById('sl_add_cand').textContent = editing ? 'Save changes' : 'Add what you found';
   document.getElementById('sl_cand_cancel').style.display = editing ? '' : 'none';
   document.getElementById('sl_cand_form').classList.toggle('editing', editing);
+  slCandFormPlace();
+}
+/* Moves the one form to where the work is: under the row being edited,
+   or into the "add somebody" fold when adding. Relocated rather than
+   duplicated -- a form per row would mean a dozen inputs sharing every
+   id, and a form fixed at the bottom means scrolling away from the row
+   you just clicked every time. */
+function slCandFormPlace(){
+  const form = document.getElementById('sl_cand_form');
+  const slot = editingCandidateId
+    ? document.querySelector(`#sl_candidates [data-editor="${CSS.escape(editingCandidateId)}"]`)
+    : document.getElementById('sl_add_slot');
+  // The row may not be on screen -- a step that hides the list, a lead
+  // re-rendered mid-edit -- so the fold is the fallback home.
+  (slot || document.getElementById('sl_add_slot')).appendChild(form);
 }
 function slCandFormClear(){
   editingCandidateId = null;
@@ -40554,12 +40611,19 @@ function slCandFormLoad(c){
   slCandTiers = candidateTiers(c).map(t=>({...t}));
   renderSlCandTiers();
   slCandFormMode();
+}
+/* Called after the list has been rebuilt and the form put back, so the
+   thing being scrolled to and focused is the one now on screen. */
+function slCandFormReveal(){
+  if(!editingCandidateId) return;
   // The price is what they came back for, so open the half that holds it
   // whatever the step would otherwise have folded away.
   const block = document.getElementById('sl_price_block');
   block.open = true;
-  block.scrollIntoView({block:'nearest'});
-  document.getElementById('sl_c_tier_qty').focus();
+  const row = document.querySelector(`#sl_candidates [data-cand-row="${CSS.escape(editingCandidateId)}"]`);
+  if(row) row.scrollIntoView({block:'nearest'});
+  const qty = document.getElementById('sl_c_tier_qty');
+  if(qty) qty.focus();
 }
 function renderSlCandTiers(){
   const unit = document.getElementById('sl_c_unit').value.trim() || 'pcs';
@@ -40653,7 +40717,13 @@ document.getElementById('sl_candidates').addEventListener('click', (e)=>{
   if(!l) return;
   const edit = e.target.closest('[data-cand-edit]');
   if(edit){
-    slCandFormLoad((l.candidates||[]).find(c=> c.id === edit.dataset.candEdit));
+    /* A toggle: pressing it on the row already open closes it. With a
+       dozen suppliers on the list, opening one has to be able to put the
+       last one away. */
+    if(editingCandidateId === edit.dataset.candEdit) slCandFormClear();
+    else slCandFormLoad((l.candidates||[]).find(c=> c.id === edit.dataset.candEdit));
+    renderSourcingLeadBody(l);
+    slCandFormReveal();
     return;
   }
   const del = e.target.closest('[data-cand-del]');
