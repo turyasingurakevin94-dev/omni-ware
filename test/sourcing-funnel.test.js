@@ -663,6 +663,24 @@ async function main() {
   t.check(/slRoleValue\(\)/.test(src) && /slSetRole\(/.test(src),
     'and every read and write goes through those, not through a .value that no longer exists');
 
+  /* Red on this screen belongs to the one primary button and to Drop
+     this. An ordinary edit washed in it read as an error, and a chosen
+     segment filled with it read as something pressed. */
+  const openRow = (/\.sf-list-row\.sf-cand\.open\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(openRow && !/--accent\) \d+%/.test(openRow),
+    'the row being edited is marked with a neutral lift, not a wash of the danger colour');
+  t.check(/inset 3px 0 0 var\(--accent\)/.test(openRow),
+    'with an accent edge, so it is still obvious which one you opened');
+  const segChecked = (/\.sf-seg input:checked \+ span\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/var\(--ink\)/.test(segChecked) && !/var\(--accent\)/.test(segChecked),
+    'and a chosen segment reads as chosen rather than as a second red button');
+  t.check(/\.sf-cand-editor \.sf-cand-form\{border:0/.test(src),
+    'the inline editor has no frame of its own — the row it opens inside is the frame');
+  /* And the row stops advertising the gap while the form that fills it is
+     open underneath. */
+  t.check(/editingCandidateId===c\.id \? ''/.test(src),
+    'the "no price yet" prompt goes away while its own editor is open');
+
   /* A disabled button that looks pressable invites a press it will
      ignore. .btn had no disabled state at all -- the icon buttons have
      carried one for ages. */

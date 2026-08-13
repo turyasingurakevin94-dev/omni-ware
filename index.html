@@ -5707,22 +5707,31 @@
   .sf-seg span{display:block;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
     cursor:pointer;white-space:nowrap;}
   .sf-seg label + label span{border-left:1px solid var(--line);}
-  .sf-seg input:checked + span{background:var(--accent);color:#fff;}
+  /* Selected, not actioned. Filled in the brand's red this competed with
+     the one red button on the screen and made choosing "Importer" look
+     like pressing something. Ink reads as chosen without shouting. */
+  .sf-seg input:checked + span{background:var(--ink);color:#fff;}
   .sf-seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:-2px;}
   .sf-cand-form{border:1px dashed var(--line);border-radius:9px;padding:12px;margin-top:8px;}
   /* Changing a supplier already on the list rather than adding another:
      a solid edge so it is obvious the form is pointed at one of the rows
      above rather than at a blank. */
-  .sf-cand-form.editing{border-style:solid;border-color:var(--accent);
-    background:color-mix(in srgb, var(--accent) 4%, transparent);}
+  /* Editing an existing row needs no frame of its own: the row it opens
+     inside is already the frame. It kept one, so an open row was a
+     bordered box inside a tinted box inside a bordered list -- three
+     containers for one form. */
+  .sf-cand-editor .sf-cand-form{border:0;background:transparent;padding:0 0 4px;}
   .sf-cand-acts{display:inline-flex;gap:2px;margin-left:auto;}
   /* The row being edited: the form drops open underneath it, so with a
      dozen suppliers you type under the one you clicked. */
   .sf-cand-editor{flex-basis:100%;}
   .sf-cand-editor:empty{display:none;}
-  .sf-list-row.sf-cand.open{background:color-mix(in srgb, var(--accent) 5%, transparent);
-    box-shadow:inset 2px 0 0 var(--accent);}
-  .sf-cand-editor .sf-cand-form{margin-top:10px;}
+  /* The open row is marked, not alarmed. A wash of the brand's red made
+     an ordinary edit read as an error -- red on this screen belongs to
+     the one primary button and to Drop this. A neutral lift and an
+     accent edge say "this is the one you opened" without either. */
+  .sf-list-row.sf-cand.open{background:var(--ow-steel-050);
+    box-shadow:inset 3px 0 0 var(--accent);}
   /* Somebody found but not priced is the Source Found step's whole job,
      so the gap is a button rather than a label about a gap. */
   .sf-rung-add{cursor:pointer;border-style:dashed;color:var(--accent);
@@ -40153,8 +40162,10 @@ function renderSourcingLeadBody(l){
           ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingRungLabel(t, c))}</span>`).join('')
           /* Somebody found and not yet priced is the whole point of the
              Source Found step, so the row itself offers the way to price
-             them rather than leaving it to be discovered. */
-          : `<button type="button" class="sf-rung sf-rung-add" data-cand-edit="${esc(c.id)}">No price yet — add what they charge</button>`}</div>
+             them rather than leaving it to be discovered -- but not while
+             the form that does it is already open underneath. */
+          : (editingCandidateId===c.id ? ''
+            : `<button type="button" class="sf-rung sf-rung-add" data-cand-edit="${esc(c.id)}">No price yet — add what they charge</button>`)}</div>
         <!-- Where the form goes when this row is the one being edited.
              One form, moved to the row you clicked, rather than a dozen
              copies or one at the bottom you have to scroll to. -->
