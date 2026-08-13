@@ -234,4 +234,35 @@ const reset = () => {
     'deleting a supplier releases the customer that claimed them');
 }
 
+/* ---------- and the name has somewhere to go on a phone --------------
+ *
+ * The "Also a customer" tag this file is about is what made the problem
+ * visible. Both cards put a 38px avatar, the name, and a row of action
+ * buttons on one line, none of which may shrink -- so on a 291px card
+ * the name got 61px to fit 124px of "Allan Lak · Also a customer" into,
+ * and the tag that says these two records are the same person was the
+ * part that fell off.
+ *
+ * Measured in the running app before: name 61px. After: 210px, nothing
+ * clipped on any of the 24 cards in either list.
+ */
+{
+  const phone = (/@media \(max-width:620px\)\{[\s\S]*?\n  \}/
+    .exec(src.slice(src.indexOf('.sc-actions{'))) || [''])[0];
+  t.check(/\.sc-head, \.cc-head\{flex-wrap:wrap;\}/.test(phone),
+    'the card head may wrap on a phone');
+  t.check(/\.sc-actions, \.cc-actions\{flex:1 1 100%/.test(phone),
+    'and the buttons take a line of their own rather than taking the name’s');
+  /* Both lists, in one rule, because they are the same card twice --
+     fixing one and leaving the other is exactly how these two drifted
+     apart in the first place. */
+  t.check(/\.sc-head, \.cc-head/.test(phone) && /\.sc-actions, \.cc-actions/.test(phone),
+    'suppliers and customers are fixed together, since they are the same card');
+  // The name must still be allowed to break, or a long one just overflows
+  // the wider box it has been given.
+  t.check(/\.sc-name\{[^}]*word-break:break-word/.test(src)
+    && /\.cc-name\{[^}]*word-break:break-word/.test(src),
+    'and a single long name still breaks rather than running off the card');
+}
+
 process.exit(t.done() ? 1 : 0);
