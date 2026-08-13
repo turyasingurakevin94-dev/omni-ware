@@ -663,6 +663,29 @@ async function main() {
   t.check(/slRoleValue\(\)/.test(src) && /slSetRole\(/.test(src),
     'and every read and write goes through those, not through a .value that no longer exists');
 
+  /* The comparison is the deciding step's whole content, so it has to
+     read as a table and end in an answer. Unheaded, its two figures were
+     unlabelled money -- and at a quantity of one they are the same
+     number printed twice, which reads as a mistake. */
+  const cmp = extractFunction(src, 'sourcingCompareHTML', 'index.html');
+  t.check(/sf-compare-hrow/.test(cmp) && /Per \$\{esc\(unit\)\}/.test(cmp) && />Total</.test(cmp),
+    'the comparison carries column headings, so a rate is not mistaken for a total');
+  t.check(/sf-win-tick/.test(cmp),
+    'and the cheapest row is marked, not left to be inferred from bold');
+  t.check(/sf-verdict/.test(cmp) && !/class="preset-hint">\$\{esc\(best/.test(cmp),
+    'the conclusion is set as the answer rather than as small print under the figures');
+  const verdictRule = (/\.sf-verdict\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/color:var\(--ink\)/.test(verdictRule) && /font-size:13\.5px/.test(verdictRule),
+    'and is set in full ink at reading size, not greyed and shrunk below the figures');
+  /* Even with nobody to compare against, the step still has to answer
+     "who do we buy from" -- one quoted supplier IS the answer. */
+  t.check(/Only <b>\$\{esc\(best\.candidate\.supplierName/.test(cmp),
+    'a single quoted supplier still gets a verdict rather than silence');
+  /* The whole-order saving is only worth saying when it differs from the
+     per-unit one. At a quantity of one it is the same figure twice. */
+  t.check(/qty > 1 \? `, \$\{fmtUGX\(best\.savesPerUnit \* qty\)\}/.test(cmp),
+    'and the order-total saving is dropped at a quantity of one, where it repeats itself');
+
   /* Red on this screen belongs to the one primary button and to Drop
      this. An ordinary edit washed in it read as an error, and a chosen
      segment filled with it read as something pressed. */

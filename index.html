@@ -5793,15 +5793,29 @@
     color:var(--ink-soft);font-weight:600;margin-bottom:8px;}
   .sf-compare-head input{width:84px;flex:0 0 auto;}
   .sf-compare-why{font-size:11px;font-weight:700;color:var(--ink-soft);}
-  .sf-compare-rows{display:flex;flex-direction:column;gap:2px;}
+  .sf-compare-rows{display:flex;flex-direction:column;}
   .sf-compare-row{display:flex;align-items:center;gap:10px;font-size:12.5px;
-    font-variant-numeric:tabular-nums;padding:3px 0;color:var(--ink-soft);}
+    font-variant-numeric:tabular-nums;padding:6px 8px;color:var(--ink-soft);
+    border-radius:6px;}
+  /* Column headings, so the two figures are a rate and a total rather
+     than two unlabelled sums -- which at a quantity of one are the same
+     number printed twice. */
+  .sf-compare-hrow{font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;
+    font-weight:700;color:var(--ink-soft);opacity:0.7;padding-bottom:2px;
+    border-bottom:1px solid var(--line);border-radius:0;margin-bottom:2px;}
   /* The cheapest at THIS quantity, which is a different supplier at a
      different quantity -- so the mark is on the row, not on the card. */
-  .sf-compare-row.win{color:var(--ink);font-weight:700;}
+  .sf-compare-row.win{color:var(--ink);font-weight:700;background:var(--panel);}
+  .sf-win-tick{width:13px;height:13px;stroke-width:3;color:var(--good);
+    flex:0 0 auto;margin-right:5px;vertical-align:-2px;}
   .sf-compare-who{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .sf-compare-each{flex:0 0 auto;}
-  .sf-compare-total{flex:0 0 auto;min-width:88px;text-align:right;}
+  .sf-compare-each{flex:0 0 auto;min-width:92px;text-align:right;}
+  .sf-compare-total{flex:0 0 auto;min-width:92px;text-align:right;}
+  /* The one sentence this step exists to produce. It was set as grey
+     small print beneath the figures it concludes from. */
+  .sf-verdict{margin:10px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink);}
+  .sf-verdict b{font-weight:700;}
+  .sf-verdict.tied{color:var(--ink-soft);}
   .sf-pick-at{font-size:10.5px;font-weight:600;color:var(--ink-soft);}
   .sf-add-ask{font-size:12px;padding:5px 10px;}
   /* On the board a known fact wears the lane's colour, which is what
@@ -40222,21 +40236,36 @@ function sourcingCompareHTML(l){
     </div>
     ${!ranked.length
       ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)} yet — every rung on file starts higher than that.</p>`
-      : `<div class="sf-compare-rows">${ranked.map((x,i)=>`
+      /* Headed columns. Unheaded, the two figures are unlabelled money --
+         and at a quantity of one they are the SAME number twice, which
+         reads as a mistake rather than as a rate beside a total. */
+      : `<div class="sf-compare-rows">
+          <div class="sf-compare-row sf-compare-hrow">
+            <span class="sf-compare-who">Supplier</span>
+            <span class="sf-compare-each">Per ${esc(unit)}</span>
+            <span class="sf-compare-total">Total</span>
+          </div>
+          ${ranked.map((x,i)=>`
           <div class="sf-compare-row${i===0?' win':''}">
-            <span class="sf-compare-who">${esc(x.candidate.supplierId ? supplierName(x.candidate.supplierId) : (x.candidate.supplierName||'Somebody'))}</span>
-            <span class="sf-compare-each">${fmtUGX(x.unitPrice)}/${esc(unit)}</span>
+            <span class="sf-compare-who">${i===0 ? '<svg class="icon sf-win-tick" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' : ''}${esc(x.candidate.supplierId ? supplierName(x.candidate.supplierId) : (x.candidate.supplierName||'Somebody'))}</span>
+            <span class="sf-compare-each">${fmtUGX(x.unitPrice)}</span>
             <span class="sf-compare-total">${fmtUGX(x.unitPrice * qty)}</span>
           </div>`).join('')}</div>
-        ${/* The tie is checked FIRST. Announcing a saving for a choice
-             that has an identical alternative sitting beside it is worse
-             than saying nothing -- it reads as a reason to prefer one
-             supplier when the price gives none. */
+        ${/* The answer, said as an answer. It was grey small print under
+             the table -- the one sentence the step exists to produce,
+             set smaller than the figures it draws its conclusion from.
+
+             The tie is checked FIRST: announcing a saving for a choice
+             that has an identical alternative beside it reads as a reason
+             to prefer one supplier when the price gives none. */
           best && best.tied
-          ? '<p class="preset-hint">Two of them charge the same at this quantity — pick on where they are, or how soon they can supply.</p>'
+          ? '<p class="sf-verdict tied">Two of them charge the same at this quantity — pick on where they are, or how soon they can supply.</p>'
           : (best && best.savesPerUnit > 0
-            ? `<p class="preset-hint">${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))} saves ${fmtUGX(best.savesPerUnit)} a ${esc(unit)} — ${fmtUGX(best.savesPerUnit * qty)} on ${esc(String(qty))}.</p>`
-            : '')}`}
+            /* The saving over the whole order is only worth saying when
+               it differs from the per-unit one -- at a quantity of one it
+               is the same figure twice. */
+            ? `<p class="sf-verdict">Buy from <b>${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))}</b> — ${fmtUGX(best.savesPerUnit)} a ${esc(unit)} cheaper${qty > 1 ? `, ${fmtUGX(best.savesPerUnit * qty)} on ${esc(String(qty))}` : ''}.</p>`
+            : `<p class="sf-verdict">Only <b>${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))}</b> has quoted for this quantity.</p>`)}`}
   </div>`;
 }
 const SOURCING_SOURCE_LABELS = {quote:'from a quote', whatsapp:'from WhatsApp', sourcing:'added here'};
