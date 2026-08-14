@@ -5799,9 +5799,6 @@
   .sf-fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
   .sf-rung-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
     color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
-  .sf-rung-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;}
-  .sf-rung-row input{flex:1 1 80px;min-width:0;}
-  .sf-rung-row select{flex:0 1 auto;}
   .sf-rungs{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
   .sf-rung{font-size:11px;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:999px;
     border:1px solid var(--line);color:var(--ink-soft);white-space:nowrap;}
@@ -8711,15 +8708,24 @@
                  given three answers, and which one applies depends
                  entirely on how much you buy -- so all three are
                  recorded, and the comparison is asked at a quantity. -->
-            <label class="sf-rung-label">Add a rung for each price break they quote</label>
-            <div class="sf-rung-row">
-              <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="From">
-              <select id="sl_c_tier_qty_unit"><option value="unit">pieces</option><option value="pack">packs</option></select>
-              <input type="number" id="sl_c_tier_price" min="0" step="any" placeholder="at">
-              <select id="sl_c_tier_price_unit"><option value="unit">each</option><option value="pack">per pack</option></select>
-              <button type="button" class="btn btn-ghost" id="sl_c_tier_add">Add rung</button>
-            </div>
+            <!-- The Price Registry's own tier row, word for word and
+                 control for control. It calls these tiers, so this calls
+                 them tiers; and the unit dropdowns are built from the
+                 packing set above rather than reading "pieces / packs"
+                 whatever the thing is actually sold in. -->
+            <label class="sf-rung-label" id="sl_c_tiers_label">Volume pricing</label>
             <div id="sl_c_tiers_wrap"></div>
+            <div class="pr-tier-add">
+              <span class="pr-tier-at">At</span>
+              <input type="number" id="sl_c_tier_qty" min="0" step="any" placeholder="Qty">
+              <select id="sl_c_tier_qty_unit"></select>
+              <span class="pr-tier-at">charge</span>
+              <input type="number" id="sl_c_tier_price" min="0" step="any" placeholder="UGX" class="pr-tier-price">
+              <select id="sl_c_tier_price_unit"></select>
+              <button type="button" class="btn-icon" id="sl_c_tier_add">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Add tier</button>
+            </div>
             <!-- The Price Registry's own bulk cards, for the supplier
                  whose row this form is open in -- so there is no supplier
                  to pick, it is already theirs. Each card can take its own
@@ -39672,7 +39678,7 @@ function candidateUnitPriceAt(c, qty){
   });
   return best;
 }
-function candidateLowestRung(c){ const t = candidateTiers(c); return t.length ? t[0] : null; }
+function candidateLowestTier(c){ const t = candidateTiers(c); return t.length ? t[0] : null; }
 /* How much the shop is actually likely to buy: what the people who asked
    said they wanted. The demand ledger already carries it per ask, so the
    quantity the comparison is made at is the shop's own, not a guess. */
@@ -40450,7 +40456,7 @@ function renderSourcingLeadBody(l){
           <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
         </span>
         <div class="sf-rungs">${rungs.length
-          ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingRungLabel(t, c))}</span>`).join('')
+          ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingTierLabel(t, c))}</span>`).join('')
           /* Somebody found and not yet priced is the whole point of the
              Source Found step, so the row itself offers the way to price
              them rather than leaving it to be discovered -- but not while
@@ -40473,14 +40479,14 @@ function renderSourcingLeadBody(l){
 /* One rung, said the way the counter says it: by the carton when the
    threshold is a whole number of cartons, by the piece otherwise --
    the same rule prTierChipLabel uses on the price form. */
-function sourcingRungLabel(t, c){
-  const packQty = Number(c && c.packQty) || 0;
-  const packUnit = String((c && c.packUnit) || '').trim();
-  const unit = String((c && c.unit) || '').trim() || 'pcs';
-  const qtyLabel = (packQty > 0 && packUnit && t.minQty > 0 && t.minQty % packQty === 0)
-    ? `${t.minQty/packQty} ${packUnit}`
-    : `${t.minQty} ${unit}`;
-  return `${qtyLabel}+: ${fmtUGX(t.price)}/${unit}`;
+/* A tier said the way the Price Registry says it, through its own
+   prTierChipLabel -- this had a near-copy of that rule, which is one
+   place for the two to start disagreeing about what "1 Ctn+" means. */
+function sourcingTierLabel(t, c){
+  return prTierChipLabel(t,
+    String((c && c.unit) || '').trim() || 'unit',
+    String((c && c.packUnit) || '').trim(),
+    Number(c && c.packQty) || 0);
 }
 /* The answer the research is FOR: at the quantity people have actually
    asked for, who is cheapest and by how much. Asked at a quantity because
@@ -40512,7 +40518,7 @@ function sourcingCompareHTML(l){
       ${demand > 0 ? `<span class="sf-compare-why" title="Added up from what the people who asked said they wanted">${demand} asked for</span>` : ''}
     </div>
     ${!ranked.length
-      ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)} yet — every rung on file starts higher than that.</p>`
+      ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)} yet — every tier on file starts higher than that.</p>`
       /* Headed columns. Unheaded, the two figures are unlabelled money --
          and at a quantity of one they are the SAME number twice, which
          reads as a mistake rather than as a rate beside a total. */
@@ -40592,7 +40598,7 @@ const SOURCING_STEP_GUIDE = {
     ctaWhy: 'Needs at least one supplier or importer on file.',
   },
   sourced: {
-    need: 'Now get their prices. Add a rung for each price break they quote you.',
+    need: 'Now get their prices. Add a tier for each price break they quote you.',
     show: ['research'],
     cta: 'Prices are in',
     ctaWhy: 'Needs a price on at least one of them.',
@@ -40836,7 +40842,7 @@ function renderGraduateCandidates(priced, demand){
   const qty = demand > 0 ? demand : 1;
   document.getElementById('sg_candidates').innerHTML = priced.map(c=>{
     const at = candidateUnitPriceAt(c, qty);
-    const low = candidateLowestRung(c);
+    const low = candidateLowestTier(c);
     return `
     <label class="sf-pick">
       <input type="radio" name="sg_cand" value="${esc(c.id)}"${c.id===graduateCandidateId?' checked':''}>
@@ -40871,10 +40877,10 @@ function renderGraduateLadder(){
   const unit = document.getElementById('sg_unit').value.trim() || 'pcs';
   const tiers = candidateTiers(c);
   wrap.innerHTML = `<div class="preset-chip-flow">${tiers.map(t=>
-    `<span class="preset-chip">${esc(sourcingRungLabel(t, {unit, packQty, packUnit}))}</span>`).join('')}</div>`;
+    `<span class="preset-chip">${esc(sourcingTierLabel(t, {unit, packQty, packUnit}))}</span>`).join('')}</div>`;
   const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
   const parts = [];
-  parts.push(retail != null ? `Retail rate ${fmtUGX(retail)}/${unit}` : 'No retail rate — every rung needs a full pack');
+  parts.push(retail != null ? `Retail rate ${fmtUGX(retail)}/${unit}` : 'No retail rate — every tier needs a full pack');
   parts.push(wholesale != null
     ? `bulk rate ${fmtUGX(wholesale)}/${unit} from ${packQty}+`
     : (packQty > 0
@@ -41220,17 +41226,33 @@ function slCandFormReveal(){
   const qty = document.getElementById('sl_c_tier_qty');
   if(qty) qty.focus();
 }
+/* The Price Registry's own tier chips and its own unit dropdowns, built
+   from the packing set above -- so a thing sold in jerrycans offers "per
+   Jerrycan", not "pieces". Reading "pieces / packs" whatever the goods
+   actually are is how a per-carton figure gets filed as a per-piece one. */
 function renderSlCandTiers(){
-  const unit = document.getElementById('sl_c_unit').value.trim() || 'pcs';
+  const unit = document.getElementById('sl_c_unit').value.trim() || 'unit';
   const packQty = Number(document.getElementById('sl_c_packqty').value) || 0;
   const packUnit = document.getElementById('sl_c_packunit').value.trim();
+  const hasPack = packUnit && packQty > 0;
+  const optionsHTML = tierUnitOptionsHTML(unit, packUnit, packQty);
+  ['sl_c_tier_qty_unit','sl_c_tier_price_unit'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = optionsHTML;
+    // "per pack" survives a redraw only while there is still a pack.
+    sel.value = (prev === 'pack' && hasPack) ? 'pack' : 'unit';
+  });
+  document.getElementById('sl_c_tiers_label').textContent =
+    leadHasVariants(sourcingLeadById(editingSourcingLeadId))
+      ? 'Volume pricing (default for every variant)' : 'Volume pricing';
   const wrap = document.getElementById('sl_c_tiers_wrap');
   wrap.innerHTML = slCandTiers.length === 0
-    ? '<p class="preset-hint">No rungs yet — add at least one, or this is somebody who has it but has not priced it.</p>'
+    ? '<div class="pr-tier-empty">No tiers yet — add one, or this is somebody who has it but has not priced it.</div>'
     : `<div class="preset-chip-flow">${slCandTiers.map((t,i)=>
-        `<span class="preset-chip">${esc(sourcingRungLabel(t, {unit, packQty, packUnit}))}<button type="button" class="pr-tier-remove" data-rung="${i}" title="Remove rung"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
-  wrap.querySelectorAll('[data-rung]').forEach(b=> b.addEventListener('click', ()=>{
-    slCandTiers.splice(Number(b.dataset.rung), 1);
+        `<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, unit, packUnit, packQty))}<button type="button" class="pr-tier-remove" data-tier="${i}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>`).join('')}</div>`;
+  wrap.querySelectorAll('[data-tier]').forEach(b=> b.addEventListener('click', ()=>{
+    slCandTiers.splice(Number(b.dataset.tier), 1);
     renderSlCandTiers();
     renderSlCandBulk();
   }));
@@ -41246,12 +41268,12 @@ document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
     document.getElementById('sl_c_tier_qty_unit').value,
     document.getElementById('sl_c_tier_price_unit').value,
     packQty);
-  if(!entry){ toast('Type the quantity and the price for this rung'); return; }
-  if(entry.missing){ toast(`That rung is missing its ${entry.missing}`); return; }
+  if(!entry){ toast('Enter a quantity and a price for the tier'); return; }
+  if(entry.missing){ toast(`That tier is missing its ${entry.missing}`); return; }
   if(document.getElementById('sl_c_tier_qty_unit').value === 'pack' && packQty <= 0){
-    toast('Say how many are in a pack first, or enter the quantity in pieces'); return;
+    toast('Set the units per pack first, or enter the quantity by the unit'); return;
   }
-  if(slCandTiers.some(t=> t.minQty === entry.tier.minQty)){ toast('There is already a rung at that quantity'); return; }
+  if(slCandTiers.some(t=> t.minQty === entry.tier.minQty)){ toast('A tier already exists at that quantity'); return; }
   slCandTiers.push(entry.tier);
   slCandTiers.sort((a,b)=> a.minQty - b.minQty);
   document.getElementById('sl_c_tier_qty').value = '';

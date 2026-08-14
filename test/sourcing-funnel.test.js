@@ -141,7 +141,7 @@ const sources = [
   extractFunction(src, 'variantLabel', 'index.html'),
   extractFunction(src, 'candidateHasPrice', 'index.html'),
   extractFunction(src, 'candidateUnitPriceAt', 'index.html'),
-  extractFunction(src, 'candidateLowestRung', 'index.html'),
+  extractFunction(src, 'candidateLowestTier', 'index.html'),
   extractFunction(src, 'leadVariantAttrs', 'index.html'),
   extractFunction(src, 'leadHasVariants', 'index.html'),
   extractFunction(src, 'leadVariantCombos', 'index.html'),
@@ -181,7 +181,7 @@ const S = compileScope(sources, env, [
   'stepSourcingStatus', 'dropSourcingLead', 'undropSourcingLead',
   'graduateSourcingLead', 'sourcingBoardLeads', 'renderSourcingBadge',
   'deriveWholesaleRetail', 'sourcingLeadById',
-  'candidateTiers', 'candidateHasPrice', 'candidateVariantOverrides', 'candidateUnitPriceAt', 'candidateLowestRung',
+  'candidateTiers', 'candidateHasPrice', 'candidateVariantOverrides', 'candidateUnitPriceAt', 'candidateLowestTier',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
   'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
   'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
@@ -995,6 +995,40 @@ async function main() {
   const saveVar = extractFunction(src, 'saveSlVarAttrs', 'index.html');
   t.check(/l\.variantAttrs = slVarParsed\(\);/.test(saveVar) && /saveData\(\);/.test(saveVar),
     'and each change is written to the lead and saved, with no button to press');
+
+  /* The shared ladder is the Registry's tier row, word for word and
+     control for control -- it calls these tiers, so this calls them
+     tiers, and the unit dropdowns are built from the packing set above
+     rather than reading "pieces / packs" whatever the goods actually
+     are. A carton figure filed as a per-piece one is the cost of getting
+     that wrong. */
+  const tierRow = extractFunction(src, 'renderSlCandTiers', 'index.html');
+  t.check(/tierUnitOptionsHTML\(unit, packUnit, packQty\)/.test(tierRow),
+    'the funnel builds its unit dropdowns from the packing above, through the Registry\'s own builder');
+  t.check(/prTierChipLabel\(t, unit, packUnit, packQty\)/.test(tierRow),
+    'and labels its chips with the Registry\'s own label, so "1 Ctn+" means one thing in both places');
+  t.check(/sel\.value = \(prev === 'pack' && hasPack\) \? 'pack' : 'unit';/.test(tierRow),
+    'keeping "per pack" across a redraw only while there is still a pack');
+  /* One vocabulary, checked by subtraction rather than by listing the
+     phrasings I happened to think of -- the first version of this check
+     listed five and missed two sentences that were on screen.
+
+     Comments come out first. Prose about ladders legitimately says rung,
+     and a comment on this codebase also says it meaning telephoned. The
+     block-comment strip needs the lookbehind: a bare opener matches the
+     accept="image/*" attribute, which then swallows everything to the
+     next real close -- and it swallowed the very label this is about,
+     so the check passed while the label said "rung".
+
+     Then the two identifiers that keep the word for a reason: the
+     sf-rung* CSS classes and the local `rungs` variables. Whatever is
+     left is English the shopkeeper can read, and there should be none. */
+  const funnelSrc = src
+    .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
+    .split(/\r?\n/).map(l=> l.replace(/(?<!:)\/\/.*$/, '')).join('\n')
+    .replace(/sf-rungs?\b/g, '').replace(/\brungs\b/g, '');
+  t.check(!/rung/i.test(funnelSrc),
+    'and nothing calls them rungs — the Registry says tiers, so the funnel says tiers');
 
   /* The funnel drives the Price Registry's OWN bulk editor, pointed at
      this candidate's arrays -- which is what lets a researched supplier
