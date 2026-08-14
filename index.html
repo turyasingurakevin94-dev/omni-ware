@@ -1316,8 +1316,17 @@
   .pr-tier-add button:hover{color:var(--ink);border-color:var(--ink-soft);}
   .pr-bulk-tier-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
   .pr-bulk-tier-status{font-size:11.5px;color:var(--ink-soft);}
-  .pr-bulk-tier-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
-  .pr-bulk-tier-toggle:hover{text-decoration:underline;}
+  /* The state that DIFFERS is the one worth seeing. A card following the
+     defaults says so quietly; one carrying its own packing or its own
+     ladder says it in full ink. */
+  .pr-bulk-tier-status.is-own{color:var(--ink);font-weight:700;}
+  /* Quiet, because these are controls rather than alarms. Two per card
+     in the brand's red was sixteen red links on a product with eight
+     sizes -- the same objection this file already records against the
+     fact pills: "all four turning the brand's red read as four alarms".
+     The accent moves to the card that is actually different. */
+  .pr-bulk-tier-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .pr-bulk-tier-toggle:hover{text-decoration:underline;color:var(--ink);}
   /* Packing sits above the prices on a card for the same reason it is
      step 2 and not step 4: a breakpoint is read as wholesale or retail by
      comparing it against the pack size, so the pack size has to be
@@ -1332,8 +1341,8 @@
   .pr-bulk-sku-row input{flex:1 1 auto;min-width:0;padding:6px 8px;border:1px solid var(--line);
     border-radius:6px;font-size:12px;font-family:inherit;}
   .pr-bulk-pack-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;}
-  .pr-bulk-pack-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--accent);}
-  .pr-bulk-pack-toggle:hover{text-decoration:underline;}
+  .pr-bulk-pack-toggle{all:unset;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .pr-bulk-pack-toggle:hover{text-decoration:underline;color:var(--ink);}
   .pr-bulk-pack-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px;}
   .pr-bulk-pack-row input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;
     font-size:12px;font-family:inherit;min-width:0;}
@@ -1369,6 +1378,12 @@
   .vf-count{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .variant-cards{display:flex;flex-direction:column;gap:12px;}
   .variant-card{background:#fff;border:1px solid var(--line);border-radius:11px;padding:14px 16px 16px;}
+  /* A size the admin has deliberately given its own packing or its own
+     ladder. Every card looked identical before, so on a product with
+     twenty-two of them there was no way to see which ones had been
+     touched without reading all twenty-two. */
+  .variant-card.has-own{border-color:var(--accent);
+    box-shadow:inset 3px 0 0 0 var(--accent);}
   .variant-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);}
   .vc-combo{display:flex;flex-wrap:wrap;gap:4px;flex:1;min-width:0;}
   .vc-combo .combo-chip{margin:0;}
@@ -30713,7 +30728,7 @@ function renderPrBulkVariantRows(surface){
       </div>`;
     const packHTML = `
       <div class="pr-bulk-pack-head">
-        <span class="pr-bulk-tier-status">${packOverride ? 'Own packing' : 'Uses default packing above'}${packOverride ? '' : ` — ${packSummary}`}</span>
+        <span class="pr-bulk-tier-status${packOverride ? ' is-own' : ''}">${packOverride ? 'Own packing' : 'Uses default packing above'}${packOverride ? '' : ` — ${packSummary}`}</span>
         <button type="button" class="pr-bulk-pack-toggle" data-idx="${i}">${packOverride ? 'Use default packing instead' : 'Set packing for this variant'}</button>
       </div>
       ${packOverride ? `<div class="pr-bulk-pack-row">
@@ -30722,14 +30737,14 @@ function renderPrBulkVariantRows(surface){
         <input type="number" class="pr-bulk-pack-qty" data-idx="${i}" min="0" step="any" placeholder="Units per pack" value="${esc(packOverride.packQty||'')}">
       </div>` : ''}`;
     return `
-    <div class="variant-card" data-idx="${i}" style="margin-bottom:10px;">
+    <div class="variant-card${(override || packOverride) ? ' has-own' : ''}" data-idx="${i}" style="margin-bottom:10px;">
       <div class="variant-card-head" style="border-bottom:none;margin-bottom:10px;padding-bottom:0;">
         <div class="vc-combo"><span class="vc-index">#${i+1}</span>${Object.entries(v.combo||{}).map(([k,val])=>`<span class="combo-chip">${esc(k)}: ${esc(val)}</span>`).join('')}</div>
       </div>
       ${skuHTML}
       ${packHTML}
       <div class="pr-bulk-tier-head">
-        <span class="pr-bulk-tier-status">${override ? 'Custom pricing for this variant' : 'Uses shared volume pricing above'}</span>
+        <span class="pr-bulk-tier-status${override ? ' is-own' : ''}">${override ? 'Custom pricing for this variant' : 'Uses shared volume pricing above'}</span>
         <button type="button" class="pr-bulk-tier-toggle" data-idx="${i}">${override ? 'Use shared pricing instead' : 'Customize for this variant'}</button>
       </div>
       ${chipsHTML}
@@ -30740,7 +30755,7 @@ function renderPrBulkVariantRows(surface){
         <span class="pr-tier-at">charge</span>
         <input type="number" class="pr-tier-price pr-bulk-tier-price" data-idx="${i}" min="0" step="any" placeholder="UGX">
         <select class="pr-bulk-tier-price-unit" data-idx="${i}">${pkOptions}</select>
-        <button type="button" class="pr-bulk-tier-add" data-idx="${i}">+ Add tier</button>
+        <button type="button" class="pr-bulk-tier-add btn-icon" data-idx="${i}"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add tier</button>
       </div>` : ''}
     </div>`;
   }).join('')

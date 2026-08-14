@@ -214,6 +214,31 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   t.check(/prTierChipLabel\(t, pk\.unit, pk\.packUnit, pk\.packQty\)/.test(rows),
     'the tier chips are labelled against the variant\'s own packing');
 
+  /* A card the admin has deliberately customised has to be findable
+     without reading all of them. Every card looked identical, so on a
+     twenty-two variant product nothing said which ones had been touched
+     -- while both toggles wore the brand's red on every card, which is
+     forty-four red links saying nothing is different. The accent belongs
+     on the difference, not on the control that offers it. */
+  t.check(/class="variant-card\$\{\(override \|\| packOverride\) \? ' has-own' : ''\}"/.test(rows),
+    'a card carrying its own packing or its own ladder is marked as such');
+  t.check(/class="pr-bulk-tier-status\$\{packOverride \? ' is-own' : ''\}"/.test(rows)
+    && /class="pr-bulk-tier-status\$\{override \? ' is-own' : ''\}"/.test(rows),
+    'and each of the two states says which of them differs');
+  const cardOwn = (/\.variant-card\.has-own\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/var\(--accent\)/.test(cardOwn),
+    'the marked card is where the accent goes');
+  ['.pr-bulk-tier-toggle', '.pr-bulk-pack-toggle'].forEach(sel=>{
+    const rule = (new RegExp('\\' + sel + '\\{[^}]*\\}').exec(src) || [''])[0];
+    t.check(/color:var\(--ink-soft\)/.test(rule) && !/color:var\(--accent\)/.test(rule),
+      `${sel} is a quiet control rather than one more alarm (${rule.slice(0, 90)})`);
+  });
+
+  // The same icon the two ladders above it already use.
+  t.check(/class="pr-bulk-tier-add btn-icon"[^>]*><svg class="icon"/.test(rows)
+    && !/>\+ Add tier</.test(rows),
+    'the per-variant Add tier carries the icon rather than a typed plus, as the shared one does');
+
   const add = extractFunction(src, 'addBulkVariantTier', 'index.html');
   t.check(/const ov = S\.getPackOverrides\(\)\[idx\];/.test(add)
     && /const packQty = ov \? \(Number\(ov\.packQty\)\|\|0\) : \(Number\(S\.getPack\(\)\.packQty\)\|\|0\);/.test(add),
