@@ -690,8 +690,21 @@ async function main() {
     (/<div class="modal-overlay" id="sourcingLeadModal">[\s\S]*?\n<\/div>/.exec(src) || [''])[0]) || [''])[0];
   t.check(/id="sl_cta"/.test(foot) && /btn-accent/.test(foot),
     'the step\'s button is in the footer, and is the one primary there');
-  t.check((foot.match(/btn-accent/g) || []).length === 1,
-    'the only one — two filled buttons in a footer is two primaries');
+  /* MECHANISM CHANGED, claim kept. A second accent button now lives in
+     this footer -- sl_save, which creates a lead -- but the two are
+     mutually exclusive, so the footer still never SHOWS two primaries.
+     Counting the markup could not tell "two buttons" from "two buttons
+     at once", so the exclusivity is what gets pinned instead. */
+  t.check((foot.match(/btn-accent/g) || []).length === 2,
+    'and the only other accent in it belongs to the other mode');
+  t.check(/document\.getElementById\('sl_save'\)\.style\.display = l \? 'none' : '';/.test(src),
+    'create shows only while there is no lead yet');
+  t.check(/<button class="btn btn-accent" id="sl_cta" style="display:none;"><\/button>/.test(src),
+    'while the step button starts hidden');
+  const stepView = extractFunction(src, 'applySourcingStepView', 'index.html');
+  t.check(/document\.getElementById\('sl_save'\)\.style\.display = 'none';/.test(stepView)
+    && /btn\.style\.display = showCta \? '' : 'none';/.test(stepView),
+    'and viewing a lead hides create in the same pass that decides the step button — never both at once');
 
   /* Which is only safe because the fields save themselves; otherwise
      Close would silently discard what was typed. */
@@ -1797,6 +1810,46 @@ async function main() {
     'everybody starts ticked, priced or not — unticking is the exception');
   t.check(/candidates: \(l\.candidates\|\|\[\]\)\.filter\(c=> graduatePickedIds\.has\(c\.id\)\)/.test(src),
     'and the candidates themselves are handed over, not fields copied off one of them');
+
+  /* The new-item screen. Its whole job is one question, and the screen
+     used to give that question the same weight as four optional boxes
+     beside it -- with "(optional)" written on all four, which is four
+     words saying one thing and none of them saying why it is worth
+     filling in. */
+  // HTML comments out: the one explaining this change quotes the very
+  // word the check forbids, and would fail the assertion it justifies.
+  const askBlock = (/<div id="sl_first_ask">[\s\S]*?<\/div>\s*<\/div>/.exec(src) || [''])[0]
+    .replace(/<!--[\s\S]*?-->/g, '');
+  t.check(!/\(optional\)/.test(askBlock),
+    'no label on the first-ask row says "(optional)" — it was on all four, so it distinguished nothing');
+  t.check(/<label class="sf-rung-label">Who asked for it<\/label>/.test(askBlock),
+    'the four are grouped under one heading instead of floating loose');
+  t.check(/different<\/b> people asked/.test(askBlock),
+    'and the group says WHY it is worth filling in — the count is of people, not asks');
+
+  /* Sized by what each box holds. The shared .form-grid is auto-fit at
+     minmax(160px,1fr), which gave a name, a phone, a size and a count
+     four equal columns -- so the customer placeholder truncated while a
+     two-digit quantity had room going spare. */
+  t.check(/class="sf-ask-grid"/.test(askBlock) && !/class="form-grid"/.test(askBlock),
+    'the row is its own proportioned grid, not the shared equal-column one');
+  const askGridRule = (/\.sf-ask-grid\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/grid-template-columns:minmax\(0,2\.1fr\) minmax\(0,1\.5fr\) minmax\(0,1fr\) minmax\(0,0\.9fr\)/.test(askGridRule),
+    'with the name column widest and the quantity narrowest');
+  t.check(/@media \(max-width:560px\)\{\s*\.sf-ask-grid\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\);\}/.test(src),
+    'and it folds to two columns on a phone rather than staying four');
+
+  /* The primary action looked exactly like the escape hatch: both ghost,
+     side by side. On a screen that exists to add one thing, the thing it
+     adds gets the accent. */
+  t.check(/<button class="btn btn-accent" id="sl_save">/.test(src),
+    'the new-item action is the accent button, not a ghost twinned with Close');
+  t.check(/<button class="btn btn-ghost" id="sl_cancel">Close<\/button>/.test(src),
+    'while Close stays quiet');
+
+  // And the question is weighted only while it IS the question.
+  t.check(/nameField\.classList\.toggle\('sf-lead-q', !l\)/.test(src),
+    'the item box is enlarged on a new lead and back to ordinary on an existing one');
 
   /* The board ages itself on a timer. renderSourcing rebuilds the whole
      board, which destroys the Listed search input along with whatever is

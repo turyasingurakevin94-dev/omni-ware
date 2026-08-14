@@ -5799,6 +5799,18 @@
   .sf-fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;}
   .sf-rung-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
     color:var(--ink-soft);font-weight:700;margin:12px 0 6px;}
+  /* The first ask, sized by what each box actually holds. The shared
+     .form-grid is auto-fit at minmax(160px,1fr), which in a 620px modal
+     gave a name, a phone, a size and a count four equal columns -- so
+     "Pick a customer, or type a new name" truncated mid-placeholder while
+     a two-digit quantity had room to spare. */
+  /* Only while it is the new-item screen's whole question. */
+  .sf-lead-q input{font-size:15.5px;padding:11px 13px;}
+  .sf-ask-grid{display:grid;gap:12px;align-items:end;
+    grid-template-columns:minmax(0,2.1fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,0.9fr);}
+  @media (max-width:560px){
+    .sf-ask-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  }
   .sf-rungs{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
   .sf-rung{font-size:11px;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:999px;
     border:1px solid var(--line);color:var(--ink-soft);white-space:nowrap;}
@@ -8617,11 +8629,17 @@
            the demand ledger starts with the ask that caused it rather
            than with an anonymous row. -->
       <div id="sl_first_ask">
-        <div class="form-grid">
-          <div class="field"><label>Who asked (optional)</label><input type="text" id="sl_ask_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
-          <div class="field"><label>Their phone (optional)</label><input type="text" id="sl_ask_phone" autocomplete="off"></div>
-          <div class="field"><label>Which size (optional)</label><input type="text" id="sl_ask_variant" placeholder="e.g. 14&quot;" autocomplete="off"></div>
-          <div class="field"><label>How many (optional)</label><input type="number" id="sl_ask_qty" min="0" step="any"></div>
+        <!-- "(optional)" was on all four labels, which is four words
+             saying the same thing and none of them saying WHY it is worth
+             filling in. Said once, with the reason, and the labels get
+             their width back. -->
+        <label class="sf-rung-label">Who asked for it</label>
+        <p class="preset-hint">All optional — but the board counts how many <b>different</b> people asked, and five asks from one builder is not the signal five customers are. Naming them is also what links this to their record.</p>
+        <div class="sf-ask-grid">
+          <div class="field"><label>Name</label><input type="text" id="sl_ask_name" list="dl_sourcing_customers" placeholder="Pick or type a name" autocomplete="off"></div>
+          <div class="field"><label>Phone</label><input type="text" id="sl_ask_phone" placeholder="e.g. 0700 000 000" autocomplete="off"></div>
+          <div class="field"><label>Which size</label><input type="text" id="sl_ask_variant" placeholder="e.g. 14&quot;" autocomplete="off"></div>
+          <div class="field"><label>How many</label><input type="number" id="sl_ask_qty" min="0" step="any" placeholder="e.g. 20"></div>
         </div>
       </div>
       <div id="sl_open_body" style="display:none;">
@@ -8801,7 +8819,12 @@
       <button class="btn btn-ghost danger sf-foot-left" id="sl_drop" style="display:none;">Drop this</button>
       <button class="btn btn-ghost sf-foot-left" id="sl_undrop" style="display:none;">Put it back</button>
       <button class="btn btn-ghost" id="sl_cancel">Close</button>
-      <button class="btn btn-ghost" id="sl_save">Save</button>
+      <!-- Accent, not ghost. This is the one thing the new-item screen
+           exists to do, and it was styled identically to Close -- the
+           action and the escape hatch looking the same. Only ever shown
+           on a NEW lead, where it IS the primary action; an existing
+           lead's fields save themselves and this stays hidden. -->
+      <button class="btn btn-accent" id="sl_save">Save</button>
       <!-- The step's finish line, where a phone can always reach it. -->
       <button class="btn btn-accent" id="sl_cta" style="display:none;"></button>
     </div>
@@ -40597,6 +40620,11 @@ function openSourcingLead(id){
      the first thing the screen says. */
   const nameField = document.getElementById('sl_name_field');
   const nameLabel = nameField.querySelector('label');
+  /* And weighted for its mode. On a new lead this box IS the screen's
+     question and everything under it is context, so it is set larger than
+     the four beneath it; tucked beside the notes on an existing lead it
+     is an ordinary field again and must not shout. */
+  nameField.classList.toggle('sf-lead-q', !l);
   if(l){
     document.getElementById('sl_name_slot').appendChild(nameField);
     nameLabel.textContent = 'Item name';
