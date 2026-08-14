@@ -449,7 +449,11 @@ async function main() {
   eq(guide('asked').show.join(), 'identity,demand', 'Asked For asks what it is and who wants it');
   eq(guide('looking').show.join(), 'assign,research', 'Looking asks who is on it and who has it');
   eq(guide('sourced').show.join(), 'research', 'Source Found asks only for their prices');
-  eq(guide('priced').show.join(), 'compare', 'Priced asks only who to buy from');
+  /* CLAIM CHANGED, deliberately. This used to read "Priced asks only who
+     to buy from", which was true when graduation banked one supplier and
+     threw the rest away. It banks all of them now, so the only decision
+     left on this step is whether to stock the thing at all. */
+  eq(guide('priced').show.join(), 'compare', 'Priced asks only whether it is worth stocking');
   eq(guide('listed').show.join(), 'outcome', 'and Listed says only what it became');
 
   // No step carries another step's block, or the steps stop meaning anything.
@@ -494,9 +498,10 @@ async function main() {
   eq(S.sourcingWantsPriceForm(lead({ status: 'sourced', voided: true })), false,
     'and a dropped lead is not asking for prices');
 
-  /* The comparison is the deciding step's question. Earlier than that it
-     appears only once there are two prices to weigh -- a one-row table
-     tells you nothing you did not just type. */
+  /* The comparison is what the stock/don't-stock decision needs: the
+     money tied up at the quantity being asked for, and the spread.
+     Earlier than Priced it appears only once there are two prices to
+     weigh -- a one-row table tells you nothing you did not just type. */
   const one = [cand({ id: 'A', tiers: rungs([1, 15000]) })];
   const two = [cand({ id: 'A', tiers: rungs([1, 15000]) }), cand({ id: 'B', tiers: rungs([1, 16000]) })];
   eq(S.sourcingWantsCompare(lead({ status: 'sourced', candidates: one })), false,
@@ -719,14 +724,40 @@ async function main() {
   const verdictRule = (/\.sf-verdict\{[^}]*\}/.exec(src) || [''])[0];
   t.check(/color:var\(--ink\)/.test(verdictRule) && /font-size:13\.5px/.test(verdictRule),
     'and is set in full ink at reading size, not greyed and shrunk below the figures');
-  /* Even with nobody to compare against, the step still has to answer
-     "who do we buy from" -- one quoted supplier IS the answer. */
+  /* Even with nobody to compare against, the table still has to end in a
+     sentence -- one quoted supplier IS what this quantity costs. */
   t.check(/Only <b>\$\{esc\(best\.candidate\.supplierName/.test(cmp),
     'a single quoted supplier still gets a verdict rather than silence');
   /* The whole-order saving is only worth saying when it differs from the
      per-unit one. At a quantity of one it is the same figure twice. */
   t.check(/qty > 1 \? `, \$\{fmtUGX\(best\.savesPerUnit \* qty\)\}/.test(cmp),
     'and the order-total saving is dropped at a quantity of one, where it repeats itself');
+
+  /* The step reports who is cheapest; it does not tell the shop who to
+     buy from. Once graduation banks every supplier found, an imperative
+     here says the opposite of what the button does -- it reads as this
+     table choosing one and discarding the others. */
+  // Comments out first: the one explaining this very change quotes the
+  // old wording, and would trip the check it exists to justify.
+  const cmpUi = cmp.replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '');
+  t.check(/is cheapest at this quantity/.test(cmpUi),
+    'the cheapest row is reported as a fact about the quantity');
+  t.check(!/Buy from/.test(cmpUi),
+    'and not as an instruction to buy from one of them, which is not what this step decides any more');
+  const pricedStep = S.sourcingStepGuide(lead({ status: 'priced' }));
+  t.check(!/who to buy it from/.test(pricedStep.need), `the step guide asks whether to stock it, not who to buy it from (${pricedStep.need})`);
+  t.check(/every supplier/.test(pricedStep.ctaWhy) && !/first price/.test(pricedStep.ctaWhy),
+    `the button explains that it banks every supplier, not "its first price" (${pricedStep.ctaWhy})`);
+
+  /* The sweep, so the imperative cannot creep back in somewhere else.
+     Comments are stripped with the guarded opener -- prose about buying
+     from a supplier is legitimate there, and a bare opener would match
+     accept="image/*" and blank the region being scanned. */
+  const funnelUi = src
+    .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
+    .split(/\r?\n/).map(l=> l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  t.check(!/Buy from <b>|Buy from \$\{/.test(funnelUi),
+    'and nothing anywhere tells the shopkeeper to buy from one named supplier');
 
   /* Red on this screen belongs to the one primary button and to Drop
      this. An ordinary edit washed in it read as an error, and a chosen

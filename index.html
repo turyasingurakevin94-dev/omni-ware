@@ -40760,16 +40760,24 @@ function sourcingTierLabel(t, c){
     String((c && c.packUnit) || '').trim(),
     Number(c && c.packQty) || 0);
 }
-/* The answer the research is FOR: at the quantity people have actually
-   asked for, who is cheapest and by how much. Asked at a quantity because
-   the answer changes with it -- ranking on the qty-1 rate is how a carton
-   order goes to the supplier who is only cheapest by the piece. */
+/* What it would cost to bring in the quantity people have actually asked
+   for, and how the shops found differ on it. Asked AT a quantity because
+   every answer here changes with it -- ranking on the qty-1 rate is how a
+   carton order goes to the shop who is only cheapest by the piece.
+
+   This is not a shortlist. Every supplier here is banked at graduation,
+   prices and all; the ranking says where to send the FIRST purchase
+   order, which is a different question from whose prices the shop keeps
+   on file. */
 let sourcingCompareQty = null;
-/* "Who do we buy from" is the DECIDING step's question, so at Priced it
-   is always drawn -- with one supplier it still costs the order. Earlier
-   than that it appears only once there are two prices to weigh, because
-   until then it is a table with one row telling you nothing you did not
-   just type. Never on a dropped or listed lead: that decision is made. */
+/* Priced is where the shop decides whether to stock the thing at all, and
+   this table is what that decision needs: the money it ties up at the
+   quantity being asked for, whether anybody quotes at that quantity at
+   all, and how wide the spread is. So at Priced it is always drawn --
+   with one supplier it still costs the order. Earlier than that it
+   appears only once there are two prices to weigh, because until then it
+   is a table with one row telling you nothing you did not just type.
+   Never on a dropped or listed lead: that decision is made. */
 function sourcingWantsCompare(l){
   if(!l || l.voided || l.status === 'listed') return false;
   if(l.status === 'priced') return true;
@@ -40819,7 +40827,14 @@ function sourcingCompareHTML(l){
             /* The saving over the whole order is only worth saying when
                it differs from the per-unit one -- at a quantity of one it
                is the same figure twice. */
-            ? `<p class="sf-verdict">Buy from <b>${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))}</b> — ${fmtUGX(best.savesPerUnit)} a ${esc(unit)} cheaper${qty > 1 ? `, ${fmtUGX(best.savesPerUnit * qty)} on ${esc(String(qty))}` : ''}.</p>`
+            /* Reported, not instructed. "Buy from X" read as this step
+               choosing a supplier and dropping the rest, which is exactly
+               what graduation stopped doing -- every shop on this table
+               is banked with its prices. What the ranking actually says
+               is where the first purchase order should go, and it says it
+               in the same words the graduation manifest marks the same
+               shop with, so one fact is not named twice. */
+            ? `<p class="sf-verdict"><b>${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))}</b> is cheapest at this quantity — ${fmtUGX(best.savesPerUnit)} a ${esc(unit)} less${qty > 1 ? `, ${fmtUGX(best.savesPerUnit * qty)} on ${esc(String(qty))}` : ''}.</p>`
             : `<p class="sf-verdict">Only <b>${esc(best.candidate.supplierName || supplierName(best.candidate.supplierId))}</b> has quoted for this quantity.</p>`)}`}
   </div>`;
 }
@@ -40876,10 +40891,14 @@ const SOURCING_STEP_GUIDE = {
     ctaWhy: 'Needs a price on at least one of them.',
   },
   priced: {
-    need: 'Decide whether it is worth stocking, and who to buy it from.',
+    need: 'Decide whether it is worth stocking.',
     show: ['compare'],
     cta: 'Add to catalogue',
-    ctaWhy: 'Creates the product and its first price.',
+    /* Not "its first price". Graduation banks EVERY supplier the research
+       found, and this line sits directly under the button -- so it was
+       the sentence telling the shopkeeper the opposite of what the
+       button does. */
+    ctaWhy: 'Creates the product and banks every supplier you found.',
   },
   listed: {
     need: 'It is one of our products now.',
