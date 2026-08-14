@@ -157,6 +157,7 @@ const sources = [
   extractFunction(src, 'leadVariantChoices', 'index.html'),
   extractFunction(src, 'leadDemandByVariant', 'index.html'),
   extractFunction(src, 'leadDemandQty', 'index.html'),
+  extractFunction(src, 'lowestQuotedQty', 'index.html'),
   extractFunction(src, 'sourcingRankedAt', 'index.html'),
   extractFunction(src, 'sourcingBestAt', 'index.html'),
   extractFunction(src, 'sourcingDefaultGraduateCandidate', 'index.html'),
@@ -205,7 +206,7 @@ const S = compileScope(sources, env, [
   'graduateSourcingLead', 'sourcingBoardLeads', 'renderSourcingBadge',
   'deriveWholesaleRetail', 'sourcingLeadById',
   'candidateTiers', 'candidateHasPrice', 'candidateVariantOverrides', 'candidateUnitPriceAt', 'candidateLowestTier',
-  'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
+  'leadDemandQty', 'lowestQuotedQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
   'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
   'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
   'applyCandidateFields',
@@ -516,6 +517,42 @@ async function main() {
     'a listed item has already been decided');
   eq(S.sourcingWantsCompare(lead({ status: 'priced', candidates: two, voided: true })), false,
     'and so has a dropped one');
+
+  /* The quantity the panel OPENS at. Falling back to 1 when nobody said
+     how many they wanted meant a lead whose only quote starts at a
+     carton opened on "nobody has quoted for 1" -- a step headed "decide
+     whether it is worth stocking" showing nothing to decide from. */
+  const fromCarton = [cand({ id: 'A', unit: 'Dozen', packQty: 20, packUnit: 'Ctn',
+    tiers: rungs([20, 1500]) })];
+  eq(S.lowestQuotedQty(lead({ candidates: fromCarton })), 20,
+    'the least anybody actually quotes for is known');
+  eq(S.lowestQuotedQty(lead({ candidates: [cand({ tiers: [] })] })), null,
+    'and is nothing when nobody has quoted at all');
+  /* The lowest deliberately sits on the SECOND supplier and not on the
+     first supplier's own lowest tier -- with it on the first, reading
+     only that one supplier returns the same answer and the sweep across
+     them is never exercised. */
+  eq(S.lowestQuotedQty(lead({ candidates: [
+    cand({ id: 'A', tiers: rungs([60, 900], [24, 1000]) }),
+    cand({ id: 'B', tiers: rungs([12, 950]) })] })), 12,
+    'across every supplier, not just the first');
+  eq(S.lowestQuotedQty(lead({ candidates: [
+    cand({ id: 'A', tiers: rungs([60, 900], [24, 1000]) })] })), 24,
+    'and across every tier on a supplier, not just the one they listed first');
+
+  /* Demand still wins when there is any -- "can we serve what people
+     asked for" is the question the step exists to answer. */
+  t.check(/const qty = sourcingCompareQty != null \? sourcingCompareQty\s*\n\s*: \(demand > 0 \? demand : \(lowestQuotedQty\(l\) \|\| 1\)\);/.test(src),
+    'the panel opens at the demand, or failing that at the lowest quantity anybody quoted');
+
+  /* And a quantity that clears nobody names the one that would, which is
+     what makes "their minimum order is bigger than the demand" readable
+     as a reason not to stock the thing. */
+  const cmpEmpty = extractFunction(src, 'sourcingCompareHTML', 'index.html');
+  t.check(/The least anybody sells is <b>\$\{esc\(String\(lowestQuotedQty\(l\)\)\)\} \$\{esc\(unit\)\}<\/b>/.test(cmpEmpty),
+    'a quantity nobody clears says what the minimum actually is');
+  t.check(/No prices on file yet\./.test(cmpEmpty),
+    'and says so plainly when there are no prices at all rather than naming a minimum that does not exist');
 }
 
 /* ---------- 3d. and the screen actually obeys the table -------------- */

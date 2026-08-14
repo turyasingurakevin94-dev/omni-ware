@@ -39791,6 +39791,22 @@ function candidateLowestTier(c){ const t = candidateTiers(c); return t.length ? 
 function leadDemandQty(l){
   return ((l && l.requests) || []).reduce((sum, r)=> sum + (Number(r.qty) || 0), 0);
 }
+/* The smallest quantity ANYBODY on this lead has actually quoted for.
+
+   Two jobs. It is the compare panel's opening quantity when nobody said
+   how many they wanted -- one is an arbitrary number to ask at, and on a
+   lead whose only quote starts at a carton it produced a panel that
+   answered nothing at all. And when a quantity clears nobody, it is what
+   turns "no answer" into the answer: the minimum order is bigger than
+   what is being asked for, which is a real reason not to stock a thing. */
+function lowestQuotedQty(l){
+  let low = null;
+  ((l && l.candidates) || []).forEach(c=> candidateTiers(c).forEach(t=>{
+    const n = Number(t.minQty) || 0;
+    if(n > 0 && (low == null || n < low)) low = n;
+  }));
+  return low;
+}
 /* Who to buy from AT A QUANTITY, and what the next-best would have cost.
    Ranked on what they would actually charge for that many, because the
    cheapest supplier CHANGES with quantity -- that is what a volume tier
@@ -40858,7 +40874,12 @@ function sourcingWantsCompare(l){
 function sourcingCompareHTML(l){
   if(!sourcingWantsCompare(l)) return '';
   const demand = leadDemandQty(l);
-  const qty = sourcingCompareQty != null ? sourcingCompareQty : (demand > 0 ? demand : 1);
+  /* Demand first, because "can we serve what people actually asked for"
+     is the question. Failing that the lowest quantity anybody quoted --
+     not 1, which is a number nobody chose and which on a lead quoted by
+     the carton opens the panel on an empty answer. */
+  const qty = sourcingCompareQty != null ? sourcingCompareQty
+    : (demand > 0 ? demand : (lowestQuotedQty(l) || 1));
   const ranked = sourcingRankedAt(l, qty);
   const best = sourcingBestAt(l, qty);
   const unit = ((l.candidates||[]).find(c=> c.unit) || {}).unit || 'pcs';
@@ -40870,7 +40891,14 @@ function sourcingCompareHTML(l){
       ${demand > 0 ? `<span class="sf-compare-why" title="Added up from what the people who asked said they wanted">${demand} asked for</span>` : ''}
     </div>
     ${!ranked.length
-      ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)} yet — every tier on file starts higher than that.</p>`
+      /* Naming the lowest quantity anybody DOES quote for turns a dead
+         end into the answer. On the Priced step the useful reading is
+         usually "their minimum order is bigger than what people asked
+         for", and that is a reason not to stock it -- but only if the
+         screen says what the minimum is. */
+      ? `<p class="preset-hint">Nobody has quoted for ${esc(String(qty))} ${esc(unit)}.${lowestQuotedQty(l)
+        ? ` The least anybody sells is <b>${esc(String(lowestQuotedQty(l)))} ${esc(unit)}</b> — try that, or take it as their minimum order.`
+        : ' No prices on file yet.'}</p>`
       /* Headed columns. Unheaded, the two figures are unlabelled money --
          and at a quantity of one they are the SAME number twice, which
          reads as a mistake rather than as a rate beside a total. */
