@@ -5781,7 +5781,17 @@
      it so the step reads as: here is the task, here is what finishes it. */
   /* The sentence under the step's instruction saying what its button will
      do -- or what is missing before it can. */
-  .sf-cta-why{font-size:12px;color:var(--ink-soft);line-height:1.45;margin:-8px 0 16px;}
+  /* In the footer with its button: it takes the leftover width, so the
+     sentence sits against the action it explains and the buttons stay
+     where the eye already expects them. */
+  .sf-cta-why{font-size:12px;color:var(--ink-soft);line-height:1.45;
+    margin:0;flex:1 1 180px;min-width:0;text-align:right;}
+  /* On a phone the row has no width to share -- the sentence takes its
+     own line ABOVE the buttons rather than squeezing them. */
+  @media (max-width:560px){
+    .modal-foot{flex-wrap:wrap;}
+    .sf-cta-why{flex-basis:100%;order:-1;text-align:left;}
+  }
   .sf-foot-left{margin-right:auto;}
   /* ONE disclosure style for both of this screen's folds. They had two --
      an accent-red one with a native triangle and a grey uppercase one --
@@ -8670,9 +8680,17 @@
           <label class="sf-rung-label">Does it come in sizes or types?</label>
           <div id="sl_var_attrs"></div>
           <p class="preset-hint" id="sl_var_count"></p>
+          <!-- The app's own icon system, as the tier button two sections
+               down already uses. These carried a typed "+" and a typed
+               "✓" instead -- and a tick on an action button reads as
+               something already done rather than something to press. -->
           <div class="btn-row">
-            <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">+ Add attribute</button>
-            <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_gen">✓ Generate variants</button>
+            <button type="button" class="btn btn-ghost sf-add-ask btn-icon" id="sl_var_add">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add attribute</button>
+            <button type="button" class="btn btn-ghost sf-add-ask btn-icon" id="sl_var_gen">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+              Generate variants</button>
           </div>
           <div id="sl_var_list"></div>
         </section>
@@ -8682,7 +8700,11 @@
         <section class="sf-sec" data-sec="demand">
           <h3 class="sf-sub">Who has asked for it</h3>
           <div id="sl_requests"></div>
-          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_add_ask">Somebody else asked</button>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost sf-add-ask btn-icon" id="sl_add_ask">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Somebody else asked</button>
+          </div>
           <!-- An inline row rather than the pair of prompt() boxes this
                replaces: a prompt cannot offer the customer list, so every
                ask was a hand-typed name that linked to nobody. -->
@@ -8804,11 +8826,6 @@
         <section class="sf-sec" data-sec="outcome">
           <div id="sl_outcome"></div>
         </section>
-        <!-- The sentence that explains the step's finish line. The BUTTON
-             itself is in the footer: on a phone this body scrolls, and
-             the one action that matters was below the fold while three
-             secondary buttons sat pinned above it. -->
-        <p class="sf-cta-why" id="sl_cta_why" style="display:none;"></p>
       </div>
     </div>
     <div class="modal-foot">
@@ -8818,6 +8835,13 @@
            than sitting shoulder to shoulder with Close. -->
       <button class="btn btn-ghost danger sf-foot-left" id="sl_drop" style="display:none;">Drop this</button>
       <button class="btn btn-ghost sf-foot-left" id="sl_undrop" style="display:none;">Put it back</button>
+      <!-- Beside the button it describes. This sentence used to sit at the
+           bottom of the scrolling body while its button was pinned down
+           here -- so it landed under whatever the last section happened to
+           render, and on the Asked For step that was the "Somebody else
+           asked" button. The screen read as though moving the item to
+           Looking was what THAT button did. -->
+      <p class="sf-cta-why" id="sl_cta_why" style="display:none;"></p>
       <button class="btn btn-ghost" id="sl_cancel">Close</button>
       <!-- Accent, not ghost. This is the one thing the new-item screen
            exists to do, and it was styled identically to Close -- the
@@ -40637,6 +40661,11 @@ function openSourcingLead(id){
   // lead's fields save themselves and applySourcingStepView hides it.
   document.getElementById('sl_save').style.display = l ? 'none' : '';
   document.getElementById('sl_save').textContent = 'Add it';
+  /* And the step sentence goes with it. Only applySourcingStepView shows
+     this, and that never runs for a new lead -- so opening "Add an item"
+     straight after reading an existing one left the previous lead's
+     finish line sitting in the footer of a form that has no step yet. */
+  if(!l) document.getElementById('sl_cta_why').style.display = 'none';
   document.getElementById('sl_open_body').style.display = l ? '' : 'none';
   document.getElementById('sl_drop').style.display = (l && !l.voided) ? '' : 'none';
   document.getElementById('sl_undrop').style.display = (l && l.voided) ? '' : 'none';

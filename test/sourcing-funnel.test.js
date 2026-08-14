@@ -1851,6 +1851,42 @@ async function main() {
   t.check(/nameField\.classList\.toggle\('sf-lead-q', !l\)/.test(src),
     'the item box is enlarged on a new lead and back to ordinary on an existing one');
 
+  /* The sentence explaining the step's finish line belongs BESIDE the
+     button it explains. It used to close the scrolling body while its
+     button was pinned in the footer, so it landed under whatever section
+     rendered last -- on Asked For that was "Somebody else asked", and the
+     screen read as though moving the item to Looking was what that button
+     did. */
+  const leadModal = (/<div class="modal-overlay" id="sourcingLeadModal">[\s\S]*?\n<\/div>/.exec(src) || [''])[0];
+  const leadFoot = (/<div class="modal-foot">[\s\S]*?<\/div>/.exec(leadModal) || [''])[0];
+  const leadBody = leadModal.replace(leadFoot, '');
+  t.check(/id="sl_cta_why"/.test(leadFoot),
+    'the step sentence is in the footer with the button it describes');
+  t.check(!/id="sl_cta_why"/.test(leadBody),
+    'and not left at the bottom of the body, captioning whichever button happened to render last');
+  const whyRule = (/\.sf-cta-why\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/flex:1 1 180px/.test(whyRule) && /text-align:right/.test(whyRule),
+    'it takes the leftover width so the buttons stay where the eye expects them');
+  t.check(/@media \(max-width:560px\)\{\s*\.modal-foot\{flex-wrap:wrap;\}\s*\.sf-cta-why\{flex-basis:100%;order:-1;text-align:left;\}/.test(src),
+    'and on a phone it takes its own line above them rather than squeezing them');
+
+  /* Only applySourcingStepView ever shows it, and that never runs for a
+     new lead -- so opening "Add an item" straight after reading an
+     existing one left the previous lead's finish line in the footer of a
+     form that has no step. */
+  t.check(/if\(!l\) document\.getElementById\('sl_cta_why'\)\.style\.display = 'none';/.test(src),
+    'and a new lead clears it, rather than inheriting the last lead\'s step sentence');
+
+  /* The app's own icon system, which this very modal already uses for its
+     tier button. A typed "+" and a typed tick were doing the job here --
+     and a tick on an action reads as something already done. */
+  ['sl_var_add', 'sl_var_gen', 'sl_add_ask'].forEach(id=>{
+    const btn = (new RegExp('<button[^>]*id="' + id + '">[\\s\\S]*?</button>').exec(src) || [''])[0];
+    t.check(/<svg class="icon"/.test(btn), `${id} carries an icon rather than a typed glyph`);
+  });
+  t.check(!/[+✓]\s*(Add attribute|Generate variants)/.test(src),
+    'and no typed + or tick is left standing in for one');
+
   /* The board ages itself on a timer. renderSourcing rebuilds the whole
      board, which destroys the Listed search input along with whatever is
      half-typed into it and the caret -- so the tick stands down while it
