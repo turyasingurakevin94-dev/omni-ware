@@ -5738,6 +5738,10 @@
   .sf-cand-acts{display:inline-flex;gap:2px;margin-left:auto;}
   /* The row being edited: the form drops open underneath it, so with a
      dozen suppliers you type under the one you clicked. */
+  .sf-var-chips{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px;}
+  /* One price box per variant, for the supplier whose row this is. Same
+     idea the Price Registry's bulk mode runs on: a shared ladder above,
+     and a box here only for the ones that differ from it. */
   .sf-cand-editor{flex-basis:100%;}
   .sf-cand-editor:empty{display:none;}
   /* The open row is marked, not alarmed. A wash of the brand's red made
@@ -8619,7 +8623,11 @@
           <label class="sf-rung-label">Does it come in sizes or types?</label>
           <div id="sl_var_attrs"></div>
           <p class="preset-hint" id="sl_var_count"></p>
-          <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">+ Add attribute</button>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_add">+ Add attribute</button>
+            <button type="button" class="btn btn-ghost sf-add-ask" id="sl_var_gen">✓ Generate variants</button>
+          </div>
+          <div id="sl_var_list"></div>
         </section>
         <section class="sf-sec" data-sec="assign">
           <div class="field"><label>Who is researching it</label><select id="sl_staff"></select></div>
@@ -8712,6 +8720,13 @@
               <button type="button" class="btn btn-ghost" id="sl_c_tier_add">Add rung</button>
             </div>
             <div id="sl_c_tiers_wrap"></div>
+            <!-- The Price Registry's own bulk cards, for the supplier
+                 whose row this form is open in -- so there is no supplier
+                 to pick, it is already theirs. Each card can take its own
+                 ladder, its own packing and their own code, exactly as it
+                 can there; anything left alone follows the ladder above. -->
+            <label class="sf-rung-label" id="sl_c_bulk_label" style="display:none;">What they charge for each one</label>
+            <div id="sl_c_bulk"></div>
           </details>
           <div class="btn-row">
             <button type="button" class="btn btn-ghost" id="sl_add_cand">Add what you found</button>
@@ -30508,17 +30523,54 @@ function renderPrBulkVariants(){
 // from saved data -- called after every tier add/remove/toggle so in-progress
 // edits (including ones the shared ladder above hasn't been saved yet) stay
 // visible instead of being clobbered by a fresh reload from data.prices.
-function renderPrBulkVariantRows(){
-  const wrap = document.getElementById('pr_bulk_variants_wrap');
-  const productId = document.getElementById('pr_product').value;
-  const p = data.products.find(x=>x.id===productId);
-  const filterBar = document.getElementById('prVariantFilterBar');
+/* A bulk-pricing surface: which variants are being priced, where the
+   cards go, the three per-variant arrays, the shared ladder and how to
+   read the shared packing.
+
+   Held as accessors, not references: prTiers and prBulkVariantOverrides
+   are REASSIGNED by renderPrBulkVariants, so a surface holding the old
+   arrays would edit lists nothing renders.
+
+   This one is the Price Registry's, and is what a bare call means -- so
+   the price form and the product form behave exactly as before. The
+   sourcing funnel passes its own. */
+function prBulkPriceSurface(){
+  const p = data.products.find(x=> x.id === document.getElementById('pr_product').value);
+  return {
+    variants: (p && p.variants) || [],
+    wrapId: 'pr_bulk_variants_wrap',
+    filterBarId: 'prVariantFilterBar',
+    countId: 'prv_count',
+    filterable: true,
+    getOverrides: ()=> prBulkVariantOverrides,
+    getPackOverrides: ()=> prBulkPackOverrides,
+    getSkus: ()=> prBulkSkus,
+    getTiers: ()=> prTiers,
+    getPack: ()=> ({
+      unit: document.getElementById('pr_unit').value.trim(),
+      packUnit: document.getElementById('pr_pack_unit').value.trim(),
+      packQty: Number(document.getElementById('pr_pack_qty').value)||0,
+    }),
+    onChange: ()=>{},
+  };
+}
+function renderPrBulkVariantRows(surface){
+  const S = surface || prBulkPriceSurface();
+  const prBulkVariantOverrides = S.getOverrides();
+  const prBulkPackOverrides = S.getPackOverrides();
+  const prBulkSkus = S.getSkus();
+  const prTiers = S.getTiers();
+  const redraw = ()=> renderPrBulkVariantRows(surface);
+  const changed = ()=> S.onChange();
+  const wrap = document.getElementById(S.wrapId);
+  const p = { variants: S.variants };
+  const filterBar = S.filterBarId ? document.getElementById(S.filterBarId) : null;
   if(!p || !Array.isArray(p.variants) || !p.variants.length){
     wrap.innerHTML = '';
     if(filterBar) filterBar.style.display = 'none';
     return;
   }
-  const prFilterable = p.variants.length >= VARIANT_FILTER_MIN;
+  const prFilterable = S.filterable && p.variants.length >= VARIANT_FILTER_MIN;
   if(filterBar) filterBar.style.display = prFilterable ? '' : 'none';
   /* Each row keeps the index it has in p.variants: every tier control on
      a card carries that number in data-idx, and toggleBulkVariantOverride
@@ -30530,14 +30582,11 @@ function renderPrBulkVariantRows(){
   const shownVariants = prFilterable
     ? filterSortVariants(p.variants, prvQuery, prvSort)
     : p.variants.map((v,i)=>({ v, i }));
-  const prvCount = document.getElementById('prv_count');
+  const prvCount = S.countId ? document.getElementById(S.countId) : null;
   if(prvCount) prvCount.textContent = shownVariants.length === p.variants.length
     ? `${p.variants.length} variants`
     : `${shownVariants.length} of ${p.variants.length}`;
-  const unit = document.getElementById('pr_unit').value.trim();
-  const packUnit = document.getElementById('pr_pack_unit').value.trim();
-  const packQty = Number(document.getElementById('pr_pack_qty').value)||0;
-  const sharedPack = { unit, packUnit, packQty };
+  const sharedPack = S.getPack();
   // Deliberately NOT copied off the shared control: each card builds its
   // own from the packing that card is priced against.
   wrap.innerHTML = shownVariants.length ? shownVariants.map(({v,i})=>{
@@ -30602,21 +30651,22 @@ function renderPrBulkVariantRows(){
        whose product suddenly has no variants to price. */
     : '<div class="pr-tier-empty">No variant matches that. Clear the search to see all of them again.</div>';
   wrap.querySelectorAll('.pr-bulk-tier-toggle').forEach(btn=>btn.addEventListener('click', e=>{
-    toggleBulkVariantOverride(Number(e.currentTarget.dataset.idx));
+    toggleBulkVariantOverride(Number(e.currentTarget.dataset.idx), surface);
   }));
   wrap.querySelectorAll('.pr-bulk-tier-remove').forEach(btn=>btn.addEventListener('click', e=>{
     const idx = Number(e.currentTarget.dataset.idx), ti = Number(e.currentTarget.dataset.ti);
     prBulkVariantOverrides[idx].splice(ti,1);
-    renderPrBulkVariantRows();
+    redraw(); changed();
   }));
   wrap.querySelectorAll('.pr-bulk-tier-add').forEach(btn=>btn.addEventListener('click', e=>{
-    addBulkVariantTier(Number(e.currentTarget.dataset.idx));
+    addBulkVariantTier(Number(e.currentTarget.dataset.idx), surface);
   }));
   wrap.querySelectorAll('.pr-bulk-sku').forEach(inp=> inp.addEventListener('input', e=>{
     prBulkSkus[Number(e.currentTarget.dataset.idx)] = e.currentTarget.value;
+    changed();
   }));
   wrap.querySelectorAll('.pr-bulk-pack-toggle').forEach(btn=>btn.addEventListener('click', e=>{
-    toggleBulkVariantPacking(Number(e.currentTarget.dataset.idx));
+    toggleBulkVariantPacking(Number(e.currentTarget.dataset.idx), surface);
   }));
   /* Typed into on `input` but redrawn only on `change`. Redrawing every
      keystroke would take the focus out of the box mid-number; not
@@ -30626,8 +30676,9 @@ function renderPrBulkVariantRows(){
     inp.addEventListener('input', e=>{
       const idx = Number(e.currentTarget.dataset.idx);
       if(prBulkPackOverrides[idx]) prBulkPackOverrides[idx][key] = e.currentTarget.value;
+      changed();
     });
-    inp.addEventListener('change', ()=> renderPrBulkVariantRows());
+    inp.addEventListener('change', ()=> redraw());
   });
   packField('.pr-bulk-pack-unit', 'unit');
   packField('.pr-bulk-pack-punit', 'packUnit');
@@ -30636,13 +30687,15 @@ function renderPrBulkVariantRows(){
 /* Starts from the default rather than from blank: a variant packed
    differently is usually a variation on how the rest come, so the numbers
    to change are already in the boxes. */
-function toggleBulkVariantPacking(idx){
-  prBulkPackOverrides[idx] = prBulkPackOverrides[idx] ? null : {
-    unit: document.getElementById('pr_unit').value,
-    packUnit: document.getElementById('pr_pack_unit').value,
-    packQty: document.getElementById('pr_pack_qty').value,
+function toggleBulkVariantPacking(idx, surface){
+  const S = surface || prBulkPriceSurface();
+  const overrides = S.getPackOverrides();
+  const shared = S.getPack();
+  overrides[idx] = overrides[idx] ? null : {
+    unit: shared.unit, packUnit: shared.packUnit, packQty: shared.packQty,
   };
-  renderPrBulkVariantRows();
+  renderPrBulkVariantRows(surface);
+  S.onChange();
 }
 /* Filtering redraws the cards from the same overrides and tiers, so a
    variant customized a moment ago is still customized when it comes back
@@ -30660,11 +30713,15 @@ document.getElementById('prv_clear').addEventListener('click', ()=>{
   renderPrBulkVariantRows();
 });
 
-function toggleBulkVariantOverride(idx){
-  prBulkVariantOverrides[idx] = prBulkVariantOverrides[idx] ? null : prTiers.map(t=>({...t}));
-  renderPrBulkVariantRows();
+function toggleBulkVariantOverride(idx, surface){
+  const S = surface || prBulkPriceSurface();
+  const overrides = S.getOverrides();
+  overrides[idx] = overrides[idx] ? null : S.getTiers().map(t=>({...t}));
+  renderPrBulkVariantRows(surface);
+  S.onChange();
 }
-function addBulkVariantTier(idx){
+function addBulkVariantTier(idx, surface){
+  const S = surface || prBulkPriceSurface();
   const qtyInput = document.querySelector(`.pr-bulk-tier-qty[data-idx="${idx}"]`);
   const qtyUnitSel = document.querySelector(`.pr-bulk-tier-qty-unit[data-idx="${idx}"]`);
   const priceInput = document.querySelector(`.pr-bulk-tier-price[data-idx="${idx}"]`);
@@ -30677,15 +30734,16 @@ function addBulkVariantTier(idx){
      on a variant that comes 5 to a carton is 60,000 each; dividing it by
      the default 12 would file it as 25,000 and quietly undercut the
      price by a factor of two. */
-  const ov = prBulkPackOverrides[idx];
-  const packQty = ov ? (Number(ov.packQty)||0) : (Number(document.getElementById('pr_pack_qty').value)||0);
+  const ov = S.getPackOverrides()[idx];
+  const packQty = ov ? (Number(ov.packQty)||0) : (Number(S.getPack().packQty)||0);
   const minQty = qtyUnitSel.value==='pack' ? rawQty*packQty : rawQty;
   const price = priceUnitSel.value==='pack' && packQty>0 ? rawPrice/packQty : rawPrice;
-  const tiers = prBulkVariantOverrides[idx];
+  const tiers = S.getOverrides()[idx];
   if(tiers.some(t=>t.minQty===minQty)){ toast('A tier already exists at that quantity'); return; }
   tiers.push({minQty, price});
   tiers.sort((a,b)=>a.minQty-b.minQty);
-  renderPrBulkVariantRows();
+  renderPrBulkVariantRows(surface);
+  S.onChange();
 }
 document.getElementById('pr_product_search').addEventListener('input', (e)=>{
   document.getElementById('pr_product').value = '';
@@ -31159,6 +31217,31 @@ function packingSignature(p){
    default over a variant packed differently does not merely mislabel it
    -- it re-reads the same numbers as meaning something else, and a
    variant whose pack size grew loses its wholesale price outright. */
+/* One price row for one variant, assembled the same way wherever it is
+   assembled from.
+
+   The Price Registry writes these when a variable product is priced in
+   bulk; the sourcing funnel writes them when a researched item becomes
+   that product. Two copies of this would let the funnel produce a row
+   that is quietly poorer than the Registry's -- no supplier code, or a
+   wholesale rate derived against the wrong pack size -- which is exactly
+   the "final products missing some information" this is meant to stop.
+
+   wholesale/retail are DERIVED against the packing this row actually
+   ends up with, never against the shared default: using the shared
+   figure here is what silently dropped a differently-packed variant's
+   bulk rate. */
+function buildVariantPriceRow({productId, variantIdx, supplierId, tiers, pack, sku, date}){
+  const derived = deriveWholesaleRetail(tiers, pack.packQty);
+  return {
+    productId, variantIdx, supplierId,
+    wholesale: derived.wholesale, retail: derived.retail,
+    date, unit: pack.unit, packUnit: pack.packUnit, packQty: pack.packQty,
+    priceSource: 'manual',
+    supplierSku: String(sku || '').trim(),
+    tiers: tiers.map(t=>({...t})),
+  };
+}
 function effectiveVariantPacking(override, shared, own, sharedEdited){
   const norm = (p)=> ({
     unit: String((p && p.unit) || '').trim(),
@@ -31371,19 +31454,13 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
       // Derived against the packing this row actually ends up with -- using
       // the shared figure here is what silently dropped a variant's
       // wholesale price.
-      const derived = deriveWholesaleRetail(effectiveTiers, rowPackQty);
+      const record = buildVariantPriceRow({productId, variantIdx:i, supplierId,
+        tiers: effectiveTiers, pack: rowPack, sku: prBulkSkus[i], date});
       // Raising the pack size past every rung on a ladder leaves that row
       // with no wholesale rate at all. Legitimate -- the admin said this is
       // how it's packed and there's no price on file for that much -- but
       // nothing on screen would otherwise show a bulk rate had just gone.
-      if(keep && keep.wholesale != null && derived.wholesale == null){ lostWholesale++; lostAt.push(rowPackQty); }
-      const record = {
-        productId, variantIdx:i, supplierId,
-        wholesale: derived.wholesale, retail: derived.retail,
-        date, unit: rowUnit, packUnit: rowPackUnit, packQty: rowPackQty, priceSource:'manual',
-        supplierSku: String(prBulkSkus[i]||'').trim(),
-        tiers: effectiveTiers.map(t=>({...t}))
-      };
+      if(keep && keep.wholesale != null && record.wholesale == null){ lostWholesale++; lostAt.push(rowPackQty); }
       data.prices = data.prices.filter(p=>!dups.includes(p));
       data.prices.push({...record, id: keep ? keep.id : allocRowId('price'), outOfStock: keep ? !!keep.outOfStock : false, outOfStockSince: keep ? (keep.outOfStockSince||null) : null});
       saved++;
@@ -39573,7 +39650,14 @@ function candidateTiers(c){
   if(p <= 0) return [];
   return [{minQty: Math.max(1, Number(c && c.moq) || 1), price: p}];
 }
-function candidateHasPrice(c){ return candidateTiers(c).length > 0; }
+/* A supplier who priced only particular sizes has still quoted. Their
+   indicative figure is the shared ladder when they gave one; failing
+   that, the cheapest size they did name. */
+function candidateVariantOverrides(c){ return Array.isArray(c && c.variantOverrides) ? c.variantOverrides : []; }
+function candidateHasPrice(c){
+  return candidateTiers(c).length > 0
+    || candidateVariantOverrides(c).some(o=> Array.isArray(o) && o.some(t=> Number(t.price) > 0));
+}
 /* The highest rung this quantity clears -- the same rule tieredUnitPrice
    settles a price row on, so a supplier cannot look cheaper here than
    they will once the item is actually in the registry. Below the lowest
@@ -39927,14 +40011,44 @@ async function graduateSourcingLead(leadId, form){
      the job is opened against it with the winning supplier and the
      ladder the research found already in place. */
   if(record.type === 'variable'){
-    renderSourcing(); renderSourcingBadge(); triggerProductsRender(); renderPresets();
-    openBulkPricingFor(productId, supplierId, {
+    /* Every size the research priced is written now -- its own figure
+       where the supplier gave one, the shared ladder where they did not.
+       Only what is still blank is left for the bulk form, which opens on
+       top with this supplier already chosen. */
+    const overrides = (form && form.variantOverrides) || [];
+    const packOverrides = (form && form.packOverrides) || [];
+    const skus = (form && form.skus) || [];
+    const packing = {
       unit: String((form && form.unit) || '').trim(),
       packUnit: String((form && form.packUnit) || '').trim(),
-      packQty, tiers,
+      packQty,
+    };
+    let written = 0;
+    record.variants.forEach((v, i)=>{
+      /* The same two resolutions the Price Registry makes: a variant with
+         its own ladder uses it, everything else follows the shared one --
+         and its own packing where it was given one, so a variant that
+         comes ten to a carton is not costed against somebody else's. */
+      const own = overrides[i];
+      const rows = (Array.isArray(own) && own.length) ? own : tiers;
+      if(!rows.length) return;
+      // sharedEdited true: this is a brand-new product, so the packing on
+      // the form IS the deliberate answer -- there is nothing on file for
+      // it to be preserving.
+      const pack = effectiveVariantPacking(packOverrides[i], packing, null, true);
+      data.prices.push({
+        ...buildVariantPriceRow({productId, variantIdx: i, supplierId,
+          tiers: rows, pack, sku: skus[i], date: todayISO()}),
+        id: allocRowId('price'), piecesPerUnit: null,
+        outOfStock: false, outOfStockSince: null,
+      });
+      written++;
     });
-    toast(`${name} is now a product with ${record.variants.length} variants — set their prices here.`, 9000);
-    return {productId, priceId: null, handedOff: true};
+    if(written) saveData();
+    renderSourcing(); renderSourcingBadge(); triggerProductsRender(); triggerPricesRender(); renderPresets();
+    openBulkPricingFor(productId, supplierId, {...packing, tiers});
+    toast(`${name} is now a product — ${written} of its ${record.variants.length} variants priced from ${supplierName(supplierId)}. Check them over.`, 9000);
+    return {productId, priceId: null, handedOff: true, variantsPriced: written};
   }
   /* Derived, never typed -- the same rule Compare Prices, quote
      suggestions and agent pricing all read these two flat fields under.
@@ -40863,6 +40977,22 @@ document.getElementById('sl_var_add').addEventListener('click', ()=>{
   slVarAttrs.push({name:'', values:''});
   renderSlVarAttrs();
 });
+/* Generating is the moment these stop being typing and become the
+   product's shape -- so, exactly as the product modal does it, that is
+   the moment they are worth keeping for next time. */
+document.getElementById('sl_var_gen').addEventListener('click', ()=>{
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;
+  const attrs = slVarParsed();
+  if(!attrs.length){ toast('Add an attribute with some values first'); return; }
+  l.variantAttrs = attrs;
+  const remembered = rememberDraftAttributes(attrs.map(a=>({name:a.name, values:a.values.join(', ')})));
+  saveData();
+  const n = leadVariantCombos(l).length;
+  if(remembered){ refreshPresetDatalists(); toast(remembered.message, 5000); }
+  else toast(`Generated ${n} variant${n===1?'':'s'}`);
+  renderSourcingLeadBody(l);
+});
 document.getElementById('sl_add_ask').addEventListener('click', ()=>{
   document.getElementById('sl_ask_form').style.display = '';
   document.getElementById('sl_add_ask').style.display = 'none';
@@ -40896,6 +41026,41 @@ document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
    the way prTiers is the price form's -- a rung is committed by a button
    and the candidate by another, and the two must not race. */
 let slCandTiers = [];
+/* The per-variant state being edited for the candidate in the form,
+   index-aligned to leadVariantCombos(lead) -- the same three arrays the
+   Price Registry's bulk mode keeps, because it is the same editor. */
+let slCandOverrides = [];
+let slCandPackOverrides = [];
+let slCandSkus = [];
+/* The funnel's bulk-pricing surface. Same editor the Price Registry
+   drives, pointed at this candidate's arrays and this lead's sizes --
+   which is why a researched supplier can carry everything a priced one
+   can, instead of the lesser thing a second editor would have captured.
+   No filter bar: a research form is not the place to hunt through
+   twenty-two rows, and there is no bar in this modal to clear. */
+function slCandBulkSurface(){
+  const l = sourcingLeadById(editingSourcingLeadId);
+  return {
+    variants: l ? leadVariantCombos(l).map(combo=> ({combo})) : [],
+    wrapId: 'sl_c_bulk',
+    filterable: false,
+    getOverrides: ()=> slCandOverrides,
+    getPackOverrides: ()=> slCandPackOverrides,
+    getSkus: ()=> slCandSkus,
+    getTiers: ()=> slCandTiers,
+    getPack: ()=> ({
+      unit: document.getElementById('sl_c_unit').value.trim(),
+      packUnit: document.getElementById('sl_c_packunit').value.trim(),
+      packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
+    }),
+    onChange: ()=>{},
+  };
+}
+function renderSlCandBulk(){
+  const surface = slCandBulkSurface();
+  document.getElementById('sl_c_bulk_label').style.display = surface.variants.length ? '' : 'none';
+  renderPrBulkVariantRows(surface);
+}
 /* Which candidate the form is CHANGING, or null when it is adding a new
    one. Without this the form could only ever add: a supplier recorded at
    Looking with no price -- exactly what that step asks you to record --
@@ -40934,6 +41099,18 @@ function renderSlVarAttrs(){
     onChange: saveSlVarAttrs,
   });
 }
+/* The generated list, shown the way the product modal shows it: the
+   count alone does not tell you that "Type × Size" became "Soft Close /
+   10 inch", and that is what you are agreeing to create. */
+function renderSlVarList(){
+  const l = sourcingLeadById(editingSourcingLeadId);
+  const wrap = document.getElementById('sl_var_list');
+  if(!wrap) return;
+  const combos = l ? leadVariantCombos(l) : [];
+  wrap.innerHTML = combos.length
+    ? `<div class="sf-var-chips">${combos.map(c=> `<span class="sf-rung">${esc(variantLabel(c))}</span>`).join('')}</div>`
+    : '';
+}
 function saveSlVarAttrs(){
   // The count is worth seeing before you agree to it: two lists of six is
   // thirty-six variants, and that is what the product becomes.
@@ -40944,6 +41121,7 @@ function saveSlVarAttrs(){
   if(!l) return;
   l.variantAttrs = slVarParsed();
   saveData();
+  renderSlVarList();
 }
 function slVarParsed(){
   return slVarAttrs
@@ -40979,6 +41157,8 @@ function slCandFormPlace(){
 function slCandFormClear(){
   editingCandidateId = null;
   slCandTiers = [];
+  slCandOverrides = []; slCandPackOverrides = []; slCandSkus = [];
+  renderSlCandBulk();
   ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
     .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
   slSetRole('supplier');
@@ -41019,8 +41199,12 @@ function slCandFormLoad(c){
   document.getElementById('sl_c_unit').value = c.unit || '';
   document.getElementById('sl_c_packqty').value = Number(c.packQty) || '';
   document.getElementById('sl_c_packunit').value = c.packUnit || '';
-  slCandTiers = candidateTiers(c).map(t=>({...t}));
+  slCandTiers = (Array.isArray(c.tiers)? c.tiers : candidateTiers(c)).map(t=>({...t}));
+  slCandOverrides = (c.variantOverrides||[]).map(o=> o ? o.map(t=>({...t})) : null);
+  slCandPackOverrides = (c.packOverrides||[]).map(o=> o ? {...o} : null);
+  slCandSkus = (c.skus||[]).slice();
   renderSlCandTiers();
+  renderSlCandBulk();
   slCandFormMode();
 }
 /* Called after the list has been rebuilt and the form put back, so the
@@ -41048,6 +41232,7 @@ function renderSlCandTiers(){
   wrap.querySelectorAll('[data-rung]').forEach(b=> b.addEventListener('click', ()=>{
     slCandTiers.splice(Number(b.dataset.rung), 1);
     renderSlCandTiers();
+    renderSlCandBulk();
   }));
 }
 document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
@@ -41072,6 +41257,8 @@ document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
   document.getElementById('sl_c_tier_qty').value = '';
   document.getElementById('sl_c_tier_price').value = '';
   renderSlCandTiers();
+  // The cards label their chips against the shared ladder, so they follow it.
+  renderSlCandBulk();
   /* Flagged while the two figures are still on screen and easy to swap
      back -- not blocked, because a supplier genuinely can price that way.
      The same warning the price form gives, for the same reason. */
@@ -41082,7 +41269,7 @@ document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
   }
 });
 ['sl_c_unit','sl_c_packqty','sl_c_packunit'].forEach(k=>
-  document.getElementById(k).addEventListener('input', renderSlCandTiers));
+  document.getElementById(k).addEventListener('input', ()=>{ renderSlCandTiers(); renderSlCandBulk(); }));
 document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   const l = sourcingLeadById(editingSourcingLeadId);
   if(!l) return;
@@ -41102,6 +41289,9 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     // sell at a price, so there is no separate MOQ to fall out of step
     // with it.
     tiers: slCandTiers.map(t=>({...t})),
+    variantOverrides: slCandOverrides.map(o=> o ? o.map(t=>({...t})) : null),
+    packOverrides: slCandPackOverrides.map(o=> o ? {...o} : null),
+    skus: slCandSkus.slice(),
     unit: document.getElementById('sl_c_unit').value.trim(),
     packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
     packUnit: document.getElementById('sl_c_packunit').value.trim(),
@@ -41211,6 +41401,9 @@ document.getElementById('sg_confirm').addEventListener('click', async ()=>{
       supplierPhone: c.phone || '',
       supplierWhere: c.where || '',
       tiers: candidateTiers(c),
+      variantOverrides: c.variantOverrides || [],
+      packOverrides: c.packOverrides || [],
+      skus: c.skus || [],
       unit: document.getElementById('sg_unit').value.trim(),
       packQty: document.getElementById('sg_packqty').value,
       packUnit: document.getElementById('sg_packunit').value.trim(),

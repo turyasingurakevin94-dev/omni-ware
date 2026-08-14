@@ -215,8 +215,8 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
     'the tier chips are labelled against the variant\'s own packing');
 
   const add = extractFunction(src, 'addBulkVariantTier', 'index.html');
-  t.check(/const ov = prBulkPackOverrides\[idx\];/.test(add)
-    && /const packQty = ov \? \(Number\(ov\.packQty\)\|\|0\) : \(Number\(document\.getElementById\('pr_pack_qty'\)\.value\)\|\|0\);/.test(add),
+  t.check(/const ov = S\.getPackOverrides\(\)\[idx\];/.test(add)
+    && /const packQty = ov \? \(Number\(ov\.packQty\)\|\|0\) : \(Number\(S\.getPack\(\)\.packQty\)\|\|0\);/.test(add),
     'and "per pack" is converted using the variant\'s own pack size, not the default one');
 
   const save = /getElementById\('pr_save'\)\.addEventListener\('click', \(\)=>\{([\s\S]*?)\n\}\);/.exec(src);
@@ -224,9 +224,14 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   t.check(!!save, 'the save handler is there to check');
   t.check(/const rowPack = effectiveVariantPacking\(prBulkPackOverrides\[i\], sharedPack, keep, packEdited\);/.test(body),
     'the save asks the same question this file tests, rather than deciding again in its own words');
-  t.check(/deriveWholesaleRetail\(effectiveTiers, rowPackQty\)/.test(body),
+  /* The derivation moved into buildVariantPriceRow, which the sourcing
+     funnel writes its rows through too -- so this claim is now made once
+     for both screens rather than once for this one. */
+  t.check(/tiers: effectiveTiers, pack: rowPack/.test(body)
+    && /deriveWholesaleRetail\(tiers, pack\.packQty\)/.test(extractFunction(src, 'buildVariantPriceRow', 'index.html')),
     'and the wholesale split is derived against the packing the row ends up with');
-  t.check(/packQty: rowPackQty/.test(body) && /unit: rowUnit/.test(body) && /packUnit: rowPackUnit/.test(body),
+  t.check(/unit: pack\.unit, packUnit: pack\.packUnit, packQty: pack\.packQty/
+    .test(extractFunction(src, 'buildVariantPriceRow', 'index.html')),
     'which is what gets written');
 
   /* A save that drops a bulk rate has always said so. Now that variants

@@ -160,7 +160,7 @@ const V = [
   const bulk = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
   t.check(/const shownVariants = prFilterable\s*\r?\n\s*\? filterSortVariants\(p\.variants, prvQuery, prvSort\)\s*\r?\n\s*: p\.variants\.map\(\(v,i\)=>\(\{ v, i \}\)\);/.test(bulk),
     'and narrows the price list through the same filter as the product form');
-  t.check(/const prFilterable = p\.variants\.length >= VARIANT_FILTER_MIN;/.test(bulk),
+  t.check(/const prFilterable = S\.filterable && p\.variants\.length >= VARIANT_FILTER_MIN;/.test(bulk),
     'with the same escape hatch: below the threshold the hidden bar filters nothing');
   t.check(/wrap\.innerHTML = shownVariants\.length \? shownVariants\.map\(\(\{v,i\}\)=>\{/.test(bulk),
     'the price cards render from the pairs, so data-idx stays the real variant');

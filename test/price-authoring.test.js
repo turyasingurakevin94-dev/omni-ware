@@ -110,7 +110,8 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
        test/bulk-variant-packing.test.js. */
     t.check(/const rowPack = effectiveVariantPacking\(prBulkPackOverrides\[i\], sharedPack, keep, packEdited\)/.test(body),
       'an untouched packing form leaves each variant on its own packing');
-    t.check(/deriveWholesaleRetail\(effectiveTiers, rowPackQty\)/.test(body),
+    t.check(/tiers: effectiveTiers, pack: rowPack/.test(body)
+      && /deriveWholesaleRetail\(tiers, pack\.packQty\)/.test(extractFunction(src, 'buildVariantPriceRow', 'index.html')),
       'wholesale/retail are derived against the packing the row ends up with, not the shared field');
     t.check(!/deriveWholesaleRetail\(effectiveTiers, packQty\)/.test(body),
       'the shared pack size is no longer used to derive a per-variant rate');
@@ -119,7 +120,7 @@ const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }))
     /* Now also records the pack size it was lost AT, since variants can
        be packed differently and the shared field is no longer every
        row's. The wording is pinned in test/bulk-variant-packing.test.js. */
-    t.check(/if\(keep && keep\.wholesale != null && derived\.wholesale == null\)\{ lostWholesale\+\+; lostAt\.push\(rowPackQty\); \}/.test(body)
+    t.check(/if\(keep && keep\.wholesale != null && record\.wholesale == null\)\{ lostWholesale\+\+; lostAt\.push\(rowPackQty\); \}/.test(body)
       && /lost their bulk rate/.test(body),
       'a save that drops a variant\'s bulk rate reports it rather than doing it quietly');
   }

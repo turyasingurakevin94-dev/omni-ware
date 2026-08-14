@@ -126,6 +126,9 @@ const sources = [
   extractFunction(src, 'issueEntityId', 'index.html'),
   extractFunction(src, 'ensurePresetCategory', 'index.html'),
   extractFunction(src, 'deriveWholesaleRetail', 'index.html'),
+  // The real ones, so a funnel price row cannot differ from a Registry one.
+  extractFunction(src, 'effectiveVariantPacking', 'index.html'),
+  extractFunction(src, 'buildVariantPriceRow', 'index.html'),
   extractFunction(src, 'supplierName', 'index.html'),
   extractFunction(src, 'sourcingLeadsAll', 'index.html'),
   extractFunction(src, 'sourcingLeadById', 'index.html'),
@@ -134,6 +137,8 @@ const sources = [
   extractFunction(src, 'leadAskCount', 'index.html'),
   extractFunction(src, 'leadCandidateNames', 'index.html'),
   extractFunction(src, 'candidateTiers', 'index.html'),
+  extractFunction(src, 'candidateVariantOverrides', 'index.html'),
+  extractFunction(src, 'variantLabel', 'index.html'),
   extractFunction(src, 'candidateHasPrice', 'index.html'),
   extractFunction(src, 'candidateUnitPriceAt', 'index.html'),
   extractFunction(src, 'candidateLowestRung', 'index.html'),
@@ -176,7 +181,7 @@ const S = compileScope(sources, env, [
   'stepSourcingStatus', 'dropSourcingLead', 'undropSourcingLead',
   'graduateSourcingLead', 'sourcingBoardLeads', 'renderSourcingBadge',
   'deriveWholesaleRetail', 'sourcingLeadById',
-  'candidateTiers', 'candidateHasPrice', 'candidateUnitPriceAt', 'candidateLowestRung',
+  'candidateTiers', 'candidateHasPrice', 'candidateVariantOverrides', 'candidateUnitPriceAt', 'candidateLowestRung',
   'leadDemandQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
   'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
   'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
@@ -507,6 +512,7 @@ async function main() {
       extractDeclaration(src, 'SOURCING_GATES', 'index.html'),
       extractFunction(src, 'leadCandidateNames', 'index.html'),
       extractFunction(src, 'candidateTiers', 'index.html'),
+      extractFunction(src, 'candidateVariantOverrides', 'index.html'),
       extractFunction(src, 'candidateHasPrice', 'index.html'),
       extractFunction(src, 'leadFacts', 'index.html'),
       extractFunction(src, 'sourcingGateBlock', 'index.html'),
@@ -990,6 +996,25 @@ async function main() {
   t.check(/l\.variantAttrs = slVarParsed\(\);/.test(saveVar) && /saveData\(\);/.test(saveVar),
     'and each change is written to the lead and saved, with no button to press');
 
+  /* The funnel drives the Price Registry's OWN bulk editor, pointed at
+     this candidate's arrays -- which is what lets a researched supplier
+     carry a ladder, a packing and a code per size, exactly as a priced
+     one does. A second editor would have captured less. */
+  const surface = extractFunction(src, 'slCandBulkSurface', 'index.html');
+  ['slCandOverrides', 'slCandPackOverrides', 'slCandSkus', 'slCandTiers'].forEach((k) =>
+    t.check(new RegExp(`=> ${k},`).test(surface), `the surface reads the candidate's ${k}`));
+  t.check(/getOverrides: \(\)=>/.test(surface) && /getTiers: \(\)=>/.test(surface),
+    'as accessors, not references — prTiers and the override arrays are REASSIGNED, and a held reference would edit a list nothing renders');
+  t.check(/leadVariantCombos\(l\)\.map\(combo=> \(\{combo\}\)\)/.test(surface),
+    'against this lead\'s own sizes, in the shape the product model uses');
+  t.check(/renderPrBulkVariantRows\(surface\)/.test(extractFunction(src, 'renderSlCandBulk', 'index.html')),
+    'and renders through the Registry\'s editor rather than one of its own');
+  /* And a bare call still means the price form, or sharing the editor
+     would have cost the screen it came from its own state. */
+  t.check(/const S = surface \|\| prBulkPriceSurface\(\);/
+    .test(extractFunction(src, 'renderPrBulkVariantRows', 'index.html')),
+    'a bare call is still the Price Registry\'s own surface');
+
   /* THE ORDER of the handoff. selectPrSupplier re-derives the shared
      ladder from what that supplier already has for this product -- which
      for one created seconds ago is nothing, so it clears it. Everything
@@ -1217,9 +1242,18 @@ async function main() {
   eq(madeProduct.variants.length, 6, 'with one variant per combination of its lists');
   eq(madeProduct.variantAttributes.length, 2, 'carrying the attributes the research recorded');
   t.check(!!madeProduct.variants[0].sku, 'and each variant gets a sku, as the product form gives them');
-  eq(data.prices.length, 0,
-    'NO single price row is written — one figure against one of six variants is worse than none');
-  eq(varOut.priceId, null, 'and the caller is told there is no price yet');
+  /* Every variant is priced, not one of them. The shared ladder covers
+     the ones the supplier quoted no separate figure for, so the product
+     arrives usable instead of arriving empty. */
+  eq(data.prices.length, 6, 'every variant gets a price row, not one of six');
+  eq(varOut.variantsPriced, 6, 'and the caller is told how many');
+  eq(JSON.stringify(data.prices.map((r) => r.variantIdx)), JSON.stringify([0, 1, 2, 3, 4, 5]),
+    'each against its own variant, in the product\'s own order');
+  t.check(data.prices.every((r) => r.supplierId === data.suppliers[0].id),
+    'all from the supplier the comparison chose');
+  t.check(data.prices.every((r) => JSON.stringify(r.tiers) === JSON.stringify(rungs([1, 8000]))),
+    'each following the shared ladder, since this supplier quoted no size separately');
+  eq(varOut.priceId, null, 'there is no single price id, because there is no single price');
   eq(varOut.handedOff, true, 'because it was handed to the form built for a matrix');
   t.check(!!calls.bulk && calls.bulk.productId === madeProduct.id,
     'which is opened against the product just created');
@@ -1227,6 +1261,40 @@ async function main() {
   eq(JSON.stringify(calls.bulk.packing.tiers), JSON.stringify(rungs([1, 8000])),
     'and the ladder the research found, so nothing is retyped');
   eq(data.sourcingLeads[0].status, 'listed', 'the lead is listed — the product exists');
+
+  /* Everything the Price Registry can say about a variant, the funnel can
+     say too -- its own ladder, its own packing, the supplier's own code.
+     A researched supplier that captured less would graduate into a
+     product missing exactly that, which is the whole point of sharing the
+     editor rather than writing a lesser one. */
+  resetAll([lead({ status: 'priced', name: 'Runners',
+    variantAttrs: [{ name: 'Size', values: ['10"', '12"', '14"'] }],
+    candidates: [cand({ tiers: rungs([1, 8000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn',
+      variantOverrides: [null, rungs([1, 9000]), null],
+      packOverrides: [null, null, { unit: 'Pc', packUnit: 'Ctn', packQty: 6 }],
+      skus: [null, null, 'RUN-14-RT'] })] })]);
+  await S.graduateSourcingLead('SRC-1', {
+    name: 'Runners', supplierName: 'Roto', tiers: rungs([1, 8000]),
+    unit: 'Pc', packUnit: 'Ctn', packQty: 12,
+    variantOverrides: [null, rungs([1, 9000]), null],
+    packOverrides: [null, null, { unit: 'Pc', packUnit: 'Ctn', packQty: 6 }],
+    skus: [null, null, 'RUN-14-RT'],
+  });
+  const byV = data.prices.slice().sort((a, b) => a.variantIdx - b.variantIdx);
+  eq(byV.length, 3, 'every size is priced');
+  eq(JSON.stringify(byV[0].tiers), JSON.stringify(rungs([1, 8000])),
+    'a size left alone follows the shared ladder');
+  eq(JSON.stringify(byV[1].tiers), JSON.stringify(rungs([1, 9000])),
+    'a size given its own ladder keeps it');
+  eq(byV[2].packQty, 6, 'a size packed differently keeps its own pack size');
+  eq(byV[0].packQty, 12, 'while the others keep the shared one');
+  eq(byV[2].supplierSku, 'RUN-14-RT', 'and the supplier\'s own code for that size survives');
+  eq(byV[0].supplierSku, '', 'with none invented for the sizes that had none');
+  /* Derived against the packing the row ENDS UP with. Costing the 6-per-
+     carton size against the shared 12 is exactly how a bulk rate goes
+     missing, and it is why both screens build rows through one function. */
+  eq(byV[2].wholesale, S.deriveWholesaleRetail(byV[2].tiers, 6).wholesale,
+    'and its wholesale split is derived against ITS packing, not the shared one');
 
   // A lead with no sizes still takes the single-price path.
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] })]);

@@ -159,7 +159,8 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
   const save = /getElementById\('pr_save'\)\.addEventListener\('click', \(\)=>\{([\s\S]*?)\n\}\);/.exec(src);
   const body = save ? save[1] : '';
   t.check(!!save, 'the save handler is there to check');
-  t.check(/supplierSku: String\(prBulkSkus\[i\]\|\|''\)\.trim\(\),/.test(body),
+  t.check(/sku: prBulkSkus\[i\]/.test(body)
+    && /supplierSku: String\(sku \|\| ''\)\.trim\(\),/.test(extractFunction(src, 'buildVariantPriceRow', 'index.html')),
     'a bulk save writes each variant its own code');
   t.check(/supplierSku: document\.getElementById\('pr_supplier_sku'\)\.value\.trim\(\),/.test(body),
     'and a single save writes the one on the form');
