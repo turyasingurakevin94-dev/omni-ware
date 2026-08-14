@@ -5792,6 +5792,17 @@
   .sf-link{background:none;border:0;padding:0;font:inherit;color:var(--accent);
     font-weight:600;cursor:pointer;text-decoration:underline;}
   .sf-outcome-name{font-size:15px;font-weight:700;margin-bottom:2px;}
+  /* Who to ring when the shelf is empty. Cheapest first, and the rate
+     right-aligned so the figures line up on themselves rather than on
+     however long each shop's name happens to be. */
+  .sf-outcome-sups{display:flex;flex-direction:column;margin-bottom:12px;}
+  .sf-outcome-sup{display:flex;align-items:baseline;gap:10px;padding:7px 0;
+    border-bottom:1px solid var(--line);font-size:12.5px;}
+  .sf-outcome-sup:last-child{border-bottom:none;}
+  .sf-outcome-sup-name{font-weight:600;flex:1 1 auto;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sf-outcome-sup-rate{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;}
+  .sf-outcome-sup-rows{font-size:10.5px;color:var(--ink-soft);white-space:nowrap;}
   /* The one primary action on the screen, set apart from the fields above
      it so the step reads as: here is the task, here is what finishes it. */
   /* The sentence under the step's instruction saying what its button will
@@ -41186,6 +41197,34 @@ function wireSourcingRailNav(l){
     });
   });
 }
+/* Who the shop can buy this from now, cheapest first, with the rate each
+   one starts at.
+
+   The panel said "2 prices on file" and stopped. A count of rows is the
+   one fact on this screen nobody can act on -- the names are what you
+   ring when the shelf is empty, and they are exactly what the research
+   spent its time producing. Read from data.prices rather than from the
+   lead's own candidates, because the registry is what the rest of the
+   app actually buys from: a row added by hand next month counts, and a
+   candidate whose row was never written does not. */
+function sourcingOutcomeSuppliers(productId){
+  const out = new Map();
+  (data.prices||[]).filter(r=> r.productId === productId).forEach(r=>{
+    if(!r.supplierId) return;
+    /* The lowest rate they quote for it. With sizes there is a row per
+       size, and "from 1,500" is the honest summary of twenty-two of
+       them -- naming one size's price as if it were the item's would
+       be picking a number out of the matrix. */
+    const rate = [r.wholesale, r.retail].map(Number).filter(n=> n > 0).sort((a,b)=> a-b)[0];
+    const cur = out.get(r.supplierId) || {id: r.supplierId, rows: 0, from: null, unit: ''};
+    cur.rows++;
+    if(rate != null && (cur.from == null || rate < cur.from)) cur.from = rate;
+    if(!cur.unit && r.unit) cur.unit = String(r.unit).trim();
+    out.set(r.supplierId, cur);
+  });
+  return [...out.values()].sort((a,b)=>
+    (a.from == null ? Infinity : a.from) - (b.from == null ? Infinity : b.from));
+}
 /* What a listed item became: the step's whole content, because that is
    all Listed has to say. */
 function sourcingOutcomeHTML(l){
@@ -41194,10 +41233,21 @@ function sourcingOutcomeHTML(l){
   if(!l.productId || !p){
     return `<p class="preset-hint">This is marked as listed but the product behind it is gone. Step it back to Priced and add it again.</p>`;
   }
-  const rows = (data.prices||[]).filter(pr=> pr.productId === l.productId);
+  const sups = sourcingOutcomeSuppliers(l.productId);
   return `<div class="sf-outcome">
     <div class="sf-outcome-name">${esc(p.name)} <span class="sf-listed-id">${esc(p.id)}</span></div>
-    <div class="preset-hint">${esc(p.category||'No category')}${p.subcategory?` · ${esc(p.subcategory)}`:''} · ${rows.length} price${rows.length===1?'':'s'} on file.</div>
+    <div class="preset-hint">${esc(p.category||'No category')}${p.subcategory?` · ${esc(p.subcategory)}`:''}</div>
+    ${sups.length ? `
+      <label class="sf-rung-label">Who we can buy it from</label>
+      <div class="sf-outcome-sups">${sups.map(s=>`
+        <div class="sf-outcome-sup">
+          <span class="sf-outcome-sup-name">${esc(supplierName(s.id))}</span>
+          <span class="sf-outcome-sup-rate">${s.from != null
+            ? `from ${fmtUGX(s.from)}${s.unit ? '/' + esc(s.unit) : ''}`
+            : 'no rate on file'}</span>
+          ${s.rows > 1 ? `<span class="sf-outcome-sup-rows">${s.rows} sizes</span>` : ''}
+        </div>`).join('')}</div>`
+      : `<p class="preset-hint">No prices on file for it yet — add one from the Price Registry.</p>`}
     <button type="button" class="btn btn-ghost" id="sl_open_product">Open it in the Price Registry</button>
   </div>`;
 }

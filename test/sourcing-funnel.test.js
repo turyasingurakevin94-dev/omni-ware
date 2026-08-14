@@ -191,6 +191,7 @@ const sources = [
   extractFunction(src, 'matchesAllTokens', 'index.html'),
   extractDeclaration(src, 'SOURCING_LISTED_PAGE', 'index.html'),
   extractFunction(src, 'listedSupplierCount', 'index.html'),
+  extractFunction(src, 'sourcingOutcomeSuppliers', 'index.html'),
   extractFunction(src, 'listedAge', 'index.html'),
   extractFunction(src, 'listedLeads', 'index.html'),
   extractFunction(src, 'sourcingBoardLeads', 'index.html'),
@@ -213,6 +214,7 @@ const S = compileScope(sources, env, [
   'supNormalisedName', 'supFindDuplicate', 'candidateSupplierNote',
   'resolveCandidateSuppliers', 'preferredCandidate', 'mergeCandidatesBySupplier',
   'candidateRowCount', 'listedSupplierCount', 'listedAge', 'listedLeads',
+  'sourcingOutcomeSuppliers',
   'graduatePackingSeed',
 ]);
 // compileScope only hands back functions, so the cap is read from source.
@@ -1747,6 +1749,48 @@ async function main() {
   eq(S.listedSupplierCount(data.sourcingLeads[0]), 2,
     'two suppliers, not four rows — the question is who has it, not how many sizes they priced');
   eq(S.listedSupplierCount(lead({ productId: null })), 0, 'and nothing to count without a product');
+
+  /* The Listed step said "2 prices on file" and stopped. A count of rows
+     is the one fact on that screen nobody can act on -- the names are
+     what you ring when the shelf is empty, and they are exactly what the
+     research spent its time producing. */
+  resetAll([]);
+  data.suppliers = [{ id: 'S1', name: 'sjs' }, { id: 'S2', name: 'Stuart Star' }];
+  data.prices = [
+    { productId: 'P354', supplierId: 'S2', variantIdx: null, unit: 'Bundle', retail: 65000, wholesale: null },
+    { productId: 'P354', supplierId: 'S1', variantIdx: null, unit: 'Bundle', retail: 50000, wholesale: null },
+    { productId: 'P999', supplierId: 'S1', variantIdx: null, unit: 'Bundle', retail: 10, wholesale: null },
+  ];
+  const who = S.sourcingOutcomeSuppliers('P354');
+  eq(who.length, 2, 'every supplier with a row for it is named');
+  eq(who.map(x=> x.id).join(), 'S1,S2', 'cheapest first — that is who to ring');
+  eq(who[0].from, 50000, 'with the rate they start at');
+  eq(who[0].unit, 'Bundle', 'in the unit that rate is per');
+
+  /* With sizes there is a row per size. "from 1,500" is the honest
+     summary of twenty-two of them; naming one size's price as the item's
+     would be picking a number out of the matrix. */
+  data.prices = [0, 1, 2].map(i=> ({ productId: 'P354', supplierId: 'S1',
+    variantIdx: i, unit: 'Dozen', wholesale: 1500 + i * 100, retail: null }));
+  const eachSize = S.sourcingOutcomeSuppliers('P354');
+  eq(eachSize.length, 1, 'a supplier pricing three sizes is one supplier, not three');
+  eq(eachSize[0].from, 1500, 'shown from their lowest rate, not whichever row came first');
+  eq(eachSize[0].rows, 3, 'with how many sizes that covers');
+
+  eq(S.sourcingOutcomeSuppliers('P000').length, 0, 'a product with no rows names nobody');
+
+  /* And the panel has to actually draw them. The list existing as data
+     while the screen still printed a count would leave the step exactly
+     as uninformative as before. */
+  const outcome = extractFunction(src, 'sourcingOutcomeHTML', 'index.html');
+  t.check(/sourcingOutcomeSuppliers\(l\.productId\)/.test(outcome),
+    'the Listed step reads who can supply it');
+  t.check(/Who we can buy it from/.test(outcome) && /sf-outcome-sup-name/.test(outcome),
+    'and names them on screen');
+  t.check(!/\$\{rows\.length\} price\$\{rows\.length===1\?'':'s'\} on file/.test(outcome),
+    'rather than reporting how many rows there are, which is the one fact there nobody can act on');
+  t.check(/No prices on file for it yet/.test(outcome),
+    'with a plain sentence when there are none, not an empty heading');
 }
 
 /* ---------- 7c. the manifest says what the button will do ------------ */
