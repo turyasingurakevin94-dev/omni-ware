@@ -1887,6 +1887,47 @@ async function main() {
   t.check(!/[+✓]\s*(Add attribute|Generate variants)/.test(src),
     'and no typed + or tick is left standing in for one');
 
+  /* ctaWhy is shown ONLY when the step is not blocked -- the render is
+     `blocked || guide.ctaWhy`, and SOURCING_GATES carries the "you cannot
+     yet" sentence for the other case. So a ctaWhy written as a
+     precondition appears exactly when that precondition is already met:
+     an item with two suppliers on file and an enabled button still read
+     "Needs at least one supplier or importer on file." */
+  const stepGuide = (status)=> S.sourcingStepGuide(lead({ status }));
+  ['asked','looking','sourced','priced'].forEach(status=>{
+    const why = stepGuide(status).ctaWhy;
+    t.check(!/^Needs\b/.test(why),
+      `${status} explains what the button does rather than restating a condition already met (${why})`);
+  });
+  t.check(/moves it to Source Found/.test(stepGuide('looking').ctaWhy)
+    && /moves it to Priced/.test(stepGuide('sourced').ctaWhy),
+    'and the two that were preconditions now name the stage they move it to, as the other steps do');
+  /* The requirement is not lost -- it moves to where it is true. */
+  const noSupplier = lead({ status: 'looking', candidates: [] });
+  t.check(/Add who has it first/.test(S.sourcingGateBlock(noSupplier, 'sourced')),
+    'while the gate still says what is missing when it actually is');
+  eq(S.sourcingGateBlock(lead({ status: 'looking',
+    candidates: [cand({ role: 'supplier', tiers: [] })] }), 'sourced'), '',
+    'and says nothing once somebody is on file');
+
+  /* Three-across rows cannot hold a sentence. Measured in the running
+     app at this modal's width: the boxes are 192px of usable space and
+     "Pick a customer, or type a new name" needed 244, so it truncated
+     mid-word -- as did the supplier and the place. */
+  ['Pick a supplier, or type a new one', 'Choose a place, or type a new one',
+   'Pick a customer, or type a new name'].forEach(long=>{
+    t.check(!new RegExp('id="sl_(c_|ask2_)[a-z]+"[^>]*placeholder="' + long + '"').test(src),
+      `no funnel field carries the over-long "${long}"`);
+  });
+  t.check(/id="sl_c_name"[^>]*placeholder="Pick or type a name"/.test(src)
+    && /id="sl_c_where"[^>]*placeholder="Pick or type a place"/.test(src)
+    && /id="sl_ask2_name"[^>]*placeholder="Pick or type a name"/.test(src),
+    'they carry the short forms that fit the column they are in');
+  /* The full-width fields elsewhere keep the longer wording, which still
+     fits there -- this was a width problem, not a copy preference. */
+  t.check(/id="s_location"[^>]*placeholder="Choose a place, or type a new one"/.test(src),
+    'while the supplier modal, where the field is full width, keeps the fuller sentence');
+
   /* The board ages itself on a timer. renderSourcing rebuilds the whole
      board, which destroys the Listed search input along with whatever is
      half-typed into it and the caret -- so the tick stands down while it

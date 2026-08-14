@@ -8710,7 +8710,7 @@
                ask was a hand-typed name that linked to nobody. -->
           <div class="sf-cand-form" id="sl_ask_form" style="display:none;">
             <div class="form-grid">
-              <div class="field"><label>Who asked</label><input type="text" id="sl_ask2_name" list="dl_sourcing_customers" placeholder="Pick a customer, or type a new name" autocomplete="off"></div>
+              <div class="field"><label>Who asked</label><input type="text" id="sl_ask2_name" list="dl_sourcing_customers" placeholder="Pick or type a name" autocomplete="off"></div>
               <div class="field"><label>Their phone</label><input type="text" id="sl_ask2_phone" autocomplete="off"></div>
               <!-- People name the size when they ask for these, and which
                    size they asked for is what says which sizes are worth
@@ -8739,7 +8739,7 @@
         </details>
         <div class="sf-cand-form" id="sl_cand_form">
           <div class="form-grid">
-            <div class="field"><label>Who</label><input type="text" id="sl_c_name" list="dl_sourcing_suppliers" placeholder="Pick a supplier, or type a new one" autocomplete="off"></div>
+            <div class="field"><label>Who</label><input type="text" id="sl_c_name" list="dl_sourcing_suppliers" placeholder="Pick or type a name" autocomplete="off"></div>
             <!-- Three short, mutually exclusive answers read better as a
                  segmented control than as a select, which truncated all
                  three of them to "Supplier — we buy from t…". On its own
@@ -8747,7 +8747,7 @@
                  inputs made that row 89px against their 56 and left the
                  whole grid ragged. -->
             <div class="field"><label>Phone</label><input type="text" id="sl_c_phone" autocomplete="off"></div>
-            <div class="field"><label>Where</label><input type="text" id="sl_c_where" list="dl_locations" placeholder="Choose a place, or type a new one" autocomplete="off"></div>
+            <div class="field"><label>Where</label><input type="text" id="sl_c_where" list="dl_locations" placeholder="Pick or type a place" autocomplete="off"></div>
             <!-- Last, so the three plain inputs fill one even row and this
                  takes the next one whole. -->
             <div class="field sf-field-wide"><label>They are the</label>
@@ -40935,17 +40935,27 @@ const SOURCING_STEP_GUIDE = {
     cta: 'Start looking',
     ctaWhy: 'Somebody is looking into it — moves it to Looking.',
   },
+  /* ctaWhy says what pressing the button DOES. It is only ever shown when
+     the step is NOT blocked -- applySourcingStepView renders
+     `blocked || guide.ctaWhy`, and SOURCING_GATES already carries the
+     "you cannot yet, because..." sentence for the other case.
+
+     These two were written as unmet preconditions, so they appeared
+     precisely when the precondition was already satisfied: an item with
+     two suppliers on file and an enabled button still read "Needs at
+     least one supplier or importer on file." The other two steps had it
+     right; these now match them. */
   looking: {
     need: 'Find who has it — a supplier, or the importer who brings it into the country.',
     show: ['assign','research'],
     cta: 'Source found',
-    ctaWhy: 'Needs at least one supplier or importer on file.',
+    ctaWhy: 'We know who has it — moves it to Source Found.',
   },
   sourced: {
     need: 'Now get their prices. Add a tier for each price break they quote you.',
     show: ['research'],
     cta: 'Prices are in',
-    ctaWhy: 'Needs a price on at least one of them.',
+    ctaWhy: 'Their prices are on file — moves it to Priced.',
   },
   priced: {
     need: 'Decide whether it is worth stocking.',
