@@ -45,6 +45,7 @@ const calls = { saves: 0, toasts: [], badges: [], renders: 0, opened: [] };
 let saveLands = true;             // does the stubbed save reach "the server"
 let nextRowId = 900;
 let forcedId = null;              // {prefix: id} — makes the allocator repeat itself
+let landOnly = null;              // [supplierId] — only these suppliers reach "the server"
 
 function resetAll(leads) {
   data.sourcingLeads = leads || [];
@@ -61,6 +62,7 @@ function resetAll(leads) {
   calls.saves = 0; calls.toasts = []; calls.badges = []; calls.renders = 0; calls.opened = [];
   calls.snapshots = [];
   saveLands = true;
+  landOnly = null;
   nextRowId = 900;
 }
 
@@ -76,7 +78,14 @@ const env = {
     calls.snapshots.push({ products: data.products.length, prices: data.prices.length });
     if (saveLands) {
       data.products.forEach((p) => { lastSynced.products[String(p.id)] = p; });
-      data.suppliers.forEach((s) => { lastSynced.suppliers[String(s.id)] = s; });
+      // `landOnly` is a PARTIAL landing: one supplier of several reaches
+      // the server and the rest do not. saveData really can do this --
+      // it fires every op at once and commits each one on its own result
+      // -- so "did they all land" is a question with a real answer.
+      data.suppliers.forEach((s) => {
+        if (landOnly && !landOnly.includes(String(s.id))) return;
+        lastSynced.suppliers[String(s.id)] = s;
+      });
     }
     return Promise.resolve();
   },
@@ -168,7 +177,20 @@ const sources = [
   extractFunction(src, 'stepSourcingStatus', 'index.html'),
   extractFunction(src, 'dropSourcingLead', 'index.html'),
   extractFunction(src, 'undropSourcingLead', 'index.html'),
+  extractFunction(src, 'supNormalisedName', 'index.html'),
+  extractFunction(src, 'supFindDuplicate', 'index.html'),
+  extractFunction(src, 'candidateSupplierNote', 'index.html'),
+  extractFunction(src, 'resolveCandidateSuppliers', 'index.html'),
+  extractFunction(src, 'preferredCandidate', 'index.html'),
+  extractFunction(src, 'mergeCandidatesBySupplier', 'index.html'),
+  extractFunction(src, 'candidateRowCount', 'index.html'),
   extractFunction(src, 'graduateSourcingLead', 'index.html'),
+  extractFunction(src, 'searchTokens', 'index.html'),
+  extractFunction(src, 'matchesAllTokens', 'index.html'),
+  extractDeclaration(src, 'SOURCING_LISTED_PAGE', 'index.html'),
+  extractFunction(src, 'listedSupplierCount', 'index.html'),
+  extractFunction(src, 'listedAge', 'index.html'),
+  extractFunction(src, 'listedLeads', 'index.html'),
   extractFunction(src, 'sourcingBoardLeads', 'index.html'),
   extractFunction(src, 'renderSourcingBadge', 'index.html'),
   extractFunction(src, 'sourcingResolveAsker', 'index.html'),
@@ -186,7 +208,14 @@ const S = compileScope(sources, env, [
   'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
   'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
   'applyCandidateFields',
+  'supNormalisedName', 'supFindDuplicate', 'candidateSupplierNote',
+  'resolveCandidateSuppliers', 'preferredCandidate', 'mergeCandidatesBySupplier',
+  'candidateRowCount', 'listedSupplierCount', 'listedAge', 'listedLeads',
 ]);
+// compileScope only hands back functions, so the cap is read from source.
+// Reading it rather than restating it means the claim below is about
+// whatever the lane actually uses.
+const LISTED_PAGE = Number((/const SOURCING_LISTED_PAGE = (\d+);/.exec(src) || [])[1]);
 
 const lead = (over) => Object.assign({
   id: 'SRC-1', name: 'sofa legs 4 inch chrome', notes: '', status: 'asked',
@@ -1020,13 +1049,16 @@ async function main() {
      next real close -- and it swallowed the very label this is about,
      so the check passed while the label said "rung".
 
-     Then the two identifiers that keep the word for a reason: the
-     sf-rung* CSS classes and the local `rungs` variables. Whatever is
-     left is English the shopkeeper can read, and there should be none. */
+     Then the sf-rung* CSS classes, which keep the word for a reason.
+     Subtracting a bare `rungs` too was a hole: it removed the plural from
+     ordinary prose as readily as from a variable, so a sentence reading
+     "No rungs yet" passed. The locals were renamed instead, which is why
+     only the class names are subtracted now -- whatever is left is
+     English the shopkeeper can read, and there should be none. */
   const funnelSrc = src
     .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
     .split(/\r?\n/).map(l=> l.replace(/(?<!:)\/\/.*$/, '')).join('\n')
-    .replace(/sf-rungs?\b/g, '').replace(/\brungs\b/g, '');
+    .replace(/sf-rungs?\b/g, '');
   t.check(!/rung/i.test(funnelSrc),
     'and nothing calls them rungs — the Registry says tiers, so the funnel says tiers');
 
@@ -1172,15 +1204,14 @@ async function main() {
   eq(calls.badges[0].n, 1, 'nor is one that already became a product');
 }
 
-/* ---------- 7. graduation: two saves, and the second one is gated ---- */
+/* ---------- 7. graduation banks everybody, and the second save is gated */
 {
   // --- the happy path
   resetAll([lead({ status: 'priced', name: 'Sofa Legs Chrome 4"',
     candidates: [cand({ tiers: rungs([1,15000],[12,13500],[60,12000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' })] })]);
   const out = await S.graduateSourcingLead('SRC-1', {
     name: 'Sofa Legs Chrome 4"', category: 'Furniture Fittings', subcategory: 'Legs',
-    supplierId: null, supplierName: 'Shafik',
-    tiers: S.candidateTiers(data.sourcingLeads[0].candidates[0]),
+    candidates: data.sourcingLeads[0].candidates,
     unit: 'Pc', packQty: 12, packUnit: 'Ctn',
   });
   t.check(!!out && !!out.productId, 'graduation returns the product it created');
@@ -1211,20 +1242,143 @@ async function main() {
   eq(JSON.stringify(pr.tiers), JSON.stringify(rungs([1,15000],[12,13500],[60,12000])),
     'in the registry\'s own {minQty, price} shape, sorted');
 
+  /* --- EVERY supplier the research found, not the cheapest one.
+
+     This is the whole point of the funnel: the Price Registry is where
+     the shop's knowledge of who sells what lives, and Compare Prices can
+     only ever compare who is in it. Banking one supplier and discarding
+     the other two assumes today's cheapest is permanently cheapest --
+     and the day they put their price up there is nothing on file to
+     notice with, so the same three shops get rung again from scratch. */
+  resetAll([lead({ status: 'priced', name: 'Padlock 50mm', candidates: [
+    cand({ id: 'C1', supplierName: 'Shafik', tiers: rungs([1, 9000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' }),
+    cand({ id: 'C2', supplierName: 'Meggo',  tiers: rungs([1, 8500]), unit: 'Pc', packQty: 24, packUnit: 'Ctn' }),
+    cand({ id: 'C3', supplierName: 'Kabuye', tiers: rungs([1, 11000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' }),
+  ] })]);
+  const many = await S.graduateSourcingLead('SRC-1', {
+    name: 'Padlock 50mm', candidates: data.sourcingLeads[0].candidates, unit: 'Pc',
+  });
+  eq(data.suppliers.length, 3, 'all three suppliers are created, not just the cheapest');
+  eq(data.prices.length, 3, 'and all three get a price row');
+  eq(many.suppliersPriced, 3, 'and the caller is told how many suppliers were banked');
+  eq(many.rowsWritten, 3, 'and how many rows that came to');
+  eq(new Set(data.prices.map(r=> r.supplierId)).size, 3, 'one row each, against their own supplier');
+  eq(JSON.stringify(data.prices.map(r=> r.retail).sort((a,b)=> a-b)), JSON.stringify([8500, 9000, 11000]),
+    'each carrying the figure that supplier actually quoted');
+  /* Their OWN packing. Two shops sell the same padlock twelve and
+     twenty-four to the carton, and costing the second against the first's
+     carton is how a bulk rate comes out at nearly double what was
+     agreed. */
+  const meggo = data.prices.find(r=> r.supplierId === data.suppliers[1].id);
+  eq(meggo.packQty, 24, 'costed against the pack size THAT supplier gave, not the form default');
+  eq(data.prices.find(r=> r.supplierId === data.suppliers[0].id).packQty, 12,
+    'while the first keeps their own');
+
+  // Unticking one is the opt-out: it is simply not in the list handed over.
+  resetAll([lead({ status: 'priced', name: 'Padlock 50mm', candidates: [
+    cand({ id: 'C1', supplierName: 'Shafik', tiers: rungs([1, 9000]), unit: 'Pc' }),
+    cand({ id: 'C2', supplierName: 'Meggo',  tiers: rungs([1, 8500]), unit: 'Pc' }),
+  ] })]);
+  await S.graduateSourcingLead('SRC-1', {
+    name: 'Padlock 50mm', unit: 'Pc',
+    candidates: data.sourcingLeads[0].candidates.filter(c=> c.id === 'C1'),
+  });
+  eq(data.suppliers.length, 1, 'an unticked supplier is not created');
+  eq(data.prices.length, 1, 'and gets no price row');
+  eq(data.suppliers[0].name, 'Shafik', 'only the one that was ticked');
+
+  /* --- somebody who has it but never quoted.
+
+     "Kabuye in Nakawa stocks it" is exactly the knowledge the research
+     exists to produce, and it is worth nothing sealed inside a lead. So
+     they become a supplier record. What they do NOT get is a price row:
+     there is no price, and a figure nobody quoted is not one to invent. */
+  resetAll([lead({ status: 'priced', name: 'Hinge 4"', candidates: [
+    cand({ id: 'C1', supplierName: 'Shafik', tiers: rungs([1, 9000]), unit: 'Pc' }),
+    cand({ id: 'C2', supplierName: 'Kabuye', tiers: [], where: 'Nakawa', role: 'importer' }),
+  ] })]);
+  const mixed = await S.graduateSourcingLead('SRC-1', {
+    name: 'Hinge 4"', candidates: data.sourcingLeads[0].candidates, unit: 'Pc',
+  });
+  eq(data.suppliers.length, 2, 'the one who never quoted is still recorded — that is the knowledge');
+  eq(data.prices.length, 1, 'but no price row is invented for them');
+  eq(mixed.suppliersPriced, 1, 'and the count of who was priced says so');
+  const quiet = data.suppliers.find(s=> s.name === 'Kabuye');
+  eq(quiet.location, 'Nakawa', 'with where they were found');
+  t.check(/never quoted a price/.test(quiet.notes || ''),
+    `and a note saying why they have no price (${quiet.notes})`);
+  t.check(/Imports it/.test(quiet.notes || ''),
+    'and which side of the trade they are on — the importer sets the floor, the shop in Kikuubo is who you buy from');
+
+  /* --- a name already on file is that supplier, not a second one.
+
+     The supplier form has a whole warning built to stop a second
+     "Kikuubo Hardware" being created, because once there are two, every
+     list shows both with the prices on one and the invoices on the other.
+     It would be absurd for the funnel to create the duplicate the form
+     refuses -- so it asks the same question with the same function. */
+  resetAll([lead({ status: 'priced', name: 'Nails 4"', candidates: [
+    cand({ id: 'C1', supplierName: 'Kikuubo  Hardware', tiers: rungs([1, 6000]), unit: 'Kg' }),
+  ] })]);
+  data.suppliers = [{ id: 'S001', name: 'Kikuubo Hardware', notes: 'known already' }];
+  await S.graduateSourcingLead('SRC-1', {
+    name: 'Nails 4"', candidates: data.sourcingLeads[0].candidates, unit: 'Kg',
+  });
+  eq(data.suppliers.length, 1, 'a supplier already on file is reused, not duplicated');
+  eq(data.prices[0].supplierId, 'S001', 'and the price row goes to the one that was there');
+  eq(data.suppliers[0].notes, 'known already', 'whose own record is left alone');
+
+  // The same name typed into two candidate rows is one business.
+  resetAll([lead({ status: 'priced', name: 'Nails 4"', candidates: [
+    cand({ id: 'C1', supplierName: 'Meggo', tiers: rungs([1, 6000]), unit: 'Kg', at: '2026-08-01T00:00:00.000Z' }),
+    cand({ id: 'C2', supplierName: 'meggo ', tiers: rungs([1, 5500]), unit: 'Kg', at: '2026-08-09T00:00:00.000Z' }),
+  ] })]);
+  const dup = await S.graduateSourcingLead('SRC-1', {
+    name: 'Nails 4"', candidates: data.sourcingLeads[0].candidates, unit: 'Kg',
+  });
+  eq(data.suppliers.length, 1, 'one supplier, however many rows named them');
+  /* pr_save's rule is one row per product+variant+supplier and it
+     REPLACES on save -- so writing both would have the second silently
+     overwrite the first, and which one survived would come down to array
+     order. Settled here instead, and the later quote is the current one. */
+  eq(data.prices.length, 1, 'and one price row, not two racing to overwrite each other');
+  eq(data.prices[0].retail, 5500, 'the later quote wins — a supplier changing their price replaces it');
+  eq(dup.rowsWritten, 1, 'and the caller is told what was actually written');
+
+  /* And a quote beats no quote, whichever order the two rows are in.
+     Somebody recorded at Looking with no price and found again later
+     with one must not have the priceless row win the merge and take the
+     price down with it. Note the dates are set so the PRICELESS row is
+     the later one -- otherwise "the later wins" would carry this on its
+     own and the rule under test would never be reached. */
+  for(const order of [['quiet', 'priced'], ['priced', 'quiet']]){
+    const rows = {
+      quiet: cand({ id: 'C1', supplierName: 'Meggo', tiers: [], at: '2026-08-09T00:00:00.000Z' }),
+      priced: cand({ id: 'C2', supplierName: 'Meggo', tiers: rungs([1, 5500]), unit: 'Kg', at: '2026-08-01T00:00:00.000Z' }),
+    };
+    resetAll([lead({ status: 'priced', name: 'Nails 4"',
+      candidates: order.map(k=> rows[k]) })]);
+    await S.graduateSourcingLead('SRC-1', {
+      name: 'Nails 4"', candidates: data.sourcingLeads[0].candidates, unit: 'Kg',
+    });
+    eq(data.prices.length, 1, `one row whichever way round the two were recorded (${order[0]} first)`);
+    eq(data.prices[0].retail, 5500, 'and it is the row that actually has a price that survives');
+  }
+
   // A supplier who only sells by the carton has no retail rate, and one
   // is not invented for them.
   resetAll([lead({ status: 'priced',
     candidates: [cand({ tiers: rungs([12,13500]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' })] })]);
-  await S.graduateSourcingLead('SRC-1', { name: 'Bulk only', supplierName: 'Meggo',
-    tiers: rungs([12,13500]), unit: 'Pc', packQty: 12, packUnit: 'Ctn' });
+  await S.graduateSourcingLead('SRC-1', { name: 'Bulk only',
+    candidates: data.sourcingLeads[0].candidates, unit: 'Pc', packQty: 12, packUnit: 'Ctn' });
   eq(data.prices[0].retail, null, 'nobody quoted a single piece, so there is no retail rate to claim');
   eq(data.prices[0].wholesale, 13500, 'only the bulk one they actually gave');
 
   // And graduation still refuses a ladder with nothing on it.
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,900]) })] })]);
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: [] }), null,
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', candidates: [cand({ tiers: [] })] }), null,
     'an empty ladder is no price at all');
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: rungs([1,0]) }), null,
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', candidates: [cand({ tiers: rungs([1,0]) })] }), null,
     'and a rung of zero is not a price either');
   eq(data.products.length, 0, 'neither of which created anything');
 
@@ -1236,7 +1390,8 @@ async function main() {
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,900]) })] })]);
   data.products = [{ id: 'P007', name: 'Something else' }];   // P001..P006 retired
   data.suppliers = [{ id: 'S004', name: 'Someone else' }];
-  await S.graduateSourcingLead('SRC-1', { name: 'New thing', supplierName: 'Shafik', tiers: rungs([1,900]) });
+  await S.graduateSourcingLead('SRC-1', { name: 'New thing',
+    candidates: data.sourcingLeads[0].candidates });
   eq(data.products.length, 2, 'the existing product is untouched');
   eq(data.products[1].id, 'P008',
     'the new product takes the NEXT id, not the lowest free one — retired ids stay retired');
@@ -1250,7 +1405,8 @@ async function main() {
   data.products = [{ id: 'P050', name: 'Already here' }];
   data.suppliers = [{ id: 'S050', name: 'Already here' }];
   forcedId = { P: 'P050', S: 'S050' };
-  await S.graduateSourcingLead('SRC-1', { name: 'New thing', supplierName: 'Brand new', tiers: rungs([1, 900]) });
+  await S.graduateSourcingLead('SRC-1', { name: 'New thing',
+    candidates: [cand({ supplierName: 'Brand new', tiers: rungs([1, 900]) })] });
   forcedId = null;
   eq(new Set(data.products.map((p) => p.id)).size, data.products.length,
     'a re-issued product id is stepped over rather than taken, so no two products share one');
@@ -1258,18 +1414,33 @@ async function main() {
   eq(new Set(data.suppliers.map((s) => s.id)).size, data.suppliers.length,
     'and the same for the supplier it created');
 
-  /* --- a lead with sizes graduates into a VARIABLE product, and its
-     prices are a matrix the Price Registry's bulk form exists to fill.
-     Writing one price row here would put a figure against one variant
-     and leave the other twenty-one blank, which is worse than leaving it
-     unpriced. */
+  /* The allocator repeating itself is the NORMAL case once a graduation
+     creates several suppliers in one loop: the server hands out the same
+     number twice in the same breath, and two of the shop's suppliers end
+     up sharing a record. Guarding only the first would put the second and
+     third on top of each other. */
+  resetAll([lead({ status: 'priced', candidates: [
+    cand({ id: 'C1', supplierName: 'One', tiers: rungs([1, 900]) }),
+    cand({ id: 'C2', supplierName: 'Two', tiers: rungs([1, 950]) }),
+    cand({ id: 'C3', supplierName: 'Three', tiers: rungs([1, 990]) }),
+  ] })]);
+  forcedId = { S: 'S001' };
+  await S.graduateSourcingLead('SRC-1', { name: 'Three shops',
+    candidates: data.sourcingLeads[0].candidates });
+  forcedId = null;
+  eq(data.suppliers.length, 3, 'three suppliers found, three records');
+  eq(new Set(data.suppliers.map(s=> s.id)).size, 3,
+    'each with its own id, though the allocator proposed the same one every time');
+
+  /* --- a lead with sizes graduates into a VARIABLE product, and every
+     size is priced by every supplier who quoted it. */
   resetAll([lead({ status: 'priced', name: 'Runners',
     variantAttrs: [{ name: 'Type', values: ['Soft Close', 'Ordinary'] },
       { name: 'Size', values: ['10"', '12"', '14"'] }],
     candidates: [cand({ tiers: rungs([1, 8000]), unit: 'Pc' })] })]);
   calls.bulk = null;
   const varOut = await S.graduateSourcingLead('SRC-1', {
-    name: 'Runners', supplierName: 'Roto', tiers: rungs([1, 8000]), unit: 'Pc',
+    name: 'Runners', candidates: data.sourcingLeads[0].candidates, unit: 'Pc',
   });
   const madeProduct = data.products[0];
   eq(madeProduct.type, 'variable', 'a lead with sizes makes a variable product');
@@ -1280,21 +1451,60 @@ async function main() {
      the ones the supplier quoted no separate figure for, so the product
      arrives usable instead of arriving empty. */
   eq(data.prices.length, 6, 'every variant gets a price row, not one of six');
-  eq(varOut.variantsPriced, 6, 'and the caller is told how many');
+  eq(varOut.rowsWritten, 6, 'and the caller is told how many');
   eq(JSON.stringify(data.prices.map((r) => r.variantIdx)), JSON.stringify([0, 1, 2, 3, 4, 5]),
     'each against its own variant, in the product\'s own order');
   t.check(data.prices.every((r) => r.supplierId === data.suppliers[0].id),
-    'all from the supplier the comparison chose');
+    'all from the supplier who quoted them');
   t.check(data.prices.every((r) => JSON.stringify(r.tiers) === JSON.stringify(rungs([1, 8000]))),
     'each following the shared ladder, since this supplier quoted no size separately');
   eq(varOut.priceId, null, 'there is no single price id, because there is no single price');
-  eq(varOut.handedOff, true, 'because it was handed to the form built for a matrix');
-  t.check(!!calls.bulk && calls.bulk.productId === madeProduct.id,
-    'which is opened against the product just created');
-  eq(calls.bulk.supplierId, data.suppliers[0].id, 'with the supplier the comparison chose');
-  eq(JSON.stringify(calls.bulk.packing.tiers), JSON.stringify(rungs([1, 8000])),
-    'and the ladder the research found, so nothing is retyped');
   eq(data.sourcingLeads[0].status, 'listed', 'the lead is listed — the product exists');
+  /* The bulk form used to open every time. On a matrix where every size
+     is already priced that handed the admin a form to fill in that was
+     already filled in, and the honest reading of it was "this did not
+     work". It now opens only for what is actually missing. */
+  eq(varOut.handedOff, undefined, 'nothing was handed off — there is nothing left to fill in');
+  eq(calls.bulk, null, 'so the bulk form is not opened over a product that is fully priced');
+
+  // A size nobody priced IS a gap, and that is what the bulk form is for.
+  resetAll([lead({ status: 'priced', name: 'Runners',
+    variantAttrs: [{ name: 'Size', values: ['10"', '12"', '14"'] }],
+    candidates: [cand({ tiers: [], unit: 'Pc',
+      variantOverrides: [rungs([1, 8000]), rungs([1, 8500]), null] })] })]);
+  calls.bulk = null;
+  const gapOut = await S.graduateSourcingLead('SRC-1', {
+    name: 'Runners', candidates: data.sourcingLeads[0].candidates, unit: 'Pc',
+  });
+  eq(data.prices.length, 2, 'only the sizes somebody actually quoted are written');
+  eq(gapOut.unpricedSlots, 1, 'and the one nobody priced is counted');
+  eq(gapOut.handedOff, true, 'which IS handed to the form built for a matrix');
+  t.check(!!calls.bulk && calls.bulk.productId === data.products[0].id,
+    'opened against the product just created');
+  eq(calls.bulk.supplierId, data.suppliers[0].id, 'with the supplier the comparison chose');
+
+  /* A size whose own ladder is all zeros is a size the admin deliberately
+     cleared -- the same reading pr_save gives an emptied variant card --
+     so it is skipped rather than quietly falling back to the shared
+     ladder and being priced at a figure nobody set for it. And because
+     the supplier here DOES have a shared ladder, this is the case that
+     shows the handoff carrying the research across rather than opening
+     an empty form. */
+  resetAll([lead({ status: 'priced', name: 'Runners',
+    variantAttrs: [{ name: 'Size', values: ['10"', '12"', '14"'] }],
+    candidates: [cand({ tiers: rungs([1, 8000]), unit: 'Pc', packQty: 12, packUnit: 'Ctn',
+      variantOverrides: [null, rungs([1, 0]), null] })] })]);
+  calls.bulk = null;
+  const zeroed = await S.graduateSourcingLead('SRC-1', {
+    name: 'Runners', candidates: data.sourcingLeads[0].candidates, unit: 'Pc', packQty: 12, packUnit: 'Ctn',
+  });
+  eq(data.prices.length, 2, 'a zero is not a price, so that size gets no row');
+  eq(JSON.stringify(data.prices.map(r=> r.variantIdx)), JSON.stringify([0, 2]),
+    'and it is the cleared one that is missing, not a neighbour');
+  eq(zeroed.unpricedSlots, 1, 'which counts as a gap');
+  eq(JSON.stringify(calls.bulk.packing.tiers), JSON.stringify(rungs([1, 8000])),
+    'and the form it hands to opens carrying the ladder the research found, so nothing is retyped');
+  eq(calls.bulk.packing.packQty, 12, 'and that supplier\'s own pack size with it');
 
   /* Everything the Price Registry can say about a variant, the funnel can
      say too -- its own ladder, its own packing, the supplier's own code.
@@ -1308,11 +1518,8 @@ async function main() {
       packOverrides: [null, null, { unit: 'Pc', packUnit: 'Ctn', packQty: 6 }],
       skus: [null, null, 'RUN-14-RT'] })] })]);
   await S.graduateSourcingLead('SRC-1', {
-    name: 'Runners', supplierName: 'Roto', tiers: rungs([1, 8000]),
+    name: 'Runners', candidates: data.sourcingLeads[0].candidates,
     unit: 'Pc', packUnit: 'Ctn', packQty: 12,
-    variantOverrides: [null, rungs([1, 9000]), null],
-    packOverrides: [null, null, { unit: 'Pc', packUnit: 'Ctn', packQty: 6 }],
-    skus: [null, null, 'RUN-14-RT'],
   });
   const byV = data.prices.slice().sort((a, b) => a.variantIdx - b.variantIdx);
   eq(byV.length, 3, 'every size is priced');
@@ -1333,16 +1540,30 @@ async function main() {
   // A lead with no sizes still takes the single-price path.
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1, 900]) })] })]);
   calls.bulk = null;
-  await S.graduateSourcingLead('SRC-1', { name: 'One thing', supplierName: 'S', tiers: rungs([1, 900]) });
+  await S.graduateSourcingLead('SRC-1', { name: 'One thing',
+    candidates: data.sourcingLeads[0].candidates });
   eq(data.products[0].type, 'simple', 'an item with no sizes is still a simple product');
   eq(data.prices.length, 1, 'and still gets its one price written here');
+  eq(data.prices[0].variantIdx, null, 'against no variant, because there are none');
   eq(calls.bulk, null, 'with no detour through the bulk form');
+
+  /* The simple row goes through the SAME builder the variant rows do.
+     It used to be assembled separately, and had already drifted: it
+     hardcoded a blank supplier code, so a simple product graduated
+     without what the supplier calls it -- the one thing you need to ring
+     them and order. */
+  resetAll([lead({ status: 'priced', candidates: [
+    cand({ tiers: rungs([1, 900]), unit: 'Pc', supplierSku: 'SHF-PAD-50' })] })]);
+  await S.graduateSourcingLead('SRC-1', { name: 'One thing',
+    candidates: data.sourcingLeads[0].candidates, unit: 'Pc' });
+  eq(data.prices[0].supplierSku, 'SHF-PAD-50',
+    'a simple product carries the supplier\'s own code, exactly as a variant row does');
 
   // --- the gate: phase one did not reach the server
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
   saveLands = false;
   const off = await S.graduateSourcingLead('SRC-1', {
-    name: 'Sofa Legs', supplierName: 'Shafik', tiers: rungs([1,15000]), unit: 'Pc',
+    name: 'Sofa Legs', candidates: data.sourcingLeads[0].candidates, unit: 'Pc',
   });
   eq(calls.saves, 1, 'the second save never happens');
   eq(data.prices.length, 0,
@@ -1353,15 +1574,156 @@ async function main() {
   eq(data.sourcingLeads[0].status, 'listed',
     'the product WAS created, so the lead is honest about being listed');
 
+  /* One supplier missing is ALL prices withheld. A half-written registry
+     is worse than an empty one: nothing on screen says which half made
+     it, so the admin cannot tell what still needs entering. */
+  resetAll([lead({ status: 'priced', candidates: [
+    cand({ id: 'C1', supplierName: 'One', tiers: rungs([1, 900]) }),
+    cand({ id: 'C2', supplierName: 'Two', tiers: rungs([1, 950]) }),
+  ] })]);
+  await S.graduateSourcingLead('SRC-1', { name: 'Two shops',
+    candidates: data.sourcingLeads[0].candidates });
+  const landedBoth = data.prices.length;
+  resetAll([lead({ status: 'priced', candidates: [
+    cand({ id: 'C1', supplierName: 'One', tiers: rungs([1, 900]) }),
+    cand({ id: 'C2', supplierName: 'Two', tiers: rungs([1, 950]) }),
+  ] })]);
+  landOnly = ['S001'];              // the second supplier never reaches the server
+  await S.graduateSourcingLead('SRC-1', { name: 'Two shops',
+    candidates: data.sourcingLeads[0].candidates });
+  landOnly = null;
+  eq(landedBoth, 2, 'with both suppliers landed, both are priced');
+  eq(data.prices.length, 0,
+    'with one of them missing, NEITHER is priced — not the one that made it and half a registry');
+
   // --- graduation refuses what it cannot make sense of
   resetAll([lead({ status: 'priced', candidates: [cand({ tiers: rungs([1,15000]) })] })]);
-  eq(await S.graduateSourcingLead('SRC-1', { name: '  ', supplierName: 'S', tiers: rungs([1,100]) }), null,
+  eq(await S.graduateSourcingLead('SRC-1', { name: '  ', candidates: [cand({ tiers: rungs([1,100]) })] }), null,
     'a product with no name is refused');
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: 'S', tiers: [] }), null,
-    'and one with no price — "Priced" recorded a figure, so there is one to carry');
-  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', supplierName: '  ', tiers: rungs([1,100]) }), null,
-    'and one with nobody to buy it from');
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', candidates: [cand({ tiers: [] })] }), null,
+    'and one where nobody quoted — "Priced" recorded a figure, so there is one to carry');
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X', candidates: [] }), null,
+    'and one with nobody ticked at all');
+  eq(await S.graduateSourcingLead('SRC-1', { name: 'X',
+    candidates: [cand({ supplierName: '  ', supplierId: null, tiers: rungs([1,100]) })] }), null,
+    'and one where the only row does not say who has it');
   eq(data.products.length, 0, 'none of which created anything');
+}
+
+/* ---------- 7b. the Listed lane, at a hundred items ------------------ */
+{
+  /* Listed is the only terminal stage -- nothing ever moves out of it --
+     so it is the one lane that grows without bound. Drawn as cards it was
+     about 120px an item, which at a hundred listed items is a lane twelve
+     thousand pixels long carrying stage arrows and a graduate button that
+     mean nothing on something already listed. */
+  const many = [];
+  for(let i=1; i<=40; i++){
+    many.push(lead({ id: 'SRC-'+i, name: 'Item '+i, status: 'listed',
+      productId: 'P'+String(i).padStart(3,'0'),
+      graduatedAt: new Date(Date.UTC(2026, 0, i)).toISOString() }));
+  }
+  resetAll(many);
+  const all = S.listedLeads(S.sourcingBoardLeads(), '');
+  eq(all.length, 40, 'every listed item is in the lane\'s list');
+  eq(all[0].name, 'Item 40', 'newest first — the reason to look here is nearly always something recent');
+  t.check(LISTED_PAGE > 0 && LISTED_PAGE < 40 && all.slice(0, LISTED_PAGE).length === LISTED_PAGE,
+    `and it is capped at ${LISTED_PAGE}, so the lane is bounded however many are listed`);
+  t.check(/const shown = sourcingListedShowAll \? all : all\.slice\(0, SOURCING_LISTED_PAGE\);/.test(src),
+    'with the cap applied where the rows are drawn, not merely declared');
+
+  /* The search is what answers "have we already done this one?". It is
+     the app's own searchTokens/matchesAllTokens rule -- every token has
+     to appear SOMEWHERE in the haystack, as a substring -- so one search
+     box in this app behaves like the next. That is why "Item 7" is four
+     hits and not one: 17, 27 and 37 all contain a 7, which is what a
+     substring search means and what the supplier bar does too. */
+  eq(S.listedLeads(S.sourcingBoardLeads(), 'Item 40').length, 1, 'searching by name finds the one');
+  eq(S.listedLeads(S.sourcingBoardLeads(), 'Item 7').length, 4,
+    'a substring search matches as a substring — 7, 17, 27 and 37');
+  eq(S.listedLeads(S.sourcingBoardLeads(), 'P012').length, 1, 'and searching by product id finds it too');
+  eq(S.listedLeads(S.sourcingBoardLeads(), 'nothing like this').length, 0, 'and a miss is a miss');
+  eq(S.listedLeads(S.sourcingBoardLeads(), '  ').length, 40, 'whitespace is not a search');
+
+  // Only listed items. The other four lanes are still work, and still cards.
+  resetAll([lead({ id: 'SRC-1', status: 'listed', productId: 'P001', graduatedAt: '2026-01-01T00:00:00.000Z' }),
+    lead({ id: 'SRC-2', status: 'priced' }), lead({ id: 'SRC-3', status: 'asked' })]);
+  eq(S.listedLeads(S.sourcingBoardLeads(), '').length, 1, 'a lane for listed items holds only listed items');
+
+  /* "N suppliers on file" is the knowledge graduation now banks, shown
+     where the board can be scanned. Read from the registry rather than
+     the lead's own candidates, because a row added by hand afterwards is
+     just as true as one the funnel wrote. */
+  resetAll([lead({ id: 'SRC-1', status: 'listed', productId: 'P001' })]);
+  data.prices = [
+    { productId: 'P001', supplierId: 'S001', variantIdx: 0 },
+    { productId: 'P001', supplierId: 'S001', variantIdx: 1 },
+    { productId: 'P001', supplierId: 'S002', variantIdx: 0 },
+    { productId: 'P999', supplierId: 'S003', variantIdx: null },
+  ];
+  eq(S.listedSupplierCount(data.sourcingLeads[0]), 2,
+    'two suppliers, not four rows — the question is who has it, not how many sizes they priced');
+  eq(S.listedSupplierCount(lead({ productId: null })), 0, 'and nothing to count without a product');
+}
+
+/* ---------- 7c. the manifest says what the button will do ------------ */
+{
+  /* The count on each row and the rows actually written are worked out
+     by the same rule, because a manifest that promises four rows and
+     writes three is worse than no manifest: the admin has no reason to
+     go and look. */
+  resetAll([lead({ status: 'priced', name: 'Runners',
+    variantAttrs: [{ name: 'Size', values: ['10"', '12"', '14"'] }],
+    candidates: [
+      cand({ id: 'C1', supplierName: 'Roto', tiers: rungs([1, 8000]), unit: 'Pc' }),
+      cand({ id: 'C2', supplierName: 'Meggo', tiers: [], unit: 'Pc',
+        variantOverrides: [rungs([1, 7800]), null, null] }),
+      cand({ id: 'C3', supplierName: 'Kabuye', tiers: [], unit: 'Pc' }),
+    ] })]);
+  const l = data.sourcingLeads[0];
+  eq(S.candidateRowCount(l.candidates[0], l), 3, 'a shared ladder covers every size');
+  eq(S.candidateRowCount(l.candidates[1], l), 1, 'one size quoted is one row');
+  eq(S.candidateRowCount(l.candidates[2], l), 0, 'and no quote at all is no rows');
+  const promised = l.candidates.reduce((n, c) => n + S.candidateRowCount(c, l), 0);
+  await S.graduateSourcingLead('SRC-1', { name: 'Runners', candidates: l.candidates, unit: 'Pc' });
+  eq(data.prices.length, promised,
+    'and the total the manifest promised is exactly what graduation wrote');
+  eq(data.suppliers.length, 3, 'while all three are still recorded as having it');
+
+  // The same rule on an item with no sizes.
+  resetAll([lead({ status: 'priced', candidates: [
+    cand({ id: 'C1', tiers: rungs([1, 900]) }), cand({ id: 'C2', tiers: [] })] })]);
+  const flat = data.sourcingLeads[0];
+  eq(S.candidateRowCount(flat.candidates[0], flat), 1, 'a quote on a sizeless item is one row');
+  eq(S.candidateRowCount(flat.candidates[1], flat), 0, 'and no quote is none');
+}
+
+/* ---------- 7d. the screen this is all driven from ------------------- */
+{
+  /* Ticks, not a radio. The radio WAS the bug: it made the screen a
+     contest to find the cheapest supplier, when the job is recording
+     everyone who has it. */
+  t.check(/<input type="checkbox" name="sg_cand"/.test(src),
+    'the graduation manifest is checkboxes — every supplier found gets banked');
+  t.check(!/type="radio" name="sg_cand"/.test(src),
+    'and not a radio, which could only ever bank one');
+  t.check(/graduatePickedIds = new Set\(\(l\.candidates\|\|\[\]\)\.map\(c=> c\.id\)\)/.test(src),
+    'everybody starts ticked, priced or not — unticking is the exception');
+  t.check(/candidates: \(l\.candidates\|\|\[\]\)\.filter\(c=> graduatePickedIds\.has\(c\.id\)\)/.test(src),
+    'and the candidates themselves are handed over, not fields copied off one of them');
+
+  /* The board ages itself on a timer. renderSourcing rebuilds the whole
+     board, which destroys the Listed search input along with whatever is
+     half-typed into it and the caret -- so the tick stands down while it
+     has focus. A minute of staleness on a "12d here" label is worth less
+     than a keystroke. */
+  t.check(/const q = document\.getElementById\('sf_listed_q'\);\s*\n\s*if\(q && document\.activeElement === q\) return;\s*\n\s*renderSourcing\(\);/.test(src),
+    'the 60-second tick stands down while the Listed search is being typed into');
+  /* And typing repaints only the rows. Repainting the lane would replace
+     the input mid-word for the same reason. */
+  t.check(/sourcingListedSearch = e\.target\.value;[\s\S]{0,220}?renderSourcingListedBody\(\);/.test(src)
+    && !/sourcingListedSearch = e\.target\.value;[\s\S]{0,220}?renderSourcing\(\);/.test(src),
+    'and typing into it refills the rows only, never the board that contains it');
 }
 
 /* ---------- 8. the two boards do not reach into each other ----------- */
@@ -1371,7 +1733,10 @@ async function main() {
      second, unpinned copy of ~330 lines of CSS. The price of that is
      three document-wide queries, and this is the sweep that keeps them
      paid: a NEW unscoped one anywhere in the file fails here too. */
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Guarded opener: a bare one matches accept="image/*" and then eats
+  // everything to the next real close, which silently blanks the region
+  // these negative checks are meant to be scanning.
+  const code = src.replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '');
   t.check(!/document\.querySelectorAll\('\.sq-check/.test(code),
     'no unscoped .sq-check query — "select all" must not tick the other board\'s cards');
   t.check(/document\.querySelectorAll\('#savedQuotesWrap \.sq-check'\)/.test(code)

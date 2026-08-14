@@ -5844,6 +5844,38 @@
   .sf-pick-name{font-weight:600;}
   .sf-pick-price{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;}
   .sf-pick-new{font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
+  /* The graduation manifest. Every supplier the research found is a row
+     here, so a row has to carry more than a name and a figure: what it
+     will produce, and the ladder it will produce it from. Wrapping, so
+     the ladder drops to its own line rather than squeezing the name. */
+  .sg-pick{flex-wrap:wrap;align-items:baseline;}
+  /* Unticked is shown, not removed -- the admin needs to see what they
+     have just decided not to bank. */
+  .sg-pick.sg-off{opacity:0.55;}
+  /* A sibling of the name rather than nested inside it, so .sf-pick's own
+     gap separates them -- a margin of its own on top of that gap would
+     space it twice. */
+  .sg-best{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;
+    font-weight:700;color:var(--accent);}
+  .sg-yield{flex-basis:100%;font-size:11px;font-weight:600;color:var(--ink-soft);}
+  .sg-ladder{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;}
+  /* The Listed lane. A line each, because this is an archive rather than
+     a queue -- nothing here is waiting to be done, so nothing here needs
+     the stage arrows, the graduate button or the height a card gives. */
+  .sf-listed{display:flex;flex-direction:column;gap:2px;}
+  .sf-listed-search{margin:0 0 6px;}
+  .sf-listed-search input{width:100%;font-size:12px;padding:6px 9px;}
+  .sf-listed-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;width:100%;
+    text-align:left;background:var(--panel);border:1px solid transparent;
+    border-radius:7px;padding:6px 8px;cursor:pointer;font:inherit;color:inherit;}
+  .sf-listed-row:hover{border-color:var(--line);}
+  .sf-listed-row:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .sf-listed-name{font-size:12.5px;font-weight:600;flex:1 1 auto;min-width:0;}
+  .sf-listed-pid{font-size:10.5px;font-weight:700;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;}
+  .sf-listed-sub{flex-basis:100%;font-size:10.5px;color:var(--ink-soft);}
+  .sf-listed-more{width:100%;margin-top:6px;background:none;border:none;font:inherit;
+    font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;padding:6px 0;}
   .sf-dropped{margin-top:18px;}
   .sf-dropped-row{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:9px 10px;
     border-top:1px solid var(--line);font-size:12.5px;}
@@ -8703,6 +8735,14 @@
               <div class="field"><label>Pack unit</label><input type="text" id="sl_c_packunit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin" autocomplete="off"></div>
               <div class="field"><label>Units per pack</label><input type="number" id="sl_c_packqty" min="0" step="any" placeholder="e.g. 25"></div>
             </div>
+            <!-- Hidden once the item has sizes, exactly as the Price
+                 Registry hides its own: a supplier gives each size its own
+                 code, so there it belongs on the variant cards below. -->
+            <div class="field" id="sl_c_sku_field">
+              <label>Supplier's code for it</label>
+              <input id="sl_c_sku" placeholder="optional — e.g. RUN-SC-10" autocomplete="off">
+              <div class="field-hint">What this supplier calls it on their own quotes and invoices. It rides into the price row, so the code is on file before anyone has to ring them about an order.</div>
+            </div>
             <!-- The price is a LADDER, not a figure. A supplier who says
                  "15,000 each, 13,500 by the carton, 12,000 from five" has
                  given three answers, and which one applies depends
@@ -8778,28 +8818,32 @@
       </button>
     </div>
     <div class="modal-body">
-      <p class="preset-hint">This creates the product, then its first price entry. The markups are left at the product form's defaults — set them from the Products tab once you have decided the margin.</p>
+      <p class="preset-hint">This creates the product and banks everything the research found against it. The markups are left at the product form's defaults — set them from the Products tab once you have decided the margin.</p>
       <div class="field"><label>Product name</label><input type="text" id="sg_name" autocomplete="off"></div>
       <div class="form-grid">
         <div class="field"><label>Category</label><input type="text" id="sg_category" list="sg_category_list" autocomplete="off"><datalist id="sg_category_list"></datalist></div>
         <div class="field"><label>Subcategory</label><input type="text" id="sg_subcategory" autocomplete="off"></div>
       </div>
+      <!-- Everybody the research found, ticked. This was a radio list --
+           pick the cheapest, bank them, throw the other four away -- which
+           quietly assumed today's cheapest is permanently cheapest. The
+           ladders are carried across whole rather than retyped, because
+           retyping a price is how a price gets retyped wrong and these
+           were already agreed with the suppliers. -->
       <div class="field">
-        <label>Buying it from</label>
+        <label>What this banks</label>
         <div id="sg_candidates"></div>
+        <p class="preset-hint" id="sg_summary"></p>
       </div>
+      <!-- A floor, not the answer. Each supplier's rows are costed
+           against that supplier's OWN packing, recorded during the
+           research; this fills in only for anyone who recorded none. -->
+      <label class="sf-rung-label">If a supplier never said how it is sold</label>
       <div class="form-grid">
         <div class="field"><label>Sold by the</label><input type="text" id="sg_unit" autocomplete="off"></div>
         <div class="field"><label>Pack of</label><input type="number" id="sg_packqty" min="0" step="any"></div>
         <div class="field"><label>Pack called</label><input type="text" id="sg_packunit" autocomplete="off"></div>
       </div>
-      <!-- The ladder is carried across whole and shown rather than
-           retyped. Retyping a price is how a price gets retyped wrong,
-           and this one was already agreed with the supplier during the
-           research. -->
-      <label class="sf-rung-label">The price ladder this becomes</label>
-      <div id="sg_ladder"></div>
-      <p class="preset-hint" id="sg_price_note"></p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="sg_cancel">Cancel</button>
@@ -28714,19 +28758,19 @@ function catalogueSellAtQty(product, variantIdx, qty, basisKey){
    price are not breaks and are not printed. */
 function catalogueBreaks(product, variantIdx, basisKey){
   const rows = productPriceRows(product.id, variantIdx);
-  const rungs = new Set();
+  const breakQtys = new Set();
   rows.forEach(r=> (Array.isArray(r.tiers) ? r.tiers : []).forEach(t=>{
     const n = Number(t.minQty);
     /* `n > 1` is likewise a statement of intent rather than a filter that
        changes an answer: a rung at one IS the base price, so it can never
        be cheaper than itself and the drop test below discards it. */
-    if(n > 1 && isFinite(n)) rungs.add(n);
+    if(n > 1 && isFinite(n)) breakQtys.add(n);
   }));
   const base = catalogueSellAtQty(product, variantIdx, 1, basisKey);
   if(!base) return [];
   const out = [];
   let last = base.price;
-  [...rungs].sort((a,b)=> a-b).forEach(qty=>{
+  [...breakQtys].sort((a,b)=> a-b).forEach(qty=>{
     const at = catalogueSellAtQty(product, variantIdx, qty, basisKey);
     if(!at || at.price == null) return;
     // Strictly cheaper, or it is not a break worth printing.
@@ -31929,10 +31973,10 @@ function cmpKindAtQty(row, qty){
 function cmpNextBreak(row, qty){
   const now = purchasePriceAtQty(row, qty);
   if(now == null) return null;
-  const rungs = (Array.isArray(row.tiers) ? row.tiers : [])
+  const ahead = (Array.isArray(row.tiers) ? row.tiers : [])
     .filter(t=> t.price != null && Number(t.minQty) > qty)
     .sort((a,b)=> Number(a.minQty) - Number(b.minQty));
-  const better = rungs.find(t=> Number(t.price) < now);
+  const better = ahead.find(t=> Number(t.price) < now);
   if(!better) return null;
   return { atQty: Number(better.minQty), price: Number(better.price),
     more: Number(better.minQty) - qty, saving: now - Number(better.price) };
@@ -39917,6 +39961,110 @@ function undropSourcingLead(id){
   return true;
 }
 
+/* ---------------- Graduation: who we found ----------------
+
+   The point of the research is not to pick a supplier. It is to find out
+   who has the thing -- and the Price Registry is where that knowledge
+   lives, because Compare Prices, quote suggestions and agent pricing can
+   only ever compare who is in it. Banking one supplier and discarding the
+   other four assumes today's cheapest is permanently cheapest, which is
+   not how Kikuubo works: the dear one drops their price next month and
+   the shop has nothing on file to notice with, so the same five suppliers
+   get rung again from scratch.
+
+   So every candidate the research found is resolved to a REAL supplier id
+   before a single price row is written, and the resolution is the same
+   one the supplier form itself uses. */
+function candidateSupplierNote(c, itemName){
+  const role = (c && c.role) === 'importer' ? 'Imports it'
+    : (c && c.role) === 'both' ? 'Imports and sells it' : 'Sells it';
+  return candidateHasPrice(c)
+    ? `Found while sourcing ${itemName}. ${role}.`
+    : `Found while sourcing ${itemName}. ${role}, but never quoted a price.`;
+}
+/* Resolved in three steps, in this order, because each catches something
+   the next one cannot:
+
+     1. the same name typed into two candidate rows is ONE supplier --
+        somebody researching a lead over a week writes "Kikuubo Hardware"
+        twice without meaning two businesses;
+     2. a name that already exists on file is that supplier, via
+        supFindDuplicate -- the supplier form has a whole warning built to
+        stop a second "Kikuubo Hardware" being created, and it would be
+        absurd for the funnel to create the duplicate the form refuses;
+     3. only then a new record, its id guarded by firstFreeEntityId rather
+        than trusted from the allocator. N allocations inside one loop is
+        exactly the collision that once put two people under C113, and
+        here the loop is the normal case rather than a race.
+
+   A candidate with no price still becomes a record. "Kabuye in Nakawa
+   stocks it" is the knowledge the whole exercise is for, and it is worth
+   nothing sealed inside a lead. What it does NOT get is a price row --
+   there is no price, and inventing one is how a quote goes out under
+   cost. */
+async function resolveCandidateSuppliers(cands, itemName){
+  const rows = [];
+  const created = [];
+  const matched = [];
+  for(const c of (cands || [])){
+    if(c && c.supplierId){ rows.push({candidate: c, supplierId: c.supplierId}); continue; }
+    const typed = String((c && c.supplierName) || '').trim();
+    // Nameless and unlinked: there is nobody to record. Kept in the lead.
+    if(!typed){ rows.push({candidate: c, supplierId: null}); continue; }
+    /* One lookup covers both jobs. A within-batch cache was here as well,
+       and it was dead: the record is pushed into data.suppliers the
+       moment it is made, so the next candidate with the same name finds
+       it through this. A second cache would only be a second matching
+       rule to keep in step with the first. */
+    const existing = supFindDuplicate(typed, null);
+    if(existing){
+      // Only counted as "already on file" when it was NOT made moments
+      // ago by this same graduation, which is the second row of a name
+      // typed twice rather than a supplier the shop already knew.
+      if(!created.includes(existing.id)) matched.push(existing.name);
+      rows.push({candidate: c, supplierId: existing.id});
+      continue;
+    }
+    const id = firstFreeEntityId('S', 3, data.suppliers,
+      await issueEntityId('supplier', 'S', 3, data.suppliers));
+    data.suppliers.push({id, name: typed,
+      phone: String((c && c.phone) || '').trim(),
+      location: String((c && c.where) || '').trim(),
+      notes: candidateSupplierNote(c, itemName)});
+    created.push(id);
+    rows.push({candidate: c, supplierId: id});
+  }
+  return {rows, created, matched};
+}
+/* Two candidates that resolve to the same supplier have to become one.
+   pr_save's rule is one price row per product+variant+supplier and it
+   REPLACES on save -- so writing both sets would have the second quietly
+   overwrite the first, and which one survived would depend on array
+   order. Settled here instead, and said out loud in the toast.
+
+   A quote beats no quote; between two quotes the later one is the current
+   one, the same way a supplier changing their price makes the old figure
+   irrelevant rather than a second opinion. */
+function preferredCandidate(a, b){
+  const ap = candidateHasPrice(a && a.candidate), bp = candidateHasPrice(b && b.candidate);
+  if(ap !== bp) return ap ? a : b;
+  const at = Date.parse((a && a.candidate && a.candidate.at) || '') || 0;
+  const bt = Date.parse((b && b.candidate && b.candidate.at) || '') || 0;
+  return bt >= at ? b : a;
+}
+function mergeCandidatesBySupplier(rows){
+  const bySup = new Map();
+  let merged = 0;
+  (rows || []).forEach(r=>{
+    if(!r || !r.supplierId) return;
+    const prev = bySup.get(r.supplierId);
+    if(!prev){ bySup.set(r.supplierId, r); return; }
+    merged++;
+    bySup.set(r.supplierId, preferredCandidate(prev, r));
+  });
+  return {rows: [...bySup.values()], merged};
+}
+
 /* ---------------- Graduation ----------------
    TWO saves, deliberately. saveData() fires every op at once through
    Promise.all, and `prices` carries a real foreign key to `products` --
@@ -39934,14 +40082,23 @@ async function graduateSourcingLead(leadId, form){
   if(!lead) return null;
   const name = String((form && form.name) || lead.name || '').trim();
   if(!name){ toast('The product needs a name'); return null; }
-  /* The whole ladder the research recorded, carried across rather than
+  /* Everybody the admin left ticked, which starts as everybody the
+     research found. Their ladders are carried across whole rather than
      retyped -- retyping a price is how a price gets retyped wrong, and
-     this one was already agreed with the supplier. */
-  const tiers = (Array.isArray(form && form.tiers) ? form.tiers : [])
-    .map(t=>({minQty: Math.max(1, Number(t.minQty)||1), price: Number(t.price)||0}))
-    .filter(t=> t.price > 0)
-    .sort((a,b)=> a.minQty - b.minQty);
-  if(!tiers.length){ toast('The product needs a price — that is what “Priced” recorded'); return null; }
+     these were already agreed with the suppliers. */
+  const picked = (Array.isArray(form && form.candidates) ? form.candidates : []).filter(Boolean);
+  if(!picked.length){ toast('Tick at least one of the suppliers you found'); return null; }
+  if(!picked.some(candidateHasPrice)){
+    toast('None of the ticked suppliers quoted a price — that is what “Priced” recorded'); return null;
+  }
+  /* A floor for whoever recorded no packing of their own, not the answer:
+     every candidate carries its own unit and pack size from the research
+     screen, and that is what its rows are costed against. */
+  const fallbackPack = {
+    unit: String((form && form.unit) || '').trim(),
+    packUnit: String((form && form.packUnit) || '').trim(),
+    packQty: Number(form && form.packQty) || 0,
+  };
 
   /* --- phase one: the entities with no foreign key between them.
 
@@ -39951,17 +40108,9 @@ async function graduateSourcingLead(leadId, form){
      never handed out again -- and they must not be: a purchase invoice
      line, a stock log entry or an old order still pointing at a deleted
      P001 would silently attach itself to whatever took the id next. */
-  let supplierId = (form && form.supplierId) || null;
-  if(!supplierId){
-    const supName = String((form && form.supplierName) || '').trim();
-    if(!supName){ toast('Say who we are buying it from'); return null; }
-    supplierId = firstFreeEntityId('S', 3, data.suppliers,
-      await issueEntityId('supplier', 'S', 3, data.suppliers));
-    data.suppliers.push({id: supplierId, name: supName,
-      phone: String((form && form.supplierPhone)||'').trim(),
-      location: String((form && form.supplierWhere)||'').trim(),
-      notes: `Found while sourcing ${name}`});
-  }
+  const resolved = await resolveCandidateSuppliers(picked, name);
+  const { rows: supplierRows, merged } = mergeCandidatesBySupplier(resolved.rows);
+  if(!supplierRows.length){ toast('None of the ticked rows says who has it'); return null; }
   /* Guarded against what is already on file, not merely issued: two
      graduations in the same breath can be handed the same number, and a
      product sharing an id owns another product's prices and stock. */
@@ -40000,80 +40149,111 @@ async function graduateSourcingLead(leadId, form){
   lead.status = 'listed';
   await saveData();
 
-  // --- phase two: the price row, only if phase one actually landed
-  const landed = lastSynced && lastSynced.products && lastSynced.products[String(productId)]
-              && lastSynced.suppliers && lastSynced.suppliers[String(supplierId)];
-  if(!landed){
+  /* --- phase two: the price rows, only if phase one actually landed.
+
+     The gate covers the product AND every supplier that was created, not
+     one of them. A price row naming a supplier that never reached the
+     server is a dangling foreign key, and a half-written registry is
+     worse than an empty one, because nothing on screen says which half
+     made it. All or nothing, and said in words. */
+  const productLanded = !!(lastSynced && lastSynced.products && lastSynced.products[String(productId)]);
+  const suppliersLanded = resolved.created.every(id=>
+    !!(lastSynced && lastSynced.suppliers && lastSynced.suppliers[String(id)]));
+  if(!(productLanded && suppliersLanded)){
     renderSourcing(); renderSourcingBadge(); triggerProductsRender(); renderPresets();
-    toast(`${name} is now a product — add its price from the Price Registry once the sync catches up.`, 9000);
-    return {productId, priceId: null};
+    toast(`${name} is now a product — add its prices from the Price Registry once the sync catches up.`, 9000);
+    return {productId, priceId: null, rowsWritten: 0, suppliersPriced: 0};
   }
-  const packQty = Number(form && form.packQty) || 0;
-  /* A variable product's prices are a matrix -- twenty-two rows for
-     Runners -- and the Price Registry's bulk form already exists to fill
-     one. Writing a single price row here would put one figure against
-     one variant and leave twenty-one blank, which is a worse lie than
-     leaving it unpriced. So the product is made, and the form built for
-     the job is opened against it with the winning supplier and the
-     ladder the research found already in place. */
-  if(record.type === 'variable'){
-    /* Every size the research priced is written now -- its own figure
-       where the supplier gave one, the shared ladder where they did not.
-       Only what is still blank is left for the bulk form, which opens on
-       top with this supplier already chosen. */
-    const overrides = (form && form.variantOverrides) || [];
-    const packOverrides = (form && form.packOverrides) || [];
-    const skus = (form && form.skus) || [];
-    const packing = {
-      unit: String((form && form.unit) || '').trim(),
-      packUnit: String((form && form.packUnit) || '').trim(),
-      packQty,
+
+  /* One loop, every supplier. The research is not a contest to find the
+     cheapest -- it is the shop learning who has the thing, and the Price
+     Registry is where that knowledge has to live, because Compare Prices
+     and the quote suggestions can only compare who is in it. Banking the
+     cheapest and dropping the rest means the day that supplier puts their
+     price up, the shop has nothing on file to notice with.
+
+     A simple product is one slot with no variant index; a variable one is
+     a slot per variant. Both go through buildVariantPriceRow, because the
+     alternative -- what was here before -- was two assemblies of the same
+     row, and the simple one had already drifted: it hardcoded a blank
+     supplier code, so a simple product lost what the supplier calls it. */
+  const slots = record.variants.length ? record.variants.map((v,i)=> i) : [null];
+  const pricedSlots = new Set();
+  const suppliersWithRows = new Set();
+  let rowsWritten = 0;
+  supplierRows.forEach(({candidate: c, supplierId})=>{
+    const shared = candidateTiers(c);
+    const overrides = candidateVariantOverrides(c);
+    const packOverrides = Array.isArray(c && c.packOverrides) ? c.packOverrides : [];
+    const skus = Array.isArray(c && c.skus) ? c.skus : [];
+    /* THIS supplier's packing, falling back to the form's only where they
+       recorded none. Two shops sell the same nail thirty and fifty to the
+       bag; costing the second against the first's bag size is how a bulk
+       rate comes out at nearly double what was agreed. */
+    const theirs = {
+      unit: String((c && c.unit) || '').trim() || fallbackPack.unit,
+      packUnit: String((c && c.packUnit) || '').trim() || fallbackPack.packUnit,
+      packQty: Number(c && c.packQty) || fallbackPack.packQty,
     };
-    let written = 0;
-    record.variants.forEach((v, i)=>{
-      /* The same two resolutions the Price Registry makes: a variant with
-         its own ladder uses it, everything else follows the shared one --
-         and its own packing where it was given one, so a variant that
-         comes ten to a carton is not costed against somebody else's. */
-      const own = overrides[i];
-      const rows = (Array.isArray(own) && own.length) ? own : tiers;
+    slots.forEach(idx=>{
+      /* The same two resolutions the Price Registry makes: a size with its
+         own ladder uses it, everything else follows this supplier's shared
+         one -- and its own packing where it was given one. */
+      const own = idx == null ? null : overrides[idx];
+      const rows = (Array.isArray(own) && own.length)
+        ? own.filter(t=> Number(t.price) > 0) : shared;
       if(!rows.length) return;
-      // sharedEdited true: this is a brand-new product, so the packing on
-      // the form IS the deliberate answer -- there is nothing on file for
-      // it to be preserving.
-      const pack = effectiveVariantPacking(packOverrides[i], packing, null, true);
+      // sharedEdited true: this product is seconds old, so there is
+      // nothing on file for the packing to be preserving.
+      const pack = effectiveVariantPacking(idx == null ? null : packOverrides[idx], theirs, null, true);
       data.prices.push({
-        ...buildVariantPriceRow({productId, variantIdx: i, supplierId,
-          tiers: rows, pack, sku: skus[i], date: todayISO()}),
+        ...buildVariantPriceRow({productId, variantIdx: idx, supplierId,
+          tiers: rows, pack,
+          sku: idx == null ? (c && c.supplierSku) : skus[idx],
+          date: todayISO()}),
         id: allocRowId('price'), piecesPerUnit: null,
         outOfStock: false, outOfStockSince: null,
       });
-      written++;
+      pricedSlots.add(String(idx));
+      suppliersWithRows.add(supplierId);
+      rowsWritten++;
     });
-    if(written) saveData();
-    renderSourcing(); renderSourcingBadge(); triggerProductsRender(); triggerPricesRender(); renderPresets();
-    openBulkPricingFor(productId, supplierId, {...packing, tiers});
-    toast(`${name} is now a product — ${written} of its ${record.variants.length} variants priced from ${supplierName(supplierId)}. Check them over.`, 9000);
-    return {productId, priceId: null, handedOff: true, variantsPriced: written};
-  }
-  /* Derived, never typed -- the same rule Compare Prices, quote
-     suggestions and agent pricing all read these two flat fields under.
-     Carrying the WHOLE ladder is what lets this produce a real bulk rate:
-     a single rung at qty 1 could only ever leave wholesale null. */
-  const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
-  const priceId = allocRowId('price');
-  data.prices.push({
-    id: priceId, productId, variantIdx: null, supplierId,
-    wholesale, retail, date: todayISO(),
-    unit: String((form && form.unit) || '').trim(),
-    packUnit: String((form && form.packUnit) || '').trim(),
-    packQty, piecesPerUnit: null, priceSource: 'manual', supplierSku: '',
-    tiers, outOfStock: false, outOfStockSince: null,
   });
-  saveData();
+  if(rowsWritten) saveData();
   renderSourcing(); renderSourcingBadge(); triggerProductsRender(); triggerPricesRender(); renderPresets();
-  toast(`${name} is now a product, priced from ${supplierName(supplierId)}.`, 7000);
-  return {productId, priceId};
+
+  /* What was banked, itemised. "Now a product" alone left the admin with
+     no way to tell a fully priced matrix from one supplier's single row,
+     and these are the four things that differ between graduations. */
+  const said = [`${name} is now product ${productId}`,
+    `${rowsWritten} price row${rowsWritten===1?'':'s'} from ${suppliersWithRows.size} supplier${suppliersWithRows.size===1?'':'s'}`];
+  if(resolved.matched.length) said.push(`${resolved.matched.length} matched to suppliers already on file`);
+  if(merged) said.push(`${merged} duplicate row${merged===1?'':'s'} merged`);
+  const contactsOnly = supplierRows.length - suppliersWithRows.size;
+  if(contactsOnly > 0) said.push(`${contactsOnly} kept as a contact only — they never quoted`);
+
+  /* The bulk form now opens only for what is still MISSING. It used to
+     open every time, which on a matrix every supplier had priced handed
+     the admin a form to fill in that was already filled in. */
+  const gaps = slots.filter(idx=> !pricedSlots.has(String(idx)));
+  if(gaps.length && record.variants.length){
+    const best = sourcingDefaultGraduateCandidate(lead, picked.filter(candidateHasPrice));
+    const row = supplierRows.find(r=> r.candidate === best) || supplierRows[0];
+    const c = row.candidate;
+    said.push(`${gaps.length} size${gaps.length===1?'':'s'} nobody priced`);
+    toast(said.join(' · ') + '.', 11000);
+    openBulkPricingFor(productId, row.supplierId, {
+      unit: String((c && c.unit) || fallbackPack.unit || '').trim(),
+      packUnit: String((c && c.packUnit) || fallbackPack.packUnit || '').trim(),
+      packQty: Number(c && c.packQty) || fallbackPack.packQty,
+      tiers: candidateTiers(c),
+    });
+    return {productId, priceId: null, handedOff: true, rowsWritten,
+      suppliersPriced: suppliersWithRows.size, unpricedSlots: gaps.length};
+  }
+  toast(said.join(' · ') + '.', 9000);
+  return {productId, priceId: null, rowsWritten,
+    suppliersPriced: suppliersWithRows.size, unpricedSlots: 0};
 }
 
 /* ---------------- The board ---------------- */
@@ -40105,6 +40285,93 @@ function sourcingDaysHere(l, nowMs){
   if(!l.stageEnteredAt) return '';
   const days = Math.floor(((nowMs==null?Date.now():nowMs) - l.stageEnteredAt) / 86400000);
   return days >= 1 ? `${days}d here` : 'today';
+}
+
+/* ---------------- The Listed lane ----------------
+
+   Listed is the only terminal stage: nothing ever moves out of it, so it
+   is the one lane that grows without bound. Drawn as cards like the other
+   four it was about 120px per item -- a hundred listed items is a lane
+   twelve thousand pixels long, and each card carried stage arrows and a
+   graduate button that mean nothing on something already listed.
+
+   So it is a list, and it answers the two questions actually asked of it:
+   "have we already done this one" -- hence the search -- and "who did we
+   find" -- hence the supplier count, which is the knowledge graduation
+   now banks, shown on the board. Browsing all hundred is what the
+   Products tab is for. */
+const SOURCING_LISTED_PAGE = 15;
+let sourcingListedSearch = '';
+let sourcingListedShowAll = false;
+/* Distinct suppliers with a price on file for the product this became --
+   read from data.prices rather than the lead's candidates, because the
+   registry is what the rest of the app actually buys from, and a row
+   added by hand afterwards counts just as much as one the funnel wrote. */
+function listedSupplierCount(l){
+  if(!l || !l.productId) return 0;
+  const seen = new Set();
+  (data.prices||[]).forEach(p=>{
+    if(p && p.productId === l.productId && p.supplierId) seen.add(p.supplierId);
+  });
+  return seen.size;
+}
+function listedAge(l, nowMs){
+  const at = Date.parse(l && l.graduatedAt) || Number(l && l.stageEnteredAt) || 0;
+  if(!at) return '';
+  const days = Math.floor(((nowMs==null?Date.now():nowMs) - at) / 86400000);
+  return days >= 1 ? `${days}d ago` : 'today';
+}
+/* Newest first: the reason to look at this lane is almost always
+   something added recently, and the search is there for everything else.
+   The same searchTokens/matchesAllTokens rule the supplier and customer
+   bars use, so one search box in this app behaves like the next. */
+function listedLeads(leads, query){
+  const tokens = searchTokens(query);
+  return leads
+    .filter(l=> l.status === 'listed')
+    .filter(l=> !tokens.length
+      || matchesAllTokens(`${l.name||''} ${l.productId||''}`.toLowerCase(), tokens))
+    .sort((a,b)=> (Date.parse(b.graduatedAt)||b.stageEnteredAt||0)
+                - (Date.parse(a.graduatedAt)||a.stageEnteredAt||0));
+}
+function listedRowHTML(l, nowMs){
+  const n = listedSupplierCount(l);
+  const age = listedAge(l, nowMs);
+  return `<button type="button" class="sf-listed-row" data-lead-open="${esc(l.id)}">
+    <span class="sf-listed-name">${esc(l.name)}</span>
+    ${l.productId ? `<span class="sf-listed-pid">${esc(l.productId)}</span>` : ''}
+    <span class="sf-listed-sub">${n
+      ? `${n} supplier${n===1?'':'s'} on file`
+      : 'no prices on file'}${age ? ` · ${esc(age)}` : ''}</span>
+  </button>`;
+}
+/* Body and footer only. The search input is deliberately OUTSIDE what
+   this rewrites: typing into it calls this on every keystroke, and an
+   input that is replaced mid-word loses its text, its focus and the
+   caret. */
+function renderSourcingListedBody(){
+  const body = document.getElementById('sf_listed_body');
+  const foot = document.getElementById('sf_listed_foot');
+  if(!body || !foot) return;
+  const now = Date.now();
+  const all = listedLeads(sourcingBoardLeads(), sourcingListedSearch);
+  const shown = sourcingListedShowAll ? all : all.slice(0, SOURCING_LISTED_PAGE);
+  body.innerHTML = shown.length
+    ? shown.map(l=> listedRowHTML(l, now)).join('')
+    : `<div class="sq-col-empty">${sourcingListedSearch.trim()
+        ? 'Nothing listed matches that' : 'Nothing here'}</div>`;
+  foot.innerHTML = all.length > shown.length
+    ? `<button type="button" class="sf-listed-more" id="sf_listed_more">Showing ${shown.length} of ${all.length} — show all</button>`
+    : (sourcingListedShowAll && all.length > SOURCING_LISTED_PAGE
+      ? `<button type="button" class="sf-listed-more" id="sf_listed_more">Showing all ${all.length} — show fewer</button>`
+      : '');
+}
+function listedLaneHTML(){
+  return `<div class="sf-listed">
+    <div class="search-bar sf-listed-search"><input type="search" id="sf_listed_q" placeholder="Search listed" autocomplete="off" value="${esc(sourcingListedSearch)}"></div>
+    <div id="sf_listed_body"></div>
+    <div id="sf_listed_foot"></div>
+  </div>`;
 }
 
 function renderSourcing(){
@@ -40197,7 +40464,9 @@ function renderSourcing(){
           <span class="sq-col-count">${group.length}</span>
         </div>
         <div class="sq-col-body">
-          ${group.length===0 ? '<div class="sq-col-empty">Nothing here</div>' : group.map(cardHTML).join('')}
+          ${status === 'listed'
+            ? listedLaneHTML()
+            : (group.length===0 ? '<div class="sq-col-empty">Nothing here</div>' : group.map(cardHTML).join(''))}
         </div>
       </div>`;
   }).join('')}</div>`;
@@ -40219,6 +40488,9 @@ function renderSourcing(){
 
   if(railMount) railMount.innerHTML = pillsHtml;
   wrap.innerHTML = boardHtml + droppedHtml;
+  // The lane's shell is in the board HTML; its rows are filled in
+  // separately because typing in the search refills only them.
+  renderSourcingListedBody();
   const boardEl = wrap.querySelector('.sq-board');
   const railSteps = railMount ? [...railMount.querySelectorAll('.sq-stepper-step')] : [];
   wireSourcingBoard(boardEl, railSteps);
@@ -40444,7 +40716,7 @@ function renderSourcingLeadBody(l){
   document.getElementById('sl_add_slot').appendChild(document.getElementById('sl_cand_form'));
   document.getElementById('sl_candidates').innerHTML = cands.length ? `
     <div class="sf-list">${cands.map(c=>{
-      const rungs = candidateTiers(c);
+      const tiers = candidateTiers(c);
       return `
       <div class="sf-list-row sf-cand${editingCandidateId===c.id ? ' open' : ''}" data-cand-row="${esc(c.id)}">
         <span class="sf-list-main">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
@@ -40455,8 +40727,8 @@ function renderSourcingLeadBody(l){
           <button type="button" class="pc-icon-btn" data-cand-edit="${esc(c.id)}" aria-expanded="${editingCandidateId===c.id ? 'true' : 'false'}" title="${editingCandidateId===c.id ? 'Close this one' : 'Change what we know about them'}">${ICON_EDIT}</button>
           <button type="button" class="pc-icon-btn danger" data-cand-del="${esc(c.id)}" title="Remove">${ICON_TRASH}</button>
         </span>
-        <div class="sf-rungs">${rungs.length
-          ? rungs.map(t=> `<span class="sf-rung">${esc(sourcingTierLabel(t, c))}</span>`).join('')
+        <div class="sf-rungs">${tiers.length
+          ? tiers.map(t=> `<span class="sf-rung">${esc(sourcingTierLabel(t, c))}</span>`).join('')
           /* Somebody found and not yet priced is the whole point of the
              Source Found step, so the row itself offers the way to price
              them rather than leaving it to be discovered -- but not while
@@ -40816,77 +41088,106 @@ function sourcingHeadFactsHTML(l){
 
 /* ---------------- Graduation form ---------------- */
 let graduatingLeadId = null;
+/* Which one is cheapest at the demanded quantity. It no longer decides
+   who gets banked -- everybody does -- but it still prefills the fallback
+   packing and is who the bulk form opens against if any size ends up
+   unpriced, so the label is kept honest. */
 let graduateCandidateId = null;
+/* Ticked. Everybody starts in it, priced or not: the default is to bank
+   the whole research, and unticking is the exception. */
+let graduatePickedIds = new Set();
 function openSourcingGraduate(leadId){
   const l = sourcingLeadById(leadId);
   if(!l) return;
   const priced = (l.candidates||[]).filter(candidateHasPrice);
   if(!priced.length){ toast('Add a price first — there is nothing to buy it at.'); openSourcingLead(leadId); return; }
   graduatingLeadId = leadId;
-  /* Pre-picked on what they would charge for the quantity people have
+  /* Marked on what they would charge for the quantity people have
      actually asked for, not on their by-the-piece rate -- the same
-     question the research screen answers, so the two cannot recommend
-     different suppliers. */
-  const demand = leadDemandQty(l);
+     question the research screen answers, so the two cannot name
+     different suppliers as cheapest. */
   graduateCandidateId = sourcingDefaultGraduateCandidate(l, priced).id;
+  graduatePickedIds = new Set((l.candidates||[]).map(c=> c.id));
   document.getElementById('sg_name').value = l.name || '';
   document.getElementById('sg_category').value = '';
   document.getElementById('sg_subcategory').value = '';
   document.getElementById('sg_category_list').innerHTML =
     (data.presetCategories||[]).map(c=> `<option value="${esc(c.name)}"></option>`).join('');
-  renderGraduateCandidates(priced, demand);
   fillGraduateFromCandidate(priced.find(c=> c.id===graduateCandidateId));
+  renderGraduateCandidates();
   openModal('sourcingGraduateModal');
 }
-function renderGraduateCandidates(priced, demand){
-  const qty = demand > 0 ? demand : 1;
-  document.getElementById('sg_candidates').innerHTML = priced.map(c=>{
+/* How many price rows this candidate will actually produce, worked out
+   with the SAME resolution graduateSourcingLead writes them under -- a
+   size with its own ladder uses it, everything else follows the shared
+   one. Counted here rather than described, so the number on screen and
+   the number written cannot disagree. */
+function candidateRowCount(c, l){
+  const combos = leadVariantCombos(l);
+  const shared = candidateTiers(c);
+  if(!combos.length) return shared.length ? 1 : 0;
+  const overrides = candidateVariantOverrides(c);
+  return combos.reduce((n, _, i)=>{
+    const own = overrides[i];
+    const rows = (Array.isArray(own) && own.length) ? own.filter(t=> Number(t.price) > 0) : shared;
+    return n + (rows.length ? 1 : 0);
+  }, 0);
+}
+function renderGraduateCandidates(){
+  const l = sourcingLeadById(graduatingLeadId);
+  if(!l) return;
+  const cands = l.candidates || [];
+  const qty = Math.max(1, leadDemandQty(l) || 1);
+  document.getElementById('sg_candidates').innerHTML = cands.map(c=>{
+    const on = graduatePickedIds.has(c.id);
+    const who = c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody');
+    const rows = candidateRowCount(c, l);
     const at = candidateUnitPriceAt(c, qty);
     const low = candidateLowestTier(c);
+    const unit = String(c.unit||'').trim();
+    const tiers = candidateTiers(c);
     return `
-    <label class="sf-pick">
-      <input type="radio" name="sg_cand" value="${esc(c.id)}"${c.id===graduateCandidateId?' checked':''}>
-      <span class="sf-pick-name">${esc(c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'Somebody'))}</span>
+    <label class="sf-pick sg-pick${on?'':' sg-off'}">
+      <input type="checkbox" name="sg_cand" value="${esc(c.id)}"${on?' checked':''}>
+      <span class="sf-pick-name">${esc(who)}</span>
+      ${c.id===graduateCandidateId
+        ? `<span class="sg-best" title="Cheapest at the quantity people asked for">cheapest at ${qty}</span>` : ''}
       <span class="sf-pick-price">${at != null
-        ? `${fmtUGX(at)}${c.unit?'/'+esc(c.unit):''}<span class="sf-pick-at"> at ${qty}</span>`
-        : `<span class="sf-pick-at">starts at ${low ? low.minQty : '?'}${c.unit?' '+esc(c.unit):''}</span>`}</span>
+        ? `${fmtUGX(at)}${unit?'/'+esc(unit):''}<span class="sf-pick-at"> at ${qty}</span>`
+        : (low
+          ? `<span class="sf-pick-at">starts at ${low.minQty}${unit?' '+esc(unit):''}</span>`
+          : '<span class="sf-pick-at">no price</span>')}</span>
       ${c.supplierId ? '' : '<span class="sf-pick-new">new supplier</span>'}
+      <span class="sg-yield">${rows
+        ? `${rows} price row${rows===1?'':'s'}`
+        : 'contact only — they never quoted'}</span>
+      ${tiers.length ? `<span class="sg-ladder">${tiers.map(t=>
+        `<span class="preset-chip pr-tier-chip">${esc(sourcingTierLabel(t, c))}</span>`).join('')}</span>` : ''}
     </label>`;
   }).join('');
+  renderGraduateSummary();
+}
+/* The total, because a per-row count answers "what does this supplier
+   give me" and the admin is about to press a button that does all of
+   them at once. */
+function renderGraduateSummary(){
+  const l = sourcingLeadById(graduatingLeadId);
+  const el = document.getElementById('sg_summary');
+  if(!l || !el) return;
+  const picked = (l.candidates||[]).filter(c=> graduatePickedIds.has(c.id));
+  const rows = picked.reduce((n,c)=> n + candidateRowCount(c, l), 0);
+  const withRows = picked.filter(c=> candidateRowCount(c, l) > 0).length;
+  const contacts = picked.length - withRows;
+  if(!picked.length){ el.textContent = 'Nothing ticked — nothing would be banked.'; return; }
+  const bits = [`${rows} price row${rows===1?'':'s'} across ${withRows} supplier${withRows===1?'':'s'}`];
+  if(contacts) bits.push(`${contacts} kept as a contact only`);
+  el.textContent = bits.join(' · ') + '.';
 }
 function fillGraduateFromCandidate(c){
   if(!c) return;
   document.getElementById('sg_unit').value = c.unit || '';
   document.getElementById('sg_packqty').value = Number(c.packQty) || '';
   document.getElementById('sg_packunit').value = c.packUnit || '';
-  renderGraduateLadder();
-}
-/* What the ladder will actually become once it is a price row, worked out
-   with the registry's own deriveWholesaleRetail rather than described --
-   so what this screen promises and what the Price Registry then shows are
-   the same two numbers. Re-run whenever the pack size changes, because
-   the pack size is what decides which rungs count as bulk. */
-function renderGraduateLadder(){
-  const l = sourcingLeadById(graduatingLeadId);
-  const c = l && (l.candidates||[]).find(x=> x.id===graduateCandidateId);
-  const wrap = document.getElementById('sg_ladder');
-  const note = document.getElementById('sg_price_note');
-  if(!c){ wrap.innerHTML = ''; note.textContent = ''; return; }
-  const packQty = Number(document.getElementById('sg_packqty').value) || 0;
-  const packUnit = document.getElementById('sg_packunit').value.trim();
-  const unit = document.getElementById('sg_unit').value.trim() || 'pcs';
-  const tiers = candidateTiers(c);
-  wrap.innerHTML = `<div class="preset-chip-flow">${tiers.map(t=>
-    `<span class="preset-chip">${esc(sourcingTierLabel(t, {unit, packQty, packUnit}))}</span>`).join('')}</div>`;
-  const { wholesale, retail } = deriveWholesaleRetail(tiers, packQty);
-  const parts = [];
-  parts.push(retail != null ? `Retail rate ${fmtUGX(retail)}/${unit}` : 'No retail rate — every tier needs a full pack');
-  parts.push(wholesale != null
-    ? `bulk rate ${fmtUGX(wholesale)}/${unit} from ${packQty}+`
-    : (packQty > 0
-      ? `no bulk rate — nobody has quoted a price at ${packQty}+, and a figure nobody has quoted is not one to invent`
-      : 'no bulk rate — set a pack size and record what a full pack costs'));
-  note.textContent = parts.join(' · ') + '.';
 }
 
 /* ---------------- Wiring ---------------- */
@@ -40895,7 +41196,23 @@ document.getElementById('src_show_dropped').addEventListener('change', (e)=>{
   sourcingShowDropped = e.target.checked;
   renderSourcing();
 });
+/* Delegated on the tab, which outlives every rebuild -- the lane's search
+   box is replaced whenever the board is redrawn, so a listener bound to
+   the input itself would be bound to a discarded element. */
+document.getElementById('tab-sourcing').addEventListener('input', (e)=>{
+  if(e.target.id !== 'sf_listed_q') return;
+  sourcingListedSearch = e.target.value;
+  // A search that has been narrowed is a new question; the previous
+  // answer's "show all" should not still be in force.
+  sourcingListedShowAll = false;
+  renderSourcingListedBody();
+});
 document.getElementById('tab-sourcing').addEventListener('click', (e)=>{
+  if(e.target.closest('#sf_listed_more')){
+    sourcingListedShowAll = !sourcingListedShowAll;
+    renderSourcingListedBody();
+    return;
+  }
   const open = e.target.closest('[data-lead-open]');
   if(open){ openSourcingLead(open.dataset.leadOpen); return; }
   const grad = e.target.closest('[data-lead-graduate]');
@@ -41065,6 +41382,9 @@ function slCandBulkSurface(){
 function renderSlCandBulk(){
   const surface = slCandBulkSurface();
   document.getElementById('sl_c_bulk_label').style.display = surface.variants.length ? '' : 'none';
+  // The Registry's own rule: with sizes on the item the code belongs on
+  // each card, because a supplier calls each size something different.
+  document.getElementById('sl_c_sku_field').style.display = surface.variants.length ? 'none' : '';
   renderPrBulkVariantRows(surface);
 }
 /* Which candidate the form is CHANGING, or null when it is adding a new
@@ -41165,7 +41485,7 @@ function slCandFormClear(){
   slCandTiers = [];
   slCandOverrides = []; slCandPackOverrides = []; slCandSkus = [];
   renderSlCandBulk();
-  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_tier_qty','sl_c_tier_price']
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_sku','sl_c_tier_qty','sl_c_tier_price']
     .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
   slSetRole('supplier');
   renderSlCandTiers();
@@ -41205,6 +41525,7 @@ function slCandFormLoad(c){
   document.getElementById('sl_c_unit').value = c.unit || '';
   document.getElementById('sl_c_packqty').value = Number(c.packQty) || '';
   document.getElementById('sl_c_packunit').value = c.packUnit || '';
+  document.getElementById('sl_c_sku').value = c.supplierSku || '';
   slCandTiers = (Array.isArray(c.tiers)? c.tiers : candidateTiers(c)).map(t=>({...t}));
   slCandOverrides = (c.variantOverrides||[]).map(o=> o ? o.map(t=>({...t})) : null);
   slCandPackOverrides = (c.packOverrides||[]).map(o=> o ? {...o} : null);
@@ -41297,7 +41618,11 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   if(!l) return;
   const who = document.getElementById('sl_c_name').value.trim();
   if(!who){ toast('Who has it?'); return; }
-  const existing = (data.suppliers||[]).find(s=> (s.name||'').trim().toLowerCase() === who.toLowerCase());
+  /* The supplier form's own matching rule, not a second one spelled
+     slightly differently -- this used to compare lowercased names
+     directly, which called "Kikuubo  Hardware" a different business from
+     "Kikuubo Hardware" while the supplier form said they were the same. */
+  const existing = supFindDuplicate(who, null);
   // Joins the shop's places the way a location typed on a customer does,
   // so the second person to type it gets the first person's spelling.
   const where = rememberLocation(document.getElementById('sl_c_where').value);
@@ -41314,6 +41639,7 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     variantOverrides: slCandOverrides.map(o=> o ? o.map(t=>({...t})) : null),
     packOverrides: slCandPackOverrides.map(o=> o ? {...o} : null),
     skus: slCandSkus.slice(),
+    supplierSku: document.getElementById('sl_c_sku').value.trim(),
     unit: document.getElementById('sl_c_unit').value.trim(),
     packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
     packUnit: document.getElementById('sl_c_packunit').value.trim(),
@@ -41398,19 +41724,16 @@ document.getElementById('sourcingGraduateModalClose').addEventListener('click', 
 document.getElementById('sg_cancel').addEventListener('click', ()=> closeModal('sourcingGraduateModal'));
 document.getElementById('sg_candidates').addEventListener('change', (e)=>{
   if(e.target.name !== 'sg_cand') return;
-  graduateCandidateId = e.target.value;
-  const l = sourcingLeadById(graduatingLeadId);
-  if(l) fillGraduateFromCandidate((l.candidates||[]).find(c=> c.id===graduateCandidateId));
+  /* The set is the truth and the row is repainted from it, rather than
+     the checkbox being the truth -- the row also carries the count and
+     the greyed-out state, and those have to move with the tick. */
+  if(e.target.checked) graduatePickedIds.add(e.target.value);
+  else graduatePickedIds.delete(e.target.value);
+  renderGraduateCandidates();
 });
-// The pack size decides which rungs count as bulk, so the two derived
-// rates have to be re-worked the moment it changes -- not left showing
-// what they were before.
-['sg_packqty','sg_packunit','sg_unit'].forEach(k=>
-  document.getElementById(k).addEventListener('input', renderGraduateLadder));
 document.getElementById('sg_confirm').addEventListener('click', async ()=>{
   const l = sourcingLeadById(graduatingLeadId);
   if(!l) return;
-  const c = (l.candidates||[]).find(x=> x.id===graduateCandidateId) || {};
   const btn = document.getElementById('sg_confirm');
   btn.disabled = true;
   try{
@@ -41418,14 +41741,11 @@ document.getElementById('sg_confirm').addEventListener('click', async ()=>{
       name: document.getElementById('sg_name').value.trim(),
       category: document.getElementById('sg_category').value.trim(),
       subcategory: document.getElementById('sg_subcategory').value.trim(),
-      supplierId: c.supplierId || null,
-      supplierName: c.supplierName || '',
-      supplierPhone: c.phone || '',
-      supplierWhere: c.where || '',
-      tiers: candidateTiers(c),
-      variantOverrides: c.variantOverrides || [],
-      packOverrides: c.packOverrides || [],
-      skus: c.skus || [],
+      /* The candidates themselves, not fields copied off one of them.
+         Each already carries its own ladder, packing, per-size overrides
+         and codes, and copying those out here would be a second place for
+         them to be copied out wrong. */
+      candidates: (l.candidates||[]).filter(c=> graduatePickedIds.has(c.id)),
       unit: document.getElementById('sg_unit').value.trim(),
       packQty: document.getElementById('sg_packqty').value,
       packUnit: document.getElementById('sg_packunit').value.trim(),
@@ -41437,7 +41757,14 @@ document.getElementById('sg_confirm').addEventListener('click', async ()=>{
    board's do -- and only while this is the tab actually being looked at. */
 setInterval(()=>{
   const tab = document.getElementById('tab-sourcing');
-  if(tab && tab.style.display !== 'none') renderSourcing();
+  if(!tab || tab.style.display === 'none') return;
+  /* Not while somebody is typing into the Listed search. renderSourcing
+     rebuilds the whole board, which destroys that input along with what
+     has been typed into it and the caret -- and a minute of ageing on a
+     "12d here" label is not worth eating a keystroke for. */
+  const q = document.getElementById('sf_listed_q');
+  if(q && document.activeElement === q) return;
+  renderSourcing();
 }, 60000);
 
 /* ================= FASTENER GUIDE =================
