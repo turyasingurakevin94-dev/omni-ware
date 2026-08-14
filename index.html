@@ -41132,7 +41132,7 @@ function openSourcingGraduate(leadId){
   document.getElementById('sg_subcategory').value = '';
   document.getElementById('sg_category_list').innerHTML =
     (data.presetCategories||[]).map(c=> `<option value="${esc(c.name)}"></option>`).join('');
-  fillGraduateFromCandidate(priced.find(c=> c.id===graduateCandidateId));
+  fillGraduateFromCandidate(graduatePackingSeed(l, graduateCandidateId));
   renderGraduateCandidates();
   openModal('sourcingGraduateModal');
 }
@@ -41201,6 +41201,31 @@ function renderGraduateSummary(){
   const bits = [`${rows} price row${rows===1?'':'s'} across ${withRows} supplier${withRows===1?'':'s'}`];
   if(contacts) bits.push(`${contacts} kept as a contact only`);
   el.textContent = bits.join(' · ') + '.';
+}
+/* Which candidate's packing prefills the fallback fields.
+
+   The cheapest one, when they recorded a packing -- that is the row the
+   admin is most likely thinking in. But a shop can quote a figure without
+   ever saying per what, and the cheapest shop doing that used to leave
+   the fallback blank even when another candidate on the same lead had
+   said "Bundle" plainly. Every supplier with no packing of their own then
+   got a price row with no unit on it: the price and the ladder right, and
+   nothing saying what the money buys. Observed on the chains lead --
+   sjs's row carried a blank unit while Stuart Star's said Bundle.
+
+   Taken as a WHOLE triple, never field by field. A unit borrowed from one
+   supplier beside a pack size borrowed from another describes a packing
+   neither of them quoted, which is worse than the blank it replaces.
+
+   Unpriced candidates count: somebody who told you it comes in bundles
+   and never gave a price still told you how it is sold. */
+function graduatePackingSeed(l, preferredId){
+  const cands = (l && l.candidates) || [];
+  const said = (c)=> !!String((c && c.unit) || '').trim();
+  return cands.find(c=> c.id === preferredId && said(c))
+    || cands.find(said)
+    || cands.find(c=> c.id === preferredId)
+    || cands[0] || null;
 }
 function fillGraduateFromCandidate(c){
   if(!c) return;

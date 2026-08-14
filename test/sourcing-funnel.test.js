@@ -184,6 +184,7 @@ const sources = [
   extractFunction(src, 'preferredCandidate', 'index.html'),
   extractFunction(src, 'mergeCandidatesBySupplier', 'index.html'),
   extractFunction(src, 'candidateRowCount', 'index.html'),
+  extractFunction(src, 'graduatePackingSeed', 'index.html'),
   extractFunction(src, 'graduateSourcingLead', 'index.html'),
   extractFunction(src, 'searchTokens', 'index.html'),
   extractFunction(src, 'matchesAllTokens', 'index.html'),
@@ -211,6 +212,7 @@ const S = compileScope(sources, env, [
   'supNormalisedName', 'supFindDuplicate', 'candidateSupplierNote',
   'resolveCandidateSuppliers', 'preferredCandidate', 'mergeCandidatesBySupplier',
   'candidateRowCount', 'listedSupplierCount', 'listedAge', 'listedLeads',
+  'graduatePackingSeed',
 ]);
 // compileScope only hands back functions, so the cap is read from source.
 // Reading it rather than restating it means the claim below is about
@@ -1727,6 +1729,59 @@ async function main() {
   const flat = data.sourcingLeads[0];
   eq(S.candidateRowCount(flat.candidates[0], flat), 1, 'a quote on a sizeless item is one row');
   eq(S.candidateRowCount(flat.candidates[1], flat), 0, 'and no quote is none');
+
+  /* --- the fallback packing has to come from somebody who actually said
+     how it is sold.
+
+     A shop can quote a figure without ever saying per what. When that
+     shop was the cheapest, the fallback prefilled blank from them and
+     every supplier with no packing of their own got a price row with no
+     unit -- the price right and nothing saying what the money buys. Seen
+     on the real chains lead: sjs's row blank, Stuart Star's "Bundle". */
+  const seedLead = lead({ candidates: [
+    cand({ id: 'CHEAP', supplierName: 'sjs', unit: '', packUnit: '', packQty: 0, tiers: rungs([1, 50000]) }),
+    cand({ id: 'SAID', supplierName: 'Stuart Star', unit: 'Bundle', packUnit: 'Ctn', packQty: 6, tiers: rungs([1, 65000]) }),
+  ]});
+  eq(S.graduatePackingSeed(seedLead, 'CHEAP').id, 'SAID',
+    'the cheapest said nothing about packing, so the fallback comes from the one who did');
+  eq(S.graduatePackingSeed(seedLead, 'SAID').id, 'SAID',
+    'and when the cheapest DID say, it is theirs — the nearest answer wins');
+
+  /* Which needs BOTH of them to have said, and the cheapest to be second
+     in the list. With only one candidate carrying a unit, "prefer the
+     cheapest" and "take the first who said" return the same row and the
+     rule under test is never reached -- which is exactly how the first
+     version of this check passed a mutant that dropped the preference. */
+  const bothSaid = lead({ candidates: [
+    cand({ id: 'FIRST', unit: 'Ctn', packUnit: 'Bag', packQty: 12, tiers: rungs([1, 70000]) }),
+    cand({ id: 'CHEAPEST', unit: 'Bundle', packUnit: 'Ctn', packQty: 6, tiers: rungs([1, 50000]) }),
+  ]});
+  eq(S.graduatePackingSeed(bothSaid, 'CHEAPEST').id, 'CHEAPEST',
+    'with two of them having said, it is the cheapest one\'s packing, not whoever was recorded first');
+
+  /* Whole triple, never field by field. A unit borrowed from one supplier
+     beside a pack size borrowed from another describes a packing neither
+     of them quoted, which is worse than the blank it replaces. */
+  const seed = S.graduatePackingSeed(seedLead, 'CHEAP');
+  eq(`${seed.unit}/${seed.packUnit}/${seed.packQty}`, 'Bundle/Ctn/6',
+    'and it is one supplier\'s whole packing, not three fields gathered from wherever each was found');
+
+  // Somebody who never quoted still told you how it is sold.
+  const quietSaid = lead({ candidates: [
+    cand({ id: 'CHEAP', unit: '', tiers: rungs([1, 50000]) }),
+    cand({ id: 'QUIET', unit: 'Bundle', packUnit: 'Ctn', packQty: 6, tiers: [] }),
+  ]});
+  eq(S.graduatePackingSeed(quietSaid, 'CHEAP').id, 'QUIET',
+    'a supplier who named the unit but never quoted is still who to take it from');
+
+  // Nobody said anything: there is nothing to seed with, and it does not
+  // invent one — the field is left for the admin, which is what it is for.
+  const nobody = lead({ candidates: [cand({ id: 'A', unit: '' }), cand({ id: 'B', unit: '' })] });
+  eq(S.graduatePackingSeed(nobody, 'A').id, 'A', 'with nobody having said, the preferred one is still returned');
+  eq(S.graduatePackingSeed(lead({ candidates: [] }), 'A'), null, 'and no candidates at all seeds nothing');
+
+  t.check(/fillGraduateFromCandidate\(graduatePackingSeed\(l, graduateCandidateId\)\)/.test(src),
+    'and the form is prefilled through it, not from the cheapest candidate directly');
 }
 
 /* ---------- 7d. the screen this is all driven from ------------------- */
