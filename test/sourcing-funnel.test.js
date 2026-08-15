@@ -2023,6 +2023,46 @@ async function main() {
     'and typing into it refills the rows only, never the board that contains it');
 }
 
+/* ---------- 7e. the two boards do not wear each other's colours ------ */
+{
+  /* They ran the same five hues: purple, amber, blue and green were
+     byte-identical and only their order differed, so a purple card meant
+     "Awaiting Goods" on one board and "Source Found" on the other.
+     Sourcing is a ramp now and orders keeps its rainbow. */
+  /* Comments stripped first: the one above this table quotes the order
+     board's own grey to explain why the ramp cannot start that light,
+     and an extractor reading raw source counts it as a sixth colour of
+     this board's -- which is exactly what it did. */
+  const hexes = (name)=> [...(new RegExp('const ' + name + ' = \\{[\\s\\S]*?\\n\\};')
+    .exec(src) || [''])[0]
+    .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
+    .matchAll(/#[0-9A-Fa-f]{6}/g)].map(m=> m[0].toUpperCase());
+  const srcHues = hexes('SOURCING_STATUSES'), ordHues = hexes('SQ_STATUSES');
+  eq(srcHues.length, 5, 'the sourcing board defines five step colours');
+  eq(ordHues.length, 5, 'and so does the order board');
+  eq(srcHues.filter(h=> ordHues.includes(h)).join(), '',
+    'with not one hex shared between them');
+
+  /* A ramp has to actually descend, or it is five mid-tones that happen
+     to differ in hue -- which is what the first attempt at this was. */
+  const lum = (hex)=>{
+    const c = [1,3,5].map(i=> parseInt(hex.substr(i,2),16)/255)
+      .map(v=> v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
+    return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+  };
+  const L = srcHues.map(lum);
+  t.check(L.slice(1).every((v,i)=> v < L[i]),
+    `each step is darker than the one before it (${srcHues.join(' → ')})`);
+  /* The lightest still has to hold the ring the live step wears. The
+     order board's own grey is 2.48:1 and does not, which is the reason
+     this ramp starts on a steel rather than a pale grey. */
+  const onWhite = (hex)=> 1.05 / (lum(hex) + 0.05);
+  t.check(onWhite(srcHues[0]) >= 3,
+    `and even the lightest clears 3:1 on white (${onWhite(srcHues[0]).toFixed(2)}:1)`);
+  t.check(srcHues.includes('#1C6B58'),
+    'with the shop\'s own verdigris among them rather than five invented greens');
+}
+
 /* ---------- 8. the two boards do not reach into each other ----------- */
 {
   /* The sourcing board emits the same .sq-* markup on purpose -- that is
