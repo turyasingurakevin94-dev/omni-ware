@@ -122,9 +122,18 @@ const sold = (productId, qty, date) => data.stockLog.push({
   data.prices = [price(1, { date: '2026-05-20' })];   // 87 days
   t.check(!scope.priceNeedsReview(scope.priceReviewFacts(data.prices[0])),
     'nor one still inside the limit');
+
+  /* Exactly ON the limit is not past it. Ninety days old is the last day
+     the price is still considered good, not the first day it is stale --
+     an off-by-one here quietly pulls a day's worth of rows onto every
+     list forever. */
+  data.prices = [price(1, { date: '2026-05-17' })];   // exactly 90
+  eq(scope.priceReviewFacts(data.prices[0]).ageDays, 90, 'a row exactly at the limit');
+  t.check(!scope.priceNeedsReview(scope.priceReviewFacts(data.prices[0])),
+    'is not yet past it, so it is not chased');
   data.prices = [price(1, { date: '2026-05-16' })];   // 91 days
   t.check(scope.priceNeedsReview(scope.priceReviewFacts(data.prices[0])),
-    'and one just past it is');
+    'and one day older is');
 
   /* An undated row is the WORST case, not an exempt one: nothing at all
      is known about when it was last true. */
@@ -139,15 +148,20 @@ const sold = (productId, qty, date) => data.stockLog.push({
 {
   reset();
   data.products = [{ id: 'P1', name: 'Cement' }, { id: 'P2', name: 'Handle' }];
-  // Cement: 200 sold at 30,000. Handle: 200 sold at 500.
-  data.prices = [price(1, { productId: 'P1', wholesale: 30000 }),
-    price(2, { productId: 'P2', wholesale: 500 })];
+  /* Cement 200 sold at 30,000; handle 200 sold at 500 -- and the HANDLE
+     is much the older of the two. Ranked by age the handle leads, which
+     is exactly the uselessness this ordering exists to avoid: the top of
+     the list would be the thing it costs nothing to be wrong about. */
+  data.prices = [price(1, { productId: 'P1', wholesale: 30000, date: '2026-04-01' }),
+    price(2, { productId: 'P2', wholesale: 500, date: '2025-01-01' })];
   sold('P1', 200, '2026-07-01');
   sold('P2', 200, '2026-07-01');
   const ranked = scope.priceReviewCandidates();
   eq(ranked.length, 2, 'both are past the limit and both move');
+  t.check(ranked[1].ageDays > ranked[0].ageDays,
+    'the row that comes second is the OLDER one, so age is not what put the first one there');
   eq(ranked[0].row.productId, 'P1',
-    'the one with more money running through it comes first, though both are the same age and sell the same number');
+    'the money leads: 200 bags at 30,000 outranks 200 handles at 500, however much older the handles are');
 
   /* A wrong WINNER misprices quotes and sends the buying list to the
      wrong door. A wrong loser costs nothing until it wins. */
@@ -162,14 +176,32 @@ const sold = (productId, qty, date) => data.stockLog.push({
   t.check(both[0].isWinner && !both[1].isWinner, 'and is marked as the one currently winning');
   t.check(both[0].reasons.includes('currently the cheapest'), 'with that given as a reason');
 
-  // A lone supplier has nothing to be checked against, so its price is
-  // the whole story.
+  /* A lone supplier has nothing to be checked against, so its price is
+     the whole story and is worth more of somebody's morning.
+
+     Told apart from the winner weighting by comparing two rows that are
+     BOTH the cheapest on their item, at the same price and the same
+     volume -- so the only thing left between them is that one item has a
+     second supplier and the other does not. The two-supplier item is
+     listed first in the array, so a tie would leave it on top. */
   reset();
-  data.prices = [price(1, { wholesale: 10000 })];
+  data.products = [{ id: 'P1', name: 'Cement' }, { id: 'P2', name: 'Handle' }];
+  data.prices = [
+    price(1, { productId: 'P1', supplierId: 'S1', wholesale: 10000 }),
+    price(2, { productId: 'P1', supplierId: 'S2', wholesale: 12000 }),
+    price(3, { productId: 'P2', supplierId: 'S1', wholesale: 10000 }),
+  ];
   sold('P1', 100, '2026-07-01');
-  const lone = scope.priceReviewCandidates()[0];
-  t.check(lone.singleSource && lone.reasons.includes('the only supplier'),
-    'a single-source row says so');
+  sold('P2', 100, '2026-07-01');
+  const bySource = scope.priceReviewCandidates();
+  const p1win = bySource.find((f) => f.row.id === 1);
+  const p2win = bySource.find((f) => f.row.id === 3);
+  t.check(p1win.isWinner && p2win.isWinner, 'both are the cheapest on their own item');
+  eq(p1win.moneyAtRisk, p2win.moneyAtRisk, 'and carry the same money');
+  t.check(!p1win.singleSource && p2win.singleSource, 'but only one item has a second opinion on file');
+  t.check(bySource[0].row.id === 3,
+    'the item with no second opinion is checked first, since its one price is the whole story');
+  t.check(p2win.reasons.includes('the only supplier'), 'and it says so');
 
   // Every row on the list explains itself. A rank nobody can argue with
   // is a rank nobody acts on.
@@ -331,6 +363,17 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'the registry offers the same list as a filter');
   t.check(/priceNeedsReview\b/.test(code) && /order\.has\(r\.id\)/.test(code),
     'showing exactly the rows the report names, in the same order');
+
+  /* And it stays OUT of the row predicate. Deciding it needs the stock
+     log, the sales and the item's other suppliers; reaching for those
+     from a function whose whole virtue is being a pure function of one
+     row is how a filter becomes untestable, and the existing dropdown
+     sweep is what caught it going in there the first time. */
+  const pred = extractFunction(src, 'priceRowMatchesAge', 'index.html');
+  t.check(!/priceNeedsReview|priceReviewFacts/.test(pred),
+    'the age predicate reads only the row it was handed, never the shop around it');
+  t.check(/if\(!ageFilter \|\| ageFilter === 'review'\) return true;/.test(pred),
+    'and passes the worklist key through untouched rather than pretending to apply it');
 }
 
 process.exit(t.done() ? 1 : 0);
