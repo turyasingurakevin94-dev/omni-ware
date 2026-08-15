@@ -892,6 +892,32 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'a row deleted since the ask is skipped rather than throwing');
   eq(scope.applySupplierReply().skipped, 0, 'and no entries at all is no work');
 
+  /* AT THE UNIT THEY WERE ASKED ABOUT, not at the pack.
+
+     Every other fixture here has packQty 0, where "read at one" and
+     "read at the pack size" are the same number and nothing can tell
+     them apart. This one has a real pack break -- singles at 3,000, a
+     carton of twelve at 2,600 -- so the two readings genuinely differ.
+
+     The ask names the item and its unit ("per Bag"), so the reply is the
+     single-unit price. Reading it against the pack would call an
+     unchanged answer a change, and then write their per-unit figure into
+     the bulk slot. */
+  reset();
+  data.prices = [price(1, { wholesale: 2600, retail: 3000, packQty: 12, date: '2026-01-01' })];
+  eq(scope.purchasePriceAtQty(data.prices[0], 1), 3000, 'a single reads the sub-pack price');
+  eq(scope.purchasePriceAtQty(data.prices[0], 12), 2600, 'and a dozen reads the pack price');
+
+  r = scope.applySupplierReply([reply(1, 3000)]);
+  eq(r.confirmed, 1, 'quoting the single price back is a confirmation of it');
+  eq(r.changed, 0, 'not a change against the pack price they were never asked about');
+
+  reset();
+  data.prices = [price(1, { wholesale: 2600, retail: 3000, packQty: 12, date: '2026-01-01' })];
+  scope.applySupplierReply([reply(1, 2800)]);
+  eq(data.prices[0].retail, 2800, 'a new single price lands on the single-price side');
+  eq(data.prices[0].wholesale, 2600, 'and leaves the pack rate they did not mention alone');
+
   // A whole reply at once, which is the point of the sheet.
   reset();
   data.prices = [
@@ -924,6 +950,13 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'a sheet nobody filled in saves nothing and says so');
   t.check(/still to ask/.test(save),
     'and the toast counts what was left unanswered, rather than reporting it as done');
+  /* Both screens the answer changes are rebuilt. Without this the
+     registry still shows yesterday's date on a row just confirmed, and
+     the dashboard goes on listing an item the shop has this minute
+     settled -- which teaches people the report is not to be believed. */
+  t.check(/triggerPricesRender\(\);/.test(save), 'the registry is redrawn');
+  t.check(/renderDashPriceReview\(\);/.test(save),
+    'and so is the report, which would otherwise still be asking for what was just answered');
 
   // Reachable beside the ask, since the two halves are one errand.
   t.check(/id="sstReplyBtn"/.test(src) && /openSupplierReply\(replyBtn\.dataset\.id\)/.test(src),
