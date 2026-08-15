@@ -82,6 +82,12 @@ const sync = (price, qty) => {
   told.length = 0;
   return scope.syncPriceRegistryFromPurchase('P1', null, 'S1', price, qty);
 };
+// The same write, told that money actually moved -- goods received, or a
+// restock booked. See section 6 for why that changes one thing only.
+const bought = (price, qty) => {
+  told.length = 0;
+  return scope.syncPriceRegistryFromPurchase('P1', null, 'S1', price, qty, {confirms: true});
+};
 const warned = () => told.some((m) => /Buying more now costs more each/.test(m));
 
 /* ---------- 1. the bug, in the words it was reported in --------------- */
@@ -186,6 +192,47 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
   t.check(row.date === undefined,
     'a price that has not changed is not restamped, so the book does not claim it was checked today');
 
+  /* Unless money moved. The claim above is aimed at the QUOTE LINE,
+     whose Buy @ arrives pre-filled and whose change event fires whether
+     or not the number was touched -- restamping there records a check
+     that never happened.
+
+     Goods arriving is not a round-trip. Somebody paid that much, to that
+     supplier, today, and buying at exactly the recorded price is the
+     strongest confirmation that price can get. Stamping only on a change
+     meant the commonest case of all -- a stable item bought at its own
+     recorded price -- refreshed nothing, so the row aged towards "stale"
+     while the shop was actively trading on it and the review list would
+     flag for checking the very prices it had just proved correct. */
+  row = tiered();
+  bought(32500, 10);
+  t.check(row.date === '2026-08-03',
+    'but buying at the price on file IS a confirmation of it, and dates the row');
+  t.check(row.priceSource === 'purchase', 'recorded as coming from a purchase, because it did');
+  t.check(scope.purchasePriceAtQty(row, 10) === 32500,
+    'while the figure itself is untouched — nothing changed, so nothing is written');
+  t.check(row.tiers.length === 2, 'and no tier is invented for a price that did not move');
+
+  /* A confirmation must not run the WRITE, only the date.
+
+     Told apart on an already-inverted row, because that is the only
+     shape where entering the write branch has a visible effect when the
+     figure is unchanged: the inversion warning fires. Confirming a price
+     you did not touch must not nag you about a shape the row already
+     had. Anywhere else the branch would write the same number over
+     itself and nothing could tell. */
+  data.prices = [{
+    id: 1, productId: 'P1', variantIdx: null, supplierId: 'S1',
+    wholesale: null, retail: 30000, packQty: 0,
+    tiers: [{ minQty: 1, price: 30000 }, { minQty: 10, price: 32500 }],
+    outOfStock: false,
+  }];
+  row = data.prices[0];
+  bought(32500, 10);
+  t.check(row.date === '2026-08-03', 'the confirmation still dates the row');
+  t.check(!warned(),
+    `and says nothing about the inversion, because it did not cause it (${JSON.stringify(told)})`);
+
   row = tiered();
   row.outOfStock = true;
   sync(32500, 10);
@@ -288,15 +335,38 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
     "while the row's headline pack price is untouched, since the tier that moved was not the lowest");
 }
 
-/* ---------- 8. both callers say at what quantity ---------------------- */
+/* ---------- 8. every caller says at what quantity ---------------------
+   Three now. Goods arriving joined the two typing paths: it is the only
+   one that needs no screen and no memory, and it is where the shop's
+   best price evidence was being thrown away. */
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const calls = [...code.matchAll(/syncPriceRegistryFromPurchase\(([^;]*?)\);/g)].map(m => m[1]);
-  t.check(calls.length === 2, `both call sites are accounted for (found ${calls.length})`);
-  t.check(calls.every((c) => c.split(',').length === 5),
+  t.check(calls.length === 3, `every call site is accounted for (found ${calls.length})`);
+  t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
-  t.check(calls.some((c) => /,\s*q$/.test(c.trim())), 'and the restock passes what was actually bought');
+  t.check(calls.some((c) => /,\s*q,\s*\{confirms: true\}$/.test(c.trim())),
+    'the restock passes what was actually bought');
+  /* THIS receipt's quantity, not the line's running total. A line that
+     came back short and was fetched again is two purchases at two
+     prices, kept as two receipts -- and a second small trip is honestly
+     priced as a small trip. */
+  t.check(calls.some((c) => /it\.receivedPrice,\s*n,\s*\{confirms: true\}/.test(c)),
+    'and goods received pass the price actually paid, at the quantity that actually arrived');
+
+  /* Which callers claim money moved, and which must not.
+
+     The two transactions do. The quote line does NOT: its Buy @ arrives
+     pre-filled and fires a change event whether or not the number was
+     touched, so letting it confirm would date every price the admin
+     merely scrolled past — and the registry would report a book kept
+     current by nobody having looked at it. */
+  const confirming = calls.filter((c) => /confirms:\s*true/.test(c));
+  t.check(confirming.length === 2,
+    `exactly the two transactions say money moved (found ${confirming.length})`);
+  t.check(confirming.every((c) => !/item\.qty/.test(c)),
+    'and the quote line is not one of them — a pre-filled field round-tripping is not a confirmation');
 
   // The quote's own qty handler has to resolve prices the same way, or an
   // edit lands in one tier while a quantity change reads another.

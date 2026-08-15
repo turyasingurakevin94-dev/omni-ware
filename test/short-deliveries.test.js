@@ -121,6 +121,7 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
  */
 {
   const deltas = [];
+  const priceWrites = [];
   const recv = compileScope(
     [extractFunction(src, 'receiveQuoteLine', 'index.html'),
       extractFunction(shared, 'orderLineIsBoughtIn', 'shared-worker.js'),
@@ -129,6 +130,12 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
     {
       applyStockDelta: (pid, vi, n) => { deltas.push(n); },
       supplierName: () => 'Shafik Katwe',
+      // Stubbed: the price registry is not what this file is about, and
+      // compiling it would drag in tier resolution and the inversion
+      // warning. Recorded so the split-delivery case below can check
+      // which quantity each receipt reported.
+      syncPriceRegistryFromPurchase: (pid, vi, sid, price, qty, opts) =>
+        priceWrites.push({ price, qty, opts }),
     },
     ['receiveQuoteLine', 'quoteLineShortfall', 'quoteLineReceived'],
   );
@@ -158,15 +165,34 @@ const arrived = (n) => ({ receivedQty: n, receivedPrice: 300000, receivedAt: '20
   t.check(it.receipts.every((r) => !!r.at),
     'and when it turned up');
 
+  /* And the price book hears about each one separately, at the quantity
+     that actually arrived rather than the line's running total.
+
+     This is the whole reason receiving reaches the registry: money
+     changed hands, so the price is confirmed for today whether or not it
+     moved. A line fetched twice is two purchases -- the second trip is
+     honestly a small one, and pricing it at ten would file a bulk rate
+     under a quantity nobody bought. */
+  t.check(priceWrites.length === 2,
+    `each arrival tells the price book once (${priceWrites.length})`);
+  t.check(priceWrites.map((w) => w.qty).join(',') === '4,6',
+    `at its own quantity, never the running total (${priceWrites.map((w) => w.qty).join(',')})`);
+  t.check(priceWrites.every((w) => w.price === 300000), 'carrying what was actually paid');
+  t.check(priceWrites.every((w) => w.opts && w.opts.confirms === true),
+    'and marked as money moving, so an unchanged price is still dated today rather than left to go stale');
+
   // Undoing takes the arrivals with it, so the next receipt starts clean.
   const it3 = line();
   recv.receiveQuoteLine(it3, 4, 300000, q);
   t.check((it3.receipts || []).length === 1, 'a fresh line records its first arrival');
 
   // Nothing arriving is not a receipt at all.
+  priceWrites.length = 0;
   const it2 = line();
   t.check(recv.receiveQuoteLine(it2, 0, 300000, q) === 0 && it2.receivedQty === undefined,
     'and a delivery of nothing does not mark the line received');
+  t.check(priceWrites.length === 0,
+    'nor tells the price book a price was confirmed by goods that never came');
 }
 
 /* ---------- 4. the shortfall stays on the buying list ----------------- */

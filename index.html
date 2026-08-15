@@ -17266,7 +17266,26 @@ function cheaperSmallerQuantity(row, qty, price){
    is not how the price is read: a row with no pack break is read from
    retail whatever wholesale holds, so the edit landed in a field nothing
    was looking at and the quote appeared to ignore it. */
-function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price, qty){
+/* `opts.confirms` says this figure came from MONEY CHANGING HANDS rather
+   than from somebody typing in a field.
+
+   The distinction decides one thing: whether an UNCHANGED price gets its
+   date restamped. Both answers are right, for different callers.
+
+   A quote line's Buy @ arrives pre-filled with the price already on
+   file, and its change event fires whether or not the number was
+   touched. Restamping there would record a check that never happened --
+   the field merely round-tripped -- so an unchanged edit leaves the date
+   alone, and the registry goes on saying when the price was last SET.
+
+   Goods arriving is not a round-trip. Somebody paid that much, to that
+   supplier, for that quantity, today. It is the strongest confirmation a
+   price can get, and stamping only on a change meant the commonest case
+   of all -- a stable item bought at exactly its recorded price --
+   refreshed nothing. The row kept its old date and aged towards "stale"
+   while the shop was actively trading on it, so the review list would
+   flag for checking precisely the prices it had just proved correct. */
+function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price, qty, opts){
   if(!supplierId || supplierId==='__stock__' || price==null) return;
   const priceRow = data.prices.find(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
   if(!priceRow) return;
@@ -17289,9 +17308,6 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price,
       // assert a volume break the supplier never quoted.
       priceRow[slot.kind] = price;
     }
-    priceRow.date = todayISO();
-    priceRow.priceSource = 'purchase';
-
     /* Saved either way, then said out loud if it reads oddly.
 
        Not blocked: the supplier may genuinely have put the bulk rate up,
@@ -17305,6 +17321,12 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price,
     if(cheaper && typeof toast === 'function'){
       toast(`Saved — but ${fmtUGX(price)} for ${atQty} is more than the ${fmtUGX(cheaper.price)} already on file for ${cheaper.qty}. Buying more now costs more each.`, 7000);
     }
+  }
+  // A change always dates itself. An unchanged price only does so when
+  // the caller says money moved -- see the header.
+  if(Number(was)!==Number(price) || (opts && opts.confirms)){
+    priceRow.date = todayISO();
+    priceRow.priceSource = 'purchase';
   }
   // An actual purchase from this supplier is proof they have it -- clear
   // any stale "out of stock" flag rather than making someone remember to.
@@ -30978,6 +31000,34 @@ function receiveQuoteLine(it, qty, price, q){
   if(!Array.isArray(it.receipts)) it.receipts = [];
   it.receipts.push({ qty: n, price: it.receivedPrice, at: new Date().toISOString() });
   it.receivedAt = new Date().toISOString();
+
+  /* And into the price registry, which this never reached.
+
+     The registry only ever refreshed from two places, both of which
+     needed somebody to have actively touched the item: editing Buy @ on
+     a quote line, and an inventory restock. So an item nobody quoted
+     regularly was never questioned again -- across this shop, 2 of 307
+     rows had ever been written by that path. Everything else was a
+     figure typed once.
+
+     This is the best evidence the shop ever gets and it was being
+     thrown away one line above: money actually paid, to a known
+     supplier, for a known quantity, today. Every item the shop BUYS now
+     refreshes itself, with no screen to visit and nothing to remember.
+
+     it.supplierId, not the one the line was quoted against: both callers
+     run setLineSupplier() first, because a trip is grouped by today's
+     cheapest and the goods often come from somebody else. The price
+     belongs to whoever was actually paid.
+
+     At THIS receipt's quantity, not the line's. A line that came back
+     short and was fetched again is two purchases at two prices -- the
+     comment above says so and keeps them as separate receipts -- and a
+     second small trip is genuinely priced as a small trip. Where that
+     reads oddly against the tiers already on file, the sync says so. */
+  syncPriceRegistryFromPurchase(it.productId, it.variantIdx == null ? null : it.variantIdx,
+    it.supplierId, it.receivedPrice, n, {confirms: true});
+
   applyStockDelta(it.productId, it.variantIdx, n, 'restock',
     `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
     it.receivedPrice || null, it.supplierId);
@@ -36188,8 +36238,9 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     if(price!=null) note += ` @ ${fmtUGX(price)} per ${unit||'unit'}`;
     // Buying at a different price than what's on file for this supplier
     // means their price has changed -- keep the Price Registry current
-    // instead of letting it go stale.
-    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q);
+    // instead of letting it go stale. confirms, because this is a
+    // purchase: buying at the SAME price is proof of it too.
+    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true});
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
     await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     saveData();

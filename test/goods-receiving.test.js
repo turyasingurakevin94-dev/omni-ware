@@ -43,6 +43,13 @@ const NAMES = ['tiersForKind', 'tieredUnitPrice', 'ipLineOutlay', 'orderLineIsBo
   'applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock'];
 
 let movements = [];
+/* Stubbed rather than compiled in: the price registry drags in tier
+   resolution, the flat-field derivation and the inversion warning, none
+   of which is what this file is about. Recorded, though, because what
+   receiving tells the registry is part of receiving -- see section on
+   the price book below. Its own behaviour is pinned in
+   test/admin-price-writeback.test.js. */
+let priceWrites = [];
 const build = () => compileScope(
   NAMES.map((n) => extractFunction(fnSrc(n), n, fnFile(n))),
   {
@@ -50,6 +57,8 @@ const build = () => compileScope(
     supplierName: (id) => (id === 'S1' ? 'Shafik Katwe' : id),
     applyStockDelta: (productId, variantIdx, delta, type, note, cost, supplierId) =>
       movements.push({ productId, variantIdx, delta, type, note, cost, supplierId }),
+    syncPriceRegistryFromPurchase: (productId, variantIdx, supplierId, price, qty, opts) =>
+      priceWrites.push({ productId, variantIdx, supplierId, price, qty, opts }),
   },
   NAMES,
 );
