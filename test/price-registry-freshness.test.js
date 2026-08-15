@@ -793,20 +793,44 @@ const sold = (productId, qty, date) => data.stockLog.push({
   const fn = (/function priceObservations[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/data\.purchaseInvoices/.test(fn), 'the history is read from the purchase invoices');
   t.check(!/stockLog/.test(fn),
-    'and NOT the stock log, whose cost and supplierId are stamped in memory and never persisted');
+    'and NOT the stock log, which carries no price for it to read');
   t.check(!/receipts/.test(fn),
     'nor the receipts, which become purchase invoice lines too and would double every order-derived price');
 
-  /* The stock log's two dead fields, pinned so nobody builds on them
-     again believing they survive. They are written by applyStockDelta,
-     mapped by neither side of the sync, and the columns do not exist. */
+  /* The stock log's two dead fields, now removed rather than pinned.
+     applyStockDelta used to stamp a cost and a supplierId that neither
+     side of the sync mapped and no column backed, so they read like a
+     price history and were never one. Checked at all four places they
+     could come back: the entry, both halves of the sync, and the
+     argument that used to feed the supplier in. */
   const push = (/data\.stockLog\.push\(\{[\s\S]*?\}\);/.exec(code) || [''])[0];
-  t.check(/cost:/.test(push) && /supplierId:/.test(push),
-    'applyStockDelta does stamp a cost and a supplier onto the entry');
+  t.check(push !== '', 'the stock log entry is found');
+  t.check(!/cost/.test(push) && !/supplierId/.test(push),
+    'and stamps neither a cost nor a supplier onto it — the two fields nothing read and nothing saved');
+  const sig = (/function applyStockDelta\([^)]*\)/.exec(code) || [''])[0];
+  t.check(/cost/.test(sig), 'applyStockDelta still takes a cost, which the FIFO lot needs');
+  t.check(!/supplierId/.test(sig),
+    'but no longer a supplier, so no caller can hand one to a field that would drop it');
   const load = (/stockLog: \(stockLogR\.data\|\|\[\]\)\.map[\s\S]*?\)\),/.exec(code) || [''])[0];
   const save = (/stockLog: d\.stockLog\.map[\s\S]*?\}\)\),/.exec(code) || [''])[0];
+  t.check(load !== '' && save !== '', 'both halves of the stock log sync are found');
   t.check(!/cost/.test(load) && !/cost/.test(save),
-    'but neither side of the sync carries it, so it does not survive a reload — which is why it is not the source here');
+    'and neither carries a cost, which is why this history comes off the invoices instead');
+
+  /* Why removing them cost nothing: every restock that had a cost to
+     stamp already raises a purchase invoice for the same price to the
+     same supplier on the same day, so the log offered no dated price
+     priceObservations cannot already see. */
+  const receive = extractFunction(src, 'receiveQuoteLine', 'index.html');
+  t.check(/syncPriceRegistryFromPurchase\(/.test(receive),
+    'a receipt tells the price registry what was paid');
+  const genForQuote = extractFunction(src, 'generatePurchaseInvoicesForQuote', 'index.html');
+  t.check(/quoteLineReceived\(it\) \? Number\(it\.receivedPrice\) : it\.price/.test(genForQuote),
+    'and the invoice bills that same received price, so the receipt is on an invoice too');
+  t.check(/quoteLineUnitsBought\(it\)/.test(genForQuote),
+    'billing the whole pack, which is the surplus restock on the same invoice line at the same price');
+  t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price\);\s*\r?\n\s*await generatePurchaseInvoiceForRestock\(/.test(code),
+    'and a manual restock raises its own invoice on the very next line');
 }
 
 /* ---------- 20. both settings are reachable ---------------------------

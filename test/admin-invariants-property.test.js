@@ -175,7 +175,7 @@ if (fns) {
   });
 
   const OPS = {
-    restock: (r) => applyStockDelta('P1', null, 1 + r(20), 'restock', '', 5000 + r(5000) * 100, 'S1'),
+    restock: (r) => applyStockDelta('P1', null, 1 + r(20), 'restock', '', 5000 + r(5000) * 100),
     correct: (r) => applyStockDelta('P1', null, -(1 + r(8)), 'correction', 'count'),
     // A stock count that finds MORE than the book says. It carries no
     // price, so it is the one legitimate source of a null-cost lot.

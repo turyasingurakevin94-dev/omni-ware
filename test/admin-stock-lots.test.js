@@ -133,7 +133,10 @@ if (fns) {
     'clearing both afterwards, so a second reversal cannot restore the same units twice');
 
   // The paths that must NOT have changed.
-  t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId\);/.test(code),
+  /* The supplier used to ride along as an eighth argument and was
+     stamped onto a log field nothing read and no column stored. It is
+     gone; the price stays, because the FIFO lot is built from it. */
+  t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price\);/.test(code),
     'a restock still passes its purchase price and no opts');
   t.check(/applyStockDelta\(invProductId, invVariantIdx, d, 'correction', note\);/.test(code),
     'and a stock-count correction still passes neither');

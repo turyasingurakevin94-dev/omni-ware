@@ -55,8 +55,15 @@ const build = () => compileScope(
   {
     productPriceRows: (pid, vi) => (pid === 'P1' && vi === 0 ? [CARTONS] : []),
     supplierName: (id) => (id === 'S1' ? 'Shafik Katwe' : id),
-    applyStockDelta: (productId, variantIdx, delta, type, note, cost, supplierId) =>
-      movements.push({ productId, variantIdx, delta, type, note, cost, supplierId }),
+    /* Takes the arguments as a LIST rather than a fixed six, so the
+       count is something the test can see. Named parameters would make
+       a seventh argument invisible: the stub would drop it and every
+       claim that nothing rides along behind the cost would hold no
+       matter what receiving passed. */
+    applyStockDelta: (...args) => movements.push({
+      productId: args[0], variantIdx: args[1], delta: args[2], type: args[3],
+      note: args[4], cost: args[5], argc: args.length,
+    }),
     syncPriceRegistryFromPurchase: (productId, variantIdx, supplierId, price, qty, opts) =>
       priceWrites.push({ productId, variantIdx, supplierId, price, qty, opts }),
   },
@@ -94,6 +101,7 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
 /* ---------- 2. the whole delivery goes on the shelf ------------------ */
 {
   movements = [];
+  priceWrites = [];
   const it = line();
   const got = fn.receiveQuoteLine(it, 5, 80000, order(it));
 
@@ -104,9 +112,18 @@ const order = (it) => ({ id: 'Q1', client: { name: 'Abraham' }, items: [it] });
      difference is real money and belongs in the margin figures rather
      than being silently absorbed. */
   t.check(movements[0].cost === 80000, `at the price actually paid (${movements[0].cost})`);
-  t.check(movements[0].supplierId === 'S1', 'against the supplier it came from');
+  /* The supplier reaches the movement as a NAME in the note and nowhere
+     else. It used to be passed alongside the cost and stamped onto a
+     stock-log field that no column stored and nothing read; the record
+     that actually keeps a price against a supplier is the registry
+     write below, and the purchase invoice this receipt bills. */
+  t.check(movements[0].argc === 6,
+    `so nothing rides along behind the cost (${movements[0].argc} arguments, not 7)`);
   t.check(/Received from Shafik Katwe for Abraham/.test(movements[0].note),
     `with a note naming both ends of it (${movements[0].note})`);
+  t.check(priceWrites.length === 1 && priceWrites[0].supplierId === 'S1'
+    && priceWrites[0].price === 80000,
+    `and the price paid is filed against the supplier it came from (${JSON.stringify(priceWrites)})`);
 
   t.check(it.receivedQty === 5 && it.receivedPrice === 80000 && !!it.receivedAt,
     'and the line remembers what arrived, at what, and when');

@@ -141,9 +141,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  */
 {
   data.stockLots = { P1: [{ qty: 60, cost: 25000 }] };
+  /* The log gives the QUANTITY that day and nothing else -- it carries
+     no cost, which is why the value has to come from the lots and why
+     the sheet marks it an estimate. */
   data.stockLog = [
-    { id: 1, key: 'P1', type: 'restock', delta: 100, qtyAfter: 100, date: '2026-07-10', cost: 25000 },
-    { id: 2, key: 'P1', type: 'sale', delta: -40, qtyAfter: 60, date: '2026-08-02', cost: null },
+    { id: 1, key: 'P1', type: 'restock', delta: 100, qtyAfter: 100, date: '2026-07-10' },
+    { id: 2, key: 'P1', type: 'sale', delta: -40, qtyAfter: 60, date: '2026-08-02' },
   ];
   const july = scope.stockValueAsAt('2026-07-31');
   eq(july.value, 2500000, '100 bags were on the shelf that day, at today\'s 25,000 a bag');
@@ -161,7 +164,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   /* Stock with no cost on file is counted, never valued at a guess --
      the same rule the live valuation follows. */
   data.stockLots = { P3: [{ qty: 8, cost: null }] };
-  data.stockLog = [{ id: 1, key: 'P3', type: 'restock', delta: 8, qtyAfter: 8, date: '2026-07-05', cost: null }];
+  data.stockLog = [{ id: 1, key: 'P3', type: 'restock', delta: 8, qtyAfter: 8, date: '2026-07-05' }];
   const un = scope.stockValueAsAt('2026-07-31');
   eq(un.value, 0, 'stock with no cost on file adds nothing to the value');
   eq(un.uncostedQty, 8, 'but its quantity is reported rather than lost');

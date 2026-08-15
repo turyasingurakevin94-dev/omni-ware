@@ -125,8 +125,12 @@ const line = (over) => Object.assign(
     {
       productPriceRows: (pid, vi) => ROWS[`${pid}::${vi == null ? '' : vi}`] || [],
       supplierName: (id) => ({ S1: 'Cartons Only', S2: 'Loose Trader' }[id] || id),
-      applyStockDelta: (productId, variantIdx, delta, type, note, cost, supplierId) =>
-        movements.push({ productId, variantIdx, delta, type, note, cost, supplierId }),
+      /* As a LIST, so a seventh argument is visible. Named parameters
+         would silently swallow one and the claim below could not fail. */
+      applyStockDelta: (...args) => movements.push({
+        productId: args[0], variantIdx: args[1], delta: args[2], type: args[3],
+        note: args[4], cost: args[5], argc: args.length,
+      }),
     },
     ['applyQuoteSurplusToStock', 'reverseQuoteSurplusToStock'],
   );
@@ -151,9 +155,14 @@ const line = (over) => Object.assign(
   t.check(m && m.productId === 'P1' && m.variantIdx === 4, 'against the item that was bought');
   /* With a cost, or the lot carries none and getFIFOUnitCost() goes null
      -- which is how a shelf ends up holding goods the shop cannot
-     value. And from the supplier, like any other restock. */
-  t.check(m && m.cost === 78333 && m.supplierId === 'S1',
-    `at the line's own unit cost, from the supplier it came from (${m && m.cost}, ${m && m.supplierId})`);
+     value. */
+  t.check(m && m.cost === 78333, `at the line's own unit cost (${m && m.cost})`);
+  /* The supplier is in the note and nowhere else on the movement. It
+     used to be handed to applyStockDelta as well, which stamped it onto
+     a stock-log field no column stored and nothing read. What bills the
+     surplus to that supplier is the purchase invoice, which covers the
+     whole pack at this same price. */
+  t.check(m && m.argc === 6, `and nothing behind it (${m && m.argc} arguments, not 7)`);
   t.check(m && /Left over from Abraham/.test(m.note) && /Cartons Only sells by the Ctn/.test(m.note),
     `with a note saying which order it is left from and why (${m && m.note})`);
 

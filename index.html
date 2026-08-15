@@ -31034,7 +31034,15 @@ function getFIFOUnitCost(productId, variantIdx){
 //                        pushing a fresh one
 // Omitting both keeps the original behaviour, which is what a plain
 // restock or a stock-count correction wants.
-function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplierId, opts){
+//
+// `cost` reaches the LOT and stops there. It used to be stamped onto the
+// log entry as well, next to a supplierId taken as an eighth argument --
+// two fields that read like a dated price history and were neither
+// mapped by the sync nor backed by a column, so every restock loaded
+// back with a null cost and nothing ever read either one. The price
+// history lives on the purchase invoices, which persist; see
+// priceObservations() for why that is the only source.
+function applyStockDelta(productId, variantIdx, delta, type, note, cost, opts){
   const key = stockKey(productId, variantIdx);
   const before = Number(data.stock[key]) || 0;
   const after = Math.max(0, before + delta);
@@ -31056,9 +31064,7 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
   const label = product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId;
   data.stockLog.push({
     id: allocRowId('stockLog'), key, productId, variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
-    label, type, delta: after-before, qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString(),
-    cost: (type==='restock' && cost!=null && cost!=='') ? Number(cost) : null,
-    supplierId: (type==='restock' && supplierId) ? supplierId : null
+    label, type, delta: after-before, qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString()
   });
   return after;
 }
@@ -31089,7 +31095,7 @@ function applyQuoteStockDeduction(q){
     // goods it no longer knew the price of -- getFIFOUnitCost went null and
     // every margin figure downstream lost its cost side.
     if(take>0) applyStockDelta(it.productId, it.variantIdx, -take, 'sale', `Quote for ${q.client.name || 'Unnamed client'}`,
-      null, null, { onConsumed: lots => { it._stockLots = lots; } });
+      null, { onConsumed: lots => { it._stockLots = lots; } });
   });
   return shortfall;
 }
@@ -31100,7 +31106,7 @@ function reverseQuoteStockDeduction(q){
     // have to go back on the shelf they came off.
     if(!it._stockTaken) return;
     applyStockDelta(it.productId, it.variantIdx, it._stockTaken, 'reversal', 'Reversed — quote un-invoiced',
-      null, null, { restoreLots: it._stockLots });
+      null, { restoreLots: it._stockLots });
     delete it._stockTaken;
     delete it._stockLots;
   });
@@ -31179,7 +31185,7 @@ function receiveQuoteLine(it, qty, price, q){
 
   applyStockDelta(it.productId, it.variantIdx, n, 'restock',
     `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
-    it.receivedPrice || null, it.supplierId);
+    it.receivedPrice || null);
   return n;
 }
 /* Undoing a receipt, for the delivery that was recorded before it was
@@ -31189,7 +31195,7 @@ function unreceiveQuoteLine(it){
   if(!quoteLineReceived(it)) return 0;
   const n = Number(it.receivedQty) || 0;
   applyStockDelta(it.productId, it.variantIdx, -n, 'reversal',
-    `Receipt undone — ${supplierName(it.supplierId)}`, null, null);
+    `Receipt undone — ${supplierName(it.supplierId)}`, null);
   delete it.receivedQty; delete it.receivedPrice; delete it.receivedAt;
   // Every arrival goes with it, or the next receipt would append to a
   // history whose goods have just been taken back off the shelf.
@@ -31206,8 +31212,9 @@ function unreceiveQuoteLine(it){
    somebody looked at the shelf.
 
    Added at the line's own unit cost, so the lot carries a price and
-   getFIFOUnitCost() can still answer what the stock is worth. Attributed
-   to the supplier it came from, like any other restock. */
+   getFIFOUnitCost() can still answer what the stock is worth. The
+   supplier it came from is named in the note, which is where a restock
+   records one: the log itself has no supplier field. */
 function applyQuoteSurplusToStock(q){
   let total = 0;
   q.items.forEach(it=>{
@@ -31222,7 +31229,7 @@ function applyQuoteSurplusToStock(q){
     const packName = it.packUnit || 'pack';
     applyStockDelta(it.productId, it.variantIdx, surplus, 'restock',
       `Left over from ${(q.client && q.client.name) || 'a quote'} — ${supplierName(it.supplierId)} sells by the ${packName}`,
-      Number(it.price) || null, it.supplierId);
+      Number(it.price) || null);
     total += surplus;
   });
   return total;
@@ -31239,7 +31246,7 @@ function reverseQuoteSurplusToStock(q){
   q.items.forEach(it=>{
     if(!it._surplusStocked) return;
     applyStockDelta(it.productId, it.variantIdx, -it._surplusStocked, 'reversal',
-      'Reversed — quote un-invoiced', null, null);
+      'Reversed — quote un-invoiced', null);
     delete it._surplusStocked;
   });
 }
@@ -31946,11 +31953,20 @@ function priceReviewStaleDays(){
    already follow. Three records look like price history and two of them
    are the same events counted again:
 
-     stock log     applyStockDelta stamps cost and supplierId onto the
-                   entry, and NEITHER IS PERSISTED -- the columns do not
-                   exist on stock_log and the sync maps neither, so every
-                   restock reads back with a null cost. Checked on the
-                   live shop: 21 restock rows, none carrying a price.
+     stock log     carries no price at all, and deliberately. It used to
+                   stamp a cost and a supplierId that neither side of the
+                   sync mapped and no column backed, so every restock
+                   read back with a null cost -- checked on the live
+                   shop: 21 restock rows, none carrying a price. Both
+                   fields are gone rather than persisted, because every
+                   restock that has a cost to stamp already raises a
+                   purchase invoice for the same price, supplier and day:
+                   receiving bills each arrival at what was paid, a pack
+                   surplus is part of the carton the invoice already
+                   bills, and Inventory > Purchase writes one on the very
+                   next line. Persisting them would have added no dated
+                   price the invoices do not have, and would have
+                   double-weighted the ones they do.
      receipts      real and persisted, but a received line becomes a
                    purchase invoice line too, so counting both would
                    double every order-derived observation and inflate
@@ -36844,7 +36860,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     // instead of letting it go stale. confirms, because this is a
     // purchase: buying at the SAME price is proof of it too.
     syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true});
-    applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
+    applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price);
     await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     saveData();
     closeModal('invModal');
