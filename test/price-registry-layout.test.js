@@ -261,12 +261,29 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const buckets = (/const PRICE_AGE_BUCKETS = \[([\s\S]*?)\];/.exec(code) || ['', ''])[1];
   const keys = [...buckets.matchAll(/key:'([a-z0-9]*)'/g)].map((m) => m[1]);
   t.check(keys.length >= 5, `the dropdown offers ${keys.length} ages`);
-  keys.filter(Boolean).forEach((k) => {
+  /* "review" is in the dropdown but is not an age, and is applied by
+     getFilteredPriceRows rather than by this predicate -- deciding it
+     needs the stock log, the sales and the item's other suppliers, none
+     of which a pure function of one row can see. Swept separately below
+     so it still cannot become a dropdown entry that does nothing. */
+  const AGE_KEYS = keys.filter(Boolean).filter((k) => k !== 'review');
+  AGE_KEYS.forEach((k) => {
     const understood = k === 'undated'
       ? scope.priceRowMatchesAge(q(''), k)
       : scope.priceRowMatchesAge(q('2020-01-01'), k);
     t.check(understood, `"${k}" is a filter the code actually applies`);
   });
+  t.check(keys.includes('review'), 'the worklist is offered from the same dropdown');
+  t.check(/if\(ageFilter === 'review'\)\{/.test(code)
+    && /priceReviewCandidates\(\)/.test(code),
+    'and applied where the shop can be read, not from the row predicate');
+  /* After the other filters, not instead of them. An early return here
+     silently ignored a supplier or stock filter set alongside it. */
+  const gf = (/function getFilteredPriceRows[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(gf.indexOf('priceRowMatchesStock') < gf.indexOf("ageFilter === 'review'"),
+    'narrowing by stock still narrows the worklist');
+  t.check(gf.indexOf('supplierFilter') < gf.indexOf("ageFilter === 'review'"),
+    'and so does narrowing by supplier');
   t.check(/pr_age_filter'\)\.value/.test(code) && /PRICE_AGE_BUCKETS\.map/.test(code),
     'and the dropdown is built from that same list rather than written out twice');
 }

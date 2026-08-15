@@ -812,6 +812,22 @@
   .dash-mini-table td.num{font-family:'IBM Plex Mono',monospace;text-align:right;}
   .dash-mini-table tr:last-child td{border-bottom:none;}
   .dash-badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+  /* The price-review report's one-line verdict, above its table. The
+     count leads because it is the answer; the sentence explains it, and
+     the month's tally sits at the far end where it can be ignored on the
+     days it is not the question. */
+  .dash-review-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+    padding-bottom:11px;margin-bottom:4px;border-bottom:1px solid var(--line);}
+  .dash-review-count{font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:700;
+    line-height:1;font-variant-numeric:tabular-nums;}
+  .dash-review-count.warn{color:var(--ow-amber-ink);}
+  .dash-review-count.good{color:var(--good);}
+  .dash-review-said{font-size:13px;color:var(--ink);flex:1 1 220px;min-width:0;}
+  .dash-review-prog{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  /* The reasons column carries several short clauses and is the one
+     thing here that may wrap; everything else on the row is a name or a
+     figure and reads worse broken. */
+  .dash-mini-table td.dash-review-why{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
   .dash-badge.good{background:var(--good-bg);color:var(--good);}
   .dash-badge.bad{background:#FBE7E3;color:var(--danger);}
   .dash-badge.warn{background:#FDF0D9;color:var(--accent-ink);}
@@ -1966,6 +1982,9 @@
   }
   .prc-source-pill.purchase{background:#E3EEFB;color:#3E6FA6;}
   .prc-source-pill.manual{background:#EEF1F3;color:var(--ink-soft);}
+  /* Checked and found unchanged. Green because it is the good outcome of
+     a review -- the price was right and now says so. */
+  .prc-source-pill.confirmed{background:#E4F2E8;color:#2F7346;}
   .prc-oos-pill{
     font-size:9.5px;font-weight:700;letter-spacing:0.2px;text-transform:uppercase;
     padding:2px 7px;border-radius:20px;white-space:nowrap;background:#F7D9D3;color:var(--danger);
@@ -6488,6 +6507,13 @@
         <div id="dash_goingQuiet"></div>
       </div>
 
+      <!-- 8. PRICES GOING OUT OF DATE -->
+      <div class="panel">
+        <div class="dash-panel-title"><h2>Prices To Check</h2></div>
+        <p class="dash-panel-note">The registry only refreshes itself where the shop is busy — quoting an item, restocking it, receiving it. Anything you do not trade regularly is never questioned again, so this is the list to go and ask about, ordered by what being wrong would actually cost. Items nobody has bought, quoted or stocked are left off: a stale price on those costs nothing until it comes up.</p>
+        <div id="dash_priceReview"></div>
+      </div>
+
       <!-- 7. DEMAND BREADTH -->
       <div class="panel">
         <div class="dash-panel-title"><h2>Demand Breadth</h2></div>
@@ -10797,6 +10823,9 @@ async function loadData(shopId){
     presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
     presetAttributes: presets.attributes || seed.presetAttributes,
     presetOrderStageLimits: presets.orderStageLimits || {},
+    // Rides in the same presets blob as everything above it, so the
+    // review's two settings need no column and no migration.
+    presetPriceReview: presets.priceReview || {},
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
@@ -11004,7 +11033,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -31748,16 +31777,210 @@ function priceRowMatchesStock(r, key){
      worse than ignoring it. */
   return true;
 }
+/* ================= WHICH PRICES TO GO AND CHECK ======================
+
+   The registry decays, and it decays UNEVENLY. Refreshing happens where
+   the shop is already busy -- a quote line edited, a restock booked,
+   and now goods arriving -- so the items that move keep themselves
+   current and the ones nobody has quoted lately are never questioned
+   again. That is the blind spot: not a few bad rows, but a whole tail
+   of prices that stopped being true without anything saying so.
+
+   Age alone will not find them usefully. Every row older than the
+   threshold is a list of hundreds that nobody works through, and the
+   ones at the top of it are as likely to be a discontinued handle as
+   the cement that half the shop's money passes through.
+
+   So the question is not "what is old" but WHAT DOES BEING OLD COST.
+   That is money at risk: the money that actually flows through this
+   price, weighted by whether a wrong figure here would do any damage.
+   A stale price on something nobody buys is harmless and stays off the
+   list entirely. */
+
+// Demand is read over a quarter: long enough that a slow-moving item
+// still registers, short enough that last season's rush does not.
+const PRICE_REVIEW_DEMAND_DAYS = 90;
+// What the shop reckons it can actually refresh in a period. Sustainable
+// is whatever gets done every month, and nobody knows that figure yet --
+// so it is a setting, and priceReviewProgress reports what was really
+// achieved so it can be set from evidence rather than guessed.
+const PRICE_REVIEW_TARGET_DEFAULT = 20;
+function priceReviewTarget(){
+  const set = data.presetPriceReview && Number(data.presetPriceReview.targetPerPeriod);
+  return set > 0 ? set : PRICE_REVIEW_TARGET_DEFAULT;
+}
+function priceReviewStaleDays(){
+  const set = data.presetPriceReview && Number(data.presetPriceReview.staleDays);
+  return set > 0 ? set : PRICE_STALE_DAYS;
+}
+// The month a round belongs to. Derived from the date, never stored:
+// there is no round object to raise, so there is nothing to raise twice.
+function priceReviewPeriod(){ return todayISO().slice(0,7); }
+
+/* How much this product/variant has actually moved lately.
+
+   Units off the shelf AND lines quoted, because they answer different
+   halves of the question. Sales say what the price is costing the shop
+   when it is wrong; quotes say what it is costing in lost or mispriced
+   business, including the ones that never closed. An item quoted ten
+   times and sold none is exactly the item whose price is worth
+   checking. */
+function priceReviewDemand(productId, variantIdx){
+  const key = stockKey(productId, variantIdx);
+  const from = anShiftDate(todayISO(), -PRICE_REVIEW_DEMAND_DAYS);
+  let units = 0;
+  (data.stockLog||[]).forEach(l=>{
+    if(l.type==='sale' && l.key===key && String(l.date||'') >= from){
+      units += Math.abs(Number(l.delta)||0);
+    }
+  });
+  let quotes = 0;
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided) return;
+    if(String(q.date||q.invoicedAt||'') < from) return;
+    if((q.items||[]).some(it=> it.productId===productId
+      && (it.variantIdx==null?null:it.variantIdx)===(variantIdx==null?null:variantIdx))) quotes++;
+  });
+  return { units, quotes };
+}
+
+/* One row, and everything a decision about it needs -- including the
+   reasons, so the screen can say WHY this is on the list rather than
+   showing a rank nobody can argue with.
+
+   The volume basis is demand PLUS what is on the shelf. Demand is the
+   money flowing through the price; stock is the money already standing
+   behind it, which still has to be re-bought and re-valued. Either one
+   alone leaves a real exposure reading as zero. */
+function priceReviewFacts(r){
+  const variantIdx = r.variantIdx==null ? null : r.variantIdx;
+  const demand = priceReviewDemand(r.productId, variantIdx);
+  const stock = getStockQty(r.productId, variantIdx);
+  const ageDays = priceAgeDays(r.date);
+  const limit = priceReviewStaleDays();
+  const peers = productPriceRows(r.productId, variantIdx);
+  const ranked = rankedPriceRows(r.productId, variantIdx);
+  const isWinner = !!(ranked.length && ranked[0].supplierId === r.supplierId);
+  const singleSource = peers.length === 1;
+  const unit = Number(r.wholesale != null ? r.wholesale : r.retail) || 0;
+  const volume = demand.units + stock;
+  const moneyAtRisk = unit * volume;
+
+  /* An undated row has no age to measure, and is the WORST case rather
+     than an exempt one -- nothing at all is known about when it was
+     true. Treated as exactly at the limit so it earns its place without
+     swamping rows whose staleness is measured. */
+  const overdueBy = ageDays === null ? 1 : (limit > 0 ? ageDays / limit : 0);
+
+  const reasons = [];
+  if(demand.units) reasons.push(`${demand.units} sold in ${PRICE_REVIEW_DEMAND_DAYS} days`);
+  if(demand.quotes) reasons.push(`quoted ${demand.quotes} ${demand.quotes===1?'time':'times'}`);
+  if(stock) reasons.push(`${stock} on the shelf`);
+  if(isWinner) reasons.push('currently the cheapest');
+  if(singleSource) reasons.push('the only supplier');
+  reasons.push(ageDays === null ? 'never dated' : `${ageDays} days old`);
+
+  return {
+    row: r, ageDays, overdueBy, demand, stock, isWinner, singleSource,
+    unit, volume, moneyAtRisk, reasons,
+    /* A wrong WINNER misprices quotes and sends the buying list to the
+       wrong door; a wrong loser costs nothing until it wins. A single
+       source has nothing to be checked against, so its price is the
+       whole story. Both are multipliers on real money rather than
+       points in a scheme, so the ranking stays explainable: this row is
+       above that one because more money runs through it. */
+    score: moneyAtRisk * (isWinner ? 2 : 1) * (singleSource ? 1.5 : 1) * Math.max(overdueBy, 0),
+  };
+}
+
+/* Past its date, and worth somebody's morning.
+
+   The exclusion is the whole point. Nothing sold, nothing quoted and
+   nothing on the shelf means a wrong price here costs the shop nothing
+   today -- it is a row to fix when the item next comes up, not a job.
+   Leaving those in is how a review list becomes six hundred rows and
+   stops being read. */
+function priceNeedsReview(f){
+  const past = f.ageDays === null || f.ageDays > priceReviewStaleDays();
+  return past && f.volume > 0;
+}
+function priceReviewCandidates(){
+  return data.prices
+    .map(r=> priceReviewFacts({...r, pname: productVariantLabel(
+      data.products.find(p=>p.id===r.productId) || {name: productName(r.productId)}, r.variantIdx),
+      sname: supplierName(r.supplierId)}))
+    .filter(priceNeedsReview)
+    .sort((a,b)=> b.score - a.score || (a.ageDays===null?-1:b.ageDays===null?1:b.ageDays-a.ageDays));
+}
+
+/* What this period actually got done, against what it meant to.
+
+   Derived from the rows themselves rather than from a round object:
+   nothing to raise, nothing to keep in step, and no way for the tally
+   to disagree with the registry it is counting.
+
+   A REFRESH IS NOT A FIRST ENTRY. Counting every row dated inside the
+   period read 304 done against a target of 20 on the first run -- but
+   297 of those were prices typed in for the first time this month, not
+   prices anybody went back and checked. A screen that opened by
+   congratulating the shop for work it had not done would be worse than
+   no screen.
+
+   So only the two sources that unambiguously mean "this price was put
+   to the test" count: a purchase, where money moved at it, and a
+   confirmation, where somebody asked and it had not changed. Deliberately
+   UNDERCOUNTS: re-typing a moved price by hand is a real refresh and
+   lands as `manual`, indistinguishable from a first entry. Undercounting
+   effort is the safe direction -- it can only ever ask for more
+   checking than was needed, never claim checking that never happened. */
+const PRICE_REVIEW_CONFIRMING_SOURCES = ['purchase', 'confirmed'];
+function priceReviewProgress(period){
+  const p = period || priceReviewPeriod();
+  const done = data.prices.filter(r=> String(r.date||'').slice(0,7) === p
+    && PRICE_REVIEW_CONFIRMING_SOURCES.includes(r.priceSource)).length;
+  const target = priceReviewTarget();
+  return { period: p, done, target, met: done >= target,
+    outstanding: priceReviewCandidates().length };
+}
+
+/* "I asked, and it has not moved."
+
+   A real answer, and one the registry could not record: without it the
+   only way to clear a row was to change a price that was correct, so
+   the honest shopkeeper who checked and found nothing had nothing to
+   show for it and the same rows came back next month. Dated today and
+   marked as confirmed rather than as a purchase, because no money
+   moved -- see syncPriceRegistryFromPurchase for the other half of that
+   distinction. */
+function confirmPriceUnchanged(priceId){
+  const r = data.prices.find(p=> p.id === priceId);
+  if(!r) return false;
+  r.date = todayISO();
+  r.priceSource = 'confirmed';
+  return true;
+}
+
 const PRICE_AGE_BUCKETS = [
   { key:'',        label:'Any age' },
+  /* Not an age band at all, and first because it is the one that leads
+     to work. The bands below ask "how old"; this asks "which of the old
+     ones matter", which is a different and much shorter list -- see
+     priceNeedsReview. */
+  { key:'review',  label:'Needs checking' },
   { key:'30',      label:'Over 30 days old' },
   { key:'90',      label:'Over 90 days old' },
   { key:'180',     label:'Over 6 months old' },
   { key:'365',     label:'Over a year old' },
   { key:'undated', label:'With no date at all' },
 ];
+/* Ages only. `review` is deliberately NOT handled here: deciding it
+   needs the stock log, the sales, the other suppliers on the item and
+   the shelf, and reaching for all that from a predicate whose whole
+   virtue is being a pure function of one row is how a filter becomes
+   untestable. getFilteredPriceRows applies that one, where the data is
+   already open. */
 function priceRowMatchesAge(r, ageFilter){
-  if(!ageFilter) return true;
+  if(!ageFilter || ageFilter === 'review') return true;
   const age = priceAgeDays(r.date);
   if(ageFilter === 'undated') return age === null;
   // An undated quote is never "older than N": it has no age to compare.
@@ -31792,6 +32015,18 @@ function getFilteredPriceRows(filter='', supplierFilter='', categoryFilter='', a
   // Here rather than in the renderer, same as the age filter above: the
   // printout has to carry the rows the screen is showing.
   if(stockFilter) rows = rows.filter(r=> priceRowMatchesStock(r, stockFilter));
+  /* The one "age" that is not an age. Applied here because it reads the
+     shop rather than the row, and AFTER the other filters so that
+     narrowing by supplier or stock still narrows it -- an early return
+     would have quietly ignored whatever else was set.
+
+     It also replaces the sort, on purpose: this list is ordered by what
+     being wrong would cost, and a worklist sorted by date is a list
+     rather than a plan. */
+  if(ageFilter === 'review'){
+    const order = new Map(priceReviewCandidates().map((f,i)=> [f.row.id, i]));
+    return rows.filter(r=> order.has(r.id)).sort((a,b)=> order.get(a.id) - order.get(b.id));
+  }
   rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id-a.id));
   return rows;
 }
@@ -32020,11 +32255,22 @@ function priceCardHTML(r, tokens){
             <span class="prc-date" title="${esc(r.date)}">${daysAgoLabel(r.date)}</span>
             ${r.outOfStock ? `<span class="prc-oos-pill" title="Excluded from best-supplier recommendations">Out of stock</span>` : ''}
             ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
+              : r.priceSource==='confirmed' ? `<span class="prc-source-pill confirmed" title="Checked with the supplier and found unchanged">Confirmed</span>`
               : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
           </div>
         </div>
       </div>
       <div class="pc-actions">
+        ${/* "I asked, and it has not moved."
+
+             Without this the only way to clear a row off the review list
+             was to change a price that was correct, so the shopkeeper who
+             did the work honestly had nothing to show for it and the same
+             rows came back the following month. Dating it is the whole
+             point: the figure is already right. */''}
+        <button class="pc-icon-btn" title="Still this price — mark it checked today" onclick="confirmPriceStillRight(${r.id})">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
         <button class="pc-icon-btn ${r.outOfStock?'pc-icon-btn-active-danger':''}" title="${r.outOfStock?'Mark back in stock':'Mark out of stock'}" onclick="toggleOutOfStock(${r.id})">${r.outOfStock?ICON_RESTOCK:ICON_NO_STOCK}</button>
         <button class="pc-icon-btn" title="Edit price entry" onclick="editPrice(${r.id})">${ICON_EDIT}</button>
         <button class="pc-icon-btn danger" title="Delete price entry" onclick="deletePrice(${r.id})">${ICON_TRASH}</button>
@@ -32255,6 +32501,16 @@ function deletePrice(id){
 // the price stays on file for reference, but rankedPriceRows() (Purchase
 // Stock, Add item to quote) and Compare Prices skip it, so an out-of-
 // stock supplier stops being recommended as somewhere to buy from.
+/* The screen's half of confirmPriceUnchanged. Split so the rule can be
+   tested without a DOM, the way announceOrderMove is split from
+   setSavedQuoteStatus. */
+function confirmPriceStillRight(id){
+  if(!confirmPriceUnchanged(id)) return;
+  saveData(); triggerPricesRender();
+  if(document.getElementById('tab-dashboard')
+    && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+  toast('Marked checked today — the price itself is untouched');
+}
 function toggleOutOfStock(id){
   const r = data.prices.find(p=>p.id===id); if(!r) return;
   r.outOfStock = !r.outOfStock;
@@ -40437,6 +40693,46 @@ function renderDashboard(){
     <table class="dash-mini-table"><thead><tr><th>Item</th><th class="num">Qty sold</th><th class="num">Buyers</th></tr></thead>
     <tbody>${breadthRows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${r.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</td><td class="num"><span class="dash-badge ${r.buyers===1?'bad':(r.buyers<=4?'warn':'good')}" title="${r.buyers===1?`All from ${esc(r.topBuyerName)}`:''}">${r.buyers}</span></td></tr>`).join('')}</tbody></table>
   ` : `<div class="threat-empty">No sales in this window yet.</div>`;
+
+  renderDashPriceReview();
+}
+
+/* The report the shop gets without asking for it.
+
+   Deliberately NOT a warning raised while quoting a client: by then it
+   is both too late and in the way. This arrives on the dashboard, in
+   its own time, so the asking can be planned -- put on a trip that is
+   already going, or sent to a supplier in the morning.
+
+   Ignores the dashboard's date range on purpose. Every other panel here
+   answers "how did the chosen window go"; this one answers "what is
+   true about the book right now", and a price does not stop being out
+   of date because you were looking at last quarter. */
+function renderDashPriceReview(){
+  const wrap = document.getElementById('dash_priceReview');
+  if(!wrap) return;
+  const rows = priceReviewCandidates();
+  const p = priceReviewProgress();
+  const money = (n)=> fmtUGX(Math.round(n));
+  const head = `<div class="dash-review-head">
+    <span class="dash-review-count ${rows.length ? 'warn' : 'good'}">${rows.length}</span>
+    <span class="dash-review-said">${rows.length
+      ? `${rows.length === 1 ? 'price is' : 'prices are'} past ${priceReviewStaleDays()} days on something the shop actually trades`
+      : `nothing the shop trades is running on a price older than ${priceReviewStaleDays()} days`}</span>
+    <span class="dash-review-prog" title="Prices confirmed this month by a purchase or by asking. Re-typing a price by hand cannot be told from entering a new one, so this undercounts rather than flatters.">${p.done} of ${p.target} checked this month</span>
+  </div>`;
+  wrap.innerHTML = rows.length ? head + `
+    <table class="dash-mini-table"><thead><tr>
+      <th>Item</th><th>Supplier</th><th class="num">At risk</th><th>Why</th>
+    </tr></thead>
+    <tbody>${rows.slice(0,8).map(f=>`<tr>
+      <td>${esc(f.row.pname)}</td>
+      <td>${esc(f.row.sname)}</td>
+      <td class="num" title="What flows through this price: ${f.volume} ${f.volume===1?'unit':'units'} sold or standing, at ${money(f.unit)}">${money(f.moneyAtRisk)}</td>
+      <td class="dash-review-why">${esc(f.reasons.join(' · '))}</td>
+    </tr>`).join('')}</tbody></table>
+    ${rows.length > 8 ? `<p class="dash-panel-note" style="margin-top:8px;">${rows.length - 8} more on the Price Registry — filter it to <b>Needs checking</b>.</p>` : ''}
+  ` : head + `<div class="threat-empty">Nothing to chase. Prices on items with no sales, no quotes and no stock are left off this list.</div>`;
 }
 document.getElementById('dash_range_preset').addEventListener('change', renderDashboard);
 
