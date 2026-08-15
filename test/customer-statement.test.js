@@ -153,10 +153,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and NOT the invoices as well — invoicing already writes into the log, so reading both would charge every credit sale twice');
 }
 
-/* ---------- 7. the printed sheet ------------------------------------- */
+/* ---------- 7. the printed sheet -------------------------------------
+   Repointed, not weakened: the sheet's LAYOUT moved into
+   printStatementSheet when the supplier statement was built, because
+   which columns exist and where the opening balance sits must be
+   identical on both documents. Every claim below is the one it always
+   was; it is now made about the builder the customer print calls. */
 {
-  const p = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(p.length > 0, 'there is a print path');
+  const caller = (/function printCustomerStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const p = (/function printStatementSheet[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(caller.length > 0 && p.length > 0, 'there is a print path');
+  t.check(/printStatementSheet\(st, \{/.test(caller),
+    'and it goes through the shared sheet rather than laying out its own');
   t.check(/clearInjectedPrintStyles\(\);/.test(p),
     'it clears a stale page size from another printout first');
   t.check(/printedShopName\(\)/.test(p) && /Statement of account/.test(p),
@@ -166,6 +174,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the disagreement, when there is one, is printed on the sheet');
   t.check(/printArea'\)\.innerHTML = '';/.test(p),
     'the print area is emptied afterwards, so the next receipt does not carry a statement');
+
+  /* The wording is the caller's and the document is not. A customer is
+     told what they owe you; read the other way round that sentence is
+     simply false, which is why the sentences are passed in and the
+     table is not. */
+  t.check(/owesLine: \(m\)=> `<b>\$\{esc\(c\.name\)\}<\/b> owes/.test(caller),
+    'the customer’s own closing sentence is supplied by the customer print');
+  t.check(/payWord: 'Payment received'/.test(caller),
+    'along with the word for money coming in');
 
   /* Built from the year and month, never by subtracting months from a
      date: standing on the 31st, setUTCMonth(-6) asks for the 31st of a
@@ -190,34 +207,45 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
    the screen it was read off. */
 {
   const block = extractFunction(src, 'customerStatementBlockHTML', 'index.html');
-  t.check(block.length > 0, 'the panel has a statement block');
+  // Repointed for the same reason as section 7: the ledger's markup moved
+  // into statementLedgerHTML when the supplier statement was built.
+  const led = extractFunction(src, 'statementLedgerHTML', 'index.html');
+  t.check(block.length > 0 && led.length > 0, 'the panel has a statement block');
 
   t.check(/customerStatementRows\(customerId, from, to\)/.test(block),
     'it calls the same builder as the print rather than totting the log up again');
+  t.check(/statementLedgerHTML\(/.test(block),
+    'and renders it through the shared ledger, so the two accounts are one table');
   t.check(/customerStatementRange\(\)/.test(block),
     'over the same six-month window, so the two documents cover the same period');
   t.check(!/debtLog/.test(block) && !/savedQuotes/.test(block),
     'and does no arithmetic of its own — a second sum over the same log is a second answer waiting to happen');
 
   /* The three things asked for, each on screen. */
-  t.check(/st\.rows\.map/.test(block), 'every entry in the period is listed');
-  t.check(/r\.charge \? money\(r\.charge\)/.test(block) && /r\.payment \? money\(r\.payment\)/.test(block),
+  t.check(/st\.rows\.map/.test(led), 'every entry in the period is listed');
+  t.check(/r\.charge \? money\(r\.charge\)/.test(led) && /r\.payment \? money\(r\.payment\)/.test(led),
     'with charges and payments in their own columns');
-  t.check(/money\(r\.balance\)/.test(block), 'and the balance running down beside them');
-  t.check(/money\(st\.opening\)/.test(block) && /Balance brought forward/.test(block),
+  t.check(/money\(r\.balance\)/.test(led), 'and the balance running down beside them');
+  t.check(/money\(st\.opening\)/.test(led) && /Balance brought forward/.test(led),
     'anything older is carried in as one labelled line, not dropped');
-  t.check(/money\(st\.closing\)/.test(block) && /Balance now due/.test(block),
+  t.check(/money\(st\.closing\)/.test(led) && /Balance now due/.test(led),
     'closing on what is owed now');
 
   /* An empty period is a real answer to "what do I owe" and must not
      render as a table with a head and nothing under it. */
-  t.check(/st\.rows\.length \? '' :/.test(block) && /Nothing was charged or paid/.test(block),
+  t.check(/st\.rows\.length \? '' :/.test(led) && /Nothing was charged or paid/.test(led),
     'a period with no movement says so rather than showing an empty table');
 
   // The disagreement is surfaced here too. A shopkeeper who only reads
   // the screen must not be the one person not told.
-  t.check(/st\.agrees \? '' :/.test(block),
+  t.check(/st\.agrees \? '' :/.test(led),
     'and the log-versus-balance disagreement is shown on screen, not only on paper');
+
+  /* The ledger reads its own window off the statement it was handed
+     rather than calling the range again. Two calls either side of
+     midnight would date the header and the rows differently. */
+  t.check(/esc\(st\.from\)/.test(led) && !/customerStatementRange\(\)/.test(led),
+    'the ledger dates itself from the statement it was given, not from a second reading of the clock');
 
   // Wired in, and guarded: the panel can be opened for a customer whose
   // record has gone.
@@ -281,12 +309,24 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
   // Both renderers, one rule -- they had a copy each, and a copy each is
   // how the counter and the paper come to disagree.
-  const block = extractFunction(src, 'customerStatementBlockHTML', 'index.html');
-  const print = extractFunction(src, 'printCustomerStatement', 'index.html');
-  t.check(/esc\(statementRowDetail\(r\)\)/.test(block), 'the screen names rows through it');
-  t.check(/esc\(statementRowDetail\(r\)\)/.test(print), 'and so does the paper');
+  const block = extractFunction(src, 'statementLedgerHTML', 'index.html');
+  const print = extractFunction(src, 'printStatementSheet', 'index.html');
+  t.check(/esc\(statementRowDetail\(r, payWord\)\)/.test(block), 'the screen names rows through it');
+  t.check(/esc\(statementRowDetail\(r, side\.payWord\)\)/.test(print), 'and so does the paper');
   t.check(!/r\.note \|\| \(r\.type === 'charge'/.test(code),
     'with the duplicated fallback gone from both');
+
+  /* The one word that flips between the two accounts. Money leaving the
+     shop is not "received", and a supplier statement that said so would
+     read as though the shop had been paid. */
+  eq(detail({ type: 'payment', ref: 'PINV-0012' }, 'Payment made'), 'Payment made — PINV-0012',
+    'the paying side names its own direction');
+  eq(detail({ type: 'payment', ref: 'PINV-0012' }), 'Payment received — PINV-0012',
+    'and the default stays the receiving side, so the customer statement is unchanged');
+  eq(detail({ type: 'charge', ref: 'PINV-0012' }), 'Invoice PINV-0012',
+    'a charge names its document whichever side it is on');
+  eq(detail({ type: 'payment' }, 'Payment made'), 'Payment made',
+    'and an unreferenced payment still takes the right word');
 }
 
 process.exit(t.done() ? 1 : 0);

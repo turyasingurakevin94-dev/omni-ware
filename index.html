@@ -1622,11 +1622,16 @@
   .assign-staff-phone{font-size:12px;color:var(--ink-soft);}
 
   /* Customer cards */
-  .cust-summary-row{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;}
-  .cust-summary-card{flex:1;min-width:160px;background:#F7F9FB;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;}
-  .cust-summary-card b{font-size:19px;font-family:'IBM Plex Mono',monospace;color:var(--ink);line-height:1.1;}
-  .cust-summary-card span{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
-  .cust-summary-card.owed b{color:var(--danger);}
+  /* The strip above a directory grid. Named for what it is rather than
+     for the first screen that had one: customers and suppliers both
+     carry it now, and a .cust- prefix on the suppliers page is a lie
+     the next reader has to decode before they can trust anything else
+     in the rule. */
+  .dir-summary-row{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;}
+  .dir-summary-card{flex:1;min-width:160px;background:#F7F9FB;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;}
+  .dir-summary-card b{font-size:19px;font-family:'IBM Plex Mono',monospace;color:var(--ink);line-height:1.1;}
+  .dir-summary-card span{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
+  .dir-summary-card.owed b{color:var(--danger);}
   .customer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
   .customer-card{
     background:#fff;border:1px solid var(--line);border-radius:11px;padding:16px 16px 14px;
@@ -6883,6 +6888,7 @@
             Add supplier
           </button>
         </div>
+        <div class="dir-summary-row" id="supSummaryRow"></div>
         <div class="search-bar" style="margin-top:14px;"><input id="s_search" placeholder="Search by supplier name or product..."></div>
         <div id="suppliersTableWrap"></div>
       </div>
@@ -6963,7 +6969,7 @@
             Add customer
           </button>
         </div>
-        <div class="cust-summary-row" id="custSummaryRow"></div>
+        <div class="dir-summary-row" id="custSummaryRow"></div>
         <div class="search-bar" style="margin-top:14px;"><input id="c_search" placeholder="Search by customer name, phone or location..."></div>
         <div id="customersTableWrap"></div>
       </div>
@@ -8751,6 +8757,19 @@
       </button>
     </div>
     <div class="modal-body" id="customerStatsBody"></div>
+  </div>
+</div>
+
+<!-- THE SUPPLIER'S ACCOUNT -->
+<div class="modal-overlay" id="supplierStatsModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="supplierStatsTitle">Supplier</h2>
+      <button class="modal-close" id="supplierStatsClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="supplierStatsBody"></div>
   </div>
 </div>
 
@@ -16816,6 +16835,7 @@ document.getElementById('buyingListClose').addEventListener('click', ()=>closeMo
 document.getElementById('shortfallPlanClose').addEventListener('click', ()=>closeModal('shortfallPlanModal'));
 document.getElementById('deliveryRunsClose').addEventListener('click', ()=>closeModal('deliveryRunsModal'));
 document.getElementById('customerStatsClose').addEventListener('click', ()=>closeModal('customerStatsModal'));
+document.getElementById('supplierStatsClose').addEventListener('click', ()=>closeModal('supplierStatsModal'));
 document.getElementById('orderPreviewClose').addEventListener('click', ()=>closeModal('orderPreviewModal'));
 // Dismissing the one in front brings the next reminder up, rather than
 // leaving rent that is already late to wait until tomorrow.
@@ -23323,7 +23343,8 @@ function supplierCardHTML(s, productMatches){
           <span class="sc-match-price">${m.wholesale!=null?fmtUGX(m.wholesale)+' <em>whs</em>':''}${(m.wholesale!=null&&m.retail!=null)?' · ':''}${m.retail!=null?fmtUGX(m.retail)+' <em>rtl</em>':''}</span>
         </div>`).join('')}
     </div>` : '';
-  return `<div class="supplier-card">
+  return `<div class="supplier-card" data-supplier="${esc(s.id)}"
+      role="button" tabindex="0" title="See the account for ${esc(s.name)}">
     <div class="sc-head">
       <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
       ${/* The tag sits on the meta line with the code, not inside the
@@ -23357,7 +23378,126 @@ function supplierCardHTML(s, productMatches){
     </div>
   </div>`;
 }
+/* What the shop knows about one supplier's account.
+
+   The customer panel leads with what they are worth and puts the debt
+   last, deliberately, so nobody reads as a debt rather than a
+   relationship. This one is the other way round on purpose: a supplier
+   account is opened to answer "what do we owe them", and the prices and
+   the wins are already on the card behind it. */
+function supplierAccountStats(supplierId){
+  const sup = (data.suppliers||[]).find(x=> String(x.id) === String(supplierId)) || null;
+  const invoices = (data.purchaseInvoices||[])
+    .filter(pi=> String(pi.supplierId) === String(supplierId) && !pi.voided);
+  const open = creditorOutstandingInvoices(supplierId);
+  const oldest = creditorOldestDueDate(supplierId);
+  return {
+    supplier: sup,
+    bought: invoices.reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0),
+    invoiceCount: invoices.length,
+    owed: creditorTotalOwed(supplierId),
+    openCount: open.length,
+    // Null, not zero: never having been paid is not the same as having
+    // been paid a long time ago, and only the first explains a supplier
+    // who will not extend credit again.
+    lastPaid: creditorLastPaymentDate(supplierId),
+    waitingDays: oldest ? daysBetweenISO(oldest, todayISO()) : null,
+  };
+}
+function openSupplierStats(supplierId){
+  const a = supplierAccountStats(supplierId);
+  const s = a.supplier;
+  document.getElementById('supplierStatsTitle').textContent =
+    s ? `${s.name}${s.location ? ` — ${s.location}` : ''}` : 'Supplier';
+  /* No purchase invoice, no statement to print. The sheet would carry a
+     brought-forward zero and the sentence "the account is settled",
+     which is a true document about nothing -- and a button that hands
+     somebody a blank page teaches them not to trust the button. The
+     panel says why in words instead. */
+  document.getElementById('supplierStatsBody').innerHTML =
+    ((s && a.invoiceCount) ? `<div class="cs-actions">
+      <button type="button" class="btn btn-ghost" id="sstPrintBtn" data-id="${esc(supplierId)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+        Print statement
+      </button>
+    </div>` : '') + supplierStatsHTML(a);
+  const btn = document.getElementById('sstPrintBtn');
+  if(btn) btn.addEventListener('click', ()=> printSupplierStatement(btn.dataset.id));
+  openModal('supplierStatsModal');
+}
+function supplierStatsHTML(a){
+  const s = a.supplier;
+  if(!s) return `<div class="cs-empty"><p>That supplier is no longer on file.</p></div>`;
+  const plural = (n, one, many)=> n === 1 ? one : many;
+  const money = (n)=> fmtUGX(Math.round(n));
+
+  /* No purchase invoice is not the same as nothing to say: a supplier
+     you have only ever priced still has prices worth seeing, and the
+     statement below would be an empty table with a header. Said plainly,
+     the way the customer panel says it. */
+  if(!a.invoiceCount){
+    return `<div class="cs-empty">
+      <p>You have not raised a purchase invoice with <b>${esc(s.name)}</b> yet.</p>
+      <p class="cs-empty-note">What you owe and what you have paid are built from purchase
+      invoices, so this fills in once the first order to them is invoiced. Their prices are
+      on the card behind this.</p>
+    </div>`;
+  }
+
+  return `
+    <div class="cs-stats">
+      ${csStat('You owe them now', money(a.owed),
+        a.owed > 0
+          ? `${a.openCount} open ${plural(a.openCount,'invoice','invoices')}${a.waitingDays !== null ? `, oldest waiting ${a.waitingDays} ${plural(a.waitingDays,'day','days')}` : ''}`
+          : 'nothing outstanding',
+        a.owed > 0 ? 'bad' : 'good')}
+      ${csStat('Bought from them', money(a.bought),
+        `${a.invoiceCount} purchase ${plural(a.invoiceCount,'invoice','invoices')}`)}
+      ${csStat('Last paid', a.lastPaid ? esc(a.lastPaid) : 'never',
+        a.lastPaid
+          ? `${daysBetweenISO(a.lastPaid, todayISO())} days ago`
+          : 'no payment recorded against them yet',
+        a.lastPaid ? '' : 'bad')}
+    </div>
+    ${(() => {
+      // The same six-month window the customer statement and both prints
+      // use, read once -- calling the range twice invites a statement
+      // whose header and body were built either side of midnight.
+      const { from, to } = customerStatementRange();
+      return statementLedgerHTML(supplierStatementRows(s.id, from, to),
+        { payWord: 'Payment made', recordedAs: 'their open invoices carry' });
+    })()}`;
+}
+
+/* The three figures above the supplier grid, answering the same three
+   questions the customers page answers: how many, how much, how many of
+   them carry it.
+
+   Money owed to a supplier is not a field on the supplier -- unlike a
+   customer's c.debt, it is derived from their unvoided purchase
+   invoices, which is what creditorTotalOwed reads. Deriving it here a
+   second way is how this strip would come to disagree with the
+   creditors list it summarises.
+
+   The 0.5 threshold is creditorOutstandingInvoices' own. A settled
+   invoice can leave a fraction of a shilling behind, and counting that
+   supplier here while the creditors list does not show them is a
+   discrepancy somebody has to go and disprove. */
+function renderSupplierSummary(){
+  const wrap = document.getElementById('supSummaryRow');
+  if(!wrap) return;
+  const total = data.suppliers.length;
+  const owedEach = data.suppliers.map(s=> creditorTotalOwed(s.id));
+  const totalOwed = owedEach.reduce((a,b)=> a+b, 0);
+  const owingCount = owedEach.filter(v=> v > 0.5).length;
+  wrap.innerHTML = `
+    <div class="dir-summary-card"><b>${total}</b><span>Total suppliers</span></div>
+    <div class="dir-summary-card owed"><b>${fmtUGX(Math.round(totalOwed))}</b><span>Total you owe</span></div>
+    <div class="dir-summary-card"><b>${owingCount}</b><span>Suppliers with a balance</span></div>
+  `;
+}
 function renderSuppliers(filter=''){
+  renderSupplierSummary();
   const wrap = document.getElementById('suppliersTableWrap');
   const tokens = searchTokens(filter);
   let rows = data.suppliers.slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -25722,9 +25862,9 @@ function renderCustomerSummary(){
   const totalOwed = data.customers.reduce((s,c)=>s+(Number(c.debt)||0),0);
   const owingCount = data.customers.filter(c=>(Number(c.debt)||0)>0).length;
   wrap.innerHTML = `
-    <div class="cust-summary-card"><b>${total}</b><span>Total customers</span></div>
-    <div class="cust-summary-card owed"><b>${fmtUGX(totalOwed)}</b><span>Total owed to you</span></div>
-    <div class="cust-summary-card"><b>${owingCount}</b><span>Customers with a balance</span></div>
+    <div class="dir-summary-card"><b>${total}</b><span>Total customers</span></div>
+    <div class="dir-summary-card owed"><b>${fmtUGX(totalOwed)}</b><span>Total owed to you</span></div>
+    <div class="dir-summary-card"><b>${owingCount}</b><span>Customers with a balance</span></div>
   `;
 }
 /* The panel behind a customer card.
@@ -25862,16 +26002,21 @@ function customerStatsHTML(s){
    balance they leave.
 
    The same builder as the print, so the sheet handed over the counter and
-   the screen it was read from cannot say different numbers. */
-function customerStatementBlockHTML(customerId){
-  if(customerId == null) return '';
-  const { from, to } = customerStatementRange();
-  const st = customerStatementRows(customerId, from, to);
+   the screen it was read from cannot say different numbers.
+
+   Parameterised over the two sides rather than written twice. What a
+   customer owes you and what you owe a supplier are the same document
+   with the arrows reversed, and two copies of a running balance is two
+   places for one to go wrong. `side` carries only what genuinely
+   differs: the word for a payment, and what the closing figure is
+   measured against. */
+function statementLedgerHTML(st, side){
   const money = (n)=> fmtUGX(Math.round(n));
+  const payWord = side && side.payWord;
   return `
     <section class="cs-block">
       <h4>Statement of account</h4>
-      <p class="cs-read cs-muted">Every charge and every payment since ${esc(from)}, oldest first.</p>
+      <p class="cs-read cs-muted">Every charge and every payment since ${esc(st.from)}, oldest first.</p>
       <table class="cs-table cs-ledger">
         <thead><tr>
           <th>Date</th><th>Detail</th>
@@ -25879,12 +26024,12 @@ function customerStatementBlockHTML(customerId){
         </tr></thead>
         <tbody>
           <tr class="cs-opening">
-            <td>${esc(from)}</td><td>Balance brought forward</td>
+            <td>${esc(st.from)}</td><td>Balance brought forward</td>
             <td class="r"></td><td class="r"></td><td class="r num">${money(st.opening)}</td>
           </tr>
           ${st.rows.map(r=>`<tr>
             <td>${esc(r.date)}</td>
-            <td>${esc(statementRowDetail(r))}</td>
+            <td>${esc(statementRowDetail(r, payWord))}</td>
             <td class="r num">${r.charge ? money(r.charge) : ''}</td>
             <td class="r num">${r.payment ? money(r.payment) : ''}</td>
             <td class="r num">${money(r.balance)}</td>
@@ -25900,13 +26045,20 @@ function customerStatementBlockHTML(customerId){
         </tr></tfoot>
       </table>
       ${/* The one check the document makes on itself, carried onto the
-           screen as well as the paper: the ledger is a history and
-           customer.debt is a balance kept beside it, and nothing forces
-           them to agree. */''}
+           screen as well as the paper: the ledger is a history and the
+           balance kept beside it is a figure, and nothing forces them to
+           agree. */''}
       ${st.agrees ? '' : `<p class="cs-empty-note cs-flag">This adds up to
-        ${money(st.closing)}, but the card carries ${money(st.recorded)} — the running
-        history and the balance beside it have gone out of step.</p>`}
+        ${money(st.closing)}, but ${esc((side && side.recordedAs) || 'the card carries')}
+        ${money(st.recorded)} — the running history and the balance beside it have gone
+        out of step.</p>`}
     </section>`;
+}
+function customerStatementBlockHTML(customerId){
+  if(customerId == null) return '';
+  const { from, to } = customerStatementRange();
+  return statementLedgerHTML(customerStatementRows(customerId, from, to),
+    { payWord: 'Payment received', recordedAs: 'the card carries' });
 }
 
 /* What one line of the statement SAYS it is.
@@ -25925,13 +26077,20 @@ function customerStatementBlockHTML(customerId){
 
    Both the screen and the paper call this, so a customer reading over
    the counter and the sheet they are handed name the same line the same
-   way. */
-function statementRowDetail(r){
+   way.
+
+   `ref` is the supplier side's version of the same idea: those rows are
+   built straight from purchase invoices and carry the document number
+   outright rather than parsed out of a note. `payWord` is the one word
+   that flips -- money leaving the shop is not "received". */
+function statementRowDetail(r, payWord){
+  const word = payWord || 'Payment received';
   const note = String(r.note || '');
   const auto = /^Auto-sync\s*[—-]\s*(.+)$/.exec(note);
-  if(auto) return r.type === 'payment' ? `Payment received — ${auto[1]}` : `Invoice ${auto[1]}`;
+  const ref = r.ref || (auto ? auto[1] : '');
+  if(ref) return r.type === 'payment' ? `${word} — ${ref}` : `Invoice ${ref}`;
   if(note) return note;
-  return r.type === 'charge' ? 'Goods supplied' : 'Payment received';
+  return r.type === 'charge' ? 'Goods supplied' : word;
 }
 
 /* Six months, with whatever came before carried in as one opening line.
@@ -25950,12 +26109,87 @@ function customerStatementRange(){
   return { from, to };
 }
 
-function printCustomerStatement(customerId){
-  const { from, to } = customerStatementRange();
-  const st = customerStatementRows(customerId, from, to);
-  const c = st.customer;
-  if(!c){ toast('That customer is no longer on file'); return; }
+/* The same statement, the other way round: what you owe a supplier.
 
+   BUILT FROM THE PURCHASE INVOICES, because that is where this side's
+   money actually lives. A customer has a c.debt field with a debtLog
+   beside it; a supplier has neither. What you owe them is derived from
+   their unvoided purchase invoices, which is what creditorTotalOwed
+   reads and what the creditors list pays down -- so the invoices are the
+   single source here exactly as the debt log is there.
+
+   Every payment reaches pi.payments. Both paths put it there: pip_save
+   for one invoice, and allocateCreditorPayment when a lump sum is spread
+   across the oldest first. Reading the cash book as well would count
+   each payment twice, for the same reason the customer statement must
+   not read the invoices as well as the log.
+
+   A VOIDED INVOICE IS GONE, and so are its payments. Not filtered at the
+   end but never gathered, so a voided invoice cannot leave a payment
+   floating against a charge that is no longer there. This matches
+   creditorTotalOwed, which is the figure the ledger is checked against;
+   filtering differently would manufacture a disagreement out of nothing. */
+function supplierStatementRows(supplierId, fromISO, toISO){
+  const sup = (data.suppliers||[]).find(x=> String(x.id) === String(supplierId)) || null;
+  const events = [];
+  (data.purchaseInvoices||[])
+    .filter(pi=> String(pi.supplierId) === String(supplierId) && !pi.voided)
+    .forEach(pi=>{
+      const ref = purchaseInvoiceNumberLabel(pi);
+      events.push({ date: pi.date || '', type: 'charge', ref, seq: (pi.id||0)*1000,
+        amount: purchaseInvoiceTotal(pi) });
+      (pi.payments||[]).forEach((p, i)=> events.push({
+        date: p.date || '', type: 'payment', ref, note: p.note || '',
+        // Ordered within the invoice they belong to, so a payment can
+        // never print above the charge it settles.
+        seq: (pi.id||0)*1000 + i + 1, amount: Number(p.amount)||0 }));
+    });
+  events.sort((a,b)=> String(a.date).localeCompare(String(b.date)) || (a.seq - b.seq));
+
+  const delta = (e)=> e.type === 'charge' ? e.amount : -e.amount;
+  let opening = 0;
+  events.forEach(e=>{ if(String(e.date) < fromISO) opening += delta(e); });
+
+  let running = opening;
+  const rows = events
+    .filter(e=>{ const d = String(e.date); return d >= fromISO && d <= toISO; })
+    .map(e=>{
+      running += delta(e);
+      return { date: e.date, ref: e.ref, note: e.note || '', type: e.type,
+        charge: e.type === 'charge' ? e.amount : 0,
+        payment: e.type === 'payment' ? e.amount : 0,
+        balance: running };
+    });
+
+  const recorded = creditorTotalOwed(supplierId);
+  return {
+    supplier: sup, from: fromISO, to: toISO,
+    opening, rows, closing: running,
+    charged: rows.reduce((s,r)=> s + r.charge, 0),
+    paid: rows.reduce((s,r)=> s + r.payment, 0),
+    recorded,
+    /* These two CAN legitimately differ, and the difference is worth
+       seeing. creditorTotalOwed clamps each invoice at zero, so an
+       overpaid one contributes nothing there while the running history
+       carries the overpayment as a credit. Saying so is the point: an
+       overpayment nobody notices is money the shop has lent a supplier
+       for free. */
+    agrees: Math.abs(running - recorded) < 1,
+  };
+}
+
+/* One sheet, both directions.
+
+   The LAYOUT is shared and the SENTENCES are not. Which columns exist,
+   where the opening balance sits, what the totals row adds up -- those
+   must be identical on both statements or the shop is handing out two
+   documents that look like one another and are not. The prose around
+   them genuinely differs: a customer is told what they owe you, a
+   supplier is told what you owe them, and neither sentence works read
+   the other way round. So the caller supplies the words and this
+   supplies the document. */
+function printStatementSheet(st, side){
+  const who = side.who;
   // A receipt's A5 sheet left over from a cancelled dialog would set the
   // page size for this one too.
   clearInjectedPrintStyles();
@@ -25967,8 +26201,8 @@ function printCustomerStatement(customerId){
         <div class="st-print-shop">${esc(printedShopName())}</div>
         <div class="st-print-title">Statement of account</div>
         <div class="st-print-meta">
-          ${esc(c.name)}${c.location ? ` · ${esc(c.location)}` : ''}${c.phone ? ` · ${esc(c.phone)}` : ''}<br>
-          ${esc(from)} to ${esc(to)} · printed ${esc(todayISO())}
+          ${esc(who.name)}${who.location ? ` · ${esc(who.location)}` : ''}${who.phone ? ` · ${esc(who.phone)}` : ''}<br>
+          ${esc(st.from)} to ${esc(st.to)} · printed ${esc(todayISO())}
         </div>
       </header>
 
@@ -25979,12 +26213,12 @@ function printCustomerStatement(customerId){
         </tr></thead>
         <tbody>
           <tr class="cst-opening">
-            <td>${esc(from)}</td><td>Balance brought forward</td>
+            <td>${esc(st.from)}</td><td>Balance brought forward</td>
             <td class="r"></td><td class="r"></td><td class="r num">${money(st.opening)}</td>
           </tr>
           ${st.rows.map(r=>`<tr>
             <td>${esc(r.date)}</td>
-            <td>${esc(statementRowDetail(r))}</td>
+            <td>${esc(statementRowDetail(r, side.payWord))}</td>
             <td class="r num">${r.charge ? money(r.charge) : ''}</td>
             <td class="r num">${r.payment ? money(r.payment) : ''}</td>
             <td class="r num">${money(r.balance)}</td>
@@ -26003,20 +26237,19 @@ function printCustomerStatement(customerId){
       </table>
 
       <p class="st-read">${st.closing > 0
-        ? `<b>${esc(c.name)}</b> owes <b>${money(st.closing)}</b> as at ${esc(to)}.`
+        ? side.owesLine(money(st.closing))
         : st.closing < 0
-          ? `The account is <b>${money(-st.closing)}</b> in credit as at ${esc(to)}.`
-          : `The account is settled as at ${esc(to)}.`}</p>
+          ? side.creditLine(money(-st.closing))
+          : `The account is settled as at ${esc(st.to)}.`}</p>
 
       ${st.agrees ? '' : `<p class="cst-flag">The entries above come to ${money(st.closing)},
-        while the balance recorded against this customer is ${money(st.recorded)}.
+        while ${esc(side.recordedAs)} ${money(st.recorded)}.
         The two disagree by ${money(Math.abs(st.closing - st.recorded))} — settle that before
-        sending this out.</p>`}
+        ${esc(side.beforeWhat)}.</p>`}
 
       <footer class="st-print-foot">
         Charges and payments as recorded by ${esc(printedShopName())}. Anything before
-        ${esc(from)} is included in the balance brought forward. Please quote this
-        statement when paying.
+        ${esc(st.from)} is included in the balance brought forward. ${esc(side.foot)}
       </footer>
     </div>`;
 
@@ -26024,6 +26257,42 @@ function printCustomerStatement(customerId){
   window.addEventListener('afterprint', function cleanup(){
     document.getElementById('printArea').innerHTML = '';
     window.removeEventListener('afterprint', cleanup);
+  });
+}
+
+function printCustomerStatement(customerId){
+  const { from, to } = customerStatementRange();
+  const st = customerStatementRows(customerId, from, to);
+  const c = st.customer;
+  if(!c){ toast('That customer is no longer on file'); return; }
+  printStatementSheet(st, {
+    who: c,
+    payWord: 'Payment received',
+    owesLine: (m)=> `<b>${esc(c.name)}</b> owes <b>${m}</b> as at ${esc(to)}.`,
+    creditLine: (m)=> `The account is <b>${m}</b> in credit as at ${esc(to)}.`,
+    recordedAs: 'the balance recorded against this customer is',
+    beforeWhat: 'sending this out',
+    foot: 'Please quote this statement when paying.',
+  });
+}
+
+/* The supplier's copy. Handed over when they ask what is still owed, or
+   kept as the shop's own record of a supplier account -- which is why
+   the closing sentence names the shop as the one who owes rather than
+   addressing the reader. */
+function printSupplierStatement(supplierId){
+  const { from, to } = customerStatementRange();
+  const st = supplierStatementRows(supplierId, from, to);
+  const s = st.supplier;
+  if(!s){ toast('That supplier is no longer on file'); return; }
+  printStatementSheet(st, {
+    who: { name: s.name, location: s.location, phone: (contactPhones(s)[0] || '') },
+    payWord: 'Payment made',
+    owesLine: (m)=> `${esc(printedShopName())} owes <b>${esc(s.name)}</b> <b>${m}</b> as at ${esc(to)}.`,
+    creditLine: (m)=> `The account is <b>${m}</b> overpaid as at ${esc(to)}.`,
+    recordedAs: 'the balance carried on their open invoices is',
+    beforeWhat: 'paying against it',
+    foot: 'Raised from the purchase invoices on file for this supplier.',
   });
 }
 
@@ -26069,6 +26338,30 @@ function renderCustomers(filter=''){
 /* Delegated once on the wrapper rather than bound per card, because the
    grid is rebuilt on every search keystroke and re-binding forty cards
    each time leaks a listener per render. */
+/* The supplier grid opens an account the same way the customer grid
+   does. Delegated on the wrapper, not bound per card: the grid is
+   rebuilt on every search keystroke, so per-card binding would leak a
+   listener per render. */
+(function wireSupplierCards(){
+  const wrap = document.getElementById('suppliersTableWrap');
+  if(!wrap) return;
+  const openFrom = (el)=>{
+    const card = el.closest('.supplier-card[data-supplier]');
+    if(card) openSupplierStats(card.dataset.supplier);
+  };
+  wrap.addEventListener('click', (e)=>{
+    // Commission, edit and delete all live inside the card and must keep
+    // doing only their own job.
+    if(e.target.closest('button')) return;
+    openFrom(e.target);
+  });
+  wrap.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    if(!e.target.classList || !e.target.classList.contains('supplier-card')) return;
+    e.preventDefault(); // Space would otherwise scroll the page
+    openFrom(e.target);
+  });
+})();
 (function wireCustomerCards(){
   const wrap = document.getElementById('customersTableWrap');
   if(!wrap) return;
