@@ -485,4 +485,27 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
     'which is what the button being display:flex requires of whatever holds several');
 }
 
+/* ---------- money does not break across two lines ---------------------
+   .dr-lines carries the loan's payment-by-payment schedule and the asset
+   depreciation tables, and had no styling at all. Measured in the
+   browser: all 84 cells of a twelve-row schedule wrapped, "20,000,000"
+   on one line and "UGX" on the next, rows standing 55px instead of 28.
+   A figure split over two lines reads as two facts. */
+{
+  const src = read('index.html');
+  const rule = (/\.dr-lines td, \.dr-lines th\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/white-space:nowrap/.test(rule),
+    'a schedule cell keeps its figure on one line');
+  const numRule = (/\.dr-lines td\.num\{[^}]*\}/.exec(src) || [''])[0];
+  t.check(/font-variant-numeric:tabular-nums/.test(numRule) && /IBM Plex Mono/.test(numRule),
+    'and its digits line up on themselves, as every other money column in this app does');
+  /* A no-wrap table can be wider than the modal, so it needs its own
+     scroll -- otherwise it pushes the dialog sideways instead. */
+  t.check(/\.dr-lines\{overflow-x:auto;\}/.test(src),
+    'and the table scrolls inside its own box rather than widening the dialog');
+  /* The precedent it follows, so the two cannot drift apart. */
+  t.check(/\.bl-lines td\.num\{[^}]*white-space:nowrap;\}/.test(src),
+    'which is the rule the buying list already had for the same reason');
+}
+
 process.exit(t.done() ? 1 : 0);
