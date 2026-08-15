@@ -205,4 +205,47 @@ const asset = (over) => Object.assign({
     'and only the two methods the app can actually compute are storable');
 }
 
+/* ---------- selling one is something you can find -------------------- */
+{
+  const src = read('index.html');
+
+  /* The disposal fields were only reachable by opening Edit and knowing
+     that two more fields sit below the notes -- which is not a thing
+     anybody knows. Asked directly: "I dont seem to see how an asset can
+     be sold." */
+  t.check(/class="pc-icon-btn fa-sell" data-id="\$\{a\.id\}" title="Sell or scrap it"/.test(src),
+    'the row offers to sell it');
+  t.check(/\.fa-sell'\)\.forEach\(b=>b\.addEventListener\('click', \(\)=>openAssetForm\(Number\(b\.dataset\.id\), true\)\)\)/.test(src),
+    'through the same form, told what it was opened for');
+
+  /* Not on something already sold: the row says "sold" and carries the
+     gain, and a second disposal would bank the proceeds twice. */
+  t.check(/\$\{gone \? '' : `<button type="button" class="pc-icon-btn fa-sell"/.test(src),
+    'and never on one already sold, which would bank the proceeds a second time');
+
+  /* One form, not a second sale dialog -- two places writing the
+     disposal date and the proceeds is how two screens come to disagree. */
+  const open = extractFunction(src, 'openAssetForm', 'index.html');
+  t.check(/function openAssetForm\(id, sell\)/.test(open),
+    'selling reuses the asset form rather than a second dialog of its own');
+  t.check(/const selling = !!sell && !!a;/.test(open),
+    'and "sell" means nothing on an asset that does not exist yet');
+  t.check(/selling \? 'Sell or scrap this asset' : \(a \? 'Edit asset' : 'Add an asset'\)/.test(open),
+    'the heading says which of the three it was opened as');
+
+  /* The disposal fields sit past the cost, the life and the notes, so
+     landing on the name would leave somebody who pressed Sell looking at
+     a form that shows no sign of having heard them. */
+  t.check(/el\.scrollIntoView\(\{block:'center'\}\);\s*\n\s*el\.focus\(\);/.test(open),
+    'the cursor lands in the date sold, which is the field they came for');
+  t.check(/if\(!el\.value\) el\.value = todayISO\(\);/.test(open),
+    'seeded with today, and never overwriting a date already recorded');
+
+  /* The one id in this form that existed twice: getElementById returns
+     the first, so the second could never be written to. */
+  const modal = (/<div class="modal-overlay" id="assetModal">[\s\S]*?\n<\/div>/.exec(src) || [''])[0];
+  t.check((modal.match(/id="fa_preview"/g) || []).length === 1,
+    'and the asset form declares fa_preview once, not twice');
+}
+
 process.exit(t.done() ? 1 : 0);
