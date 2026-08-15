@@ -110,9 +110,17 @@ const { nameInitials } = compileScope(
   t.check(/display:flex/.test(card) && /flex-direction:column/.test(card),
     'which requires the card to stay a column flex container');
 
-  /* Shared by every card in the app that carries a figure strip, so they
-     all line up rather than the supplier grid alone. */
-  t.check(/\.cc-stats|class="sc-stats"/.test(src), 'the strip class is shared markup');
+  /* The customer card has no figure strip -- it ends on the debt row,
+     which is the figure people opened the screen for and floated the
+     same way: 94px on one card, 115px on the one beside it, 3 of 12
+     rows out of step. Pinned identically, or the two grids look like
+     they were built by different people. */
+  const debt = rule('.cc-debt-row');
+  t.check(/margin-top:auto/.test(debt),
+    `the customer card's bottom line is pinned too (${debt})`);
+  const cCard = rule('.customer-card');
+  t.check(/display:flex/.test(cCard) && /flex-direction:column/.test(cCard),
+    'and that card is a column flex container as well');
 }
 
 /* ---------- 5. a zero is not good news -------------------------------- */
