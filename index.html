@@ -4749,7 +4749,7 @@
   .inv-status.unsettled{color:var(--danger);}
   .inv-status.settled{color:var(--good);}
   .inv-status.partial{color:var(--accent-ink);}
-  /* Purchase invoice "Collection progress" column -- blue bar = % of the
+  /* Purchase invoice "Paid / collected" column -- blue bar = % of the
      linked customer order collected so far (prorated across suppliers on
      that order); amber bar = a restock invoice's own % paid to the
      supplier, deliberately a different colour since it's a different
@@ -21970,7 +21970,14 @@ function renderPurchaseInvoices(filter=''){
       <th>Paid to supplier</th>
       <th>Balance due</th>
       <th>Payment status</th>
-      <th>Collection progress</th>
+      <!-- Two metrics share this column on purpose (see .pi-progress-bar):
+           an order-linked invoice shows how much of that order has been
+           collected from the client, a restock how much has been paid to
+           the supplier. The header said only "Collection progress", which
+           on a shop buying mostly for stock was wrong for most rows --
+           three of four here read "0% paid", which is not collection.
+           Each row already says which of the two it is. -->
+      <th>Paid / collected</th>
       <th></th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
