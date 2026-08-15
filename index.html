@@ -32011,19 +32011,26 @@ function priceObservations(productId, variantIdx, supplierId){
    them out. */
 function learnedStaleDays(productId, variantIdx, supplierId){
   const obs = priceObservations(productId, variantIdx, supplierId);
-  if(obs.length < PRICE_LEARN_MIN_INTERVALS + 1) return null;
-  const span = daysBetweenISO(obs[0].date, obs[obs.length-1].date);
-  if(!(span >= PRICE_LEARN_MIN_SPAN_DAYS)) return null;
-
+  /* Counted in INTERVALS rather than observations, and counted once.
+     Guarding on obs.length as well read like two checks and was one:
+     priceObservations collapses a day to a single entry, so consecutive
+     dates always differ and the intervals are always obs.length - 1.
+     Two guards that cannot disagree are a place for one of them to be
+     weakened without anything noticing. */
   const rates = [];
   for(let i=1; i<obs.length; i++){
     const days = daysBetweenISO(obs[i-1].date, obs[i].date);
     if(!(days > 0)) continue;
     const from = obs[i-1].price;
     if(!(from > 0)) continue;
+    // ABSOLUTE change: a price coming down has moved just as surely as
+    // one going up, and an item whose supplier keeps cutting is exactly
+    // one worth asking about.
     rates.push(Math.abs(obs[i].price - from) / from / days);
   }
   if(rates.length < PRICE_LEARN_MIN_INTERVALS) return null;
+  const span = daysBetweenISO(obs[0].date, obs[obs.length-1].date);
+  if(!(span >= PRICE_LEARN_MIN_SPAN_DAYS)) return null;
   rates.sort((a,b)=> a-b);
   const mid = Math.floor(rates.length/2);
   const rate = rates.length % 2 ? rates[mid] : (rates[mid-1] + rates[mid]) / 2;
@@ -32088,7 +32095,23 @@ function priceReviewFacts(r){
   const limit = learned == null ? priceReviewStaleDays() : learned;
   const peers = productPriceRows(r.productId, variantIdx);
   const ranked = rankedPriceRows(r.productId, variantIdx);
-  const isWinner = !!(ranked.length && ranked[0].supplierId === r.supplierId);
+  /* AT the cheapest price, not "sorted first at it".
+
+     rankedPriceRows returns a sorted list, and two suppliers quoting the
+     same figure are separated only by where they happen to sit in
+     data.prices -- which is server row order and shifts between reloads.
+     Seen on the real books: WISEUP Tape Measure is 45,000 from both S074
+     and S096, and which of them counted as the winner changed from one
+     load to the next.
+
+     Comparing the PRICE settles it, and is what this weighting actually
+     means: if two suppliers tie at the cheapest, a wrong figure on
+     either one misprices the quote. An out-of-stock row is never a
+     winner -- rankedPriceRows already leaves those out of the running,
+     and the buying list will not walk to them. */
+  const rankKey = (x)=> (x.wholesale != null ? x.wholesale : Infinity)
+    + ':' + (x.retail != null ? x.retail : Infinity);
+  const isWinner = !!(ranked.length && !r.outOfStock && rankKey(r) === rankKey(ranked[0]));
   const singleSource = peers.length === 1;
   const unit = Number(r.wholesale != null ? r.wholesale : r.retail) || 0;
   const volume = demand.units + stock;

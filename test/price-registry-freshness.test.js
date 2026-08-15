@@ -181,6 +181,48 @@ const sold = (productId, qty, date) => data.stockLog.push({
   t.check(both[0].isWinner && !both[1].isWinner, 'and is marked as the one currently winning');
   t.check(both[0].reasons.includes('currently the cheapest'), 'with that given as a reason');
 
+  /* A TIE MAKES BOTH WINNERS. rankedPriceRows returns a sorted list, and
+     two suppliers quoting the same figure are separated only by where
+     they sit in data.prices -- server row order, which shifts between
+     reloads. Seen on the real books: WISEUP Tape Measure is 45,000 from
+     two suppliers, and which one counted as the winner changed from one
+     load to the next. If they tie at the cheapest, a wrong figure on
+     either misprices the quote. */
+  reset();
+  data.prices = [
+    price(1, { supplierId: 'S1', wholesale: 10000 }),
+    price(2, { supplierId: 'S2', wholesale: 10000 }),
+    price(3, { supplierId: 'S3', wholesale: 12000 }),
+  ];
+  sold('P1', 100, '2026-07-01');
+  const tied = scope.priceReviewCandidates();
+  t.check(tied.filter((f) => f.isWinner).length === 2,
+    'both suppliers at the cheapest price count as winning it');
+  t.check(!tied.find((f) => f.row.supplierId === 'S3').isWinner, 'while the dearer one does not');
+  // Reversed in the array, the answer must not change.
+  data.prices.reverse();
+  const rev = scope.priceReviewCandidates();
+  t.check(rev.filter((f) => f.isWinner).length === 2,
+    'and storing them the other way round does not move the crown');
+
+  /* Out of stock is never the winner: rankedPriceRows leaves those out
+     of the running and the buying list will not walk to them.
+
+     Priced EQUAL to the cheapest available one, which is the only shape
+     that tells the guard apart from the price comparison beside it — a
+     cheaper out-of-stock row already fails on price and proves nothing
+     about whether being out of stock was checked. */
+  data.prices = [
+    price(1, { supplierId: 'S1', wholesale: 10000, outOfStock: true }),
+    price(2, { supplierId: 'S2', wholesale: 10000 }),
+    price(3, { supplierId: 'S3', wholesale: 12000 }),
+  ];
+  const oos = scope.priceReviewCandidates();
+  t.check(!oos.find((f) => f.row.supplierId === 'S1').isWinner,
+    'an out-of-stock row does not win, even at the winning price — nobody can buy it there today');
+  t.check(oos.find((f) => f.row.supplierId === 'S2').isWinner,
+    'the cheapest one actually available does');
+
   /* A lone supplier has nothing to be checked against, so its price is
      the whole story and is worth more of somebody's morning.
 
@@ -601,6 +643,20 @@ const sold = (productId, qty, date) => data.stockLog.push({
   eq(same.length, 1, 'one day is one observation, however many invoices it took');
   t.check(same[0].price > 130000,
     `weighted by quantity, so 49 at 135,000 is not out-voted by 2 at 85,000 (got ${Math.round(same[0].price)})`);
+
+  /* Stored out of order, because purchase invoices arrive in whatever
+     order the server returned them and an unsorted list turns the
+     intervals backwards. Entered newest-first here so insertion order
+     and date order disagree. */
+  reset();
+  data.purchaseInvoices = [
+    pi(3, '2026-05-01', [item(12000)]),
+    pi(1, '2026-01-01', [item(10000)]),
+    pi(2, '2026-03-01', [item(11000)]),
+  ];
+  eq(scope.priceObservations('P1', null, 'S1').map((o) => o.date).join(),
+    '2026-01-01,2026-03-01,2026-05-01',
+    'observations come back oldest first however they were stored');
 }
 
 /* ---------- 16. and when it refuses to say ----------------------------
@@ -622,6 +678,14 @@ const sold = (productId, qty, date) => data.stockLog.push({
 
   data.purchaseInvoices.push(pi(3, '2026-05-01', 12000));
   eq(scope.learnedStaleDays('P1', null, 'S1'), null, 'three still falls short of the three intervals it asks for');
+
+  /* Counted in INTERVALS, and counted once. Guarding on the observation
+     count as well read like two checks and was one -- a day is already
+     collapsed to a single observation, so the intervals are always
+     one fewer -- and two guards that cannot disagree are a place for one
+     of them to be weakened without anything noticing. */
+  t.check(!/if\(obs\.length < PRICE_LEARN_MIN_INTERVALS \+ 1\) return null;/.test(code),
+    'and there is one count guard rather than two that mask each other');
 
   data.purchaseInvoices.push(pi(4, '2026-07-01', 13000));
   t.check(scope.learnedStaleDays('P1', null, 'S1') !== null,
@@ -650,11 +714,27 @@ const sold = (productId, qty, date) => data.stockLog.push({
     pi(3, '2026-05-01', 12100), pi(4, '2026-06-30', 13310)]);
   t.check(fast >= 25 && fast <= 35, `a price climbing 10% every two months is trusted about a month (${fast})`);
 
+  /* A price coming DOWN has moved just as surely as one going up, and an
+     item whose supplier keeps cutting is exactly one worth asking about.
+     Same shape as the climb above, inverted. */
+  const falling = learn([pi(1, '2026-01-01', 13310), pi(2, '2026-03-02', 12100),
+    pi(3, '2026-05-01', 11000), pi(4, '2026-06-30', 10000)]);
+  t.check(falling >= 25 && falling <= 40,
+    `a price falling as fast as the other climbed is watched just as closely (${falling})`);
+
   /* One that has not moved at all across the same span earns the longest
      interval rather than an infinite one. */
   const flat = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-03-01', 10000),
     pi(3, '2026-05-01', 10000), pi(4, '2026-07-01', 10000)]);
   eq(flat, 365, 'a price that has never moved is trusted for a year, not for ever');
+
+  /* And one that creeps -- 0.3% every four months -- would work out at
+     around 2,000 days, which is nobody's idea of a review. The slow
+     clamp is what stops it, and only a non-zero creep can tell that
+     clamp apart from the never-moved case above. */
+  const creep = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-05-01', 10030),
+    pi(3, '2026-08-29', 10060), pi(4, '2026-12-27', 10090)]);
+  eq(creep, 365, 'a barely-moving price is still looked at once a year rather than in five');
 
   /* Clamped at both ends. A wildly jumping price must not demand
      checking every other day. */
