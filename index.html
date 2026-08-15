@@ -37791,10 +37791,18 @@ function renderLoans(){
           : (p.behind > 1
             ? `<span class="fa-sub bad">${fmtUGX(Math.round(p.behind))} behind</span>`
             : '<span class="fa-sub good">On track</span>')}</td>
+        <!-- .pc-icon-btn is display:flex, so three of them dropped
+             straight into a cell stack into a column and the row grows to
+             109px. Every other group of them in this app sits in a flex
+             wrapper -- the invoice table's is this same case, icons
+             right-aligned in a cell, so it is that class rather than a
+             third one meaning the same thing. -->
         <td class="r">
-          <button type="button" class="pc-icon-btn ln-perf" data-id="${l.id}" title="How it is performing">${ICON_ITEMS}</button>
-          <button type="button" class="pc-icon-btn ln-edit" data-id="${l.id}" title="Edit">${ICON_EDIT}</button>
-          <button type="button" class="pc-icon-btn danger ln-delete" data-id="${l.id}" title="Remove">${ICON_TRASH}</button>
+          <div class="inv-row-actions">
+            <button type="button" class="pc-icon-btn ln-perf" data-id="${l.id}" title="How it is performing">${ICON_ITEMS}</button>
+            <button type="button" class="pc-icon-btn ln-edit" data-id="${l.id}" title="Edit">${ICON_EDIT}</button>
+            <button type="button" class="pc-icon-btn danger ln-delete" data-id="${l.id}" title="Remove">${ICON_TRASH}</button>
+          </div>
         </td>
       </tr>`).join('')}</tbody></table></div>`;
 
@@ -38488,10 +38496,13 @@ function renderFixedAssets(){
         <td class="r num">${fmtUGX(Math.round(Number(a.cost)||0))}</td>
         <td class="r num">${fmtUGX(Math.round(assetAccumulatedAt(a, gone ? a.disposedOn : today)))}</td>
         <td class="r num">${gone ? '—' : fmtUGX(Math.round(assetNBVAt(a, today)))}</td>
+        <!-- Same omission as the loans table above, same fix. -->
         <td class="r">
-          <button type="button" class="pc-icon-btn fa-schedule" data-id="${a.id}" title="Depreciation schedule">${ICON_ITEMS}</button>
-          <button type="button" class="pc-icon-btn fa-edit" data-id="${a.id}" title="Edit">${ICON_EDIT}</button>
-          <button type="button" class="pc-icon-btn danger fa-delete" data-id="${a.id}" title="Remove">${ICON_TRASH}</button>
+          <div class="inv-row-actions">
+            <button type="button" class="pc-icon-btn fa-schedule" data-id="${a.id}" title="Depreciation schedule">${ICON_ITEMS}</button>
+            <button type="button" class="pc-icon-btn fa-edit" data-id="${a.id}" title="Edit">${ICON_EDIT}</button>
+            <button type="button" class="pc-icon-btn danger fa-delete" data-id="${a.id}" title="Remove">${ICON_TRASH}</button>
+          </div>
         </td>
       </tr>`;
     }).join('')}</tbody></table></div>`;

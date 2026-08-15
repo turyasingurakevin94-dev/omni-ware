@@ -461,4 +461,28 @@ const pay = (m, amount) => ({ date: `2026-${String(m).padStart(2, '0')}-01`, amo
     `so the balance is what the lender's sheet says after two weeks (${r(applied.balance)})`);
 }
 
+/* ---------- the row's own actions sit in a row -------------------------
+   .pc-icon-btn is display:flex, so icon buttons dropped straight into a
+   table cell become a COLUMN. Measured in the browser: three of them
+   stacked and the loan row stood 109px tall; wrapped, it is 52.
+
+   Every other group of them in this app already sits in a flex wrapper --
+   sq-card-icons, inv-row-actions, sc-actions, cc-actions, rost-actions,
+   pc-actions. The loans and fixed-asset tables were the only two that did
+   not, and they are the only two that stacked. */
+{
+  const src = read('index.html');
+  const cells = [...src.matchAll(/<td[^>]*>((?:(?!<\/td>)[\s\S])*?)<\/td>/g)]
+    .map(m => m[1])
+    .filter(inner => (inner.match(/pc-icon-btn/g) || []).length >= 2);
+  t.check(cells.length >= 2, `there are table cells carrying a group of icon buttons (${cells.length})`);
+  const bare = cells.filter(inner => !/<div class="[a-z-]*actions"/.test(inner));
+  t.check(bare.length === 0,
+    bare.length
+      ? `a cell drops icon buttons straight in, so they stack: ${bare[0].replace(/\s+/g,' ').slice(0,80)}`
+      : 'and every one of them wraps the buttons, so they lay out as a row');
+  t.check(/\.pc-icon-btn\{\s*\n?\s*all:unset;cursor:pointer;display:flex;/.test(src),
+    'which is what the button being display:flex requires of whatever holds several');
+}
+
 process.exit(t.done() ? 1 : 0);
