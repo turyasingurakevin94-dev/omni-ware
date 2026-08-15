@@ -1047,6 +1047,9 @@ const trip = (over) => Object.assign({
     supplierName: () => 'Dooba',
     staffName: (id) => (id === 'W1' ? 'Kevin Moses' : id),
     supplierAskList: () => askList,
+    // Stubbed with the price form's own shape: what a supplier can be
+    // asked about is a tier question, pinned in price-registry-freshness.
+    priceReplySlots: (row) => [{ qty: 1, price: 0, label: '' }],
   }, NAMES3);
 
   const t2 = (over) => Object.assign({

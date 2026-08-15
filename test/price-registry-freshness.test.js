@@ -57,7 +57,7 @@ const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getSt
   'priceObservations', 'learnedStaleDays', 'priceStaleDaysFor',
   'applySupplierReply', 'syncPriceRegistryFromPurchase', 'purchasePriceAtQty',
   'purchasePriceSlotAtQty', 'tiersForKind', 'cheaperSmallerQuantity', 'purchasePricePoints',
-  'tieredUnitPrice', 'deriveWholesaleRetail'];
+  'tieredUnitPrice', 'deriveWholesaleRetail', 'priceReplySlots'];
 const scope = compileScope([
   ...DECLS.map((n) => extractDeclaration(src, n, 'index.html')),
   ...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -494,6 +494,19 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'and never quotes back the price already on file, which would invite a yes and teach the shop nothing');
   t.check(!/UGX/.test(m), 'no money in it at all');
 
+  /* THE QUANTITY IS NAMED, because this shop's prices are kept against
+     one. 193 of its 307 rows have no single-unit price at all --
+     ELEPHANT King is 310,000 for three cartons -- so "what is your price
+     per Ctn" asks a different question from the one the registry holds,
+     and the answer would be filed against a quantity nobody quoted. */
+  const tiered = [{ row: { id: 9, pname: 'ELEPHANT King', unit: 'Ctn', packQty: 1,
+    packUnit: '', tiers: [{ minQty: 3, price: 310000 }] } }];
+  const tm = scope.supplierPriceAskMessage('S1', tiered);
+  t.check(/3 Ctn\+/.test(tm) || /3 units\+/.test(tm),
+    `the ask names the quantity the price is kept at (${tm.split('\n').find((l) => l.startsWith('•'))})`);
+  t.check(!/per Ctn\)/.test(tm),
+    'rather than asking per unit for a row that has no per-unit price');
+
   eq(scope.supplierPriceAskMessage('S1', []), '',
     'nothing to ask is no message, rather than a greeting with nothing under it');
 }
@@ -918,6 +931,52 @@ const sold = (productId, qty, date) => data.stockLog.push({
   eq(data.prices[0].retail, 2800, 'a new single price lands on the single-price side');
   eq(data.prices[0].wholesale, 2600, 'and leaves the pack rate they did not mention alone');
 
+  /* ---- THE ROW SHAPE THIS SHOP ACTUALLY HAS ------------------------
+     All 307 price rows carry tiers, and 193 of them have NO tier
+     reaching a single unit -- their break starts at 20, 25, 50.
+     ELEPHANT King is 310,000 for three cartons and has no
+     single-carton price on file at all.
+
+     Writing a reply at quantity one on those rows corrected the flat
+     field and left the tier alone, so the row said one thing at the top
+     and another from three up -- and the quote reads the tier. A
+     supplier's new price changed nothing anybody was charged. */
+  reset();
+  data.prices = [price(1, { wholesale: 310000, retail: null, packQty: 1, unit: 'Ctn',
+    tiers: [{ minQty: 3, price: 310000 }], date: '2026-01-01' })];
+  let slots = scope.priceReplySlots(data.prices[0]);
+  eq(slots.length, 1, 'a one-tier row has one thing to ask about');
+  eq(slots[0].qty, 3, 'at the quantity the price is actually kept at, not at one');
+  eq(slots[0].price, 310000, 'showing the figure on file there');
+
+  scope.applySupplierReply([{ id: 1, qty: slots[0].qty, price: 250000 }]);
+  eq(data.prices[0].tiers[0].price, 250000,
+    'so a new price lands on the TIER — which is what the quote reads at three cartons');
+  eq(scope.purchasePriceAtQty(data.prices[0], 3), 250000, 'and is what an order of three now costs');
+  t.check(data.prices[0].wholesale === 250000,
+    'the headline follows it, because that tier is the lowest on its side');
+
+  /* Two breaks are two questions. Recording either against the other is
+     how a quote comes out wrong at exactly the quantities people order.
+     36 of this shop's rows have two. */
+  reset();
+  data.prices = [price(1, { wholesale: null, retail: 34000, packQty: 0,
+    tiers: [{ minQty: 1, price: 34000 }, { minQty: 10, price: 32500 }], date: '2026-01-01' })];
+  slots = scope.priceReplySlots(data.prices[0]);
+  eq(slots.length, 2, 'a two-tier row is asked about twice');
+  eq(slots.map((s) => s.qty).join(), '1,10', 'smallest quantity first');
+
+  scope.applySupplierReply([{ id: 1, qty: 10, price: 31000 }]);
+  eq(data.prices[0].tiers[1].price, 31000, 'a bulk answer moves the bulk tier');
+  eq(data.prices[0].tiers[0].price, 34000, 'and leaves the single price they did not mention alone');
+
+  // A row with no tiers at all is still one question, at one.
+  reset();
+  data.prices = [price(1, { wholesale: 9000, retail: null, packQty: 0, tiers: [] })];
+  slots = scope.priceReplySlots(data.prices[0]);
+  eq(slots.length, 1, 'a row with no tiers has a single price point');
+  eq(slots[0].qty, 1, 'read at one, which is all its flat fields describe');
+
   // A whole reply at once, which is the point of the sheet.
   reset();
   data.prices = [
@@ -940,9 +999,12 @@ const sold = (productId, qty, date) => data.stockLog.push({
      would make "they confirmed it" and "nobody typed anything" the same
      keystroke — and the first is a fact about the supplier while the
      second is a fact about the shop. */
-  t.check(/purchasePriceAtQty\(f\.row, 1\)/.test(open), 'each row shows what is on file');
+  t.check(/priceReplySlots\(f\.row\)/.test(open) && /fmtUGX\(Math\.round\(s\.price \|\| 0\)\)/.test(open),
+    'each price point shows what is on file at that quantity');
+  t.check(/data-qty="\$\{s\.qty\}"/.test(open),
+    'and its box carries the quantity, so the answer is written where it was asked');
   t.check(/class="srp-input"[^>]*placeholder="—"/.test(open) && !/value="\$\{/.test(open.split('srp-input')[1] || ''),
-    'and its box starts empty rather than pre-filled with that figure');
+    'and starts empty rather than pre-filled with that figure');
 
   const save = extractFunction(src, 'saveSupplierReply', 'index.html');
   t.check(/applySupplierReply\(entries\)/.test(save), 'saving goes through the tested function');

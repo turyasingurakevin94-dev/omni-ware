@@ -23643,18 +23643,23 @@ function openSupplierReply(supplierId){
   document.getElementById('supplierReplyRows').innerHTML = `
     <table class="cs-table srp-table">
       <thead><tr><th>Item</th><th class="r">On file</th><th class="r">They say</th></tr></thead>
-      <tbody>${rows.map(f=>`<tr>
-        <td>${esc(f.row.pname)}${f.row.unit ? `<span class="srp-unit">per ${esc(f.row.unit)}</span>` : ''}</td>
-        <td class="r num">${fmtUGX(Math.round(purchasePriceAtQty(f.row, 1) || 0))}</td>
-        <td class="r"><input type="number" class="srp-input" data-id="${f.row.id}"
-          min="0" step="any" placeholder="—" aria-label="New price for ${esc(f.row.pname)}"></td>
-      </tr>`).join('')}</tbody>
+      ${/* A line per PRICE POINT, not per row: a supplier who breaks at
+            3 and again at 20 has two prices to be asked about, and
+            recording either against the other is how the quote comes
+            out wrong at exactly the quantities people order. */''}
+      <tbody>${rows.flatMap(f=> priceReplySlots(f.row).map((s, i)=>`<tr>
+        <td>${i === 0 ? esc(f.row.pname) : ''}${s.label ? `<span class="srp-unit">${esc(s.label)}</span>`
+          : (f.row.unit ? `<span class="srp-unit">per ${esc(f.row.unit)}</span>` : '')}</td>
+        <td class="r num">${fmtUGX(Math.round(s.price || 0))}</td>
+        <td class="r"><input type="number" class="srp-input" data-id="${f.row.id}" data-qty="${s.qty}"
+          min="0" step="any" placeholder="—" aria-label="New price for ${esc(f.row.pname)}${s.label ? ` at ${esc(s.label)}` : ''}"></td>
+      </tr>`)).join('')}</tbody>
     </table>`;
   openModal('supplierReplyModal');
 }
 function saveSupplierReply(){
   const entries = [...document.querySelectorAll('#supplierReplyRows .srp-input')]
-    .map(i=> ({ id: Number(i.dataset.id), price: i.value }));
+    .map(i=> ({ id: Number(i.dataset.id), qty: Number(i.dataset.qty), price: i.value }));
   const r = applySupplierReply(entries);
   if(!r.changed && !r.confirmed){ toast('Nothing entered — nothing changed'); return; }
   saveData();
@@ -32332,7 +32337,13 @@ function supplierPriceAskMessage(supplierId, list){
     '',
     'Please confirm your current prices on the following:',
     '',
-    ...rows.map(f=> `• ${f.row.pname}${f.row.unit ? ` (per ${f.row.unit})` : ''}`),
+    /* Named at the QUANTITY the price is kept at, not "per unit". This
+       shop records 310,000 for three cartons and has no single-carton
+       price on file at all -- asking "what is your price per Ctn" gets
+       an answer to a different question from the one the registry
+       holds, and 193 of its 307 rows are that shape. */
+    ...rows.flatMap(f=> priceReplySlots(f.row).map(s=>
+      `• ${f.row.pname}${s.label ? ` — ${s.label}` : (f.row.unit ? ` (per ${f.row.unit})` : '')}`)),
     '',
     'Thank you.',
   ].join('\n');
@@ -32364,6 +32375,40 @@ function priceAskedDaysAgo(r){
   return Math.max(0, Math.round((Date.parse(todayISO()+'T00:00:00Z') - then) / 86400000));
 }
 
+/* The price points on a row that a supplier can actually quote.
+
+   THE TIERS, not "the price at quantity one". Every one of this shop's
+   307 rows carries tiers, and 193 of them have no tier reaching a single
+   unit at all -- their break starts at 20, 25, 50. ELEPHANT King is
+   310,000 for three cartons and has no single-carton price on file.
+
+   Asking those rows "what is your price per Ctn" and writing the answer
+   at quantity one put it in the flat field and left the tier alone --
+   so the row said 9,999 at the top and 310,000 from three up, and the
+   quote reads the tier. A supplier's new price would have changed
+   nothing anybody was charged.
+
+   Falls back to a single point at quantity one for a row with no tiers,
+   which is what the flat fields alone describe. There are none in this
+   shop today, but the price form can still make one. */
+function priceReplySlots(row){
+  const tiers = (Array.isArray(row.tiers) ? row.tiers : [])
+    .filter(t=> Number(t.minQty) > 0)
+    .slice().sort((a,b)=> Number(a.minQty) - Number(b.minQty));
+  if(!tiers.length) return [{ qty: 1, price: purchasePriceAtQty(row, 1), label: '' }];
+  const packQty = Number(row.packQty)||0;
+  return tiers.map(t=>{
+    const q = Number(t.minQty);
+    /* Named the way the shop already names a tier on a price card --
+       "3 Ctn+" -- so the message asks for a figure in the same terms the
+       registry keeps it. A supplier answering a differently-worded
+       question is answering a different question. */
+    const qtyLabel = (packQty>0 && row.packUnit && q % packQty === 0)
+      ? `${q/packQty} ${row.packUnit}` : `${q} ${row.unit || 'units'}`;
+    return { qty: q, price: purchasePriceAtQty(row, q), label: `${qtyLabel}+` };
+  });
+}
+
 /* What a supplier said, entered in one go.
 
    The ask goes out as a list, so the reply comes back as a list -- "the
@@ -32382,11 +32427,10 @@ function priceAskedDaysAgo(r){
                  moves, which is exactly confirmPriceUnchanged.
      different   a change, written at the slot their quote applies to.
 
-   AT QUANTITY ONE, deliberately. The ask names the item and its unit --
-   "Cement — 50kg (per Bag)" -- so what comes back is the price per bag,
-   which is the row's base slot. A supplier who has moved only their bulk
-   break cannot be described in one box and needs the full form; this
-   sheet is for the common case and does not pretend otherwise.
+   ONE ENTRY PER PRICE POINT, at the quantity that point is quoted for --
+   see priceReplySlots. Writing every answer at quantity one corrected
+   the flat field and left the tier the quote actually reads, on 193 of
+   this shop's 307 rows.
 
    Marked `confirmed`, not `purchase`: they quoted a price, no money
    moved. Written through syncPriceRegistryFromPurchase all the same,
@@ -32399,13 +32443,14 @@ function applySupplierReply(entries){
     if(!row){ out.skipped++; return; }
     const said = Number(e.price);
     if(!(said > 0)){ out.skipped++; return; }
-    if(Number(purchasePriceAtQty(row, 1)) === said){
+    const atQty = Number(e.qty) > 0 ? Number(e.qty) : 1;
+    if(Number(purchasePriceAtQty(row, atQty)) === said){
       confirmPriceUnchanged(row.id);
       out.confirmed++;
       return;
     }
     syncPriceRegistryFromPurchase(row.productId,
-      row.variantIdx == null ? null : row.variantIdx, row.supplierId, said, 1,
+      row.variantIdx == null ? null : row.variantIdx, row.supplierId, said, atQty,
       {confirms: true, source: 'confirmed'});
     out.changed++;
   });
