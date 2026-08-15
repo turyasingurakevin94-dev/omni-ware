@@ -179,4 +179,114 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the customer panel carries the button that prints it');
 }
 
+/* ---------- 8. the same statement, on screen -------------------------
+   All of the above existed, and could only be READ by printing it. The
+   customer panel showed what somebody buys and how often, and never the
+   orders, the payments and the balance they leave -- which is the one
+   question a customer standing at the counter actually asks.
+
+   Built from customerStatementRows, the same builder the print calls, so
+   the sheet handed over the counter cannot carry different figures from
+   the screen it was read off. */
+{
+  const block = extractFunction(src, 'customerStatementBlockHTML', 'index.html');
+  t.check(block.length > 0, 'the panel has a statement block');
+
+  t.check(/customerStatementRows\(customerId, from, to\)/.test(block),
+    'it calls the same builder as the print rather than totting the log up again');
+  t.check(/customerStatementRange\(\)/.test(block),
+    'over the same six-month window, so the two documents cover the same period');
+  t.check(!/debtLog/.test(block) && !/savedQuotes/.test(block),
+    'and does no arithmetic of its own — a second sum over the same log is a second answer waiting to happen');
+
+  /* The three things asked for, each on screen. */
+  t.check(/st\.rows\.map/.test(block), 'every entry in the period is listed');
+  t.check(/r\.charge \? money\(r\.charge\)/.test(block) && /r\.payment \? money\(r\.payment\)/.test(block),
+    'with charges and payments in their own columns');
+  t.check(/money\(r\.balance\)/.test(block), 'and the balance running down beside them');
+  t.check(/money\(st\.opening\)/.test(block) && /Balance brought forward/.test(block),
+    'anything older is carried in as one labelled line, not dropped');
+  t.check(/money\(st\.closing\)/.test(block) && /Balance now due/.test(block),
+    'closing on what is owed now');
+
+  /* An empty period is a real answer to "what do I owe" and must not
+     render as a table with a head and nothing under it. */
+  t.check(/st\.rows\.length \? '' :/.test(block) && /Nothing was charged or paid/.test(block),
+    'a period with no movement says so rather than showing an empty table');
+
+  // The disagreement is surfaced here too. A shopkeeper who only reads
+  // the screen must not be the one person not told.
+  t.check(/st\.agrees \? '' :/.test(block),
+    'and the log-versus-balance disagreement is shown on screen, not only on paper');
+
+  // Wired in, and guarded: the panel can be opened for a customer whose
+  // record has gone.
+  const html = extractFunction(src, 'customerStatsHTML', 'index.html');
+  t.check(/customerStatementBlockHTML\(s\.customer && s\.customer\.id\)/.test(html),
+    'the panel renders it');
+  t.check(/if\(customerId == null\) return '';/.test(block),
+    'and a missing customer gives nothing rather than throwing inside a template');
+
+  /* The panel short-circuits to a plain sentence when there are no
+     invoiced orders, on the grounds that a wall of zeros reads as a
+     broken screen. That is true of the STATISTICS and false of the
+     account: three customers in this shop have a charged-and-settled
+     history in the log against invoices never linked back to their
+     record, and were being told there was nothing to show. */
+  const empty = html.slice(0, html.indexOf('return `\n    <div class="cs-stats">'));
+  t.check(empty.length > 0 && /if\(!s\.orderCount\)\{/.test(empty), 'the no-orders branch is found');
+  t.check(/const hasLedger = !!\(c && Array\.isArray\(c\.debtLog\) && c\.debtLog\.length\);/.test(empty),
+    'it checks whether there is a ledger at all');
+  t.check(/\$\{hasLedger \? customerStatementBlockHTML\(c\.id\) : ''\}/.test(empty),
+    'and shows the account even with no invoiced order to build statistics from');
+  t.check(!/>Figures here are built from invoices/.test(html),
+    'while no longer claiming every figure on the panel needs an invoice — the account below does not');
+}
+
+/* ---------- 9. what a line says it is --------------------------------
+   Every one of the 21 entries in this shop's log was written by the
+   invoice sync, whose note is a machine tag: "Auto-sync — INV-0150".
+   Printed straight into a Detail column, the same two words head every
+   line of a document whose whole job is telling one line from another.
+
+   Reworded on the way OUT. The stored note stays exactly as written,
+   because debtLogIsInvoiceOwned() falls back to matching it on rows
+   predating quoteId — rewriting what is on file would orphan them. */
+{
+  const detail = compileScope([extractFunction(src, 'statementRowDetail', 'index.html')],
+    {}, ['statementRowDetail']).statementRowDetail;
+
+  eq(detail({ type: 'charge', note: 'Auto-sync — INV-0150' }), 'Invoice INV-0150',
+    'a charge names the order it came from, not the process that recorded it');
+  eq(detail({ type: 'payment', note: 'Auto-sync — INV-0148' }), 'Payment received — INV-0148',
+    'and a payment says which invoice it was set against');
+
+  // A note somebody typed is theirs. Reaching in to reword it would lose
+  // the only thing on the row the shop chose to say.
+  eq(detail({ type: 'charge', note: 'Opening balance' }), 'Opening balance',
+    'a hand-written note is left alone');
+  eq(detail({ type: 'payment', note: 'MoMo' }), 'MoMo', 'whichever side it is on');
+
+  // A row with nothing written on it still has to name itself.
+  eq(detail({ type: 'charge', note: '' }), 'Goods supplied', 'an unnoted charge is still described');
+  eq(detail({ type: 'payment' }), 'Payment received', 'and so is an unnoted payment, note or no note');
+
+  /* The stored string is load-bearing. If the sync ever wrote the
+     display wording instead, debtLogIsInvoiceOwned's legacy fallback
+     would stop recognising its own rows. */
+  t.check(/note: `Auto-sync — \$\{invoiceNumberLabel\(q\)\}`/.test(code),
+    'the sync still writes the tag it always wrote');
+  t.check(/\/\^Auto-sync — INV-\/\.test\(String\(l\.note\|\|''\)\)/.test(code),
+    'which is what identifies an invoice-owned row written before quoteId existed');
+
+  // Both renderers, one rule -- they had a copy each, and a copy each is
+  // how the counter and the paper come to disagree.
+  const block = extractFunction(src, 'customerStatementBlockHTML', 'index.html');
+  const print = extractFunction(src, 'printCustomerStatement', 'index.html');
+  t.check(/esc\(statementRowDetail\(r\)\)/.test(block), 'the screen names rows through it');
+  t.check(/esc\(statementRowDetail\(r\)\)/.test(print), 'and so does the paper');
+  t.check(!/r\.note \|\| \(r\.type === 'charge'/.test(code),
+    'with the duplicated fallback gone from both');
+}
+
 process.exit(t.done() ? 1 : 0);

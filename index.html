@@ -1717,6 +1717,15 @@
   .cs-table .r{text-align:right;}
   .cs-table .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .cs-table .cs-due{color:var(--danger);font-weight:600;}
+  /* The statement of account. Money never wraps, and the balance column
+     is the one the eye runs down, so it carries the weight. */
+  .cs-ledger td, .cs-ledger th{white-space:nowrap;}
+  .cs-ledger td:nth-child(2){white-space:normal;}
+  .cs-ledger tbody td:last-child{font-weight:600;}
+  .cs-opening td{color:var(--ink-soft);}
+  .cs-ledger-total td{border-top:2px solid var(--line);border-bottom:none;
+    font-weight:700;padding-top:9px;}
+  .cs-flag{color:var(--ow-crimson);}
   .cs-actions{display:flex;justify-content:flex-end;margin-bottom:14px;}
   .cs-empty{padding:8px 0 4px;}
   .cs-empty p{margin:0 0 8px;font-size:14px;line-height:1.5;}
@@ -25669,11 +25678,20 @@ function customerStatsHTML(s){
   // A shop with nothing to show is told so plainly rather than shown a
   // wall of zeros, which reads as a broken screen.
   if(!s.orderCount){
+    /* No invoiced orders does NOT mean nothing passed between you. Three
+       customers in this shop carry a charged-and-settled history in the
+       debt log against invoices that were never linked back to their
+       record, so this branch told somebody who had paid 250,300 that
+       there was nothing to show. The statistics genuinely cannot be
+       built and still say so; the account is built from the log and
+       stands without them. */
+    const hasLedger = !!(c && Array.isArray(c.debtLog) && c.debtLog.length);
     return `<div class="cs-empty">
       <p><b>${esc(c ? c.name : 'This customer')}</b> has no invoiced orders yet${s.openCount ? `, but ${s.openCount} ${plural(s.openCount,'order is','orders are')} on the board` : ''}.</p>
-      <p class="cs-empty-note">Figures here are built from invoices, so they appear once the first order is billed.</p>
+      <p class="cs-empty-note">Spend, profit and how often they buy are built from invoices, so they appear once the first order is billed.${hasLedger ? ' What has been charged and paid is on the account below.' : ''}</p>
       ${s.debt > 0 ? `<p class="cs-empty-note">There is a debt balance of <b>${fmtUGX(s.debt)}</b> recorded against them by hand.</p>` : ''}
-    </div>`;
+    </div>
+    ${hasLedger ? customerStatementBlockHTML(c.id) : ''}`;
   }
 
   return `
@@ -25685,12 +25703,38 @@ function customerStatsHTML(s){
         s.profit > 0 ? 'good' : (s.profit < 0 ? 'bad' : ''))}
       ${csStat('Typical order', fmtUGX(Math.round(s.average)),
         `biggest ${fmtUGX(Math.round(s.biggest))}`)}
-      ${csStat('Owed to you now', fmtUGX(Math.round(s.outstanding + s.debt)),
-        s.unpaidCount
-          ? `${s.unpaidCount} unpaid ${plural(s.unpaidCount,'invoice','invoices')}${s.oldestUnpaidDays !== null ? `, oldest ${s.oldestUnpaidDays} days` : ''}`
-          : (s.debt > 0 ? 'recorded by hand on the card' : 'nothing outstanding'),
-        (s.outstanding + s.debt) > 0 ? 'bad' : 'good')}
+      ${/* The debt book, NOT the debt book plus the invoices.
+
+           Invoicing an order on credit writes the same money twice: once
+           as the invoice's balance due, and once as a charge on the debt
+           ledger (savedQuote.debtCharged is the amount pushed across).
+           Adding the two therefore counted every credit sale twice --
+           Birimuye showed 1,530,000 owed against a 765,000 debt, and
+           across this shop the panel claimed 17,455,000 where the books
+           hold 8,265,000.
+
+           The ledger is the figure the rest of the app already uses: the
+           map's "owed to you" and the debtors list both total c.debt, and
+           the printed statement of account closes on it. This panel was
+           the one place doing its own arithmetic. */''}
+      ${csStat('Owed to you now', fmtUGX(Math.round(s.debt)),
+        s.debt > 0
+          ? `${s.unpaidCount ? `${s.unpaidCount} unpaid ${plural(s.unpaidCount,'invoice','invoices')}` : 'on the debt book'}${s.oldestUnpaidDays !== null ? `, oldest ${s.oldestUnpaidDays} days` : ''}`
+          : 'nothing outstanding',
+        s.debt > 0 ? 'bad' : 'good')}
     </div>
+    ${/* Where the two records disagree, say so rather than pick one. An
+         invoice still showing a balance whose money is not on the debt
+         book means one of them is wrong, and which is a question about
+         this shop's records that no formula here can answer. Seen live on
+         one customer: a 925,000 invoice against a settled debt book. */''}
+    ${(() => {
+      const offBook = Math.round(s.outstanding - s.debt);
+      return offBook > 0 ? `<p class="cs-empty-note cs-flag">Invoices still show
+        <b>${fmtUGX(offBook)}</b> due beyond what the debt book carries. Either a payment
+        was recorded against the debt and not the invoice, or that invoice never reached
+        the debt book — worth settling which before chasing it.</p>` : '';
+    })()}
 
     <section class="cs-block">
       <h4>Do they still come?</h4>
@@ -25730,7 +25774,90 @@ function customerStatsHTML(s){
           }).join('')}</tbody>
         </table>
       </section>
-    </div>`;
+    </div>
+    ${customerStatementBlockHTML(s.customer && s.customer.id)}`;
+}
+
+/* The statement of account, on screen.
+
+   It existed already -- customerStatementRows builds the whole ledger and
+   printCustomerStatement puts it on paper. But the shopkeeper standing at
+   the counter with the customer in front of them could not see it without
+   printing it, so the screen showed what somebody BUYS and never what
+   they owe and why. Asked for directly: the orders, the payments, and the
+   balance they leave.
+
+   The same builder as the print, so the sheet handed over the counter and
+   the screen it was read from cannot say different numbers. */
+function customerStatementBlockHTML(customerId){
+  if(customerId == null) return '';
+  const { from, to } = customerStatementRange();
+  const st = customerStatementRows(customerId, from, to);
+  const money = (n)=> fmtUGX(Math.round(n));
+  return `
+    <section class="cs-block">
+      <h4>Statement of account</h4>
+      <p class="cs-read cs-muted">Every charge and every payment since ${esc(from)}, oldest first.</p>
+      <table class="cs-table cs-ledger">
+        <thead><tr>
+          <th>Date</th><th>Detail</th>
+          <th class="r">Charged</th><th class="r">Paid</th><th class="r">Balance</th>
+        </tr></thead>
+        <tbody>
+          <tr class="cs-opening">
+            <td>${esc(from)}</td><td>Balance brought forward</td>
+            <td class="r"></td><td class="r"></td><td class="r num">${money(st.opening)}</td>
+          </tr>
+          ${st.rows.map(r=>`<tr>
+            <td>${esc(r.date)}</td>
+            <td>${esc(statementRowDetail(r))}</td>
+            <td class="r num">${r.charge ? money(r.charge) : ''}</td>
+            <td class="r num">${r.payment ? money(r.payment) : ''}</td>
+            <td class="r num">${money(r.balance)}</td>
+          </tr>`).join('')}
+          ${st.rows.length ? '' : `<tr><td colspan="5" class="cs-muted">
+            Nothing was charged or paid in this period.</td></tr>`}
+        </tbody>
+        <tfoot><tr class="cs-ledger-total">
+          <td colspan="2">Balance now due</td>
+          <td class="r num">${money(st.charged)}</td>
+          <td class="r num">${money(st.paid)}</td>
+          <td class="r num">${money(st.closing)}</td>
+        </tr></tfoot>
+      </table>
+      ${/* The one check the document makes on itself, carried onto the
+           screen as well as the paper: the ledger is a history and
+           customer.debt is a balance kept beside it, and nothing forces
+           them to agree. */''}
+      ${st.agrees ? '' : `<p class="cs-empty-note cs-flag">This adds up to
+        ${money(st.closing)}, but the card carries ${money(st.recorded)} — the running
+        history and the balance beside it have gone out of step.</p>`}
+    </section>`;
+}
+
+/* What one line of the statement SAYS it is.
+
+   Every one of the 21 entries in this shop's debt log was written by the
+   invoice sync, whose note is a machine tag: "Auto-sync — INV-0150". In a
+   Detail column that is the name of the mechanism that wrote the row
+   rather than of the thing that passed between the shop and the
+   customer -- and it is the same two words on every line of a document
+   whose whole job is to distinguish one line from another.
+
+   Reworded on the way OUT only. The stored note is load-bearing:
+   debtLogIsInvoiceOwned() falls back to matching it on rows written
+   before quoteId existed, so rewriting what is on file would orphan
+   them from the invoice that owns them.
+
+   Both the screen and the paper call this, so a customer reading over
+   the counter and the sheet they are handed name the same line the same
+   way. */
+function statementRowDetail(r){
+  const note = String(r.note || '');
+  const auto = /^Auto-sync\s*[—-]\s*(.+)$/.exec(note);
+  if(auto) return r.type === 'payment' ? `Payment received — ${auto[1]}` : `Invoice ${auto[1]}`;
+  if(note) return note;
+  return r.type === 'charge' ? 'Goods supplied' : 'Payment received';
 }
 
 /* Six months, with whatever came before carried in as one opening line.
@@ -25783,7 +25910,7 @@ function printCustomerStatement(customerId){
           </tr>
           ${st.rows.map(r=>`<tr>
             <td>${esc(r.date)}</td>
-            <td>${esc(r.note || (r.type === 'charge' ? 'Goods supplied' : 'Payment received'))}</td>
+            <td>${esc(statementRowDetail(r))}</td>
             <td class="r num">${r.charge ? money(r.charge) : ''}</td>
             <td class="r num">${r.payment ? money(r.payment) : ''}</td>
             <td class="r num">${money(r.balance)}</td>

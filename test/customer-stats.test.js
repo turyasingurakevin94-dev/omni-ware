@@ -268,4 +268,39 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${got}, want $
     'the handler is delegated, so re-rendering the grid does not stack listeners');
 }
 
+/* ---------- 8. owed once, not twice ----------------------------------
+   The two figures beside each other are not two debts. Invoicing on
+   credit writes the same money into BOTH: the invoice keeps a balance
+   due, and applyInvoiceDebtCharge pushes a matching charge onto the debt
+   log. The panel used to print their SUM, so every credit sale was
+   counted twice -- one customer read 1,530,000 against a 765,000 debt,
+   and across this shop the card claimed 17,455,000 where the books hold
+   8,265,000.
+
+   c.debt is what the rest of the app means by owed: the map's "owed to
+   you", the debtors list, and the closing line of the statement all
+   total it. This panel was the only place doing its own arithmetic. */
+{
+  const html = extractFunction(src, 'customerStatsHTML', 'index.html');
+  const owedAt = html.indexOf("csStat('Owed to you now'");
+  t.check(owedAt > -1, 'the panel has an owed figure');
+  const owed = html.slice(owedAt, owedAt + 240);
+
+  t.check(!/s\.outstanding \+ s\.debt/.test(html) && !/s\.debt \+ s\.outstanding/.test(html),
+    'the owed figure is never the invoices PLUS the debt book — that sum double-counts every credit sale');
+  t.check(/fmtUGX\(Math\.round\(s\.debt\)\)/.test(owed),
+    'it is the debt book, which is what the map and the debtors list already total');
+
+  /* Where the two records genuinely disagree -- an invoice still due
+     whose money never reached the debt book -- neither figure is
+     silently preferred. Seen live on one customer: 925,000 invoiced
+     against a settled debt book. */
+  t.check(/s\.outstanding - s\.debt/.test(html),
+    'the gap between the two records is worked out');
+  t.check(/offBook > 0 \?/.test(html),
+    'and only spoken about when the invoices are AHEAD — a debt book carrying more than the invoices is an ordinary manual charge, not a discrepancy');
+  t.check(/Invoices still show/.test(html) && /cs-flag/.test(html),
+    'the disagreement is put on screen rather than resolved by a formula that cannot know which record is right');
+}
+
 process.exit(t.done() ? 1 : 0);
