@@ -89,6 +89,20 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   const all = scope.supplierStatementRows('S1', '0000-01-01', '2026-08-15');
   eq(all.opening, 0, 'over all time there is nothing brought forward');
   eq(all.rows.length, 3, 'and every entry is listed');
+
+  /* Cut at BOTH ends. An invoice dated after the period must not appear
+     on a statement that says it covers up to a given day -- a statement
+     of account is a document about a span, and one carrying next
+     month's invoice is wrong in a way the reader cannot see. */
+  supplier([
+    inv(50, '2026-03-01', 100000),
+    inv(51, '2026-09-01', 900000, { payments: [paid('2026-09-05', 400000)], amountPaid: 400000 }),
+  ]);
+  const cut = scope.supplierStatementRows('S1', '2026-01-01', '2026-06-30');
+  eq(cut.rows.length, 1, 'an invoice dated after the period is left out');
+  eq(cut.charged, 100000, 'so it adds nothing to the charges');
+  eq(cut.paid, 0, 'and neither does a payment made after the period');
+  eq(cut.closing, 100000, 'leaving the balance as it stood at the end of the period');
 }
 
 /* ---------- 3. a payment never prints above the charge it settles ----
@@ -117,6 +131,23 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   eq(pair.rows.map((r) => `${r.ref}:${r.type}`).join(' '),
     'PINV-0020:charge PINV-0020:payment PINV-0021:charge PINV-0021:payment',
     'each invoice is followed by its own payment');
+
+  /* Supplied in REVERSE, which is the only arrangement that tells the
+     tiebreak apart from doing nothing. Sorting by date alone is stable,
+     and the charge is pushed before its payment, so array order already
+     produces the right answer whenever the array happens to be in
+     document order. It is not always: data.purchaseInvoices arrives in
+     whatever order the server returned. Ordered by invoice id, two
+     same-day invoices read PINV-0020 then PINV-0021 on the sheet
+     whichever way round they were stored. */
+  supplier([
+    inv(21, '2026-06-01', 200000, { payments: [paid('2026-06-01', 50000)], amountPaid: 50000 }),
+    inv(20, '2026-06-01', 100000, { payments: [paid('2026-06-01', 40000)], amountPaid: 40000 }),
+  ]);
+  const rev = scope.supplierStatementRows('S1', '2026-01-01', '2026-12-31');
+  eq(rev.rows.map((r) => `${r.ref}:${r.type}`).join(' '),
+    'PINV-0020:charge PINV-0020:payment PINV-0021:charge PINV-0021:payment',
+    'and stored out of order they still read in document order, not in the order the server sent them');
 }
 
 /* ---------- 4. a voided invoice takes its payments with it ------------ */
@@ -171,6 +202,24 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   t.check(/pi\.payments\.push\(\{date: todayISO\(\), amount: pay, note, cashTxnId\}\);/.test(code),
     'and so does a lump sum spread across the oldest first');
 
+  /* ONE supplier's invoices, not the shop's. Every other test here has a
+     single supplier on file, which cannot tell a working filter from a
+     missing one -- and a statement carrying another supplier's invoices
+     is the worst kind of wrong on a document you hand over. */
+  data.suppliers = [{ id: 'S1', name: 'Roto Industry' }, { id: 'S2', name: 'Karddia' }];
+  data.purchaseInvoices = [
+    inv(60, '2026-06-01', 100000, { supplierId: 'S1' }),
+    inv(61, '2026-06-02', 999999, { supplierId: 'S2',
+      payments: [paid('2026-06-03', 500000)], amountPaid: 500000 }),
+  ];
+  const mine = scope.supplierStatementRows('S1', '2026-01-01', '2026-12-31');
+  eq(mine.rows.length, 1, 'only this supplier’s invoices are listed');
+  eq(mine.charged, 100000, 'another supplier’s charge is not counted');
+  eq(mine.paid, 0, 'nor their payment');
+  eq(mine.closing, 100000, 'leaving a balance that is theirs alone');
+  eq(scope.supplierStatementRows('S2', '2026-01-01', '2026-12-31').closing, 499999,
+    'and the other supplier gets their own, separately');
+
   // Unknown supplier: an empty statement, not a throw.
   data.suppliers = []; data.purchaseInvoices = [];
   const gone = scope.supplierStatementRows('NOBODY', '2026-01-01', '2026-12-31');
@@ -223,8 +272,16 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   const wiring = (/\(function wireSupplierCards\(\)[\s\S]*?\n\}\)\(\);/.exec(src) || [''])[0];
   t.check(wiring.length > 0, 'the supplier grid opens an account');
   t.check(/openSupplierStats\(card\.dataset\.supplier\)/.test(wiring), 'from the card that was clicked');
-  t.check(/data-supplier="\$\{esc\(s\.id\)\}"/.test(src) && /role="button" tabindex="0"/.test(src),
-    'the card carries the id and is reachable by keyboard, not only by pointer');
+  /* Scoped to the SUPPLIER card's own markup. Tested against the whole
+     file, `role="button" tabindex="0"` is satisfied by the customer
+     card, and stripping it off the supplier card passes unnoticed --
+     which is exactly what happened the first time this was written. */
+  const card = extractFunction(src, 'supplierCardHTML', 'index.html');
+  t.check(/data-supplier="\$\{esc\(s\.id\)\}"/.test(card), 'the card carries the id');
+  t.check(/role="button" tabindex="0"/.test(card),
+    'and is reachable by keyboard, not only by pointer');
+  t.check(/title="See the account for \$\{esc\(s\.name\)\}"/.test(card),
+    'and says what clicking it does, since a card that opens something must look like it opens something');
   t.check(/e\.target\.closest\('button'\)/.test(wiring),
     'a click on commission, edit or delete does only its own job');
   t.check(/e\.key !== 'Enter' && e\.key !== ' '/.test(wiring), 'and it opens on Enter or Space');
