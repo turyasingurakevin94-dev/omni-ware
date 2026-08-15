@@ -21788,12 +21788,24 @@ function receiptPageHeightMM(area){
   const last = el.lastElementChild;
   const px = (last ? last.getBoundingClientRect().bottom : box.bottom) - box.top;
   area.setAttribute('style', prev);
-  // 96 CSS px to the inch. Rounded UP by a single millimetre: a page
-  // even a fraction short of its content spills a second, almost-empty
-  // sheet, which costs far more roll than the millimetre saves.
-  // What remains below the cut on real paper is the printer's own
-  // head-to-cutter gap, which no CSS can reclaim.
-  return Math.max(40, Math.ceil(px / 96 * 25.4) + 1);
+  /* 96 CSS px to the inch. Rounded UP by a single millimetre: a page
+     even a fraction short of its content spills a second, almost-empty
+     sheet, which costs far more roll than the millimetre saves.
+     What remains below the cut on real paper is the printer's own
+     head-to-cutter gap, which no CSS can reclaim.
+
+     THE FLOOR IS 81mm, AND IT IS NOT ARBITRARY. Both callers write
+     `@page{size:80mm <this>mm}`, and a page declared WIDER than it is
+     tall is a landscape page -- Chrome reads the two numbers, sees
+     80x66, and rotates. The roll then feeds the printer's whole page
+     length sideways, which on an 80x210mm form means 210mm of paper
+     travelling past the head with the chit turned ninety degrees on it.
+
+     The old floor was 40mm, so anything short enough came out rotated:
+     a one- or two-line picking chit (61-72mm) always did, three lines
+     and up (82mm+) never did, and the same is true of any short sales
+     receipt. One millimetre taller than the width is the whole fix. */
+  return Math.max(81, Math.ceil(px / 96 * 25.4) + 1);
 }
 function printReceipt(q, payment, idx){
   if(!q) return;

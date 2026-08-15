@@ -210,8 +210,23 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
     'measured off to one side, since #printArea is display:none and a hidden element has no height');
   t.check(/Math\.ceil\(px \/ 96 \* 25\.4\)/.test(measure),
     'rounded UP — a page half a millimetre short spills a second, almost-empty sheet');
-  t.check(/Math\.max\(40,/.test(measure) && /if\(!el\) return 200;/.test(measure),
-    'with a floor, and a sane fallback if the receipt somehow did not render');
+  /* THE FLOOR IS 81mm, NOT 40. Both callers write `@page{size:80mm
+     <this>mm}`, and a page declared wider than it is tall IS a landscape
+     page -- Chrome reads 80x66, rotates, and the roll feeds the driver's
+     whole page length sideways with the receipt turned ninety degrees on
+     it. Seen on paper: a one-line picking chit at 66mm came out rotated
+     with the waste running off to the right, while a five-line one at
+     99mm printed correctly, because only the short ones fall under the
+     80mm width.
+
+     A claim change, not a weakening: 40 was low enough to let any short
+     receipt print sideways, and one millimetre over the width is the
+     whole fix. */
+  t.check(/Math\.max\(81,/.test(measure) && /if\(!el\) return 200;/.test(measure),
+    'with a floor ABOVE the 80mm page width, and a sane fallback if the receipt somehow did not render');
+  const floor = Number((/Math\.max\((\d+),/.exec(measure) || [])[1]);
+  t.check(floor > 80,
+    `the floor must exceed the page width or the page is landscape (floor ${floor}, width 80)`);
   /* Measured to the LAST CHILD's bottom edge, not the container's
      height. Those are the same number today -- .receipt has no bottom
      padding and its last child no bottom margin, verified at 100.8mm
