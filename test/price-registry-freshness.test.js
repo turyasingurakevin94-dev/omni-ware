@@ -965,10 +965,28 @@ const sold = (productId, qty, date) => data.stockLog.push({
   slots = scope.priceReplySlots(data.prices[0]);
   eq(slots.length, 2, 'a two-tier row is asked about twice');
   eq(slots.map((s) => s.qty).join(), '1,10', 'smallest quantity first');
+  /* Each showing the figure at ITS OWN quantity. Reading them all at one
+     would put 34,000 beside the bulk box and invite the supplier's bulk
+     answer to be compared against the single price. */
+  eq(slots.map((s) => s.price).join(), '34000,32500',
+    'each price point shows what is on file at that quantity, not all at one');
 
   scope.applySupplierReply([{ id: 1, qty: 10, price: 31000 }]);
   eq(data.prices[0].tiers[1].price, 31000, 'a bulk answer moves the bulk tier');
   eq(data.prices[0].tiers[0].price, 34000, 'and leaves the single price they did not mention alone');
+
+  /* And the CONFIRMATION is judged at that quantity too. Answering
+     32,500 for ten is "unchanged"; judged against the single price of
+     34,000 it would read as a change and rewrite a tier nobody moved.
+     Only a row whose price differs between one and the break can tell
+     those apart -- the one-tier fixture above cannot. */
+  reset();
+  data.prices = [price(1, { wholesale: null, retail: 34000, packQty: 0,
+    tiers: [{ minQty: 1, price: 34000 }, { minQty: 10, price: 32500 }], date: '2026-01-01' })];
+  r = scope.applySupplierReply([{ id: 1, qty: 10, price: 32500 }]);
+  eq(r.confirmed, 1, 'the bulk price quoted back unchanged is a confirmation');
+  eq(r.changed, 0, 'not a change against a single price they were not asked about');
+  eq(data.prices[0].tiers[1].price, 32500, 'and the tier is left exactly as it was');
 
   // A row with no tiers at all is still one question, at one.
   reset();
@@ -1003,6 +1021,14 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'each price point shows what is on file at that quantity');
   t.check(/data-qty="\$\{s\.qty\}"/.test(open),
     'and its box carries the quantity, so the answer is written where it was asked');
+  /* EVERY point, not just the first. 36 of this shop's rows break twice,
+     and offering only the lower one silently leaves the bulk price to
+     rot while the sheet looks complete. */
+  t.check(/rows\.flatMap\(f=> priceReplySlots\(f\.row\)\.map\(/.test(open),
+    'and every break on a row gets a line, not just its lowest');
+  const save2 = extractFunction(src, 'saveSupplierReply', 'index.html');
+  t.check(/qty: Number\(i\.dataset\.qty\)/.test(save2),
+    'the quantity survives the trip back out of the DOM — dropping it there would land every answer at one');
   t.check(/class="srp-input"[^>]*placeholder="—"/.test(open) && !/value="\$\{/.test(open.split('srp-input')[1] || ''),
     'and starts empty rather than pre-filled with that figure');
 
