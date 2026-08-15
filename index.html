@@ -2344,6 +2344,10 @@
   .lnf-block{display:flex;flex-direction:column;gap:8px;}
   .lnf-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
   .lnf-hint{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  /* Sat under its field's box rather than under its label, so it reads
+     as belonging to the input above it and not to the next row down. */
+  .lnf-hint-indent{margin:-3px 0 3px 165px;}
+  @media (max-width:560px){ .lnf-hint-indent{margin-left:0;} }
   .lnf-who{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;align-items:start;}
   @media (max-width:560px){ .lnf-who{grid-template-columns:1fr;} }
 
@@ -2365,7 +2369,12 @@
 
   .lnf-terms{display:flex;flex-direction:column;gap:8px;}
   .lnf-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
-  .lnf-row > label{font-size:12.5px;font-weight:600;color:var(--ink-soft);flex-shrink:0;min-width:120px;}
+  /* A fixed column, not a minimum. At min-width:120px each label sized
+     itself to its own text, so the boxes started at four different
+     places -- 554, 557, 561 and 585 measured across this one form, with
+     "Charge on each payment" pushing its input 31px right of the rest.
+     156 clears the longest label at this weight and size. */
+  .lnf-row > label{font-size:12.5px;font-weight:600;color:var(--ink-soft);flex:0 0 156px;}
   .lnf-row input[type=number]{flex:0 0 140px;font-family:'IBM Plex Mono',monospace;
     font-variant-numeric:tabular-nums;text-align:right;}
   .lnf-row input[type=date]{flex:0 0 auto;width:auto;}
@@ -8263,6 +8272,12 @@
               <input id="ln_fees" type="number" min="0" step="any" placeholder="0">
               <span class="lnf-cur">UGX</span>
             </div>
+            <!-- Directly under the field it describes. It used to close
+                 the whole block, which put it below "Figures rounded to"
+                 -- 59px and one unrelated row away from the box it is
+                 about, reading as though rounding were what the lender
+                 kept back. -->
+            <div class="lnf-hint lnf-hint-indent">Insurance, arrangement and paperwork the lender takes out of the money before handing it over. You still owe the full amount above.</div>
             <!-- Lenders' sheets repeat round figures (1,666,700 a month,
                  not 1,666,666.67). Matching that is what makes a printed
                  schedule and this one agree row for row. -->
@@ -8276,7 +8291,6 @@
               <span class="lnf-cur">UGX</span>
             </div>
           </div>
-          <div class="lnf-hint">Insurance, arrangement and paperwork the lender takes out of the money before handing it over. You still owe the full amount above.</div>
         </div>
 
         <!-- What the money actually costs. This was a grey footnote under

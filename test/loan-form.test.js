@@ -230,4 +230,36 @@ const verdict = (/function lnfRenderVerdict[\s\S]*?\n\}\n/.exec(code) || [''])[0
     'with the date taking the slack so the amount sits at the end');
 }
 
+/* ---------- the form reads as a form ----------------------------------
+   Two things measured in the browser on the real modal. */
+{
+  const src = read('index.html');
+
+  /* Every label was a MINIMUM width, so each sized itself to its own text
+     and the boxes started at four different places -- 554, 557, 561 and
+     585, with "Charge on each payment" pushing its input 31px right of
+     the rest. A fixed column puts them all on one line. */
+  t.check(/\.lnf-row > label\{[^}]*flex:0 0 156px;\}/.test(src),
+    'the label column is a fixed width, so every control starts at the same x');
+  t.check(!/\.lnf-row > label\{[^}]*min-width:120px/.test(src),
+    'rather than a minimum each label may exceed on its own');
+
+  /* The fee explanation closed the whole terms block, which put it below
+     "Figures rounded to" -- 59px and one unrelated row from the box it
+     describes, reading as though rounding were what the lender kept
+     back. */
+  const terms = (/<div class="lnf-terms">[\s\S]*?\n          <\/div>/.exec(src) || [''])[0];
+  t.check(/Insurance, arrangement and paperwork/.test(terms),
+    'the fee explanation is inside the terms block, with the fields');
+  const feeAt = terms.indexOf('id="ln_fees"');
+  const hintAt = terms.indexOf('Insurance, arrangement and paperwork');
+  const roundAt = terms.indexOf('id="ln_round"');
+  t.check(feeAt > -1 && hintAt > feeAt && roundAt > hintAt,
+    'and sits between the fee it explains and the next field, not after both');
+  t.check(/\.lnf-hint-indent\{margin:-3px 0 3px 165px;\}/.test(src),
+    'indented to its field\'s box rather than its label, so it reads as belonging above');
+  t.check(/@media \(max-width:560px\)\{ \.lnf-hint-indent\{margin-left:0;\} \}/.test(src),
+    'and the indent drops away on a phone, where the rows stack anyway');
+}
+
 process.exit(t.done() ? 1 : 0);
