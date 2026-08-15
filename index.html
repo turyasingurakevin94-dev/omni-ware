@@ -879,6 +879,39 @@
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
     #printArea{display:block;position:absolute;top:0;left:0;width:100%;padding:0;}
+
+    /* The things that outrank the blanket hide above.
+
+       `body *` is specificity (0,0,1). `.modal-overlay.show` is (0,2,0)
+       and sets visibility:visible, so an open modal was never hidden at
+       all: it stayed position:fixed, inset:0, z-index 100, and laid its
+       white card over the sheet. Print statement is the only print
+       control in this app that lives inside a modal, which is why it
+       was the only one that came out blank -- and it printed a blank
+       page rather than nothing at all, because the card is opaque and
+       covers exactly the area the statement was drawn in.
+
+       display:none rather than a louder visibility rule: .show sets
+       only opacity and visibility, so it has nothing left to argue
+       with, and a specificity race nobody can see the results of is
+       how this bug got here in the first place.
+
+       The two bubbles for the same reason -- both are held open by a
+       class as well as by hover, so either can still be on screen when
+       the print dialog goes up. */
+    .modal-overlay, .lightbox-overlay{display:none !important;}
+    .page-info-bubble, .tip-bubble{display:none !important;}
+
+    /* And the phone chrome, which escapes the same hide by a different
+       route. Around seventy controls in this stylesheet open with
+       `all:unset`, and `all` includes VISIBILITY -- so every one of them
+       computes to visible during print no matter what `body *` says.
+       Nearly all sit inside `main > section`, already display:none
+       above, so nothing came of it. The four that do not are these:
+       position:fixed, outside the sections, and on a phone-width screen
+       they print. The orange action button came out as a solid disc in
+       the corner of every sheet. */
+    .mobile-topbar, .mobile-bottomnav, .mobile-fab, .mobile-more-sheet{display:none !important;}
     #printArea h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 4px 0;}
     #printArea .print-meta{font-size:12px;color:#555;margin-bottom:16px;}
     #printArea table{width:100%;border-collapse:collapse;}

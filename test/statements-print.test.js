@@ -172,4 +172,80 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
     `every print path clears first, not just the statements (${clears} call sites)`);
 }
 
+/* ---------- what the blanket hide does not reach ---------------------
+   `body *{visibility:hidden}` is how every print path clears the screen
+   before the sheet. It is specificity (0,0,1) -- which loses to any
+   class that has an opinion about visibility, and two kinds do.
+
+   The open modal. `.modal-overlay.show{visibility:visible}` is (0,2,0),
+   so an open modal was never hidden at all: position:fixed, inset:0,
+   z-index 100, opaque white card, laid over exactly the area the
+   document was drawn in. Print statement is the only print control in
+   this app that lives inside a modal, and it printed a blank page.
+
+   The `all:unset` controls. Around seventy rules in this stylesheet
+   open with `all:unset`, and `all` includes visibility -- so each one
+   computes to visible during print. Nearly all sit inside
+   `main > section`, already display:none, so nothing came of it. The
+   phone chrome does not: fixed, outside the sections, and at
+   phone width the orange action button printed as a solid disc in the
+   corner of every sheet in the app.
+
+   Both are answered with display:none rather than a louder visibility
+   rule. `.show` sets only opacity and visibility, `all:unset` resets
+   rather than asserts, so neither has anything left to argue with --
+   and a specificity race whose result nobody can see until it reaches
+   paper is what produced this in the first place. */
+{
+  /* Parsed as rules rather than matched as text: these selectors share a
+     block with others, so a regex anchored on one of them has to cross
+     the `{` of the next and cannot. The repo's comment guard is used on
+     the way in — a bare /* ... *​/ pattern eats from an `image/*` to the
+     next close, and this file has both. */
+  const rules = printCss.replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, '')
+    .split('}').map((s) => s.trim()).filter(Boolean);
+  const hidden = (sel) => rules.some((r) => {
+    const i = r.lastIndexOf('{');
+    if (i < 0) return false;
+    return r.slice(0, i).split(',').map((s) => s.trim()).includes(sel)
+      && /display:\s*none\s*!important/.test(r.slice(i + 1));
+  });
+  t.check(rules.length > 10, `the print block parses into rules (${rules.length})`);
+
+  t.check(/body \*\{visibility:hidden;\}/.test(printCss), 'the blanket hide is still there');
+  t.check(/#printArea, #printArea \*\{visibility:visible;\}/.test(printCss),
+    'with the sheet itself exempted from it');
+
+  t.check(hidden('.modal-overlay'),
+    'an open modal is hidden outright — it outranks the blanket hide and would print its card over the document');
+  t.check(hidden('.lightbox-overlay'),
+    'and so is the lightbox, which wins the same way');
+  t.check(hidden('.mobile-fab'),
+    'the phone action button is hidden — all:unset resets visibility, so the blanket hide never touched it');
+  ['.mobile-topbar', '.mobile-bottomnav', '.mobile-more-sheet'].forEach((sel) => {
+    t.check(hidden(sel), `and so is ${sel}, fixed and outside the sections like the rest of the phone chrome`);
+  });
+
+  /* The two bubbles win the visibility fight the same way the modal
+     does, and both are held open by a CLASS as well as by hover -- so
+     either can still be on screen when the print dialog goes up, and
+     hover cannot be relied on to have ended. */
+  t.check(hidden('.page-info-bubble') && hidden('.tip-bubble'),
+    'the help bubbles are hidden too — a class holds them open, so hover ending is no guarantee they are gone');
+
+  /* display, not visibility. A second visibility rule would have to
+     out-specify .modal-overlay.show and every future .show variant;
+     display:none is not in that argument at all. */
+  t.check(!/\.modal-overlay[^{]*\{[^{}]*visibility:\s*hidden/.test(printCss),
+    'answered with display rather than by escalating the visibility fight');
+
+  /* The chrome must be hidden by the SHARED sheet, not by each print
+     path, because the injected per-path sheets only ever re-state the
+     visibility pair and would each need their own copy. */
+  const injectedSheets = [...code.matchAll(/styleEl\.textContent = `([\s\S]*?)`;/g)].map((m) => m[1]);
+  t.check(injectedSheets.length >= 4, `the per-path sheets are found (${injectedSheets.length})`);
+  t.check(injectedSheets.every((s) => !/modal-overlay|mobile-fab/.test(s)),
+    'and none of them repeats the chrome rules — one copy, in the shared block, covers every print path');
+}
+
 process.exit(t.done() ? 1 : 0);
