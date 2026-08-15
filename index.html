@@ -1744,6 +1744,9 @@
     .op-step{flex:1 1 46%;}
     .op-step-since{display:none;}
   }
+  /* Right-aligned, like the statement panel's own print row — acting on
+     a document sits opposite reading it. */
+  .op-actions{display:flex;justify-content:flex-end;margin-bottom:12px;}
   .op-facts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .op-fact{font-size:12.5px;color:var(--ink-soft);background:var(--bg);
     border:1px solid var(--line);border-radius:20px;padding:4px 11px;}
@@ -3775,6 +3778,19 @@
   .receipt .r-item-row{display:flex;justify-content:space-between;font-size:11px;padding-left:9px;gap:8px;}
   .receipt .r-item-row span:last-child{white-space:nowrap;}
   .receipt .r-item-supplier{font-size:10px;margin-top:1px;}
+  /* The packing chit. Same roll, same font, and deliberately looser than
+     a sales receipt -- this one is read at arm's length in a store with
+     a box under the other arm, and written on. */
+  .receipt.pk-chit{line-height:1.5;}
+  .receipt .pk-item{margin:7px 0;}
+  .receipt .pk-name{font-weight:700;font-size:11.5px;display:flex;align-items:flex-start;gap:5px;}
+  /* An empty square to tick. The whole reason this paper exists is that
+     nobody has a screen to tap. */
+  .receipt .pk-box{flex:0 0 auto;width:9px;height:9px;border:1px solid #000;margin-top:3px;}
+  .receipt .pk-detail{display:flex;justify-content:space-between;gap:8px;
+    font-size:10.5px;padding-left:14px;}
+  .receipt .pk-detail span:last-child{white-space:nowrap;}
+  .receipt .pk-sign{margin-top:9px;font-size:10.5px;}
   /* The only large element on the paper. */
   .receipt .r-total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:3px;}
   .receipt .r-ccy{text-align:right;font-size:9.5px;}
@@ -15647,6 +15663,74 @@ function orderPreviewStepsHTML(q){
     savedAgoLabel(q.stageEnteredAt || q.savedAt));
 }
 
+/* The picking chit: this order on 80mm paper.
+
+   For when the picker's phone dies mid-pick. The worker app is the
+   normal way to do this, and a shop where the only copy of what to
+   gather lives on one battery is a shop that stops when that battery
+   does.
+
+   NO MONEY ON IT, unlike the preview above. The picker's job is to
+   gather goods; line totals are the shop's cost position, they are not
+   something the picker acts on, and this piece of paper walks around
+   the yard and gets left on benches. The admin screen that carries the
+   figures is the one behind this button.
+
+   A box to tick on every line, because the whole reason this exists is
+   that nobody has a screen to tap. And the item name is never cut: the
+   trip message learned that the hard way, where two 14-character
+   columns rendered "Chrome Pipe — 19mm" and "Chrome Pipe — 25mm" as the
+   same row and somebody fetched the wrong pipe. */
+function buildPackingChitHTML(q){
+  const shop = shopIdentity();
+  const s = orderPreviewSummary(q);
+  const when = new Date();
+  const time = String(when.getHours()).padStart(2,'0') + ':' + String(when.getMinutes()).padStart(2,'0');
+  const who = q.assignedWorkerId ? staffName(q.assignedWorkerId) : '';
+  const row = (l, r)=> `<div class="r-row"><span>${l}</span><span>${r}</span></div>`;
+  return `<div class="receipt pk-chit">
+    <div class="r-center">
+      <div class="r-shop">${esc(shop.name)}</div>
+      <div class="r-sub">PACKING LIST</div>
+    </div>
+    <div class="r-rule"></div>
+    ${row('Order', `<b>${esc(quoteClientName(q))}</b>`)}
+    ${row(esc(fmtShortDate(todayISO())), esc(time))}
+    ${who ? row('Picker', esc(who)) : ''}
+    ${orderCustomerLocation(q) ? row('Deliver to', esc(orderCustomerLocation(q))) : ''}
+    <div class="r-line"></div>
+    ${s.lines.map(l=>`<div class="pk-item">
+      <div class="pk-name"><span class="pk-box"></span>${esc(l.name)}</div>
+      <div class="pk-detail">
+        <span>${esc(String(l.qty))}${l.unit ? ` ${esc(l.unit)}` : ''}${
+          l.picked != null ? ` — ${esc(String(l.picked))} already in` : ''}</span>
+        <span>${l.fromStock ? 'stock' : esc(l.source)}</span>
+      </div>
+    </div>`).join('')}
+    <div class="r-rule"></div>
+    ${row(`${s.lines.length} line${s.lines.length===1?'':'s'}`,
+      `${s.fromStock} stock${s.toBuy ? ` · ${s.toBuy} to buy` : ''}`)}
+    <div class="pk-sign">Picked by ............................</div>
+  </div>`;
+}
+function printPackingChit(orderId){
+  const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(orderId));
+  if(!q) return;
+  // A statement's A4 left over from another printout would set the page
+  // size for this roll -- see clearInjectedPrintStyles.
+  clearInjectedPrintStyles();
+  const area = document.getElementById('printArea');
+  area.innerHTML = buildPackingChitHTML(q);
+  const st = document.createElement('style');
+  st.id = 'receipt80PrintStyle';
+  // Measured, not guessed, and margin:0 -- the same reasoning as the
+  // sales receipt, which this shares a roll and a printer with.
+  st.textContent = `@page{size:80mm ${receiptPageHeightMM(area)}mm;margin:0;}`;
+  document.head.appendChild(st);
+  window.print();
+  area.innerHTML = '';
+}
+
 function orderPreviewHTML(q){
   const s = orderPreviewSummary(q);
   const plural = (n, one, many)=> n === 1 ? one : many;
@@ -15659,6 +15743,18 @@ function orderPreviewHTML(q){
 
   return `
     ${orderPreviewStepsHTML(q)}
+
+    ${/* Offered whenever there is anything to pick. Not gated on the
+         order being in Being Prepared: a phone dies when it dies, and an
+         admin checking goods against a list at any stage wants the same
+         piece of paper. */''}
+    ${s.lines.length ? `<div class="op-actions">
+      <button type="button" class="btn btn-ghost btn-icon" id="opChitBtn" data-id="${esc(String(q.id))}"
+        title="Print this order on 80mm roll — for picking without a phone">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
+        Print packing list
+      </button>
+    </div>` : ''}
 
     <div class="op-facts">
       ${location ? `<span class="op-fact">${esc(location)}</span>` : ''}
@@ -15705,6 +15801,8 @@ function openOrderPreview(orderId){
   document.getElementById('orderPreviewTitle').textContent =
     `${(q.client && q.client.name) || 'Unnamed client'} — ${ORDER_STATUS_SHORT_LABELS[q.status] || ''}`;
   document.getElementById('orderPreviewBody').innerHTML = orderPreviewHTML(q);
+  const chit = document.getElementById('opChitBtn');
+  if(chit) chit.addEventListener('click', ()=> printPackingChit(chit.dataset.id));
   openModal('orderPreviewModal');
 }
 

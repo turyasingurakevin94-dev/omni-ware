@@ -49,13 +49,20 @@ const scope = compileScope([
      the scope. */
   extractFunction(src, 'stageStepsHTML', 'index.html'),
   extractFunction(src, 'orderPreviewStepsHTML', 'index.html'),
+  extractFunction(src, 'buildPackingChitHTML', 'index.html'),
 ], {
   data,
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || 'Unknown supplier',
   esc: (s) => String(s == null ? '' : s),
   savedAgoLabel: () => '2h ago',
-}, ['orderPreviewLines', 'orderPreviewSummary', 'orderPreviewStepsHTML']);
+  shopIdentity: () => ({ name: 'Telagon Hardware' }),
+  quoteClientName: (q) => (q.client && q.client.name) || 'Unnamed',
+  staffName: (id) => (id === 'W1' ? 'Kevin Moses' : id),
+  orderCustomerLocation: (q) => q._where || '',
+  fmtShortDate: (d) => d,
+  todayISO: () => '2026-08-15',
+}, ['orderPreviewLines', 'orderPreviewSummary', 'orderPreviewStepsHTML', 'buildPackingChitHTML']);
 
 const stockLine = (over) => Object.assign({
   productName: 'Iron sheets', qty: 10, unit: 'pcs', supplierId: '__stock__', sellPrice: 45000, price: 0,
@@ -218,6 +225,102 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   // The figure it used is still computed: the cash-flow of a trip is
   // real, it is just shown where it belongs rather than narrated here.
   t.check(/buyTotal:/.test(src), 'buyTotal survives for the callers that do show it');
+}
+
+/* ---------- the packing chit -----------------------------------------
+   The worker app is the normal way to pick an order. A shop where the
+   only copy of what to gather lives on one battery is a shop that stops
+   when that battery does -- so the same order goes on 80mm roll, for a
+   picker working from paper.
+ */
+{
+  const chit = scope.buildPackingChitHTML(order([stockLine(), buyLine()],
+    { assignedWorkerId: 'W1', _where: 'Ndeeba' }));
+
+  /* NO MONEY ON IT, unlike the preview screen behind the button. The
+     picker gathers goods; line totals are the shop's cost position, are
+     not something they act on, and this paper walks round the yard and
+     gets left on benches. */
+  t.check(!/UGX/.test(chit) && !/45,?000|38,?000|31,?000/.test(chit),
+    'the chit carries no prices at all');
+
+  // What it must carry instead.
+  t.check(/Iron sheets/.test(chit) && /Cement/.test(chit), 'every line is named');
+  t.check(/10 pcs/.test(chit) && /40 bags/.test(chit), 'with the quantity and its unit');
+  t.check(/stock/.test(chit) && /Katwe Steel/.test(chit),
+    'and where it comes from — the shelf, or which supplier');
+  t.check(/PACKING LIST/.test(chit), 'the paper says what it is');
+  t.check(/Telagon Hardware/.test(chit), 'and who it came from');
+  t.check(/Okello/.test(chit), 'naming the order it belongs to');
+  t.check(/Ndeeba/.test(chit), 'and where it is going');
+
+  /* A box to tick on every line. The whole reason this exists is that
+     nobody has a screen to tap. */
+  const boxes = (chit.match(/class="pk-box"/g) || []).length;
+  t.check(boxes === 2, `a box to tick on each line (${boxes})`);
+  t.check(/Picked by/.test(chit), 'and somewhere to sign at the end');
+
+  /* Nothing truncated. The trip message learned this: two 14-character
+     columns rendered "Chrome Pipe — 19mm" and "Chrome Pipe — 25mm" as
+     the same row, and somebody fetched the wrong pipe. */
+  const longName = scope.buildPackingChitHTML(order([
+    buyLine({ productName: 'Chrome Pipe — 19mm - Light' }),
+    buyLine({ productName: 'Chrome Pipe — 25mm - Light' }),
+  ]));
+  t.check(/19mm/.test(longName) && /25mm/.test(longName),
+    'two products differing late in the name are still told apart');
+  t.check(!/…/.test(longName), 'nothing on the list is cut');
+
+  /* Optional rows cost no line when absent, the same rule the sales
+     receipt follows -- a blank "Picker" on a roll is wasted paper and
+     reads as a missing answer. */
+  const noWorker = scope.buildPackingChitHTML(order([stockLine()]));
+  t.check(!/Picker/.test(noWorker), 'an unassigned order prints no picker line');
+  t.check(!/Deliver to/.test(noWorker), 'and no delivery line where there is no address');
+
+  // Already-picked quantities show, so a chit printed mid-pick is honest
+  // about what is left rather than starting the job again.
+  const midPick = scope.buildPackingChitHTML(order([
+    buyLine({ pickedQty: 12, pickStatus: 'short' }),
+  ]));
+  t.check(/12 already in/.test(midPick),
+    `a part-picked line says how much is already gathered (${(midPick.match(/<div class="pk-detail">[\s\S]*?<\/div>/) || [''])[0].replace(/<[^>]+>/g, ' ').trim()})`);
+  // An untouched line says nothing rather than "0 already in", which
+  // reads as an empty shelf instead of a job not started.
+  t.check(!/already in/.test(chit),
+    'while a line nobody has answered yet claims nothing about what is gathered');
+
+  // The footer answers "how much of this is a walk to the shelf".
+  t.check(/1 stock/.test(chit) && /1 to buy/.test(chit),
+    'and the foot splits what is on the shelf from what has to be fetched');
+}
+
+/* ---------- and the roll it prints on --------------------------------- */
+{
+  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+  const fn = (/function printPackingChit[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(fn.length > 0, 'there is a print path');
+
+  /* Measured, not guessed. A page even a fraction short of its content
+     spills a second almost-empty sheet, which costs more roll than the
+     millimetre saves. */
+  t.check(/receiptPageHeightMM\(area\)/.test(fn),
+    'the page is sized to what was actually rendered');
+  t.check(/size:80mm \$\{receiptPageHeightMM\(area\)\}mm;margin:0;/.test(fn),
+    'on 80mm with no page margin — a margin offsets the content past a head that cannot reach it');
+
+  /* A statement's A4 left over from another printout would set the page
+     size for this roll. */
+  t.check(/clearInjectedPrintStyles\(\);/.test(fn),
+    'a stale page size from another printout is cleared first');
+  t.check(/area\.innerHTML = '';/.test(fn),
+    'and the print area is emptied afterwards, so the next receipt does not carry a picking list');
+
+  // Offered where the order is being looked at, and only with lines on it.
+  t.check(/id="opChitBtn"/.test(src) && /printPackingChit\(chit\.dataset\.id\)/.test(src),
+    'the order preview carries the button, wired to the order it is showing');
+  t.check(/\$\{s\.lines\.length \? `<div class="op-actions">/.test(src),
+    'and offers nothing on an order with no lines to pick');
 }
 
 process.exit(t.done() ? 1 : 0);
