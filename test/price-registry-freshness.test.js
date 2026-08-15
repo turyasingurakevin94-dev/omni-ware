@@ -50,7 +50,8 @@ const DECLS = ['PRICE_STALE_DAYS', 'PRICE_REVIEW_DEMAND_DAYS', 'PRICE_REVIEW_TAR
 const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'getStockQty', 'productPriceRows',
   'rankedPriceRows', 'priceReviewTarget', 'priceReviewStaleDays', 'priceReviewPeriod',
   'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview', 'priceReviewCandidates',
-  'priceReviewProgress', 'confirmPriceUnchanged'];
+  'priceReviewProgress', 'confirmPriceUnchanged',
+  'supplierAskList', 'supplierPriceAskMessage', 'markSupplierAsked', 'priceAskedDaysAgo'];
 const scope = compileScope([
   ...DECLS.map((n) => extractDeclaration(src, n, 'index.html')),
   ...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -374,6 +375,149 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'the age predicate reads only the row it was handed, never the shop around it');
   t.check(/if\(!ageFilter \|\| ageFilter === 'review'\) return true;/.test(pred),
     'and passes the worklist key through untouched rather than pretending to apply it');
+}
+
+/* ---------- 10. asking one supplier ----------------------------------
+   The two channels that actually collect the prices. Both rest on the
+   same derivation -- the review list, narrowed to one supplier -- rather
+   than on a stored list, which would be a second answer free to go stale
+   between the day it was built and the day somebody walked. */
+{
+  reset();
+  data.products = [{ id: 'P1', name: 'Cement' }, { id: 'P2', name: 'Handle' }];
+  data.prices = [
+    price(1, { productId: 'P1', supplierId: 'S1', unit: 'Bag' }),
+    price(2, { productId: 'P2', supplierId: 'S2', unit: '' }),
+    price(3, { productId: 'P1', supplierId: 'S2', wholesale: 11000 }),
+    price(4, { productId: 'P2', supplierId: 'S1', date: TODAY }),   // fresh
+  ];
+  sold('P1', 50, '2026-08-01');
+  sold('P2', 50, '2026-08-01');
+
+  const s1 = scope.supplierAskList('S1');
+  t.check(s1.every((f) => f.row.supplierId === 'S1'), 'an ask list is one supplier’s own rows');
+  t.check(!s1.some((f) => f.row.id === 4), 'and leaves out the price that is still fresh');
+  t.check(scope.supplierAskList('S2').some((f) => f.row.id === 2),
+    'while another supplier gets their own');
+  t.check(scope.supplierAskList('NOBODY').length === 0,
+    'and a supplier with nothing worth asking gets an empty list, not everything');
+
+  /* Ordered the same way the report is. Somebody who can only ask about
+     three things should be asking about the three that matter. */
+  const all = scope.priceReviewCandidates().filter((f) => f.row.supplierId === 'S1');
+  t.check(s1.map((f) => f.row.id).join() === all.map((f) => f.row.id).join(),
+    'in the order the review already put them, not the order they were entered');
+}
+
+/* ---------- 11. the message asks, and does not tell -------------------- */
+{
+  const list = [
+    { row: { id: 1, pname: 'Cement — 50kg', unit: 'Bag', wholesale: 34000 } },
+    { row: { id: 2, pname: 'Nails — 4 inch', unit: '', wholesale: 9500 } },
+  ];
+  const m = scope.supplierPriceAskMessage('S1', list);
+  t.check(/Please confirm your current prices/.test(m), 'it asks for their figure');
+  t.check(/Cement — 50kg \(per Bag\)/.test(m), 'naming each item and its unit');
+  t.check(/• Nails — 4 inch\n/.test(m), 'and leaving the bracket off where there is no unit');
+
+  /* THE PRICE IS NEVER IN IT, and for a stronger reason than the trip
+     message has. The whole point is to hear THEIR number: "you said
+     34,000 in May, still right?" invites a yes from a supplier who has
+     since put it up, and the shop would never find out. */
+  t.check(!/34,000|9,500|34000|9500/.test(m),
+    'and never quotes back the price already on file, which would invite a yes and teach the shop nothing');
+  t.check(!/UGX/.test(m), 'no money in it at all');
+
+  eq(scope.supplierPriceAskMessage('S1', []), '',
+    'nothing to ask is no message, rather than a greeting with nothing under it');
+}
+
+/* ---------- 12. that they were asked ----------------------------------
+   The one thing the review cannot derive. A price that was CHECKED
+   leaves a date behind; a question sent and never answered leaves
+   nothing at all, so without this the same list goes to the same
+   supplier every week and nobody can tell which items are still
+   waiting. */
+{
+  reset();
+  data.prices = [price(1, { supplierId: 'S1' }), price(2, { supplierId: 'S2' })];
+  sold('P1', 50, '2026-08-01');
+  const asked = scope.markSupplierAsked('S1');
+  eq(asked, 1, 'asking stamps the rows it asked about');
+  t.check(!!data.prices[0].lastAskedAt, 'the row remembers it was asked');
+  t.check(!data.prices[1].lastAskedAt, 'and another supplier’s row does not');
+
+  /* It does NOT clear the row off the list. Asking is not an answer --
+     a supplier who never replies must keep showing up, or the shop
+     stops chasing the very prices it could not get. */
+  t.check(scope.supplierAskList('S1').length === 1,
+    'a row that was asked about is still on the list until somebody answers');
+
+  eq(scope.priceAskedDaysAgo(data.prices[0]), 0, 'asked today is nought days ago');
+  eq(scope.priceAskedDaysAgo(data.prices[1]), null, 'never asked has no answer rather than a zero');
+  eq(scope.priceAskedDaysAgo({ lastAskedAt: 'not a date' }), null, 'and nor does a broken stamp');
+  eq(scope.priceAskedDaysAgo(null), null, 'nor a missing row');
+}
+
+/* ---------- 13. the column it needs, and surviving without it ---------
+   The migrations here are applied BY HAND, so there is always a window
+   where the new code is live and the column is not. Reads survive that
+   on their own -- the mapper sees undefined -- but a write does not:
+   PostgREST rejects the entire upsert for one unknown column, and every
+   price row goes up on every save. Sending this unguarded would stop the
+   shop saving prices at all, not merely lose the stamp. */
+{
+  t.check(/alter table prices add column if not exists last_asked_at timestamptz;/
+    .test(read('supabase/migrations/0075_price_last_asked.sql')),
+    'the column has a migration');
+  t.check(/sb\.from\('prices'\)\.select\('last_asked_at'\)\.limit\(1\)/.test(code),
+    'and the app probes for it rather than assuming');
+  t.check(/priceAskedColumn = !\(askedColR && askedColR\.error\);/.test(code),
+    'recording whether it is there yet');
+  t.check(/\.\.\.\(priceAskedColumn \? \{last_asked_at: pr\.lastAskedAt \|\| null\} : \{\}\)/.test(code),
+    'and the write is guarded on it, so prices keep saving until the migration lands');
+  t.check(/lastAskedAt: pr\.last_asked_at \|\| null/.test(code),
+    'while the read needs no guard — a missing column simply reads as never asked');
+
+  /* Its own probe, not folded into the sourcing pair. All three are
+     applied by hand and can land in any order, so one being absent must
+     not stop another being written. */
+  t.check(/sourcingImageColumn = !\(imageColR/.test(code) && /priceAskedColumn = !\(askedColR/.test(code),
+    'probed separately from the sourcing columns, which land independently');
+}
+
+/* ---------- 14. while you're there ------------------------------------
+   A separate errand to go and confirm prices is the thing that never
+   happens; a line on a message somebody is sending anyway is the thing
+   that does. Wired at the join rather than by teaching either message
+   about the other, so the trip's deliberate no-prices rule stays where
+   it can be read. The message itself is pinned in collection-trips. */
+{
+  const url = extractFunction(src, 'supplierTripWaUrl', 'index.html');
+  t.check(/supplierAskList\(trip\.supplierId\)/.test(url),
+    'the trip notice looks up what is worth asking that supplier');
+  t.check(/supplierTripMessage\(trip\) \+ '\\n\\n—\\n\\n'/.test(url),
+    'and joins the two messages rather than merging them');
+  t.check(/ask\.length\s*\?/.test(url),
+    'with nothing appended when there is nothing to ask');
+
+  // Named on the card too, so whoever presses Tell supplier knows the
+  // message carries it, and a worker being briefed knows to ask.
+  t.check(/While there, ask \$\{n\} \$\{n===1\?'price':'prices'\}/.test(code),
+    'the trip card says how many prices ride along');
+
+  // And offered on the supplier's own panel, which is where somebody
+  // already thinking about that supplier lands.
+  const ask = extractFunction(src, 'askSupplierForPrices', 'index.html');
+  t.check(/markSupplierAsked\(supplierId, rows\)/.test(ask), 'asking records that it asked');
+  t.check(/window\.open\(waComposeUrl\(/.test(ask), 'and opens WhatsApp with it written out');
+  /* A DRAFT, never a send. Nothing here puts a message on the wire: the
+     shop's own hand is on the button, the same arrangement the sales
+     share and the trip notice already use. */
+  t.check(!/api|fetch|sendMessage/i.test(ask),
+    'nothing is sent — the message is composed and a human decides');
+  t.check(/send the message to finish/.test(ask),
+    'and the toast says so, rather than implying it has gone');
 }
 
 process.exit(t.done() ? 1 : 0);

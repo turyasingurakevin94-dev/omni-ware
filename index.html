@@ -1467,6 +1467,9 @@
   /* The code and the "also a customer" tag on one line under the name.
      The tag carries its own margin-left for when it follows text inline;
      in a gapped flex row that margin is a second gap, so it goes. */
+  /* The reasons column on the supplier panel's ask list — several short
+     clauses, and the one thing there allowed to wrap. */
+  .cs-table td.cs-ask-why{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
   .sc-meta, .cc-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
   .sc-meta .both-tag, .cc-meta .both-tag{margin-left:0;}
   .sc-actions{display:flex;gap:6px;flex-shrink:0;}
@@ -4675,6 +4678,10 @@
   .bl-verdict-onhand{margin-left:auto;font-family:'IBM Plex Mono',monospace;
     font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink-soft);}
   .bl-trip-short{font-size:11.5px;color:var(--ow-amber-ink);font-weight:600;margin-top:2px;}
+  /* Quieter than the shortfall above it on purpose: a short delivery is
+     a problem, an errand to ask a price is a bonus. It must not compete
+     with the line that needs acting on. */
+  .bl-trip-ask{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
   /* Back and waiting to be checked in is the one state somebody has to
      act on, so it is the one that carries colour. */
   .bl-trip.collected{background:var(--ow-amber-soft);border-color:rgba(180,130,20,0.28);}
@@ -10587,7 +10594,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR, askedColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -10597,7 +10604,8 @@ async function loadData(shopId){
     sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
-    sb.from('sourcing_leads').select('image').limit(1)
+    sb.from('sourcing_leads').select('image').limit(1),
+    sb.from('prices').select('last_asked_at').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -10620,6 +10628,15 @@ async function loadData(shopId){
      two migrations are applied by hand and can land in either order, so
      one column being absent must not stop the other being written. */
   sourcingImageColumn = !(imageColR && imageColR.error);
+  /* 0075, and on its own probe for the same reason as 0074 -- the
+     migrations are applied by hand and can land in any order, so one
+     column being absent must not stop another being written.
+
+     This one guards a BUSIER write than the sourcing pair: every price
+     row goes up on every save, so between this deploying and 0075 being
+     applied, sending last_asked_at would fail the whole prices upsert
+     and the shop would silently stop saving prices at all. */
+  priceAskedColumn = !(askedColR && askedColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
 
@@ -10693,6 +10710,9 @@ async function loadData(shopId){
       priceSource:pr.price_source||'', outOfStock:!!pr.out_of_stock,
       supplierSku: pr.supplier_sku || '',
       outOfStockSince: pr.out_of_stock_since || null,
+      // Reads survive the column being absent on their own -- the mapper
+      // simply sees undefined. Only the WRITE needs the probe.
+      lastAskedAt: pr.last_asked_at || null,
       tiers: Array.isArray(pr.tiers) ? pr.tiers : []
     })),
     nextPriceId: (pricesR.data||[]).length ? Math.max(0,...pricesR.data.map(p=>p.id||0))+1 : 1,
@@ -10869,6 +10889,7 @@ let lastSynced = {};
 // Set by loadData: see the probe there for why a write cannot assume it.
 let sourcingVariantColumn = false;
 let sourcingImageColumn = false;
+let priceAskedColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -10913,6 +10934,11 @@ function buildSyncRows(d, shopId){
       price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
       supplier_sku: pr.supplierSku || null,
       out_of_stock_since: pr.outOfStockSince || null,
+      // Guarded: PostgREST rejects the entire upsert for one unknown
+      // column, and every price row goes up on every save -- so sending
+      // this before 0075 is applied would stop the shop saving prices
+      // at all, not merely lose the stamp.
+      ...(priceAskedColumn ? {last_asked_at: pr.lastAskedAt || null} : {}),
       tiers: pr.tiers||[]
     })),
     stock: Object.keys(d.stock).map(key=>({shop_id:shopId, key, qty:d.stock[key]})),
@@ -16318,6 +16344,14 @@ function blRunTripsHTML(run){
           <span class="bl-trip-who">${esc(who)}</span>
           <span class="bl-trip-count">${tripLines(t).length} line${tripLines(t).length===1?'':'s'}</span></div>
         ${short.length ? `<div class="bl-trip-short">${short.length} came back short</div>` : ''}
+        ${/* While you're there. Somebody is going to this supplier
+              anyway, so the prices worth asking about ride along --
+              named here so whoever presses Tell supplier knows the
+              message carries them, and so a worker being briefed knows
+              to ask. */
+          (()=>{ const n = supplierAskList(t.supplierId).length;
+            return n ? `<div class="bl-trip-ask" title="Added to the Tell supplier message">
+              While there, ask ${n} ${n===1?'price':'prices'}</div>` : ''; })()}
       </div>
       ${/* Assigned but not yet accepted means nobody has gone anywhere,
             so handing it to somebody else is free. Once they have
@@ -16647,9 +16681,26 @@ function supplierTripMessage(trip){
     closing,
   ].join('\n');
 }
+/* The journey's message, and -- while you are talking to them anyway --
+   the prices worth asking about.
+
+   The whole idea of the "while you're there" list: it costs nothing to
+   ask, because the message is already going. A separate errand to chase
+   prices is the thing that never happens; a line at the bottom of a
+   message somebody is sending regardless is the thing that does.
+
+   Two blank lines and a divider between them, because they are two
+   different requests and one of them is an order. Built by joining the
+   two message functions rather than by teaching either about the other,
+   so the trip's own no-prices rule stays where it can be read. */
 function supplierTripWaUrl(trip){
   const sup = (data.suppliers||[]).find(s=> String(s.id) === String(trip && trip.supplierId));
-  return waComposeUrl(sup && sup.phone, supplierTripMessage(trip));
+  const ask = trip ? supplierAskList(trip.supplierId) : [];
+  const body = ask.length
+    ? supplierTripMessage(trip) + '\n\n—\n\n' + supplierPriceAskMessage(trip.supplierId, ask)
+        .split('\n').slice(2).join('\n')
+    : supplierTripMessage(trip);
+  return waComposeUrl(sup && sup.phone, body);
 }
 
 /* Where a line's goods actually came from.
@@ -23465,16 +23516,74 @@ function openSupplierStats(supplierId){
      which is a true document about nothing -- and a button that hands
      somebody a blank page teaches them not to trust the button. The
      panel says why in words instead. */
+  const ask = s ? supplierAskList(supplierId) : [];
   document.getElementById('supplierStatsBody').innerHTML =
-    ((s && a.invoiceCount) ? `<div class="cs-actions">
-      <button type="button" class="btn btn-ghost" id="sstPrintBtn" data-id="${esc(supplierId)}">
+    ((s && (a.invoiceCount || ask.length)) ? `<div class="cs-actions">
+      ${ask.length ? `<button type="button" class="btn btn-ghost" id="sstAskBtn" data-id="${esc(supplierId)}"
+        title="Open WhatsApp with a list of ${ask.length} ${ask.length===1?'price':'prices'} to confirm">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 8.6 8.4z"/></svg>
+        Ask for ${ask.length} ${ask.length===1?'price':'prices'}
+      </button>` : ''}
+      ${a.invoiceCount ? `<button type="button" class="btn btn-ghost" id="sstPrintBtn" data-id="${esc(supplierId)}">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
         Print statement
-      </button>
-    </div>` : '') + supplierStatsHTML(a);
+      </button>` : ''}
+    </div>` : '') + supplierAskBlockHTML(supplierId, ask) + supplierStatsHTML(a);
   const btn = document.getElementById('sstPrintBtn');
   if(btn) btn.addEventListener('click', ()=> printSupplierStatement(btn.dataset.id));
+  const askBtn = document.getElementById('sstAskBtn');
+  if(askBtn) askBtn.addEventListener('click', ()=> askSupplierForPrices(askBtn.dataset.id));
   openModal('supplierStatsModal');
+}
+/* What is worth asking them, shown before the money.
+
+   On this panel rather than only on the dashboard because this is where
+   somebody lands when they are already thinking about this supplier --
+   about to ring them, or looking at what they are owed. The question
+   "while I have them, what else should I ask?" is answered where it
+   gets asked. */
+function supplierAskBlockHTML(supplierId, list){
+  const rows = list || supplierAskList(supplierId);
+  if(!rows.length) return '';
+  const asked = rows.map(f=> priceAskedDaysAgo(f.row)).filter(d=> d !== null);
+  const waiting = asked.length ? Math.min(...asked) : null;
+  return `
+    <section class="cs-block">
+      <h4>Prices worth asking about</h4>
+      <p class="cs-read cs-muted">Past ${priceReviewStaleDays()} days on something the shop
+      trades${waiting !== null ? `. Last asked ${waiting === 0 ? 'today' : `${waiting} ${waiting===1?'day':'days'} ago`} — still no answer on ${asked.length} of them.` : '.'}</p>
+      <table class="cs-table">
+        <thead><tr><th>Item</th><th class="r">At risk</th><th>Why</th></tr></thead>
+        <tbody>${rows.map(f=>`<tr>
+          <td>${esc(f.row.pname)}</td>
+          <td class="r num">${fmtUGX(Math.round(f.moneyAtRisk))}</td>
+          <td class="cs-ask-why">${esc(f.reasons.join(' · '))}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </section>`;
+}
+
+/* Opens WhatsApp with the list written out. Does NOT send it.
+
+   The shop's own hand on the send button, every time -- the same
+   arrangement the sales-group share and the supplier trip notice
+   already use. waComposeUrl only fills a draft; a human reads it and
+   decides.
+
+   The stamp is written here rather than on send, because nothing can
+   observe a send. That means it records "asked", not "delivered", and
+   a draft abandoned unsent will still have been counted -- which is the
+   safe direction: it can only ever make the shop wait a little before
+   asking again, never make it ask the same supplier twice in a day. */
+function askSupplierForPrices(supplierId){
+  const rows = supplierAskList(supplierId);
+  if(!rows.length){ toast('Nothing to ask them about'); return; }
+  const s = data.suppliers.find(x=> String(x.id) === String(supplierId));
+  const msg = supplierPriceAskMessage(supplierId, rows);
+  markSupplierAsked(supplierId, rows);
+  saveData();
+  window.open(waComposeUrl(s && contactPhones(s)[0], msg), '_blank');
+  toast(`${rows.length} ${rows.length===1?'price':'prices'} asked about — send the message to finish`, 5000);
 }
 function supplierStatsHTML(a){
   const s = a.supplier;
@@ -31941,6 +32050,70 @@ function priceReviewProgress(period){
   const target = priceReviewTarget();
   return { period: p, done, target, met: done >= target,
     outstanding: priceReviewCandidates().length };
+}
+
+/* What to ask THIS supplier about.
+
+   Derived, never stored. The review list already knows which prices are
+   worth chasing and in what order; narrowing it to one supplier is the
+   whole of "what should I ask them". A trip carrying its own copy of
+   that list would be a second answer, free to go stale between the day
+   it was built and the day somebody walked. */
+function supplierAskList(supplierId){
+  return priceReviewCandidates().filter(f=> f.row.supplierId === supplierId);
+}
+
+/* The message. Asking for prices, not quoting them.
+
+   supplierTripMessage withholds prices deliberately -- it goes to
+   somebody the shop is about to negotiate with, and naming what you
+   expect to pay concedes the position before you arrive. The same rule
+   holds here for a stronger reason: the entire point is to hear THEIR
+   figure. "You said 7,600 in May, still right?" invites a yes from a
+   supplier who has since put it up, and the shop would never find out.
+   So the item is named and the number is not.
+
+   Its own function rather than folded into the trip message, so a
+   journey and an enquiry stay separately testable and the trip's own
+   no-prices rule cannot be broken by a change made over here. */
+function supplierPriceAskMessage(supplierId, list){
+  const rows = list || supplierAskList(supplierId);
+  if(!rows.length) return '';
+  return [
+    `Hello *${supplierName(supplierId)}*,`,
+    '',
+    'Please confirm your current prices on the following:',
+    '',
+    ...rows.map(f=> `• ${f.row.pname}${f.row.unit ? ` (per ${f.row.unit})` : ''}`),
+    '',
+    'Thank you.',
+  ].join('\n');
+}
+
+/* That they were asked, so the same list is not sent again on Thursday.
+
+   Stamped per ROW rather than per supplier: it is the individual items
+   still waiting on an answer that matter, and a row confirmed in the
+   meantime drops out on its own. Nothing else records an unanswered
+   ask -- a confirmed price leaves a date behind, an ignored question
+   leaves nothing at all -- which is why this is the one thing in the
+   whole review needing a column of its own. */
+function markSupplierAsked(supplierId, list){
+  const rows = list || supplierAskList(supplierId);
+  const at = new Date().toISOString();
+  rows.forEach(f=>{
+    const r = data.prices.find(p=> p.id === f.row.id);
+    if(r) r.lastAskedAt = at;
+  });
+  return rows.length;
+}
+// Days since this row's supplier was last asked about it, or null when
+// nobody has been.
+function priceAskedDaysAgo(r){
+  if(!r || !r.lastAskedAt) return null;
+  const then = Date.parse(r.lastAskedAt);
+  if(!Number.isFinite(then)) return null;
+  return Math.max(0, Math.round((Date.parse(todayISO()+'T00:00:00Z') - then) / 86400000));
 }
 
 /* "I asked, and it has not moved."

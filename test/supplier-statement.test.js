@@ -259,8 +259,14 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
      and a button that hands somebody a blank page teaches them not to
      trust the button. */
   const open = extractFunction(src, 'openSupplierStats', 'index.html');
-  t.check(/\(s && a\.invoiceCount\) \?/.test(open),
+  /* Gated on its own, not on the action bar around it: the bar now also
+     carries "ask for prices", which a supplier with no invoice can very
+     much have. Printing a statement for one still produces a document
+     about nothing. */
+  t.check(/\$\{a\.invoiceCount \? `<button type="button" class="btn btn-ghost" id="sstPrintBtn"/.test(open),
     'the print button is withheld from a supplier with no purchase invoice');
+  t.check(/\(s && \(a\.invoiceCount \|\| ask\.length\)\)/.test(open),
+    'while the bar itself appears for either reason to be there');
   t.check(/if\(!a\.invoiceCount\)\{/.test(panel) && /have not raised a purchase invoice/.test(panel),
     'and the panel says why in words instead of showing an empty table');
   t.check(/Their prices are\s*\n?\s*on the card behind this/.test(panel),

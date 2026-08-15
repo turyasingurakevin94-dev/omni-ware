@@ -603,6 +603,9 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'tripGoodsAllIn', 'index.html'),
   ], {
     data: state, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
+    // Stubbed: what is worth asking this supplier about is the price
+    // review's business, pinned in price-registry-freshness.test.js.
+    supplierAskList: () => [],
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
     TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
   }, ['blStrandedTripsHTML']);
@@ -647,6 +650,7 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'tripGoodsAllIn', 'index.html'),
   ], {
     data: mixed, esc: (s) => String(s), ICON_WARN: '', ICON_TRUCK: '',
+    supplierAskList: () => [],
     staffName: () => 'Kevin Moses', supplierName: (id) => `Supplier ${id}`,
     TRIP_STATUS_LABELS: { assigned: 'Sent' },
   }, ['blStrandedTripsHTML']);
@@ -785,6 +789,7 @@ const trip = (over) => Object.assign({
     extractFunction(src, 'blRunTripsHTML', 'index.html'),
   ], {
     data: stripState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin',
+    supplierAskList: () => [],
     supplierName: () => 'Shafik Katwe',
     TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
   }, ['blRunTripsHTML']);
@@ -959,6 +964,7 @@ const trip = (over) => Object.assign({
   ], {
     data: railState, esc: (s) => String(s), ICON_TRUCK: '', staffName: () => 'Kevin Moses',
     supplierName: () => 'Shafik Katwe',
+    supplierAskList: () => [],
     TRIP_STATUS_LABELS: { open: 'To send', assigned: 'Sent', collecting: 'Out collecting', collected: 'Back — to check in' },
   }, ['blRunTripsHTML', 'tripGoodsAllIn']);
 
@@ -1022,8 +1028,15 @@ const trip = (over) => Object.assign({
  * anything leaving the shop.
  */
 {
-  const NAMES3 = ['waComposeUrl', 'supplierTripMessage'];
+  const NAMES3 = ['waComposeUrl', 'supplierTripMessage', 'supplierTripWaUrl', 'supplierPriceAskMessage'];
   const msgState = { suppliers: [{ id: 'S1', name: 'Dooba', phone: '0701240819' }] };
+  /* The price review is stubbed, not compiled: what is worth asking
+     Dooba about is decided by the stock log, the sales and the item's
+     other suppliers, none of which this file is about. Its own
+     behaviour is pinned in test/price-registry-freshness.test.js. Here
+     it only has to produce a list, so the trip message can be checked
+     for carrying one. */
+  let askList = [];
   const msg = compileScope([
     extractFunction(shared, 'tripLines', 'shared-worker.js'),
     extractDeclaration(src, 'TRIP_SUPPLIER_CARRIER', 'index.html'),
@@ -1033,6 +1046,7 @@ const trip = (over) => Object.assign({
     data: msgState,
     supplierName: () => 'Dooba',
     staffName: (id) => (id === 'W1' ? 'Kevin Moses' : id),
+    supplierAskList: () => askList,
   }, NAMES3);
 
   const t2 = (over) => Object.assign({
@@ -1102,6 +1116,42 @@ const trip = (over) => Object.assign({
   t.check(/window\.open\(supplierTripWaUrl\(trip\), '_blank'\);/.test(code2), 'which opens the link');
   t.check(/No phone number for \$\{supplierName\(trip\.supplierId\)\}/.test(code2),
     'and a supplier with no number on file is named rather than silently opening a chooser');
+
+  /* ---- while you're there ----------------------------------------------
+     A separate errand to go and confirm prices is the thing that never
+     happens. A line at the bottom of a message somebody is sending
+     anyway is the thing that does -- so the trip's own notice carries
+     the prices worth asking this supplier about. */
+  askList = [];
+  const bare = decodeURIComponent(msg.supplierTripWaUrl(t2()).split('?text=')[1]);
+  t.check(!/confirm your current prices/.test(bare),
+    'a supplier with nothing worth asking about gets the plain journey message');
+
+  askList = [
+    { row: { id: 1, pname: 'Cement — 50kg', unit: 'Bag' } },
+    { row: { id: 2, pname: 'Nails — 4 inch', unit: '' } },
+  ];
+  const withAsk = decodeURIComponent(msg.supplierTripWaUrl(t2()).split('?text=')[1]);
+  t.check(/We are coming to collect/.test(withAsk) && /Chrome Pipe/.test(withAsk),
+    'the journey is still the message');
+  t.check(/confirm your current prices/.test(withAsk), 'and the enquiry rides along at the bottom');
+  t.check(/Cement — 50kg \(per Bag\)/.test(withAsk) && /Nails — 4 inch/.test(withAsk),
+    'naming each item, with its unit where there is one');
+  t.check(!/Nails — 4 inch \(per/.test(withAsk), 'and no empty bracket where there is not');
+
+  /* STILL NO PRICES, and for a stronger reason than the journey has.
+     The whole point is to hear THEIR figure: "you said 7,600 in May,
+     still right?" invites a yes from a supplier who has since put it
+     up, and the shop would never find out. */
+  t.check(!/UGX/.test(withAsk) && !/\d{1,3},\d{3}/.test(withAsk),
+    'the enquiry names the item and never the price the shop has on file');
+
+  // Greeted once. Two "Hello Dooba," in one message reads as a mistake.
+  t.check((withAsk.match(/Hello \*Dooba\*/g) || []).length === 1,
+    'one greeting, not one per half');
+
+  const askOnly = msg.supplierPriceAskMessage('S1', []);
+  t.check(askOnly === '', 'an empty ask is no message at all rather than a greeting with nothing under it');
 }
 
 /* ---------- when the client sends their own person ------------------- */

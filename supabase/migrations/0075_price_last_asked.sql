@@ -1,0 +1,16 @@
+-- When this supplier was last asked to confirm this price.
+--
+-- The one thing the price review cannot derive. A price that was
+-- CHECKED leaves a date behind (prices.date, with price_source saying
+-- how); a question that was sent and never answered leaves nothing at
+-- all, so without this the same list goes to the same supplier every
+-- week and nobody can tell which items are still waiting on a reply.
+--
+-- Per row rather than per supplier: an ask covers several items and they
+-- come back at different times, if at all. A row confirmed in the
+-- meantime drops off the list on its own and its stamp stops mattering.
+--
+-- Nullable with no default: null means nobody has asked, which is the
+-- honest starting state for every row already on file. Back-filling a
+-- date here would claim a conversation that never happened.
+alter table prices add column if not exists last_asked_at timestamptz;
