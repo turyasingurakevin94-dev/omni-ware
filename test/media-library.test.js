@@ -235,6 +235,68 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   t.check(/if\(existing\) return \{ media: existing, reused: true \};/.test(addFn),
     'and an exact match hands back the existing photo instead');
 
+  /* ---- Downscaling, before anything reaches the bucket ----
+
+     A phone photo is three or four megabytes at four thousand pixels on
+     the long edge. It went into a 1 GB bucket exactly as it came off the
+     camera, and the catalogue -- which lazy-loads nothing -- fetched
+     every byte of it on every view. Measured on the shop's own images:
+     4032x3024 at 495 KB became 1200x900 at 92 KB, an 81% saving. */
+  const shrink = extractFunction(src, 'downscaleImageBlob', 'index.html');
+  t.check(/const IMAGE_MAX_EDGE = 1200;/.test(src) && /IMAGE_MAX_EDGE \/ Math\.max\(bmp\.width, bmp\.height\)/.test(shrink),
+    'the long edge is capped, whichever way round the photo is');
+
+  /* Phone cameras record orientation in EXIF rather than in the pixels,
+     so decoding without this lays every portrait shot on its side. */
+  t.check(/createImageBitmap\(blob, \{imageOrientation: 'from-image'\}\)/.test(shrink),
+    'EXIF orientation is honoured, so portrait photos do not come out sideways');
+
+  /* Transparency has no JPEG equivalent and an unpainted canvas encodes
+     as BLACK. Verified in a browser: a corner reading 0,0,0,0 before
+     comes back 255,255,255,255, with the subject unchanged. */
+  t.check(/ctx\.fillStyle = '#FFFFFF';[\s\S]{0,60}ctx\.fillRect\(0, 0, w, h\);[\s\S]{0,40}ctx\.drawImage/.test(shrink),
+    'the ground is painted white before the photo is drawn, so a cut-out does not come back black');
+
+  /* Two different questions, deliberately answered differently. */
+  t.check(/const oversized = scale < 1;/.test(shrink)
+    && /oversized\s*\n?\s*\? \(out\.size < blob\.size \? out : blob\)/.test(shrink),
+    'an oversized photo is resized unless the resize somehow came out bigger');
+  t.check(/out\.size <= blob\.size \* 0\.9 \? out : blob/.test(shrink),
+    'while one already inside the cap is only re-encoded when that buys a tenth of the file or better');
+
+  /* Never blocks an upload. */
+  t.check(/if\(typeof createImageBitmap !== 'function'\) return blob;/.test(shrink),
+    'a browser without createImageBitmap uploads the original rather than failing');
+  t.check(/catch\(e\)\{[\s\S]{0,200}return blob;/.test(shrink),
+    'and so does a file that cannot be decoded at all');
+  t.check(/if\(blob\.type === 'image\/svg\+xml' \|\| blob\.type === 'image\/gif'\) return blob;/.test(shrink),
+    'an SVG has no pixel size to cap and a GIF would lose every frame but one, so both pass through');
+
+  /* One place, so a third upload path cannot be added that forgets. */
+  const upFn = extractFunction(src, 'uploadProductImageBlob', 'index.html');
+  t.check(/const stored = await downscaleImageBlob\(blob\);/.test(upFn),
+    'the downscale sits inside the upload rather than at its call sites');
+  t.check(/\.upload\(path, stored,/.test(upFn) && /extFromMimeType\(stored\.type\)/.test(upFn),
+    'and it is the downscaled blob that is stored, under its own extension');
+
+  /* The row has to describe what is on the server, not what was picked
+     off the phone -- otherwise the storage strip adds up to a figure the
+     bucket does not hold. */
+  t.check(/bytes: stored\.size, mime: stored\.type/.test(addFn),
+    'the library records the stored size, not the original file size');
+  /* Presence checked BEFORE order. indexOf returns -1 when the call is
+     absent, and -1 sorts earlier than everything -- so an ordering test
+     on its own passes for code that does not make the call at all, which
+     is exactly how a mutant hashing the DOWNSCALED blob slipped through. */
+  t.check(addFn.includes('sha256HexOfBlob(file)')
+    && addFn.indexOf('sha256HexOfBlob(file)') < addFn.indexOf('uploadProductImageBlob'),
+    'the fingerprint is still taken from the file the person chose, so the same photo dedupes across devices');
+
+  /* The old 4MB refusal turned away the ordinary phone photo, which is
+     exactly the case downscaling now handles. */
+  t.check(/file\.size > 20\*1024\*1024/.test(addFn) && !/file\.size > 4\*1024\*1024/.test(addFn),
+    'and a phone photo is accepted rather than refused for being over 4MB');
+
   /* Deleting a product or variant no longer destroys the photo. */
   const delProduct = extractFunction(src, 'deleteProduct', 'index.html');
   const delVariant = extractFunction(src, 'deleteVariant', 'index.html');

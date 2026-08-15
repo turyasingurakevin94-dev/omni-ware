@@ -9748,15 +9748,88 @@ function extFromMimeType(type){
   return known[type] || 'jpg';
 }
 
+/* ---- Downscaling, before anything reaches the bucket ----
+
+   Photos enter this app off a phone camera, where three or four megabytes
+   at four thousand pixels on the long edge is ordinary. They go into a
+   1 GB bucket, and the catalogue -- which lazy-loads nothing -- fetches
+   every one of them on every view. A product photo is never shown more
+   than a few hundred pixels wide, so those pixels cost storage and
+   bandwidth and buy nothing at all.
+
+   Capped at 1200 on the long edge and re-encoded as JPEG, which puts
+   nearly any phone photo under 200 KB.
+
+   Four things it must not do:
+
+     - Rotate anything. Phone cameras record orientation in EXIF rather
+       than in the pixels, so decoding without `imageOrientation` lays
+       every portrait photo on its side.
+     - Blacken a cut-out. Transparency has no JPEG equivalent and an
+       unpainted canvas encodes as black, so the ground is filled white
+       first -- which is what these sit on everywhere in the app.
+     - Nibble at what is already small. An image inside the cap is only
+       re-encoded when that actually buys something -- a tenth of the
+       file or better -- because the cost is a second round of JPEG loss
+       and shaving 3% off a 90 KB photo is not worth paying it. That is
+       what protects the images already on file, which average 120 KB.
+       An image OVER the cap is resized regardless: capping the pixels is
+       the job, and a resize that came out bigger in bytes (JPEG encodes
+       sharp-edged noise badly) is the one case where the original wins.
+     - Destroy what it cannot improve. An SVG has no pixel size to cap,
+       and an animated GIF re-encoded to JPEG loses every frame but one.
+       Both pass through untouched.
+
+   And it never blocks an upload. A corrupt file, a browser with no
+   createImageBitmap, anything unexpected at all -- the original bytes go
+   up, which is precisely what this app did before. */
+const IMAGE_MAX_EDGE = 1200;
+const IMAGE_JPEG_QUALITY = 0.82;
+async function downscaleImageBlob(blob){
+  if(!blob || typeof blob.type !== 'string' || !blob.type.startsWith('image/')) return blob;
+  if(blob.type === 'image/svg+xml' || blob.type === 'image/gif') return blob;
+  if(typeof createImageBitmap !== 'function') return blob;
+  let bmp = null;
+  try{
+    bmp = await createImageBitmap(blob, {imageOrientation: 'from-image'});
+    const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(bmp.width, bmp.height));
+    const oversized = scale < 1;
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(res=> canvas.toBlob(res, 'image/jpeg', IMAGE_JPEG_QUALITY));
+    if(!out) return blob;
+    return oversized
+      ? (out.size < blob.size ? out : blob)
+      : (out.size <= blob.size * 0.9 ? out : blob);
+  }catch(e){
+    console.error('Could not downscale this image; uploading it as it is', e);
+    return blob;
+  }finally{
+    if(bmp && typeof bmp.close === 'function') bmp.close();
+  }
+}
+
 // Uploads one image under a per-shop folder (so storage RLS can gate on
 // shop_id the same way the app tables do) at a fresh random path -- never
 // reused, so replacing a product's photo can't collide with the old one
 // while both briefly exist.
+//
+// Downscaling happens HERE rather than at the two call sites, so a third
+// one cannot be added that forgets. Returns the stored blob alongside the
+// url, because after downscaling the caller's own file is no longer what
+// is on the server and recording its size would be a lie.
 async function uploadProductImageBlob(blob, shopId){
-  const path = `${shopId}/${crypto.randomUUID()}.${extFromMimeType(blob.type)}`;
-  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, blob, { contentType: blob.type || 'image/jpeg' });
+  const stored = await downscaleImageBlob(blob);
+  const path = `${shopId}/${crypto.randomUUID()}.${extFromMimeType(stored.type)}`;
+  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, stored, { contentType: stored.type || 'image/jpeg' });
   if(error) throw error;
-  return sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+  return { url: sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl, blob: stored };
 }
 
 // Returns the storage object path if `url` is one of our own product-image
@@ -9964,14 +10037,24 @@ async function hashUnhashedMedia(){
 // nothing, which is the de-duplication the library exists for.
 async function addMediaFromFile(file, folderId){
   if(!file.type.startsWith('image/')) throw new Error('Please choose an image file');
-  if(file.size > 4*1024*1024) throw new Error('Image is too large — please use one under 4MB');
+  /* Raised from 4MB, which rejected the ordinary phone photo this app is
+     mostly given -- a 5MB camera shot was refused outright when it is
+     exactly the case downscaling now handles, arriving in the bucket
+     under 200KB. The cap that remains is about DECODING: a very large
+     image has to be held in memory whole to be resized, and the phones
+     this runs on have little to spare. */
+  if(file.size > 20*1024*1024) throw new Error('Image is too large — please use one under 20MB');
+  /* Hashed BEFORE downscaling, so the key is the photo the person chose
+     rather than what this browser's JPEG encoder made of it. Two people
+     adding the same photo on different devices then still de-duplicate. */
   const sha = await sha256HexOfBlob(file);
   const existing = findMediaBySha(sha);
   if(existing) return { media: existing, reused: true };
-  const url = await uploadProductImageBlob(file, currentShopId);
+  const { url, blob: stored } = await uploadProductImageBlob(file, currentShopId);
   const m = {
     id: allocRowId('media'), path: productImageStoragePath(url), url,
-    name: file.name || 'photo', bytes: file.size, mime: file.type || '',
+    // What is actually on the server, not what was picked off the phone.
+    name: file.name || 'photo', bytes: stored.size, mime: stored.type || '',
     sha256: sha, folderId: folderId==null ? null : folderId,
     createdAt: new Date().toISOString(),
   };
@@ -10080,7 +10163,7 @@ async function migrateBase64ProductImages(shopId){
   for(const p of legacy){
     try{
       const blob = await (await fetch(p.image)).blob();
-      p.image = await uploadProductImageBlob(blob, shopId);
+      p.image = (await uploadProductImageBlob(blob, shopId)).url;
     } catch(e){
       console.error('Image migration failed for product', p.id, e);
     }
