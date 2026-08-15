@@ -1470,6 +1470,13 @@
   /* The reasons column on the supplier panel's ask list — several short
      clauses, and the one thing there allowed to wrap. */
   .cs-table td.cs-ask-why{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
+  /* The reply sheet. The box is the only thing on the row anybody
+     touches, so it is the only thing that looks touchable. */
+  .srp-unit{display:block;font-size:11px;color:var(--ink-soft);}
+  .srp-input{width:120px;max-width:100%;padding:6px 9px;border:1px solid var(--line);
+    border-radius:7px;font-size:13.5px;font-family:'IBM Plex Mono',monospace;text-align:right;}
+  .srp-input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .srp-table td{vertical-align:middle;}
   .sc-meta, .cc-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
   .sc-meta .both-tag, .cc-meta .both-tag{margin-left:0;}
   .sc-actions{display:flex;gap:6px;flex-shrink:0;}
@@ -8801,6 +8808,26 @@
       </button>
     </div>
     <div class="modal-body" id="customerStatsBody"></div>
+  </div>
+</div>
+
+<!-- WHAT THE SUPPLIER SAID -->
+<div class="modal-overlay" id="supplierReplyModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="supplierReplyTitle">Their reply</h2>
+      <button class="modal-close" id="supplierReplyClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="cs-read cs-muted" id="supplierReplyNote"></p>
+      <div id="supplierReplyRows"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-accent" id="supplierReplySave">Save what they said</button>
+        <button type="button" class="btn btn-ghost" id="supplierReplyCancel">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -17413,11 +17440,18 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price,
       toast(`Saved — but ${fmtUGX(price)} for ${atQty} is more than the ${fmtUGX(cheaper.price)} already on file for ${cheaper.qty}. Buying more now costs more each.`, 7000);
     }
   }
-  // A change always dates itself. An unchanged price only does so when
-  // the caller says money moved -- see the header.
+  /* A change always dates itself. An unchanged price only does so when
+     the caller says money moved -- see the header.
+
+     `opts.source` because this now serves two kinds of event. Money
+     moving is a `purchase`; a supplier answering "that is still our
+     price" is `confirmed`, and calling the second one a purchase would
+     put a sale in the record that never happened. The slot arithmetic
+     above is identical either way, which is why they share a function
+     rather than a copy. */
   if(Number(was)!==Number(price) || (opts && opts.confirms)){
     priceRow.date = todayISO();
-    priceRow.priceSource = 'purchase';
+    priceRow.priceSource = (opts && opts.source) || 'purchase';
   }
   // An actual purchase from this supplier is proof they have it -- clear
   // any stale "out of stock" flag rather than making someone remember to.
@@ -23534,6 +23568,13 @@ function openSupplierStats(supplierId){
         title="Open WhatsApp with a list of ${ask.length} ${ask.length===1?'price':'prices'} to confirm">
         <svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.9-.9L3 21l1.9-5a8.4 8.4 0 0 1-.9-3.9 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 8.6 8.4z"/></svg>
         Ask for ${ask.length} ${ask.length===1?'price':'prices'}
+      </button>
+      ${/* The other half of the same errand, beside it: asking is only
+           useful if what comes back can be written down quickly. */''}
+      <button type="button" class="btn btn-ghost" id="sstReplyBtn" data-id="${esc(supplierId)}"
+        title="Type in the prices they gave">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        Enter their reply
       </button>` : ''}
       ${a.invoiceCount ? `<button type="button" class="btn btn-ghost" id="sstPrintBtn" data-id="${esc(supplierId)}">
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
@@ -23544,6 +23585,8 @@ function openSupplierStats(supplierId){
   if(btn) btn.addEventListener('click', ()=> printSupplierStatement(btn.dataset.id));
   const askBtn = document.getElementById('sstAskBtn');
   if(askBtn) askBtn.addEventListener('click', ()=> askSupplierForPrices(askBtn.dataset.id));
+  const replyBtn = document.getElementById('sstReplyBtn');
+  if(replyBtn) replyBtn.addEventListener('click', ()=> openSupplierReply(replyBtn.dataset.id));
   openModal('supplierStatsModal');
 }
 /* What is worth asking them, shown before the money.
@@ -23573,6 +23616,62 @@ function supplierAskBlockHTML(supplierId, list){
       </table>
     </section>`;
 }
+
+/* The reply sheet: their whole answer on one screen.
+
+   NOT renderPrBulkVariantRows, which the plan for this named and which
+   is the wrong shape. That renders VARIANTS OF ONE PRODUCT, indexed
+   into p.variants, with shared tiers and packing overridable per row.
+   This is one supplier and many unrelated products, each already
+   carrying its own packing and its own figure -- it would have meant
+   faking a variants array and dragging along index-based override
+   machinery that means nothing here.
+
+   The price on file is SHOWN but the box starts EMPTY. Pre-filling it
+   would make "they confirmed it" and "nobody typed anything" the same
+   keystroke, and the first is a fact about the supplier while the
+   second is a fact about the shop. */
+let supplierReplyFor = null;
+function openSupplierReply(supplierId){
+  const rows = supplierAskList(supplierId);
+  if(!rows.length){ toast('Nothing outstanding with them'); return; }
+  supplierReplyFor = supplierId;
+  document.getElementById('supplierReplyTitle').textContent =
+    `What ${supplierName(supplierId)} said`;
+  document.getElementById('supplierReplyNote').textContent =
+    `Type the price they gave for each one. Leave a box empty where they did not say — ${rows.length === 1 ? 'it' : 'those'} will be left alone and asked again.`;
+  document.getElementById('supplierReplyRows').innerHTML = `
+    <table class="cs-table srp-table">
+      <thead><tr><th>Item</th><th class="r">On file</th><th class="r">They say</th></tr></thead>
+      <tbody>${rows.map(f=>`<tr>
+        <td>${esc(f.row.pname)}${f.row.unit ? `<span class="srp-unit">per ${esc(f.row.unit)}</span>` : ''}</td>
+        <td class="r num">${fmtUGX(Math.round(purchasePriceAtQty(f.row, 1) || 0))}</td>
+        <td class="r"><input type="number" class="srp-input" data-id="${f.row.id}"
+          min="0" step="any" placeholder="—" aria-label="New price for ${esc(f.row.pname)}"></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  openModal('supplierReplyModal');
+}
+function saveSupplierReply(){
+  const entries = [...document.querySelectorAll('#supplierReplyRows .srp-input')]
+    .map(i=> ({ id: Number(i.dataset.id), price: i.value }));
+  const r = applySupplierReply(entries);
+  if(!r.changed && !r.confirmed){ toast('Nothing entered — nothing changed'); return; }
+  saveData();
+  closeModal('supplierReplyModal');
+  supplierReplyFor = null;
+  triggerPricesRender();
+  if(document.getElementById('tab-dashboard')
+    && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+  const said = [];
+  if(r.changed) said.push(`${r.changed} moved`);
+  if(r.confirmed) said.push(`${r.confirmed} unchanged`);
+  if(r.skipped) said.push(`${r.skipped} still to ask`);
+  toast(`Saved — ${said.join(', ')}`, 5000);
+}
+document.getElementById('supplierReplyClose').addEventListener('click', ()=>closeModal('supplierReplyModal'));
+document.getElementById('supplierReplyCancel').addEventListener('click', ()=>closeModal('supplierReplyModal'));
+document.getElementById('supplierReplySave').addEventListener('click', saveSupplierReply);
 
 /* Opens WhatsApp with the list written out. Does NOT send it.
 
@@ -32263,6 +32362,54 @@ function priceAskedDaysAgo(r){
   const then = Date.parse(r.lastAskedAt);
   if(!Number.isFinite(then)) return null;
   return Math.max(0, Math.round((Date.parse(todayISO()+'T00:00:00Z') - then) / 86400000));
+}
+
+/* What a supplier said, entered in one go.
+
+   The ask goes out as a list, so the reply comes back as a list -- "the
+   tape is still 45,000, the nuts are 8,200 now, and he said nothing
+   about the washers". Before this the only way to record that was to
+   open each row's form in turn: eight items, eight round trips, which is
+   how the answering stops happening at all.
+
+   THREE OUTCOMES FROM ONE BOX, because that is how a reply arrives:
+
+     blank       they did not say. Left completely alone -- not dated,
+                 not confirmed. Silence is not an answer, and recording
+                 it as one would clear the row off the review list and
+                 lose the question.
+     the same    a confirmation. The figure is untouched and the date
+                 moves, which is exactly confirmPriceUnchanged.
+     different   a change, written at the slot their quote applies to.
+
+   AT QUANTITY ONE, deliberately. The ask names the item and its unit --
+   "Cement — 50kg (per Bag)" -- so what comes back is the price per bag,
+   which is the row's base slot. A supplier who has moved only their bulk
+   break cannot be described in one box and needs the full form; this
+   sheet is for the common case and does not pretend otherwise.
+
+   Marked `confirmed`, not `purchase`: they quoted a price, no money
+   moved. Written through syncPriceRegistryFromPurchase all the same,
+   because resolving which tier a figure belongs in is the one piece of
+   arithmetic here worth having exactly one copy of. */
+function applySupplierReply(entries){
+  const out = { changed: 0, confirmed: 0, skipped: 0 };
+  (entries||[]).forEach(e=>{
+    const row = data.prices.find(p=> p.id === e.id);
+    if(!row){ out.skipped++; return; }
+    const said = Number(e.price);
+    if(!(said > 0)){ out.skipped++; return; }
+    if(Number(purchasePriceAtQty(row, 1)) === said){
+      confirmPriceUnchanged(row.id);
+      out.confirmed++;
+      return;
+    }
+    syncPriceRegistryFromPurchase(row.productId,
+      row.variantIdx == null ? null : row.variantIdx, row.supplierId, said, 1,
+      {confirms: true, source: 'confirmed'});
+    out.changed++;
+  });
+  return out;
 }
 
 /* "I asked, and it has not moved."

@@ -54,7 +54,10 @@ const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getSt
   'priceReviewPeriod', 'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview',
   'priceReviewCandidates', 'priceReviewProgress', 'confirmPriceUnchanged',
   'supplierAskList', 'supplierPriceAskMessage', 'markSupplierAsked', 'priceAskedDaysAgo',
-  'priceObservations', 'learnedStaleDays', 'priceStaleDaysFor'];
+  'priceObservations', 'learnedStaleDays', 'priceStaleDaysFor',
+  'applySupplierReply', 'syncPriceRegistryFromPurchase', 'purchasePriceAtQty',
+  'purchasePriceSlotAtQty', 'tiersForKind', 'cheaperSmallerQuantity', 'purchasePricePoints',
+  'tieredUnitPrice', 'deriveWholesaleRetail'];
 const scope = compileScope([
   ...DECLS.map((n) => extractDeclaration(src, n, 'index.html')),
   ...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -830,6 +833,110 @@ const sold = (productId, qty, date) => data.stockLog.push({
   // Changing either one changes what the report says, so it is redrawn.
   t.check(/renderDashPriceReview\(\);/.test(fn),
     'and the dashboard is rebuilt, rather than going on reporting against the old numbers');
+}
+
+/* ---------- 21. what the supplier said, entered in one go -------------
+   The ask goes out as a list, so the reply comes back as a list. Before
+   this the only way to record one was to open each row's form in turn --
+   eight items, eight round trips, which is how the answering stops
+   happening at all.
+
+   THREE OUTCOMES FROM ONE BOX, because that is how a reply arrives. */
+{
+  const reply = (id, price) => ({ id, price });
+
+  // A price that MOVED.
+  reset();
+  data.prices = [price(1, { wholesale: 10000, date: '2026-01-01', priceSource: 'manual' })];
+  let r = scope.applySupplierReply([reply(1, 12000)]);
+  eq(r.changed, 1, 'a different figure is a change');
+  eq(scope.purchasePriceAtQty(data.prices[0], 1), 12000, 'and is written');
+  eq(data.prices[0].date, TODAY, 'dated today');
+  eq(data.prices[0].priceSource, 'confirmed',
+    'and filed as their word rather than as a purchase — no money moved');
+
+  // The SAME price: a confirmation, and the figure is not rewritten.
+  reset();
+  data.prices = [price(1, { wholesale: 10000, date: '2026-01-01', tiers: [{ minQty: 1, price: 10000 }] })];
+  r = scope.applySupplierReply([reply(1, 10000)]);
+  eq(r.confirmed, 1, 'the same figure is a confirmation');
+  eq(r.changed, 0, 'not a change');
+  eq(data.prices[0].date, TODAY, 'which still dates the row');
+  eq(data.prices[0].tiers.length, 1, 'and invents no tier for a price that did not move');
+
+  /* BLANK: they did not say. The row must be left completely alone --
+     recording silence as an answer would clear it off the review list
+     and lose the question. */
+  reset();
+  data.prices = [price(1, { date: '2026-01-01', priceSource: 'manual' })];
+  sold('P1', 50, '2026-08-01');
+  const before = JSON.stringify(data.prices[0]);
+  r = scope.applySupplierReply([reply(1, '')]);
+  eq(r.skipped, 1, 'an empty box is not an answer');
+  eq(r.confirmed, 0, 'and is not counted as one');
+  t.check(JSON.stringify(data.prices[0]) === before, 'the row is untouched, date and all');
+  eq(scope.priceReviewCandidates().length, 1, 'so it is still on the list to be asked again');
+
+  ['', null, undefined, 0, -5, 'abc'].forEach((v) => {
+    reset();
+    data.prices = [price(1, { date: '2026-01-01' })];
+    const was = data.prices[0].date;
+    scope.applySupplierReply([reply(1, v)]);
+    eq(data.prices[0].date, was, `${JSON.stringify(v)} leaves the row alone`);
+  });
+
+  // A row that has gone since the ask went out.
+  reset();
+  data.prices = [];
+  eq(scope.applySupplierReply([reply(99, 5000)]).skipped, 1,
+    'a row deleted since the ask is skipped rather than throwing');
+  eq(scope.applySupplierReply().skipped, 0, 'and no entries at all is no work');
+
+  // A whole reply at once, which is the point of the sheet.
+  reset();
+  data.prices = [
+    price(1, { supplierId: 'S1', wholesale: 10000, date: '2026-01-01' }),
+    price(2, { supplierId: 'S1', wholesale: 20000, date: '2026-01-01', productId: 'P2' }),
+    price(3, { supplierId: 'S1', wholesale: 30000, date: '2026-01-01', productId: 'P3' }),
+  ];
+  r = scope.applySupplierReply([reply(1, 11000), reply(2, 20000), reply(3, '')]);
+  t.check(r.changed === 1 && r.confirmed === 1 && r.skipped === 1,
+    `one moved, one held, one unanswered — in a single pass (${JSON.stringify(r)})`);
+}
+
+/* ---------- 22. the sheet itself -------------------------------------- */
+{
+  const open = extractFunction(src, 'openSupplierReply', 'index.html');
+  t.check(/supplierAskList\(supplierId\)/.test(open),
+    'the sheet is built from the same ask list that went out');
+
+  /* The price on file is SHOWN but the box starts EMPTY. Pre-filling it
+     would make "they confirmed it" and "nobody typed anything" the same
+     keystroke — and the first is a fact about the supplier while the
+     second is a fact about the shop. */
+  t.check(/purchasePriceAtQty\(f\.row, 1\)/.test(open), 'each row shows what is on file');
+  t.check(/class="srp-input"[^>]*placeholder="—"/.test(open) && !/value="\$\{/.test(open.split('srp-input')[1] || ''),
+    'and its box starts empty rather than pre-filled with that figure');
+
+  const save = extractFunction(src, 'saveSupplierReply', 'index.html');
+  t.check(/applySupplierReply\(entries\)/.test(save), 'saving goes through the tested function');
+  t.check(/if\(!r\.changed && !r\.confirmed\)\{ toast\('Nothing entered/.test(save),
+    'a sheet nobody filled in saves nothing and says so');
+  t.check(/still to ask/.test(save),
+    'and the toast counts what was left unanswered, rather than reporting it as done');
+
+  // Reachable beside the ask, since the two halves are one errand.
+  t.check(/id="sstReplyBtn"/.test(src) && /openSupplierReply\(replyBtn\.dataset\.id\)/.test(src),
+    'the supplier panel offers it next to the ask');
+
+  /* NOT renderPrBulkVariantRows, which the plan for this named. That
+     renders VARIANTS OF ONE PRODUCT, indexed into p.variants with shared
+     tiers and packing; this is one supplier and many unrelated products,
+     each already carrying its own. Reusing it would have meant faking a
+     variants array and dragging along index-based override machinery
+     that means nothing here. */
+  t.check(!/renderPrBulkVariantRows/.test(open),
+    'built for its own shape rather than forced through the variant editor');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -336,13 +336,15 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
 }
 
 /* ---------- 8. every caller says at what quantity ---------------------
-   Three now. Goods arriving joined the two typing paths: it is the only
-   one that needs no screen and no memory, and it is where the shop's
-   best price evidence was being thrown away. */
+   Four now. Goods arriving joined the two typing paths -- it is the only
+   one needing no screen and no memory, and where the shop's best price
+   evidence was being thrown away -- and a supplier's quoted reply joined
+   them, which is not a purchase at all but resolves a figure into a tier
+   slot by exactly the same arithmetic. */
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const calls = [...code.matchAll(/syncPriceRegistryFromPurchase\(([^;]*?)\);/g)].map(m => m[1]);
-  t.check(calls.length === 3, `every call site is accounted for (found ${calls.length})`);
+  t.check(calls.length === 4, `every call site is accounted for (found ${calls.length})`);
   t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
@@ -355,18 +357,32 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
   t.check(calls.some((c) => /it\.receivedPrice,\s*n,\s*\{confirms: true\}/.test(c)),
     'and goods received pass the price actually paid, at the quantity that actually arrived');
 
-  /* Which callers claim money moved, and which must not.
+  /* `confirms` does not mean "money moved" — it means SOMETHING ASSERTED
+     THIS PRICE TODAY, so an unchanged figure still earns a fresh date.
+     Three do: goods arriving, a restock booked, and a supplier answering
+     the question. What kind of assertion it was is carried separately by
+     `source`, checked below.
 
-     The two transactions do. The quote line does NOT: its Buy @ arrives
-     pre-filled and fires a change event whether or not the number was
-     touched, so letting it confirm would date every price the admin
-     merely scrolled past — and the registry would report a book kept
-     current by nobody having looked at it. */
+     The quote line is still not one of them, and that is the whole
+     distinction: its Buy @ arrives pre-filled and fires a change event
+     whether or not the number was touched, so letting it confirm would
+     date every price the admin merely scrolled past — and the registry
+     would report a book kept current by nobody having looked at it. */
   const confirming = calls.filter((c) => /confirms:\s*true/.test(c));
-  t.check(confirming.length === 2,
-    `exactly the two transactions say money moved (found ${confirming.length})`);
+  t.check(confirming.length === 3,
+    `three callers assert a price rather than round-trip a field (found ${confirming.length})`);
   t.check(confirming.every((c) => !/item\.qty/.test(c)),
     'and the quote line is not one of them — a pre-filled field round-tripping is not a confirmation');
+
+  /* Only the two TRANSACTIONS are recorded as purchases. A supplier
+     saying "still 45,000" is not a sale, and filing it as one would put
+     money in the record that never changed hands — and would then count
+     towards the month's checked total under the wrong heading. */
+  const asPurchase = confirming.filter((c) => !/source:/.test(c));
+  const asConfirmed = confirming.filter((c) => /source: 'confirmed'/.test(c));
+  t.check(asPurchase.length === 2, `two of them are purchases (found ${asPurchase.length})`);
+  t.check(asConfirmed.length === 1,
+    `and the supplier's own word is filed as confirmed, not bought (found ${asConfirmed.length})`);
 
   // The quote's own qty handler has to resolve prices the same way, or an
   // edit lands in one tier while a quantity change reads another.
