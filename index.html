@@ -4119,6 +4119,17 @@
   .st-period .btn{padding:6px 11px;font-size:12px;}
   .st-period input{width:auto;min-width:126px;}
   .st-to{font-size:12px;color:var(--ow-ink-400);}
+  /* The two print buttons kept together, and pushed right whenever the
+     row has slack to push into.
+
+     Deliberately nothing more. This row is 859px wide and its controls
+     come to 829, so at every width the app actually renders there is no
+     free space: an auto margin resolves to zero and a drawn separator --
+     tried, measured -- costs 13px the row has not got and tips the
+     buttons onto a second line, where a vertical rule points at nothing.
+     The grouping is structural, and honest about being so. */
+  .st-actions{display:flex;gap:6px;margin-left:auto;}
+  @media (max-width:560px){ .st-actions{margin-left:0;} }
 
   /* The four figures a day actually turns on. */
   /* The verdict. Stated before the figures it qualifies, because a
@@ -7413,20 +7424,32 @@
             <button type="button" class="st-tab" data-stab="ratios">Ratios</button>
           </div>
           <div class="st-period">
-            <button type="button" class="btn btn-ghost st-preset" data-preset="month">Month</button>
-            <button type="button" class="btn btn-ghost st-preset" data-preset="quarter">Quarter</button>
-            <button type="button" class="btn btn-ghost st-preset" data-preset="year">Year</button>
+            <!-- The roster's own segmented control, not three loose
+                 buttons. They are three shapes of one setting, and as
+                 plain buttons nothing ever said which shape the figures
+                 on screen actually covered. -->
+            <div class="rost-period">
+              <button type="button" class="rost-per st-preset" data-preset="month">Month</button>
+              <button type="button" class="rost-per st-preset" data-preset="quarter">Quarter</button>
+              <button type="button" class="rost-per st-preset" data-preset="year">Year</button>
+            </div>
             <input type="date" id="st_from"><span class="st-to">to</span><input type="date" id="st_to">
             <select id="st_basis" title="What this period is measured against">
               <option value="">Compare automatically</option>
               <option value="lastyear">vs same dates last year</option>
               <option value="previous">vs the period just before</option>
             </select>
-            <button type="button" class="btn btn-ghost" id="st_print" title="Print the statement on screen">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
-              Print
-            </button>
-            <button type="button" class="btn btn-ghost" id="st_print_all" title="Print all five, one per page">Print all</button>
+            <!-- Pushed to the far end: everything to the left of this
+                 chooses what to look at, and these two act on it. In one
+                 undifferentiated row of seven, a print button sat at the
+                 same weight as a date. -->
+            <div class="st-actions">
+              <button type="button" class="btn btn-ghost" id="st_print" title="Print the statement on screen">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
+                Print
+              </button>
+              <button type="button" class="btn btn-ghost" id="st_print_all" title="Print all five, one per page">Print all</button>
+            </div>
           </div>
         </div>
         <div id="st_body"></div>
@@ -37425,6 +37448,12 @@ function statementDocHTML(key, ctx){
 function renderStatements(){
   const body = document.getElementById('st_body');
   const ctx = statementsContext();
+  /* After statementsContext, which seeds the dates on a first open --
+     before it, there is nothing to read and the month would never light
+     up on the screen it actually opens showing. Before the early return
+     too, since a backwards range still has to clear the buttons rather
+     than leave one lit over an error. */
+  stSyncPresetButtons();
   if(!ctx){
     body.innerHTML = '<div class="empty">The start of the period is after its end.</div>';
     return;
@@ -37768,6 +37797,23 @@ document.getElementById('st_tabs').addEventListener('click', (e)=>{
   stActiveTab = b.dataset.stab;
   renderStatements();
 });
+/* Which of the three shapes the dates on screen currently describe.
+
+   Derived from the dates rather than remembered from the last click, so
+   it cannot disagree with them: type a range by hand and no button is
+   lit, because eleven days is not the month, the quarter or the year and
+   claiming otherwise would misdescribe the figures underneath.
+
+   It also means the state survives a reload -- the dates are what the
+   screen is built from, and this reads them. */
+function stSyncPresetButtons(){
+  const from = document.getElementById('st_from').value;
+  const to = document.getElementById('st_to').value;
+  document.querySelectorAll('.st-preset').forEach(b=>{
+    const d = stDefaultRange(b.dataset.preset);
+    b.classList.toggle('active', !!from && d.from === from && d.to === to);
+  });
+}
 document.querySelectorAll('.st-preset').forEach(b=>b.addEventListener('click', ()=>{
   const d = stDefaultRange(b.dataset.preset);
   document.getElementById('st_from').value = d.from;

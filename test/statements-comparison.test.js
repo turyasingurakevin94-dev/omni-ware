@@ -172,4 +172,40 @@ const win = (from, to, b) => { const w = scope.stComparisonWindow(from, to, b); 
     'and the old hard-coded sentence, which named a comparison that may not be the one shown, is gone');
 }
 
+/* ---------- the period control says which period ----------------------
+   Month, Quarter and Year were three loose buttons that set the dates and
+   then said nothing. Whichever period the figures on screen covered, the
+   control looked identical -- so the one thing a statement must be clear
+   about, what dates it covers, was only in two date boxes. */
+{
+  const src = read('index.html');
+
+  /* The roster's segmented control, reused rather than a fourth thing
+     that means "pick one of these". */
+  t.check(/<div class="rost-period">[\s\S]{0,400}?class="rost-per st-preset" data-preset="year"/.test(src),
+    'the three periods are one segmented control, not three separate buttons');
+  t.check(!/class="btn btn-ghost st-preset"/.test(src),
+    'and no longer plain buttons with no selected state at all');
+
+  /* Derived from the dates, never remembered from the last click -- so
+     it cannot disagree with the boxes beside it, and it survives a
+     reload because the dates are what the screen is built from. */
+  const sync = extractFunction(src, 'stSyncPresetButtons', 'index.html');
+  t.check(/const d = stDefaultRange\(b\.dataset\.preset\);/.test(sync)
+    && /b\.classList\.toggle\('active', !!from && d\.from === from && d\.to === to\)/.test(sync),
+    'the lit button is worked out from the dates on screen, not stored');
+  t.check(/!!from &&/.test(sync),
+    'and empty dates light nothing rather than matching a preset by accident');
+
+  /* A hand-typed range is not the month, the quarter or the year, and
+     lighting one would misdescribe the figures underneath. */
+  const render = extractFunction(src, 'renderStatements', 'index.html');
+  const syncAt = render.indexOf('stSyncPresetButtons()');
+  const guardAt = render.indexOf('if(!ctx)');
+  t.check(syncAt > -1 && guardAt > -1 && syncAt < guardAt,
+    'it runs before the backwards-range early return, so an error clears the buttons rather than leaving one lit');
+  t.check(render.indexOf('statementsContext()') < syncAt,
+    'and after the context, which seeds the dates on a first open — otherwise the screen it opens showing would light nothing');
+}
+
 process.exit(t.done() ? 1 : 0);
