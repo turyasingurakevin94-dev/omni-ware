@@ -40831,7 +40831,8 @@ function openSourcingLead(id){
   document.getElementById('dl_sourcing_suppliers').innerHTML =
     (data.suppliers||[]).map(s=> `<option value="${esc(s.name)}"></option>`).join('');
   if(!l){
-    ['sl_ask_name','sl_ask_phone','sl_ask_qty','sl_ask_variant'].forEach(k=> document.getElementById(k).value = '');
+    ['sl_ask_name','sl_ask_phone','sl_ask_qty','sl_ask_variant'].forEach(k=>{
+      const el = document.getElementById(k); el.value = ''; delete el.dataset.autofilled; });
     slVarAttrs = [];
     renderSlVarAttrs();
   } else {
@@ -41583,11 +41584,43 @@ document.getElementById('sl_cta').addEventListener('click', ()=>{
    typed: a walk-in who gave only a first name is not a customer record
    worth creating, and inventing one would fill the list with people
    nobody can ring back. */
+/* One rule for "is this somebody we already have", so the box that fills
+   itself in and the save that links the record cannot disagree about who
+   was meant. */
+function sourcingFindCustomerByName(name){
+  const key = String(name||'').trim().toLowerCase();
+  if(!key) return null;
+  return (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === key) || null;
+}
+/* Fills a phone and a place in from the record the name already matches.
+
+   Re-typing a number that is already on file is not merely tedious: it
+   is how a second, slightly different number ends up against one person,
+   and after that nobody knows which of the two rings.
+
+   It only ever replaces its OWN work. Something typed by hand is the
+   person's answer and outranks the record -- but a value this put there
+   is replaced when the name changes, so picking the wrong supplier and
+   correcting it does not leave the first one's phone number behind. */
+function sourcingAutofillKnown(rec, phoneEl, whereEl){
+  [[phoneEl, rec && rec.phone], [whereEl, rec && (rec.location || '')]].forEach(([el, val])=>{
+    if(!el) return;
+    if(el.value && el.dataset.autofilled !== '1') return;
+    el.value = val || '';
+    if(val) el.dataset.autofilled = '1'; else delete el.dataset.autofilled;
+  });
+}
+// Typing into one of these by hand takes it out of the autofill's care.
+// Our own writes set .value directly, which fires no input event, so this
+// only ever hears the person.
+function sourcingWatchTypedOver(el){
+  if(el) el.addEventListener('input', ()=> delete el.dataset.autofilled);
+}
 async function sourcingResolveAsker(rawName, rawPhone){
   const name = String(rawName||'').trim();
   const phone = String(rawPhone||'').trim();
   if(!name) return {customerId:null, customerName:'', phone};
-  const hit = (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === name.toLowerCase());
+  const hit = sourcingFindCustomerByName(name);
   if(hit) return {customerId: hit.id, customerName: hit.name, phone: phone || hit.phone || ''};
   if(!phone) return {customerId:null, customerName:name, phone:''};
   /* Issued, THEN guarded -- the same two steps p_save takes. The
@@ -41632,7 +41665,8 @@ document.getElementById('sl_add_ask').addEventListener('click', ()=>{
 function slAskFormClose(){
   document.getElementById('sl_ask_form').style.display = 'none';
   document.getElementById('sl_add_ask').style.display = '';
-  ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty','sl_ask2_variant'].forEach(k=> document.getElementById(k).value = '');
+  ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty','sl_ask2_variant'].forEach(k=>{
+    const el = document.getElementById(k); el.value = ''; delete el.dataset.autofilled; });
 }
 document.getElementById('sl_ask2_cancel').addEventListener('click', ()=> slAskFormClose());
 document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
@@ -41794,7 +41828,7 @@ function slCandFormClear(){
   slCandOverrides = []; slCandPackOverrides = []; slCandSkus = [];
   renderSlCandBulk();
   ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_sku','sl_c_tier_qty','sl_c_tier_price']
-    .forEach(k=>{ const el = document.getElementById(k); if(el) el.value = ''; });
+    .forEach(k=>{ const el = document.getElementById(k); if(el){ el.value = ''; delete el.dataset.autofilled; } });
   slSetRole('supplier');
   renderSlCandTiers();
   slCandFormMode();
@@ -41828,8 +41862,12 @@ function slCandFormLoad(c){
   editingCandidateId = c.id;
   document.getElementById('sl_c_name').value = c.supplierId ? supplierName(c.supplierId) : (c.supplierName||'');
   slSetRole(c.role || 'supplier');
+  /* What this candidate was recorded with, which is the person's own
+     answer -- so it is not the autofill's to replace if they then correct
+     the name. */
   document.getElementById('sl_c_phone').value = c.phone || '';
   document.getElementById('sl_c_where').value = c.where || '';
+  ['sl_c_phone','sl_c_where'].forEach(k=> delete document.getElementById(k).dataset.autofilled);
   document.getElementById('sl_c_unit').value = c.unit || '';
   document.getElementById('sl_c_packqty').value = Number(c.packQty) || '';
   document.getElementById('sl_c_packunit').value = c.packUnit || '';
@@ -41938,8 +41976,13 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     role: slRoleValue(),
     supplierId: existing ? existing.id : null,
     supplierName: existing ? existing.name : who,
-    phone: document.getElementById('sl_c_phone').value.trim(),
-    where,
+    /* Falling back to what the supplier record already holds, the same
+       way sourcingResolveAsker has always done for a customer's phone.
+       Belt and braces beside the box that now fills itself in: a blank
+       here would put a supplier on the research screen with no way to
+       ring them, while their number sat two tabs away. */
+    phone: document.getElementById('sl_c_phone').value.trim() || (existing && existing.phone) || '',
+    where: where || (existing && existing.location) || '',
     // The whole ladder, sorted. The lowest rung IS the least they will
     // sell at a price, so there is no separate MOQ to fall out of step
     // with it.
@@ -41960,6 +42003,29 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   toast(`${verb} ${fields.supplierName}`);
 });
 document.getElementById('sl_cand_cancel').addEventListener('click', ()=> slCandFormClear());
+
+/* Picking somebody the shop already has fills in what it already knows.
+   All three of these boxes sit beside a name with a datalist on it, and
+   every one of them used to come up blank against a supplier or customer
+   whose phone and place were on file two tabs away -- so the number got
+   typed again, or more often not at all.
+
+   `input` rather than `change`: choosing from a datalist fires input,
+   and a change alone would wait for the box to lose focus. */
+[
+  ['sl_c_name',    'sl_c_phone',    'sl_c_where',  (n)=> supFindDuplicate(n, null)],
+  ['sl_ask_name',  'sl_ask_phone',  null,          sourcingFindCustomerByName],
+  ['sl_ask2_name', 'sl_ask2_phone', null,          sourcingFindCustomerByName],
+].forEach(([nameId, phoneId, whereId, lookup])=>{
+  const nameEl = document.getElementById(nameId);
+  const phoneEl = document.getElementById(phoneId);
+  const whereEl = whereId ? document.getElementById(whereId) : null;
+  if(!nameEl) return;
+  sourcingWatchTypedOver(phoneEl);
+  sourcingWatchTypedOver(whereEl);
+  nameEl.addEventListener('input', ()=>
+    sourcingAutofillKnown(lookup(nameEl.value), phoneEl, whereEl));
+});
 /* An existing lead's own fields write themselves as they are changed --
    on `change`, so it is one save per edit rather than one per keystroke.
    Close now means close, not "discard what I just typed", which is what

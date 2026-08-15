@@ -196,6 +196,7 @@ const sources = [
   extractFunction(src, 'listedLeads', 'index.html'),
   extractFunction(src, 'sourcingBoardLeads', 'index.html'),
   extractFunction(src, 'renderSourcingBadge', 'index.html'),
+  extractFunction(src, 'sourcingFindCustomerByName', 'index.html'),
   extractFunction(src, 'sourcingResolveAsker', 'index.html'),
   extractFunction(src, 'applyCandidateFields', 'index.html'),
 ];
@@ -209,7 +210,7 @@ const S = compileScope(sources, env, [
   'candidateTiers', 'candidateHasPrice', 'candidateVariantOverrides', 'candidateUnitPriceAt', 'candidateLowestTier',
   'leadDemandQty', 'lowestQuotedQty', 'sourcingRankedAt', 'sourcingBestAt', 'sourcingDefaultGraduateCandidate',
   'leadVariantAttrs', 'leadHasVariants', 'leadVariantCombos', 'leadVariantChoices', 'leadDemandByVariant',
-  'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker',
+  'sourcingStepGuide', 'sourcingViewedStep', 'sourcingWantsPriceForm', 'sourcingWantsCompare', 'sourcingResolveAsker', 'sourcingFindCustomerByName',
   'applyCandidateFields',
   'supNormalisedName', 'supFindDuplicate', 'candidateSupplierNote',
   'resolveCandidateSuppliers', 'preferredCandidate', 'mergeCandidatesBySupplier',
@@ -2021,6 +2022,64 @@ async function main() {
   t.check(/sourcingListedSearch = e\.target\.value;[\s\S]{0,220}?renderSourcingListedBody\(\);/.test(src)
     && !/sourcingListedSearch = e\.target\.value;[\s\S]{0,220}?renderSourcing\(\);/.test(src),
     'and typing into it refills the rows only, never the board that contains it');
+}
+
+/* ---------- 7d2. what the shop already knows, filled in --------------- */
+{
+  /* Picking a supplier or a customer the shop already has left the phone
+     and the place blank, two tabs away from where they were recorded. So
+     the number got typed again -- which is how a second, slightly
+     different number ends up against one person and nobody knows which
+     of the two rings -- or, more often, not typed at all. */
+  resetAll([]);
+  data.suppliers = [{ id: 'S1', name: 'Shafik Katwe', phone: '0758004696', location: 'Katwe' }];
+  data.customers = [{ id: 'C1', name: 'Kaweke Bwaise', phone: '0754629578', location: 'Bwaise' }];
+
+  eq((S.sourcingFindCustomerByName('Kaweke Bwaise') || {}).phone, '0754629578',
+    'a customer already on file is found by the name in the box');
+  eq(S.sourcingFindCustomerByName('kaweke bwaise').id, 'C1', 'however it was capitalised');
+  eq(S.sourcingFindCustomerByName('Nobody At All'), null, 'and a new name matches nobody');
+  eq(S.sourcingFindCustomerByName('   '), null, 'nor does a blank one');
+
+  /* The box that fills itself in and the save that links the record must
+     agree about who was meant, so they ask the same function. */
+  const asked = await S.sourcingResolveAsker('Kaweke Bwaise', '');
+  eq(asked.customerId, 'C1', 'the ask links to that same customer');
+  eq(asked.phone, '0754629578',
+    'and takes their number from the record when the box was left empty');
+  eq((await S.sourcingResolveAsker('Kaweke Bwaise', '0700111222')).phone, '0700111222',
+    'while a number actually typed outranks the one on file');
+  t.check(/const hit = sourcingFindCustomerByName\(name\);/.test(
+    extractFunction(src, 'sourcingResolveAsker', 'index.html')),
+    'both go through one lookup, so they cannot disagree about who the name meant');
+
+  /* The autofill only ever replaces its OWN work. Something typed by
+     hand is the person's answer; a value the autofill put there is
+     replaced when the name changes, so correcting a mis-picked supplier
+     does not leave the first one's phone number behind. */
+  const fill = extractFunction(src, 'sourcingAutofillKnown', 'index.html');
+  t.check(/if\(el\.value && el\.dataset\.autofilled !== '1'\) return;/.test(fill),
+    'a hand-typed value is left alone');
+  t.check(/if\(val\) el\.dataset\.autofilled = '1'; else delete el\.dataset\.autofilled;/.test(fill),
+    'and what the autofill wrote is marked, so the next name can replace it');
+  const watch = extractFunction(src, 'sourcingWatchTypedOver', 'index.html');
+  t.check(/addEventListener\('input', \(\)=> delete el\.dataset\.autofilled\)/.test(watch),
+    'typing over an autofilled box takes it out of the autofill\'s care');
+
+  /* All three name boxes, not just the one that was complained about. */
+  ['sl_c_name', 'sl_ask_name', 'sl_ask2_name'].forEach(id=>{
+    t.check(new RegExp("\\['" + id + "',").test(src), `${id} is wired to fill from what is on file`);
+  });
+  t.check(/nameEl\.addEventListener\('input', \(\)=>\s*\n?\s*sourcingAutofillKnown\(lookup\(nameEl\.value\), phoneEl, whereEl\)\);/.test(src),
+    'on input, so choosing from the datalist fills immediately rather than waiting for blur');
+  t.check(/\['sl_c_name',\s*'sl_c_phone',\s*'sl_c_where',\s*\(n\)=> supFindDuplicate\(n, null\)\]/.test(src),
+    'and the supplier box uses the supplier form\'s own matching rule');
+
+  /* Belt and braces at the save: a blank would put a supplier on the
+     research screen with no way to ring them. */
+  t.check(/phone: document\.getElementById\('sl_c_phone'\)\.value\.trim\(\) \|\| \(existing && existing\.phone\) \|\| ''/.test(src)
+    && /where: where \|\| \(existing && existing\.location\) \|\| ''/.test(src),
+    'and saving a candidate falls back to the linked supplier\'s own phone and place');
 }
 
 /* ---------- 7e. the two boards do not wear each other's colours ------ */
