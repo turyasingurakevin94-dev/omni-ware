@@ -11537,7 +11537,18 @@ function mediaVisibleRows(usage){
     rows = rows.filter(m=> m.sha256 && bySha.get(m.sha256) > 1);
   }
   const q = mlState.search.trim().toLowerCase();
-  if(q) rows = rows.filter(m=> String(m.name||'').toLowerCase().includes(q));
+  /* Matched against what the card SAYS as well as what the row is called.
+     The cards are titled by what uses a photo, so searching "Sofa Legs"
+     had to find the card reading "Sofa Legs" -- against the filename
+     alone it found nothing, because that row is called
+     "4f6c002e-2fbf-401c-9e08-2ff066e94c64.jpg". The filename still
+     matches too, so a photo added as "WhatsApp Image ..." is still found
+     by typing that. */
+  if(q) rows = rows.filter(m=>{
+    const users = usage.get(m.url) || [];
+    return String(m.name||'').toLowerCase().includes(q)
+      || users.some(u=> String(u.name||'').toLowerCase().includes(q));
+  });
   // Newest first: the photo just added is the one being looked for.
   return rows.sort((a,b)=> String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 }
@@ -11546,6 +11557,28 @@ function mediaUsedBadge(users){
   return users.length
     ? `<span class="mc-used">Used by ${users.length}</span>`
     : `<span class="mc-used none">Used nowhere</span>`;
+}
+/* What to call a photo on its card.
+
+   Nine of this shop's ten are named things like
+   "02bc2ed7-8a03-45c5-9b35-78756976e5f0.jpg" -- the storage object's own
+   filename, kept when the library was backfilled from the bucket. A
+   grid of those identifies nothing, and the shop cannot tell two hinges
+   apart by reading them.
+
+   The app knows perfectly well what each one is: the usage index says
+   "Product — Soft Close Mulper" for that very row. So a photo that is
+   used is called by what uses it, and only a photo used nowhere falls
+   back to its filename -- which is the case where the filename is all
+   anybody has.
+
+   The filename is never lost: it stays on the tooltip and stays
+   searchable, so a photo added as "WhatsApp Image ..." is still found by
+   typing that. */
+function mediaCardLabel(m, users){
+  const own = String((m && m.name) || '').trim();
+  if(!users || !users.length) return own || 'Photo';
+  return users.length === 1 ? users[0].name : `${users.length} things use this`;
 }
 
 function renderMediaStrip(usage){
@@ -11672,7 +11705,7 @@ function mediaCardHTML(m, users){
   return `<button type="button" class="media-card" data-mid="${m.id}">
     <img class="mc-thumb" loading="lazy" src="${esc(m.url)}" alt="">
     <div class="mc-body">
-      <div class="mc-name" title="${esc(m.name)}">${esc(m.name)}</div>
+      <div class="mc-name" title="${esc(m.name)}">${esc(mediaCardLabel(m, users))}</div>
       <div class="mc-meta"><span>${size||'size unknown'}</span>${mediaUsedBadge(users)}</div>
     </div>
   </button>`;

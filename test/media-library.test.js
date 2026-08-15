@@ -37,7 +37,7 @@ const src = read('index.html');
 
 const NAMES = ['mediaFmtBytes', 'mediaUsageIndex', 'mediaUsage', 'mediaUserLabel',
   'findMediaBySha', 'mediaStripStats', 'mediaBackfillPlan', 'mediaFolderRemovalPlan',
-  'mediaVisibleRows'];
+  'mediaVisibleRows', 'mediaCardLabel'];
 const env = {
   data: { products: [], presetCategories: [], media: [], mediaFolders: [] },
   mlState: { folder: 'all', filter: 'all', search: '' },
@@ -190,6 +190,46 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
      search that lowercases only one side fails one of the two rows. */
   env.mlState.folder = 'all'; env.mlState.search = 'CEMENT';
   eqJ(scope.mediaVisibleRows(usage).map((m) => m.id), [3, 1], 'search is by name, case-blind');
+  env.mlState.search = '';
+}
+
+/* ---------- 6b. a card says what the photo IS ------------------------
+   Nine of this shop's ten photos are named after the storage object --
+   "02bc2ed7-8a03-45c5-9b35-78756976e5f0.jpg" -- because that is what the
+   library was backfilled with. A grid of those identifies nothing, and
+   the app knew all along: the usage index says "Soft Close Mulper" for
+   that very row. */
+{
+  eq(scope.mediaCardLabel({ name: '02bc2ed7-8a03-45c5.jpg' },
+      [{ kind: 'product', name: 'Soft Close Mulper' }]),
+    'Soft Close Mulper', 'a used photo is called by what uses it, not by its object name');
+  eq(scope.mediaCardLabel({ name: 'WhatsApp Image 2026.jpeg' },
+      [{ kind: 'variant', name: 'Sofa Legs — Gold / 4"' }]),
+    'Sofa Legs — Gold / 4"', 'even when it has a real filename — what it IS beats what it was called');
+  eq(scope.mediaCardLabel({ name: 'hinge.jpg' }, []), 'hinge.jpg',
+    'a photo used nowhere falls back to its filename, which is all anybody has');
+  eq(scope.mediaCardLabel({ name: '' }, []), 'Photo', 'and to a word rather than an empty card');
+  eq(scope.mediaCardLabel({ name: 'x.jpg' },
+      [{ kind: 'product', name: 'A' }, { kind: 'product', name: 'B' }]),
+    '2 things use this', 'a photo several things share is not labelled with just one of them');
+
+  /* The card's title and the search box have to agree: titled by usage,
+     searching "Sofa Legs" must find the card that reads "Sofa Legs". */
+  env.data.products = [{ id: 'P1', name: 'Sofa Legs', image: null,
+    variants: [{ combo: { Colour: 'Gold' }, image: 'ug' }] }];
+  env.data.presetCategories = [];
+  env.data.media = [
+    { id: 1, url: 'ug', name: '4f6c002e-2fbf-401c.jpg', folderId: null, sha256: 'a', createdAt: '2026-01-02' },
+    { id: 2, url: 'un', name: 'WhatsApp Image 2026.jpeg', folderId: null, sha256: 'b', createdAt: '2026-01-01' },
+  ];
+  const usage2 = scope.mediaUsageIndex();
+  env.mlState.folder = 'all'; env.mlState.filter = 'all';
+  env.mlState.search = 'sofa legs';
+  eqJ(scope.mediaVisibleRows(usage2).map((m) => m.id), [1],
+    'searching what the card says finds it, though the row is named after a UUID');
+  env.mlState.search = 'whatsapp';
+  eqJ(scope.mediaVisibleRows(usage2).map((m) => m.id), [2],
+    'and the filename still matches, so nothing that used to be findable stopped being');
   env.mlState.search = '';
 }
 
