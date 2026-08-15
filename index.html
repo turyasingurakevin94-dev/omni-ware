@@ -5294,8 +5294,25 @@
      confined inside this box however high it counts. */
   .mp-canvas{position:relative;z-index:0;min-width:0;}
   #mp_map{height:460px;width:100%;background:var(--ow-steel-050);}
-  .mp-bases{position:absolute;left:10px;top:10px;z-index:500;display:flex;gap:3px;
+  /* Clear of Leaflet's zoom control, which owns the same corner: both sat
+     at left:10px/top:10px and the zoom painted over "Str", so the button
+     read "eets". 54px is its 34px width plus its own 10px margin plus a
+     10px gap -- beside it rather than below, so the top of the map stays
+     one row: zoom, basemap, then the compass at the far right.
+
+     No other corner was free to move to: the compass has top-right, the
+     legend bottom-left and Leaflet's attribution bottom-right. */
+  .mp-bases{position:absolute;left:54px;top:10px;z-index:500;display:flex;gap:3px;
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;}
+  /* Zoom, basemap and compass want 339px in one row and a phone's map is
+     about 290, so the basemap drops to its own line under the zoom. It
+     already ran into the compass by 14px at the old left:10px -- moving
+     clear of the zoom widened that rather than caused it. Below the zoom
+     (10 + 64 + 10) and well above the legend, which starts near the
+     bottom edge. */
+  @media (max-width: 560px){
+    .mp-bases{left:10px;top:84px;}
+  }
   .mp-base{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;font-weight:600;
     padding:5px 10px;border-radius:6px;color:var(--ink-soft);}
   .mp-base:hover{background:var(--ow-steel-050);color:var(--ink);}
@@ -5316,6 +5333,18 @@
     border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;
     color:var(--ink-soft);line-height:1.7;}
   .mp-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
+  /* AFTER .mp-legend, not beside the .mp-bases override further up: a
+     media query adds no specificity, so the same selector written later
+     in the file wins whatever the width. Put above, this was overruled by
+     the rule it was meant to override and measured as bottom:10px.
+
+     On a 291px map Leaflet's attribution is wide enough to reach under
+     the legend -- and that credit is a licence condition of using OSM
+     tiles, so it has to stay readable. Its strip is 17px; 34 clears it
+     with room. Pre-existing, found while measuring the other corner. */
+  @media (max-width: 560px){
+    .mp-legend{bottom:34px;}
+  }
   .mp-side{border-left:1px solid var(--line);padding:13px 15px;min-width:0;max-height:460px;overflow-y:auto;}
   @media (max-width: 900px){ .mp-side{border-left:none;border-top:1px solid var(--line);max-height:none;} }
   .mp-side-empty{font-size:13px;color:var(--ink-soft);line-height:1.6;}

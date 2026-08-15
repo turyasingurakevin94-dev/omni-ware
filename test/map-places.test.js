@@ -708,6 +708,33 @@ const reset = () => {
   const topbarZ = /position:fixed;top:0;left:0;right:0;height:var\(--topbar-h\);z-index:(\d+);/.exec(src);
   t.check(!!topbarZ && Number(topbarZ[1]) > 0,
     'and the bar it must stay under is itself positioned above the page');
+
+  /* FIVE THINGS SIT ON THIS MAP AND NONE MAY COVER ANOTHER: Leaflet's
+     zoom and its attribution, and the app's basemap toggle, compass and
+     legend. Every corner is spoken for, so there is nowhere to move a
+     collision to -- it has to be laid out.
+
+     Measured in the browser: the basemap toggle and the zoom control both
+     sat at left:10px/top:10px, exactly overlapping, and the zoom painted
+     over "Str" so the button read "eets". */
+  t.check(/\.mp-bases\{position:absolute;left:54px;top:10px;/.test(src),
+    'the basemap toggle clears the zoom control rather than sharing its corner');
+  t.check(/@media \(max-width: 560px\)\{\s*\n?\s*\.mp-bases\{left:10px;top:84px;\}/.test(src),
+    'and drops below it on a phone, where the row cannot hold zoom, basemap and compass at once');
+
+  /* The legend ran under Leaflet's attribution at phone width. That
+     credit is a licence condition of using OSM tiles, so it has to stay
+     readable. */
+  const legendRule = src.indexOf('.mp-legend{position:absolute');
+  const legendMobile = src.indexOf('.mp-legend{bottom:34px;}');
+  t.check(legendMobile > -1 && legendMobile > legendRule,
+    'the legend lifts clear of the attribution on a phone');
+  /* AFTER the rule it overrides, and this is the whole point: a media
+     query adds no specificity, so the same selector written later in the
+     file wins at every width. Placed above, this measured as bottom:10px
+     -- overruled by the very rule it was meant to override. */
+  t.check(legendMobile > legendRule,
+    'and is written after that rule, since a media query alone does not outrank it');
 }
 
 process.exit(t.done() ? 1 : 0);
