@@ -403,9 +403,26 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'and a supplier with nothing worth asking gets an empty list, not everything');
 
   /* Ordered the same way the report is. Somebody who can only ask about
-     three things should be asking about the three that matter. */
+     three things should be asking about the three that matter.
+
+     Needs S1 to hold TWO chaseable rows of clearly different weight, or
+     reversing the list would be indistinguishable from leaving it
+     alone -- which is exactly how this claim first passed against a
+     reversed list. The cheap one is listed FIRST in the array, so
+     entry order and review order disagree. */
+  reset();
+  data.products = [{ id: 'P1', name: 'Cement' }, { id: 'P2', name: 'Handle' }];
+  data.prices = [
+    price(10, { productId: 'P2', supplierId: 'S1', wholesale: 500 }),
+    price(11, { productId: 'P1', supplierId: 'S1', wholesale: 30000 }),
+  ];
+  sold('P1', 200, '2026-07-01');
+  sold('P2', 200, '2026-07-01');
+  const two = scope.supplierAskList('S1');
+  eq(two.length, 2, 'both of this supplier’s stale rows are on the list');
+  eq(two[0].row.id, 11, 'the one with more money running through it is asked about first');
   const all = scope.priceReviewCandidates().filter((f) => f.row.supplierId === 'S1');
-  t.check(s1.map((f) => f.row.id).join() === all.map((f) => f.row.id).join(),
+  t.check(two.map((f) => f.row.id).join() === all.map((f) => f.row.id).join(),
     'in the order the review already put them, not the order they were entered');
 }
 
@@ -478,6 +495,13 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'and the write is guarded on it, so prices keep saving until the migration lands');
   t.check(/lastAskedAt: pr\.last_asked_at \|\| null/.test(code),
     'while the read needs no guard — a missing column simply reads as never asked');
+  /* And must not GAIN one. The probe can fail for reasons other than
+     the column being absent -- a blip on that one request -- and a
+     guarded read would then quietly report every row as never asked
+     while the stamps sat there in the table. The read is safe on its
+     own; only the write can bring an upsert down. */
+  t.check(!/\.\.\.\(priceAskedColumn \? \{lastAskedAt/.test(code),
+    'and is never made conditional on the probe, which would lose real stamps to a failed request');
 
   /* Its own probe, not folded into the sourcing pair. All three are
      applied by hand and can land in any order, so one being absent must
