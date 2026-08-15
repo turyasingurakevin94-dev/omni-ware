@@ -1445,9 +1445,14 @@
     width:38px;height:38px;border-radius:9px;background:var(--navy);color:var(--accent);flex-shrink:0;
     display:flex;align-items:center;justify-content:center;font:700 14px 'Archivo Black',sans-serif;
   }
-  .sc-title{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .sc-title{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
   .sc-name{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.3;word-break:break-word;}
   .sc-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  /* The code and the "also a customer" tag on one line under the name.
+     The tag carries its own margin-left for when it follows text inline;
+     in a gapped flex row that margin is a second gap, so it goes. */
+  .sc-meta, .cc-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;}
+  .sc-meta .both-tag, .cc-meta .both-tag{margin-left:0;}
   .sc-actions{display:flex;gap:6px;flex-shrink:0;}
   /* On a phone the head is a 38px avatar, a name, and a row of action
      buttons that may not shrink -- which left "Allan Lak · Also a
@@ -1474,11 +1479,25 @@
      130px basis puts two on a phone row and keeps all four on one line
      anywhere wider. Shared by every card in the app that carries a
      figure strip, so all of them stop clipping at once. */
-  .sc-stats{display:flex;flex-wrap:wrap;gap:8px;padding-top:11px;border-top:1px solid var(--line);}
+  /* margin-top:auto pins the strip to the bottom of the card. The grid
+     stretches every card in a row to the tallest, but the content stops
+     where it stops, so the figures floated at whatever height their own
+     card's details happened to end -- measured across one row of the
+     supplier grid at 94px, 115px and 132px from the top, with 52px,
+     31px and 15px of dead space underneath. Three figures a reader
+     compares across a row, on three different lines. The slack now
+     falls between the details and the figures, where it reads as room
+     rather than as a card that gave up early. */
+  .sc-stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:11px;border-top:1px solid var(--line);}
   .sc-stat{flex:1 1 130px;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .sc-stat b{font-size:16px;color:var(--ink);font-family:'IBM Plex Mono',monospace;line-height:1;}
   .sc-stat span{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;}
   .sc-stat.best b{color:var(--good);}
+  /* A zero is not good news, and green says it is. Nothing priced and
+     nothing won reads as an ordinary count, leaving the green for the
+     suppliers who actually win something. AFTER .sc-stat.best b, which
+     it ties with on specificity (0,2,1) and beats only on order. */
+  .sc-stat.zero b{color:var(--ink-soft);}
   .sc-matches{background:#F7F9FB;border:1px solid var(--line);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:9px;}
   .sc-matches-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
 
@@ -23234,10 +23253,26 @@ document.getElementById('pan_export_btn').addEventListener('click', ()=>{
 
 /* ================= SUPPLIERS ================= */
 let editingSupplierId = null;
-function supplierInitials(name){
-  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
-  if(parts.length===0) return '?';
-  return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
+/* The first LETTER of each of the first two words -- not the first
+   CHARACTER, which is what three byte-identical copies of this used to
+   take.
+
+   This shop tells two people of the same name apart by qualifying it:
+   "Feko (Ambrose)" and "Feko (Rebbeca)", "Bahco - Jose", "Reagan -
+   Stuart" and "Ronald - 7th Street". Character zero of the second word
+   is then a bracket or a hyphen, so the avatar read "F(", "B-", "R-" --
+   punctuation where initials belong, on 4 of 44 suppliers and 11 of 99
+   customers. Worse, both Fekos came out "F(" and both R-names "R-": the
+   one mark on the card whose job is telling two entries apart was
+   identical on precisely the pairs it exists for.
+
+   Digits count as letters here, because "Ronald - 7th Street" is
+   distinguished by its 7 and "R7" says which Ronald. */
+function nameInitials(name){
+  const letters = String(name||'').trim().split(/\s+/)
+    .map(w=> (w.match(/[A-Za-z0-9]/)||[''])[0]).filter(Boolean);
+  if(!letters.length) return '?';
+  return (letters[0] + (letters[1]||'')).toUpperCase();
 }
 // For each supplier: how many product/variant lines they have a price on
 // file for, and how many of those they currently win (cheapest wholesale,
@@ -23283,11 +23318,18 @@ function supplierCardHTML(s, productMatches){
     </div>` : '';
   return `<div class="supplier-card">
     <div class="sc-head">
-      <div class="sc-avatar">${esc(supplierInitials(s.name))}</div>
+      <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
+      ${/* The tag sits on the meta line with the code, not inside the
+           name. Inline in the name it wrapped as if it were part of it:
+           "Feko" / "(Ambrose)" / "Also a customer" / "S114" is a
+           four-line head where the other cards have two, which is what
+           set the figure strips in a row at different heights. */''}
       <div class="sc-title">
-        <div class="sc-name">${esc(s.name)}${
-          linkedCustomerOf(s) ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}</div>
-        <div class="sc-id">${esc(s.id)}</div>
+        <div class="sc-name">${esc(s.name)}</div>
+        <div class="sc-meta">
+          <span class="sc-id">${esc(s.id)}</span>
+          ${linkedCustomerOf(s) ? '<span class="both-tag" title="You sell to them as well as buy from them">Also a customer</span>' : ''}
+        </div>
       </div>
       <div class="sc-actions">
         <button class="pc-icon-btn" title="Record commission" onclick="openSupplierCommissionModal('${esc(s.id)}')"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
@@ -23303,8 +23345,8 @@ function supplierCardHTML(s, productMatches){
     </div>
     ${matchesHtml}
     <div class="sc-stats">
-      <div class="sc-stat"><b>${stats.priced}</b><span>Priced items</span></div>
-      <div class="sc-stat best"><b>${stats.best}</b><span>Best price</span></div>
+      <div class="sc-stat ${stats.priced ? '' : 'zero'}"><b>${stats.priced}</b><span>Priced items</span></div>
+      <div class="sc-stat best ${stats.best ? '' : 'zero'}"><b>${stats.best}</b><span>Best price</span></div>
     </div>
   </div>`;
 }
@@ -23686,11 +23728,6 @@ function staffPerformance(staffId, fromISO, toISO){
   };
 }
 
-function staffInitials(name){
-  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
-  if(parts.length===0) return '?';
-  return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
-}
 // staffActiveOrders() now lives in shared-worker.js (needed there too, for
 // the delivery-picker's busy/idle status).
 /* The roster.
@@ -23757,7 +23794,7 @@ function staffRosterRowHTML(s, range){
   return `<div class="rost-row ${s.unavailable?'is-off':''}" data-staff="${esc(s.id)}"
       role="button" tabindex="0" title="See ${esc(s.name)}'s record">
     <div class="rost-who">
-      <div class="sc-avatar">${esc(staffInitials(s.name))}</div>
+      <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
       <div class="rost-ident">
         <div class="rost-name">${esc(s.name)}</div>
         <div class="rost-sub">${esc(s.id)}${s.phone ? ` · ${esc(s.phone)}` : ''}</div>
@@ -25615,11 +25652,6 @@ let editingCustomerId = null;
 let editingCustomerDebtId = null;
 let editingCustomerDebtType = 'charge'; // 'charge' adds to debt, 'payment' reduces it
 
-function customerInitials(name){
-  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
-  if(parts.length===0) return '?';
-  return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
-}
 function customerCardHTML(c){
   const debt = Number(c.debt)||0;
   const log = (c.debtLog||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id-a.id));
@@ -25630,11 +25662,13 @@ function customerCardHTML(c){
   return `<div class="customer-card ${debt>0?'has-debt':''}" data-customer="${esc(c.id)}"
       role="button" tabindex="0" title="See everything known about ${esc(c.name)}">
     <div class="cc-head">
-      <div class="cc-avatar">${esc(customerInitials(c.name))}</div>
+      <div class="cc-avatar">${esc(nameInitials(c.name))}</div>
       <div class="cc-title">
-        <div class="cc-name">${esc(c.name)}${
-          c.linkedSupplierId ? '<span class="both-tag" title="You buy from them as well as sell to them">Also a supplier</span>' : ''}</div>
-        <div class="cc-id">${esc(c.id)}</div>
+        <div class="cc-name">${esc(c.name)}</div>
+        <div class="cc-meta">
+          <span class="cc-id">${esc(c.id)}</span>
+          ${c.linkedSupplierId ? '<span class="both-tag" title="You buy from them as well as sell to them">Also a supplier</span>' : ''}
+        </div>
       </div>
       <div class="cc-actions">
         <button class="pc-icon-btn" title="Edit customer" onclick="editCustomer('${esc(c.id)}')">${ICON_EDIT}</button>

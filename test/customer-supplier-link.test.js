@@ -265,4 +265,35 @@ const reset = () => {
     'and a single long name still breaks rather than running off the card');
 }
 
+/* ---------- the tag sits with the code, not inside the name ----------
+   Inline in the name it wrapped as though it were part of the name:
+   "Feko" / "(Ambrose)" / "Also a customer" / "S114" -- a four-line head
+   where the neighbouring cards have two. Both lists again, because they
+   are the same card twice. */
+{
+  const sup = (/function supplierCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+  const cus = (/function customerCardHTML[\s\S]*?\n\}/.exec(src) || [''])[0];
+
+  t.check(/<div class="sc-name">\$\{esc\(s\.name\)\}<\/div>/.test(sup),
+    'the supplier name is the whole of its own element');
+  t.check(/<div class="cc-name">\$\{esc\(c\.name\)\}<\/div>/.test(cus),
+    'and so is the customer name');
+
+  const metaLine = (fn, cls, idExpr) =>
+    new RegExp(`<div class="${cls}-meta">\\s*<span class="${cls}-id">\\$\\{esc\\(${idExpr}\\)\\}</span>\\s*\\$\\{[^]*?both-tag`).test(fn);
+  t.check(metaLine(sup, 'sc', 's\\.id'), 'the tag follows the supplier code on one meta line');
+  t.check(metaLine(cus, 'cc', 'c\\.id'), 'and the customer code on its own');
+
+  /* .both-tag carries margin-left for when it trails text inline. In a
+     gapped flex row that margin is a second gap, so it is zeroed --
+     otherwise the tag sits 14px off the code it belongs to. */
+  t.check(/\.sc-meta, \.cc-meta\{[^}]*display:flex/.test(src)
+    && /\.sc-meta, \.cc-meta\{[^}]*gap:7px/.test(src),
+    'the meta line is one gapped row for both cards');
+  t.check(/\.sc-meta \.both-tag, \.cc-meta \.both-tag\{margin-left:0;\}/.test(src),
+    'with the tag’s inline margin dropped, so the gap is not applied twice');
+  t.check(/\.sc-meta, \.cc-meta\{[^}]*flex-wrap:wrap/.test(src),
+    'and it wraps rather than pushing the tag off a narrow card');
+}
+
 process.exit(t.done() ? 1 : 0);
