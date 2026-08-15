@@ -43,15 +43,18 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const TODAY = '2026-08-15';
-const data = { prices: [], products: [], stock: {}, stockLog: [], savedQuotes: [], presetPriceReview: {} };
+const data = { prices: [], products: [], stock: {}, stockLog: [], savedQuotes: [],
+  purchaseInvoices: [], presetPriceReview: {} };
 
 const DECLS = ['PRICE_STALE_DAYS', 'PRICE_REVIEW_DEMAND_DAYS', 'PRICE_REVIEW_TARGET_DEFAULT',
-  'PRICE_REVIEW_CONFIRMING_SOURCES'];
-const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'getStockQty', 'productPriceRows',
-  'rankedPriceRows', 'priceReviewTarget', 'priceReviewStaleDays', 'priceReviewPeriod',
-  'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview', 'priceReviewCandidates',
-  'priceReviewProgress', 'confirmPriceUnchanged',
-  'supplierAskList', 'supplierPriceAskMessage', 'markSupplierAsked', 'priceAskedDaysAgo'];
+  'PRICE_REVIEW_CONFIRMING_SOURCES', 'PRICE_DRIFT_TARGET', 'PRICE_LEARN_MIN_INTERVALS',
+  'PRICE_LEARN_MIN_SPAN_DAYS', 'PRICE_LEARN_MIN_DAYS', 'PRICE_LEARN_MAX_DAYS'];
+const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getStockQty',
+  'productPriceRows', 'rankedPriceRows', 'priceReviewTarget', 'priceReviewStaleDays',
+  'priceReviewPeriod', 'priceReviewDemand', 'priceReviewFacts', 'priceNeedsReview',
+  'priceReviewCandidates', 'priceReviewProgress', 'confirmPriceUnchanged',
+  'supplierAskList', 'supplierPriceAskMessage', 'markSupplierAsked', 'priceAskedDaysAgo',
+  'priceObservations', 'learnedStaleDays', 'priceStaleDaysFor'];
 const scope = compileScope([
   ...DECLS.map((n) => extractDeclaration(src, n, 'index.html')),
   ...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -76,6 +79,7 @@ const reset = () => {
   data.stock = {};
   data.stockLog = [];
   data.savedQuotes = [];
+  data.purchaseInvoices = [];
   data.presetPriceReview = {};
 };
 const sold = (productId, qty, date) => data.stockLog.push({
@@ -542,6 +546,210 @@ const sold = (productId, qty, date) => data.stockLog.push({
     'nothing is sent — the message is composed and a human decides');
   t.check(/send the message to finish/.test(ask),
     'and the toast says so, rather than implying it has gone');
+}
+
+/* ---------- 15. how fast THIS item's price actually moves --------------
+   One flat limit over-flags a door handle and under-flags cement, and
+   that noise is what makes people stop reading the warning. Nobody has
+   to guess it per item: the shop has been billed for these things, on
+   dated invoices, at whatever the price was that day.
+
+   FROM THE PURCHASE INVOICES AND NOTHING ELSE. Two other records look
+   like price history and are the same events counted again -- the stock
+   log (whose cost and supplierId are stamped in memory and never
+   persisted; the columns do not exist) and the receipts on order lines
+   (which become purchase invoice lines too). */
+{
+  const pi = (id, date, items, over) => Object.assign({
+    id, date, supplierId: 'S1', voided: false, items,
+  }, over);
+  const item = (price, qty) => ({ productId: 'P1', variantIdx: null, price, qty: qty || 1 });
+
+  reset();
+  data.purchaseInvoices = [
+    pi(1, '2026-01-01', [item(10000)]),
+    pi(2, '2026-03-01', [item(11000)]),
+  ];
+  const obs = scope.priceObservations('P1', null, 'S1');
+  eq(obs.length, 2, 'each dated invoice line is an observation');
+  eq(obs[0].price, 10000, 'carrying what was billed');
+  t.check(obs[0].date < obs[1].date, 'oldest first');
+
+  // Not another supplier's, not another item's, not a voided invoice's.
+  data.purchaseInvoices.push(pi(3, '2026-02-01', [item(99999)], { supplierId: 'S2' }));
+  data.purchaseInvoices.push(pi(4, '2026-02-02', [{ productId: 'P2', variantIdx: null, price: 88888, qty: 1 }]));
+  data.purchaseInvoices.push(pi(5, '2026-02-03', [item(77777)], { voided: true }));
+  eq(scope.priceObservations('P1', null, 'S1').length, 2,
+    'another supplier’s, another item’s and a voided invoice are all left out');
+
+  // A variant's prices are its own.
+  data.purchaseInvoices.push(pi(6, '2026-02-04', [{ productId: 'P1', variantIdx: 0, price: 55555, qty: 1 }]));
+  eq(scope.priceObservations('P1', null, 'S1').length, 2, 'a variant’s line is not the product’s');
+  eq(scope.priceObservations('P1', 0, 'S1').length, 1, 'and belongs to the variant it was billed against');
+
+  /* Two invoices to one supplier on one day is a SPREAD, not a change
+     over time -- and it happens on the real books, where PINV-0088 and
+     PINV-0089 were both raised on 13 August. Collapsed to one
+     observation, weighted by quantity so the big line is not out-voted
+     by the small one. */
+  reset();
+  data.purchaseInvoices = [
+    pi(1, '2026-01-01', [item(135000, 49)]),
+    pi(2, '2026-01-01', [item(85000, 2)]),
+  ];
+  const same = scope.priceObservations('P1', null, 'S1');
+  eq(same.length, 1, 'one day is one observation, however many invoices it took');
+  t.check(same[0].price > 130000,
+    `weighted by quantity, so 49 at 135,000 is not out-voted by 2 at 85,000 (got ${Math.round(same[0].price)})`);
+}
+
+/* ---------- 16. and when it refuses to say ----------------------------
+   The refusals are the point. Two prices give one interval, which is an
+   anecdote rather than a rate. Anything it cannot support honestly comes
+   back null and the caller falls back to the flat limit. */
+{
+  const pi = (id, date, price) => ({ id, date, supplierId: 'S1', voided: false,
+    items: [{ productId: 'P1', variantIdx: null, price, qty: 1 }] });
+
+  reset();
+  eq(scope.learnedStaleDays('P1', null, 'S1'), null, 'no invoices at all teaches nothing');
+
+  data.purchaseInvoices = [pi(1, '2026-01-01', 10000)];
+  eq(scope.learnedStaleDays('P1', null, 'S1'), null, 'one price is not a rate');
+
+  data.purchaseInvoices.push(pi(2, '2026-03-01', 11000));
+  eq(scope.learnedStaleDays('P1', null, 'S1'), null, 'two prices are one interval — an anecdote, not a rate');
+
+  data.purchaseInvoices.push(pi(3, '2026-05-01', 12000));
+  eq(scope.learnedStaleDays('P1', null, 'S1'), null, 'three still falls short of the three intervals it asks for');
+
+  data.purchaseInvoices.push(pi(4, '2026-07-01', 13000));
+  t.check(scope.learnedStaleDays('P1', null, 'S1') !== null,
+    'four dated prices spanning half a year is the least it will speak on');
+
+  /* Four observations crammed into one week describe that week, not the
+     year. Refused on span even though the count is met. */
+  reset();
+  data.purchaseInvoices = [
+    pi(1, '2026-08-01', 10000), pi(2, '2026-08-02', 11000),
+    pi(3, '2026-08-03', 12000), pi(4, '2026-08-05', 13000),
+  ];
+  eq(scope.learnedStaleDays('P1', null, 'S1'), null,
+    'four prices inside five days describe five days, not how the item behaves');
+}
+
+/* ---------- 17. what it says when it does speak ----------------------- */
+{
+  const pi = (id, date, price) => ({ id, date, supplierId: 'S1', voided: false,
+    items: [{ productId: 'P1', variantIdx: null, price, qty: 1 }] });
+  const learn = (rows) => { reset(); data.purchaseInvoices = rows; return scope.learnedStaleDays('P1', null, 'S1'); };
+
+  /* A price that climbs 10% every 60 days drifts the 5% that counts as
+     "moved" in about 30. */
+  const fast = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-03-02', 11000),
+    pi(3, '2026-05-01', 12100), pi(4, '2026-06-30', 13310)]);
+  t.check(fast >= 25 && fast <= 35, `a price climbing 10% every two months is trusted about a month (${fast})`);
+
+  /* One that has not moved at all across the same span earns the longest
+     interval rather than an infinite one. */
+  const flat = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-03-01', 10000),
+    pi(3, '2026-05-01', 10000), pi(4, '2026-07-01', 10000)]);
+  eq(flat, 365, 'a price that has never moved is trusted for a year, not for ever');
+
+  /* Clamped at both ends. A wildly jumping price must not demand
+     checking every other day. */
+  const wild = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-02-01', 20000),
+    pi(3, '2026-03-01', 10000), pi(4, '2026-04-01', 20000)]);
+  t.check(wild >= 14, `even a violently moving price is not chased more often than a fortnight (${wild})`);
+  t.check(wild <= 365, 'and nothing exceeds a year');
+
+  /* THE MEDIAN, not the mean: one mistyped invoice must not set the pace
+     for the item. Three quiet intervals and one absurd one. */
+  const withTypo = learn([pi(1, '2026-01-01', 10000), pi(2, '2026-03-01', 10000),
+    pi(3, '2026-05-01', 10000), pi(4, '2026-07-01', 10000), pi(5, '2026-07-20', 900000)]);
+  t.check(withTypo >= 200,
+    `one absurd invoice among four quiet ones does not drag the whole item to a fortnight (${withTypo})`);
+}
+
+/* ---------- 18. the row uses its own limit ---------------------------- */
+{
+  const pi = (id, date, price) => ({ id, date, supplierId: 'S1', voided: false,
+    items: [{ productId: 'P1', variantIdx: null, price, qty: 1 }] });
+  reset();
+  data.products = [{ id: 'P1', name: 'Cement' }];
+  // Climbs fast, so its own limit is far shorter than the shop's 90.
+  data.purchaseInvoices = [pi(1, '2026-01-01', 10000), pi(2, '2026-03-02', 11000),
+    pi(3, '2026-05-01', 12100), pi(4, '2026-06-30', 13310)];
+  data.prices = [price(1, { productId: 'P1', supplierId: 'S1', date: '2026-06-20' })]; // 56 days
+  sold('P1', 50, '2026-08-01');
+
+  const f = scope.priceReviewFacts(data.prices[0]);
+  t.check(f.learnedLimit !== null && f.limit === f.learnedLimit,
+    `the row carries the limit its own invoices support (${f.limit})`);
+  t.check(f.limit < scope.priceReviewStaleDays(), 'which here is shorter than the shop-wide one');
+  t.check(scope.priceNeedsReview(f),
+    'so a 56-day-old price on a fast-moving item IS chased, where the flat 90 would have left it');
+  t.check(f.reasons.some((r) => /moves every/.test(r)),
+    `and the row says why it was judged on a different number (${f.reasons.join(' · ')})`);
+
+  // A row with no history falls back, and says nothing about moving.
+  data.purchaseInvoices = [];
+  const bare = scope.priceReviewFacts(data.prices[0]);
+  eq(bare.learnedLimit, null, 'with no history there is nothing to learn');
+  eq(bare.limit, scope.priceReviewStaleDays(), 'so the shop-wide limit applies');
+  t.check(!bare.reasons.some((r) => /moves every/.test(r)),
+    'and no claim is made about how fast it moves');
+  t.check(!scope.priceNeedsReview(bare), 'a 56-day-old price is not stale at the flat 90');
+
+  // priceStaleDaysFor answers the same question on its own.
+  eq(scope.priceStaleDaysFor(data.prices[0]), scope.priceReviewStaleDays(),
+    'the helper falls back too');
+  eq(scope.priceStaleDaysFor(null), scope.priceReviewStaleDays(),
+    'and a missing row gets the default rather than throwing');
+}
+
+/* ---------- 19. one source, and why not the other two ------------------ */
+{
+  const fn = (/function priceObservations[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/data\.purchaseInvoices/.test(fn), 'the history is read from the purchase invoices');
+  t.check(!/stockLog/.test(fn),
+    'and NOT the stock log, whose cost and supplierId are stamped in memory and never persisted');
+  t.check(!/receipts/.test(fn),
+    'nor the receipts, which become purchase invoice lines too and would double every order-derived price');
+
+  /* The stock log's two dead fields, pinned so nobody builds on them
+     again believing they survive. They are written by applyStockDelta,
+     mapped by neither side of the sync, and the columns do not exist. */
+  const push = (/data\.stockLog\.push\(\{[\s\S]*?\}\);/.exec(code) || [''])[0];
+  t.check(/cost:/.test(push) && /supplierId:/.test(push),
+    'applyStockDelta does stamp a cost and a supplier onto the entry');
+  const load = (/stockLog: \(stockLogR\.data\|\|\[\]\)\.map[\s\S]*?\)\),/.exec(code) || [''])[0];
+  const save = (/stockLog: d\.stockLog\.map[\s\S]*?\}\)\),/.exec(code) || [''])[0];
+  t.check(!/cost/.test(load) && !/cost/.test(save),
+    'but neither side of the sync carries it, so it does not survive a reload — which is why it is not the source here');
+}
+
+/* ---------- 20. both settings are reachable ---------------------------
+   The sustainable numbers are not known yet, which is exactly why they
+   are settings and why the report says what was really achieved. */
+{
+  t.check(/id="preset_price_stale_days"/.test(src) && /id="preset_price_review_target"/.test(src),
+    'both settings have a field in Presets');
+  const fn = extractFunction(src, 'renderPresetPriceReview', 'index.html');
+  t.check(/data\.presetPriceReview\[key\] = Math\.max\(0, Number\(el\.value\)\|\|0\);/.test(fn),
+    'and are saved off the box');
+  t.check(/renderPresetPriceReview\(\);/.test(code), 'drawn with the rest of the presets');
+  /* Blank means "use the default", which is why zero is stored happily
+     and the READERS fall back rather than obeying it -- a shop that
+     cleared the box must not end up with a limit of nothing. */
+  data.presetPriceReview = { staleDays: 0, targetPerPeriod: 0 };
+  eq(scope.priceReviewStaleDays(), 90, 'a cleared limit falls back to the default');
+  eq(scope.priceReviewTarget(), 20, 'and so does a cleared target');
+  data.presetPriceReview = {};
+
+  // Changing either one changes what the report says, so it is redrawn.
+  t.check(/renderDashPriceReview\(\);/.test(fn),
+    'and the dashboard is rebuilt, rather than going on reporting against the old numbers');
 }
 
 process.exit(t.done() ? 1 : 0);

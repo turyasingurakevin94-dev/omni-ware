@@ -7921,6 +7921,17 @@
                 <p>If an order sits in one of these steps on the Order Tracking board longer than its limit, its card gets a blinking warning flag. Leave a step blank or 0 to turn its warning off.</p>
               </header>
               <div class="form-grid pset-fields" id="presetOrderLimitsWrap"></div>
+
+              <section class="pset-group">
+                <h4>Price checking</h4>
+                <p class="pset-note">The registry refreshes itself only where the shop is busy — quoting an item, restocking it, receiving it — so anything you do not trade regularly is never questioned again. These two settings drive the Prices To Check report on the dashboard. Where an item has enough dated purchase invoices to show how fast its own price moves, that is used instead of the limit below; where it has not, the limit below applies.</p>
+                <div class="form-grid pset-fields">
+                  <div class="field"><label>Trust a price for (days)</label>
+                    <input type="number" id="preset_price_stale_days" min="1" step="1" placeholder="e.g. 90"></div>
+                  <div class="field"><label>Prices to check each month</label>
+                    <input type="number" id="preset_price_review_target" min="1" step="1" placeholder="e.g. 20"></div>
+                </div>
+              </section>
             </div>
 
             <div class="preset-pane" id="ppane-shop-identity" style="display:none;">
@@ -31922,6 +31933,112 @@ function priceReviewStaleDays(){
   const set = data.presetPriceReview && Number(data.presetPriceReview.staleDays);
   return set > 0 ? set : PRICE_STALE_DAYS;
 }
+
+/* ---- HOW FAST THIS ITEM'S PRICE ACTUALLY MOVES ---------------------
+
+   One flat limit over-flags a door handle and under-flags cement, and
+   that noise is what makes people stop reading the warning. Nobody has
+   to guess the number per item, though: the shop has been billed for
+   these things, on dated invoices, at whatever the price was that day.
+
+   FROM THE PURCHASE INVOICES, and from nothing else. The same
+   single-source rule the customer statement and the supplier statement
+   already follow. Three records look like price history and two of them
+   are the same events counted again:
+
+     stock log     applyStockDelta stamps cost and supplierId onto the
+                   entry, and NEITHER IS PERSISTED -- the columns do not
+                   exist on stock_log and the sync maps neither, so every
+                   restock reads back with a null cost. Checked on the
+                   live shop: 21 restock rows, none carrying a price.
+     receipts      real and persisted, but a received line becomes a
+                   purchase invoice line too, so counting both would
+                   double every order-derived observation and inflate
+                   the confidence this is about to measure.
+
+   A purchase invoice is also the honest artefact: it is what the shop
+   was BILLED, which is the number that was really agreed. */
+const PRICE_DRIFT_TARGET = 0.05;        // "materially moved" = 5%
+const PRICE_LEARN_MIN_INTERVALS = 3;    // so, four dated prices
+const PRICE_LEARN_MIN_SPAN_DAYS = 30;
+const PRICE_LEARN_MIN_DAYS = 14;
+const PRICE_LEARN_MAX_DAYS = 365;
+
+function priceObservations(productId, variantIdx, supplierId){
+  const want = variantIdx == null ? null : Number(variantIdx);
+  const byDate = new Map();
+  (data.purchaseInvoices||[])
+    .filter(pi=> !pi.voided && String(pi.supplierId) === String(supplierId) && pi.date)
+    .forEach(pi=> (pi.items||[]).forEach(it=>{
+      if(it.productId !== productId) return;
+      const got = it.variantIdx == null ? null : Number(it.variantIdx);
+      if(got !== want) return;
+      const price = Number(it.price)||0;
+      const qty = Number(it.qty)||0;
+      if(!(price > 0) || !(qty > 0)) return;
+      /* Two invoices to one supplier on one day is a spread, not a
+         change over time -- and it happens here: PINV-0088 and
+         PINV-0089 were both raised on 13 August. Collapsed to one
+         observation weighted by quantity, so 49 units at 135,000 is not
+         out-voted by 2 units at 85,000. */
+      const prev = byDate.get(pi.date) || { qty: 0, total: 0 };
+      byDate.set(pi.date, { qty: prev.qty + qty, total: prev.total + price * qty });
+    }));
+  return [...byDate.entries()]
+    .map(([date, v])=> ({ date, price: v.total / v.qty }))
+    .sort((a,b)=> a.date.localeCompare(b.date));
+}
+
+/* How long this price can be trusted, learned -- or null when the shop
+   cannot honestly say.
+
+   REFUSES far more often than it answers, and that is the point. Two
+   prices give one interval, which is an anecdote rather than a rate;
+   four observations spanning a month is the least that can support a
+   claim about how fast something moves. Below that it returns null and
+   the caller falls back to the flat limit, so the answer is never
+   dressed up as more than it is.
+
+   The MEDIAN rate, not the mean: one mistyped invoice would otherwise
+   set the pace for the whole item.
+
+   A price that has genuinely held across the window it can see earns
+   the longest interval rather than an infinite one. Note the bias this
+   carries and why it is acceptable: the shop only observes prices it
+   actually paid, so a supplier who put a price up and lost the business
+   leaves no record of the rise. Those items stop being bought, which
+   means they stop having demand, which means the review already leaves
+   them out. */
+function learnedStaleDays(productId, variantIdx, supplierId){
+  const obs = priceObservations(productId, variantIdx, supplierId);
+  if(obs.length < PRICE_LEARN_MIN_INTERVALS + 1) return null;
+  const span = daysBetweenISO(obs[0].date, obs[obs.length-1].date);
+  if(!(span >= PRICE_LEARN_MIN_SPAN_DAYS)) return null;
+
+  const rates = [];
+  for(let i=1; i<obs.length; i++){
+    const days = daysBetweenISO(obs[i-1].date, obs[i].date);
+    if(!(days > 0)) continue;
+    const from = obs[i-1].price;
+    if(!(from > 0)) continue;
+    rates.push(Math.abs(obs[i].price - from) / from / days);
+  }
+  if(rates.length < PRICE_LEARN_MIN_INTERVALS) return null;
+  rates.sort((a,b)=> a-b);
+  const mid = Math.floor(rates.length/2);
+  const rate = rates.length % 2 ? rates[mid] : (rates[mid-1] + rates[mid]) / 2;
+  if(!(rate > 0)) return PRICE_LEARN_MAX_DAYS;
+  return Math.max(PRICE_LEARN_MIN_DAYS,
+    Math.min(PRICE_LEARN_MAX_DAYS, Math.round(PRICE_DRIFT_TARGET / rate)));
+}
+
+// This row's own limit: what its history supports, or the shop-wide one
+// where there is not enough history to say.
+function priceStaleDaysFor(r){
+  const learned = r ? learnedStaleDays(r.productId,
+    r.variantIdx == null ? null : r.variantIdx, r.supplierId) : null;
+  return learned == null ? priceReviewStaleDays() : learned;
+}
 // The month a round belongs to. Derived from the date, never stored:
 // there is no round object to raise, so there is nothing to raise twice.
 function priceReviewPeriod(){ return todayISO().slice(0,7); }
@@ -31966,7 +32083,9 @@ function priceReviewFacts(r){
   const demand = priceReviewDemand(r.productId, variantIdx);
   const stock = getStockQty(r.productId, variantIdx);
   const ageDays = priceAgeDays(r.date);
-  const limit = priceReviewStaleDays();
+  // This row's own, where its invoices support one -- see priceStaleDaysFor.
+  const learned = learnedStaleDays(r.productId, variantIdx, r.supplierId);
+  const limit = learned == null ? priceReviewStaleDays() : learned;
   const peers = productPriceRows(r.productId, variantIdx);
   const ranked = rankedPriceRows(r.productId, variantIdx);
   const isWinner = !!(ranked.length && ranked[0].supplierId === r.supplierId);
@@ -31988,9 +32107,14 @@ function priceReviewFacts(r){
   if(isWinner) reasons.push('currently the cheapest');
   if(singleSource) reasons.push('the only supplier');
   reasons.push(ageDays === null ? 'never dated' : `${ageDays} days old`);
+  /* Said out loud when the limit came from this item's own invoices
+     rather than the shop-wide default, because otherwise a row flagged
+     at 40 days beside one left alone at 80 looks like a fault. */
+  if(learned != null) reasons.push(`this one moves every ~${learned} days`);
 
   return {
     row: r, ageDays, overdueBy, demand, stock, isWinner, singleSource,
+    limit, learnedLimit: learned,
     unit, volume, moneyAtRisk, reasons,
     /* A wrong WINNER misprices quotes and sends the buying list to the
        wrong door; a wrong loser costs nothing until it wins. A single
@@ -32010,7 +32134,9 @@ function priceReviewFacts(r){
    Leaving those in is how a review list becomes six hundred rows and
    stops being read. */
 function priceNeedsReview(f){
-  const past = f.ageDays === null || f.ageDays > priceReviewStaleDays();
+  // f.limit, not the shop-wide figure: a row whose own invoices say it
+  // moves every three weeks is stale at three weeks.
+  const past = f.ageDays === null || f.ageDays > f.limit;
   return past && f.volume > 0;
 }
 function priceReviewCandidates(){
@@ -35542,6 +35668,7 @@ function renderPresets(){
   renderPresetExpenseCats();
   refreshPresetDatalists();
   renderPresetOrderLimits();
+  renderPresetPriceReview();
   renderPresetAgentDiscounts();
   // Last, so the rail can only ever say what the panes have just drawn.
   // Every add and every delete routes through here, so the counts cannot
@@ -35593,6 +35720,30 @@ function renderPresetOrderLimits(){
       toast('Order tracking limits updated');
     });
   });
+}
+/* The review's two settings. Blank means "use the default", which is why
+   a zero or an empty box is not stored as a limit of nothing -- see
+   priceReviewTarget and priceReviewStaleDays, both of which fall back
+   rather than obey a zero. */
+function renderPresetPriceReview(){
+  const p = data.presetPriceReview || {};
+  const stale = document.getElementById('preset_price_stale_days');
+  const target = document.getElementById('preset_price_review_target');
+  if(!stale || !target) return;
+  stale.value = p.staleDays || '';
+  target.value = p.targetPerPeriod || '';
+  const save = (key, el)=> el.addEventListener('change', ()=>{
+    if(!data.presetPriceReview) data.presetPriceReview = {};
+    data.presetPriceReview[key] = Math.max(0, Number(el.value)||0);
+    saveData();
+    // The dashboard is built off both of these, so it must not go on
+    // reporting against the old ones.
+    if(document.getElementById('tab-dashboard')
+      && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+    toast('Price checking updated');
+  });
+  save('staleDays', stale);
+  save('targetPerPeriod', target);
 }
 document.getElementById('preset_cat_add').addEventListener('click', ()=>{
   const input = document.getElementById('preset_cat_new');
