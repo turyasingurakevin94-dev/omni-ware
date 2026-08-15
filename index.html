@@ -8699,6 +8699,32 @@
             <label>Notes</label>
             <textarea id="sl_notes" rows="2" placeholder="Specs, brand, dimensions, anything the client said"></textarea>
           </div>
+          <!-- Most of what walks into this shop is described by a picture
+               rather than by a name: somebody sends a photo of a hinge
+               and asks whether it can be got. "makitah" typed in a box is
+               not that photo, and the person researching it a week later
+               is working from the word.
+
+               The library's own picker, the same one the product form
+               uses -- so a photo added here is de-duplicated against
+               every other photo the shop holds, and is the photo the
+               product keeps when this graduates. -->
+          <label class="sf-rung-label">What it looks like</label>
+          <div class="img-upload">
+            <img id="sl_image_preview" class="img-upload-preview" style="display:none;" alt="Photo of the item being sourced">
+            <div id="sl_image_placeholder" class="img-upload-placeholder">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+            </div>
+            <div class="img-upload-controls">
+              <div class="img-upload-btns">
+                <button type="button" class="btn btn-ghost btn-icon sf-add-ask" id="sl_image_btn">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M4 16l4.5-4.5a2 2 0 0 1 2.8 0L16 16M14 14l1.5-1.5a2 2 0 0 1 2.8 0L21 16M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+                  Choose photo</button>
+                <button type="button" class="btn btn-ghost sf-add-ask" id="sl_image_remove" style="display:none;">Remove</button>
+              </div>
+              <span class="img-upload-hint">A photo of what was asked for. It becomes the product's photo when this is added to what you sell.</span>
+            </div>
+          </div>
           <!-- Most of what this shop sells comes in sizes, so the item
                being researched is usually a list. Written here because
                the first person to ask usually names one, and it grows as
@@ -9895,12 +9921,19 @@ function mediaUsageIndex(){
     (p.variants||[]).forEach(v=> add(v.image, 'variant', `${p.name} — ${variantLabel(v.combo||{})}`));
   });
   (data.presetCategories||[]).forEach(c=> add(c.image, 'category', c.name));
+  /* A lead being researched holds a photo just as a product does, and
+     this index is what stops the library deleting one out from under
+     whatever is pointing at it. Left out, the photo of the thing being
+     sourced would read as "used nowhere" and could be deleted while the
+     lead still showed it. */
+  (data.sourcingLeads||[]).forEach(l=> add(l.image, 'sourcing', l.name));
   return idx;
 }
 function mediaUsage(url){ return mediaUsageIndex().get(url) || []; }
 function mediaUserLabel(u){
   return u.kind==='product' ? `Product — ${u.name}`
     : u.kind==='variant' ? `Variant — ${u.name}`
+    : u.kind==='sourcing' ? `Being sourced — ${u.name}`
     : `Category default — ${u.name}`;
 }
 
@@ -10364,7 +10397,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -10373,7 +10406,8 @@ async function loadData(shopId){
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
-    sb.from('sourcing_leads').select('variant_attrs').limit(1)
+    sb.from('sourcing_leads').select('variant_attrs').limit(1),
+    sb.from('sourcing_leads').select('image').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -10392,6 +10426,10 @@ async function loadData(shopId){
      re-probed by the 30-second refresh, so it starts persisting on its
      own within half a minute of 0073 landing. */
   sourcingVariantColumn = !(variantColR && variantColR.error);
+  /* 0074, probed on its own rather than folded into the one above. The
+     two migrations are applied by hand and can land in either order, so
+     one column being absent must not stop the other being written. */
+  sourcingImageColumn = !(imageColR && imageColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
 
@@ -10563,6 +10601,9 @@ async function loadData(shopId){
       graduatedAt:r.graduated_at, createdAt:r.created_at,
       stageEnteredAt: r.stage_entered_at==null ? null : Number(r.stage_entered_at),
       requests: Array.isArray(r.requests) ? r.requests : [],
+      // Absent until 0074 lands, which reads as no photo rather than as
+      // an error -- the same tolerance every newer column here gets.
+      image: r.image || null,
       variantAttrs: Array.isArray(r.variant_attrs) ? r.variant_attrs : [],
       candidates: Array.isArray(r.candidates) ? r.candidates : [],
       voided: !!r.voided, droppedReason:r.dropped_reason||'', droppedAt:r.dropped_at,
@@ -10634,6 +10675,7 @@ async function loadData(shopId){
 let lastSynced = {};
 // Set by loadData: see the probe there for why a write cannot assume it.
 let sourcingVariantColumn = false;
+let sourcingImageColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -10774,6 +10816,7 @@ function buildSyncRows(d, shopId){
       stage_entered_at: l.stageEnteredAt==null ? null : Number(l.stageEnteredAt),
       requests: l.requests||[], candidates: l.candidates||[],
       ...(sourcingVariantColumn ? {variant_attrs: l.variantAttrs||[]} : {}),
+      ...(sourcingImageColumn ? {image: l.image||null} : {}),
       voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
     })),
     waPosts: (d.waPosts||[]).map(w=>({
@@ -40032,7 +40075,7 @@ function captureSourcingLead(req){
     createdAt: new Date().toISOString(),
     stageEnteredAt: Date.now(),
     productId: null, graduatedAt: null,
-    requests: [ask], candidates: [], variantAttrs: [],
+    requests: [ask], candidates: [], variantAttrs: [], image: null,
   };
   sourcingLeadsAll().push(lead);
   return {lead, isNew: true, wasDropped: false};
@@ -40321,7 +40364,10 @@ async function graduateSourcingLead(leadId, form){
     id: productId, name, type: attrs.length ? 'variable' : 'simple',
     category: String((form && form.category) || '').trim(),
     subcategory: String((form && form.subcategory) || '').trim(),
-    notes: lead.notes || '', shortDescription: '', image: null,
+    /* The photo the research was done against IS the product's photo.
+       Finding the same picture again for a product that already had one
+       is work nobody should have to do twice. */
+    notes: lead.notes || '', shortDescription: '', image: lead.image || null,
     wholesaleMarkupType: 'percent', wholesaleMarkupValue: 0,
     retailMarkupType: 'percent', retailMarkupValue: 0,
     agentDiscountWholesalePct: null, agentDiscountRetailPct: null,
@@ -40803,6 +40849,11 @@ function openSourcingLead(id){
     nameLabel.textContent = 'What is the item';
   }
   document.getElementById('sl_first_ask').style.display = l ? 'none' : '';
+  /* An existing lead's photo is put up by renderSourcingLeadBody; a new
+     one starts blank rather than inheriting whatever the last lead
+     showed, which on a screen that saves as you go would attach one
+     item's photo to the next. */
+  if(!l) setSourcingLeadImage(null);
   // Shown for a NEW lead, where it is the create button; an existing
   // lead's fields save themselves and applySourcingStepView hides it.
   document.getElementById('sl_save').style.display = l ? 'none' : '';
@@ -40837,6 +40888,7 @@ function openSourcingLead(id){
     renderSlVarAttrs();
   } else {
     document.getElementById('sl_notes').value = l.notes || '';
+    setSourcingLeadImage(l.image || null);
     slVarAttrs = leadVariantAttrs(l).map(a=>({name:a.name, values:a.values.join(', ')}));
     renderSlVarAttrs();
     document.getElementById('dl_sourcing_variants').innerHTML =
@@ -41551,6 +41603,11 @@ document.getElementById('sl_save').addEventListener('click', async ()=>{
       qty: document.getElementById('sl_ask_qty').value,
     });
     if(!res) return;
+    /* A photo chosen before the lead existed has nowhere to be written
+       until now -- saveSourcingLeadImage returns early with no lead. So
+       it is carried over here, once there is something to carry it to. */
+    const chosen = currentSourcingLeadImage();
+    if(chosen){ res.lead.image = chosen; saveData(); }
     // Straight into the one that already exists rather than a second card
     // for the same item -- which is exactly how the demand count is lost.
     openSourcingLead(res.lead.id);
@@ -42031,6 +42088,40 @@ document.getElementById('sl_cand_cancel').addEventListener('click', ()=> slCandF
    Close now means close, not "discard what I just typed", which is what
    it quietly meant while these needed a Save button they shared a footer
    with the step's own action. */
+/* Shows the photo, and IS where the lead's image lives while the modal is
+   open -- read back from the img on save rather than kept in a second
+   variable that could disagree with what is on screen. */
+function setSourcingLeadImage(url){
+  const img = document.getElementById('sl_image_preview');
+  const ph = document.getElementById('sl_image_placeholder');
+  const rm = document.getElementById('sl_image_remove');
+  if(url){
+    img.src = url; img.style.display = '';
+    ph.style.display = 'none'; rm.style.display = '';
+  } else {
+    img.removeAttribute('src'); img.style.display = 'none';
+    ph.style.display = ''; rm.style.display = 'none';
+  }
+}
+function currentSourcingLeadImage(){
+  const img = document.getElementById('sl_image_preview');
+  return img.style.display === 'none' ? null : (img.getAttribute('src') || null);
+}
+/* Written straight onto the lead, the way the notes beside it are: an
+   existing lead's fields save themselves as they change, so there is no
+   Save button here for a photo to wait behind. */
+function saveSourcingLeadImage(url){
+  setSourcingLeadImage(url);
+  const l = sourcingLeadById(editingSourcingLeadId);
+  if(!l) return;                       // a brand-new lead saves on "Add it"
+  l.image = url;
+  saveData();
+  renderSourcing();
+}
+document.getElementById('sl_image_btn').addEventListener('click', ()=>{
+  openMediaPicker({ sessionTrack: true, onPick: m=> saveSourcingLeadImage(m.url) });
+});
+document.getElementById('sl_image_remove').addEventListener('click', ()=> saveSourcingLeadImage(null));
 ['sl_name','sl_notes','sl_staff'].forEach(id=>{
   document.getElementById(id).addEventListener('change', ()=>{
     const l = sourcingLeadById(editingSourcingLeadId);

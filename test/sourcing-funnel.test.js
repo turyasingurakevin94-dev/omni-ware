@@ -2082,6 +2082,58 @@ async function main() {
     'and saving a candidate falls back to the linked supplier\'s own phone and place');
 }
 
+/* ---------- 7d3. a photo of the thing being sourced ------------------ */
+{
+  /* Most of what walks into this shop is described by a picture rather
+     than a name -- somebody sends a photo of a hinge and asks whether it
+     can be got. "makitah" typed in a box is not that photo, and whoever
+     researches it a week later is working from the word. */
+  t.check(/<img id="sl_image_preview"/.test(src) && /id="sl_image_btn"/.test(src),
+    'the lead screen can carry a photo of what was asked for');
+  t.check(/openMediaPicker\(\{ sessionTrack: true, onPick: m=> saveSourcingLeadImage\(m\.url\) \}\)/.test(src),
+    'chosen through the library\'s own picker, so it de-duplicates against every photo the shop holds');
+
+  /* The photo the research was done against IS the product's photo. */
+  const grad = extractFunction(src, 'graduateSourcingLead', 'index.html');
+  t.check(/image: lead\.image \|\| null,/.test(grad),
+    'and it becomes the product\'s photo, rather than being found again by hand');
+
+  /* A new lead must not inherit the last one's picture on a screen that
+     saves as you go. */
+  t.check(/if\(!l\) setSourcingLeadImage\(null\);/.test(src),
+    'a new lead starts blank rather than showing the photo of the one before it');
+  /* Chosen before the lead exists, there is nowhere to write it until
+     the lead is created -- so it is carried over at that moment. */
+  t.check(/const chosen = currentSourcingLeadImage\(\);\s*\n\s*if\(chosen\)\{ res\.lead\.image = chosen; saveData\(\); \}/.test(src),
+    'and a photo picked before the item was added is not dropped when it is');
+
+  /* 0074 is applied by hand, so the app has to work before it lands. A
+     missing column reads as no photo, but PostgREST rejects an ENTIRE
+     upsert for one unknown column -- so the field is omitted from the
+     write until the probe says it exists. Confirmed in the running app:
+     with 0073 applied and 0074 not, the probe reads true and false, and
+     the row sent for a lead carries variant_attrs and no image. */
+  t.check(/let sourcingImageColumn = false;/.test(src),
+    'the image column is probed rather than assumed');
+  t.check(/sb\.from\('sourcing_leads'\)\.select\('image'\)\.limit\(1\)/.test(src),
+    'by asking for it');
+  t.check(/sourcingImageColumn = !\(imageColR && imageColR\.error\);/.test(src),
+    'on its own, since 0073 and 0074 can land in either order');
+  t.check(/\.\.\.\(sourcingImageColumn \? \{image: l\.image\|\|null\} : \{\}\),/.test(src),
+    'and it is left out of the write entirely until the column is there');
+  t.check(/image: r\.image \|\| null,/.test(src),
+    'while the read tolerates its absence as "no photo"');
+
+  /* The library's usage index is what stops a photo being deleted out
+     from under whatever points at it. A lead left out would read as
+     "used nowhere". */
+  const usage = extractFunction(src, 'mediaUsageIndex', 'index.html');
+  t.check(/\(data\.sourcingLeads\|\|\[\]\)\.forEach\(l=> add\(l\.image, 'sourcing', l\.name\)\);/.test(usage),
+    'a lead counts as a user of its photo, so the library will not delete it away');
+  t.check(/u\.kind==='sourcing' \? `Being sourced — \$\{u\.name\}`/.test(src),
+    'and says so in words when it refuses');
+}
+
 /* ---------- 7e. the two boards do not wear each other's colours ------ */
 {
   /* They ran the same five hues: purple, amber, blue and green were
