@@ -34372,7 +34372,23 @@ function cbDayPosition(date){
   const rec = getDayRecord(date);
   const accounts = ACCOUNTS.map(a=>{
     const { totalReceipts, totalPayments, totalExpenses } = cbAccountTotals(date, a.key);
-    const opening = Number(rec.opening[a.key]) || 0;
+    /* A stored opening is only trusted once somebody has CONFIRMED it.
+
+       getDayRecord writes an opening the first time a day is opened,
+       carried from the day before -- and at that moment the day before
+       may not have been counted yet. Count it afterwards and come up
+       short, and this record still holds the figure from before the
+       count, with openingSet false to say nobody stood behind it.
+
+       Read unconditionally, the Cash Book then reported the shortfall
+       as money still in the drawer: 430,000 counted yesterday and 20,000
+       taken today read as 520,000 rather than 450,000, and it disagreed
+       with every other figure in the shop, all of which come through
+       cashOnHandFor and which skips an unconfirmed opening for exactly
+       this reason. Recomputed here when unconfirmed, so the two agree. */
+    const carried = rec.openingSet ? null : carriedOpening(date);
+    const opening = carried ? (Number(carried.values[a.key]) || 0)
+      : (Number(rec.opening[a.key]) || 0);
     const out = totalPayments + totalExpenses;
     const closing = opening + totalReceipts - out;
     const raw = rec.actual ? rec.actual[a.key] : null;

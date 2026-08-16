@@ -230,4 +230,91 @@ const reset = () => { data.cashDays = {}; data.cashTxns = []; };
     'and an account that did nothing says so in words');
 }
 
+/* ---------- the book and the rest of the shop agree ------------------
+ * "The arithmetic is computed once" is this file's own principle, and
+ * there was one place it did not hold. The Cash Book derives a day's
+ * closing balance from that day's stored opening; EVERY OTHER figure in
+ * the shop -- the till picker, the cash-to-buy hint, the day report --
+ * goes through cashOnHandFor, which anchors on the last confirmed
+ * opening or count and adds the transactions since.
+ *
+ * They agreed on the ordinary cases and parted on one: a day whose
+ * opening was never confirmed. getDayRecord writes an opening the first
+ * time a day is opened, carried from the day before -- and the day
+ * before may not have been counted yet. Count it afterwards and find it
+ * short, and the stored figure is stale while openingSet stays false to
+ * say nobody stood behind it.
+ *
+ * Read unconditionally, the Cash Book reported the shortfall as money
+ * still in the drawer.
+ */
+{
+  const both = compileScope([
+    extractDeclaration(src, 'ACCOUNTS', 'index.html'),
+    extractFunction(src, 'cashIsMoneyIn', 'index.html'),
+    extractFunction(src, 'cashIsMoneyOut', 'index.html'),
+    extractFunction(src, 'cashOnHandFor', 'index.html'),
+    extractFunction(src, 'cashAnchorFor', 'index.html'),
+    extractFunction(src, 'cbAccountTotals', 'index.html'),
+    extractFunction(src, 'cbDayPosition', 'index.html'),
+    extractFunction(src, 'getDayRecord', 'index.html'),
+    extractFunction(src, 'carriedOpening', 'index.html'),
+    extractFunction(src, 'cbClosingFor', 'index.html'),
+    extractFunction(src, 'previousCashDate', 'index.html'),
+  ], { data, todayISO: () => TODAY }, ['cbDayPosition', 'cashOnHandFor']);
+
+  const agree = (label) => {
+    const pos = both.cbDayPosition(TODAY);
+    pos.accounts.forEach((a) => {
+      const viaBook = Math.round(a.closing);
+      const viaShop = Math.round(both.cashOnHandFor(a.key));
+      t.check(viaBook === viaShop,
+        `${label} — ${a.key}: the book says ${viaBook}, the rest of the shop says ${viaShop}`);
+    });
+  };
+
+  reset();
+  openDay({ cash: 500000, momo: 0, bank: 0 });
+  data.cashTxns = [tx(1, '09:00', 'cash', 'receipt', 200000), tx(2, '10:00', 'cash', 'payment', 50000)];
+  agree('an ordinary day');
+
+  /* THE CASE THAT PARTED THEM. Yesterday's book said 600,000 and the
+     count found 430,000; today was opened before that count, so it
+     still holds 500,000 and nobody has confirmed it. Only the count is
+     evidence of what is actually there. */
+  reset();
+  data.cashDays = {
+    '2026-08-03': { opening: { cash: 500000, momo: 0, bank: 0 },
+      actual: { cash: 430000, momo: null, bank: null }, openingSet: true },
+    [TODAY]: { opening: { cash: 500000, momo: 0, bank: 0 },
+      actual: { cash: null, momo: null, bank: null }, openingSet: false },
+  };
+  data.cashTxns = [
+    { id: 1, date: '2026-08-03', time: '09:00', account: 'cash', type: 'receipt', category: 'X', amount: 100000, description: '' },
+    tx(2, '09:00', 'cash', 'receipt', 20000),
+  ];
+  agree('a day opened before the day before it was counted');
+  eq(Math.round(both.cbDayPosition(TODAY).accounts[0].closing), 450000,
+    'and it takes the COUNT as the starting point, not the figure that predates it');
+
+  // A confirmed opening is the shop's own word and is left alone, even
+  // where it disagrees with what came before.
+  reset();
+  data.cashDays = {
+    '2026-08-03': { opening: { cash: 500000, momo: 0, bank: 0 },
+      actual: { cash: 430000, momo: null, bank: null }, openingSet: true },
+    [TODAY]: { opening: { cash: 500000, momo: 0, bank: 0 },
+      actual: { cash: null, momo: null, bank: null }, openingSet: true },
+  };
+  data.cashTxns = [tx(2, '09:00', 'cash', 'receipt', 20000)];
+  eq(Math.round(both.cbDayPosition(TODAY).accounts[0].closing), 520000,
+    'a CONFIRMED opening stands, because somebody said that is what was there');
+  agree('a confirmed opening');
+
+  // Nothing on file at all is zero everywhere, not a crash.
+  reset();
+  data.cashTxns = [tx(1, '09:00', 'bank', 'receipt', 780000)];
+  agree('transactions with no day record at all');
+}
+
 process.exit(t.done() ? 1 : 0);
