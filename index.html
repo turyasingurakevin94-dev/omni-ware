@@ -42478,10 +42478,33 @@ function followUpSinceMs(f){
   const t = iso ? new Date(iso).getTime() : NaN;
   return isNaN(t) ? 0 : t;
 }
+/* The price this client would actually be quoted -- which is not the
+   retail one.
+
+   The basis is chosen by quantity against pack size, exactly as
+   quoteItemSellPrice chooses it. This function hard-coded 'retail', which
+   is the same mistake quoteItemSellPrice's own comment records having
+   been fixed there: a shop with a wholesale markup on file never saw it
+   applied, so somebody buying by the carton was told the by-the-piece
+   figure and every "price moved" was measured against a price they would
+   never have been charged.
+
+   Null where no markup yields a selling price, and deliberately NOT
+   falling back to the buy price the way quoteItemSellPrice does. That
+   fallback is right on a quote, where a human is looking at the line and
+   can see what it cost; here the number goes straight out to the client
+   in a message, and quoting them our own cost is far worse than saying
+   nothing about the price at all. */
 function followUpPriceNow(f){
   const s = followUpSubject(f);
   if(s.kind !== 'product' || !s.product) return null;
-  const at = catalogueSellAtQty(s.product, s.variantIdx, Number(f.qty) > 0 ? Number(f.qty) : 1, 'retail');
+  const qty = Number(f.qty) > 0 ? Number(f.qty) : 1;
+  const best = rankedPurchaseRowsAtQty(s.product.id, s.variantIdx, qty)
+    .find(r=> r.purchasePrice != null);
+  if(!best) return null;
+  const packQty = Number(best.packQty) || 0;
+  const kind = (packQty > 0 && qty >= packQty) ? 'wholesale' : 'retail';
+  const at = catalogueSellAtQty(s.product, s.variantIdx, qty, kind);
   return at && at.price != null ? Math.round(at.price) : null;
 }
 

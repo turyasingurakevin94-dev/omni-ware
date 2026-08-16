@@ -65,7 +65,13 @@ const scope = compileScope([
   stockKey: (pid, idx) => pid + '::' + (idx == null ? '' : idx),
   getStockQty: (pid, idx) => Number(data.stock[pid + '::' + (idx == null ? '' : idx)]) || 0,
   productDisplayLabel: (p, idx) => p.name + (idx == null ? '' : ' ' + idx),
-  catalogueSellAtQty: () => (data.__sellPrice == null ? null : { price: data.__sellPrice }),
+  // Records which basis it was asked for, so section 3b can check that
+  // the choice is made the way a quote makes it.
+  catalogueSellAtQty: (p, idx, qty, basis) => {
+    data.__basisAsked = basis;
+    return data.__sellPrice == null ? null : { price: data.__sellPrice };
+  },
+  rankedPurchaseRowsAtQty: () => (data.__purchaseRows || [{ purchasePrice: 1000, packQty: 0 }]),
   sourcingLeadById: (id) => (data.sourcingLeads || []).find((l) => l.id === id) || null,
   contactPhones: (c) => [c && c.phone, c && c.phone2].map((x) => String(x || '').trim()).filter(Boolean),
   waComposeUrl: (phone, msg) => `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,
@@ -212,6 +218,47 @@ const stockMove = (before, after, whenDays) => {
   data.__sellPrice = 42000;
   t.check(!scope.followUpPriceMoved(f),
     'the baseline is the MOST RECENT price they were given, not the first');
+}
+
+/* ---------- 3b. the price is the one they would be QUOTED ------------- */
+{
+  /* This hard-coded 'retail'. quoteItemSellPrice -- how the app really
+     prices a line -- chooses by quantity against pack size, and its own
+     comment records that hard-coding 'retail' there was a bug: a shop
+     with a wholesale markup on file never saw it applied. The same
+     mistake here would measure every "price moved" against a figure the
+     client would never have been charged. */
+  reset();
+  data.__sellPrice = 5000;
+  data.__purchaseRows = [{ purchasePrice: 3000, packQty: 12 }];
+
+  const small = fu({ qty: 4 });                 // under a pack
+  scope.followUpPriceNow(small);
+  eq(data.__basisAsked, 'retail', 'a few pieces are priced retail');
+
+  const bulk = fu({ qty: 24 });                 // two packs
+  scope.followUpPriceNow(bulk);
+  eq(data.__basisAsked, 'wholesale',
+    'a carton or more is priced wholesale — the same rule a quote uses, not a hard-coded retail');
+
+  data.__purchaseRows = [{ purchasePrice: 3000, packQty: 0 }];
+  const loose = fu({ qty: 500 });               // no pack size at all
+  scope.followUpPriceNow(loose);
+  eq(data.__basisAsked, 'retail', 'with no pack size there is no wholesale break to reach');
+}
+{
+  // Never the buy price. quoteItemSellPrice falls back to it, which is
+  // right on a quote where a human sees the line -- but this figure goes
+  // straight out to the client in a message.
+  reset();
+  data.__purchaseRows = [{ purchasePrice: 3000, packQty: 0 }];
+  data.__sellPrice = null;                       // no markup yields a price
+  const f = fu({ qty: 1 });
+  eq(scope.followUpPriceNow(f), null,
+    'no markup means no price to quote — and NEVER the buy price, which would send the client our own cost');
+  f.contacts.push({ at: ago(5), priceToldUGX: 4000 });
+  t.check(!scope.followUpPriceMoved(f),
+    'so nothing is reported as having moved either, rather than a move measured against a cost');
 }
 
 /* ---------- 4. gone quiet yields to real news ------------------------- */
