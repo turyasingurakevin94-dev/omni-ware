@@ -72,7 +72,12 @@ t.check(problems.length === 0,
   const admin = read('index.html');
   t.check(!/var\(--accent-deep\)/.test(admin),
     'index.html does not reach for --accent-deep, which only worker.html defines');
-  t.check(/\.sq-assign-btn:hover\{background:var\(--ow-oxide-deep\);\}/.test(admin),
+  // The selector is grouped -- .sq-confirm-btn shares the pill's look while
+  // deliberately NOT sharing its class, because the board wires every
+  // .sq-assign-btn to the assign-staff modal. What is pinned is the
+  // guarantee, not the punctuation: whatever else rides along, the Assign
+  // button itself still hovers to this token.
+  t.check(/\.sq-assign-btn:hover(?:,\s*\.[a-zA-Z0-9_-]+:hover)*\{background:var\(--ow-oxide-deep\);\}/.test(admin),
     'the Assign button hovers to --ow-oxide-deep, the hover every other accent button here uses');
   t.check(/--ow-oxide-deep:#[0-9A-Fa-f]{6};/.test(admin), 'and that one is defined');
 }
@@ -80,7 +85,7 @@ t.check(problems.length === 0,
 /* ---------- and the button still has a background at rest ------------- */
 {
   const admin = read('index.html');
-  const rest = admin.match(/\.sq-assign-btn\{[^}]*background:var\((--[a-zA-Z0-9-]+)\)/);
+  const rest = admin.match(/\.sq-assign-btn(?:,\s*\.[a-zA-Z0-9_-]+)*\{[^}]*background:var\((--[a-zA-Z0-9-]+)\)/);
   t.check(!!rest, 'the resting state paints a background from a token');
   if (rest) {
     t.check(new RegExp(`(?:^|[;{\\s])${rest[1]}\\s*:`, 'm').test(admin),

@@ -101,6 +101,10 @@ const scope = compileScope(SOURCES.concat(['function __setMyStaff(s){ myStaff = 
   // Move feedback (toast + rail pulse + scroll) is DOM work, stubbed
   // as the one collaborator it was extracted to be.
   announceOrderMove: () => {},
+  // Same reason announceOrderMove is stubbed: setSavedQuoteStatus is the
+  // one place a status changes, so the sales-group hand-off fires from
+  // there too. Its own function precisely so this stays one stub.
+  shareOrderToSalesGroup: () => {},
   renderStaff: () => {},
   refreshAdminOrderBoardIfOpen: () => {},
   toast: (m) => { seen.toasts.push(m); },

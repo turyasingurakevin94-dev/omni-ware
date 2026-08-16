@@ -44,6 +44,15 @@ const env = {
   // Move feedback (toast + rail pulse + scroll) is DOM work, stubbed
   // as the one collaborator it was extracted to be.
   announceOrderMove: () => {},
+  // Same reason announceOrderMove is stubbed: setSavedQuoteStatus is the
+  // one place a status changes, so the sales-group hand-off fires from
+  // there too. Its own function precisely so this stays one stub.
+  shareOrderToSalesGroup: () => {},
+  // Open, so the gates THIS file is about are the ones being measured. The
+  // draft gate has its own file (order-draft-confirm.test.js), and leaving
+  // it live here would block every move out of Draft before the gate under
+  // test was reached.
+  orderDraftReady: () => true,
   // Both gates divert instead of advancing; recording that is how the tests
   // tell "blocked" apart from "moved".
   promptAgentPrepayment: (q) => { calls.prompted = q.id; },

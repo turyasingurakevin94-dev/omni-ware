@@ -63,6 +63,10 @@ const scope = compileScope([
     if (q) q.status = to;
   },
   agentPaymentBlocksPreparing: () => false,
+  // Ditto for the supplier-confirmation gate on leaving Draft. true is also
+  // what the real one answers for these fixtures -- no line here names a
+  // supplier, so there is nobody to confirm with.
+  orderDraftReady: () => true,
   promptAgentPrepayment: () => {},
   openAssignStaffModal: () => { seen.assignPrompted = true; },
   toast: () => {},

@@ -4852,7 +4852,12 @@
      looked like the ones already being worked on. */
   .sq-unassigned .icon{width:14px;height:14px;flex-shrink:0;color:var(--warn-ink);}
   .sq-unassigned .sq-assignee-name{color:var(--warn-ink);}
-  .sq-assign-btn{
+  /* .sq-confirm-btn rides along for the look and is kept OUT of the
+     .sq-assign-btn class on purpose: the board wires every
+     .sq-assign-btn to the assign-staff modal, so sharing the class would
+     have made the confirm pill open a staff picker. Shared here, separate
+     there. */
+  .sq-assign-btn, .sq-confirm-btn{
     all:unset;box-sizing:border-box;cursor:pointer;margin-left:auto;position:relative;
     font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
     background:var(--accent);color:#fff;
@@ -4861,14 +4866,39 @@
      so it is tapped on phones. A min-height would put a 44px pill in a dense
      card row; an invisible ring gives the finger the same 44px without
      changing what the eye sees. */
-  .sq-assign-btn::after{content:"";position:absolute;inset:-13px -6px;}
+  .sq-assign-btn::after, .sq-confirm-btn::after{content:"";position:absolute;inset:-13px -6px;}
   /* --ow-oxide-deep, the hover every other accent button in this file uses.
      It was --accent-deep, which only worker.html defines: an undefined
      custom property with no fallback makes the whole declaration invalid at
      computed-value time, so background fell back to transparent and white
      text on a white card meant the button vanished under the cursor. */
-  .sq-assign-btn:hover{background:var(--ow-oxide-deep);}
-  .sq-assign-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .sq-assign-btn:hover, .sq-confirm-btn:hover{background:var(--ow-oxide-deep);}
+  .sq-assign-btn:focus-visible, .sq-confirm-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* ---- Supplier confirmation panel ---- */
+  .sc-row{
+    border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px;
+    background:var(--panel);
+  }
+  .sc-row.orphan{border-style:dashed;}
+  .sc-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+  .sc-head b{font-size:13.5px;}
+  .sc-pill{
+    margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+    padding:2px 9px;border-radius:999px;
+    background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;
+  }
+  .sc-pill.good{background:var(--good-bg);color:var(--good);}
+  .sc-pill.bad{background:var(--ow-crimson-soft);color:var(--danger);}
+  .sc-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
+  .sc-line{
+    display:flex;justify-content:space-between;gap:12px;
+    font-size:12px;color:var(--ink-soft);padding:2px 0;
+  }
+  .sc-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sc-note{font-size:11.5px;color:var(--ink-soft);margin-top:6px;font-style:italic;}
+  .sc-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+  .sc-acts .btn{font-size:12px;padding:5px 11px;}
   /* A short pick is the one thing on this card that needs a decision
      rather than a glance, so it is a button and not another meta row --
      the flag and the way to settle it are the same object. Amber for the
@@ -9365,6 +9395,27 @@
   </div>
 </div>
 
+<!-- SUPPLIER CONFIRMATION MODAL — the gate between a saved quote and the
+     sales group. One row per supplier on the order: ask them, then record
+     what they said. -->
+<div class="modal-overlay" id="supplierConfirmModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2>Confirm with suppliers</h2>
+      <button class="modal-close" id="supplierConfirmClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint" id="supplierConfirmHint"></p>
+      <div id="supplierConfirmList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="supplierConfirmDone">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- CUSTOMER DEBT ADJUSTMENT MODAL -->
 <div class="modal-overlay" id="customerDebtModal">
   <div class="modal modal-wide">
@@ -11110,6 +11161,13 @@ function buildSyncRows(d, shopId){
         // merging onto the server row leaves whatever was decided here
         // alone rather than reverting it from its own stale snapshot.
         pickShortfallAckAt:q.pickShortfallAckAt||null,
+        // Which suppliers have come back on a draft, and on what terms.
+        // Admin-owned like pickShortfallAckAt above -- not in
+        // WORKER_OWNED_KEYS (worker.html), so a worker save merging onto
+        // the server row cannot revert a confirmation from its own stale
+        // snapshot. No migration: saved_quotes carries a payload column,
+        // and the loader spreads it back whole.
+        supplierConfirms:q.supplierConfirms||null,
         // Agent-originated orders only -- undefined/absent for a normal
         // order, preserved here rather than dropped so an admin re-saving
         // this quote (advancing its status, editing an item, etc.) never
@@ -19695,21 +19753,21 @@ document.getElementById('q_save_btn').addEventListener('click', async ()=>{
   if(wasUpdate) data.savedQuotes[idx] = record; else data.savedQuotes.push(record);
   syncInvoiceDebtCharge(record);
 
-  // Share the internal (item + qty + supplier Ref) version to the sales
-  // group before the working quote is cleared. WhatsApp group invite links
-  // can't carry pre-filled text (that only works for wa.me/<number> chats),
-  // so the best we can do from a webpage is copy the message to the
-  // clipboard and open the group itself — the user just pastes once inside.
-  const salesGroupMsg = buildSalesGroupQuoteMessage(record.items, record.client);
-  const openGroupAndToast = (copied)=>{
-    window.open(SALES_GROUP_WA_LINK, '_blank');
-    toast((wasUpdate ? 'Quote updated' : 'Quote saved') + (copied ? ' — message copied, paste it in the group' : ' — open the group and paste the quote from Order tracking'), 4000);
-  };
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(salesGroupMsg).then(()=>openGroupAndToast(true)).catch(()=>openGroupAndToast(false));
-  } else {
-    openGroupAndToast(false);
-  }
+  /* Saving no longer tells the sales group.
+
+     It used to, in the same breath -- which said "this is agreed" about
+     an order nobody had checked. The supplier is rung afterwards and has
+     none left, or the price has moved, and by then the group has been
+     told and somebody is working from a figure that was never confirmed.
+
+     The order now waits in Draft until every supplier on it has come
+     back, and shareOrderToSalesGroup fires when it LEAVES Draft. The
+     toast points at the next thing to do rather than announcing a
+     hand-off that has not happened. */
+  const suppliersToAsk = orderSupplierGroups(record).length;
+  toast((wasUpdate ? 'Quote updated' : 'Quote saved') + (suppliersToAsk
+    ? ` — confirm with ${suppliersToAsk} supplier${suppliersToAsk===1?'':'s'} in Order tracking, then move it on`
+    : ' — nothing to confirm, move it on when you are ready'), 4500);
 
   data.quote = {client:{name:'', phone:''}, date: todayISO(), items:[], savedId:null};
   saveData();
@@ -19876,6 +19934,15 @@ function setSavedQuoteStatus(id, status){
     q.pickingStatus = 'done';
   }
   const moved = q.status!==status;
+  /* The one moment the sales group is told. Read BEFORE q.status is
+     overwritten, and here rather than in stepSavedQuoteStatus for the
+     same reason announceOrderMove is: this is the one place a status
+     actually changes, and the assign-staff modal and the agent-prepay
+     path land here too. A forward move only -- an order sent BACK to
+     Draft and pushed on again would otherwise re-announce itself, and
+     the group would read that as a second order. */
+  const leavingDraft = moved && q.status==='draft'
+    && SQ_STATUS_ORDER.indexOf(status) > SQ_STATUS_ORDER.indexOf('draft');
   if(moved) q.stageEnteredAt = Date.now();
   q.status = status;
   saveData();
@@ -19885,6 +19952,29 @@ function setSavedQuoteStatus(id, status){
      actually changes: the assign-staff modal and the agent-prepay path
      land here too, and their moves were just as silent. */
   if(moved) announceOrderMove(q, status);
+  /* Last, so its toast is the one left on screen: announceOrderMove says
+     where the card went, which the eye can see anyway, while this one is
+     an instruction somebody has to act on. */
+  if(leavingDraft) shareOrderToSalesGroup(q);
+}
+
+/* Copy the order out to the sales group. WhatsApp group invite links
+   cannot carry pre-filled text -- that only works for wa.me/<number>
+   chats -- so the best a webpage can do is put the message on the
+   clipboard and open the group for a single paste. */
+function shareOrderToSalesGroup(q){
+  const msg = buildSalesGroupQuoteMessage(q.items, q.client);
+  const openGroupAndToast = (copied)=>{
+    window.open(SALES_GROUP_WA_LINK, '_blank');
+    toast(copied
+      ? 'Suppliers confirmed — message copied, paste it in the group'
+      : 'Suppliers confirmed — open the group and paste the order from Order tracking', 4000);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(msg).then(()=>openGroupAndToast(true)).catch(()=>openGroupAndToast(false));
+  } else {
+    openGroupAndToast(false);
+  }
 }
 
 /* A move gave no feedback at all: the card vanished from one column and
@@ -19975,6 +20065,326 @@ document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>c
 // step -- keyed by the destination status. A forward move whose
 // destination isn't listed here (or any backward move) proceeds
 // immediately, same as before this existed.
+/* ---------------- Draft: getting the suppliers to say yes ------------
+
+   Saving a quote used to announce it to the sales group in the same
+   breath, which said in effect "this is agreed". Often it was not. The
+   supplier is rung afterwards and has none left, or the price has moved
+   since it was last recorded -- but the group had already been told, and
+   whoever picked the order up worked from a figure nobody had checked.
+
+   So an order now waits in Draft until every supplier on it has come
+   back, and the group is told at the moment it LEAVES Draft instead.
+
+   Kept per supplier rather than per line, because one call settles every
+   line that supplier is on -- asking twice about the same conversation
+   is how a list stops being answered. */
+
+// Every supplier this order has to hear back from, with their lines.
+//
+// '__stock__' is our own shelf, and a line with no supplier chosen has
+// nobody to ring either. Neither blocks: the first has nothing to
+// confirm, and the second is settled when a supplier is picked at buying
+// time. The second is still reported, by orderLinesWithNoSupplier, so it
+// is visible on the panel rather than silently skipped.
+function orderSupplierGroups(q){
+  const by = {}, order = [];
+  ((q && q.items) || []).forEach(it=>{
+    const sid = it && it.supplierId;
+    if(!sid || sid === '__stock__') return;
+    const key = String(sid);
+    if(!by[key]){ by[key] = {supplierId: sid, lines: []}; order.push(key); }
+    by[key].lines.push(it);
+  });
+  return order.map(k=> by[k]);
+}
+function orderLinesWithNoSupplier(q){
+  return ((q && q.items) || []).filter(it=> it && !it.supplierId);
+}
+
+/* WHAT was confirmed, not merely THAT it was.
+
+   A confirmation is about terms: these items, these quantities, this
+   price. Edit the quote afterwards -- put a quantity up, drop a price to
+   win the job -- and a plain boolean would still read as confirmed while
+   describing an agreement nobody made. The gate would then pass on the
+   strength of a call about different goods, which is the exact failure
+   this whole step exists to stop.
+
+   So each confirmation records the terms it was given and stops counting
+   the moment they differ. Rounded to whole shillings because that is
+   what the message quoted: a fraction the supplier never saw should not
+   un-confirm them. */
+function orderSupplierTerms(q, supplierId){
+  const g = orderSupplierGroups(q).find(x=> String(x.supplierId) === String(supplierId));
+  return (g ? g.lines : []).map(it=> [
+    it.productId,
+    it.variantIdx == null ? '' : it.variantIdx,
+    Number(it.qty) || 0,
+    Math.round(Number(it.price) || 0)
+  ].join(':')).join('|');
+}
+
+// 'pending' nobody has answered · 'confirmed' yes, at these terms ·
+// 'problem' they said no, or something changed · 'stale' they said yes
+// but the quote has been edited under them since.
+function orderSupplierConfirmState(q, supplierId){
+  const rec = ((q && q.supplierConfirms) || {})[String(supplierId)] || {};
+  const state = (rec.state === 'confirmed' && rec.terms !== orderSupplierTerms(q, supplierId))
+    ? 'stale'
+    : (rec.state || 'pending');
+  return {state, at: rec.at || null, askedAt: rec.askedAt || null, note: rec.note || ''};
+}
+function orderUnconfirmedSuppliers(q){
+  return orderSupplierGroups(q)
+    .filter(g=> orderSupplierConfirmState(q, g.supplierId).state !== 'confirmed');
+}
+// An order with nothing to confirm -- everything off our own shelf -- is
+// ready by default. It has no supplier to wait for, and holding it in
+// Draft would be waiting for a call nobody has to make.
+function orderDraftReady(q){
+  return orderUnconfirmedSuppliers(q).length === 0;
+}
+
+function setOrderSupplierConfirm(orderId, supplierId, state, note){
+  const q = data.savedQuotes.find(x=> x.id === orderId);
+  if(!q) return null;
+  if(!q.supplierConfirms) q.supplierConfirms = {};
+  const key = String(supplierId);
+  const prev = q.supplierConfirms[key] || {};
+  if(state === 'pending'){
+    delete q.supplierConfirms[key];
+  } else {
+    q.supplierConfirms[key] = {
+      state,
+      at: Date.now(),
+      // Survives the answer: "asked an hour ago, still nothing back" is
+      // the thing worth chasing, and a reply overwriting it would lose
+      // the only record that anybody had rung at all.
+      askedAt: prev.askedAt || null,
+      // Only a 'confirmed' carries terms -- it is the one state that has
+      // to go stale when the quote is edited under it.
+      terms: state === 'confirmed' ? orderSupplierTerms(q, supplierId) : null,
+      note: note || ''
+    };
+  }
+  saveData();
+  renderSavedQuotes();
+  return q.supplierConfirms[key] || null;
+}
+function markOrderSupplierAsked(orderId, supplierId){
+  const q = data.savedQuotes.find(x=> x.id === orderId);
+  if(!q) return;
+  if(!q.supplierConfirms) q.supplierConfirms = {};
+  const key = String(supplierId);
+  const rec = q.supplierConfirms[key] || {state:'pending', at:null, terms:null, note:''};
+  rec.askedAt = Date.now();
+  q.supplierConfirms[key] = rec;
+  saveData();
+  renderSavedQuotes();
+}
+
+/* What the supplier is actually being asked.
+
+   Carries the price, unlike the sales-group message which deliberately
+   does not: the price is half of what is being confirmed, and an ask
+   that leaves it out gets back "yes, we have them" against a figure the
+   supplier never saw -- which is worse than not asking, because it looks
+   like an answer.
+
+   Their own lines only. A supplier has no business seeing the rest of
+   the order, and a list somebody has to filter is a list answered
+   slowly. */
+function supplierConfirmMessage(q, supplierId){
+  const g = orderSupplierGroups(q).find(x=> String(x.supplierId) === String(supplierId));
+  const rows = (g ? g.lines : []).map(it=>{
+    const qty = Number(it.qty) || 0;
+    return `• ${it.productName}${it.unit ? ' ('+it.unit+')' : ''} — ${qty.toLocaleString('en-UG')} @ ${fmtUGX(Math.round(Number(it.price)||0))}`;
+  });
+  return [
+    `Hello *${supplierName(supplierId)}*,`,
+    '',
+    'Please confirm you have the following available at these prices:',
+    '',
+    ...rows,
+    '',
+    'If anything has changed — stock or price — please tell us before we commit to the client. Thank you.'
+  ].join('\n');
+}
+function supplierConfirmWaUrl(q, supplierId){
+  const sup = (data.suppliers || []).find(s=> String(s.id) === String(supplierId));
+  return waComposeUrl(sup && sup.phone, supplierConfirmMessage(q, supplierId));
+}
+
+/* The draft card's own line: how far the asking has got.
+
+   A problem or a gone-stale confirmation outranks the plain count,
+   because they are the two states somebody has to DO something about --
+   a card reading "2 of 3 confirmed" when one of the three has said no
+   describes the arithmetic correctly and the situation not at all. */
+function orderConfirmRowHTML(q){
+  if(!q || q.status !== 'draft') return '';
+  const groups = orderSupplierGroups(q);
+  if(!groups.length) return '';
+  const states = groups.map(g=> orderSupplierConfirmState(q, g.supplierId).state);
+  const left = states.filter(s=> s !== 'confirmed').length;
+  const problem = states.filter(s=> s === 'problem').length;
+  const stale = states.filter(s=> s === 'stale').length;
+  if(!left){
+    return `<div class="sq-goods-row in" title="Every supplier has confirmed — this order can go to the sales group">
+      ${ICON_CHECK}<span>All ${groups.length} supplier${groups.length===1?'':'s'} confirmed</span>
+      <button type="button" class="sq-confirm-btn" data-id="${q.id}">Review</button>
+    </div>`;
+  }
+  const label = problem
+    ? `${problem} supplier${problem===1?'':'s'} reported a problem`
+    : stale
+      ? `${stale} confirmation${stale===1?'':'s'} out of date — the quote changed`
+      : `${groups.length - left} of ${groups.length} supplier${groups.length===1?'':'s'} confirmed`;
+  return `<div class="sq-goods-row${(problem||stale) ? ' short' : ''}" title="Ask each supplier to confirm stock and price before this order is announced">
+    ${(problem||stale) ? ICON_WARN : ICON_TRUCK}
+    <span>${esc(label)}</span>
+    <button type="button" class="sq-confirm-btn" data-id="${q.id}">Confirm</button>
+  </div>`;
+}
+
+/* ---- The panel where the asking is actually done ---- */
+let supplierConfirmOrderId = null;
+
+const SUPPLIER_CONFIRM_PILLS = {
+  pending:   {label:'Not asked yet', cls:''},
+  confirmed: {label:'Confirmed',     cls:'good'},
+  problem:   {label:'Problem',       cls:'bad'},
+  stale:     {label:'Quote changed', cls:'warn'}
+};
+
+/* 'pending' covers two different situations and the pill has to tell them
+   apart: nobody has rung yet, and somebody rang and got no answer. Keyed
+   on state alone it read "Not asked yet" directly above a note saying
+   "Asked just now — nothing back yet", which is the panel contradicting
+   itself about the one thing it exists to report.
+
+   Deliberately the neutral pill and not the amber one: a supplier asked
+   thirty seconds ago is not a problem, and colouring every outstanding
+   ask as a warning is how a screen stops being read. How long they have
+   been silent is on the note underneath. */
+function supplierConfirmPill(st){
+  if(st.state === 'pending' && st.askedAt) return {label:'Waiting for reply', cls:''};
+  return SUPPLIER_CONFIRM_PILLS[st.state] || SUPPLIER_CONFIRM_PILLS.pending;
+}
+
+function renderSupplierConfirmList(){
+  const wrap = document.getElementById('supplierConfirmList');
+  const hint = document.getElementById('supplierConfirmHint');
+  if(!wrap) return;
+  const q = data.savedQuotes.find(x=> x.id === supplierConfirmOrderId);
+  if(!q){ wrap.innerHTML = ''; return; }
+  const groups = orderSupplierGroups(q);
+  const noSupplier = orderLinesWithNoSupplier(q);
+  const left = orderUnconfirmedSuppliers(q).length;
+
+  if(hint){
+    hint.textContent = groups.length
+      ? (left
+        ? `${left} of ${groups.length} still to come back. The order stays in Draft until every one of them has confirmed.`
+        : 'Every supplier has confirmed — move the order on and the sales group gets it.')
+      : 'Nothing on this order is being bought in, so there is nobody to ask.';
+  }
+
+  const rows = groups.map(g=>{
+    const st = orderSupplierConfirmState(q, g.supplierId);
+    const pill = supplierConfirmPill(st);
+    const lines = g.lines.map(it=>
+      `<div class="sc-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''} @ ${esc(fmtUGX(Math.round(Number(it.price)||0)))}</span></div>`
+    ).join('');
+    /* The stale case says what actually happened rather than just going
+       grey again: somebody DID ring this supplier, and the useful fact
+       is that the quote moved underneath that call, not that the tick
+       is missing. */
+    const note = st.state === 'stale'
+      ? `<div class="sc-note">Confirmed ${esc(savedAgoLabel(st.at))}, but the items, quantities or prices have changed since. Ask again.</div>`
+      : (st.state === 'problem' && st.note)
+        ? `<div class="sc-note">${esc(st.note)}</div>`
+        : (st.state === 'confirmed' && st.at)
+          ? `<div class="sc-note">Confirmed ${esc(savedAgoLabel(st.at))}</div>`
+          : (st.askedAt)
+            ? `<div class="sc-note">Asked ${esc(savedAgoLabel(st.askedAt))} — nothing back yet</div>`
+            : '';
+    return `<div class="sc-row" data-sup="${esc(String(g.supplierId))}">
+      <div class="sc-head">
+        <b>${esc(supplierName(g.supplierId))}</b>
+        <span class="sc-pill ${pill.cls}">${esc(pill.label)}</span>
+      </div>
+      <div class="sc-lines">${lines}</div>
+      ${note}
+      <div class="sc-acts">
+        <button type="button" class="btn btn-ghost sc-ask" data-sup="${esc(String(g.supplierId))}">Ask on WhatsApp</button>
+        <button type="button" class="btn btn-accent sc-yes" data-sup="${esc(String(g.supplierId))}">They confirmed</button>
+        <button type="button" class="btn btn-ghost sc-no" data-sup="${esc(String(g.supplierId))}">Problem</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  /* Named, not counted. "2 lines have no supplier" sends somebody
+     hunting through the order; the names are what tells them whether it
+     matters. They do not block the move -- a supplier gets chosen at
+     buying time -- but leaving Draft without noticing them is how a line
+     reaches the group with nobody sourcing it. */
+  const orphan = noSupplier.length
+    ? `<div class="sc-row orphan">
+        <div class="sc-head"><b>No supplier chosen</b><span class="sc-pill warn">Nobody to ask</span></div>
+        <div class="sc-lines">${noSupplier.map(it=>`<div class="sc-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''}</span></div>`).join('')}</div>
+        <div class="sc-note">These do not hold the order back — a supplier is picked for them on the buying list.</div>
+      </div>`
+    : '';
+
+  wrap.innerHTML = (rows + orphan) || '<p class="preset-hint">Nothing to confirm on this order.</p>';
+}
+
+function openSupplierConfirmModal(orderId){
+  supplierConfirmOrderId = orderId;
+  renderSupplierConfirmList();
+  openModal('supplierConfirmModal');
+}
+
+/* Delegated, because the list redraws itself after every answer and
+   per-button listeners would be re-bound each time -- or worse, bound
+   twice and fire twice. */
+function wireSupplierConfirmPanel(){
+  const list = document.getElementById('supplierConfirmList');
+  if(!list) return;
+  list.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.sc-ask, .sc-yes, .sc-no');
+    if(!btn) return;
+    const sup = btn.dataset.sup;
+    const q = data.savedQuotes.find(x=> x.id === supplierConfirmOrderId);
+    if(!q || !sup) return;
+
+    if(btn.classList.contains('sc-ask')){
+      /* Opened BEFORE the state is written: window.open inside the same
+         gesture is what keeps it out of the popup blocker, and a stamp
+         saying we asked is worthless if the message never opened. */
+      window.open(supplierConfirmWaUrl(q, sup), '_blank');
+      markOrderSupplierAsked(supplierConfirmOrderId, sup);
+    } else if(btn.classList.contains('sc-yes')){
+      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'confirmed', '');
+      const leftNow = orderUnconfirmedSuppliers(
+        data.savedQuotes.find(x=> x.id === supplierConfirmOrderId)).length;
+      toast(leftNow
+        ? `${supplierName(sup)} confirmed — ${leftNow} to go`
+        : 'Every supplier confirmed — move the order on to tell the group', 3500);
+    } else {
+      /* The reason matters more than the refusal: "no stock till Friday"
+         and "price is now 12,000" lead to completely different fixes,
+         and by the time anybody reads the card the call is forgotten. */
+      const why = window.prompt(`What did ${supplierName(sup)} say?`, '');
+      if(why === null) return;
+      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'problem', why.trim());
+    }
+    renderSupplierConfirmList();
+  });
+}
+
 /* How much of an order is still out, for the card of an order waiting on
    it. Reads as a countdown to being pickable rather than as a warning:
    waiting for goods is the normal state of this stage, and only the last
@@ -20125,6 +20535,27 @@ function stepSavedQuoteStatus(id, dir){
     nextIdx += dir;
     if(nextIdx < 0 || nextIdx >= SQ_STATUS_ORDER.length) return;
     toStatus = SQ_STATUS_ORDER[nextIdx];
+  }
+  /* Draft is where an order waits on its suppliers. Moving it on is the
+     claim that they have all come back, and it is also what sends the
+     order to the sales group -- so this gate is what stops the group
+     being told about goods nobody has checked, which is the whole point
+     of the stage.
+
+     Opens the panel rather than only refusing: the next thing anybody
+     does after being told is go and look at who is outstanding, and the
+     toast alone left them to find it. */
+  if(dir>0 && q.status==='draft' && !orderDraftReady(q)){
+    const left = orderUnconfirmedSuppliers(q);
+    const problem = left.filter(g=> orderSupplierConfirmState(q, g.supplierId).state === 'problem');
+    const stale = left.filter(g=> orderSupplierConfirmState(q, g.supplierId).state === 'stale');
+    toast(problem.length
+      ? `${supplierName(problem[0].supplierId)} reported a problem — sort it out before this goes to the group`
+      : stale.length
+        ? `The quote changed after ${stale.length===1 ? supplierName(stale[0].supplierId)+' confirmed' : stale.length+' suppliers confirmed'} — ask again at the new terms`
+        : `${left.length} supplier${left.length===1?'':'s'} still to confirm — ask ${left.length===1?'them':'each of them'} before the group is told`, 5000);
+    openSupplierConfirmModal(id);
+    return;
   }
   if(dir>0 && toStatus==='preparing' && agentPaymentBlocksPreparing(q)){
     promptAgentPrepayment(q);
@@ -20298,6 +20729,14 @@ function closeAssignStaffModal(){
 }
 document.getElementById('assignStaffModalClose').addEventListener('click', closeAssignStaffModal);
 document.getElementById('assignStaffCancel').addEventListener('click', closeAssignStaffModal);
+
+function closeSupplierConfirmModal(){
+  supplierConfirmOrderId = null;
+  closeModal('supplierConfirmModal');
+}
+document.getElementById('supplierConfirmClose').addEventListener('click', closeSupplierConfirmModal);
+document.getElementById('supplierConfirmDone').addEventListener('click', closeSupplierConfirmModal);
+wireSupplierConfirmPanel();
 
 function invoiceNumberLabel(q){ return 'INV-' + String(q.id).padStart(4,'0'); }
 
@@ -21092,6 +21531,7 @@ function renderSavedQuotes(){
           <div class="sq-card-meta-rows">
             ${orderMetaRowHTML(q)}
             ${orderCashStripHTML(q)}
+            ${orderConfirmRowHTML(q)}
             ${orderGoodsRowHTML(q)}
             ${orderTripsRowHTML(q)}
             ${(q.status==='preparing' && !orderNeedsWorker(q)) ? `<div class="sq-assignee-row" title="Being prepared by">${ICON_PREP_ANIM}<span class="sq-assignee-name">${esc(staffName(q.assignedWorkerId))}</span>${q.pickingStatus==='awaiting_accept' ? `<span class="st-status-pill busy" title="Not yet accepted on their device">Awaiting accept…</span>` : ''}</div>` : ''}
@@ -21307,6 +21747,7 @@ function renderSavedQuotes(){
   const runsBanner = wrap.querySelector('#sq_runs_banner');
   if(runsBanner) runsBanner.addEventListener('click', openDeliveryRuns);
   wrap.querySelectorAll('.sq-assign-btn').forEach(btn=>btn.addEventListener('click', ()=>openAssignStaffModal(Number(btn.dataset.id), 'preparing', 'worker')));
+  wrap.querySelectorAll('.sq-confirm-btn').forEach(btn=>btn.addEventListener('click', ()=>openSupplierConfirmModal(Number(btn.dataset.id))));
   // Same, one stage on. Passing the status it is already in again, so
   // setSavedQuoteStatus leaves stageEnteredAt alone and naming a new driver
   // does not reset how long the order has been waiting to go out.

@@ -194,9 +194,13 @@ const shared = read('shared-worker.js');
 {
   // This board has a mobile step-switcher, so it is used on phones. The pill
   // is 19px tall; the ring is what the finger actually lands on.
-  t.check(/\.sq-assign-btn\{[^}]*position:relative;/.test(admin),
+  // The selector is grouped with .sq-confirm-btn, which shares the pill's
+  // look without sharing its class (the board wires every .sq-assign-btn to
+  // the assign-staff modal). The finger target is what is pinned here, not
+  // whether anything else rides along.
+  t.check(/\.sq-assign-btn(?:,\s*\.[a-zA-Z0-9_-]+)*\{[^}]*position:relative;/.test(admin),
     'the button is positioned so a hit area can be hung off it');
-  const ring = admin.match(/\.sq-assign-btn::after\{content:"";position:absolute;inset:(-?\d+)px (-?\d+)px;\}/);
+  const ring = admin.match(/\.sq-assign-btn::after(?:,\s*\.[a-zA-Z0-9_-]+::after)*\{content:"";position:absolute;inset:(-?\d+)px (-?\d+)px;\}/);
   t.check(!!ring, 'and it has one');
   if (ring) {
     const vertical = 19.3 + Math.abs(Number(ring[1])) * 2;
