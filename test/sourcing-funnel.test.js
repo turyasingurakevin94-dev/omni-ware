@@ -2308,7 +2308,11 @@ async function main() {
     'seeded into lastSynced, or the first delete of a session is undone by the next load');
   t.check(/addDiffOps\(ops, 'sourcingLeads', 'sourcing_leads', 'id', shopId, rows\.sourcingLeads\);/.test(src),
     'diffed on save');
-  t.check(/'savedQuotes','sourcingLeads','purchaseInvoices'/.test(src),
+  // Membership, not adjacency. This read `'savedQuotes','sourcingLeads',
+  // 'purchaseInvoices'` and broke the moment another collection was added
+  // between them -- which says nothing about whether sourcingLeads is
+  // still guarded, and that is the whole claim.
+  t.check(/const absent = \[[^\]]*'sourcingLeads'[^\]]*\]\.filter\(k=> !data\[k\]\);/.test(src),
     'and an absent collection is refused from the sync rather than read as an instruction to empty it');
   t.check(/sourcingLeads:\[\],/.test(src), 'named in the clear-all literal');
   t.check(/if\(!data\.sourcingLeads\) data\.sourcingLeads = \[\];/.test(src),

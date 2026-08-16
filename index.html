@@ -4909,6 +4909,47 @@
     background:var(--panel);color:var(--ink);font-family:inherit;
   }
   .sconf-why-input:focus{outline:2px solid var(--accent);outline-offset:1px;}
+
+  /* ---- Follow-ups ----
+     fup- prefixed, and a test asserts it. `sc-` was already taken by
+     supplier cards and a bare rule on it restyled 44 rows silently. */
+  .fup-card{
+    border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:12px;
+    background:var(--panel);
+  }
+  .fup-card-head{display:flex;align-items:baseline;gap:9px;margin-bottom:9px;}
+  .fup-card-head b{font-size:14.5px;}
+  .fup-count{font-size:11.5px;color:var(--ink-soft);margin-left:auto;}
+  .fup-item{padding:8px 0;border-top:1px solid var(--ow-rule-soft);}
+  .fup-item:first-of-type{border-top:0;}
+  .fup-item-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .fup-item-name{font-size:13px;font-weight:600;}
+  .fup-pill{
+    font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;
+    background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;
+  }
+  .fup-pill.good{background:var(--good-bg);color:var(--good);}
+  .fup-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
+  .fup-reason{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .fup-note{font-size:11.5px;color:var(--ow-ink-400);margin-top:4px;font-style:italic;}
+  .fup-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
+  .fup-acts .btn{font-size:12px;padding:6px 12px;}
+  .fup-link{
+    all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:11.5px;
+  }
+  .fup-link:hover{text-decoration:underline;}
+  .fup-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .fup-row{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 2px;border-bottom:1px solid var(--ow-rule-soft);
+  }
+  .fup-row.closed{opacity:.55;}
+  .fup-row-main{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 200px;}
+  .fup-row-who{font-size:13px;font-weight:600;}
+  .fup-row-item{font-size:12px;color:var(--ink-soft);}
+  .fup-row-meta{font-size:11.5px;color:var(--ow-ink-400);white-space:nowrap;}
+  .fup-check{display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px;}
+  .fup-check input{width:auto;margin:0;cursor:pointer;}
   /* A short pick is the one thing on this card that needs a decision
      rather than a glance, so it is a button and not another meta row --
      the flag and the way to settle it are the same object. Amber for the
@@ -6394,6 +6435,15 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span class="nav-label">Customers</span>
         </button>
+        <!-- Deliberately NOT carrying "stock": this screen reports that a
+             followed item came back in, but the word belongs to Inventory,
+             and claiming it here put Follow-ups above Inventory for the
+             most obvious search in the app. -->
+        <button data-tab="followups" title="Follow-ups" data-keywords="keep posted update client waiting notify remind chase told">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="nav-label">Follow-ups</span>
+          <b class="nav-badge" id="navBadgeFollowUps" hidden></b>
+        </button>
         <button data-tab="agents" title="Sales agents" data-keywords="reps commission cluster">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span class="nav-label">Sales agents</span>
@@ -7105,6 +7155,31 @@
         </div>
 
         <div id="purchaseInvoicesWrap"></div>
+      </div>
+    </section>
+
+    <!-- FOLLOW-UPS — who is waiting to hear from us -->
+    <section id="tab-followups" style="display:none;">
+      <div class="page-head">
+        <h1>Follow-ups</h1>
+        <p>Clients who asked to be kept posted, and what is worth telling them today.</p>
+      </div>
+      <div class="panel">
+        <div class="st-bar">
+          <div class="st-tabs" id="fup_tabs">
+            <button type="button" class="st-tab active" data-fuptab="contact">To contact</button>
+            <button type="button" class="st-tab" data-fuptab="all">All follow-ups</button>
+          </div>
+        </div>
+        <div id="fup_contact_pane">
+          <div id="fup_contact_list"></div>
+        </div>
+        <div id="fup_all_pane" style="display:none;">
+          <div class="search-bar" style="margin-top:14px;">
+            <input id="fup_search" placeholder="Search by client, item or note...">
+          </div>
+          <div id="fup_all_list"></div>
+        </div>
       </div>
     </section>
 
@@ -9139,6 +9214,16 @@
               <div class="field"><label>Which size</label><input type="text" id="sl_ask2_variant" list="dl_sourcing_variants" placeholder="optional — e.g. 14&quot;" autocomplete="off"></div>
               <div class="field"><label>How many</label><input type="number" id="sl_ask2_qty" min="0" step="any"></div>
             </div>
+            <!-- Ticked by default: somebody who asks for something the shop
+                 does not stock is the definition of a person waiting to
+                 hear back, and the old form let that interest evaporate. It
+                 needs a NAME we can match to a customer, which is why the
+                 hint below says so when there is not one. -->
+            <label class="fup-check">
+              <input type="checkbox" id="sl_ask2_follow" checked>
+              <span>Keep them posted about it</span>
+            </label>
+            <p class="preset-hint" id="sl_ask2_follow_hint" style="margin-top:4px;"></p>
             <div class="btn-row">
               <button type="button" class="btn btn-ghost" id="sl_ask2_add">Add this ask</button>
               <button type="button" class="btn btn-ghost" id="sl_ask2_cancel">Cancel</button>
@@ -9401,6 +9486,31 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="assignStaffCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLLOW-UP LIST MODAL — one client, everything they asked to be kept
+     posted about, and a search to add more. -->
+<div class="modal-overlay" id="followUpListModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="followUpListTitle">Follow-up list</h2>
+      <button class="modal-close" id="followUpListClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-hint" id="followUpListHint"></p>
+      <div id="followUpListCurrent"></div>
+      <div class="field" style="margin-top:14px;">
+        <label>Add something they want updates on</label>
+        <input type="text" id="fup_add_search" placeholder="Search a product, or something we don't stock yet..." autocomplete="off">
+      </div>
+      <div id="fup_add_results"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="followUpListDone">Close</button>
     </div>
   </div>
 </div>
@@ -10787,7 +10897,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR, askedColR, transferColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -10796,6 +10906,7 @@ async function loadData(shopId){
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
+    sel('follow_ups'),
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
     sb.from('sourcing_leads').select('image').limit(1),
     sb.from('prices').select('last_asked_at').limit(1),
@@ -10838,6 +10949,10 @@ async function loadData(shopId){
   cashTransferColumn = !(transferColR && transferColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
+  // And follow_ups (0077), newest of the lot. A shop whose migration has
+  // not landed yet has no follow-ups, which is the truth, rather than a
+  // shop that will not open.
+  const followUpRows = (followUpsR && !followUpsR.error && followUpsR.data) || [];
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -11017,6 +11132,18 @@ async function loadData(shopId){
       candidates: Array.isArray(r.candidates) ? r.candidates : [],
       voided: !!r.voided, droppedReason:r.dropped_reason||'', droppedAt:r.dropped_at,
     })),
+    followUps: followUpRows.map(r=>({
+      id:r.id, customerId:r.customer_id,
+      productId:r.product_id, variantIdx: r.variant_idx==null ? null : Number(r.variant_idx),
+      leadId:r.lead_id,
+      // Null, not 0: "tell me when you get it" names no quantity, and
+      // reading that as zero would say they wanted none of it.
+      qty: r.qty==null ? null : Number(r.qty),
+      note:r.note||'', createdAt:r.created_at,
+      closedAt:r.closed_at, closedReason:r.closed_reason||'',
+      contacts: (r.payload && Array.isArray(r.payload.contacts)) ? r.payload.contacts : [],
+    })),
+    nextFollowUpId: followUpRows.length ? Math.max(0,...followUpRows.map(r=>Number(r.id)||0))+1 : 1,
     waPosts: (waPostsR.data||[]).map(w=>({
       id:w.id, date:w.date, productId:w.product_id,
       variantIdx: w.variant_idx==null ? null : Number(w.variant_idx),
@@ -11045,6 +11172,7 @@ async function loadData(shopId){
     // Rides in the same presets blob as everything above it, so the
     // review's two settings need no column and no migration.
     presetPriceReview: presets.priceReview || {},
+    presetFollowUp: presets.followUp || {},
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
@@ -11249,6 +11377,16 @@ function buildSyncRows(d, shopId){
       ...(sourcingImageColumn ? {image: l.image||null} : {}),
       voided: !!l.voided, dropped_reason: l.droppedReason||null, dropped_at: l.droppedAt||null,
     })),
+    followUps: (d.followUps||[]).map(f=>({
+      id:f.id, shop_id:shopId, customer_id:f.customerId,
+      product_id: f.productId||null,
+      variant_idx: f.variantIdx==null ? null : Number(f.variantIdx),
+      lead_id: f.leadId||null,
+      qty: f.qty==null ? null : Number(f.qty),
+      note: f.note||null, created_at: f.createdAt||null,
+      closed_at: f.closedAt||null, closed_reason: f.closedReason||null,
+      payload: {contacts: f.contacts||[]},
+    })),
     waPosts: (d.waPosts||[]).map(w=>({
       id:w.id, shop_id:shopId, date:w.date, product_id:w.productId,
       variant_idx: w.variantIdx==null ? null : w.variantIdx,
@@ -11270,7 +11408,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -11324,6 +11462,7 @@ function buildLastSynced(d, shopId){
     places: keyRowsById(rows.places, 'name'),
     collectionTrips: keyRowsById(rows.collectionTrips, 'id'),
     sourcingLeads: keyRowsById(rows.sourcingLeads, 'id'),
+    followUps: keyRowsById(rows.followUps, 'id'),
     settings: cloneJSON(rows.settings)
   };
 }
@@ -11410,7 +11549,7 @@ async function saveData(){
      collections sit this save out entirely (addDiffOps refuses them):
      declining to speak for a collection is recoverable, deleting it is
      not. debtLog rides customers, so an absent customers benches both. */
-  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','sourcingLeads','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
+  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','sourcingLeads','followUps','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
   if(absent.includes('customers')) absent.push('debtLog');
   syncAbsentCollections = absent.length ? new Set(absent) : null;
   if(absent.length) console.error(`REFUSING to sync ${absent.length} absent collection(s) — a partial data object is not an instruction to empty the shop: ${absent.join(', ')}`);
@@ -11444,6 +11583,7 @@ async function saveData(){
   addDiffOps(ops, 'places', 'places', 'name', shopId, rows.places);
   addDiffOps(ops, 'collectionTrips', 'collection_trips', 'id', shopId, rows.collectionTrips);
   addDiffOps(ops, 'sourcingLeads', 'sourcing_leads', 'id', shopId, rows.sourcingLeads);
+  addDiffOps(ops, 'followUps', 'follow_ups', 'id', shopId, rows.followUps);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
   if(!ops.length) return;
@@ -13774,6 +13914,7 @@ function goToTab(tab){
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
   if(tab==='sourcing') renderSourcing();
+  if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
   if(tab==='loans') renderLoans();
@@ -20813,6 +20954,9 @@ function closeSupplierConfirmModal(){
 document.getElementById('supplierConfirmClose').addEventListener('click', closeSupplierConfirmModal);
 document.getElementById('supplierConfirmDone').addEventListener('click', closeSupplierConfirmModal);
 wireSupplierConfirmPanel();
+wireFollowUpsScreen();
+wireFollowUpListModal();
+wirePickShortfallFollowUps();
 
 function invoiceNumberLabel(q){ return 'INV-' + String(q.id).padStart(4,'0'); }
 
@@ -21417,11 +21561,27 @@ function openPickShortfallModal(orderId, fromInvoice){
   pendingShortWasInvoicing = !!fromInvoice;
   document.getElementById('pickShortHint').textContent =
     `${staffName(q.assignedWorkerId) || 'The picker'} recorded less on the shelf than "${q.client.name||'this order'}" asks for.`;
-  document.getElementById('pickShortLines').innerHTML = lines.map(l=>`
+  /* The short lines are also the clearest statement of interest this app
+     ever gets: a client wanted more of it than the shop could hand over.
+     Offered here rather than left to be remembered, because this modal is
+     the last moment anybody is looking at that fact. Only where the order
+     names a customer -- a walk-in has nobody to keep posted. */
+  document.getElementById('pickShortLines').innerHTML = lines.map(l=>{
+    const already = q.customerId && l.it.productId
+      && !!findFollowUp(q.customerId, {productId: l.it.productId,
+        variantIdx: l.it.variantIdx==null ? null : l.it.variantIdx});
+    return `
     <div class="ps-line">
       <span class="ps-line-name">${esc(l.it.productName || 'Item')}</span>
       <span class="ps-line-nums"><b>${l.picked}</b> of ${l.ordered}${l.it.unit ? ` ${esc(l.it.unit)}` : ''}</span>
-    </div>`).join('');
+      ${(q.customerId && l.it.productId)
+        ? (already
+          ? `<span class="fup-row-meta">On their follow-ups</span>`
+          : `<button type="button" class="fup-link psl-follow"
+              data-line="${esc(String(l.it.lineId))}">Keep them posted</button>`)
+        : ''}
+    </div>`;
+  }).join('');
   // Both totals, because the gap between them IS the decision. Priced by
   // running the real amendment over a throwaway copy rather than by
   // re-deriving the arithmetic here: savedQuoteTotal() resolves a line with
@@ -27384,9 +27544,19 @@ function openCustomerStats(customerId){
         <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg>
         Print statement
       </button>
+      <button type="button" class="btn btn-ghost" id="cstFollowBtn" data-id="${esc(customerId)}">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        Follow-up list${followUpsForCustomer(customerId).filter(followUpIsOpen).length
+          ? ` (${followUpsForCustomer(customerId).filter(followUpIsOpen).length})` : ''}
+      </button>
     </div>` + customerStatsHTML(s);
   const btn = document.getElementById('cstPrintBtn');
   if(btn) btn.addEventListener('click', ()=> printCustomerStatement(btn.dataset.id));
+  const fup = document.getElementById('cstFollowBtn');
+  if(fup) fup.addEventListener('click', ()=>{
+    closeModal('customerStatsModal');
+    openFollowUpListModal(fup.dataset.id);
+  });
   openModal('customerStatsModal');
 }
 
@@ -31252,6 +31422,10 @@ const ROW_ID_KINDS = {
   media:           {kind:'row:media',            counter:'nextMediaId'},
   mediaFolder:     {kind:'row:media_folder',     counter:'nextMediaFolderId'},
   waPost:          {kind:'row:wa_post',          counter:'nextWaPostId'},
+  // Nobody quotes a follow-up number either, so a gap costs nothing and
+  // blocks are safe. next_row_id_blocks takes any kind matching
+  // 'row:[a-z_]+' (0034), so this needed no server change.
+  followUp:        {kind:'row:follow_up',        counter:'nextFollowUpId'},
 };
 const ROW_ID_BLOCK_KINDS = Object.keys(ROW_ID_KINDS).filter(n=> !ROW_ID_KINDS[n].dense);
 const ROW_ID_BLOCK = 10;
@@ -37036,6 +37210,15 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
         if(!l.status || !SOURCING_STATUSES[l.status]) l.status = 'asked';
         if(!l.stageEnteredAt) l.stageEnteredAt = l.createdAt ? new Date(l.createdAt).getTime() : Date.now();
       });
+      // Same trap, same fix: a backup taken before follow-ups existed
+      // would leave the collection ABSENT, which saveData benches on
+      // every save from then on.
+      if(!data.followUps) data.followUps = [];
+      data.followUps.forEach(f=>{
+        if(!Array.isArray(f.contacts)) f.contacts = [];
+        if(f.variantIdx === undefined) f.variantIdx = null;
+        if(f.qty === undefined) f.qty = null;
+      });
       __owAllowMassDelete = true;
       saveData();
       __owAllowMassDelete = false;
@@ -37062,7 +37245,7 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
     quote:{client:{name:'',phone:''}, date: todayISO(), items:[], savedId:null}, nextQuoteLineId:1,
     savedQuotes:[], nextSavedQuoteId:1, purchaseInvoices:[], supplierCommissions:[],
     fixedAssets:[], loans:[], rentAgreements:[], dues:[], media:[], mediaFolders:[], waPosts:[],
-    places:[], collectionTrips:[], sourcingLeads:[],
+    places:[], collectionTrips:[], sourcingLeads:[], followUps:[], nextFollowUpId:1,
     presetCategories: seedData().presetCategories, presetUnits: seedData().presetUnits,
     presetIncomeCategories: seedData().presetIncomeCategories, presetExpenseCategories: seedData().presetExpenseCategories,
     presetAttributes: seedData().presetAttributes, seeded:false};
@@ -42222,6 +42405,653 @@ document.getElementById('dash_range_preset').addEventListener('change', renderDa
    the rail, the sliding strip, the one-lane phone view -- rather than
    carrying a second copy of ~330 lines of CSS that nothing would pin. */
 
+/* ================= Follow-ups: who is waiting to hear from us =========
+
+   Out in the field clients say "let me know when you get it" or "tell me
+   if the price comes down". Until now there was nowhere to put that, so
+   it survived only in whoever heard it -- and the ones remembered were
+   the ones that happened to be remembered.
+
+   A follow-up is one client waiting on one thing. The thing is EITHER a
+   product the shop stocks or a lead still in the sourcing funnel, never
+   both -- the migration enforces it, and followUpSubject is where the
+   two are told apart.
+
+   The nudge is driven ONLY by what is on a list. Measured on this shop,
+   items come back into stock about 132 times a month; watching all stock
+   movement would be a screen nobody could read. Watching the eleven
+   things somebody actually asked about is a screen worth opening. */
+
+function followUpsAll(){ return data.followUps || (data.followUps = []); }
+function followUpById(id){ return followUpsAll().find(f=> String(f.id) === String(id)) || null; }
+function followUpIsOpen(f){ return !!f && !f.closedAt; }
+function openFollowUps(){ return followUpsAll().filter(followUpIsOpen); }
+function followUpsForCustomer(customerId){
+  return followUpsAll().filter(f=> String(f.customerId) === String(customerId));
+}
+
+// How long a follow-up may sit untouched before the silence is itself
+// the thing worth reporting. A setting, because the right number is a
+// matter of how this shop actually works and nobody knows it yet.
+const FOLLOW_UP_QUIET_DAYS_DEFAULT = 14;
+function followUpQuietDays(){
+  const set = data.presetFollowUp && Number(data.presetFollowUp.quietDays);
+  return set > 0 ? set : FOLLOW_UP_QUIET_DAYS_DEFAULT;
+}
+
+/* WHAT is being followed, resolved every time rather than stored.
+
+   A lead-backed follow-up keeps leadId for good and finds the product
+   THROUGH the lead. Graduation sets lead.productId, but moving the lead
+   back off `listed` sets it to null again -- so a follow-up that had
+   copied the id at graduation would afterwards point at nothing, with
+   nothing left to say what it had been following. Reading through the
+   lead survives the demotion: it goes back to being a funnel item, which
+   is exactly what it went back to being. */
+function followUpSubject(f){
+  if(!f) return {kind:'gone', label:'(unknown item)', product:null, variantIdx:null, lead:null};
+  if(f.leadId){
+    const lead = sourcingLeadById(f.leadId);
+    if(!lead) return {kind:'gone', label:'(lead no longer on file)', product:null, variantIdx:null, lead:null};
+    const prod = lead.productId ? (data.products||[]).find(p=> p.id === lead.productId) : null;
+    return prod
+      ? {kind:'product', label: productDisplayLabel(prod, null), product: prod, variantIdx: null, lead}
+      : {kind:'lead', label: lead.name || '(unnamed lead)', product:null, variantIdx:null, lead};
+  }
+  const prod = (data.products||[]).find(p=> p.id === f.productId);
+  if(!prod) return {kind:'gone', label:'(item no longer on file)', product:null, variantIdx:null, lead:null};
+  const idx = f.variantIdx==null ? null : f.variantIdx;
+  return {kind:'product', label: productDisplayLabel(prod, idx), product: prod, variantIdx: idx, lead:null};
+}
+
+function followUpLastContact(f){
+  const cs = (f && f.contacts) || [];
+  if(!cs.length) return null;
+  return cs.reduce((a,b)=> (new Date(b.at).getTime() > new Date(a.at).getTime() ? b : a));
+}
+// Everything is measured from the last time we said something -- or, if
+// we never have, from when the follow-up was taken. Otherwise news that
+// broke before the client was told would be reported forever after.
+function followUpSinceMs(f){
+  const last = followUpLastContact(f);
+  const iso = last ? last.at : (f && f.createdAt);
+  const t = iso ? new Date(iso).getTime() : NaN;
+  return isNaN(t) ? 0 : t;
+}
+function followUpPriceNow(f){
+  const s = followUpSubject(f);
+  if(s.kind !== 'product' || !s.product) return null;
+  const at = catalogueSellAtQty(s.product, s.variantIdx, Number(f.qty) > 0 ? Number(f.qty) : 1, 'retail');
+  return at && at.price != null ? Math.round(at.price) : null;
+}
+
+/* ---- 1. It came back in ----------------------------------------------
+
+   Keyed on the EVENT, not on "there is stock now". An item that has
+   never been out has stock now too, and a rule reading qty > 0 would
+   report it on every open forever. What makes this news is the moment it
+   crossed from nothing to something -- which the stock log records
+   exactly, since qtyAfter and delta together give what was there before. */
+function followUpBackInStock(f, nowMs){
+  const s = followUpSubject(f);
+  if(s.kind !== 'product' || !s.product) return null;
+  const key = stockKey(s.product.id, s.variantIdx);
+  const since = followUpSinceMs(f);
+  let latest = null;
+  (data.stockLog||[]).forEach(l=>{
+    if(l.key !== key) return;
+    const delta = Number(l.delta)||0, after = Number(l.qtyAfter)||0;
+    if(!(delta > 0 && after > 0 && (after - delta) <= 0)) return;
+    const t = new Date(l.at || l.date).getTime();
+    if(isNaN(t) || t <= since) return;
+    if(!latest || t > latest.t) latest = {t, qty: after, at: l.at || l.date};
+  });
+  // Still has to be there NOW. It can arrive and sell out again before
+  // anybody looks, and telling a client to come for goods that went
+  // yesterday is worse than saying nothing.
+  if(!latest || getStockQty(s.product.id, s.variantIdx) <= 0) return null;
+  /* text names the item because the MESSAGE goes to somebody with no
+     screen in front of them; short does not, because the card already
+     has the name on the line above and reading it twice is noise. */
+  return {kind:'back_in_stock', at: latest.at,
+    text: `${s.label} is back in stock`,
+    short: `Back in — ${getStockQty(s.product.id, s.variantIdx)} on hand`,
+    detail: `${getStockQty(s.product.id, s.variantIdx)} on hand`};
+}
+
+/* ---- 2. The sourcing got further ------------------------------------
+   Measured against the stage the client was last TOLD about, not the
+   stage at capture -- news is the difference between what they know and
+   what is true. Never having been told counts as knowing the least: the
+   baseline is the first stage, so a lead that has moved at all is news. */
+function followUpSourcingProgress(f){
+  const s = followUpSubject(f);
+  const lead = s.lead;
+  if(!lead) return null;
+  const last = followUpLastContact(f);
+  const told = (last && last.leadStatusTold) || SOURCING_STATUS_ORDER[0];
+  const toldIdx = SOURCING_STATUS_ORDER.indexOf(told);
+  const nowIdx = SOURCING_STATUS_ORDER.indexOf(lead.status);
+  if(nowIdx < 0 || toldIdx < 0 || nowIdx <= toldIdx) return null;
+  const WORDS = {
+    looking: 'someone is out looking for it',
+    sourced: 'we have found who has it',
+    priced:  'we now know what it costs',
+    listed:  'we stock it now',
+  };
+  return {kind:'sourcing_progress', status: lead.status,
+    text: `${lead.name}: ${WORDS[lead.status] || SOURCING_SHORT_LABELS[lead.status]}`,
+    short: (WORDS[lead.status] || SOURCING_SHORT_LABELS[lead.status]).replace(/^./, c=> c.toUpperCase()),
+    detail: SOURCING_SHORT_LABELS[lead.status] || ''};
+}
+
+/* ---- 3. The price moved ----------------------------------------------
+   Silent unless a price was actually quoted to them. With nothing on
+   record there is nothing to have moved from, and inventing a baseline
+   from today's figure would report every item as unchanged forever. */
+function followUpPriceMoved(f){
+  const cs = ((f && f.contacts) || [])
+    .filter(c=> Number(c.priceToldUGX) > 0)
+    .sort((a,b)=> new Date(b.at).getTime() - new Date(a.at).getTime());
+  if(!cs.length) return null;
+  const was = Math.round(Number(cs[0].priceToldUGX));
+  const now = followUpPriceNow(f);
+  if(now == null || now === was) return null;
+  const s = followUpSubject(f);
+  const down = now < was;
+  return {kind:'price_moved', was, now, down,
+    text: `${s.label} is now ${fmtUGX(now)}${down ? ' — down from ' : ' — up from '}${fmtUGX(was)}`,
+    short: `Now ${fmtUGX(now)}${down ? ' — down from ' : ' — up from '}${fmtUGX(was)}`,
+    detail: down ? 'Cheaper than when you told them' : 'Dearer than when you told them'};
+}
+
+/* ---- 4. Nobody has said anything ------------------------------------
+   The fallback, and deliberately last: silence is what actually kills a
+   follow-up list, but it must not compete with real news. A client owed
+   three updates does not also need telling that nobody has rung. */
+function followUpGoneQuiet(f, nowMs){
+  const since = followUpSinceMs(f);
+  if(!since) return null;
+  const days = Math.floor((nowMs - since) / 86400000);
+  if(days < followUpQuietDays()) return null;
+  const s = followUpSubject(f);
+  const everTold = !!followUpLastContact(f);
+  return {kind:'gone_quiet', days,
+    text: everTold
+      ? `${s.label} — nothing said for ${days} days`
+      : `${s.label} — asked ${days} days ago and never followed up`,
+    short: everTold ? `Nothing said for ${days} days` : `Asked ${days} days ago, never followed up`,
+    detail: ''};
+}
+
+// Every reason this follow-up is worth a message today. gone_quiet only
+// when nothing else speaks -- see above.
+function followUpReasons(f, nowMs){
+  if(!followUpIsOpen(f)) return [];
+  const now = nowMs || Date.now();
+  const news = [
+    followUpBackInStock(f, now),
+    followUpSourcingProgress(f),
+    followUpPriceMoved(f),
+  ].filter(Boolean);
+  if(news.length) return news;
+  const quiet = followUpGoneQuiet(f, now);
+  return quiet ? [quiet] : [];
+}
+
+/* One message per client, not one per item. A client following five
+   things with three worth reporting gets ONE message listing three --
+   nobody sends somebody three WhatsApps in a row, and a screen that
+   suggested it would be ignored on sight. */
+function followUpClientsToContact(nowMs){
+  const now = nowMs || Date.now();
+  const byCustomer = new Map();
+  openFollowUps().forEach(f=>{
+    const reasons = followUpReasons(f, now);
+    if(!reasons.length) return;
+    const key = String(f.customerId);
+    if(!byCustomer.has(key)) byCustomer.set(key, {customerId: f.customerId, items: []});
+    byCustomer.get(key).items.push({followUp: f, reasons});
+  });
+  return [...byCustomer.values()].map(row=>{
+    const c = (data.customers||[]).find(x=> String(x.id) === String(row.customerId));
+    return {
+      ...row,
+      customer: c || null,
+      name: c ? c.name : '(customer no longer on file)',
+      phone: c ? (contactPhones(c)[0] || '') : '',
+      // Real news outranks mere silence when the list is ordered: a
+      // client whose goods have arrived should be rung before one who is
+      // merely overdue a chat.
+      hasNews: row.items.some(i=> i.reasons.some(r=> r.kind !== 'gone_quiet')),
+    };
+  }).sort((a,b)=> (b.hasNews - a.hasNews) || b.items.length - a.items.length
+    || String(a.name).localeCompare(String(b.name)));
+}
+
+/* What actually gets sent. Plain, short, and it names the items -- a
+   client who asked about three things in March cannot be expected to
+   work out which one "it is here now" refers to. */
+function followUpDigest(row){
+  const lines = [];
+  row.items.forEach(i=> i.reasons.forEach(r=> lines.push('• ' + r.text)));
+  const first = String(row.name || '').trim().split(/\s+/)[0] || '';
+  return [
+    `Hello${first ? ' ' + first : ''},`,
+    '',
+    'An update on what you asked us to keep you posted about:',
+    '',
+    ...lines,
+    '',
+    'Let us know if you would like any of it put aside. Thank you.'
+  ].join('\n');
+}
+function followUpWaUrl(row){
+  return waComposeUrl(row.phone, followUpDigest(row));
+}
+
+/* ---- writing ---------------------------------------------------------
+   addFollowUp refuses a duplicate rather than stacking a second row for
+   the same client and the same thing: two rows would produce two lines
+   in one message about one item, and closing one would leave the other
+   still asking. */
+function findFollowUp(customerId, subject){
+  return followUpsAll().find(f=>
+    String(f.customerId) === String(customerId)
+    && followUpIsOpen(f)
+    && (subject.leadId
+      ? String(f.leadId||'') === String(subject.leadId)
+      : (String(f.productId||'') === String(subject.productId||'')
+        && (f.variantIdx==null ? null : Number(f.variantIdx))
+           === (subject.variantIdx==null ? null : Number(subject.variantIdx))))
+  ) || null;
+}
+function addFollowUp(customerId, subject, opts){
+  if(!customerId) return null;
+  const hasProduct = !!(subject && subject.productId);
+  const hasLead = !!(subject && subject.leadId);
+  // Exactly one, matching the table's own constraint. Neither could not
+  // say what it was about; both would leave every reader to pick, and
+  // they would not all pick the same way.
+  if(hasProduct === hasLead) return null;
+  const existing = findFollowUp(customerId, subject);
+  if(existing) return existing;
+  const f = {
+    id: allocRowId('followUp'),
+    customerId,
+    productId: hasProduct ? subject.productId : null,
+    variantIdx: hasProduct ? (subject.variantIdx==null ? null : Number(subject.variantIdx)) : null,
+    leadId: hasLead ? subject.leadId : null,
+    qty: (opts && opts.qty!=null && opts.qty!=='') ? Number(opts.qty) : null,
+    note: String((opts && opts.note) || ''),
+    createdAt: new Date().toISOString(),
+    closedAt: null, closedReason: '',
+    contacts: [],
+  };
+  followUpsAll().push(f);
+  saveData();
+  return f;
+}
+/* Recording that we told them is its own action, never a side effect of
+   opening WhatsApp. Opening a chat is not sending a message -- the same
+   split markOrderSupplierAsked keeps from setOrderSupplierConfirm, and
+   for the same reason: a stamp saying the client knows, when they were
+   never actually told, is worse than no stamp at all. */
+function recordFollowUpContact(id, reasonKind){
+  const f = followUpById(id);
+  if(!f) return null;
+  const s = followUpSubject(f);
+  f.contacts = f.contacts || [];
+  f.contacts.push({
+    at: new Date().toISOString(),
+    reason: reasonKind || '',
+    // Both stamped now, because both are what the next comparison is
+    // made against. Null price where there is none to quote: a lead with
+    // no price yet must not record one.
+    priceToldUGX: followUpPriceNow(f),
+    leadStatusTold: s.lead ? s.lead.status : null,
+  });
+  saveData();
+  return f;
+}
+function closeFollowUp(id, reason){
+  const f = followUpById(id);
+  if(!f) return null;
+  f.closedAt = new Date().toISOString();
+  f.closedReason = String(reason || '');
+  saveData();
+  return f;
+}
+function reopenFollowUp(id){
+  const f = followUpById(id);
+  if(!f) return null;
+  f.closedAt = null; f.closedReason = '';
+  saveData();
+  return f;
+}
+
+/* Did they already buy it? Suggested, never done automatically: a part
+   delivery is not the end of the matter, and closing the row on their
+   behalf would hide exactly the case worth looking at. */
+function followUpAlreadyBought(f){
+  const s = followUpSubject(f);
+  if(s.kind !== 'product' || !s.product) return null;
+  const since = f.createdAt ? new Date(f.createdAt).getTime() : 0;
+  let hit = null;
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.invoiced) return;
+    if(String(q.customerId||'') !== String(f.customerId)) return;
+    const t = q.invoicedTs || (q.invoicedAt ? new Date(q.invoicedAt).getTime() : 0);
+    if(!t || t < since) return;
+    const got = (q.items||[]).some(it=> String(it.productId) === String(s.product.id)
+      && (it.variantIdx==null ? null : Number(it.variantIdx)) === s.variantIdx);
+    if(got && (!hit || t > hit.t)) hit = {t, id: q.id, at: q.invoicedAt};
+  });
+  return hit;
+}
+
+/* ---- the screen -------------------------------------------------------
+   fup- prefixed throughout. `sc-` was already taken by supplier cards,
+   and a bare rule on it silently restyled 44 rows while every test
+   passed -- see the prefix guard in test/order-draft-confirm.test.js. */
+let fupTab = 'contact';
+
+const FUP_REASON_PILLS = {
+  back_in_stock:     {label:'Back in stock',  cls:'good'},
+  sourcing_progress: {label:'Sourcing moved', cls:'good'},
+  price_moved:       {label:'Price changed',  cls:'warn'},
+  gone_quiet:        {label:'Gone quiet',     cls:''},
+};
+
+function renderFollowUpsContact(){
+  const wrap = document.getElementById('fup_contact_list');
+  if(!wrap) return;
+  const rows = followUpClientsToContact(Date.now());
+  if(!rows.length){
+    const open = openFollowUps().length;
+    wrap.innerHTML = `<p class="preset-hint" style="margin-top:14px;">${open
+      ? `Nothing new to tell anybody today. ${open} follow-up${open===1?'':'s'} being watched.`
+      : 'No follow-ups yet. Add one from a client’s record, a sourcing ask, or a line you could not fill.'}</p>`;
+    return;
+  }
+  wrap.innerHTML = rows.map(row=>{
+    const items = row.items.map(i=>{
+      const s = followUpSubject(i.followUp);
+      const bought = followUpAlreadyBought(i.followUp);
+      return `<div class="fup-item">
+        <div class="fup-item-head">
+          <span class="fup-item-name">${esc(s.label)}</span>
+          ${i.reasons.map(r=>{
+            const p = FUP_REASON_PILLS[r.kind] || FUP_REASON_PILLS.gone_quiet;
+            return `<span class="fup-pill ${p.cls}">${esc(p.label)}</span>`;
+          }).join('')}
+        </div>
+        ${i.reasons.map(r=> `<div class="fup-reason">${esc(r.short || r.text)}</div>`).join('')}
+        ${i.followUp.note ? `<div class="fup-note">${esc(i.followUp.note)}</div>` : ''}
+        ${bought ? `<div class="fup-note">They bought this on ${esc(fmtShortDate(bought.at))} —
+          <button type="button" class="fup-link fup-close" data-id="${esc(String(i.followUp.id))}" data-reason="bought">close it?</button></div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="fup-card" data-cust="${esc(String(row.customerId))}">
+      <div class="fup-card-head">
+        <b>${esc(row.name)}</b>
+        <span class="fup-count">${row.items.length} item${row.items.length===1?'':'s'}</span>
+      </div>
+      ${items}
+      ${row.phone
+        ? `<div class="fup-acts">
+            <button type="button" class="btn btn-accent fup-msg" data-cust="${esc(String(row.customerId))}">Message on WhatsApp</button>
+            <button type="button" class="btn btn-ghost fup-told" data-cust="${esc(String(row.customerId))}">I told them</button>
+          </div>`
+        : `<div class="fup-note">No phone number on file for them — add one on their record before this can be sent.</div>
+           <div class="fup-acts">
+            <button type="button" class="btn btn-ghost fup-told" data-cust="${esc(String(row.customerId))}">I told them</button>
+           </div>`}
+    </div>`;
+  }).join('');
+}
+
+function renderFollowUpsAll(filter){
+  const wrap = document.getElementById('fup_all_list');
+  if(!wrap) return;
+  const tokens = searchTokens(filter||'');
+  const all = followUpsAll().slice().sort((a,b)=>
+    (Number(!!a.closedAt) - Number(!!b.closedAt))
+    || new Date(b.createdAt||0) - new Date(a.createdAt||0));
+  const rows = all.filter(f=>{
+    if(!tokens.length) return true;
+    const c = (data.customers||[]).find(x=> String(x.id)===String(f.customerId));
+    const hay = `${c?c.name:''} ${followUpSubject(f).label} ${f.note||''}`.toLowerCase();
+    return tokens.every(t=> hay.includes(t));
+  });
+  if(!rows.length){
+    wrap.innerHTML = `<p class="preset-hint" style="margin-top:14px;">Nothing matches.</p>`;
+    return;
+  }
+  wrap.innerHTML = rows.map(f=>{
+    const c = (data.customers||[]).find(x=> String(x.id)===String(f.customerId));
+    const s = followUpSubject(f);
+    const last = followUpLastContact(f);
+    return `<div class="fup-row${f.closedAt ? ' closed' : ''}">
+      <div class="fup-row-main">
+        <span class="fup-row-who">${esc(c ? c.name : '(gone)')}</span>
+        <span class="fup-row-item">${esc(s.label)}</span>
+      </div>
+      <div class="fup-row-meta">
+        ${f.closedAt
+          ? `Closed${f.closedReason ? ' — ' + esc(f.closedReason) : ''}`
+          : last
+            ? `Last told ${esc(savedAgoLabel(last.at))}`
+            : `Never followed up · added ${esc(savedAgoLabel(f.createdAt))}`}
+      </div>
+      <button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
+        data-id="${esc(String(f.id))}" data-reason="">${f.closedAt ? 'Reopen' : 'Close'}</button>
+    </div>`;
+  }).join('');
+}
+
+function renderFollowUps(){
+  document.getElementById('fup_contact_pane').style.display = fupTab==='contact' ? '' : 'none';
+  document.getElementById('fup_all_pane').style.display = fupTab==='all' ? '' : 'none';
+  document.querySelectorAll('#fup_tabs .st-tab').forEach(b=>
+    b.classList.toggle('active', b.dataset.fuptab === fupTab));
+  if(fupTab==='contact') renderFollowUpsContact();
+  else renderFollowUpsAll(document.getElementById('fup_search').value);
+  renderFollowUpBadge();
+}
+/* Clients, not follow-ups: the badge is a count of messages to send, and
+   one client owed three updates is one message. */
+function renderFollowUpBadge(){
+  setNavBadge('navBadgeFollowUps', followUpClientsToContact(Date.now()).length,
+    'client(s) to update');
+}
+
+function wireFollowUpsScreen(){
+  const tabs = document.getElementById('fup_tabs');
+  if(!tabs) return;
+  tabs.addEventListener('click', (e)=>{
+    const b = e.target.closest('.st-tab');
+    if(!b) return;
+    fupTab = b.dataset.fuptab;
+    renderFollowUps();
+  });
+  const search = document.getElementById('fup_search');
+  if(search) search.addEventListener('input', ()=> renderFollowUpsAll(search.value));
+
+  document.getElementById('tab-followups').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.fup-msg, .fup-told, .fup-close, .fup-reopen');
+    if(!btn) return;
+
+    if(btn.classList.contains('fup-msg')){
+      const row = followUpClientsToContact(Date.now())
+        .find(r=> String(r.customerId) === String(btn.dataset.cust));
+      if(!row) return;
+      // Opened in the same gesture, so the popup blocker leaves it alone.
+      // Nothing is recorded here: see recordFollowUpContact.
+      window.open(followUpWaUrl(row), '_blank');
+      toast('Message opened — tap “I told them” once it has actually gone', 4000);
+      return;
+    }
+    if(btn.classList.contains('fup-told')){
+      const row = followUpClientsToContact(Date.now())
+        .find(r=> String(r.customerId) === String(btn.dataset.cust));
+      if(!row) return;
+      row.items.forEach(i=> recordFollowUpContact(i.followUp.id, i.reasons[0] && i.reasons[0].kind));
+      toast(`Recorded — ${row.items.length} item${row.items.length===1?'':'s'} marked as told`, 3500);
+      renderFollowUps();
+      return;
+    }
+    if(btn.classList.contains('fup-close')) closeFollowUp(btn.dataset.id, btn.dataset.reason || 'closed');
+    else reopenFollowUp(btn.dataset.id);
+    renderFollowUps();
+  });
+}
+
+/* ---- one client's list, and the search that adds to it ---------------
+
+   Products AND open sourcing leads in the same result list, because from
+   the client's side there is no difference: they asked about a thing.
+   Whether the shop happens to stock it is our problem, not theirs, and
+   making them two separate searches would mean knowing the answer before
+   asking the question. */
+let followUpListCustomerId = null;
+
+function followUpAddResults(query){
+  const tokens = searchTokens(query);
+  if(!tokens.length) return [];
+  const out = [];
+  allProductVariantEntries(tokens).slice(0, 10).forEach(({p, variantIdx})=>{
+    out.push({
+      key: 'p:' + p.id + ':' + (variantIdx==null ? '' : variantIdx),
+      label: productDisplayLabel(p, variantIdx),
+      sub: (getStockQty(p.id, variantIdx) > 0 ? `${getStockQty(p.id, variantIdx)} in stock` : 'Out of stock'),
+      subject: {productId: p.id, variantIdx},
+    });
+  });
+  sourcingLeadsAll().filter(l=> !l.voided && !l.productId).forEach(l=>{
+    if(!matchesAllTokens(String(l.name||'').toLowerCase(), tokens)) return;
+    out.push({
+      key: 'l:' + l.id,
+      label: l.name,
+      sub: 'Not stocked yet — ' + (SOURCING_SHORT_LABELS[l.status] || l.status),
+      subject: {leadId: l.id},
+    });
+  });
+  return out.slice(0, 14);
+}
+
+function renderFollowUpListModal(){
+  const wrap = document.getElementById('followUpListCurrent');
+  const hint = document.getElementById('followUpListHint');
+  if(!wrap) return;
+  const c = (data.customers||[]).find(x=> String(x.id) === String(followUpListCustomerId));
+  const mine = followUpsForCustomer(followUpListCustomerId);
+  const open = mine.filter(followUpIsOpen);
+
+  if(hint){
+    hint.textContent = open.length
+      ? `${open.length} thing${open.length===1?'':'s'} they are waiting to hear about.`
+      : 'Nothing on their list yet. Search below to add what they asked about.';
+  }
+  wrap.innerHTML = mine.length ? mine.map(f=>{
+    const s = followUpSubject(f);
+    const last = followUpLastContact(f);
+    return `<div class="fup-row${f.closedAt ? ' closed' : ''}">
+      <div class="fup-row-main">
+        <span class="fup-row-who">${esc(s.label)}</span>
+        <span class="fup-row-item">${f.closedAt
+          ? `Closed${f.closedReason ? ' — ' + esc(f.closedReason) : ''}`
+          : last ? `Last told ${esc(savedAgoLabel(last.at))}`
+                 : `Never followed up · added ${esc(savedAgoLabel(f.createdAt))}`}</span>
+      </div>
+      <button type="button" class="fup-link ${f.closedAt ? 'fup-list-reopen' : 'fup-list-close'}"
+        data-id="${esc(String(f.id))}">${f.closedAt ? 'Reopen' : 'Remove'}</button>
+    </div>`;
+  }).join('') : '';
+  renderFollowUpAddResults();
+}
+
+function renderFollowUpAddResults(){
+  const box = document.getElementById('fup_add_results');
+  const q = document.getElementById('fup_add_search');
+  if(!box || !q) return;
+  const rows = followUpAddResults(q.value);
+  if(!rows.length){ box.innerHTML = ''; return; }
+  const already = new Set(followUpsForCustomer(followUpListCustomerId)
+    .filter(followUpIsOpen)
+    .map(f=> f.leadId ? ('l:' + f.leadId)
+      : ('p:' + f.productId + ':' + (f.variantIdx==null ? '' : f.variantIdx))));
+  box.innerHTML = rows.map(r=>`<div class="fup-row">
+    <div class="fup-row-main">
+      <span class="fup-row-who">${esc(r.label)}</span>
+      <span class="fup-row-item">${esc(r.sub)}</span>
+    </div>
+    ${already.has(r.key)
+      ? `<span class="fup-row-meta">Already on the list</span>`
+      : `<button type="button" class="fup-link fup-list-add" data-key="${esc(r.key)}">Add</button>`}
+  </div>`).join('');
+}
+
+function openFollowUpListModal(customerId){
+  followUpListCustomerId = customerId;
+  const c = (data.customers||[]).find(x=> String(x.id) === String(customerId));
+  document.getElementById('followUpListTitle').textContent =
+    c ? `Follow-up list — ${c.name}` : 'Follow-up list';
+  document.getElementById('fup_add_search').value = '';
+  renderFollowUpListModal();
+  openModal('followUpListModal');
+}
+
+/* The short-pick door. Delegated on the container because the modal's
+   lines are rebuilt every time it opens. */
+function wirePickShortfallFollowUps(){
+  const wrap = document.getElementById('pickShortLines');
+  if(!wrap) return;
+  wrap.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.psl-follow');
+    if(!btn) return;
+    const q = data.savedQuotes.find(x=> x.id === pendingShortOrderId);
+    if(!q || !q.customerId) return;
+    const it = (q.items||[]).find(x=> String(x.lineId) === String(btn.dataset.line));
+    if(!it || !it.productId) return;
+    addFollowUp(q.customerId, {productId: it.productId,
+      variantIdx: it.variantIdx==null ? null : it.variantIdx},
+      {qty: Number(it.qty)||null, note: 'Short on their order'});
+    btn.replaceWith(Object.assign(document.createElement('span'),
+      {className:'fup-row-meta', textContent:'On their follow-ups'}));
+    toast(`${q.client.name || 'They'} will be flagged when it is back in`, 3500);
+    renderFollowUpBadge();
+  });
+}
+
+function wireFollowUpListModal(){
+  const modal = document.getElementById('followUpListModal');
+  if(!modal) return;
+  const search = document.getElementById('fup_add_search');
+  if(search) search.addEventListener('input', renderFollowUpAddResults);
+  modal.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.fup-list-add, .fup-list-close, .fup-list-reopen');
+    if(!btn) return;
+    if(btn.classList.contains('fup-list-add')){
+      const row = followUpAddResults(search.value).find(r=> r.key === btn.dataset.key);
+      if(!row) return;
+      addFollowUp(followUpListCustomerId, row.subject, {});
+      toast(`Added — they will be flagged when there is news about ${row.label}`, 3500);
+    } else if(btn.classList.contains('fup-list-close')){
+      // Closed, not deleted. "They went elsewhere" is worth keeping and is
+      // exactly what a delete would throw away.
+      closeFollowUp(btn.dataset.id, 'removed from the list');
+    } else {
+      reopenFollowUp(btn.dataset.id);
+    }
+    renderFollowUpListModal();
+    renderFollowUpBadge();
+  });
+  const close = ()=>{ followUpListCustomerId = null; closeModal('followUpListModal'); };
+  document.getElementById('followUpListClose').addEventListener('click', close);
+  document.getElementById('followUpListDone').addEventListener('click', close);
+}
+
 function sourcingLeadsAll(){ return data.sourcingLeads || (data.sourcingLeads = []); }
 function sourcingLeadById(id){ return sourcingLeadsAll().find(l=> l.id===id) || null; }
 
@@ -44209,12 +45039,32 @@ document.getElementById('sl_add_ask').addEventListener('click', ()=>{
   document.getElementById('sl_ask_form').style.display = '';
   document.getElementById('sl_add_ask').style.display = 'none';
   document.getElementById('sl_ask2_name').focus();
+  slAskFollowHint();
+});
+/* Says, while the name is being typed, whether following up will
+   actually be possible. Afterwards is too late: the form has closed and
+   the moment to ask "and who was that?" has gone. */
+function slAskFollowHint(){
+  const el = document.getElementById('sl_ask2_follow_hint');
+  if(!el) return;
+  const name = document.getElementById('sl_ask2_name').value.trim();
+  const known = name ? sourcingFindCustomerByName(name) : null;
+  el.textContent = !document.getElementById('sl_ask2_follow').checked ? ''
+    : !name ? 'Needs a name — there is nobody to follow up with otherwise.'
+    : known ? `${known.name} is on file — they will be flagged when there is news.`
+    : 'Not a customer yet; they will be added, so they can be followed up.';
+}
+['sl_ask2_name','sl_ask2_follow'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', slAskFollowHint);
 });
 function slAskFormClose(){
   document.getElementById('sl_ask_form').style.display = 'none';
   document.getElementById('sl_add_ask').style.display = '';
   ['sl_ask2_name','sl_ask2_phone','sl_ask2_qty','sl_ask2_variant'].forEach(k=>{
     const el = document.getElementById(k); el.value = ''; delete el.dataset.autofilled; });
+  document.getElementById('sl_ask2_follow').checked = true;
+  slAskFollowHint();
 }
 document.getElementById('sl_ask2_cancel').addEventListener('click', ()=> slAskFormClose());
 document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
@@ -44229,6 +45079,17 @@ document.getElementById('sl_ask2_add').addEventListener('click', async ()=>{
     customerId: asker.customerId, customerName: asker.customerName, phone: asker.phone,
     variant: document.getElementById('sl_ask2_variant').value.trim(),
     qty: qtyRaw==='' ? null : Number(qtyRaw), orderId:null, conversationId:null, note:''});
+  /* The whole point of asking for a name. Only 1 of this shop's 9 asks
+     named a known customer, which is why an ask alone could never be
+     followed up -- there was nobody to follow up WITH. */
+  const wantFollow = document.getElementById('sl_ask2_follow').checked;
+  if(wantFollow && asker.customerId){
+    addFollowUp(asker.customerId, {leadId: l.id},
+      {qty: qtyRaw==='' ? null : Number(qtyRaw), note: document.getElementById('sl_ask2_variant').value.trim()});
+    toast(`${asker.customerName} added to follow-ups for ${l.name}`, 3500);
+  } else if(wantFollow){
+    toast('Ask recorded — but with no customer matched there is nobody to follow up with', 4500);
+  }
   slAskFormClose();
   saveData();
   renderSourcingLeadBody(l);
