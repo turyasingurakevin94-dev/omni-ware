@@ -1470,6 +1470,42 @@
   /* The reasons column on the supplier panel's ask list — several short
      clauses, and the one thing there allowed to wrap. */
   .cs-table td.cs-ask-why{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
+
+  /* Ringing up a counter sale. Built to be worked at speed with one hand
+     on the keyboard: search, Enter, search, Enter, take the money. */
+  .cs-sale-search{position:relative;display:flex;align-items:center;gap:8px;
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;margin-bottom:14px;}
+  .cs-sale-search .icon{width:16px;height:16px;color:var(--ink-soft);flex-shrink:0;}
+  .cs-sale-search input{all:unset;flex:1;min-width:0;font-size:14px;color:var(--ink);}
+  .cs-sale-hit{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  .cs-hit-name{font-weight:600;}
+  .cs-hit-have{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .cs-sale-empty{padding:18px;text-align:center;color:var(--ink-soft);font-size:13px;
+    background:#FBFCFD;border:1px dashed var(--line);border-radius:9px;}
+  .cs-sale-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .cs-sale-table th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:0.5px;
+    text-transform:uppercase;color:var(--ink-soft);padding:0 6px 7px;border-bottom:1px solid var(--line);}
+  .cs-sale-table th.r, .cs-sale-table td.r{text-align:right;}
+  .cs-sale-table td{padding:7px 6px;border-bottom:1px solid var(--ow-rule-soft);vertical-align:middle;}
+  .cs-sale-table td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .cs-sale-table input{width:96px;box-sizing:border-box;text-align:right;padding:6px 8px;
+    border:1px solid var(--line);border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  .cs-sale-table input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  /* Asking for more than the shelf holds. Marked rather than blocked at
+     the row, because the shop may be about to correct the count -- but
+     taking the money is refused until it agrees. */
+  .cs-sale-table tr.is-short td{background:#FDF4F2;}
+  .cs-sale-warn{display:block;font-size:11px;font-weight:700;color:var(--danger);margin-top:2px;}
+  .cs-sale-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    flex-wrap:wrap;margin-top:16px;}
+  .cs-sale-who{display:flex;flex-direction:column;gap:5px;flex:1 1 200px;min-width:0;}
+  .cs-sale-who span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);}
+  .cs-sale-who input{width:100%;box-sizing:border-box;padding:8px 11px;border:1px solid var(--line);
+    border-radius:8px;font-size:13.5px;font-family:inherit;}
+  .cs-sale-total{display:flex;align-items:baseline;gap:9px;white-space:nowrap;}
+  .cs-sale-total span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);}
+  .cs-sale-total b{font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--ink);}
+  .cs-sale-actions{justify-content:flex-end;margin-top:18px;}
   /* The reply sheet. The box is the only thing on the row anybody
      touches, so it is the only thing that looks touchable. */
   .srp-unit{display:block;font-size:11px;color:var(--ink-soft);}
@@ -7814,6 +7850,14 @@
                 <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
                 Money out
               </button>
+              <!-- The one that fills the book. Walk-in trade paid on the
+                   spot never had a home: every sale had to go through the
+                   quote board, so counter sales were simply not recorded
+                   and the cash book stayed empty. -->
+              <button class="btn btn-accent btn-icon" id="cb_counter_sale" title="Ring up a walk-in sale paid for now">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18l-2 9H5z"/><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>
+                Counter sale
+              </button>
               <!-- Neither in nor out, and deliberately a third verb rather
                    than a flavour of the other two. Withdrawing from the
                    bank to pay cash is not money the shop earned or spent
@@ -8920,6 +8964,39 @@
       <div class="btn-row">
         <button type="button" class="btn btn-accent" id="supplierReplySave">Save what they said</button>
         <button type="button" class="btn btn-ghost" id="supplierReplyCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A SALE OVER THE COUNTER.
+     Walk-in trade paid for on the spot. It becomes an ordinary invoiced,
+     paid order rather than a record of its own -- see openCounterSale for
+     why -- so it reaches revenue, margins, stock and the customer's
+     history by the same road every other sale takes. -->
+<div class="modal-overlay" id="counterSaleModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Counter sale">
+    <div class="modal-head">
+      <h2>Counter sale</h2>
+      <button class="modal-close" id="counterSaleClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="cs-sale-search searchable-select">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="cs_sale_search" placeholder="Add an item — search name, SKU or category…" autocomplete="off">
+        <div class="suggestions" id="cs_sale_suggestions" style="display:none;"></div>
+      </div>
+      <div id="cs_sale_lines"></div>
+      <div class="cs-sale-foot">
+        <label class="cs-sale-who"><span>Customer (optional)</span>
+          <input type="text" id="cs_sale_client" placeholder="Walk-in"></label>
+        <div class="cs-sale-total" id="cs_sale_total"></div>
+      </div>
+      <div class="btn-row cs-sale-actions">
+        <button class="btn btn-ghost" id="cs_sale_cancel">Cancel</button>
+        <button class="btn btn-accent" id="cs_sale_take">Take payment</button>
       </div>
     </div>
   </div>
@@ -35523,6 +35600,174 @@ function editCashTxn(id){
    then leave one account and never arrive in the other, and the day
    would fail to reconcile by exactly the amount moved with nothing on
    screen to explain it. See deleteCashTxn. */
+/* ================= A SALE OVER THE COUNTER =======================
+
+   Walk-in trade, paid on the spot, with no quote to build and no invoice
+   to raise afterwards. The reason it exists: every sale in this shop had
+   to go through the quote board, and a customer standing at the counter
+   with cash in their hand is not an order to be tracked through five
+   stages. So counter sales were not being recorded at all -- which is
+   why the cash book held four entries and every invoice on file read
+   as unpaid.
+
+   IT BECOMES AN ORDINARY SALE, not a record of its own. The income
+   statement, the margins, the dashboard, the customer's history and the
+   stock log all read savedQuotes; a separate "counter sale" table would
+   be money the shop had taken that none of them could see. So this
+   builds exactly what the quote flow builds -- an order, completed,
+   invoiced, paid -- and hands it to the same functions. The only thing
+   that differs is how fast it was made. */
+let counterSaleLines = [];
+function openCounterSale(){
+  counterSaleLines = [];
+  document.getElementById('cs_sale_search').value = '';
+  document.getElementById('cs_sale_client').value = '';
+  document.getElementById('cs_sale_suggestions').style.display = 'none';
+  renderCounterSaleLines();
+  openModal('counterSaleModal');
+  setTimeout(()=> document.getElementById('cs_sale_search').focus(), 60);
+}
+/* Only what is actually on the shelf. A counter sale is goods handed
+   over now, so an item with nothing in stock cannot be one -- offering
+   it would take the money and then find nothing to give. */
+function counterSaleSuggestions(query){
+  const tokens = searchTokens(query);
+  if(!tokens.length) return [];
+  return allProductVariantEntries(tokens)
+    .map(({p, variantIdx})=>({
+      p, variantIdx,
+      label: productVariantLabel(p, variantIdx),
+      have: getStockQty(p.id, variantIdx),
+      cost: getFIFOUnitCost(p.id, variantIdx),
+    }))
+    .filter(x=> x.have > 0)
+    .slice(0, 8);
+}
+function counterSaleAdd(productId, variantIdx){
+  const p = data.products.find(x=> x.id === productId);
+  if(!p) return;
+  const vi = variantIdx == null ? null : Number(variantIdx);
+  const existing = counterSaleLines.find(l=> l.productId===productId
+    && (l.variantIdx==null?null:l.variantIdx) === vi);
+  if(existing){ existing.qty = (Number(existing.qty)||0) + 1; renderCounterSaleLines(); return; }
+  const v = (p.variants||[])[vi] || {};
+  const cost = getFIFOUnitCost(productId, vi);
+  const line = {
+    lineId: counterSaleLines.length ? Math.max(...counterSaleLines.map(l=>l.lineId)) + 1 : 1,
+    productId, variantIdx: vi, productName: productVariantLabel(p, vi),
+    qty: 1, unit: v.unit || p.unit || '', packQty: Number(v.packQty || p.packQty) || 0,
+    packUnit: v.packUnit || p.packUnit || '',
+    // Our own shelf, which is what makes the stock come off on invoicing
+    // and what keeps a purchase invoice from being raised for it.
+    supplierId: '__stock__',
+    price: cost == null ? 0 : cost,
+  };
+  // Suggested from the stock markup rule, then editable -- the shop
+  // haggles at the counter and the figure that matters is the one that
+  // was actually agreed.
+  line.sellPrice = quoteItemSellPrice(line);
+  counterSaleLines.push(line);
+  renderCounterSaleLines();
+}
+function counterSaleTotal(){
+  return counterSaleLines.reduce((s,l)=> s + (Number(l.qty)||0) * (Number(l.sellPrice)||0), 0);
+}
+function renderCounterSaleLines(){
+  const wrap = document.getElementById('cs_sale_lines');
+  if(!counterSaleLines.length){
+    wrap.innerHTML = `<div class="cs-sale-empty">Nothing on this sale yet — search above to add what they are buying.</div>`;
+  } else {
+    wrap.innerHTML = `<table class="cs-sale-table"><thead><tr>
+        <th>Item</th><th class="r">Qty</th><th class="r">Price each</th><th class="r">Line</th><th></th>
+      </tr></thead><tbody>${counterSaleLines.map(l=>{
+        const have = getStockQty(l.productId, l.variantIdx);
+        const short = (Number(l.qty)||0) > have;
+        return `<tr${short ? ' class="is-short"' : ''}>
+          <td>${esc(l.productName)}${short ? `<span class="cs-sale-warn">only ${have} in stock</span>` : ''}</td>
+          <td class="r"><input type="number" class="cs-sale-qty" data-line="${l.lineId}" min="1" step="any" value="${l.qty}"></td>
+          <td class="r"><input type="number" class="cs-sale-price" data-line="${l.lineId}" min="0" step="any" value="${l.sellPrice}"></td>
+          <td class="r num">${fmtUGX(Math.round((Number(l.qty)||0)*(Number(l.sellPrice)||0)))}</td>
+          <td class="r"><button type="button" class="q-remove-icon cs-sale-del" data-line="${l.lineId}" title="Take off">${ICON_TRASH}</button></td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  }
+  const total = counterSaleTotal();
+  document.getElementById('cs_sale_total').innerHTML = counterSaleLines.length
+    ? `<span>Total</span><b>${fmtUGX(Math.round(total))}</b>` : '';
+  wrap.querySelectorAll('.cs-sale-qty').forEach(i=> i.addEventListener('change', ()=>{
+    const l = counterSaleLines.find(x=> x.lineId === Number(i.dataset.line));
+    if(l){ l.qty = Math.max(0, Number(i.value)||0); renderCounterSaleLines(); }
+  }));
+  wrap.querySelectorAll('.cs-sale-price').forEach(i=> i.addEventListener('change', ()=>{
+    const l = counterSaleLines.find(x=> x.lineId === Number(i.dataset.line));
+    if(l){ l.sellPrice = Math.max(0, Number(i.value)||0); renderCounterSaleLines(); }
+  }));
+  wrap.querySelectorAll('.cs-sale-del').forEach(b=> b.addEventListener('click', ()=>{
+    counterSaleLines = counterSaleLines.filter(x=> x.lineId !== Number(b.dataset.line));
+    renderCounterSaleLines();
+  }));
+}
+
+/* Taking the money, and everything that follows from it.
+
+   The order is deliberate: the money is asked for FIRST, and nothing is
+   written until an account has been chosen. Backing out of the account
+   question then leaves no half-made sale behind -- no stock off the
+   shelf, no order on the board, no receipt in the book. */
+async function takeCounterSale(){
+  if(!counterSaleLines.length){ toast('Nothing on this sale yet'); return; }
+  const total = Math.round(counterSaleTotal());
+  if(!(total > 0)){ toast('This sale comes to nothing — set a price first'); return; }
+  /* Stock is checked HERE as well as shown on the row, because the shelf
+     can move between adding a line and taking the money -- a worker
+     picking another order, or another till. */
+  const short = counterSaleLines.find(l=> (Number(l.qty)||0) > getStockQty(l.productId, l.variantIdx));
+  if(short){
+    toast(`${short.productName}: only ${getStockQty(short.productId, short.variantIdx)} on the shelf`, 6000);
+    return;
+  }
+  const account = await promptCashAccount('Where is the money going?',
+    `Taking ${fmtUGX(total)} for ${counterSaleLines.length} ${counterSaleLines.length===1?'item':'items'}.`);
+  if(!account) return;
+
+  const name = (document.getElementById('cs_sale_client').value || '').trim() || 'Walk-in';
+  const id = await issueRowId('savedQuote');
+  const now = new Date().toISOString();
+  const q = {
+    id, client: { name, phone: '' }, date: todayISO(),
+    items: JSON.parse(JSON.stringify(counterSaleLines)),
+    savedAt: now,
+    /* Completed and invoiced on the spot: the goods are in the
+       customer's hands and the money is in the till, which is every
+       stage the board tracks, all at once. */
+    status: 'completed', stageEnteredAt: Date.now(),
+    assignedWorkerId: null, assignedDeliveryId: null,
+    invoiced: true, invoicedAt: todayISO(), invoicedTs: Date.now(),
+    amountPaid: total, payments: [], voided: false,
+    customerId: null, debtCharged: 0,
+    // What it was, so the board and the reports can tell a counter sale
+    // from an order that went through the stages.
+    counterSale: true,
+  };
+  data.savedQuotes.push(q);
+  // The same deduction every other invoiced order gets, so the stock log
+  // reads the same and the lots are carried onto the line for COGS.
+  applyQuoteStockDeduction(q);
+  const cashTxnId = addCashReceipt(account, total, 'Sales Revenue',
+    `Counter sale — ${name}`);
+  q.payments.push({ date: todayISO(), amount: total, note: 'Counter sale',
+    cashTxnId, method: account, id: 1 });
+  saveData();
+  closeModal('counterSaleModal');
+  counterSaleLines = [];
+  renderSavedQuotes();
+  if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
+    renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+  }
+  toast(`${fmtUGX(total)} taken — ${invoiceNumberLabel(q)}`, 5000);
+  printReceipt(q, q.payments[0], 0);
+}
+
 /* The transfer, asked in the order it is thought about: which till it
    leaves, how much, which till it lands in.
 
@@ -35709,6 +35954,40 @@ function renderCbSummary(){
 }
 
 document.getElementById('cb_transfer').addEventListener('click', openAccountTransfer);
+document.getElementById('cb_counter_sale').addEventListener('click', openCounterSale);
+document.getElementById('counterSaleClose').addEventListener('click', ()=> closeModal('counterSaleModal'));
+document.getElementById('cs_sale_cancel').addEventListener('click', ()=> closeModal('counterSaleModal'));
+document.getElementById('cs_sale_take').addEventListener('click', takeCounterSale);
+(function wireCounterSaleSearch(){
+  const input = document.getElementById('cs_sale_search');
+  const box = document.getElementById('cs_sale_suggestions');
+  if(!input || !box) return;
+  const draw = ()=>{
+    const rows = counterSaleSuggestions(input.value);
+    if(!rows.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.innerHTML = rows.map(r=>`
+      <div class="suggestion cs-sale-hit" data-p="${esc(r.p.id)}" data-v="${r.variantIdx==null?'':r.variantIdx}">
+        <span class="cs-hit-name">${esc(r.label)}</span>
+        <span class="cs-hit-have">${r.have} in stock</span>
+      </div>`).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('.cs-sale-hit').forEach(el=> el.addEventListener('click', ()=>{
+      counterSaleAdd(el.dataset.p, el.dataset.v === '' ? null : Number(el.dataset.v));
+      input.value = ''; box.style.display = 'none'; box.innerHTML = ''; input.focus();
+    }));
+  };
+  input.addEventListener('input', draw);
+  // Enter takes the top hit, so a whole sale can be rung up without
+  // reaching for the mouse.
+  input.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    const first = box.querySelector('.cs-sale-hit');
+    if(first){ e.preventDefault(); first.click(); }
+  });
+  document.addEventListener('click', (e)=>{
+    if(!box.contains(e.target) && e.target !== input){ box.style.display = 'none'; }
+  });
+})();
 document.getElementById('cb_print').addEventListener('click', ()=>{
   /* The one #printArea path that never cleared the sheet a previous
      print left behind. Latent while every injected sheet was A5 -- a
