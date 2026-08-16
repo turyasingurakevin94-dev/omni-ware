@@ -3004,12 +3004,29 @@
   .pr-state.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
 
   /* ===== Cash Book — opening wizard ===== */
-  .cb-wizard-panel{max-width:600px;margin:0 auto 20px;}
-  .cb-progress-bar{height:8px;border-radius:5px;background:#EEF1F3;overflow:hidden;margin-bottom:8px;}
-  .cb-progress-fill{height:100%;width:25%;background:var(--accent);border-radius:5px;transition:width .28s ease;}
-  .cb-progress-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);margin-bottom:26px;}
-  .cb-step h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 6px 0;color:var(--ink);letter-spacing:0.2px;}
-  .cb-step-hint{margin:0 0 18px 0;color:var(--ink-soft);font-size:13.5px;}
+  /* Opening the day. One panel, four fields -- see the markup for why
+     it stopped being four screens. Narrow, because it is a short form
+     and a 900px card holding three number boxes reads as an empty page
+     with a form lost in it. */
+  .cb-open-panel{max-width:560px;margin:0 auto 20px;}
+  .cb-open-head h2{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0 0 5px;color:var(--ink);letter-spacing:0.2px;}
+  .cb-open-sub{margin:0 0 18px;color:var(--ink-soft);font-size:13px;line-height:1.55;}
+  .cb-open-date{max-width:220px;margin-bottom:18px;}
+  .cb-open-accounts{display:flex;flex-direction:column;gap:14px;}
+  /* Label, figure and the note that explains where the figure came from,
+     stacked so the explanation sits under the number it is about rather
+     than in a screen of its own. */
+  .cb-open-acct{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#FBFCFD;}
+  .cb-open-acct label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.5px;color:var(--ink-soft);margin-bottom:6px;}
+  .cb-open-acct input{width:100%;box-sizing:border-box;font-size:19px;font-weight:600;
+    font-family:'IBM Plex Mono',monospace;padding:9px 11px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;}
+  .cb-open-acct input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .cb-open-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
+  .cb-open-total{font-size:13px;color:var(--ink-soft);}
+  .cb-open-total b{font-family:'IBM Plex Mono',monospace;color:var(--ink);font-size:15px;}
   /* Muted and non-interactive: this sits where a delete button would be,
      so it must not read as something you can press. */
   .debt-log-locked{display:inline-flex;align-items:center;color:var(--ink-soft);opacity:.7;cursor:default;padding:0 2px;}
@@ -3146,10 +3163,6 @@
   }
   .cb-chain-break b{color:var(--danger);}
   .cb-chain-break .cb-chain-fix{align-self:flex-start;margin-top:6px;}
-  .cb-step-field{max-width:320px;}
-  .cb-step-field input{font-size:21px;font-family:'IBM Plex Mono',monospace;padding:13px 14px;font-weight:600;}
-  .cb-wizard-nav{justify-content:space-between;margin-top:28px;}
-  .cb-wizard-nav .btn{min-width:96px;}
 
   /* ===== Cash Book — day header ===== */
   .cb-day-summary .panel-head-row{align-items:flex-start;}
@@ -7722,37 +7735,49 @@
       </div>
 
       <!-- Onboarding wizard: collects date + opening balances before the day's book is accessible -->
-      <div class="panel cb-wizard-panel" id="cbWizard">
-        <div class="cb-progress-bar"><div class="cb-progress-fill" id="cbProgressFill"></div></div>
-        <div class="cb-progress-label" id="cbProgressLabel">Step 1 of 4</div>
+      <!-- OPENING THE DAY, ON ONE SCREEN.
+           It was four: a step for the date and one for each account,
+           with a progress bar and Back/Next. But on every morning except
+           the very first, all three figures are ALREADY KNOWN -- carried
+           from the day before, with a note under each saying to change it
+           only if the money really differs. So the ritual was four
+           screens to confirm what the shop had already worked out, every
+           day, before the book could be touched at all.
 
-        <div class="cb-step" id="cbStep1">
-          <h2>Which day are you opening?</h2>
-          <p class="cb-step-hint">Pick the date you're starting the cash book for.</p>
-          <div class="field cb-step-field"><label>Date</label><input type="date" id="cb_wiz_date"></div>
-        </div>
-        <div class="cb-step" id="cbStep2" style="display:none;">
-          <h2>Starting cash balance</h2>
-          <p class="cb-step-hint">How much physical cash do you have on hand right now?</p>
-          <div class="field cb-step-field"><label>Cash (UGX)</label><input type="number" id="cb_wiz_cash" min="0" placeholder="e.g. 150000"></div>
-          <div class="cb-carried-note" id="cb_wiz_cash_carried"></div>
-        </div>
-        <div class="cb-step" id="cbStep3" style="display:none;">
-          <h2>Starting mobile money balance</h2>
-          <p class="cb-step-hint">Enter the mobile money balance you're opening with.</p>
-          <div class="field cb-step-field"><label>Mobile Money (UGX)</label><input type="number" id="cb_wiz_momo" min="0" placeholder="e.g. 80000"></div>
-          <div class="cb-carried-note" id="cb_wiz_momo_carried"></div>
-        </div>
-        <div class="cb-step" id="cbStep4" style="display:none;">
-          <h2>Starting bank balance</h2>
-          <p class="cb-step-hint">Enter the bank balance you're opening with.</p>
-          <div class="field cb-step-field"><label>Bank (UGX)</label><input type="number" id="cb_wiz_bank" min="0" placeholder="e.g. 500000"></div>
-          <div class="cb-carried-note" id="cb_wiz_bank_carried"></div>
+           Four short fields is a form, not a journey. The teaching that
+           justified the steps is kept as the note under each figure,
+           where it is read at the moment it matters rather than as a
+           screen to be clicked past. -->
+      <div class="panel cb-open-panel" id="cbWizard">
+        <header class="cb-open-head">
+          <h2 id="cbOpenTitle">Open the day</h2>
+          <p class="cb-open-sub" id="cbOpenSub"></p>
+        </header>
+
+        <div class="field cb-open-date"><label>Which day</label>
+          <input type="date" id="cb_wiz_date"></div>
+
+        <div class="cb-open-accounts">
+          <div class="cb-open-acct">
+            <label for="cb_wiz_cash">Cash</label>
+            <input type="number" id="cb_wiz_cash" min="0" step="any" placeholder="0" inputmode="numeric">
+            <div class="cb-carried-note" id="cb_wiz_cash_carried"></div>
+          </div>
+          <div class="cb-open-acct">
+            <label for="cb_wiz_momo">Mobile Money</label>
+            <input type="number" id="cb_wiz_momo" min="0" step="any" placeholder="0" inputmode="numeric">
+            <div class="cb-carried-note" id="cb_wiz_momo_carried"></div>
+          </div>
+          <div class="cb-open-acct">
+            <label for="cb_wiz_bank">Bank</label>
+            <input type="number" id="cb_wiz_bank" min="0" step="any" placeholder="0" inputmode="numeric">
+            <div class="cb-carried-note" id="cb_wiz_bank_carried"></div>
+          </div>
         </div>
 
-        <div class="btn-row cb-wizard-nav">
-          <button class="btn btn-ghost" id="cb_wiz_back">Back</button>
-          <button class="btn btn-accent" id="cb_wiz_next">Next</button>
+        <div class="cb-open-foot">
+          <div class="cb-open-total" id="cbOpenTotal"></div>
+          <button class="btn btn-accent" id="cb_wiz_next">Open the books</button>
         </div>
       </div>
 
@@ -34264,9 +34289,6 @@ function getDayRecord(date){
 function currentCbDate(){ return document.getElementById('cb_wiz_date').value || todayISO(); }
 
 /* ---- Opening wizard ("virtual tour") ---- */
-const CB_WIZ_STEPS = ['cbStep1','cbStep2','cbStep3','cbStep4'];
-let cbWizStep = 0;
-
 function initCashBook(){
   const dateInput = document.getElementById('cb_wiz_date');
   if(!dateInput.value) dateInput.value = todayISO();
@@ -34280,11 +34302,7 @@ function initCashBook(){
 function showCbWizard(resetSteps){
   document.getElementById('cbWizard').style.display = 'block';
   document.getElementById('cbMain').style.display = 'none';
-  if(resetSteps){
-    cbWizStep = 0;
-    fillCbWizardFromRecord();
-    renderCbWizardStep();
-  }
+  if(resetSteps) fillCbWizardFromRecord();
 }
 
 // Pre-fills the three amounts and says where each came from. An opening
@@ -34307,23 +34325,34 @@ function fillCbWizardFromRecord(){
     }
     note.innerHTML = `Carried forward from <b>${esc(carried.from)}</b>, which ${carried.counted[a.key] ? 'was counted at' : 'calculated out at'} <b>${fmtUGX(Math.round(carried.values[a.key]))}</b>. Change it only if the money on hand really differs.`;
   });
+  /* The panel does two jobs and should say which. On the very first day
+     there is nothing to carry and somebody is being taught what a cash
+     book is; on every morning after, the figures are already worked out
+     and the job is to confirm them. Same fields, different sentence. */
+  const first = !carried;
+  document.getElementById('cbOpenTitle').textContent = first ? 'Start the cash book' : 'Open the day';
+  document.getElementById('cbOpenSub').textContent = first
+    ? 'Count what is in each account right now. Everything the book says afterwards is measured from these three figures.'
+    : 'These are carried from the last day on file. Check them against what is actually there, change any that differ, and open the day.';
+  cbRenderOpenTotal();
 }
-function renderCbWizardStep(){
-  CB_WIZ_STEPS.forEach((id,i)=>{ document.getElementById(id).style.display = (i===cbWizStep) ? 'block' : 'none'; });
-  const pct = ((cbWizStep+1)/CB_WIZ_STEPS.length)*100;
-  document.getElementById('cbProgressFill').style.width = pct+'%';
-  document.getElementById('cbProgressLabel').textContent = `Step ${cbWizStep+1} of ${CB_WIZ_STEPS.length}`;
-  document.getElementById('cb_wiz_back').style.visibility = cbWizStep===0 ? 'hidden' : 'visible';
-  document.getElementById('cb_wiz_next').textContent = cbWizStep===CB_WIZ_STEPS.length-1 ? 'Finish & open the books' : 'Next';
+// What the three come to, so the figure being committed to is visible
+// before the button rather than only after it.
+function cbRenderOpenTotal(){
+  const el = document.getElementById('cbOpenTotal');
+  if(!el) return;
+  const total = ACCOUNTS.reduce((s,a)=>
+    s + (Number(document.getElementById(`cb_wiz_${a.key}`).value)||0), 0);
+  el.innerHTML = `Opening with <b>${fmtUGX(Math.round(total))}</b> across the three accounts`;
 }
 document.getElementById('cb_wiz_date').addEventListener('change', fillCbWizardFromRecord);
-document.getElementById('cb_wiz_next').addEventListener('click', ()=>{
-  if(cbWizStep===0 && !document.getElementById('cb_wiz_date').value){ toast('Select a date to continue'); return; }
-  if(cbWizStep < CB_WIZ_STEPS.length-1){ cbWizStep++; renderCbWizardStep(); }
-  else { finishCbWizard(); }
+ACCOUNTS.forEach(a=>{
+  const el = document.getElementById(`cb_wiz_${a.key}`);
+  if(el) el.addEventListener('input', cbRenderOpenTotal);
 });
-document.getElementById('cb_wiz_back').addEventListener('click', ()=>{
-  if(cbWizStep>0){ cbWizStep--; renderCbWizardStep(); }
+document.getElementById('cb_wiz_next').addEventListener('click', ()=>{
+  if(!document.getElementById('cb_wiz_date').value){ toast('Pick the day you are opening'); return; }
+  finishCbWizard();
 });
 function finishCbWizard(){
   const date = currentCbDate();
