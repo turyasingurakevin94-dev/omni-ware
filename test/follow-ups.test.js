@@ -50,7 +50,7 @@ const NAMES = ['followUpsAll', 'followUpById', 'followUpIsOpen', 'openFollowUps'
   'followUpSinceMs', 'followUpPriceNow', 'followUpBackInStock', 'followUpSourcingProgress',
   'followUpPriceMoved', 'followUpGoneQuiet', 'followUpReasons', 'followUpClientsToContact',
   'followUpDigest', 'findFollowUp', 'addFollowUp', 'recordFollowUpContact',
-  'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought'];
+  'closeFollowUp', 'reopenFollowUp', 'followUpAlreadyBought', 'followUpStatePill'];
 
 let nextId = 1;
 const scope = compileScope([
@@ -535,6 +535,49 @@ const stockMove = (before, after, whenDays) => {
     'while the message keeps the full one');
 }
 
+/* ---------- 11bis. the pill says WHICH kind of silence ---------------- */
+{
+  /* It read "Never told" in amber from the moment a follow-up was made,
+     which told the user off twenty minutes after they had done the right
+     thing, for not saying something there was nothing to say. Two
+     situations wanting opposite reactions were wearing one label. */
+  reset();
+  // A day old, well inside the 14-day quiet threshold, so the only thing
+  // that can change its state is real news.
+  const fresh = fu({ createdAt: ago(1) });
+  eq(scope.followUpStatePill(fresh, NOW).label, 'Waiting',
+    'nothing has happened yet, so nothing was said — that is patience, not a failure');
+  eq(scope.followUpStatePill(fresh, NOW).cls, '',
+    'and it is not painted amber, or amber stops meaning anything');
+
+  stockMove(0, 20, 0);                       // now there IS something to say
+  eq(scope.followUpStatePill(fresh, NOW).label, 'Not told',
+    'once the goods are in and nobody has rung, that is work');
+  eq(scope.followUpStatePill(fresh, NOW).cls, 'warn', 'and it says so in amber');
+
+  fresh.contacts.push({ at: new Date(NOW).toISOString(), reason: 'back_in_stock' });
+  eq(scope.followUpStatePill(fresh, NOW).label, 'Told', 'told, and nothing outstanding since');
+  eq(scope.followUpStatePill(fresh, NOW).cls, 'good', 'which is the only green state');
+
+  fresh.closedAt = new Date(NOW).toISOString();
+  eq(scope.followUpStatePill(fresh, NOW).label, 'Closed', 'and a settled one is simply closed');
+}
+{
+  // Silence that has gone on long enough IS work, even with no news.
+  reset();
+  const old = fu({ createdAt: ago(40) });
+  eq(scope.followUpStatePill(old, NOW).label, 'Not told',
+    '40 days of nothing is not patience — the quiet rule already says so, and the pill now agrees with it');
+}
+{
+  // Told once, then news again: still owed a word.
+  reset();
+  const f = fu({ contacts: [{ at: ago(10), reason: 'x' }] });
+  stockMove(0, 8, 2);
+  eq(scope.followUpStatePill(f, NOW).label, 'Not told',
+    'told before is not told about THIS — a client already spoken to can still be owed the next update');
+}
+
 /* ---------- 11c. the screen reads before it is read ------------------- */
 {
   const all = extractFunction(src, 'renderFollowUpsAll', 'index.html');
@@ -557,7 +600,7 @@ const stockMove = (before, after, whenDays) => {
   t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
     'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
   t.check(/fup-group/.test(all), 'and renders them as groups');
-  t.check(/Never told/.test(all) && /fup-pill/.test(all),
+  t.check(/followUpStatePill/.test(all) && /fup-pill/.test(all),
     'and state is a pill, not a sentence in grey among other sentences in grey');
 
   t.check(/nameInitials/.test(contact) && /fup-avatar/.test(contact),

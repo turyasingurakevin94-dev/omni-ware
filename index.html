@@ -42949,6 +42949,28 @@ function renderFollowUpSummary(){
     <div class="dir-summary-card"><b>${never}</b><span>Never followed up</span></div>`;
 }
 
+/* What this row's silence actually means.
+
+   The pill used to read "Never told" the moment a follow-up was created,
+   painted amber -- telling somebody off twenty minutes after they had
+   done the right thing, for not having said something there was nothing
+   to say. It collapsed two situations that want opposite reactions:
+
+     nothing has happened yet, so nothing was said   fine, leave it
+     something HAS happened and nobody said it       go and ring them
+
+   The difference is already known -- followUpReasons is exactly the
+   question "is there anything to tell them today", and it is what the
+   To contact tab and the badge are built on. The pill now asks it too,
+   so amber always means work and never means patience. */
+function followUpStatePill(f, nowMs){
+  if(f && f.closedAt) return {label:'Closed', cls:''};
+  if(followUpReasons(f, nowMs || Date.now()).length) return {label:'Not told', cls:'warn'};
+  return followUpLastContact(f)
+    ? {label:'Told', cls:'good'}
+    : {label:'Waiting', cls:''};
+}
+
 function renderFollowUpsAll(filter){
   const wrap = document.getElementById('fup_all_list');
   if(!wrap) return;
@@ -42995,12 +43017,7 @@ function renderFollowUpsAll(filter){
       ${g.items.map(f=>{
         const s = followUpSubject(f);
         const last = followUpLastContact(f);
-        /* The state as a pill rather than a sentence in grey. "Never
-           told" is the one worth spotting from across the list, and as
-           prose it read exactly like every other line. */
-        const pill = f.closedAt ? {label:'Closed', cls:''}
-          : last ? {label:'Told', cls:'good'}
-          : {label:'Never told', cls:'warn'};
+        const pill = followUpStatePill(f, Date.now());
         return `<div class="fup-row${f.closedAt ? ' closed' : ''}">
           <div class="fup-row-main">
             <span class="fup-row-item">${esc(s.label)}</span>
@@ -43008,7 +43025,7 @@ function renderFollowUpsAll(filter){
           </div>
           <span class="fup-row-meta">${f.closedAt
             ? (f.closedReason ? esc(f.closedReason) : 'closed')
-            : last ? esc(savedAgoLabel(last.at))
+            : last ? `told ${esc(savedAgoLabel(last.at))}`
                    : `added ${esc(savedAgoLabel(f.createdAt))}`}</span>
           <button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
             data-id="${esc(String(f.id))}" data-reason="">${f.closedAt ? 'Reopen' : 'Close'}</button>
