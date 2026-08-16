@@ -7789,6 +7789,15 @@
                 <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
                 Money out
               </button>
+              <!-- Neither in nor out, and deliberately a third verb rather
+                   than a flavour of the other two. Withdrawing from the
+                   bank to pay cash is not money the shop earned or spent
+                   -- the total is unchanged -- and filing it under either
+                   would say it was. -->
+              <button class="btn btn-ghost btn-icon" id="cb_transfer" title="Move money between the shop's own accounts">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M7 10h11l-3-3"/><path d="M17 14H6l3 3"/></svg>
+                Transfer
+              </button>
               <button class="btn btn-ghost btn-icon" id="cb_edit_opening" title="Change the day or its starting balances">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>
                 Opening
@@ -10692,7 +10701,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR, askedColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, variantColR, imageColR, askedColR, transferColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -10703,7 +10712,8 @@ async function loadData(shopId){
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
     sb.from('sourcing_leads').select('image').limit(1),
-    sb.from('prices').select('last_asked_at').limit(1)
+    sb.from('prices').select('last_asked_at').limit(1),
+    sb.from('cash_txns').select('transfer_id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -10735,6 +10745,11 @@ async function loadData(shopId){
      applied, sending last_asked_at would fail the whole prices upsert
      and the shop would silently stop saving prices at all. */
   priceAskedColumn = !(askedColR && askedColR.error);
+  /* 0076, its own probe like the two above. Guards a busy write: every
+     cash entry goes up on every save, so sending transfer_id before the
+     migration lands would fail the whole cash_txns upsert and the shop
+     would silently stop recording money. */
+  cashTransferColumn = !(transferColR && transferColR.error);
   // sourcing_leads is out of the list for the same reason.
   const sourcingLeadRows = (sourcingLeadsR && !sourcingLeadsR.error && sourcingLeadsR.data) || [];
 
@@ -10820,7 +10835,7 @@ async function loadData(shopId){
     cashDays,
     // quoteId stays null rather than 0: null means this receipt was not
     // taken for a counter sale, which is the ordinary case.
-    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time, quoteId: t.quote_id==null ? null : Number(t.quote_id)})),
+    cashTxns: (cashTxnsR.data||[]).map(t=>({id:t.id, date:t.date, account:normaliseCashAccount(t.account), type:t.type, category:t.category, amount:Number(t.amount)||0, description:t.description||'', time:t.time, quoteId: t.quote_id==null ? null : Number(t.quote_id), transferId: t.transfer_id==null ? null : Number(t.transfer_id)})),
     nextCashTxnId: (cashTxnsR.data||[]).length ? Math.max(0,...cashTxnsR.data.map(t=>t.id||0))+1 : 1,
     quote,
     // lineId, not id -- quote items have never had an `id`, so this read
@@ -10988,6 +11003,7 @@ let lastSynced = {};
 let sourcingVariantColumn = false;
 let sourcingImageColumn = false;
 let priceAskedColumn = false;
+let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
 
@@ -11052,7 +11068,11 @@ function buildSyncRows(d, shopId){
     cashTxns: d.cashTxns.map(t=>({
       id:t.id, shop_id:shopId, date:t.date, account:t.account, type:t.type, category:t.category,
       amount:t.amount, description:t.description, time:t.time,
-      quote_id: t.quoteId==null ? null : t.quoteId
+      quote_id: t.quoteId==null ? null : t.quoteId,
+      // Guarded: every cash entry goes up on every save, so sending this
+      // before 0076 lands would fail the whole upsert and the shop would
+      // stop recording money rather than merely lose the link.
+      ...(cashTransferColumn ? {transfer_id: t.transferId==null ? null : t.transferId} : {})
     })),
     savedQuotes: d.savedQuotes.map(q=>({
       id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
@@ -26035,7 +26055,11 @@ async function renderCommissionClaims(){
 function cashAccountChoices(opts){
   const amount = opts && Number(opts.amount) || 0;
   const outgoing = !!(opts && opts.outgoing);
-  return ACCOUNTS.map(a=>{
+  /* A transfer's destination cannot be its source. Left in, the obvious
+     misclick produces two entries against one account that net to zero
+     and read in the book as activity that never happened. */
+  const exclude = opts && opts.excludeKey;
+  return ACCOUNTS.filter(a=> a.key !== exclude).map(a=>{
     const balance = Math.round(cashOnHandFor(a.key));
     return { key: a.key, label: a.label, balance,
       /* Only when money is LEAVING. An account being low says nothing
@@ -35451,11 +35475,97 @@ function editCashTxn(id){
   openModal(column==='in' ? 'cashInModal' : 'cashOutModal');
   document.getElementById(prefix+'amount').focus();
 }
+/* Moving the shop's own money between its own tills.
+
+   TWO ENTRIES, NOT ONE. A cash entry belongs to exactly one account, so
+   a movement between two of them is a payment out of the first and a
+   receipt into the second -- which is also how it should read in the
+   book, because on the day it happened the drawer really did go down
+   and the bank account really did go up.
+
+   Both carry CASH_TRANSFER_CATEGORY, which sits in CASH_NOT_OPEX and
+   CASH_NOT_REVENUE alike, so the pair cancels: the shop's total is
+   unchanged and neither the income statement nor the expense side
+   moves. In one list only it would be half-cancelled, which is worse
+   than being in neither.
+
+   They are LINKED, because the Cash Book deletes a row by its own id
+   and nothing else would stop somebody removing one leg -- money would
+   then leave one account and never arrive in the other, and the day
+   would fail to reconcile by exactly the amount moved with nothing on
+   screen to explain it. See deleteCashTxn. */
+/* The transfer, asked in the order it is thought about: which till it
+   leaves, how much, which till it lands in.
+
+   Built from promptCashAccount's own rows, so choosing a till looks the
+   same wherever the shop is asked to -- and the FROM step shows what is
+   in each, because "have I got it in the bank" is the question that
+   starts a transfer in the first place. */
+async function openAccountTransfer(){
+  const from = await promptCashAccount('Move money out of which account?',
+    'The shop\'s own money moving between its own tills — this changes neither what it has earned nor what it has spent.');
+  if(!from) return;
+
+  const have = Math.round(cashOnHandFor(from));
+  const typed = prompt(`How much is moving out of ${accountLabel(from)}?\n${fmtUGX(have)} on hand.`, '');
+  if(typed === null) return;
+  const amount = Math.round(Number(typed)||0);
+  if(!(amount > 0)){ toast('Enter an amount greater than 0'); return; }
+
+  /* Said, not blocked. The shop may be moving money it knows is landing,
+     and refusing would make the book disagree with what actually
+     happened -- the same rule the till picker follows. */
+  if(amount > have){
+    toast(`${accountLabel(from)} holds ${fmtUGX(have)} — this will take it ${fmtUGX(amount-have)} below zero.`, 6000);
+  }
+
+  const to = await promptCashAccount('And into which account?',
+    `Moving ${fmtUGX(amount)} out of ${accountLabel(from)}.`, {excludeKey: from});
+  if(!to) return;
+  if(to === from){ toast('That is the same account — nothing to move'); return; }
+
+  const note = (prompt('What was it for? (optional)', '') || '').trim();
+  const res = transferBetweenAccounts(from, to, amount, note);
+  if(!res){ toast('Nothing moved'); return; }
+  renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+  toast(`${fmtUGX(amount)} moved — ${accountLabel(from)} to ${accountLabel(to)}`);
+}
+function transferBetweenAccounts(from, to, amount, note, date){
+  const amt = Math.round(Number(amount)||0);
+  if(!(amt > 0)) return null;
+  // Nothing moves, so nothing is recorded. Two entries against one
+  // account would net to zero and read as activity that never happened.
+  if(!from || !to || from === to) return null;
+  const when = date || todayISO();
+  const label = `${accountLabel(from)} → ${accountLabel(to)}`;
+  const desc = note ? `${label} — ${note}` : label;
+  const outId = addCashPayment(from, amt, CASH_TRANSFER_CATEGORY, desc, when);
+  const inId = addCashReceipt(to, amt, CASH_TRANSFER_CATEGORY, desc, when);
+  /* Tied together after both exist, so a failure to write the second
+     never leaves the first claiming a partner that is not there. */
+  const outTx = data.cashTxns.find(t=> t.id === outId);
+  const inTx = data.cashTxns.find(t=> t.id === inId);
+  if(outTx && inTx){ outTx.transferId = inId; inTx.transferId = outId; }
+  saveData();
+  return { outId, inId, amount: amt };
+}
 function deleteCashTxn(id){
-  if(!confirm('Delete this transaction?')) return;
-  data.cashTxns = data.cashTxns.filter(t=>t.id!==id);
+  const t = data.cashTxns.find(x=> x.id === id);
+  /* The other half of a transfer, if this is one. Deleting a single leg
+     takes money out of one till and puts it in none, which the day
+     reconciles as a shortfall nobody can account for -- so the pair goes
+     or neither does, and the question says which it is. */
+  const twin = t && t.transferId != null
+    ? data.cashTxns.find(x=> x.id === t.transferId) : null;
+  const ask = twin
+    ? `Delete this transfer? Both sides go — ${fmtUGX(Math.round(t.amount))} out of ${accountLabel(t.account)} and into ${accountLabel(twin.account)}.`
+    : 'Delete this transaction?';
+  if(!confirm(ask)) return;
+  const gone = new Set([id]);
+  if(twin) gone.add(twin.id);
+  data.cashTxns = data.cashTxns.filter(x=> !gone.has(x.id));
   saveData(); renderCbTransactions(); renderCbSummary(); renderCbTriggers();
-  toast('Transaction deleted');
+  toast(twin ? 'Transfer deleted — both sides' : 'Transaction deleted');
 }
 
 function cbAccountTotals(date, account){
@@ -35569,6 +35679,7 @@ function renderCbSummary(){
   }
 }
 
+document.getElementById('cb_transfer').addEventListener('click', openAccountTransfer);
 document.getElementById('cb_print').addEventListener('click', ()=>{
   /* The one #printArea path that never cleared the sheet a previous
      print left behind. Latent while every injected sheet was A5 -- a
@@ -40624,6 +40735,18 @@ document.getElementById('fa_save').addEventListener('click', async ()=>{
    It is a real cost -- the shop's own money paid to an agent, counted
    nowhere else, since an agent order books the shop's floor price as the
    sale and the agent's own markup never touches these books. */
+/* What the writer stamps on both legs of a transfer.
+
+   Spelled out as a LITERAL in the two exclusion maps below rather than
+   used as a computed key, because those maps are read by a dozen scopes
+   that have no reason to know this constant exists -- and making them
+   all import it to read a category list is a poor trade for one string.
+
+   The risk that buys is drift: a transfer whose category no longer
+   matches the maps becomes an expense AND a revenue, inflating both
+   sides of the income statement by its own size. Pinned by test instead,
+   which is the cheaper guard. */
+const CASH_TRANSFER_CATEGORY = 'Account Transfer';
 const CASH_NOT_OPEX = {
   'Stock Purchase': 'inventory — costed through COGS when sold',
   'Supplier Payment': 'settles a payable already costed',
@@ -40637,6 +40760,15 @@ const CASH_NOT_OPEX = {
   // the asset register -- expensing the cash here as well would charge the
   // whole van now AND charge it again over its life.
   'Equipment purchase': 'capital — reaches the accounts as depreciation',
+  /* Moving the shop's own money between its own tills is not a cost.
+     Withdrawing 500,000 from the bank to pay in cash spends nothing --
+     the shop has exactly what it had. Counted here it would be an
+     expense of 500,000, and the matching receipt would be revenue of
+     500,000, so a single transfer would inflate BOTH sides of the
+     income statement by its own size. See CASH_NOT_REVENUE for the
+     other half; a transfer has to sit in both lists or it is only
+     half-cancelled. */
+  'Account Transfer': 'the shop\'s own money moving between its own tills',
 };
 const CASH_NOT_REVENUE = {
   'Loan Received': 'borrowing — a liability, not income',
@@ -40646,6 +40778,9 @@ const CASH_NOT_REVENUE = {
   // whether it was a good sale is the asset register's answer -- proceeds
   // against written-down value -- not the size of the cheque.
   'Asset Sale': 'investing returning — the gain or loss comes from the register',
+  // The receiving half of a transfer. Depositing cash into the bank
+  // earns nothing -- see CASH_NOT_OPEX for the paying half.
+  'Account Transfer': 'the shop\'s own money arriving from another of its tills',
 };
 const cashHas = (map, cat)=> Object.prototype.hasOwnProperty.call(map, String(cat==null?'':cat));
 function cashIsMoneyOut(t){ return t.type==='payment' || t.type==='expense' || t.type==='out'; }

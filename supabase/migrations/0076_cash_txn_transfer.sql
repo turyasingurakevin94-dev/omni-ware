@@ -1,0 +1,17 @@
+-- The other half of an account transfer.
+--
+-- Moving money between the shop's own tills is two cash entries: a
+-- payment out of one account and a receipt into the other. Each points
+-- at the other's id, so the Cash Book can refuse to delete one without
+-- the other.
+--
+-- Without it, deleting a single leg takes money out of one till and puts
+-- it into none. The day then fails to reconcile by exactly the amount
+-- moved, with nothing on screen to say why -- the same class of silent
+-- shortfall the cash book already had one of.
+--
+-- Nullable, because almost every cash entry is not a transfer. No
+-- foreign key to cash_txns.id: the pair is written together and deleted
+-- together by the app, and a self-referencing constraint would only
+-- decide which of the two could be removed first.
+alter table cash_txns add column if not exists transfer_id bigint;
