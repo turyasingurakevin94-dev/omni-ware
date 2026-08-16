@@ -4876,29 +4876,39 @@
   .sq-assign-btn:focus-visible, .sq-confirm-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
   /* ---- Supplier confirmation panel ---- */
-  .sc-row{
+  .sconf-row{
     border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px;
     background:var(--panel);
   }
-  .sc-row.orphan{border-style:dashed;}
-  .sc-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
-  .sc-head b{font-size:13.5px;}
-  .sc-pill{
+  .sconf-row.orphan{border-style:dashed;}
+  .sconf-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+  .sconf-head b{font-size:13.5px;}
+  .sconf-pill{
     margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.02em;
     padding:2px 9px;border-radius:999px;
     background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;
   }
-  .sc-pill.good{background:var(--good-bg);color:var(--good);}
-  .sc-pill.bad{background:var(--ow-crimson-soft);color:var(--danger);}
-  .sc-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
-  .sc-line{
+  .sconf-pill.good{background:var(--good-bg);color:var(--good);}
+  .sconf-pill.bad{background:var(--ow-crimson-soft);color:var(--danger);}
+  .sconf-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
+  .sconf-line{
     display:flex;justify-content:space-between;gap:12px;
     font-size:12px;color:var(--ink-soft);padding:2px 0;
   }
-  .sc-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .sc-note{font-size:11.5px;color:var(--ink-soft);margin-top:6px;font-style:italic;}
-  .sc-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
-  .sc-acts .btn{font-size:12px;padding:5px 11px;}
+  .sconf-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sconf-note{font-size:11.5px;color:var(--ink-soft);margin-top:6px;font-style:italic;}
+  .sconf-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+  .sconf-acts .btn{font-size:12px;padding:5px 11px;}
+  .sconf-why{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;align-items:center;}
+  .sconf-why .btn{font-size:12px;padding:5px 11px;}
+  /* Grows to fill the row but is allowed to wrap onto its own line on a
+     narrow screen rather than squeezing the two buttons off the edge. */
+  .sconf-why-input{
+    flex:1 1 190px;min-width:0;font-size:12px;padding:6px 9px;
+    border:1px solid var(--line);border-radius:8px;
+    background:var(--panel);color:var(--ink);font-family:inherit;
+  }
+  .sconf-why-input:focus{outline:2px solid var(--accent);outline-offset:1px;}
   /* A short pick is the one thing on this card that needs a decision
      rather than a glance, so it is a button and not another meta row --
      the flag and the way to settle it are the same object. Amber for the
@@ -20211,9 +20221,16 @@ function supplierConfirmMessage(q, supplierId){
     'If anything has changed — stock or price — please tell us before we commit to the client. Thank you.'
   ].join('\n');
 }
-function supplierConfirmWaUrl(q, supplierId){
+/* contactPhones, not sup.phone: a supplier's number can sit in phone2 --
+   nine of this shop's forty-four have no first number at all -- and
+   reaching for one field would have opened a blank chat for them while
+   the number sat one field over. */
+function supplierWaNumber(supplierId){
   const sup = (data.suppliers || []).find(s=> String(s.id) === String(supplierId));
-  return waComposeUrl(sup && sup.phone, supplierConfirmMessage(q, supplierId));
+  return sup ? (contactPhones(sup)[0] || '') : '';
+}
+function supplierConfirmWaUrl(q, supplierId){
+  return waComposeUrl(supplierWaNumber(supplierId), supplierConfirmMessage(q, supplierId));
 }
 
 /* The draft card's own line: how far the asking has got.
@@ -20250,6 +20267,9 @@ function orderConfirmRowHTML(q){
 
 /* ---- The panel where the asking is actually done ---- */
 let supplierConfirmOrderId = null;
+// Which row, if any, is currently asking what the supplier said. Panel
+// state and not order state: it is never saved and never outlives a close.
+let supplierConfirmWhyFor = null;
 
 const SUPPLIER_CONFIRM_PILLS = {
   pending:   {label:'Not asked yet', cls:''},
@@ -20295,33 +20315,57 @@ function renderSupplierConfirmList(){
     const st = orderSupplierConfirmState(q, g.supplierId);
     const pill = supplierConfirmPill(st);
     const lines = g.lines.map(it=>
-      `<div class="sc-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''} @ ${esc(fmtUGX(Math.round(Number(it.price)||0)))}</span></div>`
+      `<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''} @ ${esc(fmtUGX(Math.round(Number(it.price)||0)))}</span></div>`
     ).join('');
     /* The stale case says what actually happened rather than just going
        grey again: somebody DID ring this supplier, and the useful fact
        is that the quote moved underneath that call, not that the tick
        is missing. */
     const note = st.state === 'stale'
-      ? `<div class="sc-note">Confirmed ${esc(savedAgoLabel(st.at))}, but the items, quantities or prices have changed since. Ask again.</div>`
+      ? `<div class="sconf-note">Confirmed ${esc(savedAgoLabel(st.at))}, but the items, quantities or prices have changed since. Ask again.</div>`
       : (st.state === 'problem' && st.note)
-        ? `<div class="sc-note">${esc(st.note)}</div>`
+        ? `<div class="sconf-note">${esc(st.note)}</div>`
         : (st.state === 'confirmed' && st.at)
-          ? `<div class="sc-note">Confirmed ${esc(savedAgoLabel(st.at))}</div>`
+          ? `<div class="sconf-note">Confirmed ${esc(savedAgoLabel(st.at))}</div>`
           : (st.askedAt)
-            ? `<div class="sc-note">Asked ${esc(savedAgoLabel(st.askedAt))} — nothing back yet</div>`
+            ? `<div class="sconf-note">Asked ${esc(savedAgoLabel(st.askedAt))} — nothing back yet</div>`
             : '';
-    return `<div class="sc-row" data-sup="${esc(String(g.supplierId))}">
-      <div class="sc-head">
+    /* Said up front, because the surprise is otherwise at the far end: with
+       no number on file WhatsApp opens its contact picker instead of the
+       supplier's chat, and somebody who was not expecting that assumes the
+       button is broken. Nine of this shop's forty-four suppliers have no
+       number, so this is the ordinary case, not an edge one. */
+    const noNumber = !supplierWaNumber(g.supplierId)
+      ? `<div class="sconf-note">No WhatsApp number saved for them — the message will open for you to pick the chat.</div>`
+      : '';
+
+    /* Asked in the panel rather than through window.prompt: nothing else
+       in this file uses a browser dialog, and a native prompt on a phone
+       is an unstyled box that blocks the whole page. */
+    const asking = String(supplierConfirmWhyFor) === String(g.supplierId);
+    const acts = asking
+      ? `<div class="sconf-why">
+          <input type="text" class="sconf-why-input" data-sup="${esc(String(g.supplierId))}"
+            placeholder="What did they say? e.g. no stock until Friday"
+            value="${esc(st.note || '')}" autocomplete="off">
+          <button type="button" class="btn btn-accent sconf-why-save" data-sup="${esc(String(g.supplierId))}">Save</button>
+          <button type="button" class="btn btn-ghost sconf-why-cancel" data-sup="${esc(String(g.supplierId))}">Cancel</button>
+        </div>`
+      : `<div class="sconf-acts">
+          <button type="button" class="btn btn-ghost sconf-ask" data-sup="${esc(String(g.supplierId))}">Ask on WhatsApp</button>
+          <button type="button" class="btn btn-accent sconf-yes" data-sup="${esc(String(g.supplierId))}">They confirmed</button>
+          <button type="button" class="btn btn-ghost sconf-no" data-sup="${esc(String(g.supplierId))}">Problem</button>
+        </div>`;
+
+    return `<div class="sconf-row" data-sup="${esc(String(g.supplierId))}">
+      <div class="sconf-head">
         <b>${esc(supplierName(g.supplierId))}</b>
-        <span class="sc-pill ${pill.cls}">${esc(pill.label)}</span>
+        <span class="sconf-pill ${pill.cls}">${esc(pill.label)}</span>
       </div>
-      <div class="sc-lines">${lines}</div>
+      <div class="sconf-lines">${lines}</div>
       ${note}
-      <div class="sc-acts">
-        <button type="button" class="btn btn-ghost sc-ask" data-sup="${esc(String(g.supplierId))}">Ask on WhatsApp</button>
-        <button type="button" class="btn btn-accent sc-yes" data-sup="${esc(String(g.supplierId))}">They confirmed</button>
-        <button type="button" class="btn btn-ghost sc-no" data-sup="${esc(String(g.supplierId))}">Problem</button>
-      </div>
+      ${noNumber}
+      ${acts}
     </div>`;
   }).join('');
 
@@ -20331,10 +20375,10 @@ function renderSupplierConfirmList(){
      buying time -- but leaving Draft without noticing them is how a line
      reaches the group with nobody sourcing it. */
   const orphan = noSupplier.length
-    ? `<div class="sc-row orphan">
-        <div class="sc-head"><b>No supplier chosen</b><span class="sc-pill warn">Nobody to ask</span></div>
-        <div class="sc-lines">${noSupplier.map(it=>`<div class="sc-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''}</span></div>`).join('')}</div>
-        <div class="sc-note">These do not hold the order back — a supplier is picked for them on the buying list.</div>
+    ? `<div class="sconf-row orphan">
+        <div class="sconf-head"><b>No supplier chosen</b><span class="sconf-pill warn">Nobody to ask</span></div>
+        <div class="sconf-lines">${noSupplier.map(it=>`<div class="sconf-line"><span>${esc(it.productName || 'Item')}</span><span>${(Number(it.qty)||0).toLocaleString('en-UG')}${it.unit ? ' '+esc(it.unit) : ''}</span></div>`).join('')}</div>
+        <div class="sconf-note">These do not hold the order back — a supplier is picked for them on the buying list.</div>
       </div>`
     : '';
 
@@ -20354,34 +20398,63 @@ function wireSupplierConfirmPanel(){
   const list = document.getElementById('supplierConfirmList');
   if(!list) return;
   list.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.sc-ask, .sc-yes, .sc-no');
+    const btn = e.target.closest('.sconf-ask, .sconf-yes, .sconf-no, .sconf-why-save, .sconf-why-cancel');
     if(!btn) return;
     const sup = btn.dataset.sup;
     const q = data.savedQuotes.find(x=> x.id === supplierConfirmOrderId);
     if(!q || !sup) return;
 
-    if(btn.classList.contains('sc-ask')){
+    if(btn.classList.contains('sconf-ask')){
       /* Opened BEFORE the state is written: window.open inside the same
          gesture is what keeps it out of the popup blocker, and a stamp
          saying we asked is worthless if the message never opened. */
       window.open(supplierConfirmWaUrl(q, sup), '_blank');
       markOrderSupplierAsked(supplierConfirmOrderId, sup);
-    } else if(btn.classList.contains('sc-yes')){
+    } else if(btn.classList.contains('sconf-yes')){
+      supplierConfirmWhyFor = null;
       setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'confirmed', '');
       const leftNow = orderUnconfirmedSuppliers(
         data.savedQuotes.find(x=> x.id === supplierConfirmOrderId)).length;
       toast(leftNow
         ? `${supplierName(sup)} confirmed — ${leftNow} to go`
         : 'Every supplier confirmed — move the order on to tell the group', 3500);
+    } else if(btn.classList.contains('sconf-no')){
+      /* Opens the field rather than recording anything yet. The reason
+         matters more than the refusal: "no stock till Friday" and "the
+         price is now 12,000" lead to completely different fixes, and by
+         the time anybody reads the card the call is forgotten. */
+      supplierConfirmWhyFor = sup;
+    } else if(btn.classList.contains('sconf-why-cancel')){
+      supplierConfirmWhyFor = null;
     } else {
-      /* The reason matters more than the refusal: "no stock till Friday"
-         and "price is now 12,000" lead to completely different fixes,
-         and by the time anybody reads the card the call is forgotten. */
-      const why = window.prompt(`What did ${supplierName(sup)} say?`, '');
-      if(why === null) return;
-      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'problem', why.trim());
+      const input = list.querySelector(`.sconf-why-input[data-sup="${CSS.escape(String(sup))}"]`);
+      supplierConfirmWhyFor = null;
+      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'problem',
+        input ? input.value.trim() : '');
     }
     renderSupplierConfirmList();
+    // Put the cursor where the next keystroke is meant to go, so opening
+    // the field and typing is one movement rather than two.
+    if(supplierConfirmWhyFor != null){
+      const f = list.querySelector('.sconf-why-input');
+      if(f){ f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+    }
+  });
+  // Enter saves, Escape backs out -- the two keys anybody types in a
+  // one-field form, and without them the field is mouse-only.
+  list.addEventListener('keydown', (e)=>{
+    if(!e.target.classList || !e.target.classList.contains('sconf-why-input')) return;
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      const sup = e.target.dataset.sup;
+      supplierConfirmWhyFor = null;
+      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'problem', e.target.value.trim());
+      renderSupplierConfirmList();
+    } else if(e.key === 'Escape'){
+      e.preventDefault();
+      supplierConfirmWhyFor = null;
+      renderSupplierConfirmList();
+    }
   });
 }
 
@@ -20732,6 +20805,9 @@ document.getElementById('assignStaffCancel').addEventListener('click', closeAssi
 
 function closeSupplierConfirmModal(){
   supplierConfirmOrderId = null;
+  // Or a half-typed reason reopens on the next order, attached to a
+  // supplier who was never asked about it.
+  supplierConfirmWhyFor = null;
   closeModal('supplierConfirmModal');
 }
 document.getElementById('supplierConfirmClose').addEventListener('click', closeSupplierConfirmModal);

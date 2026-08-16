@@ -224,6 +224,105 @@ const draft = (items) => {
     'and it stays neutral — a supplier asked thirty seconds ago is not a warning, and colouring every outstanding ask amber is how a screen stops being read');
 }
 
+/* ---------- 5c. reaching the supplier, and saying so when we cannot --- */
+{
+  // Found by counting the real shop: nine of forty-four suppliers have no
+  // first number. Reading sup.phone alone would have opened a blank chat
+  // for anyone whose number sits in phone2.
+  const wa = compileScope([
+    extractFunction(src, 'contactPhones', 'index.html'),
+    extractFunction(src, 'supplierWaNumber', 'index.html'),
+  ], { data }, ['supplierWaNumber']).supplierWaNumber;
+  data.suppliers = [
+    { id: 'A', name: 'First field', phone: '0700111222', phone2: '' },
+    { id: 'B', name: 'Second field only', phone: '', phone2: '0700333444' },
+    { id: 'C', name: 'Neither', phone: '', phone2: '' },
+  ];
+  eq(wa('A'), '0700111222', 'the usual case');
+  eq(wa('B'), '0700333444', 'a number in phone2 is still a number to ring');
+  eq(wa('C'), '', 'and none is none');
+  eq(wa('gone'), '', 'a supplier no longer on file resolves to no number rather than throwing');
+  data.suppliers = [];
+
+  /* Tied to the CONDITION, not just to the words being present somewhere.
+     Checking only that the sentence exists in the file passes happily
+     while the branch that shows it is dead -- the string sits in a
+     template literal that nothing ever reaches. */
+  t.check(/const noNumber = !supplierWaNumber\(g\.supplierId\)[\s\S]{0,200}No WhatsApp number saved for them/.test(code),
+    'the panel says so up front, and only when there is genuinely no number — otherwise WhatsApp opens its contact picker and the button looks broken');
+}
+
+/* ---------- 5d. the reason is collected in the panel ------------------ */
+{
+  // window.prompt was the only one in 43,000 lines: every other flow in
+  // this file builds its own field. A native dialog on a phone is an
+  // unstyled box that blocks the page.
+  t.check(!/window\.prompt\(/.test(code),
+    'no browser dialog — nothing else in this file uses one');
+  t.check(/class="sconf-why-input"/.test(code), 'the reason is typed into the row itself');
+  t.check(/supplierConfirmWhyFor = null;[\s\S]{0,200}closeModal\('supplierConfirmModal'\)/.test(code),
+    'and closing the panel drops a half-typed reason, so it cannot reappear against another supplier');
+  const wire = extractFunction(src, 'wireSupplierConfirmPanel', 'index.html');
+  t.check(/e\.key === 'Enter'/.test(wire) && /e\.key === 'Escape'/.test(wire),
+    'Enter saves and Escape backs out — without them a one-field form is mouse-only');
+}
+
+/* ---------- 5e. the panel's classes do not collide with the app's ----- */
+{
+  /* This is a bug that shipped into the working tree and was caught by
+     looking at the rendered page, not by reading the diff. The panel was
+     written with an `sc-` prefix, and `sc-` was already taken:
+
+       .sc-row   the phone and location rows on every supplier card. The
+                 app scopes its own as `.sc-details .sc-row`; a BARE
+                 `.sc-row` rule therefore hit all 44 of them and put a
+                 border, padding and a panel background round each.
+       .sc-head  the supplier card header. The app's rule is bare too,
+                 and mine was further down the file -- equal specificity,
+                 so document order decided it and mine won, changing
+                 align-items and gap on a card it had nothing to do with.
+
+     Neither showed up in any test, because both files were still valid
+     and every assertion still passed. Hence this: a prefix check is the
+     only thing that catches a collision before somebody sees it. */
+  const render = extractFunction(src, 'renderSupplierConfirmList', 'index.html');
+  const used = [...new Set(
+    (render.match(/class="[^"$]*"/g) || [])
+      .map((m) => m.replace(/class="|"/g, ''))
+      .join(' ')
+      .split(/\s+/)
+      .filter(Boolean)
+  )];
+  /* Three kinds of unprefixed class are legitimate, and each is here by
+     name rather than by a loose pattern, so a fourth has to be argued for
+     rather than slipping in:
+
+       btn / btn-*    the app's button styling, reused deliberately.
+       preset-hint    likewise -- the app's own muted-note style.
+       good bad warn  pill colours, and orphan the dashed variant. Every
+       orphan         one of them appears ONLY compounded in the panel's
+                      CSS (.sconf-pill.warn, .sconf-row.orphan), so none
+                      can land on anything by itself. */
+  const ALLOWED = ['btn', 'preset-hint', 'good', 'bad', 'warn', 'orphan'];
+  const stray = used.filter((c) => !c.startsWith('sconf-')
+    && !ALLOWED.includes(c) && !c.startsWith('btn-'));
+  // The compound-only claim, checked rather than trusted.
+  ['good', 'bad', 'warn', 'orphan'].forEach((m) => {
+    if (!used.includes(m)) return;
+    t.check(!new RegExp(`^\\s*\\.${m}\\{`, 'm').test(code),
+      `.${m} is never a rule on its own, so using it in the panel cannot restyle anything else`);
+  });
+  t.check(stray.length === 0,
+    `every class the panel renders is sconf- prefixed, so it cannot land on anything else (stray: ${stray.join(', ') || 'none'})`);
+
+  // And from the other side: the app's own two are left as they were.
+  const bare = (sel) => (code.match(new RegExp(`^\\s*\\.${sel}\\{`, 'gm')) || []).length;
+  eq(bare('sc-row'), 0,
+    'no bare .sc-row rule — the app scopes its own as .sc-details .sc-row, and an unscoped one restyles all 44 supplier contact rows');
+  eq(bare('sc-head'), 1,
+    'exactly one bare .sc-head rule, the app’s own — a second one later in the file would win on document order and reshape supplier cards');
+}
+
 /* ---------- 6. the gate on the way out of Draft ----------------------- */
 {
   const q = draft([line({ supplierId: 'S1' })]);
