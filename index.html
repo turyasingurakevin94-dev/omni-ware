@@ -4913,41 +4913,133 @@
   /* ---- Follow-ups ----
      fup- prefixed, and a test asserts it. `sc-` was already taken by
      supplier cards and a bare rule on it restyled 44 rows silently. */
+  /* A client to ring, not a row in a table. Same card language the
+     supplier directory already uses -- white, hairline, 11px radius,
+     lifting a little under the cursor -- so this screen is recognisably
+     part of the same app rather than a second opinion about what a card
+     looks like. */
   .fup-card{
-    border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:12px;
-    background:var(--panel);
+    background:#fff;border:1px solid var(--line);border-radius:11px;
+    padding:15px 16px 14px;margin-top:12px;
+    transition:border-color .12s ease, box-shadow .12s ease;
   }
-  .fup-card-head{display:flex;align-items:baseline;gap:9px;margin-bottom:9px;}
-  .fup-card-head b{font-size:14.5px;}
-  .fup-count{font-size:11.5px;color:var(--ink-soft);margin-left:auto;}
-  .fup-item{padding:8px 0;border-top:1px solid var(--ow-rule-soft);}
+  .fup-card:hover{border-color:#C7CFD8;box-shadow:0 4px 14px rgba(20,30,40,0.06);}
+  .fup-card-head{display:flex;align-items:flex-start;gap:11px;margin-bottom:12px;}
+  .fup-avatar{
+    width:38px;height:38px;border-radius:9px;background:var(--navy);color:var(--accent);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font:700 14px 'Archivo Black',sans-serif;
+  }
+  .fup-avatar.fup-sm{width:28px;height:28px;border-radius:7px;font-size:11px;}
+  .fup-who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .fup-who-name{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.3;}
+  .fup-who-meta{font-size:11.5px;color:var(--ink-soft);}
+  /* Why this client is on the list at all, said once at the top so the
+     card can be triaged without reading its items. */
+  .fup-flag{
+    font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0;
+    background:var(--ow-steel-050);color:var(--ink-soft);
+  }
+  .fup-flag.good{background:var(--good-bg);color:var(--good);}
+
+  /* Each item carries a stripe in its own reason's colour. State reads at
+     a glance from form, not only from the words -- which is what lets a
+     card with four items still be scanned in one look. */
+  .fup-item{
+    display:flex;flex-direction:column;gap:3px;
+    padding:9px 0 9px 11px;border-left:3px solid var(--ow-steel-100);
+    border-top:1px solid var(--ow-rule-soft);
+  }
   .fup-item:first-of-type{border-top:0;}
-  .fup-item-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
-  .fup-item-name{font-size:13px;font-weight:600;}
+  .fup-item.good{border-left-color:var(--good);}
+  .fup-item.warn{border-left-color:var(--ow-amber);}
+  .fup-item-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .fup-item-name{font-size:13px;font-weight:650;color:var(--ink);}
   .fup-pill{
-    font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;
+    font-size:10px;font-weight:800;letter-spacing:.03em;padding:2px 8px;border-radius:999px;
     background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;
   }
   .fup-pill.good{background:var(--good-bg);color:var(--good);}
   .fup-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
-  .fup-reason{font-size:12px;color:var(--ink-soft);margin-top:3px;}
-  .fup-note{font-size:11.5px;color:var(--ow-ink-400);margin-top:4px;font-style:italic;}
-  .fup-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
-  .fup-acts .btn{font-size:12px;padding:6px 12px;}
-  .fup-link{
-    all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:11.5px;
+  .fup-reason{font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+  .fup-note{font-size:11.5px;color:var(--ow-ink-400);}
+  /* No number on file is a BLOCKER, not a footnote. It was italic grey
+     under the item, which is where an aside goes -- and the reader only
+     found out why there was no send button by squinting at it. */
+  .fup-warn{
+    display:flex;align-items:flex-start;gap:7px;margin-top:11px;
+    background:var(--ow-amber-soft);border-radius:8px;padding:8px 10px;
+    font-size:11.5px;color:var(--warn-ink);line-height:1.4;
   }
-  .fup-link:hover{text-decoration:underline;}
-  .fup-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .fup-warn svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;}
+  .fup-acts{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;
+    padding-top:12px;border-top:1px solid var(--ow-rule-soft);
+  }
+  .fup-acts .btn{font-size:12.5px;padding:7px 14px;}
+
+  /* ---- the full list, grouped by client ---- */
+  .fup-group{
+    border:1px solid var(--line);border-radius:11px;background:#fff;
+    margin-top:12px;overflow:hidden;
+  }
+  .fup-group-head{
+    display:flex;align-items:center;gap:10px;padding:11px 14px;
+    background:#F7F9FB;border-bottom:1px solid var(--line);
+  }
+  .fup-group-name{font-size:13.5px;font-weight:700;color:var(--ink);}
+  .fup-group-count{
+    margin-left:auto;font-size:11px;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;
+  }
   .fup-row{
     display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-    padding:10px 2px;border-bottom:1px solid var(--ow-rule-soft);
+    padding:11px 14px;border-top:1px solid var(--ow-rule-soft);
   }
-  .fup-row.closed{opacity:.55;}
-  .fup-row-main{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 200px;}
-  .fup-row-who{font-size:13px;font-weight:600;}
-  .fup-row-item{font-size:12px;color:var(--ink-soft);}
+  .fup-row:first-of-type{border-top:0;}
+  .fup-row.closed{background:#FAFBFC;}
+  .fup-row.closed .fup-row-item{color:var(--ow-ink-400);text-decoration:line-through;}
+  .fup-row-main{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 220px;flex-wrap:wrap;}
+  .fup-row-item{font-size:13px;font-weight:600;color:var(--ink);}
   .fup-row-meta{font-size:11.5px;color:var(--ow-ink-400);white-space:nowrap;}
+  /* Closing a follow-up is routine housekeeping, so it is quiet. It used
+     to be painted in the brand accent, which on this palette is a red --
+     making the most ordinary action on the screen look like the most
+     dangerous one. */
+  .fup-link{
+    all:unset;cursor:pointer;color:var(--ink-soft);font-weight:600;font-size:11.5px;
+    padding:4px 9px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;
+    position:relative;
+  }
+  /* This whole screen exists for somebody standing in a shop with a
+     phone, so its controls are tapped rather than clicked. The button
+     measures 23px; a min-height would put a 44px slab in a dense row, so
+     an invisible ring gives the finger the same 44px without changing
+     what the eye sees -- exactly what .sq-assign-btn does on the order
+     board, and for the same reason. */
+  .fup-link::after{content:"";position:absolute;inset:-11px -6px;}
+  .fup-link:hover{background:var(--ow-steel-050);color:var(--ink);}
+  .fup-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* Inside a sentence rather than at the end of a row, so it reads as the
+     link it is instead of a button dropped into prose. */
+  .fup-link.fup-inline{border:0;padding:0;color:var(--accent);}
+  .fup-link.fup-inline:hover{background:none;text-decoration:underline;}
+  .fup-empty{
+    text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:13px;line-height:1.6;
+  }
+  .fup-empty b{display:block;font-size:14.5px;color:var(--ink);margin-bottom:5px;}
+  /* The two real actions go back to full size on a phone. They are
+     compact on a desktop card to keep it quiet; on the device this screen
+     is actually used from, a 31px button is under the 44px a finger
+     needs, and there is room here to simply make them bigger rather than
+     hide a ring behind them. */
+  @media (max-width:1000px){
+    .fup-acts{gap:9px;}
+    /* 13px, not 12: at 12 the button measured 42px, and the whole point
+       of the rule is the 44 a finger needs. Measured, not assumed. */
+    .fup-acts .btn{flex:1 1 auto;font-size:14px;padding:13px 18px;}
+  }
   .fup-check{display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px;}
   .fup-check input{width:auto;margin:0;cursor:pointer;}
   /* A short pick is the one thing on this card that needs a decision
@@ -7165,7 +7257,8 @@
         <p>Clients who asked to be kept posted, and what is worth telling them today.</p>
       </div>
       <div class="panel">
-        <div class="st-bar">
+        <div class="dir-summary-row" id="fupSummaryRow"></div>
+        <div class="st-bar" style="margin-top:16px;">
           <div class="st-tabs" id="fup_tabs">
             <button type="button" class="st-tab active" data-fuptab="contact">To contact</button>
             <button type="button" class="st-tab" data-fuptab="all">All follow-ups</button>
@@ -42792,16 +42885,20 @@ function renderFollowUpsContact(){
   const rows = followUpClientsToContact(Date.now());
   if(!rows.length){
     const open = openFollowUps().length;
-    wrap.innerHTML = `<p class="preset-hint" style="margin-top:14px;">${open
-      ? `Nothing new to tell anybody today. ${open} follow-up${open===1?'':'s'} being watched.`
-      : 'No follow-ups yet. Add one from a client’s record, a sourcing ask, or a line you could not fill.'}</p>`;
+    wrap.innerHTML = `<div class="fup-empty">${open
+      ? `<b>Nothing to tell anybody today</b>${open} follow-up${open===1?'':'s'} being watched. You will be flagged here the moment one of them has news.`
+      : `<b>Nobody is waiting on anything yet</b>Add a follow-up from a client’s record, from a sourcing ask, or from a line the picker came up short on.`}</div>`;
     return;
   }
   wrap.innerHTML = rows.map(row=>{
     const items = row.items.map(i=>{
       const s = followUpSubject(i.followUp);
       const bought = followUpAlreadyBought(i.followUp);
-      return `<div class="fup-item">
+      // The stripe takes the strongest reason's colour, so an item with
+      // real news never reads as merely overdue.
+      const top = i.reasons.find(r=> r.kind !== 'gone_quiet') || i.reasons[0];
+      const tone = (FUP_REASON_PILLS[top && top.kind] || FUP_REASON_PILLS.gone_quiet).cls;
+      return `<div class="fup-item ${tone}">
         <div class="fup-item-head">
           <span class="fup-item-name">${esc(s.label)}</span>
           ${i.reasons.map(r=>{
@@ -42811,27 +42908,45 @@ function renderFollowUpsContact(){
         </div>
         ${i.reasons.map(r=> `<div class="fup-reason">${esc(r.short || r.text)}</div>`).join('')}
         ${i.followUp.note ? `<div class="fup-note">${esc(i.followUp.note)}</div>` : ''}
-        ${bought ? `<div class="fup-note">They bought this on ${esc(fmtShortDate(bought.at))} —
-          <button type="button" class="fup-link fup-close" data-id="${esc(String(i.followUp.id))}" data-reason="bought">close it?</button></div>` : ''}
+        ${bought ? `<div class="fup-note">Bought on ${esc(fmtShortDate(bought.at))} —
+          <button type="button" class="fup-link fup-inline fup-close" data-id="${esc(String(i.followUp.id))}" data-reason="bought">close it?</button></div>` : ''}
       </div>`;
     }).join('');
+    const n = row.items.length;
     return `<div class="fup-card" data-cust="${esc(String(row.customerId))}">
       <div class="fup-card-head">
-        <b>${esc(row.name)}</b>
-        <span class="fup-count">${row.items.length} item${row.items.length===1?'':'s'}</span>
+        <div class="fup-avatar">${esc(nameInitials(row.name))}</div>
+        <div class="fup-who">
+          <span class="fup-who-name">${esc(row.name)}</span>
+          <span class="fup-who-meta">${row.phone ? esc(row.phone) + ' · ' : ''}${n} thing${n===1?'':'s'} to tell them</span>
+        </div>
+        <span class="fup-flag ${row.hasNews ? 'good' : ''}">${row.hasNews ? 'News' : 'Overdue'}</span>
       </div>
       ${items}
-      ${row.phone
-        ? `<div class="fup-acts">
-            <button type="button" class="btn btn-accent fup-msg" data-cust="${esc(String(row.customerId))}">Message on WhatsApp</button>
-            <button type="button" class="btn btn-ghost fup-told" data-cust="${esc(String(row.customerId))}">I told them</button>
-          </div>`
-        : `<div class="fup-note">No phone number on file for them — add one on their record before this can be sent.</div>
-           <div class="fup-acts">
-            <button type="button" class="btn btn-ghost fup-told" data-cust="${esc(String(row.customerId))}">I told them</button>
-           </div>`}
+      ${row.phone ? '' : `<div class="fup-warn">${ICON_WARN}
+        <span>No phone number on file — add one on their record and this can be sent from here.</span></div>`}
+      <div class="fup-acts">
+        ${row.phone
+          ? `<button type="button" class="btn btn-accent fup-msg" data-cust="${esc(String(row.customerId))}">Message on WhatsApp</button>`
+          : ''}
+        <button type="button" class="btn btn-ghost fup-told" data-cust="${esc(String(row.customerId))}">I told them</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+/* The three numbers worth knowing before opening anything, in the same
+   strip Suppliers and Customers already carry. */
+function renderFollowUpSummary(){
+  const wrap = document.getElementById('fupSummaryRow');
+  if(!wrap) return;
+  const open = openFollowUps();
+  const toContact = followUpClientsToContact(Date.now()).length;
+  const never = open.filter(f=> !followUpLastContact(f)).length;
+  wrap.innerHTML = `
+    <div class="dir-summary-card"><b>${toContact}</b><span>Clients to message</span></div>
+    <div class="dir-summary-card"><b>${open.length}</b><span>Being watched</span></div>
+    <div class="dir-summary-card"><b>${never}</b><span>Never followed up</span></div>`;
 }
 
 function renderFollowUpsAll(filter){
@@ -42848,27 +42963,57 @@ function renderFollowUpsAll(filter){
     return tokens.every(t=> hay.includes(t));
   });
   if(!rows.length){
-    wrap.innerHTML = `<p class="preset-hint" style="margin-top:14px;">Nothing matches.</p>`;
+    wrap.innerHTML = `<div class="fup-empty"><b>Nothing matches</b>Try a client’s name, or part of an item.</div>`;
     return;
   }
-  wrap.innerHTML = rows.map(f=>{
-    const c = (data.customers||[]).find(x=> String(x.id)===String(f.customerId));
-    const s = followUpSubject(f);
-    const last = followUpLastContact(f);
-    return `<div class="fup-row${f.closedAt ? ' closed' : ''}">
-      <div class="fup-row-main">
-        <span class="fup-row-who">${esc(c ? c.name : '(gone)')}</span>
-        <span class="fup-row-item">${esc(s.label)}</span>
+  /* Grouped by client, because that is the unit the shop thinks in and
+     the flat list repeated the same name down the page while separating
+     the two things one person was waiting for. */
+  const byCustomer = new Map();
+  rows.forEach(f=>{
+    const key = String(f.customerId);
+    if(!byCustomer.has(key)){
+      const c = (data.customers||[]).find(x=> String(x.id)===key);
+      byCustomer.set(key, {name: c ? c.name : '(customer no longer on file)', items: []});
+    }
+    byCustomer.get(key).items.push(f);
+  });
+  // Anybody with something still open comes first: a client whose list is
+  // entirely settled is history, not work.
+  const groups = [...byCustomer.values()].sort((a,b)=>
+    (b.items.some(followUpIsOpen) - a.items.some(followUpIsOpen))
+    || String(a.name).localeCompare(String(b.name)));
+
+  wrap.innerHTML = groups.map(g=>{
+    const openN = g.items.filter(followUpIsOpen).length;
+    return `<div class="fup-group">
+      <div class="fup-group-head">
+        <div class="fup-avatar fup-sm">${esc(nameInitials(g.name))}</div>
+        <span class="fup-group-name">${esc(g.name)}</span>
+        <span class="fup-group-count">${openN} open${g.items.length > openN ? ` · ${g.items.length - openN} closed` : ''}</span>
       </div>
-      <div class="fup-row-meta">
-        ${f.closedAt
-          ? `Closed${f.closedReason ? ' — ' + esc(f.closedReason) : ''}`
-          : last
-            ? `Last told ${esc(savedAgoLabel(last.at))}`
-            : `Never followed up · added ${esc(savedAgoLabel(f.createdAt))}`}
-      </div>
-      <button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
-        data-id="${esc(String(f.id))}" data-reason="">${f.closedAt ? 'Reopen' : 'Close'}</button>
+      ${g.items.map(f=>{
+        const s = followUpSubject(f);
+        const last = followUpLastContact(f);
+        /* The state as a pill rather than a sentence in grey. "Never
+           told" is the one worth spotting from across the list, and as
+           prose it read exactly like every other line. */
+        const pill = f.closedAt ? {label:'Closed', cls:''}
+          : last ? {label:'Told', cls:'good'}
+          : {label:'Never told', cls:'warn'};
+        return `<div class="fup-row${f.closedAt ? ' closed' : ''}">
+          <div class="fup-row-main">
+            <span class="fup-row-item">${esc(s.label)}</span>
+            <span class="fup-pill ${pill.cls}">${esc(pill.label)}</span>
+          </div>
+          <span class="fup-row-meta">${f.closedAt
+            ? (f.closedReason ? esc(f.closedReason) : 'closed')
+            : last ? esc(savedAgoLabel(last.at))
+                   : `added ${esc(savedAgoLabel(f.createdAt))}`}</span>
+          <button type="button" class="fup-link ${f.closedAt ? 'fup-reopen' : 'fup-close'}"
+            data-id="${esc(String(f.id))}" data-reason="">${f.closedAt ? 'Reopen' : 'Close'}</button>
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('');
 }
@@ -42878,6 +43023,7 @@ function renderFollowUps(){
   document.getElementById('fup_all_pane').style.display = fupTab==='all' ? '' : 'none';
   document.querySelectorAll('#fup_tabs .st-tab').forEach(b=>
     b.classList.toggle('active', b.dataset.fuptab === fupTab));
+  renderFollowUpSummary();
   if(fupTab==='contact') renderFollowUpsContact();
   else renderFollowUpsAll(document.getElementById('fup_search').value);
   renderFollowUpBadge();

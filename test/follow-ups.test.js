@@ -453,11 +453,17 @@ const stockMove = (before, after, whenDays) => {
      cascade on document order, while every test passed. A prefix check is
      the only thing that catches that before somebody sees it. */
   const fns = ['renderFollowUpsContact', 'renderFollowUpsAll', 'renderFollowUpListModal',
-    'renderFollowUpAddResults'].map((n) => extractFunction(src, n, 'index.html')).join('\n');
+    'renderFollowUpAddResults', 'renderFollowUpSummary']
+    .map((n) => extractFunction(src, n, 'index.html')).join('\n');
   const used = [...new Set(
     (fns.match(/class="[^"$]*"/g) || []).map((m) => m.replace(/class="|"/g, '')).join(' ').split(/\s+/).filter(Boolean)
   )];
-  const ALLOWED = ['btn', 'preset-hint', 'good', 'warn', 'closed'];
+  /* dir-summary-card is the app's own summary strip, the one Suppliers and
+     Customers already carry. Reusing it is the point -- a third opinion
+     about what a summary tile looks like is exactly what makes a screen
+     read as bolted on. Named here rather than pattern-matched so a fourth
+     borrowed class has to be argued for. */
+  const ALLOWED = ['btn', 'preset-hint', 'dir-summary-card', 'good', 'warn', 'closed'];
   const stray = used.filter((c) => !c.startsWith('fup-') && !ALLOWED.includes(c) && !c.startsWith('btn-'));
   t.check(stray.length === 0,
     `every class the follow-up screens render is fup- prefixed (stray: ${stray.join(', ') || 'none'})`);
@@ -473,6 +479,25 @@ const stockMove = (before, after, whenDays) => {
     t.check(new RegExp(`^\\s*\\.${c}\\{`, 'm').test(code),
       `.${c} has a rule of its own — without it the class renders as unstyled text and nothing else would notice`);
   });
+}
+
+/* ---------- 10b. it is used standing up, on a phone ------------------- */
+{
+  /* This screen exists for somebody in the field with a phone, so its
+     controls are tapped. Measured in the browser at 375px: the Close
+     button was 23px tall and the action buttons 31px, both under the 44
+     a finger needs. The order board solved the same problem with an
+     invisible ring rather than a slab in a dense row. */
+  const ring = code.match(/\.fup-link::after\{content:"";position:absolute;inset:(-?\d+)px (-?\d+)px;\}/);
+  t.check(!!ring, 'the row button has a hit area hung off it');
+  if (ring) {
+    const tall = 23 + Math.abs(Number(ring[1])) * 2;
+    t.check(tall >= 44, `which brings it to ${tall}px, at or over the 44px minimum`);
+  }
+  t.check(/\.fup-link\{[^}]*position:relative;/.test(code),
+    'and it is positioned, or the ring would hang off the page instead of the button');
+  t.check(/@media \(max-width:1000px\)\{[\s\S]{0,200}\.fup-acts \.btn\{[^}]*padding:13px/.test(code),
+    'and the two real actions go back to full size on a narrow screen, where 12px padding measured 42');
 }
 
 /* ---------- 11. the three capture points ------------------------------ */
@@ -508,6 +533,45 @@ const stockMove = (before, after, whenDays) => {
   const digest = extractFunction(src, 'followUpDigest', 'index.html');
   t.check(/r\.text/.test(digest) && !/r\.short/.test(digest),
     'while the message keeps the full one');
+}
+
+/* ---------- 11c. the screen reads before it is read ------------------- */
+{
+  const all = extractFunction(src, 'renderFollowUpsAll', 'index.html');
+  const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
+  const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
+
+  /* Counted, not merely present. Checking that the string appears
+     somewhere passed happily with one of the three tiles swapped for
+     something else -- which is exactly the inconsistency the strip exists
+     to avoid. */
+  eq((summary.match(/dir-summary-card/g) || []).length, 3,
+    'all three tiles are the app’s own, the one Suppliers and Customers already carry');
+  t.check(/Clients to message/.test(summary) && /Never followed up/.test(summary),
+    'and it leads with the two numbers somebody opens this screen to find');
+
+  /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
+     proved nothing: a map keyed per row still has the name and still
+     builds groups, it just builds one per item -- which is the flat list
+     again wearing a group's clothes. */
+  t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
+    'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
+  t.check(/fup-group/.test(all), 'and renders them as groups');
+  t.check(/Never told/.test(all) && /fup-pill/.test(all),
+    'and state is a pill, not a sentence in grey among other sentences in grey');
+
+  t.check(/nameInitials/.test(contact) && /fup-avatar/.test(contact),
+    'a client is shown the way the supplier directory shows one');
+  t.check(/fup-warn/.test(contact) && /ICON_WARN/.test(contact),
+    'and no phone number is a blocker with a banner, not an italic footnote under the item');
+
+  // Close is routine housekeeping. Painted in --accent it was a red, which
+  // made the most ordinary action on the screen look like the worst one.
+  const linkRule = (code.match(/\.fup-link\{[^}]*\}/) || [''])[0];
+  t.check(/color:var\(--ink-soft\)/.test(linkRule),
+    'Close is quiet — in the brand accent it read as a destructive action, which it is not');
+  t.check(/\.fup-link\.fup-inline\{[^}]*color:var\(--accent\)/.test(code),
+    'while the one that sits inside a sentence still reads as a link');
 }
 
 /* ---------- 12. the badge counts messages, not rows ------------------- */
