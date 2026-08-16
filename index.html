@@ -1647,6 +1647,50 @@
   }
   .assign-staff-phone{font-size:12px;color:var(--ink-soft);}
 
+  /* Choosing a till. Deliberately the same object as .assign-staff-row
+     above -- both are "pick one of these from a modal", and a shop that
+     has learned what a choice row looks like should not have to learn it
+     twice. Narrower than the standard modal because three short options
+     in a 620px panel read as a form rather than a question. */
+  /* .modal.cash-acct-panel, not .cash-acct-panel — the base .modal rule
+     lives 3,000 lines below this one and carries max-width:620px at the
+     same specificity, so a bare class here loses on order and the panel
+     silently comes out full width. Won on specificity rather than by
+     moving the rule, so neither can drift out from under the other. */
+  .modal.cash-acct-panel{max-width:420px;}
+  .cash-acct-sub{margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--ink-soft);}
+  .cash-acct-list{display:flex;flex-direction:column;gap:8px;}
+  .cash-acct-row{
+    all:unset;box-sizing:border-box;cursor:pointer;width:100%;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;
+    border:1.5px solid var(--line);border-radius:10px;
+    transition:border-color .12s ease,background .12s ease;
+  }
+  .cash-acct-row:hover{border-color:var(--accent);background:#FFFBF0;}
+  /* all:unset strips the focus ring too, and this dialog opens with a row
+     already focused -- so it has to draw its own or a keyboard user is
+     answering a question with nothing to say where they are. */
+  .cash-acct-row:focus-visible{border-color:var(--accent);background:#FFFBF0;
+    box-shadow:0 0 0 3px rgba(242,169,60,0.28);}
+  .cash-acct-name{font-weight:700;font-size:13.5px;color:var(--ink);}
+  .cash-acct-figs{display:flex;align-items:baseline;gap:9px;min-width:0;}
+  .cash-acct-bal{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;white-space:nowrap;}
+  /* Short, not forbidden. The shop may know money is coming, or may
+     genuinely intend to run an account down -- so this says what is
+     missing and lets them decide, the way sellBelowCostClause does. */
+  .cash-acct-row.is-short{border-color:#EAC7C1;}
+  .cash-acct-row.is-short .cash-acct-bal{color:var(--danger);}
+  .cash-acct-short{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;
+    color:var(--danger);white-space:nowrap;}
+  .cash-acct-note{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--danger);}
+  @media (max-width:420px){
+    /* The figures drop under the name rather than squeezing it: the till
+       is what is being chosen, and a truncated "Mobile Mon…" is a worse
+       loss than a second line. */
+    .cash-acct-row{flex-direction:column;align-items:flex-start;gap:4px;}
+  }
+
   /* Customer cards */
   /* The strip above a directory grid. Named for what it is rather than
      for the first screen that had one: customers and suppliers both
@@ -25970,23 +26014,104 @@ async function renderCommissionClaims(){
 // Which account the money came out of. Built at call time rather than as
 // markup, since this is the only place that asks -- resolves to an account
 // key, or null if the person backs out.
-function promptCashAccount(title, subtitle){
+/* Which till the money moves through.
+
+   Built on the app's own .modal-overlay/.modal rather than the hand-rolled
+   box of inline styles it used to be -- that was the one dialog in the
+   shop that did not look like the shop, and it had none of the things
+   every other modal has: no close button, no Escape, nothing focused, no
+   animation, and a panel whose radius and shadow were guesses.
+
+   THE BALANCES ARE THE POINT, not decoration. This asks somebody to
+   choose a till, and the only thing that decides it is what is in each
+   one. It used to name three accounts and leave the person to go and
+   look -- so the natural move was to pick whichever was habitual and
+   find out later that the drawer could not cover it, at which point the
+   day fails to reconcile with nothing on screen saying why.
+
+   `opts.amount` with `opts.outgoing` goes further and says which tills
+   cannot cover it. Optional: a caller that passes nothing still gets
+   the balances, just no shortfall marking. */
+function cashAccountChoices(opts){
+  const amount = opts && Number(opts.amount) || 0;
+  const outgoing = !!(opts && opts.outgoing);
+  return ACCOUNTS.map(a=>{
+    const balance = Math.round(cashOnHandFor(a.key));
+    return { key: a.key, label: a.label, balance,
+      /* Only when money is LEAVING. An account being low says nothing
+         about whether it can receive a payment, and marking it would
+         warn about a problem that does not exist. */
+      short: outgoing && amount > 0 && balance < amount ? amount - balance : 0 };
+  });
+}
+function promptCashAccount(title, subtitle, opts){
   return new Promise((resolve)=>{
+    const rows = cashAccountChoices(opts);
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,26,0.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;';
+    el.className = 'modal-overlay cash-acct-modal';
     el.innerHTML = `
-      <div style="background:var(--panel);border-radius:14px;padding:20px;width:320px;max-width:100%;">
-        <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${esc(title)}</div>
-        <div style="color:var(--ink-soft);font-size:13px;margin-bottom:14px;">${esc(subtitle||'')}</div>
-        <div id="cashAcctList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="modal cash-acct-panel" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+        <div class="modal-head">
+          <h2>${esc(title)}</h2>
+          <button type="button" class="modal-close" data-acct-cancel aria-label="Cancel">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          ${subtitle ? `<p class="cash-acct-sub">${esc(subtitle)}</p>` : ''}
+          <div class="cash-acct-list">
+            ${rows.map(r=>`
+              <button type="button" class="cash-acct-row${r.short ? ' is-short' : ''}" data-acct="${esc(r.key)}">
+                <span class="cash-acct-name">${esc(r.label)}</span>
+                <span class="cash-acct-figs">
+                  <span class="cash-acct-bal">${fmtUGX(r.balance)}</span>
+                  ${r.short ? `<span class="cash-acct-short">${fmtUGX(r.short)} short</span>` : ''}
+                </span>
+              </button>`).join('')}
+          </div>
+          ${rows.every(r=> r.short) ? `<p class="cash-acct-note">No till holds this on its own — recording it against one will take that account negative.</p>` : ''}
+        </div>
       </div>`;
-    el.querySelector('#cashAcctList').innerHTML = ACCOUNTS.map(a=>
-      `<button type="button" class="btn btn-ghost" style="display:block;width:100%;text-align:left;padding:10px 12px;" data-acct="${esc(a.key)}">${esc(a.label)}</button>`
-    ).join('');
-    const finish = (v)=>{ document.body.removeChild(el); resolve(v); };
-    el.querySelectorAll('button[data-acct]').forEach(b=> b.addEventListener('click', ()=> finish(b.dataset.acct)));
-    el.addEventListener('mousedown', (e)=>{ if(e.target===el) finish(null); });
+
+    /* One exit, however it was asked for, so the promise resolves exactly
+       once and the listener never outlives the dialog. */
+    let done = false;
+    const finish = (v)=>{
+      if(done) return;
+      done = true;
+      document.removeEventListener('keydown', onKey);
+      el.classList.remove('show');
+      // Let the fade finish before the node goes, or it vanishes rather
+      // than closes. Removed on a timer rather than transitionend, which
+      // never fires when the user prefers reduced motion.
+      setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 160);
+      resolve(v);
+    };
+    const onKey = (e)=>{
+      if(e.key === 'Escape'){ e.preventDefault(); finish(null); }
+    };
+    el.querySelectorAll('[data-acct]').forEach(b=>
+      b.addEventListener('click', ()=> finish(b.dataset.acct)));
+    el.querySelector('[data-acct-cancel]').addEventListener('click', ()=> finish(null));
+    // Backdrop only, never a click that began inside the panel and drifted.
+    el.addEventListener('mousedown', (e)=>{ if(e.target === el) finish(null); });
+    document.addEventListener('keydown', onKey);
     document.body.appendChild(el);
+    /* Reflow then show, rather than requestAnimationFrame.
+
+       .modal-overlay opens at opacity:0;visibility:hidden and needs .show
+       on a LATER frame for the fade to play -- but rAF does not run in a
+       tab the browser is not compositing, and a dialog that never became
+       visible is a shop waiting on a question it cannot see. Reading
+       offsetWidth forces the starting style to be committed
+       synchronously, so the transition still plays and the class is on
+       before this function returns either way. */
+    void el.offsetWidth;
+    el.classList.add('show');
+    /* The first till takes focus, so this is answerable from the keyboard
+       -- it is a question, and the answer should not require a mouse. */
+    const first = el.querySelector('.cash-acct-row');
+    if(first) first.focus();
   });
 }
 
@@ -25998,7 +26123,8 @@ async function markClaimPaid(id){
   // profit figure built on them stayed exactly as if the payout had never
   // happened. Asked before the write, so backing out here changes nothing.
   const account = await promptCashAccount('Where did the money come from?',
-    `Recording ${fmtUGX(c.bonus_amount)} paid to ${agentNameById(c.agent_id)} in the Cash Book.`);
+    `Recording ${fmtUGX(c.bonus_amount)} paid to ${agentNameById(c.agent_id)} in the Cash Book.`,
+    {amount: Number(c.bonus_amount)||0, outgoing: true});
   if(!account) return;
 
   const amount = Number(c.bonus_amount)||0;
@@ -28499,7 +28625,7 @@ async function openDuePayment(dueId){
      and the day would fail to reconcile with nothing on screen to say
      why. Same question the loan reminder asks. */
   const account = await promptCashAccount('Where is the money coming from?',
-    `Recording ${fmtUGX(Math.round(amount))} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`);
+    `Recording ${fmtUGX(Math.round(amount))} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`, {amount, outgoing: true});
   if(!account) return;
   const paid = payDue(dueId, amount, account);
   if(paid === null) return;
@@ -39602,7 +39728,7 @@ async function payLoanFromReminder(loanId, suggested){
   if(!(amount > 0)){ toast('Enter what was paid'); return; }
 
   const account = await promptCashAccount('Where is the money coming from?',
-    `Recording ${fmtUGX(amount)} to ${loan.lender} against the loan and in the Cash Book.`);
+    `Recording ${fmtUGX(amount)} to ${loan.lender} against the loan and in the Cash Book.`, {amount, outgoing: true});
   if(!account) return;
 
   const date = todayISO();
@@ -39706,7 +39832,7 @@ async function payDueFromReminder(dueId, suggested){
   if(!(amount > 0)){ toast('Enter what was paid'); return; }
 
   const account = await promptCashAccount('Where is the money coming from?',
-    `Recording ${fmtUGX(amount)} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`);
+    `Recording ${fmtUGX(amount)} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`, {amount, outgoing: true});
   if(!account) return;
 
   const paid = payDue(dueId, amount, account);
