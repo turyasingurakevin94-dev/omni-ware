@@ -11704,7 +11704,31 @@ function addSettingsDiffOp(ops, shopId, settingsCore){
   });
 }
 
+/* How many saves are in flight, so the background refresh can see one.
+
+   A refresh REPLACES `data` and `lastSynced` wholesale, and both of those
+   are hazards to a save that is still running. The work it is sending
+   lives in `data`; and addDiffOps captured its `prev` FROM the old
+   lastSynced, so a commit landing after the swap writes into an object
+   nothing points at any more and the new snapshot never learns the row
+   was sent.
+
+   A counter rather than a flag, because recording a payment fires two
+   saves at once -- addCashReceipt() saves the cash entry, then ip_save
+   saves the invoice it belongs to -- and a boolean cleared by whichever
+   finished first would leave the other one unguarded. */
+let syncSavesInFlight = 0;
 async function saveData(){
+  syncSavesInFlight++;
+  try{ return await syncDataToServer(); }
+  finally{ syncSavesInFlight--; }
+}
+/* Returns whether everything this save wanted to send actually landed.
+   The background refresh has to know: a write that failed leaves the
+   only copy of that work in memory, and replacing it is the end of it.
+   The toast below says so for five seconds; the refresh runs every
+   thirty. */
+async function syncDataToServer(){
   const shopId = currentShopId;
 
   /* A collection ABSENT from `data` is a partial rebuild or a bug, never
@@ -11751,7 +11775,7 @@ async function saveData(){
   addDiffOps(ops, 'followUps', 'follow_ups', 'id', shopId, rows.followUps);
   addSettingsDiffOp(ops, shopId, rows.settings);
 
-  if(!ops.length) return;
+  if(!ops.length) return true;
 
   const results = await Promise.all(ops.map(op=> op.run()));
   results.forEach((r, i)=>{ if(!(r && r.error)) ops[i].commit(); });
@@ -11761,6 +11785,7 @@ async function saveData(){
     console.error('saveData failed:', failed.error);
     toast('Sync failed — a change may not have been saved (' + failed.error.message + ')', 5000);
   }
+  return !failed;
 }
 
 // ensureAuthOverlay/hideAuthOverlay/getAuthedUser/showLoginScreen/
@@ -46725,6 +46750,9 @@ async function boot(){
 // refresh forever, which is why the poll looked like it never ran).
 let lastUserInputAt = 0;
 document.addEventListener('input', ()=>{ lastUserInputAt = Date.now(); }, true);
+// One refresh at a time. Declared beside the guard it feeds rather than
+// after the function that reads it.
+let pollInFlight = false;
 // Re-pulls this shop's data in the background so a change made from
 // another device/tab shows up without a manual reload -- the app has no
 // Realtime subscriptions, so this is the low-effort stand-in. Skipped
@@ -46732,6 +46760,18 @@ document.addEventListener('input', ()=>{ lastUserInputAt = Date.now(); }, true);
 // is open, or they typed in the last few seconds (a quote client's name,
 // an amount, etc.).
 async function pollForUpdatesNow(){
+  /* visibilitychange fires one of these the moment the tab comes back,
+     which can land on top of the thirty-second tick's own await. Two
+     refreshes interleaving would assign `data` from one load and
+     `lastSynced` from the other -- and the pair disagreeing is not a
+     stale render, it is a delete instruction to the next save. */
+  if(pollInFlight) return;
+  /* A refresh mid-save swaps lastSynced out from under the diff that
+     save is still committing against, and swaps `data` out from under
+     the work it is sending. The Worker app has refused this since a
+     picked item came back unpicked; this one did not, and a receipt
+     recorded against an invoice came back unrecorded the same way. */
+  if(syncSavesInFlight) return;
   if(document.querySelector('.modal-overlay.show')) return;
   // The Worker tab's own prompts (the short-pick quantity entry) are built
   // at call time by shared-worker.js rather than from markup here, so they
@@ -46741,7 +46781,22 @@ async function pollForUpdatesNow(){
   // modals and refreshed straight through the decision it was asking about.
   if(document.querySelector('.wv-assign-overlay')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
+  pollInFlight = true;
   try{
+    /* Work that has not reached the server yet must survive this.
+       The refresh replaces `data` wholesale, so anything still only in
+       memory is gone -- and a save that failed says so in a toast that
+       fades in five seconds, on an app that refreshes every thirty. The
+       receipt was entered, saved, lost, and only came back because that
+       particular write had in fact landed and a later poll read it again.
+       One that had not would simply have been gone.
+
+       saveData only advances lastSynced for the parts that actually
+       landed, so a second call sends exactly what is still outstanding
+       and nothing else. If it lands there is nothing left to protect; if
+       it does not, the local copy is worth more than a minute of
+       staleness. Same order the Worker app has used since the same bug. */
+    if(!(await saveData())) return;
     // Both are built before either is assigned, so a throw anywhere in here
     // leaves the existing pair intact.
     //
@@ -46762,6 +46817,10 @@ async function pollForUpdatesNow(){
     refreshNavBadges();
   } catch(err){
     console.error('Background refresh failed:', err);
+  } finally {
+    // In a finally: an early return leaving this stuck true would
+    // silently stop every future refresh for the life of the tab.
+    pollInFlight = false;
   }
 }
 let dataPollTimer = null;

@@ -344,4 +344,151 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
   });
 }
 
-process.exit(t.done() ? 1 : 0);
+/* ---------- 9. the refresh does not eat work that is still in flight ----
+ *
+ * Reported live: a receipt was recorded against Musisi's invoice, saved,
+ * and the invoice came back showing nothing received. A while later it
+ * was there again. Second time that day.
+ *
+ * The shape: ip_save mutates `data` and fires saveData() WITHOUT awaiting
+ * it, then closes the modal. From that moment the payment exists only in
+ * memory until the write lands. pollForUpdatesNow() replaces `data` and
+ * `lastSynced` wholesale, and had no idea a save was running -- so a poll
+ * landing in that window threw the payment away. It reappeared because
+ * that particular write had in fact reached the server and a later poll
+ * read it back. One that had NOT would have been gone with no trace but a
+ * five-second toast.
+ *
+ * The window is not theoretical: visibilitychange fires a poll the instant
+ * the tab comes back, which is exactly what happens when somebody records
+ * a receipt and switches to WhatsApp.
+ *
+ * These drive the real pollForUpdatesNow() out of index.html.
+ */
+(async () => {
+  /* A watchdog, because these drive real async code against stalled
+     promises: without it a regression that never resolves would drain the
+     event loop, exit 0, and read as a pass. Found by mutation — removing
+     the re-entrancy latch hung this file and the run went green. */
+  const watchdog = setTimeout(() => {
+    t.fail('the refresh tests never finished — a poll is hanging, which is a failure, not a pass');
+    process.exit(1);
+  }, 10000);
+
+  const invoice = (paid) => ({ id: 170, client: { name: 'Musisi' }, status: 'completed',
+    invoiced: true, amountPaid: paid, payments: paid ? [{ id: 1, amount: paid }] : [] });
+  // What the server still has: the invoice with nothing received, because
+  // the read went out before the write landed.
+  const serverState = () => ({ savedQuotes: [invoice(0)], cashTxns: [] });
+
+  const build = (over) => {
+    const log = [];
+    const env = Object.assign({
+      data: { savedQuotes: [invoice(665000)], cashTxns: [{ id: 9, amount: 665000 }] },
+      lastSynced: { savedQuotes: {} },
+      pollInFlight: false,
+      syncSavesInFlight: 0,
+      lastUserInputAt: 0,
+      currentShopId: 'shop-1',
+      currentActiveTab: 'invoices',
+      document: { querySelector: () => null },
+      saveData: async () => { log.push('save'); return true; },
+      loadData: async () => { log.push('load'); return serverState(); },
+      buildLastSynced: (d) => ({ savedQuotes: Object.fromEntries((d.savedQuotes || []).map((q) => [String(q.id), q])) }),
+      goToTab: () => {},
+      refreshNavBadges: () => {},
+      console: { error: () => { log.push('error'); } },
+    }, over || {});
+    const scope = compileScope(
+      [extractFunction(adminSrc, 'pollForUpdatesNow', 'index.html'),
+        'function __peek(){ return { data: data, pollInFlight: pollInFlight }; }'],
+      env, ['pollForUpdatesNow', '__peek'],
+    );
+    return { scope, log, paidNow: () => scope.__peek().data.savedQuotes[0].amountPaid };
+  };
+
+  /* a save still running holds the refresh off entirely */
+  {
+    const h = build({ syncSavesInFlight: 1 });
+    await h.scope.pollForUpdatesNow();
+    t.check(!h.log.includes('load'),
+      'a refresh will not run while a save is in flight — it would swap lastSynced out from under that save’s diff');
+    eq(h.paidNow(), 665000, 'so the payment that save is carrying is still there');
+  }
+
+  /* the refresh flushes first, and gives up if the flush did not land */
+  {
+    const h = build({ saveData: async () => false });
+    await h.scope.pollForUpdatesNow();
+    t.check(!h.log.includes('load'),
+      'a flush that failed abandons the refresh rather than overwriting the only copy of the work');
+    eq(h.paidNow(), 665000,
+      'the receipt survives — this is the case that used to lose it outright, with the write never having reached the server');
+    /* This is the path that makes the finally load-bearing, and the throw
+       path is not: a throw is caught and execution carries on past the
+       try either way. Abandoning the refresh RETURNS from inside it, and
+       only a finally runs on the way out. */
+    t.check(!h.scope.__peek().pollInFlight,
+      'and it lowers the latch on its way out, rather than refusing every refresh from here on');
+  }
+
+  /* and when there is nothing outstanding, it refreshes as before */
+  {
+    const h = build();
+    await h.scope.pollForUpdatesNow();
+    eq(h.log.join(','), 'save,load',
+      'the flush goes out BEFORE the load, so anything local is on the server before the server’s copy replaces it');
+    eq(h.paidNow(), 0, 'and the refresh does still replace data — the guard is not a permanent freeze');
+  }
+
+  /* two refreshes cannot interleave */
+  {
+    // Every stalled load keeps its own resolver: a second poll that got
+    // through would make a second promise, and one shared `release` would
+    // strand the first one for ever.
+    const stalled = [];
+    const h = build({ loadData: () => new Promise((res) => stalled.push(() => res(serverState()))) });
+    /* Neither is awaited. A refused refresh returns immediately, but one
+       that slipped past the latch would sit on the stalled load — and
+       awaiting THAT is how this test used to hang instead of failing. */
+    const both = [h.scope.pollForUpdatesNow(), h.scope.pollForUpdatesNow()];
+    /* Checked with no await in between: both prologues run synchronously
+       as far as their first await, so a second one that got through has
+       already logged its flush by now. */
+    t.check(h.log.filter((x) => x === 'save').length === 1,
+      'a second refresh arriving mid-flight (visibilitychange lands on top of the 30s tick) is refused');
+    // Now let the surviving refresh get as far as its load before releasing
+    // it -- the flush it awaits first means `stalled` is empty until it does.
+    await new Promise((r) => setTimeout(r, 0));
+    stalled.forEach((r) => r());
+    await Promise.all(both);
+    t.check(!h.scope.__peek().pollInFlight, 'and the latch is down again once it finishes');
+  }
+
+  /* a refresh that throws must not wedge the latch */
+  {
+    const h = build({ loadData: async () => { throw new Error('offline'); } });
+    await h.scope.pollForUpdatesNow();
+    t.check(!h.scope.__peek().pollInFlight,
+      'the latch is cleared in a finally — a throw leaving it raised would stop every future refresh for the life of the tab');
+    await h.scope.pollForUpdatesNow();
+    t.check(h.log.filter((x) => x === 'save').length === 2, 'and the next refresh runs');
+  }
+
+  /* saveData has to actually report, and actually count */
+  {
+    const wrapper = extractFunction(adminSrc, 'saveData', 'index.html');
+    t.check(/syncSavesInFlight\+\+;/.test(wrapper) && /finally\s*\{\s*syncSavesInFlight--;/.test(wrapper),
+      'saveData counts itself in and out in a finally, so a throw cannot wedge the refresh off');
+    t.check(/return await/.test(wrapper),
+      'and passes the verdict back, rather than swallowing it');
+    const inner = extractFunction(adminSrc, 'syncDataToServer', 'index.html');
+    t.check(/if\(!ops\.length\) return true;/.test(inner),
+      'nothing to send counts as landed');
+    t.check(/return !failed;/.test(inner),
+      'and a failed write counts as not landed — which is what the refresh reads before it replaces anything');
+  }
+
+  clearTimeout(watchdog);
+  process.exit(t.done() ? 1 : 0);
+})();
