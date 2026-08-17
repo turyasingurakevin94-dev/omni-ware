@@ -4875,30 +4875,57 @@
   .sq-assign-btn:hover, .sq-confirm-btn:hover{background:var(--ow-oxide-deep);}
   .sq-assign-btn:focus-visible, .sq-confirm-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-  /* ---- Supplier confirmation panel ---- */
+  /* ---- Supplier confirmation panel ----
+     One supplier to a card, in the same white-and-hairline language the
+     directory screens use, with a stripe down the left carrying the
+     state so a list of five can be triaged without reading it. */
   .sconf-row{
-    border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px;
-    background:var(--panel);
+    border:1px solid var(--line);border-left:3px solid var(--ow-steel-100);
+    border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;
+    transition:border-color .12s ease, box-shadow .12s ease;
   }
-  .sconf-row.orphan{border-style:dashed;}
-  .sconf-head{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
-  .sconf-head b{font-size:13.5px;}
+  .sconf-row:hover{box-shadow:0 3px 12px rgba(20,30,40,0.05);}
+  .sconf-row.good{border-left-color:var(--good);}
+  .sconf-row.warn{border-left-color:var(--ow-amber);}
+  .sconf-row.bad{border-left-color:var(--danger);}
+  .sconf-row.orphan{border-style:dashed;border-left-style:dashed;}
+  .sconf-head{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .sconf-head b{font-size:14px;letter-spacing:-.005em;}
   .sconf-pill{
-    margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.02em;
-    padding:2px 9px;border-radius:999px;
+    margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;padding:2.5px 9px;border-radius:999px;
     background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;
   }
   .sconf-pill.good{background:var(--good-bg);color:var(--good);}
   .sconf-pill.bad{background:var(--ow-crimson-soft);color:var(--danger);}
   .sconf-pill.warn{background:var(--ow-amber-soft);color:var(--warn-ink);}
-  .sconf-line{
-    display:flex;justify-content:space-between;gap:12px;
-    font-size:12px;color:var(--ink-soft);padding:2px 0;
+  /* The lines are the substance of the ask -- what this supplier is being
+     asked to stand behind -- so they read as a small table rather than as
+     a caption. */
+  .sconf-lines{
+    background:var(--ow-steel-050);border-radius:7px;padding:7px 10px;margin-bottom:2px;
   }
-  .sconf-line span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .sconf-note{font-size:11.5px;color:var(--ink-soft);margin-top:6px;font-style:italic;}
-  .sconf-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
-  .sconf-acts .btn{font-size:12px;padding:5px 11px;}
+  .sconf-line{
+    display:flex;justify-content:space-between;gap:14px;
+    font-size:12px;color:var(--ink);padding:2.5px 0;
+  }
+  .sconf-line + .sconf-line{border-top:1px solid var(--ow-rule-soft);}
+  .sconf-line span:last-child{
+    font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink-soft);
+  }
+  .sconf-note{font-size:11.5px;color:var(--ink-soft);margin-top:7px;}
+  .sconf-acts{
+    display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;
+    padding-top:10px;border-top:1px solid var(--ow-rule-soft);
+  }
+  .sconf-acts .btn{font-size:12px;padding:6px 12px;}
+  /* Everything after the one accent button is secondary, and reads that
+     way. Without this the row offered three equally loud choices and the
+     eye had to work out which was the point. */
+  .sconf-acts .btn-ghost{
+    border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+  }
+  .sconf-acts .btn-ghost:hover{background:var(--ow-steel-050);color:var(--ink);}
   .sconf-why{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;align-items:center;}
   .sconf-why .btn{font-size:12px;padding:5px 11px;}
   /* Grows to fill the row but is allowed to wrap onto its own line on a
@@ -20397,7 +20424,15 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
   const key = String(supplierId);
   const prev = q.supplierConfirms[key] || {};
   if(state === 'pending'){
-    delete q.supplierConfirms[key];
+    /* Undoing an answer must not also unsay the asking. Deleting the
+       whole record took askedAt with it, so a row that had been chased
+       twice went back to reading "Not asked yet" -- and the next person
+       rang them again. */
+    if(prev.askedAt){
+      q.supplierConfirms[key] = {state:'pending', at:null, askedAt: prev.askedAt, terms:null, note:''};
+    } else {
+      delete q.supplierConfirms[key];
+    }
   } else {
     q.supplierConfirms[key] = {
       state,
@@ -20527,6 +20562,52 @@ function supplierConfirmPill(st){
   return SUPPLIER_CONFIRM_PILLS[st.state] || SUPPLIER_CONFIRM_PILLS.pending;
 }
 
+/* The buttons a row offers depend on what that supplier has already
+   said. The first cut showed the same three in every state, so a
+   supplier who had confirmed still had a red "They confirmed" sitting
+   on their card as the loudest thing on the screen -- inviting a click
+   on work already done, beside an "Ask on WhatsApp" that implied nobody
+   had asked. And a mis-tick could not be taken back at all: the only way
+   out was to record a Problem, which was a lie about what the supplier
+   said.
+
+   So: exactly one accent button, on the one action that state actually
+   wants, and a settled row offers a quiet way to undo instead. */
+function supplierConfirmActionsHTML(supplierId, st){
+  const sid = esc(String(supplierId));
+  const ask = (label, cls)=>
+    `<button type="button" class="btn ${cls} sconf-ask" data-sup="${sid}">${label}</button>`;
+  const yes = (label, cls)=>
+    `<button type="button" class="btn ${cls} sconf-yes" data-sup="${sid}">${label}</button>`;
+  const no  = (label)=>
+    `<button type="button" class="btn btn-ghost sconf-no" data-sup="${sid}">${label}</button>`;
+  const undo = `<button type="button" class="btn btn-ghost sconf-undo" data-sup="${sid}">Undo</button>`;
+
+  let inner;
+  if(st.state === 'confirmed'){
+    // Nothing here is a call to action: the row is settled. Undo is for
+    // the wrong-row tick, and is deliberately not styled as a warning --
+    // correcting a mistake should not feel like an incident.
+    inner = ask('Ask again', 'btn-ghost') + no('Report a problem') + undo;
+  } else if(st.state === 'stale'){
+    // The quote moved under them, so asking again IS the work.
+    inner = ask('Ask again at the new terms', 'btn-accent')
+      + yes('They confirmed', 'btn-ghost') + no('Report a problem');
+  } else if(st.state === 'problem'){
+    inner = ask('Ask again', 'btn-accent') + yes('They confirmed', 'btn-ghost')
+      + no('Edit what they said');
+  } else if(st.askedAt){
+    // Asked and waiting: the message has gone, so recording the answer is
+    // the next thing that happens.
+    inner = yes('They confirmed', 'btn-accent') + ask('Ask again', 'btn-ghost')
+      + no('Report a problem');
+  } else {
+    inner = ask('Ask on WhatsApp', 'btn-accent') + yes('They confirmed', 'btn-ghost')
+      + no('Report a problem');
+  }
+  return `<div class="sconf-acts">${inner}</div>`;
+}
+
 function renderSupplierConfirmList(){
   const wrap = document.getElementById('supplierConfirmList');
   const hint = document.getElementById('supplierConfirmHint');
@@ -20585,13 +20666,9 @@ function renderSupplierConfirmList(){
           <button type="button" class="btn btn-accent sconf-why-save" data-sup="${esc(String(g.supplierId))}">Save</button>
           <button type="button" class="btn btn-ghost sconf-why-cancel" data-sup="${esc(String(g.supplierId))}">Cancel</button>
         </div>`
-      : `<div class="sconf-acts">
-          <button type="button" class="btn btn-ghost sconf-ask" data-sup="${esc(String(g.supplierId))}">Ask on WhatsApp</button>
-          <button type="button" class="btn btn-accent sconf-yes" data-sup="${esc(String(g.supplierId))}">They confirmed</button>
-          <button type="button" class="btn btn-ghost sconf-no" data-sup="${esc(String(g.supplierId))}">Problem</button>
-        </div>`;
+      : supplierConfirmActionsHTML(g.supplierId, st);
 
-    return `<div class="sconf-row" data-sup="${esc(String(g.supplierId))}">
+    return `<div class="sconf-row ${pill.cls}" data-sup="${esc(String(g.supplierId))}">
       <div class="sconf-head">
         <b>${esc(supplierName(g.supplierId))}</b>
         <span class="sconf-pill ${pill.cls}">${esc(pill.label)}</span>
@@ -20632,7 +20709,7 @@ function wireSupplierConfirmPanel(){
   const list = document.getElementById('supplierConfirmList');
   if(!list) return;
   list.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.sconf-ask, .sconf-yes, .sconf-no, .sconf-why-save, .sconf-why-cancel');
+    const btn = e.target.closest('.sconf-ask, .sconf-yes, .sconf-no, .sconf-undo, .sconf-why-save, .sconf-why-cancel');
     if(!btn) return;
     const sup = btn.dataset.sup;
     const q = data.savedQuotes.find(x=> x.id === supplierConfirmOrderId);
@@ -20652,6 +20729,10 @@ function wireSupplierConfirmPanel(){
       toast(leftNow
         ? `${supplierName(sup)} confirmed — ${leftNow} to go`
         : 'Every supplier confirmed — move the order on to tell the group', 3500);
+    } else if(btn.classList.contains('sconf-undo')){
+      supplierConfirmWhyFor = null;
+      setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'pending', '');
+      toast(`${supplierName(sup)} is back to unconfirmed`, 3000);
     } else if(btn.classList.contains('sconf-no')){
       /* Opens the field rather than recording anything yet. The reason
          matters more than the refusal: "no stock till Friday" and "the

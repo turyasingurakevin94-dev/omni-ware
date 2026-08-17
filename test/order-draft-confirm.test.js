@@ -224,6 +224,76 @@ const draft = (items) => {
     'and it stays neutral — a supplier asked thirty seconds ago is not a warning, and colouring every outstanding ask amber is how a screen stops being read');
 }
 
+/* ---------- 5b2. the buttons match what the supplier has said --------- */
+{
+  /* Found by looking at a fully-confirmed panel: every row offered the
+     same three buttons whatever state it was in, so a supplier who had
+     already confirmed still had a red "They confirmed" as the loudest
+     thing on their card, beside an "Ask on WhatsApp" implying nobody had
+     asked. And a mis-tick could not be undone except by recording a
+     Problem, which was a lie about what the supplier said. */
+  const acts = compileScope([extractFunction(src, 'supplierConfirmActionsHTML', 'index.html')],
+    { esc: (x) => String(x) }, ['supplierConfirmActionsHTML']).supplierConfirmActionsHTML;
+  const accentOf = (html) => {
+    const m = html.match(/btn-accent [a-z-]*sconf-(ask|yes|no)[^>]*>([^<]*)</);
+    return m ? { kind: m[1], label: m[2] } : null;
+  };
+  const has = (html, cls) => html.includes(cls);
+
+  const fresh = acts('S1', { state: 'pending', askedAt: null });
+  eq(accentOf(fresh).label, 'Ask on WhatsApp',
+    'nobody has been asked, so asking is the one highlighted action');
+
+  const waiting = acts('S1', { state: 'pending', askedAt: 123 });
+  eq(accentOf(waiting).kind, 'yes',
+    'once the message has gone, recording their answer is what happens next');
+  t.check(/Ask again/.test(waiting), 'and asking becomes “Ask again”, not “Ask on WhatsApp”');
+
+  const done = acts('S1', { state: 'confirmed', askedAt: 123 });
+  t.check(accentOf(done) === null,
+    'a confirmed row has NO accent button — there is no work left on it to invite');
+  t.check(!/They confirmed/.test(done),
+    'and does not offer to confirm something already confirmed');
+  t.check(has(done, 'sconf-undo'),
+    'it offers Undo instead, so a tick on the wrong supplier can be taken back');
+  t.check(/Ask again/.test(done), 'asking again is still possible, quietly');
+
+  const stale = acts('S1', { state: 'stale', askedAt: 123 });
+  eq(accentOf(stale).kind, 'ask',
+    'when the quote moved under them, asking again IS the work and is highlighted');
+  t.check(/new terms/.test(stale), 'and the label says what changed');
+
+  const prob = acts('S1', { state: 'problem', askedAt: 123 });
+  eq(accentOf(prob).kind, 'ask', 'a problem is resolved by going back to them');
+  t.check(/Edit what they said/.test(prob),
+    'and the note can be corrected rather than only replaced');
+
+  ['pending', 'confirmed', 'stale', 'problem'].forEach((state) => {
+    const html = acts('S1', { state, askedAt: 1 });
+    const accents = (html.match(/btn-accent/g) || []).length;
+    t.check(accents <= 1, `${state}: at most one accent button, so the eye is never asked to choose`);
+  });
+}
+
+/* ---------- 5b3. undoing an answer does not unsay the asking --------- */
+{
+  const q = draft([line({ supplierId: 'S1' })]);
+  scope.markOrderSupplierAsked(500, 'S1');
+  scope.setOrderSupplierConfirm(500, 'S1', 'confirmed', '');
+  scope.setOrderSupplierConfirm(500, 'S1', 'pending', '');
+  const st = scope.orderSupplierConfirmState(q, 'S1');
+  eq(st.state, 'pending', 'undo returns the row to unconfirmed');
+  t.check(!!st.askedAt,
+    'but keeps the record that they were asked — deleting it made a twice-chased supplier read as “Not asked yet”, and the next person rang them again');
+}
+{
+  const q = draft([line({ supplierId: 'S1' })]);
+  scope.setOrderSupplierConfirm(500, 'S1', 'confirmed', '');
+  scope.setOrderSupplierConfirm(500, 'S1', 'pending', '');
+  eq(scope.orderSupplierConfirmState(q, 'S1').state, 'pending',
+    'and a row that was never asked simply clears');
+}
+
 /* ---------- 5c. reaching the supplier, and saying so when we cannot --- */
 {
   // Found by counting the real shop: nine of forty-four suppliers have no
