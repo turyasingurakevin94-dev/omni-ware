@@ -96,6 +96,7 @@ const scope = compileScope([
   savedAgoLabel: () => '42 minutes ago',
   savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + i.qty * (i.sellPrice || 0), 0),
   ICON_WALLET: '<svg data-i="wallet"></svg>', ICON_STORE: '<svg data-i="store"></svg>',
+  ICON_GO: '<svg data-i="go"></svg>',
   ICON_WARN: '<svg data-i="warn"></svg>', ICON_CLOCK: '<svg data-i="clock"></svg>',
   ICON_ITEMS: '<svg data-i="items"></svg>', ICON_MONEY: '<svg data-i="money"></svg>',
   ICON_SHELF: '<svg data-i="shelf"></svg>', ICON_PURCHASE: '<svg data-i="purchase"></svg>',
@@ -261,6 +262,77 @@ const figures = (html) => [...String(html).matchAll(/([\d,]+) UGX/g)]
   t.check(shown[0] === 30000, 'the headline figure still covers every supplier, shown or not');
   t.check(shown[1] >= shown[2] && shown[2] >= shown[3],
     'the runs that made the cut are the biggest ones, since those are what a day is planned around');
+}
+
+/* ---------- 4b. it never says the same number twice ------------------- */
+/*
+ * A real board: one order, every line from Okuosi Gypsum. The runs
+ * partition exactly the lines the headline is summed from, so with a
+ * single supplier that run's total IS the headline -- and the banner
+ * printed it again directly underneath itself. The screenshot that
+ * raised this read 2,309,000 UGX over 2,309,000 UGX.
+ *
+ * Equivalent mutant, named: dropping the amount when runs.length === 1
+ * cannot be distinguished from dropping it when the run total happens
+ * to equal the headline, because those are the same condition. The
+ * assertions below are written on the count of suppliers, which is what
+ * the rule is actually about.
+ */
+{
+  data.products = [{ id: 'P1', name: 'Cement', variants: [] }, { id: 'P2', name: 'Nails', variants: [] }];
+  data.prices = [
+    price({ id: 1, productId: 'P1', supplierId: 'S1', wholesale: 1000, retail: 1000 }),
+    price({ id: 2, productId: 'P2', supplierId: 'S2', wholesale: 500, retail: 500 })];
+
+  const alone = scope.cashToBuyBannerHTML([order({ items: [
+    line({ productId: 'P1', qty: 2 }), line({ productId: 'P1', qty: 3 })] })]);
+  t.check(figures(alone).length === 1 && figures(alone)[0] === 5000,
+    `one supplier prints its amount once, not twice (got ${JSON.stringify(figures(alone))})`);
+  t.check(/All from Roto/.test(alone),
+    'and names them instead -- the supplier is the fact the headline does not already carry');
+  t.check(!/<b>/.test(alone),
+    'with no second figure left on the row at all');
+
+  const both = scope.cashToBuyBannerHTML([order({ items: [
+    line({ productId: 'P1', qty: 2 }),
+    line({ productId: 'P2', productName: 'Nails', qty: 4, supplierId: 'S2' })] })]);
+  t.check(figures(both).length === 3 && figures(both)[0] === 4000,
+    `two suppliers still carry an amount each under the headline (got ${JSON.stringify(figures(both))})`);
+  t.check(!/All from/.test(both),
+    'and none of them claims to be all of it');
+
+  // It opens the buying list. Nothing on it said so.
+  t.check(/data-i="go"/.test(alone), 'the banner shows it can be pressed');
+}
+
+/* ---------- 4c. nothing on it wraps -------------------------------------
+ *
+ * A lane is 270px, which leaves this card about 230px inside its padding.
+ * The label and the amount were laid out abreast in it -- 74px and 123px
+ * measured -- so BOTH wrapped, and the amount broke after its digits and
+ * stranded "UGX" on a line of its own. These are the CSS facts that stop
+ * that, held here because no assertion on the markup can see a wrap.
+ */
+{
+  const rule = (sel) => (new RegExp(`\\${sel}\\{[^}]*\\}`).exec(src) || [''])[0];
+
+  t.check(/display:block/.test(rule('.sq-cash-fig')) && !/margin-left:auto/.test(rule('.sq-cash-fig')),
+    'the amount is a line of its own, not the right-hand end of the label’s row');
+  t.check(/white-space:nowrap/.test(rule('.sq-cash-fig')),
+    'and cannot be broken in the middle whatever the lane is doing');
+  t.check(/white-space:nowrap/.test(rule('.sq-cash-label')),
+    'nor can the label, which is why it can sit above rather than fight for room');
+
+  /* The supplier chips were panel-white on a panel-white card: the pill
+     had a radius and padding that drew nothing at all. Rows instead --
+     and the guard is that the run must not repaint the card's own
+     background, whatever it is. */
+  const runRule = rule('.sq-cash-run');
+  const cardRule = rule('.sq-cash');
+  t.check(/background:var\(--panel\)/.test(cardRule) && !/background:/.test(runRule),
+    'a run paints no background of its own, so it cannot be an invisible pill on the card again');
+  t.check(/text-overflow:ellipsis/.test(rule('.sq-cash-run .nm')) && /white-space:nowrap/.test(rule('.sq-cash-run b')),
+    'and when a name is too long for the lane it is the NAME that yields, never the amount');
 }
 
 /* ---------- 5. what it cannot price, it says ------------------------- */

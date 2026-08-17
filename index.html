@@ -4102,29 +4102,61 @@
      and the panel itself goes neutral so the cards carry the eye. */
   .sq-cash{
     all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;
-    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 11px;margin:0 0 10px;
   }
   .sq-cash:hover{border-color:var(--ink-soft);}
   .sq-cash:focus-visible{outline:2px solid var(--ow-amber);outline-offset:2px;}
+  /* The label sits ABOVE the figure, not beside it. Abreast they were a
+     74px label and a 123px amount competing for the 230px a lane leaves
+     inside this card, so BOTH wrapped -- and the amount broke after its
+     digits, stranding "UGX" alone on a second line. Stacked, each has the
+     full width, and the card came out SHORTER than it was: 233px to 200px
+     on a three-supplier board, because nothing wraps any more. */
   .sq-cash-top{display:flex;align-items:center;gap:7px;}
-  .sq-cash-top .icon{width:17px;height:17px;color:var(--ow-amber-ink);flex-shrink:0;}
-  .sq-cash-label{font-size:11.5px;font-weight:700;color:var(--ow-amber-ink);}
+  .sq-cash-top .icon{width:16px;height:16px;color:var(--ow-amber-ink);flex-shrink:0;}
+  /* An eyebrow, not a headline. Three ambers of equal weight -- icon,
+     label, figure -- gave the card no hierarchy at all; the label goes
+     quiet so the colour means the money. */
+  .sq-cash-label{
+    font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* It opens the buying list and looked like a panel. Scoped past
+     `.sq-cash-top .icon` above, which is the same specificity and would
+     otherwise size and colour the chevron like the wallet. */
+  .sq-cash-top .sq-cash-go{width:13px;height:13px;margin-left:auto;color:var(--ow-ink-400);flex-shrink:0;}
+  .sq-cash:hover .sq-cash-go{color:var(--ink-soft);}
   .sq-cash-fig{
-    margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600;
-    color:var(--ow-amber-ink);font-variant-numeric:tabular-nums;
+    display:block;margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;
+    color:var(--ow-amber-ink);font-variant-numeric:tabular-nums;white-space:nowrap;
   }
-  .sq-cash-runs{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+  /* Where the money goes, as rows rather than pills. The pill was never
+     visible in the first place -- panel white on a panel-white card, so
+     its radius and padding drew nothing -- and a supplier name plus an
+     amount is 35 characters, which no pill was fitting on one line of a
+     lane. As rows the names run left and the amounts line up right,
+     which is how a column of money is read. */
+  .sq-cash-runs{
+    display:flex;flex-direction:column;margin-top:9px;padding-top:8px;
+    border-top:1px solid var(--ow-rule-soft);
+  }
   .sq-cash-run{
-    display:inline-flex;align-items:center;gap:5px;background:var(--panel);border-radius:999px;
-    padding:3px 9px;font-size:11px;color:var(--ink-soft);
+    display:flex;align-items:center;gap:6px;min-width:0;
+    padding:2.5px 0;font-size:11.5px;color:var(--ink-soft);
   }
-  .sq-cash-run .icon{width:12px;height:12px;flex-shrink:0;}
-  .sq-cash-run b{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
-  .sq-cash-run.more{color:var(--ow-ink-400);}
+  .sq-cash-run .icon{width:13px;height:13px;flex-shrink:0;color:var(--ow-ink-400);}
+  /* The name yields, never the amount: a truncated supplier is a tooltip
+     and one tap from the buying list, a truncated figure is a wrong one. */
+  .sq-cash-run .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sq-cash-run b{
+    margin-left:auto;padding-left:8px;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .sq-cash-run.more{color:var(--ow-ink-400);padding-left:19px;}
   .sq-cash-gap{
-    display:flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;color:var(--ow-crimson);
+    display:flex;align-items:flex-start;gap:5px;margin-top:8px;font-size:11px;color:var(--ow-crimson);
   }
-  .sq-cash-gap .icon{width:13px;height:13px;flex-shrink:0;}
+  .sq-cash-gap .icon{width:13px;height:13px;flex-shrink:0;margin-top:1px;}
   /* The buying list. Wider than a decision modal because it is a working
      document -- read standing up, in a shop, against what is on the shelf. */
   .modal-wide{max-width:680px;width:100%;}
@@ -4161,7 +4193,20 @@
   .pr-supplier-head .icon{width:14px;height:14px;color:var(--ink-soft);}
   .sq-cash.sq-runs{border-color:var(--line);background:var(--panel);}
   .sq-cash.sq-runs .sq-cash-top .icon{color:var(--ow-verdigris);}
-  .sq-cash.sq-runs .sq-cash-fig{color:var(--ow-verdigris);}
+  /* "5 orders" is a count, not money: mono buys it no column to line up
+     in, and at the cash figure's 20px the WORD was the loudest thing on
+     the lane. Sans, and a size below it. */
+  .sq-cash.sq-runs .sq-cash-fig{
+    color:var(--ow-verdigris);font-family:'Inter',system-ui,sans-serif;
+    font-size:15.5px;font-weight:700;letter-spacing:-.01em;
+  }
+  /* Places carry one digit each, not an amount, so they pack across the
+     line instead of down it -- a right-aligned column of single digits
+     is a column of nothing, and stacking three of them cost the lane
+     24px it did not need to spend. */
+  .sq-cash.sq-runs .sq-cash-runs{flex-direction:row;flex-wrap:wrap;gap:2px 13px;}
+  .sq-cash.sq-runs .sq-cash-run b{margin-left:0;padding-left:0;}
+  .sq-cash.sq-runs .sq-cash-run.more{padding-left:0;}
   .sq-cash-note{
     display:block;margin-top:7px;font-size:11px;color:var(--ink-soft);
   }
@@ -11991,6 +12036,9 @@ const ICON_CHECK = '<svg class="icon" viewBox="0 0 24 24"><path d="m4 12.5 5 5L2
 // Where an order is going, and the trip that takes several at once.
 const ICON_PIN = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 const ICON_ROUTE = '<svg class="icon" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/></svg>';
+// The board banners are buttons that open a document. Nothing on them
+// said so, so they read as panels nobody thought to press.
+const ICON_GO = '<svg class="icon sq-cash-go" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
 const ICON_TRUCK = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 16V6h11v10"/><path d="M14 9h4l3 3v4h-7"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>';
 // Shown on a shortfall: the way out, not another warning.
 const ICON_PLAN = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 5-5 2.1 2.1-5 5-2.1Z"/></svg>';
@@ -15963,14 +16011,22 @@ function cashToBuyBannerHTML(group){
   const runs = buyingListRuns(orders);
   const shown = runs.slice(0, 3);
   const rest = runs.length - shown.length;
+  /* One supplier means that supplier's run IS the total -- the runs
+     partition exactly the lines the total is summed from -- so printing
+     the amount again under itself said the same number twice, which is
+     how the board looked on a real day. The name is the new fact; "All
+     from" is there so one name under a figure cannot be read as the
+     first of several. */
+  const only = runs.length === 1;
   return `<button type="button" class="sq-cash" id="sq_cash_banner" title="Open the buying list">
     <span class="sq-cash-top">
       ${ICON_WALLET}
       <span class="sq-cash-label">Cash to buy in</span>
-      <span class="sq-cash-fig">${fmtUGX(total)}</span>
+      ${ICON_GO}
     </span>
+    <span class="sq-cash-fig">${fmtUGX(total)}</span>
     ${shown.length ? `<span class="sq-cash-runs">${shown.map(r=>`
-      <span class="sq-cash-run">${ICON_STORE}${esc(supplierName(r.supplierId))} <b>${fmtUGX(r.total)}</b></span>`).join('')}
+      <span class="sq-cash-run" title="${esc(supplierName(r.supplierId))}">${ICON_STORE}<span class="nm">${only?'All from ':''}${esc(supplierName(r.supplierId))}</span>${only?'':`<b>${fmtUGX(r.total)}</b>`}</span>`).join('')}
       ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>` : ''}
     ${unpriced ? `<span class="sq-cash-gap">${ICON_WARN}${unpriced} line${unpriced===1?'':'s'} with no supplier price — not counted</span>` : ''}
   </button>`;
@@ -16577,14 +16633,18 @@ function deliveryRunsBannerHTML(group){
   const shown = runs.slice(0, 3);
   const rest = runs.length - shown.length;
   const going = runs.reduce((s,r)=> s + r.orders.length, 0);
+  // Same rule as the cash banner: one place takes every order on the
+  // board, so repeating the count beside its name says nothing twice.
+  const only = runs.length === 1;
   return `<button type="button" class="sq-cash sq-runs" id="sq_runs_banner" title="Open the delivery clusters">
     <span class="sq-cash-top">
       ${ICON_ROUTE}
       <span class="sq-cash-label">${runs.length} place${runs.length===1?'':'s'} to reach</span>
-      <span class="sq-cash-fig">${going} order${going===1?'':'s'}</span>
+      ${ICON_GO}
     </span>
+    <span class="sq-cash-fig">${going} order${going===1?'':'s'}</span>
     ${shown.length ? `<span class="sq-cash-runs">${shown.map(r=>`
-      <span class="sq-cash-run">${ICON_PIN}${esc(r.label)} <b>${r.orders.length}</b></span>`).join('')}
+      <span class="sq-cash-run" title="${esc(r.label)}">${ICON_PIN}<span class="nm">${only?'All to ':''}${esc(r.label)}</span>${only?'':`<b>${r.orders.length}</b>`}</span>`).join('')}
       ${rest>0 ? `<span class="sq-cash-run more">+${rest} more</span>` : ''}</span>` : ''}
     ${unknown.length ? `<span class="sq-cash-note">${unknown.length} with no address yet</span>` : ''}
   </button>`;

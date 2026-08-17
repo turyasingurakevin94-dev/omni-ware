@@ -61,6 +61,7 @@ const scope = compileScope([
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
   ICON_ROUTE: '<svg data-i="route"></svg>', ICON_PIN: '<svg data-i="pin"></svg>',
+  ICON_GO: '<svg data-i="go"></svg>',
   ICON_WARN: '<svg data-i="warn"></svg>', ICON_TRUCK: '<svg data-i="truck"></svg>',
   openModal: (id) => { modal.opened = id; },
 }, ['orderDestination', 'orderIsCollected', 'destinationKey', 'deliveryRuns',
@@ -221,6 +222,12 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
   const lone = scope.deliveryRunsBannerHTML([order({ id: 1, customerId: 'k1' })]);
   t.check(lone !== '', 'one order to one place still raises the banner');
   t.check(places(lone) === '1' && figure(lone) === '1', `saying one place, one order (${places(lone)}/${figure(lone)})`);
+  /* Same rule as the cash banner beside it: with one destination the
+     headline count IS that destination's count, so repeating it on the
+     row said nothing twice. The name is what the headline lacks. */
+  t.check(/All to Ntinda/.test(lone) && !/<b>/.test(lone),
+    'and naming it rather than counting to one underneath a headline that already said one');
+  t.check(/data-i="go"/.test(lone), 'the banner shows it opens something');
 
   const mixed = [order({ id: 1, customerId: 'k1' }), order({ id: 2, customerId: 'k2' }),
     order({ id: 3, customerId: 'k3' }), order({ id: 9, client: { name: 'Wilson' } })];
