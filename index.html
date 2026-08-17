@@ -23790,7 +23790,15 @@ function invoiceLineCost(it){
   const qty = Number(it.qty)||0;
   const unit = Number(it.price)||0;
   if(it.supplierId !== '__stock__'){
-    return { cost: qty*unit, estimatedQty: 0 };
+    /* A bought-in line carries what we agreed to pay, so it is evidence
+       -- unless it carries nothing. `Number(it.price)||0` turns a line
+       with no price on file into a line that cost us NOTHING, and this
+       branch then declared that certain. It is not: it is a cost nobody
+       recorded, and the shop has plenty of them (the buying list says so
+       on its own banner: "N lines with no supplier price"). Reported as
+       free, one such line prints its whole sale value as gross profit,
+       which is how a 22% margin turns up on a shop that trades at five. */
+    return { cost: qty*unit, estimatedQty: unit>0 ? 0 : qty };
   }
   const lots = Array.isArray(it._stockLots) ? it._stockLots : [];
   let lotQty = 0, lotCost = 0;
@@ -23805,7 +23813,13 @@ function invoiceLineCost(it){
   const covered = Math.min(lotQty, qty);
   const gap = qty - covered;
   const perLot = lotQty>0 ? lotCost/lotQty : 0;
-  return { cost: covered*perLot + gap*unit, estimatedQty: gap };
+  /* The same rule one level down. A lot's cost is nullable, and
+     `Number(null)||0` is zero -- so units drawn from lots that carry no
+     cost were being costed at nothing and counted as measured. The
+     arithmetic is unchanged; what changes is that those units no longer
+     claim to be evidence. */
+  const uncostedLots = perLot>0 ? 0 : covered;
+  return { cost: covered*perLot + gap*unit, estimatedQty: gap + uncostedLots };
 }
 function anInvoiceTotals(q){
   let sales=0, cost=0, qty=0, estimatedQty=0;
@@ -24027,13 +24041,36 @@ function renderAnKpis(rows){
   const bits = [];
   if(filtered) bits.push(`<span class="an-note-filtered">Showing only what matches &ldquo;${esc(document.getElementById('an_table_search').value.trim())}&rdquo; — clear the search to see the whole range.</span>`);
   else if(prev) bits.push(`Against ${esc(fmtShortDate(prev.from))} – ${esc(fmtShortDate(prev.to))}: ${esc(fmtUGX(Math.round(prev.sales)))} of sales, ${esc(fmtUGX(Math.round(prev.profit)))} profit.`);
+  /* The wording no longer blames stock alone: a bought-in line with no
+     price on file counts here too now, and telling somebody to go and
+     look at their shelf for it would send them to the wrong place. The
+     star on the cost column says which rows. */
   if(conf) bits.push(`<span class="an-note-estimated">Cost was estimated on ${conf.est.toLocaleString('en-UG',{maximumFractionDigits:2})} of ${conf.qty.toLocaleString('en-UG',{maximumFractionDigits:2})} units${
-    conf.dominant ? ' — most of this margin rests on a guess' : ''}. Those came out of your own stock with no purchase cost recorded against them.</span>`);
+    conf.dominant ? ' — most of this margin rests on a guess' : ''}. Nothing on file says what those units cost us, so their sale value counts as profit in full. The rows marked * are the ones.</span>`);
   note.innerHTML = bits.join(' ');
   note.style.display = bits.length ? '' : 'none';
 }
-function anFormatCell(col, value){
-  if(col.money) return fmtUGX(Math.round(Number(value)||0));
+/* The mark that says this row's cost is not all evidence.
+
+   anCostConfidence has been telling the KPI strip this since 20 of 30
+   units turned out to be costed at zero -- but the strip describes the
+   whole visible range, and the question people actually ask is about ONE
+   row: how does this order show that much profit. The row carried
+   estimatedQty all along and printed its margin to one decimal without
+   ever mentioning it.
+
+   On the cost cell rather than the margin, because cost is where the
+   doubt lives; the profit and the margin are both derived from it. */
+function anEstimatedMarkHTML(row, key){
+  if(key !== 'cost' || !row) return '';
+  const est = Number(row.estimatedQty)||0;
+  if(est <= 0) return '';
+  const qty = Number(row.qty)||0;
+  const of = qty>0 ? ` of ${qty.toLocaleString('en-UG',{maximumFractionDigits:2})}` : '';
+  return `<span class="pan-partial-mark" title="${esc(`${est.toLocaleString('en-UG',{maximumFractionDigits:2})}${of} units here have no purchase cost recorded against them, so this figure — and the profit and margin beside it — are part guesswork. Open the order and put a buy price on those lines.`)}">*</span>`;
+}
+function anFormatCell(col, value, row){
+  if(col.money) return fmtUGX(Math.round(Number(value)||0)) + anEstimatedMarkHTML(row, col.key);
   /* One decimal, not two -- the same reason the KPI carries one: part of
      the cost behind a margin can be estimated, and two decimals is
      precision the figure does not have. Shared with Purchase Analytics,
@@ -24051,8 +24088,11 @@ function anFormatCell(col, value){
 function reportCardHTML(cols, row, idx, formatCellFn){
   const textCols = cols.filter(c=>!c.numeric);
   const numCols = cols.filter(c=>c.numeric);
-  const title = textCols.length ? formatCellFn(textCols[0], row[textCols[0].key]) : '';
-  const metaCols = textCols.slice(1).map(c=>formatCellFn(c, row[c.key])).filter(Boolean);
+  // The row rides along so a formatter can qualify a figure by something
+  // the row knows and the value does not -- Sales Analytics marks a cost
+  // that is part guesswork. panFormatCell ignores the third argument.
+  const title = textCols.length ? formatCellFn(textCols[0], row[textCols[0].key], row) : '';
+  const metaCols = textCols.slice(1).map(c=>formatCellFn(c, row[c.key], row)).filter(Boolean);
   return `<div class="pi-card">
     <div class="pi-card-top">
       <div class="pi-card-title">
@@ -24062,7 +24102,7 @@ function reportCardHTML(cols, row, idx, formatCellFn){
     </div>
     ${metaCols.length ? `<div class="pi-card-meta"><div>${metaCols.join(' · ')}</div></div>` : ''}
     <div class="sc-stats an-card-stats">
-      ${numCols.map(c=>`<div class="sc-stat"><b>${formatCellFn(c, row[c.key])}</b><span>${esc(c.label)}</span></div>`).join('')}
+      ${numCols.map(c=>`<div class="sc-stat"><b>${formatCellFn(c, row[c.key], row)}</b><span>${esc(c.label)}</span></div>`).join('')}
     </div>
   </div>`;
 }
@@ -24083,7 +24123,9 @@ function anTableFootHTML(cols, rows){
       const v = c.key==='margin' ? t.margin
         : c.key==='count' ? t.count
         : (t[c.key] != null ? t[c.key] : rows.reduce((s,r)=> s + (Number(r[c.key])||0), 0));
-      return `<td class="price${c.key==='profit' && v<0 ? ' an-neg' : ''}">${anFormatCell(c, v)}</td>`;
+      // `t` carries estimatedQty, so the total's cost is marked on the
+      // same rule as the rows it adds up.
+      return `<td class="price${c.key==='profit' && v<0 ? ' an-neg' : ''}">${anFormatCell(c, v, t)}</td>`;
     }).join('')}
   </tr></tfoot>`;
 }
@@ -24106,7 +24148,7 @@ function renderAnTable(){
     ${cols.map(c=>`<th class="sortable${sort.key===c.key?' sorted':''}" data-key="${c.key}">${esc(c.label)}${sort.key===c.key?`<span class="sort-arrow">${sort.dir===1?'▲':'▼'}</span>`:''}</th>`).join('')}
   </tr></thead><tbody>${rows.map((r,i)=>`<tr>
     <td class="an-rank">${i+1}</td>
-    ${cols.map(c=>`<td class="${c.numeric?'price':''}${c.key==='profit' && Number(r[c.key])<0 ? ' an-neg' : ''}">${anFormatCell(c, r[c.key])}</td>`).join('')}
+    ${cols.map(c=>`<td class="${c.numeric?'price':''}${c.key==='profit' && Number(r[c.key])<0 ? ' an-neg' : ''}">${anFormatCell(c, r[c.key], r)}</td>`).join('')}
   </tr>`).join('')}</tbody>
   ${anTableFootHTML(cols, rows)}</table></div>
   <div class="pi-cards">${rows.map((r,i)=>reportCardHTML(cols, r, i, anFormatCell)).join('')}</div>`;
@@ -24146,7 +24188,12 @@ document.getElementById('an_export_btn').addEventListener('click', ()=>{
      row, and pressed the button beside that search box got a file with
      everybody in it, in a different order. */
   const rows = anVisibleRows();
-  const lines = [['No.', ...cols.map(c=>c.label)].join(',')];
+  /* The screen marks a cost that is part guesswork with a star. A file
+     that drops that mark is the same figure with the doubt filed off --
+     and this one gets opened in a spreadsheet, mailed on, and quoted
+     back. It travels as its own column, which is what a spreadsheet can
+     actually filter and sum on. */
+  const lines = [['No.', ...cols.map(c=>c.label), 'Units with no cost recorded'].join(',')];
   rows.forEach((r,i)=>{
     const vals = cols.map(c=>{
       let v = r[c.key];
@@ -24157,7 +24204,7 @@ document.getElementById('an_export_btn').addEventListener('click', ()=>{
       else v = v==null ? '' : v;
       return `"${String(v).replace(/"/g,'""')}"`;
     });
-    lines.push([i+1, ...vals].join(','));
+    lines.push([i+1, ...vals, `"${Math.round(Number(r.estimatedQty)||0)}"`].join(','));
   });
   const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const url = URL.createObjectURL(blob);

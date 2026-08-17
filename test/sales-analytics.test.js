@@ -84,8 +84,16 @@ if (scope) {
     'while a handful of units is not that');
 
   t.check(/const conf = anCostConfidence\(t\);/.test(kpis), 'the screen works it out');
-  t.check(/Cost was estimated on/.test(kpis) && /no purchase cost recorded against them/.test(kpis),
+  /* Repointed, not weakened: the note used to end "those came out of your
+     own stock with no purchase cost recorded against them", which stopped
+     being true once a BOUGHT-IN line with no price on file started
+     counting here too -- and sending somebody to look at their shelf for
+     a line they ordered in is worse than saying nothing. Same assertion,
+     same intent: name what happened. */
+  t.check(/Cost was estimated on/.test(kpis) && /Nothing on file says what those units cost us/.test(kpis),
     'and says it in terms of what actually happened, not "data quality"');
+  t.check(/their sale value counts as profit in full/.test(kpis),
+    'spelling out the consequence, since that is the number somebody is about to act on');
   t.check(/conf\.dominant \? ' — most of this margin rests on a guess' : ''/.test(kpis),
     'with the stronger warning kept for when it is warranted');
   /* Two decimals on a figure part of whose cost was invented is
@@ -213,6 +221,96 @@ if (scope) {
     'the screen saying instead what it is showing');
   t.check(/else if\(prev\) bits\.push\(/.test(kpis),
     'and the comparison line taking its place only when there is no search');
+}
+
+/* ---------- 8. a cost of nothing is not a cost of zero ------------------
+ *
+ * Asked live, of a real board: "how does Ken Bwaise have 105,000 UGX as
+ * gross profit on his order. That can't be true." His row showed 22.6%
+ * against four neighbours at 4.0, 4.5, 4.8 and 7.4.
+ *
+ * invoiceLineCost costs a bought-in line at `Number(it.price)||0`, and
+ * declared the answer certain either way. A line with no price on file --
+ * a state this shop demonstrably has, since the buying banner counts them
+ * on its own face ("N lines with no supplier price") -- therefore cost
+ * NOTHING, with estimatedQty 0 to say so confidently. Its whole sale value
+ * lands in gross profit.
+ *
+ * The arithmetic below is unchanged. What changes is which units claim to
+ * be evidence.
+ */
+{
+  const costFn = compileScope([extractFunction(src, 'invoiceLineCost', 'index.html')], {}, ['invoiceLineCost']).invoiceLineCost;
+  const line = (o) => Object.assign({ qty: 10, price: 1000, supplierId: 'S1' }, o);
+
+  const priced = costFn(line());
+  eq(priced.cost, 10000, 'a bought-in line still costs what we agreed to pay');
+  eq(priced.estimatedQty, 0, 'and that is evidence, not a guess');
+
+  const unpriced = costFn(line({ price: 0 }));
+  eq(unpriced.cost, 0, 'a bought-in line with no price on file still contributes no cost — the arithmetic is unchanged');
+  eq(unpriced.estimatedQty, 10,
+    'but every unit of it is now counted as unmeasured, instead of reporting a free sale as a fact');
+  eq(costFn(line({ price: undefined })).estimatedQty, 10, 'a line with no price field at all counts the same way');
+
+  /* Off the shelf: the lots are the evidence. */
+  const shelf = (lots, o) => costFn(line(Object.assign({ supplierId: '__stock__', _stockLots: lots }, o)));
+  eq(shelf([{ qty: 10, cost: 800 }]).cost, 8000, 'shelf units cost what those exact units cost');
+  eq(shelf([{ qty: 10, cost: 800 }]).estimatedQty, 0, 'which is measured, not guessed');
+  eq(shelf([{ qty: 6, cost: 800 }]).estimatedQty, 4,
+    'stock running out mid-sale leaves the remainder a guess, as it always has');
+  /* And those four are still COSTED, at the line's own price. Dropping
+     them would make a short sale look more profitable than a full one --
+     the opposite of the bug this section is about, and the mutation that
+     survived until this line existed. */
+  eq(shelf([{ qty: 6, cost: 800 }]).cost, 8800,
+    'the guessed remainder still carries the line price into the cost — six at 800 and four at 1,000');
+  /* stock_lots.cost is nullable, and Number(null)||0 is zero -- so these
+     units were costed at nothing AND counted as measured. */
+  eq(shelf([{ qty: 10, cost: null }]).estimatedQty, 10,
+    'lots carrying no cost of their own are unmeasured too, not free');
+  eq(shelf([{ qty: 10, cost: null }]).cost, 0, 'again with the arithmetic left alone');
+  eq(shelf([]).estimatedQty, 10, 'and a shelf line with no lots at all is entirely a guess');
+
+  // The reversal guard this function has always carried.
+  eq(shelf([{ qty: 25, cost: 800 }]).cost, 8000,
+    'lots recording more than was sold cost only what was sold');
+}
+
+/* ---------- 9. and the row says so ------------------------------------
+ *
+ * anCostConfidence has told the KPI strip this since the 79.71% incident.
+ * The strip describes the whole visible range; the question people ask is
+ * about ONE row. estimatedQty was on the row the entire time and the
+ * margin printed beside it without a word.
+ */
+{
+  const mark = extractFunction(src, 'anEstimatedMarkHTML', 'index.html');
+  const markFn = compileScope([mark], { esc: (s) => String(s) }, ['anEstimatedMarkHTML']).anEstimatedMarkHTML;
+
+  eq(markFn({ estimatedQty: 0, qty: 22 }, 'cost'), '', 'a row whose cost is all evidence is not marked');
+  eq(markFn(null, 'cost'), '', 'and neither is a missing row');
+  t.check(markFn({ estimatedQty: 22, qty: 22 }, 'cost').includes('*'),
+    'a row part of whose cost was invented carries the mark');
+  t.check(/22 of 22 units/.test(markFn({ estimatedQty: 22, qty: 22 }, 'cost')),
+    'saying how many of how many, so the reader can weigh it');
+  eq(markFn({ estimatedQty: 22, qty: 22 }, 'sales'), '',
+    'on the cost column only — cost is where the doubt is, and profit and margin both come out of it');
+
+  t.check(/anFormatCell\(c, r\[c\.key\], r\)/.test(table),
+    'the table hands the row to the formatter, since the value alone cannot know');
+  t.check(/anFormatCell\(c, v, t\)/.test(foot),
+    'and the totals line is marked on the same rule as the rows it adds up');
+  const card = extractFunction(src, 'reportCardHTML', 'index.html');
+  t.check(/formatCellFn\(c, row\[c\.key\], row\)/.test(card),
+    'the phone card too — the caveat cannot be desktop-only');
+
+  /* The file gets opened in a spreadsheet, mailed on, and quoted back. A
+     star that does not survive the export is a figure with the doubt
+     filed off. */
+  t.check(/Units with no cost recorded/.test(exportFn),
+    'the export carries the count as its own column');
+  t.check(/r\.estimatedQty/.test(exportFn), 'taken from the row, not recomputed');
 }
 
 process.exit(t.done() ? 1 : 0);
