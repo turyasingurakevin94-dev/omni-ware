@@ -10202,6 +10202,46 @@
   </div>
 </div>
 
+<!-- CORRECT A PURCHASE MODAL -->
+<div class="modal-overlay" id="invPurchaseEditModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Correct this purchase</h2>
+      <button class="modal-close" id="invPurchaseEditClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- What was actually written down, before anything is changed. The
+           figures below are editable and therefore stop being a record of
+           what went wrong the moment somebody types -- so the original is
+           stated once, plainly, and stays put. -->
+      <div class="q-stage-head"><div class="q-stage-name" id="ipe_item"></div></div>
+      <p class="preset-hint" id="ipe_asrecorded"></p>
+      <div class="form-grid">
+        <div class="field">
+          <label>Quantity bought</label>
+          <input type="number" id="ipe_qty" min="0" step="any">
+        </div>
+        <div class="field">
+          <label>Price paid (UGX per unit)</label>
+          <input type="number" id="ipe_price" min="0" step="any">
+        </div>
+      </div>
+      <div class="field">
+        <label>Bought from</label>
+        <select id="ipe_supplier"></select>
+      </div>
+      <p class="preset-hint" id="ipe_effect"></p>
+      <p class="sf-need" id="ipe_error" style="display:none; color:var(--danger);"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="ipe_cancel">Close</button>
+      <button class="btn btn-accent" id="ipe_save">Save the correction</button>
+    </div>
+  </div>
+</div>
+
 <!-- STOCK PRICING RULE MODAL -->
 <div class="modal-overlay" id="stockRuleModal">
   <div class="modal">
@@ -23213,10 +23253,15 @@ function removePurchaseInvoicesForQuote(quoteId){
 // One purchase invoice per restock event (quoteId left null so it's easy to
 // tell apart from order-driven ones); skipped entirely when no supplier was
 // chosen, since there's nobody to bill.
+/* Returns the bill's id so the movement that raised it can carry a
+   pointer to it. Without that, correcting a purchase could only find its
+   bill by guessing from supplier, item, date and quantity -- and the
+   quantity is the very thing being corrected. */
 async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayName, qty, price, supplierId, priceRow){
-  if(!supplierId) return;
+  if(!supplierId) return null;
+  const id = await issueRowId('purchaseInvoice');
   data.purchaseInvoices.push({
-    id: await issueRowId('purchaseInvoice'),
+    id,
     quoteId: null,
     customerName: '',
     supplierId,
@@ -23234,6 +23279,7 @@ async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayN
     payments: [],
     voided: false
   });
+  return id;
 }
 
 const PI_SORT_STATE = {key:'date', dir:-1};
@@ -32462,6 +32508,194 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
   });
   return after;
 }
+
+/* ================= CORRECTING A PURCHASE THAT WAS ENTERED WRONG =========
+   Inventory > Purchase writes to five places at once -- the count, a FIFO
+   cost lot, this log, a supplier bill, and the price registry -- and until
+   now none of it could be taken back. The comment over the purchase
+   invoices says as much: "never reversed automatically since a restock
+   itself can't be un-done". A shop that types 50 where it meant 5 had no
+   way to say so, and every margin drawn off that lot was wrong from then
+   on.
+
+   A correction is POSTED, not painted over. The row that was wrong stays
+   exactly as it was written and a new movement carries the difference --
+   which is how a ledger corrects anything, and what keeps `qtyAfter` on
+   every later row still true. "What does this purchase say now" is
+   therefore the end of a chain rather than the first row of it. */
+const STOCK_PURCHASE_NOTE_RE = /^Purchased\b/;
+/* Which restock rows this screen may correct. A receipt against an order
+   and the leftovers of a broken pack are restocks too, and both belong to
+   the order that caused them -- correcting them here would leave the order
+   claiming goods arrived that no longer exist. Rows written before this
+   feature carry no marker, so their note is read instead: the purchase
+   path is the only one that writes "Purchased". */
+function isStockPurchaseRow(e){
+  if(!e || e.type !== 'restock') return false;
+  if(e.source === 'inv-purchase') return true;
+  return !e.source && STOCK_PURCHASE_NOTE_RE.test(String(e.note || ''));
+}
+function stockCostsEqual(a, b){
+  const na = (a == null || a === '') ? null : Number(a);
+  const nb = (b == null || b === '') ? null : Number(b);
+  return na === null && nb === null ? true : (na !== null && nb !== null && na === nb);
+}
+/* The figures this purchase currently stands at, after any corrections. */
+function effectiveStockPurchase(e){
+  let row = e, guard = 0;
+  while(row && row.correctedBy && guard++ < 200){
+    const next = (data.stockLog || []).find(x => x.id === row.correctedBy);
+    if(!next) break;
+    row = next;
+  }
+  return {
+    qty: Number(row.purchaseQty != null ? row.purchaseQty : row.delta) || 0,
+    cost: (row.cost == null || row.cost === '') ? null : Number(row.cost),
+    supplierId: row.supplierId || null,
+    piId: row.piId != null ? row.piId : (e.piId != null ? e.piId : null),
+    tail: row,
+  };
+}
+/* The smallest this purchase can now be said to have been. Units that have
+   already left the shelf cannot be un-bought: twenty bought and twelve
+   sold can be corrected down to twelve and no further, because twelve of
+   them demonstrably existed and were sold. */
+function stockPurchaseMinQty(e){
+  const eff = effectiveStockPurchase(e);
+  const onHand = Number(data.stock[e.key]) || 0;
+  return Math.max(0, eff.qty - onHand);
+}
+/* Takes units back off the shelf for a purchase being corrected.
+
+   consumeStockLots() eats from the FRONT, which is right for a sale and
+   wrong here. The units being taken back are the ones THIS purchase put
+   there, and under FIFO those are at the back -- taking them off the front
+   would leave the shop holding this purchase's goods at somebody else's
+   cost, which is the very error being corrected. So its own lot is looked
+   for first, newest first and matched on the cost it was booked at; only
+   what that cannot cover falls back to the front, the way every other
+   reduction works. */
+function takeBackPurchaseLots(productId, variantIdx, qty, cost){
+  if(qty <= 0) return;
+  if(!data.stockLots) data.stockLots = {};
+  const key = stockKey(productId, variantIdx);
+  const lots = data.stockLots[key] || [];
+  let remaining = qty;
+  for(let i = lots.length - 1; i >= 0 && remaining > 0; i--){
+    if(!stockCostsEqual(lots[i].cost, cost)) continue;
+    const take = Math.min(lots[i].qty, remaining);
+    lots[i].qty -= take;
+    remaining -= take;
+    if(lots[i].qty <= 0) lots.splice(i, 1);
+  }
+  data.stockLots[key] = lots;
+  if(remaining > 0) consumeStockLots(productId, variantIdx, remaining);
+}
+/* The supplier bill this purchase raised, so a corrected quantity or price
+   reaches the money as well as the shelf. Matched by the id stamped on the
+   log row; rows written before that existed are matched on what they have
+   -- same supplier, same item, same day, same quantity, and not attached
+   to a customer's order, which is what separates a restock bill from the
+   ones an invoiced order raises. */
+function stockPurchaseInvoiceFor(e){
+  const eff = effectiveStockPurchase(e);
+  const all = data.purchaseInvoices || [];
+  if(eff.piId != null){
+    const byId = all.find(pi => pi.id === eff.piId);
+    if(byId) return byId;
+  }
+  if(!e.supplierId) return null;
+  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
+  return all.find(pi => !pi.voided && !pi.quoteId && pi.supplierId === e.supplierId && pi.date === e.date
+    && (pi.items || []).length === 1
+    && pi.items[0].productId === e.productId
+    && ((pi.items[0].variantIdx == null ? null : pi.items[0].variantIdx) === vIdx)
+    && Number(pi.items[0].qty) === Number(e.delta)) || null;
+}
+/* Applies a correction. Returns {ok:false, error} rather than toasting on
+   its own so the form can say what is wrong beside the field, and so this
+   is testable without a screen. */
+function applyStockPurchaseEdit(logId, next){
+  const e = (data.stockLog || []).find(x => x.id === logId);
+  if(!e || !isStockPurchaseRow(e)) return {ok: false, error: 'That movement is not a purchase this screen can correct.'};
+  const eff = effectiveStockPurchase(e);
+  const onHand = Number(data.stock[e.key]) || 0;
+  const newQty = Number(next.qty) || 0;
+  if(!(newQty > 0)) return {ok: false, error: 'Enter how many were actually bought — a purchase cannot be for nothing.'};
+  const minQty = Math.max(0, eff.qty - onHand);
+  if(newQty < minQty){
+    const gone = eff.qty - onHand;
+    return {ok: false, error: `${gone} of the ${eff.qty} bought ${gone === 1 ? 'has' : 'have'} already been sold or written off, so this cannot go below ${minQty}. Correct that movement first if it is the mistake.`};
+  }
+  const newCost = (next.price == null || next.price === '') ? null : Number(next.price);
+  const newSupplierId = next.supplierId || null;
+  const pi = stockPurchaseInvoiceFor(e);
+  /* Moving a bill that has money against it would move that money to a
+     supplier who never received it. The quantity and the price can still
+     be corrected -- those are what the bill is FOR -- but who it is owed
+     to is settled once something has been paid on it. */
+  if(pi && newSupplierId !== eff.supplierId && Number(pi.amountPaid) > 0){
+    return {ok: false, error: `${fmtUGX(pi.amountPaid)} has already been paid against ${purchaseInvoiceNumberLabel(pi)}, so the supplier cannot be changed. Void that bill by hand if it went to the wrong supplier.`};
+  }
+  if(newQty === eff.qty && stockCostsEqual(newCost, eff.cost) && newSupplierId === eff.supplierId){
+    return {ok: false, error: 'Nothing was changed.'};
+  }
+
+  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
+  /* Units already sold keep the cost they were sold at: that sale is
+     history, and its margin was recorded against the lot as it stood.
+     Only what is still on the shelf is re-costed. */
+  const takeBack = Math.min(eff.qty, onHand);
+  const soldFromThis = eff.qty - takeBack;
+  const newRemaining = newQty - soldFromThis;
+  if(takeBack > 0) takeBackPurchaseLots(e.productId, vIdx, takeBack, eff.cost);
+  if(newRemaining > 0) addStockLot(e.productId, vIdx, newRemaining, newCost);
+  data.stock[e.key] = Math.max(0, onHand - takeBack + newRemaining);
+
+  const bits = [];
+  if(newQty !== eff.qty) bits.push(`quantity ${eff.qty} → ${newQty}`);
+  if(!stockCostsEqual(newCost, eff.cost)){
+    bits.push(`price ${eff.cost == null ? 'not recorded' : fmtUGX(eff.cost)} → ${newCost == null ? 'not recorded' : fmtUGX(newCost)}`);
+  }
+  if(newSupplierId !== eff.supplierId){
+    bits.push(`supplier ${eff.supplierId ? supplierName(eff.supplierId) : 'none'} → ${newSupplierId ? supplierName(newSupplierId) : 'none'}`);
+  }
+  const product = data.products.find(p => p.id === e.productId);
+  const row = {
+    id: allocRowId('stockLog'), key: e.key, productId: e.productId, variantIdx: vIdx,
+    label: product ? productVariantLabel(product, vIdx) : e.productId,
+    type: 'correction', delta: newRemaining - takeBack, qtyAfter: Number(data.stock[e.key]) || 0,
+    note: `Purchase of ${e.date} corrected — ${bits.join(', ')}`,
+    date: todayISO(), at: new Date().toISOString(),
+    cost: newCost, supplierId: newSupplierId,
+    source: 'inv-purchase', corrects: eff.tail.id, purchaseQty: newQty, piId: pi ? pi.id : eff.piId,
+  };
+  data.stockLog.push(row);
+  eff.tail.correctedBy = row.id;
+
+  let overpaid = false;
+  if(pi){
+    const item = pi.items[0];
+    item.qty = newQty;
+    item.price = (newCost != null && !isNaN(newCost)) ? Number(newCost) : 0;
+    if(newSupplierId && newSupplierId !== pi.supplierId){
+      pi.supplierId = newSupplierId;
+      pi.supplierName = supplierName(newSupplierId);
+    }
+    /* Said out loud rather than silently clamped. A bill corrected DOWN
+       below what has already been paid on it means the shop is owed money
+       back, and that is a conversation with the supplier, not a rounding
+       error to hide. */
+    overpaid = Number(pi.amountPaid) > newQty * (item.price || 0);
+  }
+  /* The registry learns the corrected figure the same way it learned the
+     wrong one. Leaving it holding a price the shop has just said it never
+     paid is worse than re-asking. */
+  if(newSupplierId && newCost != null){
+    syncPriceRegistryFromPurchase(e.productId, vIdx, newSupplierId, newCost, newQty, {confirms: true});
+  }
+  return {ok: true, row, pi, overpaid, tookBack: takeBack, soldFromThis};
+}
 // Deducts stock for every "Our stock" line on a quote once it's marked
 // invoiced. Remembers exactly how much was taken per line (it may be less
 // than the qty quoted if stock ran short) so later un-invoicing can reverse
@@ -37857,6 +38091,85 @@ document.getElementById('inv_category_filter').addEventListener('change', render
 document.getElementById('inv_hide_zero').addEventListener('change', renderInventory);
 
 const STOCK_TYPE_LABELS = {restock:'Restock', correction:'Correction', damaged:'Damaged / lost', other:'Other', sale:'Sold (quote)', reversal:'Reversed'};
+/* Only a purchase made from this screen offers this. A sale, a stock count
+   and a receipt against an order are all corrected where they were made --
+   offering a button here that quietly disagreed with the order screen is
+   how the two come to hold different truths about the same delivery. */
+function stockLogEditButtonHTML(e){
+  if(!isStockPurchaseRow(e)) return '';
+  return `<button type="button" class="btn btn-ghost stock-log-edit" data-edit-log="${esc(String(e.id))}">Edit</button>`;
+}
+/* The row that was wrong stays on the log saying what it said. Without
+   this tag it would go on claiming to be the current figure, which is the
+   one thing a corrected record must not do. */
+function stockLogCorrectedTagHTML(e){
+  if(!e || !e.correctedBy) return '';
+  const eff = effectiveStockPurchase(e);
+  return ` <span class="lc-none" title="Corrected later — this row is kept as it was written">corrected → ${esc(String(eff.qty))}${
+    eff.cost != null ? ` @ ${esc(fmtUGX(eff.cost))}` : ''}</span>`;
+}
+
+/* ---------------- The correction form ---------------- */
+let editingPurchaseLogId = null;
+function openStockPurchaseEdit(logId){
+  const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
+  if(!e || !isStockPurchaseRow(e)){ toast('That movement cannot be corrected here'); return; }
+  editingPurchaseLogId = e.id;
+  const eff = effectiveStockPurchase(e);
+  const onHand = Number(data.stock[e.key]) || 0;
+  const minQty = stockPurchaseMinQty(e);
+
+  document.getElementById('ipe_item').textContent = e.label || e.productId;
+  document.getElementById('ipe_asrecorded').textContent =
+    `Recorded on ${e.date}: ${e.delta} bought${e.cost != null ? ` at ${fmtUGX(e.cost)} each` : ''}`
+    + `${e.supplierId ? ` from ${supplierName(e.supplierId)}` : ''}.`
+    + (e.correctedBy ? ` Since corrected to ${eff.qty}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
+
+  document.getElementById('ipe_qty').value = eff.qty;
+  document.getElementById('ipe_price').value = eff.cost == null ? '' : eff.cost;
+  const sel = document.getElementById('ipe_supplier');
+  sel.innerHTML = `<option value="">(not recorded)</option>` + (data.suppliers || [])
+    .map(s => `<option value="${esc(s.id)}" ${s.id === eff.supplierId ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+
+  /* Says the floor BEFORE anything is typed, with the arithmetic behind
+     it. A form that only objects after the fact leaves somebody guessing
+     at what it will accept. */
+  const effect = document.getElementById('ipe_effect');
+  effect.textContent = minQty > 0
+    ? `${eff.qty - onHand} of these have already been sold or written off, so this cannot go below ${minQty}. ${onHand} are still on the shelf.`
+    : `All ${onHand} are still on the shelf, so this can be corrected to any quantity.`;
+  document.getElementById('ipe_error').style.display = 'none';
+  openModal('invPurchaseEditModal');
+}
+document.getElementById('invLogWrap').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('[data-edit-log]');
+  if(btn) openStockPurchaseEdit(btn.dataset.editLog);
+});
+document.getElementById('invPurchaseEditClose').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
+document.getElementById('ipe_cancel').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
+document.getElementById('ipe_save').addEventListener('click', ()=>{
+  if(editingPurchaseLogId == null) return;
+  const res = applyStockPurchaseEdit(editingPurchaseLogId, {
+    qty: document.getElementById('ipe_qty').value,
+    price: document.getElementById('ipe_price').value,
+    supplierId: document.getElementById('ipe_supplier').value || null,
+  });
+  const err = document.getElementById('ipe_error');
+  if(!res.ok){ err.textContent = res.error; err.style.display = ''; return; }
+  saveData();
+  closeModal('invPurchaseEditModal');
+  renderInventory();
+  if(document.getElementById('pi_doc_search')){
+    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  }
+  /* The overpayment is worth interrupting for: the shop is owed money
+     back by a supplier, and nothing else on any screen will say so. */
+  if(res.overpaid){
+    toast(`Corrected — but ${purchaseInvoiceNumberLabel(res.pi)} has now been paid more than it is worth. Take that up with ${res.pi.supplierName}.`, 9000);
+  } else {
+    toast('Purchase corrected');
+  }
+});
 /* ================= TRACKING ONE ITEM THROUGH THE LOG =================
 
    The movements list was the last twenty entries, full stop. That is a
@@ -38021,21 +38334,23 @@ function renderStockLog(){
       </div>
       <div class="pi-card-meta">
         <div>${esc(e.label||e.productId)}</div>
-        ${e.note ? `<div>${esc(e.note)}</div>` : ''}
+        ${e.note ? `<div>${esc(e.note)}${stockLogCorrectedTagHTML(e)}</div>` : ''}
       </div>
       <div class="sc-stats">
         <div class="sc-stat"><b style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${e.delta}</b><span>Change</span></div>
         <div class="sc-stat"><b>${e.qtyAfter}</b><span>Resulting stock</span></div>
       </div>
+      ${isStockPurchaseRow(e) ? `<div class="pi-card-foot">${stockLogEditButtonHTML(e)}</div>` : ''}
     </div>`).join('');
-  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th></tr></thead><tbody>
+  wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Change</th><th>Resulting stock</th><th>Note</th><th></th></tr></thead><tbody>
     ${entries.map(e=>`<tr>
       <td>${esc(e.date)}</td>
       <td>${esc(e.label||e.productId)}</td>
       <td>${esc(STOCK_TYPE_LABELS[e.type]||e.type)}</td>
       <td class="price" style="color:${e.delta<0?'var(--danger)':'var(--good)'};">${e.delta>0?'+':''}${e.delta}</td>
       <td class="price">${e.qtyAfter}</td>
-      <td>${esc(e.note||'')}</td>
+      <td>${esc(e.note||'')}${stockLogCorrectedTagHTML(e)}</td>
+      <td>${stockLogEditButtonHTML(e)}</td>
     </tr>`).join('')}
   </tbody></table></div>
   <div class="pi-cards">${cardsHtml}</div>
@@ -38449,7 +38764,14 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     // purchase: buying at the SAME price is proof of it too.
     syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true});
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
-    await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
+    /* The row applyStockDelta just pushed. Marked as a purchase made from
+       THIS screen, and tied to the bill it raises below -- the two facts a
+       correction needs, and neither of which can be worked out afterwards
+       from a note. */
+    const logRow = data.stockLog[data.stockLog.length - 1];
+    if(logRow) logRow.source = 'inv-purchase';
+    const piId = await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
+    if(logRow && piId != null) logRow.piId = piId;
     saveData();
     closeModal('invModal');
     renderInventory();

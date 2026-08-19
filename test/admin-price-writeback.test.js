@@ -336,15 +336,20 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
 }
 
 /* ---------- 8. every caller says at what quantity ---------------------
-   Four now. Goods arriving joined the two typing paths -- it is the only
+   Five now. Goods arriving joined the two typing paths -- it is the only
    one needing no screen and no memory, and where the shop's best price
    evidence was being thrown away -- and a supplier's quoted reply joined
    them, which is not a purchase at all but resolves a figure into a tier
-   slot by exactly the same arithmetic. */
+   slot by exactly the same arithmetic.
+
+   The fifth is a purchase being CORRECTED. It has to write back for the
+   same reason the original did: the registry was taught the wrong figure
+   by the entry now being fixed, and a book still quoting a price the shop
+   has just said it never paid is worse than one that asks again. */
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const calls = [...code.matchAll(/syncPriceRegistryFromPurchase\(([^;]*?)\);/g)].map(m => m[1]);
-  t.check(calls.length === 4, `every call site is accounted for (found ${calls.length})`);
+  t.check(calls.length === 5, `every call site is accounted for (found ${calls.length})`);
   t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
@@ -356,6 +361,11 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
      priced as a small trip. */
   t.check(calls.some((c) => /it\.receivedPrice,\s*n,\s*\{confirms: true\}/.test(c)),
     'and goods received pass the price actually paid, at the quantity that actually arrived');
+  /* The correction passes the CORRECTED pair, not the original one. A
+     write-back carrying the figures being thrown away would re-teach the
+     registry the very mistake the shop just came here to fix. */
+  t.check(calls.some((c) => /newCost,\s*newQty,\s*\{confirms: true\}/.test(c)),
+    'and a corrected purchase passes what it turned out to be, not what was first typed');
 
   /* `confirms` does not mean "money moved" — it means SOMETHING ASSERTED
      THIS PRICE TODAY, so an unchanged figure still earns a fresh date.
@@ -369,18 +379,21 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
      date every price the admin merely scrolled past — and the registry
      would report a book kept current by nobody having looked at it. */
   const confirming = calls.filter((c) => /confirms:\s*true/.test(c));
-  t.check(confirming.length === 3,
-    `three callers assert a price rather than round-trip a field (found ${confirming.length})`);
+  t.check(confirming.length === 4,
+    `four callers assert a price rather than round-trip a field (found ${confirming.length})`);
   t.check(confirming.every((c) => !/item\.qty/.test(c)),
     'and the quote line is not one of them — a pre-filled field round-tripping is not a confirmation');
 
-  /* Only the two TRANSACTIONS are recorded as purchases. A supplier
-     saying "still 45,000" is not a sale, and filing it as one would put
-     money in the record that never changed hands — and would then count
-     towards the month's checked total under the wrong heading. */
+  /* Only the TRANSACTIONS are recorded as purchases. A supplier saying
+     "still 45,000" is not a sale, and filing it as one would put money in
+     the record that never changed hands — and would then count towards
+     the month's checked total under the wrong heading.
+
+     A correction is one of them: the goods were bought and the money did
+     move, and the corrected figure is what actually changed hands. */
   const asPurchase = confirming.filter((c) => !/source:/.test(c));
   const asConfirmed = confirming.filter((c) => /source: 'confirmed'/.test(c));
-  t.check(asPurchase.length === 2, `two of them are purchases (found ${asPurchase.length})`);
+  t.check(asPurchase.length === 3, `three of them are purchases (found ${asPurchase.length})`);
   t.check(asConfirmed.length === 1,
     `and the supplier's own word is filed as confirmed, not bought (found ${asConfirmed.length})`);
 
