@@ -11737,8 +11737,22 @@ async function syncDataToServer(){
      it, from every device". The absence is recorded FIRST now, and those
      collections sit this save out entirely (addDiffOps refuses them):
      declining to speak for a collection is recoverable, deleting it is
-     not. debtLog rides customers, so an absent customers benches both. */
-  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','savedQuotes','sourcingLeads','followUps','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
+     not. debtLog rides customers, so an absent customers benches both.
+
+     EVERY collection addDiffOps() diffs belongs in this literal. One
+     that is missing has no armor at all: buildSyncRows reads it as
+     `(d.places||[])`, so the gap arrives as an ordinary empty array and
+     the diff below reads that as "delete every row the snapshot
+     remembers". places and collectionTrips were both missing. Both
+     shipped after the backup files shops already hold were written, so
+     restoring any of those read the gap as "delete every pin and every
+     trip on the server" -- and silently, because a restore raises
+     __owAllowMassDelete, which is the one breaker that would otherwise
+     have named the count and the table out loud.
+
+     The test derives this list from the addDiffOps calls now rather
+     than trusting it to be complete. */
+  const absent = ['suppliers','staff','agents','customers','products','prices','stockLog','cashTxns','places','collectionTrips','savedQuotes','sourcingLeads','followUps','purchaseInvoices','supplierCommissions','fixedAssets','loans','rentAgreements','dues','media','mediaFolders','waPosts','stock','stockLots','cashDays'].filter(k=> !data[k]);
   if(absent.includes('customers')) absent.push('debtLog');
   syncAbsentCollections = absent.length ? new Set(absent) : null;
   if(absent.length) console.error(`REFUSING to sync ${absent.length} absent collection(s) — a partial data object is not an instruction to empty the shop: ${absent.join(', ')}`);

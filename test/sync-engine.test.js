@@ -262,6 +262,20 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
   const g = runScenario(mk(20), mk(20).map((r) => ({ ...r, v: 'CHANGED' })), null, { absent: new Set(['c']) });
   eq(g.ops.length, 0, 'an absent collection sits the save out entirely — no upserts, no deletes');
 
+  /* The exact shape of the places/collectionTrips bug, proven end to end.
+     A collection missing from `data` reaches the diff as an empty array --
+     buildSyncRows reads it as `(d.places||[])` -- so "we have none" and "we
+     never asked" are indistinguishable by the time the diff sees them. The
+     absent list is the ONLY thing that tells them apart, and a restore
+     holds the mass-delete breaker open, so the breaker cannot catch what
+     the list misses. */
+  const i = runScenario(mk(12), [], null, { allow: true });
+  eq(i.confirms.length, 0, 'a restore holds the breaker open by design — the wipe is never questioned');
+  eq(i.deletes[0].vals.length, 12,
+    'so a collection the absent list forgot loses every row the snapshot remembered, silently');
+  const j = runScenario(mk(12), [], null, { allow: true, absent: new Set(['c']) });
+  eq(j.ops.length, 0, 'naming it in the absent list is the only thing standing between the two');
+
   /* the stock-lots rewrite honors the same latch, REACHABLY — its refusal
      string existing is not the refusal running */
   {
@@ -292,7 +306,8 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
 
 /* saveData records absence FIRST, and refuses to speak for the gap */
 {
-  t.check(/const absent = \['suppliers','staff'[\s\S]{0,400}'stock','stockLots','cashDays'\]\.filter\(k=> !data\[k\]\);/.test(adminSrc),
+  const absentLit = (/const absent = \[[^\]]*\]\.filter\(k=> !data\[k\]\);/.exec(adminSrc) || [''])[0];
+  t.check(absentLit.length > 0,
     'saveData computes which collections are absent before anything fills them');
   t.check(/syncAbsentCollections = absent\.length \? new Set\(absent\) : null;/.test(adminSrc),
     'and hands the set to the diff engine to refuse');
@@ -300,6 +315,17 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
     'debtLog rides customers, so an absent customers benches both');
   t.check(/REFUSING to sync stockLots/.test(adminSrc),
     'the stock-lots rewrite refuses an absent collection the same way');
+
+  /* DERIVED from the addDiffOps calls, never hand-listed. The check that
+     used to stand here matched the literal's two ends with [\s\S]{0,400}
+     between them, so a collection missing from the MIDDLE satisfied it --
+     which is how places and collectionTrips sat outside the armor while a
+     test named 'absence is not emptiness' passed on every run. */
+  const diffedKeys = [...adminSrc.matchAll(/addDiffOps\(ops, '(\w+)'/g)].map((m) => m[1])
+    .filter((k) => k !== 'debtLog');   // pushed conditionally, riding customers
+  diffedKeys.concat(['stockLots']).forEach((k) =>
+    t.check(new RegExp(`'${k}'`).test(absentLit),
+      `the absent list names ${k} — one it forgets is read as "delete every row" instead of benched`));
 }
 
 /* the Clear button says what it does, and does all of what it says */
