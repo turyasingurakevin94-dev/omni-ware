@@ -3002,6 +3002,90 @@
   .pr-state.ok{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
   .pr-state.bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .pr-state.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pr-state.over{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+
+  /* ---- Who's in (the daily register) ---- */
+  .att-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:0;}
+  .att-date{width:150px;padding:6px 9px;font-variant-numeric:tabular-nums;}
+  .att-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 12px;}
+  .att-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;
+    font-size:12px;font-weight:700;background:var(--ow-steel-050);color:var(--ow-ink-600);}
+  .att-chip b{font-family:'IBM Plex Mono',monospace;font-size:13px;color:inherit;}
+  .att-chip.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .att-chip.out{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .att-when{margin-left:auto;font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .att-list{display:flex;flex-direction:column;gap:8px;}
+  .att-row{display:grid;grid-template-columns:minmax(160px,1.4fr) auto minmax(120px,1fr) auto;
+    gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--bg);}
+  /* The left edge carries the state, so a register of fifteen people can
+     be read down rather than across. */
+  .att-row.absent{border-left:3px solid var(--ow-amber);}
+  .att-row.paid{border-left:3px solid var(--ow-verdigris);}
+  .att-who{display:flex;align-items:center;gap:10px;min-width:0;}
+  .att-ident{min-width:0;}
+  .att-pick{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel);}
+  .att-opt{padding:6px 13px;border:0;background:transparent;cursor:pointer;font:inherit;
+    font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap;
+    /* Tapped on a phone by somebody standing at the counter. */
+    min-height:34px;}
+  .att-opt + .att-opt{border-left:1px solid var(--line);}
+  .att-opt:hover{background:var(--ow-steel-050);color:var(--ink);}
+  .att-opt.on{background:var(--ow-steel-950);color:var(--ow-paper);}
+  .att-row.absent .att-opt.on{background:var(--ow-amber);color:var(--ow-paper);}
+  .att-row.paid .att-opt.on{background:var(--ow-verdigris);color:var(--ow-paper);}
+  .att-month{display:flex;flex-direction:column;gap:2px;font-size:11.5px;}
+  .att-month-days{color:var(--ink-soft);}
+  .att-month-days.quiet{opacity:.7;}
+  .att-month-off{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ow-amber-ink);}
+  .att-note{margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--ink-soft);}
+  @media (max-width: 720px){
+    .att-row{grid-template-columns:1fr;gap:9px;}
+    .att-pick{width:100%;}
+    /* 44px, the same floor the worker app holds every pressable control
+       to. This panel is used one-handed, standing up, by somebody
+       looking at the person they are about to dock a day's pay from. */
+    .att-opt{flex:1 1 0;text-align:center;min-height:44px;}
+    .att-when{margin-left:0;}
+  }
+  .pr-cell.warn b{color:var(--ow-amber-ink);}
+
+  /* ---- Days missed ---- */
+  /* The cell is a button whether or not anybody is absent, because "none
+     missed" is a claim somebody has to be able to change. A dash would
+     be a dead cell on the one row where the shop needs to act. */
+  .pr-miss{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);background:var(--bg);cursor:pointer;font:inherit;
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;}
+  .pr-miss:hover{border-color:var(--ow-steel-400);color:var(--ink);}
+  .pr-miss.on{background:var(--ow-amber-soft);border-color:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pr-miss-off{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  /* A month that deducts nothing from what it records -- a daily-paid
+     one, or one where every absence was paid leave. Marked so the figure
+     beside it is not read as money already taken off. */
+  .pr-miss.note{background:var(--ow-steel-100);border-color:var(--ow-steel-100);color:var(--ow-ink-600);}
+  /* Gross struck through above the net, so a deducted month says what it
+     started as. Without it a salary that reads 460,000 in August and
+     520,000 in September looks like a raise nobody gave. */
+  .pr-gross{display:block;font-size:11px;color:var(--ink-soft);text-decoration:line-through;
+    font-variant-numeric:tabular-nums;}
+
+  .abs-head{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;
+    padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line);}
+  .abs-sum{font-size:12.5px;color:var(--ink-soft);}
+  .abs-sum b{font-family:'IBM Plex Mono',monospace;color:var(--ink);}
+  .abs-add{display:grid;grid-template-columns:minmax(140px,1fr) minmax(120px,1fr) auto;gap:10px;align-items:end;}
+  .abs-paid-row{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12.5px;color:var(--ink-soft);}
+  .abs-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .abs-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:9px 12px;
+    border:1px solid var(--line);border-radius:10px;background:var(--bg);}
+  .abs-date{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;color:var(--ink);}
+  .abs-reason{font-size:12.5px;color:var(--ink-soft);flex:1 1 auto;}
+  .abs-cost{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-variant-numeric:tabular-nums;}
+  .abs-cost.free{color:var(--ow-verdigris);}
+  .abs-empty{margin:16px 0 0;padding:16px;text-align:center;border:1px dashed var(--line);
+    border-radius:10px;color:var(--ink-soft);font-size:12.5px;}
+  .abs-note{margin:14px 0 0;font-size:12px;line-height:1.6;color:var(--ink-soft);}
 
   /* ===== Cash Book — opening wizard ===== */
   /* Opening the day. One panel, four fields -- see the markup for why
@@ -7422,6 +7506,30 @@
         <p>Workers and delivery personnel. Assign them to orders as they move through Order Tracking.</p>
       </div>
       <div id="staffTeamStrip"></div>
+
+      <!-- Who is in today.
+
+           The payroll screen asks what the month cost, which is the
+           question you answer on payday with four weeks to reconstruct
+           from memory. This asks who is in TODAY -- the question
+           somebody can actually answer, because they are standing in the
+           shop looking at the answer.
+
+           It writes the same rows the payroll screen reads. There is no
+           second attendance record and no second figure to reconcile. -->
+      <div class="panel" id="attendancePanel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">Who&rsquo;s in</h2>
+          <div class="att-bar">
+            <button type="button" class="btn btn-ghost btn-icon" id="att_prev">&lsaquo; Previous</button>
+            <input type="date" id="att_date" class="att-date">
+            <button type="button" class="btn btn-ghost btn-icon" id="att_next">Next &rsaquo;</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="att_today">Today</button>
+          </div>
+        </div>
+        <div id="attendanceWrap"></div>
+      </div>
+
       <!-- Who is signed in, on what, and since when. On the Staff tab
            because it is a question about people, not about settings. -->
       <div class="panel">
@@ -7954,6 +8062,47 @@
         <div class="modal-foot">
           <button class="btn btn-ghost" id="rt_cancel">Cancel</button>
           <button class="btn btn-accent" id="rt_save">Save premises</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Days one person missed in one month.
+
+         A modal rather than a number box in the table, because an
+         absence is a dated row and not a count: "four days" cannot be
+         shown to somebody who queries their pay, cannot separate paid
+         sick leave from unpaid absence, and cannot stop the same day
+         being entered twice by two people. -->
+    <div class="modal-overlay" id="absenceModal">
+      <div class="modal">
+        <div class="modal-head">
+          <h2 id="absModalTitle">Days missed</h2>
+          <button class="modal-close" id="absModalClose" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="abs-head">
+            <div class="pr-name" id="abs_who"></div>
+            <div class="abs-sum" id="abs_sum"></div>
+          </div>
+          <div class="abs-add">
+            <div class="field"><label>Day missed</label><input id="abs_date" type="date"></div>
+            <div class="field"><label>Reason</label>
+              <input id="abs_reason" list="abs_reasons" placeholder="Absent">
+              <datalist id="abs_reasons"></datalist>
+            </div>
+            <button type="button" class="btn btn-accent" id="abs_add">Add day</button>
+          </div>
+          <label class="abs-paid-row">
+            <input type="checkbox" id="abs_paid">
+            <span>Paid day — record it, but take nothing off their pay</span>
+          </label>
+          <div id="abs_list"></div>
+          <p class="abs-note" id="abs_note"></p>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-accent" id="abs_done">Done</button>
         </div>
       </div>
     </div>
@@ -11364,7 +11513,14 @@ async function loadData(shopId){
       amount: d.amount==null ? null : Number(d.amount),
       days: d.days==null ? null : Number(d.days),
       rate: Number(d.rate)||0, paid: Number(d.paid)||0, notes:d.notes||'',
-      payments: (d.payload && Array.isArray(d.payload.payments)) ? d.payload.payments : []
+      payments: (d.payload && Array.isArray(d.payload.payments)) ? d.payload.payments : [],
+      /* Days missed, and how the month was worked out. Both live in the
+         payload rather than columns of their own: absences are a list,
+         and the basis is only ever read alongside them. A due raised
+         before either existed comes back with an empty list and no
+         basis, which dueBasis resolves from the staff member. */
+      absences: (d.payload && Array.isArray(d.payload.absences)) ? d.payload.absences : [],
+      basis: (d.payload && d.payload.basis) || null
     })),
     nextDueId: (duesR.data||[]).length ? Math.max(0,...duesR.data.map(d=>d.id||0))+1 : 1,
     presetCategories: presets.categories || seed.presetCategories,
@@ -11609,7 +11765,7 @@ function buildSyncRows(d, shopId){
       amount: x.amount==null ? null : x.amount,
       days: x.days==null ? null : x.days,
       rate:x.rate||0, paid:x.paid||0, notes:x.notes||null,
-      payload:{ payments: x.payments||[] }
+      payload:{ payments: x.payments||[], absences: x.absences||[], basis: x.basis||null }
     })),
     settings: {
       shop_id: shopId,
@@ -25499,6 +25655,10 @@ function renderStaffTeamStrip(){
   const busy = on.filter(s=> staffActiveOrders(s).length);
   const inHand = on.reduce((n,s)=> n + staffActiveOrders(s).length, 0);
   const noLogin = all.filter(s=> !s.userId).length;
+  // Today's register, not the chosen day's: this strip is what the shop
+  // has to hand RIGHT NOW, and a stale count from a day somebody was
+  // reviewing last week would be read as the state of the shop floor.
+  const today = attendanceForDay(todayISO());
   const cell = (value, label, cls)=> `<div class="sum-cell ${cls||''}">
     <div class="sum-value">${esc(String(value))}</div><div class="sum-label">${esc(label)}</div></div>`;
   document.getElementById('staffTeamStrip').innerHTML = all.length ? `<div class="sum-strip">
@@ -25506,6 +25666,8 @@ function renderStaffTeamStrip(){
     ${cell(busy.length, 'working now', busy.length ? 'good' : '')}
     ${cell(on.length - busy.length, 'free', (on.length - busy.length) ? '' : 'warn')}
     ${cell(inHand, inHand===1?'order in hand':'orders in hand')}
+    ${today.absent ? cell(today.absent, today.absent===1?'absent today':'absent today', 'warn') : ''}
+    ${today.onLeave ? cell(today.onLeave, 'on paid leave') : ''}
     ${off.length ? cell(off.length, 'unavailable', 'warn') : ''}
     ${noLogin ? cell(noLogin, noLogin===1?'without a login':'without a login', 'warn') : ''}
   </div>` : '';
@@ -25845,8 +26007,145 @@ function lsTidyBarHTML(rows, nowMs){
   </div>`;
 }
 
+/* ---- WHO'S IN ------------------------------------------------------
+
+   Three states, one click each: in, absent, on paid leave. Deliberately
+   not a checkbox. "Absent" and "paid leave" are different things -- one
+   costs the worker a day's pay and the other does not -- and a single
+   tick box would have made the shop choose between recording the day and
+   recording it correctly.
+
+   Present is the DEFAULT and writes nothing. The shop records the
+   exceptions; a "present" row for everybody every day would be a
+   thousand rows a year saying nothing happened. */
+let attDate = null;
+function currentAttDate(){ return attDate || todayISO(); }
+
+const ATT_STATES = [
+  {key:'present', label:'In'},
+  {key:'absent',  label:'Absent'},
+  {key:'paid',    label:'Paid leave'},
+];
+
+function renderAttendance(){
+  const wrap = document.getElementById('attendanceWrap');
+  if(!wrap) return;
+  const date = currentAttDate();
+  const box = document.getElementById('att_date');
+  box.value = date;
+  // No tomorrow to take a register for.
+  box.max = todayISO();
+  document.getElementById('att_next').disabled = date >= todayISO();
+  document.getElementById('att_today').disabled = date === todayISO();
+
+  const a = attendanceForDay(date);
+
+  if(!a.rows.length){
+    wrap.innerHTML = `<div class="empty">${a.notOnPayroll
+      ? `${a.notOnPayroll} ${a.notOnPayroll===1?'person is':'people are'} on the staff list, but nobody has a pay rate — so there is no wage to record a missed day against. Set how somebody is paid and they will appear here.`
+      : 'Nobody on the team yet. Add someone below.'}</div>`;
+    return;
+  }
+
+  const row = (r)=>{
+    const s = r.staff;
+    const daily = (r.due ? dueBasis(r.due) : s.payBasis) === 'daily';
+    /* What one day off costs THIS person, said on their own row. A day
+       is not worth the same to the man on 520,000 a month as to the one
+       on 260,000, and the person deciding whether to dock it is entitled
+       to know which before they click.
+
+       FROM THE DUE WHERE THERE IS ONE, from the staff member where there
+       is not. Merely looking at the register must not raise a month, so
+       on a day nobody has touched there is no due to read -- and reading
+       a missing one as zero put "0 UGX a day" against every name until
+       somebody was marked absent. */
+    const dayRate = r.due ? dueDayRate(r.due)
+      : s.payRate == null ? 0
+      : daily ? Number(s.payRate) : Number(s.payRate) / WAGE_DAYS_PER_MONTH;
+    const rateLabel = s.payRate == null ? 'no rate set' : `${fmtUGX(Math.round(dayRate))} a day`;
+    const cost = r.state === 'absent'
+      ? (daily ? 'counted in the days worked' : `−${fmtUGX(Math.round(dayRate))} today`)
+      : r.state === 'paid' ? 'no deduction'
+      : rateLabel;
+    return `<div class="att-row ${r.state}" data-staff="${esc(s.id)}">
+      <div class="att-who">
+        <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
+        <div class="att-ident">
+          <div class="rost-name">${esc(s.name)}</div>
+          <div class="rost-sub">${daily ? 'Daily' : 'Monthly'} · ${esc(cost)}${
+            r.reason && r.reason !== 'Absent' && r.reason !== 'Leave' ? ` · ${esc(r.reason)}` : ''}</div>
+        </div>
+      </div>
+      <div class="att-pick" role="group" aria-label="${esc(s.name)} on ${esc(fmtShortDate(date))}">
+        ${ATT_STATES.map(st=> `<button type="button" class="att-opt${st.key===r.state?' on':''}"
+          data-staff="${esc(s.id)}" data-state="${st.key}"
+          aria-pressed="${st.key===r.state}">${esc(st.label)}</button>`).join('')}
+      </div>
+      <div class="att-month">${r.monthDays
+        ? `<span class="att-month-days">${r.monthDays} day${r.monthDays===1?'':'s'} this month</span>${
+            r.monthDeduction >= 0.5 ? `<span class="att-month-off">−${fmtUGX(Math.round(r.monthDeduction))}</span>` : ''}`
+        : '<span class="att-month-days quiet">nothing missed this month</span>'}
+      </div>
+      <button type="button" class="age-act att-open" data-staff="${esc(s.id)}"
+        title="Open the whole month for ${esc(s.name)}">The month</button>
+    </div>`;
+  };
+
+  const lines = [];
+  if(a.notOnPayroll) lines.push(`<p class="att-note">${a.notOnPayroll}
+    ${a.notOnPayroll===1?'person on the staff list is':'people on the staff list are'} not shown:
+    nobody has set how ${a.notOnPayroll===1?'they are':'they are'} paid, so there is no wage to record a
+    missed day against.</p>`);
+  /* A day that has not been ticked is not a day everybody worked -- it
+     is a day nobody has said anything about. Worth saying on a register
+     that costs people money, because "all present" and "not filled in"
+     look identical here and only one of them is a claim. */
+  if(!a.absent && !a.onLeave) lines.push(`<p class="att-note">Nothing recorded for
+    ${esc(fmtShortDate(date))}. Everybody is treated as having worked — mark anybody who did not.</p>`);
+
+  wrap.innerHTML = `<div class="att-sum">
+      <span class="att-chip in"><b>${a.present}</b> in</span>
+      <span class="att-chip out"><b>${a.absent}</b> absent</span>
+      <span class="att-chip leave"><b>${a.onLeave}</b> on paid leave</span>
+      <span class="att-when">${esc(date === todayISO() ? 'Today' : fmtShortDate(date))}</span>
+    </div>
+    <div class="att-list">${a.rows.map(row).join('')}</div>
+    ${lines.join('')}`;
+
+  wrap.querySelectorAll('.att-opt').forEach(b=> b.addEventListener('click', ()=>{
+    const res = setStaffAttendance(b.dataset.staff, currentAttDate(), b.dataset.state);
+    if(res && res.error){ toast(res.error); return; }
+    renderAttendance();
+    renderStaffTeamStrip();
+    // The payroll screen reads the same rows, so it cannot be left
+    // showing last minute's figures behind this one.
+    if(document.getElementById('tab-payroll').style.display !== 'none') renderPayroll();
+  }));
+  wrap.querySelectorAll('.att-open').forEach(b=> b.addEventListener('click', ()=>{
+    const due = ensureWageDue(b.dataset.staff, periodOf(currentAttDate()));
+    if(!due){ toast('They are not on the payroll — set how they are paid first'); return; }
+    openAbsences(due.id);
+  }));
+}
+
+function goToAttDate(date){
+  if(date > todayISO()) return;
+  attDate = date;
+  renderAttendance();
+}
+document.getElementById('att_prev').addEventListener('click', ()=> goToAttDate(anShiftDate(currentAttDate(), -1)));
+document.getElementById('att_next').addEventListener('click', ()=> goToAttDate(anShiftDate(currentAttDate(), 1)));
+document.getElementById('att_today').addEventListener('click', ()=> goToAttDate(todayISO()));
+document.getElementById('att_date').addEventListener('change', (e)=>{
+  if(!e.target.value) return;
+  if(e.target.value > todayISO()){ toast('That day has not happened yet'); renderAttendance(); return; }
+  goToAttDate(e.target.value);
+});
+
 function renderStaff(filter=''){
   renderStaffTeamStrip();
+  renderAttendance();
   const range = staffPeriodRange();
   const tokens = searchTokens(filter);
   let rows = (data.staff||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
@@ -29337,24 +29636,55 @@ function generateDuesForPeriod(period){
 
   staffOnPayroll().forEach(s=>{
     if(findDue('wage', s.id, period)) return;
-    const monthly = s.payBasis === 'monthly';
-    made.push({
-      id: allocRowId('due'), kind:'wage', refId:String(s.id), period,
-      // Wages fall due at the end of the month they were worked.
-      dueDate: periodEndDate(period),
-      /* A monthly wage is known the moment the month exists. A daily one
-         is NOT -- it cannot be costed until somebody counts the days, and
-         that is why this is null rather than 0. Zero would be a claim
-         that they worked no days. */
-      amount: monthly ? (s.payRate==null ? null : Number(s.payRate)) : null,
-      days: null,
-      rate: s.payRate==null ? 0 : Number(s.payRate),
-      paid:0, notes:'', payments:[],
-    });
+    made.push(newWageDue(s, period));
   });
 
   if(made.length){ data.dues = data.dues.concat(made); saveData(); }
   return made;
+}
+
+// One person's month, unraised. Pulled out of generateDuesForPeriod so
+// that marking somebody absent can raise the one wage it needs without
+// also raising that month's RENT as a side effect -- a liability the
+// shop would find on its balance sheet having only said "he did not come
+// in on Tuesday".
+function newWageDue(s, period){
+  const monthly = s.payBasis === 'monthly';
+  return {
+    id: allocRowId('due'), kind:'wage', refId:String(s.id), period,
+    // Wages fall due at the end of the month they were worked.
+    dueDate: periodEndDate(period),
+    /* A monthly wage is known the moment the month exists. A daily one
+       is NOT -- it cannot be costed until somebody counts the days, and
+       that is why this is null rather than 0. Zero would be a claim
+       that they worked no days. */
+    amount: monthly ? (s.payRate==null ? null : Number(s.payRate)) : null,
+    days: null,
+    rate: s.payRate==null ? 0 : Number(s.payRate),
+    /* Snapshot alongside the rate, and for the same reason: how this
+       month is worked out is settled when it is raised. Moving somebody
+       from a day rate to a salary in September must not change what
+       August cost or how August's absences were priced. */
+    basis: monthly ? 'monthly' : 'daily',
+    absences: [],
+    paid:0, notes:'', payments:[],
+  };
+}
+
+/* The month one absence has to be written on, raised if it does not
+   exist yet. Returns null for somebody who is not on the payroll --
+   there is no wage to dock and nothing to write it against, which the
+   caller says out loud rather than silently doing nothing. */
+function ensureWageDue(staffId, period){
+  const existing = findDue('wage', staffId, period);
+  if(existing) return existing;
+  const s = (data.staff||[]).find(x=> String(x.id)===String(staffId));
+  if(!s || !(s.payBasis === 'monthly' || s.payBasis === 'daily')) return null;
+  if(!data.dues) data.dues = [];
+  const due = newWageDue(s, period);
+  data.dues.push(due);
+  saveData();
+  return due;
 }
 
 // Last day of a YYYY-MM, via day 0 of the next month so February and the
@@ -29365,6 +29695,108 @@ function periodEndDate(period){
   return new Date(Date.UTC(y, m, 0)).toISOString().slice(0,10);
 }
 
+/* ---- DAYS MISSED ----------------------------------------------------
+
+   A month of wages was raised at the full rate whether or not the person
+   turned up. A monthly-salaried worker who missed three days was paid
+   exactly as much as one who missed none, and the shop's only recourse
+   was to hand over a different figure from the one the screen said and
+   leave the difference explained nowhere.
+
+   AN ABSENCE IS A DATED ROW, not a count. "Four days" cannot be shown to
+   somebody who queries their pay, cannot tell sick leave that is paid
+   from absence that is not, and cannot stop the same day being entered
+   twice by two people going through the book on payday. {date, reason,
+   paid} does all three.
+
+   MONTHLY AND DAILY DEDUCT DIFFERENTLY, and only one of them deducts at
+   all. A daily-paid month is costed from the days somebody COUNTED, so
+   the days not worked were never in the figure to begin with -- charging
+   them again here would take the money off twice. Their absences are
+   kept as the record of why the month was short, and cost nothing. */
+
+/* A month is 26 working days -- six days a week, the ordinary shop week.
+   Deliberately a constant rather than the length of the calendar month:
+   dividing by the real number would make one missed day in February cost
+   more than the same day in July, which is a difference nobody agreed to
+   and nobody could explain to the person losing it. */
+const WAGE_DAYS_PER_MONTH = 26;
+
+const ABSENCE_REASONS = ['Absent', 'Sick', 'Leave', 'Suspended', 'Other'];
+
+function dueAbsences(d){ return Array.isArray(d && d.absences) ? d.absences : []; }
+
+/* Monthly or daily, for a wage due.
+
+   SNAPSHOT ONTO THE DUE when it is raised, for the same reason the rate
+   is: moving somebody off a day rate and onto a salary in August must
+   not change how July was worked out. Dues raised before this was stored
+   ask the staff member instead -- and if they have been deleted,
+   monthly, which is the basis that keeps a figure on the screen rather
+   than the one that quietly puts the month back to uncosted. */
+function dueBasis(d){
+  if(d.basis === 'monthly' || d.basis === 'daily') return d.basis;
+  const s = (data.staff||[]).find(x=> String(x.id)===String(d.refId));
+  return s && s.payBasis === 'daily' ? 'daily' : 'monthly';
+}
+
+// What one day of this due is worth. Only ever asked of a wage.
+function dueDayRate(d){
+  const rate = Number(d.rate)||0;
+  return dueBasis(d) === 'daily' ? rate : rate / WAGE_DAYS_PER_MONTH;
+}
+
+/* Days that actually come off the pay: the absences NOT marked paid. A
+   paid sick day is still recorded -- the shop wants to know it happened,
+   and so does the next conversation about it -- it simply costs the
+   worker nothing. */
+function dueUnpaidAbsenceDays(d){
+  return dueAbsences(d).filter(a=> !a.paid).length;
+}
+
+/* What comes off this month's pay for days missed.
+
+   Zero for rent, which nobody is absent from, and zero for a daily-paid
+   month for the reason above. CAPPED AT THE SALARY: 30 unpaid days
+   against a 26-day month would otherwise produce a negative wage, which
+   is the shop billing its own staff. */
+function dueDeduction(d){
+  if(d.kind !== 'wage' || dueBasis(d) !== 'monthly') return 0;
+  const gross = Number(d.rate)||0;
+  return Math.min(gross, dueUnpaidAbsenceDays(d) * dueDayRate(d));
+}
+
+/* The month's cost, from its own parts. The one place a wage's amount is
+   decided, so days worked and days missed cannot each write a figure the
+   other does not know about.
+
+   Still null -- uncosted -- for a daily month whose days nobody has
+   counted. Absences do not make it costable: knowing somebody missed
+   four days says nothing about how many of the rest they worked. */
+function dueCostOf(d){
+  if(d.kind !== 'wage') return d.amount === undefined ? null : d.amount;
+  if(dueBasis(d) === 'daily'){
+    return d.days === null || d.days === undefined ? null : Number(d.days) * (Number(d.rate)||0);
+  }
+  /* A monthly month raised for somebody with no salary agreed is
+     UNCOSTED, and stays that way. Its snapshot rate is 0 -- a stand-in
+     for a figure nobody has given, not a wage of nothing -- so deducting
+     from it would turn "we do not know what this costs" into a confident
+     zero, which is the one mistake this whole screen exists to avoid. */
+  if(!(Number(d.rate)||0) && (d.amount === null || d.amount === undefined)) return null;
+  return Math.max(0, (Number(d.rate)||0) - dueDeduction(d));
+}
+
+// Writes it back. Every path that changes days worked or days missed
+// goes through here.
+function recostDue(dueId){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return null;
+  due.amount = dueCostOf(due);
+  saveData();
+  return due;
+}
+
 // Days worked, entered for a daily-paid month. Clearing the box puts the
 // month back to uncosted rather than costing it at nothing.
 function setDueDays(dueId, days){
@@ -29372,8 +29804,147 @@ function setDueDays(dueId, days){
   if(!due) return;
   const n = (days===''||days===null||days===undefined) ? null : Number(days);
   due.days = n;
-  due.amount = n===null ? null : n * (Number(due.rate)||0);
-  saveData();
+  recostDue(dueId);
+}
+
+/* Recording one. THE DATE IS THE KEY, and a day already on the list is
+   refused rather than merged: two people going through the book on
+   payday would otherwise dock the same absence twice over and neither
+   would see the other's entry. The second entry may also carry a
+   different reason, and picking one silently is a guess about somebody's
+   pay. */
+function addDueAbsence(dueId, dateISO, reason, paid){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due || due.kind !== 'wage') return {error:'Days missed are only recorded against wages'};
+  const date = String(dateISO||'').slice(0,10);
+  if(!date) return {error:'Pick the day that was missed'};
+  // A day outside the month is a typo -- and one that would go uncounted
+  // in every month's totals rather than showing up wrong in one of them.
+  if(periodOf(date) !== due.period) return {error:`That day is not in ${periodLabel(due.period)}`};
+  if(date > todayISO()) return {error:'That day has not happened yet'};
+  if(!due.absences) due.absences = [];
+  if(due.absences.some(a=> String(a.date)===date)) return {error:'That day is already recorded'};
+  due.absences.push({date, reason: String(reason||'Absent').trim() || 'Absent', paid: !!paid});
+  due.absences.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+  recostDue(dueId);
+  return {due};
+}
+
+function removeDueAbsence(dueId, dateISO){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return;
+  due.absences = dueAbsences(due).filter(a=> String(a.date) !== String(dateISO));
+  recostDue(dueId);
+}
+
+// Flipping one between paid leave and unpaid absence. The row stays
+// either way -- the day was still missed.
+function setDueAbsencePaid(dueId, dateISO, paid){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return;
+  const a = dueAbsences(due).find(x=> String(x.date)===String(dateISO));
+  if(!a) return;
+  a.paid = !!paid;
+  recostDue(dueId);
+}
+
+/* ---- ONE PERSON, ONE DAY -------------------------------------------
+
+   The payroll screen asks "what did August cost?", which is the question
+   you answer on payday with a month to reconstruct from memory. This
+   asks "who is in today?", which is the question somebody can actually
+   answer, because they are standing in the shop looking at the answer.
+
+   Both write the same rows. There is no separate attendance record and
+   no second figure to reconcile -- marking somebody absent here IS an
+   absence on their wage month, and the payroll screen shows it the
+   moment it is written. */
+
+// Present, absent, or on paid leave, for one person on one day. Present
+// is the ABSENCE OF A ROW, not a row of its own: the shop records the
+// exceptions, and a "present" row for everybody every day would be a
+// thousand rows a year saying nothing happened.
+function staffAttendanceOn(staffId, dateISO){
+  const due = findDue('wage', staffId, periodOf(dateISO));
+  const a = due ? dueAbsences(due).find(x=> String(x.date)===String(dateISO)) : null;
+  if(!a) return {state:'present', due};
+  return {state: a.paid ? 'paid' : 'absent', reason: a.reason || 'Absent', due};
+}
+
+/* Setting it. Raises the wage month if this is the first thing anybody
+   has said about it, so marking somebody absent on the 3rd works before
+   anyone has opened the payroll screen for that month.
+
+   AN EXISTING REASON SURVIVES a change of state. Somebody marked "Sick"
+   from the payroll screen and then switched to paid leave here keeps
+   "Sick" -- that is the true reason either way, and overwriting it with
+   the default would quietly lose why the day was missed. */
+function setStaffAttendance(staffId, dateISO, state){
+  const date = String(dateISO||'').slice(0,10);
+  if(!date) return {error:'Pick a day'};
+  if(date > todayISO()) return {error:'That day has not happened yet'};
+  const due = ensureWageDue(staffId, periodOf(date));
+  if(!due) return {error:'They are not on the payroll — set how they are paid first'};
+  const existing = dueAbsences(due).find(a=> String(a.date)===date);
+
+  if(state === 'present'){
+    if(existing) removeDueAbsence(due.id, date);
+    return {due, state:'present'};
+  }
+  const paid = state === 'paid';
+  if(existing){
+    setDueAbsencePaid(due.id, date, paid);
+    return {due, state};
+  }
+  const res = addDueAbsence(due.id, date, paid ? 'Leave' : 'Absent', paid);
+  if(res && res.error) return res;
+  return {due, state};
+}
+
+/* Everybody on the payroll, and where they stood on one day. The shape
+   the "Who's in" panel is drawn from, and the thing to ask if anything
+   else ever needs a day's attendance. */
+function attendanceForDay(dateISO){
+  const rows = staffOnPayroll()
+    .slice()
+    .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')))
+    .map(s=>{
+      const at = staffAttendanceOn(s.id, dateISO);
+      const due = at.due || findDue('wage', s.id, periodOf(dateISO));
+      return {
+        staff: s, state: at.state, reason: at.reason || '',
+        due,
+        // What THIS person's month has lost so far, so the panel can say
+        // what a day off actually costs the person standing in front of
+        // you rather than only what it costs the shop in total.
+        monthDeduction: due ? dueDeduction(due) : 0,
+        monthDays: due ? dueAbsences(due).length : 0,
+      };
+    });
+  return {
+    date: dateISO, rows,
+    present: rows.filter(r=> r.state==='present').length,
+    absent: rows.filter(r=> r.state==='absent').length,
+    onLeave: rows.filter(r=> r.state==='paid').length,
+    /* People on the staff list with no pay basis are NOT on this panel:
+       there is no wage to dock and nothing to write an absence against.
+       Counted so the panel can say who it is leaving out rather than
+       quietly showing a short team. */
+    notOnPayroll: staffWithoutPayRate().filter(s=> !(s.payBasis==='monthly' || s.payBasis==='daily')).length,
+  };
+}
+
+/* Paid in full, and then an absence is recorded afterwards. The month
+   now costs less than what has already gone out of the till, and
+   dueBalance floors at zero -- so without this the row would read as
+   settled while the shop was genuinely owed money back.
+
+   Reported, never corrected automatically: taking it off next month,
+   asking for it back, or writing it off are all the shop's call. */
+function dueOverpaid(d){
+  const cost = d.amount;
+  if(cost === null || cost === undefined) return 0;
+  return Math.max(0, (Number(d.paid)||0) - Number(cost));
 }
 
 function dueBalance(d){
@@ -29432,6 +30003,14 @@ function payrollPosition(period){
   });
 
   const overdue = costed.filter(d=> dueIsOverdue(d));
+  const wages = dues.filter(d=> d.kind==='wage');
+  /* Days missed are counted across EVERY wage month, costed or not. A
+     daily-paid worker whose days nobody has entered still has absences
+     worth showing, and a monthly one raised without a salary still has
+     days the shop needs to know about before it sets one. */
+  const absenceDays = sum(wages, d=> dueAbsences(d).length);
+  const deducted = sum(costed, d=> dueDeduction(d));
+  const overpaid = sum(costed, d=> dueOverpaid(d));
   return {
     period, dues, byKind,
     known: sum(costed, d=> Number(d.amount)||0),
@@ -29441,6 +30020,20 @@ function payrollPosition(period){
     overdueCount: overdue.length,
     overdueAmount: sum(overdue, d=> dueBalance(d)||0),
     settledCount: costed.filter(dueIsSettled).length,
+    /* What the absences took off, and the days behind it. `known` is
+       already NET of this -- the deduction is applied when the month is
+       costed, not subtracted from the total here -- so this is reported
+       so the screen can say why the payroll is smaller than the sum of
+       everybody's salaries, not to be taken off again. */
+    deducted,
+    absenceDays,
+    unpaidAbsenceDays: sum(wages, d=> dueUnpaidAbsenceDays(d)),
+    absentCount: wages.filter(d=> dueAbsences(d).length).length,
+    /* Months already paid MORE than they turned out to cost, because an
+       absence was recorded after the money went out. dueBalance floors
+       at zero, so nothing else on the screen can see this. */
+    overpaid,
+    overpaidCount: costed.filter(d=> dueOverpaid(d) > 0.5).length,
     // Somebody on the staff list with no rate is not on the payroll at
     // all, so their month is missing entirely rather than uncosted.
     noRateCount: staffWithoutPayRate().length,
@@ -29600,6 +30193,22 @@ function renderPayrollPosition(){
     no pay rate set, so ${p.noRateCount===1?'they are':'they are'} not on the payroll at all.
     Open them in Staff and set how they are paid.
   </div>`);
+  /* Money already handed over for days that were later recorded as
+     missed. Nothing else on the screen can show it -- the balance floors
+     at zero, so the row reads "Paid" -- and it is real money the shop is
+     owed back. */
+  if(p.overpaidCount) lines.push(`<div class="age-verdict bad">
+    <b>${esc(fmtUGX(Math.round(p.overpaid)))}</b> was paid over what
+    ${p.overpaidCount===1?'a month':`${p.overpaidCount} months`} turned out to cost — days were recorded
+    as missed after the money went out. Take it off next month, ask for it back, or leave it;
+    nothing here does any of those on its own.
+  </div>`);
+  if(p.absenceDays) lines.push(`<div class="age-verdict quiet">
+    ${p.absenceDays} day${p.absenceDays===1?'':'s'} recorded as missed across
+    ${p.absentCount} ${p.absentCount===1?'person':'people'}${p.deducted >= 0.5
+      ? `, taking <b>${esc(fmtUGX(Math.round(p.deducted)))}</b> off the wages above`
+      : ' — none of them deducted'}.
+  </div>`);
 
   wrap.innerHTML = `<div class="age-pos">
     <div class="age-pos-head">
@@ -29617,6 +30226,11 @@ function renderPayrollPosition(){
         `owed of ${fmtUGX(Math.round(p.byKind.wage.known))}`)}
       ${cell('Rent', fmtUGX(Math.round(p.byKind.rent.owed)),
         `owed of ${fmtUGX(Math.round(p.byKind.rent.known))}`)}
+      ${cell('Days missed', String(p.absenceDays),
+        p.deducted >= 0.5
+          ? `${fmtUGX(Math.round(p.deducted))} off`
+          : p.absenceDays ? 'none deducted' : 'nobody absent',
+        p.deducted >= 0.5 ? 'warn' : '')}
     </div>
     ${lines.join('')}
   </div>`;
@@ -29642,18 +30256,40 @@ function renderPayrollDues(){
     const overdue = dueIsOverdue(d);
     const settled = dueIsSettled(d);
     const staff = d.kind==='wage' ? (data.staff||[]).find(s=> String(s.id)===String(d.refId)) : null;
-    const daily = staff && staff.payBasis === 'daily';
+    const wage = d.kind === 'wage';
+    // The due's own basis, not the staff member's current one: somebody
+    // moved onto a salary in September must not make August's row
+    // suddenly stop offering the days box that costed it.
+    const daily = wage && dueBasis(d) === 'daily';
+    const missed = dueAbsences(d).length;
+    const off = dueDeduction(d);
+    const overpaid = dueOverpaid(d);
     /* A wage addressed to nobody, with nothing paid against it: a demand
        with no person behind it (the worker was deleted before deleteStaff
        learned to take these along). It gets Remove instead of Pay. A
        part-paid orphan keeps Pay -- the shop may genuinely owe a departed
        worker the balance, and that is the shop's call, not a cleanup's. */
     const orphanGhost = d.kind==='wage' && !staff && !(Number(d.paid)||0) && !(d.payments||[]).length;
-    const state = settled ? '<span class="pr-state ok">Paid</span>'
+    /* Overpaid outranks Paid. The balance is zero either way, so without
+       this the row that needs a conversation looks exactly like the
+       thirty that do not. */
+    const state = overpaid > 0.5 ? '<span class="pr-state over">Overpaid</span>'
+      : settled ? '<span class="pr-state ok">Paid</span>'
       : bal === null ? '<span class="pr-state todo">Not costed</span>'
       : overdue ? '<span class="pr-state bad">Late</span>'
       : '<span class="pr-state">Due</span>';
-    return `<tr class="${settled?'pr-settled':''}">
+    /* Every wage gets the button, absent or not: "nobody missed a day"
+       is a claim somebody has to be able to change, and a dash would be
+       a dead cell on the one row where the shop needs to act. Rent does
+       not -- premises are not absent. */
+    const missCell = !wage ? '<span class="pr-quiet">—</span>'
+      : `<button type="button" class="pr-miss${missed ? (off >= 0.5 ? ' on' : ' note') : ''}"
+           data-id="${d.id}"
+           title="${missed ? 'Days recorded as missed — click to see or change them' : 'Record a day this person missed'}">
+          ${missed ? `${missed} day${missed===1?'':'s'}` : 'None'}
+          ${off >= 0.5 ? `<span class="pr-miss-off">−${fmtUGX(Math.round(off))}</span>` : ''}
+        </button>`;
+    return `<tr class="${settled && overpaid <= 0.5 ?'pr-settled':''}">
       <td>
         <div class="pr-name">${esc(dueName(d))}</div>
         <div class="pr-sub">${esc((DUE_KINDS[d.kind]||{}).label||'')}${daily?` · ${fmtUGX(Math.round(d.rate))} a day`:''}</div>
@@ -29662,11 +30298,14 @@ function renderPayrollDues(){
         ? `<input type="number" min="0" step="any" class="pr-days" data-id="${d.id}"
              value="${d.days===null||d.days===undefined?'':d.days}" placeholder="days">`
         : '<span class="pr-quiet">—</span>'}</td>
+      <td>${missCell}</td>
       <td class="price">${bal===null
         ? '<span class="pr-quiet">not costed</span>'
-        : `<span class="age-amt">${fmtUGX(Math.round(d.amount))}</span>`}</td>
+        : `${off >= 0.5 ? `<span class="pr-gross">${fmtUGX(Math.round(Number(d.rate)||0))}</span>` : ''}<span class="age-amt">${fmtUGX(Math.round(d.amount))}</span>`}</td>
       <td class="price">${(Number(d.paid)||0) ? fmtUGX(Math.round(d.paid)) : '<span class="pr-quiet">—</span>'}</td>
-      <td class="price">${bal===null ? '<span class="pr-quiet">—</span>' : `<b>${fmtUGX(Math.round(bal))}</b>`}</td>
+      <td class="price">${bal===null ? '<span class="pr-quiet">—</span>'
+        : overpaid > 0.5 ? `<b title="Paid more than this month turned out to cost">+${fmtUGX(Math.round(overpaid))}</b>`
+        : `<b>${fmtUGX(Math.round(bal))}</b>`}</td>
       <td>${esc(fmtShortDate(d.dueDate))}</td>
       <td>${state}</td>
       <td class="row-actions">${orphanGhost
@@ -29681,7 +30320,7 @@ function renderPayrollDues(){
 
   wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table class="age-table pr-table">
     <thead><tr>
-      <th>Who / what</th><th>Days</th><th class="r">Cost</th><th class="r">Paid</th>
+      <th>Who / what</th><th>Days</th><th>Missed</th><th class="r">Cost</th><th class="r">Paid</th>
       <th class="r">Still owed</th><th>Due</th><th>State</th><th></th>
     </tr></thead>
     <tbody>${dues.map(row).join('')}</tbody>
@@ -29691,6 +30330,8 @@ function renderPayrollDues(){
     setDueDays(Number(inp.dataset.id), inp.value);
     renderPayroll();
   }));
+  wrap.querySelectorAll('.pr-miss').forEach(btn=> btn.addEventListener('click', ()=>
+    openAbsences(Number(btn.dataset.id))));
   wrap.querySelectorAll('.pr-pay').forEach(btn=> btn.addEventListener('click', ()=> openDuePayment(Number(btn.dataset.id))));
   wrap.querySelectorAll('.pr-orphan-del').forEach(btn=> btn.addEventListener('click', ()=>{
     const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
@@ -29734,6 +30375,139 @@ async function openDuePayment(dueId){
   renderPayroll();
   toast(`${fmtUGX(Math.round(paid))} paid — logged to the cash book`);
 }
+
+/* ---- The days-missed modal ----------------------------------------
+
+   Opens on one wage month. Everything it changes is written straight
+   through and recosted, so closing it is not a save and there is no
+   Cancel: the shop is recording days somebody did or did not work, and a
+   list that quietly discards what you typed if you hit the wrong button
+   is the wrong shape for that. */
+let absenceDueId = null;
+
+function openAbsences(dueId){
+  const d = (data.dues||[]).find(x=> x.id===dueId);
+  if(!d) return;
+  if(d.kind !== 'wage'){ toast('Days missed are only recorded against wages'); return; }
+  absenceDueId = dueId;
+  document.getElementById('absModalTitle').textContent = `Days missed · ${periodLabel(d.period)}`;
+  const dl = document.getElementById('abs_reasons');
+  dl.innerHTML = ABSENCE_REASONS.map(r=> `<option value="${esc(r)}"></option>`).join('');
+  document.getElementById('abs_reason').value = '';
+  document.getElementById('abs_paid').checked = false;
+  /* Defaulted to the last day of the month, or today if the month is
+     still running -- never blank. The overwhelmingly common entry is a
+     day in the month you are already looking at, and an empty date box
+     is one more thing to fill in on payday. */
+  const cap = periodEndDate(d.period);
+  document.getElementById('abs_date').value = cap > todayISO() ? todayISO() : cap;
+  document.getElementById('abs_date').min = d.period + '-01';
+  document.getElementById('abs_date').max = cap > todayISO() ? todayISO() : cap;
+  renderAbsences();
+  openModal('absenceModal');
+  document.getElementById('abs_date').focus();
+}
+
+function renderAbsences(){
+  const d = (data.dues||[]).find(x=> x.id===absenceDueId);
+  if(!d) return;
+  const rows = dueAbsences(d);
+  const dayRate = dueDayRate(d);
+  const off = dueDeduction(d);
+  const unpaid = dueUnpaidAbsenceDays(d);
+  const daily = dueBasis(d) === 'daily';
+
+  document.getElementById('abs_who').textContent = dueName(d);
+  document.getElementById('abs_sum').innerHTML = rows.length
+    ? `${rows.length} day${rows.length===1?'':'s'} recorded · <b>${esc(fmtUGX(Math.round(off)))}</b> off`
+    : 'No days recorded';
+
+  const list = document.getElementById('abs_list');
+  if(!rows.length){
+    list.innerHTML = `<div class="abs-empty">No days recorded for ${esc(periodLabel(d.period))}.</div>`;
+  } else {
+    list.innerHTML = `<ul class="abs-list">${rows.map(a=>{
+      /* What THIS day costs, which is not the deduction divided by the
+         days once the cap has bitten. Shown as free when it is paid
+         leave, or when the basis does not deduct at all. */
+      const free = a.paid || daily;
+      return `<li class="abs-row">
+        <span class="abs-date">${esc(fmtShortDate(a.date))}</span>
+        <span class="abs-reason">${esc(a.reason||'Absent')}</span>
+        <span class="abs-cost${free?' free':''}">${free ? 'no deduction' : `−${fmtUGX(Math.round(dayRate))}`}</span>
+        <button type="button" class="age-act abs-toggle" data-date="${esc(a.date)}">${a.paid?'Make unpaid':'Make paid'}</button>
+        <button type="button" class="age-act danger abs-del" data-date="${esc(a.date)}">${ICON_TRASH}Remove</button>
+      </li>`;
+    }).join('')}</ul>`;
+  }
+
+  /* Says what the list is doing to the money, in the two cases where it
+     is doing something other than the obvious. A daily-paid month is the
+     one that surprises people: they record four missed days, watch the
+     cost not move, and assume the app is broken. */
+  const note = document.getElementById('abs_note');
+  if(daily){
+    note.innerHTML = `<b>Nothing is deducted here.</b> ${esc(dueName(d))} is paid
+      ${esc(fmtUGX(Math.round(Number(d.rate)||0)))} a day, so the month is costed from the days you
+      enter in the Days column — the days missed were never counted in. This list is the record of why
+      the month was short.`;
+  } else if(!(Number(d.rate)||0)){
+    note.innerHTML = `<b>Nothing is deducted yet.</b> ${esc(dueName(d))} has no salary set for
+      ${esc(periodLabel(d.period))}, so there is nothing to take days off. The days stay recorded.`;
+  } else {
+    const capped = unpaid * dayRate > (Number(d.rate)||0) + 0.5;
+    note.innerHTML = `A day is <b>${esc(fmtUGX(Math.round(dayRate)))}</b> —
+      ${esc(fmtUGX(Math.round(Number(d.rate)||0)))} a month over ${WAGE_DAYS_PER_MONTH} working days.
+      ${unpaid} unpaid day${unpaid===1?'':'s'} of ${rows.length} recorded.${capped
+        ? ' <b>More days than the month has been deducted</b>, so the deduction stops at the whole salary — nobody is billed for working here.'
+        : ''}`;
+  }
+}
+
+document.getElementById('abs_add').addEventListener('click', ()=>{
+  const d = (data.dues||[]).find(x=> x.id===absenceDueId);
+  if(!d) return;
+  const res = addDueAbsence(absenceDueId,
+    document.getElementById('abs_date').value,
+    document.getElementById('abs_reason').value,
+    document.getElementById('abs_paid').checked);
+  if(!res || res.error){ toast(res ? res.error : 'Could not record that day'); return; }
+  document.getElementById('abs_reason').value = '';
+  document.getElementById('abs_paid').checked = false;
+  renderAbsences();
+  renderPayroll();
+});
+// Enter adds, from either box. Recording a run of missed days is the
+// common case and reaching for the mouse between each one is the slow part.
+['abs_date','abs_reason'].forEach(id=>
+  document.getElementById(id).addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    document.getElementById('abs_add').click();
+  }));
+
+document.getElementById('abs_list').addEventListener('click', (e)=>{
+  const toggle = e.target.closest('.abs-toggle');
+  const del = e.target.closest('.abs-del');
+  if(toggle){
+    const d = (data.dues||[]).find(x=> x.id===absenceDueId);
+    const a = d && dueAbsences(d).find(x=> String(x.date)===toggle.dataset.date);
+    if(!a) return;
+    setDueAbsencePaid(absenceDueId, a.date, !a.paid);
+  } else if(del){
+    removeDueAbsence(absenceDueId, del.dataset.date);
+  } else return;
+  renderAbsences();
+  renderPayroll();
+});
+
+function closeAbsences(){
+  closeModal('absenceModal');
+  absenceDueId = null;
+  renderPayroll();
+}
+document.getElementById('abs_done').addEventListener('click', closeAbsences);
+document.getElementById('absModalClose').addEventListener('click', closeAbsences);
 
 function renderRentAgreements(){
   const wrap = document.getElementById('prRentWrap');
