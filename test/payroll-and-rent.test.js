@@ -54,13 +54,17 @@ const NAMES = ['periodOf', 'currentPeriod', 'periodShift', 'periodEndDate', 'sta
   'dueCostOf', 'recostDue', 'addDueAbsence', 'removeDueAbsence', 'setDueAbsencePaid',
   'dueOverpaid',
   // The daily register on the Staff screen.
-  'newWageDue', 'ensureWageDue', 'staffAttendanceOn', 'setStaffAttendance', 'attendanceForDay'];
+  'newWageDue', 'ensureWageDue', 'staffAttendanceOn', 'setStaffAttendance', 'attendanceForDay',
+  // The month calendar the register is drawn on.
+  'attWeekdayIndex', 'attIsRestDay', 'attMonthDays', 'currentAttDate', 'currentAttMonth',
+  'goToAttMonth', 'selectAttDate'];
 
 const scope = compileScope([
   extractDeclaration(src, 'DUE_KINDS', 'index.html'),
   extractDeclaration(src, 'DUES_SNOOZE_KEY', 'index.html'),
   extractDeclaration(src, 'WAGE_DAYS_PER_MONTH', 'index.html'),
   extractDeclaration(src, 'ABSENCE_REASONS', 'index.html'),
+  extractDeclaration(src, 'attDate', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -78,6 +82,9 @@ const scope = compileScope([
   lsGet: (k) => store[k],
   lsSet: (k, v) => { store[k] = v; },
   closeModal: () => {},
+  // The calendar's month navigation redraws on the way out. Nothing here
+  // has a DOM, and what is being tested is where it LANDS, not what it draws.
+  renderAttendance: () => {},
   removeCashTxnsByIds: (ids) => {
     const set = new Set(ids.filter((x) => x != null));
     data.cashTxns = data.cashTxns.filter((x) => !set.has(x.id));
@@ -890,6 +897,112 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   eq(data.dues.length, raised, 'and raises nothing');
   t.check(scope.ensureWageDue('S404', '2026-08') === null,
     'and a staff member who does not exist raises nothing at all');
+}
+
+/* ---------- 19. the month the register is drawn on -----------------
+ *
+ * The register is a calendar now, and a calendar is arithmetic wearing a
+ * grid. Every one of these has an off-by-one waiting in it: the weekday
+ * the month starts on decides how many blank squares lead it, and a
+ * wrong answer silently shifts every date in the month into the wrong
+ * column -- which reads as somebody being absent on a different day.
+ */
+{
+  /* MONDAY IS 0, because the shop week is Monday to Saturday and a grid
+     that starts on Sunday puts the rest day in the middle of it. */
+  eq(scope.attWeekdayIndex('2026-08-01'), 5, '1 Aug 2026 is a Saturday');
+  eq(scope.attWeekdayIndex('2026-07-01'), 2, '1 Jul 2026 is a Wednesday');
+  eq(scope.attWeekdayIndex('2026-02-01'), 6, '1 Feb 2026 is a Sunday');
+  eq(scope.attWeekdayIndex('2026-06-01'), 0, '1 Jun 2026 is a Monday, the zero case');
+  eq(scope.attWeekdayIndex('2024-02-29'), 3, 'and a leap day is a Thursday');
+
+  /* READ AS UTC, NEVER AS LOCAL TIME. new Date('2026-08-01') is UTC
+     midnight; asking it for a LOCAL weekday returns the day before
+     anywhere west of Greenwich. That is the bug that shifts a whole
+     month by one column, and it does not show up in the timezone the
+     author happens to be sitting in. */
+  const viaLocal = (iso)=> (new Date(iso).getDay() + 6) % 7;
+  eq(scope.attWeekdayIndex('2026-08-01'), viaLocal('2026-08-01'),
+    'which agrees with the local reading here, and must keep agreeing everywhere');
+
+  /* SATURDAY IS A WORKING DAY. 26 days is six days a week, so only
+     Sunday is unpaid. Treating Saturday as a weekend would grey out
+     four working days a month on the screen that decides pay. */
+  t.check(scope.attIsRestDay('2026-08-02'), 'Sunday is the rest day');
+  t.check(!scope.attIsRestDay('2026-08-01'), 'Saturday is NOT — the 26-day month pays for it');
+  t.check(!scope.attIsRestDay('2026-08-03'), 'nor is Monday');
+
+  // Month lengths, February included, leap February included.
+  eq(scope.attMonthDays('2026-02').length, 28, 'February has 28 days');
+  eq(scope.attMonthDays('2024-02').length, 29, 'and 29 in a leap year');
+  eq(scope.attMonthDays('2026-04').length, 30, 'April has 30');
+  eq(scope.attMonthDays('2026-12').length, 31, 'December has 31');
+  eq(scope.attMonthDays('2026-02')[0], '2026-02-01', 'the first day is the 1st, zero-padded');
+  eq(scope.attMonthDays('2024-02').slice(-1)[0], '2024-02-29', 'and the last is the last');
+
+  // Every month of a year lines up: leading blanks plus days is a whole
+  // number of weeks' worth of columns, and no month is short or long.
+  let bad = 0;
+  for(let m=1;m<=12;m++){
+    const p = `2026-${String(m).padStart(2,'0')}`;
+    const days = scope.attMonthDays(p);
+    if(days.length < 28 || days.length > 31) bad++;
+    if(days[0] !== `${p}-01`) bad++;
+    // Consecutive days must be consecutive weekday indices, wrapping at 7.
+    for(let i=1;i<days.length;i++){
+      if(scope.attWeekdayIndex(days[i]) !== (scope.attWeekdayIndex(days[i-1]) + 1) % 7) bad++;
+    }
+  }
+  eq(bad, 0, 'and every month of a year runs Monday to Sunday without a gap or a repeat');
+}
+
+/* ---------- 20. stepping between months ----------------------------
+ * The selected day travels with the month rather than being cleared, so
+ * stepping back and forward lands where you were looking. Two ways that
+ * goes wrong: the 31st of a 30-day month, and any day after today.
+ */
+{
+  eq(scope.periodShift('2026-12', 1), '2027-01', 'December steps into next January');
+  eq(scope.periodShift('2026-01', -1), '2025-12', 'and January steps back into last December');
+
+  // TODAY is 2026-08-04 in this file.
+  scope.goToAttMonth('2026-01');
+  const jan = scope.currentAttDate();
+  t.check(jan.startsWith('2026-01'), 'stepping to a month lands inside it');
+
+  /* Picking a day refuses one that has not happened. The grid renders
+     those disabled, but the guard lives here too -- the button carries
+     it for the mouse, this carries it for everything else. */
+  scope.selectAttDate('2026-01-31');
+  eq(scope.currentAttDate(), '2026-01-31', 'a past day can be picked');
+  scope.selectAttDate('2026-09-01');
+  eq(scope.currentAttDate(), '2026-01-31', 'a future one is refused and leaves the pick alone');
+  scope.selectAttDate('');
+  eq(scope.currentAttDate(), '2026-01-31', 'and so is nothing at all');
+
+  /* THE 31st OF FEBRUARY. Carrying the day-of-month across without
+     checking produces a date that does not exist, which every later
+     lookup then silently fails to match. */
+  scope.goToAttMonth('2026-02');
+  eq(scope.currentAttDate(), '2026-02-28',
+    'a 31st carried into February lands on the 28th rather than on a day that does not exist');
+  eq(scope.currentAttMonth(), '2026-02', 'and the month shown is February');
+
+  scope.selectAttDate('2024-01-31');
+  scope.goToAttMonth('2024-02');
+  eq(scope.currentAttDate(), '2024-02-29', 'and in a leap year it lands on the 29th');
+
+  /* NEVER INTO THE FUTURE. Stepping forward into the current month from
+     a 31st would otherwise select a day that has not happened, and the
+     editor would offer to mark somebody absent on it. */
+  scope.selectAttDate('2026-07-31');
+  scope.goToAttMonth('2026-08');
+  eq(scope.currentAttDate(), TODAY,
+    'stepping into this month cannot land past today');
+
+  const before = scope.currentAttDate();
+  scope.goToAttMonth('2026-09');
+  eq(scope.currentAttDate(), before, 'and next month is refused outright');
 }
 
 process.exit(t.done() ? 1 : 0);

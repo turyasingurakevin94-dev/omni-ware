@@ -3004,49 +3004,127 @@
   .pr-state.todo{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .pr-state.over{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
 
-  /* ---- Who's in (the daily register) ---- */
+  /* ---- Who's in (the month, as a calendar) ---- */
   .att-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:0;}
-  .att-date{width:150px;padding:6px 9px;font-variant-numeric:tabular-nums;}
-  .att-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 12px;}
-  .att-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;
-    font-size:12px;font-weight:700;background:var(--ow-steel-050);color:var(--ow-ink-600);}
-  .att-chip b{font-family:'IBM Plex Mono',monospace;font-size:13px;color:inherit;}
-  .att-chip.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
-  .att-chip.out{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .att-when{margin-left:auto;font-size:12px;font-weight:700;color:var(--ink-soft);}
-  .att-list{display:flex;flex-direction:column;gap:8px;}
-  .att-row{display:grid;grid-template-columns:minmax(160px,1.4fr) auto minmax(120px,1fr) auto;
-    gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);
+  .att-monthlabel{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:0.2px;
+    color:var(--ink);min-width:132px;text-align:center;}
+
+  /* The names. A row, not a dropdown -- a shop has a handful of people
+     and a dropdown hides how many there are behind a click. */
+  .att-people{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px;}
+  .att-person{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel);cursor:pointer;font:inherit;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);min-height:36px;}
+  .att-person:hover{border-color:var(--ow-steel-400);color:var(--ink);}
+  .att-person.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);color:var(--ow-paper);}
+  .att-person-tag{display:inline-flex;align-items:center;justify-content:center;min-width:19px;
+    height:19px;padding:0 5px;border-radius:999px;font-size:11px;font-variant-numeric:tabular-nums;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .att-person.on .att-person-tag{background:var(--ow-amber);color:var(--ow-paper);}
+
+  /* What the month has come to, for the person on screen. */
+  .att-total{display:flex;flex-direction:column;gap:3px;padding:12px 14px;margin:14px 0 12px;
+    border:1px solid var(--line);border-left:3px solid var(--ow-steel-400);
     border-radius:10px;background:var(--bg);}
-  /* The left edge carries the state, so a register of fifteen people can
-     be read down rather than across. */
-  .att-row.absent{border-left:3px solid var(--ow-amber);}
-  .att-row.paid{border-left:3px solid var(--ow-verdigris);}
-  .att-who{display:flex;align-items:center;gap:10px;min-width:0;}
-  .att-ident{min-width:0;}
-  .att-pick{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel);}
-  .att-opt{padding:6px 13px;border:0;background:transparent;cursor:pointer;font:inherit;
-    font-size:12px;font-weight:700;color:var(--ink-soft);white-space:nowrap;
-    /* Tapped on a phone by somebody standing at the counter. */
-    min-height:34px;}
+  .att-total.warn{border-left-color:var(--ow-amber);}
+  .att-total-label{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .att-total b{font-family:'IBM Plex Mono',monospace;font-size:15px;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .att-total.warn b{color:var(--ow-amber-ink);}
+  .att-total-note{font-size:12px;color:var(--ink-soft);line-height:1.5;}
+
+  /* The grid. Seven equal columns whatever the width, so the weekday
+     header and the squares under it cannot drift apart. */
+  .att-cal{margin-top:4px;}
+  .att-dow,.att-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
+  .att-dow{margin-bottom:6px;}
+  .att-dow span{font-size:11px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    color:var(--ink-soft);text-align:center;padding:2px 0;}
+  .att-dow span.rest{color:var(--ow-steel-400);}
+  .att-pad{display:block;}
+
+  .att-day{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+    min-height:74px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel);cursor:pointer;font:inherit;text-align:left;overflow:hidden;
+    transition:border-color .12s ease, background .12s ease;}
+  .att-day:hover:not(:disabled){border-color:var(--ow-steel-400);}
+  .att-daynum{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;}
+  /* The state, as a word and a mark. Colour alone would leave the grid
+     unreadable to anybody who cannot separate the greens from the
+     ambers, and this one is about somebody's pay. */
+  .att-mark{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;
+    font-size:10.5px;font-weight:700;letter-spacing:0.2px;white-space:nowrap;
+    max-width:100%;overflow:hidden;}
+  .att-i{width:11px;height:11px;flex:none;fill:none;stroke:currentColor;stroke-width:3;
+    stroke-linecap:round;stroke-linejoin:round;}
+  .att-mark.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .att-mark.absent{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .att-mark.paid{background:var(--ow-steel-100);color:var(--ow-ink-600);}
+  .att-mark.rest{background:transparent;color:var(--ow-steel-400);padding-left:0;}
+  .att-why{font-size:10.5px;color:var(--ink-soft);line-height:1.25;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .att-day.rest{background:var(--bg);}
+  .att-day.rest .att-daynum{color:var(--ow-steel-400);}
+  .att-day.is-absent{border-color:var(--ow-amber);background:#FEFAF2;}
+  .att-day.is-paid{border-color:var(--ow-steel-400);}
+  /* A day that has not happened. Kept in the grid -- a month with its
+     tail cut off does not read as a month -- but plainly not actionable. */
+  .att-day.future{background:var(--bg);border-style:dashed;cursor:default;opacity:.55;}
+  .att-day.is-today .att-daynum{position:relative;color:var(--accent);}
+  .att-day.is-today .att-daynum::after{content:'';position:absolute;left:0;right:0;bottom:-3px;
+    height:2px;border-radius:2px;background:var(--accent);}
+  .att-day.is-sel{border-color:var(--ow-steel-950);box-shadow:0 0 0 2px var(--ow-steel-950) inset;}
+  /* Docked for a Sunday, which the 26-day month already treats as
+     unpaid. Not blocked -- a shop that opens on Sunday may mean it --
+     but never silent. */
+  .att-day.odd{border-style:dotted;border-color:var(--ow-amber);}
+
+  .att-key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;
+    font-size:11.5px;color:var(--ink-soft);}
+  .att-key-item{display:inline-flex;align-items:center;gap:6px;}
+  .att-key i{width:11px;height:11px;border-radius:3px;flex:none;}
+  .att-key .k-in{background:var(--ow-verdigris);}
+  .att-key .k-absent{background:var(--ow-amber);}
+  .att-key .k-paid{background:var(--ow-steel-400);}
+  .att-key .k-rest{background:var(--ow-steel-100);border:1px solid var(--ow-steel-400);}
+
+  /* The editor. Under the grid rather than inside a cell: it names the
+     day and the person in full, and there is no room for that in a
+     74px square. */
+  .att-edit{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    margin-top:14px;padding:13px 15px;border:1px solid var(--line);border-radius:10px;
+    background:var(--bg);}
+  .att-edit.empty-ish{justify-content:flex-start;color:var(--ink-soft);font-size:12.5px;}
+  .att-edit-day{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--ink);letter-spacing:0.2px;}
+  .att-edit-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .att-edit-why{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-soft);}
+  .att-edit-why input{width:150px;padding:6px 9px;}
+
+
+  .att-pick{display:inline-flex;border:1px solid var(--line);border-radius:999px;
+    overflow:hidden;background:var(--panel);}
+  .att-opt{padding:8px 16px;border:0;background:transparent;cursor:pointer;font:inherit;
+    font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;min-height:38px;}
   .att-opt + .att-opt{border-left:1px solid var(--line);}
   .att-opt:hover{background:var(--ow-steel-050);color:var(--ink);}
   .att-opt.on{background:var(--ow-steel-950);color:var(--ow-paper);}
-  .att-row.absent .att-opt.on{background:var(--ow-amber);color:var(--ow-paper);}
-  .att-row.paid .att-opt.on{background:var(--ow-verdigris);color:var(--ow-paper);}
-  .att-month{display:flex;flex-direction:column;gap:2px;font-size:11.5px;}
-  .att-month-days{color:var(--ink-soft);}
-  .att-month-days.quiet{opacity:.7;}
-  .att-month-off{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ow-amber-ink);}
   .att-note{margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--ink-soft);}
-  @media (max-width: 720px){
-    .att-row{grid-template-columns:1fr;gap:9px;}
+
+  /* Narrow. The seven columns are kept -- a calendar that reflows to
+     three columns is no longer a calendar -- and the squares lose their
+     labels instead, down to the number and a coloured dot. */
+  @media (max-width: 860px){
+    .att-day{min-height:58px;padding:6px;gap:4px;align-items:center;}
+    .att-mark{padding:2px 5px;font-size:0;gap:0;width:16px;height:16px;
+      justify-content:center;border-radius:999px;}
+    .att-mark.rest{background:var(--ow-steel-100);}
+    .att-why{display:none;}
+    .att-edit{flex-direction:column;align-items:stretch;}
     .att-pick{width:100%;}
-    /* 44px, the same floor the worker app holds every pressable control
-       to. This panel is used one-handed, standing up, by somebody
-       looking at the person they are about to dock a day's pay from. */
     .att-opt{flex:1 1 0;text-align:center;min-height:44px;}
-    .att-when{margin-left:0;}
+    .att-edit-why input{width:100%;}
+    .att-edit-why{display:grid;grid-template-columns:auto 1fr;}
   }
   .pr-cell.warn b{color:var(--ow-amber-ink);}
 
@@ -7522,11 +7600,12 @@
           <h2 style="margin-bottom:0;">Who&rsquo;s in</h2>
           <div class="att-bar">
             <button type="button" class="btn btn-ghost btn-icon" id="att_prev">&lsaquo; Previous</button>
-            <input type="date" id="att_date" class="att-date">
+            <span class="att-monthlabel" id="att_month" aria-live="polite"></span>
             <button type="button" class="btn btn-ghost btn-icon" id="att_next">Next &rsaquo;</button>
-            <button type="button" class="btn btn-ghost btn-icon" id="att_today">Today</button>
+            <button type="button" class="btn btn-ghost btn-icon" id="att_today">This month</button>
           </div>
         </div>
+        <div id="att_people"></div>
         <div id="attendanceWrap"></div>
       </div>
 
@@ -26009,17 +26088,43 @@ function lsTidyBarHTML(rows, nowMs){
 
 /* ---- WHO'S IN ------------------------------------------------------
 
-   Three states, one click each: in, absent, on paid leave. Deliberately
-   not a checkbox. "Absent" and "paid leave" are different things -- one
-   costs the worker a day's pay and the other does not -- and a single
-   tick box would have made the shop choose between recording the day and
-   recording it correctly.
+   A month at a time, as a calendar, because that is the shape of the
+   question. A register that showed one day could answer "was he in on
+   Tuesday" but not "how often is he not in", which is the thing a shop
+   actually wants to know and the thing a run of dates on a grid says at
+   a glance.
+
+   ONE PERSON AT A TIME. A grid showing six people's states in each cell
+   is a spreadsheet, not a calendar, and it stops being readable at about
+   four. The names sit above it and the month redraws under whichever is
+   picked -- and the strip at the top of the page still carries today's
+   count for the whole team, which is the one cross-team figure worth
+   having at all times.
+
+   THE GRID IS READ-ONLY-ISH. Clicking a day SELECTS it; the three states
+   are set in the bar underneath. A grid where clicking cycles a day
+   through in/absent/paid would be quicker and would also mean a
+   mis-click silently changes what somebody is paid. The states cost
+   money, so they get a deliberate press and a label, not a cycle.
 
    Present is the DEFAULT and writes nothing. The shop records the
    exceptions; a "present" row for everybody every day would be a
    thousand rows a year saying nothing happened. */
 let attDate = null;
-function currentAttDate(){ return attDate || todayISO(); }
+let attPerson = null;
+/* Written out rather than as one-liners on purpose. test/_extract.js
+   finds a function's body by looking for the brace that ENDS ITS LINE,
+   and a `function f(){ return x; }` has none -- so it walks on to the
+   next one it finds and drags everything in between into the extract.
+   A swallowed `const` is then declared twice and the whole scope throws.
+   Every other function in this file opens its brace at end of line; these
+   do too, so they can be tested. */
+function currentAttDate(){
+  return attDate || todayISO();
+}
+function currentAttMonth(){
+  return periodOf(currentAttDate());
+}
 
 const ATT_STATES = [
   {key:'present', label:'In'},
@@ -26027,122 +26132,294 @@ const ATT_STATES = [
   {key:'paid',    label:'Paid leave'},
 ];
 
+/* Monday-first, because the shop week is Monday to Saturday and a grid
+   that starts on Sunday puts the rest day in the middle of the working
+   week. Sunday is the seventh column and the one day of the seven the
+   26-day month does not pay for. */
+const ATT_DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+/* Small enough to sit inside a calendar square next to a word. The
+   shared ICON_ set is drawn for buttons and toolbars and is too heavy
+   at this size -- a 24px tick in a 15px slot reads as a smudge. */
+const ICON_ATT_IN    = '<svg class="att-i" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+const ICON_ATT_OUT   = '<svg class="att-i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const ICON_ATT_LEAVE = '<svg class="att-i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>';
+
+// "Thursday 13 Aug 2026". The weekday is the point: the editor sits
+// under a grid of numbered squares and the name of the day is what
+// makes it obvious which square is being changed.
+function fmtLongDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00Z');
+  if(isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString('en-UG',
+    {weekday:'long', day:'numeric', month:'short', year:'numeric', timeZone:'UTC'});
+}
+
+// 0 = Monday ... 6 = Sunday, from an ISO date, without a timezone
+// anywhere near it -- new Date('2026-08-01') is UTC midnight and
+// getDay() would read it in local time, which is a day out west of
+// Greenwich and has been the source of every off-by-one calendar bug
+// ever written.
+function attWeekdayIndex(iso){
+  const [y,m,d] = String(iso).split('-').map(Number);
+  return (new Date(Date.UTC(y, m-1, d)).getUTCDay() + 6) % 7;
+}
+function attIsRestDay(iso){
+  return attWeekdayIndex(iso) === 6;
+}
+
+// Every day of a YYYY-MM, in order.
+function attMonthDays(period){
+  const [y,m] = String(period).split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const out = [];
+  for(let d=1; d<=last; d++) out.push(`${period}-${String(d).padStart(2,'0')}`);
+  return out;
+}
+
+// Who the calendar is drawn for. Falls back to the first person on the
+// payroll so the panel is never showing an empty month because nobody
+// has clicked a name yet.
+function currentAttPerson(){
+  const on = staffOnPayroll();
+  if(!on.length) return null;
+  const chosen = on.find(s=> String(s.id) === String(attPerson));
+  return chosen || on.slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')))[0];
+}
+
 function renderAttendance(){
   const wrap = document.getElementById('attendanceWrap');
   if(!wrap) return;
-  const date = currentAttDate();
-  const box = document.getElementById('att_date');
-  box.value = date;
-  // No tomorrow to take a register for.
-  box.max = todayISO();
-  document.getElementById('att_next').disabled = date >= todayISO();
-  document.getElementById('att_today').disabled = date === todayISO();
+  const people = document.getElementById('att_people');
+  const period = currentAttMonth();
+  const thisMonth = periodOf(todayISO());
 
-  const a = attendanceForDay(date);
+  document.getElementById('att_month').textContent = periodLabel(period);
+  document.getElementById('att_next').disabled = period >= thisMonth;
+  document.getElementById('att_today').disabled = period === thisMonth;
 
-  if(!a.rows.length){
-    wrap.innerHTML = `<div class="empty">${a.notOnPayroll
-      ? `${a.notOnPayroll} ${a.notOnPayroll===1?'person is':'people are'} on the staff list, but nobody has a pay rate — so there is no wage to record a missed day against. Set how somebody is paid and they will appear here.`
+  const roster = staffOnPayroll().slice()
+    .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')));
+  const person = currentAttPerson();
+  const notOnPayroll = (data.staff||[]).filter(s=>
+    !(s.payBasis === 'monthly' || s.payBasis === 'daily')).length;
+
+  if(!person){
+    people.innerHTML = '';
+    wrap.innerHTML = `<div class="empty">${notOnPayroll
+      ? `${notOnPayroll} ${notOnPayroll===1?'person is':'people are'} on the staff list, but nobody has a pay rate — so there is no wage to record a missed day against. Set how somebody is paid and their month appears here.`
       : 'Nobody on the team yet. Add someone below.'}</div>`;
     return;
   }
 
-  const row = (r)=>{
-    const s = r.staff;
-    const daily = (r.due ? dueBasis(r.due) : s.payBasis) === 'daily';
-    /* What one day off costs THIS person, said on their own row. A day
-       is not worth the same to the man on 520,000 a month as to the one
-       on 260,000, and the person deciding whether to dock it is entitled
-       to know which before they click.
+  // The names. A row of them rather than a dropdown: a shop has a handful
+  // of people, and a dropdown hides how many there are behind a click.
+  people.innerHTML = `<div class="att-people">${roster.map(s=>{
+    const due = findDue('wage', s.id, period);
+    const missed = due ? dueAbsences(due).length : 0;
+    return `<button type="button" class="att-person${String(s.id)===String(person.id)?' on':''}"
+      data-staff="${esc(s.id)}" aria-pressed="${String(s.id)===String(person.id)}">
+      <span class="att-person-name">${esc(s.name)}</span>
+      ${missed ? `<span class="att-person-tag">${missed}</span>` : ''}
+    </button>`;
+  }).join('')}</div>`;
 
-       FROM THE DUE WHERE THERE IS ONE, from the staff member where there
-       is not. Merely looking at the register must not raise a month, so
-       on a day nobody has touched there is no due to read -- and reading
-       a missing one as zero put "0 UGX a day" against every name until
-       somebody was marked absent. */
-    const dayRate = r.due ? dueDayRate(r.due)
-      : s.payRate == null ? 0
-      : daily ? Number(s.payRate) : Number(s.payRate) / WAGE_DAYS_PER_MONTH;
-    const rateLabel = s.payRate == null ? 'no rate set' : `${fmtUGX(Math.round(dayRate))} a day`;
-    const cost = r.state === 'absent'
-      ? (daily ? 'counted in the days worked' : `−${fmtUGX(Math.round(dayRate))} today`)
-      : r.state === 'paid' ? 'no deduction'
-      : rateLabel;
-    return `<div class="att-row ${r.state}" data-staff="${esc(s.id)}">
-      <div class="att-who">
-        <div class="sc-avatar">${esc(nameInitials(s.name))}</div>
-        <div class="att-ident">
-          <div class="rost-name">${esc(s.name)}</div>
-          <div class="rost-sub">${daily ? 'Daily' : 'Monthly'} · ${esc(cost)}${
-            r.reason && r.reason !== 'Absent' && r.reason !== 'Leave' ? ` · ${esc(r.reason)}` : ''}</div>
-        </div>
-      </div>
-      <div class="att-pick" role="group" aria-label="${esc(s.name)} on ${esc(fmtShortDate(date))}">
-        ${ATT_STATES.map(st=> `<button type="button" class="att-opt${st.key===r.state?' on':''}"
-          data-staff="${esc(s.id)}" data-state="${st.key}"
-          aria-pressed="${st.key===r.state}">${esc(st.label)}</button>`).join('')}
-      </div>
-      <div class="att-month">${r.monthDays
-        ? `<span class="att-month-days">${r.monthDays} day${r.monthDays===1?'':'s'} this month</span>${
-            r.monthDeduction >= 0.5 ? `<span class="att-month-off">−${fmtUGX(Math.round(r.monthDeduction))}</span>` : ''}`
-        : '<span class="att-month-days quiet">nothing missed this month</span>'}
-      </div>
-      <button type="button" class="age-act att-open" data-staff="${esc(s.id)}"
-        title="Open the whole month for ${esc(s.name)}">The month</button>
-    </div>`;
+  const due = findDue('wage', person.id, period);
+  const daily = due ? dueBasis(due) === 'daily' : person.payBasis === 'daily';
+  const dayRate = due ? dueDayRate(due)
+    : person.payRate == null ? 0
+    : daily ? Number(person.payRate) : Number(person.payRate) / WAGE_DAYS_PER_MONTH;
+
+  const days = attMonthDays(period);
+  const today = todayISO();
+  const selected = currentAttDate();
+  const lead = attWeekdayIndex(days[0]);
+
+  const cell = (iso)=>{
+    const at = staffAttendanceOn(person.id, iso);
+    const dayNum = Number(iso.slice(8));
+    const future = iso > today;
+    const rest = attIsRestDay(iso);
+    /* A rest day the shop nonetheless docked somebody for. The 26-day
+       month already assumes Sundays off, so an absence on one takes a
+       day's pay for a day nobody was expected to work. Not blocked --
+       a shop that opens on Sunday is entitled to record it -- but never
+       silent. */
+    const oddRest = rest && at.state !== 'present';
+    const cls = [
+      'att-day',
+      future ? 'future' : '',
+      rest ? 'rest' : '',
+      at.state === 'absent' ? 'is-absent' : '',
+      at.state === 'paid' ? 'is-paid' : '',
+      iso === today ? 'is-today' : '',
+      iso === selected ? 'is-sel' : '',
+      oddRest ? 'odd' : '',
+    ].filter(Boolean).join(' ');
+    /* A day still to come carries no attendance claim -- but Sunday is
+       Sunday whether or not it has happened, so the rest days stay
+       labelled right across the month rather than stopping at today. */
+    const mark = future ? (rest ? '<span class="att-mark rest">Rest day</span>' : '')
+      : at.state === 'absent' ? `<span class="att-mark absent">${ICON_ATT_OUT}Absent</span>`
+      : at.state === 'paid' ? `<span class="att-mark paid">${ICON_ATT_LEAVE}Leave</span>`
+      : rest ? '<span class="att-mark rest">Rest day</span>'
+      : `<span class="att-mark in">${ICON_ATT_IN}In</span>`;
+    return `<button type="button" class="${cls}" data-date="${iso}"
+      ${future ? 'disabled aria-disabled="true"' : ''}
+      aria-pressed="${iso === selected}"
+      title="${esc(fmtShortDate(iso))}${future ? ' — has not happened yet' : ''}">
+      <span class="att-daynum">${dayNum}</span>
+      ${mark}
+      ${at.state !== 'present' && at.reason && at.reason !== 'Absent' && at.reason !== 'Leave'
+        ? `<span class="att-why">${esc(at.reason)}</span>` : ''}
+    </button>`;
   };
 
-  const lines = [];
-  if(a.notOnPayroll) lines.push(`<p class="att-note">${a.notOnPayroll}
-    ${a.notOnPayroll===1?'person on the staff list is':'people on the staff list are'} not shown:
-    nobody has set how ${a.notOnPayroll===1?'they are':'they are'} paid, so there is no wage to record a
-    missed day against.</p>`);
-  /* A day that has not been ticked is not a day everybody worked -- it
-     is a day nobody has said anything about. Worth saying on a register
-     that costs people money, because "all present" and "not filled in"
-     look identical here and only one of them is a claim. */
-  if(!a.absent && !a.onLeave) lines.push(`<p class="att-note">Nothing recorded for
-    ${esc(fmtShortDate(date))}. Everybody is treated as having worked — mark anybody who did not.</p>`);
+  const missedDays = due ? dueAbsences(due).length : 0;
+  const unpaidDays = due ? dueUnpaidAbsenceDays(due) : 0;
+  const off = due ? dueDeduction(due) : 0;
+  const gross = due ? (Number(due.rate)||0) : (person.payRate == null ? 0 : Number(person.payRate));
 
-  wrap.innerHTML = `<div class="att-sum">
-      <span class="att-chip in"><b>${a.present}</b> in</span>
-      <span class="att-chip out"><b>${a.absent}</b> absent</span>
-      <span class="att-chip leave"><b>${a.onLeave}</b> on paid leave</span>
-      <span class="att-when">${esc(date === todayISO() ? 'Today' : fmtShortDate(date))}</span>
+  /* What the month has come to, for the person on screen. The whole
+     reason somebody opens this panel on payday, and it was previously
+     only on the Payroll screen -- two clicks from the register that
+     produced the figure. */
+  const totals = daily
+    ? `<div class="att-total">
+         <span class="att-total-label">${esc(person.name)} · ${esc(periodLabel(period))}</span>
+         <b>${missedDays} day${missedDays===1?'':'s'} missed</b>
+         <span class="att-total-note">Nothing is deducted — a daily month is costed from the days
+           entered on Payroll &amp; rent, so days missed were never counted in.</span>
+       </div>`
+    : `<div class="att-total${off >= 0.5 ? ' warn' : ''}">
+         <span class="att-total-label">${esc(person.name)} · ${esc(periodLabel(period))}</span>
+         <b>${off >= 0.5 ? `${fmtUGX(Math.round(gross))} − ${fmtUGX(Math.round(off))} = ${fmtUGX(Math.round(Math.max(0, gross - off)))}`
+              : gross ? `${fmtUGX(Math.round(gross))} — nothing deducted` : 'No salary set'}</b>
+         <span class="att-total-note">${missedDays
+           ? `${missedDays} day${missedDays===1?'':'s'} recorded, ${unpaidDays} unpaid${
+               dayRate ? ` at ${fmtUGX(Math.round(dayRate))} a day` : ''}.`
+           : `Nothing missed${dayRate ? ` — a day is ${fmtUGX(Math.round(dayRate))}` : ''}.`}</span>
+       </div>`;
+
+  const at = staffAttendanceOn(person.id, selected);
+  const selFuture = selected > today;
+  const selInMonth = periodOf(selected) === period;
+  /* The editor names the day and the person in full. It is the control
+     that changes what somebody is paid, and "Absent" under a grid of
+     thirty-one numbered squares is not enough to be sure which square. */
+  const editor = !selInMonth ? `<div class="att-edit empty-ish">Pick a day above.</div>`
+    : selFuture ? `<div class="att-edit empty-ish">${esc(fmtLongDate(selected))} has not happened yet.</div>`
+    : `<div class="att-edit">
+        <div class="att-edit-head">
+          <div class="att-edit-day">${esc(fmtLongDate(selected))}</div>
+          <div class="att-edit-sub">${esc(person.name)}${attIsRestDay(selected)
+            ? ' · Sunday, which the 26-day month already treats as unpaid'
+            : dayRate ? ` · a day is ${fmtUGX(Math.round(dayRate))}` : ''}</div>
+        </div>
+        <div class="att-pick" role="group" aria-label="${esc(person.name)} on ${esc(fmtShortDate(selected))}">
+          ${ATT_STATES.map(st=> `<button type="button" class="att-opt${st.key===at.state?' on':''}"
+            data-state="${st.key}" aria-pressed="${st.key===at.state}">${esc(st.label)}</button>`).join('')}
+        </div>
+        <div class="att-edit-why">
+          <label for="att_reason">Reason</label>
+          <!-- Never disabled, even on a day that currently reads "In".
+               The natural order is to pick the day, say why, and THEN
+               press Absent; a box that only wakes up once the day is
+               already marked makes you press twice and silently drops
+               what you typed the first time. -->
+          <input id="att_reason" list="att_reasons" placeholder="Absent"
+            value="${esc(at.state === 'present' ? '' : (at.reason||''))}">
+          <datalist id="att_reasons">${ABSENCE_REASONS.map(r=> `<option value="${esc(r)}"></option>`).join('')}</datalist>
+        </div>
+      </div>`;
+
+  const lines = [];
+  if(notOnPayroll) lines.push(`<p class="att-note">${notOnPayroll}
+    ${notOnPayroll===1?'person on the staff list is':'people on the staff list are'} not here:
+    nobody has set how ${notOnPayroll===1?'they are':'they are'} paid, so there is no wage to record a
+    missed day against.</p>`);
+
+  wrap.innerHTML = `
+    ${totals}
+    <div class="att-cal" role="grid" aria-label="${esc(person.name)}, ${esc(periodLabel(period))}">
+      <div class="att-dow">${ATT_DOW.map((d,i)=>
+        `<span class="${i===6?'rest':''}">${d}</span>`).join('')}</div>
+      <div class="att-grid">
+        ${Array.from({length: lead}, ()=> '<span class="att-pad" aria-hidden="true"></span>').join('')}
+        ${days.map(cell).join('')}
+      </div>
     </div>
-    <div class="att-list">${a.rows.map(row).join('')}</div>
+    <div class="att-key">
+      <span class="att-key-item"><i class="k-in"></i>In</span>
+      <span class="att-key-item"><i class="k-absent"></i>Absent — a day's pay off</span>
+      <span class="att-key-item"><i class="k-paid"></i>Paid leave — recorded, nothing off</span>
+      <span class="att-key-item"><i class="k-rest"></i>Sunday, not part of the 26-day month</span>
+    </div>
+    ${editor}
     ${lines.join('')}`;
 
+  // ---- wiring ----
+  people.querySelectorAll('.att-person').forEach(b=> b.addEventListener('click', ()=>{
+    attPerson = b.dataset.staff;
+    renderAttendance();
+  }));
+  wrap.querySelectorAll('.att-day').forEach(b=> b.addEventListener('click', ()=>
+    selectAttDate(b.dataset.date)));
   wrap.querySelectorAll('.att-opt').forEach(b=> b.addEventListener('click', ()=>{
-    const res = setStaffAttendance(b.dataset.staff, currentAttDate(), b.dataset.state);
+    const reasonBox = document.getElementById('att_reason');
+    const typed = reasonBox ? reasonBox.value.trim() : '';
+    const res = setStaffAttendance(person.id, currentAttDate(), b.dataset.state);
     if(res && res.error){ toast(res.error); return; }
+    // A reason already typed applies to the day being set. Blank leaves
+    // whatever the writer defaulted to, which is 'Absent' or 'Leave'.
+    if(typed && b.dataset.state !== 'present'){
+      const d2 = findDue('wage', person.id, periodOf(currentAttDate()));
+      const a = d2 && dueAbsences(d2).find(x=> String(x.date)===String(currentAttDate()));
+      if(a){ a.reason = typed; saveData(); }
+    }
     renderAttendance();
     renderStaffTeamStrip();
     // The payroll screen reads the same rows, so it cannot be left
     // showing last minute's figures behind this one.
     if(document.getElementById('tab-payroll').style.display !== 'none') renderPayroll();
   }));
-  wrap.querySelectorAll('.att-open').forEach(b=> b.addEventListener('click', ()=>{
-    const due = ensureWageDue(b.dataset.staff, periodOf(currentAttDate()));
-    if(!due){ toast('They are not on the payroll — set how they are paid first'); return; }
-    openAbsences(due.id);
-  }));
+  const reasonBox = document.getElementById('att_reason');
+  if(reasonBox) reasonBox.addEventListener('change', ()=>{
+    const d2 = findDue('wage', person.id, periodOf(currentAttDate()));
+    const a = d2 && dueAbsences(d2).find(x=> String(x.date)===String(currentAttDate()));
+    if(!a) return;
+    a.reason = reasonBox.value.trim() || (a.paid ? 'Leave' : 'Absent');
+    saveData();
+    renderAttendance();
+  });
 }
 
-function goToAttDate(date){
-  if(date > todayISO()) return;
-  attDate = date;
+/* Picking a day. A future day is refused here as well as being rendered
+   disabled: the button carries the guard for the mouse, this carries it
+   for everything else, and the day being selected is what the editor
+   underneath then offers to change somebody's pay for. */
+function selectAttDate(iso){
+  if(!iso || iso > todayISO()) return;
+  attDate = iso;
   renderAttendance();
 }
-document.getElementById('att_prev').addEventListener('click', ()=> goToAttDate(anShiftDate(currentAttDate(), -1)));
-document.getElementById('att_next').addEventListener('click', ()=> goToAttDate(anShiftDate(currentAttDate(), 1)));
-document.getElementById('att_today').addEventListener('click', ()=> goToAttDate(todayISO()));
-document.getElementById('att_date').addEventListener('change', (e)=>{
-  if(!e.target.value) return;
-  if(e.target.value > todayISO()){ toast('That day has not happened yet'); renderAttendance(); return; }
-  goToAttDate(e.target.value);
-});
 
+/* Moving the calendar. The SELECTED DAY moves with the month rather than
+   being cleared, so stepping back to July and forward again lands on the
+   day you were looking at instead of on nothing. Clamped to the month's
+   length, because the 31st of a 30-day month is not a day. */
+function goToAttMonth(period){
+  if(period > periodOf(todayISO())) return;
+  const days = attMonthDays(period);
+  const wanted = `${period}-${currentAttDate().slice(8)}`;
+  const landing = days.includes(wanted) ? wanted : days[days.length-1];
+  attDate = landing > todayISO() ? todayISO() : landing;
+  renderAttendance();
+}
+document.getElementById('att_prev').addEventListener('click', ()=> goToAttMonth(periodShift(currentAttMonth(), -1)));
+document.getElementById('att_next').addEventListener('click', ()=> goToAttMonth(periodShift(currentAttMonth(), 1)));
+document.getElementById('att_today').addEventListener('click', ()=>{ attDate = todayISO(); renderAttendance(); });
 function renderStaff(filter=''){
   renderStaffTeamStrip();
   renderAttendance();
