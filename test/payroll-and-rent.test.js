@@ -57,7 +57,9 @@ const NAMES = ['periodOf', 'currentPeriod', 'periodShift', 'periodEndDate', 'sta
   'newWageDue', 'ensureWageDue', 'staffAttendanceOn', 'setStaffAttendance', 'attendanceForDay',
   // The month calendar the register is drawn on.
   'attWeekdayIndex', 'attIsRestDay', 'attMonthDays', 'currentAttDate', 'currentAttMonth',
-  'goToAttMonth', 'selectAttDate'];
+  'goToAttMonth', 'selectAttDate',
+  // Weekly pay.
+  'basisDayRate', 'basisMonthCost', 'dueGross', 'dueFortnight'];
 
 const scope = compileScope([
   extractDeclaration(src, 'DUE_KINDS', 'index.html'),
@@ -65,6 +67,9 @@ const scope = compileScope([
   extractDeclaration(src, 'WAGE_DAYS_PER_MONTH', 'index.html'),
   extractDeclaration(src, 'ABSENCE_REASONS', 'index.html'),
   extractDeclaration(src, 'attDate', 'index.html'),
+  extractDeclaration(src, 'PAY_BASES', 'index.html'),
+  extractDeclaration(src, 'WAGE_DAYS_PER_WEEK', 'index.html'),
+  extractDeclaration(src, 'WAGE_DAYS_PER_FORTNIGHT', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -1003,6 +1008,123 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   const before = scope.currentAttDate();
   scope.goToAttMonth('2026-09');
   eq(scope.currentAttDate(), before, 'and next month is refused outright');
+}
+
+/* ---------- 21. paid by the week -----------------------------------
+ *
+ * "add a weekly rate, because we have some workers we pay every after
+ * two weeks". The RATE is a week; the shop hands over two weeks at a
+ * time. Those are different facts and the app has to hold both.
+ *
+ * SIX DAYS TO THE WEEK, AND SO 26 TO THE MONTH. The two constants are
+ * one fact stated twice. If they ever drift, a weekly worker's month
+ * stops agreeing with a monthly worker's, and the same missed day costs
+ * two different amounts depending on how somebody's pay was written up.
+ */
+{
+  t.check(/const WAGE_DAYS_PER_WEEK = 6;/.test(src), 'a week is six working days');
+  t.check(/const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_WEEK \* 2;/.test(src),
+    'and a fortnight is two of them, derived rather than typed again');
+
+  // 60,000 a week -> 10,000 a day -> 260,000 a month.
+  eq(scope.basisDayRate('weekly', 60000), 10000, 'a weekly rate divides by six to give a day');
+  eq(scope.basisMonthCost('weekly', 60000), 260000, 'and a month is that day across 26 of them');
+  eq(scope.basisDayRate('monthly', 260000), 10000,
+    'which is the SAME day rate a 260,000 salary gives — the two bases agree');
+  eq(scope.basisDayRate('daily', 10000), 10000, 'a daily rate is already a day');
+
+  /* A MONTHLY SALARY IS RETURNED AS ITSELF, not as its day rate times
+     26. Those are equal in arithmetic and not in floating point --
+     400000/26*26 is 400000.00000000006 -- and a salary that will not
+     compare equal to itself reports a settled month as owing a fraction
+     of a shilling for ever. */
+  eq(scope.basisMonthCost('monthly', 400000), 400000,
+    'a monthly salary comes back exactly, not through a division and a multiplication');
+  t.check(scope.basisMonthCost('daily', 15000) === null,
+    'a daily rate has no month — what it costs follows the days worked');
+  t.check(scope.basisMonthCost('weekly', null) === null, 'and no rate has no month either');
+}
+
+/* ---------- 22. a weekly month, and days missed from it ------------- */
+{
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000),
+    staff('S2', 'Monthly Musa', 'monthly', 260000),
+    staff('S3', 'Daily Okello', 'daily', 15000)], []);
+  scope.generateDuesForPeriod('2026-08');
+
+  const w = wageFor('Weekly Wasswa');
+  eq(w.basis, 'weekly', 'the basis is snapshot onto the due like any other');
+  eq(w.rate, 60000, 'and the rate stored is the WEEK, as it was agreed');
+  eq(w.amount, 260000, 'but the month is raised costed, at what the week comes to over 26 days');
+  eq(scope.dueGross(w), 260000, 'the gross is the month, not the week');
+  eq(scope.dueDayRate(w), 10000, 'a day is a sixth of the week');
+  eq(scope.dueFortnight(w), 120000, 'and a fortnight is twelve days — what the shop hands over');
+
+  /* A WEEKLY MONTH DEDUCTS. It is known up front, exactly like a salary,
+     so a day missed comes off it. Only the daily basis is exempt, and
+     only because its days were never counted in. */
+  scope.addDueAbsence(w.id, '2026-08-03', 'Absent', false);
+  eq(scope.dueDeduction(w), 10000, 'one unpaid day off a weekly month costs a day');
+  eq(w.amount, 250000, 'and the month is recosted');
+  scope.addDueAbsence(w.id, '2026-08-04', 'Sick', true);
+  eq(w.amount, 250000, 'a paid day is recorded and costs nothing, same as anywhere else');
+
+  // The two bases agree about the same absence.
+  scope.addDueAbsence(wageFor('Monthly Musa').id, '2026-08-03', 'Absent', false);
+  eq(scope.dueDeduction(wageFor('Monthly Musa')), 10000,
+    'and a monthly worker on the same money loses exactly the same for the same day');
+  eq(wageFor('Monthly Musa').amount, 250000, 'down to the shilling');
+
+  /* THE CAP IS THE MONTH, NOT THE WEEK. Reading d.rate as the ceiling
+     would stop docking a weekly worker after six days -- a sixth of what
+     the month is worth -- and quietly pay them for the rest of it. */
+  const o = wageFor('Weekly Wasswa');
+  o.absences = Array.from({ length: 40 }, (_, i) => {
+    const d = String((i % 28) + 1).padStart(2, '0');
+    return { date: `2026-08-${d}`, reason: 'Absent', paid: false };
+  }).filter((a, i, arr) => arr.findIndex((x) => x.date === a.date) === i);
+  scope.recostDue(o.id);
+  eq(scope.dueDeduction(o), 260000, 'more days missed than the month has caps at the whole MONTH');
+  eq(o.amount, 0, 'so the month costs nothing, and never less');
+}
+
+/* ---------- 23. weekly is on the payroll, and is a committed cost --- */
+{
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000),
+    staff('S2', 'Half-set Peter', 'weekly', null),
+    staff('S3', 'Unset Joan', null, null)], []);
+  eq(scope.staffOnPayroll().length, 2, 'a weekly worker is on the payroll');
+  eq(scope.staffWithoutPayRate().length, 2,
+    'and one with no rate agreed is counted as not set up, like any other basis');
+
+  scope.generateDuesForPeriod('2026-08');
+  t.check(wageFor('Half-set Peter').amount === null,
+    'a weekly month with no rate agreed is raised UNCOSTED, not at zero');
+  eq(scope.dueBasis(wageFor('Half-set Peter')), 'weekly', 'with its basis still recorded');
+
+  const pos = scope.payrollPosition('2026-08');
+  eq(pos.known, 260000, 'the payroll counts the costed weekly month');
+  eq(pos.uncostedCount, 1, 'and reports the one it cannot cost rather than folding it in at nothing');
+
+  /* A weekly wage is a STANDING PROMISE, the same as a salary -- it is
+     owed whether or not a thing is sold. Leaving it out of the breakeven
+     floor understates what the shop has to cover by a whole wage. */
+  eq(scope.basisMonthCost('weekly', 60000), 260000,
+    'and the breakeven floor carries it across the month before adding it');
+}
+
+/* ---------- 24. an older due, raised before weekly existed ---------- */
+{
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000)], []);
+  scope.generateDuesForPeriod('2026-08');
+  const w = wageFor('Weekly Wasswa');
+
+  // A due from before the basis was stored falls back to the staff member.
+  delete w.basis;
+  eq(scope.dueBasis(w), 'weekly', 'an older due with no basis asks the staff member');
+  data.staff = [];
+  eq(scope.dueBasis(w), 'monthly',
+    'and one whose worker is gone falls back to monthly, which keeps a figure on the screen');
 }
 
 process.exit(t.done() ? 1 : 0);

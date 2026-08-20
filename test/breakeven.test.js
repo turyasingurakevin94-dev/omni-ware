@@ -27,7 +27,7 @@
  *
  * Run: node test/breakeven.test.js   (or: npm test)
  */
-const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('breakeven');
 const src = read('index.html');
@@ -35,10 +35,15 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 
 const data = { rentAgreements: [], staff: [] };
 const NAMES = ['rentAgreementsFor', 'staffOnPayroll', 'staffWithoutPayRate',
-  'committedMonthlyCost', 'breakevenPosition', 'periodDays'];
+  'committedMonthlyCost', 'breakevenPosition', 'periodDays', 'basisMonthCost'];
 const scope = compileScope([
   // periodDays guards itself with monthsBetween, so that comes too.
   extractFunction(src, 'monthsBetween', 'index.html'),
+  // Which bases are on the payroll at all, and what a week costs a month.
+  extractDeclaration(src, 'PAY_BASES', 'index.html'),
+  extractDeclaration(src, 'WAGE_DAYS_PER_MONTH', 'index.html'),
+  extractDeclaration(src, 'WAGE_DAYS_PER_WEEK', 'index.html'),
+  extractFunction(src, 'basisDayRate', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], { data, currentPeriod: () => '2026-08' }, NAMES);
 

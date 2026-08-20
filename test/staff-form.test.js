@@ -101,7 +101,9 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
 {
   const list = scope.bases();
   eq(list[0].key, '', 'not being on the payroll is a first-class choice, not an empty dropdown slot');
-  eq(list.length, 3, 'with monthly and daily beside it');
+  eq(list.length, 4, 'with monthly, weekly and daily beside it');
+  eq(list.map((b) => b.key).join(','), ',monthly,weekly,daily',
+    'ordered longest period first, so the rate box means less money as the eye travels right');
 
   const sync = (/function syncStaffPayFields[\s\S]*?\n\}\n/.exec(code) || [''])[0];
   /* The commitment, said here rather than discovered on the payroll
@@ -120,8 +122,12 @@ const modal = (/<div class="modal-overlay" id="staffModal">[\s\S]*?\n<\/div>\n/.
     'the rate is hidden until there is a basis for it to mean something');
   t.check(/if\(!basis\) input\.value = '';/.test(sync),
     'and cleared, so a rate cannot survive being taken off the payroll');
-  t.check(/label\.textContent = basis === 'daily' \? 'Each day' : 'Each month';/.test(sync),
-    'the label says which, since one reading is twenty times the other');
+  /* The label is the only thing on the form that says what the number
+     means, and the three readings are twenty-six, four and one times
+     each other -- so a wrong one is not a cosmetic slip. */
+  t.check(/label\.textContent = basis === 'daily' \? 'Each day'/.test(sync)
+    && /basis === 'weekly' \? 'Each week' : 'Each month'/.test(sync),
+    'the label says which of the three, since one reading is twenty-six times another');
 
   /* Still null on the way out, never 0. Somebody half set up has not
      agreed to work for nothing. */

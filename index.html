@@ -41,6 +41,11 @@
     --ow-verdigris-soft:#E2EFEB;
     --ow-amber:#B0700A;
     --ow-amber-soft:#FBEFD9;
+    /* A tint, not a fill: soft is right behind a chip-sized label and far
+       too loud spread across a whole calendar square. Named rather than
+       written into the rule so it is reviewable alongside the family it
+       belongs to, like every other colour in this file. */
+    --ow-amber-faint:#FEFAF2;
     --ow-amber-ink:#7A4A02;
     --ow-crimson:#7F1D1A;
     --ow-crimson-soft:#F7E4E2;
@@ -3060,17 +3065,23 @@
   .att-mark.in{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
   .att-mark.absent{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .att-mark.paid{background:var(--ow-steel-100);color:var(--ow-ink-600);}
-  .att-mark.rest{background:transparent;color:var(--ow-steel-400);padding-left:0;}
+  /* ink-600, not steel-400. This is text meant to be read, and steel-400
+     on the muted cell behind it -- dimmed again on a future day -- came
+     out around 1.6:1, which is a label nobody can actually read. */
+  .att-mark.rest{background:transparent;color:var(--ow-ink-600);padding-left:0;}
   .att-why{font-size:10.5px;color:var(--ink-soft);line-height:1.25;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
   .att-day.rest{background:var(--bg);}
   .att-day.rest .att-daynum{color:var(--ow-steel-400);}
-  .att-day.is-absent{border-color:var(--ow-amber);background:#FEFAF2;}
+  .att-day.is-absent{border-color:var(--ow-amber);background:var(--ow-amber-faint);}
   .att-day.is-paid{border-color:var(--ow-steel-400);}
   /* A day that has not happened. Kept in the grid -- a month with its
      tail cut off does not read as a month -- but plainly not actionable. */
-  .att-day.future{background:var(--bg);border-style:dashed;cursor:default;opacity:.55;}
+  /* Dimmed, not erased. The dashed border already says "not yet", so the
+     opacity only has to take the cell out of the foreground -- at .55 it
+     was also taking the Rest day label below legibility. */
+  .att-day.future{background:var(--bg);border-style:dashed;cursor:default;opacity:.72;}
   .att-day.is-today .att-daynum{position:relative;color:var(--accent);}
   .att-day.is-today .att-daynum::after{content:'';position:absolute;left:0;right:0;bottom:-3px;
     height:2px;border-radius:2px;background:var(--accent);}
@@ -3118,7 +3129,15 @@
     .att-day{min-height:58px;padding:6px;gap:4px;align-items:center;}
     .att-mark{padding:2px 5px;font-size:0;gap:0;width:16px;height:16px;
       justify-content:center;border-radius:999px;}
-    .att-mark.rest{background:var(--ow-steel-100);}
+    /* Outlined, not filled. Paid leave is already a filled grey dot at
+       this size, and giving the rest day the same grey left two states
+       telling apart only by the dash glyph inside one of them. The
+       outline matches this state's own swatch in the key. */
+    .att-mark.rest{background:transparent;border:1px solid var(--ow-steel-400);}
+    /* The primary control on a phone -- it is how you change person --
+       and it was the one thing in this query left under the 44px the
+       buttons beside it are held to. */
+    .att-person{min-height:44px;}
     .att-why{display:none;}
     .att-edit{flex-direction:column;align-items:stretch;}
     .att-pick{width:100%;}
@@ -26202,8 +26221,7 @@ function renderAttendance(){
   const roster = staffOnPayroll().slice()
     .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')));
   const person = currentAttPerson();
-  const notOnPayroll = (data.staff||[]).filter(s=>
-    !(s.payBasis === 'monthly' || s.payBasis === 'daily')).length;
+  const notOnPayroll = (data.staff||[]).filter(s=> !PAY_BASES.includes(s.payBasis)).length;
 
   if(!person){
     people.innerHTML = '';
@@ -26226,10 +26244,12 @@ function renderAttendance(){
   }).join('')}</div>`;
 
   const due = findDue('wage', person.id, period);
-  const daily = due ? dueBasis(due) === 'daily' : person.payBasis === 'daily';
-  const dayRate = due ? dueDayRate(due)
-    : person.payRate == null ? 0
-    : daily ? Number(person.payRate) : Number(person.payRate) / WAGE_DAYS_PER_MONTH;
+  /* The DUE's basis where there is one, the person's where there is not.
+     Merely looking at a month must not raise it, so on an untouched
+     month there is no snapshot to read and the staff record answers. */
+  const basis = due ? dueBasis(due) : (PAY_BASES.includes(person.payBasis) ? person.payBasis : 'monthly');
+  const daily = basis === 'daily';
+  const dayRate = due ? dueDayRate(due) : basisDayRate(basis, person.payRate);
 
   const days = attMonthDays(period);
   const today = todayISO();
@@ -26241,12 +26261,17 @@ function renderAttendance(){
     const dayNum = Number(iso.slice(8));
     const future = iso > today;
     const rest = attIsRestDay(iso);
-    /* A rest day the shop nonetheless docked somebody for. The 26-day
-       month already assumes Sundays off, so an absence on one takes a
-       day's pay for a day nobody was expected to work. Not blocked --
-       a shop that opens on Sunday is entitled to record it -- but never
-       silent. */
-    const oddRest = rest && at.state !== 'present';
+    /* A rest day the shop nonetheless DOCKED somebody for. The 26-day
+       month already assumes Sundays off, so an unpaid absence on one
+       takes a day's pay for a day nobody was expected to work. Not
+       blocked -- a shop that opens on Sunday is entitled to record it --
+       but never silent.
+
+       Only where money actually moves. Paid leave deducts nothing, and
+       neither does any absence on a daily-paid month, so flagging those
+       put the deduction colour on a day that cost nothing -- on the same
+       screen whose own key says amber means a day's pay off. */
+    const oddRest = rest && at.state === 'absent' && !daily;
     const cls = [
       'att-day',
       future ? 'future' : '',
@@ -26279,7 +26304,11 @@ function renderAttendance(){
   const missedDays = due ? dueAbsences(due).length : 0;
   const unpaidDays = due ? dueUnpaidAbsenceDays(due) : 0;
   const off = due ? dueDeduction(due) : 0;
-  const gross = due ? (Number(due.rate)||0) : (person.payRate == null ? 0 : Number(person.payRate));
+  /* THE MONTH, not the rate. Those are the same number only for a
+     monthly worker -- a weekly rate is one week, and reading it as the
+     month here would have shown a man on 60,000 a week losing a day out
+     of 60,000 instead of out of the 260,000 he is actually owed. */
+  const gross = due ? (dueGross(due) || 0) : (basisMonthCost(basis, person.payRate) || 0);
 
   /* What the month has come to, for the person on screen. The whole
      reason somebody opens this panel on payday, and it was previously
@@ -26293,13 +26322,18 @@ function renderAttendance(){
            entered on Payroll &amp; rent, so days missed were never counted in.</span>
        </div>`
     : `<div class="att-total${off >= 0.5 ? ' warn' : ''}">
-         <span class="att-total-label">${esc(person.name)} · ${esc(periodLabel(period))}</span>
+         <span class="att-total-label">${esc(person.name)} · ${esc(BASIS_LABELS[basis]||'Monthly')} · ${esc(periodLabel(period))}</span>
          <b>${off >= 0.5 ? `${fmtUGX(Math.round(gross))} − ${fmtUGX(Math.round(off))} = ${fmtUGX(Math.round(Math.max(0, gross - off)))}`
-              : gross ? `${fmtUGX(Math.round(gross))} — nothing deducted` : 'No salary set'}</b>
+              : gross ? `${fmtUGX(Math.round(gross))} — nothing deducted` : 'No rate set'}</b>
          <span class="att-total-note">${missedDays
            ? `${missedDays} day${missedDays===1?'':'s'} recorded, ${unpaidDays} unpaid${
                dayRate ? ` at ${fmtUGX(Math.round(dayRate))} a day` : ''}.`
-           : `Nothing missed${dayRate ? ` — a day is ${fmtUGX(Math.round(dayRate))}` : ''}.`}</span>
+           : `Nothing missed${dayRate ? ` — a day is ${fmtUGX(Math.round(dayRate))}` : ''}.`}${
+           /* What the shop actually counts out, for the one basis whose
+              month is not what it hands over. */
+           basis === 'weekly' && dayRate
+             ? ` Paid every second week — about ${fmtUGX(Math.round(dayRate * WAGE_DAYS_PER_FORTNIGHT))} a time.`
+             : ''}</span>
        </div>`;
 
   const at = staffAttendanceOn(person.id, selected);
@@ -26384,6 +26418,19 @@ function renderAttendance(){
     // showing last minute's figures behind this one.
     if(document.getElementById('tab-payroll').style.display !== 'none') renderPayroll();
   }));
+  /* SAVES, AND DOES NOT REDRAW. `change` on a text box fires on blur,
+     and pressing a button blurs it on MOUSEDOWN -- so redrawing from
+     here tore the pressed button out of the document between mousedown
+     and mouseup, no click was ever dispatched to it, and the state
+     change was dropped. The panel redrew, showing the new reason, which
+     made it look like something had happened: a day stayed Absent while
+     the operator watched the row change and believed they had made it
+     paid leave, and a day's pay stayed docked.
+
+     The reason is written here and shown at the next redraw, which any
+     button press causes anyway -- and the button's own handler already
+     applies whatever is typed in this box, so nothing is lost by not
+     redrawing now. */
   const reasonBox = document.getElementById('att_reason');
   if(reasonBox) reasonBox.addEventListener('change', ()=>{
     const d2 = findDue('wage', person.id, periodOf(currentAttDate()));
@@ -26391,7 +26438,6 @@ function renderAttendance(){
     if(!a) return;
     a.reason = reasonBox.value.trim() || (a.paid ? 'Leave' : 'Absent');
     saveData();
-    renderAttendance();
   });
 }
 
@@ -26542,6 +26588,7 @@ function sfUpdateRoleWarning(){
 const SF_BASES = [
   {key:'', name:'Not on the payroll', hint:'No wage is raised for them at all.'},
   {key:'monthly', name:'Monthly salary', hint:''},
+  {key:'weekly', name:'Weekly rate', hint:''},
   {key:'daily', name:'Daily rate', hint:''},
 ];
 
@@ -26614,7 +26661,8 @@ function syncStaffPayFields(){
   // is taken away rather than shown greyed and unexplained.
   row.style.display = basis ? '' : 'none';
   if(!basis) input.value = '';
-  label.textContent = basis === 'daily' ? 'Each day' : 'Each month';
+  label.textContent = basis === 'daily' ? 'Each day'
+    : basis === 'weekly' ? 'Each week' : 'Each month';
 
   const rate = Number(input.value) || 0;
   const month = periodLabel(currentPeriod());
@@ -26625,11 +26673,25 @@ function syncStaffPayFields(){
     out.className = 'sf-consequence quiet';
     out.textContent = basis === 'monthly'
       ? 'Put in the salary and this will say what it commits the shop to.'
+      : basis === 'weekly'
+      ? 'Put in the weekly rate and this will say what a day and a month come to.'
       : 'Put in the day rate and this will say how the month is worked out.';
   } else if(basis === 'monthly'){
     out.className = 'sf-consequence';
     out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> is raised on the payroll at the end of
       every month, starting ${esc(month)}, until this is changed.`;
+  } else if(basis === 'weekly'){
+    /* Spelled all the way out to the month, because that is what the
+       payroll will actually raise and it is not the number being typed.
+       Somebody entering 60,000 is agreeing to 260,000 a month, and a
+       form that shows only the 60,000 lets that be a surprise. */
+    out.className = 'sf-consequence';
+    out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each week — that is
+      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate))))} a day over a ${WAGE_DAYS_PER_WEEK}-day week,
+      and <b>${esc(fmtUGX(Math.round(basisMonthCost('weekly', rate))))}</b> for a month of
+      ${WAGE_DAYS_PER_MONTH} working days, raised on the payroll at the end of every month starting
+      ${esc(month)}. Paying every second week comes to about
+      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate) * WAGE_DAYS_PER_FORTNIGHT)))}.`;
   } else {
     out.className = 'sf-consequence';
     out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each day worked. A month costs that
@@ -29875,10 +29937,10 @@ function periodShift(period, months){
    screen has to say out loud rather than quietly costing them nothing
    and reporting a month that is short by one person's wages. */
 function staffOnPayroll(){
-  return (data.staff||[]).filter(s=> s.payBasis === 'monthly' || s.payBasis === 'daily');
+  return (data.staff||[]).filter(s=> PAY_BASES.includes(s.payBasis));
 }
 function staffWithoutPayRate(){
-  return (data.staff||[]).filter(s=> !(s.payBasis === 'monthly' || s.payBasis === 'daily') || s.payRate == null);
+  return (data.staff||[]).filter(s=> !PAY_BASES.includes(s.payBasis) || s.payRate == null);
 }
 // A tenancy is live in a month if it had started and had not ended.
 function rentAgreementsFor(period){
@@ -29926,26 +29988,29 @@ function generateDuesForPeriod(period){
 // shop would find on its balance sheet having only said "he did not come
 // in on Tuesday".
 function newWageDue(s, period){
-  const monthly = s.payBasis === 'monthly';
-  return {
+  const due = {
     id: allocRowId('due'), kind:'wage', refId:String(s.id), period,
     // Wages fall due at the end of the month they were worked.
     dueDate: periodEndDate(period),
-    /* A monthly wage is known the moment the month exists. A daily one
-       is NOT -- it cannot be costed until somebody counts the days, and
-       that is why this is null rather than 0. Zero would be a claim
-       that they worked no days. */
-    amount: monthly ? (s.payRate==null ? null : Number(s.payRate)) : null,
+    amount: null,
     days: null,
     rate: s.payRate==null ? 0 : Number(s.payRate),
     /* Snapshot alongside the rate, and for the same reason: how this
        month is worked out is settled when it is raised. Moving somebody
        from a day rate to a salary in September must not change what
        August cost or how August's absences were priced. */
-    basis: monthly ? 'monthly' : 'daily',
+    basis: PAY_BASES.includes(s.payBasis) ? s.payBasis : 'monthly',
     absences: [],
     paid:0, notes:'', payments:[],
   };
+  /* Costed by the one function that costs anything, rather than by a
+     second copy of the rule written out here. A monthly or weekly month
+     is known the moment the month exists; a DAILY one is not -- it
+     cannot be costed until somebody counts the days, and dueCostOf
+     returns null for it, which is why this is null rather than 0. Zero
+     would be a claim that they worked no days. */
+  due.amount = s.payRate == null ? null : dueCostOf(due);
+  return due;
 }
 
 /* The month one absence has to be written on, raised if it does not
@@ -29956,7 +30021,7 @@ function ensureWageDue(staffId, period){
   const existing = findDue('wage', staffId, period);
   if(existing) return existing;
   const s = (data.staff||[]).find(x=> String(x.id)===String(staffId));
-  if(!s || !(s.payBasis === 'monthly' || s.payBasis === 'daily')) return null;
+  if(!s || !PAY_BASES.includes(s.payBasis)) return null;
   if(!data.dues) data.dues = [];
   const due = newWageDue(s, period);
   data.dues.push(due);
@@ -29999,11 +30064,27 @@ function periodEndDate(period){
    and nobody could explain to the person losing it. */
 const WAGE_DAYS_PER_MONTH = 26;
 
+/* Six, and the reason 26 is 26. A weekly rate buys this many days, so
+   the two constants are one fact stated twice and must move together:
+   26 / 6 is how many weeks the month is worth, and it is the only place
+   a weekly rate becomes a monthly one. */
+const WAGE_DAYS_PER_WEEK = 6;
+
+// What the shop actually hands over to a weekly worker, because it pays
+// them every second week rather than every week.
+const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_WEEK * 2;
+
+const PAY_BASES = ['monthly', 'weekly', 'daily'];
+
+// What each basis is called on screen. One place, so the payroll row,
+// the register and the staff form cannot each invent their own word.
+const BASIS_LABELS = {monthly:'Monthly', weekly:'Weekly', daily:'Daily'};
+
 const ABSENCE_REASONS = ['Absent', 'Sick', 'Leave', 'Suspended', 'Other'];
 
 function dueAbsences(d){ return Array.isArray(d && d.absences) ? d.absences : []; }
 
-/* Monthly or daily, for a wage due.
+/* Monthly, weekly or daily, for a wage due.
 
    SNAPSHOT ONTO THE DUE when it is raised, for the same reason the rate
    is: moving somebody off a day rate and onto a salary in August must
@@ -30012,15 +30093,63 @@ function dueAbsences(d){ return Array.isArray(d && d.absences) ? d.absences : []
    monthly, which is the basis that keeps a figure on the screen rather
    than the one that quietly puts the month back to uncosted. */
 function dueBasis(d){
-  if(d.basis === 'monthly' || d.basis === 'daily') return d.basis;
+  if(PAY_BASES.includes(d.basis)) return d.basis;
   const s = (data.staff||[]).find(x=> String(x.id)===String(d.refId));
-  return s && s.payBasis === 'daily' ? 'daily' : 'monthly';
+  return s && PAY_BASES.includes(s.payBasis) && s.payBasis !== 'monthly' ? s.payBasis : 'monthly';
+}
+
+/* One day's pay, from a basis and the rate quoted against it. Taken
+   apart from the due so the staff form and the register can ask it of
+   somebody whose month has not been raised yet -- reading a missing due
+   as a rate of nothing put "0 UGX a day" against every name. */
+function basisDayRate(basis, rate){
+  if(rate === null || rate === undefined || rate === '') return 0;
+  const n = Number(rate) || 0;
+  if(basis === 'daily') return n;
+  if(basis === 'weekly') return n / WAGE_DAYS_PER_WEEK;
+  return n / WAGE_DAYS_PER_MONTH;
+}
+
+/* What a full month costs somebody on this basis, before any day is
+   deducted. Null for a daily worker: their month is not a commitment at
+   all -- what they cost follows the days worked, which follows the trade.
+
+   MONTHLY IS RETURNED AS ITSELF, not as its day rate times 26. Those are
+   the same number in arithmetic and not in floating point: 400000/26*26
+   is 400000.00000000006, and a salary that will not compare equal to
+   itself is the sort of thing that reports a settled month as owing a
+   fraction of a shilling forever. */
+function basisMonthCost(basis, rate){
+  if(rate === null || rate === undefined || rate === '') return null;
+  if(basis === 'monthly') return Number(rate) || 0;
+  if(basis === 'weekly') return basisDayRate('weekly', rate) * WAGE_DAYS_PER_MONTH;
+  return null;
 }
 
 // What one day of this due is worth. Only ever asked of a wage.
 function dueDayRate(d){
-  const rate = Number(d.rate)||0;
-  return dueBasis(d) === 'daily' ? rate : rate / WAGE_DAYS_PER_MONTH;
+  return basisDayRate(dueBasis(d), d.rate);
+}
+
+// What the shop hands a weekly worker each time it pays them.
+function dueFortnight(d){
+  return dueDayRate(d) * WAGE_DAYS_PER_FORTNIGHT;
+}
+
+/* The month before anything is taken off it -- what the row shows struck
+   through when days have been missed.
+
+   NOT `d.rate`, which is only the same figure for a monthly worker. A
+   weekly rate is one week, so reading it as the month would cap the
+   deduction at a sixth of what the month is worth and quietly stop
+   docking somebody after their first missed week. */
+function dueGross(d){
+  if(d.kind !== 'wage') return Number(d.amount) || 0;
+  const basis = dueBasis(d);
+  if(basis === 'daily'){
+    return d.days === null || d.days === undefined ? null : Number(d.days) * (Number(d.rate)||0);
+  }
+  return basisMonthCost(basis, d.rate) || 0;
 }
 
 /* Days that actually come off the pay: the absences NOT marked paid. A
@@ -30038,8 +30167,8 @@ function dueUnpaidAbsenceDays(d){
    against a 26-day month would otherwise produce a negative wage, which
    is the shop billing its own staff. */
 function dueDeduction(d){
-  if(d.kind !== 'wage' || dueBasis(d) !== 'monthly') return 0;
-  const gross = Number(d.rate)||0;
+  if(d.kind !== 'wage' || dueBasis(d) === 'daily') return 0;
+  const gross = dueGross(d) || 0;
   return Math.min(gross, dueUnpaidAbsenceDays(d) * dueDayRate(d));
 }
 
@@ -30055,13 +30184,13 @@ function dueCostOf(d){
   if(dueBasis(d) === 'daily'){
     return d.days === null || d.days === undefined ? null : Number(d.days) * (Number(d.rate)||0);
   }
-  /* A monthly month raised for somebody with no salary agreed is
-     UNCOSTED, and stays that way. Its snapshot rate is 0 -- a stand-in
-     for a figure nobody has given, not a wage of nothing -- so deducting
-     from it would turn "we do not know what this costs" into a confident
-     zero, which is the one mistake this whole screen exists to avoid. */
+  /* A month raised for somebody with no rate agreed is UNCOSTED, and
+     stays that way. Its snapshot rate is 0 -- a stand-in for a figure
+     nobody has given, not a wage of nothing -- so deducting from it
+     would turn "we do not know what this costs" into a confident zero,
+     which is the one mistake this whole screen exists to avoid. */
   if(!(Number(d.rate)||0) && (d.amount === null || d.amount === undefined)) return null;
-  return Math.max(0, (Number(d.rate)||0) - dueDeduction(d));
+  return Math.max(0, dueGross(d) - dueDeduction(d));
 }
 
 // Writes it back. Every path that changes days worked or days missed
@@ -30538,6 +30667,10 @@ function renderPayrollDues(){
     // moved onto a salary in September must not make August's row
     // suddenly stop offering the days box that costed it.
     const daily = wage && dueBasis(d) === 'daily';
+    // A weekly worker is paid every second week, so the row says what
+    // one hand-over comes to -- the figure the shop is about to count
+    // out, which is not the month it is looking at.
+    const weekly = wage && dueBasis(d) === 'weekly';
     const missed = dueAbsences(d).length;
     const off = dueDeduction(d);
     const overpaid = dueOverpaid(d);
@@ -30569,7 +30702,10 @@ function renderPayrollDues(){
     return `<tr class="${settled && overpaid <= 0.5 ?'pr-settled':''}">
       <td>
         <div class="pr-name">${esc(dueName(d))}</div>
-        <div class="pr-sub">${esc((DUE_KINDS[d.kind]||{}).label||'')}${daily?` · ${fmtUGX(Math.round(d.rate))} a day`:''}</div>
+        <div class="pr-sub">${esc((DUE_KINDS[d.kind]||{}).label||'')}${
+          daily ? ` · ${fmtUGX(Math.round(d.rate))} a day`
+          : weekly ? ` · ${fmtUGX(Math.round(d.rate))} a week · fortnight ≈ ${fmtUGX(Math.round(dueFortnight(d)))}`
+          : ''}</div>
       </td>
       <td>${daily
         ? `<input type="number" min="0" step="any" class="pr-days" data-id="${d.id}"
@@ -30578,7 +30714,7 @@ function renderPayrollDues(){
       <td>${missCell}</td>
       <td class="price">${bal===null
         ? '<span class="pr-quiet">not costed</span>'
-        : `${off >= 0.5 ? `<span class="pr-gross">${fmtUGX(Math.round(Number(d.rate)||0))}</span>` : ''}<span class="age-amt">${fmtUGX(Math.round(d.amount))}</span>`}</td>
+        : `${off >= 0.5 ? `<span class="pr-gross">${fmtUGX(Math.round(dueGross(d)||0))}</span>` : ''}<span class="age-amt">${fmtUGX(Math.round(d.amount))}</span>`}</td>
       <td class="price">${(Number(d.paid)||0) ? fmtUGX(Math.round(d.paid)) : '<span class="pr-quiet">—</span>'}</td>
       <td class="price">${bal===null ? '<span class="pr-quiet">—</span>'
         : overpaid > 0.5 ? `<b title="Paid more than this month turned out to cost">+${fmtUGX(Math.round(overpaid))}</b>`
@@ -30636,7 +30772,15 @@ async function openDuePayment(dueId){
   if(!d) return;
   const bal = dueBalance(d);
   if(bal === null){ toast('Enter the days worked first'); return; }
-  const raw = prompt(`Pay ${dueName(d)} for ${periodLabel(d.period)}.\n\nStill owed: ${fmtUGX(Math.round(bal))}\n\nHow much are you paying?`, String(Math.round(bal)));
+  /* A weekly worker is paid every second week, so the whole balance is
+     the wrong default to hand somebody halfway through the month. The
+     fortnight is offered as the figure, and the balance is still said
+     out loud above it so nobody has to work out which is which. */
+  const fortnight = dueBasis(d) === 'weekly' ? dueFortnight(d) : 0;
+  const suggested = fortnight > 0.5 ? Math.min(bal, fortnight) : bal;
+  const raw = prompt(`Pay ${dueName(d)} for ${periodLabel(d.period)}.\n\nStill owed: ${fmtUGX(Math.round(bal))}${
+    fortnight > 0.5 ? `\nA fortnight is ${fmtUGX(Math.round(fortnight))}` : ''}\n\nHow much are you paying?`,
+    String(Math.round(suggested)));
   if(raw === null) return;
   const amount = Number(raw);
   if(!amount || amount <= 0){ toast('Enter an amount to pay'); return; }
@@ -40794,8 +40938,13 @@ function statementBasisGap(is, cf){
 function committedMonthlyCost(period){
   const p = period || currentPeriod();
   const rent = rentAgreementsFor(p).reduce((s,r)=> s + (Number(r.amount)||0), 0);
-  const salaried = staffOnPayroll().filter(s=> s.payBasis==='monthly' && s.payRate!=null);
-  const wages = salaried.reduce((s,x)=> s + (Number(x.payRate)||0), 0);
+  /* Monthly AND weekly. Both are a standing promise to pay whether or
+     not a single thing is sold, which is what a floor means -- a weekly
+     worker left off understates it by their whole wage. Their rate is a
+     week, so it is carried across the month before being added. */
+  const salaried = staffOnPayroll().filter(s=>
+    (s.payBasis==='monthly' || s.payBasis==='weekly') && s.payRate!=null);
+  const wages = salaried.reduce((s,x)=> s + (basisMonthCost(x.payBasis, x.payRate)||0), 0);
   return {
     period: p, rent, wages, total: rent + wages,
     salariedCount: salaried.length,
