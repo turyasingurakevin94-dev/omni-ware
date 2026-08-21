@@ -212,20 +212,167 @@ if (fns) {
  * and offers the mirror repair: set the balance to the history's total.
  */
 {
-  t.check(/id="deb_drift_adopt"/.test(code), 'the banner carries the trust-the-history button');
+  t.check(/data-drift-adopt="/.test(code), 'the banner carries the trust-the-history repair');
   t.check(/customerDriftEvidence\(c, customerInvoiceBaselineTotal\(data, c\.id\)\)/.test(code),
     'and asks the same three questions the heal asks, per customer, to say why it was left');
-  const adopt = (/function adoptLedgerBalances[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(adopt.length > 0, 'adoptLedgerBalances() exists');
+  const adopt = (/function adoptLedgerBalance\(customerId\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(adopt.length > 0, 'adoptLedgerBalance() takes one customer, not the whole list');
   t.check(/if\(!confirm\(msg\)\) return;/.test(adopt), 'it asks first');
-  t.check(/c\.debt = Math\.max\(0, customerLedgerTotal\(c\)\);/.test(adopt),
+  t.check(/t\.debt = Math\.max\(0, customerLedgerTotal\(t\)\);/.test(adopt),
     'the balance it sets is the history\'s own total, never below zero');
   t.check(!/debtLog\.push/.test(adopt),
     'and it writes nothing into the history -- the history already explains the corrected figure');
   t.check(!/addCashReceipt|cashTxn/.test(adopt),
     'and touches no cash -- nothing happened to the money, only to the record of it');
-  t.check(/#deb_drift_adopt'\)/.test((/function wireDebtDriftFix[\s\S]*?\n\}/.exec(code) || [''])[0]),
-    'wired beside the existing repair, from both render paths');
+  const wire = (/function wireDebtDriftFix[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/data-drift-adopt\]/.test(wire) && /data-drift-explain\]/.test(wire),
+    'both repairs are wired per row, from both render paths');
+
+  /* The three defects an adversarial review confirmed in the first cut of
+     these repairs -- each pinned so it cannot come back. */
+
+  // 1. A history summing below zero is a credit. Clamping it to zero left
+  // the drift in place, so the row stayed in the banner while every click
+  // reported success.
+  t.check(/if\(ledger < -0\.5\)\{/.test(adopt),
+    'a history that adds up to less than nothing is refused, not clamped into a no-op');
+  t.check(/which is a credit rather than a balance/.test(adopt),
+    'and says why, rather than claiming to have corrected it');
+
+  // 2. confirm() does not hold off the 30-second refresh, which replaces
+  // `data` wholesale -- so the object captured when the banner was drawn
+  // can be an orphan by the time the answer arrives.
+  t.check(/const still = debtDriftTargetNow\(customerId, drift\);/.test(adopt),
+    'the customer is re-resolved and re-measured after the question is answered');
+  t.check((code.match(/const still = debtDriftTargetNow\(customerId, drift\);/g) || []).length === 2,
+    'in both repairs, not just one');
+  const target = (/function debtDriftTargetNow[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/expectedDrift != null && drift !== expectedDrift/.test(target),
+    'and a drift that moved under the question is refused rather than applied blind');
+
+  // 3. Lowering a balance writes off money the shop was chasing. The heal
+  // on load stays silent (every device runs it); a person deciding once
+  // does not.
+  t.check(/t\.notes = t\.notes \?/.test(adopt),
+    'adopting a lower balance leaves a dated note on the customer -- a write-off is not a silent act');
+}
+
+/* ---------- 7c. the repairs, actually run ---------------------------- */
+/*
+ * Shape checks caught none of the three defects above on their own -- the
+ * first cut looked perfectly reasonable and did the wrong thing. So the
+ * repairs are driven here for real, against a live `data`, with confirm()
+ * and the renders stubbed.
+ */
+{
+  const store = { customers: [], savedQuotes: [] };
+  let saved = 0, nextId = 100;
+  const toasts = [];
+  let answer = true;
+  /* compileScope binds each env value ONCE, as a var in the compiled
+     scope, so reassigning env.confirm afterwards does nothing -- the
+     compiled code goes on calling the function it was given. The hook has
+     to live INSIDE that first function. (Learned the hard way: without it
+     the race checks below silently exercised the ordinary path and
+     reported the stale-write bug as absent.) */
+  let duringConfirm = null;
+  const env = {
+    data: store,
+    confirm: () => { if (duringConfirm) duringConfirm(); return answer; },
+    toast: (m) => toasts.push(String(m)),
+    saveData: () => { saved++; },
+    renderCustomers: () => {},
+    renderDebtorsList: () => {},
+    document: { getElementById: () => null },
+    allocRowId: () => nextId++,
+    todayISO: () => '2026-08-21',
+    fmtUGX: (n) => `${Math.round(Number(n) || 0)} UGX`,
+  };
+  const RUN = ['debtLogIsInvoiceOwned', 'customerLedgerTotal', 'customerDebtDrift',
+    'debtDriftTargetNow', 'afterDebtDriftRepair', 'explainDebtDrift', 'adoptLedgerBalance'];
+  let r = null, rErr = null;
+  try { r = compileScope(RUN.map(n => extractFunction(src, n, 'index.html')), env, RUN); }
+  catch (e) { rErr = e; }
+  t.check(!!r, `the repairs compile${rErr ? ` (${rErr.message})` : ''}`);
+
+  if (r) {
+    const put = (over) => {
+      store.customers = [Object.assign({ id: 'C1', name: 'Mulongo', notes: '', debt: 0, debtLog: [] }, over)];
+      toasts.length = 0; answer = true; duringConfirm = null;
+      return store.customers[0];
+    };
+    const ledgerOf = (entries) => entries.map((e, i) => ({ id: i + 1, date: '2026-08-0' + (i + 1), type: e[0], amount: e[1], note: e[2] || 'x' }));
+
+    /* trust-the-history, the ordinary case */
+    {
+      const c = put({ debt: 2645000, debtLog: ledgerOf([['charge', 2380000]]) });
+      r.adoptLedgerBalance('C1');
+      t.check(c.debt === 2380000, `adopting sets the balance to the history's total (got ${c.debt})`);
+      t.check(r.customerDebtDrift(c) === 0, 'and the drift is gone -- the row leaves the banner');
+      t.check(/balance corrected/.test(c.notes) && /2645000/.test(c.notes) && /2380000/.test(c.notes),
+        `the write-off is noted on the record (notes: ${JSON.stringify(c.notes)})`);
+      t.check(c.debtLog.length === 1, 'and nothing is written into the history');
+    }
+
+    /* declining the question changes nothing at all */
+    {
+      const c = put({ debt: 2645000, debtLog: ledgerOf([['charge', 2380000]]) });
+      answer = false;
+      r.adoptLedgerBalance('C1');
+      t.check(c.debt === 2645000 && c.notes === '', 'answering no leaves the balance and the record untouched');
+    }
+
+    /* trust-the-balance writes the missing entry and moves no balance */
+    {
+      const c = put({ debt: 2645000, debtLog: ledgerOf([['charge', 2380000]]) });
+      r.explainDebtDrift('C1');
+      t.check(c.debt === 2645000, 'explaining does not move the balance');
+      t.check(c.debtLog.length === 2 && c.debtLog[1].type === 'charge' && c.debtLog[1].amount === 265000,
+        `it writes the 265,000 the history was missing (${c.debtLog.map(l => l.type + ' ' + l.amount).join(', ')})`);
+      t.check(r.customerDebtDrift(c) === 0, 'and the two now agree');
+      t.check(c.debtLog[1].cashTxnId === null, 'with no cash entry -- nothing happened to the money');
+    }
+
+    /* THE FIRST DEFECT: a history that sums below zero */
+    {
+      const c = put({ debt: 0, debtLog: ledgerOf([['charge', 3000], ['payment', 8000]]) });
+      const before = r.customerDebtDrift(c);
+      r.adoptLedgerBalance('C1');
+      t.check(c.debt === 0 && r.customerDebtDrift(c) === before,
+        'a credit history is refused rather than clamped to a no-op the banner would show for ever');
+      t.check(toasts.some(m => /credit rather than a balance/.test(m)),
+        `and the refusal says why (${JSON.stringify(toasts)})`);
+      t.check(saved === (saved | 0) && c.notes === '', 'nothing is written down for a repair that did not happen');
+    }
+
+    /* THE SECOND DEFECT: the records move while the question is open */
+    {
+      const c = put({ debt: 2645000, debtLog: ledgerOf([['charge', 2380000]]) });
+      // What a background refresh does mid-question: `data` is replaced
+      // wholesale, so the banner's object is an orphan and the figures are
+      // no longer the ones the question named.
+      duringConfirm = () => {
+        store.customers = [{ id: 'C1', name: 'Mulongo', notes: '', debt: 900000, debtLog: ledgerOf([['charge', 2380000]]) }];
+      };
+      r.adoptLedgerBalance('C1');
+      duringConfirm = null;
+      t.check(store.customers[0].debt === 900000,
+        `a repair whose figures moved under it is refused, not applied to stale numbers (got ${store.customers[0].debt})`);
+      t.check(c.debt === 2645000, 'and the orphaned copy is not written to either');
+      t.check(toasts.some(m => /changed while that question was open/.test(m)),
+        'the shopkeeper is told, rather than shown a success for work that did not happen');
+    }
+
+    /* a customer deleted under the question */
+    {
+      put({ debt: 2645000, debtLog: ledgerOf([['charge', 2380000]]) });
+      duringConfirm = () => { store.customers = []; };
+      r.adoptLedgerBalance('C1');
+      duringConfirm = null;
+      t.check(toasts.some(m => /no longer on file/.test(m)), 'a customer removed mid-question is reported, not recreated');
+      t.check(store.customers.length === 0, 'and is not resurrected by the repair');
+    }
+  }
 }
 
 /* ---------- 8. the shape of the wiring ------------------------------- */

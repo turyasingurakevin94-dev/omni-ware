@@ -3344,6 +3344,18 @@
   }
   .cb-chain-break b{color:var(--danger);}
   .cb-chain-break .cb-chain-fix{align-self:flex-start;margin-top:6px;}
+  /* One drifted customer: their figures, what the records point to, and
+     the two repairs -- which act on this customer alone. */
+  .deb-drift-row{
+    display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;
+    border-top:1px solid rgba(192,57,43,.25);
+  }
+  .deb-drift-why{opacity:.85;}
+  .deb-drift-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;}
+  /* The repair the evidence points to. Weight only -- never the sole
+     signal, and never disabling the other one: the shopkeeper knows
+     things the ledger cannot, and this is a hint, not a verdict. */
+  .deb-drift-acts .deb-drift-lean{border-color:var(--danger);font-weight:600;}
 
   /* ===== Cash Book — day header ===== */
   .cb-day-summary .panel-head-row{align-items:flex-start;}
@@ -29609,34 +29621,71 @@ function debRowsForList(filter=''){
 // ledger meant to explain it. Not filtered by the search box: a drifted
 // balance is worth seeing whether or not that customer matches what was
 // typed, and it is the whole list's credibility at stake, not one row's.
+/* Which record the evidence leans toward for one drifted customer, and
+   why -- said in the banner beside their figures. Any drift still showing
+   is one the load-time heal DECLINED for want of conclusive evidence, so
+   the banner's job is to hand over what it found and leave the verdict to
+   the person who can check it against the world. A banner that only names
+   the gap sends the shopkeeper to stare at two numbers with no way to
+   choose.
+
+   `lean` is deliberately never stated as a certainty. The evidence here
+   is circumstantial in both directions: row ids are issued from per-device
+   blocks, so the write-order walk reconstructs a plausible past total
+   rather than a proven one. It says which way the records point and what
+   would explain them -- the shopkeeper knows what the customer actually
+   owes, which no walk of the ledger can. */
+function customerDriftVerdict(c){
+  const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(data, c.id));
+  if(!ev.hasInvoiceEntries) return {lean:'none',
+    why:'No invoices stand behind this history, so the records cannot say which figure is right — you can.'};
+  if(!ev.invoicesAgree) return {lean:'none',
+    why:'Their invoices and their history disagree with each other, so neither can vouch for the balance — open them and compare before correcting anything.'};
+  if(!ev.isPastBalance) return {lean:'balance',
+    why:'Their invoices back the history, but the balance is not a figure this history ever added up to — which would fit a history entry having gone missing. That points to the balance.'};
+  return {lean:'ledger',
+    why:'Their invoices back the history, and the balance looks like a stale copy of an earlier total. That points to the history.'};
+}
+// Kept short so every drifted customer on it is one the buttons beside
+// them actually act on. The old banner listed five and then acted on all
+// of them from a single button -- committing, unread, to customers whose
+// evidence pointed the other way.
+const DEB_DRIFT_ROWS_SHOWN = 12;
 function debtDriftBannerHTML(){
   const drifted = customersWithDebtDrift();
   if(!drifted.length) return '';
   const net = drifted.reduce((s,x)=>s+x.drift, 0);
-  /* Any drift still showing is one the load-time heal DECLINED, for want
-     of conclusive evidence -- so beside each figure, say which record the
-     evidence leans toward and why, and leave the verdict to the person
-     who can check it against the world. A banner that only names the gap
-     sends the shopkeeper to stare at two numbers with no way to choose. */
-  const why = (c)=>{
-    const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(data, c.id));
-    if(!ev.hasInvoiceEntries) return 'No invoices stand behind this history, so the records cannot say which figure is right — you can.';
-    if(!ev.invoicesAgree) return 'Their invoices and their history disagree with each other, so neither can vouch for the balance — compare the history against the invoices before correcting anything.';
-    if(!ev.isPastBalance) return 'Their invoices back the history, but the balance is not a figure this history ever added up to — the likeliest story is a history entry that went missing, which makes the balance the figure to trust.';
-    return 'The evidence leans toward the history: the invoices back it, and the balance looks like a stale copy.';
-  };
-  const lines = drifted.slice(0,5).map(({c, drift})=>
-    `<div><b>${esc(c.name||'Unnamed customer')}</b>: shows ${fmtUGX(Math.round(Number(c.debt)||0))}, but their history adds up to ${fmtUGX(Math.round(customerLedgerTotal(c)))} — ${drift>0?'overstated':'understated'} by ${fmtUGX(Math.abs(drift))}. ${esc(why(c))}</div>`
-  ).join('');
+  const shown = drifted.slice(0, DEB_DRIFT_ROWS_SHOWN);
+  /* One row per customer, and the two repairs sit INSIDE the row.
+     Repairing in bulk was wrong in a way no wording could fix: the
+     verdicts above are per customer and routinely disagree, so one button
+     spanning all of them could write off a real debt for the second
+     customer while correcting a stale figure for the first. Every
+     correction is now its own decision about one named person. */
+  const rows = shown.map(({c, drift})=>{
+    const v = customerDriftVerdict(c);
+    const ledger = Math.round(customerLedgerTotal(c));
+    const balance = Math.round(Number(c.debt)||0);
+    // A history summing below zero is a credit, and no balance can show
+    // one -- so the repair that adopts it is not offered, and says why
+    // rather than quietly clamping to zero and leaving the row here.
+    const adoptable = ledger >= 0;
+    return `<div class="deb-drift-row">
+      <div><b>${esc(c.name||'Unnamed customer')}</b>: shows ${fmtUGX(balance)}, but their history adds up to ${fmtUGX(ledger)} — ${drift>0?'overstated':'understated'} by ${fmtUGX(Math.abs(drift))}.</div>
+      <div class="deb-drift-why">${esc(v.why)}</div>
+      <div class="deb-drift-acts">
+        <button type="button" class="btn btn-ghost${v.lean==='balance'?' deb-drift-lean':''}" data-drift-explain="${esc(c.id)}">Trust the ${fmtUGX(balance)} balance — write the missing entry into the history</button>
+        ${adoptable
+          ? `<button type="button" class="btn btn-ghost${v.lean==='ledger'?' deb-drift-lean':''}" data-drift-adopt="${esc(c.id)}">Trust the history — set the balance to ${fmtUGX(ledger)}</button>`
+          : `<span class="deb-drift-why">Their history adds up to less than nothing, which is a credit rather than a balance — that cannot be adopted as a figure to chase. Correct the entries themselves in their debt history.</span>`}
+      </div>
+    </div>`;
+  }).join('');
   return `<div class="cb-chain-break">
     <div><b>${drifted.length} customer${drifted.length===1?'’s balance does':'s’ balances do'} not match their own history.</b></div>
-    ${lines}
-    ${drifted.length>5 ? `<div>…and ${drifted.length-5} more.</div>` : ''}
-    <div>Net effect on the total below: ${net>0?'overstated':'understated'} by ${fmtUGX(Math.abs(net))}. Open the customer and check their debt history against the charges and payments listed.</div>
-    <div style="margin-top:8px;">If the balance is the figure you trust, this writes the missing entry into each history so the two agree. It changes no balance and moves no cash — it only records what the history was already missing.</div>
-    <button type="button" class="btn btn-ghost cb-chain-fix" id="deb_drift_fix">Explain ${drifted.length===1?'this balance':'these balances'} in the history</button>
-    <div style="margin-top:8px;">If the history is the figure you trust, this sets each balance to what its own history adds up to. It writes nothing into the history and moves no cash — the history already explains the corrected figure.</div>
-    <button type="button" class="btn btn-ghost cb-chain-fix" id="deb_drift_adopt">Set ${drifted.length===1?'this balance':'these balances'} to the history’s total</button>
+    <div>Net effect on the total below: ${net>0?'overstated':'understated'} by ${fmtUGX(Math.abs(net))}. Each correction below changes one customer only, moves no cash, and asks before it does anything.</div>
+    ${rows}
+    ${drifted.length>shown.length ? `<div>…and ${drifted.length-shown.length} more — correct these first and the rest will list here.</div>` : ''}
   </div>`;
 }
 
@@ -29651,65 +29700,121 @@ function debtDriftBannerHTML(){
 //
 // No balance moves, and no Cash Book entry is created: nothing happened to
 // the money, only to the record of it.
-function explainDebtDrift(){
-  const drifted = customersWithDebtDrift();
-  if(!drifted.length){ toast('Every balance already matches its history'); return; }
-  const net = drifted.reduce((s,x)=>s+x.drift, 0);
-  const msg = `Write a correcting entry into ${drifted.length} customer${drifted.length===1?"'s":"s'"} history `
-    + `so it adds up to the balance already shown?\n\n`
-    + `No balance changes and no money moves — this only records what each history was missing `
-    + `(${fmtUGX(Math.abs(net))} in total).\n\nThis cannot be undone automatically.`;
-  if(!confirm(msg)) return;
-  drifted.forEach(({c, drift})=>{
-    if(!c.debtLog) c.debtLog = [];
-    c.debtLog.push({
-      id: allocRowId('debtLog'),
-      date: todayISO(),
-      type: drift>0 ? 'charge' : 'payment',
-      amount: Math.abs(drift),
-      note: 'Balance correction — history did not add up to the balance shown',
-      cashTxnId: null,
-    });
-  });
-  saveData();
-  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
-  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
-  toast(`Corrected ${drifted.length} customer${drifted.length===1?'':'s'} — balances unchanged`);
+/* One drifted customer, looked up again and re-measured at the moment a
+   repair is about to be applied.
+
+   Both repairs ask first, and a confirm() does NOT hold off the
+   thirty-second background refresh: pollForUpdatesNow reads its guards on
+   the way in and never again, and it replaces `data` wholesale. A customer
+   object captured when the banner was drawn can therefore be an orphan by
+   the time the answer comes back -- written to, saved, and discarded by
+   the next refresh, with the shopkeeper told it was corrected.
+
+   So nothing is applied to the object the banner closed over. It is found
+   again by id, re-measured, and required to still show the same drift the
+   question named: anything else is a different question from the one that
+   was answered, and is refused rather than guessed at. */
+function debtDriftTargetNow(customerId, expectedDrift){
+  const c = (data.customers||[]).find(x=> String(x.id) === String(customerId));
+  if(!c){ toast('That customer is no longer on file — nothing was changed', 5000); return null; }
+  const drift = customerDebtDrift(c);
+  const who = c.name || 'That customer';
+  if(drift === 0){ toast(`${who}’s balance already matches their history — nothing was changed`, 5000); return null; }
+  if(expectedDrift != null && drift !== expectedDrift){
+    toast(`${who}’s records changed while that question was open — nothing was changed. Check the figures again.`, 7000);
+    return null;
+  }
+  return {c, drift};
 }
-// The same gap closed from the other side: the HISTORY is treated as the
-// truth and the balance is re-read from it. This is the by-hand form of
-// what reconcileCustomerDebts() does on load -- offered here because that
-// routine only acts when the invoices corroborate the history outright,
-// and what is left showing in the banner is exactly what the records
-// alone could not decide. The shopkeeper can decide it: they know what
-// the customer actually owes.
-//
-// Nothing is written into the history -- it already adds up to the
-// corrected figure -- and no Cash Book entry is created: nothing happened
-// to the money, only to the record of it.
-function adoptLedgerBalances(){
-  const drifted = customersWithDebtDrift();
-  if(!drifted.length){ toast('Every balance already matches its history'); return; }
-  // Named one by one, from and to. "2 balances will change" is not enough
-  // to say yes to; these lines go into confirm(), which renders plain
-  // text, so nothing is escaped (see orderReversalParts).
-  const lines = drifted.map(({c})=>
-    `${c.name||'Unnamed customer'}: ${fmtUGX(Math.round(Number(c.debt)||0))} → ${fmtUGX(Math.round(Math.max(0, customerLedgerTotal(c))))}`);
-  const msg = `Set ${drifted.length===1?"this customer's balance":`these ${drifted.length} customers' balances`} to what their own history adds up to?\n\n`
-    + lines.join('\n')
-    + `\n\nNothing is written into any history and no money moves — only the balance shown changes.\n\nThis cannot be undone automatically.`;
-  if(!confirm(msg)) return;
-  drifted.forEach(({c})=>{ c.debt = Math.max(0, customerLedgerTotal(c)); });
+function afterDebtDriftRepair(){
   saveData();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
-  toast(`Corrected ${drifted.length} balance${drifted.length===1?'':'s'} from their own histor${drifted.length===1?'y':'ies'}`);
+}
+function explainDebtDrift(customerId){
+  const at = debtDriftTargetNow(customerId);
+  if(!at){ afterDebtDriftRepair(); return; }
+  const {c, drift} = at;
+  // Plain text: confirm() renders no markup, and escaping here would show
+  // a customer called "O'Brien & Sons" as "O&#39;Brien &amp; Sons" (see
+  // orderReversalParts, which says the same for the same reason).
+  const msg = `Write a ${fmtUGX(Math.abs(drift))} ${drift>0?'charge':'payment'} into ${c.name || 'this customer'}'s history, `
+    + `so it adds up to the ${fmtUGX(Math.round(Number(c.debt)||0))} balance already shown?\n\n`
+    + `Their balance does not change and no money moves — this only records what their history was missing.\n\n`
+    + `This cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  const still = debtDriftTargetNow(customerId, drift);
+  if(!still){ afterDebtDriftRepair(); return; }
+  const t = still.c;
+  if(!t.debtLog) t.debtLog = [];
+  t.debtLog.push({
+    id: allocRowId('debtLog'),
+    date: todayISO(),
+    type: drift>0 ? 'charge' : 'payment',
+    amount: Math.abs(drift),
+    note: 'Balance correction — history did not add up to the balance shown',
+    cashTxnId: null,
+  });
+  afterDebtDriftRepair();
+  toast(`${t.name || 'Customer'}’s history now adds up to their balance — the balance is unchanged`, 5000);
+}
+/* The same gap closed from the other side: the HISTORY is treated as the
+   truth and the balance is re-read from it. This is the by-hand form of
+   what reconcileCustomerDebts() does on load -- offered here because that
+   routine acts only when the invoices corroborate the history outright,
+   and what is left in the banner is exactly what the records alone could
+   not decide. The shopkeeper can decide it: they know what the customer
+   actually owes.
+
+   Nothing is written into the history -- it already adds up to the
+   corrected figure -- and no Cash Book entry is created: nothing happened
+   to the money, only to the record of it.
+
+   It IS written down, though. The heal on load stays silent because every
+   device runs it on every load and a note would be written over and over;
+   this is a person deciding once, and lowering a balance here writes off
+   money the shop was chasing. That belongs in the record: a dated line on
+   the customer, in the same spirit as the labelled entry the other repair
+   leaves in the history. */
+function adoptLedgerBalance(customerId){
+  const at = debtDriftTargetNow(customerId);
+  if(!at){ afterDebtDriftRepair(); return; }
+  const {c, drift} = at;
+  const ledger = customerLedgerTotal(c);
+  /* A history summing below zero describes a credit, and a balance cannot
+     carry one -- Math.max(0, ...) would clamp it to zero, the drift would
+     survive the repair, and the row would sit in the banner for ever
+     while every click claimed to have fixed it. Refused, and said, the
+     way deleteCustomerDebtLog refuses what it cannot apply whole. */
+  if(ledger < -0.5){
+    toast(`${c.name || 'This customer'}’s history adds up to ${fmtUGX(Math.round(ledger))} — less than nothing, which is a credit rather than a balance. `
+      + `Correct the entries in their debt history instead.`, 9000);
+    return;
+  }
+  const from = Math.round(Number(c.debt)||0);
+  const to = Math.round(Math.max(0, ledger));
+  const msg = `Set ${c.name || 'this customer'}'s balance to ${fmtUGX(to)}, what their own history adds up to?\n\n`
+    + `${fmtUGX(from)} → ${fmtUGX(to)}\n\n`
+    + (to < from
+      ? `That writes off ${fmtUGX(from - to)} the shop is currently chasing. Do this only if their history is the record you trust.\n\n`
+      : `That adds ${fmtUGX(to - from)} to what the shop is chasing. Do this only if their history is the record you trust.\n\n`)
+    + `Nothing is written into their history and no money moves — only the balance shown changes.\n\n`
+    + `This cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  const still = debtDriftTargetNow(customerId, drift);
+  if(!still){ afterDebtDriftRepair(); return; }
+  const t = still.c;
+  t.debt = Math.max(0, customerLedgerTotal(t));
+  const stamp = `${todayISO()}: balance corrected ${fmtUGX(from)} → ${fmtUGX(Math.round(t.debt))} to match this customer's own debt history. No money moved.`;
+  t.notes = t.notes ? `${t.notes}\n${stamp}` : stamp;
+  afterDebtDriftRepair();
+  toast(`${t.name || 'Customer'}’s balance is now ${fmtUGX(Math.round(t.debt))}, matching their history — noted on their record`, 6000);
 }
 function wireDebtDriftFix(wrap){
-  const btn = wrap.querySelector('#deb_drift_fix');
-  if(btn) btn.addEventListener('click', explainDebtDrift);
-  const adopt = wrap.querySelector('#deb_drift_adopt');
-  if(adopt) adopt.addEventListener('click', adoptLedgerBalances);
+  wrap.querySelectorAll('[data-drift-explain]').forEach(btn=>
+    btn.addEventListener('click', ()=> explainDebtDrift(btn.dataset.driftExplain)));
+  wrap.querySelectorAll('[data-drift-adopt]').forEach(btn=>
+    btn.addEventListener('click', ()=> adoptLedgerBalance(btn.dataset.driftAdopt)));
 }
 /* The bar and its bands. Proportional to money, not to how many people
    are in each band -- one 4,000,000 balance at ninety days is the

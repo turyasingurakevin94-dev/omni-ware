@@ -216,8 +216,13 @@ if (fns) {
  * gap survives every tool the screen offered.
  */
 {
-  t.check(/function explainDebtDrift\(\)/.test(code), 'the drift banner can now write the missing entry');
-  t.check(/const drifted = customersWithDebtDrift\(\);/.test(code), 'for exactly the customers that are adrift');
+  /* Per customer, not in bulk. The first version corrected every drifted
+     customer from one button -- which, once the banner started saying
+     which record the evidence pointed to PER customer, could write off a
+     real debt for the second person while correcting a stale figure for
+     the first. */
+  t.check(/function explainDebtDrift\(customerId\)/.test(code), 'the drift banner can now write the missing entry, for one named customer');
+  t.check(/const at = debtDriftTargetNow\(customerId\);/.test(code), 'resolved by id rather than from an object the banner closed over');
   t.check(/type: drift>0 \? 'charge' : 'payment',\s*\n\s*amount: Math\.abs\(drift\),/.test(code),
     'in the direction and size that closes the gap');
   t.check(/note: 'Balance correction — history did not add up to the balance shown'/.test(code),
