@@ -203,8 +203,15 @@ const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0
     'and saving records it, trimmed');
   t.check(/document\.getElementById\('s_shopno'\)\.value = s\.shopNo \|\| '';/.test(src),
     'editing fills it back');
-  t.check(/\['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes'\]/.test(src),
-    'and the reset clears it with the rest');
+  /* Read out of the reset list rather than matched as a whole literal:
+     the list grows as the form does (it since gained the opening-balance
+     fields), and pinning every id in one string made an unrelated field
+     addition fail as though the shop no. had been dropped. What matters
+     is that this field is cleared, so that is what is asked. */
+  const resetIds = (/\['s_id',[^\]]*\]\.forEach\(id=>document\.getElementById\(id\)\.value=''\)/.exec(src) || [''])[0];
+  t.check(/'s_shopno'/.test(resetIds), 'and the reset clears it with the rest');
+  ['s_id', 's_name', 's_phone', 's_phone2', 's_location', 's_notes'].forEach(id =>
+    t.check(resetIds.includes(`'${id}'`), `the reset still clears ${id}`));
 
   /* Both directions of the sync, in both apps -- an unmapped column is a
      field that quietly empties itself on the next reload. */

@@ -2465,6 +2465,18 @@
   .sup-block{display:flex;flex-direction:column;gap:8px;}
   .sup-label{font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;color:var(--ink-soft);}
   .sup-hint{font-size:11.5px;line-height:1.45;color:var(--ink-soft);}
+  /* What the shop already owed this supplier. Laid out like the customer
+     form's mirror of it (.cf-owe), so the two directions of the same
+     question look the same. */
+  .sup-owe{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;}
+  @media (max-width:520px){ .sup-owe{grid-template-columns:1fr;} }
+  .sup-amt{position:relative;}
+  .sup input[type=number]#s_open_bal{font-size:18px;font-weight:700;padding:12px 52px 12px 14px;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .sup-amt-cur{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;
+    font-size:11px;font-weight:700;letter-spacing:0.6px;color:var(--ink-soft);}
+  .sup-since{display:flex;flex-direction:column;gap:5px;}
+  .sup-since label{font-size:11.5px;font-weight:600;color:var(--ink-soft);}
   .sup input[type=text],.sup input:not([type]),.sup select{
     width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
     color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
@@ -8749,6 +8761,28 @@
           <input id="s_shopno" placeholder="Shop no. inside the building — e.g. B12, optional" autocomplete="off">
         </div>
 
+        <!-- The mirror of the customer form's "what they already owe you",
+             for the other direction: money the shop owed a supplier before
+             any of it was being recorded here. It becomes a real purchase
+             invoice, because what the shop owes is DERIVED from those and
+             from nothing else -- a figure stored on the supplier would be
+             invisible to every screen that reports payables. -->
+        <div class="sup-block" id="s_owe_block">
+          <span class="sup-label">What you already owed them</span>
+          <div class="sup-owe">
+            <div class="sup-amt">
+              <input id="s_open_bal" type="number" min="0" step="any" placeholder="0" autocomplete="off">
+              <span class="sup-amt-cur">UGX</span>
+            </div>
+            <div class="sup-since" id="s_open_since_row">
+              <label for="s_open_since">Owed since</label>
+              <input id="s_open_since" type="date">
+            </div>
+          </div>
+          <label class="cf-undated" id="s_open_undated_row"><input type="checkbox" id="s_open_undated"> Nobody knows when it started</label>
+          <div class="sup-hint" id="s_open_hint"></div>
+        </div>
+
         <div class="sup-block">
           <span class="sup-label">Notes</span>
           <input id="s_notes" placeholder="Anything worth remembering — optional" autocomplete="off">
@@ -11790,7 +11824,14 @@ function buildSyncRows(d, shopId){
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
       id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
-      payload:{customerName:pi.customerName, supplierId:pi.supplierId, supplierName:pi.supplierName, items:pi.items, amountPaid:pi.amountPaid, payments:pi.payments, voided:pi.voided}
+      // openingBalance rides the payload rather than a column of its own,
+      // so no migration has to land before a shop can carry its old
+      // supplier debts in. Dropping it here would be quiet and expensive:
+      // the supplier form reads it to refuse writing a SECOND opening
+      // balance, so a marker lost on the round trip would let the next
+      // save of that supplier double what the shop believes it owes.
+      payload:{customerName:pi.customerName, supplierId:pi.supplierId, supplierName:pi.supplierName, items:pi.items, amountPaid:pi.amountPaid, payments:pi.payments, voided:pi.voided,
+        ...(pi.openingBalance ? {openingBalance:true} : {})}
     })),
     supplierCommissions: d.supplierCommissions.map(c=>({
       id:c.id, shop_id:shopId, supplier_id:c.supplierId, period:c.period, amount:c.amount, notes:c.notes||null
@@ -23355,6 +23396,85 @@ function printQuotesA5(quotes){
    by hand like any other purchase invoice. */
 function purchaseInvoiceNumberLabel(pi){ return 'PINV-' + String(pi.id).padStart(4,'0'); }
 
+/* ---- What the shop already owed a supplier on day one ----------------
+
+   A shop does not start trading on the day it starts recording. Suppliers
+   are owed money from before any of this existed, and until now there was
+   nowhere to say so: the creditors list, the aging bands, the payables on
+   the balance sheet and every "what do we owe" figure are DERIVED from
+   purchase invoices and from nothing else. A number stored on the supplier
+   record would have been invisible to all of them.
+
+   So an opening balance IS a purchase invoice -- one line, dated when the
+   debt started -- and every one of those screens picks it up without
+   knowing anything new. It is paid off, aged, voided and reported exactly
+   like a bill for goods, because by then that is what it is.
+
+   Marked with openingBalance so it can be recognised again: the supplier
+   form uses it to refuse writing a second one, which would silently
+   double what the shop thinks it owes.
+
+   The DATE carries the same rule the customer side learned: never a
+   silent today. A balance carried in from before is not new money, and
+   dating it today would file every one of them in "Under 30 days" -- the
+   one band AGING_BANDS says a figure typed straight in must never quietly
+   join. An empty date means nobody knows, which daysSinceDate reads as
+   -1 and the bands sort into "No date on record", where the creditors
+   screen sets these aside to be found out. */
+const SUPPLIER_OPENING_BALANCE_LABEL = 'Opening balance — owed before this system';
+/* The flag is the answer; the line's own name is the fallback.
+
+   Same shape, and for the same reason, as debtLogIsInvoiceOwned(): the
+   flag rides a JSON payload, and anything that ever strips or predates it
+   would otherwise turn "this supplier already has an opening balance"
+   into "no they don't" -- and the form would cheerfully write a second
+   one, doubling what the shop believes it owes. The label is only a
+   fallback because a person can type anything into a line name. */
+function purchaseInvoiceIsOpeningBalance(pi){
+  if(!pi) return false;
+  if(pi.openingBalance) return true;
+  return (pi.items||[]).some(it=> String(it.productName||'') === SUPPLIER_OPENING_BALANCE_LABEL);
+}
+function supplierOpeningInvoice(supplierId){
+  return (data.purchaseInvoices||[]).find(pi=>
+    purchaseInvoiceIsOpeningBalance(pi) && String(pi.supplierId)===String(supplierId) && !pi.voided) || null;
+}
+async function createSupplierOpeningBalance(supplierId, amount, sinceISO){
+  const amt = Number(amount)||0;
+  if(!supplierId || amt <= 0) return null;
+  const id = await issueRowId('purchaseInvoice');
+  const pi = {
+    id,
+    // Marks it as carried in rather than raised here. Everything else
+    // about it is an ordinary purchase invoice on purpose.
+    openingBalance: true,
+    // No order raised it and no customer is waiting on it: this is the
+    // shop's own history, not a line on somebody's job.
+    quoteId: null,
+    customerName: '',
+    supplierId,
+    supplierName: supplierName(supplierId),
+    // '' when nobody knows. Sorts first (oldest) everywhere invoices are
+    // ordered by date, which is what an opening balance is.
+    date: sinceISO || '',
+    /* The single line is not decoration. purchaseInvoiceTotal() sums
+       qty * price across items and there is no stored total anywhere, so
+       an opening balance without a line would be a record worth zero to
+       every screen that reads it. */
+    items: [{
+      productId: null, variantIdx: null,
+      productName: SUPPLIER_OPENING_BALANCE_LABEL,
+      unit: '', packUnit: '', packQty: '',
+      qty: 1, price: amt,
+    }],
+    amountPaid: 0,
+    payments: [],
+    voided: false,
+  };
+  data.purchaseInvoices.push(pi);
+  return pi;
+}
+
 /* ---- Walking the order's lifecycle ---------------------------------
  * An order, the invoice it becomes and the purchase invoice it generates
  * against a supplier are one thing moving through the business. The data
@@ -25317,16 +25437,57 @@ function editSupplier(id){
   document.getElementById('supplierFormTitle').textContent = 'Edit supplier';
   sfFillLinkPicker(s);
   supShowIssuedId();
+  sfShowOpeningBalance(s.id);
   supRefresh();
   openModal('supplierModal');
   document.getElementById('s_name').focus();
 }
+/* Whether this supplier can still be given an opening balance, and what
+   the form says about it.
+
+   Offered on EDIT as well as on add, which the customer form does not do
+   -- and deliberately. A shop reaching for this has been trading, and so
+   has been entering its suppliers, for as long as it has been running the
+   app; the ones it owed money to before that are already on file. A
+   create-only field would have been a field they could never use.
+
+   Once one exists the field closes rather than adding a second, because
+   two of these would silently double what the shop believes it owes. The
+   way to change it afterwards is the invoice itself, which can be paid,
+   corrected or voided like any other -- and is named here so it can be
+   found. */
+function sfShowOpeningBalance(supplierId){
+  const block = document.getElementById('s_owe_block');
+  const hint = document.getElementById('s_open_hint');
+  const amt = document.getElementById('s_open_bal');
+  const since = document.getElementById('s_open_since');
+  const undated = document.getElementById('s_open_undated');
+  const existing = supplierId ? supplierOpeningInvoice(supplierId) : null;
+  [amt, since, undated].forEach(el=>{ el.disabled = !!existing; });
+  document.getElementById('s_open_since_row').style.display = existing ? 'none' : '';
+  document.getElementById('s_open_undated_row').style.display = existing ? 'none' : '';
+  block.querySelector('.sup-amt').style.display = existing ? 'none' : '';
+  if(existing){
+    const due = purchaseInvoiceBalanceDue(existing);
+    hint.innerHTML = `Recorded as <b>${esc(purchaseInvoiceNumberLabel(existing))}</b>` +
+      `${existing.date ? ` and owed since ${esc(fmtShortDate(existing.date))}` : ', with no date on record'} — ` +
+      `${fmtUGX(Math.round(purchaseInvoiceTotal(existing)))}, ` +
+      `${due > 0.5 ? `${fmtUGX(Math.round(due))} still outstanding` : 'now settled'}. ` +
+      `Change it on the Purchase Invoices screen, where it can be paid, corrected or voided like any other bill.`;
+  } else {
+    hint.textContent = 'Only what you owed them before you started using this system. '
+      + 'It becomes a purchase invoice you can pay off like any other, so it shows up in Creditors and on the balance sheet. '
+      + 'Leave it blank if you owed them nothing.';
+  }
+}
 function resetSupplierForm(){
   editingSupplierId = null;
-  ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes'].forEach(id=>document.getElementById(id).value='');
+  ['s_id','s_name','s_phone','s_phone2','s_location','s_shopno','s_notes','s_open_bal','s_open_since'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('s_open_undated').checked = false;
   fillIssuedId('s_id', 'supplier', 'S', 3, data.suppliers);
   sfFillLinkPicker(null);
   supShowIssuedId();
+  sfShowOpeningBalance(null);
   supRefresh();
   document.getElementById('supplierFormTitle').textContent = 'Add supplier';
 }
@@ -25474,13 +25635,41 @@ document.getElementById('s_add_btn').addEventListener('click', ()=>{
   // The only field somebody came here to fill in.
   document.getElementById('s_name').focus();
 });
-document.getElementById('s_save').addEventListener('click', ()=>{
+document.getElementById('s_save').addEventListener('click', async ()=>{
   /* `let`, because the collision check below may replace it. As a
      const this threw "Assignment to constant variable" and took the
      whole save handler with it -- the form simply did nothing. */
   let id = document.getElementById('s_id').value.trim();
   const name = document.getElementById('s_name').value.trim();
   if(!name){ toast('Supplier name is required'); return; }
+  /* The opening balance is validated BEFORE anything is written, and by
+     the same routine the customer form uses -- the question is identical
+     in both directions and answering it twice is how the two would come
+     to disagree. A supplier who already has one gets a disabled field,
+     so nothing here is read for them. */
+  const openField = document.getElementById('s_open_bal');
+  const openLocked = openField.disabled;
+  const openChk = openLocked
+    ? {amount: 0, problem: null}
+    : cfOpeningBalanceCheck(openField.value,
+        document.getElementById('s_open_since').value,
+        document.getElementById('s_open_undated').checked);
+  if(openChk.problem === 'negative'){
+    toast('You cannot owe them less than nothing. Leave it blank if you owed them nothing.', 6000);
+    openField.focus(); return;
+  }
+  if(openChk.problem === 'not-a-number'){
+    toast('That opening balance is not a number.', 5000);
+    openField.focus(); return;
+  }
+  if(openChk.problem === 'future'){
+    toast('A debt cannot start in the future.', 5000);
+    document.getElementById('s_open_since').focus(); return;
+  }
+  if(openChk.problem === 'no-date'){
+    toast('Say when you started owing this — Creditors ages it from that date. Tick the box if nobody knows.', 6500);
+    document.getElementById('s_open_since').focus(); return;
+  }
   if(!editingSupplierId && idIsPending(id)){ toast('Still issuing a Supplier ID — try again in a moment'); return; }
   // Defensive only -- the id comes from nextEntityId() now, so a clash here
   // would mean the counter itself is wrong rather than a mistyped entry.
@@ -25523,9 +25712,32 @@ Add them anyway?`)) return;
      somewhere else is a person who is their own supplier from one screen
      and nobody's from the other. */
   linkCustomerSupplier(document.getElementById('s_link_customer').value || null, id);
+  /* After the supplier is in `data.suppliers`, and not before: both
+     dashTotalCreditors and payablesAsAt reach purchase invoices THROUGH
+     the supplier list, so a bill whose supplier does not exist yet is
+     money the balance sheet cannot see while the Purchase Invoices screen
+     shows it plainly.
+
+     Awaited because a PINV- number is issued one at a time from the
+     server -- the sequence on the shop's paperwork stays dense, so
+     nothing is reserved ahead of use. */
+  let opened = null;
+  if(!openLocked && openChk.amount > 0){
+    const since = document.getElementById('s_open_undated').checked
+      ? '' : document.getElementById('s_open_since').value;
+    opened = await createSupplierOpeningBalance(id, openChk.amount, since);
+  }
   saveData(); closeModal('supplierModal'); resetSupplierForm(); renderSuppliers();
   populatePriceSupplierFilter(document.getElementById('pr_supplier_filter').value);
-  toast('Supplier saved');
+  // Every screen that counts what the shop owes has just changed.
+  if(opened){
+    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+    refreshNavBadges();
+  }
+  toast(opened
+    ? `Supplier saved — ${fmtUGX(Math.round(openChk.amount))} recorded as ${purchaseInvoiceNumberLabel(opened)}, payable like any other bill`
+    : 'Supplier saved', opened ? 6000 : 2200);
 });
 document.getElementById('s_cancel').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('supplierModalClose').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
@@ -29242,6 +29454,14 @@ function reconcileCustomerDebts(d){
     const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(d, c.id));
     if(!ev.hasInvoiceEntries || !ev.invoicesAgree || !ev.isPastBalance) return;
     const corrected = Math.max(0, ledger);
+    /* A history summing below zero describes a credit, which no balance
+       can carry. The clamp would then "correct" a stored 0 to 0 -- and
+       because the drift survives it, every load would find the same
+       customer, announce the same repair, and change nothing: a toast on
+       every boot for a gap that never closes. A repair that moves nothing
+       is not a repair; this one belongs to the banner, and the balance is
+       left exactly as found. */
+    if(Math.round(corrected - stored) === 0) return;
     healed.push({c, from: stored, to: corrected});
     c.debt = corrected;
   });
@@ -29636,6 +29856,15 @@ function debRowsForList(filter=''){
    would explain them -- the shopkeeper knows what the customer actually
    owes, which no walk of the ledger can. */
 function customerDriftVerdict(c){
+  /* Asked FIRST, because the questions below cannot see it. A history
+     summing below zero is a credit, and the stored-zero shortcut inside
+     customerStoredBalanceIsPastTotal answers "yes, the balance was once a
+     real total" for every one of these -- vacuously, since zero is where
+     every history starts. Left to fall through, the verdict called a
+     clamp-made gap "a stale copy" and pointed at the one repair that
+     cannot express it. */
+  if(customerLedgerTotal(c) < -0.5) return {lean:'none',
+    why:'Their history adds up to less than nothing, which is a credit rather than a balance — so no balance can be read from it. Correct the entries in their debt history, or record what they really owe.'};
   const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(data, c.id));
   if(!ev.hasInvoiceEntries) return {lean:'none',
     why:'No invoices stand behind this history, so the records cannot say which figure is right — you can.'};

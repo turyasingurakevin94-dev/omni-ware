@@ -190,6 +190,26 @@ if (fns) {
       'a balance the history never added up to is flagged as exactly that');
   }
 
+  /* ---------- 6d. a credit history is not "healed" every load ------- */
+  /* Stored 0 against a history summing below zero: the clamp would set 0
+     to 0 and call it a correction, so every boot and every refresh found
+     the same customer, announced the same repair, and changed nothing. */
+  {
+    const d = shop(0);
+    d.customers[0].debtLog = [
+      { id: 1, date: '2026-08-20', type: 'charge',  amount: 425000, note: 'Auto-sync — INV-0179' },
+      { id: 2, date: '2026-08-21', type: 'payment', amount: 425000, note: 'Auto-sync — INV-0179' },
+      { id: 3, date: '2026-08-21', type: 'payment', amount: 370000, note: 'Auto-sync — INV-0195' },
+    ];
+    d.savedQuotes = [{ id: 179, customerId: 'C1', invoiced: true, voided: false, debtCharged: 0 },
+      { id: 195, customerId: 'C1', invoiced: true, voided: false, debtCharged: -370000 }];
+    const first = reconcileCustomerDebts(d);
+    const second = reconcileCustomerDebts(d);
+    t.check(first.length === 0 && second.length === 0,
+      `a repair that would move nothing is not reported as one (${first.length}, then ${second.length})`);
+    t.check(d.customers[0].debt === 0, 'and the balance is left exactly as found, for the banner to raise');
+  }
+
   /* ---------- 7. only the customer with the problem is touched ------ */
   {
     const d = shop(370000);
