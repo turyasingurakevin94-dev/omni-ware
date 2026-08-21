@@ -29179,39 +29179,56 @@ function customerInvoiceOwnedLedgerTotal(c){
     ? s + (l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0))
     : s, 0);
 }
-function reconcileCustomerDebts(d){
-  // What every invoice currently claims to have placed on its customer's
-  // balance. Voided, deleted and settled invoices all maintain this
-  // through applyInvoiceDebtCharge, so for a healthy customer it equals
-  // the net of their invoice-owned ledger entries.
-  const chargedByCustomer = {};
-  (d.savedQuotes||[]).forEach(q=>{
-    if(q.customerId==null) return;
-    chargedByCustomer[q.customerId] = (chargedByCustomer[q.customerId]||0) + (Number(q.debtCharged)||0);
+// What this customer's invoices currently claim to have placed on their
+// balance. Voided, deleted and settled invoices all maintain q.debtCharged
+// through applyInvoiceDebtCharge, so for a healthy customer this equals
+// the net of their invoice-owned ledger entries.
+function customerInvoiceBaselineTotal(d, customerId){
+  return (d.savedQuotes||[]).reduce((s,q)=>
+    String(q.customerId)===String(customerId) ? s + (Number(q.debtCharged)||0) : s, 0);
+}
+// Was the stored figure ever true? Walk the ledger and ask whether the
+// balance matches any running total along the way. Walked in statement
+// order (date, then write order) AND in plain write order: a backdated
+// payment makes the two disagree, and the balance a stale device carried
+// was a total in the order things were WRITTEN, not the order a statement
+// reads them back. Zero is the total every history starts from, so it
+// always qualifies.
+function customerStoredBalanceIsPastTotal(c){
+  const stored = Number(c.debt)||0;
+  if(Math.round(stored) === 0) return true;
+  const log = c.debtLog||[];
+  const byStatement = log.slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || ((a.id||0)-(b.id||0)));
+  const byWrite = log.slice().sort((a,b)=> (a.id||0)-(b.id||0));
+  return [byStatement, byWrite].some(ordered=>{
+    let run = 0;
+    for(const l of ordered){
+      run += l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0);
+      if(Math.round(stored - run) === 0) return true;
+    }
+    return false;
   });
+}
+// The three questions above, answered together. Shared by the heal below
+// and by the drift banner, which uses them to say WHY a balance was not
+// corrected on its own and which figure the evidence leans toward.
+function customerDriftEvidence(c, baselineTotal){
+  return {
+    hasInvoiceEntries: (c.debtLog||[]).some(debtLogIsInvoiceOwned),
+    invoicesAgree: Math.round(customerInvoiceOwnedLedgerTotal(c) - (Number(baselineTotal)||0)) === 0,
+    isPastBalance: customerStoredBalanceIsPastTotal(c),
+  };
+}
+function reconcileCustomerDebts(d){
   const healed = [];
   (d.customers||[]).forEach(c=>{
-    const log = c.debtLog||[];
-    if(!log.some(debtLogIsInvoiceOwned)) return;
     const stored = Number(c.debt)||0;
     const ledger = customerLedgerTotal(c);
     // Rounded, same as customerDebtDrift: a fractional shilling is not a
     // finding, and certainly not one to act on.
     if(Math.round(stored - ledger) === 0) return;
-    if(Math.round(customerInvoiceOwnedLedgerTotal(c) - (chargedByCustomer[c.id]||0)) !== 0) return;
-    // Was the stored figure ever true? Walk the ledger the way the
-    // statement does (date, then write order) and ask whether the balance
-    // matches any running total along the way. Zero is the total every
-    // history starts from, so it always qualifies.
-    let run = 0, isPastBalance = Math.round(stored) === 0;
-    if(!isPastBalance){
-      const ordered = log.slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || ((a.id||0)-(b.id||0)));
-      for(const l of ordered){
-        run += l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0);
-        if(Math.round(stored - run) === 0){ isPastBalance = true; break; }
-      }
-    }
-    if(!isPastBalance) return;
+    const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(d, c.id));
+    if(!ev.hasInvoiceEntries || !ev.invoicesAgree || !ev.isPastBalance) return;
     const corrected = Math.max(0, ledger);
     healed.push({c, from: stored, to: corrected});
     c.debt = corrected;
@@ -29596,8 +29613,20 @@ function debtDriftBannerHTML(){
   const drifted = customersWithDebtDrift();
   if(!drifted.length) return '';
   const net = drifted.reduce((s,x)=>s+x.drift, 0);
+  /* Any drift still showing is one the load-time heal DECLINED, for want
+     of conclusive evidence -- so beside each figure, say which record the
+     evidence leans toward and why, and leave the verdict to the person
+     who can check it against the world. A banner that only names the gap
+     sends the shopkeeper to stare at two numbers with no way to choose. */
+  const why = (c)=>{
+    const ev = customerDriftEvidence(c, customerInvoiceBaselineTotal(data, c.id));
+    if(!ev.hasInvoiceEntries) return 'No invoices stand behind this history, so the records cannot say which figure is right — you can.';
+    if(!ev.invoicesAgree) return 'Their invoices and their history disagree with each other, so neither can vouch for the balance — compare the history against the invoices before correcting anything.';
+    if(!ev.isPastBalance) return 'Their invoices back the history, but the balance is not a figure this history ever added up to — the likeliest story is a history entry that went missing, which makes the balance the figure to trust.';
+    return 'The evidence leans toward the history: the invoices back it, and the balance looks like a stale copy.';
+  };
   const lines = drifted.slice(0,5).map(({c, drift})=>
-    `<div><b>${esc(c.name||'Unnamed customer')}</b>: shows ${fmtUGX(Math.round(Number(c.debt)||0))}, but their history adds up to ${fmtUGX(Math.round(customerLedgerTotal(c)))} — ${drift>0?'overstated':'understated'} by ${fmtUGX(Math.abs(drift))}.</div>`
+    `<div><b>${esc(c.name||'Unnamed customer')}</b>: shows ${fmtUGX(Math.round(Number(c.debt)||0))}, but their history adds up to ${fmtUGX(Math.round(customerLedgerTotal(c)))} — ${drift>0?'overstated':'understated'} by ${fmtUGX(Math.abs(drift))}. ${esc(why(c))}</div>`
   ).join('');
   return `<div class="cb-chain-break">
     <div><b>${drifted.length} customer${drifted.length===1?'’s balance does':'s’ balances do'} not match their own history.</b></div>
@@ -29606,6 +29635,8 @@ function debtDriftBannerHTML(){
     <div>Net effect on the total below: ${net>0?'overstated':'understated'} by ${fmtUGX(Math.abs(net))}. Open the customer and check their debt history against the charges and payments listed.</div>
     <div style="margin-top:8px;">If the balance is the figure you trust, this writes the missing entry into each history so the two agree. It changes no balance and moves no cash — it only records what the history was already missing.</div>
     <button type="button" class="btn btn-ghost cb-chain-fix" id="deb_drift_fix">Explain ${drifted.length===1?'this balance':'these balances'} in the history</button>
+    <div style="margin-top:8px;">If the history is the figure you trust, this sets each balance to what its own history adds up to. It writes nothing into the history and moves no cash — the history already explains the corrected figure.</div>
+    <button type="button" class="btn btn-ghost cb-chain-fix" id="deb_drift_adopt">Set ${drifted.length===1?'this balance':'these balances'} to the history’s total</button>
   </div>`;
 }
 
@@ -29645,9 +29676,40 @@ function explainDebtDrift(){
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
   toast(`Corrected ${drifted.length} customer${drifted.length===1?'':'s'} — balances unchanged`);
 }
+// The same gap closed from the other side: the HISTORY is treated as the
+// truth and the balance is re-read from it. This is the by-hand form of
+// what reconcileCustomerDebts() does on load -- offered here because that
+// routine only acts when the invoices corroborate the history outright,
+// and what is left showing in the banner is exactly what the records
+// alone could not decide. The shopkeeper can decide it: they know what
+// the customer actually owes.
+//
+// Nothing is written into the history -- it already adds up to the
+// corrected figure -- and no Cash Book entry is created: nothing happened
+// to the money, only to the record of it.
+function adoptLedgerBalances(){
+  const drifted = customersWithDebtDrift();
+  if(!drifted.length){ toast('Every balance already matches its history'); return; }
+  // Named one by one, from and to. "2 balances will change" is not enough
+  // to say yes to; these lines go into confirm(), which renders plain
+  // text, so nothing is escaped (see orderReversalParts).
+  const lines = drifted.map(({c})=>
+    `${c.name||'Unnamed customer'}: ${fmtUGX(Math.round(Number(c.debt)||0))} → ${fmtUGX(Math.round(Math.max(0, customerLedgerTotal(c))))}`);
+  const msg = `Set ${drifted.length===1?"this customer's balance":`these ${drifted.length} customers' balances`} to what their own history adds up to?\n\n`
+    + lines.join('\n')
+    + `\n\nNothing is written into any history and no money moves — only the balance shown changes.\n\nThis cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  drifted.forEach(({c})=>{ c.debt = Math.max(0, customerLedgerTotal(c)); });
+  saveData();
+  renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
+  renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
+  toast(`Corrected ${drifted.length} balance${drifted.length===1?'':'s'} from their own histor${drifted.length===1?'y':'ies'}`);
+}
 function wireDebtDriftFix(wrap){
   const btn = wrap.querySelector('#deb_drift_fix');
   if(btn) btn.addEventListener('click', explainDebtDrift);
+  const adopt = wrap.querySelector('#deb_drift_adopt');
+  if(adopt) adopt.addEventListener('click', adoptLedgerBalances);
 }
 /* The bar and its bands. Proportional to money, not to how many people
    are in each band -- one 4,000,000 balance at ninety days is the
