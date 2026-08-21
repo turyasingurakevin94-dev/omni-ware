@@ -29134,6 +29134,100 @@ function customersWithDebtDrift(){
     .filter(x=> x.drift !== 0);
 }
 
+/* ---- Healing a balance its own records outvote ----
+
+   c.debt is the one figure in the debt system that syncs as a bare column
+   on the customers row: last write wins, whole row at a time, in its own
+   op. The debt log syncs row by row (a stale device can only ADD rows it
+   knows about, never unwrite someone else's), and every invoice carries
+   its own baseline (q.debtCharged) inside its own row. So when a payment
+   is taken on one device while another device holds a stale copy of the
+   customer -- or when the customers op of a save fails while the debt-log
+   and invoice ops land -- the balance quietly reverts to a value from
+   earlier in the day while the history and the invoices go on telling the
+   truth. The shop then chases money that was already handed over: the
+   invoice says Settled, the Debtors List says owing, and the drift banner
+   offers to "explain" a figure that is simply stale.
+
+   The banner cannot fix this case, because its repair trusts the balance.
+   Here the balance is the record that stands ALONE, and it can be outvoted
+   -- but only when the evidence is real, so three things must all hold:
+
+   1. The history and the invoices corroborate each other: the net of the
+      log's invoice-owned entries equals the sum of what the invoices
+      themselves claim to have placed on this balance. Two independently
+      synced records agreeing is what makes the third the odd one out.
+   2. That evidence is not vacuous: at least one invoice-owned entry
+      exists. A hand-typed balance with no invoice behind it has no
+      witness, and stays a question for the banner and its human.
+   3. The stored balance is a value this history actually passed through
+      -- a running total the ledger once reached. A stale snapshot always
+      is one; a balance carrying an entry the log LOST generally is not
+      (it sits above every total the surviving rows can reach), and that
+      case belongs to the banner, whose correction rebuilds the missing
+      entry -- the right repair in exactly the cases this one refuses.
+
+   When all three hold, the balance is re-read from the ledger. No log
+   entry is written: the history already adds up to the corrected figure,
+   which is the whole point -- and writing rows from a routine that every
+   device runs on every load would double them. Setting a derived value is
+   idempotent across devices; the caller runs this AFTER the sync snapshot
+   is taken, so the correction diffs as an ordinary edit and the next save
+   carries it to the server for everyone. */
+function customerInvoiceOwnedLedgerTotal(c){
+  return (c.debtLog||[]).reduce((s,l)=> debtLogIsInvoiceOwned(l)
+    ? s + (l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0))
+    : s, 0);
+}
+function reconcileCustomerDebts(d){
+  // What every invoice currently claims to have placed on its customer's
+  // balance. Voided, deleted and settled invoices all maintain this
+  // through applyInvoiceDebtCharge, so for a healthy customer it equals
+  // the net of their invoice-owned ledger entries.
+  const chargedByCustomer = {};
+  (d.savedQuotes||[]).forEach(q=>{
+    if(q.customerId==null) return;
+    chargedByCustomer[q.customerId] = (chargedByCustomer[q.customerId]||0) + (Number(q.debtCharged)||0);
+  });
+  const healed = [];
+  (d.customers||[]).forEach(c=>{
+    const log = c.debtLog||[];
+    if(!log.some(debtLogIsInvoiceOwned)) return;
+    const stored = Number(c.debt)||0;
+    const ledger = customerLedgerTotal(c);
+    // Rounded, same as customerDebtDrift: a fractional shilling is not a
+    // finding, and certainly not one to act on.
+    if(Math.round(stored - ledger) === 0) return;
+    if(Math.round(customerInvoiceOwnedLedgerTotal(c) - (chargedByCustomer[c.id]||0)) !== 0) return;
+    // Was the stored figure ever true? Walk the ledger the way the
+    // statement does (date, then write order) and ask whether the balance
+    // matches any running total along the way. Zero is the total every
+    // history starts from, so it always qualifies.
+    let run = 0, isPastBalance = Math.round(stored) === 0;
+    if(!isPastBalance){
+      const ordered = log.slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || ((a.id||0)-(b.id||0)));
+      for(const l of ordered){
+        run += l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0);
+        if(Math.round(stored - run) === 0){ isPastBalance = true; break; }
+      }
+    }
+    if(!isPastBalance) return;
+    const corrected = Math.max(0, ledger);
+    healed.push({c, from: stored, to: corrected});
+    c.debt = corrected;
+  });
+  return healed;
+}
+// Said out loud, because a chase list that shrinks on its own is otherwise
+// indistinguishable from a chase list that lost something.
+function reportDebtReconciliation(healed){
+  if(!healed.length) return;
+  healed.forEach(h=> console.warn(`Customer balance re-read from its own records: ${h.c.name} ${h.from} -> ${h.to}`));
+  toast(healed.length===1
+    ? `${healed[0].c.name}'s balance re-read from their own records: ${fmtUGX(Math.round(healed[0].from))} → ${fmtUGX(Math.round(healed[0].to))} — the history and invoices agreed, the stored total did not`
+    : `${healed.length} customer balances re-read from their own records — their histories and invoices agreed, the stored totals did not`, 7000);
+}
+
 function customerDebtHistoryHTML(c){
   const log = (c.debtLog||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id-a.id)).slice(0,8);
   if(!log.length) return '<div class="cc-history-empty">No activity recorded yet.</div>';
@@ -48251,6 +48345,11 @@ async function boot(){
     // would upsert itself on boot.
     backfillOrderVariantNames();
     initLastSynced(data, currentShopId);
+    // AFTER initLastSynced, and on purpose -- the opposite choice from the
+    // name backfill above. A balance corrected here must read as an edit,
+    // so the next save pushes it to the server for every device, instead
+    // of each device quietly re-correcting its own copy for ever.
+    reportDebtReconciliation(reconcileCustomerDebts(data));
     // Reserve this session's row id blocks before anything can be created.
     // Awaited so the first save of the session already uses server-issued
     // ids rather than falling back; it swallows its own errors, so a failed
@@ -48392,6 +48491,10 @@ async function pollForUpdatesNow(){
     // If the refresh came back empty, that is every row in the shop.
     const fresh = await loadData(currentShopId);
     const freshSynced = buildLastSynced(fresh, currentShopId);
+    // Between the snapshot and the swap, for the same reason boot()
+    // corrects after initLastSynced: the correction has to diff as an
+    // outstanding edit so the next save carries it to the server.
+    reportDebtReconciliation(reconcileCustomerDebts(fresh));
     data = fresh;
     lastSynced = freshSynced;
     goToTab(currentActiveTab);

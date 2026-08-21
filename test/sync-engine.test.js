@@ -423,6 +423,10 @@ const row = (id, name) => ({ id, shop_id: 'shop-1', name });
       buildLastSynced: (d) => ({ savedQuotes: Object.fromEntries((d.savedQuotes || []).map((q) => [String(q.id), q])) }),
       goToTab: () => {},
       refreshNavBadges: () => {},
+      // The debt heal has its own test file (debtor-balance-reconciliation);
+      // here it only needs to not be a ReferenceError inside the refresh.
+      reconcileCustomerDebts: () => [],
+      reportDebtReconciliation: () => {},
       console: { error: () => { log.push('error'); } },
     }, over || {});
     const scope = compileScope(
