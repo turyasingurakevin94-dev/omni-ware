@@ -148,9 +148,25 @@ if (fns) {
   t.check(/renderStockLotDrift\(\);\s*\n\s*const wrap = document\.getElementById\('invTableWrap'\);/.test(code),
     'every time it renders, so a repair elsewhere cannot leave a stale warning');
   const banner = (/function renderStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
+  const fix = (/function fixStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
   t.check(/\$\{rows\.map\(r=>/.test(banner) && !/rows\.slice\(/.test(banner),
     'listing every product adrift rather than a first few — the buttons act on what is named');
-  const fix = (/function fixStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* Action before mechanism. The first version led with the FIFO queue
+     and repeated the same explanation under every row; the shop read it
+     and asked what it was supposed to do. What a reader must DECIDE now
+     comes before anything they merely have to KNOW, and the theory is
+     said once — in the confirm, where it is about to matter. */
+  t.check(/Is the shelf count right\?/.test(banner),
+    'the banner opens on the one question the reader has to answer');
+  t.check(banner.indexOf('Is the shelf count right?') < banner.indexOf('rows.map'),
+    'asked before the list, not after it');
+  t.check(!/first-in-first-out/.test(banner),
+    'and the FIFO explanation is not repeated under every row');
+  t.check(/This changes no stock count, no money, and no figure on your statements/.test(banner),
+    'while what it does NOT touch is said plainly, since that is the fear');
+  t.check(/what is still on the shelf is \nthe newest stock|the oldest entries are dropped/.test(fix),
+    'the mechanism is kept for the confirm, where it is about to be acted on');
+
   t.check(/if\(!confirm\(msg\)\) return;/.test(fix), 'the repair asks first');
   t.check(/No stock count changes and no money moves/.test(fix),
     'saying plainly that the shelf and the money are not what is being changed');

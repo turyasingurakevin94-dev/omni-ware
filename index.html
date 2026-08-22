@@ -3393,6 +3393,15 @@
     border-top:1px solid rgba(192,57,43,.25);
   }
   .deb-drift-why{opacity:.85;}
+  /* One product adrift: its name, its two figures, and the one button.
+     Laid out as a row rather than a paragraph -- six of these have to be
+     scannable, and the first version repeated a sentence of FIFO theory
+     under every one of them. */
+  .inv-lot-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    margin-top:8px;padding-top:8px;border-top:1px solid rgba(192,57,43,.25);}
+  .inv-lot-name{font-weight:600;color:var(--ink);}
+  .inv-lot-figs{flex:1 1 auto;opacity:.85;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:12px;}
   .deb-drift-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;}
   /* The repair the evidence points to. Weight only -- never the sole
      signal, and never disabling the other one: the shopkeeper knows
@@ -40185,21 +40194,29 @@ function renderStockLotDrift(){
   if(!wrap) return;
   const rows = stockLotDrift();
   if(!rows.length){ wrap.innerHTML = ''; return; }
-  const net = rows.reduce((s2,r)=> s2 + r.drift, 0);
+  /* Action first, mechanism last.
+
+     The first version of this led with a paragraph about the FIFO queue
+     and then repeated the same explanation under all six rows. It was
+     accurate and it was unreadable: the shop's answer to it was "am
+     confused what should i do here", which is the only review that
+     matters. Everything a reader has to DECIDE now comes before
+     anything they merely have to KNOW -- and what they have to decide
+     is one question asked once, per product, with the two numbers
+     beside it. */
   wrap.innerHTML = `<div class="cb-chain-break">
     <div><b>${rows.length} product${rows.length===1?"'s cost record does":"s' cost records do"} not match the shelf.</b></div>
-    <div>The count beside each product is what the shop has and what every figure is valued from — these are untouched. What has drifted is the record of what those goods cost, which is the queue a sale draws its cost from: left alone, the next sales of these products carry a cost that was already used up, and their margin reads wrong.</div>
-    ${rows.map(r=> `<div class="deb-drift-row">
-      <div><b>${esc(r.label)}</b>: ${r.onShelf} on the shelf, but the cost record still carries ${r.inLots} — ${r.drift > 0 ? `${r.drift} more than there ${r.drift===1?'is':'are'}` : `${-r.drift} fewer than there ${(-r.drift)===1?'is':'are'}`}.</div>
-      <div class="deb-drift-why">${r.drift > 0
-        ? 'The oldest of them will be dropped: under first-in-first-out what is still on the shelf is the newest, so the ones that outlived the goods are the oldest.'
-        : 'The shortfall goes in with no cost on it — nothing on file says what those cost, and a guess would be worse than an admission.'}</div>
-      <div class="deb-drift-acts">
-        <button type="button" class="btn btn-ghost" data-lotfix="${esc(r.key)}">Match the cost record to the ${r.onShelf} on the shelf</button>
-      </div>
+    <div><b>Is the shelf count right?</b> If it is, press the button beside it — that is all this needs.
+      If one looks wrong, count that product and correct it in the list below first, then come back.</div>
+    <div class="deb-drift-why">This changes no stock count, no money, and no figure on your statements. It clears out
+      old cost entries left behind by goods that have gone, which would otherwise give the wrong cost — and the wrong
+      profit — to your next sales of these products.</div>
+    ${rows.map(r=> `<div class="inv-lot-row">
+      <span class="inv-lot-name">${esc(r.label)}</span>
+      <span class="inv-lot-figs"><b>${r.onShelf}</b> on the shelf · cost record says <b>${r.inLots}</b></span>
+      <button type="button" class="btn btn-ghost" data-lotfix="${esc(r.key)}">Fix</button>
     </div>`).join('')}
-    ${rows.length > 1 ? `<div style="margin-top:10px;"><button type="button" class="btn btn-ghost cb-chain-fix" id="inv_lotfix_all">Match all ${rows.length} to their shelves</button></div>` : ''}
-    <div class="deb-drift-why">Net across them: the cost records carry ${net > 0 ? `${net} more` : `${-net} fewer`} than the shelves do.</div>
+    ${rows.length > 1 ? `<div style="margin-top:10px;"><button type="button" class="btn btn-ghost cb-chain-fix" id="inv_lotfix_all">Fix all ${rows.length}</button></div>` : ''}
   </div>`;
   wrap.querySelectorAll('[data-lotfix]').forEach(btn=>
     btn.addEventListener('click', ()=> fixStockLotDrift(btn.dataset.lotfix)));
@@ -40218,7 +40235,9 @@ function fixStockLotDrift(key){
   const msg = `Match ${doing.length === 1 ? 'this cost record' : `these ${doing.length} cost records`} to the shelf?\n\n`
     + lines.join('\n')
     + `\n\nNo stock count changes and no money moves — the shelf figures stay exactly as they are. `
-    + `Only the record of what those goods cost is brought back into line with them.\n\nThis cannot be undone automatically.`;
+    + `Only the record of what those goods cost is brought back into line with them.\n\n`
+    + `Where the record carries more than the shelf, the oldest entries are dropped: what is still on the shelf is `
+    + `the newest stock, so the entries that outlived their goods are the oldest ones.\n\nThis cannot be undone automatically.`;
   if(!confirm(msg)) return;
   doing.forEach(r=> repairStockLotDrift(r.key));
   saveData();
