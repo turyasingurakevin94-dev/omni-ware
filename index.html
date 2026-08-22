@@ -20617,6 +20617,11 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
   if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
   const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
   const existing = idxExisting>-1 ? data.savedQuotes[idxExisting] : null;
+  /* Before anything is written, and before an INV- number is issued for a
+     new order -- a save the shop backs out of must cost nothing. */
+  const droppedWarning = orderDroppedReceiptWarning(
+    orderReceiptsBeingDropped(existing, data.quote.items));
+  if(droppedWarning && !confirm(droppedWarning)) return;
   // Issued before the record is built, and only for a genuinely new quote --
   // this id becomes the INV- number, so it's fetched one at a time to keep
   // that sequence dense (see issueRowId).
@@ -22203,6 +22208,47 @@ function orderStockReturnParts(q){
     .filter(it=> (Number(it._stockTaken)||0) > 0)
     .map(it=> `${Number(it._stockTaken)} × ${it.productName || it.productId || 'item'}`);
   return rows;
+}
+/* Goods already RECEIVED against a line that is about to leave the order.
+
+   A line only comes off the shelf when it is the shop's own stock or has
+   been received (quoteLineComesOffShelf). So replacing a received line --
+   re-sourcing it to another supplier, or removing it -- hands the order a
+   fresh line with no receipt on it, and invoicing that order then deducts
+   nothing. The goods that were received stay on the shelf.
+
+   Which is RIGHT if the shop really has them: a delivery received is a
+   delivery owned, whoever the customer's order was finally filled from.
+   It is wrong, and silently so, when the goods on the shelf and the goods
+   that went to the customer were the same twenty boxes all along.
+
+   That is what happened: a line sourced from one supplier, received,
+   invoiced and un-invoiced twice, then re-sourced to another supplier and
+   invoiced. Twenty boxes the customer had walked out with sat on the
+   shelf, and the only place it showed was a stock movement log nobody
+   reads until something looks wrong.
+
+   Matched on product rather than on the line's id, because loading an
+   order for editing renumbers every line -- so the ids in hand are never
+   the ids on file. */
+function orderReceiptsBeingDropped(existing, nextItems){
+  if(!existing) return [];
+  const staying = (nextItems||[]).filter(quoteLineReceived);
+  const same = (a,b)=> String(a.productId) === String(b.productId)
+    && String(a.variantIdx == null ? '' : a.variantIdx) === String(b.variantIdx == null ? '' : b.variantIdx);
+  return (existing.items||[])
+    .filter(quoteLineReceived)
+    .filter(old=> !staying.some(n=> same(n, old)));
+}
+// Plain text: this goes into confirm(), which renders no markup.
+function orderDroppedReceiptWarning(dropped){
+  if(!dropped.length) return null;
+  const lines = dropped.map(it=>
+    `  ${Number(it.receivedQty)||0} x ${it.productName || it.productId || 'item'} — received from ${supplierName(it.supplierId) || 'a supplier'}`);
+  return `${dropped.length === 1 ? 'This line has' : 'These lines have'} goods already received against ${dropped.length === 1 ? 'it' : 'them'}:\n\n`
+    + lines.join('\n')
+    + `\n\nSaving without ${dropped.length === 1 ? 'it' : 'them'} leaves those goods ON THE SHELF, and this order will no longer take them off when it is invoiced.\n\n`
+    + `That is right if you still have them. If they are the same goods the customer is taking, count that product afterwards and put the shelf right.\n\nSave anyway?`;
 }
 function orderReversalParts(q){
   const parts = [];
