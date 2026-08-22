@@ -173,6 +173,84 @@ if (fns) {
   }
 }
 
+/* ---------- 7b. rent paid before the books began --------------------- */
+/*
+ * The same rule, on the payroll side. From the shop: two months' rent
+ * paid in advance when the premises were taken, before the system
+ * existed — and the sheet showing both months owed, with the only way
+ * out a payment that would spend this month's drawer on last quarter's
+ * rent. Wage months settled from the old records are the same case.
+ */
+{
+  const store2 = { dues: [], cashTxns: [] };
+  const cashWrites = [];
+  const RUN = ['dueBalance', 'payDue', 'reverseDuePayment'];
+  let r = null, rErr = null;
+  try {
+    r = compileScope(
+      [extractDeclaration(src, 'DUE_KINDS', 'index.html'),
+        extractDeclaration(src, 'SETTLED_BEFORE_NOTE', 'index.html'),
+        ...RUN.map(n => extractFunction(src, n, 'index.html'))],
+      { data: store2,
+        todayISO: () => '2026-08-22',
+        toast: () => {},
+        saveData: () => {},
+        addCashPayment: (account, amount) => { cashWrites.push({ account, amount }); return 500 + cashWrites.length; },
+        removeCashTxnsByIds: (ids) => { store2.cashTxns = store2.cashTxns.filter(t => !ids.includes(t.id)); },
+        dueName: (d) => 'JHB08',
+        periodLabel: (x) => String(x),
+      }, RUN);
+  } catch (e) { rErr = e; }
+  t.check(!!r, `the dues routines compile${rErr ? ` (${rErr.message})` : ''}`);
+
+  if (r) {
+    const due = (over) => Object.assign({
+      id: 1, kind: 'rent', refId: 'R1', period: '2026-07', dueDate: '2026-07-02',
+      amount: 600000, paid: 0, payments: [],
+    }, over);
+
+    /* the reported case: the month clears and no cash moves */
+    {
+      store2.dues = [due()];
+      const paid = r.payDue(1, 600000, 'settled-before');
+      t.check(paid === 600000, 'the month can be marked settled in full');
+      t.check(r.dueBalance(store2.dues[0]) === 0, 'and stops being owed');
+      t.check(cashWrites.length === 0, 'with no Cash Book entry written — the money left before the books began');
+      const p = store2.dues[0].payments[0];
+      t.check(p.cashTxnId === null && p.settledBeforeSystem === true,
+        'the record knows what it is and points at no cash entry');
+      t.check(p.date === '2026-07-02',
+        `dated with the due itself, so no historic sheet ever shows the month owed (got ${p.date})`);
+    }
+
+    /* an ordinary payment is untouched by the option existing */
+    {
+      store2.dues = [due({ id: 2, period: '2026-08', dueDate: '2026-08-02' })];
+      cashWrites.length = 0;
+      const paid = r.payDue(2, 600000, 'cash');
+      t.check(paid === 600000 && cashWrites.length === 1 && cashWrites[0].account === 'cash',
+        'a real payment still writes its cash entry exactly as before');
+    }
+
+    /* reversing a settled-before month restores the debt and touches no cash */
+    {
+      store2.dues = [due({ id: 3 })];
+      store2.cashTxns = [{ id: 77 }];
+      r.payDue(3, 600000, 'settled-before');
+      r.reverseDuePayment(3, 0);
+      t.check(r.dueBalance(store2.dues[0]) === 600000, 'reversing puts the month back to owed');
+      t.check(store2.cashTxns.length === 1, 'and deletes nothing from the cash book — there was never anything to delete');
+    }
+
+    /* an uncosted wage month still refuses — the rule outranks the shortcut */
+    {
+      store2.dues = [due({ id: 4, kind: 'wage', amount: null })];
+      t.check(r.payDue(4, 100000, 'settled-before') === null,
+        'a month with no cost on file cannot be settled by any route until it is costed');
+    }
+  }
+}
+
 /* ---------- 8. the shape of it --------------------------------------- */
 {
   const save = code.slice(code.indexOf("getElementById('pip_save')"));
@@ -189,6 +267,23 @@ if (fns) {
   // was never written.
   t.check(/no Cash Book entry was ever made and none will be removed/.test(code),
     'removing one says plainly that no cash entry is involved');
+}
+
+/* ---------- 9. the payroll wiring ------------------------------------ */
+{
+  t.check(/opts && opts\.settledBefore \? `/.test(code) && /data-acct="settled-before"/.test(code),
+    'the account picker offers the no-cash exit only when the caller says history applies');
+  const payDueSrc = (/function payDue\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(account === 'settled-before'\)\{/.test(payDueSrc),
+    'payDue takes the branch');
+  t.check(!/addCashPayment/.test(payDueSrc.slice(payDueSrc.indexOf("'settled-before'"), payDueSrc.indexOf('const kind'))),
+    'and its settled-before path writes no cash');
+  t.check(/date: due\.dueDate \|\| todayISO\(\)/.test(payDueSrc),
+    'dated with the due, which is what keeps every historic sheet clean');
+  t.check(/settledBefore: 'For months paid before you started using this system/.test(code),
+    'the payroll screen explains what choosing it means');
+  t.check(/no Cash Book entry to remove — the month simply goes back to being owed/.test(code),
+    'and reversing one does not threaten to delete a cash entry that never existed');
 }
 
 process.exit(t.done() ? 1 : 0);

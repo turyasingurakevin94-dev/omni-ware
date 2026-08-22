@@ -1671,6 +1671,11 @@
     border:1.5px solid var(--line);border-radius:10px;
     transition:border-color .12s ease,background .12s ease;
   }
+  /* The no-cash exit in the account picker: set apart from the tills
+     above it, because choosing it is a statement about history, not a
+     drawer. */
+  .cash-acct-row.cash-acct-nocash{border-style:dashed;margin-top:10px;}
+  .cash-acct-row.cash-acct-nocash .cash-acct-bal{font-family:inherit;font-size:11px;color:var(--ink-soft);}
   .cash-acct-row:hover{border-color:var(--accent);background:#FFFBF0;}
   /* all:unset strips the focus ring too, and this dialog opens with a row
      already focused -- so it has to draw its own or a keyboard user is
@@ -28269,6 +28274,12 @@ function promptCashAccount(title, subtitle, opts){
               </button>`).join('')}
           </div>
           ${rows.every(r=> r.short) ? `<p class="cash-acct-note">No till holds this on its own — recording it against one will take that account negative.</p>` : ''}
+          ${opts && opts.settledBefore ? `
+          <button type="button" class="cash-acct-row cash-acct-nocash" data-acct="settled-before">
+            <span class="cash-acct-name">Already settled — before this system</span>
+            <span class="cash-acct-figs"><span class="cash-acct-bal">no cash moves</span></span>
+          </button>
+          <p class="cash-acct-note">${esc(opts.settledBefore)}</p>` : ''}
         </div>
       </div>`;
 
@@ -31247,6 +31258,25 @@ function payDue(dueId, amount, account, dateISO){
   const pay = Math.min(Number(amount)||0, bal);
   if(pay <= 0){ toast('Enter an amount to pay'); return null; }
 
+  /* A month settled before this system existed. The same rule the
+     purchase invoices learned for opening stock: no Cash Book entry,
+     because no cash moves TODAY -- rent paid in advance before the books
+     began must not spend this month's drawer, and backdating a payment
+     only moves the false entry to an earlier day.
+
+     Dated with the due itself, so duesOwedAsAt -- which nets payments on
+     or before the date it is asked about -- never shows the month owed
+     on any sheet: it never was, the premises were paid for before the
+     shop moved in. */
+  if(account === 'settled-before'){
+    due.payments = (due.payments||[]).concat([{
+      date: due.dueDate || todayISO(), amount: pay, account: null, cashTxnId: null,
+      settledBeforeSystem: true, note: SETTLED_BEFORE_NOTE,
+    }]);
+    due.paid = (Number(due.paid)||0) + pay;
+    saveData();
+    return pay;
+  }
   const kind = DUE_KINDS[due.kind] || DUE_KINDS.wage;
   const cashTxnId = addCashPayment(
     account || 'cash', pay, kind.cashCategory,
@@ -31492,10 +31522,14 @@ function renderPayrollDues(){
   wrap.querySelectorAll('.pr-undo').forEach(btn=> btn.addEventListener('click', ()=>{
     const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
     if(!d || !(d.payments||[]).length) return;
-    if(!confirm(`Reverse the last payment of ${fmtUGX(Math.round(d.payments[d.payments.length-1].amount))} to ${dueName(d)}?\n\nIts Cash Book entry is removed too.`)) return;
+    const last = d.payments[d.payments.length-1];
+    const noCash = !!last.settledBeforeSystem || last.cashTxnId == null;
+    if(!confirm(noCash
+      ? `Reverse this ${fmtUGX(Math.round(last.amount))} for ${dueName(d)}?\n\nIt was marked settled before this system, so there is no Cash Book entry to remove — the month simply goes back to being owed.`
+      : `Reverse the last payment of ${fmtUGX(Math.round(last.amount))} to ${dueName(d)}?\n\nIts Cash Book entry is removed too.`)) return;
     reverseDuePayment(d.id, d.payments.length-1);
     renderPayroll();
-    toast('Payment reversed — cash book entry removed');
+    toast(noCash ? 'Reversed — the month is owed again, no cash was involved either way' : 'Payment reversed — cash book entry removed');
   }));
 }
 
@@ -31524,12 +31558,16 @@ async function openDuePayment(dueId){
      and the day would fail to reconcile with nothing on screen to say
      why. Same question the loan reminder asks. */
   const account = await promptCashAccount('Where is the money coming from?',
-    `Recording ${fmtUGX(Math.round(amount))} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`, {amount, outgoing: true});
+    `Recording ${fmtUGX(Math.round(amount))} for ${dueName(d)} against ${periodLabel(d.period)} and in the Cash Book.`,
+    {amount, outgoing: true,
+      settledBefore: 'For months paid before you started using this system — rent paid in advance, a wage settled from the old records. The month is marked settled and the Cash Book is left exactly as it stands.'});
   if(!account) return;
   const paid = payDue(dueId, amount, account);
   if(paid === null) return;
   renderPayroll();
-  toast(`${fmtUGX(Math.round(paid))} paid — logged to the cash book`);
+  toast(account === 'settled-before'
+    ? `${fmtUGX(Math.round(paid))} marked as settled before this system — no cash moved`
+    : `${fmtUGX(Math.round(paid))} paid — logged to the cash book`, account === 'settled-before' ? 6000 : 2200);
 }
 
 /* ---- The days-missed modal ----------------------------------------
