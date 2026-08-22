@@ -118,4 +118,57 @@ if (fns) {
     'said on open too, not only after a keystroke');
 }
 
+
+/* ---------- 6. un-invoicing says what goes back on the shelf --------- */
+/*
+ * A shop sourced a line from one supplier, received it, invoiced,
+ * un-invoiced to change supplier, invoiced, and un-invoiced again. Each
+ * undo put twenty boxes back on the shelf — correctly, because the sale
+ * was being undone — and the shelf ended up holding goods the customer
+ * had walked out with.
+ *
+ * Nothing in the dialog mentioned stock. It named payments and debt, and
+ * an order carrying neither opened no dialog at all: the goods went back
+ * in silence. The books were right and the shop was not told.
+ */
+{
+  const { read: rd, extractFunction: ef, compileScope: cs } = require('./_extract');
+  const s2 = rd('index.html');
+  const N2 = ['orderStockReturnParts', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning'];
+  let f2 = null, e2 = null;
+  try {
+    f2 = cs(N2.map(n => ef(s2, n, 'index.html')),
+      { data: { purchaseInvoices: [] }, fmtUGX: (n) => `${Math.round(n)} UGX` }, N2);
+  } catch (e) { e2 = e; }
+  t.check(!!f2, `the reversal warnings compile${e2 ? ` (${e2.message})` : ''}`);
+
+  if (f2) {
+    const order = (over) => Object.assign({
+      id: 193, client: { name: 'Falcon Imprex' }, payments: [], debtCharged: 0,
+      items: [{ productId: 'P1', productName: 'Black Screws — 8∗ / Coarse', _stockTaken: 20 }],
+    }, over);
+
+    t.check(f2.orderStockReturnParts(order())[0] === '20 × Black Screws — 8∗ / Coarse',
+      `what the sale took is what goes back (${f2.orderStockReturnParts(order())[0]})`);
+    t.check(f2.orderStockReturnParts(order({ items: [{ productId: 'P1', _stockTaken: 0 }] })).length === 0,
+      'a line that took nothing off the shelf puts nothing back');
+
+    const w = f2.uninvoiceReversalWarning(order());
+    t.check(!!w, 'an order carrying no payments now WARNS — it used to open no dialog and return the goods in silence');
+    t.check(/goes back onto the shelf/.test(w), 'saying the goods go back');
+    t.check(/If those goods actually left with the customer, count that product afterwards/.test(w),
+      'and naming the one case the books cannot know about');
+
+    // Alongside money, both are said, each as its own sentence.
+    const paid = f2.uninvoiceReversalWarning(order({ payments: [{ amount: 230000 }] }));
+    t.check(/permanently remove/.test(paid) && /goes back onto the shelf/.test(paid),
+      'with payments on the order, the money and the goods are both named');
+
+    const del = f2.deleteQuoteWarning(order());
+    t.check(/goes back onto the shelf/.test(del), 'deleting says it too — it undoes the same sale');
+    t.check(f2.uninvoiceReversalWarning(order({ items: [] })) === null,
+      'while an order that took nothing and carries nothing still asks nothing');
+  }
+}
+
 process.exit(t.done() ? 1 : 0);

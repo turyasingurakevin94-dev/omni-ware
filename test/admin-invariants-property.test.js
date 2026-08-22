@@ -97,7 +97,7 @@ const NAMES = [
   'resolveInvoiceCustomer', 'applyInvoiceDebtCharge', 'syncInvoiceDebtCharge',
   'customerLedgerTotal', 'customerDebtDrift', 'customerOutstandingInvoices',
   'applyCustomerPaymentAllocations', 'recordCustomerPayment', 'setInvoicesVoided',
-  'orderReversalParts', 'deleteQuoteWarning', 'removePurchaseInvoicesForQuote', 'deleteSavedQuote',
+  'orderStockReturnParts', 'orderReversalParts', 'deleteQuoteWarning', 'removePurchaseInvoicesForQuote', 'deleteSavedQuote',
 ];
 let fns = null, err = null;
 /* Three of these moved to shared-worker.js when Awaiting Goods

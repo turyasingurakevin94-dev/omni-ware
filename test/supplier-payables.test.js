@@ -70,7 +70,7 @@ const FNS = [
   'purchaseInvoicePaymentStatusLabel', 'supplierName',
   'creditorOutstandingInvoices', 'creditorTotalOwed',
   'allocateCreditorPayment', 'generatePurchaseInvoicesForQuote',
-  'removePurchaseInvoicesForQuote', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning',
+  'removePurchaseInvoicesForQuote', 'orderStockReturnParts', 'orderReversalParts', 'uninvoiceReversalWarning', 'deleteQuoteWarning',
   'savedQuoteTotal', 'invoiceBalanceDue',
 ];
 /* Three of these moved to shared-worker.js when Awaiting Goods

@@ -22181,6 +22181,29 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
 // by un-invoicing and deleting, because they undo the same things --
 // deleting simply also removes the order itself, and used to say the least
 // about it: "This cannot be undone", naming no figure at all.
+/* What comes BACK ONTO THE SHELF when this order is undone.
+
+   Un-invoicing reverses the sale, so whatever the sale took off the
+   shelf goes back on it -- which is right in the books and is the thing
+   most easily forgotten in the shop, because the goods themselves may
+   well have gone out of the door with the customer.
+
+   A shop hit this twice on one order: sourced a line from one supplier,
+   received it, invoiced, un-invoiced to change supplier, invoiced,
+   un-invoiced again. Each undo quietly put twenty boxes back, and the
+   shelf ended up holding goods the customer had. Nothing in the dialog
+   mentioned stock at all -- it named payments and debt, and when there
+   were neither it did not open.
+
+   Driven by _stockTaken, which is what the deduction actually took,
+   rather than by the line's quantity: a line that could only be part
+   filled put back what it removed and no more. */
+function orderStockReturnParts(q){
+  const rows = ((q && q.items) || [])
+    .filter(it=> (Number(it._stockTaken)||0) > 0)
+    .map(it=> `${Number(it._stockTaken)} × ${it.productName || it.productId || 'item'}`);
+  return rows;
+}
 function orderReversalParts(q){
   const parts = [];
   const custPaid = (q.payments||[]).reduce((s,p)=> s + (Number(p.amount)||0), 0);
@@ -22201,15 +22224,32 @@ function orderReversalParts(q){
 }
 function uninvoiceReversalWarning(q){
   const parts = orderReversalParts(q);
-  if(!parts.length) return null;
-  return `Un-invoicing this order will permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
+  const back = orderStockReturnParts(q);
+  if(!parts.length && !back.length) return null;
+  const removed = parts.length
+    ? `Un-invoicing this order will permanently remove ${parts.join(' and ')}, along with their Cash Book entries.`
+    : 'Un-invoicing this order takes back the sale.';
+  /* Said in its own sentence, and said even when there is nothing else to
+     say -- an order carrying no payments used to un-invoice with no
+     dialog at all, silently putting the goods back. And said as the
+     QUESTION it is: the books put them back because the sale is undone;
+     whether they are there is something only the shop can answer. */
+  const shelf = back.length
+    ? `\n\n${back.join(', ')} goes back onto the shelf, because the sale is being undone. If those goods actually left with the customer, count that product afterwards and put the shelf right.`
+    : '';
+  return `${removed}${shelf}\n\nThis cannot be undone. Continue?`;
 }
 // Deleting undoes all of the above AND removes the order, so it names the
 // same figures. An order carrying nothing still asks, just without a list.
 function deleteQuoteWarning(q){
   const parts = q ? orderReversalParts(q) : [];
-  if(!parts.length) return 'Delete this saved quote? This cannot be undone.';
-  return `Deleting this order will also permanently remove ${parts.join(' and ')}, along with their Cash Book entries.\n\nThis cannot be undone. Continue?`;
+  const back = q ? orderStockReturnParts(q) : [];
+  const shelf = back.length
+    ? `\n\n${back.join(', ')} goes back onto the shelf, because the sale is being undone. If those goods actually left with the customer, count that product afterwards and put the shelf right.`
+    : '';
+  if(!parts.length && !back.length) return 'Delete this saved quote? This cannot be undone.';
+  if(!parts.length) return `Deleting this order takes back the sale.${shelf}\n\nThis cannot be undone. Continue?`;
+  return `Deleting this order will also permanently remove ${parts.join(' and ')}, along with their Cash Book entries.${shelf}\n\nThis cannot be undone. Continue?`;
 }
 
 // Guarded because issuing the PINV- numbers is now awaited, so this is no
