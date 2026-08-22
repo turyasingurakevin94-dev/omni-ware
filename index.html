@@ -8055,6 +8055,7 @@
                the question is the other one. -->
           <label class="p-toolbar-checkbox"><input type="checkbox" id="inv_hide_zero" checked>Hide no stock</label>
         </div>
+        <div id="invLotDrift"></div>
         <div id="invSummary"></div>
         <div id="invTableWrap"></div>
       </div>
@@ -40169,7 +40170,65 @@ function sortInventoryLines(lines, mode){
   });
 }
 
+/* Every product whose cost ledger has outlived its shelf, named with
+   the two figures side by side and the way to put each right.
+
+   ALL of them are listed, not a first few: the repair below acts on
+   what is named, and a button that commits to rows nobody was shown is
+   the fault the debtors banner had to be rebuilt to lose. A fix-all is
+   offered as well, which is safe HERE in a way it was not there --
+   there the direction of truth varied per customer and the verdicts
+   could disagree; here the shelf is the truth in every row, and the
+   repair is the same act done as many times. */
+function renderStockLotDrift(){
+  const wrap = document.getElementById('invLotDrift');
+  if(!wrap) return;
+  const rows = stockLotDrift();
+  if(!rows.length){ wrap.innerHTML = ''; return; }
+  const net = rows.reduce((s2,r)=> s2 + r.drift, 0);
+  wrap.innerHTML = `<div class="cb-chain-break">
+    <div><b>${rows.length} product${rows.length===1?"'s cost record does":"s' cost records do"} not match the shelf.</b></div>
+    <div>The count beside each product is what the shop has and what every figure is valued from — these are untouched. What has drifted is the record of what those goods cost, which is the queue a sale draws its cost from: left alone, the next sales of these products carry a cost that was already used up, and their margin reads wrong.</div>
+    ${rows.map(r=> `<div class="deb-drift-row">
+      <div><b>${esc(r.label)}</b>: ${r.onShelf} on the shelf, but the cost record still carries ${r.inLots} — ${r.drift > 0 ? `${r.drift} more than there ${r.drift===1?'is':'are'}` : `${-r.drift} fewer than there ${(-r.drift)===1?'is':'are'}`}.</div>
+      <div class="deb-drift-why">${r.drift > 0
+        ? 'The oldest of them will be dropped: under first-in-first-out what is still on the shelf is the newest, so the ones that outlived the goods are the oldest.'
+        : 'The shortfall goes in with no cost on it — nothing on file says what those cost, and a guess would be worse than an admission.'}</div>
+      <div class="deb-drift-acts">
+        <button type="button" class="btn btn-ghost" data-lotfix="${esc(r.key)}">Match the cost record to the ${r.onShelf} on the shelf</button>
+      </div>
+    </div>`).join('')}
+    ${rows.length > 1 ? `<div style="margin-top:10px;"><button type="button" class="btn btn-ghost cb-chain-fix" id="inv_lotfix_all">Match all ${rows.length} to their shelves</button></div>` : ''}
+    <div class="deb-drift-why">Net across them: the cost records carry ${net > 0 ? `${net} more` : `${-net} fewer`} than the shelves do.</div>
+  </div>`;
+  wrap.querySelectorAll('[data-lotfix]').forEach(btn=>
+    btn.addEventListener('click', ()=> fixStockLotDrift(btn.dataset.lotfix)));
+  const all = wrap.querySelector('#inv_lotfix_all');
+  if(all) all.addEventListener('click', ()=> fixStockLotDrift(null));
+}
+/* Applies the repair, to one product or to all of them. Asks first, and
+   names what changes -- and what does not, because "correcting stock" is
+   exactly what this is NOT doing and the shop has to be sure of that
+   before pressing anything. */
+function fixStockLotDrift(key){
+  const rows = stockLotDrift();
+  const doing = key ? rows.filter(r=> r.key === key) : rows;
+  if(!doing.length){ toast('Every cost record already matches its shelf'); return; }
+  const lines = doing.map(r=> `${r.label}: cost record ${r.inLots} → ${r.onShelf}`);
+  const msg = `Match ${doing.length === 1 ? 'this cost record' : `these ${doing.length} cost records`} to the shelf?\n\n`
+    + lines.join('\n')
+    + `\n\nNo stock count changes and no money moves — the shelf figures stay exactly as they are. `
+    + `Only the record of what those goods cost is brought back into line with them.\n\nThis cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  doing.forEach(r=> repairStockLotDrift(r.key));
+  saveData();
+  renderInventory();
+  toast(doing.length === 1
+    ? `${doing[0].label} — cost record matched to the ${doing[0].onShelf} on the shelf`
+    : `${doing.length} cost records matched to their shelves`, 6000);
+}
 function renderInventory(){
+  renderStockLotDrift();
   const wrap = document.getElementById('invTableWrap');
   const strip = document.getElementById('invSummary');
   const searchEl = document.getElementById('inv_table_search');
@@ -41634,6 +41693,70 @@ function loanPerformance(loan, asOfISO){
    Anything on the shelf beyond what the lots can cost is UNCOSTED and
    counts as nothing, which is the rule this file already applies
    everywhere else: a thing with no cost on file is not worth a guess. */
+/* ---- Where the shelf and the cost ledger disagree --------------------
+
+   Two records, two jobs. data.stock counts what is on the shelf; the
+   FIFO lots remember what each batch cost. Every ordinary movement
+   writes both -- applyStockDelta adds a lot or consumes from one in the
+   same breath as it moves the count -- so they should never part.
+
+   They can. A count corrected down further than the lots could supply
+   consumes what there is and stops; a purchase corrected, a restore that
+   found nothing to restore, an older path that moved one and not the
+   other. Nothing said so, and until stock stopped being valued off the
+   lot quantities it did not merely go unsaid: it was ACTED on, and a
+   shop carried forty cartons of hinges that did not exist.
+
+   Valuation no longer reads the lots for quantity, so this is not a
+   money fault any more. It is still a real one: the lots are the queue a
+   sale draws its cost from, so a lot that outlives the goods it was
+   bought for makes the next sales of that product look cheaper than they
+   were, and the margin on them wrong. Hence: say so, and offer to put it
+   right. */
+function stockLotDrift(){
+  const stock = data.stock || {};
+  const lots = data.stockLots || {};
+  const out = [];
+  new Set(Object.keys(stock).concat(Object.keys(lots))).forEach(k=>{
+    const onShelf = Number(stock[k])||0;
+    const inLots = (lots[k]||[]).reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
+    if(Math.abs(onShelf - inLots) < 0.0001) return;
+    const [pid, vRaw] = String(k).split('::');
+    const product = (data.products||[]).find(x=> x.id === pid);
+    const variantIdx = (vRaw == null || vRaw === '') ? null : (isNaN(Number(vRaw)) ? vRaw : Number(vRaw));
+    out.push({
+      key: k, productId: pid, variantIdx,
+      label: product ? productVariantLabel(product, variantIdx) : pid,
+      onShelf, inLots, drift: inLots - onShelf,
+    });
+  });
+  return out.sort((a,b)=> Math.abs(b.drift) - Math.abs(a.drift));
+}
+
+/* Brings one product's cost ledger back to its shelf.
+
+   THE SHELF IS THE TRUTH. It is the figure the Inventory screen shows,
+   the one a stock-take is counted against, and the one every other
+   screen now values -- so this moves the lots, never the count.
+
+   Lots in EXCESS are consumed from the front, which is the same walk a
+   sale takes: under FIFO what is still on the shelf is the newest, so
+   the ones that outlived the goods are the oldest. Straight through
+   consumeStockLots rather than a second copy of that rule.
+
+   A SHORTFALL is the honest opposite: the shelf holds more than any lot
+   accounts for, and nothing on file says what those cost. They go in as
+   an uncosted lot, which every valuation already reads as "counts as
+   nothing" rather than guessing a price for goods nobody priced. */
+function repairStockLotDrift(key){
+  const rows = stockLotDrift();
+  const row = rows.find(r=> r.key === key);
+  if(!row) return null;
+  if(row.drift > 0) consumeStockLots(row.productId, row.variantIdx, row.drift);
+  else addStockLot(row.productId, row.variantIdx, -row.drift, null);
+  return row;
+}
+
 function inventoryValue(){
   let value = 0, uncostedQty = 0;
   const lots = data.stockLots || {};
