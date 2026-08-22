@@ -7676,6 +7676,7 @@
           </button>
         </div>
 
+        <div id="piDupWrap"></div>
         <div id="purchaseInvoicesWrap"></div>
       </div>
     </section>
@@ -23900,7 +23901,100 @@ function piDocGetDateRange(){
   return {from: document.getElementById('pi_doc_from').value || null, to: document.getElementById('pi_doc_to').value || today};
 }
 
+/* ---- Bills raised twice for one delivery -----------------------------
+
+   Save on the restock screen awaited a PINV number from the server, and
+   the button stayed live while it did -- so a second press, by somebody
+   who had seen nothing happen, entered the whole purchase again. That is
+   guarded now (saveOnceAtATime), but the bills it already raised are
+   still on the books, and a shop cannot be expected to find them by
+   reading a year of paperwork.
+
+   Matched on what a duplicate actually IS: the same supplier, the same
+   day, and the same lines at the same prices. Not on the numbers being
+   consecutive -- a real double-press usually is, but so is an honest
+   second delivery, and a duplicate that had one ordinary bill land
+   between the two presses would go unfound.
+
+   ASKED, NEVER ASSUMED. A shop can genuinely buy the same thing twice in
+   one day, which is why nothing here voids anything on its own: it names
+   the group, says which of them carries money, and leaves the decision
+   with the person who knows whether two lorries arrived. */
+function duplicatePurchaseInvoiceGroups(){
+  const groups = new Map();
+  (data.purchaseInvoices||[]).forEach(pi=>{
+    if(pi.voided) return;
+    const lines = (pi.items||[])
+      .map(it=> `${it.productId||''}|${it.variantIdx==null?'':it.variantIdx}|${Number(it.qty)||0}|${Number(it.price)||0}`)
+      .sort().join(';');
+    if(!lines) return;
+    const key = [pi.supplierId||'', pi.date||'', lines].join('::');
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(pi);
+  });
+  return [...groups.values()]
+    .filter(g=> g.length > 1)
+    // Oldest number first: the first one raised is the one to keep.
+    .map(g=> g.slice().sort((a,b)=> (a.id||0) - (b.id||0)))
+    .sort((a,b)=> String(b[0].date||'').localeCompare(String(a[0].date||'')));
+}
+function renderPurchaseInvoiceDuplicates(){
+  const wrap = document.getElementById('piDupWrap');
+  if(!wrap) return;
+  const groups = duplicatePurchaseInvoiceGroups();
+  if(!groups.length){ wrap.innerHTML = ''; return; }
+  const extra = groups.reduce((s2,g)=> s2 + purchaseInvoiceTotal(g[0]) * (g.length - 1), 0);
+  wrap.innerHTML = `<div class="cb-chain-break">
+    <div><b>${groups.length} deliver${groups.length===1?'y appears':'ies appear'} to have been billed more than once.</b></div>
+    <div><b>Did that delivery really arrive twice?</b> If it did, leave these alone. If it did not, void the extra bill —
+      the shop stops owing for goods it never received.</div>
+    <div class="deb-drift-why">Voiding a bill does NOT take the goods back off the shelf. If the same delivery was entered twice,
+      the stock was added twice too — count that product and put it right, then the stock record warning on Inventory will
+      offer to match its cost record.</div>
+    ${groups.map(g=>{
+      const total = purchaseInvoiceTotal(g[0]);
+      return `<div class="inv-lot-row">
+        <span class="inv-lot-name">${esc(g[0].supplierName || 'Supplier')} · ${esc(g[0].date || 'no date')}</span>
+        <span class="inv-lot-figs">${g.length} bills of ${fmtUGX(Math.round(total))} — ${g.map(pi=> esc(purchaseInvoiceNumberLabel(pi))
+          + (((pi.payments||[]).length || (Number(pi.amountPaid)||0) > 0.5) ? ' (paid on)' : '')).join(', ')}</span>
+        <button type="button" class="btn btn-ghost" data-pidup="${esc(g.map(pi=> pi.id).join(','))}">Void the ${g.length - 1} extra</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+  wrap.querySelectorAll('[data-pidup]').forEach(btn=>
+    btn.addEventListener('click', ()=> voidDuplicatePurchaseInvoices(btn.dataset.pidup)));
+}
+/* Voids all but the FIRST of a group -- the one raised first is the one
+   the delivery actually produced. Refuses to void a bill with money
+   against it: that is a real payment to a real supplier, and voiding it
+   would leave the cash book explaining nothing. */
+function voidDuplicatePurchaseInvoices(idsRaw){
+  const ids = String(idsRaw||'').split(',').map(Number).filter(n=> !isNaN(n));
+  const all = ids.map(id=> (data.purchaseInvoices||[]).find(pi=> pi.id === id)).filter(Boolean);
+  if(all.length < 2) return;
+  const keep = all[0];
+  const drop = all.slice(1);
+  const paid = drop.filter(pi=> (pi.payments||[]).length || (Number(pi.amountPaid)||0) > 0.5);
+  if(paid.length){
+    toast(`${paid.map(purchaseInvoiceNumberLabel).join(', ')} ${paid.length===1?'has':'have'} money paid against ${paid.length===1?'it':'them'} — remove the payment first if the bill is not real`, 8000);
+    return;
+  }
+  const msg = `Void ${drop.length === 1 ? 'this bill' : `these ${drop.length} bills`} as duplicates?\n\n`
+    + `Keeping: ${purchaseInvoiceNumberLabel(keep)}\n`
+    + `Voiding: ${drop.map(purchaseInvoiceNumberLabel).join(', ')}\n\n`
+    + `The shop stops owing ${fmtUGX(Math.round(drop.reduce((s2,pi)=> s2 + purchaseInvoiceBalanceDue(pi), 0)))} on them.\n\n`
+    + `This does NOT take any goods back off the shelf. If the delivery was entered twice, count that product and correct it.\n\n`
+    + `This cannot be undone automatically.`;
+  if(!confirm(msg)) return;
+  drop.forEach(pi=>{ pi.voided = true; });
+  saveData();
+  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+  refreshNavBadges();
+  toast(`${drop.length} duplicate bill${drop.length===1?'':'s'} voided — check that product's stock count next`, 7000);
+}
 function renderPurchaseInvoices(filter=''){
+  renderPurchaseInvoiceDuplicates();
   const wrap = document.getElementById('purchaseInvoicesWrap');
   const tokens = searchTokens(filter);
   const {from, to} = piDocGetDateRange();
