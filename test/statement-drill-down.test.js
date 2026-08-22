@@ -68,7 +68,7 @@ const env = {
   inventoryValue: () => ({ value: 0, uncostedQty: 0 }),
 };
 const NAMES = [
-  'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal',
+  'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal', 'cashIsDebtCollection', 'invoiceBackedCashTxnIds',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
 ];

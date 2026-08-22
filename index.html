@@ -22095,7 +22095,7 @@ function applyCustomerPaymentAllocations(allocations, account, note, category, d
     const pay = Math.min(Math.max(0,amount), invoiceBalanceDue(q));
     if(pay<=0) return;
     if(!q.payments) q.payments = [];
-    const cashTxnId = addCashReceipt(account, pay, category || 'Debt Payment', note || `Payment — ${invoiceNumberLabel(q)}`, date);
+    const cashTxnId = addCashReceipt(account, pay, category || 'Debt Payment', note || `Payment — ${invoiceNumberLabel(q)}`, date, q.id);
     q.payments.push({date: date || todayISO(), amount: pay, note, cashTxnId});
     q.amountPaid = (Number(q.amountPaid)||0) + pay;
     syncInvoiceDebtCharge(q);
@@ -23382,7 +23382,7 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   const note = document.getElementById('ip_note').value.trim();
   const account = document.getElementById('ip_account').value;
   if(!q.payments) q.payments = [];
-  const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`);
+  const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`, null, q.id);
   /* `method` is the account the form already asked for and used to
      throw away -- a receipt that says how the money arrived settles an
      argument months later. `id` is what makes this payment's receipt
@@ -37444,7 +37444,7 @@ let editingCashTxnColumn = null; // 'in' | 'out'
 // Returns the new cash txn's id so the caller (a payment record) can keep a link
 // back to it -- needed so the entry can be found and removed again if the payment
 // is ever reversed (invoice un-invoiced/deleted, payment deleted, etc).
-function addCashReceipt(account, amount, category, description, date){
+function addCashReceipt(account, amount, category, description, date, quoteId){
   if(!amount || amount<=0) return null;
   const id = allocRowId('cashTxn');
   data.cashTxns.push({
@@ -37456,6 +37456,10 @@ function addCashReceipt(account, amount, category, description, date){
     amount,
     description: description || '',
     time: new Date().toTimeString().slice(0,5),
+    // The invoice this money belongs to, when the caller knows it. The
+    // basis-gap reads the invoices' own payment records as the truth, so
+    // this is a convenience for anything reading the txn alone.
+    quoteId: quoteId == null ? null : quoteId,
   });
   saveData();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
@@ -41676,6 +41680,18 @@ function balanceSheetAsAt(asOfISO){
    Built from the cash book alone, so it reconciles to something countable
    -- which is the one statement here that CAN be checked against reality,
    and the reason the check is shown. */
+// Cash entries an invoice claims as its own. Every payment recorded
+// against a saved order keeps the id of the cash entry it created
+// (cashTxnId) -- a record that exists for every payment ever written,
+// which the quoteId stamp on the txn itself does not: that stamp was
+// only ever written by the mobile-money webhook.
+function invoiceBackedCashTxnIds(){
+  const backed = new Set();
+  (data.savedQuotes||[]).forEach(q=> (q.payments||[]).forEach(pp=>{
+    if(pp && pp.cashTxnId != null) backed.add(pp.cashTxnId);
+  }));
+  return backed;
+}
 function cashFlowStatement(fromISO, toISO){
   const rows = dashCashTxnsInRange(fromISO, toISO);
   const sum = (f)=> rows.filter(f).reduce((s,t)=> s + (Number(t.amount)||0), 0);
@@ -41689,14 +41705,21 @@ function cashFlowStatement(fromISO, toISO){
      what the basis-gap warning is about. Counting the linked ones would
      fire the warning on exactly the sales that were just recorded
      properly, which teaches a shop to ignore it. */
-  const tradingInUninvoiced = sum(t=> cashIsTradingIncome(t) && t.quoteId == null);
+  /* Linked through the invoices' own payment records, not the quoteId
+     stamp -- see invoiceBackedCashTxnIds. Testing the stamp alone
+     counted essentially every till payment as uninvoiced trade, and told
+     a shop that invoices everything that its figures were missing half
+     of what it took: the same money, seen once as the invoice and again
+     as its own receipt. */
+  const backed = invoiceBackedCashTxnIds();
+  const tradingInUninvoiced = sum(t=> cashIsTradingIncome(t) && t.quoteId == null && !backed.has(t.id));
   const operatingOut = sum(cashIsOperatingExpense);
   // Named rather than "everything that is not a running cost": that set
   // also holds Loan Repayment, which is financing, and folding it in here
   // reported a repayment as money spent on stock.
   const stockOut = sum(t=> cashIsMoneyOut(t)
     && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'));
-  const debtCollected = sum(t=> cashIsMoneyIn(t) && t.category === 'Debt Collection');
+  const debtCollected = sum(cashIsDebtCollection);
   const operating = tradingIn + debtCollected - operatingOut - stockOut;
 
   const borrowed = sum(t=> cashIsMoneyIn(t) && t.category === 'Loan Received');
@@ -42582,7 +42605,7 @@ function stDrillData(key, ctx){
      exact complement rather than a second opinion about it. */
   const CF_PICKS = {
     tradingin:     (t)=> cashIsTradingIncome(t),
-    debtcollected: (t)=> cashIsMoneyIn(t) && t.category === 'Debt Collection',
+    debtcollected: (t)=> cashIsDebtCollection(t),
     stockout:      (t)=> cashIsMoneyOut(t) && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'),
     opexpaid:      (t)=> cashIsOperatingExpense(t),
     equipment:     (t)=> cashIsMoneyOut(t) && t.category === 'Equipment purchase',
@@ -44575,6 +44598,10 @@ const CASH_NOT_REVENUE = {
   'Loan Received': 'borrowing — a liability, not income',
   'Owner Investment': 'equity — the owner\'s money, not earnings',
   'Debt Collection': 'settles a receivable — the sale was already booked',
+  // The same settling, by the name the payment screens actually write.
+  // Counted as revenue it was the sale arriving twice: once when
+  // invoiced, again when the debtor paid it off.
+  'Debt Payment': 'settles a receivable — the sale was already booked',
   // Selling the van is not a sale. The money is investing coming back, and
   // whether it was a good sale is the asset register's answer -- proceeds
   // against written-down value -- not the size of the cheque.
@@ -44596,6 +44623,14 @@ function cashIsOperatingExpense(t){
 // cash-flow statement needs to keep financing and equity out of trading.
 function cashIsTradingIncome(t){
   return cashIsMoneyIn(t) && !cashHas(CASH_NOT_REVENUE, t.category);
+}
+// Money collected against sales already booked, by either name it is
+// written under: 'Debt Collection' is what the Cash Book's own preset
+// offers, 'Debt Payment' is what the customer-payment screens write.
+// The statements matched only the first, so half the shop's collections
+// posed as fresh takings.
+function cashIsDebtCollection(t){
+  return cashIsMoneyIn(t) && (t.category === 'Debt Collection' || t.category === 'Debt Payment');
 }
 // The owner's money leaving, by either name a shop is likely to give it.
 // Matched by exact category, the same way 'Owner Investment' is on the

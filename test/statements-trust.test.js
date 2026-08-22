@@ -99,8 +99,16 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
  */
 {
   const cf = (/function cashFlowStatement[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/const tradingInUninvoiced = sum\(t=> cashIsTradingIncome\(t\) && t\.quoteId == null\);/.test(cf),
-    'the cash flow separates takings with a sale behind them from takings without');
+  /* The separation is made through the invoices' own payment records
+     now, not the quoteId stamp alone: the stamp was only ever written by
+     the mobile-money webhook, so testing it counted every till payment
+     as uninvoiced and told a shop that invoices everything that half its
+     takings had no invoice behind them. */
+  t.check(/const backed = invoiceBackedCashTxnIds\(\);/.test(cf)
+    && /tradingInUninvoiced = sum\(t=> cashIsTradingIncome\(t\) && t\.quoteId == null && !backed\.has\(t\.id\)\);/.test(cf),
+    'the cash flow separates takings with a sale behind them from takings without — read from the invoices\u2019 own payment records');
+  t.check(!/tradingInUninvoiced = sum\(t=> cashIsTradingIncome\(t\) && t\.quoteId == null\);/.test(cf),
+    'and the stamp-only test that cried wolf on every till payment is gone');
   /* == null, not === null: a receipt loaded before this column existed
      has undefined there, and treating it as linked would hide a real
      gap on every book written before today. */

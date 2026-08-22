@@ -52,6 +52,8 @@ const scope = compileScope([
   extractFunction(src, 'cashIsMoneyIn', 'index.html'),
   extractFunction(src, 'cashIsOperatingExpense', 'index.html'),
   extractFunction(src, 'cashIsOwnerWithdrawal', 'index.html'),
+  extractFunction(src, 'cashIsDebtCollection', 'index.html'),
+  extractFunction(src, 'invoiceBackedCashTxnIds', 'index.html'),
   extractFunction(src, 'cashIsTradingIncome', 'index.html'),
   extractFunction(src, 'invoiceLineCost', 'index.html'),
   extractFunction(src, 'anInvoiceTotals', 'index.html'),
@@ -561,6 +563,61 @@ const reset = () => {
      never how much the business itself explains. */
   t.check(bs.ownerCapital - bs.ownerDrawings + bs.retainedEarnings === bs.equity,
     'put in, less taken out, plus kept — the equity section still closes');
+}
+
+/* ---------- an invoiced sale's own receipt is not a second sale ------- */
+/*
+ * From the shop, verbatim: "These figures are missing 50% of what the
+ * shop took — 15,717,000 came in as sales cash with no invoice behind
+ * it." The shopkeeper's reply was the finding: "but the invoices are
+ * there that total that amount."
+ *
+ * They were. The gap tested the quoteId stamp on the cash entry, and the
+ * only writer that ever stamped it was the mobile-money webhook — every
+ * till payment recorded through the app itself went out unstamped. So a
+ * shop that invoices everything was told half its takings had no invoice
+ * behind them: the same money, seen once as the invoice and again as its
+ * own receipt. The invoices' payment records (cashTxnId, written with
+ * every payment since the feature existed) are the link that was there
+ * all along, and are what the gap reads now.
+ *
+ * And a debtor settling up was "sales cash" too: the payment screens
+ * write 'Debt Payment', the statements only knew 'Debt Collection', so
+ * collections posed as fresh takings on top of the sales already booked.
+ */
+{
+  reset();
+  // An invoiced sale, paid at the till: the payment keeps the id of the
+  // cash entry it created, exactly as ip_save writes it.
+  data.savedQuotes = [sale({ amountPaid: 450000, payments: [{ date: TODAY, amount: 450000, cashTxnId: 71 }] })];
+  data.cashTxns = [
+    txn({ id: 71, type: 'receipt', category: 'Invoice Payment', amount: 450000 }),
+    // A debtor clearing an older sale, by the name the screens write.
+    txn({ id: 72, type: 'receipt', category: 'Debt Payment', amount: 795000 }),
+    // And one genuine counter taking with no document behind it.
+    txn({ id: 73, type: 'receipt', category: 'Sales Revenue', amount: 60000 }),
+  ];
+  const is = scope.incomeStatement('2026-08-01', TODAY);
+  const cf = scope.cashFlowStatement('2026-08-01', TODAY);
+
+  t.check(cf.tradingInUninvoiced === 60000,
+    `only the undocumented taking counts as uninvoiced — not the invoice's own receipt, not the debt payment (got ${cf.tradingInUninvoiced})`);
+  t.check(cf.debtCollected === 795000,
+    'a debt payment is collections, by either name it was written under');
+  t.check(cf.tradingIn === 450000 + 60000,
+    `received from sales carries the till money and not the collections (got ${cf.tradingIn})`);
+
+  const gap = scope.statementBasisGap(is, cf);
+  t.check(gap.uninvoiced === 60000,
+    `the warning names the 60,000 actually undocumented, not the half of takings it used to claim (got ${gap.uninvoiced})`);
+
+  // The exact shape of the false alarm, pinned so it cannot return: the
+  // same books with the payment link ignored would have called 510,000
+  // of 510,000 receipts uninvoiced.
+  data.savedQuotes[0].payments[0].cashTxnId = null;
+  const cfUnlinked = scope.cashFlowStatement('2026-08-01', TODAY);
+  t.check(cfUnlinked.tradingInUninvoiced === 450000 + 60000,
+    'severing the payment record puts the receipt back outside the invoices — the link is the evidence, not the category name');
 }
 
 process.exit(t.done() ? 1 : 0);
