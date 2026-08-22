@@ -261,8 +261,17 @@ if (fns) {
 
 /* ---------- 7. the wiring on the page -------------------------------- */
 {
-  t.check(/const drillable = stActiveTab !== 'ratios';/.test(code),
-    'the ratios stay full-width — every ratio is derived, so there is nothing to list');
+  t.check(/const drillable = stActiveTab !== 'ratios' && stActiveTab !== 'overview';/.test(code),
+    'the ratios and the overview stay full-width — ratios because every figure is derived, the overview by the shop\u2019s own request: it is the summary, and the records live on the statements its lines summarise');
+  /* No handle on a door that opens onto a wall: with no panel on the
+     overview, none of its lines may carry a drill key. Matched over the
+     whole of stOverview so a key added to any future line fails here. */
+  const overviewDoc = (/function stOverview\([\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(overviewDoc.length > 0, 'found stOverview');
+  t.check(!/drill:/.test(overviewDoc), 'and none of its lines is clickable');
+  // The two providers only the overview reached went with it.
+  t.check(!/ov:runcosts|ov:borrowcost/.test(code),
+    'the providers nothing can reach any more are gone rather than left as dead code');
   t.check(/stDrillKey = null;\n  renderStatements\(\);/.test(code.replace(/\r/g, '')),
     'switching documents closes the preview rather than leaving it beside the wrong statement');
   t.check(/data-st-drill="\$\{esc\(o\.drill\)\}" tabindex="0" role="button"/.test(code),

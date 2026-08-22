@@ -42607,13 +42607,6 @@ function stDrillData(key, ctx){
     note: 'What each asset fetched against what the books said it was worth.',
     rows: is.disposals.map(x=> ({ d: x.asset.disposedOn, l: x.asset.name,
       s: `sold for ${fmtUGX(Math.round(x.proceeds))} against ${fmtUGX(Math.round(x.book))} on the books`, v: x.gain })) };
-  if(key === 'ov:runcosts') return { title: 'Running costs', expect: is.opex + is.depreciation,
-    note: 'Every operating cost paid this period, plus depreciation — which moves no money, the cash having left when the assets were bought.',
-    rows: opexRowsFor(null).concat(depreciationRows()) };
-  if(key === 'ov:borrowcost') return { title: 'Cost of borrowing', expect: is.interest + is.loanFees,
-    note: 'Interest paid this period, and fees on loans taken out in it.',
-    rows: interestRows().concat(feeRows()) };
-
   if(key && key.indexOf('bs:cash:') === 0){
     const k = key.slice('bs:cash:'.length);
     const end = asOf;
@@ -42881,8 +42874,13 @@ function renderStatements(){
   basisEl.querySelector('option[value=""]').textContent =
     stComparisonBasis ? 'Compare automatically' : `Automatic — ${ST_BASES[ctx.basis].toLowerCase()}`;
   /* The ratios are all derived figures, so there is nothing for a
-     preview to list; the document takes the full width there. */
-  const drillable = stActiveTab !== 'ratios';
+     preview to list; the document takes the full width there. The
+     overview keeps its full width too, by request: it is the summary,
+     read side by side with its own trust-checks, and the records belong
+     on the detailed statements its lines are summaries OF -- revenue's
+     invoices live behind the P&L's revenue line, not behind a digest of
+     it. */
+  const drillable = stActiveTab !== 'ratios' && stActiveTab !== 'overview';
   body.innerHTML = drillable
     ? `<div class="st-split">
         <div class="st-split-doc">${statementDocHTML(stActiveTab, ctx)}</div>
@@ -43077,12 +43075,12 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
         <header class="st-doc-head"><h3>Where the profit went</h3>
           <span class="st-doc-when">${esc(from)} to ${esc(to)}</span></header>
         <table class="st-table">
-          ${stLine('Sales', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
-          ${stLine('Less what the goods cost', -is.costOfSales, -prev.costOfSales, {drill:'pl:cogs'})}
+          ${stLine('Sales', is.revenue, prev.revenue, {delta:true, higherIsBetter:true})}
+          ${stLine('Less what the goods cost', -is.costOfSales, -prev.costOfSales)}
           ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
-          ${stLine('Less running costs', -(is.opex + is.depreciation), -(prev.opex + prev.depreciation), {drill:'ov:runcosts'})}
-          ${stLine('Less cost of borrowing', -(is.interest + is.loanFees), -(prev.interest + prev.loanFees), {drill:'ov:borrowcost'})}
-          ${is.disposalGain ? stLine('Assets sold', is.disposalGain, prev.disposalGain, {drill:'pl:disposals'}) : ''}
+          ${stLine('Less running costs', -(is.opex + is.depreciation), -(prev.opex + prev.depreciation))}
+          ${stLine('Less cost of borrowing', -(is.interest + is.loanFees), -(prev.interest + prev.loanFees))}
+          ${is.disposalGain ? stLine('Assets sold', is.disposalGain, prev.disposalGain) : ''}
           ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
         </table>
         <p class="st-read">${is.revenue>0
