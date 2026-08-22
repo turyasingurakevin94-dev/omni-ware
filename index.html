@@ -10078,9 +10078,17 @@
             <option value="cash">Cash</option>
             <option value="momo">Mobile Money</option>
             <option value="bank">Bank</option>
+            <!-- Stock that was already on the shelf when the shop started
+                 recording had to be entered as a purchase to get it onto
+                 the books, which raised a bill for money that was settled
+                 long before any of this existed. Paying that off out of
+                 today's till would be a payment the shop never made. -->
+            <option value="settled-before">Already settled — before this system (no cash moves)</option>
           </select>
         </div>
+        <div class="field" id="pip_settled_date_field" style="display:none;"><label>Settled on</label><input id="pip_settled_date" type="date"></div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="pip_note" placeholder="e.g. Cash, mobile money, bank transfer..."></div>
+        <div class="field" id="pip_settled_hint" style="grid-column:1/-1;display:none;"></div>
       </div>
       <div class="cc-history" id="piPaymentHistory" style="margin-top:14px;"></div>
     </div>
@@ -23422,6 +23430,27 @@ function purchaseInvoiceNumberLabel(pi){ return 'PINV-' + String(pi.id).padStart
    -1 and the bands sort into "No date on record", where the creditors
    screen sets these aside to be found out. */
 const SUPPLIER_OPENING_BALANCE_LABEL = 'Opening balance — owed before this system';
+/* The other half of carrying a shop's history in: not what was still
+   OWED at the door, but what had already been settled before it.
+
+   Stock sitting on the shelf on day one has to be entered as a purchase
+   to exist on the books at all, and that raises a bill. For goods the
+   shop had already paid for, that bill is money it does not owe -- and
+   the only way the app offered to clear it was a payment out of today's
+   till, which would spend cash the shop still has on goods it bought
+   months ago. This marks such a bill settled without moving any. */
+const SETTLED_BEFORE_NOTE = 'Settled before this system — no cash moved';
+function piPaymentIsSettledBefore(p){
+  if(!p) return false;
+  if(p.settledBeforeSystem) return true;
+  // The flag rides the invoice's JSON payload; the note is the fallback,
+  // the way debtLogIsInvoiceOwned keeps one for entries written before
+  // its own flag existed.
+  return String(p.note||'') === SETTLED_BEFORE_NOTE;
+}
+function purchaseInvoiceSettledBeforeTotal(pi){
+  return ((pi && pi.payments)||[]).reduce((s,p)=> piPaymentIsSettledBefore(p) ? s + (Number(p.amount)||0) : s, 0);
+}
 /* The flag is the answer; the line's own name is the fallback.
 
    Same shape, and for the same reason, as debtLogIsInvoiceOwned(): the
@@ -23897,6 +23926,12 @@ function openPiPaymentModal(id){
   `;
   document.getElementById('pip_amount').value = due>0 ? due : '';
   document.getElementById('pip_note').value = '';
+  document.getElementById('pip_account').value = 'cash';
+  // Defaulted to the bill's own date: the debt was never real, so dating
+  // the settlement with it keeps every historic balance sheet clean too,
+  // not just today's.
+  document.getElementById('pip_settled_date').value = pi.date || todayISO();
+  pipRefreshSettledBefore();
   renderPiPaymentHistory(pi);
   openModal('piPaymentModal');
 }
@@ -23905,7 +23940,7 @@ function renderPiPaymentHistory(pi){
   hist.innerHTML = (pi.payments&&pi.payments.length)
     ? pi.payments.map((p,i)=>({p,i})).reverse().map(({p,i})=>`
       <div class="cc-history-row">
-        <span>${esc(p.date)} — ${esc(p.note||'Payment')}</span>
+        <span>${esc(p.date)} — ${esc(p.note||'Payment')}${piPaymentIsSettledBefore(p) ? ' <b>(no cash moved)</b>' : ''}</span>
         <span class="amt" style="color:var(--danger);">${fmtUGX(Math.round(p.amount))}</span>
         <button type="button" class="q-remove-icon pi-pay-del" data-idx="${i}" title="Remove this payment">${ICON_TRASH}</button>
       </div>`).join('')
@@ -23920,7 +23955,13 @@ function renderPiPaymentHistory(pi){
 function removePiPayment(id, idx){
   const pi = data.purchaseInvoices.find(x=>x.id===id);
   if(!pi || !pi.payments || !pi.payments[idx]) return;
-  if(!confirm('Remove this payment? Its matching Cash Book entry will be removed too.')) return;
+  // A settled-before-this-system entry never made a Cash Book entry, so
+  // promising to remove one would be a lie -- and an alarming one, since
+  // it reads as "this will take money back out of the books".
+  const settledBefore = piPaymentIsSettledBefore(pi.payments[idx]);
+  if(!confirm(settledBefore
+    ? 'Remove this? It was recorded as settled before this system, so no Cash Book entry was ever made and none will be removed — the bill simply goes back to being owed.'
+    : 'Remove this payment? Its matching Cash Book entry will be removed too.')) return;
   const [removed] = pi.payments.splice(idx, 1);
   pi.amountPaid = Math.max(0, (Number(pi.amountPaid)||0) - (Number(removed.amount)||0));
   removeCashTxnsByIds([removed.cashTxnId]);
@@ -23943,6 +23984,21 @@ function removePiPayment(id, idx){
 function resetPiPaymentForm(){ piPaymentId = null; }
 document.getElementById('piPaymentModalClose').addEventListener('click', ()=> closeModalAndReset('piPaymentModal', resetPiPaymentForm));
 document.getElementById('pip_cancel').addEventListener('click', ()=> closeModalAndReset('piPaymentModal', resetPiPaymentForm));
+/* Shows the date and the explanation only when the shop is saying this
+   bill was settled before any of this existed -- an ordinary payment
+   should not have to read a paragraph about opening stock. */
+function pipRefreshSettledBefore(){
+  const on = document.getElementById('pip_account').value === 'settled-before';
+  document.getElementById('pip_settled_date_field').style.display = on ? '' : 'none';
+  const hint = document.getElementById('pip_settled_hint');
+  hint.style.display = on ? '' : 'none';
+  if(on){
+    hint.innerHTML = '<div class="sup-hint">For stock you already had, and had already paid for, when you started using this system. '
+      + 'It clears what this bill says you owe <b>without taking anything out of your cash</b>, so your Cash Book still matches the money in the drawer '
+      + 'and nothing is reported as bought this period. Your stock and your profit figures do not change — only what you are shown as owing.</div>';
+  }
+}
+document.getElementById('pip_account').addEventListener('change', pipRefreshSettledBefore);
 document.getElementById('pip_save').addEventListener('click', ()=>{
   const pi = data.purchaseInvoices.find(x=>x.id===piPaymentId);
   if(!pi) return;
@@ -23959,6 +24015,39 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
   const note = document.getElementById('pip_note').value.trim();
   const account = document.getElementById('pip_account').value;
   if(!pi.payments) pi.payments = [];
+  /* Settling a bill that was already settled before any of this existed.
+
+     No Cash Book entry, because no cash moves TODAY -- that is the whole
+     point. Paying opening stock off out of the till would take money the
+     shop still has and spend it on goods it bought months ago: the cash
+     book would stop matching the drawer, and the cash flow statement
+     would report stock buying that never happened in the period.
+
+     The DATE defaults to the bill's own, and that is what makes the
+     historic sheets right rather than merely the current one: payablesAsAt
+     re-sums payments dated on or before the date it is asked about, so a
+     settlement dated with the bill means no balance sheet, at any date,
+     ever shows this as money owed. Which is the truth -- it was not. */
+  if(account === 'settled-before'){
+    const settledOn = document.getElementById('pip_settled_date').value || pi.date || todayISO();
+    if(settledOn > todayISO()){ toast('That date is in the future.', 5000); return; }
+    pi.payments.push({
+      date: settledOn, amount,
+      note: note || SETTLED_BEFORE_NOTE,
+      // No cash entry to point at, and none to remove if this is undone.
+      cashTxnId: null,
+      settledBeforeSystem: true,
+    });
+    pi.amountPaid = (Number(pi.amountPaid)||0) + amount;
+    saveData();
+    closeModal('piPaymentModal');
+    resetPiPaymentForm();
+    renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+    if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+    refreshNavBadges();
+    toast(`${fmtUGX(Math.round(amount))} marked as settled before this system — no cash moved`, 6000);
+    return;
+  }
   const cashTxnId = addCashPayment(account, amount, 'Stock Purchase', note || `Payment — ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName||''}`);
   pi.payments.push({date: todayISO(), amount, note, cashTxnId});
   pi.amountPaid = (Number(pi.amountPaid)||0) + amount;
