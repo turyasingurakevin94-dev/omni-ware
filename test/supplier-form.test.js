@@ -33,7 +33,9 @@ const scope = compileScope([...NAMES.map((n) => extractFunction(src, n, 'index.h
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const modal = (/<div class="modal-overlay" id="supplierModal">[\s\S]*?\n<\/div>\n/.exec(src) || [''])[0];
-const save = (/s_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+// The handler is wrapped in saveOnceAtATime (one click, one document),
+// so it registers off a captured button and closes with `}));`.
+const save = (/__btn_s_save\.addEventListener[\s\S]*?\n\}\)\);/.exec(code) || [''])[0];
 
 /* ---------- 1. the same supplier, typed twice ------------------------ */
 {

@@ -20426,7 +20426,8 @@ function buildSalesGroupQuoteMessage(items, client){
   ].join('\n');
 }
 
-document.getElementById('q_save_btn').addEventListener('click', async ()=>{
+const __btn_q_save_btn = document.getElementById('q_save_btn');
+__btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, async ()=>{
   ensureQuote();
   if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
   const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
@@ -20499,7 +20500,7 @@ document.getElementById('q_save_btn').addEventListener('click', async ()=>{
   renderQuoteAll();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
-});
+}));
 
 function loadSavedQuote(id){
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -25724,7 +25725,8 @@ document.getElementById('s_add_btn').addEventListener('click', ()=>{
   // The only field somebody came here to fill in.
   document.getElementById('s_name').focus();
 });
-document.getElementById('s_save').addEventListener('click', async ()=>{
+const __btn_s_save = document.getElementById('s_save');
+__btn_s_save.addEventListener('click', saveOnceAtATime(__btn_s_save, async ()=>{
   /* `let`, because the collision check below may replace it. As a
      const this threw "Assignment to constant variable" and took the
      whole save handler with it -- the form simply did nothing. */
@@ -25827,7 +25829,7 @@ Add them anyway?`)) return;
   toast(opened
     ? `Supplier saved — ${fmtUGX(Math.round(openChk.amount))} recorded as ${purchaseInvoiceNumberLabel(opened)}, payable like any other bill`
     : 'Supplier saved', opened ? 6000 : 2200);
-});
+}));
 document.getElementById('s_cancel').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('supplierModalClose').addEventListener('click', ()=>closeModalAndReset('supplierModal', resetSupplierForm));
 document.getElementById('s_search').addEventListener('input', e=>renderSuppliers(e.target.value));
@@ -33673,6 +33675,42 @@ async function issueRowId(name){
   return localRowId(name);
 }
 
+/* One click, one document.
+
+   Issuing an INV- or PINV- number is a round trip to the server, so every
+   save that raises one has a window between the click and the record
+   being written -- and the button stays live for all of it. On a slow
+   connection that window is seconds long, which is exactly when somebody
+   who has seen nothing happen presses Save again.
+
+   The second press is not a duplicate of the first, it is a SECOND
+   DOCUMENT. On the restock path it is worse than that, because stock is
+   moved before the await: twenty cartons become forty, on two bills. A
+   real shop found it as PINV-0143 and PINV-0144 -- the same twenty
+   cartons, the same supplier, seconds apart.
+
+   toggleQuoteInvoiced has carried a guard of this shape since PINV
+   numbers started being awaited, and says the same thing in its own
+   comment. This is that guard, shared, so a save that awaits an id gets
+   it by being wrapped rather than by somebody remembering. */
+function saveOnceAtATime(btn, run){
+  let busy = false;
+  return async function(...args){
+    if(busy) return;
+    busy = true;
+    /* Disabled as well as flagged. The flag is what makes the second
+       click harmless; the greyed button is what tells the person
+       pressing it why nothing happened -- without it the fix looks
+       exactly like the app ignoring them. */
+    const was = btn ? btn.disabled : false;
+    if(btn) btn.disabled = true;
+    try{ return await run.apply(this, args); }
+    finally{
+      busy = false;
+      if(btn) btn.disabled = was;
+    }
+  };
+}
 function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
@@ -40521,7 +40559,8 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
   });
 
-  document.getElementById('inv_purchase_save_btn').addEventListener('click', async ()=>{
+  const __btn_inv_purchase_save_btn = document.getElementById('inv_purchase_save_btn');
+__btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_purchase_save_btn, async ()=>{
     const q = invPurchaseQtyValue(qtyInput.value, qtyUnitSel.value, packQty);
     if(q<=0){ toast('Enter a quantity greater than 0'); return; }
     const price = invPurchasePriceValue(priceInput.value, priceUnitSel.value, packQty);
@@ -40551,7 +40590,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     renderInventory();
     renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
     toast('Stock updated');
-  });
+  }));
 }
 
 /* ================= Init ================= */

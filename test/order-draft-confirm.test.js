@@ -461,7 +461,9 @@ const draft = (items) => {
   // in a keydown handler earlier in the file, and the loose anchor captured
   // that one instead -- 666 characters that contained neither the sales
   // group nor the status, so both checks "passed" against the wrong code.
-  const saveHandler = (/getElementById\('q_save_btn'\)\.addEventListener\('click'[\s\S]*?\n\}\);/.exec(code) || [''])[0];
+  // Wrapped in saveOnceAtATime (one click, one document), so it registers
+  // off a captured button and closes with `}));`.
+  const saveHandler = (/__btn_q_save_btn\.addEventListener\('click'[\s\S]*?\n\}\)\);/.exec(code) || [''])[0];
   t.check(saveHandler.length > 0, 'found the save handler');
   // Block comments stripped as well as line ones: the comment left in the
   // handler EXPLAINS that the announcement moved out, and naming it there
