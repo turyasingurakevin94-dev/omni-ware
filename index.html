@@ -11737,10 +11737,37 @@ let cashTransferColumn = false;
 // Builds the exact row shapes saveData() sends to Supabase, from the
 // current `data`. Shared with initLastSynced() so the snapshot used for
 // diffing is always built the same way as what actually gets upserted.
+/* A date column will not take an empty string.
+
+   "No date on record" is a real answer in this app -- an opening balance
+   whose age nobody knows, carried in from before the shop kept records --
+   and every screen that reads one already handles it: daysSinceDate()
+   returns -1 for a blank, which the aging bands file under "No date on
+   record", and every sort and comparison reaches for `x.date||''`.
+
+   Postgres does not share that tolerance. `date` accepts null and rejects
+   '' outright, so ONE undated row fails the whole upsert for its table --
+   PostgREST rejects the batch, not the row -- and the shop is told "Sync
+   failed" every thirty seconds while that collection quietly stops
+   saving. It happened for real: a supplier opening balance ticked
+   "nobody knows when it started" put an empty date on a purchase invoice
+   and jammed the purchase-invoice sync with `invalid input syntax for
+   type date: ""`.
+
+   Null is what "no date" means to the database, so every date crossing
+   this boundary is converted on the way out. Applied at the boundary
+   rather than at each source: the in-memory model keeps '' where it
+   already uses it (the customer opening balance has since day one), and
+   a row already stuck in memory heals on its next save rather than
+   needing to be found and rewritten. */
+function dateOrNull(v){
+  const s = v == null ? '' : String(v).trim();
+  return s === '' ? null : s;
+}
 function buildSyncRows(d, shopId){
   const debtLogRows = [];
   d.customers.forEach(c=> (c.debtLog||[]).forEach(l=> debtLogRows.push({
-    id:l.id, shop_id:shopId, customer_id:c.id, date:l.date, type:l.type, amount:l.amount, note:l.note
+    id:l.id, shop_id:shopId, customer_id:c.id, date:dateOrNull(l.date), type:l.type, amount:l.amount, note:l.note
   })));
   return {
     suppliers: d.suppliers.map(s=>({shop_id:shopId, id:s.id, name:s.name, phone:s.phone, phone2:s.phone2||null, location:s.location, shop_no:s.shopNo||null, notes:s.notes, commission_pct: s.commissionPct==null ? null : s.commissionPct})),
@@ -11770,7 +11797,7 @@ function buildSyncRows(d, shopId){
     })),
     prices: d.prices.map(pr=>({
       id:pr.id, shop_id:shopId, product_id:pr.productId, variant_idx:pr.variantIdx, supplier_id:pr.supplierId,
-      wholesale:pr.wholesale, retail:pr.retail, date:pr.date, unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
+      wholesale:pr.wholesale, retail:pr.retail, date:dateOrNull(pr.date), unit:pr.unit, pack_unit:pr.packUnit, pack_qty:pr.packQty,
       pieces_per_unit: pr.piecesPerUnit == null ? null : Number(pr.piecesPerUnit),
       price_source:pr.priceSource||'', out_of_stock:!!pr.outOfStock,
       supplier_sku: pr.supplierSku || null,
@@ -11786,14 +11813,14 @@ function buildSyncRows(d, shopId){
     stockLots: d.stockLots,
     stockLog: d.stockLog.map(l=>({
       id:l.id, shop_id:shopId, key:l.key, product_id:l.productId, variant_idx:l.variantIdx,
-      label:l.label, type:l.type, delta:l.delta, qty_after:l.qtyAfter, note:l.note, date:l.date, at:l.at
+      label:l.label, type:l.type, delta:l.delta, qty_after:l.qtyAfter, note:l.note, date:dateOrNull(l.date), at:l.at
     })),
     cashDays: Object.keys(d.cashDays).map(date=>({
       shop_id:shopId, date, opening:d.cashDays[date].opening, actual:d.cashDays[date].actual,
       opening_set:d.cashDays[date].openingSet
     })),
     cashTxns: d.cashTxns.map(t=>({
-      id:t.id, shop_id:shopId, date:t.date, account:t.account, type:t.type, category:t.category,
+      id:t.id, shop_id:shopId, date:dateOrNull(t.date), account:t.account, type:t.type, category:t.category,
       amount:t.amount, description:t.description, time:t.time,
       quote_id: t.quoteId==null ? null : t.quoteId,
       // Guarded: every cash entry goes up on every save, so sending this
@@ -11803,7 +11830,7 @@ function buildSyncRows(d, shopId){
     })),
     savedQuotes: d.savedQuotes.map(q=>({
       id:q.id, shop_id:shopId, client_name:(q.client&&q.client.name)||null, client_phone:(q.client&&q.client.phone)||null,
-      date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
+      date:dateOrNull(q.date), status:q.status, invoiced:q.invoiced, invoiced_at:dateOrNull(q.invoicedAt),
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
       payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null,
@@ -11831,7 +11858,7 @@ function buildSyncRows(d, shopId){
         originWa:q.originWa, originWamid:q.originWamid}
     })),
     purchaseInvoices: d.purchaseInvoices.map(pi=>({
-      id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:pi.date,
+      id:pi.id, shop_id:shopId, quote_id:pi.quoteId, date:dateOrNull(pi.date),
       // openingBalance rides the payload rather than a column of its own,
       // so no migration has to land before a shop can carry its old
       // supplier debts in. Dropping it here would be quiet and expensive:
@@ -11908,7 +11935,7 @@ function buildSyncRows(d, shopId){
       payload: {contacts: f.contacts||[]},
     })),
     waPosts: (d.waPosts||[]).map(w=>({
-      id:w.id, shop_id:shopId, date:w.date, product_id:w.productId,
+      id:w.id, shop_id:shopId, date:dateOrNull(w.date), product_id:w.productId,
       variant_idx: w.variantIdx==null ? null : w.variantIdx,
       name:w.name, reason:w.reason||null
     })),
@@ -11919,7 +11946,7 @@ function buildSyncRows(d, shopId){
     })),
     dues: (d.dues||[]).map(x=>({
       id:x.id, shop_id:shopId, kind:x.kind, ref_id:String(x.refId), period:x.period,
-      due_date:x.dueDate,
+      due_date:dateOrNull(x.dueDate),
       // null is carried through as null: it means uncosted, not zero.
       amount: x.amount==null ? null : x.amount,
       days: x.days==null ? null : x.days,
@@ -23484,9 +23511,12 @@ async function createSupplierOpeningBalance(supplierId, amount, sinceISO){
     customerName: '',
     supplierId,
     supplierName: supplierName(supplierId),
-    // '' when nobody knows. Sorts first (oldest) everywhere invoices are
-    // ordered by date, which is what an opening balance is.
-    date: sinceISO || '',
+    /* null when nobody knows -- what a date column means by "no date",
+       and what loadData reads back. Every screen treats it exactly as it
+       treats the '' it used to hold: daysSinceDate gives -1 (the "No date
+       on record" band) and the sorts all reach for `date||''`, where it
+       still sorts first, which is what an opening balance is. */
+    date: sinceISO || null,
     /* The single line is not decoration. purchaseInvoiceTotal() sums
        qty * price across items and there is no stored total anywhere, so
        an opening balance without a line would be a record worth zero to
