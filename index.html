@@ -34424,6 +34424,64 @@ function stockPurchaseInvoiceFor(e){
     && ((pi.items[0].variantIdx == null ? null : pi.items[0].variantIdx) === vIdx)
     && Number(pi.items[0].qty) === Number(e.delta)) || null;
 }
+/* ---- Counting down, versus un-buying ----------------------------------
+
+   Both take the same number off the shelf and they are completely
+   different facts about the money. A count that finds two fewer than the
+   book says is breakage or shrinkage: the goods came, the supplier is
+   owed, and no bill should move. A purchase entered wrong -- or entered
+   twice, which the Save button made easy until it was guarded -- is
+   different: those goods never arrived, and the bill for them has to go
+   with them.
+
+   The stock count screen only ever did the first, correctly and silently.
+   A shop that used it to undo a duplicate restock got the shelf right and
+   was left owing for cartons it did not have, with the two invoices still
+   standing and nothing anywhere connecting them to the correction. That
+   is how a real shop ended up with PINV-0143 and PINV-0144 both live
+   after it had already put the count right.
+
+   So the count now says which it thinks this might be. It does not
+   refuse: a genuine count-down is exactly what this screen is for, and
+   the shop knows which it is doing. It names the bills that would be left
+   standing and points at the tool that takes them with it. */
+const STOCK_COUNT_BILL_LOOKBACK_DAYS = 30;
+function stockCountOpenPurchaseBills(productId, variantIdx, delta){
+  if(!(Number(delta) < 0)) return [];
+  const key = stockKey(productId, variantIdx);
+  const seen = new Set();
+  const out = [];
+  (data.stockLog||[]).forEach(e=>{
+    if(e.key !== key || !isStockPurchaseRow(e)) return;
+    // Recent only. A bill from four months ago is not what somebody
+    // recounting a shelf today is undoing, and naming it would turn this
+    // into a warning that fires on every count and is read on none.
+    const age = daysSinceDate(e.date);
+    if(age < 0 || age > STOCK_COUNT_BILL_LOOKBACK_DAYS) return;
+    const pi = stockPurchaseInvoiceFor(e);
+    if(!pi || pi.voided || seen.has(pi.id)) return;
+    // Nothing still owed means nothing would be left standing.
+    if(purchaseInvoiceBalanceDue(pi) <= 0.5) return;
+    seen.add(pi.id);
+    out.push(pi);
+  });
+  return out;
+}
+// Plain text: this goes into confirm(), which renders no markup, and
+// escaping here would show a supplier called "O'Brien & Sons" as
+// "O&#39;Brien &amp; Sons" (same reason as orderReversalParts).
+function stockCountBillWarning(productId, variantIdx, delta){
+  const bills = stockCountOpenPurchaseBills(productId, variantIdx, delta);
+  if(!bills.length) return null;
+  const lines = bills.map(pi=>
+    `  ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName || 'supplier'} — ${fmtUGX(Math.round(purchaseInvoiceBalanceDue(pi)))} still owed`);
+  return `Counting this stock down does not change any supplier bill.\n\n`
+    + `Still owed on recent purchases of this item:\n${lines.join('\n')}\n\n`
+    + `If you are putting right a purchase that was entered wrong, or entered twice, correct THAT purchase instead — `
+    + `open its row in this item's history and press Edit, and its bill is corrected with it.\n\n`
+    + `If this is a real count — breakage, shrinkage, a miscount — then the bill is right and this is what you want.\n\n`
+    + `Continue with the count?`;
+}
 /* Applies a correction. Returns {ok:false, error} rather than toasting on
    its own so the form can say what is wrong beside the field, and so this
    is testable without a screen. */
@@ -40362,6 +40420,10 @@ function renderInvStage(){
     const d = actual - current;
     if(d===0){ toast('Actual stock matches current stock — nothing to adjust'); return; }
     const note = document.getElementById('inv_note').value.trim();
+    // Says what this will and will not touch, when it looks like it might
+    // be undoing a purchase rather than counting a shelf.
+    const billWarning = stockCountBillWarning(invProductId, invVariantIdx, d);
+    if(billWarning && !confirm(billWarning)) return;
     applyStockDelta(invProductId, invVariantIdx, d, 'correction', note);
     saveData();
     closeModal('invModal');
