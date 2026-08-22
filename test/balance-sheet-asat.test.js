@@ -36,6 +36,12 @@ const NAMES = ['stockValueAsAt', 'receivablesAsAt', 'payablesAsAt', 'duesOwedAsA
 const scope = compileScope([
   extractFunction(src, 'purchaseInvoiceTotal', 'index.html'),
   extractFunction(src, 'dueBalance', 'index.html'),
+  extractFunction(src, 'duePaidBy', 'index.html'),
+  extractFunction(src, 'dueBasis', 'index.html'),
+  extractFunction(src, 'dueAccruedAsAt', 'index.html'),
+  extractFunction(src, 'dueAccruedOutstanding', 'index.html'),
+  extractFunction(src, 'periodEndDate', 'index.html'),
+  extractFunction(src, 'daysBetweenISO', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,

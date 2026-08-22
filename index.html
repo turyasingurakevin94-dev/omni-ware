@@ -3036,6 +3036,8 @@
   .pr-cell-note{font-size:11.5px;color:var(--ink-soft);}
   .pr-name{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.3;}
   .pr-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .pr-accrued{display:block;font-size:10.5px;font-weight:600;color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .pr-quiet{color:var(--ink-soft);}
   .pr-days{width:76px;padding:5px 8px;font-variant-numeric:tabular-nums;}
   .pr-table td{vertical-align:middle;}
@@ -8374,6 +8376,9 @@
             <button type="button" class="btn btn-ghost btn-icon" id="pr_prev">‹ Previous</button>
             <button type="button" class="btn btn-ghost btn-icon" id="pr_today">This month</button>
             <button type="button" class="btn btn-ghost btn-icon" id="pr_next">Next ›</button>
+            <!-- Shown only on a past month with nothing raised. Looking at
+                 a month no longer raises it; running it is a decision. -->
+            <button type="button" class="btn btn-accent btn-icon" id="pr_raise" style="display:none;">Run this month's payroll</button>
           </div>
         </div>
         <div id="prDuesWrap"></div>
@@ -31103,6 +31108,59 @@ function dueBalance(d){
   if(d.amount === null || d.amount === undefined) return null;   // uncosted
   return Math.max(0, Number(d.amount) - (Number(d.paid)||0));
 }
+/* ---- What a month has EARNED by a given day -------------------------
+
+   dueBalance answers "what does this month cost, less what has been paid
+   on it" -- the figure the payroll screen pays against, and it is the
+   whole month from the moment the month is raised.
+
+   A balance sheet asks a different question: what does the shop owe on
+   THIS day. On the 22nd, a worker has not yet worked the 23rd, and
+   counting the whole month as a liability charges the shop for days
+   nobody has worked. It matters most for somebody paid every second
+   week, who is genuinely owed a fortnight mid-month and not a month.
+
+   The two figures were already at odds and nobody had noticed: the
+   balance sheet's today path counted every unpaid month whatever its
+   date, while its own as-at path dropped any month not yet fallen due.
+   Printing the sheet for today and for yesterday jumped by the whole of
+   an unaccrued payroll, and the drill-down beside it -- which follows
+   the as-at rule -- disagreed with the figure it was previewing. That
+   disagreement is what surfaced this. One rule now serves both.
+
+   Rent is not accrued by the day: a month's rent falls due on its day,
+   whole, which is what a tenancy agreement says. Nor is a daily-paid
+   month, whose amount already IS the days actually worked. */
+function duePaidBy(d, asOf){
+  const rows = (d.payments||[]);
+  // Legacy months carry a paid total with no records behind it; trust
+  // the total there rather than reading an empty list as "nothing paid".
+  if(!rows.length) return Number(d.paid)||0;
+  return rows.filter(p=> String(p.date||'') <= asOf)
+    .reduce((n,p)=> n + (Number(p.amount)||0), 0);
+}
+function dueAccruedAsAt(d, asOf){
+  const on = asOf || todayISO();
+  if(d.amount === null || d.amount === undefined) return null;
+  const amount = Number(d.amount)||0;
+  const start = String(d.period||'') + '-01';
+  if(String(d.period||'') && on < start) return 0;      // the month had not begun
+  if(String(d.dueDate||'') <= on) return amount;         // fallen due: all of it
+  if(d.kind !== 'wage') return 0;                        // rent falls due whole, on its day
+  if(dueBasis(d) === 'daily') return amount;             // already the days worked
+  const end = periodEndDate(d.period);
+  const total = daysBetweenISO(start, end) + 1;
+  if(!(total > 0)) return amount;
+  const done = Math.min(total, Math.max(0, daysBetweenISO(start, on) + 1));
+  return amount * (done / total);
+}
+// What is still owed of what has been earned, as at a day.
+function dueAccruedOutstanding(d, asOf){
+  const on = asOf || todayISO();
+  const acc = dueAccruedAsAt(d, on);
+  if(acc === null) return null;
+  return Math.max(0, acc - duePaidBy(d, on));
+}
 function dueIsSettled(d){
   const bal = dueBalance(d);
   return bal !== null && bal <= 0.5;
@@ -31216,18 +31274,11 @@ function duesOverdue(asOf){
    guessing it would put an invented number on the balance sheet. It is
    returned alongside so the statement can say what it is leaving out
    rather than quietly leaving it out. */
-function duesOwed(){
-  const open = (data.dues||[]).filter(d=> (dueBalance(d) || 0) > 0.5);
-  const by = (k)=> open.filter(d=> d.kind===k).reduce((s,d)=> s + dueBalance(d), 0);
-  return {
-    wages: by('wage'),
-    rent: by('rent'),
-    total: open.reduce((s,d)=> s + dueBalance(d), 0),
-    count: open.length,
-    // Months nobody has costed yet: a real obligation of an unknown size.
-    uncostedCount: (data.dues||[]).filter(d=> dueBalance(d) === null).length,
-  };
-}
+// What the shop owes its people and its landlord TODAY. The same walk
+// as any other day -- see duesOwedAsAt, which this is now the today case
+// of. Two rules for one figure is how the sheet and its own preview came
+// to disagree.
+function duesOwed(){ return duesOwedAsAt(todayISO()); }
 function duesOwedTotal(){ return duesOwed().total; }
 
 /* What the reminder asks about: everything unpaid whose date has ARRIVED,
@@ -31291,6 +31342,29 @@ function payDue(dueId, amount, account, dateISO){
   return pay;
 }
 
+/* Removes a month that should never have been raised.
+
+   Not the same act as reversing a payment: this says the OBLIGATION was
+   never real -- a wage for a month before somebody was employed, a month
+   paged into existence by browsing. Refused the moment anything has been
+   paid against it, because then it is a real month with a real payment
+   and what is wanted is the reversal, not a deletion that would leave
+   that cash entry pointing at nothing. */
+function dropDue(dueId){
+  const due = (data.dues||[]).find(d=> d.id===dueId);
+  if(!due) return;
+  if((due.payments||[]).length || (Number(due.paid)||0) > 0.5){
+    toast('Something has been paid against this month — undo the payment first', 5000);
+    return;
+  }
+  const what = `${dueName(due)} — ${periodLabel(due.period)}`;
+  if(!confirm(`Remove ${what} from the payroll?\n\nThis says the month was never owed at all — nothing has been paid against it, and no cash entry is involved. It will be raised again only if you run this month's payroll.\n\nThis cannot be undone automatically.`)) return;
+  data.dues = (data.dues||[]).filter(d=> d.id!==dueId);
+  saveData();
+  renderPayroll();
+  toast(`${what} removed — it is no longer owed`, 5000);
+}
+
 // Reverses one payment: removes its cash-book entry as well, so the two
 // cannot drift apart.
 function reverseDuePayment(dueId, index){
@@ -31309,15 +31383,32 @@ function currentPrPeriod(){ return prPeriod || currentPeriod(); }
 
 function renderPayroll(){
   const period = currentPrPeriod();
-  /* Raising this month's dues on open is what makes the screen work
+  /* Raising THIS month's dues on open is what makes the screen work
      without anybody remembering to "run payroll". It is idempotent on
      (kind, refId, period), so opening it twice in a morning cannot
-     charge the rent twice -- the table carries the same constraint. */
-  generateDuesForPeriod(period);
+     charge the rent twice -- the table carries the same constraint.
+
+     A PAST month is not raised by being looked at, and that is the whole
+     of a real fault: this ran for whatever month was on screen, so
+     paging back through the year wrote a wage for every worker into
+     every month browsed -- including months before the shop had employed
+     them, or existed. A shop found eight million owed to people it had
+     not yet hired, put there by reading. Looking is not deciding, so a
+     past month offers the button below instead. */
+  if(period >= currentPeriod()) generateDuesForPeriod(period);
   renderPayrollPosition();
   renderPayrollDues();
   renderRentAgreements();
   document.getElementById('pr_next').disabled = period >= currentPeriod();
+  /* Offered for a past month that carries nothing, which is the only
+     case where raising it by hand is what somebody means. A month that
+     already has its dues is left alone; a future one cannot be run. */
+  const raiseBtn = document.getElementById('pr_raise');
+  if(raiseBtn){
+    const past = period < currentPeriod();
+    const bare = !(data.dues||[]).some(d=> d.period === period);
+    raiseBtn.style.display = (past && bare) ? '' : 'none';
+  }
 }
 
 function renderPayrollPosition(){
@@ -31483,16 +31574,25 @@ function renderPayrollDues(){
       <td class="price">${(Number(d.paid)||0) ? fmtUGX(Math.round(d.paid)) : '<span class="pr-quiet">—</span>'}</td>
       <td class="price">${bal===null ? '<span class="pr-quiet">—</span>'
         : overpaid > 0.5 ? `<b title="Paid more than this month turned out to cost">+${fmtUGX(Math.round(overpaid))}</b>`
-        : `<b>${fmtUGX(Math.round(bal))}</b>`}</td>
+        : `<b>${fmtUGX(Math.round(bal))}</b>${(()=>{
+            /* A month still running is not yet owed in full. What the
+               shop owes TODAY is the part worked so far, which is the
+               figure somebody paid every second week actually asks for
+               -- and it is what the balance sheet counts. */
+            const acc = dueAccruedOutstanding(d, todayISO());
+            return (acc !== null && String(d.dueDate||'') > todayISO() && bal > 0.5)
+              ? `<span class="pr-accrued" title="This month is still running: what has been earned so far, which is what the balance sheet shows as owed">${fmtUGX(Math.round(acc))} so far</span>` : '';
+          })()}`}</td>
       <td>${esc(fmtShortDate(d.dueDate))}</td>
       <td>${state}</td>
       <td class="row-actions">${orphanGhost
         ? `<button type="button" class="age-act pr-orphan-del" data-id="${d.id}" title="Addressed to a staff member who no longer exists, nothing paid against it">Remove</button>`
         : bal!==null && bal>0.5
-        ? `<button type="button" class="age-act pr-pay" data-id="${d.id}">Pay</button>`
+        ? `<button type="button" class="age-act pr-pay" data-id="${d.id}">Pay</button>${
+            (d.payments||[]).length ? '' : `<button type="button" class="age-act pr-drop" data-id="${d.id}" title="This month should never have been raised — nothing has been paid against it">Remove</button>`}`
         : (d.payments||[]).length
           ? `<button type="button" class="age-act pr-undo" data-id="${d.id}">Undo</button>`
-          : ''}</td>
+          : `<button type="button" class="age-act pr-drop" data-id="${d.id}" title="This month should never have been raised — nothing has been paid against it">Remove</button>`}</td>
     </tr>`;
   };
 
@@ -31511,6 +31611,7 @@ function renderPayrollDues(){
   wrap.querySelectorAll('.pr-miss').forEach(btn=> btn.addEventListener('click', ()=>
     openAbsences(Number(btn.dataset.id))));
   wrap.querySelectorAll('.pr-pay').forEach(btn=> btn.addEventListener('click', ()=> openDuePayment(Number(btn.dataset.id))));
+  wrap.querySelectorAll('.pr-drop').forEach(btn=> btn.addEventListener('click', ()=> dropDue(Number(btn.dataset.id))));
   wrap.querySelectorAll('.pr-orphan-del').forEach(btn=> btn.addEventListener('click', ()=>{
     const d = (data.dues||[]).find(x=> x.id===Number(btn.dataset.id));
     if(!d) return;
@@ -31796,6 +31897,13 @@ document.getElementById('rt_save').addEventListener('click', saveRentAgreement);
 document.getElementById('rt_cancel').addEventListener('click', ()=> closeModal('rentModal'));
 document.getElementById('rentModalClose').addEventListener('click', ()=> closeModal('rentModal'));
 document.getElementById('pr_prev').addEventListener('click', ()=>{ prPeriod = periodShift(currentPrPeriod(), -1); renderPayroll(); });
+document.getElementById('pr_raise').addEventListener('click', ()=>{
+  const period = currentPrPeriod();
+  if(!confirm(`Raise the payroll for ${periodLabel(period)}?\n\nThis writes a wage for everybody on the payroll and the rent for any tenancy running then — a liability the shop will be shown as owing until it is paid or removed.\n\nOnly do this for a month the shop really did trade through and has not yet run.`)) return;
+  const made = generateDuesForPeriod(period);
+  renderPayroll();
+  toast(made.length ? `${periodLabel(period)} raised — ${made.length} entr${made.length===1?'y':'ies'}` : 'Nothing to raise for that month', 5000);
+});
 document.getElementById('pr_today').addEventListener('click', ()=>{ prPeriod = null; renderPayroll(); });
 // Guarded as well as disabled, so a keyboard cannot raise next month's
 // wages before the month has happened.
@@ -41636,26 +41744,21 @@ function payablesAsAt(asOf){
 }
 
 function duesOwedAsAt(asOf){
-  const today = todayISO();
-  if(!asOf || asOf >= today) return duesOwed();
-  const open = (data.dues||[]).filter(d=>{
-    if(String(d.dueDate||'') > asOf) return false;      // not yet due that day
-    if(d.amount === null || d.amount === undefined) return false;
-    const paid = (d.payments||[])
-      .filter(p=> String(p.date||'') <= asOf)
-      .reduce((n,p)=> n + (Number(p.amount)||0), 0);
-    return (Number(d.amount) - paid) > 0.5;
-  });
-  const bal = (d)=> Number(d.amount) - (d.payments||[])
-    .filter(p=> String(p.date||'') <= asOf)
-    .reduce((n,p)=> n + (Number(p.amount)||0), 0);
+  const on = asOf || todayISO();
+  const open = (data.dues||[])
+    .map(d=> ({d, bal: dueAccruedOutstanding(d, on)}))
+    .filter(x=> x.bal !== null && x.bal > 0.5);
+  const by = (k)=> open.filter(x=> x.d.kind===k).reduce((s,x)=> s + x.bal, 0);
   return {
-    wages: open.filter(d=> d.kind==='wage').reduce((s,d)=> s + bal(d), 0),
-    rent: open.filter(d=> d.kind==='rent').reduce((s,d)=> s + bal(d), 0),
-    total: open.reduce((s,d)=> s + bal(d), 0),
+    wages: by('wage'),
+    rent: by('rent'),
+    total: open.reduce((s,x)=> s + x.bal, 0),
     count: open.length,
+    // Months nobody has costed yet: a real obligation of an unknown
+    // size, counted only once the month has begun.
     uncostedCount: (data.dues||[]).filter(d=>
-      String(d.dueDate||'') <= asOf && (d.amount === null || d.amount === undefined)).length,
+      (d.amount === null || d.amount === undefined)
+      && String(d.period||'') + '-01' <= on).length,
   };
 }
 
@@ -42778,16 +42881,19 @@ function stDrillData(key, ctx){
       rows: byDateDesc(rows) };
   }
   if(key === 'bs:duesowed'){
-    const rows = (data.dues||[]).filter(x=> String(x.dueDate||'') <= asOf && x.amount != null)
+    const rows = (data.dues||[])
       .map(x=>{
-        const paid = (x.payments||[]).filter(pp=> String(pp.date||'') <= asOf)
-          .reduce((n,pp)=> n + (Number(pp.amount)||0), 0);
+        const bal = dueAccruedOutstanding(x, asOf);
+        if(bal === null) return null;
         const who = x.kind === 'wage'
           ? (((data.staff||[]).find(st=> String(st.id) === String(x.refId))||{}).name || 'Staff') + ' — wages'
           : ((((data.rentAgreements||[]).find(r=> String(r.id) === String(x.refId))||{}).premises) || 'Premises') + ' — rent';
-        return { d: x.dueDate, l: who, s: x.period || '', v: Number(x.amount) - paid };
+        // A month still running is shown as the part of it earned so far,
+        // said out loud rather than left to look like a short month.
+        const part = String(x.dueDate||'') > asOf && bal > 0.5;
+        return { d: x.dueDate, l: who, s: (x.period || '') + (part ? ' · earned so far, this month is still running' : ''), v: bal };
       })
-      .filter(r=> r.v > 0.5);
+      .filter(r=> r && r.v > 0.5);
     return { title: 'Wages and rent owed', expect: bs.staffAndRent,
       note: 'Months already worked or occupied, not yet paid.'
         + (bs.staffAndRentDetail.uncostedCount ? ` ${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages are not yet costed and count as nothing here.` : ''),
