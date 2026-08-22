@@ -4724,14 +4724,42 @@
 
   /* ---- The records behind a figure ----
      The statement keeps its reading width on the left; the preview takes
-     the space that sat empty beside it. Sticky, because the figure
-     clicked may be far down a long document and its records should stay
-     in view while the eye moves between the two. */
-  .st-split{display:grid;grid-template-columns:minmax(0,640px) minmax(280px,1fr);gap:20px;align-items:start;}
-  .st-split-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
+     the space that sat empty beside it.
+
+     THE PANEL IS EXACTLY AS TALL AS THE STATEMENT, and that is load
+     bearing, not taste. The first cut sized the panel to its own content
+     and capped it at the viewport, which gave the page two competing
+     scrollbars -- the document's and the panel's -- and a right column
+     whose height never agreed with the left. The shop that used it said
+     the scrolling had "become weird", which is the accurate review.
+
+     So the column is absolutely anchored inside its grid track: it
+     contributes NO height of its own, the row is sized by the statement
+     alone, and opening a preview -- however many hundred rows are behind
+     the figure -- never changes the height of the page. The one place a
+     second scrollbar is allowed is inside the panel's list, whose bounds
+     are the panel's own.
+
+     Sticky survives inside the anchor for the one case that needs it: a
+     statement taller than the screen, where the panel (capped at the
+     viewport) follows the reader down to the line they clicked instead of
+     being stranded beside the header. When the whole statement fits on
+     screen, min(100%, ...) resolves to the statement's height and the two
+     panels stand edge to edge, which is the point. */
+  .st-split{display:grid;grid-template-columns:minmax(0,640px) minmax(300px,1fr);gap:20px;}
+  .st-split-doc{min-width:0;}
+  .st-split-side{position:relative;min-width:0;}
+  .st-split-anchor{position:absolute;inset:0;}
+  .st-split-anchor > *{position:sticky;top:12px;box-sizing:border-box;
+    height:100%;max-height:min(100%, calc(100vh - 24px));}
   @media (max-width:1100px){
     .st-split{grid-template-columns:1fr;}
-    .st-split-side{position:static;max-height:none;}
+    .st-split-side{position:static;}
+    .st-split-anchor{position:static;inset:auto;}
+    /* Stacked under the statement, the panel keeps a lid on itself: a
+       250-row list at full height would put the end of the page a dozen
+       screens away. The list scrolls within it, same as beside. */
+    .st-split-anchor > *{position:static;height:auto;max-height:70vh;}
   }
   .st-table tr.st-drillable{cursor:pointer;}
   .st-table tr.st-drillable:hover td{background:var(--ow-steel-050, rgba(60,90,120,.05));}
@@ -4750,7 +4778,13 @@
   .st-drill-hint{
     border:1px dashed var(--line);border-radius:12px;padding:18px 16px;
     font-size:12px;line-height:1.6;color:var(--ow-ink-400);
+    display:flex;align-items:center;justify-content:center;text-align:center;
   }
+  /* Inside the panel the hint loses its own frame -- the panel already
+     has one -- and absorbs the spare height instead of the list, so the
+     reconciliation footer stays pinned to the bottom edge even when
+     there is nothing to list. */
+  .st-drill .st-drill-hint{border:0;flex:1 1 auto;min-height:0;}
   .st-drill{
     border:1px solid var(--line);border-radius:12px;background:var(--panel);
     display:flex;flex-direction:column;overflow:hidden;
@@ -4764,7 +4798,8 @@
   .st-drill-amt{display:block;margin-top:2px;font-size:19px;color:var(--ink);
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
   .st-drill-note{margin:8px 14px 0;font-size:11.5px;line-height:1.55;color:var(--ink-soft);}
-  .st-drill-list{margin-top:10px;border-top:1px solid var(--ow-rule-soft);overflow-y:auto;}
+  .st-drill-list{margin-top:10px;border-top:1px solid var(--ow-rule-soft);overflow-y:auto;
+    flex:1 1 auto;min-height:0;}
   .st-drill-row{
     display:flex;align-items:baseline;justify-content:space-between;gap:10px;
     padding:8px 14px;border-bottom:1px solid var(--ow-rule-soft);font-size:12px;
@@ -42851,7 +42886,7 @@ function renderStatements(){
   body.innerHTML = drillable
     ? `<div class="st-split">
         <div class="st-split-doc">${statementDocHTML(stActiveTab, ctx)}</div>
-        <aside class="st-split-side" id="st_drill_side">${stDrillPanelHTML(ctx)}</aside>
+        <aside class="st-split-side" id="st_drill_side"><div class="st-split-anchor">${stDrillPanelHTML(ctx)}</div></aside>
       </div>`
     : statementDocHTML(stActiveTab, ctx);
 }

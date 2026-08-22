@@ -271,4 +271,47 @@ if (fns) {
     'and on paper the lines are not doors, so nothing says they are');
 }
 
+/* ---------- the panel stands exactly as tall as the statement -------- */
+/*
+ * The first cut sized the panel to its own content and capped it at the
+ * viewport, which gave the page two competing scrollbars and a right
+ * column whose height never agreed with the left. The shop's review was
+ * "the scrolling doesn't have to become weird", which was accurate.
+ *
+ * The contract now: the preview column contributes NO height of its own
+ * (absolutely anchored in its track, so the row is sized by the statement
+ * alone and opening a 250-row preview never lengthens the page), the
+ * panel fills that height exactly, and the only scrollbar the panel owns
+ * is its list's. Checked structurally, since a cascade helper cannot
+ * measure a scroll: what must not come back is the shape that scrolled
+ * weirdly.
+ */
+{
+  const css = src.replace(/\s+/g, ' ');
+  t.check(/\.st-split-side\{position:relative;min-width:0;\}/.test(css.replace(/ /g, '')),
+    'the side column is a positioning context, not a sticky scroller');
+  t.check(!/\.st-split-side\{[^}]*position:sticky/.test(css),
+    'the first cut\u2019s sticky-scrolling column is gone');
+  t.check(/\.st-split-anchor\{position:absolute;inset:0;\}/.test(css.replace(/ /g, '')),
+    'the anchor is absolute, so the preview adds no height to the page');
+  t.check(/\.st-split-anchor > \*\{[^}]*height:100%/.test(css),
+    'and the panel fills the statement\u2019s height exactly');
+  t.check(/max-height:min\(100%, calc\(100vh - 24px\)\)/.test(css),
+    'capped at the viewport only when the statement itself runs past it');
+  t.check(/\.st-drill-list\{[^}]*flex:1 1 auto/.test(css),
+    'the list absorbs the spare room, so the reconciliation footer sits on the bottom edge');
+  t.check(/<div class="st-split-anchor">\$\{stDrillPanelHTML\(ctx\)\}<\/div>/.test(src),
+    'and the markup actually routes the panel through the anchor');
+  // Stacked on a narrow screen, the absolute anchor would overlay the
+  // document it is meant to follow.
+  /* Two 1100px media blocks exist in the file; matched on the one that
+     restyles the split, not merely the first. */
+  const mobile = (/@media \(max-width:1100px\)\{\s*\.st-split\{[\s\S]*?\n  \}/.exec(src) || [''])[0];
+  t.check(mobile.length > 0, 'found the split layout\u2019s own narrow-screen block');
+  t.check(/\.st-split-anchor\{position:static/.test(mobile),
+    'on a narrow screen the anchor returns to the flow');
+  t.check(/max-height:70vh/.test(mobile),
+    'where the panel keeps a lid on itself instead of pushing the page a dozen screens long');
+}
+
 process.exit(t.done() ? 1 : 0);
