@@ -26811,7 +26811,7 @@ function renderAttendance(){
            /* What the shop actually counts out, for the one basis whose
               month is not what it hands over. */
            basis === 'weekly' && dayRate
-             ? ` Paid every second week — about ${fmtUGX(Math.round(dayRate * WAGE_DAYS_PER_FORTNIGHT))} a time.`
+             ? ` Paid every second week — ${fmtUGX(Math.round(dayRate * WAGE_DAYS_PER_FORTNIGHT))} a time, half the month.`
              : ''}</span>
        </div>`;
 
@@ -27158,7 +27158,8 @@ function syncStaffPayFields(){
   } else if(basis === 'monthly'){
     out.className = 'sf-consequence';
     out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> is raised on the payroll at the end of
-      every month, starting ${esc(month)}, until this is changed.`;
+      every month, starting ${esc(month)}, until this is changed. Paying every second week is
+      ${esc(fmtUGX(Math.round(rate/2)))} a time, half the month.`;
   } else if(basis === 'weekly'){
     /* Spelled all the way out to the month, because that is what the
        payroll will actually raise and it is not the number being typed.
@@ -27168,9 +27169,11 @@ function syncStaffPayFields(){
     out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each week — that is
       ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate))))} a day over a ${WAGE_DAYS_PER_WEEK}-day week,
       and <b>${esc(fmtUGX(Math.round(basisMonthCost('weekly', rate))))}</b> for a month of
-      ${WAGE_DAYS_PER_MONTH} working days, raised on the payroll at the end of every month starting
-      ${esc(month)}. Paying every second week comes to about
-      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate) * WAGE_DAYS_PER_FORTNIGHT)))}.`;
+      ${WAGE_DAYS_PER_MONTH} days, raised on the payroll at the end of every month starting
+      ${esc(month)}. Paying every second week is
+      ${esc(fmtUGX(Math.round(basisDayRate('weekly', rate) * WAGE_DAYS_PER_FORTNIGHT)))} a time, half the month.
+      <span class="sf-consequence-note">If the figure you have agreed is a MONTHLY one, put it in as a monthly
+      salary instead — the month is then exactly what you typed, and half of it exactly half.</span>`;
   } else {
     out.className = 'sf-consequence';
     out.innerHTML = `<b>${esc(fmtUGX(Math.round(rate)))}</b> for each day worked. A month costs that
@@ -30808,22 +30811,38 @@ function periodEndDate(period){
    them again here would take the money off twice. Their absences are
    kept as the record of why the month was short, and cost nothing. */
 
-/* A month is 26 working days -- six days a week, the ordinary shop week.
+/* A month is 30 days.
+
    Deliberately a constant rather than the length of the calendar month:
    dividing by the real number would make one missed day in February cost
    more than the same day in July, which is a difference nobody agreed to
-   and nobody could explain to the person losing it. */
-const WAGE_DAYS_PER_MONTH = 26;
+   and nobody could explain to the person losing it.
 
-/* Six, and the reason 26 is 26. A weekly rate buys this many days, so
+   THIRTY, not the 26 this began as. Twenty-six counted only the days a
+   six-day shop opens -- a defensible way to price a day, and a confusing
+   way to describe a wage. A shop paying 320,000 a month thinks of that
+   as the month, not as 26 shifts, and the arithmetic that followed from
+   26 kept producing figures the shop had to argue with: most visibly a
+   fortnight of 147,692 against a month of 320,000, which is not half of
+   anything. */
+const WAGE_DAYS_PER_MONTH = 30;
+
+/* Seven, and the reason 30 is 30. A weekly rate buys this many days, so
    the two constants are one fact stated twice and must move together:
-   26 / 6 is how many weeks the month is worth, and it is the only place
+   30 / 7 is how many weeks the month is worth, and it is the only place
    a weekly rate becomes a monthly one. */
-const WAGE_DAYS_PER_WEEK = 6;
+const WAGE_DAYS_PER_WEEK = 7;
 
-// What the shop actually hands over to a weekly worker, because it pays
-// them every second week rather than every week.
-const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_WEEK * 2;
+/* What the shop hands over when it pays every second week: HALF THE
+   MONTH.
+
+   Not two weeks of seven, which is 14/30 of a month -- a fortnight that
+   is nearly-but-not-quite half is the shape of arithmetic somebody has
+   to explain every payday. A shop paying twice a month pays half each
+   time, which is what "every second week" means to everybody who is not
+   a calendar. Read from the month rather than from the week, so the two
+   cannot drift: twice the fortnight IS the month, exactly. */
+const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_MONTH / 2;
 
 const PAY_BASES = ['monthly', 'weekly', 'daily'];
 
@@ -30882,7 +30901,10 @@ function dueDayRate(d){
   return basisDayRate(dueBasis(d), d.rate);
 }
 
-// What the shop hands a weekly worker each time it pays them.
+/* What the shop hands over each time it pays, when it pays twice a
+   month. Exactly half the month by construction (see
+   WAGE_DAYS_PER_FORTNIGHT), so a 320,000 month is 160,000 a time --
+   the figure the shop counts out, and the one it asked for. */
 function dueFortnight(d){
   return dueDayRate(d) * WAGE_DAYS_PER_FORTNIGHT;
 }
@@ -31560,8 +31582,11 @@ function renderPayrollDues(){
         <div class="pr-name">${esc(dueName(d))}</div>
         <div class="pr-sub">${esc((DUE_KINDS[d.kind]||{}).label||'')}${
           daily ? ` · ${fmtUGX(Math.round(d.rate))} a day`
-          : weekly ? ` · ${fmtUGX(Math.round(d.rate))} a week · fortnight ≈ ${fmtUGX(Math.round(dueFortnight(d)))}`
-          : ''}</div>
+          : weekly ? ` · ${fmtUGX(Math.round(d.rate))} a week · half the month is ${fmtUGX(Math.round(dueFortnight(d)))}`
+          /* Shown for a salary too. A shop paying monthly-agreed wages in
+             two halves is the ordinary case, and the row used to name the
+             half only for a weekly rate. */
+          : ` · half the month is ${fmtUGX(Math.round(dueFortnight(d)))}`}</div>
       </td>
       <td>${daily
         ? `<input type="number" min="0" step="any" class="pr-days" data-id="${d.id}"

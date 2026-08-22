@@ -575,7 +575,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * losing it would have no way to see that it had happened.
  */
 {
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000),
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000),
     staff('S2', 'Daily Okello', 'daily', 15000),
     staff('S3', 'Half-set Peter', 'monthly', null)], []);
   scope.generateDuesForPeriod('2026-08');
@@ -583,16 +583,16 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   const okello = wageFor('Daily Okello');
   const peter = wageFor('Half-set Peter');
 
-  t.check(/const WAGE_DAYS_PER_MONTH = 26;/.test(src), 'a month is 26 working days');
-  eq(scope.dueDayRate(musa), 20000, 'so a 520,000 salary is 20,000 a day');
+  t.check(/const WAGE_DAYS_PER_MONTH = 30;/.test(src), 'a month is 30 days');
+  eq(scope.dueDayRate(musa), 20000, 'so a 600,000 salary is 20,000 a day');
   /* Deliberately not the length of the calendar month: the same absence
      must not cost more in February than in July. */
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000)], []);
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000)], []);
   scope.generateDuesForPeriod('2026-02');
   eq(scope.dueDayRate(wageFor('Monthly Musa')), 20000,
-    'and 20,000 a day in February too, not 18,571');
+    'and 20,000 a day in February too, not 21,429');
 
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000),
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000),
     staff('S2', 'Daily Okello', 'daily', 15000),
     staff('S3', 'Half-set Peter', 'monthly', null)], []);
   scope.generateDuesForPeriod('2026-08');
@@ -603,28 +603,28 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   eq(m.basis, 'monthly', 'the basis is snapshot onto the due when it is raised');
   eq(o.basis, 'daily', 'for a daily worker too');
 
-  eq(m.amount, 520000, 'a monthly month starts at the whole salary');
+  eq(m.amount, 600000, 'a monthly month starts at the whole salary');
   scope.addDueAbsence(m.id, '2026-08-03', 'Absent', false);
-  eq(m.amount, 500000, 'one unpaid day off a 520,000 salary leaves 500,000');
+  eq(m.amount, 580000, 'one unpaid day off a 600,000 salary leaves 580,000');
   scope.addDueAbsence(m.id, '2026-08-04', 'Absent', false);
-  eq(m.amount, 480000, 'two unpaid days off a 520,000 salary is 40,000 off');
+  eq(m.amount, 560000, 'two unpaid days off a 600,000 salary is 40,000 off');
   eq(scope.dueDeduction(m), 40000, 'and the deduction says so');
-  eq(scope.dueBalance(m), 480000, 'what is owed follows the net, not the salary');
+  eq(scope.dueBalance(m), 560000, 'what is owed follows the net, not the salary');
 
   /* A paid day is RECORDED but costs nothing. The shop wants to know it
      happened; the worker does not lose money for it. */
   scope.addDueAbsence(m.id, '2026-08-02', 'Sick', true);
   eq(scope.dueAbsences(m).length, 3, 'a paid day is still recorded');
-  eq(m.amount, 480000, 'but takes nothing off the pay');
+  eq(m.amount, 560000, 'but takes nothing off the pay');
   eq(scope.dueUnpaidAbsenceDays(m), 2, 'only the unpaid days are deducted');
 
   scope.setDueAbsencePaid(m.id, '2026-08-03', true);
-  eq(m.amount, 500000, 'turning an absence into paid leave puts the day back');
+  eq(m.amount, 580000, 'turning an absence into paid leave puts the day back');
   scope.setDueAbsencePaid(m.id, '2026-08-03', false);
-  eq(m.amount, 480000, 'and turning it back takes it off again');
+  eq(m.amount, 560000, 'and turning it back takes it off again');
 
   scope.removeDueAbsence(m.id, '2026-08-04');
-  eq(m.amount, 500000, 'removing a day recosts the month');
+  eq(m.amount, 580000, 'removing a day recosts the month');
   eq(scope.dueAbsences(m).length, 2, 'and takes it off the list');
 
   /* ---- the double-dock trap ---- */
@@ -670,7 +670,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * A negative wage is the shop billing its own staff for turning up.
  */
 {
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000)], []);
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000)], []);
   scope.generateDuesForPeriod('2026-08');
   const m = wageFor('Monthly Musa');
   for (let i = 1; i <= 30; i++) {
@@ -682,7 +682,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   m.absences = Array.from({ length: 30 }, (_, i) =>
     ({ date: `2026-08-${String(i + 1).padStart(2, '0')}`, reason: 'Absent', paid: false }));
   scope.recostDue(m.id);
-  eq(scope.dueDeduction(m), 520000, 'the deduction stops at the whole salary');
+  eq(scope.dueDeduction(m), 600000, 'the deduction stops at the whole salary');
   eq(m.amount, 0, 'so the month costs nothing');
   t.check(m.amount >= 0, 'and never less than nothing — nobody is billed for working here');
 }
@@ -694,15 +694,15 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * all the shop's call.
  */
 {
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000)], []);
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000)], []);
   scope.generateDuesForPeriod('2026-08');
   const m = wageFor('Monthly Musa');
-  scope.payDue(m.id, 520000, 'cash', '2026-08-31');
+  scope.payDue(m.id, 600000, 'cash', '2026-08-31');
   t.check(scope.dueIsSettled(m), 'the month is paid in full');
   eq(scope.dueOverpaid(m), 0, 'and nothing is over');
 
   scope.addDueAbsence(m.id, '2026-08-03', 'Absent', false);
-  eq(m.amount, 500000, 'the month is recosted downwards');
+  eq(m.amount, 580000, 'the month is recosted downwards');
   eq(scope.dueBalance(m), 0, 'the balance still floors at zero');
   eq(scope.dueOverpaid(m), 20000, 'so the overpayment is what says 20,000 went out too much');
 
@@ -714,13 +714,13 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
 
   scope.reverseDuePayment(m.id, 0);
   eq(scope.dueOverpaid(m), 0, 'reversing the payment clears it');
-  eq(scope.dueBalance(m), 500000, 'and the net month is owed again');
+  eq(scope.dueBalance(m), 580000, 'and the net month is owed again');
 }
 
 /* ---------- 14. what the screen totals ------------------------------ */
 {
-  reset([staff('S1', 'Monthly Musa', 'monthly', 520000),
-    staff('S2', 'Monthly Grace', 'monthly', 260000),
+  reset([staff('S1', 'Monthly Musa', 'monthly', 600000),
+    staff('S2', 'Monthly Grace', 'monthly', 300000),
     staff('S3', 'Daily Okello', 'daily', 15000)], []);
   scope.generateDuesForPeriod('2026-08');
   const m = wageFor('Monthly Musa');
@@ -740,7 +740,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   /* `known` is already NET. This is the line that catches the deduction
      being applied twice -- once when the month is costed and again when
      the screen adds up. */
-  eq(pos.known, 500000 + 250000 + 330000,
+  eq(pos.known, 580000 + 290000 + 330000,
     'and the payroll total is the net of every month, deducted exactly once');
   eq(pos.owed, pos.known, 'with nothing paid yet, all of it is owed');
 }
@@ -762,7 +762,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
 
   // Put them on a salary.
   data.staff[0].payBasis = 'monthly';
-  data.staff[0].payRate = 520000;
+  data.staff[0].payRate = 600000;
   eq(scope.dueBasis(aug), 'daily', 'August is still a daily month');
   scope.recostDue(aug.id);
   eq(aug.amount, 330000, 'so recosting it does not price it as a salary');
@@ -789,7 +789,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * disagreed on the day it paid somebody the wrong amount.
  */
 {
-  reset([staff('S1', 'Amos Kato', 'monthly', 520000),
+  reset([staff('S1', 'Amos Kato', 'monthly', 600000),
     staff('S2', 'Okello Denis', 'daily', 15000),
     staff('S3', 'Unset Joan', null, null)], []);
 
@@ -809,7 +809,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
     'and does NOT raise that month\'s rent as a side effect');
 
   eq(scope.staffAttendanceOn('S1', '2026-08-03').state, 'absent', 'the day reads back as absent');
-  eq(wage.amount, 500000, 'and the month is costed 20,000 lighter');
+  eq(wage.amount, 580000, 'and the month is costed 20,000 lighter');
   eq(scope.dueAbsences(wage)[0].reason, 'Absent', 'recorded as a plain absence');
 
   /* Present is the ABSENCE OF A ROW. The shop records exceptions; a
@@ -817,12 +817,12 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
      year saying nothing happened. */
   scope.setStaffAttendance('S1', '2026-08-03', 'present');
   eq(scope.dueAbsences(wage).length, 0, 'marking them back in removes the row rather than adding one');
-  eq(wage.amount, 520000, 'and the whole salary is owed again');
+  eq(wage.amount, 600000, 'and the whole salary is owed again');
 
   scope.setStaffAttendance('S1', '2026-08-03', 'paid');
   eq(scope.staffAttendanceOn('S1', '2026-08-03').state, 'paid', 'paid leave is its own state');
   eq(scope.dueAbsences(wage).length, 1, 'it is recorded');
-  eq(wage.amount, 520000, 'but costs them nothing');
+  eq(wage.amount, 600000, 'but costs them nothing');
 
   /* A reason typed on the payroll screen SURVIVES a change of state
      here. Overwriting "Sick" with the default would quietly lose why
@@ -830,7 +830,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   scope.dueAbsences(wage)[0].reason = 'Sick';
   scope.setStaffAttendance('S1', '2026-08-03', 'absent');
   eq(scope.dueAbsences(wage)[0].reason, 'Sick', 'and the reason already on the day is kept');
-  eq(wage.amount, 500000, 'while the state itself changes');
+  eq(wage.amount, 580000, 'while the state itself changes');
 
   // Somebody with no pay basis has no wage to dock and nothing to write against.
   const unset = scope.setStaffAttendance('S3', '2026-08-03', 'absent');
@@ -846,7 +846,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * disagree, one of them is lying about somebody's pay.
  */
 {
-  reset([staff('S1', 'Amos Kato', 'monthly', 520000),
+  reset([staff('S1', 'Amos Kato', 'monthly', 600000),
     staff('S2', 'Okello Denis', 'daily', 15000)], []);
   scope.setStaffAttendance('S1', '2026-08-03', 'absent');
   scope.setStaffAttendance('S1', '2026-08-04', 'paid');
@@ -868,7 +868,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   eq(pos.absenceDays, 3, 'the payroll screen counts every day the register wrote');
   eq(pos.unpaidAbsenceDays, 2, 'and which of them were unpaid');
   eq(pos.deducted, 20000, 'only the monthly unpaid day costs anything');
-  eq(scope.dueBalance(wageFor('Amos Kato')), 500000, 'so the salary owed is 20,000 lighter');
+  eq(scope.dueBalance(wageFor('Amos Kato')), 580000, 'so the salary owed is 20,000 lighter');
   /* The daily worker's absence is on record and costs nothing, exactly
      as it does when it is entered from the payroll screen. */
   t.check(wageFor('Okello Denis').amount === null,
@@ -885,7 +885,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
 
 /* ---------- 18. the register writes onto a month already raised ----- */
 {
-  reset([staff('S1', 'Amos Kato', 'monthly', 520000)],
+  reset([staff('S1', 'Amos Kato', 'monthly', 600000)],
     [rent(1, 'Main shop', 800000, 1, '2026-01')]);
   scope.generateDuesForPeriod('2026-08');
   const raised = data.dues.length;
@@ -894,7 +894,7 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   scope.setStaffAttendance('S1', '2026-08-03', 'absent');
   eq(data.dues.length, raised, 'a month already raised is written onto, not raised twice');
   eq(scope.dueAbsences(wage).length, 1, 'the day lands on the month that was already there');
-  eq(wage.amount, 500000, 'and it is recosted');
+  eq(wage.amount, 580000, 'and it is recosted');
 
   // ensureWageDue is what makes that true, and it is idempotent.
   const again = scope.ensureWageDue('S1', '2026-08');
@@ -1022,15 +1022,21 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * two different amounts depending on how somebody's pay was written up.
  */
 {
-  t.check(/const WAGE_DAYS_PER_WEEK = 6;/.test(src), 'a week is six working days');
-  t.check(/const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_WEEK \* 2;/.test(src),
-    'and a fortnight is two of them, derived rather than typed again');
+  t.check(/const WAGE_DAYS_PER_WEEK = 7;/.test(src), 'a week is seven days');
+  /* Read from the MONTH, not the week. Two weeks of seven is 14/30 of
+     a month, which is nearly-but-not-quite half -- and a shop paying
+     twice a month pays half each time. Derived either way, so it cannot
+     be typed out of step with what it halves. */
+  t.check(/const WAGE_DAYS_PER_FORTNIGHT = WAGE_DAYS_PER_MONTH \/ 2;/.test(src),
+    'and a fortnight is half the month, derived rather than typed again');
+  eq(scope.basisDayRate('monthly', 300000) * 15 * 2, 300000,
+    'so twice the fortnight is exactly the month — the arithmetic a payday has to survive');
 
-  // 60,000 a week -> 10,000 a day -> 260,000 a month.
-  eq(scope.basisDayRate('weekly', 60000), 10000, 'a weekly rate divides by six to give a day');
-  eq(scope.basisMonthCost('weekly', 60000), 260000, 'and a month is that day across 26 of them');
-  eq(scope.basisDayRate('monthly', 260000), 10000,
-    'which is the SAME day rate a 260,000 salary gives — the two bases agree');
+  // 70,000 a week -> 10,000 a day -> 300,000 a month.
+  eq(scope.basisDayRate('weekly', 70000), 10000, 'a weekly rate divides by seven to give a day');
+  eq(scope.basisMonthCost('weekly', 70000), 300000, 'and a month is that day across 30 of them');
+  eq(scope.basisDayRate('monthly', 300000), 10000,
+    'which is the SAME day rate a 300,000 salary gives — the two bases agree');
   eq(scope.basisDayRate('daily', 10000), 10000, 'a daily rate is already a day');
 
   /* A MONTHLY SALARY IS RETURNED AS ITSELF, not as its day rate times
@@ -1040,6 +1046,12 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
      of a shilling for ever. */
   eq(scope.basisMonthCost('monthly', 400000), 400000,
     'a monthly salary comes back exactly, not through a division and a multiplication');
+  /* The figure the shop asked for, stated as arithmetic: a 320,000 month
+     paid every second week is 160,000 a time. Under the 26-day month it
+     was 147,692, which is not half of anything and had to be explained
+     every payday. */
+  eq(scope.basisDayRate('monthly', 320000) * 15, 160000,
+    'and half a 320,000 month is 160,000 — what the shop counts out');
   t.check(scope.basisMonthCost('daily', 15000) === null,
     'a daily rate has no month — what it costs follows the days worked');
   t.check(scope.basisMonthCost('weekly', null) === null, 'and no rate has no month either');
@@ -1047,50 +1059,53 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
 
 /* ---------- 22. a weekly month, and days missed from it ------------- */
 {
-  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000),
-    staff('S2', 'Monthly Musa', 'monthly', 260000),
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 70000),
+    staff('S2', 'Monthly Musa', 'monthly', 300000),
     staff('S3', 'Daily Okello', 'daily', 15000)], []);
   scope.generateDuesForPeriod('2026-08');
 
   const w = wageFor('Weekly Wasswa');
   eq(w.basis, 'weekly', 'the basis is snapshot onto the due like any other');
-  eq(w.rate, 60000, 'and the rate stored is the WEEK, as it was agreed');
-  eq(w.amount, 260000, 'but the month is raised costed, at what the week comes to over 26 days');
-  eq(scope.dueGross(w), 260000, 'the gross is the month, not the week');
-  eq(scope.dueDayRate(w), 10000, 'a day is a sixth of the week');
-  eq(scope.dueFortnight(w), 120000, 'and a fortnight is twelve days — what the shop hands over');
+  eq(w.rate, 70000, 'and the rate stored is the WEEK, as it was agreed');
+  eq(w.amount, 300000, 'but the month is raised costed, at what the week comes to over 30 days');
+  eq(scope.dueGross(w), 300000, 'the gross is the month, not the week');
+  eq(scope.dueDayRate(w), 10000, 'a day is a seventh of the week');
+  eq(scope.dueFortnight(w), 150000, 'and a fortnight is half the month — what the shop hands over');
 
   /* A WEEKLY MONTH DEDUCTS. It is known up front, exactly like a salary,
      so a day missed comes off it. Only the daily basis is exempt, and
      only because its days were never counted in. */
   scope.addDueAbsence(w.id, '2026-08-03', 'Absent', false);
   eq(scope.dueDeduction(w), 10000, 'one unpaid day off a weekly month costs a day');
-  eq(w.amount, 250000, 'and the month is recosted');
+  eq(w.amount, 290000, 'and the month is recosted');
   scope.addDueAbsence(w.id, '2026-08-04', 'Sick', true);
-  eq(w.amount, 250000, 'a paid day is recorded and costs nothing, same as anywhere else');
+  eq(w.amount, 290000, 'a paid day is recorded and costs nothing, same as anywhere else');
 
   // The two bases agree about the same absence.
   scope.addDueAbsence(wageFor('Monthly Musa').id, '2026-08-03', 'Absent', false);
   eq(scope.dueDeduction(wageFor('Monthly Musa')), 10000,
     'and a monthly worker on the same money loses exactly the same for the same day');
-  eq(wageFor('Monthly Musa').amount, 250000, 'down to the shilling');
+  eq(wageFor('Monthly Musa').amount, 290000, 'down to the shilling');
 
   /* THE CAP IS THE MONTH, NOT THE WEEK. Reading d.rate as the ceiling
      would stop docking a weekly worker after six days -- a sixth of what
      the month is worth -- and quietly pay them for the rest of it. */
   const o = wageFor('Weekly Wasswa');
   o.absences = Array.from({ length: 40 }, (_, i) => {
-    const d = String((i % 28) + 1).padStart(2, '0');
+    // Every day August has. Twenty-eight was enough to overrun a 26-day
+    // month and is not enough to overrun a 30-day one — the fixture has
+    // to out-miss the month, or it stops testing the cap at all.
+    const d = String((i % 31) + 1).padStart(2, '0');
     return { date: `2026-08-${d}`, reason: 'Absent', paid: false };
   }).filter((a, i, arr) => arr.findIndex((x) => x.date === a.date) === i);
   scope.recostDue(o.id);
-  eq(scope.dueDeduction(o), 260000, 'more days missed than the month has caps at the whole MONTH');
+  eq(scope.dueDeduction(o), 300000, 'more days missed than the month has caps at the whole MONTH');
   eq(o.amount, 0, 'so the month costs nothing, and never less');
 }
 
 /* ---------- 23. weekly is on the payroll, and is a committed cost --- */
 {
-  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000),
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 70000),
     staff('S2', 'Half-set Peter', 'weekly', null),
     staff('S3', 'Unset Joan', null, null)], []);
   eq(scope.staffOnPayroll().length, 2, 'a weekly worker is on the payroll');
@@ -1103,19 +1118,19 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
   eq(scope.dueBasis(wageFor('Half-set Peter')), 'weekly', 'with its basis still recorded');
 
   const pos = scope.payrollPosition('2026-08');
-  eq(pos.known, 260000, 'the payroll counts the costed weekly month');
+  eq(pos.known, 300000, 'the payroll counts the costed weekly month');
   eq(pos.uncostedCount, 1, 'and reports the one it cannot cost rather than folding it in at nothing');
 
   /* A weekly wage is a STANDING PROMISE, the same as a salary -- it is
      owed whether or not a thing is sold. Leaving it out of the breakeven
      floor understates what the shop has to cover by a whole wage. */
-  eq(scope.basisMonthCost('weekly', 60000), 260000,
+  eq(scope.basisMonthCost('weekly', 70000), 300000,
     'and the breakeven floor carries it across the month before adding it');
 }
 
 /* ---------- 24. an older due, raised before weekly existed ---------- */
 {
-  reset([staff('S1', 'Weekly Wasswa', 'weekly', 60000)], []);
+  reset([staff('S1', 'Weekly Wasswa', 'weekly', 70000)], []);
   scope.generateDuesForPeriod('2026-08');
   const w = wageFor('Weekly Wasswa');
 
