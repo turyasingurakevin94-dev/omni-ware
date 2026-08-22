@@ -68,7 +68,7 @@ const env = {
   inventoryValue: () => ({ value: 0, uncostedQty: 0 }),
 };
 const NAMES = [
-  'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome',
+  'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
 ];
@@ -76,6 +76,7 @@ try {
   fns = compileScope(
     [extractDeclaration(src, 'ACCOUNTS', 'index.html'),
       extractDeclaration(src, 'CASH_NOT_OPEX', 'index.html'),
+      extractDeclaration(src, 'CASH_OWNER_WITHDRAWAL', 'index.html'),
       extractDeclaration(src, 'CASH_NOT_REVENUE', 'index.html'),
       extractDeclaration(src, 'ST_DRILL_MAX_ROWS', 'index.html'),
       // cashHas is a const arrow, so it is pulled as a declaration.
@@ -114,6 +115,8 @@ if (fns) {
       { id: 5, date: '2026-08-07', account: 'cash', type: 'receipt', category: 'Owner Investment', amount: 900000, description: 'Owner' },
       { id: 6, date: '2026-08-08', account: 'cash', type: 'payment', category: 'Loan Repayment', amount: 60000, description: 'Repay' },
       { id: 7, date: '2026-07-20', account: 'cash', type: 'receipt', category: 'Sales', amount: 11111, description: 'Last month' },
+      // The owner taking money home: financing, never an expense.
+      { id: 8, date: '2026-08-09', account: 'cash', type: 'expense', category: 'Capital Withdrawal', amount: 250000, description: 'Owner took home' },
     ];
     store.suppliers = [{ id: 'S1', name: 'Roto' }];
     store.purchaseInvoices = [
@@ -151,8 +154,8 @@ if (fns) {
       ],
       receivables: receivablesAsAt(to), payables: payablesAsAt(to),
       loans: 3200000, staffAndRent: 0, staffAndRentDetail: { uncostedCount: 0 },
-      fixedAssets: 0, inventory: 0, ownerCapital: 900000,
-      equity: 2132737, retainedEarnings: 2132737 - 900000,
+      fixedAssets: 0, inventory: 0, ownerCapital: 900000, ownerDrawings: 250000,
+      equity: 2132737, retainedEarnings: 2132737 - (900000 - 250000),
     };
     return { from, to, is, bs, cf };
   };
@@ -169,9 +172,24 @@ if (fns) {
     reconciles(stDrillData('bs:payables', ctx), 'owed to suppliers');
     reconciles(stDrillData('bs:loans', ctx), 'loans outstanding');
     reconciles(stDrillData('bs:ownerin', ctx), 'owner money in');
+    reconciles(stDrillData('bs:ownerout', ctx), 'owner money out');
     reconciles(stDrillData('bs:retained', ctx), 'retained earnings');
-    ['tradingin', 'debtcollected', 'stockout', 'opexpaid', 'borrowed', 'ownerin', 'repaid', 'equipment', 'assetsale', 'unclassified']
+    ['tradingin', 'debtcollected', 'stockout', 'opexpaid', 'borrowed', 'ownerin', 'ownerout', 'repaid', 'equipment', 'assetsale', 'unclassified']
       .forEach(k => reconciles(stDrillData('cf:' + k, ctx), 'cash flow — ' + k));
+  }
+
+  /* ---------- 1b. a withdrawal is nowhere near the expenses ---------- */
+  {
+    const ctx = ctxFor();
+    const opex = stDrillData('pl:opex:Transport', ctx);
+    t.check(opex.rows.every(r => !/took home/i.test(r.l) && !/Capital Withdrawal/.test(r.s || '')),
+      'the expense preview carries no withdrawal');
+    const out = stDrillData('cf:ownerout', ctx);
+    t.check(out.rows.length === 1 && /Owner took home/.test(out.rows[0].l),
+      'the withdrawal lives on its own financing line, listed by name');
+    const ret = stDrillData('bs:retained', ctx);
+    t.check(ret.rows.some(r => /Back out what the owner took/.test(r.l)),
+      'and the balancing figure\u2019s subtraction shows it added back — a withdrawal is not a loss');
   }
 
   /* ---------- 2. the rows are the right records, not just the sum --- */

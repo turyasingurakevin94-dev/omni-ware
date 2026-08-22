@@ -11420,7 +11420,7 @@ function seedData(){
     // something is going quietly splits in half.
     presetLocations: ['Ntinda','Nakawa','Kireka','Kyaliwajjala','Bwaise','Kisenyi','Kampala Industrial Area'],
     presetIncomeCategories: ['Sales Revenue','Debt Collection','Loan Received','Owner Investment','Other Income'],
-    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Other Expense'],
+    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Capital Withdrawal','Other Expense'],
     presetAttributes: [
       {name:'Color', values:['Red','White','Blue','Black','Green','Grey']},
       {name:'Size', values:['Small','Medium','Large']},
@@ -41646,6 +41646,14 @@ function balanceSheetAsAt(asOfISO){
   const ownerIn = (data.cashTxns||[])
     .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment' && String(t.date||'') <= asOf)
     .reduce((s,t)=> s + (Number(t.amount)||0), 0);
+  /* And back out. Without this line a withdrawal fell into retained
+     earnings -- the balancing figure -- and read as a trading loss: the
+     owner taking 900,000 home looked like the shop losing 900,000. The
+     owner's stake is what they put in LESS what they took out, and only
+     the remainder of equity after that is the business's own doing. */
+  const ownerOut = (data.cashTxns||[])
+    .filter(t=> cashIsOwnerWithdrawal(t) && String(t.date||'') <= asOf)
+    .reduce((s,t)=> s + (Number(t.amount)||0), 0);
   const equity = assets - liabilities;
 
   return {
@@ -41658,7 +41666,8 @@ function balanceSheetAsAt(asOfISO){
     fixedAssets: fixed, assets,
     payables, loans, liabilities,
     staffAndRent: staffAndRent.total, staffAndRentDetail: staffAndRent,
-    ownerCapital: ownerIn, retainedEarnings: equity - ownerIn, equity,
+    ownerCapital: ownerIn, ownerDrawings: ownerOut,
+    retainedEarnings: equity - (ownerIn - ownerOut), equity,
   };
 }
 
@@ -41692,8 +41701,9 @@ function cashFlowStatement(fromISO, toISO){
 
   const borrowed = sum(t=> cashIsMoneyIn(t) && t.category === 'Loan Received');
   const ownerIn = sum(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment');
+  const ownerOut = sum(cashIsOwnerWithdrawal);
   const repaid = sum(t=> cashIsMoneyOut(t) && t.category === 'Loan Repayment');
-  const financing = borrowed + ownerIn - repaid;
+  const financing = borrowed + ownerIn - repaid - ownerOut;
 
   // Buying equipment is investing, not trading. The asset register writes
   // this category itself when an asset is added, so it is a fact the app
@@ -41709,7 +41719,7 @@ function cashFlowStatement(fromISO, toISO){
     from: fromISO, to: toISO,
     tradingIn, tradingInUninvoiced, debtCollected, operatingOut, stockOut, operating,
     equipmentOut, assetSaleIn, investing,
-    borrowed, ownerIn, repaid, financing,
+    borrowed, ownerIn, ownerOut, repaid, financing,
     netMovement,
     // Should always be zero as the categories stand -- every movement
     // belongs to one of the three sections above. It is a tripwire rather
@@ -42579,6 +42589,7 @@ function stDrillData(key, ctx){
     assetsale:     (t)=> cashIsMoneyIn(t) && t.category === 'Asset Sale',
     borrowed:      (t)=> cashIsMoneyIn(t) && t.category === 'Loan Received',
     ownerin:       (t)=> cashIsMoneyIn(t) && t.category === 'Owner Investment',
+    ownerout:      (t)=> cashIsOwnerWithdrawal(t),
     repaid:        (t)=> cashIsMoneyOut(t) && t.category === 'Loan Repayment',
   };
 
@@ -42726,11 +42737,17 @@ function stDrillData(key, ctx){
     rows: byDateDesc((data.cashTxns||[])
       .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment' && String(t.date||'') <= asOf)
       .map(txnRow)) };
+  if(key === 'bs:ownerout') return { title: 'Money the owner took out', expect: bs.ownerDrawings,
+    note: 'Every withdrawal of the owner’s own money recorded in the cash book' + (asOf < today ? ` up to ${asOf}` : '') + '. Not a cost of trading — profit is unmoved by it — which is why it sits here and not on the profit and loss.',
+    rows: byDateDesc((data.cashTxns||[])
+      .filter(t=> cashIsOwnerWithdrawal(t) && String(t.date||'') <= asOf)
+      .map(txnRow)) };
   if(key === 'bs:retained') return { title: 'Kept in the business', expect: bs.retainedEarnings, signed: true,
-    note: 'Not a list of records, because none exist for it: this line is arrived at by subtraction. It is net worth less the owner’s money — so anything mis-stated elsewhere on the sheet lands here, which is why it is named a balancing figure.',
+    note: 'Not a list of records, because none exist for it: this line is arrived at by subtraction. It is net worth less the owner’s net money — so anything mis-stated elsewhere on the sheet lands here, which is why it is named a balancing figure.',
     rows: [
       { d: null, l: 'Net worth', s: 'what the shop owns, less what it owes', v: bs.equity },
       { d: null, l: 'Less money the owner put in', s: '', v: -bs.ownerCapital },
+      ...(bs.ownerDrawings ? [{ d: null, l: 'Back out what the owner took', s: 'withdrawals reduce the owner’s stake, not the business’s earnings', v: bs.ownerDrawings }] : []),
     ] };
 
   if(key && key.indexOf('cf:') === 0){
@@ -42739,13 +42756,15 @@ function stDrillData(key, ctx){
       tradingin: 'Received from sales', debtcollected: 'Collected from debtors',
       stockout: 'Spent on stock and suppliers', opexpaid: 'Running costs paid',
       equipment: 'Equipment bought', assetsale: 'Equipment sold',
-      borrowed: 'Borrowed', ownerin: 'Put in by the owner', repaid: 'Loan repayments',
+      borrowed: 'Borrowed', ownerin: 'Put in by the owner',
+      ownerout: 'Taken out by the owner', repaid: 'Loan repayments',
       unclassified: 'Not classified',
     };
     const expects = {
       tradingin: cf.tradingIn, debtcollected: cf.debtCollected, stockout: cf.stockOut,
       opexpaid: cf.operatingOut, equipment: cf.equipmentOut, assetsale: cf.assetSaleIn,
-      borrowed: cf.borrowed, ownerin: cf.ownerIn, repaid: cf.repaid, unclassified: cf.unclassified,
+      borrowed: cf.borrowed, ownerin: cf.ownerIn, ownerout: cf.ownerOut,
+      repaid: cf.repaid, unclassified: cf.unclassified,
     };
     if(!(k in titles)) return null;
     if(k === 'unclassified'){
@@ -43153,6 +43172,7 @@ function stBalanceSheet({bs}){
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What is left over — yours</td></tr>
       ${stLine("Money the owner put in", bs.ownerCapital, null, {drill:'bs:ownerin'})}
+      ${bs.ownerDrawings ? stLine('Money the owner took out', -bs.ownerDrawings, null, {drill:'bs:ownerout'}) : ''}
       ${/* Named for what it IS. "Profit kept in the business" claims the
             app added up years of profit and put the answer here; it did
             not. This is net worth less the owner's money, arrived at by
@@ -43195,6 +43215,7 @@ function stCashFlow({from, to, cf, prevCf}){
       <tr class="st-section"><td colspan="3">Financing</td></tr>
       ${stLine('Borrowed', cf.borrowed, prevCf.borrowed, {drill:'cf:borrowed'})}
       ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn, {drill:'cf:ownerin'})}
+      ${(cf.ownerOut||prevCf.ownerOut) ? stLine('Taken out by the owner', -cf.ownerOut, -prevCf.ownerOut, {drill:'cf:ownerout'}) : ''}
       ${stLine('Loan repayments', -cf.repaid, -prevCf.repaid, {drill:'cf:repaid'})}
       ${stLine('From financing', cf.financing, prevCf.financing, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
@@ -44530,6 +44551,16 @@ const CASH_NOT_OPEX = {
   // the asset register -- expensing the cash here as well would charge the
   // whole van now AND charge it again over its life.
   'Equipment purchase': 'capital — reaches the accounts as depreciation',
+  /* The owner taking their own money home is not a cost of trading.
+     It is the mirror of 'Owner Investment' on the CASH_NOT_REVENUE side:
+     equity moving, in the other direction. Counted as an expense it
+     understates profit by exactly the amount the owner drew -- a shop
+     that earned 2,000,000 and whose owner took 900,000 home still EARNED
+     2,000,000. The withdrawal belongs to the cash flow's financing
+     section and to the equity lines of the balance sheet, and both read
+     it from these names. */
+  'Capital Withdrawal': 'the owner\'s money leaving — equity, not a cost of trading',
+  'Owner Withdrawal': 'the owner\'s money leaving — equity, not a cost of trading',
   /* Moving the shop's own money between its own tills is not a cost.
      Withdrawing 500,000 from the bank to pay in cash spends nothing --
      the shop has exactly what it had. Counted here it would be an
@@ -44565,6 +44596,13 @@ function cashIsOperatingExpense(t){
 // cash-flow statement needs to keep financing and equity out of trading.
 function cashIsTradingIncome(t){
   return cashIsMoneyIn(t) && !cashHas(CASH_NOT_REVENUE, t.category);
+}
+// The owner's money leaving, by either name a shop is likely to give it.
+// Matched by exact category, the same way 'Owner Investment' is on the
+// way in.
+const CASH_OWNER_WITHDRAWAL = ['Capital Withdrawal', 'Owner Withdrawal'];
+function cashIsOwnerWithdrawal(t){
+  return cashIsMoneyOut(t) && CASH_OWNER_WITHDRAWAL.indexOf(String(t.category==null?'':t.category)) !== -1;
 }
 function dashPct(n){ return (n>=0?'+':'') + n.toFixed(1) + '%'; }
 function dashFmtShort(n){

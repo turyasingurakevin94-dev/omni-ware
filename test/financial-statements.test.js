@@ -38,6 +38,7 @@ const scope = compileScope([
   extractDeclaration(src, 'ACCOUNTS', 'index.html'),
   extractDeclaration(src, 'DEPRECIATION_MAX_MONTHS', 'index.html'),
   extractDeclaration(src, 'CASH_NOT_OPEX', 'index.html'),
+  extractDeclaration(src, 'CASH_OWNER_WITHDRAWAL', 'index.html'),
   extractDeclaration(src, 'CASH_NOT_REVENUE', 'index.html'),
   extractDeclaration(src, 'cashHas', 'index.html'),
   extractFunction(src, 'cbAccountTotals', 'index.html'),
@@ -50,6 +51,7 @@ const scope = compileScope([
   extractFunction(src, 'cashIsMoneyOut', 'index.html'),
   extractFunction(src, 'cashIsMoneyIn', 'index.html'),
   extractFunction(src, 'cashIsOperatingExpense', 'index.html'),
+  extractFunction(src, 'cashIsOwnerWithdrawal', 'index.html'),
   extractFunction(src, 'cashIsTradingIncome', 'index.html'),
   extractFunction(src, 'invoiceLineCost', 'index.html'),
   extractFunction(src, 'anInvoiceTotals', 'index.html'),
@@ -508,6 +510,57 @@ const reset = () => {
 
   t.check(/balanceSheetToday/.test(code) && !/balanceSheetAt\(/.test(code),
     'the balance sheet is offered for today only -- cash, debtors and stock are current balances, so a sheet dated last March would be today\'s figures under last March\'s heading');
+}
+
+/* ---------- the owner taking money home is not a cost ---------------- */
+/*
+ * From the shop: a 900,000 "Capital Withdrawal" recorded to bring the
+ * book's cash down to the drawer's, which then appeared in the profit
+ * and loss as an operating expense. The shopkeeper's own question was
+ * the correct review: "is capital withdrawal really an expense?"
+ *
+ * It is not. It is the mirror of Owner Investment — equity moving the
+ * other way. A shop that earned 2,000,000 and whose owner took 900,000
+ * home still earned 2,000,000; what changed is where the money sits.
+ * So it belongs in the cash flow's financing section and on the equity
+ * lines of the balance sheet, and must never move profit. Before this,
+ * it also fell into retained earnings — the balancing figure — where it
+ * read as a trading loss the shop never made.
+ */
+{
+  reset();
+  data.savedQuotes = [sale()];
+  data.cashTxns = [
+    txn({ id: 1, type: 'expense', category: 'Transport', amount: 150000 }),
+    txn({ id: 2, type: 'receipt', category: 'Owner Investment', amount: 1000000 }),
+    txn({ id: 3, type: 'expense', category: 'Capital Withdrawal', amount: 900000 }),
+    txn({ id: 4, type: 'expense', category: 'Owner Withdrawal', amount: 20000 }),
+  ];
+  const is = scope.incomeStatement('2026-08-01', TODAY);
+  t.check(is.opex === 150000,
+    `operating costs carry the transport and neither withdrawal (got ${is.opex})`);
+  t.check(!('Capital Withdrawal' in is.opexRows) && !('Owner Withdrawal' in is.opexRows),
+    'so no withdrawal line appears on the profit and loss at all');
+  t.check(is.netProfit === 450000 - 300000 - 150000,
+    `and profit is what the shop earned, unmoved by what the owner took home (got ${is.netProfit})`);
+
+  const cf = scope.cashFlowStatement('2026-08-01', TODAY);
+  t.check(cf.ownerOut === 920000, 'the cash flow carries the withdrawals by name');
+  t.check(cf.financing === 1000000 - 920000,
+    `in financing, the mirror of the owner putting money in (got ${cf.financing})`);
+  t.check(cf.operatingOut === 150000,
+    'while trading\u2019s outgoings are only the real running costs');
+  t.check(Math.abs(cf.unclassified) < 0.01,
+    'and nothing falls between the sections — the statement still adds up');
+
+  const bs = scope.balanceSheetToday();
+  t.check(bs.ownerDrawings === 920000, 'the balance sheet shows what the owner took out');
+  t.check(bs.retainedEarnings === bs.equity - (1000000 - 920000),
+    'and retained earnings is net worth less the owner\u2019s NET money — a withdrawal no longer reads as a trading loss');
+  /* The invariant in one line: drawings change WHERE the equity sits,
+     never how much the business itself explains. */
+  t.check(bs.ownerCapital - bs.ownerDrawings + bs.retainedEarnings === bs.equity,
+    'put in, less taken out, plus kept — the equity section still closes');
 }
 
 process.exit(t.done() ? 1 : 0);
