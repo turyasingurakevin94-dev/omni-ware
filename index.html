@@ -3374,6 +3374,9 @@
   .cb-count.over .cb-count-diff{color:var(--ow-amber-ink);}
   .cb-count.short .cb-count-diff{color:var(--danger);}
   .cb-count-why{color:var(--ink-soft);line-height:1.45;}
+  .cb-count-fix{display:flex;flex-direction:column;gap:6px;margin-top:11px;padding-top:11px;
+    border-top:1px solid var(--ow-rule-soft);font-size:12.5px;}
+  .cb-count-fix .cb-var-record{align-self:flex-start;}
   @media (max-width:640px){
     .cb-day{flex-direction:column;align-items:stretch;}
     .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
@@ -11452,8 +11455,14 @@ function seedData(){
     // places that are one place, and every screen that groups by where
     // something is going quietly splits in half.
     presetLocations: ['Ntinda','Nakawa','Kireka','Kyaliwajjala','Bwaise','Kisenyi','Kampala Industrial Area'],
-    presetIncomeCategories: ['Sales Revenue','Debt Collection','Loan Received','Owner Investment','Other Income'],
-    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Capital Withdrawal','Other Expense'],
+    presetIncomeCategories: ['Sales Revenue','Debt Collection','Loan Received','Owner Investment','Cash Overage','Other Income'],
+    /* 'Cash Shortage' sits immediately before 'Capital Withdrawal' on
+       purpose. A drawer that counts short and a book that will not agree
+       is the moment a shopkeeper reaches for whichever category is
+       nearest, and the one nearest used to be the withdrawal -- which
+       says the owner took the money home. The honest answer now stands
+       in front of it in the list. */
+    presetExpenseCategories: ['Stock Purchase','Supplier Payment','Agent Commission','Rent','Utilities','Transport','Salaries & Wages','Cash Shortage','Capital Withdrawal','Other Expense'],
     presetAttributes: [
       {name:'Color', values:['Red','White','Blue','Black','Green','Grey']},
       {name:'Size', values:['Small','Medium','Large']},
@@ -11836,8 +11845,13 @@ async function loadData(shopId){
     presetCategories: presets.categories || seed.presetCategories,
     presetUnits: presets.units || seed.presetUnits,
     presetLocations: presets.locations || seed.presetLocations,
-    presetIncomeCategories: presets.incomeCategories || seed.presetIncomeCategories,
-    presetExpenseCategories: presets.expenseCategories || seed.presetExpenseCategories,
+    /* Guaranteed present rather than merely seeded. A shop trading since
+       before these two names existed has its own preset list saved, and
+       `presets.x || seed.x` means the seed never reaches it again -- so
+       the category the count screen writes under would be missing from
+       the very list it is meant to be picked from. */
+    presetIncomeCategories: withPresetCategory(presets.incomeCategories || seed.presetIncomeCategories, CASH_OVERAGE_CATEGORY),
+    presetExpenseCategories: withPresetCategory(presets.expenseCategories || seed.presetExpenseCategories, CASH_SHORTAGE_CATEGORY),
     presetAttributes: presets.attributes || seed.presetAttributes,
     presetOrderStageLimits: presets.orderStageLimits || {},
     // Rides in the same presets blob as everything above it, so the
@@ -39323,6 +39337,12 @@ function renderCbSummary(){
             : `<span class="cb-count-diff">${a.variance>0?'+':''}${fmtUGX(Math.round(a.variance))}</span>
                <span class="cb-count-why">${esc(meaning.text)}</span>`
       }</div>
+      ${meaning.state==='over' || meaning.state==='short' ? `
+      <div class="cb-count-fix">
+        <button type="button" class="btn btn-ghost cb-var-record" data-account="${esc(a.key)}">Book the ${
+          meaning.state==='short' ? 'missing' : 'extra'} ${fmtUGX(Math.abs(Math.round(a.variance)))}</button>
+        <span class="cb-count-why">Only for money you cannot trace. If you can still name it, enter that instead — dated the day it happened.</span>
+      </div>` : ''}
     </article>`;
   };
 
@@ -39335,6 +39355,10 @@ function renderCbSummary(){
       saveData();
       renderCbSummary();
     });
+  });
+
+  wrap.querySelectorAll('.cb-var-record').forEach(btn=>{
+    btn.addEventListener('click', ()=> recordCountVariance(btn.dataset.account));
   });
 
   /* The one line that says whether the day is closed. Counting two of
@@ -39352,6 +39376,52 @@ function renderCbSummary(){
       : off.length ? `All counted — ${off.length} ${off.length===1?'account does':'accounts do'} not match`
       : 'All counted and everything matches';
   }
+}
+
+/* Booking a count difference as the thing it actually is.
+
+   Without this there is no entry to make, and what a shop reaches for is
+   whatever category is nearest. In this one it was Capital Withdrawal:
+   900,000 that the drawer did not have, entered as the owner taking money
+   home. It balanced the cash and it lied twice -- drawings overstated by
+   the whole amount, and retained earnings with them, so the shop's
+   trading read 900,000 better than it was.
+
+   The figure is recomputed from the day rather than read off the button.
+   The count in the box may have been retyped since the card was drawn,
+   and the thirty-second refresh may have brought in a transaction from
+   another till; booking a stale figure would leave a fresh variance the
+   size of the error. */
+function recordCountVariance(accountKey){
+  const date = currentCbDate();
+  const acc = cbDayPosition(date).accounts.find(a=> a.key === accountKey);
+  if(!acc || acc.counted === null){ toast('Count it first'); return; }
+  const variance = Math.round(acc.variance);
+  if(Math.abs(variance) < 1){ toast('The count already agrees with the book'); return; }
+
+  const short = variance < 0;
+  const amount = Math.abs(variance);
+  const money = fmtUGX(amount);
+  const where = accountLabel(accountKey);
+
+  /* Said in full before it is written, because the honest answer to a
+     variance is usually NOT this button -- it is finding the entry that
+     was never made. This is what to do with the remainder. */
+  const ask = short
+    ? `Book ${money} missing from ${where} on ${date}?\n\n`
+      + `It goes out as a Cash Shortage, so the book comes down to what you counted and the loss shows on the profit and loss.\n\n`
+      + `Do this only for money you cannot trace. If you can still name it — a supplier paid in cash, a wage, transport — enter that instead, dated the day it happened.`
+    : `Book ${money} extra in ${where} on ${date}?\n\n`
+      + `It comes in as a Cash Overage, so the book comes up to what you counted. It credits the same line a shortage charges, so the two settle against each other.\n\n`
+      + `Money found is usually a sale that was never written down. If you can still say which, invoice it instead.`;
+  if(!confirm(ask)) return;
+
+  const note = `${short ? 'Short' : 'Over'} on the count of ${date}`;
+  if(short) addCashPayment(accountKey, amount, CASH_SHORTAGE_CATEGORY, note, date);
+  else addCashReceipt(accountKey, amount, CASH_OVERAGE_CATEGORY, note, date);
+
+  renderCbTransactions(); renderCbSummary(); renderCbTriggers();
+  toast(`${money} booked — the count and the book now agree`);
 }
 
 document.getElementById('cb_transfer').addEventListener('click', openAccountTransfer);
@@ -42062,11 +42132,7 @@ function incomeStatement(fromISO, toISO){
   const trade = anOverallTotals(invoices);
   const cash = dashCashTxnsInRange(fromISO, toISO);
 
-  const opexRows = {};
-  cash.filter(cashIsOperatingExpense).forEach(t=>{
-    const k = t.category || 'Uncategorised';
-    opexRows[k] = (opexRows[k]||0) + (Number(t.amount)||0);
-  });
+  const opexRows = cashOpexRows(cash);
   const opex = Object.values(opexRows).reduce((s,v)=>s+v, 0);
 
   const depreciation = depreciationForPeriod(fromISO, toISO);
@@ -42314,7 +42380,14 @@ function cashFlowStatement(fromISO, toISO){
   const stockOut = sum(t=> cashIsMoneyOut(t)
     && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'));
   const debtCollected = sum(cashIsDebtCollection);
-  const operating = tradingIn + debtCollected - operatingOut - stockOut;
+  /* Money found in the drawer really did arrive, whatever it was, so it
+     is operating cash. It is excluded from tradingIn deliberately -- see
+     CASH_NOT_REVENUE -- which leaves it belonging to no section at all
+     unless it is named here, and `unclassified` below exists to catch
+     exactly that. The paying side needs no line: a shortage is an
+     ordinary operating expense and operatingOut already has it. */
+  const cashFound = sum(cashIsCashOverage);
+  const operating = tradingIn + debtCollected + cashFound - operatingOut - stockOut;
 
   const borrowed = sum(t=> cashIsMoneyIn(t) && t.category === 'Loan Received');
   const ownerIn = sum(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment');
@@ -42334,7 +42407,7 @@ function cashFlowStatement(fromISO, toISO){
   const netMovement = rows.reduce((s,t)=> s + (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0), 0);
   return {
     from: fromISO, to: toISO,
-    tradingIn, tradingInUninvoiced, debtCollected, operatingOut, stockOut, operating,
+    tradingIn, tradingInUninvoiced, debtCollected, cashFound, operatingOut, stockOut, operating,
     equipmentOut, assetSaleIn, investing,
     borrowed, ownerIn, ownerOut, repaid, financing,
     netMovement,
@@ -43182,8 +43255,17 @@ function stDrillData(key, ctx){
       s: `${(q.client && q.client.name) || 'Unnamed client'}${pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
       v: pick==='cost' ? t.cost : t.sales, go: `inv:${q.id}` };
   }));
-  const opexRowsFor = (cat)=> byDateDesc(cash.filter(t=> cashIsOperatingExpense(t)
-    && (cat==null || (t.category || 'Uncategorised') === cat)).map(txnRow));
+  /* The short/over line is two categories under one name, so opening it
+     has to fetch both -- and the money found carries a negative value,
+     the same way it nets on the statement. Without that the panel would
+     total more than the line it was opened from and the drill-down's own
+     agreement check would call the statement wrong. */
+  const opexRowsFor = (cat)=> byDateDesc(
+    cat === CASH_VARIANCE_LINE
+      ? cash.filter(t=> cashIsCashShortage(t) || cashIsCashOverage(t))
+          .map(t=> cashIsCashOverage(t) ? {...txnRow(t), v: -(Number(t.amount)||0)} : txnRow(t))
+      : cash.filter(t=> cashIsOperatingExpense(t)
+          && (cat==null || (t.category || 'Uncategorised') === cat)).map(txnRow));
   const depreciationRows = ()=> liveFixedAssets()
     .map(a=> ({ d: a.acquiredOn, l: a.name, s: 'wear over this period', v: assetChargeBetween(a, from, to) }))
     .filter(r=> r.v > 0.5);
@@ -43200,6 +43282,7 @@ function stDrillData(key, ctx){
   const CF_PICKS = {
     tradingin:     (t)=> cashIsTradingIncome(t),
     debtcollected: (t)=> cashIsDebtCollection(t),
+    cashfound:     (t)=> cashIsCashOverage(t),
     stockout:      (t)=> cashIsMoneyOut(t) && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'),
     opexpaid:      (t)=> cashIsOperatingExpense(t),
     equipment:     (t)=> cashIsMoneyOut(t) && t.category === 'Equipment purchase',
@@ -43382,6 +43465,7 @@ function stDrillData(key, ctx){
     const k = key.slice(3);
     const titles = {
       tradingin: 'Received from sales', debtcollected: 'Collected from debtors',
+      cashfound: 'Found on the count',
       stockout: 'Spent on stock and suppliers', opexpaid: 'Running costs paid',
       equipment: 'Equipment bought', assetsale: 'Equipment sold',
       borrowed: 'Borrowed', ownerin: 'Put in by the owner',
@@ -43389,7 +43473,8 @@ function stDrillData(key, ctx){
       unclassified: 'Not classified',
     };
     const expects = {
-      tradingin: cf.tradingIn, debtcollected: cf.debtCollected, stockout: cf.stockOut,
+      tradingin: cf.tradingIn, debtcollected: cf.debtCollected, cashfound: cf.cashFound,
+      stockout: cf.stockOut,
       opexpaid: cf.operatingOut, equipment: cf.equipmentOut, assetsale: cf.assetSaleIn,
       borrowed: cf.borrowed, ownerin: cf.ownerIn, ownerout: cf.ownerOut,
       repaid: cf.repaid, unclassified: cf.unclassified,
@@ -43831,6 +43916,9 @@ function stCashFlow({from, to, cf, prevCf}){
       <tr class="st-section"><td colspan="3">Trading</td></tr>
       ${stLine('Received from sales', cf.tradingIn, prevCf.tradingIn, {drill:'cf:tradingin'})}
       ${stLine('Collected from debtors', cf.debtCollected, prevCf.debtCollected, {hint:'older sales being settled', drill:'cf:debtcollected'})}
+      ${cf.cashFound || prevCf.cashFound
+        ? stLine('Found on the count', cf.cashFound, prevCf.cashFound, {hint:'more in the drawer than the book said', drill:'cf:cashfound'})
+        : ''}
       ${stLine('Spent on stock and suppliers', -cf.stockOut, -prevCf.stockOut, {drill:'cf:stockout'})}
       ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut, {drill:'cf:opexpaid'})}
       ${stLine('From trading', cf.operating, prevCf.operating, {cls:'st-total', delta:true, higherIsBetter:true})}
@@ -45214,6 +45302,14 @@ const CASH_NOT_REVENUE = {
   // The receiving half of a transfer. Depositing cash into the bank
   // earns nothing -- see CASH_NOT_OPEX for the paying half.
   'Account Transfer': 'the shop\'s own money arriving from another of its tills',
+  /* Money found in the drawer is a correction to the cash record, not a
+     sale. Left in as trading income it would reach the basis-gap check as
+     takings with no invoice behind them, and a 5,000 miscount would raise
+     the "these figures are missing what the shop took" warning -- which is
+     about counter sales going unrecorded and means nothing here. Where it
+     DOES belong is the short/over line of the profit and loss, netted
+     against the shortages; see incomeStatement. */
+  'Cash Overage': 'a counting correction — the short/over line carries it, not revenue',
 };
 const cashHas = (map, cat)=> Object.prototype.hasOwnProperty.call(map, String(cat==null?'':cat));
 function cashIsMoneyOut(t){ return t.type==='payment' || t.type==='expense' || t.type==='out'; }
@@ -45243,6 +45339,79 @@ function cashIsDebtCollection(t){
 const CASH_OWNER_WITHDRAWAL = ['Capital Withdrawal', 'Owner Withdrawal'];
 function cashIsOwnerWithdrawal(t){
   return cashIsMoneyOut(t) && CASH_OWNER_WITHDRAWAL.indexOf(String(t.category==null?'':t.category)) !== -1;
+}
+
+/* ---- What the drawer holds against what the book says --------------
+
+   A count that does not match is not an event in the business: nothing
+   was bought, sold or paid. It is the book being wrong, and the entry
+   that fixes it has to say so in those words.
+
+   Two names because a shopkeeper counting a drawer thinks in two
+   directions, and one account because that is what they are. Booked
+   apart they would drift apart -- shortages charged to profit month
+   after month while the overages that answer them credited nothing
+   anywhere, since revenue on the profit and loss comes from invoices and
+   a cash receipt is not one. Netted onto a single line they behave the
+   way the underlying thing behaves: bad counting has a cost, and the
+   cost is what is left after the two sides have met. */
+const CASH_SHORTAGE_CATEGORY = 'Cash Shortage';
+const CASH_OVERAGE_CATEGORY = 'Cash Overage';
+// The one line they share on the profit and loss. Named for both
+// directions because it genuinely runs both ways.
+const CASH_VARIANCE_LINE = 'Cash short / over';
+function cashIsCashShortage(t){
+  return cashIsMoneyOut(t) && String(t.category==null?'':t.category) === CASH_SHORTAGE_CATEGORY;
+}
+function cashIsCashOverage(t){
+  return cashIsMoneyIn(t) && String(t.category==null?'':t.category) === CASH_OVERAGE_CATEGORY;
+}
+
+/* Running costs by category, out of a period's cash book.
+
+   One routine because two screens report this figure and a shop reading
+   both has to see the same number. The profit and loss and the home
+   screen's "running the shop cost" were the same walk of the same array
+   written twice, which was harmless while the walk was a filter and a
+   sum. It stopped being harmless the moment a credit entered it: added
+   to one copy and not the other, the two would part company by every
+   shilling ever found in a drawer, and neither would look wrong on its
+   own. */
+function cashOpexRows(rows){
+  const out = {};
+  rows.filter(cashIsOperatingExpense).forEach(t=>{
+    const k = cashIsCashShortage(t) ? CASH_VARIANCE_LINE : (t.category || 'Uncategorised');
+    out[k] = (out[k]||0) + (Number(t.amount)||0);
+  });
+  /* Money found, against money missing. The two are one account -- see
+     CASH_SHORTAGE_CATEGORY -- so the overages come off the line the
+     shortages went on rather than sitting somewhere of their own. This is
+     the only credit among the running costs, and it has to be: revenue is
+     built from invoices, and an overage has no invoice because it was
+     never a sale. Left off, it would raise cash, reach nothing on the
+     profit and loss and be absorbed by the equity plug -- so a shop that
+     miscounts in both directions would be charged for every bad count and
+     credited for none. */
+  rows.filter(cashIsCashOverage).forEach(t=>{
+    out[CASH_VARIANCE_LINE] = (out[CASH_VARIANCE_LINE]||0) - (Number(t.amount)||0);
+  });
+  // Short and over meeting is a line worth nothing, and a zero on a
+  // statement reads as a figure somebody ought to look into. To the
+  // shilling rather than exactly, so a half-shilling left over from two
+  // typed decimals does not print as a line either.
+  if(Math.abs(out[CASH_VARIANCE_LINE] || 0) < 0.5) delete out[CASH_VARIANCE_LINE];
+  return out;
+}
+function cashOpexTotal(rows){
+  return Object.values(cashOpexRows(rows)).reduce((s,v)=> s + v, 0);
+}
+
+/* A preset list with a category the app depends on guaranteed to be in
+   it. Adding rather than replacing: the list is the shop's, and the
+   names they typed themselves are not ours to reorder or drop. */
+function withPresetCategory(list, category){
+  const arr = Array.isArray(list) ? list.slice() : [];
+  return arr.indexOf(category) === -1 ? arr.concat([category]) : arr;
 }
 function dashPct(n){ return (n>=0?'+':'') + n.toFixed(1) + '%'; }
 function dashFmtShort(n){
@@ -45861,8 +46030,8 @@ function renderDashboard(){
   const curTotals = anOverallTotals(curInvoices);
   const prevTotals = anOverallTotals(prevInvoices);
 
-  const curOpex = dashCashTxnsInRange(from,to).filter(cashIsOperatingExpense).reduce((s,t)=>s+(Number(t.amount)||0),0);
-  const prevOpex = dashCashTxnsInRange(prevFrom,prevTo).filter(cashIsOperatingExpense).reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const curOpex = cashOpexTotal(dashCashTxnsInRange(from,to));
+  const prevOpex = cashOpexTotal(dashCashTxnsInRange(prevFrom,prevTo));
   const netProfit = curTotals.profit - curOpex;
   const prevNetProfit = prevTotals.profit - prevOpex;
   const netMargin = curTotals.sales>0 ? netProfit/curTotals.sales*100 : 0;

@@ -68,6 +68,7 @@ const env = {
 };
 const NAMES = [
   'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal', 'cashIsDebtCollection', 'invoiceBackedCashTxnIds',
+  'cashIsCashShortage', 'cashIsCashOverage',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
   // The real label pair — a stub here once hid that the stock preview
@@ -80,6 +81,9 @@ try {
       extractDeclaration(src, 'CASH_NOT_OPEX', 'index.html'),
       extractDeclaration(src, 'CASH_OWNER_WITHDRAWAL', 'index.html'),
       extractDeclaration(src, 'CASH_NOT_REVENUE', 'index.html'),
+      extractDeclaration(src, 'CASH_SHORTAGE_CATEGORY', 'index.html'),
+      extractDeclaration(src, 'CASH_OVERAGE_CATEGORY', 'index.html'),
+      extractDeclaration(src, 'CASH_VARIANCE_LINE', 'index.html'),
       extractDeclaration(src, 'ST_DRILL_MAX_ROWS', 'index.html'),
       // cashHas is a const arrow, so it is pulled as a declaration.
       extractDeclaration(src, 'cashHas', 'index.html'),
