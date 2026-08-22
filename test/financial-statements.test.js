@@ -266,7 +266,10 @@ const reset = () => {
   /* As a hint, not merely as text present somewhere in the function.
      Renaming the key left the sentence sitting in the source, unrendered
      and unreachable, while a content-only check went on passing. */
-  t.check(/\{hint:'a balancing figure, not a running total of profit/.test(doc),
+  /* The opts now open with the drill key (the line's records can be
+     previewed), so the hint is matched as a property rather than as the
+     start of the object — its job is unchanged: rendered on the line. */
+  t.check(/hint:'a balancing figure, not a running total of profit/.test(doc),
     'it says what it actually is, on the line where it is read');
   t.check(/anything unexplained elsewhere on this sheet lands here/.test(doc),
     'and that it absorbs everything the rest of the sheet could not explain');
@@ -472,7 +475,12 @@ const reset = () => {
      how a printed balance sheet comes to disagree with the one it was
      printed from. What still has to hold is that the BODY shows one
      document, not the single scroll this replaced. */
-  t.check(/body\.innerHTML = statementDocHTML\(stActiveTab, ctx\);/.test(code),
+  /* The document now renders beside the records-preview panel, so it is
+     interpolated into a split layout rather than assigned directly. What
+     the check protects is unchanged: ONE document keyed off the active
+     tab, never the five-statement scroll this replaced. */
+  t.check(/\$\{statementDocHTML\(stActiveTab, ctx\)\}/.test(code)
+    && /: statementDocHTML\(stActiveTab, ctx\);/.test(code),
     'and the body renders one of them rather than all of them at once');
   t.check(/key === 'pl'\s+\? stProfitAndLoss/.test(code),
     'chosen by key, one renderer per document');

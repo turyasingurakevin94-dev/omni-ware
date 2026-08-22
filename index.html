@@ -4721,6 +4721,73 @@
     font-size:12px;line-height:1.6;color:var(--ink-soft);
   }
   .st-note{margin:12px 0 0;font-size:11.5px;line-height:1.55;color:var(--ow-ink-400);}
+
+  /* ---- The records behind a figure ----
+     The statement keeps its reading width on the left; the preview takes
+     the space that sat empty beside it. Sticky, because the figure
+     clicked may be far down a long document and its records should stay
+     in view while the eye moves between the two. */
+  .st-split{display:grid;grid-template-columns:minmax(0,640px) minmax(280px,1fr);gap:20px;align-items:start;}
+  .st-split-side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
+  @media (max-width:1100px){
+    .st-split{grid-template-columns:1fr;}
+    .st-split-side{position:static;max-height:none;}
+  }
+  .st-table tr.st-drillable{cursor:pointer;}
+  .st-table tr.st-drillable:hover td{background:var(--ow-steel-050, rgba(60,90,120,.05));}
+  .st-table tr.st-drillable:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .st-table tr.st-drilled td{background:var(--ow-oxide-soft, rgba(180,90,50,.08));}
+  .st-table tr.st-drilled td.st-l{color:var(--ink);font-weight:600;}
+  /* The affordance whispers. It exists so a first-time reader learns the
+     lines are doors; a chevron at full ink on thirty rows would shout. */
+  .st-drill-aff{display:inline-block;margin-left:6px;color:var(--ow-ink-400);font-weight:700;
+    transition:transform .12s ease;}
+  .st-table tr.st-drillable:hover .st-drill-aff{color:var(--accent);transform:translateX(2px);}
+  .st-table tr.st-drilled .st-drill-aff{color:var(--accent);transform:rotate(90deg);}
+  /* On paper the lines are not doors, so nothing should say they are. */
+  .st-print .st-drill-aff{display:none;}
+
+  .st-drill-hint{
+    border:1px dashed var(--line);border-radius:12px;padding:18px 16px;
+    font-size:12px;line-height:1.6;color:var(--ow-ink-400);
+  }
+  .st-drill{
+    border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .st-drill-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:13px 14px 0;
+  }
+  .st-drill-title{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--accent);}
+  .st-drill-amt{display:block;margin-top:2px;font-size:19px;color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .st-drill-note{margin:8px 14px 0;font-size:11.5px;line-height:1.55;color:var(--ink-soft);}
+  .st-drill-list{margin-top:10px;border-top:1px solid var(--ow-rule-soft);overflow-y:auto;}
+  .st-drill-row{
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+    padding:8px 14px;border-bottom:1px solid var(--ow-rule-soft);font-size:12px;
+  }
+  .st-drill-row:last-child{border-bottom:0;}
+  .st-drill-main{min-width:0;}
+  .st-drill-main b{display:block;font-weight:600;color:var(--ink);overflow-wrap:anywhere;}
+  .st-drill-main span{display:block;font-size:11px;color:var(--ow-ink-400);overflow-wrap:anywhere;}
+  .st-drill-meta{display:flex;flex-direction:column;align-items:flex-end;flex:none;}
+  .st-drill-date{font-size:10.5px;color:var(--ow-ink-400);}
+  .st-drill-val{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;color:var(--ink);white-space:nowrap;}
+  .st-drill-go{cursor:pointer;}
+  .st-drill-go:hover{background:var(--ow-steel-050, rgba(60,90,120,.05));}
+  .st-drill-go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .st-drill-more{padding:8px 14px;font-size:11px;color:var(--ow-ink-400);}
+  .st-drill-foot{
+    padding:10px 14px;border-top:1px solid var(--ow-rule);font-size:11.5px;line-height:1.5;
+    color:var(--ink-soft);background:var(--bg);
+  }
+  /* The tripwire tripped: the rows do not add up to the statement.
+     Loud on purpose -- this is a fault in the app, not in the shop. */
+  .st-drill-foot.st-drill-off{color:var(--danger);border-top-color:var(--danger);font-weight:600;}
   @media (max-width:560px){
     .st-bar{flex-direction:column;align-items:stretch;}
     .st-tabs{overflow-x:auto;}
@@ -42318,10 +42385,19 @@ function stDeltaChip(now, before, higherIsBetter){
 }
 // A statement line. The prior figure is optional; when present it sits in
 // a muted column beside this one, which is how a statement is read.
+//
+// o.drill names the records behind the figure (see stDrillData), and is
+// what makes the line clickable: the preview beside the statement opens
+// on exactly those records. Totals and other derived lines carry no key
+// on purpose -- their components are each drillable, and a "preview" of
+// an arithmetic result would be a second copy of the statement.
 function stLine(label, value, prior, opts){
   const o = opts || {};
-  return `<tr class="${o.cls||''}">
-    <td class="st-l">${esc(label)}${o.hint?`<span class="st-hint">${esc(o.hint)}</span>`:''}</td>
+  const drillable = !!o.drill;
+  const open = drillable && stDrillKey === o.drill;
+  return `<tr class="${o.cls||''}${drillable?' st-drillable':''}${open?' st-drilled':''}"${
+      drillable?` data-st-drill="${esc(o.drill)}" tabindex="0" role="button" aria-expanded="${open}" title="Show the records behind this figure"`:''}>
+    <td class="st-l">${esc(label)}${drillable?'<span class="st-drill-aff" aria-hidden="true">&#8250;</span>':''}${o.hint?`<span class="st-hint">${esc(o.hint)}</span>`:''}</td>
     <td class="st-v">${fmtUGX(stZero(value))}${o.delta&&prior!=null?stDeltaChip(value,prior,o.higherIsBetter):''}</td>
     ${prior!=null?`<td class="st-p">${fmtUGX(stZero(prior))}</td>`:'<td class="st-p"></td>'}
   </tr>`;
@@ -42406,6 +42482,303 @@ function stResolvedBasis(from, to){
   return stWindowHasActivity(ly.from, ly.to) ? 'lastyear' : 'previous';
 }
 
+/* ---- The records behind a figure -------------------------------------
+
+   Every line on these statements is a sum, and a sum on its own has to be
+   taken on trust. This is the other half: click the line and the records
+   it was summed from appear beside the statement -- the invoices behind
+   revenue, the cash entries behind a cost category, the bills behind
+   payables, per customer, per product, per asset, per loan.
+
+   Built from the SAME primitives the statement figures are computed from
+   (anInvoicesInRange, dashCashTxnsInRange, the as-at walks), never from a
+   parallel query -- and the panel still adds its rows up and compares the
+   total against the figure on the statement, saying so when they differ.
+   Agreement is expected by construction; the check is a tripwire, because
+   a preview that quietly showed less than the statement would teach a
+   reader to distrust exactly the thing built to earn trust.
+
+   Derived lines -- gross profit, the section totals, net worth, every
+   ratio -- deliberately have no preview. Their components are each
+   drillable, and "the records behind gross profit" is just both lists
+   again with a minus sign. */
+let stDrillKey = null;
+
+function stDrillData(key, ctx){
+  const {from, to, is, bs, cf} = ctx;
+  const today = todayISO();
+  const asOf = bs.asOf;
+  const accLabel = (k)=> (ACCOUNTS.find(a=> a.key===k)||{}).label || k;
+  const txnRow = (t)=> ({d: t.date, l: t.description || t.category || 'Cash entry',
+    s: `${accLabel(t.account)}${t.category ? ` · ${t.category}` : ''}`, v: Number(t.amount)||0});
+  const byDateDesc = (rows)=> rows.sort((a,b)=> String(b.d||'').localeCompare(String(a.d||'')));
+  const byValueDesc = (rows)=> rows.sort((a,b)=> b.v - a.v);
+  const cash = dashCashTxnsInRange(from, to);
+  const invoiceRows = (pick)=> byDateDesc(anInvoicesInRange(from, to).map(q=>{
+    const t = anInvoiceTotals(q);
+    return { d: q.invoicedAt || q.date, l: invoiceNumberLabel(q),
+      s: `${(q.client && q.client.name) || 'Unnamed client'}${pick==='cost' && t.estimatedQty ? ' · part of this cost is estimated' : ''}`,
+      v: pick==='cost' ? t.cost : t.sales, go: `inv:${q.id}` };
+  }));
+  const opexRowsFor = (cat)=> byDateDesc(cash.filter(t=> cashIsOperatingExpense(t)
+    && (cat==null || (t.category || 'Uncategorised') === cat)).map(txnRow));
+  const depreciationRows = ()=> liveFixedAssets()
+    .map(a=> ({ d: a.acquiredOn, l: a.name, s: 'wear over this period', v: assetChargeBetween(a, from, to) }))
+    .filter(r=> r.v > 0.5);
+  const interestRows = ()=> liveLoans()
+    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'interest paid this period', v: loanInterestPaidBetween(l, from, to) }))
+    .filter(r=> r.v > 0.5);
+  const feeRows = ()=> liveLoans()
+    .filter(l=> String(l.startedOn||'') >= from && String(l.startedOn||'') <= to)
+    .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: 'arrangement fees', v: loanFees(l) }))
+    .filter(r=> r.v > 0.5);
+
+  /* The cash-flow buckets, named once so "unclassified" can be their
+     exact complement rather than a second opinion about it. */
+  const CF_PICKS = {
+    tradingin:     (t)=> cashIsTradingIncome(t),
+    debtcollected: (t)=> cashIsMoneyIn(t) && t.category === 'Debt Collection',
+    stockout:      (t)=> cashIsMoneyOut(t) && (t.category === 'Stock Purchase' || t.category === 'Supplier Payment'),
+    opexpaid:      (t)=> cashIsOperatingExpense(t),
+    equipment:     (t)=> cashIsMoneyOut(t) && t.category === 'Equipment purchase',
+    assetsale:     (t)=> cashIsMoneyIn(t) && t.category === 'Asset Sale',
+    borrowed:      (t)=> cashIsMoneyIn(t) && t.category === 'Loan Received',
+    ownerin:       (t)=> cashIsMoneyIn(t) && t.category === 'Owner Investment',
+    repaid:        (t)=> cashIsMoneyOut(t) && t.category === 'Loan Repayment',
+  };
+
+  if(key === 'pl:revenue') return { title: 'Revenue', expect: is.revenue,
+    note: 'Every invoice raised in the period — sales count when invoiced, whether or not they have been paid.',
+    rows: invoiceRows('sales') };
+  if(key === 'pl:cogs') return { title: 'Cost of sales', expect: is.costOfSales,
+    note: 'What the goods on those same invoices cost the shop.',
+    rows: invoiceRows('cost') };
+  if(key && key.indexOf('pl:opex:') === 0){
+    const cat = key.slice('pl:opex:'.length);
+    return { title: cat, expect: is.opexRows[cat] || 0,
+      note: 'Every cash entry in this category over the period.',
+      rows: opexRowsFor(cat) };
+  }
+  if(key === 'pl:depreciation') return { title: 'Depreciation', expect: is.depreciation,
+    note: 'Wear charged on each thing the shop owns, for this period. No money moved — the cash left when the asset was bought.',
+    rows: depreciationRows() };
+  if(key === 'pl:interest') return { title: 'Loan interest', expect: is.interest,
+    note: 'The interest portion of repayments made this period, per loan.',
+    rows: interestRows() };
+  if(key === 'pl:loanfees') return { title: 'Loan arrangement fees', expect: is.loanFees,
+    note: 'Fees on loans taken out this period.',
+    rows: feeRows() };
+  if(key === 'pl:disposals') return { title: 'Assets sold above or below book value', expect: is.disposalGain, signed: true,
+    note: 'What each asset fetched against what the books said it was worth.',
+    rows: is.disposals.map(x=> ({ d: x.asset.disposedOn, l: x.asset.name,
+      s: `sold for ${fmtUGX(Math.round(x.proceeds))} against ${fmtUGX(Math.round(x.book))} on the books`, v: x.gain })) };
+  if(key === 'ov:runcosts') return { title: 'Running costs', expect: is.opex + is.depreciation,
+    note: 'Every operating cost paid this period, plus depreciation — which moves no money, the cash having left when the assets were bought.',
+    rows: opexRowsFor(null).concat(depreciationRows()) };
+  if(key === 'ov:borrowcost') return { title: 'Cost of borrowing', expect: is.interest + is.loanFees,
+    note: 'Interest paid this period, and fees on loans taken out in it.',
+    rows: interestRows().concat(feeRows()) };
+
+  if(key && key.indexOf('bs:cash:') === 0){
+    const k = key.slice('bs:cash:'.length);
+    const end = asOf;
+    const start = from <= end ? from : end;
+    const opening = cashOnHandFor(k, anShiftDate(start, -1));
+    const moves = dashCashTxnsInRange(start, end).filter(t=> t.account === k)
+      .map(t=> ({ ...txnRow(t), v: (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0) }));
+    return { title: accLabel(k), expect: (bs.cashAccounts.find(a=> a.key===k)||{}).amount || 0, signed: true,
+      note: `The balance carried into ${start}, plus every movement in this account up to ${end}.`,
+      rows: [{ d: anShiftDate(start, -1), l: 'Balance carried in', s: 'everything before this period', v: opening }]
+        .concat(byDateDesc(moves)) };
+  }
+  if(key === 'bs:receivables'){
+    const rows = (data.customers||[]).map(c=>{
+      const bal = asOf >= today
+        ? Number(c.debt)||0
+        : Math.max(0, (c.debtLog||[]).filter(l=> String(l.date||'') <= asOf)
+            .reduce((n,l)=> n + (l.type==='charge' ? (Number(l.amount)||0) : -(Number(l.amount)||0)), 0));
+      return { d: null, l: c.name || 'Unnamed customer', s: c.location || '', v: bal };
+    }).filter(r=> r.v > 0.5);
+    return { title: 'Owed by customers', expect: bs.receivables,
+      note: asOf >= today ? 'Each customer’s balance as it stands. The Debtors List is the working view of the same money.'
+        : `Each customer’s balance as at ${asOf}, rebuilt from their dated history.`,
+      rows: byValueDesc(rows) };
+  }
+  if(key === 'bs:stock'){
+    const lots = data.stockLots || {};
+    let qtyThen = null;
+    if(asOf < today){
+      const log = (data.stockLog||[]).slice()
+        .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')) || (a.id-b.id));
+      qtyThen = {}; const seen = new Set();
+      log.forEach(e=>{
+        if(!e.key) return;
+        if(String(e.date||'') <= asOf){ qtyThen[e.key] = Number(e.qtyAfter)||0; }
+        else if(!seen.has(e.key) && qtyThen[e.key] === undefined){
+          qtyThen[e.key] = (Number(e.qtyAfter)||0) - (Number(e.delta)||0);
+        }
+        seen.add(e.key);
+      });
+    }
+    const keys = new Set(Object.keys(lots).concat(qtyThen ? Object.keys(qtyThen) : []));
+    const rows = []; let uncostedQty = 0;
+    keys.forEach(k=>{
+      const current = lots[k]||[];
+      const currentQty = current.reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
+      const costed = current.filter(l=> l.cost != null);
+      const costedQty = costed.reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
+      const costedValue = costed.reduce((s2,l)=> s2 + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+      const qty = qtyThen ? (qtyThen[k] === undefined ? currentQty : qtyThen[k])
+        : costedQty + current.filter(l=> l.cost == null).reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
+      if(qty <= 0) return;
+      const [pid, vRaw] = String(k).split('|');
+      const product = (data.products||[]).find(x=> x.id === pid);
+      const label = product ? productVariantLabel(product, vRaw === '' ? null : (isNaN(Number(vRaw)) ? vRaw : Number(vRaw))) : pid;
+      if(costedQty <= 0){
+        uncostedQty += qty;
+        rows.push({ d: null, l: label, s: `${qty} on the shelf — no cost on file, counts as nothing`, v: 0 });
+        return;
+      }
+      const unit = costedValue / costedQty;
+      const costedOnShelf = qtyThen ? qty : costedQty;
+      const un = qtyThen ? 0 : qty - costedQty;
+      if(un > 0){ uncostedQty += un; }
+      rows.push({ d: null, l: label,
+        s: `${qty} on the shelf @ ~${fmtUGX(Math.round(unit))}${un > 0 ? ` — ${un} of them uncosted, counting as nothing` : ''}`,
+        v: costedOnShelf * unit });
+    });
+    return { title: 'Stock on the shelf', expect: bs.inventory,
+      note: (asOf < today ? `How many stood on the shelf on ${asOf} is exact; each value is at today’s unit cost, since the lots as they stood then were not kept. ` : '')
+        + (uncostedQty ? `${uncostedQty} unit${uncostedQty===1?'':'s'} have no cost on file and count as nothing.` : 'Valued from the cost each batch actually arrived at.'),
+      rows: byValueDesc(rows) };
+  }
+  if(key === 'bs:fixed') return { title: 'Equipment and vehicles', expect: bs.fixedAssets,
+    note: 'Each thing the shop owns, at what is left of its cost after depreciation.',
+    rows: byValueDesc(liveFixedAssets()
+      .filter(a=> !assetIsDisposed(a, asOf) && String(a.acquiredOn||'') <= String(asOf))
+      .map(a=> ({ d: a.acquiredOn, l: a.name, s: 'book value after wear', v: assetNBVAt(a, asOf) }))) };
+  if(key === 'bs:payables'){
+    const known = new Set((data.suppliers||[]).map(x=> x.id));
+    const rows = (data.purchaseInvoices||[])
+      .filter(pi=> !pi.voided && known.has(pi.supplierId) && String(pi.date||'') <= asOf)
+      .map(pi=>{
+        const paid = (pi.payments||[]).filter(pp=> String(pp.date||'') <= asOf)
+          .reduce((n,pp)=> n + (Number(pp.amount)||0), 0);
+        return { d: pi.date || null, l: purchaseInvoiceNumberLabel(pi), s: pi.supplierName || '', v: Math.max(0, purchaseInvoiceTotal(pi) - paid), go: `pinv:${pi.id}` };
+      })
+      .filter(r=> r.v > 0.5);
+    return { title: 'Owed to suppliers', expect: bs.payables,
+      note: 'Every bill still carrying a balance' + (asOf < today ? ` as at ${asOf}` : '') + '. The Creditors screen is the working view of the same money.',
+      rows: byDateDesc(rows) };
+  }
+  if(key === 'bs:duesowed'){
+    const rows = (data.dues||[]).filter(x=> String(x.dueDate||'') <= asOf && x.amount != null)
+      .map(x=>{
+        const paid = (x.payments||[]).filter(pp=> String(pp.date||'') <= asOf)
+          .reduce((n,pp)=> n + (Number(pp.amount)||0), 0);
+        const who = x.kind === 'wage'
+          ? (((data.staff||[]).find(st=> String(st.id) === String(x.refId))||{}).name || 'Staff') + ' — wages'
+          : ((((data.rentAgreements||[]).find(r=> String(r.id) === String(x.refId))||{}).premises) || 'Premises') + ' — rent';
+        return { d: x.dueDate, l: who, s: x.period || '', v: Number(x.amount) - paid };
+      })
+      .filter(r=> r.v > 0.5);
+    return { title: 'Wages and rent owed', expect: bs.staffAndRent,
+      note: 'Months already worked or occupied, not yet paid.'
+        + (bs.staffAndRentDetail.uncostedCount ? ` ${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages are not yet costed and count as nothing here.` : ''),
+      rows: byDateDesc(rows) };
+  }
+  if(key === 'bs:loans') return { title: 'Loans outstanding', expect: bs.loans,
+    note: 'What is still owed on each loan' + (asOf < today ? ` as at ${asOf}` : '') + '.',
+    rows: byValueDesc(liveLoans()
+      .filter(l=> String(l.startedOn||'') <= String(asOf))
+      .map(l=> ({ d: l.startedOn, l: l.lender || 'Loan', s: `borrowed ${fmtUGX(Math.round(Number(l.principal)||0))}`, v: loanOutstanding(l, asOf) }))
+      .filter(r=> r.v > 0.5)) };
+  if(key === 'bs:ownerin') return { title: 'Money the owner put in', expect: bs.ownerCapital,
+    note: 'Every owner investment recorded in the cash book' + (asOf < today ? ` up to ${asOf}` : '') + '.',
+    rows: byDateDesc((data.cashTxns||[])
+      .filter(t=> cashIsMoneyIn(t) && t.category === 'Owner Investment' && String(t.date||'') <= asOf)
+      .map(txnRow)) };
+  if(key === 'bs:retained') return { title: 'Kept in the business', expect: bs.retainedEarnings, signed: true,
+    note: 'Not a list of records, because none exist for it: this line is arrived at by subtraction. It is net worth less the owner’s money — so anything mis-stated elsewhere on the sheet lands here, which is why it is named a balancing figure.',
+    rows: [
+      { d: null, l: 'Net worth', s: 'what the shop owns, less what it owes', v: bs.equity },
+      { d: null, l: 'Less money the owner put in', s: '', v: -bs.ownerCapital },
+    ] };
+
+  if(key && key.indexOf('cf:') === 0){
+    const k = key.slice(3);
+    const titles = {
+      tradingin: 'Received from sales', debtcollected: 'Collected from debtors',
+      stockout: 'Spent on stock and suppliers', opexpaid: 'Running costs paid',
+      equipment: 'Equipment bought', assetsale: 'Equipment sold',
+      borrowed: 'Borrowed', ownerin: 'Put in by the owner', repaid: 'Loan repayments',
+      unclassified: 'Not classified',
+    };
+    const expects = {
+      tradingin: cf.tradingIn, debtcollected: cf.debtCollected, stockout: cf.stockOut,
+      opexpaid: cf.operatingOut, equipment: cf.equipmentOut, assetsale: cf.assetSaleIn,
+      borrowed: cf.borrowed, ownerin: cf.ownerIn, repaid: cf.repaid, unclassified: cf.unclassified,
+    };
+    if(!(k in titles)) return null;
+    if(k === 'unclassified'){
+      const named = Object.values(CF_PICKS);
+      const rows = cash.filter(t=> !named.some(f=> f(t)))
+        .map(t=> ({ ...txnRow(t), v: (cashIsMoneyIn(t) ? 1 : -1) * (Number(t.amount)||0) }));
+      return { title: titles[k], expect: expects[k], signed: true,
+        note: 'Cash movements that fell into none of the sections above — each one is worth recategorising.',
+        rows: byDateDesc(rows) };
+    }
+    return { title: titles[k], expect: expects[k],
+      note: 'Every cash book entry behind this line, over the period.',
+      rows: byDateDesc(cash.filter(CF_PICKS[k]).map(txnRow)) };
+  }
+  return null;
+}
+
+/* The preview cap. Everything is COUNTED whatever the length -- the
+   total is summed over all rows before the list is cut -- but a month of
+   a busy till is hundreds of entries, and a list that long stops being a
+   preview. */
+const ST_DRILL_MAX_ROWS = 250;
+function stDrillPanelHTML(ctx){
+  if(!stDrillKey){
+    return `<div class="st-drill-hint">Click any figure on the statement to see the records that make it up — the invoices behind revenue, the entries behind a cost, who owes what.</div>`;
+  }
+  const d = stDrillData(stDrillKey, ctx);
+  if(!d) return `<div class="st-drill-hint">Nothing to show for that line in this period.</div>`;
+  const rows = d.rows || [];
+  const sum = rows.reduce((s2,r)=> s2 + (Number(r.v)||0), 0);
+  const agrees = Math.abs(sum - (Number(d.expect)||0)) < 1;
+  const shown = rows.slice(0, ST_DRILL_MAX_ROWS);
+  const amt = (v)=> d.signed
+    ? `${v < 0 ? '−' : ''}${fmtUGX(Math.abs(Math.round(v)))}`
+    : fmtUGX(Math.round(Math.abs(v)));
+  return `<div class="st-drill">
+    <header class="st-drill-head">
+      <div>
+        <span class="st-drill-title">${esc(d.title)}</span>
+        <b class="st-drill-amt">${amt(d.expect)}</b>
+      </div>
+      <button type="button" class="modal-close" id="st_drill_close" aria-label="Close the preview">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    ${d.note ? `<p class="st-drill-note">${esc(d.note)}</p>` : ''}
+    ${rows.length === 0
+      ? '<div class="st-drill-hint">No records behind this figure in this period.</div>'
+      : `<div class="st-drill-list">${shown.map(r=> `
+        <div class="st-drill-row${r.go ? ' st-drill-go' : ''}"${r.go ? ` data-st-go="${esc(r.go)}" tabindex="0" role="button" title="Open this document"` : ''}>
+          <span class="st-drill-main"><b>${esc(r.l)}</b>${r.s ? `<span>${esc(r.s)}</span>` : ''}</span>
+          <span class="st-drill-meta">${r.d ? `<span class="st-drill-date">${esc(r.d)}</span>` : ''}<span class="st-drill-val">${amt(r.v)}</span></span>
+        </div>`).join('')}
+      ${rows.length > shown.length ? `<div class="st-drill-more">…and ${rows.length - shown.length} more — every one is counted in the total below.</div>` : ''}</div>`}
+    <footer class="st-drill-foot${agrees ? '' : ' st-drill-off'}">
+      ${rows.length} record${rows.length===1?'':'s'} adding up to ${amt(sum)}${agrees ? ' — exactly the figure on the statement.'
+        : ` — but the statement shows ${amt(d.expect)}. The ${fmtUGX(Math.round(Math.abs(sum - d.expect)))} difference is a fault worth reporting, not a rounding.`}
+    </footer>
+  </div>`;
+}
+
 function statementsContext(){
   const fromEl = document.getElementById('st_from'), toEl = document.getElementById('st_to');
   if(!fromEl.value || !toEl.value){
@@ -42472,7 +42845,15 @@ function renderStatements(){
   basisEl.title = `Comparing against ${ST_BASES[ctx.basis].toLowerCase()}`;
   basisEl.querySelector('option[value=""]').textContent =
     stComparisonBasis ? 'Compare automatically' : `Automatic — ${ST_BASES[ctx.basis].toLowerCase()}`;
-  body.innerHTML = statementDocHTML(stActiveTab, ctx);
+  /* The ratios are all derived figures, so there is nothing for a
+     preview to list; the document takes the full width there. */
+  const drillable = stActiveTab !== 'ratios';
+  body.innerHTML = drillable
+    ? `<div class="st-split">
+        <div class="st-split-doc">${statementDocHTML(stActiveTab, ctx)}</div>
+        <aside class="st-split-side" id="st_drill_side">${stDrillPanelHTML(ctx)}</aside>
+      </div>`
+    : statementDocHTML(stActiveTab, ctx);
 }
 
 /* On paper.
@@ -42661,12 +43042,12 @@ function stOverview({from, to, is, prev, bs, cf, checks}){
         <header class="st-doc-head"><h3>Where the profit went</h3>
           <span class="st-doc-when">${esc(from)} to ${esc(to)}</span></header>
         <table class="st-table">
-          ${stLine('Sales', is.revenue, prev.revenue, {delta:true, higherIsBetter:true})}
-          ${stLine('Less what the goods cost', -is.costOfSales, -prev.costOfSales)}
+          ${stLine('Sales', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
+          ${stLine('Less what the goods cost', -is.costOfSales, -prev.costOfSales, {drill:'pl:cogs'})}
           ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
-          ${stLine('Less running costs', -(is.opex + is.depreciation), -(prev.opex + prev.depreciation))}
-          ${stLine('Less cost of borrowing', -(is.interest + is.loanFees), -(prev.interest + prev.loanFees))}
-          ${is.disposalGain ? stLine('Assets sold', is.disposalGain, prev.disposalGain) : ''}
+          ${stLine('Less running costs', -(is.opex + is.depreciation), -(prev.opex + prev.depreciation), {drill:'ov:runcosts'})}
+          ${stLine('Less cost of borrowing', -(is.interest + is.loanFees), -(prev.interest + prev.loanFees), {drill:'ov:borrowcost'})}
+          ${is.disposalGain ? stLine('Assets sold', is.disposalGain, prev.disposalGain, {drill:'pl:disposals'}) : ''}
           ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
         </table>
         <p class="st-read">${is.revenue>0
@@ -42695,17 +43076,17 @@ function stProfitAndLoss(ctx){
       <span class="st-doc-when">${esc(from)} to ${esc(to)} · ${is.invoiceCount} invoice${is.invoiceCount===1?'':'s'}</span></header>
     <table class="st-table">
       ${stHead('This period', 'Period before')}
-      ${stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true})}
-      ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost'})}
+      ${stLine('Revenue', is.revenue, prev.revenue, {delta:true, higherIsBetter:true, drill:'pl:revenue'})}
+      ${stLine('Cost of sales', -is.costOfSales, -prev.costOfSales, {hint:'what the goods actually cost', drill:'pl:cogs'})}
       ${stLine('Gross profit', is.grossProfit, prev.grossProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
-      ${cats.map(k=>stLine(k, -(is.opexRows[k]||0), -(prev.opexRows[k]||0))).join('')}
-      ${(is.depreciation||prev.depreciation) ? stLine('Depreciation', -is.depreciation, -prev.depreciation, {hint:'wear on what the shop owns'}) : ''}
+      ${cats.map(k=>stLine(k, -(is.opexRows[k]||0), -(prev.opexRows[k]||0), {drill:'pl:opex:'+k})).join('')}
+      ${(is.depreciation||prev.depreciation) ? stLine('Depreciation', -is.depreciation, -prev.depreciation, {hint:'wear on what the shop owns', drill:'pl:depreciation'}) : ''}
       ${stLine('Operating profit', is.operatingProfit, prev.operatingProfit, {cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
-      ${(is.disposalGain||prev.disposalGain) ? stLine('Assets sold above or below book value', is.disposalGain, prev.disposalGain) : ''}
-      ${(is.interest||prev.interest) ? stLine('Loan interest', -is.interest, -prev.interest) : ''}
-      ${(is.loanFees||prev.loanFees) ? stLine('Loan arrangement fees', -is.loanFees, -prev.loanFees) : ''}
+      ${(is.disposalGain||prev.disposalGain) ? stLine('Assets sold above or below book value', is.disposalGain, prev.disposalGain, {drill:'pl:disposals'}) : ''}
+      ${(is.interest||prev.interest) ? stLine('Loan interest', -is.interest, -prev.interest, {drill:'pl:interest'}) : ''}
+      ${(is.loanFees||prev.loanFees) ? stLine('Loan arrangement fees', -is.loanFees, -prev.loanFees, {drill:'pl:loanfees'}) : ''}
       ${stLine('Net profit', is.netProfit, prev.netProfit, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
     <p class="st-read">Sales counted when invoiced, costs when paid. ${stComparisonNote(ctx)}</p>
@@ -42719,26 +43100,26 @@ function stBalanceSheet({bs}){
     <table class="st-table">
       ${stHead('Amount', '')}
       <tr class="st-section"><td colspan="3">What the shop owns</td></tr>
-      ${bs.cashAccounts.map(a=>stLine(a.label, a.amount, null)).join('')}
-      ${stLine('Owed by customers', bs.receivables, null)}
-      ${stLine('Stock on the shelf', bs.inventory, null,
+      ${bs.cashAccounts.map(a=>stLine(a.label, a.amount, null, {drill:'bs:cash:'+a.key})).join('')}
+      ${stLine('Owed by customers', bs.receivables, null, {drill:'bs:receivables'})}
+      ${stLine('Stock on the shelf', bs.inventory, null, Object.assign({drill:'bs:stock'},
         bs.inventoryEstimated
           ? {hint:`how many were on the shelf that day is exact; what they were worth is today's unit cost, since the lots as they stood then were not kept${bs.inventoryUncostedQty ? ` — and ${bs.inventoryUncostedQty} units have no cost on file at all` : ''}`}
-          : (bs.inventoryUncostedQty ? {hint:`${bs.inventoryUncostedQty} units have no cost on file and count as nothing`} : {}))}
-      ${stLine('Equipment and vehicles', bs.fixedAssets, null, {hint:'after depreciation'})}
+          : (bs.inventoryUncostedQty ? {hint:`${bs.inventoryUncostedQty} units have no cost on file and count as nothing`} : {})))}
+      ${stLine('Equipment and vehicles', bs.fixedAssets, null, {hint:'after depreciation', drill:'bs:fixed'})}
       ${stLine('Total', bs.assets, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What the shop owes</td></tr>
-      ${stLine('Owed to suppliers', bs.payables, null)}
-      ${stLine('Wages and rent owed', bs.staffAndRent, null,
+      ${stLine('Owed to suppliers', bs.payables, null, {drill:'bs:payables'})}
+      ${stLine('Wages and rent owed', bs.staffAndRent, null, Object.assign({drill:'bs:duesowed'},
         bs.staffAndRentDetail.uncostedCount
           ? {hint:`${bs.staffAndRentDetail.uncostedCount} month${bs.staffAndRentDetail.uncostedCount===1?'':'s'} of daily wages not yet costed, so not counted here`}
-          : {hint:'months already worked or occupied, not yet paid'})}
-      ${stLine('Loans outstanding', bs.loans, null)}
+          : {hint:'months already worked or occupied, not yet paid'}))}
+      ${stLine('Loans outstanding', bs.loans, null, {drill:'bs:loans'})}
       ${stLine('Total', bs.liabilities, null, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">What is left over — yours</td></tr>
-      ${stLine("Money the owner put in", bs.ownerCapital, null)}
+      ${stLine("Money the owner put in", bs.ownerCapital, null, {drill:'bs:ownerin'})}
       ${/* Named for what it IS. "Profit kept in the business" claims the
             app added up years of profit and put the answer here; it did
             not. This is net worth less the owner's money, arrived at by
@@ -42747,7 +43128,7 @@ function stBalanceSheet({bs}){
             they trust it. The caveat belongs on the line rather than in
             a footnote under it. */''}
       ${stLine('Kept in the business', bs.retainedEarnings, null,
-        {hint:'a balancing figure, not a running total of profit — it is what is left once the owner\'s money is taken from net worth, so anything unexplained elsewhere on this sheet lands here'})}
+        {drill:'bs:retained', hint:'a balancing figure, not a running total of profit — it is what is left once the owner\'s money is taken from net worth, so anything unexplained elsewhere on this sheet lands here'})}
       ${stLine('Net worth', bs.equity, null, {cls:'st-grand'})}
     </table>
     <p class="st-read">${bs.assets>0
@@ -42767,24 +43148,24 @@ function stCashFlow({from, to, cf, prevCf}){
     <table class="st-table">
       ${stHead('This period', 'Period before')}
       <tr class="st-section"><td colspan="3">Trading</td></tr>
-      ${stLine('Received from sales', cf.tradingIn, prevCf.tradingIn)}
-      ${stLine('Collected from debtors', cf.debtCollected, prevCf.debtCollected, {hint:'older sales being settled'})}
-      ${stLine('Spent on stock and suppliers', -cf.stockOut, -prevCf.stockOut)}
-      ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut)}
+      ${stLine('Received from sales', cf.tradingIn, prevCf.tradingIn, {drill:'cf:tradingin'})}
+      ${stLine('Collected from debtors', cf.debtCollected, prevCf.debtCollected, {hint:'older sales being settled', drill:'cf:debtcollected'})}
+      ${stLine('Spent on stock and suppliers', -cf.stockOut, -prevCf.stockOut, {drill:'cf:stockout'})}
+      ${stLine('Running costs paid', -cf.operatingOut, -prevCf.operatingOut, {drill:'cf:opexpaid'})}
       ${stLine('From trading', cf.operating, prevCf.operating, {cls:'st-total', delta:true, higherIsBetter:true})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">Investing</td></tr>
-      ${stLine('Equipment bought', -cf.equipmentOut, -prevCf.equipmentOut, {hint:'from the asset register'})}
-      ${stLine('Equipment sold', cf.assetSaleIn, prevCf.assetSaleIn)}
+      ${stLine('Equipment bought', -cf.equipmentOut, -prevCf.equipmentOut, {hint:'from the asset register', drill:'cf:equipment'})}
+      ${stLine('Equipment sold', cf.assetSaleIn, prevCf.assetSaleIn, {drill:'cf:assetsale'})}
       ${stLine('From investing', cf.investing, prevCf.investing, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
       <tr class="st-section"><td colspan="3">Financing</td></tr>
-      ${stLine('Borrowed', cf.borrowed, prevCf.borrowed)}
-      ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn)}
-      ${stLine('Loan repayments', -cf.repaid, -prevCf.repaid)}
+      ${stLine('Borrowed', cf.borrowed, prevCf.borrowed, {drill:'cf:borrowed'})}
+      ${stLine('Put in by the owner', cf.ownerIn, prevCf.ownerIn, {drill:'cf:ownerin'})}
+      ${stLine('Loan repayments', -cf.repaid, -prevCf.repaid, {drill:'cf:repaid'})}
       ${stLine('From financing', cf.financing, prevCf.financing, {cls:'st-total'})}
       <tr class="st-gap"><td colspan="3"></td></tr>
-      ${Math.abs(cf.unclassified)>=1 ? stLine('Not classified', cf.unclassified, null, {hint:'movement that fell into none of the above'}) : ''}
+      ${Math.abs(cf.unclassified)>=1 ? stLine('Not classified', cf.unclassified, null, {hint:'movement that fell into none of the above', drill:'cf:unclassified'}) : ''}
       ${stLine('Money in the till moved by', cf.netMovement, prevCf.netMovement, {cls:'st-grand', delta:true, higherIsBetter:true})}
     </table>
     <p class="st-read">${cf.operating < 0 && cf.financing > 0
@@ -42800,7 +43181,60 @@ document.getElementById('st_tabs').addEventListener('click', (e)=>{
   const b = e.target.closest('.st-tab');
   if(!b) return;
   stActiveTab = b.dataset.stab;
+  // A preview from the previous document would sit beside a statement it
+  // is not part of, agreeing with a figure that is no longer on screen.
+  stDrillKey = null;
   renderStatements();
+});
+/* Delegated on the body container, which survives every re-render.
+   One handler for the three things a click can mean here: open or close
+   a line's preview, close it from the panel, or jump from a previewed
+   document to the document itself. */
+function stHandleDrillAction(e){
+  const close = e.target.closest('#st_drill_close');
+  if(close){ stDrillKey = null; renderStatements(); return true; }
+  const go = e.target.closest('[data-st-go]');
+  if(go){
+    const [kind, rawId] = String(go.dataset.stGo).split(':');
+    const id = Number(rawId);
+    if(kind === 'inv'){
+      const q = data.savedQuotes.find(x=> x.id === id);
+      if(q){
+        const box = document.getElementById('inv_doc_search');
+        if(box) box.value = invoiceNumberLabel(q);
+        goToTab('invoices');
+        toast(`Showing ${invoiceNumberLabel(q)}`);
+      }
+    } else if(kind === 'pinv'){
+      revealPurchaseInvoice(id);
+    }
+    return true;
+  }
+  const row = e.target.closest('[data-st-drill]');
+  if(row){
+    const k = row.dataset.stDrill;
+    stDrillKey = stDrillKey === k ? null : k;
+    renderStatements();
+    /* On a narrow screen the panel sits BELOW the document, off-screen
+       at the moment it fills -- which reads as the click doing nothing.
+       Only there: on a wide screen it is already beside the figure, and
+       scrolling would yank the page for no reason. */
+    if(stDrillKey && window.innerWidth < 1100){
+      const side = document.getElementById('st_drill_side');
+      if(side) side.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+    return true;
+  }
+  return false;
+}
+document.getElementById('st_body').addEventListener('click', stHandleDrillAction);
+// The rows carry role=button, so the keyboard has to mean the same thing
+// a click does.
+document.getElementById('st_body').addEventListener('keydown', (e)=>{
+  if(e.key !== 'Enter' && e.key !== ' ') return;
+  if(!e.target.closest('[data-st-drill],[data-st-go]')) return;
+  e.preventDefault();
+  stHandleDrillAction(e);
 });
 /* Which of the three shapes the dates on screen currently describe.
 
