@@ -42693,9 +42693,15 @@ function stDrillData(key, ctx){
       const qty = qtyThen ? (qtyThen[k] === undefined ? currentQty : qtyThen[k])
         : costedQty + current.filter(l=> l.cost == null).reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
       if(qty <= 0) return;
-      const [pid, vRaw] = String(k).split('|');
+      /* stockKey joins with '::', and writes no separator at all when
+         there is no variant. The first cut split on '|' — which matches
+         nothing a stock key contains — so the lookup failed for every
+         variant product and the preview printed P051::6 where it meant
+         the product's name. Parsed the way supplierStats parses the same
+         keys; a bare key leaves vRaw undefined, which is "no variant". */
+      const [pid, vRaw] = String(k).split('::');
       const product = (data.products||[]).find(x=> x.id === pid);
-      const label = product ? productVariantLabel(product, vRaw === '' ? null : (isNaN(Number(vRaw)) ? vRaw : Number(vRaw))) : pid;
+      const label = product ? productVariantLabel(product, (vRaw == null || vRaw === '') ? null : (isNaN(Number(vRaw)) ? vRaw : Number(vRaw))) : pid;
       if(costedQty <= 0){
         uncostedQty += qty;
         rows.push({ d: null, l: label, s: `${qty} on the shelf — no cost on file, counts as nothing`, v: 0 });

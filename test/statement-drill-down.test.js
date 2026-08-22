@@ -54,7 +54,6 @@ const env = {
   loanOutstanding: (l, asOf) => l._outstanding != null ? l._outstanding : 0,
   loanInterestPaidBetween: (l) => l._interest || 0,
   loanFees: (l) => l._fees || 0,
-  productVariantLabel: (p) => p.name,
   cashOnHandFor: (account, asOf) => store.cashTxns
     .filter(t => t.account === account && String(t.date || '') <= asOf)
     .reduce((s, x) => s + (x.type === 'receipt' || x.type === 'in' ? 1 : -1) * (Number(x.amount) || 0), 0),
@@ -71,6 +70,9 @@ const NAMES = [
   'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal', 'cashIsDebtCollection', 'invoiceBackedCashTxnIds',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
+  // The real label pair — a stub here once hid that the stock preview
+  // never found a product at all and printed raw keys instead of names.
+  'productVariantLabel', 'variantLabel',
 ];
 try {
   fns = compileScope(
@@ -133,6 +135,13 @@ if (fns) {
       { id: 'C2', name: 'Clear', debt: 0, debtLog: [] },
     ];
     store.loans = [{ id: 1, lender: 'Centenary', startedOn: '2026-01-01', principal: 5000000, _outstanding: 3200000, _interest: 45000, _fees: 0 }];
+    // The shelf: one plain product, one variant — keyed the way stockKey
+    // writes them, '::' and no separator at all when there is no variant.
+    store.products = [
+      { id: 'P1', name: 'Mulper Hinges — Flat' },
+      { id: 'P2', name: 'Nice Door', variants: [{ combo: { Color: 'Red' } }, { combo: { Color: 'Blue' } }] },
+    ];
+    store.stockLots = { 'P1': [{ qty: 49, cost: 145000 }], 'P2::1': [{ qty: 3, cost: 80000 }] };
   };
 
   const ctxFor = () => {
@@ -154,7 +163,7 @@ if (fns) {
       ],
       receivables: receivablesAsAt(to), payables: payablesAsAt(to),
       loans: 3200000, staffAndRent: 0, staffAndRentDetail: { uncostedCount: 0 },
-      fixedAssets: 0, inventory: 0, ownerCapital: 900000, ownerDrawings: 250000,
+      fixedAssets: 0, inventory: 49 * 145000 + 3 * 80000, ownerCapital: 900000, ownerDrawings: 250000,
       equity: 2132737, retainedEarnings: 2132737 - (900000 - 250000),
     };
     return { from, to, is, bs, cf };
@@ -171,6 +180,7 @@ if (fns) {
     reconciles(stDrillData('bs:receivables', ctx), 'owed by customers');
     reconciles(stDrillData('bs:payables', ctx), 'owed to suppliers');
     reconciles(stDrillData('bs:loans', ctx), 'loans outstanding');
+    reconciles(stDrillData('bs:stock', ctx), 'stock on the shelf');
     reconciles(stDrillData('bs:ownerin', ctx), 'owner money in');
     reconciles(stDrillData('bs:ownerout', ctx), 'owner money out');
     reconciles(stDrillData('bs:retained', ctx), 'retained earnings');
@@ -190,6 +200,28 @@ if (fns) {
     const ret = stDrillData('bs:retained', ctx);
     t.check(ret.rows.some(r => /Back out what the owner took/.test(r.l)),
       'and the balancing figure\u2019s subtraction shows it added back — a withdrawal is not a loss');
+  }
+
+  /* ---------- 1c. the shelf is named in words, not keys -------------- */
+  /*
+   * From the shop: the stock preview read P051::6 and P042::0 where it
+   * meant products' names. stockKey joins with '::' and writes no
+   * separator at all for a plain product; the preview split on '|', so
+   * the lookup found nothing and every row fell back to its raw key.
+   * Checked with the real productVariantLabel, because the stub that
+   * stood in for it returned a bare name for anything and hid exactly
+   * this.
+   */
+  {
+    const ctx = ctxFor();
+    const d = stDrillData('bs:stock', ctx);
+    const labels = d.rows.map(r => r.l);
+    t.check(labels.includes('Mulper Hinges — Flat'),
+      `a plain product is named (${JSON.stringify(labels)})`);
+    t.check(labels.includes('Nice Door — Blue'),
+      'a variant is named with its combo, from the key\u2019s own index');
+    t.check(labels.every(l => !/::/.test(l) && !/^P\d+$/.test(l)),
+      'and no row shows a raw stock key where a name belongs');
   }
 
   /* ---------- 2. the rows are the right records, not just the sum --- */
