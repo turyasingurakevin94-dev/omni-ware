@@ -3993,6 +3993,18 @@
   .inv-eq-icon{width:20px;height:20px;color:var(--ink-soft);flex-shrink:0;}
   .inv-eq-label{font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;color:var(--ink-soft);}
   .inv-eq-value{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:19px;color:var(--ink);}
+  /* The unit beside the box, and the count said back in both. A bare
+     number in a box whose unit is unstated is how a shelf of 2,000
+     pairs became 10: the shop meant ten cartons, and nothing on screen
+     was in cartons to contradict it. */
+  .inv-eq-entry{display:flex;align-items:center;gap:6px;width:100%;}
+  .inv-eq-entry .inv-eq-input{flex:1 1 auto;min-width:0;}
+  .inv-eq-unit{flex:0 0 auto;font-family:inherit;font-size:12px;padding:6px 8px;
+    border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);}
+  .inv-eq-unit-flat{flex:0 0 auto;font-size:11px;color:var(--ink-soft);}
+  .inv-eq-sub{display:block;font-size:10.5px;color:var(--ink-soft);margin-top:2px;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .inv-eq-say{margin-top:8px;font-size:12px;line-height:1.5;color:var(--ink-soft);}
   .inv-eq-input{
     width:100%;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:17px;
     border:1px solid var(--line);border-radius:7px;padding:6px 4px;background:#FBFCFD;color:var(--ink);
@@ -40761,6 +40773,9 @@ function renderInvStage(){
   const variantIdx = invVariantIdx;
   const displayName = productVariantLabel(product, variantIdx);
   const current = getStockQty(invProductId, variantIdx);
+  // What this product is counted in and bought in -- the count screen
+  // needs it as much as the purchase screen does. See invPackContextFor.
+  const packCtx = invPackContextFor(invProductId, variantIdx);
   const backBtn = `<button class="ip-back" id="inv_back_btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to search</button>`;
 
   if(invPresetAction==='purchase'){
@@ -40780,13 +40795,20 @@ function renderInvStage(){
       <div class="inv-eq-card">
         <svg class="inv-eq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11"/></svg>
         <span class="inv-eq-label">Actual stock</span>
-        <input type="number" id="inv_actual" class="inv-eq-input" step="any" placeholder="${current}">
+        <div class="inv-eq-entry">
+          <input type="number" id="inv_actual" class="inv-eq-input" step="any" placeholder="${current}">
+          ${packCtx.hasPack ? `<select id="inv_actual_unit" class="inv-eq-unit">
+            <option value="unit">${esc(packCtx.unit || 'units')}</option>
+            <option value="pack">${esc(packCtx.packUnit)}</option>
+          </select>` : (packCtx.unit ? `<span class="inv-eq-unit-flat">${esc(packCtx.unit)}</span>` : '')}
+        </div>
       </div>
       <span class="inv-eq-op">−</span>
       <div class="inv-eq-card">
         <svg class="inv-eq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
         <span class="inv-eq-label">Current stock</span>
         <span class="inv-eq-value">${current}</span>
+        ${packCtx.hasPack ? `<span class="inv-eq-sub">${esc(invQtyInBothUnits(current, packCtx))}</span>` : ''}
       </div>
       <span class="inv-eq-op">=</span>
       <div class="inv-eq-card" id="inv_eq_result_card">
@@ -40795,6 +40817,7 @@ function renderInvStage(){
         <span class="inv-eq-value" id="inv_eq_result_value">0</span>
       </div>
     </div>
+    ${packCtx.hasPack ? '<div class="inv-eq-say" id="inv_eq_say"></div>' : ''}
 
     <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="inv_note" rows="3" placeholder="e.g. Delivery from Kirinya Steel, damaged during transport, reason for correction..."></textarea></div>
     <div class="btn-row">
@@ -40807,10 +40830,21 @@ function renderInvStage(){
   const ICON_DOWN = '<path d="M23 18l-9.5-9.5-5 5L1 6"/><path d="M17 18h6v-6"/>';
   const ICON_FLAT = '<line x1="5" y1="12" x2="19" y2="12"/>';
   const actualInput = document.getElementById('inv_actual');
+  const unitSel = document.getElementById('inv_actual_unit');
+  // Through the same converter the purchase screen uses, so a carton
+  // means the same thing on both.
+  const typedAsBase = ()=> invPurchaseQtyValue(actualInput.value,
+    unitSel ? unitSel.value : 'unit', packCtx.packQty);
   const updatePreview = ()=>{
     const hasVal = actualInput.value!=='';
-    const actual = hasVal ? Number(actualInput.value)||0 : current;
+    const actual = hasVal ? typedAsBase() : current;
     const adjusted = actual - current;
+    const say = document.getElementById('inv_eq_say');
+    if(say){
+      say.textContent = hasVal
+        ? `That is ${invQtyInBothUnits(actual, packCtx)} on the shelf, against ${invQtyInBothUnits(current, packCtx)} recorded.`
+        : `The shelf currently holds ${invQtyInBothUnits(current, packCtx)}.`;
+    }
     const card = document.getElementById('inv_eq_result_card');
     const icon = document.getElementById('inv_eq_result_icon');
     card.classList.remove('up','down');
@@ -40821,9 +40855,11 @@ function renderInvStage(){
     document.getElementById('inv_eq_result_value').textContent = `${sign}${adjusted}`;
   };
   actualInput.addEventListener('input', updatePreview);
+  if(unitSel) unitSel.addEventListener('change', updatePreview);
+  updatePreview();
   document.getElementById('inv_save_btn').addEventListener('click', ()=>{
     if(actualInput.value===''){ toast('Enter the actual stock count'); return; }
-    const actual = Number(actualInput.value)||0;
+    const actual = typedAsBase();
     const d = actual - current;
     if(d===0){ toast('Actual stock matches current stock — nothing to adjust'); return; }
     const note = document.getElementById('inv_note').value.trim();
@@ -40844,6 +40880,39 @@ function renderInvStage(){
 // floor (a New Quote line always represents at least one of something;
 // an empty/zero purchase quantity here genuinely means nothing to buy
 // yet, so it should resolve to 0 rather than being forced up to 1).
+/* What this product is counted in, and what it is bought in.
+
+   The count is always kept in BASE units -- pairs, pieces, metres -- and
+   a shop that buys in cartons thinks in cartons. Both screens that take
+   a quantity need the same answer to that, from the same place, or they
+   will disagree about what a typed number means. Which is not
+   hypothetical: the stock-count box took a bare number in base units
+   with no unit beside it, so a shop counting "10" cartons set a shelf of
+   2,000 pairs to 10, and the 1,990 pairs that vanished were only found
+   weeks later by reading the movement log.
+
+   The pack comes off a price row, because that is where a supplier's
+   packing is recorded. Given a supplier, theirs; otherwise the
+   best-priced row, which is the one the purchase screen would have
+   opened on anyway. */
+function invPackContextFor(productId, variantIdx, supplierId){
+  const rows = productPriceRows(productId, variantIdx).filter(r=> !r.outOfStock);
+  const row = (supplierId ? rows.find(r=> r.supplierId === supplierId) : null)
+    || rankedPriceRows(productId, variantIdx)[0] || null;
+  const packQty = row ? Number(row.packQty)||0 : 0;
+  const packUnit = row ? (row.packUnit||'') : '';
+  const unit = row ? (row.unit||'') : '';
+  return { packQty, packUnit, unit, hasPack: packQty > 0 && !!packUnit };
+}
+// The same figure said the way the shop says it: "600 Pair · 6 Ctn".
+function invQtyInBothUnits(qty, ctx){
+  const n = Number(qty)||0;
+  const base = `${n}${ctx.unit ? ' ' + ctx.unit : ''}`;
+  if(!ctx.hasPack) return base;
+  const packs = n / ctx.packQty;
+  const shown = Number.isInteger(packs) ? String(packs) : packs.toFixed(2).replace(/\.?0+$/, '');
+  return `${base} · ${shown} ${ctx.packUnit}`;
+}
 function invPurchaseQtyValue(rawQty, unitMode, packQty){
   const raw = Number(rawQty)||0;
   return unitMode==='pack' && packQty>0 ? raw*packQty : raw;
