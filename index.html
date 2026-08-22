@@ -2473,11 +2473,34 @@
   .sup-amt{position:relative;}
   .sup input[type=number]#s_open_bal{font-size:18px;font-weight:700;padding:12px 52px 12px 14px;
     font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  /* No spinners on money. They step by 1, which on a figure kept in
+     hundreds of thousands is a control that cannot do anything useful --
+     and they crowd the currency badge sitting in the same corner.
+     Both opening-balance fields, because they are one control asking the
+     same question in opposite directions. */
+  #s_open_bal,#c_debt{-moz-appearance:textfield;}
+  #s_open_bal::-webkit-outer-spin-button,#s_open_bal::-webkit-inner-spin-button,
+  #c_debt::-webkit-outer-spin-button,#c_debt::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  /* The native calendar button is the one part of a date field the app
+     cannot draw, so it is toned to sit with the ink rather than against
+     it. */
+  .sup input[type=date]::-webkit-calendar-picker-indicator,
+  .cf input[type=date]::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;}
+  .sup input[type=date]:hover::-webkit-calendar-picker-indicator,
+  .cf input[type=date]:hover::-webkit-calendar-picker-indicator{opacity:.9;}
   .sup-amt-cur{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;
     font-size:11px;font-weight:700;letter-spacing:0.6px;color:var(--ink-soft);}
   .sup-since{display:flex;flex-direction:column;gap:5px;}
   .sup-since label{font-size:11.5px;font-weight:600;color:var(--ink-soft);}
-  .sup input[type=text],.sup input:not([type]),.sup select{
+  /* type=number and type=date are named here, not left to
+     :not([type]). This form had neither until it learned to ask what the
+     shop already owed a supplier, and the omission did not degrade
+     gracefully -- it meant NO app styling reached either field, so they
+     rendered as raw browser controls: no width, no radius, no padding,
+     the amount's currency badge sitting outside a box it was supposed to
+     be inside, and two fields of different heights side by side. The
+     customer, loan and asset forms all name them for the same reason. */
+  .sup input[type=text],.sup input:not([type]),.sup input[type=number],.sup input[type=date],.sup select{
     width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;line-height:1.4;
     color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:9px;
     padding:11px 13px;transition:border-color .14s ease,box-shadow .14s ease;
@@ -8776,7 +8799,7 @@
             </div>
             <div class="sup-since" id="s_open_since_row">
               <label for="s_open_since">Owed since</label>
-              <input id="s_open_since" type="date">
+              <input id="s_open_since" type="date" aria-describedby="s_open_hint">
             </div>
           </div>
           <label class="cf-undated" id="s_open_undated_row"><input type="checkbox" id="s_open_undated"> Nobody knows when it started</label>
@@ -25595,9 +25618,8 @@ function sfShowOpeningBalance(supplierId){
       `${due > 0.5 ? `${fmtUGX(Math.round(due))} still outstanding` : 'now settled'}. ` +
       `Change it on the Purchase Invoices screen, where it can be paid, corrected or voided like any other bill.`;
   } else {
-    hint.textContent = 'Only what you owed them before you started using this system. '
-      + 'It becomes a purchase invoice you can pay off like any other, so it shows up in Creditors and on the balance sheet. '
-      + 'Leave it blank if you owed them nothing.';
+    hint.textContent = 'Only what you owed them before you started using this system — leave blank if that is nothing. '
+      + 'It becomes a purchase invoice you can pay off like any other, so it shows in Creditors and on the balance sheet.';
   }
 }
 function resetSupplierForm(){
