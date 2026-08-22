@@ -29,7 +29,7 @@ const src = read('index.html');
 const TODAY = '2026-08-03';
 const data = {
   savedQuotes: [], customers: [], suppliers: [], products: [],
-  cashTxns: [], cashDays: {}, stockLots: {}, fixedAssets: [], loans: [],
+  cashTxns: [], cashDays: {}, stock: {}, stockLots: {}, fixedAssets: [], loans: [],
   // Wages and rent already fallen due are a liability on this sheet.
   dues: [],
 };
@@ -133,7 +133,7 @@ const sale = (over) => Object.assign({
 const reset = () => {
   data.savedQuotes = []; data.customers = []; data.cashTxns = [];
   data.cashDays = { [TODAY]: { opening: { cash: 0, momo: 0, bank: 0 }, actual: {}, openingSet: true } };
-  data.stockLots = {}; data.fixedAssets = []; data.loans = [];
+  data.stock = {}; data.stockLots = {}; data.fixedAssets = []; data.loans = [];
 };
 
 /* ---------- 1. profit, built from the corrected pieces ---------------- */
@@ -233,6 +233,10 @@ const reset = () => {
   reset();
   data.cashDays[TODAY].opening = { cash: 2000000, momo: 500000, bank: 1000000 };
   data.customers = [{ id: 'C1', name: 'Okello', debt: 1200000, debtLog: [] }];
+  /* The shelf holds 120: a hundred bought at 30,000 and twenty whose
+     cost was never recorded. The COUNT is what is valued; the lots say
+     what a unit cost. */
+  data.stock = { 'P1::': 120 };
   data.stockLots = { 'P1::': [{ qty: 100, cost: 30000 }, { qty: 20, cost: null }] };
   data.fixedAssets = [{ id: 80, name: 'Van', cost: 20000000, acquiredOn: '2026-08-01',
     method: 'straight_line', lifeMonths: 60, salvage: 2000000, disposedOn: null }];
@@ -423,6 +427,7 @@ const reset = () => {
     actual: { cash: 1200000, momo: '', bank: '' }, openingSet: true };
   data.savedQuotes = [sale({ items: [{ productId: 'P1', qty: 10, supplierId: '__stock__',
     price: 34000, sellPrice: 45000, _stockLots: [{ qty: 6, cost: 30000 }] }] })];
+  data.stock = { 'P1::': 5 };
   data.stockLots = { 'P1::': [{ qty: 5, cost: null }] };
 
   const is = scope.incomeStatement('2026-08-01', TODAY);

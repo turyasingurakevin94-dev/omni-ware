@@ -41608,14 +41608,51 @@ function loanPerformance(loan, asOfISO){
 // from. Stock whose cost was never recorded -- entered by a count, or
 // returned by an un-invoice -- is counted separately rather than valued
 // at a guess.
+/* What is on the shelf, at what it cost.
+
+   THE COUNT COMES FROM data.stock AND THE PRICE FROM THE LOTS, and the
+   division of labour matters. data.stock is how many things are there --
+   it is what the Inventory screen shows, and what a stock-take corrects
+   against the shelf. The FIFO lots exist to answer a different question:
+   what each of them cost to buy.
+
+   This used to sum the LOT quantities instead, which is the same figure
+   only while the two agree. They can come apart -- a count corrected
+   without enough lots behind it to consume, a purchase corrected, any
+   path that moves one and not the other -- and when they did, the
+   balance sheet valued stock nobody had. A shop found 49 cartons on this
+   line against 9 on the shelf and 9 on its own Inventory screen: the
+   sheet was carrying 40 cartons of hinges that did not exist, and
+   nothing on it disagreed with anything else, because every figure in
+   the section came from the same wrong side.
+
+   It also put today at odds with the past: stockValueAsAt reconstructs
+   an earlier day from the stock LOG's counts and values them at the
+   lots' unit cost -- count-based, exactly like this now is. Today was
+   the odd one out.
+
+   Anything on the shelf beyond what the lots can cost is UNCOSTED and
+   counts as nothing, which is the rule this file already applies
+   everywhere else: a thing with no cost on file is not worth a guess. */
 function inventoryValue(){
   let value = 0, uncostedQty = 0;
   const lots = data.stockLots || {};
-  Object.keys(lots).forEach(k=>{
-    (lots[k]||[]).forEach(l=>{
-      const q = Number(l.qty)||0;
-      if(l.cost == null) uncostedQty += q; else value += q * (Number(l.cost)||0);
-    });
+  const stock = data.stock || {};
+  const keys = new Set(Object.keys(stock).concat(Object.keys(lots)));
+  keys.forEach(k=>{
+    const qty = Number(stock[k])||0;
+    if(qty <= 0) return;
+    const rows = lots[k]||[];
+    const costed = rows.filter(l=> l.cost != null);
+    const costedQty = costed.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+    if(costedQty <= 0){ uncostedQty += qty; return; }
+    const costedValue = costed.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+    // Priced at what the lots say a unit cost. Where the shelf holds more
+    // than the lots account for, the surplus has no cost behind it.
+    const unit = costedValue / costedQty;
+    const priced = Math.min(qty, costedQty);
+    value += priced * unit;
+    if(qty > costedQty) uncostedQty += qty - costedQty;
   });
   return { value, uncostedQty };
 }
@@ -42852,12 +42889,14 @@ function stDrillData(key, ctx){
     const rows = []; let uncostedQty = 0;
     keys.forEach(k=>{
       const current = lots[k]||[];
-      const currentQty = current.reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
       const costed = current.filter(l=> l.cost != null);
       const costedQty = costed.reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
       const costedValue = costed.reduce((s2,l)=> s2 + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
-      const qty = qtyThen ? (qtyThen[k] === undefined ? currentQty : qtyThen[k])
-        : costedQty + current.filter(l=> l.cost == null).reduce((s2,l)=> s2 + (Number(l.qty)||0), 0);
+      /* The COUNT, from the same place the Inventory screen reads it --
+         not the sum of the cost lots, which is a different question and
+         had this preview reporting 49 cartons against 9 on the shelf. */
+      const onShelfNow = Number((data.stock||{})[k])||0;
+      const qty = qtyThen ? (qtyThen[k] === undefined ? onShelfNow : qtyThen[k]) : onShelfNow;
       if(qty <= 0) return;
       /* stockKey joins with '::', and writes no separator at all when
          there is no variant. The first cut split on '|' — which matches
@@ -42874,8 +42913,8 @@ function stDrillData(key, ctx){
         return;
       }
       const unit = costedValue / costedQty;
-      const costedOnShelf = qtyThen ? qty : costedQty;
-      const un = qtyThen ? 0 : qty - costedQty;
+      const costedOnShelf = Math.min(qty, costedQty);
+      const un = qty - costedOnShelf;
       if(un > 0){ uncostedQty += un; }
       rows.push({ d: null, l: label,
         s: `${qty} on the shelf @ ~${fmtUGX(Math.round(unit))}${un > 0 ? ` — ${un} of them uncosted, counting as nothing` : ''}`,

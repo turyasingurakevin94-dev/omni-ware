@@ -141,6 +141,12 @@ if (fns) {
       { id: 'P1', name: 'Mulper Hinges — Flat' },
       { id: 'P2', name: 'Nice Door', variants: [{ combo: { Color: 'Red' } }, { combo: { Color: 'Blue' } }] },
     ];
+    /* Count and lots are separate facts, and the fixture keeps them
+       separate: the shelf holds what data.stock says, the lots say what
+       a unit cost. Deliberately made to DISAGREE on P1 — 9 on the shelf
+       against lots for 49 — which is the shop's own case, and the shape
+       that used to value forty cartons nobody had. */
+    store.stock = { 'P1': 9, 'P2::1': 3 };
     store.stockLots = { 'P1': [{ qty: 49, cost: 145000 }], 'P2::1': [{ qty: 3, cost: 80000 }] };
   };
 
@@ -163,7 +169,7 @@ if (fns) {
       ],
       receivables: receivablesAsAt(to), payables: payablesAsAt(to),
       loans: 3200000, staffAndRent: 0, staffAndRentDetail: { uncostedCount: 0 },
-      fixedAssets: 0, inventory: 49 * 145000 + 3 * 80000, ownerCapital: 900000, ownerDrawings: 250000,
+      fixedAssets: 0, inventory: 9 * 145000 + 3 * 80000, ownerCapital: 900000, ownerDrawings: 250000,
       equity: 2132737, retainedEarnings: 2132737 - (900000 - 250000),
     };
     return { from, to, is, bs, cf };
@@ -222,6 +228,30 @@ if (fns) {
       'a variant is named with its combo, from the key\u2019s own index');
     t.check(labels.every(l => !/::/.test(l) && !/^P\d+$/.test(l)),
       'and no row shows a raw stock key where a name belongs');
+  }
+
+  /* ---------- 1d. the shelf, not the cost ledger --------------------- */
+  /*
+   * From the shop: "why is it saying we have 49 ctns yet we have 9".
+   *
+   * data.stock is how many things are on the shelf — what the Inventory
+   * screen shows and what a stock-take corrects. The FIFO lots answer a
+   * different question: what each of them cost. Valuing the LOT
+   * quantities is the same figure only while the two agree, and when
+   * they came apart the balance sheet carried forty cartons of hinges
+   * that did not exist — with nothing on the sheet to disagree with,
+   * every figure in the section having come from the same wrong side.
+   */
+  {
+    const ctx = ctxFor();
+    const d = stDrillData('bs:stock', ctx);
+    const hinges = d.rows.find(r => /Mulper/.test(r.l));
+    t.check(!!hinges && /^9 on the shelf/.test(hinges.s),
+      `the count is the one on the shelf, not the sum of the cost lots (${hinges && hinges.s})`);
+    t.check(!!hinges && hinges.v === 9 * 145000,
+      `and it is valued at nine cartons, not forty-nine (${hinges && hinges.v})`);
+    t.check(!/49/.test((hinges && hinges.s) || ''), 'the lot quantity is nowhere in what the shop reads');
+    reconciles(d, 'stock valued from the shelf');
   }
 
   /* ---------- 2. the rows are the right records, not just the sum --- */
