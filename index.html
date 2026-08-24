@@ -9895,7 +9895,7 @@
                breath should not have to come back for it. -->
           <details class="sf-fold" id="sl_price_block">
             <summary id="sl_price_summary">They quoted a price too — add it now</summary>
-            <!-- The same three fields the Price Registry asks for, in its
+            <!-- The same four fields the Price Registry asks for, in its
                  order and under its names -- this ladder becomes a price
                  row, and two screens describing one packing differently
                  is how a carton price ends up stored per piece. -->
@@ -9903,6 +9903,15 @@
               <div class="field"><label>Unit</label><input type="text" id="sl_c_unit" list="dl_units" placeholder="e.g. Kg, Pair, Litre" autocomplete="off"></div>
               <div class="field"><label>Pack unit</label><input type="text" id="sl_c_packunit" list="dl_units" placeholder="e.g. Bag, Ctn, Tin" autocomplete="off"></div>
               <div class="field"><label>Units per pack</label><input type="number" id="sl_c_packqty" min="0" step="any" placeholder="e.g. 25"></div>
+              <!-- Asked HERE, while the supplier is on the phone. This is
+                   the one field that cannot be worked out later from
+                   anything else on file, and researching a supplier is
+                   the only moment anybody is in a position to ask them. -->
+              <div class="field" style="grid-column:1/-1;">
+                <label>Pieces in one unit</label>
+                <input type="number" id="sl_c_pieces" min="0" step="any" placeholder="optional — e.g. 100">
+                <div class="field-hint">Only needed to compare this against a RIVAL product. One supplier quotes a Box and another a Pack; without this, nothing can say which is cheaper per screw. Leave blank if you don't know — it is reported as unknown, never guessed.</div>
+              </div>
             </div>
             <!-- Hidden once the item has sizes, exactly as the Price
                  Registry hides its own: a supplier gives each size its own
@@ -10638,7 +10647,7 @@
       <div id="ip_search_view" class="searchable-select">
         <div class="field" style="margin-bottom:12px;">
           <label>Search product</label>
-          <input type="text" id="ip_search" placeholder="Search by product name, ID, variant or supplier's code..." autocomplete="off">
+          <input type="text" id="ip_search" placeholder="Search by name, ID, variant, supplier's code, or anything in the description or notes..." autocomplete="off">
         </div>
         <div id="ip_list"></div>
       </div>
@@ -19252,24 +19261,42 @@ function buildProductSuggestionEntries(tokens, opts){
   // its own supplier gave it, not by one belonging to its neighbour.
   const codesFor = (productId, variantIdx)=>
     (skus.get(productId + '::' + (variantIdx==null ? '' : variantIdx)) || []).join(' ');
+  /* Everything the Products tab can find a product by, which is more
+     than this list could until now: it built its own haystack out of
+     name, category and id, so the short description and the notes -- the
+     two fields that exist precisely to hold the words nobody thinks to
+     put in a name -- were searchable on one screen and not on the one
+     that matters most.
+
+     That screen is this one. Somebody typing here has a customer in
+     front of them repeating what they were told: "the 90 litre one",
+     "the heavy duty barrow", "the ones that come on Kadde's van". Those
+     words are in the description and the notes and nowhere else, and a
+     search that cannot see them answers "No matching products" about a
+     product the shop is holding -- which then offers to record it as
+     something to go and source.
+
+     One routine now, so the two lists cannot drift again. Subcategory
+     comes along with it, having been missing here for the same reason. */
   data.products.forEach(p=>{
+    const base = productSearchText(p);
     if(p.type==='variable'){
       if(!p.variants || !p.variants.length){
-        const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
+        const haystack = base+' '+codesFor(p.id, null);
         if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
         return;
       }
-      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
+      const haystack = base+' '+codesFor(p.id, null);
       if(opts.includeWholeProduct && (!tokens.length || matchesAllTokens(haystack, tokens))){
         entries.push({p, variantIdx:null, wholeProduct:true});
       }
       p.variants.forEach((v,idx)=>{
-        const vHaystack = (p.name+' '+(p.category||'')+' '+p.id+' '+(v.sku||'')+' '+variantLabel(v.combo)).toLowerCase()
+        const vHaystack = base+' '+((v.sku||'')+' '+variantLabel(v.combo)).toLowerCase()
           +' '+codesFor(p.id, idx);
         if(!tokens.length || matchesAllTokens(vHaystack, tokens)) entries.push({p, variantIdx:idx});
       });
     } else {
-      const haystack = (p.name+' '+(p.category||'')+' '+p.id).toLowerCase()+' '+codesFor(p.id, null);
+      const haystack = base+' '+codesFor(p.id, null);
       if(!tokens.length || matchesAllTokens(haystack, tokens)) entries.push({p, variantIdx:null});
     }
   });
@@ -47756,6 +47783,12 @@ async function graduateSourcingLead(leadId, form){
     unit: String((form && form.unit) || '').trim(),
     packUnit: String((form && form.packUnit) || '').trim(),
     packQty: Number(form && form.packQty) || 0,
+    /* No floor for the piece count, deliberately. The graduate step asks
+       how the PRODUCT is sold; how many pieces are in one of those units
+       is a thing each supplier was asked separately on the research form,
+       and one supplier's answer is not a default for another's. Unknown
+       is the honest floor, and the comparison already handles it. */
+    piecesPerUnit: null,
   };
 
   /* --- phase one: the entities with no foreign key between them.
@@ -47855,6 +47888,8 @@ async function graduateSourcingLead(leadId, form){
       unit: String((c && c.unit) || '').trim() || fallbackPack.unit,
       packUnit: String((c && c.packUnit) || '').trim() || fallbackPack.packUnit,
       packQty: Number(c && c.packQty) || fallbackPack.packQty,
+      // What THIS supplier said, and nothing if they were not asked.
+      piecesPerUnit: piecesPerUnitOrNull(c && c.piecesPerUnit),
     };
     slots.forEach(idx=>{
       /* The same two resolutions the Price Registry makes: a size with its
@@ -47913,6 +47948,9 @@ async function graduateSourcingLead(leadId, form){
       unit: String((c && c.unit) || fallbackPack.unit || '').trim(),
       packUnit: String((c && c.packUnit) || fallbackPack.packUnit || '').trim(),
       packQty: Number(c && c.packQty) || fallbackPack.packQty,
+      // Carried across, or the researcher's answer dies at the door of
+      // the screen that was opened to finish their work.
+      piecesPerUnit: piecesPerUnitOrNull(c && c.piecesPerUnit),
       tiers: candidateTiers(c),
     });
     return {productId, priceId: null, handedOff: true, rowsWritten,
@@ -48665,6 +48703,7 @@ function openBulkPricingFor(productId, supplierId, packing){
   document.getElementById('pr_unit').value = packing.unit || '';
   document.getElementById('pr_pack_unit').value = packing.packUnit || '';
   document.getElementById('pr_pack_qty').value = packing.packQty || '';
+  document.getElementById('pr_pieces_per_unit').value = packing.piecesPerUnit || '';
   prTiers = (packing.tiers || []).map(t=>({...t}));
   renderPrTierUnitOptions();
   renderPrTiers();
@@ -49233,14 +49272,7 @@ function slCandBulkSurface(){
       unit: document.getElementById('sl_c_unit').value.trim(),
       packUnit: document.getElementById('sl_c_packunit').value.trim(),
       packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
-      /* Stated, not left off. A research form has no shared box for the
-         piece count -- a size's own card is the only place to record it
-         here -- but every reader of this surface expects the same four
-         fields, and toggleBulkVariantPacking seeds from this object
-         without checking. Omitted, it worked only on the accident that
-         `undefined == null` is true; named, the contract is the same on
-         both surfaces and a card seeds blank because nobody has said. */
-      piecesPerUnit: null,
+      piecesPerUnit: piecesPerUnitOrNull(document.getElementById('sl_c_pieces').value),
     }),
     // A lead has no price rows: nothing is on file until it graduates.
     getOwnRow: ()=> null,
@@ -49353,7 +49385,7 @@ function slCandFormClear(){
   slCandTiers = [];
   slCandOverrides = []; slCandPackOverrides = []; slCandSkus = [];
   renderSlCandBulk();
-  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_sku','sl_c_tier_qty','sl_c_tier_price']
+  ['sl_c_name','sl_c_phone','sl_c_where','sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_pieces','sl_c_sku','sl_c_tier_qty','sl_c_tier_price']
     .forEach(k=>{ const el = document.getElementById(k); if(el){ el.value = ''; delete el.dataset.autofilled; } });
   slSetRole('supplier');
   renderSlCandTiers();
@@ -49397,6 +49429,7 @@ function slCandFormLoad(c){
   document.getElementById('sl_c_unit').value = c.unit || '';
   document.getElementById('sl_c_packqty').value = Number(c.packQty) || '';
   document.getElementById('sl_c_packunit').value = c.packUnit || '';
+  document.getElementById('sl_c_pieces').value = c.piecesPerUnit || '';
   document.getElementById('sl_c_sku').value = c.supplierSku || '';
   slCandTiers = (Array.isArray(c.tiers)? c.tiers : candidateTiers(c)).map(t=>({...t}));
   slCandOverrides = (c.variantOverrides||[]).map(o=> o ? o.map(t=>({...t})) : null);
@@ -49483,7 +49516,7 @@ document.getElementById('sl_c_tier_add').addEventListener('click', ()=>{
     toast(`Check this — ${hi.minQty}+ costs ${fmtUGX(hi.price)} each but ${lo.minQty}+ only costs ${fmtUGX(lo.price)}, so buying more costs more`, 6000);
   }
 });
-['sl_c_unit','sl_c_packqty','sl_c_packunit'].forEach(k=>
+['sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_pieces'].forEach(k=>
   document.getElementById(k).addEventListener('input', ()=>{ renderSlCandTiers(); renderSlCandBulk(); }));
 document.getElementById('sl_add_cand').addEventListener('click', ()=>{
   const l = sourcingLeadById(editingSourcingLeadId);
@@ -49520,6 +49553,9 @@ document.getElementById('sl_add_cand').addEventListener('click', ()=>{
     unit: document.getElementById('sl_c_unit').value.trim(),
     packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
     packUnit: document.getElementById('sl_c_packunit').value.trim(),
+    // Through the same guard the Registry uses: blank is unknown, and a
+    // zero would be a divisor nobody could tell from a real reading.
+    piecesPerUnit: piecesPerUnitOrNull(document.getElementById('sl_c_pieces').value),
   };
   const verb = applyCandidateFields(l, editingCandidateId, fields) ? 'Updated' : 'Added';
   slCandFormClear();

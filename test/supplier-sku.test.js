@@ -90,9 +90,10 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
       { productId: 'P2', variantIdx: null, supplierId: 'S2' },
     ],
   };
-  const NAMES2 = ['buildProductSuggestionEntries', 'supplierSkuIndex'];
+  const NAMES2 = ['buildProductSuggestionEntries', 'supplierSkuIndex', 'productSearchText'];
   const sc = compileScope([
     extractFunction(src, 'supplierSkuIndex', 'index.html'),
+    extractFunction(src, 'productSearchText', 'index.html'),
     extractFunction(src, 'buildProductSuggestionEntries', 'index.html'),
   ], {
     data: store,

@@ -253,8 +253,8 @@ const rowFor = (p) => build({ productId: 'P1', variantIdx: 0, supplierId: 'S1',
  */
 {
   const funnel = extractFunction(src, 'slCandBulkSurface', 'index.html');
-  t.check(/piecesPerUnit: null/.test(funnel),
-    'the research form’s surface states it has no shared count, rather than omitting the field');
+  t.check(/piecesPerUnit: piecesPerUnitOrNull\(document\.getElementById\('sl_c_pieces'\)\.value\)/.test(funnel),
+    'the research form asks the count too, and its surface reads that box');
   t.check(/getPack: \(\)=> \(\{/.test(funnel), 'through the same getPack every card reads');
 
   const rows = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
@@ -330,6 +330,55 @@ const rowFor = (p) => build({ productId: 'P1', variantIdx: 0, supplierId: 'S1',
     'typing the default count is watched like the rest of the packing');
   t.check(/if\(prBulkMode\) renderPrBulkVariantRows\(\);/.test(code),
     'and redraws the cards, so none of them goes on quoting a figure the box no longer holds');
+}
+
+/* ---------- 14. the research form asks it too ----------------------- */
+/*
+ * The gap left open when the count first became per-variant: the size
+ * cards on the research form had the box, because they are the same
+ * editor, but the form itself did not -- so a lead with no sizes had
+ * nowhere to record it at all, and researching a supplier is the only
+ * moment anybody is in a position to ask them.
+ */
+{
+  t.check(/id="sl_c_pieces"/.test(code), 'the research form has the box');
+  t.check(/four fields the Price Registry asks for/.test(code),
+    'described as the Registry’s own set, which is what it now is');
+  t.check(/'sl_c_unit','sl_c_packqty','sl_c_packunit','sl_c_pieces'/.test(code),
+    'typing it redraws the size cards, like the rest of the packing');
+  t.check(/'sl_c_packunit','sl_c_pieces','sl_c_sku'/.test(code),
+    'and it is cleared between candidates, so one supplier’s answer cannot leak into the next');
+
+  const load = extractFunction(src, 'slCandFormLoad', 'index.html');
+  t.check(/getElementById\('sl_c_pieces'\)\.value = c\.piecesPerUnit \|\| ''/.test(load),
+    'reopening a candidate shows what they said');
+
+  /* Anchored on the fields object the save assembles, rather than on a
+     window of characters after the button — the handler validates a good
+     deal before it gets there. */
+  const fields = code.slice(code.indexOf("packUnit: document.getElementById('sl_c_packunit').value.trim(),"));
+  t.check(/piecesPerUnit: piecesPerUnitOrNull\(document\.getElementById\('sl_c_pieces'\)\.value\)/.test(fields.slice(0, 400)),
+    'and saving stores it through the same guard — blank is unknown, a zero is not a count');
+}
+
+/* ---------- 15. and it survives the whole way to a price row -------- */
+{
+  const grad = code.slice(code.indexOf('async function graduateSourcingLead'));
+  t.check(/piecesPerUnit: piecesPerUnitOrNull\(c && c\.piecesPerUnit\)/.test(grad.slice(0, 9000)),
+    'graduation costs each supplier’s rows against the count THAT supplier gave');
+
+  /* No floor from the graduate step, deliberately: it asks how the
+     PRODUCT is sold, and one supplier's count is not a default for
+     another's. */
+  const fb = grad.slice(grad.indexOf('const fallbackPack'), grad.indexOf('const fallbackPack') + 700);
+  t.check(/piecesPerUnit: null/.test(fb),
+    'with no fallback from the product step — unknown is the honest floor');
+
+  t.check(/piecesPerUnit: piecesPerUnitOrNull\(c && c\.piecesPerUnit\),\s*\n\s*tiers: candidateTiers\(c\)/.test(code),
+    'and the handoff into the registry carries it');
+  t.check(/getElementById\('pr_pieces_per_unit'\)\.value = packing\.piecesPerUnit \|\| ''/.test(
+    extractFunction(src, 'openBulkPricingFor', 'index.html')),
+    'which then puts it in the box, instead of the answer dying at the door of the screen opened to finish the work');
 }
 
 process.exit(t.done() ? 1 : 0);
