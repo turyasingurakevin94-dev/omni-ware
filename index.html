@@ -35438,8 +35438,18 @@ function addPrTier(){
   }
 }
 document.getElementById('pr_tier_add').addEventListener('click', addPrTier);
-['pr_unit','pr_pack_unit','pr_pack_qty'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{ renderPrTierUnitOptions(); renderPrTiers(); });
+/* The piece count joins them, and the variant cards are redrawn with
+   them. Each card states the packing it is following -- which now
+   includes the count -- so without this the cards go on quoting a figure
+   the box no longer holds, and the summary contradicts what Save is
+   about to write. Redrawing cards while the shared box has focus takes
+   nothing away from anyone: the cards repaint from the override state
+   they were already writing into, and no card input is focused. */
+['pr_unit','pr_pack_unit','pr_pack_qty','pr_pieces_per_unit'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    renderPrTierUnitOptions(); renderPrTiers();
+    if(prBulkMode) renderPrBulkVariantRows();
+  });
 });
 
 function selectPrSupplier(id){
@@ -35689,6 +35699,16 @@ function prBulkPriceSurface(){
       packQty: Number(document.getElementById('pr_pack_qty').value)||0,
       piecesPerUnit: prPiecesPerUnitValue(),
     }),
+    /* What this supplier already has on file for one variant. Only the
+       piece count needs it, and needs it because that count is the one
+       part of packing that is a MEASUREMENT of the variant rather than a
+       convention shared across them -- see toggleBulkVariantPacking. */
+    getOwnRow: (idx)=>{
+      const supplierId = document.getElementById('pr_supplier').value;
+      if(!p || !supplierId) return null;
+      return (data.prices||[]).find(pr=> pr.productId === p.id
+        && pr.variantIdx === idx && pr.supplierId === supplierId) || null;
+    },
     onChange: ()=>{},
   };
 }
@@ -35822,7 +35842,25 @@ function renderPrBulkVariantRows(surface){
   const packField = (sel, key)=> wrap.querySelectorAll(sel).forEach(inp=>{
     inp.addEventListener('input', e=>{
       const idx = Number(e.currentTarget.dataset.idx);
-      if(prBulkPackOverrides[idx]) prBulkPackOverrides[idx][key] = e.currentTarget.value;
+      const ov = prBulkPackOverrides[idx];
+      if(ov){
+        /* The count is "pieces in one UNIT". Change the unit and the
+           number still standing in that box was counted against a unit
+           that has gone -- it now describes nothing. Left there it is not
+           merely stale, because it is the divisor in the per-piece
+           comparison: 100 per Kg carried onto a row switched to selling
+           by the piece prices a 500-shilling screw at 5 and calls it the
+           cheapest on the board.
+
+           Cleared rather than converted, because nothing here knows how
+           many pieces are in the new unit. The redraw on `change` brings
+           the empty box back with its placeholder showing, so the shop
+           can see it went and say what the new count is. */
+        if(key === 'unit' && String(ov.unit||'') !== String(e.currentTarget.value||'')){
+          ov.piecesPerUnit = '';
+        }
+        ov[key] = e.currentTarget.value;
+      }
       changed();
     });
     inp.addEventListener('change', ()=> redraw());
@@ -35834,24 +35872,39 @@ function renderPrBulkVariantRows(surface){
 }
 /* Starts from the default rather than from blank: a variant packed
    differently is usually a variation on how the rest come, so the numbers
-   to change are already in the boxes. */
+   to change are already in the boxes.
+
+   THE PIECE COUNT IS NOT LIKE THAT, and it was seeded from the default
+   here until it was caught doing real damage. Unit and pack size are
+   conventions a supplier applies across a product; how many pieces are in
+   one unit is a MEASUREMENT of this variant, and a 4" screw is not the
+   same number to the Kg as a 2" one. So the default's count is evidence
+   about the default and about nothing else.
+
+   Seeded from it, the number went onto variants that had never been
+   measured -- including ones this supplier has never priced, which
+   contribute nothing to packingSignature (see the filter(Boolean) that
+   builds packSigs) and so were never covered by the "they all agree"
+   argument that was supposed to make this safe. And it did not sit there
+   harmlessly. The count is the DIVISOR in the per-piece comparison: a
+   seeded 100-per-Kg left on a variant switched to selling by the piece
+   priced a 500-shilling screw at 5 and badged it the cheapest on the
+   board, against a rival that was genuinely cheaper.
+
+   Taken from this variant's own row instead -- the only place an answer
+   for THIS variant can come from -- and left blank when there is none.
+   Blank reports as unknown, which the comparison already handles by
+   refusing to rank on pieces at all. An unmeasured row that says so
+   costs a shop nothing; one that guesses costs it the order. */
 function toggleBulkVariantPacking(idx, surface){
   const S = surface || prBulkPriceSurface();
   const overrides = S.getPackOverrides();
   const shared = S.getPack();
+  const own = S.getOwnRow ? S.getOwnRow(idx) : null;
+  const ownPieces = piecesPerUnitOrNull(own && own.piecesPerUnit);
   overrides[idx] = overrides[idx] ? null : {
     unit: shared.unit, packUnit: shared.packUnit, packQty: shared.packQty,
-    /* Seeding the piece count is only honest because packingSignature
-       counts it. A seeded figure is a claim about this variant that
-       nobody typed, and a fabricated count is worse than none at all:
-       absence is reported as unknown, while a wrong number is reported
-       as a RANKED per-piece price. What makes it safe is that the
-       default box is filled only when every priced variant agrees, and
-       since the signature includes the count, "agrees" now means agrees
-       about this too -- so the figure being seeded is one this variant
-       already held. Take the count back out of the signature and this
-       line starts inventing them. */
-    piecesPerUnit: shared.piecesPerUnit == null ? '' : shared.piecesPerUnit,
+    piecesPerUnit: ownPieces == null ? '' : ownPieces,
   };
   renderPrBulkVariantRows(surface);
   S.onChange();
@@ -49189,6 +49242,8 @@ function slCandBulkSurface(){
          both surfaces and a card seeds blank because nobody has said. */
       piecesPerUnit: null,
     }),
+    // A lead has no price rows: nothing is on file until it graduates.
+    getOwnRow: ()=> null,
     onChange: ()=>{},
   };
 }

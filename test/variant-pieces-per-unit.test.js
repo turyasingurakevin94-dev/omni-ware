@@ -156,11 +156,16 @@ const rowFor = (p) => build({ productId: 'P1', variantIdx: 0, supplierId: 'S1',
        === sig({ unit: 'Kg', packUnit: 'Bag', packQty: 25, piecesPerUnit: 0 }),
     'while unrecorded and zero are one claim — nobody said — so a catalogue that never answered reads as uniform');
 
-  const toggle = extractFunction(src, 'toggleBulkVariantPacking', 'index.html');
-  t.check(/piecesPerUnit: shared\.piecesPerUnit == null \? '' : shared\.piecesPerUnit/.test(toggle),
-    'turning on a variant’s own packing seeds the count from the default');
-  t.check(/signature/i.test(toggle),
-    'with the reason it is safe to do so written where somebody might remove it');
+  /* Why the signature still counts it, now that nothing seeds from the
+     default: it decides whether the shared boxes are pre-filled at all.
+     Filled from one variant when the variants disagree, the default
+     would be a claim about all of them made from one -- and a typed
+     default DOES reach every variant that has none of its own. */
+  const load = extractFunction(src, 'renderPrBulkVariants', 'index.html');
+  t.check(/packSample = packTrulyShared/.test(load),
+    'the default boxes are filled only when every priced variant agrees');
+  t.check(/piecesPerUnitOrNull\(p\.piecesPerUnit\)/.test(extractFunction(src, 'packingSignature', 'index.html')),
+    'and agreeing includes agreeing about the count, so the box is never filled from a lone measurement');
 }
 
 /* ---------- 6. opening the form, and telling typed from shown -------- */
@@ -259,6 +264,72 @@ const rowFor = (p) => build({ productId: 'P1', variantIdx: 0, supplierId: 'S1',
     'and a card following the default says what the default’s count is — otherwise the only way to see it is to scroll past every card');
   t.check(/pk\.piecesPerUnit != null/.test(rows),
     'saying nothing when there is nothing to say, rather than printing a zero');
+}
+
+/* ---------- 11. the count is a measurement, not a convention -------- */
+/*
+ * THE ONE THAT GOT THROUGH THE FIRST TIME, and it was worse than the bug
+ * it came from. Unit and pack size are conventions a supplier applies
+ * across a product, so seeding a new override from the default is a
+ * kindness. How many pieces are in one unit is not that: it is a
+ * measurement of THIS variant, and a 4" screw is not the same number to
+ * the Kg as a 2" one.
+ *
+ * Seeded from the default it reached variants nobody had measured --
+ * including ones this supplier has never priced, which are filtered out
+ * of packSigs and so were never covered by the "they all agree" argument
+ * that was supposed to make the seed safe. And the count is the DIVISOR
+ * in the per-piece comparison, so it did not sit there quietly: a seeded
+ * 100-per-Kg left on a variant switched to selling by the piece priced a
+ * 500-shilling screw at 5 and badged it cheapest against a rival that was
+ * genuinely cheaper.
+ */
+{
+  const toggle = extractFunction(src, 'toggleBulkVariantPacking', 'index.html');
+  t.check(!/piecesPerUnit: shared\.piecesPerUnit/.test(toggle),
+    'a new override no longer takes its count from the default');
+  t.check(/S\.getOwnRow \? S\.getOwnRow\(idx\) : null/.test(toggle),
+    'it asks this variant’s own row instead — the only place its count can come from');
+  t.check(/piecesPerUnit: ownPieces == null \? '' : ownPieces/.test(toggle),
+    'and leaves it blank when there is none, which reports as unknown rather than as a price');
+  t.check(/unit: shared\.unit, packUnit: shared\.packUnit, packQty: shared\.packQty/.test(toggle),
+    'while unit and pack size still seed from the default, because those really are shared');
+
+  // Both surfaces answer it, so the seed never falls back on `undefined`.
+  t.check(/getOwnRow: \(idx\)=>/.test(extractFunction(src, 'prBulkPriceSurface', 'index.html')),
+    'the registry can find the row on file');
+  t.check(/getOwnRow: \(\)=> null/.test(extractFunction(src, 'slCandBulkSurface', 'index.html')),
+    'and a lead says plainly that it has none');
+}
+
+/* ---------- 12. and a count cannot outlive its unit ----------------- */
+{
+  const rows = extractFunction(src, 'renderPrBulkVariantRows', 'index.html');
+  t.check(/key === 'unit' && String\(ov\.unit\|\|''\) !== String\(e\.currentTarget\.value\|\|''\)/.test(rows),
+    'changing a variant’s unit is noticed');
+  t.check(/ov\.piecesPerUnit = '';/.test(rows),
+    'and clears the count, which was counted against the unit that has just gone');
+
+  /* The arithmetic that makes this worth a guard rather than a note.
+     The count divides, so a stale one does not degrade the answer -- it
+     inverts it. */
+  const stale = eff({ unit: 'Pc', packUnit: '', packQty: 0, piecesPerUnit: 100 }, pack(), null, false);
+  t.check(stale.piecesPerUnit === 100 && stale.unit === 'Pc',
+    'nothing downstream questions a count against a unit it does not belong to');
+  const priceEach = 500;
+  t.check(priceEach / stale.piecesPerUnit === 5,
+    'so a 500-shilling screw would be priced at 5 per piece — a 60x inversion against a rival at 300');
+  const cleared = eff({ unit: 'Pc', packUnit: '', packQty: 0, piecesPerUnit: '' }, pack(), null, false);
+  t.check(cleared.piecesPerUnit === null,
+    'cleared, it reports unknown, and the comparison refuses to rank on pieces at all');
+}
+
+/* ---------- 13. the cards keep up with the box above them ----------- */
+{
+  t.check(/'pr_unit','pr_pack_unit','pr_pack_qty','pr_pieces_per_unit'/.test(code),
+    'typing the default count is watched like the rest of the packing');
+  t.check(/if\(prBulkMode\) renderPrBulkVariantRows\(\);/.test(code),
+    'and redraws the cards, so none of them goes on quoting a figure the box no longer holds');
 }
 
 process.exit(t.done() ? 1 : 0);
