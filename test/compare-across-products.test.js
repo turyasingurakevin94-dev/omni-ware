@@ -291,11 +291,18 @@ const fig = (over, qty) => scope.cmpBasisFigures(row(over), qty == null ? 1 : qt
 /* ---------- 7. the field, and the round trip -------------------------- */
 {
   t.check(/id="pr_pieces_per_unit"/.test(code), 'the Price Registry can record pieces per unit');
-  const fn = (/function prPiecesPerUnitValue\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/if\(raw === '' \|\| raw == null\) return null;/.test(fn),
+  /* The rule lives in one place now that the figure arrives from two --
+     the shared box and a variant's own card. Checked where it lives, and
+     checked that the DOM reader routes through it rather than keeping a
+     second copy that could drift from this one. */
+  const guard = (/function piecesPerUnitOrNull\(raw\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/if\(raw === '' \|\| raw == null\) return null;/.test(guard),
     'a blank stays null rather than becoming a zero that divides');
-  t.check(/isNaN\(n\) \|\| n <= 0\) \? null : n/.test(fn),
+  t.check(/isNaN\(n\) \|\| n <= 0\) \? null : n/.test(guard),
     'and so does zero, a negative, or junk');
+  const fn = (/function prPiecesPerUnitValue\(\)[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/piecesPerUnitOrNull\(/.test(fn),
+    'and the box reads it through that one guard, so there is no second copy to disagree');
 
   // Absence has to survive the trip to the server and back as absence.
   t.check(/piecesPerUnit: pr\.pieces_per_unit == null \? null : Number\(pr\.pieces_per_unit\)/.test(code),

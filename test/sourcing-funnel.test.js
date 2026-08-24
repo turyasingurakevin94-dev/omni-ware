@@ -136,6 +136,7 @@ const sources = [
   extractFunction(src, 'ensurePresetCategory', 'index.html'),
   extractFunction(src, 'deriveWholesaleRetail', 'index.html'),
   // The real ones, so a funnel price row cannot differ from a Registry one.
+  extractFunction(src, 'piecesPerUnitOrNull', 'index.html'),
   extractFunction(src, 'effectiveVariantPacking', 'index.html'),
   extractFunction(src, 'buildVariantPriceRow', 'index.html'),
   extractFunction(src, 'supplierName', 'index.html'),

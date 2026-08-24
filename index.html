@@ -1402,6 +1402,10 @@
     font-size:12px;font-family:inherit;min-width:0;}
   .pr-bulk-pack-row input[type=text]{flex:1 1 120px;}
   .pr-bulk-pack-row input[type=number]{flex:0 1 120px;}
+  /* A line of its own, as the shared block gives it, because it is the
+     only one of the four whose placeholder has to explain itself -- there
+     are no labels on a variant card. */
+  .pr-bulk-pack-row input.pr-bulk-pack-pieces{flex:1 1 100%;}
 
   /* Product modal — sectioned panels + per-variant cards */
   .modal.modal-xwide{max-width:940px;}
@@ -35589,13 +35593,20 @@ function renderPrBulkVariants(){
   document.getElementById('pr_unit').value = packSample ? (packSample.unit||'') : '';
   document.getElementById('pr_pack_unit').value = packSample ? (packSample.packUnit||'') : '';
   document.getElementById('pr_pack_qty').value = packSample && packSample.packQty ? packSample.packQty : '';
+  /* Filled here for the first time. The box was left blank on every
+     variable product no matter what was on file, so the one field that
+     makes two rival products comparable per screw opened empty, was saved
+     back as nothing, and took the figure with it. */
+  document.getElementById('pr_pieces_per_unit').value =
+    packSample && packSample.piecesPerUnit ? packSample.piecesPerUnit : '';
   /* When they are NOT all the same, each priced variant carries its own
      packing on its own card -- which is the whole point: a supplier who
      sells the 10" in tens and the 20" in fives can now be recorded in one
      save instead of one modal per variant. */
   prBulkSkus = variantRows0.map(r=> (r && r.supplierSku) ? r.supplierSku : '');
   prBulkPackOverrides = variantRows0.map(r=> (r && !packTrulyShared)
-    ? { unit: r.unit||'', packUnit: r.packUnit||'', packQty: r.packQty ? String(r.packQty) : '' }
+    ? { unit: r.unit||'', packUnit: r.packUnit||'', packQty: r.packQty ? String(r.packQty) : '',
+        piecesPerUnit: r.piecesPerUnit ? String(r.piecesPerUnit) : '' }
     : null);
   // Remembered so the save can tell "the admin typed a new pack size" from
   // "these fields are just showing one variant's". Without that, a bulk
@@ -35607,7 +35618,8 @@ function renderPrBulkVariants(){
   prBulkPackPrefill = {
     unit: document.getElementById('pr_unit').value,
     packUnit: document.getElementById('pr_pack_unit').value,
-    packQty: document.getElementById('pr_pack_qty').value
+    packQty: document.getElementById('pr_pack_qty').value,
+    piecesPerUnit: document.getElementById('pr_pieces_per_unit').value
   };
   const variantRows = p.variants.map((v,i)=> supplierId
     ? data.prices.find(pr=>pr.productId===productId && pr.variantIdx===i && pr.supplierId===supplierId)
@@ -35675,6 +35687,7 @@ function prBulkPriceSurface(){
       unit: document.getElementById('pr_unit').value.trim(),
       packUnit: document.getElementById('pr_pack_unit').value.trim(),
       packQty: Number(document.getElementById('pr_pack_qty').value)||0,
+      piecesPerUnit: prPiecesPerUnitValue(),
     }),
     onChange: ()=>{},
   };
@@ -35725,14 +35738,22 @@ function renderPrBulkVariantRows(surface){
       unit: String(packOverride.unit||'').trim(),
       packUnit: String(packOverride.packUnit||'').trim(),
       packQty: Number(packOverride.packQty)||0,
+      piecesPerUnit: piecesPerUnitOrNull(packOverride.piecesPerUnit),
     } : sharedPack;
     const pkOptions = tierUnitOptionsHTML(pk.unit, pk.packUnit, pk.packQty);
     const chipsHTML = tiers.length
       ? `<div class="preset-chip-flow">${tiers.map((t,ti)=>`<span class="preset-chip pr-tier-chip">${esc(prTierChipLabel(t, pk.unit, pk.packUnit, pk.packQty))}${override ? `<button type="button" class="pr-bulk-tier-remove" data-idx="${i}" data-ti="${ti}" title="Remove tier"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : ''}</span>`).join('')}</div>`
       : `<div class="pr-tier-empty">${override ? 'No tiers yet for this variant.' : 'No shared pricing set yet.'}</div>`;
-    const packSummary = pk.packUnit && pk.packQty
+    const packBase = pk.packUnit && pk.packQty
       ? `${pk.packQty} ${esc(pk.unit||'unit')} / ${esc(pk.packUnit)}`
       : (pk.unit ? `sold by the ${esc(pk.unit)}` : 'no packing set');
+    /* The count is part of the packing now, so a card saying it follows
+       the default should say what it is following. Without this the only
+       way to see whether the default carries one is to scroll back up
+       past every card. */
+    const packSummary = pk.piecesPerUnit != null
+      ? `${packBase}, ${esc(String(pk.piecesPerUnit))} pcs / ${esc(pk.unit||'unit')}`
+      : packBase;
     const skuHTML = `
       <div class="pr-bulk-sku-row">
         <label for="pr_bulk_sku_${i}">Supplier's code</label>
@@ -35748,6 +35769,7 @@ function renderPrBulkVariantRows(surface){
         <input type="text" class="pr-bulk-pack-unit" data-idx="${i}" list="dl_units" placeholder="Unit — e.g. Pc" value="${esc(packOverride.unit||'')}">
         <input type="text" class="pr-bulk-pack-punit" data-idx="${i}" list="dl_units" placeholder="Pack unit — e.g. Ctn" value="${esc(packOverride.packUnit||'')}">
         <input type="number" class="pr-bulk-pack-qty" data-idx="${i}" min="0" step="any" placeholder="Units per pack" value="${esc(packOverride.packQty||'')}">
+        <input type="number" class="pr-bulk-pack-pieces" data-idx="${i}" min="0" step="any" placeholder="Pieces in one unit — optional, e.g. 100" value="${esc(packOverride.piecesPerUnit||'')}">
       </div>` : ''}`;
     return `
     <div class="variant-card${(override || packOverride) ? ' has-own' : ''}" data-idx="${i}" style="margin-bottom:10px;">
@@ -35808,6 +35830,7 @@ function renderPrBulkVariantRows(surface){
   packField('.pr-bulk-pack-unit', 'unit');
   packField('.pr-bulk-pack-punit', 'packUnit');
   packField('.pr-bulk-pack-qty', 'packQty');
+  packField('.pr-bulk-pack-pieces', 'piecesPerUnit');
 }
 /* Starts from the default rather than from blank: a variant packed
    differently is usually a variation on how the rest come, so the numbers
@@ -35818,6 +35841,17 @@ function toggleBulkVariantPacking(idx, surface){
   const shared = S.getPack();
   overrides[idx] = overrides[idx] ? null : {
     unit: shared.unit, packUnit: shared.packUnit, packQty: shared.packQty,
+    /* Seeding the piece count is only honest because packingSignature
+       counts it. A seeded figure is a claim about this variant that
+       nobody typed, and a fabricated count is worse than none at all:
+       absence is reported as unknown, while a wrong number is reported
+       as a RANKED per-piece price. What makes it safe is that the
+       default box is filled only when every priced variant agrees, and
+       since the signature includes the count, "agrees" now means agrees
+       about this too -- so the figure being seeded is one this variant
+       already held. Take the count back out of the signature and this
+       line starts inventing them. */
+    piecesPerUnit: shared.piecesPerUnit == null ? '' : shared.piecesPerUnit,
   };
   renderPrBulkVariantRows(surface);
   S.onChange();
@@ -36835,7 +36869,13 @@ function renderPrices(filter='', supplierFilter='', categoryFilter='', ageFilter
    have been touched since they were filled in. */
 function packingSignature(p){
   if(!p) return '';
-  return [String(p.unit||'').trim(), String(p.packUnit||'').trim(), Number(p.packQty)||0].join('|');
+  /* Pieces counts. Two variants packed 25 to a bag are NOT packed the
+     same way when one is 100 screws to the Kg and the other is 60 -- and
+     calling them shared is what fills the default box from one of them
+     and writes it over the other. It is the same untruth this signature
+     already exists to prevent, one field further along. */
+  return [String(p.unit||'').trim(), String(p.packUnit||'').trim(),
+    Number(p.packQty)||0, piecesPerUnitOrNull(p.piecesPerUnit)].join('|');
 }
 /* Which packing a variant is actually saved with, in order of who said so
    most deliberately:
@@ -36869,6 +36909,12 @@ function buildVariantPriceRow({productId, variantIdx, supplierId, tiers, pack, s
     productId, variantIdx, supplierId,
     wholesale: derived.wholesale, retail: derived.retail,
     date, unit: pack.unit, packUnit: pack.packUnit, packQty: pack.packQty,
+    /* Was absent from this object altogether, which is not the same as
+       being null in it. Every bulk save replaces the row it found --
+       `{...record, id: keep.id}` -- so a variant recorded as 100 pieces
+       to the unit came back from a save that touched nothing else with
+       the figure gone, and nothing on screen had asked about it. */
+    piecesPerUnit: piecesPerUnitOrNull(pack.piecesPerUnit),
     priceSource: 'manual',
     supplierSku: String(sku || '').trim(),
     tiers: tiers.map(t=>({...t})),
@@ -36879,6 +36925,11 @@ function effectiveVariantPacking(override, shared, own, sharedEdited){
     unit: String((p && p.unit) || '').trim(),
     packUnit: String((p && p.packUnit) || '').trim(),
     packQty: Number(p && p.packQty) || 0,
+    /* Rides the same three-way resolution as the rest of the packing,
+       rather than a rule of its own. How many screws are in a Kg is a
+       fact about how the thing comes, so a variant that says "my packing
+       is different" is saying it about this too. */
+    piecesPerUnit: piecesPerUnitOrNull(p && p.piecesPerUnit),
   });
   if(override) return norm(override);
   if(sharedEdited) return norm(shared);
@@ -37042,11 +37093,15 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
     // pack size grew loses its wholesale price entirely. Only apply them
     // where the admin actually typed something; otherwise each variant
     // keeps its own packing.
-    const sharedPack = { unit, packUnit, packQty };
+    const sharedPack = { unit, packUnit, packQty, piecesPerUnit: prPiecesPerUnitValue() };
     const packEdited = !prBulkPackPrefill
       || document.getElementById('pr_unit').value !== prBulkPackPrefill.unit
       || document.getElementById('pr_pack_unit').value !== prBulkPackPrefill.packUnit
-      || document.getElementById('pr_pack_qty').value !== prBulkPackPrefill.packQty;
+      || document.getElementById('pr_pack_qty').value !== prBulkPackPrefill.packQty
+      // Typing only in this box is still typing: without it the figure
+      // entered would count as "the form was untouched" and every variant
+      // would keep whatever it already had, which is nothing.
+      || document.getElementById('pr_pieces_per_unit').value !== prBulkPackPrefill.piecesPerUnit;
     /* The shared ladder only reaches variants that have no price of their
        own when the admin actually entered one. A box merely SHOWING what
        is already on file must not write itself onto variants nobody
@@ -37538,12 +37593,24 @@ function cmpNoBasisReason(figures){
 
 // Blank is NULL, not zero: zero divides, and "not recorded" is not a
 // quantity. Same rule as invPurchasePriceValue's empty price.
-function prPiecesPerUnitValue(){
-  const el = document.getElementById('pr_pieces_per_unit');
-  const raw = el ? el.value : '';
+/* Blank stays NULL. Zero would be a claim, and an unusable one -- it is
+   the divisor in the per-piece comparison, so a zero would not merely be
+   wrong, it would take the comparison down with it. One would be worse
+   than either: it says "this is sold by the piece" about every row nobody
+   answered for, and every one of them would then look comparable when it
+   is not.
+
+   Lifted out of the DOM reader because the figure now arrives from two
+   places -- the shared box and a variant's own card -- and two copies of
+   this rule would be two chances to disagree about what blank means. */
+function piecesPerUnitOrNull(raw){
   if(raw === '' || raw == null) return null;
   const n = Number(raw);
   return (isNaN(n) || n <= 0) ? null : n;
+}
+function prPiecesPerUnitValue(){
+  const el = document.getElementById('pr_pieces_per_unit');
+  return piecesPerUnitOrNull(el ? el.value : '');
 }
 
 function cmpQty(){
@@ -47752,7 +47819,13 @@ async function graduateSourcingLead(leadId, form){
           tiers: rows, pack,
           sku: idx == null ? (c && c.supplierSku) : skus[idx],
           date: todayISO()}),
-        id: allocRowId('price'), piecesPerUnit: null,
+        /* piecesPerUnit is no longer forced to null here. The research
+           form has no shared box for it, but its variant cards are the
+           same editor as the Registry's, so a researcher who recorded
+           100 to the unit had it thrown away at the moment the lead
+           became a product. It now rides the packing, and is null when
+           genuinely nobody said. */
+        id: allocRowId('price'),
         outOfStock: false, outOfStockSince: null,
       });
       pricedSlots.add(String(idx));
@@ -49107,6 +49180,14 @@ function slCandBulkSurface(){
       unit: document.getElementById('sl_c_unit').value.trim(),
       packUnit: document.getElementById('sl_c_packunit').value.trim(),
       packQty: Number(document.getElementById('sl_c_packqty').value) || 0,
+      /* Stated, not left off. A research form has no shared box for the
+         piece count -- a size's own card is the only place to record it
+         here -- but every reader of this surface expects the same four
+         fields, and toggleBulkVariantPacking seeds from this object
+         without checking. Omitted, it worked only on the accident that
+         `undefined == null` is true; named, the contract is the same on
+         both surfaces and a card seeds blank because nobody has said. */
+      piecesPerUnit: null,
     }),
     onChange: ()=>{},
   };

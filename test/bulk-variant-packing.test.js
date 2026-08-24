@@ -31,11 +31,15 @@ const t = createReporter('bulk variant packing');
 const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-const NAMES = ['packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail', 'tierUnitOptionsHTML', 'pendingTierEntry'];
+const NAMES = ['piecesPerUnitOrNull', 'packingSignature', 'effectiveVariantPacking', 'deriveWholesaleRetail', 'tierUnitOptionsHTML', 'pendingTierEntry'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')),
   { esc: (x) => String(x == null ? '' : x) }, NAMES);
 
-const pk = (unit, packUnit, packQty) => ({ unit, packUnit, packQty });
+/* Four fields, not three. How many pieces are in one unit is packing --
+   a fact about how the thing comes -- so it rides the same resolution as
+   the rest of it rather than a rule of its own. */
+const pk = (unit, packUnit, packQty, piecesPerUnit = null) =>
+  ({ unit, packUnit, packQty, piecesPerUnit });
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(want),
   `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
@@ -52,7 +56,72 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   eq(sig(pk('Pc', 'Ctn', 12)), sig({ unit: 'Pc', packUnit: 'Ctn', packQty: '12' }),
     'nor is a pack size that arrived as text');
   eq(sig(null), '', 'no packing signs as nothing');
-  eq(sig({}), '|' + '|0', 'and an empty one reads as blank, blank, nought');
+  /* Two variants packed 25 to a bag are not packed the same way when one
+     is 100 screws to the Kg and the other 60. Calling them shared is what
+     fills the default box from one and writes it over the other. */
+  t.check(sig(pk('Kg', 'Bag', 25, 100)) !== sig(pk('Kg', 'Bag', 25, 60)),
+    'a different count of pieces in the unit is different packing');
+  eq(sig(pk('Kg', 'Bag', 25, 100)), sig(pk('Kg', 'Bag', 25, '100')),
+    'and one typed as text signs the same as one that arrived as a number');
+  /* Not recorded, recorded as nothing, and recorded as a number that
+     cannot be true are one claim: nobody said. They must not sign as
+     three different packings, or a catalogue of rows that never answered
+     the question would read as all differently packed. */
+  eq(sig(pk('Kg', 'Bag', 25, null)), sig(pk('Kg', 'Bag', 25, 0)),
+    'while unrecorded and zero are the same claim — nobody said');
+  eq(sig(pk('Kg', 'Bag', 25, null)), sig(pk('Kg', 'Bag', 25, '')),
+    'and so is a box left empty');
+  eq(sig({}), '||0|', 'and an empty one reads as blank, blank, nought, unknown');
+}
+
+/* ---------- 1b. the piece count follows the same precedence ---------- */
+/*
+ * It used to follow nothing at all. buildVariantPriceRow simply had no
+ * piecesPerUnit key, so every bulk save replaced the row it found with
+ * one that had lost the figure -- silently, on a save that touched
+ * nothing else.
+ */
+{
+  const f = fn.effectiveVariantPacking;
+  const shared = pk('Pc', 'Ctn', 12, 100);
+  const own = pk('Pc', 'Ctn', 12, 60);
+  const mine = pk('Pc', 'Ctn', 12, 25);
+
+  eq(f(mine, shared, own, true).piecesPerUnit, 25,
+    'a variant that says how many pieces are in ITS unit keeps that, default or no default');
+  eq(f(null, shared, own, true).piecesPerUnit, 100,
+    'a typed default reaches the variants that never said');
+  /* The one that was losing data. The default box shows something
+     whether or not anybody typed in it. */
+  eq(f(null, shared, own, false).piecesPerUnit, 60,
+    'and an untouched default leaves a variant on the count it already had');
+  eq(f(null, shared, null, false).piecesPerUnit, 100,
+    'a variant with nothing on file follows the default, having nothing to protect');
+
+  // The rule the whole figure rests on, applied wherever it now arrives.
+  eq(f(pk('Pc', 'Ctn', 12, ''), shared, own, false).piecesPerUnit, null,
+    'a blank box on a variant card is "unknown", not a fallback to the default');
+  eq(f(pk('Pc', 'Ctn', 12, 0), shared, own, false).piecesPerUnit, null,
+    'zero is not a count — it divides, and would take the comparison with it');
+  eq(f(pk('Pc', 'Ctn', 12, -5), shared, own, false).piecesPerUnit, null, 'nor is a negative');
+  eq(f(pk('Pc', 'Ctn', 12, 'abc'), shared, own, false).piecesPerUnit, null, 'nor junk');
+  eq(f(pk('Pc', 'Ctn', 12, '100'), shared, own, false).piecesPerUnit, 100,
+    'while a real count typed into an input arrives as a number');
+}
+
+/* ---------- 1c. and the row that is saved actually carries it -------- */
+{
+  const row = extractFunction(src, 'buildVariantPriceRow', 'index.html');
+  t.check(/piecesPerUnit: piecesPerUnitOrNull\(pack\.piecesPerUnit\)/.test(row),
+    'the saved row carries the count — its absence was the whole leak');
+  /* Absent is not the same as null here: the bulk save writes
+     `{...record, id: keep.id}` over the row it found, so a key that is
+     simply missing takes the old value with it. */
+  t.check(/piecesPerUnit/.test(row), 'the key is present on the object, not merely null-able');
+
+  const grad = code.slice(code.indexOf('const slots = record.variants.length'));
+  t.check(!/id: allocRowId\('price'\), piecesPerUnit: null/.test(grad.slice(0, 2000)),
+    'and a lead graduating into a product no longer throws the researcher’s count away');
 }
 
 /* ---------- 2. which packing a variant is saved with ----------------- */
@@ -107,6 +176,15 @@ const eqJ = (got, want, msg) => t.check(JSON.stringify(got) === JSON.stringify(w
   const load = extractFunction(src, 'renderPrBulkVariants', 'index.html');
   t.check(/const packSigs = variantRows0\.filter\(Boolean\)\.map\(r=> packingSignature\(r\)\);/.test(load),
     'every variant this supplier prices is compared, not just the first row');
+  /* The box was left blank on every variable product no matter what was
+     on file -- so it opened empty, saved back as nothing, and took the
+     figure with it. */
+  t.check(/getElementById\('pr_pieces_per_unit'\)\.value =\s*\n?\s*packSample && packSample\.piecesPerUnit/.test(load),
+    'opening a variable product fills the piece count from what is on file');
+  t.check(/piecesPerUnit: r\.piecesPerUnit \? String\(r\.piecesPerUnit\) : ''/.test(load),
+    'and a differently-packed variant opens with its own count on its card');
+  t.check(/piecesPerUnit: document\.getElementById\('pr_pieces_per_unit'\)\.value/.test(load),
+    'the prefill remembers it, so the save can tell typed-in from merely shown');
   /* Where packing parts company with the price ladder above: an unpriced
      variant has no packing to disagree with, and packing is never written
      to a variant that has no tiers, so counting them as "differently

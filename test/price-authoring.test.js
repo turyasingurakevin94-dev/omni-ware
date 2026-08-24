@@ -22,7 +22,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('price authoring');
 const src = read('index.html');
 
-const NAMES = ['deriveWholesaleRetail', 'tiersFromLegacyRow', 'tiersSignature', 'packingSignature', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
+const NAMES = ['piecesPerUnitOrNull', 'deriveWholesaleRetail', 'tiersFromLegacyRow', 'tiersSignature', 'packingSignature', 'invertedTierPairs', 'tieredUnitPrice', 'tiersForKind'];
 const fn = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {}, NAMES);
 
 const ladder = (...pairs) => pairs.map(([minQty, price]) => ({ minQty, price }));
