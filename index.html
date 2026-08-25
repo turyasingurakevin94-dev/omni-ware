@@ -50927,6 +50927,16 @@ function apRuleWords(kind, r){
       : r.value + '% on cost')
     + (r.source==='variant' ? ' (set on this variant itself)' : '');
 }
+/* Variant attributes, sanitised exactly as the product form sanitises
+   its own: trimmed names, trimmed non-empty values, empties dropped,
+   at most two attributes. */
+function apProductAttrs(raw){
+  return (Array.isArray(raw) ? raw : []).slice(0, 2)
+    .map(a=> ({ name: String((a && a.name) || '').trim(),
+      values: (Array.isArray(a && a.values) ? a.values : [])
+        .map(v=> String(v||'').trim()).filter(Boolean) }))
+    .filter(a=> a.name && a.values.length);
+}
 /* Everything add_supplier_price needs, resolved ONCE and shared by the
    card and the write so they can never disagree. The heart is the
    merge: a supplier's single price and their pack price are two rungs
@@ -51532,6 +51542,73 @@ const ASSISTANT_TOOLS = {
       catch(e){ preview = null; }
       out.now_suggests = (preview && preview.recommended_sell!=null)
         ? { price: preview.recommended_sell, basis: preview.basis, unit: preview.unit } : null;
+      return out;
+    }},
+
+  /* A NEW product card, shaped exactly as the product form and the
+     graduation shape one -- same id allocator, same default markups,
+     same sku rule, same category presets. The guard mirrors the
+     customer and supplier lesson: a misheard name must never create a
+     product, so a name already on file is an error, never a twin. */
+  create_product: { confirm: true,
+    summary(input){
+      const name = String(input.name||'').trim();
+      const dup = (data.products||[]).find(p=> supNormalisedName(p.name) === supNormalisedName(name));
+      if(dup) return 'This product seems to already exist — ' + dup.name + ' (' + dup.id
+        + '). Attach prices to it instead of creating a twin.';
+      const attrs = apProductAttrs(input.variant_attributes);
+      const shape = attrs.length
+        ? attrs.map(a=> a.name + ': ' + a.values.join(', ')).join(' × ')
+        : 'simple, no variants';
+      return 'Create NEW product: ' + name
+        + ' — category ' + (String(input.category||'').trim() || '(none)')
+        + '; ' + shape + '. It starts with no prices or markup rules.';
+    },
+    async run(input){
+      const name = String(input.name||'').trim();
+      if(!name) throw new Error('The product needs a name.');
+      const dup = (data.products||[]).find(p=> supNormalisedName(p.name) === supNormalisedName(name));
+      if(dup) throw new Error('A product with that name already exists — ' + dup.name + ' (' + dup.id
+        + '). Attach prices to it instead.');
+      const attrs = apProductAttrs(input.variant_attributes);
+      let combos = [{}];
+      attrs.forEach(a=>{
+        const next = [];
+        combos.forEach(c=> a.values.forEach(v=> next.push({ ...c, [a.name]: v })));
+        combos = next;
+      });
+      const type = attrs.length ? 'variable' : 'simple';
+      const id = firstFreeEntityId('P', 3, data.products,
+        await issueEntityId('product', 'P', 3, data.products));
+      const record = {
+        id, name, type,
+        category: String(input.category||'').trim(),
+        subcategory: String(input.subcategory||'').trim(),
+        notes: String(input.notes||'').trim(),
+        shortDescription: String(input.short_description||'').trim(),
+        image: null,
+        wholesaleMarkupType: 'percent', wholesaleMarkupValue: 0,
+        retailMarkupType: 'percent', retailMarkupValue: 0,
+        agentDiscountWholesalePct: null, agentDiscountRetailPct: null,
+        variantAttributes: attrs,
+        variants: type === 'variable' ? combos.map(combo=>({
+          sku: Object.values(combo).join('-').toUpperCase().replace(/\s+/g,''),
+          combo, image: null,
+          wholesaleMarkupType:'percent', wholesaleMarkupValue:0,
+          retailMarkupType:'percent', retailMarkupValue:0,
+        })) : [],
+        createdAt: new Date().toISOString(),
+      };
+      data.products.push(record);
+      ensurePresetCategory(record.category, record.subcategory);
+      await saveData();
+      /* The FK lesson from the graduation: a price row racing a product
+         the server has not confirmed is a dangling key. The result says
+         plainly whether pricing may follow yet. */
+      const synced = !!(lastSynced && lastSynced.products && lastSynced.products[String(id)]);
+      const out = { done: true, product_id: id, name, type,
+        variants: record.variants.length, synced };
+      if(!synced) out.note = 'Saved — but the connection has not confirmed it yet. Wait a moment before adding its prices, or add them from the Price Registry.';
       return out;
     }},
 

@@ -45,6 +45,8 @@ const SYSTEM_PROMPT = [
   '',
   'Supplier prices: add_supplier_price records what a supplier charges — resolve the product with find_product and the supplier with find_supplier first. A supplier_name that is not on file is created as a NEW supplier when the owner confirms the card, so say that back before writing — and never create a supplier from a sound-alike guess: if find_supplier’s names include someone close to what was heard, ask. A single price and a pack price are two rungs of ONE ladder and are independent quotes: never derive one from the other, and never invent a pack price the supplier did not say — packing with no bulk quote is pack_unit and pack_qty alone. When the owner changes one rung, send only that rung: an update keeps the other rungs and the packing as they are on file, and the card marks what is kept. Prices are per unit ("each dozen at 8,000" is unit Dozen, price_per_unit 8000, pieces_per_unit 12); a pack rate ("a carton of 100 at 60,000") is pack_qty 100 and price_per_pack 60000, the whole-pack figure as quoted. After saving, read the whole ladder back from the result.',
   '',
+  'Creating products: create_product adds a NEW product card — only after find_product found nothing AND the owner has confirmed it is genuinely new; never from a sound-alike guess, and never from a photo alone without the owner’s word. Sizes or types of one thing become VARIANTS on one product, not separate products. Ask the category when it is not obvious. After creating, record its supplier prices with add_supplier_price — and when the result says the connection has not confirmed the product yet, wait before pricing it.',
+  '',
   'Markup rules: set_markup_rule sets how a selling price is suggested from cost — a fixed amount, or percent on cost (a fixed wholesale markup is added on each pack, a fixed retail one per unit). This shop’s markups are usually fixed amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. Value 0 clears a rule. Say the rule back in plain words before the card, treat an ambiguous figure like "10,0000" as a question to ask rather than a number to guess, and after saving tell the owner the new suggested price the tool returns — a misheard figure shows itself there at once.',
   '',
   'Quotes are drafts only: create_quote saves a draft. Invoicing, stock movement and order progression are done by the owner in the app — say so when it matters.',
@@ -66,7 +68,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty-three tools in FIXED order — the array is part of the cached
+/* Twenty-four tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -250,6 +252,30 @@ const TOOLS = [
         wholesale_markup_value: { type: 'number', minimum: 0 },
       },
       required: ['product_id'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_product',
+    description: 'Create a NEW product card in the catalogue — only after find_product found nothing and the owner confirmed it is genuinely new. Sizes or types of one thing are VARIANTS on one product (a variant attribute like Size with its values), never separate products. The product starts with no prices and no markup rules: record its supplier prices with add_supplier_price afterwards.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        category: { type: 'string', description: 'Ask the owner when not obvious; reuse an existing category name where one fits.' },
+        subcategory: { type: 'string' },
+        short_description: { type: 'string' },
+        notes: { type: 'string' },
+        variant_attributes: {
+          type: 'array', maxItems: 2,
+          description: 'E.g. [{"name":"Size","values":["400mm","600mm"]}]. Two attributes cross into the full matrix.',
+          items: {
+            type: 'object',
+            properties: { name: { type: 'string' }, values: { type: 'array', items: { type: 'string' } } },
+            required: ['name', 'values'], additionalProperties: false,
+          },
+        },
+      },
+      required: ['name'], additionalProperties: false,
     },
   },
   {

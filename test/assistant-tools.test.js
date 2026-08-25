@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty-three entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty-four entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -45,7 +45,10 @@ let toasts = [];
 /* The sync engine's "this row reached the server" record, held so the
    offline case can be staged: a Proxy says every id landed; swapping in
    an empty object says none did. */
-const lastSyncedStub = { suppliers: new Proxy({}, { get: () => true }) };
+const lastSyncedStub = {
+  suppliers: new Proxy({}, { get: () => true }),
+  products: new Proxy({}, { get: () => true }),
+};
 
 const NAMES = [
   'buildQuoteRecord', 'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue',
@@ -68,7 +71,7 @@ const NAMES = [
   'captureSourcingLead', 'captureSourcingLeadAndSave', 'findSourcingLeadByText',
   'sourcingLeadsAll', 'sourcingCaptureToast', 'leadDistinctAskers',
   'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull', 'tiersFromLegacyRow',
-  'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId',
+  'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId', 'ensurePresetCategory',
   'allProductVariantEntries', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
   'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   'todayISO', 'accountLabel',
@@ -83,6 +86,7 @@ const scope = compileScope([
   extractFunction(src, 'apCustomerByName', 'index.html'),
   extractFunction(src, 'apPriceBasis', 'index.html'),
   extractFunction(src, 'apRuleWords', 'index.html'),
+  extractFunction(src, 'apProductAttrs', 'index.html'),
   extractFunction(src, 'apSupplierPriceParts', 'index.html'),
   extractFunction(src, 'apLastPaymentDate', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
@@ -99,7 +103,7 @@ const scope = compileScope([
   saveData: () => { saveCalls++; },
   allocRowId: () => nextId++,
   issueRowId: async () => nextId++,
-  issueEntityId: async () => 'S900',
+  issueEntityId: async (kind, prefix) => prefix + '900',
   lastSynced: lastSyncedStub,
   toast: (m) => toasts.push(m),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
@@ -121,12 +125,12 @@ const run = (name, input) => T[name].run(input || {});
 {
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
-    'add_supplier_price', 'add_sourcing_lead'];
+    'create_product', 'add_supplier_price', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
     'stock_overview'];
-  t.check(Object.keys(T).length === 23, `twenty-three executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 24, `twenty-four executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -134,7 +138,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 23 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 24 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -766,6 +770,57 @@ const run = (name, input) => T[name].run(input || {});
     catch(e){ threwP = e.message; }
     t.check(!!threwP && /Nothing to change/.test(threwP),
       'while an update saying nothing new is refused rather than re-saved');
+
+    /* ---------- 8e. a NEW product, shaped like the form's own ------- */
+    /*
+     * The photo flow exposed the gap: seven items on a price list, no
+     * way to create them. create_product mirrors the product form's
+     * record EXACTLY -- same id allocator, default rules, sku rule,
+     * category presets -- and carries the two disciplines that matter:
+     * a name already on file never creates a twin, and pricing is told
+     * to wait until the server has confirmed the product exists.
+     */
+    data.presetCategories = [];
+    const cp = await run('create_product', { name: 'Pull Handle H-type', category: 'Fittings',
+      variant_attributes: [
+        { name: 'Size', values: ['400mm', '600mm'] },
+        { name: 'Colour', values: ['Silver', 'Black'] }] });
+    const newP = data.products.find(p=> p.id === cp.product_id);
+    t.check(cp.done === true && cp.product_id === 'P900' && cp.synced === true,
+      `a new product lands with the server-issued id, confirmed synced (got ${JSON.stringify(cp)})`);
+    t.check(newP.type === 'variable' && newP.variants.length === 4
+      && JSON.stringify(newP.variants[0].combo) === JSON.stringify({ Size: '400mm', Colour: 'Silver' })
+      && newP.variants[0].sku === '400MM-SILVER',
+      `two attributes cross into the full matrix, skus by the graduation rule (got ${JSON.stringify(newP.variants.map(v=> v.sku))})`);
+    t.check(newP.wholesaleMarkupType === 'percent' && newP.wholesaleMarkupValue === 0
+      && newP.agentDiscountWholesalePct === null && newP.variants[1].retailMarkupValue === 0
+      && typeof newP.createdAt === 'string',
+      'the record is the product form\'s own shape — default rules, null agent overrides, a birth date');
+    t.check(data.presetCategories.some(c=> c.name === 'Fittings'),
+      'and the category joins the presets, as the form would have it');
+
+    const cpSimple = await run('create_product', { name: 'Wood Glue 500ml', category: 'General' });
+    t.check(data.products.find(p=> p.id === cpSimple.product_id).type === 'simple'
+      && cpSimple.variants === 0, 'no attributes makes a simple product');
+
+    const beforeDup = data.products.length;
+    let threwN = null;
+    try{ await run('create_product', { name: '  pull handle H-TYPE ' }); }
+    catch(e){ threwN = e.message; }
+    t.check(!!threwN && /already exists/.test(threwN) && /P900/.test(threwN),
+      'a name already on file is refused NAMING the existing product — a mishear never creates a twin');
+    t.check(data.products.length === beforeDup, 'and nothing was pushed');
+    t.check(/already exist/.test(T.create_product.summary({ name: 'pull handle h-type' })),
+      'the card itself says so before anything is confirmed');
+    t.check(/Create NEW product/.test(T.create_product.summary({ name: 'Brand New Thing', category: 'General' })),
+      'while a genuinely new one is announced as NEW on the card');
+
+    lastSyncedStub.products = {};
+    const cpOffline = await run('create_product', { name: 'Tile Spacer 2mm', category: 'General' });
+    t.check(cpOffline.synced === false && /Wait a moment/.test(cpOffline.note)
+      && data.products.some(p=> p.id === cpOffline.product_id),
+      'offline, the product keeps but the reply says pricing must wait for the server');
+    lastSyncedStub.products = new Proxy({}, { get: () => true });
 
     /* ---------- 9. reads stay diet -------------------------------- */
     data.customers = Array.from({ length: 30 }, (_, i) => ({
