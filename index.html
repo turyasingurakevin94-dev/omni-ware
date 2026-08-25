@@ -51469,7 +51469,7 @@ const ASSISTANT_TOOLS = {
         ? parts.supplierName + ' (NEW — they will be added as a supplier)'
         : parts.supplierName;
       const unit = parts.pack.unit || 'unit';
-      const rungs = parts.tiers.map(t=>{
+      const tierWords = parts.tiers.map(t=>{
         let w;
         if(t.minQty === 1){
           w = fmtUGX(apRound(t.price)) + ' per ' + unit;
@@ -51489,9 +51489,9 @@ const ASSISTANT_TOOLS = {
         packNote = ' Packed ' + parts.pack.packQty + ' ' + unit + ' per '
           + parts.pack.packUnit + ' — no pack price quoted.';
       }
-      return 'Price for ' + parts.label + ' — ' + supBit + ': ' + rungs.join('; ') + '.'
+      return 'Price for ' + parts.label + ' — ' + supBit + ': ' + tierWords.join('; ') + '.'
         + packNote
-        + (parts.existing ? ' Updates their entry — unstated rungs and packing stay as they are.'
+        + (parts.existing ? ' Updates their entry — anything not restated stays as it is.'
           : ' A new Registry entry.');
     },
     async run(input){
@@ -51538,10 +51538,10 @@ const ASSISTANT_TOOLS = {
         retail: record.retail==null ? null : apRound(record.retail),
         wholesale: record.wholesale==null ? null : apRound(record.wholesale),
         tiers: parts.tiers.slice(0, 6).map(t=> ({ min_qty: t.minQty, price: apRound(t.price) })) };
-      const rung1 = parts.tiers.find(t=> t.minQty === 1);
-      const packRung = parts.pack.packQty > 1
+      const singleTier = parts.tiers.find(t=> t.minQty === 1);
+      const packTier = parts.pack.packQty > 1
         ? parts.tiers.find(t=> t.minQty === parts.pack.packQty && t.minQty !== 1) : null;
-      if(rung1 && packRung && packRung.price > rung1.price)
+      if(singleTier && packTier && packTier.price > singleTier.price)
         out.warning = 'The pack works out dearer per ' + (parts.pack.unit||'unit')
           + ' than buying one — check the figures were heard right.';
       return out;
