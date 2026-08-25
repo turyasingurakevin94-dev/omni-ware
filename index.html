@@ -2054,6 +2054,7 @@
   }
   .prc-source-pill.purchase{background:#E3EEFB;color:#3E6FA6;}
   .prc-source-pill.manual{background:#EEF1F3;color:var(--ink-soft);}
+  .prc-source-pill.assistant{background:#FAF0E0;color:#96690F;}
   /* Checked and found unchanged. Green because it is the good outcome of
      a review -- the price was right and now says so. */
   .prc-source-pill.confirmed{background:#E4F2E8;color:#2F7346;}
@@ -36947,6 +36948,7 @@ function priceRegistryRowHTML(g, r, tokens){
       ${r.supplierSku ? `<span class="prc-sku" title="This supplier's own code for it">${highlightTokens(r.supplierSku, tokens)}</span>` : ''}
       ${r.outOfStock ? `<span class="prc-oos-pill" title="Left out of best-supplier recommendations">Out of stock</span>` : ''}
       ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
+        : r.priceSource==='assistant' ? `<span class="prc-source-pill assistant" title="Recorded through the assistant — confirmed on its card">Assistant</span>`
         : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand here">By hand</span>` : ''}
     </div>
     <div class="reg-fig">${r.wholesale == null || r.wholesale === ''
@@ -36987,6 +36989,7 @@ function priceCardHTML(r, tokens){
             ${r.outOfStock ? `<span class="prc-oos-pill" title="Excluded from best-supplier recommendations">Out of stock</span>` : ''}
             ${r.priceSource==='purchase' ? `<span class="prc-source-pill purchase" title="Updated automatically from a stock purchase at this price">From purchase</span>`
               : r.priceSource==='confirmed' ? `<span class="prc-source-pill confirmed" title="Checked with the supplier and found unchanged">Confirmed</span>`
+              : r.priceSource==='assistant' ? `<span class="prc-source-pill assistant" title="Recorded through the assistant — confirmed on its card">Assistant</span>`
               : r.priceSource==='manual' ? `<span class="prc-source-pill manual" title="Set by hand in the Price Registry">Manually set</span>` : ''}
           </div>
         </div>
@@ -51382,7 +51385,11 @@ const ASSISTANT_TOOLS = {
         && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id);
       const keep = dups[0];
       data.prices = data.prices.filter(r=> !dups.includes(r));
-      data.prices.push({ ...record, id: keep ? keep.id : allocRowId('price'),
+      /* Not 'manual': this row came through the assistant's card, and the
+         Registry says so. It still does NOT count toward the price review
+         -- same undercounting rule as a hand-typed figure. */
+      data.prices.push({ ...record, priceSource: 'assistant',
+        id: keep ? keep.id : allocRowId('price'),
         outOfStock: keep ? !!keep.outOfStock : false,
         outOfStockSince: keep ? (keep.outOfStockSince||null) : null });
       saveData();

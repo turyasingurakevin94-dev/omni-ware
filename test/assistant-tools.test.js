@@ -522,6 +522,10 @@ const run = (name, input) => T[name].run(input || {});
     t.check(row && row.unit === 'Dozen' && row.retail === 8000 && row.wholesale === null
       && row.piecesPerUnit === 12 && row.supplierId === 'S900',
       `and the Registry row is the Registry's own shape (got ${JSON.stringify(row)})`);
+    t.check(row.priceSource === 'assistant',
+      'stamped as the assistant’s entry — the card does not say "manually set" about a spoken price');
+    t.check(/prc-source-pill assistant/.test(src) && />Assistant<\/span>/.test(src),
+      'and the Registry renders that source as its own pill');
     t.check(row.tiers.length === 1 && row.tiers[0].minQty === 1 && row.tiers[0].price === 8000,
       'one tier: 8,000 for one dozen');
 
