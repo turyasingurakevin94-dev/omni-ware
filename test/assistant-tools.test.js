@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty-one entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -80,6 +80,7 @@ const scope = compileScope([
   extractFunction(src, 'apCustomerById', 'index.html'),
   extractFunction(src, 'apCustomerByName', 'index.html'),
   extractFunction(src, 'apPriceBasis', 'index.html'),
+  extractFunction(src, 'apRuleWords', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -115,12 +116,12 @@ const run = (name, input) => T[name].run(input || {});
 /* ---------- 1. the gate labels are right ------------------------------ */
 {
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
-    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_supplier_price',
-    'add_sourcing_lead'];
+    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
+    'add_supplier_price', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details'];
-  t.check(Object.keys(T).length === 20, `twenty executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 21, `twenty-one executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -128,7 +129,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 20 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 21 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -561,6 +562,57 @@ const run = (name, input) => T[name].run(input || {});
       'so no price row dangles on a supplier the server never confirmed');
     lastSyncedStub.suppliers = new Proxy({}, { get: () => true });
     t.check(data.customers.length === 0, 'and none of this ever touched a customer');
+
+    /* ---------- 8c. markup rules, spoken --------------------------- */
+    /*
+     * "Wholesale = 10,000, retail = 2,000 per dozen" -- the rules are
+     * the product form's own fields, written the same way (value 0 IS
+     * "no rule"), and the reply carries the suggestion that NOW
+     * follows, through recommended_price itself, where a misheard
+     * figure shows itself at once. This shop speaks fixed amounts.
+     */
+    const mk = await run('set_markup_rule', { product_id: 'P10',
+      retail_markup_type: 'percent', retail_markup_value: 25 });
+    t.check(mk.done === true && data.products[0].retailMarkupType === 'percent'
+      && data.products[0].retailMarkupValue === 25,
+      'a spoken rule lands on the product, in the same fields the form writes');
+    const direct2 = run('recommended_price', { product_id: 'P10' });
+    t.check(mk.now_suggests && mk.now_suggests.price === direct2.recommended_sell,
+      'and the reply carries the suggestion that now follows — recommended_price itself');
+
+    const sum2 = T.set_markup_rule.summary({ product_id: 'P10',
+      retail_markup_type: 'percent', retail_markup_value: 30 });
+    t.check(/retail markup 30% on cost \(replaces 25% on cost\)/.test(sum2),
+      `the card says what replaces what (got "${sum2}")`);
+
+    const mkFix = await run('set_markup_rule', { product_id: 'P10',
+      wholesale_markup_type: 'fixed', wholesale_markup_value: 10000 });
+    t.check(mkFix.wholesale_rule === '10,000 UGX added on each pack',
+      'a fixed wholesale rule reads per pack — this shop speaks fixed amounts');
+
+    const mkVar = await run('set_markup_rule', { product_id: 'P11', variant_index: 1,
+      retail_markup_type: 'fixed', retail_markup_value: 2000 });
+    t.check(mkVar.done === true && data.products[1].variants[1].retailMarkupValue === 2000
+      && data.products[1].retailMarkupValue === undefined,
+      'a variant rule lands on the variant and leaves the product default untouched');
+    t.check(run('product_details', { product_id: 'P11' }).variants[1].retail_markup_override
+      === '2,000 UGX added per unit (set on this variant itself)',
+      'and the dossier shows it as that variant’s own rule');
+
+    const mkClear = await run('set_markup_rule', { product_id: 'P10',
+      retail_markup_type: 'percent', retail_markup_value: 0 });
+    t.check(mkClear.retail_rule === 'cleared'
+      && run('product_details', { product_id: 'P10' }).markup_rules.retail === null,
+      'value 0 clears — the form’s own "no rule", and the dossier agrees');
+
+    let threwM = null;
+    try{ await run('set_markup_rule', { product_id: 'P10', retail_markup_value: 10 }); }
+    catch(e){ threwM = e.message; }
+    t.check(!!threwM && /type/.test(threwM), 'a value without its type is refused');
+    threwM = null;
+    try{ await run('set_markup_rule', { product_id: 'P10' }); }
+    catch(e){ threwM = e.message; }
+    t.check(!!threwM, 'and so is a call carrying no rule at all');
 
     /* ---------- 9. reads stay diet -------------------------------- */
     data.customers = Array.from({ length: 30 }, (_, i) => ({

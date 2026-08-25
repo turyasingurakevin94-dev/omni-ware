@@ -50886,6 +50886,19 @@ function apPriceBasis(best){
   if(best.wholesale!=null) return { kind: 'wholesale', cost: best.wholesale };
   return { kind: 'retail', cost: best.retail };
 }
+/* A markup rule in words. A fixed WHOLESALE markup is money added on
+   each pack -- that is what suggestedSellingPrice's value/packQty
+   spread means -- so the words must say pack, or the model reads a
+   false mismatch between rule and figure and sends the owner to check
+   a healthy setting. Shared by the dossier and set_markup_rule. */
+function apRuleWords(kind, r){
+  if(!r) return null;
+  return (r.type==='fixed'
+      ? apRound(r.value).toLocaleString('en-US')
+        + (kind==='wholesale' ? ' UGX added on each pack' : ' UGX added per unit')
+      : r.value + '% on cost')
+    + (r.source==='variant' ? ' (set on this variant itself)' : '');
+}
 
 /* ---- the tools -----------------------------------------------------
    One entry per schema in api/assistant.js: {confirm, summary(input),
@@ -51121,16 +51134,6 @@ const ASSISTANT_TOOLS = {
   product_details: { confirm: false, run(input){
     const p = (data.products||[]).find(x=> x.id === input.product_id);
     if(!p) throw new Error('No product with that id — use find_product first.');
-    /* A fixed WHOLESALE markup is money added on each pack -- that is
-       what suggestedSellingPrice's value/packQty spread means -- so the
-       words must say pack, or the model reads a false mismatch between
-       rule and figure and sends the owner to check a healthy setting. */
-    const ruleWords = (kind, r)=> !r ? null
-      : (r.type==='fixed'
-          ? apRound(r.value).toLocaleString('en-US')
-            + (kind==='wholesale' ? ' UGX added on each pack' : ' UGX added per unit')
-          : r.value + '% on cost')
-        + (r.source==='variant' ? ' (set on this variant itself)' : '');
     const hasVariants = p.type==='variable' && p.variants && p.variants.length;
     const idxs = hasVariants ? p.variants.map((_, i)=> i) : [null];
     const variants = idxs.slice(0, 10).map(vi=>{
@@ -51151,14 +51154,14 @@ const ASSISTANT_TOOLS = {
         suppliers_out_of_stock: productPriceRows(p.id, vi).length - ranked.length };
       ['retail', 'wholesale'].forEach(kind=>{
         const r = effectiveMarkupRule(p, vi, kind);
-        if(r && r.source==='variant') out[kind + '_markup_override'] = ruleWords(kind, r);
+        if(r && r.source==='variant') out[kind + '_markup_override'] = apRuleWords(kind, r);
       });
       return out;
     });
     return { name: p.name, category: p.category||'',
       description: p.shortDescription||'', notes: p.notes||'',
-      markup_rules: { retail: ruleWords('retail', effectiveMarkupRule(p, null, 'retail')),
-        wholesale: ruleWords('wholesale', effectiveMarkupRule(p, null, 'wholesale')) },
+      markup_rules: { retail: apRuleWords('retail', effectiveMarkupRule(p, null, 'retail')),
+        wholesale: apRuleWords('wholesale', effectiveMarkupRule(p, null, 'wholesale')) },
       variant_count: idxs.length, variants };
   }},
 
@@ -51302,6 +51305,71 @@ const ASSISTANT_TOOLS = {
       if(amount<=0) throw new Error('The amount must be above zero.');
       addCashReceipt(input.account, amount, input.category, input.description||'', input.date || todayISO());
       return { done: true, recorded: amount, category: input.category };
+    }},
+
+  /* The markup rules are how the app turns a cost into a suggested
+     selling price. Plain product (or variant) fields, written here
+     exactly as the product form writes them -- value 0 IS the form's
+     own "no rule". The result carries the suggestion that now follows,
+     through recommended_price itself, so a misheard figure shows
+     itself in the very next sentence. */
+  set_markup_rule: { confirm: true,
+    summary(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      const vi = input.variant_index==null ? null : input.variant_index;
+      let label = p ? productVariantLabel(p, vi) : String(input.product_id||'');
+      if(p && p.type==='variable' && p.variants && p.variants.length && vi==null)
+        label += ' — the default for every variant without its own rule';
+      const target = p ? (vi!=null && p.variants ? p.variants[vi] : p) : null;
+      const side = (kind)=>{
+        const type = input[kind + '_markup_type'], value = input[kind + '_markup_value'];
+        if(type==null && value==null) return null;
+        const cur = target && Number(target[kind + 'MarkupValue']) > 0
+          ? apRuleWords(kind, { type: target[kind + 'MarkupType'], value: Number(target[kind + 'MarkupValue']) })
+          : null;
+        const words = Number(value) > 0 ? apRuleWords(kind, { type, value: Number(value) }) : 'cleared';
+        return kind + ' markup ' + words + (cur ? ' (replaces ' + cur + ')' : '');
+      };
+      const parts = [side('wholesale'), side('retail')].filter(Boolean);
+      return 'Set for ' + label + ': ' + parts.join('; ') + '. Future price suggestions change accordingly.';
+    },
+    run(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      if(!p) throw new Error('No product with that id — use find_product first.');
+      const vi = input.variant_index==null ? null : input.variant_index;
+      if(vi!=null && !(p.type==='variable' && p.variants && p.variants[vi]))
+        throw new Error(p.name + ' has no variant ' + vi + '.');
+      const target = vi!=null ? p.variants[vi] : p;
+      // Validate BOTH sides before touching either, so a half-good call
+      // cannot leave one rule changed in memory with nothing saved.
+      const ops = [];
+      ['retail', 'wholesale'].forEach(kind=>{
+        const type = input[kind + '_markup_type'];
+        const raw = input[kind + '_markup_value'];
+        if(type==null && raw==null) return;
+        if(type==null || raw==null)
+          throw new Error('The ' + kind + ' rule needs both its type (percent or fixed) and its value.');
+        if(type!=='percent' && type!=='fixed')
+          throw new Error('The ' + kind + ' rule type must be percent or fixed.');
+        const value = Number(raw);
+        if(!(value >= 0 && isFinite(value)))
+          throw new Error('The ' + kind + ' rule value must be zero or above.');
+        ops.push({ kind, type, value });
+      });
+      if(!ops.length) throw new Error('Say at least one rule — retail or wholesale.');
+      const out = { done: true, product: productVariantLabel(p, vi) };
+      ops.forEach(({kind, type, value})=>{
+        target[kind + 'MarkupType'] = type;
+        target[kind + 'MarkupValue'] = value || 0;
+        out[kind + '_rule'] = value > 0 ? apRuleWords(kind, { type, value }) : 'cleared';
+      });
+      saveData();
+      let preview = null;
+      try{ preview = ASSISTANT_TOOLS.recommended_price.run({ product_id: p.id, variant_index: vi }); }
+      catch(e){ preview = null; }
+      out.now_suggests = (preview && preview.recommended_sell!=null)
+        ? { price: preview.recommended_sell, basis: preview.basis, unit: preview.unit } : null;
+      return out;
     }},
 
   /* One current price per product+variant+supplier -- the Registry's own

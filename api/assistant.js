@@ -45,6 +45,8 @@ const SYSTEM_PROMPT = [
   '',
   'Supplier prices: add_supplier_price records what a supplier charges — resolve the product with find_product and the supplier with find_supplier first. One current price per supplier per item: saving replaces their previous entry. A supplier_name that is not on file is created as a NEW supplier when the owner confirms the card, so say that back before writing — and never create a supplier from a sound-alike guess: if find_supplier’s names include someone close to what was heard, ask. Prices are per unit ("each dozen at 8,000" is unit Dozen, price_per_unit 8000, pieces_per_unit 12); when a pack rate is quoted ("a carton of 100 at 60,000") pass pack_qty and price_per_pack and the app derives the per-piece figure.',
   '',
+  'Markup rules: set_markup_rule sets how a selling price is suggested from cost — a fixed amount, or percent on cost (a fixed wholesale markup is added on each pack, a fixed retail one per unit). This shop’s markups are usually fixed amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. Value 0 clears a rule. Say the rule back in plain words before the card, treat an ambiguous figure like "10,0000" as a question to ask rather than a number to guess, and after saving tell the owner the new suggested price the tool returns — a misheard figure shows itself there at once.',
+  '',
   'Quotes are drafts only: create_quote saves a draft. Invoicing, stock movement and order progression are done by the owner in the app — say so when it matters.',
   '',
   'Confirmation: every write shows the owner a confirmation first. Only claim an action happened after its tool result says done. A result with declined:true means the owner cancelled — acknowledge briefly and do not retry or argue.',
@@ -60,7 +62,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty tools in FIXED order — the array is part of the cached
+/* Twenty-one tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -218,6 +220,22 @@ const TOOLS = [
         category: { type: 'string' }, description: { type: 'string' }, date: { type: 'string' },
       },
       required: ['account', 'amount', 'category', 'description'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_markup_rule',
+    description: 'Set how the app suggests a selling price for one product (or one variant): a markup rule added on top of the supplier cost — a fixed amount, or percent on cost. This shop’s markups are usually FIXED amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. A fixed wholesale markup is added on each pack, a fixed retail markup per unit. Value 0 clears a rule. Product-level is the default for every variant; pass variant_index to give one variant its own rule. Resolve the product with find_product first.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string' },
+        variant_index: { type: ['integer', 'null'] },
+        retail_markup_type: { type: 'string', enum: ['percent', 'fixed'] },
+        retail_markup_value: { type: 'number', minimum: 0 },
+        wholesale_markup_type: { type: 'string', enum: ['percent', 'fixed'] },
+        wholesale_markup_value: { type: 'number', minimum: 0 },
+      },
+      required: ['product_id'], additionalProperties: false,
     },
   },
   {
