@@ -73,7 +73,7 @@ const pkg = read('package.json');
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all eighteen');
+    'and so does the LAST tool, closing the cached prefix over all twenty');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -98,22 +98,26 @@ const pkg = read('package.json');
     'and the shop’s economics: wholesale is the default answer, and a fixed wholesale markup is per pack — not a mismatch to flag');
   t.check(/no markdown except one mark/.test(src) && /double asterisks/.test(src),
     'one mark is allowed: the figures that decide things, wrapped for on-screen highlight');
+  t.check(/created as a NEW supplier when the owner confirms/.test(src)
+    && /never create a supplier from a sound-alike guess/.test(src),
+    'and the supplier-price terrain: creation only past the card, never off a sound-alike');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
 
-/* ---------- 5. eighteen tools, writes distinguishable ----------------- */
+/* ---------- 5. twenty tools, writes distinguishable ------------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 18, `eighteen tools defined (got ${names.length})`);
+  t.check(names.length === 20, `twenty tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
-    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_sourcing_lead'];
+    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_supplier_price',
+    'add_sourcing_lead'];
   writes.forEach(w => t.check(names.includes(w), `${w} is offered`));
-  ['find_customer', 'find_product', 'customer_statement', 'list_debtors', 'cash_on_hand',
-    'suppliers_owed', 'dues_owed', 'recent_invoices', 'financial_summary', 'recommended_price',
-    'product_details']
+  ['find_customer', 'find_supplier', 'find_product', 'customer_statement', 'list_debtors',
+    'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices', 'financial_summary',
+    'recommended_price', 'product_details']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
-  t.check((src.match(/additionalProperties: false/g) || []).length >= 19,
+  t.check((src.match(/additionalProperties: false/g) || []).length >= 21,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');
 }
 

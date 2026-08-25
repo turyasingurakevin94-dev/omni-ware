@@ -50925,6 +50925,33 @@ const ASSISTANT_TOOLS = {
       }) };
   }},
 
+  /* The supplier mirror of find_customer, same tiers and the same
+     miss behaviour: real names instead of a guess. */
+  find_supplier: { confirm: false, run(input){
+    const q = String(input.query||'').trim();
+    if(!q) throw new Error('Say a supplier name to search for.');
+    const key = supNormalisedName(q);
+    const exact = (data.suppliers||[]).find(s=> supNormalisedName(s.name) === key) || null;
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const inAll = (hay)=> tokens.every(t=> hay.includes(t));
+    const list = exact ? [exact] : (data.suppliers||[]).filter(s=>
+      inAll(((s.name||'') + ' ' + (s.phone||'') + ' ' + (s.location||'') + ' ' + (s.notes||'')).toLowerCase()));
+    if(!list.length){
+      const all = data.suppliers||[];
+      return { exact_match: false, matches: [],
+        all_names: all.slice(0,300).map(s=>({ id: s.id, name: s.name })),
+        truncated: all.length > 300 };
+    }
+    return { exact_match: !!exact,
+      matches: list.slice(0,5).map(s=>{
+        const name = (s.name||'').toLowerCase();
+        const matched = inAll(name) ? 'name'
+          : inAll(name + ' ' + (s.phone||'').toLowerCase()) ? 'phone' : 'notes';
+        return { id: s.id, name: s.name, phone: s.phone||'', matched,
+          owed: apRound(creditorTotalOwed(s.id)) };
+      }) };
+  }},
+
   find_product: { confirm: false, run(input){
     const entries = buildProductSuggestionEntries(searchTokens(String(input.query||'')));
     /* Spelling found nothing: hand the model the catalogue's real names
@@ -51272,6 +51299,100 @@ const ASSISTANT_TOOLS = {
       if(amount<=0) throw new Error('The amount must be above zero.');
       addCashReceipt(input.account, amount, input.category, input.description||'', input.date || todayISO());
       return { done: true, recorded: amount, category: input.category };
+    }},
+
+  /* One current price per product+variant+supplier -- the Registry's own
+     rule (pr_save): saving REPLACES that supplier's previous entry, and
+     the row is assembled by buildVariantPriceRow, the same builder the
+     Registry and the sourcing funnel use. A supplier_name not on file
+     becomes a NEW supplier -- said plainly on the card -- through the
+     same two-save gate the graduation uses, because a price row naming
+     a supplier that never reached the server is a dangling foreign key. */
+  add_supplier_price: { confirm: true,
+    summary(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      const vi = input.variant_index==null ? null : input.variant_index;
+      const label = p ? productVariantLabel(p, vi) : String(input.product_id||'');
+      const sup = input.supplier_id
+        ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
+        : supFindDuplicate(String(input.supplier_name||''), null);
+      const supBit = sup ? sup.name
+        : String(input.supplier_name||'').trim() + ' (NEW — they will be added as a supplier)';
+      const unit = String(input.unit||'').trim() || 'unit';
+      let priceBit = fmtUGX(apRound(input.price_per_unit)) + ' per ' + unit;
+      const pieces = piecesPerUnitOrNull(input.pieces_per_unit);
+      if(pieces) priceBit += ' (' + pieces + ' pieces)';
+      if(input.pack_qty && input.price_per_pack){
+        priceBit += ', ' + fmtUGX(apRound(input.price_per_pack)) + ' for a '
+          + (String(input.pack_unit||'').trim()||'pack') + ' of ' + Number(input.pack_qty);
+      }
+      const existing = sup ? (data.prices||[]).find(r=> r.productId===input.product_id
+        && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id) : null;
+      return 'Price for ' + label + ' — ' + supBit + ': ' + priceBit + '.'
+        + (existing ? ' Replaces their current entry.' : ' A new Registry entry.');
+    },
+    async run(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      if(!p) throw new Error('No product with that id — use find_product first.');
+      const vi = input.variant_index==null ? null : input.variant_index;
+      const hasVariants = p.type==='variable' && p.variants && p.variants.length;
+      if(hasVariants && vi==null)
+        throw new Error(p.name + ' has variants — ask which type and pass its variant_index.');
+      if(vi!=null && !(hasVariants && p.variants[vi]))
+        throw new Error(p.name + ' has no variant ' + vi + '.');
+      const unit = String(input.unit||'').trim();
+      if(!unit) throw new Error('Say the unit the price is for (piece, dozen, bag...).');
+      const unitPrice = Number(input.price_per_unit);
+      if(!(unitPrice > 0)) throw new Error('The price per ' + unit + ' must be above zero.');
+      const packUnit = String(input.pack_unit||'').trim();
+      const packQty = Number(input.pack_qty)||0;
+      const packPrice = Number(input.price_per_pack)||0;
+      if((packUnit || packQty || packPrice) && !(packUnit && packQty > 1 && packPrice > 0))
+        throw new Error('A pack price needs all three: the pack unit, how many ' + unit
+          + 's it holds (more than one), and its price.');
+      /* Resolve or create the supplier. Creation rides the graduation's
+         discipline: server-issued id, saved and CONFIRMED landed before
+         any price row may point at it. */
+      let sup = input.supplier_id
+        ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
+        : supFindDuplicate(String(input.supplier_name||''), null);
+      if(input.supplier_id && !sup) throw new Error('No supplier with that id — use find_supplier first.');
+      let supplierCreated = false;
+      if(!sup){
+        const typed = String(input.supplier_name||'').trim();
+        if(!typed) throw new Error('Say which supplier this price is from.');
+        const id = firstFreeEntityId('S', 3, data.suppliers,
+          await issueEntityId('supplier', 'S', 3, data.suppliers));
+        sup = { id, name: typed, phone: '', location: '',
+          notes: 'Added from the assistant while recording a price' };
+        data.suppliers.push(sup);
+        supplierCreated = true;
+        await saveData();
+        if(!(lastSynced && lastSynced.suppliers && lastSynced.suppliers[String(id)])){
+          return { done: false, supplier_created: sup.name,
+            note: 'The new supplier is saved, but the price could not follow before the connection catches up — say the price again in a moment, or add it from the Price Registry.' };
+        }
+      }
+      const tiers = [{ minQty: 1, price: unitPrice }];
+      if(packQty) tiers.push({ minQty: packQty, price: packPrice / packQty });
+      const record = buildVariantPriceRow({ productId: p.id, variantIdx: vi, supplierId: sup.id,
+        tiers, pack: { unit, packUnit, packQty, piecesPerUnit: input.pieces_per_unit },
+        sku: input.supplier_sku, date: todayISO() });
+      const dups = (data.prices||[]).filter(r=> r.productId===p.id
+        && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id);
+      const keep = dups[0];
+      data.prices = data.prices.filter(r=> !dups.includes(r));
+      data.prices.push({ ...record, id: keep ? keep.id : allocRowId('price'),
+        outOfStock: keep ? !!keep.outOfStock : false,
+        outOfStockSince: keep ? (keep.outOfStockSince||null) : null });
+      saveData();
+      const out = { done: true, supplier: sup.name, supplier_created: supplierCreated,
+        product: productVariantLabel(p, vi), replaced: !!keep, unit,
+        retail: record.retail==null ? null : apRound(record.retail),
+        wholesale: record.wholesale==null ? null : apRound(record.wholesale) };
+      if(packQty && (packPrice / packQty) > unitPrice)
+        out.warning = 'The pack works out dearer per ' + unit + ' than buying one — check the figures were heard right.';
+      return out;
     }},
 
   add_sourcing_lead: { confirm: true,

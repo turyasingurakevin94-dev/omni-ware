@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: eighteen entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -42,6 +42,10 @@ const data = {
 let nextId = 100;
 let saveCalls = 0;
 let toasts = [];
+/* The sync engine's "this row reached the server" record, held so the
+   offline case can be staged: a Proxy says every id landed; swapping in
+   an empty object says none did. */
+const lastSyncedStub = { suppliers: new Proxy({}, { get: () => true }) };
 
 const NAMES = [
   'buildQuoteRecord', 'savedQuoteTotal', 'quoteItemSellPrice', 'invoiceBalanceDue',
@@ -63,6 +67,8 @@ const NAMES = [
   'rankedPriceRows', 'productPriceRows', 'suggestedSellingPrice', 'effectiveMarkupRule',
   'captureSourcingLead', 'captureSourcingLeadAndSave', 'findSourcingLeadByText',
   'sourcingLeadsAll', 'sourcingCaptureToast', 'leadDistinctAskers',
+  'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull',
+  'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId',
   'todayISO', 'accountLabel',
 ];
 const scope = compileScope([
@@ -88,6 +94,8 @@ const scope = compileScope([
   saveData: () => { saveCalls++; },
   allocRowId: () => nextId++,
   issueRowId: async () => nextId++,
+  issueEntityId: async () => 'S900',
+  lastSynced: lastSyncedStub,
   toast: (m) => toasts.push(m),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
   // Statement functions have their own test files; the executors that
@@ -107,11 +115,12 @@ const run = (name, input) => T[name].run(input || {});
 /* ---------- 1. the gate labels are right ------------------------------ */
 {
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
-    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_sourcing_lead'];
-  const reads = ['find_customer', 'find_product', 'customer_statement', 'list_debtors',
-    'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
+    'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_supplier_price',
+    'add_sourcing_lead'];
+  const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
+    'list_debtors', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details'];
-  t.check(Object.keys(T).length === 18, `eighteen executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 20, `twenty executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -119,7 +128,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 18 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 20 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -471,6 +480,83 @@ const run = (name, input) => T[name].run(input || {});
     t.check(!!threw && /find_product/.test(threw),
       'an unresolved product id is an error naming the fix');
     t.check(data.savedQuotes.length === 1, 'and no half-built quote was pushed');
+
+    /* ---------- 8b. the price registry, by voice ------------------- */
+    /*
+     * "Add jjaja walu as supplier for brushes 2 inch, he sells each
+     * dozen at 8,000." The row must be the Registry's own row: built by
+     * buildVariantPriceRow, one current price per product+variant+
+     * supplier (REPLACE, keeping the row id and its out-of-stock flag),
+     * and a new supplier goes through the graduation's two-save gate --
+     * no price row may name a supplier the server never confirmed.
+     */
+    data.suppliers = [{ id: 'S1', name: 'Kampala Steel', phone: '0700', location: 'Kisenyi', notes: '' }];
+    data.products = [
+      { id: 'P10', name: 'Brushes 2 inch', type: 'simple', category: 'Tools' },
+      { id: 'P11', name: 'Mulper Hinges', type: 'variable', category: 'Fittings',
+        variants: [{ combo: { Type: 'Normal' } }, { combo: { Type: 'Gold' } }] },
+    ];
+    data.prices = [];
+
+    const fs1 = run('find_supplier', { query: 'kampala steel' });
+    t.check(fs1.exact_match === true && fs1.matches[0].id === 'S1' && fs1.matches[0].matched === 'name',
+      'a supplier is found the way a customer is, exact tier first');
+    const fsMiss = run('find_supplier', { query: 'jaja walu' });
+    t.check(fsMiss.matches.length === 0 && fsMiss.all_names.length === 1
+      && fsMiss.all_names[0].name === 'Kampala Steel',
+      'and a miss returns the real supplier names on file, never a guess');
+
+    t.check(T.add_supplier_price.confirm === true, 'writing a price demands the card');
+    const card = T.add_supplier_price.summary({ product_id: 'P10', supplier_name: 'Jjaja Walu',
+      unit: 'Dozen', price_per_unit: 8000, pieces_per_unit: 12 });
+    t.check(/Jjaja Walu \(NEW/.test(card) && /8,000 UGX per Dozen \(12 pieces\)/.test(card),
+      `the card says NEW supplier and the price in words (got "${card}")`);
+
+    const dozen = await run('add_supplier_price', { product_id: 'P10', supplier_name: 'Jjaja Walu',
+      unit: 'Dozen', price_per_unit: 8000, pieces_per_unit: 12 });
+    t.check(dozen.done === true && dozen.supplier_created === true && dozen.supplier === 'Jjaja Walu',
+      'the dozen case lands: a new supplier, created and confirmed synced first');
+    t.check(data.suppliers.length === 2 && data.suppliers[1].id === 'S900',
+      `with the server-issued S-number (got ${data.suppliers[1] && data.suppliers[1].id})`);
+    const row = data.prices[0];
+    t.check(row && row.unit === 'Dozen' && row.retail === 8000 && row.wholesale === null
+      && row.piecesPerUnit === 12 && row.supplierId === 'S900',
+      `and the Registry row is the Registry's own shape (got ${JSON.stringify(row)})`);
+    t.check(row.tiers.length === 1 && row.tiers[0].minQty === 1 && row.tiers[0].price === 8000,
+      'one tier: 8,000 for one dozen');
+
+    const packed = await run('add_supplier_price', { product_id: 'P10', supplier_id: 'S1',
+      unit: 'Pc', price_per_unit: 700, pack_unit: 'Ctn', pack_qty: 100, price_per_pack: 60000 });
+    t.check(packed.retail === 700 && packed.wholesale === 600,
+      `a pack quote derives the per-piece rate in code, never in the model (got ${JSON.stringify(packed)})`);
+
+    const before = data.prices.find(r=> r.supplierId === 'S1');
+    before.outOfStock = true; before.outOfStockSince = '2026-08-01';
+    const again = await run('add_supplier_price', { product_id: 'P10', supplier_id: 'S1',
+      unit: 'Pc', price_per_unit: 650 });
+    const after = data.prices.find(r=> r.supplierId === 'S1');
+    t.check(again.replaced === true && after.id === before.id && after.retail === 650
+      && after.outOfStock === true && after.outOfStockSince === '2026-08-01',
+      'a new figure REPLACES the old row — same id, out-of-stock flag untouched');
+    t.check(data.prices.filter(r=> r.supplierId === 'S1' && r.productId === 'P10').length === 1,
+      'one current price per product+supplier, never a pile');
+
+    let threwV = null;
+    try{ await run('add_supplier_price', { product_id: 'P11', supplier_id: 'S1', unit: 'Pc', price_per_unit: 500 }); }
+    catch(e){ threwV = e.message; }
+    t.check(!!threwV && /variant/.test(threwV),
+      'a variable product without its variant is refused, naming the fix');
+
+    lastSyncedStub.suppliers = {};
+    const offline = await run('add_supplier_price', { product_id: 'P10', supplier_name: 'Mbale Tools',
+      unit: 'Pc', price_per_unit: 900 });
+    t.check(offline.done === false && offline.supplier_created === 'Mbale Tools',
+      'offline, the supplier is saved but the price says it could not follow');
+    t.check(data.suppliers[2].id === 'S901'
+      && !data.prices.some(r=> r.supplierId === 'S901'),
+      'so no price row dangles on a supplier the server never confirmed');
+    lastSyncedStub.suppliers = new Proxy({}, { get: () => true });
+    t.check(data.customers.length === 0, 'and none of this ever touched a customer');
 
     /* ---------- 9. reads stay diet -------------------------------- */
     data.customers = Array.from({ length: 30 }, (_, i) => ({
