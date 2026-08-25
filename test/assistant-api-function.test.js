@@ -94,6 +94,8 @@ const pkg = read('package.json');
     'the prompt teaches the terrain: a miss hands the model the real names, and its pick is said back inside the answer');
   t.check(/ask the owner to spell the name/.test(src),
     'with spelling out the name as the stated last resort');
+  t.check(/sells wholesale first/.test(src) && /added on each pack/.test(src),
+    'and the shop’s economics: wholesale is the default answer, and a fixed wholesale markup is per pack — not a mismatch to flag');
 }
 
 /* ---------- 5. eighteen tools, writes distinguishable ----------------- */

@@ -50866,6 +50866,18 @@ function apCustomerByName(q){
   const needle = String(q||'').trim().toLowerCase();
   return (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === needle) || null;
 }
+/* Which side of the counter a price question means. The quote picker's
+   ipSuggestionPriceNote picks retail-first because it describes the
+   SUPPLIER'S offer; the assistant answers the owner's selling question,
+   and this shop sells wholesale first -- retail is the fallback, used
+   only when a row carries no wholesale side. All three price sites
+   (find_product hints, recommended_price, create_quote defaults) share
+   this pick so the spoken figure and the drafted quote never differ. */
+function apPriceBasis(best){
+  if(!best) return { kind: null, cost: null };
+  if(best.wholesale!=null) return { kind: 'wholesale', cost: best.wholesale };
+  return { kind: 'retail', cost: best.retail };
+}
 
 /* ---- the tools -----------------------------------------------------
    One entry per schema in api/assistant.js: {confirm, summary(input),
@@ -50922,8 +50934,7 @@ const ASSISTANT_TOOLS = {
     }
     return { matches: entries.slice(0,5).map(({p, variantIdx})=>{
       const best = rankedPriceRows(p.id, variantIdx)[0] || null;
-      const kind = best ? (best.retail!=null ? 'retail' : 'wholesale') : null;
-      const cost = best ? (best.retail!=null ? best.retail : best.wholesale) : null;
+      const { kind, cost } = apPriceBasis(best);
       const sell = best ? suggestedSellingPrice(p, cost, kind, variantIdx, Number(best.packQty)||0) : null;
       return { product_id: p.id, variant_index: variantIdx,
         name: productVariantLabel(p, variantIdx),
@@ -51048,16 +51059,22 @@ const ASSISTANT_TOOLS = {
     const label = productVariantLabel(p, vi);
     if(!best) return { no_price_on_file: true, name: label,
       in_stock: getStockQty(p.id, vi) };
-    /* The stage view's own arithmetic (ipSuggestionPriceNote): the tier
-       this supplier actually offers decides which markup rule is asked. */
-    const kind = best.retail!=null ? 'retail' : 'wholesale';
-    const cost = best.retail!=null ? best.retail : best.wholesale;
-    const sell = suggestedSellingPrice(p, cost, kind, vi, Number(best.packQty)||0);
+    const { kind, cost } = apPriceBasis(best);
+    const packQty = Number(best.packQty)||0;
+    /* The retail side rides along whenever the row carries one, so
+       "and the retail price?" never needs a second call. */
+    const extras = {};
+    if(kind==='wholesale' && best.retail!=null){
+      extras.retail_cost = apRound(best.retail);
+      const rSell = suggestedSellingPrice(p, best.retail, 'retail', vi, packQty);
+      if(rSell!=null) extras.retail_sell = apRound(rSell);
+    }
+    const sell = suggestedSellingPrice(p, cost, kind, vi, packQty);
     if(sell==null) return { no_markup_rule: true, name: label, unit: best.unit||'',
-      cost: apRound(cost), basis: kind,
+      cost: apRound(cost), basis: kind, ...extras,
       note: 'A cost is on file but no ' + kind + ' markup rule — set one in Products and this becomes a sell price.' };
     return { name: label, unit: best.unit||'', cost: apRound(cost),
-      recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi) };
+      recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi), ...extras };
   }},
 
   /* The dossier behind "what do we know about X": stock, the suppliers
@@ -51069,9 +51086,14 @@ const ASSISTANT_TOOLS = {
   product_details: { confirm: false, run(input){
     const p = (data.products||[]).find(x=> x.id === input.product_id);
     if(!p) throw new Error('No product with that id — use find_product first.');
-    const ruleWords = (r)=> !r ? null
+    /* A fixed WHOLESALE markup is money added on each pack -- that is
+       what suggestedSellingPrice's value/packQty spread means -- so the
+       words must say pack, or the model reads a false mismatch between
+       rule and figure and sends the owner to check a healthy setting. */
+    const ruleWords = (kind, r)=> !r ? null
       : (r.type==='fixed'
-          ? apRound(r.value).toLocaleString('en-US') + ' UGX added per unit'
+          ? apRound(r.value).toLocaleString('en-US')
+            + (kind==='wholesale' ? ' UGX added on each pack' : ' UGX added per unit')
           : r.value + '% on cost')
         + (r.source==='variant' ? ' (set on this variant itself)' : '');
     const hasVariants = p.type==='variable' && p.variants && p.variants.length;
@@ -51094,14 +51116,14 @@ const ASSISTANT_TOOLS = {
         suppliers_out_of_stock: productPriceRows(p.id, vi).length - ranked.length };
       ['retail', 'wholesale'].forEach(kind=>{
         const r = effectiveMarkupRule(p, vi, kind);
-        if(r && r.source==='variant') out[kind + '_markup_override'] = ruleWords(r);
+        if(r && r.source==='variant') out[kind + '_markup_override'] = ruleWords(kind, r);
       });
       return out;
     });
     return { name: p.name, category: p.category||'',
       description: p.shortDescription||'', notes: p.notes||'',
-      markup_rules: { retail: ruleWords(effectiveMarkupRule(p, null, 'retail')),
-        wholesale: ruleWords(effectiveMarkupRule(p, null, 'wholesale')) },
+      markup_rules: { retail: ruleWords('retail', effectiveMarkupRule(p, null, 'retail')),
+        wholesale: ruleWords('wholesale', effectiveMarkupRule(p, null, 'wholesale')) },
       variant_count: idxs.length, variants };
   }},
 
@@ -51125,8 +51147,7 @@ const ASSISTANT_TOOLS = {
         const qty = Number(it.qty)||0;
         if(qty<=0) throw new Error('Quantity for ' + p.name + ' must be above zero.');
         const best = rankedPriceRows(p.id, vi)[0] || null;
-        const kind = best ? (best.retail!=null ? 'retail' : 'wholesale') : null;
-        const cost = best ? (best.retail!=null ? best.retail : best.wholesale) : null;
+        const { kind, cost } = apPriceBasis(best);
         let sell = it.sell_price!=null ? Number(it.sell_price)
           : (best ? suggestedSellingPrice(p, cost, kind, vi, Number(best.packQty)||0) : null);
         if(sell==null) throw new Error('No price on file for ' + productVariantLabel(p, vi) + ' — say the selling price.');

@@ -73,6 +73,7 @@ const scope = compileScope([
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
   extractFunction(src, 'apCustomerByName', 'index.html'),
+  extractFunction(src, 'apPriceBasis', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -231,10 +232,12 @@ const run = (name, input) => T[name].run(input || {});
     'a variant with no price says NO PRICE — it does not borrow a sibling’s');
 
   const priced = run('recommended_price', { product_id: 'P1', variant_index: 1 });
-  t.check(priced.cost === 8000 && priced.basis === 'retail',
-    `the priced one answers from its own row (got ${JSON.stringify(priced)})`);
-  t.check(priced.no_markup_rule === undefined || !priced.no_markup_rule || priced.note,
-    'and when no markup rule exists it says so with what to do, never a guessed figure');
+  t.check(priced.cost === 7000 && priced.basis === 'wholesale',
+    `the priced one answers from its own row, WHOLESALE side first — this shop wholesales (got ${JSON.stringify(priced)})`);
+  t.check(priced.retail_cost === 8000,
+    'with the retail cost riding along for the day the owner asks for retail');
+  t.check(priced.no_markup_rule === true && /wholesale/.test(priced.note),
+    'and no wholesale rule on file is said, with what to do, never a guessed figure');
 
   let threw = false;
   try{ run('recommended_price', { product_id: 'P999' }); } catch(e){ threw = true; }
@@ -265,7 +268,10 @@ const run = (name, input) => T[name].run(input || {});
         { combo: { Type: 'Soft Close' } },
       ] },
     { id: 'P2', name: 'Cement', type: 'simple', category: 'Building',
-      wholesaleMarkupType: 'percent', wholesaleMarkupValue: 10 },
+      wholesaleMarkupType: 'percent', wholesaleMarkupValue: 10,
+      retailMarkupType: 'percent', retailMarkupValue: 20 },
+    { id: 'P3', name: 'G-MAN Bow Saw', type: 'simple', category: 'Furniture',
+      wholesaleMarkupType: 'fixed', wholesaleMarkupValue: 10000 },
   ];
   data.prices = [
     { id: 1, productId: 'P1', variantIdx: 0, supplierId: 'S2', retail: 9000, wholesale: null,
@@ -277,8 +283,10 @@ const run = (name, input) => T[name].run(input || {});
       unit: 'Pc', packUnit: '', packQty: 0, date: '2026-07-01', outOfStock: true },
     { id: 4, productId: 'P1', variantIdx: 1, supplierId: 'S1', retail: 10000, wholesale: null,
       unit: 'Pc', packUnit: '', packQty: 0, date: '2026-08-10' },
-    { id: 5, productId: 'P2', variantIdx: null, supplierId: 'S2', retail: null, wholesale: 32000,
+    { id: 5, productId: 'P2', variantIdx: null, supplierId: 'S2', retail: 36000, wholesale: 32000,
       unit: 'Bag', packUnit: '', packQty: 0, date: '2026-08-15' },
+    { id: 6, productId: 'P3', variantIdx: null, supplierId: 'S1', retail: null, wholesale: 9500,
+      unit: 'Pc', packUnit: 'Bundle', packQty: 10, date: '2026-08-24' },
   ];
   data.stock = { 'P1::0': 140, 'P1::1': 6, 'P2': 55 };
 
@@ -318,8 +326,26 @@ const run = (name, input) => T[name].run(input || {});
 
   const simple = run('product_details', { product_id: 'P2' });
   t.check(simple.variant_count === 1 && simple.variants[0].variant_index === null
-    && simple.variants[0].recommended_sell === 35200,
-    `a simple product is one block, priced off its wholesale rule (got ${JSON.stringify(simple.variants[0].recommended_sell)})`);
+    && simple.variants[0].recommended_sell === 35200 && simple.variants[0].basis === 'wholesale',
+    `a simple product is one block, priced WHOLESALE first even when both sides exist (got ${JSON.stringify(simple.variants[0].recommended_sell)})`);
+  t.check(simple.variants[0].retail_cost === 36000 && simple.variants[0].retail_sell === 43200,
+    'with the retail figures riding along for the day the owner asks for retail');
+  t.check(simple.markup_rules.wholesale === '10% on cost' && simple.markup_rules.retail === '20% on cost',
+    'both rules named in words');
+
+  /* The live G-MAN case, verbatim: a fixed wholesale markup is added on
+     the PACK and spread across its pieces — 9,500 + 10,000/10 = 10,500.
+     The words must say pack too, or the model reads a false mismatch
+     and sends the owner to check a setting that was healthy all along. */
+  const saw = run('product_details', { product_id: 'P3' });
+  t.check(saw.variants[0].recommended_sell === 10500 && saw.variants[0].cost === 9500,
+    `a fixed wholesale markup spreads across the bundle (got ${JSON.stringify(saw.variants[0].recommended_sell)})`);
+  t.check(saw.markup_rules.wholesale === '10,000 UGX added on each pack',
+    'and the rule is WORDED per pack, so the words and the figure agree');
+
+  const hint = run('find_product', { query: 'Cement' });
+  t.check(hint.matches[0].cost === 32000 && hint.matches[0].suggested_sell_price === 35200,
+    'find_product price hints stand on the same wholesale-first pick');
 
   let threw2 = false;
   try{ run('product_details', { product_id: 'P999' }); } catch(e){ threw2 = true; }
