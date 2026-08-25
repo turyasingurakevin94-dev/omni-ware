@@ -73,13 +73,10 @@ const scope = compileScope([
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
   extractFunction(src, 'apCustomerByName', 'index.html'),
-  extractFunction(src, 'apNameKey', 'index.html'),
-  extractFunction(src, 'apEditDistance', 'index.html'),
-  extractFunction(src, 'apFuzzyFind', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS, apNameKey, apFuzzyFind}; }',
+  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS}; }',
 ], {
   data,
   /* A benign element for every id: the reused functions peek at tabs
@@ -140,31 +137,24 @@ const run = (name, input) => T[name].run(input || {});
     'a full name is an exact match');
   t.check(exact.matches[0].owes === 370000, 'carrying what they owe, rounded');
   t.check(run('find_customer', { query: 'nobody at all' }).matches.length === 0,
-    'a miss returns nothing');
+    'a miss returns no matches — the name list rides separately, never as a match');
   t.check(data.customers.length === 3,
     'and searching NEVER creates a customer — the resolveInvoiceCustomer trap stays out of this path');
 }
 
-/* ---------- 2b. names matched by SOUND -------------------------------- */
+/* ---------- 2b. a miss hands over the real names ---------------------- */
 /*
  * The shop's names are Luganda as often as English, and the voice
  * recognizer writes what it hears: "my long go" for Mulongo, "chali
- * wajala" for Kyaliwajjala, r and l swapping, doubled letters gone.
- * A search that needs the letters to match looks broken precisely on
- * the shop's own vocabulary — so when spelling finds nothing, sound
- * does, FLAGGED, and the floor matters more than the ranking: a fuzzy
- * tier that matches something for every query turns every miss into a
- * wrong customer.
+ * wajala" for Kyaliwajjala. A code-side phonetic key that guessed the
+ * match was tried and made things WORSE — wrong picks on the real
+ * catalogue, real names still missed (bc4a4d0). So the guessing moved
+ * to the model: a miss now returns the actual names on file, the model
+ * picks the one that sounds right and says it back inside the answer.
+ * Code keeps only recall and honesty — full list, hard cap, truncated
+ * flag, and each substring match naming the field it came through.
  */
 {
-  const { apNameKey } = scope.names();
-  const same = (a, b, why)=> t.check(apNameKey(a) === apNameKey(b), why + ` (${apNameKey(a)} vs ${apNameKey(b)})`);
-  same('Kyaliwajjala', 'chali wajala', 'ky and ch are one sound, and doubled letters collapse');
-  same('Mulper', 'mulpel', 'r and l swap freely');
-  same('Jjaja', 'gaga', 'g blurs into j, doubles collapse');
-  t.check(apNameKey('Cement') !== apNameKey('Mulongo'),
-    'while genuinely different names keep different keys');
-
   data.customers = [
     { id: 1, name: 'Mulongo Hardware', phone: '0700111222', debt: 2380000, debtLog: [], notes: '' },
     { id: 2, name: 'Onora Peter', phone: '0788999000', debt: 370000, debtLog: [], notes: '' },
@@ -172,25 +162,31 @@ const run = (name, input) => T[name].run(input || {});
   ];
 
   const heard = run('find_customer', { query: 'my long go' });
-  t.check(heard.matches.length === 1 && heard.matches[0].name === 'Mulongo Hardware',
-    `"my long go" finds Mulongo (got ${JSON.stringify(heard.matches.map(m=>m.name))})`);
-  t.check(heard.close_match === true && heard.exact_match === false,
-    'flagged as a sound-alike GUESS — the model must say the name back before using the id');
+  t.check(heard.matches.length === 0 && Array.isArray(heard.all_names),
+    'a name heard by sound is never guessed at in code — the real names come back instead');
+  t.check(heard.all_names.length === 3 && heard.all_names.some(n=> n.id === 1 && n.name === 'Mulongo Hardware'),
+    'every name on file WITH its id, so the model can pick Mulongo and act on the real record');
+  t.check(heard.truncated === false, 'a small book is complete');
+  t.check(!('close_match' in heard),
+    'and the close_match guess flag is gone — there is nothing left to guess');
 
   const nick = run('find_customer', { query: 'Kadde' });
   t.check(nick.matches.length === 1 && nick.matches[0].name === 'Ssebunya Joseph',
     'a nickname written in the notes finds its customer — how the owner teaches the assistant');
-  t.check(nick.close_match === false,
-    'and a nickname is a real substring hit, not a guess');
+  t.check(nick.matches[0].matched === 'notes',
+    'and the match says it came through the notes, so the model can say so aloud');
+  t.check(run('find_customer', { query: 'Onora' }).matches[0].matched === 'name',
+    'a plain name hit says name');
+  t.check(run('find_customer', { query: '0788999' }).matches[0].matched === 'phone',
+    'a phone hit says phone');
 
-  const clean = run('find_customer', { query: 'Onora' });
-  t.check(clean.close_match === false,
-    'a correctly spelt search never carries the guess flag');
-
-  t.check(run('find_customer', { query: 'xyzqwv' }).matches.length === 0,
-    'gibberish still finds NOBODY — the floor holds');
-  t.check(run('find_customer', { query: 'Cement' }).matches.length === 0,
-    'and a word that is simply a different name does not fall into the nearest customer');
+  const keep = data.customers;
+  data.customers = Array.from({ length: 310 }, (_, i) =>
+    ({ id: i + 1, name: 'Customer ' + (i + 1), phone: '', debt: 0, debtLog: [], notes: '' }));
+  const cap = run('find_customer', { query: 'zzz nothing here' });
+  t.check(cap.all_names.length === 300 && cap.truncated === true,
+    'a book bigger than the cap SAYS it was cut, instead of silently ending at the Ms');
+  data.customers = keep;
 
   data.products = [
     { id: 'P1', name: 'Mulper Hinges', type: 'variable', category: 'Fittings',
@@ -199,16 +195,16 @@ const run = (name, input) => T[name].run(input || {});
   ];
   data.prices = [];
   const fp = run('find_product', { query: 'mulpel hinges' });
-  t.check(fp.matches.length === 2 && fp.matches.every(m=> m.product_id === 'P1'),
-    `"mulpel hinges" finds Mulper Hinges, expanded to its variants (got ${fp.matches.length})`);
-  t.check(fp.close_match === true, 'flagged, since the spelling never matched');
-  const rope = run('find_product', { query: 'chali wajala rope' });
-  t.check(rope.matches.length === 1 && rope.matches[0].product_id === 'P3',
-    '"chali wajala" reaches Kyaliwajjala — two spoken halves of one name, rescued as a pair');
-  t.check(run('find_product', { query: 'chali wajala nails' }).matches.length === 0,
-    'while a word the pairs cannot rescue sinks the guess — half-right must not match the wrong record');
-  t.check(run('find_product', { query: 'mulper' }).close_match === false,
-    'while a spelt-right product search stays unflagged');
+  t.check(fp.matches.length === 0 && Array.isArray(fp.product_names),
+    'a misheard product is not guessed either — the catalogue names come back');
+  t.check(fp.product_names.includes('Mulper Hinges') && fp.product_names.includes('Kyaliwajjala Rope'),
+    'all of them, spelt exactly as the shop spells them');
+  t.check(fp.truncated === false && !('close_match' in fp), 'complete, and no guess flag');
+  const again = run('find_product', { query: 'Mulper Hinges' });
+  t.check(again.matches.length === 2 && again.matches.every(m=> m.product_id === 'P1'),
+    're-calling with the picked spelling resolves variants and prices down the normal path');
+  t.check(!/apFuzzyFind|apNameKey|apEditDistance/.test(src),
+    'and the phonetic guesser is genuinely gone from the app — recall belongs to code, ranking to the model');
 }
 
 /* ---------- 3. the recommended price, honestly ------------------------ */

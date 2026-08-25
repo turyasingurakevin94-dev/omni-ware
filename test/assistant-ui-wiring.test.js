@@ -107,8 +107,8 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/AP_MAX_THREAD/.test(trim), 'history is capped');
   t.check(/typeof m\.content === 'string'/.test(trim),
     'and trimmed only at a plain-string user turn — a tool_use split from its result is an API error on the next call');
-  t.check(/AP_MAX_THREAD = 24/.test(code) && /AP_MAX_STEPS = 8/.test(code),
-    'both bounds are named constants');
+  t.check(/AP_MAX_THREAD = 24/.test(code) && /AP_MAX_STEPS = 10/.test(code),
+    'both bounds are named constants — steps at 10, since a product heard by sound costs a re-call');
 }
 
 /* ---------- 7. voice: two ways, never a hot mic ----------------------- */

@@ -89,9 +89,11 @@ const pkg = read('package.json');
   t.check(/\[Today is YYYY-MM-DD\]/.test(promptBlock),
     'and the prompt tells the model to read it from there');
   t.check(!/currentShopId|shopId/.test(src), 'no shop identity in the prefix either');
-  t.check(/close_match is a sound-alike guess/.test(src)
-    && /never write money against a close match/.test(src),
-    'the prompt teaches the terrain: a sound-alike match must be said back, and money never moves on one unconfirmed');
+  t.check(/all_names or product_names/.test(src)
+    && /say the resolved name inside your answer/.test(src),
+    'the prompt teaches the terrain: a miss hands the model the real names, and its pick is said back inside the answer');
+  t.check(/ask the owner to spell the name/.test(src),
+    'with spelling out the name as the stated last resort');
 }
 
 /* ---------- 5. seventeen tools, writes distinguishable ---------------- */
