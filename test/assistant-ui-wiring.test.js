@@ -193,12 +193,25 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(fn.apExtractChoices('Which?\n[choices: a | b | c | d | e]').choices.length === 4,
     'capped at four — chips, not a menu');
 
+  const wrapped = fn.apExtractChoices('Which side?\n[choices: Retail per roll | Wholesale |\nBoth]');
+  t.check(wrapped.choices.length === 3 && wrapped.choices[2] === 'Both'
+    && !/\[choices/i.test(wrapped.clean),
+    'a marker the model wraps across lines still parses — the plumbing must never show');
+  const spaced = fn.apExtractChoices('Which?\n[Choices : Yes | No] Thanks.');
+  t.check(spaced.choices.length === 2 && spaced.choices[0] === 'Yes'
+    && /Thanks\.$/.test(spaced.clean) && !/\[/.test(spaced.clean),
+    'capitals, stray spaces, and a sentence after the marker all survive');
+  const twice = fn.apExtractChoices('[choices: old | stale]\nStill deciding.\n[choices: 10,000 | 100,000]');
+  t.check(twice.choices.length === 2 && twice.choices[0] === '10,000'
+    && !/\[choices/i.test(twice.clean) && /Still deciding\./.test(twice.clean),
+    'with two markers the LAST supplies the buttons and BOTH leave the screen');
+
   const rc = extractFunction(src, 'apRenderChoices', 'index.html');
   t.check(/apRecognition\.abort\(\)/.test(rc) && /apSend\(c\)/.test(rc),
     'a tap kills any live listen before it answers — no half-heard duplicate');
   t.check(/apClearChoices\(\);/.test(extractFunction(src, 'apSend', 'index.html')),
     'and any send clears the buttons — an answered question keeps no stale options');
-  t.check(/\[choices:/.test(extractFunction(src, 'apSpeak', 'index.html')),
+  t.check(extractFunction(src, 'apSpeak', 'index.html').includes('choices'),
     'the choices line is never spoken');
   t.check(/\.ap-choices\{[^}]*flex/.test(src), 'and the chip row is styled with the panel');
 }
