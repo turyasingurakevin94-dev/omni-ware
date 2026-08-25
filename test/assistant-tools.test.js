@@ -67,7 +67,7 @@ const NAMES = [
   'rankedPriceRows', 'productPriceRows', 'suggestedSellingPrice', 'effectiveMarkupRule',
   'captureSourcingLead', 'captureSourcingLeadAndSave', 'findSourcingLeadByText',
   'sourcingLeadsAll', 'sourcingCaptureToast', 'leadDistinctAskers',
-  'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull',
+  'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull', 'tiersFromLegacyRow',
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId',
   'todayISO', 'accountLabel',
 ];
@@ -81,6 +81,7 @@ const scope = compileScope([
   extractFunction(src, 'apCustomerByName', 'index.html'),
   extractFunction(src, 'apPriceBasis', 'index.html'),
   extractFunction(src, 'apRuleWords', 'index.html'),
+  extractFunction(src, 'apSupplierPriceParts', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -542,7 +543,9 @@ const run = (name, input) => T[name].run(input || {});
     const after = data.prices.find(r=> r.supplierId === 'S1');
     t.check(again.replaced === true && after.id === before.id && after.retail === 650
       && after.outOfStock === true && after.outOfStockSince === '2026-08-01',
-      'a new figure REPLACES the old row — same id, out-of-stock flag untouched');
+      'a new single price lands on the same row — id and out-of-stock flag untouched');
+    t.check(after.wholesale === 600 && after.tiers.length === 2,
+      'and the carton rung SURVIVES it — one rung restated never erases the other');
     t.check(data.prices.filter(r=> r.supplierId === 'S1' && r.productId === 'P10').length === 1,
       'one current price per product+supplier, never a pile');
 
@@ -613,6 +616,63 @@ const run = (name, input) => T[name].run(input || {});
     try{ await run('set_markup_rule', { product_id: 'P10' }); }
     catch(e){ threwM = e.message; }
     t.check(!!threwM, 'and so is a call carrying no rule at all');
+
+    /* ---------- 8d. two quotes, two rungs -------------------------- */
+    /*
+     * The live failure, verbatim. "Each pack at 100,000, a carton has
+     * 10 of them" is one rung plus PACKING — no carton price exists to
+     * invent. "A carton becomes 800,000" is the SECOND rung of the same
+     * ladder: saving it must keep the 100,000 single rung, because the
+     * two are independent quotes. Updates merge into the ladder on
+     * file; only what is restated changes.
+     */
+    data.products.push({ id: 'P12', name: 'Chair Pin Small', type: 'simple', category: 'Fittings' });
+
+    const card1 = T.add_supplier_price.summary({ product_id: 'P12', supplier_name: 'Reagan Stuart',
+      unit: 'Pack', price_per_unit: 100000, pack_unit: 'Carton', pack_qty: 10 });
+    t.check(/no pack price quoted/.test(card1),
+      `packing without a bulk quote says so on the card — nothing invented (got "${card1}")`);
+    const reagan1 = await run('add_supplier_price', { product_id: 'P12', supplier_name: 'Reagan Stuart',
+      unit: 'Pack', price_per_unit: 100000, pack_unit: 'Carton', pack_qty: 10 });
+    const rrow = ()=> data.prices.find(r=> r.productId === 'P12');
+    t.check(reagan1.done === true && reagan1.retail === 100000 && reagan1.wholesale === null
+      && rrow().tiers.length === 1 && rrow().packQty === 10,
+      `packing recorded, carton price NOT invented (got ${JSON.stringify(reagan1)})`);
+
+    const card2 = T.add_supplier_price.summary({ product_id: 'P12', supplier_name: 'Reagan Stuart',
+      pack_unit: 'Carton', pack_qty: 10, price_per_pack: 800000 });
+    t.check(/100,000 UGX per Pack \(kept\)/.test(card2) && /800,000 UGX for a Carton of 10/.test(card2)
+      && /Updates their entry/.test(card2),
+      `the card shows BOTH rungs, the kept one marked (got "${card2}")`);
+    const reagan2 = await run('add_supplier_price', { product_id: 'P12', supplier_name: 'Reagan Stuart',
+      pack_unit: 'Carton', pack_qty: 10, price_per_pack: 800000 });
+    t.check(reagan2.retail === 100000 && reagan2.wholesale === 80000
+      && rrow().tiers.length === 2 && rrow().tiers[0].price === 100000 && rrow().tiers[1].price === 80000,
+      `the carton rate joins the ladder WITHOUT erasing the single price (got ${JSON.stringify(reagan2.tiers)})`);
+    t.check(reagan2.tiers.length === 2 && reagan2.tiers[0].min_qty === 1 && reagan2.tiers[1].min_qty === 10,
+      'and the reply carries the whole ladder to read back');
+
+    const resized = await run('add_supplier_price', { product_id: 'P12', supplier_name: 'Reagan Stuart',
+      pack_unit: 'Carton', pack_qty: 5, price_per_pack: 350000 });
+    t.check(rrow().tiers.length === 2 && rrow().tiers[1].minQty === 5 && rrow().tiers[1].price === 70000
+      && rrow().packQty === 5 && resized.retail === 100000,
+      'a changed pack size takes its old rung with it — a rate for cartons of 10 says nothing about cartons of 5');
+
+    let threwP = null;
+    try{ await run('add_supplier_price', { product_id: 'P12', supplier_id: 'S1', price_per_pack: 50000 }); }
+    catch(e){ threwP = e.message; }
+    t.check(!!threwP && /packing|first entry/.test(threwP),
+      'a bare pack price with nothing on file is refused, naming what is missing');
+    threwP = null;
+    try{ await run('add_supplier_price', { product_id: 'P12', supplier_id: 'S1' }); }
+    catch(e){ threwP = e.message; }
+    t.check(!!threwP && /first entry/.test(threwP),
+      'a first entry still demands the single-quantity price');
+    threwP = null;
+    try{ await run('add_supplier_price', { product_id: 'P12', supplier_name: 'Reagan Stuart' }); }
+    catch(e){ threwP = e.message; }
+    t.check(!!threwP && /Nothing to change/.test(threwP),
+      'while an update saying nothing new is refused rather than re-saved');
 
     /* ---------- 9. reads stay diet -------------------------------- */
     data.customers = Array.from({ length: 30 }, (_, i) => ({

@@ -43,7 +43,7 @@ const SYSTEM_PROMPT = [
   '',
   'Names here are often Luganda or other local names, and a voice transcript writes them as they sound — "my long go" may mean Mulongo. When a name search finds nothing it returns the real names on file instead (all_names or product_names): pick the one that sounds like what was heard, allowing for how a transcript drifts (ky heard as ch, r and l swapping, doubled letters lost, g and j blurring). For a product, call find_product again with the exact name you picked to get its variants and prices; a customer picked from all_names already carries its id. Always say the resolved name inside your answer so a wrong pick is caught at once, and mention when a match came through the notes on a customer (matched: notes — "the one noted as Kadde"). Do not add a did-you-mean round to read-only questions — naming the record in the answer is the check, and every write already shows a confirmation card the owner must approve. If the list is truncated or nothing on it sounds right, ask the owner to spell the name.',
   '',
-  'Supplier prices: add_supplier_price records what a supplier charges — resolve the product with find_product and the supplier with find_supplier first. One current price per supplier per item: saving replaces their previous entry. A supplier_name that is not on file is created as a NEW supplier when the owner confirms the card, so say that back before writing — and never create a supplier from a sound-alike guess: if find_supplier’s names include someone close to what was heard, ask. Prices are per unit ("each dozen at 8,000" is unit Dozen, price_per_unit 8000, pieces_per_unit 12); when a pack rate is quoted ("a carton of 100 at 60,000") pass pack_qty and price_per_pack and the app derives the per-piece figure.',
+  'Supplier prices: add_supplier_price records what a supplier charges — resolve the product with find_product and the supplier with find_supplier first. A supplier_name that is not on file is created as a NEW supplier when the owner confirms the card, so say that back before writing — and never create a supplier from a sound-alike guess: if find_supplier’s names include someone close to what was heard, ask. A single price and a pack price are two rungs of ONE ladder and are independent quotes: never derive one from the other, and never invent a pack price the supplier did not say — packing with no bulk quote is pack_unit and pack_qty alone. When the owner changes one rung, send only that rung: an update keeps the other rungs and the packing as they are on file, and the card marks what is kept. Prices are per unit ("each dozen at 8,000" is unit Dozen, price_per_unit 8000, pieces_per_unit 12); a pack rate ("a carton of 100 at 60,000") is pack_qty 100 and price_per_pack 60000, the whole-pack figure as quoted. After saving, read the whole ladder back from the result.',
   '',
   'Markup rules: set_markup_rule sets how a selling price is suggested from cost — a fixed amount, or percent on cost (a fixed wholesale markup is added on each pack, a fixed retail one per unit). This shop’s markups are usually fixed amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. Value 0 clears a rule. Say the rule back in plain words before the card, treat an ambiguous figure like "10,0000" as a question to ask rather than a number to guess, and after saving tell the owner the new suggested price the tool returns — a misheard figure shows itself there at once.',
   '',
@@ -242,7 +242,7 @@ const TOOLS = [
   },
   {
     name: 'add_supplier_price',
-    description: 'Add or update one supplier’s price for a product in the Price Registry. One current price per product+variant+supplier: saving replaces that supplier’s previous entry. Resolve the product with find_product and the supplier with find_supplier first; a supplier_name that is not on file is created as a NEW supplier when the owner confirms the card. price_per_unit is what ONE unit costs; when the supplier quoted a bulk rate, also pass pack_unit, pack_qty and price_per_pack (the price of the whole pack) and the app derives the per-unit figure.',
+    description: 'Add or update one supplier’s price for a product in the Price Registry. A supplier’s single price and their pack price are two rungs of ONE ladder, saved on one entry — and an update MERGES: rungs and packing you do not restate are kept exactly as they are on file, so send only what the owner actually said. Resolve the product with find_product and the supplier with find_supplier first; a supplier_name not on file is created as a NEW supplier when the owner confirms the card.',
     input_schema: {
       type: 'object',
       properties: {
@@ -250,15 +250,15 @@ const TOOLS = [
         variant_index: { type: ['integer', 'null'] },
         supplier_id: { type: 'string', description: 'From find_supplier, for a supplier already on file.' },
         supplier_name: { type: 'string', description: 'Used when there is no supplier_id; a name not on file becomes a new supplier.' },
-        unit: { type: 'string', description: 'What one costs: Pc, Dozen, Bag, Kg...' },
-        price_per_unit: { type: 'number', exclusiveMinimum: 0 },
+        unit: { type: 'string', description: 'What one costs: Pc, Dozen, Bag, Kg... Required on a first entry; omit to keep the current one.' },
+        price_per_unit: { type: 'number', exclusiveMinimum: 0, description: 'The single-quantity price for ONE unit. Required on a first entry; omit to keep the current rung when updating.' },
         pieces_per_unit: { type: ['integer', 'null'], description: 'How many pieces one unit carries, e.g. 12 for a dozen.' },
-        pack_unit: { type: 'string' },
+        pack_unit: { type: 'string', description: 'How it comes packed — may be given with pack_qty alone, no pack price.' },
         pack_qty: { type: 'number', description: 'How many units the pack holds.' },
-        price_per_pack: { type: 'number', description: 'The price of the WHOLE pack, as quoted.' },
+        price_per_pack: { type: 'number', description: 'The price of the WHOLE pack, ONLY when the supplier actually quoted one — never derive it from the unit price.' },
         supplier_sku: { type: 'string' },
       },
-      required: ['product_id', 'unit', 'price_per_unit'], additionalProperties: false,
+      required: ['product_id'], additionalProperties: false,
     },
   },
   {

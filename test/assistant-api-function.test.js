@@ -101,6 +101,8 @@ const pkg = read('package.json');
   t.check(/created as a NEW supplier when the owner confirms/.test(src)
     && /never create a supplier from a sound-alike guess/.test(src),
     'and the supplier-price terrain: creation only past the card, never off a sound-alike');
+  t.check(/two rungs of ONE ladder/.test(src) && /never invent a pack price/.test(src),
+    'and the ladder law: a single price and a pack price are independent quotes, never derived, never invented');
   t.check(/usually fixed amounts/.test(src) && /Value 0 clears a rule/.test(src),
     'and the markup terrain: a bare figure is fixed shillings unless the owner says percent, and zero clears');
   t.check(/\[choices: first \| second\]/.test(src) && /never speaks it/.test(src),

@@ -50900,6 +50900,86 @@ function apRuleWords(kind, r){
       : r.value + '% on cost')
     + (r.source==='variant' ? ' (set on this variant itself)' : '');
 }
+/* Everything add_supplier_price needs, resolved ONCE and shared by the
+   card and the write so they can never disagree. The heart is the
+   merge: a supplier's single price and their pack price are two rungs
+   of ONE ladder, independent quotes -- so a call touching one rung
+   starts from the row already on file (tiersFromLegacyRow reads tiered
+   and legacy flat rows alike) and replaces only what was said. Packing
+   is a fact and may be stated without a bulk price; a pack price is a
+   quote and always needs its packing. Every rung not restated is KEPT,
+   and marked so for the card. */
+function apSupplierPriceParts(input){
+  const p = (data.products||[]).find(x=> x.id === input.product_id);
+  if(!p) throw new Error('No product with that id — use find_product first.');
+  const vi = input.variant_index==null ? null : input.variant_index;
+  const hasVariants = p.type==='variable' && p.variants && p.variants.length;
+  if(hasVariants && vi==null)
+    throw new Error(p.name + ' has variants — ask which type and pass its variant_index.');
+  if(vi!=null && !(hasVariants && p.variants[vi]))
+    throw new Error(p.name + ' has no variant ' + vi + '.');
+  const sup = input.supplier_id
+    ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
+    : supFindDuplicate(String(input.supplier_name||''), null);
+  if(input.supplier_id && !sup) throw new Error('No supplier with that id — use find_supplier first.');
+  if(!sup && !String(input.supplier_name||'').trim())
+    throw new Error('Say which supplier this price is from.');
+  const existing = sup ? ((data.prices||[]).find(r=> r.productId===p.id
+    && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id) || null) : null;
+
+  const unitGiven = String(input.unit||'').trim();
+  const unit = unitGiven || (existing ? (existing.unit||'') : '');
+  const unitPrice = input.price_per_unit==null ? null : Number(input.price_per_unit);
+  if(unitPrice!=null && !(unitPrice > 0))
+    throw new Error('The price per ' + (unit||'unit') + ' must be above zero.');
+  const packUnitGiven = String(input.pack_unit||'').trim();
+  const packQtyGiven = input.pack_qty==null ? 0 : Number(input.pack_qty);
+  const packPrice = input.price_per_pack==null ? null : Number(input.price_per_pack);
+  if((packUnitGiven && !packQtyGiven) || (!packUnitGiven && packQtyGiven))
+    throw new Error('Packing needs both the pack unit and how many ' + (unit||'unit') + 's it holds.');
+  if(packQtyGiven && !(packQtyGiven > 1))
+    throw new Error('A pack must hold more than one ' + (unit||'unit') + '.');
+  const oldPackQty = existing ? (Number(existing.packQty)||0) : 0;
+  const effPackQty = packQtyGiven || oldPackQty;
+  if(packPrice!=null){
+    if(!(packPrice > 0)) throw new Error('The pack price must be above zero.');
+    if(!(effPackQty > 1))
+      throw new Error('A pack price needs its packing — say the pack unit and how many it holds.');
+  }
+  if(!existing){
+    if(!unit) throw new Error('A first entry needs the unit the price is for (piece, dozen, bag...).');
+    if(unitPrice==null) throw new Error('A first entry needs price_per_unit — the single-quantity price.');
+  } else if(unitPrice==null && packPrice==null && !packUnitGiven
+      && input.pieces_per_unit==null && input.supplier_sku==null && !unitGiven){
+    throw new Error('Nothing to change — say a price, packing, or pieces per unit.');
+  }
+
+  const pack = {
+    unit,
+    packUnit: packUnitGiven || (existing ? (existing.packUnit||'') : ''),
+    packQty: effPackQty,
+    piecesPerUnit: input.pieces_per_unit!=null ? input.pieces_per_unit
+      : (existing ? existing.piecesPerUnit : null),
+  };
+  let tiers = (existing ? tiersFromLegacyRow(existing) : [])
+    .map(t=> ({ minQty: Number(t.minQty)||0, price: Number(t.price)||0, kept: true }));
+  if(unitPrice!=null){
+    tiers = tiers.filter(t=> t.minQty !== 1);
+    tiers.push({ minQty: 1, price: unitPrice, kept: false });
+  }
+  if(packPrice!=null){
+    /* The rung priced against packing that is changing goes with it --
+       a bulk rate quoted for cartons of 100 says nothing about cartons
+       of 50. */
+    tiers = tiers.filter(t=> t.minQty !== effPackQty
+      && !(packQtyGiven && oldPackQty && t.minQty === oldPackQty));
+    tiers.push({ minQty: effPackQty, price: packPrice / effPackQty, kept: false });
+  }
+  tiers.sort((a,b)=> a.minQty - b.minQty);
+  return { p, vi, label: productVariantLabel(p, vi), sup,
+    supplierName: sup ? sup.name : String(input.supplier_name||'').trim(),
+    isNew: !sup, existing, pack, tiers };
+}
 
 /* ---- the tools -----------------------------------------------------
    One entry per schema in api/assistant.js: {confirm, summary(input),
@@ -51382,60 +51462,49 @@ const ASSISTANT_TOOLS = {
      a supplier that never reached the server is a dangling foreign key. */
   add_supplier_price: { confirm: true,
     summary(input){
-      const p = (data.products||[]).find(x=> x.id === input.product_id);
-      const vi = input.variant_index==null ? null : input.variant_index;
-      const label = p ? productVariantLabel(p, vi) : String(input.product_id||'');
-      const sup = input.supplier_id
-        ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
-        : supFindDuplicate(String(input.supplier_name||''), null);
-      const supBit = sup ? sup.name
-        : String(input.supplier_name||'').trim() + ' (NEW — they will be added as a supplier)';
-      const unit = String(input.unit||'').trim() || 'unit';
-      let priceBit = fmtUGX(apRound(input.price_per_unit)) + ' per ' + unit;
-      const pieces = piecesPerUnitOrNull(input.pieces_per_unit);
-      if(pieces) priceBit += ' (' + pieces + ' pieces)';
-      if(input.pack_qty && input.price_per_pack){
-        priceBit += ', ' + fmtUGX(apRound(input.price_per_pack)) + ' for a '
-          + (String(input.pack_unit||'').trim()||'pack') + ' of ' + Number(input.pack_qty);
+      let parts;
+      try{ parts = apSupplierPriceParts(input); }
+      catch(e){ return 'This price cannot be saved yet — ' + e.message; }
+      const supBit = parts.isNew
+        ? parts.supplierName + ' (NEW — they will be added as a supplier)'
+        : parts.supplierName;
+      const unit = parts.pack.unit || 'unit';
+      const rungs = parts.tiers.map(t=>{
+        let w;
+        if(t.minQty === 1){
+          w = fmtUGX(apRound(t.price)) + ' per ' + unit;
+          const pieces = piecesPerUnitOrNull(parts.pack.piecesPerUnit);
+          if(pieces) w += ' (' + pieces + ' pieces)';
+        } else if(parts.pack.packQty && t.minQty === parts.pack.packQty){
+          w = fmtUGX(apRound(t.price * t.minQty)) + ' for a '
+            + (parts.pack.packUnit||'pack') + ' of ' + t.minQty;
+        } else {
+          w = fmtUGX(apRound(t.price)) + ' per ' + unit + ' from ' + t.minQty;
+        }
+        return w + (t.kept ? ' (kept)' : '');
+      });
+      let packNote = '';
+      if(parts.pack.packQty > 1 && parts.pack.packUnit
+          && !parts.tiers.some(t=> t.minQty === parts.pack.packQty && t.minQty !== 1)){
+        packNote = ' Packed ' + parts.pack.packQty + ' ' + unit + ' per '
+          + parts.pack.packUnit + ' — no pack price quoted.';
       }
-      const existing = sup ? (data.prices||[]).find(r=> r.productId===input.product_id
-        && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id) : null;
-      return 'Price for ' + label + ' — ' + supBit + ': ' + priceBit + '.'
-        + (existing ? ' Replaces their current entry.' : ' A new Registry entry.');
+      return 'Price for ' + parts.label + ' — ' + supBit + ': ' + rungs.join('; ') + '.'
+        + packNote
+        + (parts.existing ? ' Updates their entry — unstated rungs and packing stay as they are.'
+          : ' A new Registry entry.');
     },
     async run(input){
-      const p = (data.products||[]).find(x=> x.id === input.product_id);
-      if(!p) throw new Error('No product with that id — use find_product first.');
-      const vi = input.variant_index==null ? null : input.variant_index;
-      const hasVariants = p.type==='variable' && p.variants && p.variants.length;
-      if(hasVariants && vi==null)
-        throw new Error(p.name + ' has variants — ask which type and pass its variant_index.');
-      if(vi!=null && !(hasVariants && p.variants[vi]))
-        throw new Error(p.name + ' has no variant ' + vi + '.');
-      const unit = String(input.unit||'').trim();
-      if(!unit) throw new Error('Say the unit the price is for (piece, dozen, bag...).');
-      const unitPrice = Number(input.price_per_unit);
-      if(!(unitPrice > 0)) throw new Error('The price per ' + unit + ' must be above zero.');
-      const packUnit = String(input.pack_unit||'').trim();
-      const packQty = Number(input.pack_qty)||0;
-      const packPrice = Number(input.price_per_pack)||0;
-      if((packUnit || packQty || packPrice) && !(packUnit && packQty > 1 && packPrice > 0))
-        throw new Error('A pack price needs all three: the pack unit, how many ' + unit
-          + 's it holds (more than one), and its price.');
+      const parts = apSupplierPriceParts(input);
       /* Resolve or create the supplier. Creation rides the graduation's
          discipline: server-issued id, saved and CONFIRMED landed before
          any price row may point at it. */
-      let sup = input.supplier_id
-        ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
-        : supFindDuplicate(String(input.supplier_name||''), null);
-      if(input.supplier_id && !sup) throw new Error('No supplier with that id — use find_supplier first.');
+      let sup = parts.sup;
       let supplierCreated = false;
       if(!sup){
-        const typed = String(input.supplier_name||'').trim();
-        if(!typed) throw new Error('Say which supplier this price is from.');
         const id = firstFreeEntityId('S', 3, data.suppliers,
           await issueEntityId('supplier', 'S', 3, data.suppliers));
-        sup = { id, name: typed, phone: '', location: '',
+        sup = { id, name: parts.supplierName, phone: '', location: '',
           notes: 'Added from the assistant while recording a price' };
         data.suppliers.push(sup);
         supplierCreated = true;
@@ -51445,13 +51514,15 @@ const ASSISTANT_TOOLS = {
             note: 'The new supplier is saved, but the price could not follow before the connection catches up — say the price again in a moment, or add it from the Price Registry.' };
         }
       }
-      const tiers = [{ minQty: 1, price: unitPrice }];
-      if(packQty) tiers.push({ minQty: packQty, price: packPrice / packQty });
-      const record = buildVariantPriceRow({ productId: p.id, variantIdx: vi, supplierId: sup.id,
-        tiers, pack: { unit, packUnit, packQty, piecesPerUnit: input.pieces_per_unit },
-        sku: input.supplier_sku, date: todayISO() });
-      const dups = (data.prices||[]).filter(r=> r.productId===p.id
-        && (r.variantIdx==null?null:r.variantIdx)===vi && r.supplierId===sup.id);
+      const record = buildVariantPriceRow({ productId: parts.p.id, variantIdx: parts.vi,
+        supplierId: sup.id,
+        tiers: parts.tiers.map(t=> ({ minQty: t.minQty, price: t.price })),
+        pack: parts.pack,
+        sku: input.supplier_sku!=null ? input.supplier_sku
+          : (parts.existing ? parts.existing.supplierSku : ''),
+        date: todayISO() });
+      const dups = (data.prices||[]).filter(r=> r.productId===parts.p.id
+        && (r.variantIdx==null?null:r.variantIdx)===parts.vi && r.supplierId===sup.id);
       const keep = dups[0];
       data.prices = data.prices.filter(r=> !dups.includes(r));
       /* Not 'manual': this row came through the assistant's card, and the
@@ -51463,11 +51534,16 @@ const ASSISTANT_TOOLS = {
         outOfStockSince: keep ? (keep.outOfStockSince||null) : null });
       saveData();
       const out = { done: true, supplier: sup.name, supplier_created: supplierCreated,
-        product: productVariantLabel(p, vi), replaced: !!keep, unit,
+        product: parts.label, replaced: !!keep, unit: parts.pack.unit,
         retail: record.retail==null ? null : apRound(record.retail),
-        wholesale: record.wholesale==null ? null : apRound(record.wholesale) };
-      if(packQty && (packPrice / packQty) > unitPrice)
-        out.warning = 'The pack works out dearer per ' + unit + ' than buying one — check the figures were heard right.';
+        wholesale: record.wholesale==null ? null : apRound(record.wholesale),
+        tiers: parts.tiers.slice(0, 6).map(t=> ({ min_qty: t.minQty, price: apRound(t.price) })) };
+      const rung1 = parts.tiers.find(t=> t.minQty === 1);
+      const packRung = parts.pack.packQty > 1
+        ? parts.tiers.find(t=> t.minQty === parts.pack.packQty && t.minQty !== 1) : null;
+      if(rung1 && packRung && packRung.price > rung1.price)
+        out.warning = 'The pack works out dearer per ' + (parts.pack.unit||'unit')
+          + ' than buying one — check the figures were heard right.';
       return out;
     }},
 
