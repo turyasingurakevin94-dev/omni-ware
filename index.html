@@ -5820,13 +5820,43 @@
   .ap-state.listening{background:var(--good-bg);color:var(--good);}
   .ap-state.thinking{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
   .ap-state.speaking{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .ap-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  /* The conversation sits on the app's own steel-grey ground, so white
+     bubbles read as panels the way every other screen's panels do -- an
+     all-white chat column reads as an unfinished page. */
+  .ap-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;
+    background:var(--bg);}
   .ap-msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.5;
     white-space:pre-wrap;word-break:break-word;}
   .ap-msg.user{align-self:flex-end;background:var(--bg);color:var(--ink);border-bottom-right-radius:4px;}
   .ap-msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px;}
   .ap-msg.err{align-self:flex-start;border:1px solid var(--danger);color:var(--danger);background:var(--ow-crimson-soft);}
   .ap-msg .num{font-family:'IBM Plex Mono',monospace;}
+  /* A repeated identical error bumps this badge instead of stacking --
+     four boxes saying one thing is noise pretending to be information. */
+  .ap-err-count{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;
+    background:var(--ow-crimson-soft);font-size:11px;font-weight:700;}
+  /* The empty state: what this panel is, and four first questions to tap.
+     Removed on the first send; New chat brings it back. */
+  .ap-welcome{align-self:stretch;display:flex;flex-direction:column;align-items:center;
+    text-align:center;gap:10px;padding:26px 18px 18px;}
+  .ap-welcome-icon{width:44px;height:44px;border-radius:50%;background:var(--panel);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    color:var(--accent);}
+  .ap-welcome-icon .icon{width:20px;height:20px;}
+  .ap-welcome h3{margin:0;font-size:15px;font-weight:700;color:var(--ink);}
+  .ap-welcome p{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5;max-width:280px;}
+  .ap-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px;}
+  .ap-chip{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 14px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);font-size:12.5px;color:var(--ink);}
+  .ap-chip:hover{border-color:var(--accent);color:var(--accent);}
+  .ap-welcome-small{font-size:11px;color:var(--ink-soft);line-height:1.5;max-width:300px;margin-top:8px;}
+  /* Three dots while a request is in flight -- silence that looks alive. */
+  .ap-typing{display:flex;gap:5px;align-items:center;padding:14px 13px;}
+  .ap-typing i{width:6px;height:6px;border-radius:50%;background:var(--ink-soft);
+    animation:apTypingBlink 1.2s infinite;}
+  .ap-typing i:nth-child(2){animation-delay:.2s;}
+  .ap-typing i:nth-child(3){animation-delay:.4s;}
+  @keyframes apTypingBlink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
   /* The confirmation card: a decision, styled like one. While one is on
      screen the panel carries .ap-confirm-pending, which the background
      refresh reads to hold off (see pollForUpdatesNow). */
@@ -5837,10 +5867,13 @@
   .ap-setup{align-self:stretch;border:1px solid var(--line);border-radius:10px;padding:14px;
     font-size:13px;line-height:1.6;background:var(--bg);}
   .ap-setup b{display:block;margin-bottom:6px;}
-  .ap-cost-note{padding:5px 16px;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--ow-rule-soft);}
   .ap-composer{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);align-items:flex-end;}
-  .ap-composer textarea{flex:1;resize:none;min-height:40px;max-height:120px;padding:9px 11px;
-    border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
+  /* Grows with the text instead of scrolling inside itself -- a 40px box
+     with an inner scrollbar drew Windows scrollbar arrows around the
+     placeholder, which is what "unprofessional" looked like up close. */
+  .ap-composer textarea{flex:1;resize:none;min-height:40px;max-height:120px;overflow-y:hidden;
+    padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;
+    font-family:inherit;background:#FBFCFD;color:var(--ink);}
   .ap-composer textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
   .ap-iconbtn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
     width:38px;height:38px;border-radius:8px;border:1px solid var(--line);color:var(--ink-soft);flex-shrink:0;}
@@ -6945,9 +6978,8 @@
     </button>
   </div>
   <div class="ap-log" id="apLog"></div>
-  <div class="ap-cost-note">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset.</div>
   <div class="ap-composer">
-    <textarea id="apInput" placeholder="Ask about the shop, or tell it what to record…" rows="1"></textarea>
+    <textarea id="apInput" placeholder="Ask, or tell me what to record…" rows="1"></textarea>
     <button type="button" class="ap-iconbtn" id="apMicBtn" title="Voice works in English; you can type in Luganda" aria-label="Speak">
       <svg class="icon" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4"/></svg>
     </button>
@@ -51176,7 +51208,86 @@ function apFormatText(text){
 }
 function apRenderUser(text){ apBubble('user', apFormatText(text)); }
 function apRenderAssistant(text){ apBubble('bot', apFormatText(text)); }
-function apRenderError(msg){ apBubble('err', esc(msg)); }
+/* The same error twice in a row bumps a counter on the existing bubble
+   instead of stacking another -- four boxes saying one thing is noise
+   pretending to be information. Different text still gets its own. */
+function apRenderError(msg){
+  const log = apLogEl();
+  const last = log.lastElementChild;
+  if(last && last.classList.contains('err') && last.dataset.errText === msg){
+    const n = (Number(last.dataset.errCount)||1) + 1;
+    last.dataset.errCount = n;
+    let badge = last.querySelector('.ap-err-count');
+    if(!badge){
+      badge = document.createElement('span');
+      badge.className = 'ap-err-count';
+      last.appendChild(badge);
+    }
+    badge.textContent = '×' + n;
+    apScroll();
+    return;
+  }
+  const div = apBubble('err', esc(msg));
+  div.dataset.errText = msg;
+  div.dataset.errCount = 1;
+}
+
+/* The empty state: what this is, and four first questions to tap. Each
+   chip goes through apSend -- the same path as typing, so every gate
+   (busy, confirm, results) holds. Removed on the first send; New chat
+   brings it back. */
+function apRenderWelcome(){
+  const div = document.createElement('div');
+  div.className = 'ap-welcome';
+  div.id = 'apWelcome';
+  const chips = [
+    'How much money do I have?',
+    'Who owes me the most?',
+    'What did we sell this month?',
+    'What is the price of ',
+  ];
+  div.innerHTML = '<div class="ap-welcome-icon"><svg class="icon" viewBox="0 0 24 24">'
+    + '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>'
+    + '<h3>Ask your shop anything</h3>'
+    + '<p>Debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.</p>'
+    + '<div class="ap-chips">' + chips.map(c=>
+      '<button type="button" class="ap-chip">' + esc(c.trim()) + (c.endsWith(' ') ? '…' : '') + '</button>').join('') + '</div>'
+    + '<div class="ap-welcome-small">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset.</div>';
+  apLogEl().appendChild(div);
+  div.querySelectorAll('.ap-chip').forEach((btn, i)=>{
+    btn.addEventListener('click', ()=>{
+      const q = chips[i];
+      if(q.endsWith(' ')){
+        // The open-ended one seeds the box for the owner to finish.
+        const input = document.getElementById('apInput');
+        input.value = q;
+        input.focus();
+        return;
+      }
+      apSend(q);
+    });
+  });
+}
+function apClearWelcome(){
+  const w = document.getElementById('apWelcome');
+  if(w) w.remove();
+}
+
+/* Three dots while a request is in flight. One at a time; every path
+   that renders an outcome -- reply, error, setup card -- clears it. */
+function apShowTyping(){
+  apHideTyping();
+  const div = document.createElement('div');
+  div.className = 'ap-msg bot ap-typing';
+  div.id = 'apTyping';
+  div.innerHTML = '<i></i><i></i><i></i>';
+  apLogEl().appendChild(div);
+  apScroll();
+}
+function apHideTyping(){
+  const el = document.getElementById('apTyping');
+  if(el) el.remove();
+}
 function apRenderSetupCard(){
   apBubble('setup ap-setup', [
     '<b>Not connected yet — 4 steps, once</b>',
@@ -51256,9 +51367,10 @@ function apAskConfirm(tool, input){
 /* ---- the loop ---- */
 
 async function apCallServer(){
+  apShowTyping();
   const sess = await sb.auth.getSession();
   const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
-  if(!token){ apRenderError('Your login has expired — reload the page and sign in again.'); return null; }
+  if(!token){ apHideTyping(); apRenderError('Your login has expired — reload the page and sign in again.'); return null; }
   let resp;
   try{
     resp = await fetch('/api/assistant', {
@@ -51267,11 +51379,13 @@ async function apCallServer(){
       body: JSON.stringify({ messages: assistantThread }),
     });
   } catch(e){
+    apHideTyping();
     apRenderError('Could not reach the assistant — check the internet connection and try again.');
     return null;
   }
   let body = null;
   try{ body = await resp.json(); } catch(e){}
+  apHideTyping();
   if(resp.status === 401){ apRenderError((body && body.error && body.error.message) || 'Your login has expired — reload the page and sign in again.'); return null; }
   if(body && body.not_configured){ apRenderSetupCard(); return null; }
   if(!resp.ok || (body && body.error)){
@@ -51369,6 +51483,9 @@ function apTrimThread(){
 function apSend(text){
   const clean = String(text||'').trim();
   if(!clean || assistantBusy) return;
+  apClearWelcome();
+  const inputEl = document.getElementById('apInput');
+  if(inputEl) inputEl.style.height = '';
   /* The date rides inside the user turn, after the cached prefix -- the
      system prompt stays byte-stable so the big prefix caches. */
   assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\n' + clean });
@@ -51457,7 +51574,7 @@ function apOpenPanel(){
   document.getElementById('assistantPanel').classList.add('open');
   const input = document.getElementById('apInput');
   if(assistantThread.length === 0 && apLogEl().children.length === 0){
-    apBubble('bot', esc('Ask me anything about the shop — debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.'));
+    apRenderWelcome();
   }
   setTimeout(()=> input.focus(), 30);
 }
@@ -51478,13 +51595,22 @@ document.getElementById('apCloseBtn').addEventListener('click', apClosePanel);
 document.getElementById('apNewChatBtn').addEventListener('click', ()=>{
   assistantThread = [];
   apLogEl().innerHTML = '';
-  apBubble('bot', esc('New chat. What do you need?'));
+  apRenderWelcome();
 });
 document.getElementById('apSendBtn').addEventListener('click', ()=>{
   const input = document.getElementById('apInput');
   const text = input.value;
   input.value = '';
   apSend(text);
+});
+/* Grows with the text to a lid of 120px, then scrolls -- and only then.
+   The reset lives in apSend, so the box snaps back after each message. */
+document.getElementById('apInput').addEventListener('input', (e)=>{
+  const el = e.currentTarget;
+  el.style.height = 'auto';
+  const h = Math.min(el.scrollHeight, 120);
+  el.style.height = h + 'px';
+  el.style.overflowY = el.scrollHeight > 120 ? 'auto' : 'hidden';
 });
 document.getElementById('apInput').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' && !e.shiftKey){

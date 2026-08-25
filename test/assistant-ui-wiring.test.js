@@ -174,4 +174,54 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and only the thread — tools and prompt live server-side where they cache');
 }
 
+/* ---------- 10. the professional pass --------------------------------- */
+/*
+ * The polish the owner asked for, pinned so it cannot quietly regress:
+ * the conversation sits on the app's grey ground; the empty state
+ * teaches by offering first questions that go through the SAME send
+ * path as typing; the always-on footer is gone; the composer grows
+ * instead of sprouting a Windows scrollbar; waiting shows dots that
+ * every outcome clears; and a repeated error becomes a count, not a
+ * stack of four identical boxes.
+ */
+{
+  const logBg = winningDeclaration(src, 'apLog', 'background');
+  t.check(logBg && /var\(--bg\)/.test(logBg.value),
+    'the conversation sits on the app’s own grey ground — white panels on it, like every other screen');
+
+  t.check(!/ap-cost-note/.test(src),
+    'the permanent footer line is gone — its words live in the welcome block instead');
+
+  const welcome = extractFunction(src, 'apRenderWelcome', 'index.html');
+  t.check(/ap-chip/.test(welcome) && /apSend\(q\)/.test(welcome),
+    'the empty state offers first questions, and a tapped chip goes through apSend — the same gates as typing');
+  t.check(/input\.value = q;/.test(welcome) && /input\.focus\(\)/.test(welcome),
+    'the open-ended chip seeds the box for the owner to finish, never sends a half question');
+  t.check(/apClearWelcome\(\)/.test(extractFunction(src, 'apSend', 'index.html')),
+    'the first send clears the welcome');
+  t.check(/apRenderWelcome\(\)/.test(extractFunction(src, 'apOpenPanel', 'index.html')),
+    'and New chat / first open bring it back');
+
+  const errFn = extractFunction(src, 'apRenderError', 'index.html');
+  t.check(/dataset\.errText === msg/.test(errFn) && /ap-err-count/.test(errFn),
+    'the same error twice in a row bumps a ×N badge instead of stacking another box');
+
+  const call = extractFunction(src, 'apCallServer', 'index.html');
+  t.check(/apShowTyping\(\)/.test(call),
+    'waiting shows the typing dots');
+  t.check((call.match(/apHideTyping\(\)/g) || []).length >= 2,
+    'and every outcome clears them — the no-token return and the response paths alike');
+  const hideAt = call.indexOf('apHideTyping();', call.indexOf('await resp.json'));
+  const setupAt = call.indexOf('apRenderSetupCard');
+  t.check(hideAt > 0 && setupAt > hideAt,
+    'including before the setup card, so dots never sit beside it');
+
+  t.check(/el\.style\.height = h \+ 'px';/.test(code) && /Math\.min\(el\.scrollHeight, 120\)/.test(code),
+    'the composer grows with the text to a 120px lid');
+  t.check(/inputEl\.style\.height = '';/.test(extractFunction(src, 'apSend', 'index.html')),
+    'and snaps back after each send');
+  t.check(/overflow-y:hidden/.test((/\.ap-composer textarea\{[\s\S]{0,400}?\}/.exec(src) || [''])[0]),
+    'no inner scrollbar until the lid — the Windows arrow artifact cannot return');
+}
+
 process.exit(t.done() ? 1 : 0);
