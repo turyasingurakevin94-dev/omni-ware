@@ -51060,6 +51060,51 @@ const ASSISTANT_TOOLS = {
       recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi) };
   }},
 
+  /* The dossier behind "what do we know about X": stock, the suppliers
+     and their prices, the markup rules, the suggested price -- all read
+     from the same functions the screens read. The price block per
+     variant comes from recommended_price ITSELF, so the assistant holds
+     exactly one pricing arithmetic. Diet rules as everywhere: 10
+     variants, 5 suppliers, 4 tiers, every shilling rounded. */
+  product_details: { confirm: false, run(input){
+    const p = (data.products||[]).find(x=> x.id === input.product_id);
+    if(!p) throw new Error('No product with that id — use find_product first.');
+    const ruleWords = (r)=> !r ? null
+      : (r.type==='fixed'
+          ? apRound(r.value).toLocaleString('en-US') + ' UGX added per unit'
+          : r.value + '% on cost')
+        + (r.source==='variant' ? ' (set on this variant itself)' : '');
+    const hasVariants = p.type==='variable' && p.variants && p.variants.length;
+    const idxs = hasVariants ? p.variants.map((_, i)=> i) : [null];
+    const variants = idxs.slice(0, 10).map(vi=>{
+      const price = ASSISTANT_TOOLS.recommended_price.run({ product_id: p.id, variant_index: vi });
+      const ranked = rankedPriceRows(p.id, vi);
+      const suppliers = ranked.slice(0, 5).map(r=>{
+        const row = { supplier: r.sname,
+          wholesale: r.wholesale==null ? null : apRound(r.wholesale),
+          retail: r.retail==null ? null : apRound(r.retail),
+          unit: r.unit||'',
+          pack: (Number(r.packQty)>0 && r.packUnit) ? (r.packQty + ' ' + (r.unit||'') + ' per ' + r.packUnit) : null,
+          date: r.date||'' };
+        const tiers = (r.tiers||[]).slice(0, 4).map(t=>({ min_qty: t.minQty, price: apRound(t.price) }));
+        if(tiers.length) row.tiers = tiers;
+        return row;
+      });
+      const out = { variant_index: vi, ...price, suppliers,
+        suppliers_out_of_stock: productPriceRows(p.id, vi).length - ranked.length };
+      ['retail', 'wholesale'].forEach(kind=>{
+        const r = effectiveMarkupRule(p, vi, kind);
+        if(r && r.source==='variant') out[kind + '_markup_override'] = ruleWords(r);
+      });
+      return out;
+    });
+    return { name: p.name, category: p.category||'',
+      description: p.shortDescription||'', notes: p.notes||'',
+      markup_rules: { retail: ruleWords(effectiveMarkupRule(p, null, 'retail')),
+        wholesale: ruleWords(effectiveMarkupRule(p, null, 'wholesale')) },
+      variant_count: idxs.length, variants };
+  }},
+
   /* ---- writes: everything below renders a card first ---- */
 
   create_quote: { confirm: true,

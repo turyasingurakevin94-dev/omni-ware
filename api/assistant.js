@@ -35,7 +35,7 @@ const SYSTEM_PROMPT = [
   '',
   'Money: everything is Ugandan Shillings. Write amounts like 1,250,000 UGX. Whole shillings only.',
   '',
-  'Tools first, never invent: every figure you state must come from a tool result in this conversation. If you have not looked something up, look it up. If no tool can answer it, say so plainly — never estimate, never answer from memory.',
+  'Tools first, never invent: every figure you state must come from a tool result in this conversation. If you have not looked something up, look it up. If no tool can answer it, say so plainly — never estimate, never answer from memory. When the owner asks what is known about a product, resolve it with find_product, then call product_details and answer with what matters: stock, the cheapest supplier or two, the markup rule and the suggested price — summarise, never read every supplier row aloud.',
   '',
   'Resolve before writing: before any write tool, resolve the exact customer, product, supplier or due id with the find/list tools. Never guess an id. If a search returns nothing, say so. If it returns several plausible matches, ask the owner which one — name the options (for products, by their variant names, e.g. "Normal, Gold, or Soft Close?") and wait. A misspelt name must never cause a new customer to be created.',
   '',
@@ -56,7 +56,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Seventeen tools in FIXED order — the array is part of the cached
+/* Eighteen tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -119,6 +119,11 @@ const TOOLS = [
     name: 'recommended_price',
     description: 'The app’s own recommended selling price for one product variant, from its recorded cost and the shop’s markup rules — the same figure the quote screen suggests. Says plainly when no price is on file or no markup rule is set; never guesses. Resolve the product with find_product first, and if it has several variants confirm which one before calling.',
     input_schema: { type: 'object', properties: { product_id: { type: 'string' }, variant_index: { type: ['integer', 'null'] } }, required: ['product_id'], additionalProperties: false },
+  },
+  {
+    name: 'product_details',
+    description: 'The full picture of one product: stock on hand, every supplier and what they charge (volume tiers included), the markup rules that apply, and the suggested selling price per variant. Use it when the owner asks what is known about a product, after find_product resolves the id.',
+    input_schema: { type: 'object', properties: { product_id: { type: 'string', description: 'From find_product.' } }, required: ['product_id'], additionalProperties: false },
   },
   {
     name: 'create_quote',

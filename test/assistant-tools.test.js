@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: seventeen entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: eighteen entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -109,8 +109,8 @@ const run = (name, input) => T[name].run(input || {});
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_product', 'customer_statement', 'list_debtors',
     'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
-    'financial_summary', 'recommended_price'];
-  t.check(Object.keys(T).length === 17, `seventeen executors (got ${Object.keys(T).length})`);
+    'financial_summary', 'recommended_price', 'product_details'];
+  t.check(Object.keys(T).length === 18, `eighteen executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -118,7 +118,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 17 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 18 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -239,6 +239,91 @@ const run = (name, input) => T[name].run(input || {});
   let threw = false;
   try{ run('recommended_price', { product_id: 'P999' }); } catch(e){ threw = true; }
   t.check(threw, 'a product that does not exist is an error, not an empty guess');
+}
+
+/* ---------- 3b. the dossier: one question, the whole product ---------- */
+/*
+ * "What do we know about X" must come back complete: stock, WHO sells
+ * it and at what price, the markup rules, the suggested price. The
+ * dossier assembles the same functions the screens read — and its
+ * price block is recommended_price's own output, cross-called, so the
+ * assistant can never hold two pricing arithmetics that drift.
+ */
+{
+  data.suppliers = [
+    { id: 'S1', name: 'Kampala Steel' },
+    { id: 'S2', name: 'Jinja Traders' },
+    { id: 'S3', name: 'Mbale Hardware' },
+  ];
+  data.products = [
+    { id: 'P1', name: 'Mulper Hinges', type: 'variable', category: 'Fittings',
+      shortDescription: 'Brass door hinges', notes: 'Fast mover',
+      retailMarkupType: 'percent', retailMarkupValue: 30,
+      variants: [
+        { combo: { Type: 'Normal' } },
+        { combo: { Type: 'Gold' }, retailMarkupType: 'fixed', retailMarkupValue: 2000 },
+        { combo: { Type: 'Soft Close' } },
+      ] },
+    { id: 'P2', name: 'Cement', type: 'simple', category: 'Building',
+      wholesaleMarkupType: 'percent', wholesaleMarkupValue: 10 },
+  ];
+  data.prices = [
+    { id: 1, productId: 'P1', variantIdx: 0, supplierId: 'S2', retail: 9000, wholesale: null,
+      unit: 'Pc', packUnit: '', packQty: 0, date: '2026-08-01' },
+    { id: 2, productId: 'P1', variantIdx: 0, supplierId: 'S1', retail: 8000, wholesale: null,
+      unit: 'Pc', packUnit: 'Ctn', packQty: 20, date: '2026-08-10',
+      tiers: [{ minQty: 1, price: 8000 }, { minQty: 20, price: 7500 }] },
+    { id: 3, productId: 'P1', variantIdx: 0, supplierId: 'S3', retail: 7000, wholesale: null,
+      unit: 'Pc', packUnit: '', packQty: 0, date: '2026-07-01', outOfStock: true },
+    { id: 4, productId: 'P1', variantIdx: 1, supplierId: 'S1', retail: 10000, wholesale: null,
+      unit: 'Pc', packUnit: '', packQty: 0, date: '2026-08-10' },
+    { id: 5, productId: 'P2', variantIdx: null, supplierId: 'S2', retail: null, wholesale: 32000,
+      unit: 'Bag', packUnit: '', packQty: 0, date: '2026-08-15' },
+  ];
+  data.stock = { 'P1::0': 140, 'P1::1': 6, 'P2': 55 };
+
+  const d = run('product_details', { product_id: 'P1' });
+  t.check(d.name === 'Mulper Hinges' && d.description === 'Brass door hinges' && d.notes === 'Fast mover',
+    'the product introduces itself — name, description, notes');
+  t.check(d.markup_rules.retail === '30% on cost' && d.markup_rules.wholesale === null,
+    'the markup rules arrive in words, and an unset rule is null, never a guess');
+  t.check(d.variant_count === 3 && d.variants.length === 3, 'every variant accounted for');
+
+  const normal = d.variants[0];
+  t.check(normal.suppliers.length === 2
+    && normal.suppliers[0].supplier === 'Kampala Steel' && normal.suppliers[0].retail === 8000
+    && normal.suppliers[1].supplier === 'Jinja Traders' && normal.suppliers[1].retail === 9000,
+    `suppliers come cheapest first, by name and price (got ${JSON.stringify(normal.suppliers.map(s=>s.supplier))})`);
+  t.check(normal.suppliers[0].pack === '20 Pc per Ctn', 'pack sizes ride along');
+  t.check(normal.suppliers[0].tiers.length === 2 && normal.suppliers[0].tiers[1].price === 7500,
+    'and so do volume tiers, so the model can speak the carton price');
+  t.check(normal.suppliers_out_of_stock === 1,
+    'a supplier marked out of stock is counted, not silently dropped');
+  t.check(normal.in_stock === 140 && normal.cost === 8000 && normal.recommended_sell === 10400,
+    `stock, best cost and the 30% suggestion (got ${JSON.stringify({ s: normal.in_stock, c: normal.cost, r: normal.recommended_sell })})`);
+  const direct = run('recommended_price', { product_id: 'P1', variant_index: 0 });
+  t.check(normal.cost === direct.cost && normal.recommended_sell === direct.recommended_sell
+    && normal.basis === direct.basis && normal.name === direct.name,
+    'the dossier price block IS recommended_price — one arithmetic, cross-called');
+
+  const gold = d.variants[1];
+  t.check(gold.recommended_sell === 12000
+    && gold.retail_markup_override === '2,000 UGX added per unit (set on this variant itself)',
+    `a variant with its own fixed rule overrides and says so (got ${JSON.stringify({ r: gold.recommended_sell, o: gold.retail_markup_override })})`);
+  t.check(normal.retail_markup_override === undefined,
+    'while a variant riding the product rule carries no override line');
+
+  t.check(d.variants[2].no_price_on_file === true,
+    'a variant with nothing on file says NO PRICE — honesty survives assembly');
+
+  const simple = run('product_details', { product_id: 'P2' });
+  t.check(simple.variant_count === 1 && simple.variants[0].variant_index === null
+    && simple.variants[0].recommended_sell === 35200,
+    `a simple product is one block, priced off its wholesale rule (got ${JSON.stringify(simple.variants[0].recommended_sell)})`);
+
+  let threw2 = false;
+  try{ run('product_details', { product_id: 'P999' }); } catch(e){ threw2 = true; }
+  t.check(threw2, 'an unknown id is an error pointing back to find_product');
 }
 
 /* ---------- 4. receiving money: oldest first, books consistent -------- */
