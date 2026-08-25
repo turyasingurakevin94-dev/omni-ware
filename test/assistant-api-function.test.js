@@ -29,8 +29,12 @@ const pkg = read('package.json');
 {
   t.check(/process\.env\.ANTHROPIC_API_KEY/.test(src),
     'the key is read from the environment');
-  t.check(!/sk-ant/.test(src), 'and no key literal appears in the source');
-  t.check(!/sk-ant/.test(read('index.html')),
+  /* The setup card is allowed to SAY what a key looks like ("sk-ant-…");
+     what must never appear is a real one — the prefix followed by the
+     long body an actual key carries. */
+  const keyish = /sk-ant-[A-Za-z0-9_-]{20,}/;
+  t.check(!keyish.test(src), 'and no key literal appears in the source');
+  t.check(!keyish.test(read('index.html')),
     'nor anywhere in the app the browser downloads');
   t.check(/if \(!process\.env\.ANTHROPIC_API_KEY\) \{\s*\n\s*return res\.status\(200\)\.json\(\{ not_configured: true \}\)/.test(src),
     'with no key the function answers not_configured — the feature ships dark and spends nothing');

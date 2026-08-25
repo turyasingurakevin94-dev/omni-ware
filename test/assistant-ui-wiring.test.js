@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+'use strict';
+/*
+ * The assistant's shell: where the panel sits, who can see it, and the
+ * two disciplines the loop must never lose.
+ *
+ * The loop's disciplines, because they are invisible until they fail:
+ *
+ *   one gate, honored    a write executor runs ONLY behind its card.
+ *                        The loop checks .confirm; Cancel becomes a
+ *                        declined result the model reads gracefully.
+ *   one message back     every tool result of a turn returns in ONE
+ *                        user message. Split across messages they would
+ *                        quietly teach the model to stop calling tools
+ *                        in parallel.
+ *
+ * And the shell's: the panel overlays every tab below the modals, is
+ * invisible to workers, the loading screen and the printer, holds the
+ * background refresh off while a confirmation is being read, and never
+ * keeps a hot microphone after the tab hides or the panel closes.
+ *
+ * Run: node test/assistant-ui-wiring.test.js   (or: npm test)
+ */
+const { read, extractFunction, createReporter, winningDeclaration } = require('./_extract');
+
+const t = createReporter('assistant ui wiring');
+const src = read('index.html');
+const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
+
+/* ---------- 1. who can see it ---------------------------------------- */
+{
+  const workerBlock = (/body\.worker-only-mode[\s\S]{0,700}?display:none !important;\}/.exec(src) || [''])[0];
+  t.check(/\.assistant-panel/.test(workerBlock) && /#assistantOpenBtn/.test(workerBlock)
+    && /#assistantOpenBtnMobile/.test(workerBlock),
+    'a worker-only login sees neither the panel nor its launchers — the topbar survives worker mode, so the launcher must be named');
+  const loadingBlock = (/body\.app-loading[\s\S]{0,400}?display:none !important;\}/.exec(src) || [''])[0];
+  t.check(/\.assistant-panel/.test(loadingBlock), 'nor does the loading screen');
+  t.check(/\.mobile-topbar, \.mobile-bottomnav, \.mobile-fab, \.mobile-more-sheet, \.assistant-panel\{display:none !important;\}/.test(src),
+    'nor the printer — fixed chrome on an invoice sheet is the fault this block exists for');
+}
+
+/* ---------- 2. where it sits ----------------------------------------- */
+{
+  const panelZ = winningDeclaration(src, 'assistantPanel', 'z-index');
+  t.check(panelZ && Number(panelZ.value) === 80,
+    `the panel sits at 80 — above every tab (topbar 60, tb-menu 70) (got ${panelZ && panelZ.value})`);
+  const modalZ = winningDeclaration(src, 'itemPickerModal', 'z-index');
+  t.check(modalZ && Number(modalZ.value) === 100 && Number(panelZ.value) < Number(modalZ.value),
+    'and below every modal, so a dialog opened after a tool’s render still lands on top');
+  t.check(/@media \(max-width:820px\)\{\s*\n\s*\.assistant-panel\{\s*\n\s*inset:0;/.test(src),
+    'on a phone it becomes the full-screen sheet, the More sheet’s own pattern');
+  const backdrop = (/\['supplierModal','productModal'[\s\S]{0,400}?\]\.forEach/.exec(src) || [''])[0];
+  t.check(!/assistantPanel/.test(backdrop),
+    'and it is NOT in the modal backdrop array — it is deliberately not a modal');
+}
+
+/* ---------- 3. the confirm gate -------------------------------------- */
+{
+  const loop = extractFunction(src, 'apRunLoop', 'index.html');
+  t.check(/tool\.confirm/.test(loop), 'the loop asks each tool whether it needs the owner');
+  t.check(/await apAskConfirm\(tool, block\.input/.test(loop), 'and waits on the card when it does');
+  t.check(/declined: true, reason: 'owner declined'/.test(loop),
+    'Cancel becomes a declined result — not an error, so the model acknowledges instead of retrying');
+  t.check((loop.match(/assistantThread\.push\(\{ role: 'user', content: results \}\)/g) || []).length === 1,
+    'ALL tool results of a turn go back in ONE user message');
+  t.check(/goToTab\(currentActiveTab\)/.test(loop) && /refreshNavBadges\(\)/.test(loop),
+    'a confirmed write refreshes the visible tab through the app’s own idiom');
+  t.check(/AP_MAX_STEPS/.test(loop) && /too many steps/.test(loop),
+    'and the loop is bounded, with a sentence when the bound bites');
+
+  const ask = extractFunction(src, 'apAskConfirm', 'index.html');
+  t.check(/classList\.add\('ap-confirm-pending'\)/.test(ask)
+    && /classList\.remove\('ap-confirm-pending'\)/.test(ask),
+    'a pending card marks the panel, and the mark comes off however the card resolves');
+  t.check(/if\(settled\) return;/.test(ask) && /b\.disabled = true/.test(ask),
+    'a card settles exactly once — the second press of a nervous thumb does nothing');
+  const poll = extractFunction(src, 'pollForUpdatesNow', 'index.html');
+  t.check(/\.ap-confirm-pending/.test(poll),
+    'and the background refresh reads that mark and holds off — it replaces `data` wholesale, and a card is a decision being asked about');
+}
+
+/* ---------- 4. money comes from the moment, not the card -------------- */
+{
+  const map = code.slice(code.indexOf('const ASSISTANT_TOOLS'), code.indexOf('function apLogEl'));
+  t.check(/apCustomerById\(input\.customer_id\)/.test(map),
+    'executors re-resolve records from the tool INPUT’s ids at run time');
+  t.check(!/resolveInvoiceCustomer/.test(map),
+    'and never through resolveInvoiceCustomer, which CREATES a customer on a name miss');
+  const paySup = map.slice(map.indexOf('pay_supplier'), map.indexOf('pay_staff_or_rent'));
+  t.check((paySup.match(/creditorTotalOwed\(input\.supplier_id\)/g) || []).length >= 2,
+    'pay_supplier reads what is owed fresh in BOTH summary and run — the card may sit across a background refresh');
+}
+
+/* ---------- 5. the date rides in the turn, not the prefix ------------- */
+{
+  const send = extractFunction(src, 'apSend', 'index.html');
+  t.check(/\[Today is ' \+ todayISO\(\)/.test(send),
+    'the composer stamps today inside the user turn');
+  const promptBlock = read('api/assistant.js').split('SYSTEM_PROMPT')[1].split('const ACCOUNT_ENUM')[0];
+  t.check(!/20\d\d-\d\d-\d\d/.test(promptBlock) && !/todayISO/.test(promptBlock),
+    'while the server’s prompt holds no actual date and computes none — the cached prefix stays byte-stable');
+}
+
+/* ---------- 6. the thread stays whole and bounded --------------------- */
+{
+  const trim = extractFunction(src, 'apTrimThread', 'index.html');
+  t.check(/AP_MAX_THREAD/.test(trim), 'history is capped');
+  t.check(/typeof m\.content === 'string'/.test(trim),
+    'and trimmed only at a plain-string user turn — a tool_use split from its result is an API error on the next call');
+  t.check(/AP_MAX_THREAD = 24/.test(code) && /AP_MAX_STEPS = 8/.test(code),
+    'both bounds are named constants');
+}
+
+/* ---------- 7. voice: two ways, never a hot mic ----------------------- */
+{
+  t.check(/const AP_SR = window\.SpeechRecognition \|\| window\.webkitSpeechRecognition \|\| null;/.test(code),
+    'speech-in is feature-detected');
+  t.check(/if\(!AP_SR\)\{\s*\n\s*document\.getElementById\('apMicBtn'\)\.hidden = true;/.test(code),
+    'and its buttons vanish where the browser has none — the chat itself stays whole');
+
+  const speak = extractFunction(src, 'apSpeak', 'index.html');
+  t.check(/replace\(\/\\bUGX\\b\/g, 'shillings'\)/.test(speak),
+    'spoken money says shillings — UGX reads as letters');
+  t.check(/AP_TTS\.cancel\(\)/.test(speak), 'a new reply silences the old one');
+
+  const listen = extractFunction(src, 'apListenOnce', 'index.html');
+  t.check(/not-allowed/.test(listen) && /apStopVoice\(\)/.test(listen),
+    'a denied microphone stops hands-free entirely — a hot mic nobody granted is not a state this panel may be in');
+
+  const stop = extractFunction(src, 'apStopVoice', 'index.html');
+  t.check(/abort\(\)/.test(stop) && /AP_TTS\.cancel\(\)/.test(stop),
+    'stopping voice kills both the mic and the speech');
+  t.check(/document\.addEventListener\('visibilitychange'[\s\S]{0,200}apStopVoice\(\)/.test(code),
+    'a hidden tab stops listening');
+  const close = extractFunction(src, 'apClosePanel', 'index.html');
+  t.check(/apStopVoice\(\)/.test(close), 'and so does closing the panel');
+
+  const confirm = extractFunction(src, 'apAskConfirm', 'index.html');
+  t.check(/\^\(yes\|yeah\|yep\|confirm\|ok\|okay\|do it\)/.test(confirm)
+    && /\^\(no\|nope\|cancel\|stop\|don't\)/.test(confirm),
+    'a voice confirmation accepts only a clear yes or no');
+  t.check(/Say yes to confirm, or no\./.test(confirm),
+    'anything else re-prompts — it never guesses which way the owner meant');
+  t.check(/settle\(true\)/.test(confirm) && /settle\(false\)/.test(confirm),
+    'and voice resolves the SAME settle the buttons do — one gate, two inputs');
+
+  const turn = extractFunction(src, 'apVoiceListenTurn', 'index.html');
+  t.check(/if\(!apVoiceMode \|\| assistantBusy\) return;/.test(turn),
+    'hands-free never talks over a running turn');
+  t.check(/apVoiceListenTurn\(\)/.test(extractFunction(src, 'apRunLoop', 'index.html')),
+    'and the loop hands the mic back after speaking — the turn-taking that makes it a conversation');
+}
+
+/* ---------- 8. keys and escape ---------------------------------------- */
+{
+  t.check(/\(e\.ctrlKey \|\| e\.metaKey\) && !e\.shiftKey && !e\.altKey && \(e\.key === 'j' \|\| e\.key === 'J'\)/.test(code),
+    'Ctrl+J opens it — the bare-key namespace (q, r, c, p) is spoken for');
+  const esc = (/getElementById\('assistantPanel'\)\.addEventListener\('keydown'[\s\S]{0,500}?\}\);/.exec(code) || [''])[0];
+  t.check(/stopPropagation\(\)/.test(esc),
+    'Escape inside the panel never reaches the modal chain');
+  t.check(/if\(input\.value\)\{ input\.value = ''; \}\s*\n\s*else apClosePanel\(\)/.test(esc),
+    'first press clears the composer, second closes — the nav search’s own shape');
+}
+
+/* ---------- 9. the loop’s failure sentences --------------------------- */
+{
+  const call = extractFunction(src, 'apCallServer', 'index.html');
+  t.check(/not_configured/.test(call) && /apRenderSetupCard\(\)/.test(call),
+    'the dark server renders the setup card, not an error');
+  t.check(/login has expired/.test(call), 'a dead session says what to do');
+  t.check(/check the internet/.test(call), 'and so does a dead connection');
+  t.check(/Bearer ' \+ token/.test(call), 'every request carries the owner’s own login');
+  t.check(/JSON\.stringify\(\{ messages: assistantThread \}\)/.test(call),
+    'and only the thread — tools and prompt live server-side where they cache');
+}
+
+process.exit(t.done() ? 1 : 0);

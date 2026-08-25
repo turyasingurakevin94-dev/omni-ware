@@ -96,7 +96,8 @@
   body.app-loading .topbar,
   body.app-loading .mobile-topbar,
   body.app-loading .mobile-bottomnav,
-  body.app-loading .mobile-fab{display:none !important;}
+  body.app-loading .mobile-fab,
+  body.app-loading .assistant-panel{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
   /* Top bar -- the whole map of the app.
@@ -932,7 +933,7 @@
        position:fixed, outside the sections, and on a phone-width screen
        they print. The orange action button came out as a solid disc in
        the corner of every sheet. */
-    .mobile-topbar, .mobile-bottomnav, .mobile-fab, .mobile-more-sheet{display:none !important;}
+    .mobile-topbar, .mobile-bottomnav, .mobile-fab, .mobile-more-sheet, .assistant-panel{display:none !important;}
     #printArea h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 4px 0;}
     #printArea .print-meta{font-size:12px;color:#555;margin-bottom:16px;}
     #printArea table{width:100%;border-collapse:collapse;}
@@ -3385,6 +3386,13 @@
     .cb-day{flex-direction:column;align-items:stretch;}
     .cb-day-actions{display:grid;grid-template-columns:1fr 1fr;}
   }
+  @media (max-width:820px){
+    .assistant-panel{
+      inset:0;width:auto;border-left:none;z-index:96;
+      transform:translateY(100%);transition:transform .2s ease;display:flex;
+    }
+    .assistant-panel.open{transform:translateY(0);}
+  }
 
   .cb-chain-break{
     display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:12px 14px;
@@ -5783,6 +5791,65 @@
     flex-direction:column;transform:translateY(100%);transition:transform .2s ease;
   }
   .mobile-more-sheet.show{transform:translateY(0);}
+
+  /* ===== Assistant panel =====
+     Desktop: a fixed right-side column at z-index 80 -- above every tab
+     (the ladder runs sidebar 30, q-stickybar 40, topbar 60, tb-menu 70),
+     below every modal (overlay 100), so a modal opened from a tool's
+     render still lands on top of the chat. It overlays rather than
+     joining `main > section`, because the assistant belongs to no tab.
+     Phone (in the 820px block below): the More sheet's own full-screen
+     translateY pattern, at 96 -- above the bottomnav/fab/sheet, still
+     below modals. */
+  /* The launcher in the phone topbar: tb-iconbtn's own rules are scoped
+     to the desktop .topbar, so the mobile twin needs the same face. */
+  .mobile-topbar .tb-iconbtn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;}
+  .mobile-topbar .tb-iconbtn:hover{background:rgba(255,255,255,0.09);}
+  .assistant-panel{
+    position:fixed;top:0;right:0;bottom:0;width:380px;max-width:100vw;z-index:80;
+    background:var(--panel);border-left:1px solid var(--line);
+    display:none;flex-direction:column;
+    box-shadow:-8px 0 28px rgba(10,15,20,0.12);
+  }
+  .assistant-panel.open{display:flex;}
+  .ap-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .ap-head h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-soft);font-weight:700;flex:1;}
+  .ap-state{font-size:11px;font-weight:700;letter-spacing:0.4px;padding:3px 9px;border-radius:999px;
+    background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
+  .ap-state.listening{background:var(--good-bg);color:var(--good);}
+  .ap-state.thinking{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ap-state.speaking{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .ap-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .ap-msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.5;
+    white-space:pre-wrap;word-break:break-word;}
+  .ap-msg.user{align-self:flex-end;background:var(--bg);color:var(--ink);border-bottom-right-radius:4px;}
+  .ap-msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px;}
+  .ap-msg.err{align-self:flex-start;border:1px solid var(--danger);color:var(--danger);background:var(--ow-crimson-soft);}
+  .ap-msg .num{font-family:'IBM Plex Mono',monospace;}
+  /* The confirmation card: a decision, styled like one. While one is on
+     screen the panel carries .ap-confirm-pending, which the background
+     refresh reads to hold off (see pollForUpdatesNow). */
+  .ap-confirm{align-self:stretch;border:1px solid var(--ow-amber);border-left-width:4px;border-radius:10px;
+    padding:12px 14px;background:var(--ow-amber-faint);font-size:13.5px;line-height:1.5;}
+  .ap-confirm .btn-row{margin-top:10px;}
+  .ap-confirm.decided{opacity:.6;border-color:var(--line);}
+  .ap-setup{align-self:stretch;border:1px solid var(--line);border-radius:10px;padding:14px;
+    font-size:13px;line-height:1.6;background:var(--bg);}
+  .ap-setup b{display:block;margin-bottom:6px;}
+  .ap-cost-note{padding:5px 16px;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--ow-rule-soft);}
+  .ap-composer{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);align-items:flex-end;}
+  .ap-composer textarea{flex:1;resize:none;min-height:40px;max-height:120px;padding:9px 11px;
+    border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
+  .ap-composer textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .ap-iconbtn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    width:38px;height:38px;border-radius:8px;border:1px solid var(--line);color:var(--ink-soft);flex-shrink:0;}
+  .ap-iconbtn:hover{border-color:var(--accent);color:var(--accent);}
+  .ap-iconbtn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .ap-send{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    width:38px;height:38px;border-radius:8px;background:var(--accent);color:#fff;flex-shrink:0;}
+  .ap-send:hover{background:var(--ow-oxide-deep);}
+  .ap-send:disabled{opacity:.45;cursor:not-allowed;}
   .mms-head{
     display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
     padding:14px 16px;border-bottom:1px solid var(--line);
@@ -5931,7 +5998,13 @@
   body.worker-only-mode .mobile-bottomnav,
   body.worker-only-mode .mobile-topbar,
   body.worker-only-mode .mobile-fab,
-  body.worker-only-mode .mobile-more-sheet{display:none !important;}
+  body.worker-only-mode .mobile-more-sheet,
+  /* The desktop topbar survives worker mode, so its assistant launcher
+     must be named here or a worker-only login could open the owner's
+     assistant. */
+  body.worker-only-mode .assistant-panel,
+  body.worker-only-mode #assistantOpenBtn,
+  body.worker-only-mode #assistantOpenBtnMobile{display:none !important;}
   .worker-view-wrap{max-width:520px;margin:0 auto;padding:12px;}
   .worker-toggle-btn{margin-left:auto;}
   .wv-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
@@ -6795,6 +6868,10 @@
 <div class="mobile-topbar" id="mobileTopbar">
   <span class="mt-title" id="mobileTopbarTitle">Dashboard</span>
   <div class="order-status-bar" id="orderStatusBarMobile" title="Click to view the Order tracking board"></div>
+  <button type="button" class="tb-iconbtn" id="assistantOpenBtnMobile" aria-label="Assistant"
+    style="color:#C7CFD8;">
+    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
 </div>
 
 <nav class="mobile-bottomnav" id="mobileBottomnav">
@@ -6854,6 +6931,35 @@
   </div>
 </div>
 
+<!-- ASSISTANT — a chat panel over whatever tab is open. Not a modal on
+     purpose: modals (z 100) must still open above it, and the Escape
+     chain that closes modals must not see it. Deliberately absent from
+     the backdrop-dismiss and Escape arrays; it handles its own keys. -->
+<div class="assistant-panel" id="assistantPanel">
+  <div class="ap-head">
+    <h2>Assistant</h2>
+    <span class="ap-state" id="apState" hidden></span>
+    <button type="button" class="btn btn-ghost" id="apNewChatBtn" style="padding:6px 12px;font-size:12px;">New chat</button>
+    <button class="modal-close" id="apCloseBtn" aria-label="Close">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="ap-log" id="apLog"></div>
+  <div class="ap-cost-note">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset.</div>
+  <div class="ap-composer">
+    <textarea id="apInput" placeholder="Ask about the shop, or tell it what to record…" rows="1"></textarea>
+    <button type="button" class="ap-iconbtn" id="apMicBtn" title="Voice works in English; you can type in Luganda" aria-label="Speak">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4"/></svg>
+    </button>
+    <button type="button" class="ap-iconbtn" id="apVoiceBtn" title="Hands-free: it listens, answers aloud, and listens again" aria-label="Hands-free conversation">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    </button>
+    <button type="button" class="ap-send" id="apSendBtn" aria-label="Send">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+    </button>
+  </div>
+</div>
+
 <!-- The whole map, ordered by how often a shop needs it: the day's own
      screen first, then selling, then buying, then the money, then the
      price book, then what only gets looked at now and again. Each heading
@@ -6888,6 +6994,11 @@
 
   <div class="tb-spacer"></div>
   <div class="order-status-bar" id="orderStatusBar" title="Click to view the Order tracking board"></div>
+
+  <button type="button" class="tb-top tb-iconbtn" id="assistantOpenBtn"
+    title="Assistant (Ctrl+J)" aria-label="Assistant">
+    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
 
   <!-- Actions, not destinations. Everything you can navigate to is in
        the rail; what is left here acts on the shop as a whole, which is
@@ -50600,6 +50711,12 @@ async function pollForUpdatesNow(){
   // standalone worker app does; this one was looking only for its own
   // modals and refreshed straight through the decision it was asking about.
   if(document.querySelector('.wv-assign-overlay')) return;
+  /* The assistant's pending confirmation card, for the same reason as
+     the two above: it is a decision being asked about, and this refresh
+     replaces `data` wholesale. The card's executors re-read by id at
+     Confirm anyway -- this guard just keeps the ground still while the
+     owner reads the question. */
+  if(document.querySelector('.ap-confirm-pending')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
   pollInFlight = true;
   try{
@@ -50667,6 +50784,758 @@ function startDataPolling(){
 // signOutAndReload() now lives in shared-worker.js.
 document.getElementById('wv_signout_btn').addEventListener('click', signOutAndReload);
 document.getElementById('adminSignoutBtn').addEventListener('click', signOutAndReload);
+/* ================= ASSISTANT =========================================
+
+   The client half of the assistant: a chat panel over whatever tab is
+   open, an agentic loop, and two-way voice. The other half is
+   api/assistant.js, which holds the API key and the tool DEFINITIONS;
+   this side holds the tool EXECUTIONS, because the data lives here.
+   Every executor below reuses the exact function its screen's button
+   uses -- the assistant is a second pair of hands on the same controls,
+   never a second implementation of the books.
+
+   Two rules run through everything:
+
+   WRITES CONFIRM. A write tool never runs from the model's say-so; it
+   renders a card (and, hands-free, speaks it) and waits for the owner.
+   While a card waits, the panel carries .ap-confirm-pending, which the
+   background refresh reads to hold off -- and the executors re-read
+   every record by id at Confirm time anyway, because that refresh
+   replaces `data` wholesale and a captured row would be a pointer into
+   a dead object graph.
+
+   RESULTS ARE THE ONLY TRUTH. Every figure the model speaks comes from
+   a tool result built here, from live data, rounded to whole shillings
+   and capped to a handful of rows -- both for honesty and because every
+   byte of a result is billed on every following turn. */
+
+const AP_MAX_THREAD = 24;   // messages kept; trimmed at exchange boundaries
+const AP_MAX_STEPS = 8;     // tool round-trips per question
+let assistantThread = [];
+let assistantBusy = false;
+let apVoiceMode = false;    // hands-free conversation on
+let apRecognition = null;   // the live SpeechRecognition, when listening
+let apQuoteInFlight = false; // one INV- number per confirm, ever
+
+const AP_SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const AP_TTS = window.speechSynthesis || null;
+
+/* ---- small shared helpers ---- */
+
+const apRound = (n)=> Math.round(Number(n)||0);
+function apMonthRange(from, to){
+  const today = todayISO();
+  return { from: from || (today.slice(0,7) + '-01'), to: to || today };
+}
+function apCustomerById(id){ return (data.customers||[]).find(c=> c.id === id) || null; }
+// The app's own name-match pattern -- NEVER resolveInvoiceCustomer here,
+// which creates a customer when the name misses.
+function apCustomerByName(q){
+  const needle = String(q||'').trim().toLowerCase();
+  return (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === needle) || null;
+}
+
+/* ---- the tools -----------------------------------------------------
+   One entry per schema in api/assistant.js: {confirm, summary(input),
+   run(input)}. summary() is the sentence on the confirmation card; it
+   and run() both read LIVE data at call time. run() returns a plain
+   object; throwing an Error becomes an is_error tool result with the
+   message as the reason -- which the model reads and acts on, so every
+   throw is written for it ("no such customer", "pick a variant"). */
+const ASSISTANT_TOOLS = {
+
+  find_customer: { confirm: false, run(input){
+    const q = String(input.query||'').trim();
+    if(!q) throw new Error('Say a name or phone to search for.');
+    const exact = apCustomerByName(q);
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const list = exact ? [exact] : (data.customers||[]).filter(c=>{
+      const hay = ((c.name||'') + ' ' + (c.phone||'')).toLowerCase();
+      return tokens.every(t=> hay.includes(t));
+    });
+    return { exact_match: !!exact,
+      matches: list.slice(0,5).map(c=>({ id: c.id, name: c.name, phone: c.phone||'', owes: apRound(c.debt) })) };
+  }},
+
+  find_product: { confirm: false, run(input){
+    const entries = buildProductSuggestionEntries(searchTokens(String(input.query||'')));
+    return { matches: entries.slice(0,5).map(({p, variantIdx})=>{
+      const best = rankedPriceRows(p.id, variantIdx)[0] || null;
+      const kind = best ? (best.retail!=null ? 'retail' : 'wholesale') : null;
+      const cost = best ? (best.retail!=null ? best.retail : best.wholesale) : null;
+      const sell = best ? suggestedSellingPrice(p, cost, kind, variantIdx, Number(best.packQty)||0) : null;
+      return { product_id: p.id, variant_index: variantIdx,
+        name: productVariantLabel(p, variantIdx),
+        unit: best ? (best.unit||'') : '',
+        in_stock: getStockQty(p.id, variantIdx),
+        cost: cost==null ? null : apRound(cost),
+        suggested_sell_price: sell==null ? null : apRound(sell) };
+    })};
+  }},
+
+  customer_statement: { confirm: false, run(input){
+    const c = apCustomerById(input.customer_id);
+    if(!c) throw new Error('No customer with that id — use find_customer first.');
+    const open = customerOutstandingInvoices(c.id).slice(0,10).map(q=>({
+      invoice: invoiceNumberLabel(q), date: q.invoicedAt || q.date,
+      total: apRound(savedQuoteTotal(q)), paid: apRound(q.amountPaid),
+      due: apRound(invoiceBalanceDue(q)) }));
+    const history = (c.debtLog||[]).slice(-10).reverse().map(e=>({
+      date: e.date, type: e.type, amount: apRound(e.amount), note: e.note||'' }));
+    return { name: c.name, phone: c.phone||'', balance: apRound(c.debt),
+      open_invoices: open, recent_history: history };
+  }},
+
+  list_debtors: { confirm: false, run(){
+    const rows = collectableDebts();
+    return { count: rows.length,
+      total: apRound(rows.reduce((s,r)=> s + r.debt, 0)),
+      debtors: rows.slice(0,15).map(r=>({ id: r.id, name: r.name, owes: apRound(r.debt), days_old: r.ageDays })) };
+  }},
+
+  cash_on_hand: { confirm: false, run(){
+    const held = cashOnHandByAccount();
+    const out = { total: apRound(held.total) };
+    held.byAccount.forEach(a=>{ out[a.key] = apRound(a.amount); });
+    return out;
+  }},
+
+  suppliers_owed: { confirm: false, run(input){
+    if(input.supplier_id){
+      const bills = creditorOutstandingInvoices(input.supplier_id).slice(0,10).map(pi=>({
+        bill: purchaseInvoiceNumberLabel(pi), date: pi.date,
+        total: apRound(purchaseInvoiceTotal(pi)), due: apRound(purchaseInvoiceBalanceDue(pi)) }));
+      return { supplier: supplierName(input.supplier_id),
+        total_owed: apRound(creditorTotalOwed(input.supplier_id)), open_bills: bills };
+    }
+    const bySupplier = {};
+    credOpenInvoices().forEach(row=>{
+      const k = row.supplierId;
+      if(!bySupplier[k]) bySupplier[k] = { supplier_id: k, supplier: supplierName(k), owed: 0, open_bills: 0 };
+      bySupplier[k].owed += row.due;
+      bySupplier[k].open_bills += 1;
+    });
+    const list = Object.values(bySupplier).sort((a,b)=> b.owed - a.owed);
+    list.forEach(r=>{ r.owed = apRound(r.owed); });
+    return { total_owed: apRound(list.reduce((s,r)=> s + r.owed, 0)), suppliers: list.slice(0,10) };
+  }},
+
+  dues_owed: { confirm: false, run(){
+    const owed = duesOwedAsAt(todayISO());
+    const payable = duesNeedingPayment(todayISO()).slice(0,10).map(d=>({
+      due_id: d.id, name: dueName(d), kind: d.kind, period: d.period,
+      balance: dueBalance(d)==null ? null : apRound(dueBalance(d)),
+      uncosted: dueBalance(d)==null }));
+    return { wages_owed: apRound(owed.wages), rent_owed: apRound(owed.rent),
+      total: apRound(owed.total), payable_now: payable };
+  }},
+
+  recent_invoices: { confirm: false, run(input){
+    const lim = Math.min(Math.max(Number(input.limit)||5, 1), 10);
+    const rows = (data.savedQuotes||[])
+      .filter(q=> q.invoiced && !q.voided && (input.customer_id==null || q.customerId === input.customer_id))
+      .sort((a,b)=> (b.invoicedTs||0) - (a.invoicedTs||0))
+      .slice(0, lim);
+    return { invoices: rows.map(q=>({
+      invoice: invoiceNumberLabel(q), date: q.invoicedAt || q.date,
+      customer: (q.client && q.client.name) || '',
+      total: apRound(savedQuoteTotal(q)), paid: apRound(q.amountPaid),
+      due: apRound(invoiceBalanceDue(q)) })) };
+  }},
+
+  financial_summary: { confirm: false, run(input){
+    if(input.statement === 'balance_sheet'){
+      const bs = balanceSheetAsAt(input.as_of || todayISO());
+      return { as_of: bs.asOf, cash: apRound(bs.cash), owed_by_customers: apRound(bs.receivables),
+        stock_value: apRound(bs.inventory), equipment: apRound(bs.fixedAssets), assets: apRound(bs.assets),
+        owed_to_suppliers: apRound(bs.payables), wages_and_rent_owed: apRound(bs.staffAndRent),
+        loans: apRound(bs.loans), liabilities: apRound(bs.liabilities), equity: apRound(bs.equity) };
+    }
+    const r = apMonthRange(input.from, input.to);
+    if(input.statement === 'cash_flow'){
+      const cf = cashFlowStatement(r.from, r.to);
+      return { from: r.from, to: r.to, from_sales: apRound(cf.tradingIn),
+        collected_from_debtors: apRound(cf.debtCollected),
+        spent_on_stock_and_suppliers: apRound(cf.stockOut), running_costs_paid: apRound(cf.operatingOut),
+        from_trading: apRound(cf.operating), investing: apRound(cf.investing),
+        financing: apRound(cf.financing), net_movement: apRound(cf.netMovement) };
+    }
+    const is = incomeStatement(r.from, r.to);
+    const opexEntries = Object.entries(is.opexRows).sort((a,b)=> b[1]-a[1]);
+    const costs = {};
+    opexEntries.slice(0,8).forEach(([k,v])=>{ costs[k] = apRound(v); });
+    const rest = opexEntries.slice(8).reduce((s,[,v])=> s+v, 0);
+    if(Math.abs(rest) >= 0.5) costs['Other'] = apRound(rest);
+    return { from: r.from, to: r.to, revenue: apRound(is.revenue),
+      cost_of_sales: apRound(is.costOfSales), gross_profit: apRound(is.grossProfit),
+      running_costs: costs, depreciation: apRound(is.depreciation),
+      operating_profit: apRound(is.operatingProfit), interest: apRound(is.interest),
+      net_profit: apRound(is.netProfit) };
+  }},
+
+  recommended_price: { confirm: false, run(input){
+    const p = (data.products||[]).find(x=> x.id === input.product_id);
+    if(!p) throw new Error('No product with that id — use find_product first.');
+    const hasVariants = p.type==='variable' && p.variants && p.variants.length;
+    let vi = input.variant_index==null ? null : input.variant_index;
+    if(hasVariants && vi==null){
+      if(p.variants.length === 1) vi = 0;
+      else return { needs_variant: true, name: p.name,
+        variants: p.variants.map((v,i)=>({ variant_index: i, name: variantLabel(v.combo) })) };
+    }
+    const best = rankedPriceRows(p.id, vi)[0] || null;
+    const label = productVariantLabel(p, vi);
+    if(!best) return { no_price_on_file: true, name: label,
+      in_stock: getStockQty(p.id, vi) };
+    /* The stage view's own arithmetic (ipSuggestionPriceNote): the tier
+       this supplier actually offers decides which markup rule is asked. */
+    const kind = best.retail!=null ? 'retail' : 'wholesale';
+    const cost = best.retail!=null ? best.retail : best.wholesale;
+    const sell = suggestedSellingPrice(p, cost, kind, vi, Number(best.packQty)||0);
+    if(sell==null) return { no_markup_rule: true, name: label, unit: best.unit||'',
+      cost: apRound(cost), basis: kind,
+      note: 'A cost is on file but no ' + kind + ' markup rule — set one in Products and this becomes a sell price.' };
+    return { name: label, unit: best.unit||'', cost: apRound(cost),
+      recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi) };
+  }},
+
+  /* ---- writes: everything below renders a card first ---- */
+
+  create_quote: { confirm: true,
+    summary(input){
+      const names = (input.items||[]).map(it=>{
+        const p = (data.products||[]).find(x=> x.id === it.product_id);
+        return it.qty + ' × ' + (p ? productVariantLabel(p, it.variant_index==null?null:it.variant_index) : it.product_id);
+      });
+      return 'Create a DRAFT quote for ' + (input.customer_name||'') + ': ' + names.join(', ') + '. It will not be invoiced and stock will not move.';
+    },
+    async run(input){
+      if(apQuoteInFlight) throw new Error('A quote is already being saved — wait for it.');
+      const built = (input.items||[]).map(it=>{
+        const p = (data.products||[]).find(x=> x.id === it.product_id);
+        if(!p) throw new Error('No product with id ' + it.product_id + ' — use find_product first.');
+        const vi = it.variant_index==null ? null : it.variant_index;
+        if(vi!=null && !(p.variants && p.variants[vi])) throw new Error(p.name + ' has no variant ' + vi + '.');
+        const qty = Number(it.qty)||0;
+        if(qty<=0) throw new Error('Quantity for ' + p.name + ' must be above zero.');
+        const best = rankedPriceRows(p.id, vi)[0] || null;
+        const kind = best ? (best.retail!=null ? 'retail' : 'wholesale') : null;
+        const cost = best ? (best.retail!=null ? best.retail : best.wholesale) : null;
+        let sell = it.sell_price!=null ? Number(it.sell_price)
+          : (best ? suggestedSellingPrice(p, cost, kind, vi, Number(best.packQty)||0) : null);
+        if(sell==null) throw new Error('No price on file for ' + productVariantLabel(p, vi) + ' — say the selling price.');
+        // The picker's own default: sold off the shelf when the shelf
+        // covers it, otherwise from the best-priced supplier.
+        const supplierId = getStockQty(p.id, vi) >= qty ? '__stock__'
+          : (best && best.supplierId ? best.supplierId : '__stock__');
+        return { lineId: data.nextQuoteLineId++,
+          productId: p.id, variantIdx: vi, productName: productVariantLabel(p, vi),
+          unit: best ? (best.unit||'') : '', packUnit: best ? (best.packUnit||'') : '',
+          packQty: best ? (Number(best.packQty)||0) : 0,
+          qty, supplierId, supplierName: supplierName(supplierId),
+          price: supplierId==='__stock__' ? 0 : (cost==null ? 0 : cost),
+          sellPrice: sell };
+      });
+      apQuoteInFlight = true;
+      try{
+        const quoteId = await issueRowId('savedQuote');
+        const record = buildQuoteRecord({ quoteId,
+          client: { name: String(input.customer_name||'').trim(), phone: String(input.customer_phone||'').trim() },
+          date: input.date || todayISO(), items: built, existing: null });
+        data.savedQuotes.push(record);
+        syncInvoiceDebtCharge(record);
+        saveData();
+        return { done: true, invoice: invoiceNumberLabel(record), status: 'draft',
+          total: apRound(savedQuoteTotal(record)) };
+      } finally { apQuoteInFlight = false; }
+    }},
+
+  record_customer_payment: { confirm: true,
+    summary(input){
+      const c = apCustomerById(input.customer_id);
+      return 'Receive ' + fmtUGX(apRound(input.amount)) + ' from ' + (c ? c.name : 'customer #' + input.customer_id)
+        + (c ? ' — owes ' + fmtUGX(apRound(c.debt)) : '') + ' — into ' + accountLabel(input.account) + '.';
+    },
+    run(input){
+      const c = apCustomerById(input.customer_id);
+      if(!c) throw new Error('No customer with that id — it may have changed; use find_customer again.');
+      const amount = apRound(input.amount);
+      if(amount<=0) throw new Error('The amount must be above zero.');
+      // Oldest open invoices first; the remainder reduces the general
+      // balance -- the same cascade the payment screen offers.
+      let remaining = amount;
+      const selections = [];
+      customerOutstandingInvoices(c.id).forEach(q=>{
+        const pay = Math.min(remaining, invoiceBalanceDue(q));
+        if(pay>0){ selections.push({ quoteId: q.id, amount: pay }); remaining -= pay; }
+      });
+      const received = recordCustomerPayment(c.id, amount, input.account, input.note||'', selections, undefined, input.date);
+      saveData();
+      return { done: true, received: apRound(received),
+        applied_to_invoices: selections.length, new_balance: apRound(c.debt) };
+    }},
+
+  pay_supplier: { confirm: true,
+    summary(input){
+      const owed = creditorTotalOwed(input.supplier_id);
+      const amt = Math.min(apRound(input.amount), apRound(owed));
+      return 'Pay ' + fmtUGX(amt) + ' to ' + supplierName(input.supplier_id)
+        + ' — owed ' + fmtUGX(apRound(owed)) + ' — from ' + accountLabel(input.account)
+        + '. Oldest bills are settled first.';
+    },
+    run(input){
+      const owed = creditorTotalOwed(input.supplier_id);
+      if(owed <= 0.5) throw new Error(supplierName(input.supplier_id) + ' is not owed anything.');
+      const amt = Math.min(apRound(input.amount), apRound(owed));
+      if(amt<=0) throw new Error('The amount must be above zero.');
+      const res = allocateCreditorPayment(input.supplier_id, amt, input.account, input.note||'');
+      saveData();   // allocateCreditorPayment deliberately leaves saving to its caller
+      return { done: true, paid: apRound(res.applied), supplier: supplierName(input.supplier_id),
+        still_owed: apRound(creditorTotalOwed(input.supplier_id)) };
+    }},
+
+  pay_staff_or_rent: { confirm: true,
+    summary(input){
+      const due = (data.dues||[]).find(d=> d.id === input.due_id);
+      if(!due) return 'Pay a wage or rent month that no longer exists — it will be refused.';
+      const bal = dueBalance(due);
+      return 'Pay ' + fmtUGX(apRound(input.amount)) + ' for ' + dueName(due) + ' (' + periodLabel(due.period) + ')'
+        + (bal==null ? ' — NOT COSTED yet' : ' — balance ' + fmtUGX(apRound(bal)))
+        + ' — from ' + accountLabel(input.account) + '.';
+    },
+    run(input){
+      const due = (data.dues||[]).find(d=> d.id === input.due_id);
+      if(!due) throw new Error('No wage or rent month with that id — use dues_owed again.');
+      const paid = payDue(input.due_id, apRound(input.amount), input.account, input.date);
+      if(paid==null) throw new Error('That month is not costed yet — enter the days worked in Payroll first.');
+      return { done: true, paid: apRound(paid), name: dueName(due), period: due.period,
+        balance_left: dueBalance(due)==null ? null : apRound(dueBalance(due)) };
+    }},
+
+  add_expense: { confirm: true,
+    summary(input){
+      return 'Record ' + fmtUGX(apRound(input.amount)) + ' out of ' + accountLabel(input.account)
+        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.';
+    },
+    run(input){
+      const cats = data.presetExpenseCategories||[];
+      if(cats.indexOf(input.category) === -1)
+        throw new Error('"' + input.category + '" is not one of the shop\'s expense categories. Valid: ' + cats.join(', ') + '.');
+      const amount = apRound(input.amount);
+      if(amount<=0) throw new Error('The amount must be above zero.');
+      addCashPayment(input.account, amount, input.category, input.description||'', input.date || todayISO());
+      return { done: true, recorded: amount, category: input.category };
+    }},
+
+  record_other_income: { confirm: true,
+    summary(input){
+      return 'Record ' + fmtUGX(apRound(input.amount)) + ' into ' + accountLabel(input.account)
+        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.';
+    },
+    run(input){
+      const cats = data.presetIncomeCategories||[];
+      if(cats.indexOf(input.category) === -1)
+        throw new Error('"' + input.category + '" is not one of the shop\'s income categories. Valid: ' + cats.join(', ') + '.');
+      const amount = apRound(input.amount);
+      if(amount<=0) throw new Error('The amount must be above zero.');
+      addCashReceipt(input.account, amount, input.category, input.description||'', input.date || todayISO());
+      return { done: true, recorded: amount, category: input.category };
+    }},
+
+  add_sourcing_lead: { confirm: true,
+    summary(input){
+      return 'Add "' + (input.item_name||'') + '" to the sourcing queue'
+        + (input.customer_name ? ' (asked for by ' + input.customer_name + ')' : '') + '.';
+    },
+    run(input){
+      const res = captureSourcingLeadAndSave({
+        name: input.item_name, source: 'assistant',
+        customerId: null, customerName: input.customer_name||'', phone: '',
+        orderId: null, note: input.note||'' });
+      if(!res) throw new Error('Nothing to add — the item needs a name.');
+      return { done: true, item: res.lead.name,
+        already_on_queue: !res.isNew && !res.wasDropped, revived: !!res.wasDropped };
+    }},
+};
+
+/* ---- rendering ---- */
+
+function apLogEl(){ return document.getElementById('apLog'); }
+function apScroll(){ const el = apLogEl(); el.scrollTop = el.scrollHeight; }
+function apBubble(cls, html){
+  const div = document.createElement('div');
+  div.className = 'ap-msg ' + cls;
+  div.innerHTML = html;
+  apLogEl().appendChild(div);
+  apScroll();
+  return div;
+}
+// Amounts get the app's numeric face; everything else is escaped text.
+function apFormatText(text){
+  return esc(text).replace(/\d[\d,]*(\.\d+)? UGX/g, m=> '<span class="num">' + m + '</span>');
+}
+function apRenderUser(text){ apBubble('user', apFormatText(text)); }
+function apRenderAssistant(text){ apBubble('bot', apFormatText(text)); }
+function apRenderError(msg){ apBubble('err', esc(msg)); }
+function apRenderSetupCard(){
+  apBubble('setup ap-setup', [
+    '<b>Not connected yet — 4 steps, once</b>',
+    '1. At <b>console.anthropic.com</b>: sign up, add about $5 of credit under Billing, then API Keys → Create Key. Copy the key (sk-ant-…). Set a monthly spend limit there too — $5 is a good start.',
+    '2. At <b>vercel.com</b>: open your project → Settings → Environment Variables → add <b>ANTHROPIC_API_KEY</b> = the key → Save.',
+    '3. In Vercel’s Deployments tab, Redeploy the newest deployment.',
+    '4. Reload this app and ask something.',
+    'Each question then uses a few cents of that credit (roughly 100–300 UGX). Remove the variable and redeploy to switch it off.',
+  ].join('<br>'));
+}
+
+function apSetState(state){
+  const el = document.getElementById('apState');
+  if(!el) return;
+  if(!state){ el.hidden = true; el.className = 'ap-state'; return; }
+  el.hidden = false;
+  el.className = 'ap-state ' + state;
+  el.textContent = state === 'listening' ? '● Listening'
+    : state === 'thinking' ? '… Thinking'
+    : state === 'speaking' ? '🔊 Speaking' : state;
+}
+
+/* ---- confirmation queue ---- */
+
+/* One card at a time, resolved by button OR by voice -- the same gate,
+   two inputs. The promise resolves true/false; the card greys out the
+   moment either input decides, so a second press cannot double-run. */
+function apAskConfirm(tool, input){
+  return new Promise((resolve)=>{
+    const panel = document.getElementById('assistantPanel');
+    let summary;
+    try{ summary = tool.summary(input); }
+    catch(e){ resolve(false); apRenderError('Could not describe that action: ' + e.message); return; }
+    const card = document.createElement('div');
+    card.className = 'ap-confirm';
+    card.innerHTML = '<div>' + apFormatText(summary) + '</div>'
+      + '<div class="btn-row">'
+      + '<button type="button" class="btn btn-accent ap-yes">Confirm</button>'
+      + '<button type="button" class="btn btn-ghost ap-no">Cancel</button></div>';
+    apLogEl().appendChild(card);
+    apScroll();
+    panel.classList.add('ap-confirm-pending');
+
+    let settled = false;
+    const settle = (ok)=>{
+      if(settled) return;
+      settled = true;
+      card.classList.add('decided');
+      card.querySelectorAll('button').forEach(b=> b.disabled = true);
+      panel.classList.remove('ap-confirm-pending');
+      /* Settled by button while the yes/no mic was open: close that mic,
+         or it sits there and swallows the first words of the next turn. */
+      if(apRecognition){ try{ apRecognition.abort(); }catch(e){} }
+      resolve(ok);
+    };
+    card.querySelector('.ap-yes').addEventListener('click', ()=> settle(true));
+    card.querySelector('.ap-no').addEventListener('click', ()=> settle(false));
+
+    /* Hands-free: the card is spoken, then the mic listens for a yes or
+       a no. Anything else re-prompts once; the buttons always stand. */
+    if(apVoiceMode && AP_SR){
+      const listenYesNo = ()=>{
+        if(settled || !apVoiceMode) return;
+        apListenOnce((heard)=>{
+          if(settled) return;
+          const h = String(heard||'').trim().toLowerCase();
+          if(/^(yes|yeah|yep|confirm|ok|okay|do it)\b/.test(h)) settle(true);
+          else if(/^(no|nope|cancel|stop|don't)\b/.test(h)) settle(false);
+          else { apSpeak('Say yes to confirm, or no.').then(listenYesNo); }
+        });
+      };
+      apSpeak(summary + ' Say yes to confirm, or no.').then(listenYesNo);
+    }
+  });
+}
+
+/* ---- the loop ---- */
+
+async function apCallServer(){
+  const sess = await sb.auth.getSession();
+  const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
+  if(!token){ apRenderError('Your login has expired — reload the page and sign in again.'); return null; }
+  let resp;
+  try{
+    resp = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ messages: assistantThread }),
+    });
+  } catch(e){
+    apRenderError('Could not reach the assistant — check the internet connection and try again.');
+    return null;
+  }
+  let body = null;
+  try{ body = await resp.json(); } catch(e){}
+  if(resp.status === 401){ apRenderError((body && body.error && body.error.message) || 'Your login has expired — reload the page and sign in again.'); return null; }
+  if(body && body.not_configured){ apRenderSetupCard(); return null; }
+  if(!resp.ok || (body && body.error)){
+    apRenderError((body && body.error && body.error.message) || 'Something went wrong. Try again.');
+    return null;
+  }
+  return body;
+}
+
+async function apRunLoop(){
+  assistantBusy = true;
+  document.getElementById('apSendBtn').disabled = true;
+  apSetState('thinking');
+  let finalText = '';
+  try{
+    for(let step=0; step<AP_MAX_STEPS; step++){
+      const resp = await apCallServer();
+      if(!resp) return;
+      assistantThread.push({ role: 'assistant', content: resp.content });
+      let spokeText = '';
+      (resp.content||[]).forEach(block=>{
+        if(block.type === 'text' && block.text){ apRenderAssistant(block.text); spokeText += (spokeText?' ':'') + block.text; }
+      });
+      if(resp.stop_reason === 'refusal'){
+        apRenderError('I can\'t help with that request.');
+        return;
+      }
+      if(resp.stop_reason !== 'tool_use'){ finalText = spokeText; return; }
+
+      /* Execute every tool_use in this turn, in order; writes wait on
+         their card. ALL results go back in ONE user message -- split
+         across messages they would quietly teach the model to stop
+         calling tools in parallel. */
+      const results = [];
+      let wroteSomething = false;
+      for(const block of (resp.content||[])){
+        if(block.type !== 'tool_use') continue;
+        const tool = ASSISTANT_TOOLS[block.name];
+        let result, isError = false;
+        if(!tool){
+          result = { error: 'Unknown tool.' }; isError = true;
+        } else if(tool.confirm){
+          const ok = await apAskConfirm(tool, block.input || {});
+          if(!ok){ result = { declined: true, reason: 'owner declined' }; }
+          else {
+            try{ result = await tool.run(block.input || {}); wroteSomething = true; }
+            catch(e){ result = { error: e.message }; isError = true; }
+          }
+        } else {
+          try{ result = await tool.run(block.input || {}); }
+          catch(e){ result = { error: e.message }; isError = true; }
+        }
+        results.push({ type: 'tool_result', tool_use_id: block.id,
+          content: JSON.stringify(result), ...(isError ? { is_error: true } : {}) });
+      }
+      if(wroteSomething){
+        /* The idiom the poll itself uses after swapping data: re-render
+           the visible tab and the rail counts, through the app's own
+           calls. goToTab is idempotent for the current tab. */
+        goToTab(currentActiveTab);
+        refreshNavBadges();
+      }
+      assistantThread.push({ role: 'user', content: results });
+      apSetState('thinking');
+    }
+    apRenderError('I stopped after too many steps — ask again more specifically.');
+  } finally {
+    assistantBusy = false;
+    document.getElementById('apSendBtn').disabled = false;
+    apTrimThread();
+    apSetState(apVoiceMode ? 'speaking' : null);
+    if(apVoiceMode && finalText){
+      await apSpeak(finalText);
+    }
+    if(apVoiceMode){ apVoiceListenTurn(); } else { apSetState(null); }
+  }
+}
+
+function apTrimThread(){
+  if(assistantThread.length <= AP_MAX_THREAD) return;
+  /* Trim whole exchanges from the front: cut only at a message that is a
+     plain-string user turn (a real owner question), so a tool_use and
+     its tool_result are never split -- a split pair is an API error on
+     the next call. If no safe boundary brings us under the cap, keep
+     everything; over the cap beats broken. */
+  for(let i=1; i<assistantThread.length; i++){
+    const m = assistantThread[i];
+    if(m.role === 'user' && typeof m.content === 'string' && assistantThread.length - i <= AP_MAX_THREAD){
+      assistantThread = assistantThread.slice(i);
+      return;
+    }
+  }
+}
+
+function apSend(text){
+  const clean = String(text||'').trim();
+  if(!clean || assistantBusy) return;
+  /* The date rides inside the user turn, after the cached prefix -- the
+     system prompt stays byte-stable so the big prefix caches. */
+  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\n' + clean });
+  apRenderUser(clean);
+  apRunLoop();
+}
+
+/* ---- voice ---- */
+
+function apSpeak(text){
+  return new Promise((resolve)=>{
+    if(!AP_TTS || !text){ resolve(); return; }
+    AP_TTS.cancel();
+    /* "1,250,000 UGX" reads as letters; "shillings" reads as money. */
+    const spoken = String(text).replace(/\bUGX\b/g, 'shillings');
+    const u = new SpeechSynthesisUtterance(spoken);
+    u.lang = 'en-GB';
+    u.onend = ()=> resolve();
+    u.onerror = ()=> resolve();
+    AP_TTS.speak(u);
+  });
+}
+
+/* One listen: a single recognition session; onDone gets the final
+   transcript ('' when nothing was heard). Errors that mean "the mic is
+   not allowed" also stop hands-free entirely -- a hot mic nobody
+   granted is not a state this panel may be in. */
+function apListenOnce(onDone){
+  if(!AP_SR){ onDone(''); return; }
+  const rec = new AP_SR();
+  apRecognition = rec;
+  rec.lang = 'en-UG';
+  rec.interimResults = false;
+  rec.continuous = false;
+  let finalText = '';
+  apSetState('listening');
+  rec.onresult = (e)=>{
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
+    }
+  };
+  rec.onerror = (e)=>{
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      apStopVoice();
+      apRenderError('The microphone is not allowed — enable it in the browser to talk hands-free.');
+    }
+  };
+  rec.onend = ()=>{
+    apRecognition = null;
+    if(!apVoiceMode) apSetState(null);
+    onDone(finalText.trim());
+  };
+  try{ rec.start(); }
+  catch(e){ apRecognition = null; onDone(''); }
+}
+
+/* One hands-free turn: listen; heard something -> send it (the loop
+   speaks the reply and calls back here); heard nothing -> listen again,
+   so a pause in a noisy shop does not end the conversation. */
+function apVoiceListenTurn(){
+  if(!apVoiceMode || assistantBusy) return;
+  apListenOnce((heard)=>{
+    if(!apVoiceMode) return;
+    if(heard) apSend(heard);
+    else apVoiceListenTurn();
+  });
+}
+
+function apStartVoice(){
+  if(!AP_SR){ toast('This browser has no speech recognition — type instead'); return; }
+  apVoiceMode = true;
+  document.getElementById('apVoiceBtn').classList.add('active');
+  apVoiceListenTurn();
+}
+function apStopVoice(){
+  apVoiceMode = false;
+  document.getElementById('apVoiceBtn').classList.remove('active');
+  if(apRecognition){ try{ apRecognition.abort(); }catch(e){} apRecognition = null; }
+  if(AP_TTS) AP_TTS.cancel();
+  apSetState(null);
+}
+
+/* ---- panel shell ---- */
+
+function apOpenPanel(){
+  document.getElementById('assistantPanel').classList.add('open');
+  const input = document.getElementById('apInput');
+  if(assistantThread.length === 0 && apLogEl().children.length === 0){
+    apBubble('bot', esc('Ask me anything about the shop — debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.'));
+  }
+  setTimeout(()=> input.focus(), 30);
+}
+function apClosePanel(){
+  apStopVoice();
+  document.getElementById('assistantPanel').classList.remove('open');
+  const opener = document.getElementById('assistantOpenBtn');
+  if(opener) opener.focus();
+}
+function apTogglePanel(){
+  const open = document.getElementById('assistantPanel').classList.contains('open');
+  if(open) apClosePanel(); else apOpenPanel();
+}
+
+document.getElementById('assistantOpenBtn').addEventListener('click', apTogglePanel);
+document.getElementById('assistantOpenBtnMobile').addEventListener('click', apTogglePanel);
+document.getElementById('apCloseBtn').addEventListener('click', apClosePanel);
+document.getElementById('apNewChatBtn').addEventListener('click', ()=>{
+  assistantThread = [];
+  apLogEl().innerHTML = '';
+  apBubble('bot', esc('New chat. What do you need?'));
+});
+document.getElementById('apSendBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('apInput');
+  const text = input.value;
+  input.value = '';
+  apSend(text);
+});
+document.getElementById('apInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    const input = e.currentTarget;
+    const text = input.value;
+    input.value = '';
+    apSend(text);
+  }
+});
+// Tap-to-talk: one listen, into the box -- the owner reads before it goes.
+document.getElementById('apMicBtn').addEventListener('click', ()=>{
+  if(!AP_SR){ toast('This browser has no speech recognition — type instead'); return; }
+  if(apRecognition){ try{ apRecognition.abort(); }catch(e){} return; }
+  apListenOnce((heard)=>{
+    if(heard) document.getElementById('apInput').value = heard;
+  });
+});
+document.getElementById('apVoiceBtn').addEventListener('click', ()=>{
+  if(apVoiceMode) apStopVoice(); else apStartVoice();
+});
+if(!AP_SR){
+  document.getElementById('apMicBtn').hidden = true;
+  document.getElementById('apVoiceBtn').hidden = true;
+}
+
+/* Escape inside the panel: the nav-search shape -- stopPropagation so
+   the modal Escape chain never sees it; first press clears a non-empty
+   composer, second closes the panel. */
+document.getElementById('assistantPanel').addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  e.stopPropagation();
+  const input = document.getElementById('apInput');
+  if(input.value){ input.value = ''; }
+  else apClosePanel();
+});
+
+/* Ctrl/Cmd+J, beside Ctrl+K: the bare-key namespace (q, r, c, p, /) is
+   spoken for, and a chord works from inside any field. */
+document.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'j' || e.key === 'J')){
+    e.preventDefault();
+    apTogglePanel();
+  }
+});
+
+/* A hidden tab must never keep a hot mic or keep talking. */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && apVoiceMode) apStopVoice();
+});
+
 boot();
 </script>
 </body>
