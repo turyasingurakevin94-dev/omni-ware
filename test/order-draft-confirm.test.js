@@ -472,7 +472,13 @@ const draft = (items) => {
   const saveCode = saveHandler.replace(/\/\*[\s\S]*?\*\//g, '');
   t.check(!/SALES_GROUP_WA_LINK|shareOrderToSalesGroup/.test(saveCode),
     'saving a quote does not tell the sales group — that is what this whole stage moved');
-  t.check(/status: existing \? existing\.status : 'draft'/.test(saveHandler),
+  /* The record literal moved into buildQuoteRecord so the assistant can
+     build a draft through the identical path -- the handler now calls
+     it, and the draft default is asserted where it lives. */
+  t.check(/const record = buildQuoteRecord\(/.test(saveHandler),
+    'the handler builds its record through the shared builder');
+  t.check(/status: existing \? existing\.status : 'draft'/.test(
+    extractFunction(src, 'buildQuoteRecord', 'index.html')),
     'and a new quote still lands in Draft');
 }
 {

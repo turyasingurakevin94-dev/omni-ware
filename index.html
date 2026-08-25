@@ -20656,22 +20656,17 @@ function buildSalesGroupQuoteMessage(items, client){
   ].join('\n');
 }
 
-const __btn_q_save_btn = document.getElementById('q_save_btn');
-__btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, async ()=>{
-  ensureQuote();
-  if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
-  const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
-  const existing = idxExisting>-1 ? data.savedQuotes[idxExisting] : null;
-  /* Before anything is written, and before an INV- number is issued for a
-     new order -- a save the shop backs out of must cost nothing. */
-  const droppedWarning = orderDroppedReceiptWarning(
-    orderReceiptsBeingDropped(existing, data.quote.items));
-  if(droppedWarning && !confirm(droppedWarning)) return;
-  // Issued before the record is built, and only for a genuinely new quote --
-  // this id becomes the INV- number, so it's fetched one at a time to keep
-  // that sequence dense (see issueRowId).
-  const quoteId = data.quote.savedId || await issueRowId('savedQuote');
-  const record = {
+/* One saved-quote record, assembled the same way for every caller.
+
+   Extracted from the save button's handler so the assistant can build a
+   draft through the identical path a hand-saved quote takes -- two
+   assemblies of this record would drift the way the till's once did.
+   Pure and synchronous: the INV- id stays the CALLER'S concern, because
+   both callers must issue it only after their own validation and
+   confirms have passed (a save the shop backs out of must cost nothing,
+   and the sequence is dense). */
+function buildQuoteRecord({quoteId, client, date, items, existing}){
+  return {
     // Spread the existing order FIRST so anything already on it survives by
     // default, then override only what this form actually edits.
     //
@@ -20686,9 +20681,9 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
     // spreading is correct by default instead.
     ...(existing || {}),
     id: quoteId,
-    client: {...data.quote.client},
-    date: data.quote.date,
-    items: JSON.parse(JSON.stringify(data.quote.items)),
+    client: {...client},
+    date,
+    items: JSON.parse(JSON.stringify(items)),
     savedAt: new Date().toISOString(),
     // The rest re-state defaults for a brand-new record, and normalise
     // types on an existing one (the spread above already carried the
@@ -20709,6 +20704,25 @@ __btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, asy
     customerId: existing ? (existing.customerId||null) : null,
     debtCharged: existing ? (Number(existing.debtCharged)||0) : 0
   };
+}
+
+const __btn_q_save_btn = document.getElementById('q_save_btn');
+__btn_q_save_btn.addEventListener('click', saveOnceAtATime(__btn_q_save_btn, async ()=>{
+  ensureQuote();
+  if(data.quote.items.length===0){ toast('Add at least one item before saving'); return; }
+  const idxExisting = data.savedQuotes.findIndex(q=>q.id===data.quote.savedId);
+  const existing = idxExisting>-1 ? data.savedQuotes[idxExisting] : null;
+  /* Before anything is written, and before an INV- number is issued for a
+     new order -- a save the shop backs out of must cost nothing. */
+  const droppedWarning = orderDroppedReceiptWarning(
+    orderReceiptsBeingDropped(existing, data.quote.items));
+  if(droppedWarning && !confirm(droppedWarning)) return;
+  // Issued before the record is built, and only for a genuinely new quote --
+  // this id becomes the INV- number, so it's fetched one at a time to keep
+  // that sequence dense (see issueRowId).
+  const quoteId = data.quote.savedId || await issueRowId('savedQuote');
+  const record = buildQuoteRecord({quoteId, client: data.quote.client,
+    date: data.quote.date, items: data.quote.items, existing});
   const idx = data.savedQuotes.findIndex(q=>q.id===record.id);
   const wasUpdate = idx>-1;
   if(wasUpdate) data.savedQuotes[idx] = record; else data.savedQuotes.push(record);
