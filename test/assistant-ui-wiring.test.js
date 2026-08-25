@@ -216,6 +216,36 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/\.ap-choices\{[^}]*flex/.test(src), 'and the chip row is styled with the panel');
 }
 
+/* ---------- 7d. a photo rides the turn --------------------------------- */
+/*
+ * The paper the shop runs on — price lists, receipts, delivery notes —
+ * gets photographed, compressed IN the browser, and sent as the first
+ * block of the owner's turn. The date stamp stays inside the TEXT
+ * block, so the cached prefix never learns the date; the pending photo
+ * is cleared the moment it rides; and a photo turn trims like any
+ * other owner turn.
+ */
+{
+  t.check(/id="apPhotoBtn"/.test(src) && /id="apPhotoInput"[^>]*accept="image\/\*"/.test(src),
+    'the composer offers the camera, through a hidden picker that accepts only images');
+  const comp = extractFunction(src, 'apCompressImage', 'index.html');
+  t.check(/createImageBitmap/.test(comp) && /toDataURL\('image\/jpeg'/.test(comp) && /1568/.test(comp),
+    'photos are decoded, capped at 1568px on the long side, and re-encoded as JPEG in the browser');
+  t.check(/900000/.test(comp), 'stepping quality down until the payload fits the server ceiling');
+  const send = extractFunction(src, 'apSend', 'index.html');
+  t.check(/type: 'image', source: \{ type: 'base64'/.test(send)
+    && /\{ type: 'text', text: stamped \}/.test(send),
+    'a photo turn is [image, text] — the picture first, the date inside the TEXT block');
+  t.check(/!clean && !apPendingPhoto/.test(send),
+    'an empty caption sends only when a photo is attached');
+  t.check(/apClearPhoto\(\)/.test(send), 'and the pending photo is cleared once it rides');
+  const trim2 = extractFunction(src, 'apTrimThread', 'index.html');
+  t.check(/Array\.isArray\(m\.content\) && !m\.content\.some\(b=> b && b\.type === 'tool_result'\)/.test(trim2),
+    'a photo turn is a safe trim boundary — only tool pairs are unsplittable');
+  t.check(/\.ap-msg \.ap-photo\{/.test(src) && /\.ap-photo-chip\{/.test(src),
+    'the photo is styled in the bubble and previewed before sending');
+}
+
 /* ---------- 8. keys and escape ---------------------------------------- */
 {
   t.check(/\(e\.ctrlKey \|\| e\.metaKey\) && !e\.shiftKey && !e\.altKey && \(e\.key === 'j' \|\| e\.key === 'J'\)/.test(code),

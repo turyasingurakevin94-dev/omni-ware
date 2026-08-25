@@ -59,6 +59,8 @@ const SYSTEM_PROMPT = [
   '',
   'When you ask the owner a question, offer your best guesses as tap buttons: end the reply with one line — [choices: first | second] — two to four short options, most likely first, each worded exactly as the owner would answer (for example [choices: 10,000 | 100,000] or [choices: Both sizes | Only the 2 inch]). Only when asking, never on a plain answer, and the sentences above the line must still carry the question in full. The app turns the line into buttons and never speaks it.',
   '',
+  'Photos: the owner may attach a photo — a supplier price list, a delivery note, a receipt, a handwritten order, or the shelf itself. Say in one line what the document is, then read ONLY what is visible: never invent a figure, name or quantity the photo does not show, and read unclear handwriting back as a question ("I read 31,500 — correct?") rather than guessing. Then use the normal tools: a supplier price list becomes find_supplier and find_product then add_supplier_price, one card per item — the ladder rules apply, and price lists often quote per pack; a receipt becomes add_expense; a handwritten customer order becomes find_product then one create_quote draft. A delivery note: read it out and total it, but say plainly that receiving stock into the books is done on the Purchases screen. Work through multi-line documents in the order written, and say which lines you could not read.',
+  '',
   'Language: the owner may write or speak in English or Luganda. Reply in the language of their message.',
   '',
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
@@ -323,9 +325,39 @@ module.exports = async (req, res) => {
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: { type: 'bad_request', message: 'Nothing to answer.' } });
   }
-  /* A hard ceiling, not a nicety: history is the one input a bug in the
-     client could grow without bound, and every byte of it is billed. */
-  if (messages.length > 40 || JSON.stringify(messages).length > 200000) {
+  /* Hard ceilings, not niceties: history is the one input a bug in the
+     client could grow without bound, and every byte of it is billed.
+     Photos get their own ceilings — the browser compresses them, but
+     the browser is not the trust boundary, so each is bounded again
+     here. The TEXT of the thread keeps its own cap, measured with the
+     image bytes blanked, so a photo cannot smuggle a longer history. */
+  if (messages.length > 40) {
+    return res.status(413).json({ error: { type: 'too_long', message: 'This chat has grown too long — press New chat and continue there.' } });
+  }
+  const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  let imageCount = 0;
+  for (const m of messages) {
+    const blocks = Array.isArray(m && m.content) ? m.content : [];
+    for (const b of blocks) {
+      if (!b || b.type !== 'image') continue;
+      if (m.role !== 'user') {
+        return res.status(400).json({ error: { type: 'bad_request', message: 'Photos can only come from you.' } });
+      }
+      imageCount++;
+      const src = b.source || {};
+      if (src.type !== 'base64' || !IMAGE_TYPES.includes(src.media_type) || typeof src.data !== 'string') {
+        return res.status(400).json({ error: { type: 'bad_request', message: 'That photo could not be read — attach it again with the camera button.' } });
+      }
+      if (src.data.length > 950000) {
+        return res.status(413).json({ error: { type: 'too_long', message: 'That photo is too large — retake it and try again.' } });
+      }
+    }
+  }
+  if (imageCount > 3) {
+    return res.status(413).json({ error: { type: 'too_long', message: 'Too many photos in one chat — press New chat and send it there.' } });
+  }
+  const textOnly = JSON.stringify(messages, (k, v) => (k === 'data' && typeof v === 'string' && v.length > 1000 ? '' : v));
+  if (textOnly.length > 200000) {
     return res.status(413).json({ error: { type: 'too_long', message: 'This chat has grown too long — press New chat and continue there.' } });
   }
 

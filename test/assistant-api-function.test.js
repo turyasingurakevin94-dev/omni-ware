@@ -107,6 +107,9 @@ const pkg = read('package.json');
     'and the markup terrain: a bare figure is fixed shillings unless the owner says percent, and zero clears');
   t.check(/\[choices: first \| second\]/.test(src) && /never speaks it/.test(src),
     'and questions offer tap answers: the choices line, buttons on screen, silent in the ear');
+  t.check(/never invent a figure, name or quantity the photo does not show/.test(src)
+    && /Purchases screen/.test(src),
+    'and the photo terrain: read only what is visible, and receiving stock stays on the Purchases screen');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
@@ -132,6 +135,12 @@ const pkg = read('package.json');
   t.check(/messages\.length > 40/.test(src) && /200000/.test(src),
     'oversized threads are refused, with the New-chat message');
   t.check(/press New chat/.test(src), 'in words the owner can act on');
+  t.check(/'image\/jpeg', 'image\/png', 'image\/webp'/.test(src),
+    'photos are admitted by a media-type whitelist, nothing else');
+  t.check(/950000/.test(src) && /imageCount > 3/.test(src),
+    'each photo bounded, and at most three per chat — the Vercel body cap stays honest');
+  t.check(/k === 'data'/.test(src),
+    'while the 200KB TEXT ceiling is measured with the image bytes blanked — a photo cannot smuggle a longer history');
   ['AuthenticationError', 'RateLimitError', 'APIConnectionError', 'APIError'].forEach(k =>
     t.check(src.includes('Anthropic.' + k), `${k} is caught by type`));
   const order = ['AuthenticationError', 'RateLimitError', 'APIConnectionError', 'APIError']
@@ -208,6 +217,35 @@ const pkg = read('package.json');
       body: { messages: [{ role: 'user', content: 'hi' }] } }, r);
     t.check(r.code === 200 && r.body.not_configured === true,
       'a real user with no key configured gets the dark answer, and the throwing SDK stub proves nothing was spent');
+
+    /* Photo ceilings, exercised with the key SET so the bounds are
+       reachable — each returns before the throwing SDK stub could be
+       constructed, which is the proof an oversized photo cannot spend. */
+    process.env.ANTHROPIC_API_KEY = 'test-not-a-real-key';
+    r = res();
+    await handler({ method: 'POST', headers: { authorization: 'Bearer good' },
+      body: { messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'x'.repeat(950001) } },
+        { type: 'text', text: 'hi' }] }] } }, r);
+    t.check(r.code === 413 && /too large/.test(r.body.error.message),
+      'an oversized photo is refused in plain words — the browser is not the trust boundary');
+
+    r = res();
+    const tinyImg = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'x' } };
+    await handler({ method: 'POST', headers: { authorization: 'Bearer good' },
+      body: { messages: [{ role: 'user', content: [tinyImg, tinyImg, tinyImg, tinyImg, { type: 'text', text: 'hi' }] }] } }, r);
+    t.check(r.code === 413 && /Too many photos/.test(r.body.error.message),
+      'and so is a fourth photo');
+
+    r = res();
+    await handler({ method: 'POST', headers: { authorization: 'Bearer good' },
+      body: { messages: [
+        { role: 'user', content: 'hi' },
+        { role: 'assistant', content: [tinyImg] },
+        { role: 'user', content: 'again' }] } }, r);
+    t.check(r.code === 400 && /only come from you/.test(r.body.error.message),
+      'an image smuggled into an assistant turn is refused');
+    delete process.env.ANTHROPIC_API_KEY;
 
     g.fetch = realFetch;
     process.exit(t.done() ? 1 : 0);
