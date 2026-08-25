@@ -51018,6 +51018,155 @@ function apSupplierPriceParts(input){
     isNew: !sup, existing, pack, tiers };
 }
 
+/* Resolve-or-create for suppliers, shared by add_supplier_price and
+   import_price_list. Creation rides the graduation's discipline:
+   server-issued id, saved and CONFIRMED landed (the two-save gate)
+   before any price row may point at it -- gateFailed tells the caller
+   to stop and say so instead of writing a dangling foreign key. */
+async function apEnsureSupplier(sup, supplierName){
+  if(sup) return { sup, created: false, gateFailed: false };
+  const id = firstFreeEntityId('S', 3, data.suppliers,
+    await issueEntityId('supplier', 'S', 3, data.suppliers));
+  sup = { id, name: supplierName, phone: '', location: '',
+    notes: 'Added from the assistant while recording a price' };
+  data.suppliers.push(sup);
+  await saveData();
+  return { sup, created: true,
+    gateFailed: !(lastSynced && lastSynced.suppliers && lastSynced.suppliers[String(id)]) };
+}
+
+/* Variant combos compared by content, tolerant of case and spacing --
+   the model restates {"Size":"400mm"} from a document while the card
+   on file may say "400MM". */
+function apComboKey(combo){
+  return JSON.stringify(Object.entries(combo||{})
+    .map(([k,v])=> [String(k).trim().toLowerCase(), String(v).trim().toLowerCase()])
+    .sort((a,b)=> a[0] < b[0] ? -1 : 1));
+}
+function apSameCombo(a, b){ return apComboKey(a) === apComboKey(b); }
+
+/* ---- bulk import: a whole price list behind ONE card ---------------
+   The row-by-row review happens in CHAT before the card -- the model
+   lays out every line and the owner corrects it there -- so the card
+   only has to count honestly. Shared by import_price_list's summary()
+   and run() so they cannot disagree. Validation is strict ON PURPOSE:
+   a bad line throws HERE, before the card renders, and the model fixes
+   its call instead of the owner confirming a card that would half-fail. */
+function apImportParts(input){
+  const items = Array.isArray(input.items) ? input.items : [];
+  if(!items.length) throw new Error('The import has no lines — say what to bring in.');
+  if(items.length > 60)
+    throw new Error('That is ' + items.length + ' lines — one import takes at most 60. Split the document and send the rest in a second call.');
+  const sup = input.supplier_id
+    ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
+    : supFindDuplicate(String(input.supplier_name||''), null);
+  if(input.supplier_id && !sup) throw new Error('No supplier with that id — use find_supplier first.');
+  const supplierName = sup ? sup.name : String(input.supplier_name||'').trim();
+  if(!supplierName) throw new Error('Say which supplier this price list is from.');
+
+  const groups = [];        // one NEW product per distinct name
+  const groupByKey = {};
+  const lines = [];
+  const seen = {};          // product+variant -> line number, twins throw
+  items.forEach((it, i)=>{
+    const n = i + 1;
+    const price = { unit: it.unit, price_per_unit: it.price_per_unit,
+      pieces_per_unit: it.pieces_per_unit, pack_unit: it.pack_unit,
+      pack_qty: it.pack_qty, price_per_pack: it.price_per_pack,
+      supplier_sku: it.supplier_sku };
+    let spec = it.new_product && String(it.new_product.name||'').trim() ? it.new_product : null;
+    let productId = it.product_id || null;
+    const combo = it.variant_combo && typeof it.variant_combo === 'object'
+      && Object.keys(it.variant_combo).length ? it.variant_combo : null;
+    if(!spec && !productId)
+      throw new Error('Line ' + n + ' names no product — give product_id or new_product.');
+    if(spec){
+      /* A "new" product that already exists attaches to the existing
+         card instead -- the same no-twins law create_product enforces. */
+      const dup = (data.products||[]).find(p=> supNormalisedName(p.name) === supNormalisedName(String(spec.name)));
+      if(dup){ productId = dup.id; spec = null; }
+    }
+    if(productId){
+      const p = (data.products||[]).find(x=> x.id === productId);
+      let vi = it.variant_index==null ? null : it.variant_index;
+      if(combo && p && vi==null){
+        vi = (p.variants||[]).findIndex(v=> apSameCombo(v.combo, combo));
+        if(vi < 0) throw new Error('Line ' + n + ': ' + p.name + ' has no '
+          + variantLabel(combo) + ' variant — check catalogue_names.');
+      }
+      /* The full Registry law, per line: product exists, variant law,
+         a first entry needs unit and price, packing pairs up. */
+      let parts;
+      try{
+        parts = apSupplierPriceParts({ product_id: productId, variant_index: vi,
+          supplier_id: sup ? sup.id : undefined,
+          supplier_name: sup ? undefined : supplierName, ...price });
+      }catch(e){ throw new Error('Line ' + n + ': ' + e.message); }
+      const key = 'P|' + productId + '|' + (vi==null ? '' : vi);
+      if(seen[key]) throw new Error('Lines ' + seen[key] + ' and ' + n + ' both price '
+        + parts.label + ' — merge them into one line.');
+      seen[key] = n;
+      lines.push({ n, kind: 'existing', label: parts.label,
+        product_id: productId, variant_index: vi, price });
+    } else {
+      const gkey = supNormalisedName(String(spec.name));
+      let g = groupByKey[gkey];
+      if(!g){
+        g = { key: gkey, name: String(spec.name).trim(),
+          category: String(spec.category||'').trim(),
+          subcategory: String(spec.subcategory||'').trim(),
+          attrs: apProductAttrs(spec.variant_attributes), combos: [{}] };
+        g.attrs.forEach(a=>{
+          const next = [];
+          g.combos.forEach(c=> a.values.forEach(v=> next.push({ ...c, [a.name]: v })));
+          g.combos = next;
+        });
+        groupByKey[gkey] = g; groups.push(g);
+      }
+      if(g.attrs.length){
+        if(!combo) throw new Error('Line ' + n + ': ' + g.name
+          + ' is being created with variants — say which one this price is for (variant_combo).');
+        if(!g.combos.some(c=> apSameCombo(c, combo)))
+          throw new Error('Line ' + n + ': ' + g.name + ' has no ' + variantLabel(combo)
+            + ' variant in its variant_attributes.');
+      } else if(combo){
+        throw new Error('Line ' + n + ': ' + g.name
+          + ' is being created without variants — drop variant_combo or give variant_attributes.');
+      }
+      const label = combo ? g.name + ' — ' + variantLabel(combo) : g.name;
+      /* A brand-new product's price is always a FIRST entry -- the same
+         law apSupplierPriceParts applies once the product exists. */
+      const unit = String(price.unit||'').trim();
+      if(!unit) throw new Error('Line ' + n + ' (' + label + '): a new product\'s price needs the unit (piece, dozen, bag...).');
+      if(price.price_per_unit==null)
+        throw new Error('Line ' + n + ' (' + label + '): a new product\'s price needs price_per_unit — the single-quantity price.');
+      if(!(Number(price.price_per_unit) > 0))
+        throw new Error('Line ' + n + ' (' + label + '): the price per ' + unit + ' must be above zero.');
+      const packUnit = String(price.pack_unit||'').trim();
+      const packQty = price.pack_qty==null ? 0 : Number(price.pack_qty);
+      if((packUnit && !packQty) || (!packUnit && packQty))
+        throw new Error('Line ' + n + ' (' + label + '): packing needs both the pack unit and how many ' + unit + 's it holds.');
+      if(packQty && !(packQty > 1))
+        throw new Error('Line ' + n + ' (' + label + '): a pack must hold more than one ' + unit + '.');
+      if(price.price_per_pack!=null){
+        if(!(Number(price.price_per_pack) > 0))
+          throw new Error('Line ' + n + ' (' + label + '): the pack price must be above zero.');
+        if(!(packQty > 1))
+          throw new Error('Line ' + n + ' (' + label + '): a pack price needs its packing — say the pack unit and how many it holds.');
+      }
+      const key = 'N|' + gkey + '|' + (combo ? apComboKey(combo) : '');
+      if(seen[key]) throw new Error('Lines ' + seen[key] + ' and ' + n + ' both price '
+        + label + ' — merge them into one line.');
+      seen[key] = n;
+      lines.push({ n, kind: 'new', label, groupKey: gkey, combo, price });
+    }
+  });
+  const existingIds = {};
+  lines.forEach(l=>{ if(l.kind === 'existing') existingIds[l.product_id] = true; });
+  return { sup, supplierName, isNew: !sup, lines, groups,
+    productCount: Object.keys(existingIds).length + groups.length };
+}
+
 /* ---- the tools -----------------------------------------------------
    One entry per schema in api/assistant.js: {confirm, summary(input),
    run(input)}. summary() is the sentence on the confirmation card; it
@@ -51338,6 +51487,23 @@ const ASSISTANT_TOOLS = {
     return out;
   }},
 
+  /* The whole catalogue in one call -- names and variant labels only.
+     Built for bulk documents (a photographed price list): the model
+     matches EVERY row against real names at once instead of burning a
+     find_product round per row. Variant labels come in variants[]
+     order, so a label's position IS its variant_index. */
+  catalogue_names: { confirm: false, run(){
+    const all = data.products||[];
+    return { count: all.length,
+      products: all.slice(0, 300).map(p=>{
+        const row = { id: p.id, name: p.name };
+        if(p.type === 'variable' && p.variants && p.variants.length)
+          row.variants = p.variants.map(v=> variantLabel(v.combo));
+        return row;
+      }),
+      truncated: all.length > 300 };
+  }},
+
   /* ---- writes: everything below renders a card first ---- */
 
   create_quote: { confirm: true,
@@ -51655,23 +51821,12 @@ const ASSISTANT_TOOLS = {
     },
     async run(input){
       const parts = apSupplierPriceParts(input);
-      /* Resolve or create the supplier. Creation rides the graduation's
-         discipline: server-issued id, saved and CONFIRMED landed before
-         any price row may point at it. */
-      let sup = parts.sup;
-      let supplierCreated = false;
-      if(!sup){
-        const id = firstFreeEntityId('S', 3, data.suppliers,
-          await issueEntityId('supplier', 'S', 3, data.suppliers));
-        sup = { id, name: parts.supplierName, phone: '', location: '',
-          notes: 'Added from the assistant while recording a price' };
-        data.suppliers.push(sup);
-        supplierCreated = true;
-        await saveData();
-        if(!(lastSynced && lastSynced.suppliers && lastSynced.suppliers[String(id)])){
-          return { done: false, supplier_created: sup.name,
-            note: 'The new supplier is saved, but the price could not follow before the connection catches up — say the price again in a moment, or add it from the Price Registry.' };
-        }
+      const ensured = await apEnsureSupplier(parts.sup, parts.supplierName);
+      const sup = ensured.sup;
+      const supplierCreated = ensured.created;
+      if(ensured.gateFailed){
+        return { done: false, supplier_created: sup.name,
+          note: 'The new supplier is saved, but the price could not follow before the connection catches up — say the price again in a moment, or add it from the Price Registry.' };
       }
       const record = buildVariantPriceRow({ productId: parts.p.id, variantIdx: parts.vi,
         supplierId: sup.id,
@@ -51703,6 +51858,85 @@ const ASSISTANT_TOOLS = {
       if(singleTier && packTier && packTier.price > singleTier.price)
         out.warning = 'The pack works out dearer per ' + (parts.pack.unit||'unit')
           + ' than buying one — check the figures were heard right.';
+      return out;
+    }},
+
+  /* A whole price list behind ONE card. The row-by-row review happened
+     in chat before this call, so the card counts what the review showed,
+     and run() DELEGATES every write to create_product.run and
+     add_supplier_price.run -- one arithmetic, one set of guards, and
+     this card stands in for the per-row cards it covers. */
+  import_price_list: { confirm: true,
+    summary(input){
+      let parts;
+      try{ parts = apImportParts(input); }
+      catch(e){ return 'This import cannot run yet — ' + e.message; }
+      const supBit = parts.isNew
+        ? parts.supplierName + ' (NEW — they will be added as a supplier)'
+        : parts.supplierName;
+      const names = parts.groups.map(g=> g.name);
+      const newBit = names.length
+        ? ', creating ' + names.length + ' new product' + (names.length===1?'':'s') + ': '
+          + names.slice(0, 6).join(', ') + (names.length > 6 ? ' +' + (names.length-6) + ' more' : '')
+        : '';
+      return 'Import the price list from ' + supBit + ' — ' + parts.lines.length
+        + ' price entr' + (parts.lines.length===1?'y':'ies') + ' across ' + parts.productCount
+        + ' product' + (parts.productCount===1?'':'s') + newBit
+        + '. Exactly the lines just reviewed.';
+    },
+    async run(input){
+      const parts = apImportParts(input);
+      const ensured = await apEnsureSupplier(parts.sup, parts.supplierName);
+      if(ensured.gateFailed)
+        return { done: false, supplier_created: ensured.sup.name,
+          note: 'The new supplier is saved, but the connection has not confirmed them yet — no products or prices were written. Run the import again in a moment.' };
+      const sup = ensured.sup;
+      /* Products first, one per group, sequentially -- a price row must
+         never point at a product the server has not confirmed (the
+         graduation's FK lesson, inherited from create_product itself). */
+      const createdId = {}; const blocked = {};
+      const products_created = [];
+      for(const g of parts.groups){
+        try{
+          const res = await ASSISTANT_TOOLS.create_product.run({ name: g.name,
+            category: g.category, subcategory: g.subcategory,
+            variant_attributes: g.attrs });
+          createdId[g.key] = res.product_id;
+          products_created.push(res.name);
+          if(!res.synced)
+            blocked[g.key] = 'the product is saved, but the connection has not confirmed it yet — add its prices in a moment';
+        }catch(e){
+          /* A twin landed between the card and now: attach, don't fail. */
+          const dup = (data.products||[]).find(p=> supNormalisedName(p.name) === supNormalisedName(g.name));
+          if(dup) createdId[g.key] = dup.id;
+          else blocked[g.key] = e.message;
+        }
+      }
+      const failed = []; const warnings = [];
+      let saved = 0;
+      for(const line of parts.lines){
+        let productId = line.product_id, vi = line.variant_index;
+        try{
+          if(line.kind === 'new'){
+            if(blocked[line.groupKey]) throw new Error(blocked[line.groupKey]);
+            productId = createdId[line.groupKey];
+            vi = null;
+            if(line.combo){
+              const p = (data.products||[]).find(x=> x.id === productId);
+              vi = ((p && p.variants)||[]).findIndex(v=> apSameCombo(v.combo, line.combo));
+              if(vi < 0) throw new Error('no ' + variantLabel(line.combo) + ' variant on ' + (p ? p.name : productId));
+            }
+          }
+          const res = await ASSISTANT_TOOLS.add_supplier_price.run({
+            product_id: productId, variant_index: vi, supplier_id: sup.id, ...line.price });
+          saved++;
+          if(res.warning) warnings.push(line.label + ': ' + res.warning);
+        }catch(e){ failed.push({ item: line.label, error: e.message }); }
+      }
+      const out = { done: true, supplier: sup.name, supplier_created: ensured.created,
+        products_created, lines: parts.lines.length, saved };
+      if(failed.length) out.failed = failed;
+      if(warnings.length) out.warnings = warnings;
       return out;
     }},
 

@@ -73,7 +73,7 @@ const pkg = read('package.json');
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all twenty-four');
+    'and so does the LAST tool, closing the cached prefix over all twenty-six');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -112,24 +112,35 @@ const pkg = read('package.json');
     'and the photo terrain: read only what is visible, and receiving stock stays on the Purchases screen');
   t.check(/genuinely new/.test(src) && /not separate products/.test(src),
     'and the creation law: a product is made only when the owner says it is new, and sizes are variants, never twins');
+  t.check(/never work a many-row document row by row/.test(src)
+    && /one review message/.test(src) && /never one question per row/.test(src),
+    'and the bulk law: a price list is matched whole and reviewed in ONE message, uncertainties batched');
+  t.check(/states how many the pack holds/.test(src),
+    'a carton column with no pack size is a question, never a guess');
+  t.check(/its single card replaces the per-row cards/.test(src)
+    && /every failed line with its reason/.test(src),
+    'one import call, one card — and the per-line outcomes reported honestly');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
 
-/* ---------- 5. twenty-four tools, writes distinguishable -------------- */
+/* ---------- 5. twenty-six tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 24, `twenty-four tools defined (got ${names.length})`);
+  t.check(names.length === 26, `twenty-six tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
-    'create_product', 'add_supplier_price', 'add_sourcing_lead'];
+    'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead'];
   writes.forEach(w => t.check(names.includes(w), `${w} is offered`));
   ['find_customer', 'find_supplier', 'find_product', 'customer_statement', 'list_debtors',
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
-    'financial_summary', 'recommended_price', 'product_details', 'stock_overview']
+    'financial_summary', 'recommended_price', 'product_details', 'stock_overview',
+    'catalogue_names']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
-  t.check((src.match(/additionalProperties: false/g) || []).length >= 25,
+  t.check((src.match(/additionalProperties: false/g) || []).length >= 30,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');
+  t.check(/maxItems: 60/.test(src),
+    'the import batch is capped at sixty lines — the rest goes in a second call');
 }
 
 /* ---------- 6. bounds, and errors in plain words ---------------------- */

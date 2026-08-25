@@ -61,14 +61,16 @@ const SYSTEM_PROMPT = [
   '',
   'When you ask the owner a question, offer your best guesses as tap buttons: end the reply with one line — [choices: first | second] — two to four short options, most likely first, each worded exactly as the owner would answer (for example [choices: 10,000 | 100,000] or [choices: Both sizes | Only the 2 inch]). Only when asking, never on a plain answer, and the sentences above the line must still carry the question in full. The app turns the line into buttons and never speaks it.',
   '',
-  'Photos: the owner may attach a photo — a supplier price list, a delivery note, a receipt, a handwritten order, or the shelf itself. Say in one line what the document is, then read ONLY what is visible: never invent a figure, name or quantity the photo does not show, and read unclear handwriting back as a question ("I read 31,500 — correct?") rather than guessing. Then use the normal tools: a supplier price list becomes find_supplier and find_product then add_supplier_price, one card per item — the ladder rules apply, and price lists often quote per pack; a receipt becomes add_expense; a handwritten customer order becomes find_product then one create_quote draft. A delivery note: read it out and total it, but say plainly that receiving stock into the books is done on the Purchases screen. Work through multi-line documents in the order written, and say which lines you could not read.',
+  'Photos: the owner may attach a photo — a supplier price list, a delivery note, a receipt, a handwritten order, or the shelf itself. Say in one line what the document is, then read ONLY what is visible: never invent a figure, name or quantity the photo does not show, and read unclear handwriting back as a question ("I read 31,500 — correct?") rather than guessing. Then use the normal tools: a price list with many rows is bulk work — next paragraph; a receipt becomes add_expense; a handwritten customer order becomes find_product then one create_quote draft. A delivery note: read it out and total it, but say plainly that receiving stock into the books is done on the Purchases screen. Work through multi-line documents in the order written, and say which lines you could not read.',
+  '',
+  'Price lists and bulk documents: never work a many-row document row by row. Call catalogue_names once (and find_supplier for the letterhead), match every row against the real names, then put the WHOLE plan in one review message: which rows are products already on file and which are genuinely new — sizes and types grouped as variants of ONE product — each price exactly as it will land, rows you are skipping and why, and every uncertainty batched as questions in that same message ([choices: …] where it helps), never one question per row. A carton or pack figure is only a pack price when the document or the owner states how many the pack holds; a carton column with no pack size is one of those questions, never a guess. Once the owner has corrected or agreed, make ONE import_price_list call — its single card replaces the per-row cards — then report its counts plainly: how many lines saved, and every failed line with its reason. The ladder rules and the photo rules still bind every line.',
   '',
   'Language: the owner may write or speak in English or Luganda. Reply in the language of their message.',
   '',
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty-four tools in FIXED order — the array is part of the cached
+/* Twenty-six tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -151,6 +153,11 @@ const TOOLS = [
     name: 'stock_overview',
     description: 'The shop’s stock at a glance: total shelf value, how many lines are in stock, the biggest holdings by value (quantities and pack counts), what has RUN OUT (had stock before, none now), and lines with no cost on file. An optional query narrows it to a category or name. For one specific product use product_details. Use for "update me about the stock", "how is our stock".',
     input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Empty for the whole shop; words to narrow it ("cement").' } }, required: [], additionalProperties: false },
+  },
+  {
+    name: 'catalogue_names',
+    description: 'Every product name in the catalogue in one call, with each variable product’s variant labels in variant_index order. Use it for BULK documents — a photographed price list with many rows — to match every row at once instead of calling find_product per row. It carries no prices or stock; for one product’s details use find_product or product_details.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
     name: 'create_quote',
@@ -297,6 +304,59 @@ const TOOLS = [
         supplier_sku: { type: 'string' },
       },
       required: ['product_id'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'import_price_list',
+    description: 'Bring in a WHOLE price list (or a big slice of one) as a single confirmed batch: the genuinely-new products are created and every supplier price saved together, behind one card — only after the owner has seen the full review message and agreed. One supplier per call, resolved with find_supplier first (a supplier_name not on file becomes a NEW supplier). Items sharing a new_product name become ONE product created once; price its variants by variant_combo. Existing products take product_id (from catalogue_names or find_product) and variant_index. Every line follows add_supplier_price’s own laws — ladder rungs stay independent, and never invent a pack price the document does not quote. At most 60 items per call; the result reports per-line outcomes.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        supplier_id: { type: 'string', description: 'From find_supplier, for a supplier already on file.' },
+        supplier_name: { type: 'string', description: 'Used when there is no supplier_id; a name not on file becomes a new supplier.' },
+        items: {
+          type: 'array', minItems: 1, maxItems: 60,
+          items: {
+            type: 'object',
+            properties: {
+              product_id: { type: 'string', description: 'An existing product, from catalogue_names or find_product.' },
+              new_product: {
+                type: 'object',
+                description: 'Create this product first. Lines sharing one name are one product created once.',
+                properties: {
+                  name: { type: 'string' },
+                  category: { type: 'string' },
+                  subcategory: { type: 'string' },
+                  variant_attributes: {
+                    type: 'array', maxItems: 2,
+                    description: 'E.g. [{"name":"Size","values":["400mm","600mm"]}].',
+                    items: {
+                      type: 'object',
+                      properties: { name: { type: 'string' }, values: { type: 'array', items: { type: 'string' } } },
+                      required: ['name', 'values'], additionalProperties: false,
+                    },
+                  },
+                },
+                required: ['name'], additionalProperties: false,
+              },
+              variant_index: { type: ['integer', 'null'], description: 'For an existing variable product — the position in catalogue_names’ variant list.' },
+              variant_combo: {
+                type: 'object', additionalProperties: { type: 'string' },
+                description: 'For a variant of a product created in this same call, e.g. {"Size":"400mm"}.',
+              },
+              unit: { type: 'string', description: 'What one costs: Pc, Dozen, Bag... Required when the line is a first entry for that product and supplier.' },
+              price_per_unit: { type: 'number', exclusiveMinimum: 0, description: 'The single-quantity price for ONE unit.' },
+              pieces_per_unit: { type: ['integer', 'null'] },
+              pack_unit: { type: 'string', description: 'May be given with pack_qty alone, no pack price.' },
+              pack_qty: { type: 'number' },
+              price_per_pack: { type: 'number', description: 'The WHOLE-pack price, only when the document actually quotes one.' },
+              supplier_sku: { type: 'string' },
+            },
+            required: [], additionalProperties: false,
+          },
+        },
+      },
+      required: ['items'], additionalProperties: false,
     },
   },
   {

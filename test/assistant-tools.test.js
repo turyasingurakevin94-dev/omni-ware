@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty-four entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty-six entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -88,6 +88,10 @@ const scope = compileScope([
   extractFunction(src, 'apRuleWords', 'index.html'),
   extractFunction(src, 'apProductAttrs', 'index.html'),
   extractFunction(src, 'apSupplierPriceParts', 'index.html'),
+  extractFunction(src, 'apEnsureSupplier', 'index.html'),
+  extractFunction(src, 'apComboKey', 'index.html'),
+  extractFunction(src, 'apSameCombo', 'index.html'),
+  extractFunction(src, 'apImportParts', 'index.html'),
   extractFunction(src, 'apLastPaymentDate', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
@@ -125,12 +129,12 @@ const run = (name, input) => T[name].run(input || {});
 {
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
-    'create_product', 'add_supplier_price', 'add_sourcing_lead'];
+    'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
-    'stock_overview'];
-  t.check(Object.keys(T).length === 24, `twenty-four executors (got ${Object.keys(T).length})`);
+    'stock_overview', 'catalogue_names'];
+  t.check(Object.keys(T).length === 26, `twenty-six executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -138,7 +142,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 24 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 26 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -821,6 +825,141 @@ const run = (name, input) => T[name].run(input || {});
       && data.products.some(p=> p.id === cpOffline.product_id),
       'offline, the product keeps but the reply says pricing must wait for the server');
     lastSyncedStub.products = new Proxy({}, { get: () => true });
+
+    /* ---------- 8f. the whole price list, one card ------------------ */
+    /*
+     * Maria Building Materials' typed list is ~88 rows; row-by-row that
+     * is dozens of cards and more loop steps than exist. The bulk path:
+     * catalogue_names hands the model the WHOLE catalogue in one read,
+     * the review happens in chat, and import_price_list replays the
+     * reviewed lines behind ONE card -- DELEGATING every write to
+     * create_product.run and add_supplier_price.run, so the batch obeys
+     * the exact laws the single tools do. Per-line failures are
+     * collected, never fatal; only the supplier gate aborts the batch.
+     */
+    const cat = run('catalogue_names', {});
+    t.check(cat.count === data.products.length && cat.products.length === data.products.length
+      && cat.truncated === false, 'the whole catalogue comes back in one read');
+    const catP11 = cat.products.find(p=> p.id === 'P11');
+    t.check(catP11 && catP11.variants.length === 2
+      && catP11.variants[0] === 'Normal' && catP11.variants[1] === 'Gold',
+      'variant labels ride in order — a label\'s position IS its variant_index');
+    t.check(!('variants' in cat.products.find(p=> p.id === 'P10')),
+      'simple products carry no variant list — the result stays diet');
+
+    const batch = { supplier_name: 'Maria Building Materials', items: [
+      { product_id: 'P10', unit: 'Pc', price_per_unit: 700 },
+      { product_id: 'P11', variant_index: 1, unit: 'Pc', price_per_unit: 4500 },
+      { new_product: { name: 'Wire Nails', category: 'Nails',
+          variant_attributes: [{ name: 'Size', values: ['2 inch', '4 inch'] }] },
+        variant_combo: { Size: '2 inch' }, unit: 'Kg', price_per_unit: 6000,
+        pack_unit: 'Carton', pack_qty: 20, price_per_pack: 100000 },
+      { new_product: { name: 'Wire Nails' }, variant_combo: { Size: '4 inch' },
+        unit: 'Kg', price_per_unit: 5500 },
+      { new_product: { name: 'Hoe Handle' }, unit: 'Pc', price_per_unit: 3000 },
+    ] };
+    const cardI = T.import_price_list.summary(batch);
+    t.check(/Maria Building Materials \(NEW/.test(cardI)
+      && /5 price entries across 4 products/.test(cardI)
+      && /creating 2 new products: Wire Nails, Hoe Handle/.test(cardI),
+      `ONE card counts the whole batch honestly (got "${cardI}")`);
+
+    const beforeImp = data.products.length;
+    const imp = await run('import_price_list', batch);
+    t.check(imp.done === true && imp.lines === 5 && imp.saved === 5 && !imp.failed
+      && imp.supplier_created === true,
+      `five lines land in one confirmed batch (got ${JSON.stringify(imp)})`);
+    t.check(imp.products_created.length === 2 && data.products.length === beforeImp + 2,
+      'two new products created ONCE each — lines sharing a name share the product');
+    const wire = data.products.find(p=> p.name === 'Wire Nails');
+    t.check(wire && wire.type === 'variable' && wire.variants.length === 2,
+      'Wire Nails crosses into its two sizes, through create_product itself');
+    const maria = data.suppliers.find(s=> s.name === 'Maria Building Materials');
+    const wireRows = data.prices.filter(r=> r.productId === wire.id);
+    t.check(!!maria && wireRows.length === 2 && wireRows.every(r=> r.supplierId === maria.id
+      && r.priceSource === 'assistant'),
+      'both size rows on file under the one new supplier, stamped as the assistant\'s');
+    const r2in = wireRows.find(r=> r.variantIdx === 0);
+    t.check(r2in && r2in.retail === 6000 && r2in.wholesale === 5000 && r2in.packQty === 20,
+      `the 2-inch line carries both tiers — 6,000 single, the carton of 20 at 5,000/Kg (got ${JSON.stringify(r2in)})`);
+    const r4in = wireRows.find(r=> r.variantIdx === 1);
+    t.check(r4in && r4in.retail === 5500 && r4in.wholesale === null,
+      'the 4-inch line has its single price and NO invented carton rate');
+    t.check(data.prices.some(r=> r.productId === 'P11' && r.variantIdx === 1 && r.supplierId === maria.id),
+      'and the existing variable product took its price on the exact variant');
+
+    /* A "new" product that already exists attaches instead of twinning,
+       and combos compare tolerantly -- the document says "4 INCH", the
+       card on file says "4 inch". */
+    const impDup = await run('import_price_list', { supplier_name: 'Maria Building Materials',
+      items: [{ new_product: { name: '  WIRE NAILS ' }, variant_combo: { size: '4 INCH' },
+        price_per_unit: 5200 }] });
+    t.check(impDup.done === true && impDup.saved === 1 && impDup.products_created.length === 0
+      && impDup.supplier_created === false,
+      `a twin name attaches to the existing product — nothing created (got ${JSON.stringify(impDup)})`);
+    t.check(data.products.filter(p=> /wire nails/i.test(p.name)).length === 1
+      && data.prices.find(r=> r.productId === wire.id && r.variantIdx === 1).retail === 5200,
+      'the price MERGED onto the existing 4-inch entry through the normal update law');
+
+    /* An unconfirmed product blocks only its own lines. */
+    lastSyncedStub.products = {};
+    const imp2 = await run('import_price_list', { supplier_id: maria.id, items: [
+      { product_id: 'P12', unit: 'Pc', price_per_unit: 1200 },
+      { new_product: { name: 'Tile Cross 3mm' }, unit: 'Pkt', price_per_unit: 2500 },
+    ] });
+    t.check(imp2.done === true && imp2.saved === 1 && imp2.failed.length === 1
+      && imp2.failed[0].item === 'Tile Cross 3mm' && /confirmed it yet/.test(imp2.failed[0].error),
+      `an unconfirmed product fails ONLY its own lines, named with the reason (got ${JSON.stringify(imp2.failed)})`);
+    const tileCross = data.products.find(p=> p.name === 'Tile Cross 3mm');
+    t.check(imp2.products_created.includes('Tile Cross 3mm') && !!tileCross
+      && !data.prices.some(r=> r.productId === tileCross.id),
+      'the product kept, honestly reported, and NO price row dangles on it');
+    lastSyncedStub.products = new Proxy({}, { get: () => true });
+
+    /* A supplier the server never confirmed aborts the WHOLE batch. */
+    lastSyncedStub.suppliers = {};
+    const beforeGate = { p: data.products.length, r: data.prices.length };
+    const imp3 = await run('import_price_list', { supplier_name: 'Never Synced Traders',
+      items: [{ new_product: { name: 'Binding Wire' }, unit: 'Kg', price_per_unit: 4000 }] });
+    t.check(imp3.done === false && /no products or prices were written/.test(imp3.note)
+      && data.products.length === beforeGate.p && data.prices.length === beforeGate.r,
+      'the supplier gate stops the batch BEFORE anything else lands');
+    lastSyncedStub.suppliers = new Proxy({}, { get: () => true });
+
+    /* Bad batches are refused BEFORE the card, naming the line. */
+    let threwI = null;
+    try{ await run('import_price_list', { supplier_name: 'Maria Building Materials', items: [
+      { product_id: 'P10', unit: 'Pc', price_per_unit: 700 },
+      { product_id: 'P10', price_per_unit: 720 } ] }); }
+    catch(e){ threwI = e.message; }
+    t.check(!!threwI && /Lines 1 and 2 both price/.test(threwI) && /merge them/.test(threwI),
+      'two lines on one ladder are refused — an import must not silently self-overwrite');
+    threwI = null;
+    try{ await run('import_price_list', { supplier_name: 'X Traders', items: [
+      { unit: 'Pc', price_per_unit: 700 } ] }); }
+    catch(e){ threwI = e.message; }
+    t.check(!!threwI && /Line 1 names no product/.test(threwI),
+      'a line naming no product is refused by its line number');
+    threwI = null;
+    try{ await run('import_price_list', { supplier_name: 'X Traders', items: [
+      { new_product: { name: 'Padlock Steel',
+          variant_attributes: [{ name: 'Size', values: ['40mm', '50mm'] }] },
+        unit: 'Pc', price_per_unit: 9000 } ] }); }
+    catch(e){ threwI = e.message; }
+    t.check(!!threwI && /variant_combo/.test(threwI),
+      'a price on a variable NEW product must say which variant it is for');
+    threwI = null;
+    try{ await run('import_price_list', { supplier_name: 'X Traders', items: [
+      { new_product: { name: 'Hinge Pin' }, unit: 'Pc' } ] }); }
+    catch(e){ threwI = e.message; }
+    t.check(!!threwI && /Line 1/.test(threwI) && /price_per_unit/.test(threwI),
+      'a new product\'s line still needs its single-quantity price — the first-entry law');
+    const cardBig = T.import_price_list.summary({ supplier_name: 'X Traders',
+      items: Array.from({ length: 61 }, ()=> ({ product_id: 'P10', price_per_unit: 5 })) });
+    t.check(/cannot run yet/.test(cardBig) && /at most 60/.test(cardBig),
+      'sixty-one lines refuse on the card itself — split the document instead');
+    t.check(!data.suppliers.some(s=> /X Traders/.test(s.name)),
+      'and none of the refused batches created their supplier');
 
     /* ---------- 9. reads stay diet -------------------------------- */
     data.customers = Array.from({ length: 30 }, (_, i) => ({
