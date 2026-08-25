@@ -73,10 +73,13 @@ const scope = compileScope([
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
   extractFunction(src, 'apCustomerByName', 'index.html'),
+  extractFunction(src, 'apNameKey', 'index.html'),
+  extractFunction(src, 'apEditDistance', 'index.html'),
+  extractFunction(src, 'apFuzzyFind', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS}; }',
+  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS, apNameKey, apFuzzyFind}; }',
 ], {
   data,
   /* A benign element for every id: the reused functions peek at tabs
@@ -140,6 +143,72 @@ const run = (name, input) => T[name].run(input || {});
     'a miss returns nothing');
   t.check(data.customers.length === 3,
     'and searching NEVER creates a customer — the resolveInvoiceCustomer trap stays out of this path');
+}
+
+/* ---------- 2b. names matched by SOUND -------------------------------- */
+/*
+ * The shop's names are Luganda as often as English, and the voice
+ * recognizer writes what it hears: "my long go" for Mulongo, "chali
+ * wajala" for Kyaliwajjala, r and l swapping, doubled letters gone.
+ * A search that needs the letters to match looks broken precisely on
+ * the shop's own vocabulary — so when spelling finds nothing, sound
+ * does, FLAGGED, and the floor matters more than the ranking: a fuzzy
+ * tier that matches something for every query turns every miss into a
+ * wrong customer.
+ */
+{
+  const { apNameKey } = scope.names();
+  const same = (a, b, why)=> t.check(apNameKey(a) === apNameKey(b), why + ` (${apNameKey(a)} vs ${apNameKey(b)})`);
+  same('Kyaliwajjala', 'chali wajala', 'ky and ch are one sound, and doubled letters collapse');
+  same('Mulper', 'mulpel', 'r and l swap freely');
+  same('Jjaja', 'gaga', 'g blurs into j, doubles collapse');
+  t.check(apNameKey('Cement') !== apNameKey('Mulongo'),
+    'while genuinely different names keep different keys');
+
+  data.customers = [
+    { id: 1, name: 'Mulongo Hardware', phone: '0700111222', debt: 2380000, debtLog: [], notes: '' },
+    { id: 2, name: 'Onora Peter', phone: '0788999000', debt: 370000, debtLog: [], notes: '' },
+    { id: 3, name: 'Ssebunya Joseph', phone: '0755000111', debt: 50000, debtLog: [], notes: 'also called Kadde — brings the van on Thursdays' },
+  ];
+
+  const heard = run('find_customer', { query: 'my long go' });
+  t.check(heard.matches.length === 1 && heard.matches[0].name === 'Mulongo Hardware',
+    `"my long go" finds Mulongo (got ${JSON.stringify(heard.matches.map(m=>m.name))})`);
+  t.check(heard.close_match === true && heard.exact_match === false,
+    'flagged as a sound-alike GUESS — the model must say the name back before using the id');
+
+  const nick = run('find_customer', { query: 'Kadde' });
+  t.check(nick.matches.length === 1 && nick.matches[0].name === 'Ssebunya Joseph',
+    'a nickname written in the notes finds its customer — how the owner teaches the assistant');
+  t.check(nick.close_match === false,
+    'and a nickname is a real substring hit, not a guess');
+
+  const clean = run('find_customer', { query: 'Onora' });
+  t.check(clean.close_match === false,
+    'a correctly spelt search never carries the guess flag');
+
+  t.check(run('find_customer', { query: 'xyzqwv' }).matches.length === 0,
+    'gibberish still finds NOBODY — the floor holds');
+  t.check(run('find_customer', { query: 'Cement' }).matches.length === 0,
+    'and a word that is simply a different name does not fall into the nearest customer');
+
+  data.products = [
+    { id: 'P1', name: 'Mulper Hinges', type: 'variable', category: 'Fittings',
+      variants: [{ combo: { Type: 'Normal' } }, { combo: { Type: 'Gold' } }] },
+    { id: 'P3', name: 'Kyaliwajjala Rope', type: 'simple', category: 'General' },
+  ];
+  data.prices = [];
+  const fp = run('find_product', { query: 'mulpel hinges' });
+  t.check(fp.matches.length === 2 && fp.matches.every(m=> m.product_id === 'P1'),
+    `"mulpel hinges" finds Mulper Hinges, expanded to its variants (got ${fp.matches.length})`);
+  t.check(fp.close_match === true, 'flagged, since the spelling never matched');
+  const rope = run('find_product', { query: 'chali wajala rope' });
+  t.check(rope.matches.length === 1 && rope.matches[0].product_id === 'P3',
+    '"chali wajala" reaches Kyaliwajjala — two spoken halves of one name, rescued as a pair');
+  t.check(run('find_product', { query: 'chali wajala nails' }).matches.length === 0,
+    'while a word the pairs cannot rescue sinks the guess — half-right must not match the wrong record');
+  t.check(run('find_product', { query: 'mulper' }).close_match === false,
+    'while a spelt-right product search stays unflagged');
 }
 
 /* ---------- 3. the recommended price, honestly ------------------------ */

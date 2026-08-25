@@ -50867,6 +50867,122 @@ function apCustomerByName(q){
   return (data.customers||[]).find(c=> (c.name||'').trim().toLowerCase() === needle) || null;
 }
 
+/* ---- matching names by SOUND ---------------------------------------
+
+   The shop's names are Luganda as often as English -- Mulongo, Jjaja
+   Walu, Kyaliwajjala -- and the voice recognizer writes what it hears
+   in English: "my long go", "jaja walu", "chali wajala". A search that
+   needs the letters to match cannot find records that are really there,
+   which in the field means the assistant looks broken precisely on the
+   shop's own vocabulary.
+
+   apNameKey reduces a word to how it SOUNDS, normalising exactly the
+   confusions Luganda-through-an-English-recognizer produces:
+     - doubled letters the mic never hears (Jjaja -> jaja)
+     - ky/ch being one sound (Kyaliwajjala -> "chali wajala")
+     - r and l swapping (Mulper -> "mulpel")
+     - g and j blurring ("gaga" for Jjaja), c and k likewise
+   Both sides of every comparison go through the same key, so the
+   mappings only have to be consistent, not phonetically perfect. */
+function apNameKey(s){
+  let k = String(s||'').toLowerCase().replace(/[^a-z]/g, '');
+  k = k.replace(/ch/g, 'k').replace(/ky/g, 'k').replace(/gy/g, 'j');
+  k = k.replace(/g/g, 'j').replace(/c/g, 'k').replace(/r/g, 'l');
+  k = k.replace(/(.)\1+/g, '$1');
+  return k;
+}
+function apEditDistance(a, b){
+  a = String(a||''); b = String(b||'');
+  if(a === b) return 0;
+  const m = a.length, n = b.length;
+  if(!m || !n) return m + n;
+  let prev = Array.from({length: n + 1}, (_, j)=> j);
+  for(let i = 1; i <= m; i++){
+    const cur = [i];
+    for(let j = 1; j <= n; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+/* Rank a list against a spoken-or-typed query. Tiers: the exact string
+   (100), every query word found as a substring (80), then the sound
+   tier -- each query word finding a sound-alike word (70 on equal keys,
+   less with key edit-distance), with the whole query also tried as ONE
+   squashed name so "my long go" can meet "Mulongo".
+
+   THE FLOOR MATTERS MORE THAN THE RANKING. A fuzzy tier that matches
+   something for every query turns every miss into a wrong customer, so
+   below 55 is nothing, short keys refuse the distance tier, and the
+   caller flags everything under the substring tier close_match so the
+   model must say the name back before using it. */
+function apFuzzyFind(list, getText, query){
+  const qNorm = String(query||'').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if(!qNorm) return [];
+  const qWords = qNorm.split(' ').filter(w=> w.length > 1);
+  const qSquashKey = apNameKey(qNorm);
+  const keyVs = (aKey, textKeys)=>{
+    if(!aKey || aKey.length < 3) return 0;
+    let best = 0;
+    textKeys.forEach(k=>{
+      if(!k) return;
+      if(k === aKey){ best = Math.max(best, 70); return; }
+      if(Math.min(k.length, aKey.length) < 4) return;
+      const lim = 1 + Math.floor(Math.min(k.length, aKey.length) / 5);
+      const d = apEditDistance(k, aKey);
+      if(d <= lim) best = Math.max(best, 65 - d * 5);
+    });
+    return best;
+  };
+  const wordScore = (word, textWords, textKeys)=>{
+    if(textWords.some(w=> w.includes(word))) return 80;
+    return keyVs(apNameKey(word), textKeys);
+  };
+  const scored = [];
+  (list||[]).forEach(item=>{
+    const tNorm = String(getText(item)||'').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    if(!tNorm) return;
+    let score = 0;
+    if(tNorm === qNorm) score = 100;
+    else {
+      const textWords = tNorm.split(' ').filter(Boolean);
+      /* Word keys plus ADJACENT-PAIR keys, never the whole text squashed:
+         a haystack like productSearchText carries category and id tails
+         that poison a whole-string key. Pairs are what the mic actually
+         produces -- one name split in two ("chali wajala"), or two words
+         heard as one ("jajawalu"). */
+      const textKeys = textWords.map(apNameKey);
+      for(let i = 0; i < textWords.length - 1; i++){
+        textKeys.push(apNameKey(textWords[i] + textWords[i+1]));
+      }
+      if(qWords.length){
+        // Every query word must find a home; the weakest home is the score.
+        const homes = qWords.map(w=> wordScore(w, textWords, textKeys));
+        /* An adjacent pair that matches as ONE name homes both its words:
+           "chali" and "wajala" are each half of Kyaliwajjala and home
+           nowhere alone -- their join does. A word the pairs cannot
+           rescue ("...nails") still sinks the item, which is the guard
+           against a half-right query matching the wrong record. */
+        for(let i = 0; i < qWords.length - 1; i++){
+          const pairScore = keyVs(apNameKey(qWords[i] + qWords[i+1]), textKeys);
+          if(pairScore){
+            homes[i] = Math.max(homes[i], pairScore);
+            homes[i+1] = Math.max(homes[i+1], pairScore);
+          }
+        }
+        score = homes.length ? Math.min.apply(null, homes) : 0;
+      }
+      // The whole query as one squashed name, for names split many ways.
+      if(score < 60 && qSquashKey.length >= 4){
+        score = Math.max(score, keyVs(qSquashKey, textKeys));
+      }
+    }
+    if(score >= 55) scored.push({ item, score, close: score < 80 });
+  });
+  return scored.sort((a,b)=> b.score - a.score).slice(0, 5);
+}
+
 /* ---- the tools -----------------------------------------------------
    One entry per schema in api/assistant.js: {confirm, summary(input),
    run(input)}. summary() is the sentence on the confirmation card; it
@@ -50879,19 +50995,47 @@ const ASSISTANT_TOOLS = {
   find_customer: { confirm: false, run(input){
     const q = String(input.query||'').trim();
     if(!q) throw new Error('Say a name or phone to search for.');
+    /* Notes are part of the haystack on purpose: they are where a
+       nickname lives ("also called Kadde"), which is how the owner
+       teaches the assistant what a customer is actually CALLED --
+       the same trick the product search already plays. */
+    const hayFor = (c)=> ((c.name||'') + ' ' + (c.phone||'') + ' ' + (c.notes||''));
     const exact = apCustomerByName(q);
     const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const list = exact ? [exact] : (data.customers||[]).filter(c=>{
-      const hay = ((c.name||'') + ' ' + (c.phone||'')).toLowerCase();
+    let list = exact ? [exact] : (data.customers||[]).filter(c=>{
+      const hay = hayFor(c).toLowerCase();
       return tokens.every(t=> hay.includes(t));
     });
-    return { exact_match: !!exact,
+    let close = false;
+    /* Only when spelling found nothing: the voice writes names as they
+       sound, so match by sound -- and FLAG it, because a sound-alike is
+       a guess the model must say back before using. */
+    if(!list.length){
+      const fuzzy = apFuzzyFind(data.customers||[], hayFor, q);
+      list = fuzzy.map(f=> f.item);
+      close = list.length > 0;
+    }
+    return { exact_match: !!exact, close_match: close,
       matches: list.slice(0,5).map(c=>({ id: c.id, name: c.name, phone: c.phone||'', owes: apRound(c.debt) })) };
   }},
 
   find_product: { confirm: false, run(input){
-    const entries = buildProductSuggestionEntries(searchTokens(String(input.query||'')));
-    return { matches: entries.slice(0,5).map(({p, variantIdx})=>{
+    let entries = buildProductSuggestionEntries(searchTokens(String(input.query||'')));
+    let close = false;
+    /* Spelling found nothing: match the query by SOUND against the same
+       text the real search reads (name, category, description, notes),
+       then expand hits to variant entries exactly as the picker would.
+       Flagged close_match -- a sound-alike is a guess to say back. */
+    if(!entries.length){
+      const fuzzy = apFuzzyFind(data.products||[], p=> productSearchText(p), String(input.query||''));
+      fuzzy.forEach(({item: p})=>{
+        if(p.type==='variable' && p.variants && p.variants.length){
+          p.variants.forEach((v, idx)=> entries.push({p, variantIdx: idx}));
+        } else entries.push({p, variantIdx: null});
+      });
+      close = entries.length > 0;
+    }
+    return { close_match: close, matches: entries.slice(0,5).map(({p, variantIdx})=>{
       const best = rankedPriceRows(p.id, variantIdx)[0] || null;
       const kind = best ? (best.retail!=null ? 'retail' : 'wholesale') : null;
       const cost = best ? (best.retail!=null ? best.retail : best.wholesale) : null;
@@ -51252,7 +51396,7 @@ function apRenderWelcome(){
     + '<p>Debts, stock, prices, statements — or tell me what to record. Press the headset button to talk hands-free.</p>'
     + '<div class="ap-chips">' + chips.map(c=>
       '<button type="button" class="ap-chip">' + esc(c.trim()) + (c.endsWith(' ') ? '…' : '') + '</button>').join('') + '</div>'
-    + '<div class="ap-welcome-small">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset.</div>';
+    + '<div class="ap-welcome-small">Each question uses a little AI credit from your own key. Answers can be read aloud — in a crowded shop, use a headset. Names can be said as they sound, and a customer\'s nickname written in their notes teaches me it.</div>';
   apLogEl().appendChild(div);
   div.querySelectorAll('.ap-chip').forEach((btn, i)=>{
     btn.addEventListener('click', ()=>{
