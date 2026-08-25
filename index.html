@@ -50887,6 +50887,16 @@ function apPriceBasis(best){
   if(best.wholesale!=null) return { kind: 'wholesale', cost: best.wholesale };
   return { kind: 'retail', cost: best.retail };
 }
+// The newest date this customer paid anything, from their own ledger.
+function apLastPaymentDate(c){
+  let last = '';
+  ((c && c.debtLog) || []).forEach(e=>{
+    if(e.type !== 'payment') return;
+    const d = String(e.date||'').slice(0, 10);
+    if(d > last) last = d;
+  });
+  return last || null;
+}
 /* A markup rule in words. A fixed WHOLESALE markup is money added on
    each pack -- that is what suggestedSellingPrice's value/packQty
    spread means -- so the words must say pack, or the model reads a
@@ -51091,7 +51101,34 @@ const ASSISTANT_TOOLS = {
     const rows = collectableDebts();
     return { count: rows.length,
       total: apRound(rows.reduce((s,r)=> s + r.debt, 0)),
-      debtors: rows.slice(0,15).map(r=>({ id: r.id, name: r.name, owes: apRound(r.debt), days_old: r.ageDays })) };
+      debtors: rows.slice(0,15).map(r=>({ id: r.id, name: r.name, owes: apRound(r.debt),
+        days_old: r.ageDays, last_paid: apLastPaymentDate(apCustomerById(r.id)) })) };
+  }},
+
+  /* One day of debt collections, partitioned. The paid side reads EVERY
+     customer's ledger, not just the debtors -- somebody who cleared
+     their whole balance today owes nothing now and would vanish from a
+     debtors-only view, which is exactly the wrong day to forget them. */
+  debtor_payments: { confirm: false, run(input){
+    const day = String(input.date || todayISO()).slice(0, 10);
+    const paidOn = (c)=> ((c && c.debtLog) || [])
+      .filter(e=> e.type === 'payment' && String(e.date||'').slice(0, 10) === day)
+      .reduce((s, e)=> s + (Number(e.amount)||0), 0);
+    const paid = [];
+    (data.customers||[]).forEach(c=>{
+      const sum = paidOn(c);
+      if(sum > 0) paid.push({ name: c.name, paid: apRound(sum), still_owes: apRound(c.debt) });
+    });
+    paid.sort((a,b)=> b.paid - a.paid);
+    const unpaid = collectableDebts().filter(r=> !(paidOn(apCustomerById(r.id)) > 0));
+    return { date: day,
+      paid_count: paid.length,
+      paid_total: apRound(paid.reduce((s,r)=> s + r.paid, 0)),
+      paid: paid.slice(0, 15),
+      not_paid_count: unpaid.length,
+      not_paid_total: apRound(unpaid.reduce((s,r)=> s + r.debt, 0)),
+      not_paid: unpaid.slice(0, 15).map(r=>({ id: r.id, name: r.name, owes: apRound(r.debt),
+        days_old: r.ageDays, last_paid: apLastPaymentDate(apCustomerById(r.id)) })) };
   }},
 
   cash_on_hand: { confirm: false, run(){

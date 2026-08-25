@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty-one entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty-two entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -82,6 +82,7 @@ const scope = compileScope([
   extractFunction(src, 'apPriceBasis', 'index.html'),
   extractFunction(src, 'apRuleWords', 'index.html'),
   extractFunction(src, 'apSupplierPriceParts', 'index.html'),
+  extractFunction(src, 'apLastPaymentDate', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -120,9 +121,9 @@ const run = (name, input) => T[name].run(input || {});
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'add_supplier_price', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
-    'list_debtors', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
-    'financial_summary', 'recommended_price', 'product_details'];
-  t.check(Object.keys(T).length === 21, `twenty-one executors (got ${Object.keys(T).length})`);
+    'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
+    'recent_invoices', 'financial_summary', 'recommended_price', 'product_details'];
+  t.check(Object.keys(T).length === 22, `twenty-two executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -130,7 +131,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 21 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 22 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -217,6 +218,53 @@ const run = (name, input) => T[name].run(input || {});
     're-calling with the picked spelling resolves variants and prices down the normal path');
   t.check(!/apFuzzyFind|apNameKey|apEditDistance/.test(src),
     'and the phonetic guesser is genuinely gone from the app — recall belongs to code, ranking to the model');
+}
+
+/* ---------- 2c. one day of collections, partitioned ------------------- */
+/*
+ * "Which clients haven't paid today" is a partition of the DAY, not a
+ * filter over the debtor list: somebody who cleared their whole balance
+ * today owes nothing now and would vanish from a debtors-only view —
+ * the exact day it matters that they appear.
+ */
+{
+  const pay = (date, amount)=> ({ id: nextId++, date, type: 'payment', amount, note: '' });
+  const charge = (date, amount)=> ({ id: nextId++, date, type: 'charge', amount, note: '' });
+  data.customers = [
+    { id: 1, name: 'Mulongo Hardware', phone: '', debt: 400000,
+      debtLog: [charge('2026-08-01', 500000), pay(TODAY, 100000)] },
+    { id: 2, name: 'Onora Peter', phone: '', debt: 300000,
+      debtLog: [charge('2026-07-01', 350000), pay('2026-08-18', 50000)] },
+    { id: 3, name: 'Ssebunya Joseph', phone: '', debt: 0,
+      debtLog: [charge('2026-08-10', 150000), pay(TODAY, 150000)] },
+    { id: 4, name: 'Dad', phone: '', debt: 200000,
+      debtLog: [charge('2026-06-30', 200000)] },
+  ];
+
+  const day = run('debtor_payments', {});
+  t.check(day.date === TODAY && day.paid_count === 2 && day.paid_total === 250000,
+    `today's collections are counted whole (got ${JSON.stringify({ c: day.paid_count, t: day.paid_total })})`);
+  t.check(day.paid[0].name === 'Ssebunya Joseph' && day.paid[0].paid === 150000 && day.paid[0].still_owes === 0,
+    'the customer who CLEARED their debt today still appears — paid, owing nothing');
+  t.check(day.paid[1].name === 'Mulongo Hardware' && day.paid[1].still_owes === 400000,
+    'largest payment first, each with what still stands');
+  t.check(day.not_paid_count === 2 && day.not_paid.every(r=> r.name !== 'Mulongo Hardware'),
+    'a debtor who paid something today is NOT on the has-not-paid side');
+  t.check(day.not_paid[0].name === 'Dad' && day.not_paid[0].last_paid === null,
+    'oldest debt first, and never-paid says so');
+  t.check(day.not_paid[1].name === 'Onora Peter' && day.not_paid[1].last_paid === '2026-08-18',
+    'while a debtor who paid last week shows WHEN');
+  t.check(day.not_paid_total === 500000, 'with the outstanding money summed whole');
+
+  const other = run('debtor_payments', { date: '2026-08-18' });
+  t.check(other.paid_count === 1 && other.paid[0].name === 'Onora Peter'
+    && other.not_paid_count === 2,
+    'any other day partitions by ITS ledger entries');
+
+  const ld = run('list_debtors', {});
+  t.check(ld.debtors[0].last_paid !== undefined
+    && ld.debtors.some(r=> r.name === 'Onora Peter' && r.last_paid === '2026-08-18'),
+    'and the plain debtor list now carries when each last paid');
 }
 
 /* ---------- 3. the recommended price, honestly ------------------------ */

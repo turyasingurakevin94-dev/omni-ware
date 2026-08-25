@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty-one tools in FIXED order — the array is part of the cached
+/* Twenty-two tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -93,8 +93,13 @@ const TOOLS = [
   },
   {
     name: 'list_debtors',
-    description: 'Everyone who owes the shop money, oldest debt first, with ages. Top 15 plus the overall count and total.',
+    description: 'Everyone who owes the shop money, oldest debt first, with ages and when each last paid anything. Top 15 plus the overall count and total.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'debtor_payments',
+    description: 'One day’s debt collections, partitioned: who paid that day (amounts and what they still owe — including anyone who cleared their whole balance), and which debtors did NOT pay that day (balance, age, last payment date). date defaults to today. Use for "who paid today", "which clients have not paid today", or any other day.',
+    input_schema: { type: 'object', properties: { date: { type: 'string', description: 'YYYY-MM-DD; omit for today.' } }, required: [], additionalProperties: false },
   },
   {
     name: 'cash_on_hand',
