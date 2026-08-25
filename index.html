@@ -51283,6 +51283,34 @@ const ASSISTANT_TOOLS = {
       variant_count: idxs.length, variants };
   }},
 
+  /* The shelf at a glance, through the Inventory screen's own stack --
+     entries, lines, stats, value-sort. Ran-out means HAD stock (lot
+     history) and has none now; a product never tracked is not news. */
+  stock_overview: { confirm: false, run(input){
+    const tokens = searchTokens(String(input.query||''));
+    const entries = allProductVariantEntries(tokens);
+    if(tokens.length && !entries.length)
+      return { matches: 0, note: 'Nothing on file matches that — try find_product, or say the name differently.' };
+    const lines = entries.map(({p, variantIdx})=> inventoryLineFor(p, variantIdx));
+    const s = inventoryLineStats(lines);
+    const inStock = lines.filter(l=> l.qty > 0);
+    const ranOut = lines.filter(l=> l.qty <= 0
+      && ((((data.stockLots||{})[stockKey(l.p.id, l.variantIdx)])||[]).length > 0));
+    const out = {
+      total_value: apRound(s.value),
+      lines_in_stock: inStock.length,
+      uncosted_lines: s.uncosted,
+      top_by_value: sortInventoryLines(inStock, 'value').slice(0, 8).map(l=>({
+        name: productVariantLabel(l.p, l.variantIdx),
+        qty: l.qty, unit: l.costUnit||'', packs: l.packsLabel,
+        value: l.value==null ? null : apRound(l.value) })),
+      ran_out_count: ranOut.length,
+      ran_out: ranOut.slice(0, 10).map(l=> productVariantLabel(l.p, l.variantIdx)),
+    };
+    if(tokens.length) out.filter = String(input.query||'').trim();
+    return out;
+  }},
+
   /* ---- writes: everything below renders a card first ---- */
 
   create_quote: { confirm: true,

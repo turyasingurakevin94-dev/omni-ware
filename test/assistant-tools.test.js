@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty-two entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: twenty-three entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -69,6 +69,8 @@ const NAMES = [
   'sourcingLeadsAll', 'sourcingCaptureToast', 'leadDistinctAskers',
   'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull', 'tiersFromLegacyRow',
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId',
+  'allProductVariantEntries', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
+  'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   'todayISO', 'accountLabel',
 ];
 const scope = compileScope([
@@ -122,8 +124,9 @@ const run = (name, input) => T[name].run(input || {});
     'add_supplier_price', 'add_sourcing_lead'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
-    'recent_invoices', 'financial_summary', 'recommended_price', 'product_details'];
-  t.check(Object.keys(T).length === 22, `twenty-two executors (got ${Object.keys(T).length})`);
+    'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
+    'stock_overview'];
+  t.check(Object.keys(T).length === 23, `twenty-three executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -131,7 +134,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 22 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 23 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
 }
 
@@ -265,6 +268,48 @@ const run = (name, input) => T[name].run(input || {});
   t.check(ld.debtors[0].last_paid !== undefined
     && ld.debtors.some(r=> r.name === 'Onora Peter' && r.last_paid === '2026-08-18'),
     'and the plain debtor list now carries when each last paid');
+}
+
+/* ---------- 2d. the shelf at a glance --------------------------------- */
+/*
+ * "Update me about the stock" is an overview, not a 300-line list: the
+ * value, where the money sits, what RAN OUT. Everything through the
+ * Inventory screen's own stack — and its honesty rules: an uncosted
+ * line is null, never zero, and ran-out means HAD stock (lot history),
+ * so a product never tracked is not announced as missing.
+ */
+{
+  data.products = [
+    { id: 'PC1', name: 'Cement', type: 'simple', category: 'Building' },
+    { id: 'PN1', name: 'Nails', type: 'simple', category: 'Building' },
+    { id: 'PR1', name: 'Rope', type: 'simple', category: 'General' },
+    { id: 'PX1', name: 'Glue', type: 'simple', category: 'General' },
+  ];
+  data.prices = [
+    { id: 1, productId: 'PC1', variantIdx: null, supplierId: 'S1', retail: null, wholesale: 32000,
+      unit: 'Bag', packUnit: '', packQty: 0, date: TODAY },
+  ];
+  data.stock = { PC1: 40, PN1: 0, PR1: 10 };
+  data.stockLots = { PC1: [{ qty: 40, cost: 30000 }], PN1: [{ qty: 0, cost: 2000 }] };
+
+  const ov = run('stock_overview', {});
+  t.check(ov.total_value === 1200000 && ov.lines_in_stock === 2,
+    `the shelf is valued at its costed lines (got ${JSON.stringify({ v: ov.total_value, n: ov.lines_in_stock })})`);
+  t.check(ov.top_by_value[0].name === 'Cement' && ov.top_by_value[0].qty === 40
+    && ov.top_by_value[0].value === 1200000 && ov.top_by_value[0].unit === 'Bag',
+    'the biggest holding leads, with quantity, unit and value');
+  t.check(ov.top_by_value[1].name === 'Rope' && ov.top_by_value[1].value === null
+    && ov.uncosted_lines === 1,
+    'a line with no recorded cost is null, never zero — cost unknown is not worthless');
+  t.check(ov.ran_out_count === 1 && ov.ran_out[0] === 'Nails',
+    'RAN OUT means had stock and has none — Nails, never the never-stocked Glue');
+
+  const cem = run('stock_overview', { query: 'cement' });
+  t.check(cem.total_value === 1200000 && cem.lines_in_stock === 1 && cem.ran_out_count === 0
+    && cem.filter === 'cement',
+    'a query narrows every figure to the matching lines');
+  t.check(run('stock_overview', { query: 'zqxwv' }).matches === 0,
+    'and a query matching nothing says so instead of describing an empty shop');
 }
 
 /* ---------- 3. the recommended price, honestly ------------------------ */

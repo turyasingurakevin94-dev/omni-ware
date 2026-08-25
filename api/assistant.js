@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty-two tools in FIXED order — the array is part of the cached
+/* Twenty-three tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -142,6 +142,11 @@ const TOOLS = [
     name: 'product_details',
     description: 'The full picture of one product: stock on hand, every supplier and what they charge (volume tiers included), the markup rules that apply, and the suggested selling price per variant. Use it when the owner asks what is known about a product, after find_product resolves the id.',
     input_schema: { type: 'object', properties: { product_id: { type: 'string', description: 'From find_product.' } }, required: ['product_id'], additionalProperties: false },
+  },
+  {
+    name: 'stock_overview',
+    description: 'The shop’s stock at a glance: total shelf value, how many lines are in stock, the biggest holdings by value (quantities and pack counts), what has RUN OUT (had stock before, none now), and lines with no cost on file. An optional query narrows it to a category or name. For one specific product use product_details. Use for "update me about the stock", "how is our stock".',
+    input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Empty for the whole shop; words to narrow it ("cement").' } }, required: [], additionalProperties: false },
   },
   {
     name: 'create_quote',

@@ -73,7 +73,7 @@ const pkg = read('package.json');
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all twenty-two');
+    'and so does the LAST tool, closing the cached prefix over all twenty-three');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -111,19 +111,19 @@ const pkg = read('package.json');
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
 
-/* ---------- 5. twenty-two tools, writes distinguishable --------------- */
+/* ---------- 5. twenty-three tools, writes distinguishable ------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 22, `twenty-two tools defined (got ${names.length})`);
+  t.check(names.length === 23, `twenty-three tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'add_supplier_price', 'add_sourcing_lead'];
   writes.forEach(w => t.check(names.includes(w), `${w} is offered`));
   ['find_customer', 'find_supplier', 'find_product', 'customer_statement', 'list_debtors',
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
-    'financial_summary', 'recommended_price', 'product_details']
+    'financial_summary', 'recommended_price', 'product_details', 'stock_overview']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
-  t.check((src.match(/additionalProperties: false/g) || []).length >= 23,
+  t.check((src.match(/additionalProperties: false/g) || []).length >= 24,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');
 }
 
