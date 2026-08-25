@@ -5831,6 +5831,11 @@
   .ap-msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px;}
   .ap-msg.err{align-self:flex-start;border:1px solid var(--danger);color:var(--danger);background:var(--ow-crimson-soft);}
   .ap-msg .num{font-family:'IBM Plex Mono',monospace;}
+  /* The figures that decide things: money is chipped automatically,
+     and model-marked key info (pack sizes) reads strong and accented. */
+  .ap-msg.bot .num{font-weight:600;color:var(--accent-ink);background:var(--bg);
+    padding:0 4px;border-radius:5px;}
+  .ap-msg.bot strong{font-weight:650;color:var(--accent-ink);}
   /* A repeated identical error bumps this badge instead of stacking --
      four boxes saying one thing is noise pretending to be information. */
   .ap-err-count{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;
@@ -51297,9 +51302,14 @@ function apBubble(cls, html){
   apScroll();
   return div;
 }
-// Amounts get the app's numeric face; everything else is escaped text.
+/* Amounts get the app's numeric face automatically; **key info** the
+   model marks (pack sizes, the figure that answers the question) is
+   rendered strong. Everything else is escaped text -- and apSpeak
+   strips the asterisks, so emphasis never reaches the headset. */
 function apFormatText(text){
-  return esc(text).replace(/\d[\d,]*(\.\d+)? UGX/g, m=> '<span class="num">' + m + '</span>');
+  return esc(text)
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\d[\d,]*(\.\d+)? UGX/g, m=> '<span class="num">' + m + '</span>');
 }
 function apRenderUser(text){ apBubble('user', apFormatText(text)); }
 function apRenderAssistant(text){ apBubble('bot', apFormatText(text)); }
@@ -51594,8 +51604,9 @@ function apSpeak(text){
   return new Promise((resolve)=>{
     if(!AP_TTS || !text){ resolve(); return; }
     AP_TTS.cancel();
-    /* "1,250,000 UGX" reads as letters; "shillings" reads as money. */
-    const spoken = String(text).replace(/\bUGX\b/g, 'shillings');
+    /* "1,250,000 UGX" reads as letters; "shillings" reads as money.
+       The ** emphasis marks are visual only -- never spoken. */
+    const spoken = String(text).replace(/\*\*/g, '').replace(/\bUGX\b/g, 'shillings');
     const u = new SpeechSynthesisUtterance(spoken);
     u.lang = 'en-GB';
     u.onend = ()=> resolve();

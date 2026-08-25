@@ -151,6 +151,29 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and the loop hands the mic back after speaking — the turn-taking that makes it a conversation');
 }
 
+/* ---------- 7b. key figures highlighted, never spoken ------------------ */
+/*
+ * The owner reads replies as often as he hears them, and what he reads
+ * for is the pack size, the cost, the suggested price. Money amounts
+ * are chipped automatically off their UGX shape; everything else that
+ * decides is marked **so** by the model and rendered strong. The
+ * emphasis is for the eye only — apSpeak strips the marks, so the
+ * headset hears the same plain sentence as before.
+ */
+{
+  const fmt = extractFunction(src, 'apFormatText', 'index.html');
+  t.check(/<strong>\$1<\/strong>/.test(fmt),
+    'model-marked **key info** renders strong');
+  t.check(/class="num"/.test(fmt),
+    'while every UGX amount is chipped automatically, markers or none');
+  const speak2 = extractFunction(src, 'apSpeak', 'index.html');
+  t.check(/replace\(\/\\\*\\\*\/g, ''\)/.test(speak2),
+    'and the asterisks are stripped before speech');
+  t.check(/\.ap-msg\.bot \.num\{[^}]*color:var\(--accent-ink\)/.test(src)
+    && /\.ap-msg\.bot strong\{[^}]*var\(--accent-ink\)/.test(src),
+    'both faces carry the theme accent, in bot bubbles only — the owner’s own words stay plain');
+}
+
 /* ---------- 8. keys and escape ---------------------------------------- */
 {
   t.check(/\(e\.ctrlKey \|\| e\.metaKey\) && !e\.shiftKey && !e\.altKey && \(e\.key === 'j' \|\| e\.key === 'J'\)/.test(code),

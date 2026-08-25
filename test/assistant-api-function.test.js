@@ -96,6 +96,10 @@ const pkg = read('package.json');
     'with spelling out the name as the stated last resort');
   t.check(/sells wholesale first/.test(src) && /added on each pack/.test(src),
     'and the shop’s economics: wholesale is the default answer, and a fixed wholesale markup is per pack — not a mismatch to flag');
+  t.check(/no markdown except one mark/.test(src) && /double asterisks/.test(src),
+    'one mark is allowed: the figures that decide things, wrapped for on-screen highlight');
+  t.check(!/no tables, no markdown,/.test(src),
+    'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
 
 /* ---------- 5. eighteen tools, writes distinguishable ----------------- */
