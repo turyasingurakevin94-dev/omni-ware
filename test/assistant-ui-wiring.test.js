@@ -21,7 +21,7 @@
  *
  * Run: node test/assistant-ui-wiring.test.js   (or: npm test)
  */
-const { read, extractFunction, createReporter, winningDeclaration } = require('./_extract');
+const { read, extractFunction, compileScope, createReporter, winningDeclaration } = require('./_extract');
 
 const t = createReporter('assistant ui wiring');
 const src = read('index.html');
@@ -172,6 +172,35 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/\.ap-msg\.bot \.num\{[^}]*color:var\(--accent-ink\)/.test(src)
     && /\.ap-msg\.bot strong\{[^}]*var\(--accent-ink\)/.test(src),
     'both faces carry the theme accent, in bot bubbles only — the owner’s own words stay plain');
+}
+
+/* ---------- 7c. a question offers its answers -------------------------- */
+/*
+ * The assistant's clarifying questions ("10,000 or 100,000?") should be
+ * answerable with a tap. The model ends an asking reply with a
+ * [choices: ...] line; the client strips it from screen and speech and
+ * turns it into chips that SEND the answer. Voice answering unchanged.
+ */
+{
+  const fn = compileScope([extractFunction(src, 'apExtractChoices', 'index.html')], {}, ['apExtractChoices']);
+  const parsed = fn.apExtractChoices('Is that 10,000 or 100,000 added per pack?\n[choices: 10,000 | 100,000]');
+  t.check(parsed.choices.length === 2 && parsed.choices[1] === '100,000',
+    'the trailing [choices:] line becomes tap options');
+  t.check(!/\[choices/.test(parsed.clean) && /added per pack\?$/.test(parsed.clean),
+    'and is stripped from what the owner reads');
+  t.check(fn.apExtractChoices('Mulongo owes 250,000 UGX.').choices.length === 0,
+    'a plain answer carries no buttons');
+  t.check(fn.apExtractChoices('Which?\n[choices: a | b | c | d | e]').choices.length === 4,
+    'capped at four — chips, not a menu');
+
+  const rc = extractFunction(src, 'apRenderChoices', 'index.html');
+  t.check(/apRecognition\.abort\(\)/.test(rc) && /apSend\(c\)/.test(rc),
+    'a tap kills any live listen before it answers — no half-heard duplicate');
+  t.check(/apClearChoices\(\);/.test(extractFunction(src, 'apSend', 'index.html')),
+    'and any send clears the buttons — an answered question keeps no stale options');
+  t.check(/\[choices:/.test(extractFunction(src, 'apSpeak', 'index.html')),
+    'the choices line is never spoken');
+  t.check(/\.ap-choices\{[^}]*flex/.test(src), 'and the chip row is styled with the panel');
 }
 
 /* ---------- 8. keys and escape ---------------------------------------- */

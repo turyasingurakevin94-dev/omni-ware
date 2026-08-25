@@ -103,6 +103,8 @@ const pkg = read('package.json');
     'and the supplier-price terrain: creation only past the card, never off a sound-alike');
   t.check(/usually fixed amounts/.test(src) && /Value 0 clears a rule/.test(src),
     'and the markup terrain: a bare figure is fixed shillings unless the owner says percent, and zero clears');
+  t.check(/\[choices: first \| second\]/.test(src) && /never speaks it/.test(src),
+    'and questions offer tap answers: the choices line, buttons on screen, silent in the ear');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }

@@ -5855,6 +5855,7 @@
   .ap-chip{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 14px;border-radius:999px;
     background:var(--panel);border:1px solid var(--line);font-size:12.5px;color:var(--ink);}
   .ap-chip:hover{border-color:var(--accent);color:var(--accent);}
+  .ap-choices{display:flex;flex-wrap:wrap;gap:8px;align-self:flex-start;max-width:88%;}
   .ap-welcome-small{font-size:11px;color:var(--ink-soft);line-height:1.5;max-width:300px;margin-top:8px;}
   /* Three dots while a request is in flight -- silence that looks alive. */
   .ap-typing{display:flex;gap:5px;align-items:center;padding:14px 13px;}
@@ -51508,7 +51509,47 @@ function apFormatText(text){
     .replace(/\d[\d,]*(\.\d+)? UGX/g, m=> '<span class="num">' + m + '</span>');
 }
 function apRenderUser(text){ apBubble('user', apFormatText(text)); }
-function apRenderAssistant(text){ apBubble('bot', apFormatText(text)); }
+/* A question's best guesses, offered as buttons. The model ends an
+   ASKING reply with one line -- [choices: 10,000 | 100,000] -- which is
+   stripped from what is shown and spoken, and rendered as tap chips.
+   Tapping one sends it as the owner's answer; saying the answer aloud
+   still works exactly as before. */
+function apExtractChoices(text){
+  const m = /\n?\s*\[choices:([^\]\n]+)\]\s*$/i.exec(String(text||''));
+  if(!m) return { clean: String(text||''), choices: [] };
+  const choices = m[1].split('|').map(s=> s.trim()).filter(Boolean).slice(0, 4);
+  return { clean: String(text||'').slice(0, m.index).trimEnd(), choices };
+}
+function apClearChoices(){
+  const el = document.getElementById('apChoices');
+  if(el) el.remove();
+}
+function apRenderChoices(choices){
+  apClearChoices();
+  const div = document.createElement('div');
+  div.className = 'ap-choices';
+  div.id = 'apChoices';
+  choices.forEach(c=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ap-chip';
+    btn.textContent = c;
+    btn.addEventListener('click', ()=>{
+      /* A tap answers the question -- a live listen for the same answer
+         must die first, or it swallows the next turn's first words. */
+      if(apRecognition){ try{ apRecognition.abort(); }catch(e){} apRecognition = null; }
+      apSend(c);
+    });
+    div.appendChild(btn);
+  });
+  apLogEl().appendChild(div);
+  apScroll();
+}
+function apRenderAssistant(text){
+  const { clean, choices } = apExtractChoices(text);
+  if(clean) apBubble('bot', apFormatText(clean));
+  if(choices.length) apRenderChoices(choices);
+}
 /* The same error twice in a row bumps a counter on the existing bubble
    instead of stacking another -- four boxes saying one thing is noise
    pretending to be information. Different text still gets its own. */
@@ -51785,6 +51826,7 @@ function apSend(text){
   const clean = String(text||'').trim();
   if(!clean || assistantBusy) return;
   apClearWelcome();
+  apClearChoices();
   const inputEl = document.getElementById('apInput');
   if(inputEl) inputEl.style.height = '';
   /* The date rides inside the user turn, after the cached prefix -- the
@@ -51802,7 +51844,8 @@ function apSpeak(text){
     AP_TTS.cancel();
     /* "1,250,000 UGX" reads as letters; "shillings" reads as money.
        The ** emphasis marks are visual only -- never spoken. */
-    const spoken = String(text).replace(/\*\*/g, '').replace(/\bUGX\b/g, 'shillings');
+    const spoken = String(text).replace(/\[choices:[^\]\n]*\]/gi, '')
+      .replace(/\*\*/g, '').replace(/\bUGX\b/g, 'shillings');
     const u = new SpeechSynthesisUtterance(spoken);
     u.lang = 'en-GB';
     u.onend = ()=> resolve();
