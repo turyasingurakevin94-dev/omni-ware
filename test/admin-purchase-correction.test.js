@@ -382,6 +382,33 @@ const logRow = () => data.stockLog[0];
     'the quantity field can speak packs, through the same conversion the purchase form uses');
   t.check(/now stands at/.test(src),
     'and the saved toast names the bill’s new balance — the confirmation the owner is actually waiting for');
+  t.check(/id="ipe_bill_note"/.test(src) && /’s open bills: /.test(src),
+    'when nothing can be linked, the chosen supplier’s open bills are shown right there — read, not guessed');
+  t.check(/getElementById\('ipe_supplier'\)\.addEventListener\('change'/.test(src)
+    && /ipeFillBillOptions\(/.test(src),
+    'and naming the supplier refreshes the money side');
+}
+
+/* ---------- 21. a lost pointer does not un-correct a purchase ----------
+   The live case: the correction row survived a sync, the correctedBy
+   written in place onto the OLD row did not -- and the form reopened
+   showing the original 60 as if nothing had happened. The correction
+   row's own `corrects` field is the same fact on the row that survives,
+   so the chain heals from it. */
+{
+  freshShop({ qty: 60, cost: 5000 });
+  applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1' });
+  delete data.stockLog[0].correctedBy;   // the in-place write the sync lost
+  eq(effectiveStockPurchase(logRow()).qty, 30,
+    'the correction is found again through its own corrects pointer');
+  t.check(/corrected → 30/.test(stockLogCorrectedTagHTML(logRow())),
+    'the row still reads as corrected where the log is read');
+  eq(stockPurchaseMinQty(logRow()), 0, 'and the floor is computed off the healed figure');
+  const res = applyStockPurchaseEdit(1, { qty: 25, price: 5000, supplierId: 'S1' });
+  t.check(res.ok, 'the next correction builds on the healed figure instead of the stale 60');
+  eq(effectiveStockPurchase(logRow()).qty, 25, 'landing where it should');
+  eq(data.stock.P1, 25, 'with the shelf agreeing');
+  eq(data.purchaseInvoices[0].items[0].qty, 25, 'and the bill following, found by the id the correction row carries');
 }
 
 process.exit(t.done() ? 1 : 0);

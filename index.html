@@ -10887,6 +10887,7 @@
              because a correction that reaches the shelf but not the bill
              leaves the shop owing for goods it never kept. -->
         <select id="ipe_bill"></select>
+        <p class="preset-hint" id="ipe_bill_note" style="display:none;"></p>
       </div>
       <p class="preset-hint" id="ipe_effect"></p>
       <p class="sf-need" id="ipe_error" style="display:none; color:var(--danger);"></p>
@@ -35119,11 +35120,23 @@ function stockCostsEqual(a, b){
   const nb = (b == null || b === '') ? null : Number(b);
   return na === null && nb === null ? true : (na !== null && nb !== null && na === nb);
 }
-/* The figures this purchase currently stands at, after any corrections. */
+/* The figures this purchase currently stands at, after any corrections.
+
+   Walked by TWO pointers, on purpose. correctedBy is written onto the
+   old row in place, and an in-place edit of an old row is exactly the
+   kind of write a sync can lose -- a real shop's correction row
+   survived while the pointer to it did not, so the form reopened
+   showing the original 60 as if nothing had been corrected. The
+   correction row's own `corrects` field is the same fact written on
+   the row that always survives, so a missing forward pointer is healed
+   from the backward one. */
 function effectiveStockPurchase(e){
   let row = e, guard = 0;
-  while(row && row.correctedBy && guard++ < 200){
-    const next = (data.stockLog || []).find(x => x.id === row.correctedBy);
+  while(row && guard++ < 200){
+    let next = row.correctedBy
+      ? (data.stockLog || []).find(x => x.id === row.correctedBy)
+      : null;
+    if(!next) next = (data.stockLog || []).find(x => x !== row && x.corrects === row.id) || null;
     if(!next) break;
     row = next;
   }
@@ -41028,10 +41041,12 @@ function stockLogEditButtonHTML(e){
 }
 /* The row that was wrong stays on the log saying what it said. Without
    this tag it would go on claiming to be the current figure, which is the
-   one thing a corrected record must not do. */
+   one thing a corrected record must not do. Decided by the healed chain,
+   not the raw pointer -- a lost pointer must not un-correct the row. */
 function stockLogCorrectedTagHTML(e){
-  if(!e || !e.correctedBy) return '';
+  if(!e || !isStockPurchaseRow(e)) return '';
   const eff = effectiveStockPurchase(e);
+  if(eff.tail === e) return '';
   return ` <span class="lc-none" title="Corrected later — this row is kept as it was written">corrected → ${esc(String(eff.qty))}${
     eff.cost != null ? ` @ ${esc(fmtUGX(eff.cost))}` : ''}</span>`;
 }
@@ -41039,6 +41054,44 @@ function stockLogCorrectedTagHTML(e){
 /* ---------------- The correction form ---------------- */
 let editingPurchaseLogId = null;
 let ipePack = null;   // {packQty, packUnit, unit} when this product packs
+
+/* The bill options, and -- when none of them fits -- what the chosen
+   supplier's money actually looks like. Only a one-line bill for THIS
+   item can be linked (anything else would have its line overwritten
+   with this item's figures), but the shop still deserves to SEE the
+   supplier's open bills right here: an owed balance that lives in some
+   other shape of record is found by reading it, not by guessing. */
+function ipeFillBillOptions(e, vIdx){
+  const billSel = document.getElementById('ipe_bill');
+  const note = document.getElementById('ipe_bill_note');
+  const linked = stockPurchaseInvoiceFor(e);
+  if(linked){
+    billSel.disabled = true;
+    billSel.innerHTML = `<option value="">${esc(purchaseInvoiceNumberLabel(linked))} — ${esc(linked.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceBalanceDue(linked))))} still owed (corrected with this save)</option>`;
+    note.style.display = 'none'; note.textContent = '';
+    return;
+  }
+  const cands = (data.purchaseInvoices || []).filter(pi => !pi.voided && !pi.quoteId
+    && (pi.items || []).length === 1 && pi.items[0].productId === e.productId
+    && ((pi.items[0].variantIdx == null ? null : pi.items[0].variantIdx) === vIdx));
+  billSel.disabled = false;
+  billSel.innerHTML = `<option value="">(no bill linked — what is owed will NOT change)</option>`
+    + cands.map(pi => `<option value="${esc(String(pi.id))}">${esc(purchaseInvoiceNumberLabel(pi))} — ${esc(pi.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceTotal(pi))))}</option>`).join('');
+  const chosen = document.getElementById('ipe_supplier').value || null;
+  if(cands.length || !chosen){ note.style.display = 'none'; note.textContent = ''; return; }
+  const theirs = (data.purchaseInvoices || []).filter(pi => !pi.voided
+    && pi.supplierId === chosen && purchaseInvoiceBalanceDue(pi) > 0.5);
+  note.style.display = '';
+  note.textContent = theirs.length
+    ? `${supplierName(chosen)}’s open bills: ` + theirs.slice(0, 4).map(pi =>
+        `${purchaseInvoiceNumberLabel(pi)} — ${fmtUGX(Math.round(purchaseInvoiceBalanceDue(pi)))} owed — ${
+          ((pi.items || [])[0] && pi.items[0].productName) || '(no line)'}${
+          (pi.items || []).length > 1 ? ` +${pi.items.length - 1} more lines` : ''}${pi.quoteId ? ' (from an order)' : ''}`
+      ).join('; ')
+      + (theirs.length > 4 ? `; +${theirs.length - 4} more` : '')
+      + '. None is a one-line bill for this item, so none can be linked here.'
+    : `${supplierName(chosen)} has no open bills — nothing they are owed can come from this purchase.`;
+}
 function openStockPurchaseEdit(logId){
   const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
   if(!e || !isStockPurchaseRow(e)){ toast('That movement cannot be corrected here'); return; }
@@ -41060,7 +41113,7 @@ function openStockPurchaseEdit(logId){
   document.getElementById('ipe_asrecorded').textContent =
     `Recorded on ${e.date}: ${e.delta} bought${packBit(Number(e.delta)||0)}${e.cost != null ? ` at ${fmtUGX(e.cost)} each` : ''}`
     + `${e.supplierId ? ` from ${supplierName(e.supplierId)}` : ''}.`
-    + (e.correctedBy ? ` Since corrected to ${eff.qty}${packBit(eff.qty)}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
+    + (eff.tail !== e ? ` Since corrected to ${eff.qty}${packBit(eff.qty)}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
 
   const unitSel = document.getElementById('ipe_qty_unit');
   if(ipePack){
@@ -41084,19 +41137,7 @@ function openStockPurchaseEdit(logId){
      corrected with the save; an unlinked one is offered from the bills
      that match this item, because "corrected" that never reached the
      bill is how a supplier balance stood wrong at a real shop. */
-  const billSel = document.getElementById('ipe_bill');
-  const linked = stockPurchaseInvoiceFor(e);
-  if(linked){
-    billSel.disabled = true;
-    billSel.innerHTML = `<option value="">${esc(purchaseInvoiceNumberLabel(linked))} — ${esc(linked.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceBalanceDue(linked))))} still owed (corrected with this save)</option>`;
-  } else {
-    const cands = (data.purchaseInvoices || []).filter(pi => !pi.voided && !pi.quoteId
-      && (pi.items || []).length === 1 && pi.items[0].productId === e.productId
-      && ((pi.items[0].variantIdx == null ? null : pi.items[0].variantIdx) === vIdx));
-    billSel.disabled = false;
-    billSel.innerHTML = `<option value="">(no bill linked — what is owed will NOT change)</option>`
-      + cands.map(pi => `<option value="${esc(String(pi.id))}">${esc(purchaseInvoiceNumberLabel(pi))} — ${esc(pi.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceTotal(pi))))}</option>`).join('');
-  }
+  ipeFillBillOptions(e, vIdx);
 
   /* Says the floor BEFORE anything is typed, with the arithmetic behind
      it. A form that only objects after the fact leaves somebody guessing
@@ -41114,6 +41155,13 @@ document.getElementById('invLogWrap').addEventListener('click', (ev)=>{
 });
 document.getElementById('invPurchaseEditClose').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
 document.getElementById('ipe_cancel').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
+/* Choosing who it was bought from re-reads the money side: the bill
+   options and the open-bills line follow the supplier just named. */
+document.getElementById('ipe_supplier').addEventListener('change', ()=>{
+  const e = (data.stockLog || []).find(x => x.id === editingPurchaseLogId);
+  if(!e) return;
+  ipeFillBillOptions(e, (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx);
+});
 /* Switching what the field COUNTS in converts the figure in it -- 300
    units becomes 60 Ctn, not a claim of 300 cartons. */
 document.getElementById('ipe_qty_unit').addEventListener('change', (ev)=>{
