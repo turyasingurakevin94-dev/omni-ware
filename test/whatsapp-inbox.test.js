@@ -141,6 +141,24 @@ if (!hook) process.exit(1);
   t.check(/record failed AFTER delivery/.test(sendSrc),
     'a bookkeeping failure after delivery is reported as such — never as "not sent"');
 
+  /* The order-receipt image travels the same gated road. Scoped to its
+     own action — it sits AFTER "send", so the send pins above keep
+     measuring the text action. */
+  const imgBlock = sendSrc.slice(sendSrc.indexOf('action === "send-image"'));
+  t.check(imgBlock.length > 10, 'wa-send knows the send-image action');
+  const iWin = imgBlock.indexOf('windowState(conv.last_inbound_at');
+  const iGraph = imgBlock.indexOf('fetch(`${GRAPH_BASE}');
+  t.check(iWin > -1 && iGraph > -1 && iWin < iGraph,
+    'an image re-checks the window BEFORE any bytes go to Meta');
+  t.check(/type: "image",\s*\n\s*image: caption \? \{ link, caption \} : \{ link \},/.test(imgBlock),
+    'the Graph payload is a real image message, caption optional');
+  t.check(imgBlock.includes('!/^https:\\/\\//.test(link)'),
+    'only an https link is forwarded — Meta fetches it itself');
+  t.check(/msg_type: "image", body: caption \? "\[image\] " \+ caption : "\[image\]"/.test(imgBlock),
+    'recorded the way the webhook records inbound media — the thread already knows how to show it');
+  t.check(/image record failed AFTER delivery/.test(imgBlock),
+    'and a bookkeeping failure after an image delivery is reported as such too');
+
   /* The register action: the dashboard's opaque toast, replaced by
      Meta's real sentence. */
   const regBlock = (/action === "register"[\s\S]*?action === "send"/.exec(sendSrc) || [''])[0];

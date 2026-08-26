@@ -14040,7 +14040,8 @@ let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null
   drafts: {},         // conversation id -> half-typed reply, surviving re-renders
   dismissed: {},      // wamid -> true; suggestion cards waved away this session
   aiDrafts: {},       // conversation id -> {wamid, text|error} — survives the 12s poll
-  aiBusy: null };     // conversation id currently drafting, else null
+  aiBusy: null,       // conversation id currently drafting, else null
+  creating: false };  // an order mid-creation — a double-tap must not make two
 
 /* ---- the assistant draft: the counter's brain, fenced ----------------
    The token-match card above is instant and free; this is the slower,
@@ -14147,29 +14148,198 @@ function waWaMarkupHTML(text){
   return esc(String(text||'')).replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
 }
 
+/* ---- the order receipt: composed by code, never by the model --------
+
+   The words that confirm an order are NEVER the model's. Its draft was
+   written BEFORE the order existed; sending "confirm and we prepare
+   it" to a customer who already said "just give me 5" reads as a shop
+   that does not listen. Once the owner taps Create order, what goes
+   out is composed here, from the order that now exists — as a drawn
+   receipt image (the agents app's own renderer, the format traders
+   forward around), with a plain-text twin that carries the same facts
+   whenever the image road cannot deliver. */
+
+function waOrderReceiptText(receipt){
+  const f = n=> Number(n||0).toLocaleString('en-UG');
+  const out = ['Order *' + receipt.invoice + '* — received.'];
+  (receipt.lines||[]).forEach(l=>{
+    const rate = l.qty > 1 ? ' @ ' + f(l.price) : '';
+    out.push('*' + f(l.qty) + '* ' + (l.unit || 'pc') + ' ' + l.name + rate + ' — *UGX ' + f(l.amount) + '*');
+  });
+  out.push('TOTAL *UGX ' + f(receipt.total) + '*');
+  out.push('We are preparing your order — thank you.');
+  return out.join('\n');
+}
+
+// Canvas has no ellipsis: a long product name would run under the RATE
+// column, so it is measured down to fit its cell instead.
+function waReceiptClip(ctx, text, maxW){
+  let s = String(text||'');
+  if(ctx.measureText(s).width <= maxW) return s;
+  while(s.length > 1 && ctx.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+  return s + '…';
+}
+
+/* Drawn from the order's own lines in its own render pass — the same
+   law as waDrawStatus: nothing beyond what the customer already agreed
+   to is in reach, so nothing else can end up on a document a customer
+   holds. Colors are literal, not theme variables — a receipt is the
+   shop's paper, not the owner's screen. 2× oversampled so the text
+   stays crisp after WhatsApp recompresses it. */
+function waDrawOrderReceipt(canvas, receipt){
+  const rowH = 40, headerH = 122, footerH = 120;
+  const rows = receipt.lines || [];
+  const w = 640, h = headerH + rows.length*rowH + 70 + footerH;
+  canvas.width = w*2; canvas.height = h*2;
+  const c = canvas.getContext('2d');
+  c.scale(2, 2);
+  const f = n=> Number(n||0).toLocaleString('en-UG');
+  const ACCENT = '#8E2C1C', INK = '#12151A', MUTE = '#6B7280', FAINT = '#9CA3AF';
+  const SANS = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+  const MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", monospace';
+  c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, h);
+  c.fillStyle = ACCENT; c.fillRect(0, 0, w, 6);
+
+  c.fillStyle = INK; c.font = '700 22px ' + SANS;
+  c.fillText(receipt.shopName || 'Omni-Ware', 32, 48);
+  c.fillStyle = ACCENT; c.font = '700 13px ' + SANS;
+  c.fillText('ORDER RECEIVED', 32, 68);
+  c.textAlign = 'right';
+  c.fillStyle = INK; c.font = '700 13px ' + SANS;
+  c.fillText('Order ' + (receipt.invoice || ''), w-32, 48);
+  c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
+  c.fillText(receipt.dateLabel || '', w-32, 68);
+  c.textAlign = 'left';
+
+  c.strokeStyle = '#E9EBEF'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(32, 90); c.lineTo(w-32, 90); c.stroke();
+
+  let y = headerH;
+  c.fillStyle = FAINT; c.font = '700 11px ' + SANS;
+  c.fillText('QTY', 32, y);
+  c.fillText('ITEM', 110, y);
+  c.textAlign = 'right';
+  c.fillText('RATE', w-190, y);
+  c.fillText('AMOUNT', w-32, y);
+  c.textAlign = 'left';
+  y += 14;
+  c.beginPath(); c.moveTo(32, y); c.lineTo(w-32, y); c.stroke();
+
+  rows.forEach(l=>{
+    y += rowH;
+    c.fillStyle = INK; c.font = '600 13px ' + SANS;
+    c.fillText(f(l.qty) + ' ' + (l.unit || 'pc'), 32, y);
+    c.font = '700 13.5px ' + SANS;
+    c.fillText(waReceiptClip(c, l.name, 250), 110, y);
+    c.font = '700 13px ' + MONO;
+    c.textAlign = 'right';
+    c.fillText(f(l.price), w-190, y);
+    c.fillText(f(l.amount), w-32, y);
+    c.textAlign = 'left';
+    c.strokeStyle = '#F1F3F5';
+    c.beginPath(); c.moveTo(32, y+22); c.lineTo(w-32, y+22); c.stroke();
+  });
+
+  y += 50;
+  c.strokeStyle = INK; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(32, y); c.lineTo(w-32, y); c.stroke();
+  y += 30;
+  c.fillStyle = INK; c.font = '800 14px ' + SANS;
+  c.fillText('TOTAL', 32, y);
+  c.textAlign = 'right';
+  c.font = '800 18px ' + MONO;
+  c.fillStyle = ACCENT;
+  c.fillText('UGX ' + f(receipt.total), w-32, y);
+  c.textAlign = 'left';
+
+  y += 44;
+  c.fillStyle = FAINT; c.font = '500 11.5px ' + SANS;
+  c.fillText('We are preparing your order — thank you.', 32, y);
+  const who = [receipt.shopName, receipt.phone].filter(Boolean).join(' · ');
+  if(who){
+    y += 22;
+    c.fillStyle = MUTE; c.font = '600 11.5px ' + SANS;
+    c.fillText(who, 32, y);
+  }
+}
+
+/* Straight PNG upload — NOT uploadProductImageBlob: that one re-encodes
+   to JPEG (ringing halos around drawn text) and everything it uploads
+   is indexed by the media library as a product photo. Receipts live one
+   folder down (`receipts/`), which the library's single-level listing
+   reads as a placeholder and skips; storage RLS still gates on the
+   shop folder, and the bucket is public, so Meta can fetch the link. */
+async function waUploadReceiptBlob(blob){
+  const path = `${currentShopId}/receipts/${crypto.randomUUID()}.png`;
+  const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, blob, { contentType: 'image/png' });
+  if(error) throw error;
+  return sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+/* Image first, words always: render → upload → wa-send "send-image".
+   ANY miss on that road — canvas, storage, or a deployed wa-send still
+   on the version before send-image existed — and the SAME receipt goes
+   as text through waSendReply, where the 24-hour window check still
+   governs. The customer always gets the confirmation; the image is an
+   upgrade, never a dependency. */
+async function waSendOrderReceipt(receipt){
+  let sentImage = false;
+  try{
+    const canvas = document.createElement('canvas');
+    waDrawOrderReceipt(canvas, receipt);
+    const blob = await new Promise((res, rej)=>
+      canvas.toBlob(b=> b ? res(b) : rej(new Error('no blob')), 'image/png'));
+    const link = await waUploadReceiptBlob(blob);
+    const { data: out, error } = await sb.functions.invoke('wa-send', {
+      body: { shopId: currentShopId, action: 'send-image', conversationId: waInbox.active,
+        link, caption: 'Order ' + receipt.invoice + ' — we are preparing it.' } });
+    sentImage = !error && !!(out && out.sent);
+  }catch(_e){ /* fall through to the text twin */ }
+  if(!sentImage){ await waSendReply(waOrderReceiptText(receipt)); return; }
+  await waFetchThread(waInbox.active);
+  await waFetchConvs();
+  waRenderInbox();
+}
+
 /* The owner's tap that makes a chat commitment REAL: a draft order in
    Order tracking through create_quote.run (one arithmetic), stamped as
-   WhatsApp-born so the insights count it, then the confirmation goes
-   out with the order number — through waSendReply, same as any reply. */
+   WhatsApp-born so the insights count it — and then the receipt above
+   goes out, composed from the order that now exists. */
 async function waCreateOrderFromChat(){
   const conv = (waInbox.convs||[]).find(c=> c.id === waInbox.active);
   const d = waInbox.aiDrafts[String(waInbox.active)];
-  if(!conv || !d || !d.order || !(d.order.lines||[]).length || waInbox.sending) return;
+  if(!conv || !d || !d.order || !(d.order.lines||[]).length || waInbox.sending || waInbox.creating) return;
+  waInbox.creating = true;
   try{
-    const res = await ASSISTANT_TOOLS.create_quote.run({
-      customer_name: conv.profile_name || ('+' + conv.wa_id),
-      customer_phone: '+' + conv.wa_id,
-      items: d.order.lines.map(l=> ({ product_id: l.productId,
-        variant_index: l.variantIdx==null ? null : l.variantIdx,
-        qty: l.qty, sell_price: l.price })),
-    });
+    let res;
+    try{
+      res = await ASSISTANT_TOOLS.create_quote.run({
+        customer_name: conv.profile_name || ('+' + conv.wa_id),
+        customer_phone: '+' + conv.wa_id,
+        items: d.order.lines.map(l=> ({ product_id: l.productId,
+          variant_index: l.variantIdx==null ? null : l.variantIdx,
+          qty: l.qty, sell_price: l.price })),
+      });
+    }catch(e){
+      toast('Could not create the order — ' + e.message, 7000);
+      return;
+    }
     const q = (data.savedQuotes||[]).find(x=> invoiceNumberLabel(x) === res.invoice);
     if(q){ q.originWa = true; q.waConversationId = conv.id; saveData(); }
     refreshNavBadges();
     delete waInbox.aiDrafts[String(waInbox.active)];
-    waSendReply(d.text + '\nOrder no. ' + res.invoice + '.');
-  }catch(e){
-    toast('Could not create the order — ' + e.message, 7000);
+    waRenderInbox();
+    const ident = shopIdentity();
+    await waSendOrderReceipt({
+      shopName: ident.name, phone: ident.phone || data.presetWaPhone || '',
+      invoice: res.invoice,
+      dateLabel: new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }),
+      lines: d.order.lines.map(l=> ({ qty: l.qty, unit: l.unit, name: l.name,
+        price: l.price, amount: Math.round(l.qty * l.price) })),
+      total: d.order.total,
+    });
+  } finally {
+    waInbox.creating = false;
   }
 }
 

@@ -154,12 +154,16 @@ if (!scope) process.exit(1);
     'no suggestion on a closed window — it could not be sent anyway');
   t.check(/waSendReply\(replyText\);/.test(src),
     'even "Send suggestion" travels the composer road, with the server\'s window check at the end');
-  /* Three roads only, all of them through words the owner has SEEN:
-     the composer (textOverride), the token-match card (replyText), and
-     the assistant draft (d.text — rendered in full before its Send
-     button exists). Anything else calling the send with text it made
-     up is the bug this pin exists to catch. */
-  t.check(!/waSendReply\((?!textOverride|replyText|d\.text|\))/.test(src.slice(src.indexOf('function waQuoteMatch'))),
+  /* Four roads only, all of them through words the owner has SEEN or
+     figures the owner has APPROVED: the composer (textOverride), the
+     token-match card (replyText), the assistant draft (d.text —
+     rendered in full before its Send button exists), and the order
+     receipt (waOrderReceiptText — composed by code from the order the
+     owner just created by tapping). Anything else calling the send
+     with text it made up is the bug this pin exists to catch. The
+     slice starts at the receipt twins, where send-capable code now
+     begins. */
+  t.check(!/waSendReply\((?!textOverride|replyText|d\.text|waOrderReceiptText|\))/.test(src.slice(src.indexOf('function waOrderReceiptText'))),
     'and nothing else calls the send with fabricated text');
   t.check(/waInbox\.drafts\[String\(waInbox\.active\)\] = replyText;/.test(src),
     '"Edit first" hands the text to the composer as a draft');

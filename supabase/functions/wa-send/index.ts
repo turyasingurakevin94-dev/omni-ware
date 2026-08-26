@@ -611,5 +611,71 @@ Deno.serve(async (req) => {
     return json({ sent: true, wamid, recorded: !insErr });
   }
 
+  // The send action's sibling for the order receipt: same membership
+  // auth above, same window law, but the payload is an image Meta
+  // fetches from a public link (the receipt PNG the client rendered
+  // and uploaded). Kept a separate action so an older client that has
+  // never heard of images cannot reach it by accident.
+  if (action === "send-image") {
+    const conversationId = Number(body.conversationId);
+    const link = String(body.link ?? "").trim();
+    const caption = String(body.caption ?? "").trim();
+    if (!conversationId || !link) return json({ error: "conversationId and link are required" }, 400);
+    // Meta fetches this URL itself and requires https; refusing anything
+    // else here keeps a garbled caller from burning the send on a link
+    // that can only fail downstream.
+    if (!/^https:\/\//.test(link)) return json({ error: "link must be an https URL" }, 400);
+    if (!ACCESS_TOKEN || !numRow) return json({ error: "WhatsApp is not connected yet" }, 409);
+
+    const { data: conv, error: convErr } = await admin.from("wa_conversations")
+      .select("id, wa_id, last_inbound_at").eq("id", conversationId).eq("shop_id", shopId).maybeSingle();
+    if (convErr) return json({ error: convErr.message, stage: "conversation" }, 500);
+    if (!conv) return json({ error: "Conversation not found" }, 404);
+
+    const win = windowState(conv.last_inbound_at, Date.now());
+    if (!win.open) {
+      return json({
+        error: "The 24-hour reply window is closed — the customer has to message first.",
+        windowClosed: true,
+      }, 403);
+    }
+
+    const resp = await fetch(`${GRAPH_BASE}/${numRow.phone_number_id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: conv.wa_id,
+        type: "image",
+        image: caption ? { link, caption } : { link },
+      }),
+    });
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error("wa-send: graph call failed", resp.status, result);
+      const msg = (result as { error?: { message?: string } })?.error?.message || `Graph API error ${resp.status}`;
+      return json({ error: msg }, 502);
+    }
+    const wamid = String((result as { messages?: { id?: string }[] })?.messages?.[0]?.id ?? "");
+    const now = new Date().toISOString();
+
+    // Recorded the way wa-webhook records inbound media — msg_type
+    // "image", the caption behind the same "[image]" marker — so the
+    // thread bubbles and snippets render it with code they already
+    // have. If this insert fails the image HAS still reached the
+    // customer; say so rather than pretending the send failed.
+    const { error: insErr } = await admin.from("wa_messages").insert({
+      shop_id: shopId, conversation_id: conv.id, wamid: wamid || `local:${crypto.randomUUID()}`,
+      direction: "out", msg_type: "image", body: caption ? "[image] " + caption : "[image]",
+      status: "sent", sent_at: now, payload: { link },
+    });
+    if (insErr) console.error("wa-send: image record failed AFTER delivery", insErr);
+    const { error: updErr } = await admin.from("wa_conversations")
+      .update({ last_message_at: now }).eq("id", conv.id);
+    if (updErr) console.error("wa-send: conversation bump failed", updErr);
+
+    return json({ sent: true, wamid, recorded: !insErr });
+  }
+
   return json({ error: `Unknown action "${action}"` }, 400);
 });

@@ -93,6 +93,13 @@ const vercel = read('vercel.json');
   t.check(/NEVER claim an order already exists/.test(src)
     && /never call wa_take_order for a question that is only asking prices/.test(src),
     'and an order exists only after the owner makes it — commitment detected, never presumed');
+  /* The live bug this law comes from: a customer who said "just give
+     me 5" was answered "Confirm and we prepare it." with the order
+     number glued on. The draft may promise the confirmation; only the
+     app's own receipt IS one. */
+  t.check(!/Confirm and we prepare it/.test(src)
+    && /Order noted — confirmation coming shortly\./.test(src),
+    'a committed customer is never asked to confirm again — the receipt confirms');
 }
 
 /* ---------- 5. two tools, and ceilings before the SDK ----------------- */
@@ -250,10 +257,74 @@ const vercel = read('vercel.json');
     'the order is created through create_quote.run — the same door the owner\'s assistant uses');
   t.check(/q\.originWa = true; q\.waConversationId = conv\.id;/.test(createFn),
     'stamped WhatsApp-born, so the insights count it like a webhook cart order');
-  t.check(/waSendReply\(d\.text \+ '\\nOrder no\. ' \+ res\.invoice \+ '\.'\)/.test(createFn),
-    'and the confirmation goes out with the order number, through the same send door');
+  t.check(/await waSendOrderReceipt\(\{/.test(createFn) && !/d\.text/.test(createFn),
+    'and the confirmation is the code-composed receipt — never the model\'s pre-order prose');
+  t.check(/waInbox\.creating = true/.test(createFn) && /waInbox\.creating = false/.test(createFn)
+    && /\|\| waInbox\.creating\) return;/.test(createFn),
+    'a double-tap on Create order cannot make two orders');
   t.check(/waWaMarkupHTML/.test(app) && /replace\(\/\\\*\(\[\^\*\\n\]\+\)\\\*\/g, '<b>\$1<\/b>'\)/.test(app),
     'the preview renders *bold* the way WhatsApp will');
+}
+
+/* ---------- 7b. the receipt twins: what actually confirms ------------- */
+/*
+ * The owner's complaint, verbatim: the order details "written in sort
+ * of a sentence", no total, and a confirm-ask AFTER the customer had
+ * already committed. The confirmation is now composed by code from the
+ * created order — a drawn receipt image with a plain-text twin — so
+ * those three failures are pinned here against both twins.
+ */
+{
+  let R = null; let rErr = null;
+  try {
+    R = compileScope([extractFunction(app, 'waOrderReceiptText', 'index.html')], {}, ['waOrderReceiptText']);
+  } catch (e) { rErr = e; }
+  t.check(!!R, `waOrderReceiptText compiles alone${rErr ? ` (${rErr.message})` : ''}`);
+  if (R) {
+    const text = R.waOrderReceiptText({ invoice: 'INV-0238',
+      lines: [
+        { qty: 5, unit: 'pc', name: 'Soft Close Half Bend', price: 265000, amount: 1325000 },
+        { qty: 1, unit: 'Ctn', name: 'Super Stick', price: 480000, amount: 480000 },
+      ],
+      total: 1805000 });
+    const rows = text.split('\n');
+    t.check(rows[0] === 'Order *INV-0238* — received.',
+      `the receipt opens with the order number, as a fact (got ${JSON.stringify(rows[0])})`);
+    t.check(rows[1] === '*5* pc Soft Close Half Bend @ 265,000 — *UGX 1,325,000*',
+      `one line per item — qty, name, rate, amount — never a sentence (got ${JSON.stringify(rows[1])})`);
+    t.check(rows[2] === '*1* Ctn Super Stick — *UGX 480,000*',
+      `a single unit skips the redundant rate (got ${JSON.stringify(rows[2])})`);
+    t.check(rows[3] === 'TOTAL *UGX 1,805,000*',
+      `the total the owner asked for, bolded (got ${JSON.stringify(rows[3])})`);
+    t.check(rows[4] === 'We are preparing your order — thank you.',
+      'and it closes as a done deal');
+    t.check(!/confirm/i.test(text),
+      'NO confirm-ask anywhere — the customer already committed; this is the confirmation');
+  }
+
+  const draw = (/function waDrawOrderReceipt\(canvas, receipt\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  t.check(/'QTY'/.test(draw) && /'ITEM'/.test(draw) && /'RATE'/.test(draw) && /'AMOUNT'/.test(draw),
+    'the image twin is a real table — the agents-app renderer, adapted');
+  t.check(/'ORDER RECEIVED'/.test(draw) && /'TOTAL'/.test(draw) && /'UGX ' \+ f\(receipt\.total\)/.test(draw),
+    'headed as an order and closed with an emphasized total');
+  t.check(/c\.scale\(2, 2\)/.test(draw),
+    'oversampled 2× so WhatsApp compression cannot blur the figures');
+  t.check(!!draw && !/(cost|margin|profit|supplier|debt)/i.test(draw),
+    'nothing beyond the agreed order is in reach of the renderer — the waDrawStatus law');
+
+  const up = (/async function waUploadReceiptBlob\(blob\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  t.check(/receipts\/\$\{crypto\.randomUUID\(\)\}\.png/.test(up) && /contentType: 'image\/png'/.test(up),
+    'stored as PNG under the shop\'s receipts/ folder — sharp text, invisible to the media library');
+
+  const chain = (/async function waSendOrderReceipt\(receipt\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  t.check(/waUploadReceiptBlob\(blob\)/.test(chain) && /action: 'send-image'/.test(chain),
+    'the image road: render, upload, then wa-send\'s send-image action');
+  t.check(/caption: 'Order ' \+ receipt\.invoice \+ ' — we are preparing it\.'/.test(chain),
+    'with the order number riding the caption');
+  t.check(/if\(!sentImage\)\{ await waSendReply\(waOrderReceiptText\(receipt\)\); return; \}/.test(chain),
+    'ANY miss on the image road — including a wa-send deployed before send-image existed — sends the text twin through the composer door');
+  t.check(!/uploadProductImageBlob/.test(chain) && !!up && !/uploadProductImageBlob/.test(up),
+    'and never through the product-photo road, which would JPEG the text and index the receipt');
 }
 
 /* ---------- 8. dry-run: the handler's order is the security ----------- */
