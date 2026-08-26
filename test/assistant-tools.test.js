@@ -30,7 +30,11 @@ const { read, extractFunction, extractDeclaration, compileScope, createReporter 
 const t = createReporter('assistant tools');
 const src = read('index.html');
 
-const TODAY = '2026-08-25';
+/* TODAY is read from the SAME todayISO() the executors call (assigned
+   once the scope is compiled, below) -- a hardcoded date here failed
+   the whole suite the first midnight after it was written, because
+   debtor_payments' default-date path reads the real clock. */
+let TODAY;
 const data = {
   customers: [], products: [], prices: [], savedQuotes: [], purchaseInvoices: [],
   suppliers: [], dues: [], cashTxns: [], cashDays: {}, stock: {}, stockLots: {},
@@ -96,7 +100,7 @@ const scope = compileScope([
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS}; }',
+  'function names(){ return {ASSISTANT_TOOLS, AP_MAX_THREAD, AP_MAX_STEPS, todayISO}; }',
 ], {
   data,
   /* A benign element for every id: the reused functions peek at tabs
@@ -122,7 +126,8 @@ const scope = compileScope([
   currentActiveTab: 'quote',
 }, ['names']);
 
-const { ASSISTANT_TOOLS: T } = scope.names();
+const { ASSISTANT_TOOLS: T, todayISO } = scope.names();
+TODAY = todayISO();
 const run = (name, input) => T[name].run(input || {});
 
 /* ---------- 1. the gate labels are right ------------------------------ */
@@ -955,9 +960,9 @@ const run = (name, input) => T[name].run(input || {});
     t.check(!!threwI && /Line 1/.test(threwI) && /price_per_unit/.test(threwI),
       'a new product\'s line still needs its single-quantity price — the first-entry law');
     const cardBig = T.import_price_list.summary({ supplier_name: 'X Traders',
-      items: Array.from({ length: 61 }, ()=> ({ product_id: 'P10', price_per_unit: 5 })) });
-    t.check(/cannot run yet/.test(cardBig) && /at most 60/.test(cardBig),
-      'sixty-one lines refuse on the card itself — split the document instead');
+      items: Array.from({ length: 21 }, ()=> ({ product_id: 'P10', price_per_unit: 5 })) });
+    t.check(/cannot run yet/.test(cardBig) && /at most 20/.test(cardBig),
+      'twenty-one lines refuse on the card itself — a bigger call could not even be emitted whole');
     t.check(!data.suppliers.some(s=> /X Traders/.test(s.name)),
       'and none of the refused batches created their supplier');
 

@@ -63,7 +63,7 @@ const SYSTEM_PROMPT = [
   '',
   'Photos: the owner may attach a photo — a supplier price list, a delivery note, a receipt, a handwritten order, or the shelf itself. Say in one line what the document is, then read ONLY what is visible: never invent a figure, name or quantity the photo does not show, and read unclear handwriting back as a question ("I read 31,500 — correct?") rather than guessing. Then use the normal tools: a price list with many rows is bulk work — next paragraph; a receipt becomes add_expense; a handwritten customer order becomes find_product then one create_quote draft. A delivery note: read it out and total it, but say plainly that receiving stock into the books is done on the Purchases screen. Work through multi-line documents in the order written, and say which lines you could not read.',
   '',
-  'Price lists and bulk documents: never work a many-row document row by row. Call catalogue_names once (and find_supplier for the letterhead), match every row against the real names, then put the WHOLE plan in one review message: which rows are products already on file and which are genuinely new — sizes and types grouped as variants of ONE product — each price exactly as it will land, rows you are skipping and why, and every uncertainty batched as questions in that same message ([choices: …] where it helps), never one question per row. A carton or pack figure is only a pack price when the document or the owner states how many the pack holds; a carton column with no pack size is one of those questions, never a guess. Once the owner has corrected or agreed, make ONE import_price_list call — its single card replaces the per-row cards — then report its counts plainly: how many lines saved, and every failed line with its reason. The ladder rules and the photo rules still bind every line.',
+  'Price lists and bulk documents: never work a many-row document row by row. Call catalogue_names once (and find_supplier for the letterhead), match every row against the real names, then put the WHOLE plan in one review message: which rows are products already on file and which are genuinely new — sizes and types grouped as variants of ONE product — each price exactly as it will land, rows you are skipping and why, and every uncertainty batched as questions in that same message ([choices: …] where it helps), never one question per row. A carton or pack figure is only a pack price when the document or the owner states how many the pack holds; a carton column with no pack size is one of those questions, never a guess. Once the owner has corrected or agreed, save it with import_price_list — its cards replace the per-row cards. An import call carries AT MOST 20 lines: a longer document goes as parts, one import_price_list call after another in the same turn, each behind its own card — say how many parts there will be before the first, and keep each call small enough to finish. Afterwards report the counts plainly: how many lines saved, and every failed line with its reason. The ladder rules and the photo rules still bind every line.',
   '',
   'Language: the owner may write or speak in English or Luganda. Reply in the language of their message.',
   '',
@@ -156,7 +156,7 @@ const TOOLS = [
   },
   {
     name: 'catalogue_names',
-    description: 'Every product name in the catalogue in one call, with each variable product’s variant labels in variant_index order. Use it for BULK documents — a photographed price list with many rows — to match every row at once instead of calling find_product per row. It carries no prices or stock; for one product’s details use find_product or product_details.',
+    description: 'Every product name in the catalogue in one call (up to 500), with each variable product’s variant labels in variant_index order. Use it for BULK documents — a photographed price list with many rows — to match every row at once instead of calling find_product per row. It carries no prices or stock; for one product’s details use find_product or product_details.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
@@ -308,14 +308,14 @@ const TOOLS = [
   },
   {
     name: 'import_price_list',
-    description: 'Bring in a WHOLE price list (or a big slice of one) as a single confirmed batch: the genuinely-new products are created and every supplier price saved together, behind one card — only after the owner has seen the full review message and agreed. One supplier per call, resolved with find_supplier first (a supplier_name not on file becomes a NEW supplier). Items sharing a new_product name become ONE product created once; price its variants by variant_combo. Existing products take product_id (from catalogue_names or find_product) and variant_index. Every line follows add_supplier_price’s own laws — ladder rungs stay independent, and never invent a pack price the document does not quote. At most 60 items per call; the result reports per-line outcomes.',
+    description: 'Bring in a price list as confirmed batches: the genuinely-new products are created and every supplier price saved together, behind one card per call — only after the owner has seen the full review message and agreed. At most 20 items per call — a longer document goes as several calls in a row (part after part, one card each), never one giant call. One supplier per call, resolved with find_supplier first (a supplier_name not on file becomes a NEW supplier). Items sharing a new_product name become ONE product created once; price its variants by variant_combo. Existing products take product_id (from catalogue_names or find_product) and variant_index. Every line follows add_supplier_price’s own laws — ladder rungs stay independent, and never invent a pack price the document does not quote. The result reports per-line outcomes.',
     input_schema: {
       type: 'object',
       properties: {
         supplier_id: { type: 'string', description: 'From find_supplier, for a supplier already on file.' },
         supplier_name: { type: 'string', description: 'Used when there is no supplier_id; a name not on file becomes a new supplier.' },
         items: {
-          type: 'array', minItems: 1, maxItems: 60,
+          type: 'array', minItems: 1, maxItems: 20,
           items: {
             type: 'object',
             properties: {
@@ -451,7 +451,13 @@ module.exports = async (req, res) => {
   try {
     const response = await client.beta.messages.create({
       model: 'claude-opus-5',
-      max_tokens: 2000,
+      /* 3000 is sized to the 60s Vercel window, not to taste: adaptive
+         thinking counts against it too, and generating much more than
+         this cannot finish before the function is killed. A bulk import
+         must therefore go as parts (the schema caps items at 20) — at
+         2000 a big import call was cut off mid-JSON, which reached the
+         owner as a silently dead panel. */
+      max_tokens: 3000,
       /* Refusal fallbacks, current-guidance default for Opus 5: a safety
          decline re-runs on a fallback model inside this same call rather
          than dead-ending the owner's question. */

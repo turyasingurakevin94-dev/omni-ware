@@ -66,7 +66,7 @@ const pkg = read('package.json');
     'no thinking parameter — adaptive is this model’s default and a budget would 400');
   t.check(!/temperature|top_p|top_k/.test(src),
     'no sampling parameters — removed on this model');
-  t.check(/max_tokens: 2000/.test(src), 'output is capped');
+  t.check(/max_tokens: 3000/.test(src), 'output is capped, sized to the 60s window (a bulk import call at 2000 was cut off mid-JSON)');
   const sys = /system: \[\{ type: 'text', text: SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}\]/.test(src);
   t.check(sys, 'the system prompt carries a cache breakpoint');
   const lastTool = src.lastIndexOf("name: 'add_sourcing_lead'");
@@ -117,9 +117,11 @@ const pkg = read('package.json');
     'and the bulk law: a price list is matched whole and reviewed in ONE message, uncertainties batched');
   t.check(/states how many the pack holds/.test(src),
     'a carton column with no pack size is a question, never a guess');
-  t.check(/its single card replaces the per-row cards/.test(src)
+  t.check(/its cards replace the per-row cards/.test(src)
     && /every failed line with its reason/.test(src),
-    'one import call, one card — and the per-line outcomes reported honestly');
+    'import cards replace the per-row cards — and the per-line outcomes reported honestly');
+  t.check(/AT MOST 20 lines/.test(src) && /goes as parts/.test(src),
+    'and the parts law: a long document goes as several small calls — a giant call cannot finish inside max_tokens');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }
@@ -139,8 +141,8 @@ const pkg = read('package.json');
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
   t.check((src.match(/additionalProperties: false/g) || []).length >= 30,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');
-  t.check(/maxItems: 60/.test(src),
-    'the import batch is capped at sixty lines — the rest goes in a second call');
+  t.check(/maxItems: 20/.test(src),
+    'the import batch is capped at twenty lines — sized so the call itself fits the output budget');
 }
 
 /* ---------- 6. bounds, and errors in plain words ---------------------- */

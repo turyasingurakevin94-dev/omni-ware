@@ -319,4 +319,25 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'no inner scrollbar until the lid — the Windows arrow artifact cannot return');
 }
 
+/* ---------- 7e. the loop never ends a turn in silence ------------------ */
+/*
+ * The live failure: a bulk import call bigger than max_tokens came back
+ * as stop_reason max_tokens with nothing renderable (thinking counts
+ * against the cap, and a cut-off tool call is dropped) -- and the loop
+ * returned without a word. The owner saw a dead panel and sent the same
+ * message twice into the void. Every response shape must now end in
+ * pixels: text, a card, or an honest error line.
+ */
+{
+  const loop = extractFunction(src, 'apRunLoop', 'index.html');
+  t.check(/stop_reason === 'max_tokens'/.test(loop) && /stop mid-answer/.test(loop),
+    'a cut-off answer says so on screen — the silent-panel failure cannot return');
+  t.check(/I got an empty answer back/.test(loop),
+    'and even an unexpected empty shape renders an honest line');
+  t.check(/toolBlocks/.test(loop) && !/stop_reason !== 'tool_use'/.test(loop),
+    'tool calls run whenever complete ones arrived — a truncated turn with a whole call still executes it and lets the model continue');
+  t.check(/resp\.content\.length\)\s*\n?\s*assistantThread\.push/.test(loop),
+    'an empty content array never joins the thread — the API rejects empty assistant turns, which would jam every later send');
+}
+
 process.exit(t.done() ? 1 : 0);

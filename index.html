@@ -51055,8 +51055,12 @@ function apSameCombo(a, b){ return apComboKey(a) === apComboKey(b); }
 function apImportParts(input){
   const items = Array.isArray(input.items) ? input.items : [];
   if(!items.length) throw new Error('The import has no lines — say what to bring in.');
-  if(items.length > 60)
-    throw new Error('That is ' + items.length + ' lines — one import takes at most 60. Split the document and send the rest in a second call.');
+  /* Twenty is a WIRE limit, not a taste: the model must EMIT this whole
+     call within the server's output budget, and a bigger batch gets cut
+     off mid-JSON -- the silent-panel failure. A long document goes as
+     parts, one card each. */
+  if(items.length > 20)
+    throw new Error('That is ' + items.length + ' lines — one import takes at most 20. Send this part, then the rest as the next parts.');
   const sup = input.supplier_id
     ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
     : supFindDuplicate(String(input.supplier_name||''), null);
@@ -51491,17 +51495,19 @@ const ASSISTANT_TOOLS = {
      Built for bulk documents (a photographed price list): the model
      matches EVERY row against real names at once instead of burning a
      find_product round per row. Variant labels come in variants[]
-     order, so a label's position IS its variant_index. */
+     order, so a label's position IS its variant_index. The cap is 500
+     because the live shop already holds 419 products -- a truncated
+     catalogue would quietly twin the products it cut off. */
   catalogue_names: { confirm: false, run(){
     const all = data.products||[];
     return { count: all.length,
-      products: all.slice(0, 300).map(p=>{
+      products: all.slice(0, 500).map(p=>{
         const row = { id: p.id, name: p.name };
         if(p.type === 'variable' && p.variants && p.variants.length)
           row.variants = p.variants.map(v=> variantLabel(v.combo));
         return row;
       }),
-      truncated: all.length > 300 };
+      truncated: all.length > 500 };
   }},
 
   /* ---- writes: everything below renders a card first ---- */
@@ -52269,7 +52275,11 @@ async function apRunLoop(){
     for(let step=0; step<AP_MAX_STEPS; step++){
       const resp = await apCallServer();
       if(!resp) return;
-      assistantThread.push({ role: 'assistant', content: resp.content });
+      /* An empty content array must not join the thread -- the API
+         rejects empty assistant turns, which would jam every send
+         after a truncated one. */
+      if(Array.isArray(resp.content) && resp.content.length)
+        assistantThread.push({ role: 'assistant', content: resp.content });
       let spokeText = '';
       (resp.content||[]).forEach(block=>{
         if(block.type === 'text' && block.text){ apRenderAssistant(block.text); spokeText += (spokeText?' ':'') + block.text; }
@@ -52278,7 +52288,21 @@ async function apRunLoop(){
         apRenderError('I can\'t help with that request.');
         return;
       }
-      if(resp.stop_reason !== 'tool_use'){ finalText = spokeText; return; }
+      /* Truncation is a real outcome, not an exception: the model may
+         think and write past max_tokens (a huge import call did exactly
+         this live -- and the panel went SILENT). A cut-off turn with
+         complete tool calls still runs them and lets the model carry on
+         next round; one with nothing runnable must SAY it was cut off.
+         Either way this loop never ends a turn with an empty panel. */
+      const toolBlocks = (resp.content||[]).filter(b=> b && b.type === 'tool_use');
+      if(!toolBlocks.length){
+        if(resp.stop_reason === 'max_tokens'){
+          apRenderError('I had to stop mid-answer — that was too much for one go. Ask me to continue, or to work in smaller pieces (for a price list: fewer rows per part).');
+        } else if(!spokeText){
+          apRenderError('I got an empty answer back — say that again.');
+        }
+        finalText = spokeText; return;
+      }
 
       /* Execute every tool_use in this turn, in order; writes wait on
          their card. ALL results go back in ONE user message -- split
