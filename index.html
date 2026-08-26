@@ -50872,6 +50872,7 @@ const AP_MAX_STEPS = 10;    // tool round-trips per question (a product heard by
 let assistantThread = [];
 let assistantBusy = false;
 let apVoiceMode = false;    // hands-free conversation on
+let apWasCutOff = false;    // last answer hit max_tokens; next send says so
 let apRecognition = null;   // the live SpeechRecognition, when listening
 let apQuoteInFlight = false; // one INV- number per confirm, ever
 
@@ -51060,7 +51061,7 @@ function apImportParts(input){
      off mid-JSON -- the silent-panel failure. A long document goes as
      parts, one card each. */
   if(items.length > 20)
-    throw new Error('That is ' + items.length + ' lines — one import takes at most 20. Send this part, then the rest as the next parts.');
+    throw new Error('That is ' + items.length + ' lines — one import takes at most 20. Save this section, then the rest as the next sections.');
   const sup = input.supplier_id
     ? ((data.suppliers||[]).find(s=> s.id === input.supplier_id) || null)
     : supFindDuplicate(String(input.supplier_name||''), null);
@@ -52297,7 +52298,11 @@ async function apRunLoop(){
       const toolBlocks = (resp.content||[]).filter(b=> b && b.type === 'tool_use');
       if(!toolBlocks.length){
         if(resp.stop_reason === 'max_tokens'){
-          apRenderError('I had to stop mid-answer — that was too much for one go. Ask me to continue, or to work in smaller pieces (for a price list: fewer rows per part).');
+          /* The flag makes the recovery mechanical: the next send tells
+             the model its answer was cut off, so it resumes smaller
+             instead of repeating -- no burnt round re-explaining. */
+          apWasCutOff = true;
+          apRenderError('I had to stop mid-answer — that was too much for one go. Say "continue" and I will pick up where I stopped, in smaller pieces.');
         } else if(!spokeText){
           apRenderError('I got an empty answer back — say that again.');
         }
@@ -52386,7 +52391,9 @@ function apSend(text){
      photo the turn becomes [image, text]: the picture first, the date
      and the words inside the TEXT block -- the shape the API reads. */
   const stamped = '[Today is ' + todayISO() + ']\n'
+    + (apWasCutOff ? '[Your previous answer was cut off mid-way. Resume from where it stopped, in smaller pieces — do not repeat what already went through, do not re-ask what was already answered.]\n' : '')
     + (clean || 'Read this photo. If it is a document for the books, read it out and propose the entries.');
+  apWasCutOff = false;
   if(apPendingPhoto){
     assistantThread.push({ role: 'user', content: [
       { type: 'image', source: { type: 'base64', media_type: apPendingPhoto.mediaType, data: apPendingPhoto.data } },

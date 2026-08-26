@@ -67,6 +67,8 @@ const pkg = read('package.json');
   t.check(!/temperature|top_p|top_k/.test(src),
     'no sampling parameters — removed on this model');
   t.check(/max_tokens: 3000/.test(src), 'output is capped, sized to the 60s window (a bulk import call at 2000 was cut off mid-JSON)');
+  t.check(/output_config: \{ effort: 'medium' \}/.test(src),
+    'effort is medium — deep thinking spent the output budget before a word was said, and it is the owner\'s money');
   const sys = /system: \[\{ type: 'text', text: SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}\]/.test(src);
   t.check(sys, 'the system prompt carries a cache breakpoint');
   const lastTool = src.lastIndexOf("name: 'add_sourcing_lead'");
@@ -113,15 +115,19 @@ const pkg = read('package.json');
   t.check(/genuinely new/.test(src) && /not separate products/.test(src),
     'and the creation law: a product is made only when the owner says it is new, and sizes are variants, never twins');
   t.check(/never work a many-row document row by row/.test(src)
-    && /one review message/.test(src) && /never one question per row/.test(src),
-    'and the bulk law: a price list is matched whole and reviewed in ONE message, uncertainties batched');
+    && /never one question per row/.test(src),
+    'and the bulk law: rows matched in one sweep, uncertainties batched — never a question per row');
   t.check(/states how many the pack holds/.test(src),
     'a carton column with no pack size is a question, never a guess');
-  t.check(/its cards replace the per-row cards/.test(src)
+  t.check(/Size the work yourself/.test(src) && /sections of at most 20 rows/.test(src),
+    'the model sizes its own work: sections it can always finish — a giant answer cannot fit inside max_tokens');
+  t.check(/its card confirms that section/.test(src)
+    && /continue straight into the next section/.test(src)
     && /every failed line with its reason/.test(src),
-    'import cards replace the per-row cards — and the per-line outcomes reported honestly');
-  t.check(/AT MOST 20 lines/.test(src) && /goes as parts/.test(src),
-    'and the parts law: a long document goes as several small calls — a giant call cannot finish inside max_tokens');
+    'each section rides one card and the next section follows without re-asking; per-line outcomes reported honestly');
+  t.check(/resume from where it stopped in smaller pieces/.test(src)
+    && /never repeat lines already saved/.test(src),
+    'and a cut-off answer resumes smaller — never repeating, never re-asking (credits are the owner\'s money)');
   t.check(!/no tables, no markdown,/.test(src),
     'the old blanket markdown ban is gone — it would fight the mark the app now renders');
 }

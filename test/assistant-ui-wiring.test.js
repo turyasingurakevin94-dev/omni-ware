@@ -332,6 +332,13 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   const loop = extractFunction(src, 'apRunLoop', 'index.html');
   t.check(/stop_reason === 'max_tokens'/.test(loop) && /stop mid-answer/.test(loop),
     'a cut-off answer says so on screen — the silent-panel failure cannot return');
+  t.check(/apWasCutOff = true/.test(loop),
+    'and raises the cut-off flag');
+  const send = extractFunction(src, 'apSend', 'index.html');
+  t.check(/cut off mid-way\. Resume from where it stopped/.test(send)
+    && /do not repeat what already went through/.test(send)
+    && /apWasCutOff = false/.test(send),
+    'the NEXT send tells the model mechanically to resume smaller — no burnt round re-explaining, and the flag clears');
   t.check(/I got an empty answer back/.test(loop),
     'and even an unexpected empty shape renders an honest line');
   t.check(/toolBlocks/.test(loop) && !/stop_reason !== 'tool_use'/.test(loop),
