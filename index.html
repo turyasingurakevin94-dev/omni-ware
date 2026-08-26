@@ -10863,7 +10863,13 @@
       <div class="form-grid">
         <div class="field">
           <label>Quantity bought</label>
-          <input type="number" id="ipe_qty" min="0" step="any">
+          <!-- The shop buys in cartons and the record keeps base units; a
+               field that only spoke units is how 60 cartons got "corrected"
+               with a carton figure typed into a unit box. -->
+          <div style="display:flex; gap:6px;">
+            <input type="number" id="ipe_qty" min="0" step="any" style="flex:1; min-width:0;">
+            <select id="ipe_qty_unit" style="display:none; max-width:45%;"></select>
+          </div>
         </div>
         <div class="field">
           <label>Price paid (UGX per unit)</label>
@@ -10873,6 +10879,14 @@
       <div class="field">
         <label>Bought from</label>
         <select id="ipe_supplier"></select>
+      </div>
+      <div class="field">
+        <label>Supplier bill</label>
+        <!-- The money side of this purchase. Linked: shown and corrected
+             with the save. Not linked: the matching bills are offered,
+             because a correction that reaches the shelf but not the bill
+             leaves the shop owing for goods it never kept. -->
+        <select id="ipe_bill"></select>
       </div>
       <p class="preset-hint" id="ipe_effect"></p>
       <p class="sf-need" id="ipe_error" style="display:none; color:var(--danger);"></p>
@@ -35252,28 +35266,64 @@ function applyStockPurchaseEdit(logId, next){
   }
   const newCost = (next.price == null || next.price === '') ? null : Number(next.price);
   const newSupplierId = next.supplierId || null;
-  const pi = stockPurchaseInvoiceFor(e);
+  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
+  let pi = stockPurchaseInvoiceFor(e);
+  /* A purchase whose bill the lookup cannot find -- a row older than the
+     piId stamp, or one recorded without its supplier -- used to be
+     corrected on the shelf while the bill stood untouched, and the toast
+     still said "corrected". A real shop chased a supplier balance that
+     never moved because of exactly that. The form now offers the
+     matching bills, and the pick arrives here to be ADOPTED: stamped
+     onto the correction row and corrected with it, but only when it is
+     genuinely this purchase's kind of bill. */
+  let billAdopted = false;
+  if(!pi && next.adoptPiId != null){
+    const cand = (data.purchaseInvoices || []).find(x => x.id === Number(next.adoptPiId));
+    if(!cand || cand.voided || cand.quoteId || (cand.items || []).length !== 1
+        || cand.items[0].productId !== e.productId
+        || ((cand.items[0].variantIdx == null ? null : cand.items[0].variantIdx) !== vIdx)){
+      return {ok: false, error: 'That bill does not match this purchase — pick the bill raised for this same item, or leave it unlinked.'};
+    }
+    pi = cand;
+    billAdopted = true;
+  }
   /* Moving a bill that has money against it would move that money to a
      supplier who never received it. The quantity and the price can still
      be corrected -- those are what the bill is FOR -- but who it is owed
-     to is settled once something has been paid on it. */
-  if(pi && newSupplierId !== eff.supplierId && Number(pi.amountPaid) > 0){
+     to is settled once something has been paid on it. Compared against
+     the BILL's supplier: that is whose money it is. */
+  if(pi && newSupplierId !== pi.supplierId && Number(pi.amountPaid) > 0){
     return {ok: false, error: `${fmtUGX(pi.amountPaid)} has already been paid against ${purchaseInvoiceNumberLabel(pi)}, so the supplier cannot be changed. Void that bill by hand if it went to the wrong supplier.`};
   }
-  if(newQty === eff.qty && stockCostsEqual(newCost, eff.cost) && newSupplierId === eff.supplierId){
+  /* "Nothing was changed" must also look at the BILL. When an earlier
+     correction fixed the shelf but missed the bill, the figures typed
+     today equal the movement exactly -- and refusing that save was the
+     dead end that kept a wrong balance wrong. A bill out of line with
+     the figures is a change to make. */
+  const billOutOfLine = pi && ((Number(pi.items[0].qty) || 0) !== newQty
+    || (Number(pi.items[0].price) || 0) !== (newCost != null ? Number(newCost) : 0)
+    || (!!newSupplierId && pi.supplierId !== newSupplierId));
+  if(newQty === eff.qty && stockCostsEqual(newCost, eff.cost) && newSupplierId === eff.supplierId
+      && !billOutOfLine && !billAdopted){
     return {ok: false, error: 'Nothing was changed.'};
   }
 
-  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
   /* Units already sold keep the cost they were sold at: that sale is
      history, and its margin was recorded against the lot as it stood.
-     Only what is still on the shelf is re-costed. */
-  const takeBack = Math.min(eff.qty, onHand);
-  const soldFromThis = eff.qty - takeBack;
-  const newRemaining = newQty - soldFromThis;
-  if(takeBack > 0) takeBackPurchaseLots(e.productId, vIdx, takeBack, eff.cost);
-  if(newRemaining > 0) addStockLot(e.productId, vIdx, newRemaining, newCost);
-  data.stock[e.key] = Math.max(0, onHand - takeBack + newRemaining);
+     Only what is still on the shelf is re-costed -- and only when the
+     shelf figures themselves changed: a bill-only repair moves money,
+     not goods. */
+  const figuresChanged = newQty !== eff.qty || !stockCostsEqual(newCost, eff.cost);
+  let takeBack = 0, soldFromThis = eff.qty - Math.min(eff.qty, onHand), rowDelta = 0;
+  if(figuresChanged){
+    takeBack = Math.min(eff.qty, onHand);
+    soldFromThis = eff.qty - takeBack;
+    const newRemaining = newQty - soldFromThis;
+    if(takeBack > 0) takeBackPurchaseLots(e.productId, vIdx, takeBack, eff.cost);
+    if(newRemaining > 0) addStockLot(e.productId, vIdx, newRemaining, newCost);
+    data.stock[e.key] = Math.max(0, onHand - takeBack + newRemaining);
+    rowDelta = newRemaining - takeBack;
+  }
 
   const bits = [];
   if(newQty !== eff.qty) bits.push(`quantity ${eff.qty} → ${newQty}`);
@@ -35283,11 +35333,13 @@ function applyStockPurchaseEdit(logId, next){
   if(newSupplierId !== eff.supplierId){
     bits.push(`supplier ${eff.supplierId ? supplierName(eff.supplierId) : 'none'} → ${newSupplierId ? supplierName(newSupplierId) : 'none'}`);
   }
+  if(billAdopted) bits.push(`linked to ${purchaseInvoiceNumberLabel(pi)}`);
+  else if(billOutOfLine && !bits.length) bits.push(`bill ${purchaseInvoiceNumberLabel(pi)} re-aligned to these figures`);
   const product = data.products.find(p => p.id === e.productId);
   const row = {
     id: allocRowId('stockLog'), key: e.key, productId: e.productId, variantIdx: vIdx,
     label: product ? productVariantLabel(product, vIdx) : e.productId,
-    type: 'correction', delta: newRemaining - takeBack, qtyAfter: Number(data.stock[e.key]) || 0,
+    type: 'correction', delta: rowDelta, qtyAfter: Number(data.stock[e.key]) || 0,
     note: `Purchase of ${e.date} corrected — ${bits.join(', ')}`,
     date: todayISO(), at: new Date().toISOString(),
     cost: newCost, supplierId: newSupplierId,
@@ -35296,15 +35348,20 @@ function applyStockPurchaseEdit(logId, next){
   data.stockLog.push(row);
   eff.tail.correctedBy = row.id;
 
-  let overpaid = false;
+  /* The balance before and after ride the result so the toast can NAME
+     the money moving -- "now stands at 14,813,750" is the confirmation
+     the owner is actually waiting for. */
+  let overpaid = false, billBefore = null, billAfter = null;
   if(pi){
     const item = pi.items[0];
+    billBefore = Math.max(0, (Number(item.qty) || 0) * (Number(item.price) || 0) - (Number(pi.amountPaid) || 0));
     item.qty = newQty;
     item.price = (newCost != null && !isNaN(newCost)) ? Number(newCost) : 0;
     if(newSupplierId && newSupplierId !== pi.supplierId){
       pi.supplierId = newSupplierId;
       pi.supplierName = supplierName(newSupplierId);
     }
+    billAfter = Math.max(0, newQty * (item.price || 0) - (Number(pi.amountPaid) || 0));
     /* Said out loud rather than silently clamped. A bill corrected DOWN
        below what has already been paid on it means the shop is owed money
        back, and that is a conversation with the supplier, not a rounding
@@ -35317,7 +35374,8 @@ function applyStockPurchaseEdit(logId, next){
   if(newSupplierId && newCost != null){
     syncPriceRegistryFromPurchase(e.productId, vIdx, newSupplierId, newCost, newQty, {confirms: true});
   }
-  return {ok: true, row, pi, overpaid, tookBack: takeBack, soldFromThis};
+  return {ok: true, row, pi, overpaid, tookBack: takeBack, soldFromThis,
+    billAdopted, billBefore, billAfter};
 }
 // Deducts stock for every "Our stock" line on a quote once it's marked
 // invoiced. Remembers exactly how much was taken per line (it may be less
@@ -40980,6 +41038,7 @@ function stockLogCorrectedTagHTML(e){
 
 /* ---------------- The correction form ---------------- */
 let editingPurchaseLogId = null;
+let ipePack = null;   // {packQty, packUnit, unit} when this product packs
 function openStockPurchaseEdit(logId){
   const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
   if(!e || !isStockPurchaseRow(e)){ toast('That movement cannot be corrected here'); return; }
@@ -40987,18 +41046,57 @@ function openStockPurchaseEdit(logId){
   const eff = effectiveStockPurchase(e);
   const onHand = Number(data.stock[e.key]) || 0;
   const minQty = stockPurchaseMinQty(e);
+  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
+
+  /* Speak packs where the product packs: 60 cartons was recorded as its
+     base units, and a bare unit field invited a carton figure typed over
+     it. The stored record stays base units; only the field converts. */
+  const pk = productPackInfo(e.productId, vIdx);
+  ipePack = (pk && Number(pk.packQty) > 1) ? { packQty: Number(pk.packQty), packUnit: pk.packUnit || 'Pack', unit: pk.unit || 'units' } : null;
+  const packBit = (n)=> ipePack && n > 0 && Number.isInteger(n / ipePack.packQty)
+    ? ` (= ${n / ipePack.packQty} ${ipePack.packUnit})` : '';
 
   document.getElementById('ipe_item').textContent = e.label || e.productId;
   document.getElementById('ipe_asrecorded').textContent =
-    `Recorded on ${e.date}: ${e.delta} bought${e.cost != null ? ` at ${fmtUGX(e.cost)} each` : ''}`
+    `Recorded on ${e.date}: ${e.delta} bought${packBit(Number(e.delta)||0)}${e.cost != null ? ` at ${fmtUGX(e.cost)} each` : ''}`
     + `${e.supplierId ? ` from ${supplierName(e.supplierId)}` : ''}.`
-    + (e.correctedBy ? ` Since corrected to ${eff.qty}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
+    + (e.correctedBy ? ` Since corrected to ${eff.qty}${packBit(eff.qty)}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
 
-  document.getElementById('ipe_qty').value = eff.qty;
+  const unitSel = document.getElementById('ipe_qty_unit');
+  if(ipePack){
+    const inPacks = eff.qty / ipePack.packQty;
+    const packMode = inPacks > 0 && Number.isInteger(inPacks);
+    unitSel.innerHTML = `<option value="unit">${esc(ipePack.unit)}</option>`
+      + `<option value="pack"${packMode ? ' selected' : ''}>${esc(ipePack.packUnit)} of ${ipePack.packQty}</option>`;
+    unitSel.style.display = '';
+    document.getElementById('ipe_qty').value = packMode ? inPacks : eff.qty;
+  } else {
+    unitSel.innerHTML = '';
+    unitSel.style.display = 'none';
+    document.getElementById('ipe_qty').value = eff.qty;
+  }
   document.getElementById('ipe_price').value = eff.cost == null ? '' : eff.cost;
   const sel = document.getElementById('ipe_supplier');
   sel.innerHTML = `<option value="">(not recorded)</option>` + (data.suppliers || [])
     .map(s => `<option value="${esc(s.id)}" ${s.id === eff.supplierId ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+
+  /* The money side, said plainly. A linked bill is shown and will be
+     corrected with the save; an unlinked one is offered from the bills
+     that match this item, because "corrected" that never reached the
+     bill is how a supplier balance stood wrong at a real shop. */
+  const billSel = document.getElementById('ipe_bill');
+  const linked = stockPurchaseInvoiceFor(e);
+  if(linked){
+    billSel.disabled = true;
+    billSel.innerHTML = `<option value="">${esc(purchaseInvoiceNumberLabel(linked))} — ${esc(linked.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceBalanceDue(linked))))} still owed (corrected with this save)</option>`;
+  } else {
+    const cands = (data.purchaseInvoices || []).filter(pi => !pi.voided && !pi.quoteId
+      && (pi.items || []).length === 1 && pi.items[0].productId === e.productId
+      && ((pi.items[0].variantIdx == null ? null : pi.items[0].variantIdx) === vIdx));
+    billSel.disabled = false;
+    billSel.innerHTML = `<option value="">(no bill linked — what is owed will NOT change)</option>`
+      + cands.map(pi => `<option value="${esc(String(pi.id))}">${esc(purchaseInvoiceNumberLabel(pi))} — ${esc(pi.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceTotal(pi))))}</option>`).join('');
+  }
 
   /* Says the floor BEFORE anything is typed, with the arithmetic behind
      it. A form that only objects after the fact leaves somebody guessing
@@ -41016,12 +41114,25 @@ document.getElementById('invLogWrap').addEventListener('click', (ev)=>{
 });
 document.getElementById('invPurchaseEditClose').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
 document.getElementById('ipe_cancel').addEventListener('click', ()=> closeModal('invPurchaseEditModal'));
+/* Switching what the field COUNTS in converts the figure in it -- 300
+   units becomes 60 Ctn, not a claim of 300 cartons. */
+document.getElementById('ipe_qty_unit').addEventListener('change', (ev)=>{
+  if(!ipePack) return;
+  const q = document.getElementById('ipe_qty');
+  const v = Number(q.value) || 0;
+  q.value = ev.target.value === 'pack' ? (v / ipePack.packQty) : (v * ipePack.packQty);
+});
 document.getElementById('ipe_save').addEventListener('click', ()=>{
   if(editingPurchaseLogId == null) return;
+  const unitSel = document.getElementById('ipe_qty_unit');
+  const mode = (ipePack && unitSel.style.display !== 'none') ? unitSel.value : 'unit';
+  const billSel = document.getElementById('ipe_bill');
+  const supplierChosen = document.getElementById('ipe_supplier').value || null;
   const res = applyStockPurchaseEdit(editingPurchaseLogId, {
-    qty: document.getElementById('ipe_qty').value,
+    qty: invPurchaseQtyValue(document.getElementById('ipe_qty').value, mode, ipePack ? ipePack.packQty : 0),
     price: document.getElementById('ipe_price').value,
-    supplierId: document.getElementById('ipe_supplier').value || null,
+    supplierId: supplierChosen,
+    adoptPiId: (!billSel.disabled && billSel.value) ? Number(billSel.value) : null,
   });
   const err = document.getElementById('ipe_error');
   if(!res.ok){ err.textContent = res.error; err.style.display = ''; return; }
@@ -41031,10 +41142,20 @@ document.getElementById('ipe_save').addEventListener('click', ()=>{
   if(document.getElementById('pi_doc_search')){
     renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
   }
+  if(typeof renderCreditorsList === 'function' && document.getElementById('cred_search')){
+    renderCreditorsList(document.getElementById('cred_search').value);
+  }
+  refreshNavBadges();
   /* The overpayment is worth interrupting for: the shop is owed money
      back by a supplier, and nothing else on any screen will say so. */
   if(res.overpaid){
     toast(`Corrected — but ${purchaseInvoiceNumberLabel(res.pi)} has now been paid more than it is worth. Take that up with ${res.pi.supplierName}.`, 9000);
+  } else if(res.pi){
+    /* Name the money that moved: this line IS the confirmation the
+       correction reached what the shop owes. */
+    toast(`Purchase corrected — ${purchaseInvoiceNumberLabel(res.pi)} now stands at ${fmtUGX(Math.round(res.billAfter))}${res.pi.supplierName ? ` owed to ${res.pi.supplierName}` : ''}.`, 8000);
+  } else if(supplierChosen){
+    toast('Purchase corrected on the shelf — but NO supplier bill is linked, so what you owe did not change. If their bill stands wrong, press Edit again and pick it under Supplier bill.', 9000);
   } else {
     toast('Purchase corrected');
   }

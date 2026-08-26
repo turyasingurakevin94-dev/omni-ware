@@ -291,4 +291,97 @@ const logRow = () => data.stockLog[0];
   t.check(/4,800/.test(tag), 'including the price it became');
 }
 
+/* ---------- 16. the Roto case: a bill the lookup cannot find -----------
+   A real shop corrected 60 cartons down to 30 and the supplier's balance
+   did not move: the movement predated the piId stamp, carried no
+   supplier, and the date fallback missed -- so the shelf was corrected,
+   the bill stood, and the toast said "corrected" anyway. The result now
+   says the truth (pi null), and the SECOND visit -- same figures, the
+   bill picked by hand -- adopts and corrects it instead of dying on
+   "Nothing was changed". */
+{
+  freshShop({ qty: 60, cost: 5000 });
+  data.stockLog[0].piId = null;
+  data.stockLog[0].supplierId = null;
+  data.purchaseInvoices[0].date = '2026-08-10';   // fallback needs same-day; miss
+
+  const first = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1' });
+  t.check(first.ok && first.pi === null && first.billAfter === null,
+    'the shelf corrects, and the result SAYS no bill was touched — the silent half-correction cannot hide');
+  eq(data.stock.P1, 30, 'thirty on the shelf');
+  eq(data.purchaseInvoices[0].items[0].qty, 60, 'while the bill still claims sixty — the live symptom, reproduced');
+
+  const second = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1', adoptPiId: 7 });
+  t.check(second.ok && second.billAdopted === true && second.pi.id === 7,
+    `same figures plus the picked bill is a real change, not "Nothing was changed" (${JSON.stringify(second.error || null)})`);
+  eq(data.purchaseInvoices[0].items[0].qty, 30, 'the bill now stands at what was really bought');
+  eq(second.billBefore, 300000, 'carrying what it stood at');
+  eq(second.billAfter, 150000, 'and what it stands at now — the figure the toast names');
+  eq(data.stock.P1, 30, 'a bill-only repair moves money, never goods');
+  eq(data.stockLots.P1.reduce((n, l) => n + l.qty, 0), 30, 'the lots agree');
+  const corr2 = data.stockLog[2];
+  eq(corr2.delta, 0, 'the repair posts a movement of nothing');
+  eq(corr2.piId, 7, 'stamped with the bill, so the next correction finds it by id');
+  t.check(/linked to PINV-0007/.test(corr2.note), `and the note says the link was made (${JSON.stringify(corr2.note)})`);
+}
+
+/* ---------- 17. a linked bill out of line is a change to make ---------- */
+{
+  freshShop({ qty: 30, cost: 5000 });
+  data.purchaseInvoices[0].items[0].qty = 60;   // the damage an earlier half-correction left
+  const res = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1' });
+  t.check(res.ok, 'figures matching the movement still save when the BILL disagrees');
+  eq(data.purchaseInvoices[0].items[0].qty, 30, 'and the bill is re-aligned');
+  eq(res.billAfter, 150000, 'to the balance the toast will name');
+  t.check(/re-aligned/.test(data.stockLog[1].note), `said in the log (${JSON.stringify(data.stockLog[1].note)})`);
+
+  const again = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1' });
+  t.check(!again.ok && /Nothing was changed/.test(again.error),
+    'once movement and bill agree, saving the same figures posts nothing');
+}
+
+/* ---------- 18. adoption takes only this purchase's kind of bill ------- */
+{
+  freshShop({ qty: 60, cost: 5000 });
+  data.stockLog[0].piId = null;
+  data.stockLog[0].supplierId = null;
+  data.purchaseInvoices[0].date = '2026-08-10';
+  data.purchaseInvoices.push({ id: 8, quoteId: 41, customerName: 'Musisi', supplierId: 'S1',
+    supplierName: 'Kirinya Steel', date: '2026-08-18',
+    items: [{ productId: 'P1', variantIdx: null, productName: 'Sofa legs 4in chrome', qty: 60, price: 5000 }],
+    amountPaid: 0, payments: [], voided: false });
+  const res = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1', adoptPiId: 8 });
+  t.check(!res.ok && /does not match this purchase/.test(res.error),
+    'a bill raised by a customer order cannot be adopted by a restock correction');
+  eq(data.stockLog.length, 1, 'and the refusal wrote nothing');
+  eq(data.stock.P1, 60, 'not even to the shelf');
+}
+
+/* ---------- 19. paid money pins the BILL's supplier, not the row's -----
+   A legacy row with no supplier adopting the bill of the supplier who was
+   actually paid is not a supplier change -- the money stays exactly where
+   it went. The old guard compared against the row and refused this. */
+{
+  freshShop({ qty: 60, cost: 5000, amountPaid: 100000 });
+  data.stockLog[0].piId = null;
+  data.stockLog[0].supplierId = null;
+  data.purchaseInvoices[0].date = '2026-08-10';
+  const res = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1', adoptPiId: 7 });
+  t.check(res.ok, `naming the supplier the bill already belongs to is not moving the bill (${JSON.stringify(res.error || null)})`);
+  eq(data.purchaseInvoices[0].items[0].qty, 30, 'so a part-paid bill can still be corrected');
+  eq(res.billAfter, 50000, 'to what remains owed after the money already paid');
+}
+
+/* ---------- 20. the form offers the money side ------------------------- */
+{
+  t.check(/id="ipe_bill"/.test(src) && /Supplier bill/.test(src),
+    'the correction form carries the bill line');
+  t.check(/what is owed will NOT change/.test(src),
+    'and an unlinked bill says plainly that the balance will not move');
+  t.check(/id="ipe_qty_unit"/.test(src) && /invPurchaseQtyValue\(document\.getElementById\('ipe_qty'\)\.value/.test(src),
+    'the quantity field can speak packs, through the same conversion the purchase form uses');
+  t.check(/now stands at/.test(src),
+    'and the saved toast names the bill’s new balance — the confirmation the owner is actually waiting for');
+}
+
 process.exit(t.done() ? 1 : 0);
