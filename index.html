@@ -6522,6 +6522,7 @@
   .wa-suggest.ai{background:var(--ow-verdigris-soft);}
   .wa-suggest.ai .wa-suggest-head{color:var(--ow-verdigris);}
   .wa-ai-row{border-top:1px solid var(--line);padding:8px 14px;margin:0;}
+  .wa-suggest-order{font-size:12px;margin-top:6px;color:var(--ow-verdigris);font-weight:600;}
   .wa-bc-compose textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;
     font-size:13px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
   .wa-bc-est{font-size:13px;font-weight:600;color:var(--ink);padding-bottom:9px;}
@@ -14071,7 +14072,62 @@ const WA_DRAFT_TOOLS = {
     }
     return { matches: out };
   }},
+  /* Resolves a commitment into priced lines — and CREATES NOTHING. The
+     order only comes to exist when the owner taps "Create order & send",
+     which walks it through create_quote.run, the same door the owner's
+     own assistant uses. Priced at the order's quantity, so volume tiers
+     apply the way they would at the counter. */
+  wa_take_order: { run(input){
+    const lines = []; const unmatched = [];
+    (Array.isArray(input.items) ? input.items : []).slice(0, 10).forEach(it=>{
+      const qty = Number(it.qty)||0;
+      const entries = allProductVariantEntries(searchTokens(String(it.query||'')));
+      let hit = null;
+      for(const {p, variantIdx} of entries){
+        const at = catalogueSellAtQty(p, variantIdx, Math.max(1, qty), 'retail');
+        if(at && at.price != null){ hit = { p, variantIdx, at }; break; }
+      }
+      if(!hit || !(qty > 0)){ unmatched.push(String(it.query||'')); return; }
+      lines.push({ productId: hit.p.id,
+        variantIdx: hit.variantIdx==null ? null : hit.variantIdx,
+        name: productVariantLabel(hit.p, hit.variantIdx), qty,
+        price: Math.round(hit.at.price), unit: hit.at.unit || '' });
+    });
+    return { lines, total: Math.round(lines.reduce((s,l)=> s + l.qty*l.price, 0)), unmatched };
+  }},
 };
+
+/* What the customer will SEE: WhatsApp renders *pairs* as bold, so the
+   preview does too — the owner reads the message as it will land. */
+function waWaMarkupHTML(text){
+  return esc(String(text||'')).replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+}
+
+/* The owner's tap that makes a chat commitment REAL: a draft order in
+   Order tracking through create_quote.run (one arithmetic), stamped as
+   WhatsApp-born so the insights count it, then the confirmation goes
+   out with the order number — through waSendReply, same as any reply. */
+async function waCreateOrderFromChat(){
+  const conv = (waInbox.convs||[]).find(c=> c.id === waInbox.active);
+  const d = waInbox.aiDrafts[String(waInbox.active)];
+  if(!conv || !d || !d.order || !(d.order.lines||[]).length || waInbox.sending) return;
+  try{
+    const res = await ASSISTANT_TOOLS.create_quote.run({
+      customer_name: conv.profile_name || ('+' + conv.wa_id),
+      customer_phone: '+' + conv.wa_id,
+      items: d.order.lines.map(l=> ({ product_id: l.productId,
+        variant_index: l.variantIdx==null ? null : l.variantIdx,
+        qty: l.qty, sell_price: l.price })),
+    });
+    const q = (data.savedQuotes||[]).find(x=> invoiceNumberLabel(x) === res.invoice);
+    if(q){ q.originWa = true; q.waConversationId = conv.id; saveData(); }
+    refreshNavBadges();
+    delete waInbox.aiDrafts[String(waInbox.active)];
+    waSendReply(d.text + '\nOrder no. ' + res.invoice + '.');
+  }catch(e){
+    toast('Could not create the order — ' + e.message, 7000);
+  }
+}
 
 /* The thread as the model reads it: inbound is the customer (user),
    outbound is the shop (assistant), last twelve bodies, text and order
@@ -14105,6 +14161,7 @@ async function waDraftReply(){
   waRenderInbox();
   try{
     let msgs = thread;
+    let orderProposal = null;
     for(let step = 0; step < WA_DRAFT_STEPS; step++){
       const sess = await sb.auth.getSession();
       const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
@@ -14121,7 +14178,8 @@ async function waDraftReply(){
       const text = content.filter(b=> b && b.type === 'text' && b.text).map(b=> b.text).join(' ').trim();
       if(!toolBlocks.length){
         if(!text) throw new Error('The draft came back empty — try again.');
-        waInbox.aiDrafts[convId] = { wamid: lastIn.wamid, text };
+        waInbox.aiDrafts[convId] = { wamid: lastIn.wamid, text,
+          order: (orderProposal && orderProposal.lines.length) ? orderProposal : null };
         return;
       }
       msgs = msgs.concat([{ role: 'assistant', content }]);
@@ -14130,6 +14188,7 @@ async function waDraftReply(){
         const tool = WA_DRAFT_TOOLS[b.name];
         try{ result = tool ? tool.run(b.input || {}) : { error: 'Unknown tool.' }; }
         catch(e){ result = { error: e.message }; }
+        if(b.name === 'wa_take_order' && result && Array.isArray(result.lines)) orderProposal = result;
         return { type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(result) };
       });
       msgs = msgs.concat([{ role: 'user', content: results }]);
@@ -14630,11 +14689,17 @@ function waRenderInbox(){
                 <div class="wa-suggest-body">${esc(d.error)}</div>
                 <div class="btn-row" style="margin-top:8px;"><button type="button" class="btn btn-ghost" id="wa_ai_btn">Try again</button></div></div>`;
             } else if(d && d.wamid === lastIn.wamid){
+              const hasOrder = !!(d.order && (d.order.lines||[]).length);
               ai = `<div class="wa-suggest ai">
                 <div class="wa-suggest-head">Assistant draft — read it before it goes</div>
-                <div class="wa-suggest-body" id="wa_ai_body">${esc(d.text)}</div>
+                <div class="wa-suggest-body" id="wa_ai_body">${waWaMarkupHTML(d.text)}</div>
+                ${hasOrder ? `<div class="wa-suggest-order">${d.order.lines.map(l=>
+                  `${esc(String(l.qty))} × ${esc(l.name)} @ ${fmtUGX(l.price)}`).join(' · ')} — ${fmtUGX(d.order.total)}${
+                  (d.order.unmatched||[]).length ? ` · could not match: ${esc(d.order.unmatched.join(', '))}` : ''}</div>` : ''}
                 <div class="btn-row" style="margin-top:8px;">
-                  <button type="button" class="btn btn-accent" id="wa_ai_send">Send draft</button>
+                  ${hasOrder ? `<button type="button" class="btn btn-accent" id="wa_ai_order">Create order &amp; send</button>
+                  <button type="button" class="btn btn-ghost" id="wa_ai_send">Send reply only</button>` :
+                  `<button type="button" class="btn btn-accent" id="wa_ai_send">Send draft</button>`}
                   <button type="button" class="btn btn-ghost" id="wa_ai_edit">Edit first</button>
                 </div>
               </div>`;
@@ -14741,6 +14806,8 @@ function waRenderInbox(){
   if(sendBtn) sendBtn.addEventListener('click', waSendReply);
   const aiBtn = document.getElementById('wa_ai_btn');
   if(aiBtn) aiBtn.addEventListener('click', ()=> waDraftReply());
+  const aiOrder = document.getElementById('wa_ai_order');
+  if(aiOrder) aiOrder.addEventListener('click', ()=> waCreateOrderFromChat());
   const aiSend = document.getElementById('wa_ai_send');
   if(aiSend) aiSend.addEventListener('click', ()=>{
     const d = waInbox.aiDrafts[String(waInbox.active)];

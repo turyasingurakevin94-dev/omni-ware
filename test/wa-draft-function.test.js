@@ -54,7 +54,7 @@ const vercel = read('vercel.json');
     'no thinking parameter, no sampling parameters');
   t.check(/system: \[\{ type: 'text', text: WA_SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}\]/.test(src),
     'the system prompt carries a cache breakpoint');
-  const lastTool = src.lastIndexOf("name: 'wa_product_price'");
+  const lastTool = src.lastIndexOf("name: 'wa_take_order'");
   const cacheAfter = src.indexOf('cache_control', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < src.indexOf('];', lastTool),
     'and so does the LAST tool, closing the cached prefix');
@@ -64,26 +64,39 @@ const vercel = read('vercel.json');
   t.check(/\[Today is YYYY-MM-DD\]/.test(promptBlock), 'which the prompt says to read from there');
 }
 
-/* ---------- 4. the fence, stated as law ------------------------------- */
+/* ---------- 4. the fence and the counter voice, stated as law --------- */
 {
   t.check(/writing TO A CUSTOMER/.test(src) && /owner reads and approves every draft/.test(src),
     'the prompt knows who reads these words, and who approves them');
   t.check(/NEVER mention supplier names, what things cost the shop, margins, debts, other customers/.test(src),
     'the fence is spelled out: nothing from the books');
-  t.check(/Prices come from the tools only/.test(src) && /never guess/.test(src),
-    'figures come from tools, never memory, never guesses');
+  t.check(/Prices come from the tools only/.test(src) && /never invented/.test(src),
+    'figures come from tools, never memory, never invention');
+  t.check(/BREVITY IS THE LAW/.test(src) && /one to three SHORT lines/.test(src)
+    && /No closing filler/.test(src) && /one line per item/.test(src),
+    'the counter voice is short by law — busy traders read one line, not paragraphs');
+  t.check(/\*single asterisks\* as bold/.test(src) && /the product name, the price, and the pack size/.test(src),
+    'the figures that decide are highlighted the way WhatsApp actually renders');
+  t.check(/We don’t have <it>\./.test(src) && /a hedge reads as a middleman about to overcharge/.test(src),
+    'not selling something is said plainly — hedging is banned, with the reason written down');
+  t.check(/say we don’t have that size and list the sizes we do/.test(src),
+    'a missing size offers its siblings in one line');
   t.check(/Mirror the customer’s language/.test(src),
     'English or Luganda, matching the customer');
-  t.check(/in stock means they can come today; to order means/.test(src),
-    'availability is yes or to-order, said plainly');
+  t.check(/in stock \(come today\) or to order \(we bring it in\)/.test(src),
+    'availability is two words, said plainly');
+  t.check(/NEVER claim an order already exists/.test(src)
+    && /never call wa_take_order for a question that is only asking prices/.test(src),
+    'and an order exists only after the owner makes it — commitment detected, never presumed');
 }
 
 /* ---------- 5. two tools, and ceilings before the SDK ----------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map((m) => m[1]);
-  t.check(names.length === 2 && names[0] === 'wa_catalogue_names' && names[1] === 'wa_product_price',
-    `exactly the two catalogue reads (got ${JSON.stringify(names)})`);
-  t.check((src.match(/additionalProperties: false/g) || []).length >= 2,
+  t.check(names.length === 3 && names[0] === 'wa_catalogue_names'
+    && names[1] === 'wa_product_price' && names[2] === 'wa_take_order',
+    `the two catalogue reads plus the order-taker (got ${JSON.stringify(names)})`);
+  t.check((src.match(/additionalProperties: false/g) || []).length >= 4,
     'every schema closes itself');
   t.check(/messages\.length > 30/.test(src) && /100000/.test(src),
     'thread ceilings hold before anything spends');
@@ -147,6 +160,21 @@ const vercel = read('vercel.json');
   t.check(!/purchasePrice|supplierId|wholesale|debt|rankedPriceRows/.test(toolsSrc),
     'no cost-bearing function is even referenced by these executors');
 
+  /* the order-taker resolves and prices — and CREATES nothing */
+  const before = JSON.stringify(data);
+  const order = T.wa_take_order.run({ items: [
+    { query: 'simba cement', qty: 5 },
+    { query: 'flying elephant', qty: 1 },
+  ] });
+  t.check(order.lines.length === 1 && order.lines[0].productId === 'P1'
+    && order.lines[0].qty === 5 && order.lines[0].price === 45000,
+    `a commitment resolves to priced lines the app can turn into an order (got ${JSON.stringify(order.lines)})`);
+  t.check(order.total === 225000, 'with the total already right');
+  t.check(order.unmatched.length === 1 && order.unmatched[0] === 'flying elephant',
+    'and what could not be matched is NAMED, never silently dropped');
+  t.check(JSON.stringify(data) === before,
+    'drafting an order writes NOTHING — only the owner\'s tap creates one');
+
   /* the thread mapper: customer is user, shop is assistant */
   setMsgs([
     { direction: 'out', msg_type: 'text', body: 'We are open' },
@@ -169,12 +197,24 @@ const vercel = read('vercel.json');
     'the draft is one deliberate tap, never automatic');
   t.check(/waSendReply\(d\.text\)/.test(app),
     'and Send routes the draft through waSendReply — the same 24h window check as a hand-typed reply');
-  t.check(/aiDrafts: \{\}/.test(app) && /waInbox\.aiDrafts\[convId\] = \{ wamid: lastIn\.wamid, text \}/.test(app),
+  t.check(/aiDrafts: \{\}/.test(app) && /waInbox\.aiDrafts\[convId\] = \{ wamid: lastIn\.wamid, text,/.test(app),
     'the draft lives in inbox state, so the 12-second poll cannot eat it mid-read');
   t.check(/\.wa-suggest:not\(\.ai\)/.test(app),
     'the token-match card keeps its own handlers — the two suggestions coexist');
   t.check(/fetch\('\/api\/wa-draft'/.test(app) && /'Bearer ' \+ token/.test(app),
     'the client calls the endpoint with the owner\'s own session');
+  t.check(/id="wa_ai_order"/.test(app) && /waCreateOrderFromChat\(\)/.test(app)
+    && /hasOrder \? `<button/.test(app),
+    'the Create-order button exists only when the draft carries a resolved order');
+  const createFn = (/async function waCreateOrderFromChat\(\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  t.check(/ASSISTANT_TOOLS\.create_quote\.run\(/.test(createFn),
+    'the order is created through create_quote.run — the same door the owner\'s assistant uses');
+  t.check(/q\.originWa = true; q\.waConversationId = conv\.id;/.test(createFn),
+    'stamped WhatsApp-born, so the insights count it like a webhook cart order');
+  t.check(/waSendReply\(d\.text \+ '\\nOrder no\. ' \+ res\.invoice \+ '\.'\)/.test(createFn),
+    'and the confirmation goes out with the order number, through the same send door');
+  t.check(/waWaMarkupHTML/.test(app) && /replace\(\/\\\*\(\[\^\*\\n\]\+\)\\\*\/g, '<b>\$1<\/b>'\)/.test(app),
+    'the preview renders *bold* the way WhatsApp will');
 }
 
 /* ---------- 8. dry-run: the handler's order is the security ----------- */
