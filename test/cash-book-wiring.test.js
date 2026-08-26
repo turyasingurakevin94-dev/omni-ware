@@ -161,4 +161,45 @@ isEq(loanNetAdvanced({ principal: 20000000, fees: 0 }), 20000000,
 isEq(loanNetAdvanced({ principal: 20000000 }), 20000000,
   'a loan recorded before the fee field existed banks its principal');
 
+/* ---------- the ledger names who paid ----------------------------------
+   "Payment — INV-0192" is findable by nobody during reconciling; the
+   name of the client who paid is. Resolved at DISPLAY time so every old
+   row gains it too, and the stored description (what the edit form must
+   show) is never rewritten. */
+{
+  const data2 = {
+    savedQuotes: [
+      { id: 192, client: { name: 'Mulongo Hardware' } },
+      { id: 226, client: { name: 'Onora Peter' } },
+      { id: 300, client: { name: '' } },
+    ],
+  };
+  const scope2 = compileScope([
+    extractFunction(src, 'invoiceNumberLabel', 'index.html'),
+    extractFunction(src, 'cbTxnDisplayDesc', 'index.html'),
+  ], { data: data2 }, ['cbTxnDisplayDesc']);
+  const desc = scope2.cbTxnDisplayDesc;
+
+  t.check(desc({ description: 'Payment — INV-0226', quoteId: 226 }) === 'Payment — INV-0226 — Onora Peter',
+    'a row linked by quoteId gains the client\'s name');
+  t.check(desc({ description: 'Payment — INV-0192', quoteId: null }) === 'Payment — INV-0192 — Mulongo Hardware',
+    'an old row with no link is resolved from the INV number in its own text');
+  t.check(desc({ description: 'Payment — Milly', quoteId: null }) === 'Payment — Milly',
+    'a general debt payment already naming its payer is left as written');
+  t.check(desc({ description: 'Payment — INV-0192 — Mulongo Hardware', quoteId: 192 }) === 'Payment — INV-0192 — Mulongo Hardware',
+    'and a name already present is never doubled');
+  t.check(desc({ description: 'Payment — PINV-0192 — Roto Industry', quoteId: null }) === 'Payment — PINV-0192 — Roto Industry',
+    'a supplier bill (PINV) never matches the INV pattern — it already names its supplier');
+  t.check(desc({ description: 'Payment — INV-0300', quoteId: 300 }) === 'Payment — INV-0300',
+    'a nameless client adds nothing');
+  t.check(desc({ description: 'Payment — INV-9999', quoteId: null }) === 'Payment — INV-9999',
+    'and an invoice that no longer exists leaves the text as it was');
+
+  t.check(/cbTxnDisplayDesc\(t\)/.test(read('index.html'))
+    && /esc\(cbTxnDisplayDesc\(t\)\)/.test(read('index.html')),
+    'the cash book screen, its daily print and the statement drill-downs all read through it');
+  t.check(/document\.getElementById\(prefix\+'desc'\)\.value = t\.description;/.test(read('index.html')),
+    'while the edit form still shows the RAW stored description — display never rewrites the record');
+}
+
 process.exit(t.done() ? 1 : 0);

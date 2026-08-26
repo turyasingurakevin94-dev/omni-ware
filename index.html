@@ -38903,6 +38903,29 @@ function renderCbLedgerFilter(){
   });
 }
 
+/* What a ledger line should SAY during reconciling: the stored
+   description, plus WHO the money came from when the row points at an
+   invoice. "Payment — INV-0192" is findable by nobody a week later;
+   "Payment — INV-0192 — Mulongo Hardware" is. Resolved at DISPLAY
+   time, so every old row gains the name too and the stored record (and
+   the edit form, which must show what was written) stays untouched: by
+   the row's own quoteId first, else by the INV number in its text
+   (\bINV- so a PINV row, which already names its supplier, never
+   matches). Never doubled when the name is already written there. */
+function cbTxnDisplayDesc(t){
+  const desc = String((t && t.description) || '');
+  let q = null;
+  if(t && t.quoteId != null) q = (data.savedQuotes || []).find(x => x.id === t.quoteId) || null;
+  if(!q){
+    const m = /\bINV-(\d+)\b/.exec(desc);
+    if(m) q = (data.savedQuotes || []).find(x => invoiceNumberLabel(x) === 'INV-' + m[1]) || null;
+  }
+  const name = q && q.client && String(q.client.name || '').trim();
+  if(!name) return desc;
+  if(desc.toLowerCase().includes(name.toLowerCase())) return desc;
+  return desc ? desc + ' — ' + name : name;
+}
+
 function renderCbTransactions(){
   const date = currentCbDate();
   const wrap = document.getElementById('cbTxnTableWrap');
@@ -38937,7 +38960,7 @@ function renderCbTransactions(){
       <td class="${typeClass(t.type)}">${typeLabel(t.type)}</td>
       <td>
         <div>${esc(t.category||'Uncategorized')}</div>
-        ${t.description ? `<div class="cb-led-desc">${esc(t.description)}</div>` : ''}
+        ${t.description ? `<div class="cb-led-desc">${esc(cbTxnDisplayDesc(t))}</div>` : ''}
       </td>
       <td class="price cb-in-cell">${r.isIn ? fmtUGX(r.amount) : ''}</td>
       <td class="price cb-out-cell">${r.isIn ? '' : fmtUGX(r.amount)}</td>
@@ -38967,7 +38990,7 @@ function renderCbTransactions(){
       </div>
       <div class="pi-card-meta">
         <div>${esc(accountLabel(t.account))} · ${esc(t.category||'Uncategorized')}</div>
-        ${t.description ? `<div>${esc(t.description)}</div>` : ''}
+        ${t.description ? `<div>${esc(cbTxnDisplayDesc(t))}</div>` : ''}
       </div>
       <div class="pi-card-foot">
         <span class="q-line-total price ${r.isIn?'cb-in-cell':'cb-out-cell'}">${r.isIn?'+':'-'}${fmtUGX(r.amount)}</span>
@@ -39990,7 +40013,7 @@ document.getElementById('cb_print').addEventListener('click', ()=>{
     : rows.map(t=>`<tr>
         <td>${esc(t.time||'')}</td><td>${esc(accountLabel(t.account))}</td>
         <td>${typeLabel(t.type)}</td><td>${fmtUGX(t.amount)}</td>
-        <td>${esc(t.description)}</td>
+        <td>${esc(cbTxnDisplayDesc(t))}</td>
       </tr>`).join('');
 
   printArea.innerHTML = `
@@ -43871,7 +43894,7 @@ function stDrillData(key, ctx){
   const today = todayISO();
   const asOf = bs.asOf;
   const accLabel = (k)=> (ACCOUNTS.find(a=> a.key===k)||{}).label || k;
-  const txnRow = (t)=> ({d: t.date, l: t.description || t.category || 'Cash entry',
+  const txnRow = (t)=> ({d: t.date, l: cbTxnDisplayDesc(t) || t.category || 'Cash entry',
     s: `${accLabel(t.account)}${t.category ? ` · ${t.category}` : ''}`, v: Number(t.amount)||0});
   const byDateDesc = (rows)=> rows.sort((a,b)=> String(b.d||'').localeCompare(String(a.d||'')));
   const byValueDesc = (rows)=> rows.sort((a,b)=> b.v - a.v);

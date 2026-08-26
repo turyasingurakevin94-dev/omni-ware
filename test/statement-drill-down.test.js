@@ -71,6 +71,9 @@ const NAMES = [
   'cashIsCashShortage', 'cashIsCashOverage',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',
   'cashFlowStatement', 'stDrillData', 'stDrillPanelHTML',
+  // The drill labels read through the same who-paid resolver the cash
+  // book screen uses, so a txn preview names the client too.
+  'cbTxnDisplayDesc',
   // The real label pair — a stub here once hid that the stock preview
   // never found a product at all and printed raw keys instead of names.
   'productVariantLabel', 'variantLabel',
