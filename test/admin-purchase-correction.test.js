@@ -31,7 +31,8 @@ const src = read('index.html');
 
 const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow', 'stockCostsEqual',
   'effectiveStockPurchase', 'stockPurchaseMinQty', 'takeBackPurchaseLots', 'stockPurchaseInvoiceFor',
-  'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'stockLogCorrectedTagHTML'];
+  'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'stockLogCorrectedTagHTML',
+  'samePiLineTarget', 'applyPurchaseBillEdit', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue'];
 
 /* compileScope copies each env value into a `var` once, so the extracted
    source keeps whatever reference it was handed. Both of these are
@@ -61,7 +62,8 @@ const scope = compileScope(
 );
 
 const { applyStockPurchaseEdit, effectiveStockPurchase, isStockPurchaseRow,
-  stockPurchaseMinQty, stockLogEditButtonHTML, stockLogCorrectedTagHTML } = scope;
+  stockPurchaseMinQty, stockLogEditButtonHTML, stockLogCorrectedTagHTML,
+  samePiLineTarget, applyPurchaseBillEdit } = scope;
 
 const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 
@@ -409,6 +411,83 @@ const logRow = () => data.stockLog[0];
   eq(effectiveStockPurchase(logRow()).qty, 25, 'landing where it should');
   eq(data.stock.P1, 25, 'with the shelf agreeing');
   eq(data.purchaseInvoices[0].items[0].qty, 25, 'and the bill following, found by the id the correction row carries');
+}
+
+/* ---------- 22. bills are matched by content, never by type ------------
+   The live miss: PINV-0205 sat in plain sight — right product, right
+   variant, one line — and was not offered, because one side of the
+   comparison held a number where the other held a string. Rows and
+   bills cross tab versions and a sync layer; === on their ids was a
+   trap. */
+{
+  freshShop({ qty: 60, cost: 5000 });
+  data.stockLog[0].variantIdx = 1;
+  data.stockLog[0].key = 'P1:1';
+  data.stock = { 'P1:1': 60 };
+  data.stockLots = { 'P1:1': [{ qty: 60, cost: 5000 }] };
+  data.purchaseInvoices[0].items[0].variantIdx = '1';   // the string twin
+  t.check(samePiLineTarget(data.purchaseInvoices[0].items[0], 'P1', 1),
+    "a bill line holding '1' stands for variant 1");
+  t.check(!samePiLineTarget(data.purchaseInvoices[0].items[0], 'P1', 2),
+    'and never for a different variant');
+  t.check(!samePiLineTarget(data.purchaseInvoices[0].items[0], 'P1', null),
+    'nor for the plain product when it names a variant');
+  data.stockLog[0].piId = null;
+  data.purchaseInvoices[0].date = '2026-08-10';   // date fallback misses too
+  const res = applyStockPurchaseEdit(1, { qty: 30, price: 5000, supplierId: 'S1', adoptPiId: 7 });
+  t.check(res.ok && res.billAdopted === true,
+    `the mixed-type bill can now be adopted (${JSON.stringify(res.error || null)})`);
+  eq(data.purchaseInvoices[0].items[0].qty, 30, 'and corrected');
+}
+
+/* ---------- 23. a bill corrected on the bill itself --------------------
+   The escape hatch the Roto tangle proved necessary: shelf already
+   right, bill standing wrong, and the movement too knotted by lost
+   stamps for the floor rules to let a re-save through. Money only —
+   stock is NOT touched here. */
+{
+  freshShop({ qty: 60, cost: 235000 });
+  const shelfBefore = data.stock.P1;
+  const res = applyPurchaseBillEdit(7, [{ qty: 30, price: 235000 }]);
+  t.check(res.ok, 'a standalone bill takes a direct correction');
+  eq(res.billBefore, 60 * 235000, 'from what it stood at');
+  eq(res.billAfter, 30 * 235000, 'to what it stands at now — the Roto arithmetic exactly');
+  eq(data.purchaseInvoices[0].items[0].qty, 30, 'written on the line');
+  eq(data.stock.P1, shelfBefore, 'and the shelf did not move — this corrects money, not goods');
+  eq(data.stockLog.length, 1, 'no stock movement is posted');
+
+  const same = applyPurchaseBillEdit(7, [{ qty: 30, price: 235000 }]);
+  t.check(!same.ok && /Nothing was changed/.test(same.error), 'saving the same figures posts nothing');
+  const zero = applyPurchaseBillEdit(7, [{ qty: 0, price: 235000 }]);
+  t.check(!zero.ok && /void the bill instead/.test(zero.error),
+    'a quantity of nothing is a void, not a correction — and the error says so');
+
+  data.purchaseInvoices[0].amountPaid = 8000000;
+  const over = applyPurchaseBillEdit(7, [{ qty: 30, price: 200000 }]);
+  t.check(over.ok && over.overpaid === true && over.billAfter === 0,
+    'correcting below what was already paid says OVERPAID out loud, with the balance clamped at zero');
+
+  data.purchaseInvoices.push({ id: 9, quoteId: 55, supplierId: 'S1', supplierName: 'Kirinya Steel',
+    date: '2026-08-18', items: [{ productId: 'P1', variantIdx: null, productName: 'Sofa legs', qty: 5, price: 1000 }],
+    amountPaid: 0, payments: [], voided: false });
+  const order = applyPurchaseBillEdit(9, [{ qty: 3, price: 1000 }]);
+  t.check(!order.ok && /raised by a customer order/.test(order.error),
+    'an order’s bill is the order’s own truth — corrected there, never here');
+  data.purchaseInvoices[0].voided = true;
+  const voided = applyPurchaseBillEdit(7, [{ qty: 10, price: 235000 }]);
+  t.check(!voided.ok && /voided/.test(voided.error), 'and a voided bill is not correctable');
+}
+
+/* ---------- 24. the bill screen offers the way in ---------------------- */
+{
+  t.check(/pi-doc-edit/.test(src) && /Correct this bill \(money only — no stock moves\)/.test(src),
+    'standalone bills carry a Correct-bill action, said plainly to be money-only');
+  t.check(/id="piBillEditModal"/.test(src) && /openPiBillEditModal\(/.test(src),
+    'wired to its own form');
+  t.check(/no stock moves|no stock moves\./.test(src) && /corrects money, not goods|changes only the MONEY/.test(src),
+    'the form itself says what it does and does not touch');
+  t.check(/\$\{esc\(String\(it\.qty\)\)\}/.test(src) && /pbe_preview/.test(src),
+    'lines open prefilled and the new balance is previewed before saving');
 }
 
 process.exit(t.done() ? 1 : 0);
