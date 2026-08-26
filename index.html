@@ -13592,8 +13592,13 @@ function waPostCandidates(dateISO, skipKeys){
       const name = productVariantLabel(p, idx);
       const image = resolveProductImage(p, idx);
       if(!image) gaps.noPhoto.push(name);   // named for the photos-wanted rail; NOT excluded
-      const at = catalogueSellAtQty(p, idx, 1, 'retail');
-      if(!at || at.price==null){ gaps.noPrice.push(name); return; }
+      /* Retail first, wholesale as the fallback: this shop wholesales
+         first, and a wholesale-only product is postable — its price
+         list would just be the trade one. Only a product NEITHER side
+         can price is a gap. */
+      const priced = waCustomerPriceAt(p, idx, 1);
+      if(!priced){ gaps.noPrice.push(name); return; }
+      const at = priced.at;
       const key = stockKey(p.id, idx);
       if(skip.has(key)) return;
 
@@ -13667,7 +13672,7 @@ function waPostCandidates(dateISO, skipKeys){
       candidates.push({ key, productId: p.id, variantIdx: idx, name, category: p.category || '',
         image: image || null, needsPhoto, price: at.price, unit: at.unit || '', dropped,
         units30, contribution,
-        breaks: catalogueBreaks(p, idx, 'retail'), score, reasons });
+        breaks: catalogueBreaks(p, idx, priced.basisKey), score, reasons });
     });
   });
 
@@ -13884,7 +13889,7 @@ function renderWhatsApp(){
   /* No longer a wall, still worth naming: a photo makes a better post,
      and this rail is the shop's to-do list for getting them taken. */
   if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPhoto.length} without a photo — still pickable, better with one</b><span>${esc(gaps.noPhoto.slice(0,4).join(', '))}${gaps.noPhoto.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="media">Media</button></div>`);
-  if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPrice.length} without a retail price</b><span>${esc(gaps.noPrice.slice(0,4).join(', '))}${gaps.noPrice.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="products">Products</button></div>`);
+  if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPrice.length} without a selling price on either side</b><span>${esc(gaps.noPrice.slice(0,4).join(', '))}${gaps.noPrice.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="products">Products</button></div>`);
   if(gaps.lowStock.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.lowStock.length} selling too fast to advertise — restock first</b><span>${esc(gaps.lowStock.slice(0,4).join(', '))}${gaps.lowStock.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="inventory">Inventory</button></div>`);
   if(excluded.length){
     const resting = excluded.slice().sort((a,b)=> b.daysAgo - a.daysAgo).slice(0, 6);
@@ -14048,6 +14053,31 @@ let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null
    draft cannot leak. Nothing sends itself: the draft lands beside the
    composer and leaves through waSendReply like any hand-typed reply. */
 const WA_DRAFT_STEPS = 5;
+
+/* The customer price, the shop's own way round. This shop wholesales
+   first and retail is the small side, so half the catalogue carries a
+   WHOLESALE rule and no retail one -- and a 'retail'-only read returned
+   null for those, which the first draft tools took as "product does not
+   exist": a customer was told we do not sell the Half Bend that sat in
+   Products with a price on it. The basis follows the counter's own line
+   (quoteItemSellPrice): a quantity at or above the pack earns the
+   wholesale side, below it retail -- each falling back to whichever
+   side HAS a rule, because a missing rule is a pricing gap, never a
+   missing product. Null only when NEITHER side prices. */
+function waCustomerPriceAt(p, idx, qty){
+  const retail = catalogueSellAtQty(p, idx, qty, 'retail');
+  /* At one unit a ruled retail side IS the answer; the wholesale read
+     happens only when it can matter — a bulk quantity, or a product
+     with no retail rule at all. */
+  const needWholesale = !retail || qty > 1;
+  const wholesale = needWholesale ? catalogueSellAtQty(p, idx, qty, 'wholesale') : null;
+  const packQty = (retail && retail.packQty) || (wholesale && wholesale.packQty) || 0;
+  const bulk = packQty > 0 && qty >= packQty;
+  const pick = bulk ? (wholesale || retail) : (retail || wholesale);
+  if(!pick) return null;
+  return { at: pick, basisKey: pick === wholesale ? 'wholesale' : 'retail' };
+}
+
 const WA_DRAFT_TOOLS = {
   wa_catalogue_names: { run(){
     const all = data.products||[];
@@ -14057,12 +14087,23 @@ const WA_DRAFT_TOOLS = {
     const entries = allProductVariantEntries(searchTokens(String(input.query||'')));
     const out = [];
     for(const {p, variantIdx} of entries){
-      const at = catalogueSellAtQty(p, variantIdx, 1, 'retail');
-      if(!at || at.price == null) continue;
-      out.push({ name: productVariantLabel(p, variantIdx),
-        price: Math.round(at.price), unit: at.unit || '',
-        breaks: (catalogueBreaks(p, variantIdx, 'retail')||[]).slice(0, 2),
-        in_stock: getStockQty(p.id, variantIdx) > 0 ? 'yes' : 'to order' });
+      /* Existence and price are SEPARATE facts. A matched product with
+         no rule on either side is still returned, flagged — the first
+         version skipped it, and a customer was told we did not sell a
+         product that sat in the catalogue with a supplier price. */
+      const r = waCustomerPriceAt(p, variantIdx, 1);
+      const row = { name: productVariantLabel(p, variantIdx),
+        in_stock: getStockQty(p.id, variantIdx) > 0 ? 'yes' : 'to order' };
+      if(r){
+        row.price = Math.round(r.at.price);
+        row.unit = r.at.unit || '';
+        if(r.at.packQty > 1){ row.pack_qty = r.at.packQty; row.pack_unit = r.at.packUnit || 'pack'; }
+        row.breaks = (catalogueBreaks(p, variantIdx, r.basisKey)||[]).slice(0, 2);
+      } else {
+        row.price = null;
+        row.price_not_set = true;
+      }
+      out.push(row);
       if(out.length >= 4) break;
     }
     if(!out.length){
@@ -14078,22 +14119,25 @@ const WA_DRAFT_TOOLS = {
      own assistant uses. Priced at the order's quantity, so volume tiers
      apply the way they would at the counter. */
   wa_take_order: { run(input){
-    const lines = []; const unmatched = [];
+    const lines = []; const unmatched = []; const unpriced = [];
     (Array.isArray(input.items) ? input.items : []).slice(0, 10).forEach(it=>{
       const qty = Number(it.qty)||0;
       const entries = allProductVariantEntries(searchTokens(String(it.query||'')));
-      let hit = null;
-      for(const {p, variantIdx} of entries){
-        const at = catalogueSellAtQty(p, variantIdx, Math.max(1, qty), 'retail');
-        if(at && at.price != null){ hit = { p, variantIdx, at }; break; }
-      }
-      if(!hit || !(qty > 0)){ unmatched.push(String(it.query||'')); return; }
-      lines.push({ productId: hit.p.id,
-        variantIdx: hit.variantIdx==null ? null : hit.variantIdx,
-        name: productVariantLabel(hit.p, hit.variantIdx), qty,
-        price: Math.round(hit.at.price), unit: hit.at.unit || '' });
+      const first = entries[0] || null;
+      if(!first || !(qty > 0)){ unmatched.push(String(it.query||'')); return; }
+      /* Priced at the ORDER's quantity through the shared resolver, so
+         a pack-sized order earns the wholesale side by arithmetic. A
+         match with no rule on either side is an UNPRICED line -- we do
+         sell it; the owner quotes it by hand -- never an unmatched one. */
+      const r = waCustomerPriceAt(first.p, first.variantIdx, Math.max(1, qty));
+      if(!r){ unpriced.push(productVariantLabel(first.p, first.variantIdx)); return; }
+      lines.push({ productId: first.p.id,
+        variantIdx: first.variantIdx==null ? null : first.variantIdx,
+        name: productVariantLabel(first.p, first.variantIdx), qty,
+        price: Math.round(r.at.price), unit: r.at.unit || '' });
     });
-    return { lines, total: Math.round(lines.reduce((s,l)=> s + l.qty*l.price, 0)), unmatched };
+    return { lines, total: Math.round(lines.reduce((s,l)=> s + l.qty*l.price, 0)),
+      unmatched, unpriced };
   }},
 };
 
@@ -14695,6 +14739,7 @@ function waRenderInbox(){
                 <div class="wa-suggest-body" id="wa_ai_body">${waWaMarkupHTML(d.text)}</div>
                 ${hasOrder ? `<div class="wa-suggest-order">${d.order.lines.map(l=>
                   `${esc(String(l.qty))} × ${esc(l.name)} @ ${fmtUGX(l.price)}`).join(' · ')} — ${fmtUGX(d.order.total)}${
+                  (d.order.unpriced||[]).length ? ` · no price set (quote by hand): ${esc(d.order.unpriced.join(', '))}` : ''}${
                   (d.order.unmatched||[]).length ? ` · could not match: ${esc(d.order.unmatched.join(', '))}` : ''}</div>` : ''}
                 <div class="btn-row" style="margin-top:8px;">
                   ${hasOrder ? `<button type="button" class="btn btn-accent" id="wa_ai_order">Create order &amp; send</button>

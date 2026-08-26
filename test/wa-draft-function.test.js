@@ -81,6 +81,11 @@ const vercel = read('vercel.json');
     'not selling something is said plainly — hedging is banned, with the reason written down');
   t.check(/say we don’t have that size and list the sizes we do/.test(src),
     'a missing size offers its siblings in one line');
+  t.check(/price_not_set means we DO sell it/.test(src)
+    && /NEVER say we don’t have something the tool returned/.test(src),
+    'a pending price is never denied existence — the Half Bend law, written into the prompt too');
+  t.check(/\*5\* cartons = \*100\* pcs/.test(src) && /never guess a pack size/.test(src),
+    'pack arithmetic is shown, and an unknown pack size is a question');
   t.check(/Mirror the customer’s language/.test(src),
     'English or Luganda, matching the customer');
   t.check(/in stock \(come today\) or to order \(we bring it in\)/.test(src),
@@ -117,8 +122,20 @@ const vercel = read('vercel.json');
     products: [
       { id: 'P1', name: 'Simba Cement', type: 'simple', category: 'Cement' },
       { id: 'P2', name: 'Secret-cost hinge', type: 'simple', category: 'Fittings' },
+      /* The live lie, kept as a fixture: a wholesale rule, no retail
+         one — the first tools skipped it and told a customer we did
+         not sell it. */
+      { id: 'P3', name: 'Soft Close Mulper Half Bend', type: 'simple', category: 'Furniture' },
+      { id: 'P4', name: 'Ruleless bracket', type: 'simple', category: 'Fittings' },
     ],
-    stock: { P1: 40 },
+    stock: { P1: 40, P3: 0 },
+  };
+  const PRICEBOOK = {
+    P1: { retail: { price: 45000, unit: 'bag', packQty: 12, packUnit: 'Ctn' },
+      wholesale: { price: 40000, unit: 'bag', packQty: 12, packUnit: 'Ctn' } },
+    P2: { retail: { price: 9000, unit: 'pc', packQty: 0, packUnit: '' } },
+    P3: { wholesale: { price: 265000, unit: 'Pc', packQty: 20, packUnit: 'Ctn' } },
+    P4: {},
   };
   const env = {
     data,
@@ -126,7 +143,7 @@ const vercel = read('vercel.json');
       .filter((p) => !tokens.length || tokens.every((tk) => p.name.toLowerCase().includes(tk)))
       .map((p) => ({ p, variantIdx: null })),
     searchTokens: (s) => String(s || '').toLowerCase().split(/\s+/).filter(Boolean),
-    catalogueSellAtQty: (p) => (p.id === 'P1' ? { price: 45000, unit: 'bag' } : { price: 9000, unit: 'pc' }),
+    catalogueSellAtQty: (p, idx, qty, basis) => (PRICEBOOK[p.id] || {})[basis] || null,
     catalogueBreaks: () => [{ qty: 10, price: 43500 }],
     getStockQty: (pid) => Number(data.stock[pid]) || 0,
     productVariantLabel: (p) => p.name,
@@ -134,6 +151,7 @@ const vercel = read('vercel.json');
   };
   const scope = compileScope([
     extractDeclaration(app, 'WA_DRAFT_TOOLS', 'index.html'),
+    extractFunction(app, 'waCustomerPriceAt', 'index.html'),
     extractFunction(app, 'waDraftThreadMessages', 'index.html'),
     'let waInbox = { msgs: [] }; function setMsgs(m){ waInbox.msgs = m; }',
     'function names(){ return { WA_DRAFT_TOOLS, waDraftThreadMessages, setMsgs }; }',
@@ -144,12 +162,26 @@ const vercel = read('vercel.json');
   t.check(priced.matches.length === 1 && priced.matches[0].name === 'Simba Cement',
     'the price tool finds the product');
   const keys = Object.keys(priced.matches[0]).sort().join(',');
-  t.check(keys === 'breaks,in_stock,name,price,unit',
+  t.check(keys === 'breaks,in_stock,name,pack_qty,pack_unit,price,unit',
     `a match carries EXACTLY the customer-safe fields — nothing else exists to leak (got ${keys})`);
+  t.check(priced.matches[0].pack_qty === 12 && priced.matches[0].pack_unit === 'Ctn',
+    'packing is public — the model can convert cartons to units');
   t.check(priced.matches[0].in_stock === 'yes',
     'availability is a word, never a count');
   t.check(T.wa_product_price.run({ query: 'secret cost hinge' }).matches[0].in_stock === 'to order',
     'and no stock reads as to-order, not as a number');
+
+  /* THE HALF BEND LAW: a wholesale-only product answers with its
+     wholesale price — a missing retail rule must never read as a
+     missing product. */
+  const halfBend = T.wa_product_price.run({ query: 'soft close half bend' });
+  t.check(halfBend.matches.length === 1 && halfBend.matches[0].price === 265000,
+    `the wholesale-only Half Bend IS found, priced from the wholesale side (got ${JSON.stringify(halfBend.matches)})`);
+  const ruleless = T.wa_product_price.run({ query: 'ruleless bracket' });
+  t.check(ruleless.matches.length === 1 && ruleless.matches[0].price === null
+    && ruleless.matches[0].price_not_set === true,
+    'a product with no rule on EITHER side is still returned — existence and price are separate facts');
+
   const miss = T.wa_product_price.run({ query: 'xyzzy' });
   t.check(miss.matches.length === 0 && miss.product_names.includes('Simba Cement'),
     'a miss hands back real names to pick from — the same law as the owner assistant');
@@ -157,23 +189,30 @@ const vercel = read('vercel.json');
   t.check(Array.isArray(cat.names) && typeof cat.names[0] === 'string',
     'the catalogue read is names only');
   const toolsSrc = extractDeclaration(app, 'WA_DRAFT_TOOLS', 'index.html');
-  t.check(!/purchasePrice|supplierId|wholesale|debt|rankedPriceRows/.test(toolsSrc),
+  t.check(!/purchasePrice|supplierId|debt|rankedPriceRows/.test(toolsSrc),
     'no cost-bearing function is even referenced by these executors');
 
   /* the order-taker resolves and prices — and CREATES nothing */
   const before = JSON.stringify(data);
   const order = T.wa_take_order.run({ items: [
     { query: 'simba cement', qty: 5 },
+    { query: 'ruleless bracket', qty: 2 },
     { query: 'flying elephant', qty: 1 },
   ] });
   t.check(order.lines.length === 1 && order.lines[0].productId === 'P1'
     && order.lines[0].qty === 5 && order.lines[0].price === 45000,
     `a commitment resolves to priced lines the app can turn into an order (got ${JSON.stringify(order.lines)})`);
   t.check(order.total === 225000, 'with the total already right');
+  t.check(order.unpriced.length === 1 && order.unpriced[0] === 'Ruleless bracket',
+    'a match with no price is UNPRICED — we sell it, the owner quotes it — never unmatched');
   t.check(order.unmatched.length === 1 && order.unmatched[0] === 'flying elephant',
     'and what could not be matched is NAMED, never silently dropped');
   t.check(JSON.stringify(data) === before,
     'drafting an order writes NOTHING — only the owner\'s tap creates one');
+
+  const bulk = T.wa_take_order.run({ items: [{ query: 'simba cement', qty: 12 }] });
+  t.check(bulk.lines[0].price === 40000,
+    'a pack-sized order earns the wholesale side — the counter\'s own law, by arithmetic');
 
   /* the thread mapper: customer is user, shop is assistant */
   setMsgs([

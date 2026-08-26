@@ -45,7 +45,7 @@ const src = read('index.html');
 const workerSrc = read('shared-worker.js');
 
 const NAMES = ['waDaysBetween', 'waWeekday', 'waSalesByKey', 'waPriceTrail',
-  'waStockIdle', 'waLastRestock', 'waAskersByProduct',
+  'waStockIdle', 'waLastRestock', 'waAskersByProduct', 'waCustomerPriceAt',
   'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats'];
 
 // The pricing chain (catalogueSellAtQty, catalogueBreaks, ranked rows) is
@@ -65,7 +65,10 @@ const env = {
   catalogueSellAtQty: (p, idx, qty, basis) => {
     basisAsked.push(basis);
     const v = sellFixture.get(p.id + (idx==null ? '' : '::'+idx));
-    return v ? { price: v.price, unit: v.unit || '', packQty: 0, packUnit: '' } : null;
+    /* A fixture may price ONE side ({wholesale: {...}}) or, plainly,
+       both the same ({price, unit}) — the shop's book has both kinds. */
+    const side = v && (v.retail !== undefined || v.wholesale !== undefined) ? v[basis] : v;
+    return side ? { price: side.price, unit: side.unit || '', packQty: 0, packUnit: '' } : null;
   },
   catalogueBreaks: (p, idx) => breaksFixture.get(p.id + (idx==null ? '' : '::'+idx)) || [],
   rankedPurchaseRowsAtQty: (pid, idx, qty) => {
@@ -185,7 +188,10 @@ const THU = '2026-08-06', MON = '2026-08-03';
   eq(candidates.length, 3, 'a candidate needs a retail price — a photo is NOT a gate any more');
   t.check(gaps.noPhoto.includes('Faceless hinge'), 'the missing photo is still NAMED for the photos-wanted rail');
   t.check(gaps.noPrice.includes('Priceless nail'), 'and so is the missing price');
-  t.check(basisAsked.every((b) => b === 'retail'), 'every price the picker asks for is the RETAIL one');
+  /* Retail leads; wholesale is asked only where retail had no answer —
+     this shop wholesales first and half the book has no retail rule. */
+  t.check(basisAsked[0] === 'retail' && basisAsked.every((b) => b === 'retail' || b === 'wholesale'),
+    'retail is asked first, wholesale only as the fallback');
 
   const p5 = candidates.find((c) => c.key === 'P5');
   t.check(!!p5 && p5.needsPhoto === true && p5.image === null,
@@ -230,6 +236,26 @@ const THU = '2026-08-06', MON = '2026-08-03';
   t.check(!!r2, 'posted 27 days ago: back in the pool');
   hasNot(r2.reasons, /Never been posted/, 'but no longer claiming to be new');
   env.data.waPosts = [];
+}
+
+/* ---------- 5b. a wholesale-only product is postable ------------------- */
+/*
+ * The Half Bend law reaches the picker too: this shop wholesales first,
+ * and a product with only a wholesale rule was landing in "no price"
+ * and could never be advertised. Its price list is just the trade one.
+ */
+{
+  env.data.products.push({ id: 'W1', name: 'Trade-only tube', type: 'simple', category: 'Plumbing', image: 'u9' });
+  sellFixture.set('W1', { wholesale: { price: 30000, unit: 'Pc' } });
+  const { candidates, gaps } = scope.waPostCandidates(THU, []);
+  const w = candidates.find((c) => c.key === 'W1');
+  t.check(!!w && w.price === 30000,
+    'a wholesale-only product IS a candidate, carrying the wholesale sell price');
+  t.check(!gaps.noPrice.includes('Trade-only tube') && gaps.noPrice.includes('Priceless nail'),
+    'gaps.noPrice keeps only what NEITHER side can price');
+  t.check(basisAsked.includes('wholesale'), 'reached through the wholesale fallback, not a lucky retail row');
+  env.data.products = env.data.products.filter((p) => p.id !== 'W1');
+  sellFixture.delete('W1');
 }
 
 /* ---------- 6. picks: ranked, diverse, swappable --------------------- */
