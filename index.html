@@ -6385,6 +6385,13 @@
   .wap-chip.drop{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
   .wap-chip.weekday{background:var(--ow-steel-100);color:var(--ow-ink-600);}
   .wap-chip.fresh{background:var(--panel);border-color:var(--line);}
+  .wap-chip.earner{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);font-weight:700;}
+  .wap-chip.justin{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .wap-chip.asked{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .wap-chip.fast{background:var(--ow-steel-100);color:var(--ow-ink-600);}
+  .wap-chip.nophoto{background:var(--panel);border-color:var(--line);color:var(--ink-soft);}
+  .wap-thumb.wap-noimg{display:flex;align-items:center;justify-content:center;
+    background:var(--ow-steel-100);color:var(--ink-soft);font-weight:800;font-size:22px;letter-spacing:.06em;}
   .wap-actions{display:flex;gap:8px;margin-top:auto;padding-top:8px;}
   .wa-empty{padding:24px 8px;color:var(--ink-soft);font-size:13.5px;}
   .wa-gap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -6512,6 +6519,9 @@
   .wa-suggest-head{font-size:11.5px;font-weight:700;color:var(--ow-amber-ink);display:flex;align-items:center;gap:8px;}
   .wa-suggest-x{margin-left:auto;border:none;background:none;cursor:pointer;color:var(--ow-amber-ink);font-size:13px;padding:2px 6px;}
   .wa-suggest-body{font-size:13px;margin-top:6px;white-space:pre-wrap;color:var(--ink);}
+  .wa-suggest.ai{background:var(--ow-verdigris-soft);}
+  .wa-suggest.ai .wa-suggest-head{color:var(--ow-verdigris);}
+  .wa-ai-row{border-top:1px solid var(--line);padding:8px 14px;margin:0;}
   .wa-bc-compose textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;
     font-size:13px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;}
   .wa-bc-est{font-size:13px;font-weight:600;color:var(--ink);padding-bottom:9px;}
@@ -13447,7 +13457,9 @@ document.getElementById('mp_file_input').addEventListener('change', async e=>{
 
 const WA_ROTATION_DAYS = 14;   // a repeat inside this window gets skipped
 const WA_SITTING_DAYS = 30;    // stock unmoved this long starts to count
-const WA_PICK_COUNT = 3;
+const WA_PICK_COUNT = 6;       // slots on the board -- swap pool behind them
+const WA_JUSTIN_DAYS = 7;      // a restock this fresh is news
+const WA_DEPTH_DAYS = 5;       // a pick must cover this many days of its own pace
 
 function waDaysBetween(a, b){
   return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
@@ -13455,22 +13467,52 @@ function waDaysBetween(a, b){
 const WA_DAY_NAMES = ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'];
 function waWeekday(dateISO){ return new Date(dateISO + 'T00:00:00Z').getUTCDay(); }
 
-// Sales units per product+variant key, split by weekday -- from orders
-// that were actually invoiced, because a draft quote is an intention,
-// not a sale.
-function waSalesByKey(){
+// Sales units per product+variant key, split by weekday and windowed to
+// the last 30 days -- from orders that were actually invoiced, because a
+// draft quote is an intention, not a sale. units30 is the VELOCITY the
+// scorer runs on; lifetime units only feed the weekday share.
+function waSalesByKey(dateISO){
   const out = new Map();
   (data.savedQuotes||[]).forEach(q=>{
     if(q.voided || !q.invoiced || !q.date) return;
     const wd = waWeekday(q.date);
+    const age = dateISO ? waDaysBetween(q.date, dateISO) : -1;
+    const inWindow = age >= 0 && age < 30;
     (q.items||[]).forEach(it=>{
       if(!it.productId) return;
       const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
-      const s = out.get(key) || { units: 0, byWeekday: [0,0,0,0,0,0,0] };
+      const s = out.get(key) || { units: 0, units30: 0, byWeekday: [0,0,0,0,0,0,0] };
       const qty = Number(it.qty)||0;
       s.units += qty; s.byWeekday[wd] += qty;
+      if(inWindow) s.units30 += qty;
       out.set(key, s);
     });
+  });
+  return out;
+}
+
+// When each key last RESTOCKED, from the movement log -- the lots carry
+// no dates, and stockLog's date/type/delta are the fields that survive
+// the sync round-trip. New stock is news; the scorer says so for a week.
+function waLastRestock(){
+  const out = new Map();
+  (data.stockLog||[]).forEach(l=>{
+    if(l.type !== 'restock' || !(l.delta > 0) || !l.date) return;
+    const prev = out.get(l.key);
+    if(!prev || l.date > prev) out.set(l.key, l.date);
+  });
+  return out;
+}
+
+// Who ASKED: open follow-ups ("tell me when you get it") on the product,
+// plus distinct askers on sourcing leads that graduated to it. Demand a
+// customer stated out loud is the strongest reason to show it to everyone.
+function waAskersByProduct(){
+  const out = new Map();
+  const add = (pid, n)=>{ if(pid && n > 0) out.set(pid, (out.get(pid)||0) + n); };
+  (data.followUps||[]).forEach(f=>{ if(f.productId && !f.closedAt) add(f.productId, 1); });
+  (data.sourcingLeads||[]).forEach(l=>{
+    if(!l.voided && l.productId) add(l.productId, leadDistinctAskers(l));
   });
   return out;
 }
@@ -13511,14 +13553,26 @@ function waStockIdle(key, dateISO){
   return { qty, days: Math.max(0, waDaysBetween(since, dateISO)) };
 }
 
-// Every product+variant that COULD be posted: has a photo and a retail
-// price. What can't be posted is returned as named gaps, because "3
-// products are missing photos" is something the shop can fix and "no
+// Every product+variant that COULD be posted: has a retail price and can
+// actually be sold. A missing PHOTO is information, never a gate -- the
+// shop's most lucrative lines were exactly the ones without photos, and
+// an algorithm that only saw the photographed shelf recommended the
+// leftovers. What can't be posted is returned as named gaps, because "3
+// products are missing prices" is something the shop can fix and "no
 // picks today" is not.
+//
+// The score is additive and every term is a reason chip -- a
+// recommendation that can't be interrogated is one that stops being
+// trusted. The backbone is CONTRIBUTION: profit per unit times units
+// sold in the last 30 days -- the money the item actually earns in a
+// month, which is profit emphasis and fast-mover emphasis in one number,
+// normalized against today's best earner so no other signal drowns.
 function waPostCandidates(dateISO, skipKeys){
   const skip = new Set(skipKeys||[]);
-  const sales = waSalesByKey();
+  const sales = waSalesByKey(dateISO);
   const trail = waPriceTrail();
+  const restocks = waLastRestock();
+  const askers = waAskersByProduct();
   const wd = waWeekday(dateISO);
   const lastPosted = new Map();
   (data.waPosts||[]).forEach(w=>{
@@ -13527,7 +13581,7 @@ function waPostCandidates(dateISO, skipKeys){
     if(!prev || w.date > prev) lastPosted.set(key, w.date);
   });
 
-  const candidates = [], excluded = [], gaps = { noPhoto: [], noPrice: [] };
+  const candidates = [], excluded = [], gaps = { noPhoto: [], noPrice: [], lowStock: [] };
   (data.products||[]).forEach(p=>{
     const idxs = p.type==='variable'
       ? (p.variants||[]).map((v,i)=>i)
@@ -13536,11 +13590,24 @@ function waPostCandidates(dateISO, skipKeys){
     idxs.forEach(idx=>{
       const name = productVariantLabel(p, idx);
       const image = resolveProductImage(p, idx);
-      if(!image){ gaps.noPhoto.push(name); return; }
+      if(!image) gaps.noPhoto.push(name);   // named for the photos-wanted rail; NOT excluded
       const at = catalogueSellAtQty(p, idx, 1, 'retail');
       if(!at || at.price==null){ gaps.noPrice.push(name); return; }
       const key = stockKey(p.id, idx);
       if(skip.has(key)) return;
+
+      const s = sales.get(key);
+      const units30 = s ? s.units30 : 0;
+      /* Depth: never advertise what its own pace would sell out before
+         the week ends -- an ad for an empty shelf costs trust. An item
+         with no recent sales is left alone here: zero stock plus zero
+         pace is a to-order line, and a sourcing graduate starts exactly
+         there. */
+      const qty = Number((data.stock||{})[key])||0;
+      if(units30 > 0 && qty < (units30/30) * WA_DEPTH_DAYS){
+        gaps.lowStock.push(name);
+        return;
+      }
 
       const posted = lastPosted.get(key) || null;
       const sinceLast = posted ? waDaysBetween(posted, dateISO) : null;
@@ -13550,39 +13617,82 @@ function waPostCandidates(dateISO, skipKeys){
       }
 
       let score = 0; const reasons = [];
+      const best = rankedPurchaseRowsAtQty(p.id, idx, 1).find(r=> r.purchasePrice != null);
+      const marginUnit = (best && best.purchasePrice > 0 && at.price > best.purchasePrice)
+        ? at.price - best.purchasePrice : null;
+      const contribution = marginUnit != null ? marginUnit * units30 : 0;
+      if(marginUnit != null){
+        const m = marginUnit / at.price;
+        if(m >= 0.10){ score += Math.min(3, m*5); reasons.push({ kind: 'margin', text: `Margin ${Math.round(m*100)}%` }); }
+      } else if(units30 >= 10){
+        // Selling fast with no cost on file: the earner term cannot fire,
+        // but pace alone is still a reason to show it.
+        score += 1.5;
+        reasons.push({ kind: 'fast', text: `${units30} sold this month` });
+      }
+      const restocked = restocks.get(key) || null;
+      const restockDays = restocked ? waDaysBetween(restocked, dateISO) : null;
+      if(restockDays != null && restockDays >= 0 && restockDays < WA_JUSTIN_DAYS){
+        score += 3 * (1 - restockDays/WA_JUSTIN_DAYS);
+        reasons.push({ kind: 'justin', text: restockDays === 0 ? 'Restocked today — new stock is news'
+          : `Restocked ${restockDays} day${restockDays===1?'':'s'} ago — new stock is news` });
+      }
+      const asked = askers.get(p.id) || 0;
+      if(asked > 0){
+        score += Math.min(3.6, asked * 1.2);
+        reasons.push({ kind: 'asked', text: `${asked} customer${asked===1?'':'s'} asked for this` });
+      }
       const idle = waStockIdle(key, dateISO);
       if(idle && idle.days >= WA_SITTING_DAYS){
         score += 2 + Math.min(idle.days/30, 3);
         reasons.push({ kind: 'sitting', text: `${idle.qty} ${at.unit || 'units'} sitting ${idle.days} days` });
       }
-      const best = rankedPurchaseRowsAtQty(p.id, idx, 1).find(r=> r.purchasePrice != null);
-      if(best && best.purchasePrice > 0 && at.price > best.purchasePrice){
-        const m = (at.price - best.purchasePrice) / at.price;
-        if(m >= 0.10){ score += m*10; reasons.push({ kind: 'margin', text: `Margin ${Math.round(m*100)}%` }); }
-      }
       const t = trail.get(key);
       const dropped = !!(t && t.prev != null && t.last != null && t.last <= t.prev*0.98);
       if(dropped){ score += 2.5; reasons.push({ kind: 'drop', text: 'Costs the shop less than it used to — the price can say so' }); }
-      const s = sales.get(key);
       if(s && s.units >= 5 && s.byWeekday[wd]/s.units >= 0.25){
         score += 1.5;
         reasons.push({ kind: 'weekday', text: `Sells on ${WA_DAY_NAMES[wd]} (${Math.round(100*s.byWeekday[wd]/s.units)}% of its sales)` });
       }
       if(!posted){ score += 1; reasons.push({ kind: 'fresh', text: 'Never been posted' }); }
+      const needsPhoto = !image;
+      if(needsPhoto){
+        // A nudge on ties only, never a wall -- and the chip says a post
+        // is still one tap away as a text card.
+        score -= 0.25;
+        reasons.push({ kind: 'nophoto', text: 'No photo yet — posts as a text card' });
+      }
 
       candidates.push({ key, productId: p.id, variantIdx: idx, name, category: p.category || '',
-        image, price: at.price, unit: at.unit || '', dropped,
+        image: image || null, needsPhoto, price: at.price, unit: at.unit || '', dropped,
+        units30, contribution,
         breaks: catalogueBreaks(p, idx, 'retail'), score, reasons });
     });
   });
+
+  /* The earner term last: normalized against today's cohort so the scale
+     never depends on the size of the shop, and the top earner is worth
+     +4 -- more than any single other claim. */
+  const maxContribution = candidates.reduce((m,c)=> Math.max(m, c.contribution), 0);
+  if(maxContribution > 0){
+    candidates.forEach(c=>{
+      if(!(c.contribution > 0)) return;
+      c.score += 4 * (c.contribution / maxContribution);
+      c.reasons.unshift({ kind: 'earner',
+        text: `Earns about UGX ${Math.round(c.contribution).toLocaleString('en-UG')} profit a month` });
+    });
+  }
 
   candidates.sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
   return { candidates, excluded, gaps };
 }
 
-// Top picks with one rule of taste: not everything from the same shelf.
-// Greedy by score, but a candidate whose category is already picked
-// waits while any other category is still available for the slot.
+// Top picks with two rules of taste. One: not everything from the same
+// shelf -- greedy by score, but a candidate whose category is already
+// picked waits while any other category is still available. Two: a good
+// day's posting carries at least one fresh arrival and one shelf-mover
+// when the shop HAS them -- if the score alone left either out, the
+// strongest such candidate swaps in for the weakest plain pick.
 function waDailyPicks(dateISO, skipKeys){
   const { candidates, excluded, gaps } = waPostCandidates(dateISO, skipKeys);
   const picks = []; const rest = [...candidates];
@@ -13591,6 +13701,23 @@ function waDailyPicks(dateISO, skipKeys){
     const i = rest.findIndex(c=> !cats.has(c.category));
     picks.push(rest.splice(i === -1 ? 0 : i, 1)[0]);
   }
+  const wears = (c, kind)=> c.reasons.some(r=> r.kind === kind);
+  ['justin', 'sitting'].forEach(kind=>{
+    if(picks.length < 2 || picks.some(c=> wears(c, kind))) return;
+    const j = rest.findIndex(c=> wears(c, kind));
+    if(j === -1) return;
+    let out = -1;
+    for(let k = picks.length - 1; k >= 0; k--){
+      if(!wears(picks[k], 'justin') && !wears(picks[k], 'sitting')){ out = k; break; }
+    }
+    if(out === -1) return;
+    const incoming = rest.splice(j, 1)[0];
+    const outgoing = picks.splice(out, 1)[0];
+    /* The guest slot sits LAST -- it earned its place by kind, not by
+       score, and the board's order keeps telling the truth about rank. */
+    picks.push(incoming);
+    rest.unshift(outgoing);
+  });
   return { picks, others: rest, excluded, gaps };
 }
 
@@ -13634,6 +13761,16 @@ function waDrawStatus(canvas, pick, shopName, phone, img){
     const scale = Math.max(fw/img.width, fh/img.height);
     const dw = img.width*scale, dh = img.height*scale;
     c.drawImage(img, fx+(fw-dw)/2, fy+(fh-dh)/2, dw, dh);
+  } else {
+    /* No photo is no bar to a post: the frame becomes a text card --
+       deep ground, accent rule, the product's own name filling the
+       space a photo would. Words carry a status fine. */
+    c.fillStyle = '#1E3A34'; c.fillRect(fx, fy, fw, fh);
+    c.fillStyle = '#F0B429'; c.fillRect(fx, fy+fh-14, fw, 14);
+    c.fillStyle = '#FFFFFF'; c.font = 'bold 110px Inter, sans-serif';
+    const cardLines = waWrapText(c, pick.name, fw-160);
+    cardLines.forEach((l,i)=>
+      c.fillText(l, fx+80, fy + fh/2 - ((cardLines.length-1)*70) + i*140));
   }
   c.restore();
   if(pick.dropped){
@@ -13704,18 +13841,20 @@ function renderWhatsApp(){
   const phoneInput = document.getElementById('wa_phone');
   if(document.activeElement !== phoneInput) phoneInput.value = data.presetWaPhone || '';
 
-  const { picks, others, gaps } = waDailyPicks(today, waSkipKeys);
+  const { picks, others, excluded, gaps } = waDailyPicks(today, waSkipKeys);
   const wrap = document.getElementById('wa_picks');
   if(!picks.length){
     const total = (data.products||[]).length;
     wrap.innerHTML = `<div class="wa-empty">${total
       ? 'Nothing can be picked — "Unlock more picks" names what is missing.'
-      : 'No products yet. Picks appear once products have photos and retail prices.'}</div>`;
+      : 'No products yet. Picks appear once products have retail prices.'}</div>`;
   } else {
     wrap.innerHTML = `<div class="wa-picks">${picks.map((p,i)=>`
       <div class="wa-pick${i===0?' lead':''}" data-key="${esc(p.key)}">
         <div class="wap-media">
-          <img class="wap-thumb" loading="lazy" src="${esc(p.image)}" alt="">
+          ${p.image
+            ? `<img class="wap-thumb" loading="lazy" src="${esc(p.image)}" alt="">`
+            : `<div class="wap-thumb wap-noimg"><span>${esc(p.name.slice(0, 2).toUpperCase())}</span></div>`}
           <span class="wap-rank">${i===0 ? "Today's pick" : 'Alternate ' + i}</span>
         </div>
         <div class="wap-body">
@@ -13741,8 +13880,15 @@ function renderWhatsApp(){
 
   const gapsPanel = document.getElementById('wa_gaps_panel');
   const gapBits = [];
-  if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPhoto.length} waiting on a photo</b><span>${esc(gaps.noPhoto.slice(0,4).join(', '))}${gaps.noPhoto.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="media">Media</button></div>`);
+  /* No longer a wall, still worth naming: a photo makes a better post,
+     and this rail is the shop's to-do list for getting them taken. */
+  if(gaps.noPhoto.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPhoto.length} without a photo — still pickable, better with one</b><span>${esc(gaps.noPhoto.slice(0,4).join(', '))}${gaps.noPhoto.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="media">Media</button></div>`);
   if(gaps.noPrice.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.noPrice.length} without a retail price</b><span>${esc(gaps.noPrice.slice(0,4).join(', '))}${gaps.noPrice.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="products">Products</button></div>`);
+  if(gaps.lowStock.length) gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${gaps.lowStock.length} selling too fast to advertise — restock first</b><span>${esc(gaps.lowStock.slice(0,4).join(', '))}${gaps.lowStock.length>4?'…':''}</span></div><button class="btn btn-ghost wa-gap-go" data-go="inventory">Inventory</button></div>`);
+  if(excluded.length){
+    const resting = excluded.slice().sort((a,b)=> b.daysAgo - a.daysAgo).slice(0, 6);
+    gapBits.push(`<div class="wa-gap-row"><div class="wa-gap-text"><b>${excluded.length} resting after a recent post</b><span>${resting.map(e=> `${esc(e.name)} — back in ${WA_ROTATION_DAYS - e.daysAgo}d`).join(', ')}${excluded.length>6?'…':''}</span></div></div>`);
+  }
   gapsPanel.style.display = gapBits.length ? '' : 'none';
   document.getElementById('wa_gaps').innerHTML = gapBits.join('');
   gapsPanel.querySelectorAll('.wa-gap-go').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.go)));
@@ -13778,10 +13924,12 @@ function openWaPost(pick){
     waCaption(pick, printedShopName(), data.presetWaPhone || '');
   const canvas = document.getElementById('wp_canvas');
   waDrawStatus(canvas, pick, printedShopName(), data.presetWaPhone || '', null);
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = ()=>{ if(waCurrentPick === pick) waDrawStatus(canvas, pick, printedShopName(), data.presetWaPhone || '', img); };
-  img.src = pick.image;
+  if(pick.image){
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{ if(waCurrentPick === pick) waDrawStatus(canvas, pick, printedShopName(), data.presetWaPhone || '', img); };
+    img.src = pick.image;
+  }
   document.getElementById('wp_share').style.display =
     (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', {type:'image/png'})] })) ? '' : 'none';
   openModal('waPostModal');
@@ -13884,15 +14032,127 @@ function waTimeShort(ts){
 
 let waInbox = { configured: null, convs: [], msgs: [], active: null, timer: null, sending: false,
   drafts: {},         // conversation id -> half-typed reply, surviving re-renders
-  dismissed: {} };    // wamid -> true; suggestion cards waved away this session
+  dismissed: {},      // wamid -> true; suggestion cards waved away this session
+  aiDrafts: {},       // conversation id -> {wamid, text|error} — survives the 12s poll
+  aiBusy: null };     // conversation id currently drafting, else null
+
+/* ---- the assistant draft: the counter's brain, fenced ----------------
+   The token-match card above is instant and free; this is the slower,
+   smarter sibling — one deliberate tap calls /api/wa-draft (the same
+   auth-before-spend skeleton as /api/assistant) and the model works the
+   thread with TWO read-only tools executed here, against local data.
+   The fence is structural: these executors return name, retail price,
+   breaks and a yes/to-order availability — no cost, no supplier, no
+   stock count, no customer, no ledger. What the model cannot reach, a
+   draft cannot leak. Nothing sends itself: the draft lands beside the
+   composer and leaves through waSendReply like any hand-typed reply. */
+const WA_DRAFT_STEPS = 5;
+const WA_DRAFT_TOOLS = {
+  wa_catalogue_names: { run(){
+    const all = data.products||[];
+    return { names: all.slice(0, 300).map(p=> p.name), truncated: all.length > 300 };
+  }},
+  wa_product_price: { run(input){
+    const entries = allProductVariantEntries(searchTokens(String(input.query||'')));
+    const out = [];
+    for(const {p, variantIdx} of entries){
+      const at = catalogueSellAtQty(p, variantIdx, 1, 'retail');
+      if(!at || at.price == null) continue;
+      out.push({ name: productVariantLabel(p, variantIdx),
+        price: Math.round(at.price), unit: at.unit || '',
+        breaks: (catalogueBreaks(p, variantIdx, 'retail')||[]).slice(0, 2),
+        in_stock: getStockQty(p.id, variantIdx) > 0 ? 'yes' : 'to order' });
+      if(out.length >= 4) break;
+    }
+    if(!out.length){
+      const all = data.products||[];
+      return { matches: [], product_names: all.slice(0, 200).map(p=> p.name),
+        truncated: all.length > 200 };
+    }
+    return { matches: out };
+  }},
+};
+
+/* The thread as the model reads it: inbound is the customer (user),
+   outbound is the shop (assistant), last twelve bodies, text and order
+   summaries only — never payloads, never other conversations. The date
+   rides inside the last customer turn so the server prompt stays
+   byte-stable. */
+function waDraftThreadMessages(){
+  const usable = (waInbox.msgs||[]).filter(m=> m.body
+    && (m.msg_type === 'text' || m.msg_type === 'order' || m.msg_type === 'interactive'));
+  const out = [];
+  usable.slice(-12).forEach(m=>{
+    const role = m.direction === 'in' ? 'user' : 'assistant';
+    const body = String(m.body||'');
+    if(out.length && out[out.length-1].role === role) out[out.length-1].content += '\n' + body;
+    else out.push({ role, content: body });
+  });
+  while(out.length && out[0].role !== 'user') out.shift();
+  if(out.length && out[out.length-1].role === 'user'){
+    out[out.length-1].content = '[Today is ' + todayISO() + ']\n' + out[out.length-1].content;
+  }
+  return out;
+}
+
+async function waDraftReply(){
+  const convId = String(waInbox.active);
+  const lastIn = [...waInbox.msgs].reverse().find(x=> x.direction==='in' && x.msg_type==='text');
+  if(!lastIn || waInbox.aiBusy) return;
+  const thread = waDraftThreadMessages();
+  if(!thread.length || thread[thread.length-1].role !== 'user') return;
+  waInbox.aiBusy = convId;
+  waRenderInbox();
+  try{
+    let msgs = thread;
+    for(let step = 0; step < WA_DRAFT_STEPS; step++){
+      const sess = await sb.auth.getSession();
+      const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
+      if(!token) throw new Error('Your login has expired — reload the page and sign in again.');
+      const r = await fetch('/api/wa-draft', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ messages: msgs }) });
+      let body = null;
+      try{ body = await r.json(); }catch(_e){}
+      if(body && body.not_configured) throw new Error('The assistant is not set up on the server yet — the in-app assistant\'s setup covers this too.');
+      if(!r.ok || (body && body.error)) throw new Error((body && body.error && body.error.message) || 'Something went wrong — try again.');
+      const content = body.content || [];
+      const toolBlocks = content.filter(b=> b && b.type === 'tool_use');
+      const text = content.filter(b=> b && b.type === 'text' && b.text).map(b=> b.text).join(' ').trim();
+      if(!toolBlocks.length){
+        if(!text) throw new Error('The draft came back empty — try again.');
+        waInbox.aiDrafts[convId] = { wamid: lastIn.wamid, text };
+        return;
+      }
+      msgs = msgs.concat([{ role: 'assistant', content }]);
+      const results = toolBlocks.map(b=>{
+        let result;
+        const tool = WA_DRAFT_TOOLS[b.name];
+        try{ result = tool ? tool.run(b.input || {}) : { error: 'Unknown tool.' }; }
+        catch(e){ result = { error: e.message }; }
+        return { type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(result) };
+      });
+      msgs = msgs.concat([{ role: 'user', content: results }]);
+    }
+    throw new Error('The draft took too many steps — reply by hand this time.');
+  }catch(e){
+    waInbox.aiDrafts[convId] = { wamid: lastIn.wamid, error: e.message };
+  }finally{
+    waInbox.aiBusy = null;
+    waRenderInbox();
+  }
+}
 
 /* What the WhatsApp catalog should hold: every product with a photo and
-   a RETAIL price -- the same two gates the daily picks use, priced by
-   the same rules the printed catalogue proves. The retailer id is the
-   app's own stock key, which is what lets a cart walk straight back to
-   the product when the order arrives. What cannot be listed is returned
-   as named gaps, because "3 products missing photos" is a task and a
-   silent omission is not. */
+   a RETAIL price, priced by the same rules the printed catalogue
+   proves. The photo gate HERE is deliberate and stays: Meta's catalog
+   rejects imageless items, so this is their law, not ours -- the daily
+   picks dropped the same gate on purpose (a photo-less product can
+   still be posted as a text card) and the two must not be re-unified.
+   The retailer id is the app's own stock key, which is what lets a
+   cart walk straight back to the product when the order arrives. What
+   cannot be listed is returned as named gaps, because "3 products
+   missing photos" is a task and a silent omission is not. */
 function waCatalogItems(){
   const items = []; const gaps = { noPhoto: [], noPrice: [] };
   (data.products||[]).forEach(p=>{
@@ -14352,9 +14612,36 @@ function waRenderInbox(){
         <div class="wa-msg ${m.direction==='in'?'in':'out'}${m.msg_type==='order'?' order':''}${mi>0 && g.msgs[mi-1].direction===m.direction?' cont':''}"><span class="wm-text">${esc(m.msg_type==='order' ? waOrderSummary(m.payload) : (m.body || '['+m.msg_type+']'))}</span><span class="wm-meta">${m.payload && m.payload.auto ? '<span class="wm-auto">auto</span>' : ''}${esc(waTimeShort(m.sent_at))}${m.direction==='out' ? waTickHTML(m.status) : ''}</span></div>`).join('')}`).join('')}</div>
       ${(()=>{ const w = waWindowInfo(active.last_inbound_at, Date.now());
         let suggestion = '';
+        let ai = '';
         if(w.open){
           const lastMsg = waInbox.msgs[waInbox.msgs.length-1];
           const lastIn = [...waInbox.msgs].reverse().find(x=> x.direction==='in' && x.msg_type==='text');
+          /* The assistant draft rides the same moment as the card above:
+             an unanswered inbound. It is NOT behind the dismiss — waving
+             away the token match must not take the smarter option with
+             it. Its state lives in waInbox.aiDrafts, so the 12s poll
+             re-render cannot eat a draft mid-read. */
+          if(lastIn && lastMsg === lastIn){
+            const d = waInbox.aiDrafts[String(active.id)];
+            if(waInbox.aiBusy === String(active.id)){
+              ai = `<div class="wa-suggest ai"><div class="wa-suggest-head">Drafting a reply…</div></div>`;
+            } else if(d && d.wamid === lastIn.wamid && d.error){
+              ai = `<div class="wa-suggest ai"><div class="wa-suggest-head">Could not draft</div>
+                <div class="wa-suggest-body">${esc(d.error)}</div>
+                <div class="btn-row" style="margin-top:8px;"><button type="button" class="btn btn-ghost" id="wa_ai_btn">Try again</button></div></div>`;
+            } else if(d && d.wamid === lastIn.wamid){
+              ai = `<div class="wa-suggest ai">
+                <div class="wa-suggest-head">Assistant draft — read it before it goes</div>
+                <div class="wa-suggest-body" id="wa_ai_body">${esc(d.text)}</div>
+                <div class="btn-row" style="margin-top:8px;">
+                  <button type="button" class="btn btn-accent" id="wa_ai_send">Send draft</button>
+                  <button type="button" class="btn btn-ghost" id="wa_ai_edit">Edit first</button>
+                </div>
+              </div>`;
+            } else {
+              ai = `<div class="btn-row wa-ai-row"><button type="button" class="btn btn-ghost" id="wa_ai_btn">✨ Draft a reply with the assistant</button></div>`;
+            }
+          }
           // Only for an UNANSWERED question: if anything has gone out
           // since -- a hand-typed reply, an auto-quote -- the moment has
           // passed and the card would just be noise.
@@ -14408,7 +14695,7 @@ function waRenderInbox(){
             }
           }
         }
-        return `${suggestion}<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
+        return `${suggestion}${ai}<div class="wa-window ${w.open?'open':'closed'}">${esc(waWindowLabel(w))}</div>
       <div class="wa-composer">
         <button class="wa-round-btn ghost" id="wa_send_catalog" title="Send a browsable catalog card into this chat" ${w.open && !waInbox.sending ? '' : 'disabled'}>
           <svg class="icon" viewBox="0 0 24 24"><path d="M6 2l-2 5v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7l-2-5z"/><path d="M4 7h16"/><path d="M16 11a4 4 0 0 1-8 0"/></svg>
@@ -14452,7 +14739,28 @@ function waRenderInbox(){
   }
   const sendBtn = document.getElementById('wa_reply_send');
   if(sendBtn) sendBtn.addEventListener('click', waSendReply);
-  const sug = wrap.querySelector('.wa-suggest');
+  const aiBtn = document.getElementById('wa_ai_btn');
+  if(aiBtn) aiBtn.addEventListener('click', ()=> waDraftReply());
+  const aiSend = document.getElementById('wa_ai_send');
+  if(aiSend) aiSend.addEventListener('click', ()=>{
+    const d = waInbox.aiDrafts[String(waInbox.active)];
+    if(!d || !d.text) return;
+    delete waInbox.aiDrafts[String(waInbox.active)];
+    /* Through the same door as a hand-typed reply: waSendReply carries
+       it to wa-send, where the 24h window check still governs. */
+    waSendReply(d.text);
+  });
+  const aiEdit = document.getElementById('wa_ai_edit');
+  if(aiEdit) aiEdit.addEventListener('click', ()=>{
+    const d = waInbox.aiDrafts[String(waInbox.active)];
+    if(!d || !d.text) return;
+    waInbox.drafts[String(waInbox.active)] = d.text;
+    delete waInbox.aiDrafts[String(waInbox.active)];
+    waRenderInbox();
+    const ta = document.getElementById('wa_reply');
+    if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  });
+  const sug = wrap.querySelector('.wa-suggest:not(.ai)');
   if(sug){
     const wamid = sug.dataset.wamid;
     sug.querySelectorAll('.wa-suggest-opt').forEach(btn=> btn.addEventListener('click', ()=>{

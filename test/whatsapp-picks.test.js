@@ -4,12 +4,18 @@
  * WhatsApp: today's post.
  *
  * The picker recommends what the shop should show people today, and the
- * whole feature stands on three promises:
+ * whole feature stands on four promises:
  *
  *   EVERY PICK CARRIES ITS REASONS, and every reason is a claim about
- *   the shop's own data -- stock that is sitting, margin, a price that
- *   fell, a weekday the item actually sells on. A recommendation that
- *   cannot be interrogated is one that stops being trusted.
+ *   the shop's own data -- what it EARNS in a month (margin times
+ *   pace, the backbone), a fresh restock, customers who asked, stock
+ *   that is sitting, margin, a price that fell, a weekday it sells on.
+ *   A recommendation that cannot be interrogated stops being trusted.
+ *
+ *   A PHOTO IS INFORMATION, NEVER A GATE. The photo-gated picker only
+ *   ever saw the photographed shelf and recommended the leftovers; the
+ *   most lucrative lines were exactly the ones without photos. A
+ *   photo-less pick posts as a text card.
  *
  *   ROTATION IS REAL. "Not shown recently" is backed by wa_posts rows,
  *   not by hope. A product posted 5 days ago is not offered again; one
@@ -39,7 +45,8 @@ const src = read('index.html');
 const workerSrc = read('shared-worker.js');
 
 const NAMES = ['waDaysBetween', 'waWeekday', 'waSalesByKey', 'waPriceTrail',
-  'waStockIdle', 'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats'];
+  'waStockIdle', 'waLastRestock', 'waAskersByProduct',
+  'waPostCandidates', 'waDailyPicks', 'waCaption', 'waPostDeskStats'];
 
 // The pricing chain (catalogueSellAtQty, catalogueBreaks, ranked rows) is
 // already mutation-proven by the printed-catalogue suite; here it is
@@ -51,8 +58,9 @@ const breaksFixture = new Map(); // key -> [{qty, price}]
 const basisAsked = [];
 const env = {
   data: { products: [], presetCategories: [], savedQuotes: [], purchaseInvoices: [],
-    stock: {}, stockLog: [], waPosts: [] },
+    stock: {}, stockLog: [], waPosts: [], followUps: [], sourcingLeads: [] },
   WA_ROTATION_DAYS: 14, WA_SITTING_DAYS: 30, WA_PICK_COUNT: 3,
+  WA_JUSTIN_DAYS: 7, WA_DEPTH_DAYS: 5,
   WA_DAY_NAMES: ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'],
   catalogueSellAtQty: (p, idx, qty, basis) => {
     basisAsked.push(basis);
@@ -71,6 +79,8 @@ try {
   scope = compileScope([
     ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
     extractFunction(src, 'stockKey', 'index.html'),
+    extractFunction(src, 'leadDistinctAskers', 'index.html'),
+    extractFunction(src, 'sourcingPhoneKey', 'index.html'),
     extractFunction(workerSrc, 'resolveProductImage', 'shared-worker.js'),
   ], env, NAMES);
 } catch (e) { err = e; }
@@ -123,9 +133,16 @@ const THU = '2026-08-06', MON = '2026-08-03';
     { invoiced: false, voided: false, date: MON, items: [{ productId: 'P1', variantIdx: null, qty: 90 }] }, // a draft is not a sale
     { invoiced: true, voided: true, date: MON, items: [{ productId: 'P1', variantIdx: null, qty: 90 }] },  // neither is a voided one
   ];
-  const s = scope.waSalesByKey().get('P1');
+  const s = scope.waSalesByKey(THU).get('P1');
   eq(s.units, 10, 'only invoiced, unvoided orders count as sales');
   eq(s.byWeekday[1], 8, 'and the Monday units land on Monday');
+  eq(s.units30, 10, 'the 30-day window carries the velocity the scorer runs on');
+  env.data.savedQuotes.push(
+    { invoiced: true, voided: false, date: '2026-06-01', items: [{ productId: 'P1', variantIdx: null, qty: 50 }] });
+  const s2 = scope.waSalesByKey(THU).get('P1');
+  eq(s2.units, 60, 'lifetime units still count everything');
+  eq(s2.units30, 10, 'but a sale from June is not this month\'s pace');
+  env.data.savedQuotes.pop();
 }
 
 /* ---------- 4. the price drop reads history, not the registry -------- */
@@ -165,10 +182,16 @@ const THU = '2026-08-06', MON = '2026-08-03';
   env.data.waPosts = [];
 
   const { candidates, gaps } = scope.waPostCandidates(THU, []);
-  eq(candidates.length, 2, 'a candidate needs a photo and a retail price');
-  t.check(gaps.noPhoto.includes('Faceless hinge'), 'the missing photo is NAMED, not just missing');
+  eq(candidates.length, 3, 'a candidate needs a retail price — a photo is NOT a gate any more');
+  t.check(gaps.noPhoto.includes('Faceless hinge'), 'the missing photo is still NAMED for the photos-wanted rail');
   t.check(gaps.noPrice.includes('Priceless nail'), 'and so is the missing price');
   t.check(basisAsked.every((b) => b === 'retail'), 'every price the picker asks for is the RETAIL one');
+
+  const p5 = candidates.find((c) => c.key === 'P5');
+  t.check(!!p5 && p5.needsPhoto === true && p5.image === null,
+    'the photo-less product IS a candidate, flagged so the board can say so');
+  has(p5.reasons, /No photo yet — posts as a text card/, 'with the chip that says a post is still one tap away');
+  eq(kindOf(p5.reasons, /No photo yet/), 'nophoto', 'typed nophoto');
 
   const p1 = candidates.find((c) => c.key === 'P1');
   has(p1.reasons, /12 bag.* sitting 47 days/, 'the sitting claim carries quantity and days');
@@ -176,6 +199,11 @@ const THU = '2026-08-06', MON = '2026-08-03';
   has(p1.reasons, /Costs the shop less/, 'the price drop is noticed');
   has(p1.reasons, /Never been posted/, 'and a fresh product says so');
   hasNot(p1.reasons, /Thursdays/, 'no weekday claim on a day the item does not favour');
+  /* The backbone: 10,350 margin × 10 sold this month = the money it earns. */
+  has(p1.reasons, /Earns about UGX 103,500 profit a month/,
+    'the earner claim multiplies margin by this month\'s pace');
+  eq(kindOf(p1.reasons, /Earns about/), 'earner', 'typed earner');
+  eq(p1.reasons[0].kind, 'earner', 'and it leads the chips — the backbone speaks first');
 
   /* each claim wears its kind, so the board can colour it */
   eq(kindOf(p1.reasons, /sitting/), 'sitting', 'the sitting claim is typed sitting');
@@ -229,6 +257,118 @@ const THU = '2026-08-06', MON = '2026-08-03';
 
   const swapped = scope.waDailyPicks(THU, ['A1']);
   t.check(!swapped.picks.some((p) => p.key === 'A1'), '"pick something else" really excludes it');
+}
+
+/* ---------- 6b. the owner's case: lucrative beats photographed -------- */
+/*
+ * The complaint, verbatim: the photo-gated picker "leaves out the vast
+ * majority of the more lucrative items". Here is that item — no photo,
+ * strong margin, forty sold this month — against a photographed line
+ * that neither sells nor earns. The money must win.
+ */
+{
+  env.data.products = [
+    { id: 'L1', name: 'Lucrative hinge', type: 'simple', category: 'Fittings', image: null },
+    { id: 'L2', name: 'Photographed mat', type: 'simple', category: 'Mats', image: 'u' },
+  ];
+  env.data.stock = { L1: 100 }; env.data.stockLog = []; env.data.waPosts = [];
+  env.data.purchaseInvoices = []; env.data.followUps = []; env.data.sourcingLeads = [];
+  env.data.savedQuotes = [
+    { invoiced: true, voided: false, date: '2026-08-01', items: [{ productId: 'L1', variantIdx: null, qty: 40 }] },
+  ];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('L1', { price: 10000, unit: 'pc' }); costFixture.set('L1', 6000);
+  sellFixture.set('L2', { price: 10000, unit: 'pc' }); costFixture.set('L2', 8500);
+  const { candidates } = scope.waPostCandidates(THU, []);
+  eq(candidates[0].key, 'L1', 'the photo-less lucrative line OUTRANKS the photographed slow one');
+  t.check(candidates[0].needsPhoto === true, 'wearing its missing photo as information, not a sentence');
+  has(candidates[0].reasons, /Earns about UGX 160,000 profit a month/, 'because the money says so, out loud');
+}
+
+/* ---------- 6c. depth: an ad for an empty shelf costs trust ----------- */
+{
+  env.data.products = [{ id: 'F1', name: 'Flying cement', type: 'simple', category: 'Cement', image: 'u' }];
+  env.data.stock = { F1: 3 };
+  env.data.savedQuotes = [
+    { invoiced: true, voided: false, date: '2026-08-01', items: [{ productId: 'F1', variantIdx: null, qty: 60 }] },
+  ];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('F1', { price: 45000, unit: 'bag' }); costFixture.set('F1', 30000);
+  const { candidates, gaps } = scope.waPostCandidates(THU, []);
+  t.check(!candidates.some((c) => c.key === 'F1'), 'three bags cannot cover a two-a-day pace — not advertised');
+  t.check(gaps.lowStock.includes('Flying cement'), 'and the skip is NAMED: restock first');
+  env.data.stock.F1 = 40;
+  t.check(scope.waPostCandidates(THU, []).candidates.some((c) => c.key === 'F1'),
+    'restocked deep enough, it is back');
+  /* Zero stock with zero pace is a to-order line, not a gap: a sourcing
+     graduate starts exactly there and still deserves its announcement. */
+  env.data.stock = {}; env.data.savedQuotes = [];
+  t.check(scope.waPostCandidates(THU, []).candidates.some((c) => c.key === 'F1'),
+    'no stock and no pace is to-order, still announceable');
+}
+
+/* ---------- 6d. just in: new stock is news, for a week ---------------- */
+{
+  env.data.products = [{ id: 'J1', name: 'New arrival', type: 'simple', category: 'Tools', image: 'u' }];
+  env.data.savedQuotes = []; env.data.stock = { J1: 50 };
+  env.data.stockLog = [{ key: 'J1', type: 'restock', delta: 50, date: '2026-08-04' }];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('J1', { price: 5000, unit: 'pc' });
+  const c = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
+  has(c.reasons, /Restocked 2 days ago — new stock is news/, 'a fresh restock is news, dated');
+  eq(kindOf(c.reasons, /Restocked/), 'justin', 'typed justin');
+  const scoreFresh = c.score;
+  env.data.stockLog = [{ key: 'J1', type: 'restock', delta: 50, date: '2026-07-31' }];
+  const older = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
+  t.check(older.score < scoreFresh, 'and the news decays by the day');
+  env.data.stockLog = [{ key: 'J1', type: 'restock', delta: 50, date: '2026-07-20' }];
+  const stale = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'J1');
+  hasNot(stale.reasons, /Restocked/, 'until it is not news at all');
+  env.data.stockLog = [];
+}
+
+/* ---------- 6e. asked for: demand said out loud ----------------------- */
+{
+  env.data.products = [{ id: 'K1', name: 'Asked-for lock', type: 'simple', category: 'Locks', image: 'u' }];
+  env.data.stock = { K1: 10 }; env.data.stockLog = []; env.data.savedQuotes = [];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('K1', { price: 20000, unit: 'pc' });
+  env.data.followUps = [
+    { id: 1, productId: 'K1', closedAt: null, customerId: 1 },
+    { id: 2, productId: 'K1', closedAt: '2026-08-01', customerId: 2 },  // answered: not open demand
+  ];
+  env.data.sourcingLeads = [
+    { id: 'SRC-1', productId: 'K1', voided: false, requests: [
+      { customerName: 'A', phone: '0700' }, { customerName: 'B', phone: '0711' }] },
+  ];
+  const c = scope.waPostCandidates(THU, []).candidates.find((x) => x.key === 'K1');
+  has(c.reasons, /3 customers asked for this/,
+    'one open follow-up plus the lead\'s two distinct askers — a closed follow-up is answered, not demand');
+  eq(kindOf(c.reasons, /asked for this/), 'asked', 'typed asked');
+  env.data.followUps = []; env.data.sourcingLeads = [];
+}
+
+/* ---------- 6f. the mix rule: a fresh arrival makes the board --------- */
+{
+  env.data.products = [
+    { id: 'S1', name: 'Star A', type: 'simple', category: 'C1', image: 'u' },
+    { id: 'S2', name: 'Star B', type: 'simple', category: 'C2', image: 'u' },
+    { id: 'S3', name: 'Star C', type: 'simple', category: 'C3', image: 'u' },
+    { id: 'S4', name: 'Fresh box', type: 'simple', category: 'C4', image: 'u' },
+  ];
+  env.data.stock = { S4: 30 }; env.data.savedQuotes = []; env.data.waPosts = [];
+  env.data.stockLog = [{ key: 'S4', type: 'restock', delta: 30, date: '2026-08-01' }];
+  sellFixture.clear(); costFixture.clear();
+  sellFixture.set('S1', { price: 100 }); costFixture.set('S1', 40);
+  sellFixture.set('S2', { price: 100 }); costFixture.set('S2', 45);
+  sellFixture.set('S3', { price: 100 }); costFixture.set('S3', 50);
+  sellFixture.set('S4', { price: 100 });
+  const { picks } = scope.waDailyPicks(THU, []);
+  t.check(picks.some((p) => p.key === 'S4'),
+    'a day with a fresh arrival SHOWS the fresh arrival — the mix rule swaps it in over a stronger plain pick');
+  eq(picks[0].key, 'S1', 'without touching the top pick');
+  t.check(!picks.some((p) => p.key === 'S3'), 'the weakest plain pick made the room');
+  env.data.stockLog = [];
 }
 
 /* ---------- 7. what leaves the building ------------------------------ */
@@ -288,11 +428,19 @@ const THU = '2026-08-06', MON = '2026-08-03';
   t.check(/class="wap-chip \$\{esc\(r\.kind\)\}"/.test(src)
     && /\$\{esc\(r\.text\)\}/.test(src),
     'each reason renders as a chip coloured by its kind');
-  ['sitting', 'margin', 'drop', 'weekday', 'fresh'].forEach((k) =>
+  ['sitting', 'margin', 'drop', 'weekday', 'fresh', 'earner', 'justin', 'asked', 'fast', 'nophoto'].forEach((k) =>
     t.check(new RegExp(`\\.wap-chip\\.${k}\\{`).test(src), `the ${k} chip has its own colour`));
+  t.check(/wap-thumb wap-noimg/.test(src) && /\.wap-thumb\.wap-noimg\{/.test(src),
+    'a photo-less pick renders a lettered tile, not a broken image');
   t.check(/data-go="media"/.test(src) && /data-go="products"/.test(src)
     && /goToTab\(btn\.dataset\.go\)/.test(src),
     'the unlock rail walks straight to Media and Products');
+  t.check(/still pickable, better with one/.test(src),
+    'the photo rail says plainly that a photo is wanted, not required');
+  t.check(/selling too fast to advertise — restock first/.test(src) && /data-go="inventory"/.test(src),
+    'the depth skips are shown with the way to fix them');
+  t.check(/resting after a recent post/.test(src) && /back in \$\{WA_ROTATION_DAYS - e\.daysAgo\}d/.test(src),
+    'and the rotation bench is visible — what is resting, and when it returns');
   t.check(/class="btn btn-ghost wa-hist-del"/.test(src) && /class="wa-rec-sub"/.test(src),
     'the record list still lets a row be removed, and shows why it was picked');
 }
