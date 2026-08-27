@@ -417,7 +417,10 @@ const wageFor = (name) => data.dues.find((d) => d.kind === 'wage' && scope.dueNa
  * the second wait a day.
  */
 {
-  t.check(/function runStartupReminders\(\)\{\s*\n\s*if\(maybeRemindLoanDue\(\)\) return;\s*\n\s*maybeRemindDuesDue\(\);/.test(code),
+  /* The morning brief runs ahead of them, but it NAVIGATES (to the
+     dashboard) rather than opening a modal — so it takes no slot in
+     this queue and the two reminders still relay exactly as before. */
+  t.check(/maybeShowMorningBrief\(\);\s*\n\s*if\(maybeRemindLoanDue\(\)\) return;\s*\n\s*maybeRemindDuesDue\(\);/.test(code),
     'they queue rather than stack — only one modal is opened at a time');
   /* Anchored on the line inside the loan reminder, not on the function
      wrapper: `maybeRemindLoanDue(){ [\s\S]*? return true; }` matched with

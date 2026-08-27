@@ -727,6 +727,23 @@
   .dash-range-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
   .dash-range-bar .field select{padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;font-family:inherit;background:#FBFCFD;color:var(--ink);}
   .dash-asof{font-size:12px;color:var(--ink-soft);}
+  /* ---- The morning brief ----------------------------------------
+     Yesterday's picture in one panel: a strip of four figures, then
+     only the blocks that carry news. Sits above everything else on
+     the dashboard, and the first visit of each day lands here. */
+  .dash-brief{margin-bottom:20px;}
+  .brief-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px;}
+  .brief-stat{display:flex;flex-direction:column;gap:2px;background:var(--bg);border-radius:10px;padding:10px 12px;}
+  .brief-stat span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ow-ink-400);}
+  .brief-stat b{font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .brief-stat em{font-style:normal;font-size:11.5px;color:var(--ink-soft);}
+  .brief-blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 20px;margin-top:10px;}
+  .brief-block h4{font-size:11px;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ow-ink-400);}
+  .brief-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line);}
+  .brief-row:last-child{border-bottom:none;}
+  .brief-row span{min-width:0;}
+  .brief-row b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .brief-row em{font-style:normal;color:var(--ink-soft);}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -7316,6 +7333,15 @@
           </select>
         </div>
         <div class="dash-asof" id="dash_asof"></div>
+      </div>
+
+      <!-- -1. THE MORNING BRIEF. Yesterday's picture before today's
+           choices — above even "what needs you", because it is the
+           context those actions are read against. The first visit of
+           each day lands on this tab (maybeShowMorningBrief). -->
+      <div class="panel dash-brief">
+        <div class="dash-panel-title"><h2>Morning brief</h2><span class="dash-asof" id="dash_brief_date"></span></div>
+        <div id="dash_morningBrief"></div>
       </div>
 
       <!-- 0. WHAT NEEDS YOU TODAY.
@@ -23687,12 +23713,10 @@ function renderSavedQuotes(){
   // there before its card should flag as overdue. 0/blank leaves that
   // step's warning off.
   const stageLimits = data.presetOrderStageLimits || {};
-  /* One rule, read by the card's blinking flag AND the rail's per-step
-     roll-up, so the two can never disagree about what is overdue. */
-  const orderIsOverdue = (q)=>{
-    const limitMin = Number(stageLimits[q.status])||0;
-    return limitMin>0 && !!q.stageEnteredAt && (Date.now() - q.stageEnteredAt) > limitMin*60000;
-  };
+  /* One rule, read by the card's blinking flag, the rail's per-step
+     roll-up AND the morning brief — orderStageOverdue is the single
+     source, so none of the three can disagree about what is overdue. */
+  const orderIsOverdue = (q)=> orderStageOverdue(q, stageLimits, Date.now());
   /* An order stuck for a PERSON rather than for time: nobody preparing,
      or nobody delivering. Counted on the rail beside the overdue ones,
      because both are the "needs chasing" question. */
@@ -45985,6 +46009,9 @@ function maybeRemindDuesDue(){
    showing only the first would make the second wait a day. So they
    queue: dismissing the one in front brings the next up. */
 function runStartupReminders(){
+  /* The brief first: it NAVIGATES rather than opening a modal, so the
+     loan/dues reminders still queue on top of it as before. */
+  maybeShowMorningBrief();
   if(maybeRemindLoanDue()) return;
   maybeRemindDuesDue();
 }
@@ -47509,7 +47536,144 @@ function dashAlerts(ctx){
     || (b.money - a.money));
 }
 
+/* ---------------- The morning brief ----------------
+
+   The day's picture before the shop opens: what YESTERDAY did — sales,
+   profit, cash, who paid — and what this morning inherits from it —
+   what ran out, which orders sat too long, who to follow up, who owes
+   most. Every number is DERIVED at render time from the same functions
+   the screens already trust (a stored statistic is a second copy of a
+   fact, and second copies drift), so the brief can never disagree with
+   the books. */
+
+// The one stage-timer rule, shared by the Order Tracking board's flag,
+// its rail roll-up, and the morning brief — lifted out of
+// renderSavedQuotes so the three can never drift apart.
+function orderStageOverdue(q, stageLimits, nowMs){
+  const limitMin = Number((stageLimits||{})[q.status])||0;
+  return limitMin>0 && !!q.stageEnteredAt && (nowMs - q.stageEnteredAt) > limitMin*60000;
+}
+
+function morningBriefData(dateISO, nowMs){
+  const y = dateISO;
+  // Sales and gross profit on the same accrual definition the
+  // statements use — completed, invoiced, not voided, dated y.
+  const tot = anOverallTotals(anInvoicesInRange(y, y));
+  // Cash movement and the count, from the cash book's own day position.
+  const pos = cbDayPosition(y);
+  // Who paid: every payment entry in every customer's debt ledger
+  // dated y — the same rows the debtor_payments tool reads.
+  const paidRows = [];
+  (data.customers||[]).forEach(c=>{
+    const got = (c.debtLog||[]).filter(e=> e && e.type==='payment'
+      && String(e.date||'').slice(0,10) === y)
+      .reduce((s,e)=> s + (Number(e.amount)||0), 0);
+    if(got > 0.5) paidRows.push({ name: c.name, amount: Math.round(got) });
+  });
+  paidRows.sort((a,b)=> b.amount - a.amount);
+  // Ran out: stock-log rows dated y whose delta crossed the count to
+  // nothing — the inverse of followUpBackInStock's crossing test — and
+  // whose line is STILL empty this morning (a restock since un-rings
+  // it; old news is not news).
+  const ranMap = new Map();
+  (data.stockLog||[]).forEach(l=>{
+    if(!l || String(l.date||'').slice(0,10) !== y) return;
+    const delta = Number(l.delta)||0;
+    const after = Number(l.qtyAfter)||0;
+    if(delta < 0 && after <= 0 && (after - delta) > 0) ranMap.set(l.key, l);
+  });
+  const ranOut = [...ranMap.values()]
+    .filter(l=> getStockQty(l.productId, l.variantIdx==null ? null : l.variantIdx) <= 0)
+    .map(l=> l.label || String(l.key));
+  // Orders sitting past their stage limit, by the board's own rule.
+  const stageLimits = data.presetOrderStageLimits || {};
+  const stuck = (data.savedQuotes||[])
+    .filter(q=> q && !q.voided && q.status !== 'completed' && orderStageOverdue(q, stageLimits, nowMs))
+    .map(q=> ({ id: q.id, name: (q.client && q.client.name) || 'Walk-in',
+      statusLabel: (SQ_STATUSES[q.status] && SQ_STATUSES[q.status].label) || q.status,
+      overMinutes: Math.max(1, Math.round((nowMs - q.stageEnteredAt)/60000 - (Number(stageLimits[q.status])||0))) }))
+    .sort((a,b)=> b.overMinutes - a.overMinutes);
+  // Debts and follow-ups: this morning's standing picture, not y's.
+  const debts = collectableDebts();
+  const fu = followUpClientsToContact(nowMs);
+  return {
+    date: y,
+    sales: { count: tot.count, total: Math.round(tot.sales), profit: Math.round(tot.profit),
+      margin: tot.margin, estimated: (tot.estimatedQty||0) > 0 },
+    cash: { moneyIn: Math.round(pos.in), moneyOut: Math.round(pos.out),
+      counted: pos.countedAccounts > 0, variance: Math.round(pos.varianceTotal) },
+    paid: { count: paidRows.length,
+      total: paidRows.reduce((s,r)=> s + r.amount, 0), rows: paidRows.slice(0, 6) },
+    debts: { total: Math.round(debts.reduce((s,r)=> s + r.debt, 0)), rows: debts.slice(0, 3) },
+    ranOut: ranOut.slice(0, 8), ranOutCount: ranOut.length,
+    stuck: stuck.slice(0, 6), stuckCount: stuck.length,
+    followUps: { count: fu.length, names: fu.slice(0, 4).map(r=> r.name) },
+  };
+}
+
+function morningBriefHTML(b){
+  const money = n=> fmtUGX(Math.round(n));
+  const stat = (label, value, note)=> `<div class="brief-stat"><span>${esc(label)}</span><b>${esc(value)}</b>${note ? `<em>${esc(note)}</em>` : ''}</div>`;
+  const row = (main, side)=> `<div class="brief-row"><span>${main}</span>${side ? `<b>${esc(side)}</b>` : ''}</div>`;
+  const block = (title, rows)=> rows.length
+    ? `<div class="brief-block"><h4>${esc(title)}</h4>${rows.join('')}</div>` : '';
+  const overLabel = m=> m >= 1440 ? Math.round(m/1440) + 'd over' : m >= 60 ? Math.round(m/60) + 'h over' : m + 'min over';
+  const stats = [
+    stat('Cash in', money(b.cash.moneyIn), b.cash.counted && Math.abs(b.cash.variance) >= 1
+      ? (b.cash.variance < 0 ? 'short ' : 'over ') + money(Math.abs(b.cash.variance))
+      : (b.cash.counted ? 'count matched' : 'not counted')),
+    stat('Sales invoiced', money(b.sales.total),
+      b.sales.count ? b.sales.count + (b.sales.count===1 ? ' invoice' : ' invoices') : 'none recorded'),
+    /* ≈ says the honest thing: part of the cost side was estimated, so
+       the profit is a good figure, not a certain one. */
+    stat('Gross profit', (b.sales.estimated ? '≈ ' : '') + money(b.sales.profit),
+      b.sales.total > 0 ? Math.round(b.sales.margin) + '% margin' : ''),
+    stat('Debt collected', money(b.paid.total),
+      b.paid.count ? b.paid.count + ' paid' : 'nobody paid'),
+  ].join('');
+  const blocks = [
+    block('Who paid', b.paid.rows.map(r=> row(esc(r.name), fmtUGX(r.amount)))),
+    block('Ran out yesterday' + (b.ranOutCount > b.ranOut.length ? ` (${b.ranOutCount})` : ''),
+      b.ranOut.map(n=> row(esc(n)))),
+    block('Orders sitting too long' + (b.stuckCount > b.stuck.length ? ` (${b.stuckCount})` : ''),
+      b.stuck.map(s=> row(`${esc(s.name)} <em>· ${esc(s.statusLabel)}</em>`, overLabel(s.overMinutes)))),
+    block('Biggest debts this morning', b.debts.rows.map(r=>
+      row(`${esc(r.name)}${r.ageDays > 0 ? ` <em>· ${r.ageDays}d</em>` : ''}`, fmtUGX(Math.round(r.debt))))),
+    block('To follow up today', b.followUps.count
+      ? [row(esc(b.followUps.names.join(', ') + (b.followUps.count > b.followUps.names.length
+          ? ` and ${b.followUps.count - b.followUps.names.length} more` : '')))] : []),
+  ].join('');
+  return `<div class="brief-grid">${stats}</div>` + (blocks
+    ? `<div class="brief-blocks">${blocks}</div>`
+    : `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing carried over — a clean start.</p>`);
+}
+
+function renderMorningBrief(){
+  const el = document.getElementById('dash_morningBrief');
+  if(!el) return;
+  const y = anShiftDate(todayISO(), -1);
+  const dateEl = document.getElementById('dash_brief_date');
+  if(dateEl) dateEl.textContent = 'Yesterday · ' + y;
+  el.innerHTML = morningBriefHTML(morningBriefData(y, Date.now()));
+}
+
+/* First open of the day lands on the Dashboard, where the brief sits
+   at the top — the day's picture before the shop opens. The marker
+   follows the loan/dues snooze convention (compared with >=, so a
+   cleared device shows it again at worst once), and is LOCAL by
+   design: which device has seen the brief is a per-device courtesy,
+   not shop data. */
+const MORNING_BRIEF_KEY = 'owMorningBriefShownOn';
+function maybeShowMorningBrief(){
+  const seen = lsGet(MORNING_BRIEF_KEY);
+  if(seen && String(seen) >= todayISO()) return false;
+  lsSet(MORNING_BRIEF_KEY, todayISO());
+  goToTab('dashboard');
+  return true;
+}
+
 function renderDashboard(){
+  renderMorningBrief();
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
   const prevTo = anShiftDate(from, -1);

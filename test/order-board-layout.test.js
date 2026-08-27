@@ -113,8 +113,8 @@ const src = read('index.html');
 /* ---------- 5. what needs chasing, from the rail --------------------- */
 {
   const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
-  t.check(/const orderIsOverdue = \(q\)=>\{/.test(render),
-    'the overdue rule is one helper');
+  t.check(/const orderIsOverdue = \(q\)=> orderStageOverdue\(q, stageLimits, Date\.now\(\)\);/.test(render),
+    'the overdue rule is one helper — shared with the morning brief via orderStageOverdue');
   t.check(/const overdue = orderIsOverdue\(q\);/.test(render),
     'read by the card flag');
   t.check(/group\.filter\(q=> orderIsOverdue\(q\) \|\| orderNeedsSomebody\(q\)\)\.length/.test(render),

@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+'use strict';
+/*
+ * The morning brief: yesterday's picture, derived — never stored.
+ *
+ * Every figure on it comes from the same functions the screens already
+ * trust (sales from the statements' own invoice window, cash from the
+ * cash book's day position, debts from the collectable list, stuck
+ * orders from the board's own stage rule), so the brief can never
+ * disagree with the books. What this file holds to account:
+ *
+ *   THE STAGE RULE IS SHARED. orderStageOverdue is read by the Order
+ *   Tracking flag, the rail roll-up AND the brief — one rule, no drift.
+ *
+ *   RAN OUT MEANS THE CROSSING. A line that went from something to
+ *   nothing yesterday and is STILL empty this morning. A restock since
+ *   un-rings it; a line already empty before yesterday is not an event.
+ *
+ *   AN EMPTY DAY IS SAID PLAINLY. Zero sales is "none recorded", not a
+ *   dressed-up dashboard; estimated profit carries the ≈.
+ *
+ * Run: node test/morning-brief.test.js   (or: npm test)
+ */
+const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+
+const t = createReporter('morning brief');
+const src = read('index.html');
+const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+
+const Y = '2026-08-26';
+const NOW = Date.parse('2026-08-27T06:30:00.000Z');
+
+/* ---------- 1. the stage-timer rule, now shared ----------------------- */
+{
+  const scope = compileScope([extractFunction(src, 'orderStageOverdue', 'index.html')], {}, ['orderStageOverdue']);
+  const limits = { preparing: 60 };
+  eq(scope.orderStageOverdue({ status: 'preparing', stageEnteredAt: NOW - 61 * 60000 }, limits, NOW), true,
+    'past its limit flags');
+  eq(scope.orderStageOverdue({ status: 'preparing', stageEnteredAt: NOW - 59 * 60000 }, limits, NOW), false,
+    'under it does not');
+  eq(scope.orderStageOverdue({ status: 'draft', stageEnteredAt: NOW - 999 * 60000 }, limits, NOW), false,
+    'a step with no limit never flags');
+  eq(scope.orderStageOverdue({ status: 'preparing' }, limits, NOW), false,
+    'and no stage timestamp cannot flag');
+  const render = extractFunction(src, 'renderSavedQuotes', 'index.html');
+  t.check(/const orderIsOverdue = \(q\)=> orderStageOverdue\(q, stageLimits, Date\.now\(\)\);/.test(render),
+    'the board reads the SAME rule — its flag and the brief can never disagree');
+}
+
+/* ---------- 2. the derivation ----------------------------------------- */
+{
+  const data = {
+    customers: [
+      { id: 'C1', name: 'Mukasa', debtLog: [
+        { type: 'payment', date: Y, amount: 200000 },
+        { type: 'payment', date: '2026-08-20', amount: 50000 },
+        { type: 'charge', date: Y, amount: 999999 }] },
+      // A timestamped date must still count for its day.
+      { id: 'C2', name: 'Auma', debtLog: [{ type: 'payment', date: Y + 'T09:12:00', amount: 80000 }] },
+      { id: 'C3', name: 'Quiet', debtLog: [] },
+    ],
+    stockLog: [
+      // crossed to zero yesterday, still out this morning -> news
+      { key: 'P1', productId: 'P1', variantIdx: null, label: 'Simba Cement', date: Y, delta: -5, qtyAfter: 0 },
+      // crossed yesterday but restocked since -> old news, not shown
+      { key: 'P2', productId: 'P2', variantIdx: null, label: 'Sahara Filler', date: Y, delta: -3, qtyAfter: 0 },
+      // was already at nothing (no crossing) -> not an event
+      { key: 'P3', productId: 'P3', variantIdx: null, label: 'Half Bend', date: Y, delta: -2, qtyAfter: -2 },
+      // right shape, wrong day
+      { key: 'P4', productId: 'P4', variantIdx: null, label: 'Runner', date: '2026-08-20', delta: -1, qtyAfter: 0 },
+    ],
+    savedQuotes: [
+      { id: 1, status: 'preparing', stageEnteredAt: NOW - 5 * 3600000, client: { name: 'Okello' }, voided: false },
+      { id: 2, status: 'preparing', stageEnteredAt: NOW - 2 * 3600000, client: { name: 'Nsubuga' } },
+      { id: 3, status: 'completed', stageEnteredAt: NOW - 99 * 3600000, client: { name: 'Done' } },
+      { id: 4, status: 'preparing', stageEnteredAt: NOW - 9 * 3600000, client: { name: 'Voided' }, voided: true },
+    ],
+    presetOrderStageLimits: { preparing: 60 },
+  };
+  const env = {
+    data,
+    anInvoicesInRange: (from, to) => { env._range = [from, to]; return ['inv']; },
+    anOverallTotals: () => ({ sales: 560750, cost: 400000, qty: 9, estimatedQty: 2, count: 3, profit: 160750, margin: 28.7 }),
+    cbDayPosition: (d) => ({ date: d, in: 700000, out: 120000, countedAccounts: 1, varianceTotal: -5000 }),
+    collectableDebts: () => [
+      { id: 'C9', name: 'Roto Debtor', debt: 900000, ageDays: 30 },
+      { id: 'C8', name: 'Second', debt: 100000, ageDays: 3 },
+    ],
+    followUpClientsToContact: () => [{ name: 'Mulongo' }, { name: 'Achen' }],
+    getStockQty: (pid) => (pid === 'P2' ? 12 : 0),
+    SQ_STATUSES: { preparing: { label: 'Preparing' }, completed: { label: 'Completed' } },
+  };
+  const scope = compileScope([
+    extractFunction(src, 'orderStageOverdue', 'index.html'),
+    extractFunction(src, 'morningBriefData', 'index.html'),
+  ], env, ['morningBriefData']);
+  const b = scope.morningBriefData(Y, NOW);
+
+  eq(env._range.join(','), Y + ',' + Y,
+    'sales are read for exactly yesterday, on the statements\' own definition of a sale');
+  eq(b.sales.total, 560750, 'the sales total rides through untouched');
+  t.check(b.sales.estimated === true,
+    'an estimated cost marks the profit approximate — a good figure, never a certain one');
+  eq(b.cash.moneyIn, 700000, 'cash in comes from the cash book\'s own day position');
+  t.check(b.cash.counted === true && b.cash.variance === -5000, 'with the count and its shortfall');
+
+  eq(b.paid.count, 2, 'two customers paid yesterday');
+  eq(b.paid.total, 280000, 'and their payments sum');
+  eq(b.paid.rows[0].name, 'Mukasa', 'largest payment first');
+  t.check(!b.paid.rows.some((r) => r.name === 'Quiet'), 'nobody is invented, and a charge is not a payment');
+
+  eq(b.ranOut.join(','), 'Simba Cement',
+    'ran-out is the CROSSING dated yesterday, still empty now — a restock un-rings it, already-empty is no event');
+
+  eq(b.stuck.length, 2, 'two orders sit past their stage limit');
+  eq(b.stuck[0].name, 'Okello', 'longest-overdue first');
+  eq(b.stuck[0].statusLabel, 'Preparing', 'named by the board\'s own stage label');
+  t.check(!b.stuck.some((s) => s.name === 'Done' || s.name === 'Voided'),
+    'completed and voided orders cannot be stuck');
+
+  eq(b.debts.rows[0].name, 'Roto Debtor', 'the debt book\'s standing picture rides along');
+  eq(b.debts.total, 1000000, 'with its total');
+  eq(b.followUps.count, 2, 'and today\'s follow-up count');
+}
+
+/* ---------- 3. the words ---------------------------------------------- */
+{
+  const scope = compileScope([
+    extractFunction(src, 'morningBriefHTML', 'index.html'),
+  ], {
+    esc: (s) => String(s),
+    fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+  }, ['morningBriefHTML']);
+
+  const empty = scope.morningBriefHTML({
+    date: Y,
+    sales: { count: 0, total: 0, profit: 0, margin: 0, estimated: false },
+    cash: { moneyIn: 0, moneyOut: 0, counted: false, variance: 0 },
+    paid: { count: 0, total: 0, rows: [] },
+    debts: { total: 0, rows: [] },
+    ranOut: [], ranOutCount: 0, stuck: [], stuckCount: 0,
+    followUps: { count: 0, names: [] },
+  });
+  t.check(/none recorded/.test(empty) && /nobody paid/.test(empty) && /not counted/.test(empty),
+    'an empty day is said plainly, never dressed up');
+  t.check(/Nothing carried over — a clean start\./.test(empty),
+    'and no leftover blocks means a clean start, said as one line');
+
+  const busy = scope.morningBriefHTML({
+    date: Y,
+    sales: { count: 3, total: 560750, profit: 160750, margin: 28.7, estimated: true },
+    cash: { moneyIn: 700000, moneyOut: 120000, counted: true, variance: -5000 },
+    paid: { count: 2, total: 280000, rows: [{ name: 'Mukasa', amount: 200000 }] },
+    debts: { total: 1000000, rows: [{ name: 'Roto Debtor', debt: 900000, ageDays: 30 }] },
+    ranOut: ['Simba Cement'], ranOutCount: 1,
+    stuck: [{ id: 1, name: 'Okello', statusLabel: 'Preparing', overMinutes: 240 }],
+    stuckCount: 1,
+    followUps: { count: 2, names: ['Mulongo', 'Achen'] },
+  });
+  t.check(/≈ 160,750 UGX/.test(busy), 'estimated profit carries the ≈, honestly');
+  t.check(/short 5,000 UGX/.test(busy), 'a counted shortfall is named');
+  t.check(/Ran out yesterday/.test(busy) && /Simba Cement/.test(busy), 'stock-outs are named');
+  t.check(/4h over/.test(busy) && /Okello/.test(busy), 'a stuck order says how far over it is');
+  t.check(/Mulongo, Achen/.test(busy), 'and who to call today');
+}
+
+/* ---------- 4. the wiring --------------------------------------------- */
+{
+  t.check(/id="dash_morningBrief"/.test(src) && /id="dash_brief_date"/.test(src),
+    'the panel exists at the top of the dashboard');
+  const dash = extractFunction(src, 'renderDashboard', 'index.html');
+  t.check(/renderMorningBrief\(\);/.test(dash), 'and renders with the dashboard');
+  const rmb = extractFunction(src, 'renderMorningBrief', 'index.html');
+  t.check(/anShiftDate\(todayISO\(\), -1\)/.test(rmb), 'the brief is always about yesterday');
+  const show = extractFunction(src, 'maybeShowMorningBrief', 'index.html');
+  t.check(/String\(seen\) >= todayISO\(\)/.test(show) && /goToTab\('dashboard'\)/.test(show),
+    'first open of the day NAVIGATES to the dashboard, suppressed by the snooze convention (>=)');
+  t.check(/const MORNING_BRIEF_KEY = 'owMorningBriefShownOn';/.test(src),
+    'under the ow* local-preference key convention — per-device courtesy, not shop data');
+  const rem = extractFunction(src, 'runStartupReminders', 'index.html');
+  t.check(/maybeShowMorningBrief\(\);/.test(rem)
+    && rem.indexOf('maybeShowMorningBrief') < rem.indexOf('maybeRemindLoanDue'),
+    'the brief runs FIRST at boot and does not eat the reminder queue — it navigates, not modals');
+}
+
+process.exit(t.done() ? 1 : 0);
