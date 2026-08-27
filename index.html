@@ -12025,7 +12025,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR, lotConsignColR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -12038,7 +12038,8 @@ async function loadData(shopId){
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
     sb.from('sourcing_leads').select('image').limit(1),
     sb.from('prices').select('last_asked_at').limit(1),
-    sb.from('cash_txns').select('transfer_id').limit(1)
+    sb.from('cash_txns').select('transfer_id').limit(1),
+    sb.from('stock_lots').select('consign').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -12070,6 +12071,19 @@ async function loadData(shopId){
      applied, sending last_asked_at would fail the whole prices upsert
      and the shop would silently stop saving prices at all. */
   priceAskedColumn = !(askedColR && askedColR.error);
+  /* 0080, and the busiest write of the lot: every sale rewrites the key
+     it touched, so sending an unknown column here would fail the whole
+     stock_lots insert and the shop would stop saving its FIFO costs
+     entirely. Probed on its own like the rest, because these migrations
+     are applied by hand and can land in any order.
+
+     Consignment shipped BEFORE this column existed, which is the fault
+     it now guards: the mark was written in memory, dropped on save, and
+     gone on the next load -- goods held for a supplier came back as the
+     shop's own, with nothing on any screen to say so. Until the column
+     is there the app refuses to take a consignment at all rather than
+     accept one it cannot keep. */
+  stockLotConsignColumn = !(lotConsignColR && lotConsignColR.error);
   /* 0076, its own probe like the two above. Guards a busy write: every
      cash entry goes up on every save, so sending transfer_id before the
      migration lands would fail the whole cash_txns upsert and the shop
@@ -12091,7 +12105,14 @@ async function loadData(shopId){
   (stockR.data||[]).forEach(s=>{ stock[s.key] = Number(s.qty)||0; });
 
   const stockLots = {};
-  (stockLotsR.data||[]).forEach(l=>{ (stockLots[l.key] ||= []).push({qty:Number(l.qty)||0, cost: l.cost==null ? null : Number(l.cost)}); });
+  (stockLotsR.data||[]).forEach(l=>{
+    const lot = {qty:Number(l.qty)||0, cost: l.cost==null ? null : Number(l.cost)};
+    // Whose goods these are, when the column is there to say. Absent on a
+    // shop that has not applied 0080, which reads as the shop's own --
+    // and the app refuses to take a consignment until it can be kept.
+    if(l.consign) lot.consign = l.consign;
+    (stockLots[l.key] ||= []).push(lot);
+  });
 
   const cashDays = {};
   (cashDaysR.data||[]).forEach(cd=>{ cashDays[cd.date] = {opening:cd.opening, actual:cd.actual, openingSet: !!cd.opening_set}; });
@@ -12378,6 +12399,7 @@ let lastSynced = {};
 let sourcingVariantColumn = false;
 let sourcingImageColumn = false;
 let priceAskedColumn = false;
+let stockLotConsignColumn = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -12714,7 +12736,13 @@ function addStockLotsDiffOps(ops, shopId, stockLotsMap){
       const del = await sb.from('stock_lots').delete().eq('shop_id', shopId).in('key', rewriteKeys);
       if(del.error) return del;
       const insertRows = [];
-      changedKeys.forEach(k=> (stockLotsMap[k]||[]).forEach(l=> insertRows.push({shop_id:shopId, key:k, qty:l.qty, cost:l.cost})));
+      /* Guarded: PostgREST rejects the entire insert for one unknown
+         column, and every sale rewrites the key it touched -- so sending
+         this before 0080 is applied would stop the shop saving its FIFO
+         cost lots altogether, not merely lose the consignor. */
+      changedKeys.forEach(k=> (stockLotsMap[k]||[]).forEach(l=> insertRows.push({
+        shop_id:shopId, key:k, qty:l.qty, cost:l.cost,
+        ...(stockLotConsignColumn ? {consign: l.consign || null} : {})})));
       return insertRows.length ? await sb.from('stock_lots').insert(insertRows) : {error:null};
     },
     commit: ()=>{
@@ -25368,6 +25396,72 @@ async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayN
   return id;
 }
 
+/* Marking goods that are ALREADY here as a supplier's.
+
+   Needed because consignment shipped without the column that keeps the
+   mark: goods were received, sold, and came back looking like the
+   shop's own. It earns its place beyond that repair, though -- a
+   supplier who drops goods off and mentions the arrangement afterwards
+   is an ordinary Tuesday.
+
+   It reaches the SALES too. Units already invoiced were the
+   consignor's; the app simply failed to write it down, and leaving
+   those out would say the shop owes nothing for goods it has already
+   taken money for. The same reasoning the debt drift banner uses: where
+   the records are wrong and the evidence is plain, offer the repair and
+   let the person who can check it decide. Nothing here happens without
+   that decision -- consignmentMarkPlan says exactly what will change,
+   and only then does consignmentMarkApply do it. */
+function consignmentMarkPlan(productId, variantIdx, supplierId){
+  const key = stockKey(productId, variantIdx);
+  const lots = ((data.stockLots||{})[key] || []).filter(l=> l.qty > 0 && !l.consign);
+  const shelfQty = lots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+  const shelfValue = lots.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+  const sales = [];
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      if(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) !== key) return;
+      const unmarked = (it._stockLots||[]).filter(l=> !l.consign);
+      if(!unmarked.length) return;
+      sales.push({ quoteId: q.id, invoice: invoiceNumberLabel(q), date: q.invoicedAt || q.date || '',
+        qty: unmarked.reduce((s,l)=> s + (Number(l.qty)||0), 0),
+        value: unmarked.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0) });
+    });
+  });
+  return { key, productId, variantIdx, supplierId, supplierName: supplierName(supplierId),
+    shelfQty, shelfValue,
+    soldQty: sales.reduce((s,r)=> s + r.qty, 0),
+    soldValue: sales.reduce((s,r)=> s + r.value, 0),
+    sales: sales.sort((a,b)=> String(a.date).localeCompare(String(b.date))) };
+}
+function consignmentMarkApply(productId, variantIdx, supplierId){
+  const plan = consignmentMarkPlan(productId, variantIdx, supplierId);
+  if(!plan.shelfQty && !plan.soldQty) return null;
+  ((data.stockLots||{})[plan.key] || []).forEach(l=>{ if(l.qty > 0 && !l.consign) l.consign = supplierId; });
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      if(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) !== plan.key) return;
+      (it._stockLots||[]).forEach(l=>{ if(!l.consign) l.consign = supplierId; });
+    });
+  });
+  const product = (data.products||[]).find(x=> x.id === productId);
+  data.stockLog.push({
+    id: allocRowId('stockLog'), key: plan.key, productId,
+    variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
+    label: product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId,
+    type: 'correction', delta: 0, qtyAfter: Number((data.stock||{})[plan.key]) || 0,
+    note: `Marked as ${plan.supplierName}'s — held on consignment`
+      + (plan.soldQty ? `, including ${plan.soldQty} already sold` : ''),
+    date: todayISO(), at: new Date().toISOString(), cost: null, supplierId: null,
+  });
+  saveData();
+  return plan;
+}
+
 /* Settling up with a consignor.
 
    What the shop owes them has been accruing sale by sale; this turns
@@ -32341,8 +32435,18 @@ function renderConsignment(){
   const f = n=> fmtUGX(Math.round(n));
   const owedTotal = consignmentOwedTotal();
 
+  /* Said before anything else, because without the column a consignment
+     cannot be KEPT: it would show here until the page reloaded and then
+     vanish, which is exactly how this shipped broken. */
+  const blocked = !stockLotConsignColumn ? `
+    <p class="buy-note" style="margin:0 0 12px;color:var(--accent);">
+      <b>This screen cannot record anything yet.</b> Consignment needs one update to your database — a place to store which supplier owns each delivery. Until it is applied, receiving on consignment is refused rather than accepted and lost. Send this to whoever manages the database, or paste it into the Supabase SQL editor:
+      <code style="display:block;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px;">alter table stock_lots add column if not exists consign text;</code>
+      It takes effect within half a minute, without reloading.</p>` : '';
+
   if(!rows.length){
-    el.innerHTML = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing is held on consignment. When a supplier leaves goods to be paid for as they sell, receive them on the Inventory screen and tick "on consignment" — no bill is raised, and what you owe will build here as they sell.</p>`;
+    el.innerHTML = blocked + `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing is held on consignment. When a supplier leaves goods to be paid for as they sell, receive them on the Inventory screen and tick "on consignment" — no bill is raised, and what you owe will build here as they sell.</p>`
+      + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
     return;
   }
 
@@ -32368,11 +32472,12 @@ function renderConsignment(){
     </div>`;
   };
 
-  el.innerHTML = `
+  el.innerHTML = blocked + `
     <p class="buy-note" style="margin:0 0 12px;">Of the money you are holding, <b>${f(owedTotal)}</b> belongs to ${
       rows.filter(r=> r.owed > 0.5).length === 1 ? 'a supplier' : 'suppliers'} — it is takings from goods that were never yours.</p>
-    ${rows.map(card).join('')}`;
+    ${rows.map(card).join('')}` + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
 
+  wireMarkAlreadyHere(el);
   el.querySelectorAll('.cons-settle').forEach(btn=> btn.addEventListener('click', async ()=>{
     const sup = btn.dataset.sup;
     const row = consignmentRows().find(r=> r.supplierId === sup);
@@ -32411,6 +32516,62 @@ function renderConsignment(){
     toast(`${taken} sent back to ${supplierName(sup)} — nothing owed on them`);
   }));
 }
+/* The door for goods that are already here.
+
+   Two uses, and the second is why it exists at all: a supplier who
+   mentions the arrangement after dropping the goods off, and the
+   repair for consignments this app lost before it had anywhere to keep
+   them. It never acts on a guess -- it says what it will change and
+   waits. */
+function markAlreadyHereHTML(){
+  const stocked = Object.keys(data.stock || {}).filter(k=> (Number(data.stock[k])||0) > 0);
+  if(!stocked.length || !(data.suppliers||[]).length) return '';
+  const opts = stocked.map(k=>{
+    const [pid, vRaw] = String(k).split('::');
+    const p = (data.products||[]).find(x=> x.id === pid);
+    if(!p) return '';
+    const vi = vRaw === undefined ? null : Number(vRaw);
+    return `<option value="${esc(k)}">${esc(productVariantLabel(p, vi))} — ${Math.round(Number(data.stock[k])||0)} on the shelf</option>`;
+  }).filter(Boolean).join('');
+  if(!opts) return '';
+  return `<div class="buy-tail"><h4>Goods already here that are a supplier's</h4>
+    <p class="dash-panel-note" style="margin:0 0 8px;">Marks stock you already hold as held on consignment — including any of it already sold, which is money you owe them.</p>
+    <div class="buy-controls">
+      <label>Item <select id="cons_mark_key" style="min-width:220px;">${opts}</select></label>
+      <label>Belongs to <select id="cons_mark_sup">${
+        (data.suppliers||[]).map(x=> `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
+      <button type="button" class="btn btn-ghost" id="cons_mark_btn">Mark as theirs</button>
+    </div></div>`;
+}
+function wireMarkAlreadyHere(el){
+  const btn = el.querySelector('#cons_mark_btn');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    const key = el.querySelector('#cons_mark_key').value;
+    const supplierId = el.querySelector('#cons_mark_sup').value;
+    const [pid, vRaw] = String(key).split('::');
+    const variantIdx = vRaw === undefined ? null : Number(vRaw);
+    const plan = consignmentMarkPlan(pid, variantIdx, supplierId);
+    if(!plan.shelfQty && !plan.soldQty){ toast('Nothing here to mark — this stock is already marked, or there is none'); return; }
+    const f = n=> fmtUGX(Math.round(n));
+    /* Every figure that will move, before it moves. The sales matter
+       most: marking them ADDS to what the shop owes, and nobody should
+       meet that number for the first time afterwards. */
+    if(!confirm(`Mark as ${plan.supplierName}'s?\n\n`
+      + `${Math.round(plan.shelfQty)} on the shelf, worth ${f(plan.shelfValue)} to them.\n`
+      + (plan.soldQty
+        ? `${Math.round(plan.soldQty)} already sold on ${plan.sales.map(x=> x.invoice).join(', ')} — that adds ${f(plan.soldValue)} to what you owe them.\n`
+        : 'None of it has sold yet, so nothing is owed.\n')
+      + `\nThis says the goods were always theirs. It does not move any money.`)) return;
+    const done = consignmentMarkApply(pid, variantIdx, supplierId);
+    if(!done){ toast('Nothing was marked'); return; }
+    renderConsignment();
+    renderInventory();
+    refreshNavBadges();
+    toast(`Marked as ${plan.supplierName}'s${plan.soldQty ? ` — ${f(plan.soldValue)} now owed on what has sold` : ''}`);
+  });
+}
+
 // On the rail: the number of suppliers waiting to be settled.
 function renderConsignBadge(){
   setNavBadge('navBadgeConsign', consignmentRows().filter(r=> r.owed > 0.5).length,
@@ -43648,12 +43809,16 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
       : `<div class="q-empty-hint" style="margin-top:14px;">No priced suppliers for this item yet — add prices in the Price Registry tab.</div>`}
 
     <label class="sq-select-all-label" style="margin-top:14px;">
-      <input type="checkbox" id="inv_purchase_consign" ${invPurchaseConsign ? 'checked' : ''}>
+      <input type="checkbox" id="inv_purchase_consign" ${invPurchaseConsign ? 'checked' : ''}${stockLotConsignColumn ? '' : ' disabled'}>
       These goods are on consignment — pay for them as they sell
     </label>
+    ${stockLotConsignColumn ? `
     <div class="q-empty-hint" id="inv_purchase_consign_note" style="margin-top:6px;${invPurchaseConsign ? '' : 'display:none;'}">
       No bill is raised now. The goods go on the shelf as ${esc(supplierLabelForConsign || 'the supplier')}'s, and what you owe grows only as they sell — you will see it on Consignment, and settle when they come round.
-    </div>
+    </div>` : `
+    <div class="q-empty-hint" style="margin-top:6px;">
+      Consignment needs one database update before it can be recorded — until it lands, a consignment ticked here would be lost the next time the page loads, so it is refused rather than taken. See the Consignment screen.
+    </div>`}
 
     <div class="q-qty-row q-qty-row-noted" style="margin-top:14px;">
       <div class="field q-qty-field">
@@ -43688,7 +43853,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
      supplier, and the supplier can change with the quantity. */
   const consignBox = document.getElementById('inv_purchase_consign');
   if(consignBox) consignBox.addEventListener('change', ()=>{
-    invPurchaseConsign = consignBox.checked;
+    invPurchaseConsign = consignBox.checked && stockLotConsignColumn;
     renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
   });
   const qtyInput = document.getElementById('inv_purchase_qty');
@@ -43762,7 +43927,18 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
        raised, because nothing is owed until something sells -- what IS
        owed is read off the sales as they happen. The lot carries whose
        goods these are so every reading downstream can tell. */
-    const onConsignment = !!(invPurchaseConsign && invPurchaseSupplierId);
+    /* The column has to exist, or the mark is written and then dropped
+       on the way to the server -- which is exactly how this shipped
+       broken once. Refusing loudly beats accepting silently. */
+    if(invPurchaseConsign && !stockLotConsignColumn){
+      toast('Consignment cannot be saved yet — the database needs one update first. See the Consignment screen.', 7000);
+      return;
+    }
+    const onConsignment = !!(invPurchaseConsign && invPurchaseSupplierId && stockLotConsignColumn);
+    if(invPurchaseConsign && !invPurchaseSupplierId){
+      toast('Choose which supplier these goods belong to before saving them as a consignment', 6000);
+      return;
+    }
     if(onConsignment) note = `Received on consignment from ${supplierName(invPurchaseSupplierId)}`
       + (price!=null ? ` — owed ${fmtUGX(price)} per ${unit||'unit'} as they sell` : '');
     applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId,

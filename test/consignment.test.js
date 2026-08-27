@@ -69,11 +69,13 @@ try {
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued',
     'consignmentSettlements', 'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
     'consignmentSoldLines', 'returnConsignedStock', 'consignedUnitCostForSale', 'sellBelowCostClause',
+    'consignmentMarkPlan', 'consignmentMarkApply', 'invoiceNumberLabel',
   ].map((n) => extractFunction(src, n, 'index.html')),
   env, ['addStockLot', 'applyStockDelta', 'consumeStockLots', 'restoreStockLots', 'inventoryValue',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
     'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
-    'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements']);
+    'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements',
+    'consignmentMarkPlan', 'consignmentMarkApply']);
 } catch (e) { err = e; }
 t.check(!!scope, `the consignment chain compiles${err ? ` (${err.message})` : ''}`);
 
@@ -225,6 +227,91 @@ if (scope) {
     'goods the shop owns are not judged by this rule — that margin is the shop\'s own business');
 }
 
+/* ---------- 7b. THE ROUND TRIP -- the case that was missed ------------ */
+/*
+ * The feature shipped with every reading correct and no way to keep the
+ * answer. stock_lots is a real table -- key, qty, cost -- and the mark
+ * was never in the row that went up nor in the mapper that came back.
+ * So a shop received goods on consignment, sold some, and saw an empty
+ * screen: the mark lived until the next page load and then the goods
+ * were the shop's own again.
+ *
+ * Pinned as a round trip rather than as source text, because that is
+ * the shape of the fault: each half looked reasonable on its own.
+ */
+{
+  const code = src;
+  // The write: what one lot becomes on the way to the server.
+  const insertLine = (code.match(/changedKeys\.forEach\(k=> \(stockLotsMap\[k\]\|\|\[\]\)\.forEach\(l=> insertRows\.push\(\{[\s\S]{0,300}?\}\)\)\);/) || [''])[0];
+  t.check(/consign: l\.consign \|\| null/.test(insertLine),
+    'the row that goes UP carries the consignor');
+  t.check(/stockLotConsignColumn \? \{consign/.test(insertLine),
+    'guarded by a probe, because one unknown column would fail the whole insert and stop the shop saving its cost lots at all');
+
+  // The read: what comes back becomes a lot again.
+  const loadBlock = (code.match(/\(stockLotsR\.data\|\|\[\]\)\.forEach\(l=>\{[\s\S]{0,400}?\}\);/) || [''])[0];
+  t.check(/if\(l\.consign\) lot\.consign = l\.consign;/.test(loadBlock),
+    'and the row that comes DOWN puts it back on the lot');
+
+  // Both halves against one lot, so a change to either is caught here.
+  const lot = { qty: 12, cost: 2250, consign: 'S2' };
+  const wire = { shop_id: 'x', key: 'P3', qty: lot.qty, cost: lot.cost, consign: lot.consign || null };
+  const backOnLoad = { qty: Number(wire.qty) || 0, cost: wire.cost == null ? null : Number(wire.cost) };
+  if (wire.consign) backOnLoad.consign = wire.consign;
+  t.check(backOnLoad.consign === 'S2' && backOnLoad.qty === 12 && backOnLoad.cost === 2250,
+    'a consigned lot survives the trip out and back — the whole feature rests on this one field');
+
+  t.check(/alter table stock_lots\s*\n\s*add column if not exists consign text;/.test(read('supabase/migrations/0080_stock_lot_consign.sql')),
+    'and the column it needs is a migration in the repo, not an assumption');
+}
+
+/* ---------- 7c. what happens before that migration lands -------------- */
+{
+  const stage = extractFunction(src, 'renderInvPurchaseStage', 'index.html');
+  t.check(/id="inv_purchase_consign" \$\{invPurchaseConsign \? 'checked' : ''\}\$\{stockLotConsignColumn \? '' : ' disabled'\}/.test(stage),
+    'without the column the consignment tick is disabled rather than offered');
+  const save = src.slice(src.indexOf('inv_purchase_save_btn'));
+  t.check(/if\(invPurchaseConsign && !stockLotConsignColumn\)\{/.test(save),
+    'and refused at the save too — a mark that cannot be kept is never taken');
+  t.check(/if\(invPurchaseConsign && !invPurchaseSupplierId\)\{/.test(save),
+    'as is a consignment with nobody to consign it to');
+  const screen = extractFunction(src, 'renderConsignment', 'index.html');
+  t.check(/This screen cannot record anything yet/.test(screen)
+    && /alter table stock_lots add column if not exists consign text;/.test(screen),
+    'and the screen says so plainly, with the exact line to run');
+}
+
+/* ---------- 7d. marking goods that are already here ------------------- */
+if (scope) {
+  data.stockLots.P9 = [{ qty: 30, cost: 3000 }];
+  data.stock.P9 = 30;
+  data.products.push({ id: 'P9', name: 'Gypsum Boards', variants: [] });
+  data.savedQuotes.push({ id: 50, invoiced: true, voided: false, invoicedAt: '2026-08-26',
+    items: [{ productId: 'P9', variantIdx: null, productName: 'Gypsum Boards', qty: 10,
+      supplierId: '__stock__', sellPrice: 4200, _stockLots: [{ qty: 10, cost: 3000 }] }] });
+
+  const plan = scope.consignmentMarkPlan('P9', null, 'S2');
+  t.check(plan.shelfQty === 30 && plan.shelfValue === 90000,
+    'the plan says what is on the shelf');
+  t.check(plan.soldQty === 10 && plan.soldValue === 30000,
+    'and what has ALREADY sold, which is money owed the moment it is marked');
+  t.check(plan.sales.length === 1 && /INV-/.test(plan.sales[0].invoice),
+    'naming the invoice it is on, so the figure can be checked before it is accepted');
+
+  const owedBefore = scope.consignmentOwedTotal();
+  scope.consignmentMarkApply('P9', null, 'S2');
+  eq(scope.consignmentOwedTotal(), owedBefore + 30000,
+    'applying it adds exactly what the plan said to what is owed');
+  t.check(data.stockLots.P9.every((l) => l.consign === 'S2'),
+    'the shelf is theirs');
+  t.check(data.savedQuotes.find((q) => q.id === 50).items[0]._stockLots[0].consign === 'S2',
+    'and so are the units already sold — the goods were always theirs, the app simply failed to write it down');
+
+  const again = scope.consignmentMarkPlan('P9', null, 'S2');
+  t.check(again.shelfQty === 0 && again.soldQty === 0,
+    'marking it twice would do nothing, so it cannot double the debt');
+}
+
 /* ---------- 8. the wiring --------------------------------------------- */
 {
   t.check(/id="tab-consignment"/.test(src) && /data-tab="consignment"/.test(src),
@@ -233,9 +320,9 @@ if (scope) {
   t.check(/if\(tab==='consignment'\) renderConsignment\(\);/.test(go), 'and redraws on entry');
 
   const save = src.slice(src.indexOf('inv_purchase_save_btn'));
-  t.check(/const onConsignment = !!\(invPurchaseConsign && invPurchaseSupplierId\);/.test(save)
+  t.check(/const onConsignment = !!\(invPurchaseConsign && invPurchaseSupplierId && stockLotConsignColumn\);/.test(save)
     && /const piId = onConsignment \? null/.test(save),
-    'receiving on consignment raises NO bill — nothing is owed until something sells');
+    'receiving on consignment raises NO bill — nothing is owed until something sells — and only when the mark can actually be kept');
   t.check(/consign: invPurchaseSupplierId/.test(save),
     'and the lot is marked as the consignor\'s');
 
