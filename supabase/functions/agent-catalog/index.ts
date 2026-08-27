@@ -61,7 +61,7 @@ function itemImage(product: any, variantIdx: number | null): string | null {
   return (v && v.image) || product?.image || null;
 }
 
-function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind): MarkupRule {
+function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind, dflt: any = null): MarkupRule {
   if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
     const v = product.variants[variantIdx];
     const vVal = Number(v[kind + "MarkupValue"]) || 0;
@@ -69,6 +69,11 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
   }
   const colVal = Number(product[kind + "_markup_value"]) || 0;
   if (colVal > 0) return { type: product[kind + "_markup_type"], value: colVal };
+  // The shop default rule (app_settings.presets.defaultMarkup), threaded in
+  // as an ARGUMENT per request -- never module state; requests interleave in
+  // one isolate. Mirrors the last step of index.html's effectiveMarkupRule.
+  const dVal = dflt ? Number(dflt[kind + "Value"]) || 0 : 0;
+  if (dVal > 0) return { type: dflt[kind + "Type"] === "fixed" ? "fixed" : "percent", value: dVal };
   return null;
 }
 
@@ -77,9 +82,9 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
 // per-unit price -- wholesale is bought and sold by the pack. Percent
 // markups don't need this (they scale identically either way). Mirrors
 // index.html's own suggestedSellingPrice() exactly.
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0): number | null {
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0, dflt: any = null): number | null {
   if (basePrice == null) return null;
-  const rule = effectiveMarkupRule(product, variantIdx, kind);
+  const rule = effectiveMarkupRule(product, variantIdx, kind, dflt);
   if (!rule) return null;
   if (rule.type === "fixed") {
     const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
@@ -143,7 +148,7 @@ function pickBestPriceRow(rows: any[]): any | null {
 // quite different amounts, and there was no way to read that off the
 // setting. As a share of margin, 40% means the same thing on every
 // product: we keep 60% of what we would have made.
-function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
+function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number, dflt: any = null) {
   if (!priceRow) return null;
   const packQty = Number(priceRow.pack_qty) || 0;
   const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
@@ -154,9 +159,10 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   // has one, for this same quantity.
   const costNum = tieredUnitPrice(priceRow, qty, tier);
   if (costNum == null) return null;
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty, dflt) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
-  // A product with no markup rule has ourPrice == costNum above, so its
+  // A product with no markup rule ANYWHERE -- variant, product, or the shop
+  // default handed in as dflt -- has ourPrice == costNum above, so its
   // margin is zero and no discount can find anything to give away -- the
   // agent pays cost. That is correct rather than a gap: a shop that has
   // not said what it makes on an item has not said what it can afford to
@@ -205,7 +211,7 @@ function effectiveTiers(row: any): { minQty: number; price: number }[] {
 // price curve at once (so an agent can see what a bigger order would
 // cost before typing it) without exposing anything beyond what a single
 // "price" call already exposes for one quantity at a time.
-function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct: number, discountRetailPct: number) {
+function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct: number, discountRetailPct: number, dflt: any = null) {
   // qty 1 is always a rung, even when no tier starts there.
   //
   // A row whose breakpoints begin above 1 (say tiers at 10 and 50) charges
@@ -230,7 +236,7 @@ function buildFloorPriceLadder(product: any, priceRow: any, discountWholesalePct
     new Set<number>([1, ...effectiveTiers(priceRow).map((t) => Number(t.minQty))]),
   ).filter((q) => q > 0).sort((a, b) => a - b);
   return minQtys.map((minQty) => {
-    const resolved = computeFloorPrice(product, priceRow, minQty, discountWholesalePct, discountRetailPct);
+    const resolved = computeFloorPrice(product, priceRow, minQty, discountWholesalePct, discountRetailPct, dflt);
     return resolved ? { minQty, unitPrice: resolved.floorPrice, tier: resolved.tier } : null;
   }).filter((x): x is { minQty: number; unitPrice: number; tier: MarkupKind } => x != null);
 }
@@ -298,6 +304,10 @@ Deno.serve(async (req) => {
         .from("app_settings").select("presets").eq("shop_id", shopId).maybeSingle();
       if (settingsErr) return json({ error: settingsErr.message, stage: "settings_lookup" }, 500);
       const presets = settingsRow?.presets || {};
+      // The shop default price rule, from the same presets blob the agent
+      // discounts already ride in. Threaded into every pricing call below;
+      // a product's own rule always wins inside effectiveMarkupRule.
+      const defaultMarkup = presets.defaultMarkup || null;
 
       if (action === "price") {
         const { productId, variantIdx, qty } = body;
@@ -321,14 +331,14 @@ Deno.serve(async (req) => {
         const best = pickBestPriceRow(priceRows || []);
         if (!best) return json({ ok: true, available: false });
         const { discountWholesalePct, discountRetailPct } = resolveDiscountPcts(product, presets);
-        const result = computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct);
+        const result = computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct, defaultMarkup);
         if (!result) return json({ ok: true, available: false });
         const { cost, ...safeResult } = result; // cost never leaves this function
         // The full breakpoint ladder travels alongside the single resolved
         // price for the requested qty -- the app fetches this once when an
         // item's detail panel opens, then resolves every further qty/unit
         // change against it locally instead of calling this action again.
-        const tiers = buildFloorPriceLadder(product, best, discountWholesalePct, discountRetailPct);
+        const tiers = buildFloorPriceLadder(product, best, discountWholesalePct, discountRetailPct, defaultMarkup);
         return json({ ok: true, available: true, ...safeResult, tiers });
       }
 
@@ -357,7 +367,7 @@ Deno.serve(async (req) => {
         return variantIdxs.map((variantIdx) => {
           const key = `${p.id}::${variantIdx == null ? "" : variantIdx}`;
           const best = pickBestPriceRow(rowsByProduct.get(key) || []);
-          let priced = best ? computeFloorPrice(p, best, 1, discountWholesalePct, discountRetailPct) : null;
+          let priced = best ? computeFloorPrice(p, best, 1, discountWholesalePct, discountRetailPct, defaultMarkup) : null;
           // A price entry with only a wholesale figure (no retail) fails
           // the qty=1 probe above and would otherwise vanish from Browse
           // entirely, even though it's a real, orderable item -- retry at
@@ -367,7 +377,7 @@ Deno.serve(async (req) => {
           // quantity, so a genuinely small order still correctly gets
           // rejected at submit time if no retail price exists.
           if (!priced && best && Number(best.pack_qty) > 0) {
-            priced = computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct);
+            priced = computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct, defaultMarkup);
           }
           // The single cheapest breakpoint this item has, only when it
           // actually beats the headline price above -- lets Browse tease
@@ -377,7 +387,7 @@ Deno.serve(async (req) => {
           // once, only for the one item an agent has actually opened).
           let bestTierMinQty: number | null = null, bestTierPrice: number | null = null;
           if (best) {
-            const ladder = buildFloorPriceLadder(p, best, discountWholesalePct, discountRetailPct);
+            const ladder = buildFloorPriceLadder(p, best, discountWholesalePct, discountRetailPct, defaultMarkup);
             if (ladder.length > 1) {
               const cheapest = ladder.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a));
               if (priced && cheapest.unitPrice < priced.floorPrice) {

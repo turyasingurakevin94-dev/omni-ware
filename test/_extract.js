@@ -113,8 +113,10 @@ function stripTypes(src) {
   // the brace that opens the body, and only the head sees it.
   const bodyStart = /\)[^\n]*\{[ \t]*\r?\n/.exec(src);
   const cut = bodyStart ? bodyStart.index + bodyStart[0].length : src.length;
+  // The lookahead also stops at `=`, so a typed parameter WITH a default
+  // (`dflt: any = null`) loses its annotation and keeps its default.
   const head = src.slice(0, cut)
-    .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)])/g, '$1$2');
+    .replace(/([(,]\s*)([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$<>\[\]|.\s]*?(?=\s*[,)=])/g, '$1$2');
 
   return (head + src.slice(cut))
     // Return annotation. Anchored to the brace that ends the line rather

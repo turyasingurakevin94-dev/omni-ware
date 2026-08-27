@@ -56,7 +56,7 @@ function orderFingerprint(agentClientId: any, items: any): string {
 type MarkupKind = "wholesale" | "retail";
 type MarkupRule = { type: string; value: number } | null;
 
-function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind): MarkupRule {
+function effectiveMarkupRule(product: any, variantIdx: number | null, kind: MarkupKind, dflt: any = null): MarkupRule {
   if (variantIdx != null && Array.isArray(product.variants) && product.variants[variantIdx]) {
     const v = product.variants[variantIdx];
     const vVal = Number(v[kind + "MarkupValue"]) || 0;
@@ -64,6 +64,11 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
   }
   const colVal = Number(product[kind + "_markup_value"]) || 0;
   if (colVal > 0) return { type: product[kind + "_markup_type"], value: colVal };
+  // The shop default rule (app_settings.presets.defaultMarkup), threaded in
+  // as an ARGUMENT per request -- never module state; requests interleave in
+  // one isolate. Mirrors the last step of index.html's effectiveMarkupRule.
+  const dVal = dflt ? Number(dflt[kind + "Value"]) || 0 : 0;
+  if (dVal > 0) return { type: dflt[kind + "Type"] === "fixed" ? "fixed" : "percent", value: dVal };
   return null;
 }
 
@@ -72,9 +77,9 @@ function effectiveMarkupRule(product: any, variantIdx: number | null, kind: Mark
 // per-unit price -- wholesale is bought and sold by the pack. Percent
 // markups don't need this (they scale identically either way). Mirrors
 // index.html's own suggestedSellingPrice() exactly.
-function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0): number | null {
+function suggestedSellingPrice(product: any, basePrice: number | null, kind: MarkupKind, variantIdx: number | null, packQty = 0, dflt: any = null): number | null {
   if (basePrice == null) return null;
-  const rule = effectiveMarkupRule(product, variantIdx, kind);
+  const rule = effectiveMarkupRule(product, variantIdx, kind, dflt);
   if (!rule) return null;
   if (rule.type === "fixed") {
     const fixedPerUnit = (kind === "wholesale" && packQty > 0) ? rule.value / packQty : rule.value;
@@ -127,7 +132,7 @@ function pickBestPriceRow(rows: any[]): any | null {
 //
 // This is the copy that CHARGES, so it is the one that has to agree with
 // the shown figure; tier-pricing-parity compares the two line by line.
-function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number) {
+function computeFloorPrice(product: any, priceRow: any, qty: number, discountWholesalePct: number, discountRetailPct: number, dflt: any = null) {
   if (!priceRow) return null;
   const packQty = Number(priceRow.pack_qty) || 0;
   const tier: MarkupKind = packQty > 0 && qty >= packQty ? "wholesale" : "retail";
@@ -138,9 +143,10 @@ function computeFloorPrice(product: any, priceRow: any, qty: number, discountWho
   // has one, for this same quantity.
   const costNum = tieredUnitPrice(priceRow, qty, tier);
   if (costNum == null) return null;
-  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty) ?? costNum;
+  const ourPrice = suggestedSellingPrice(product, costNum, tier, variantIdx, packQty, dflt) ?? costNum;
   const discountPct = tier === "wholesale" ? discountWholesalePct : discountRetailPct;
-  // A product with no markup rule has ourPrice == costNum above, so its
+  // A product with no markup rule ANYWHERE -- variant, product, or the shop
+  // default handed in as dflt -- has ourPrice == costNum above, so its
   // margin is zero and no discount can find anything to give away -- the
   // agent pays cost.
   const margin = ourPrice - costNum;
@@ -268,6 +274,10 @@ Deno.serve(async (req) => {
     }
     if (!client || client.agent_id !== agentId) return json({ error: "That client doesn't belong to this agent" }, 403);
     const presets = settingsRow?.presets || {};
+    // The shop default price rule, from the same presets blob the agent
+    // discounts ride in. This is the copy that CHARGES, so it must read
+    // the same default the catalog showed.
+    const defaultMarkup = presets.defaultMarkup || null;
 
     // A submit that lands server-side while the agent's connection drops
     // looks like a failure to them: agent.html re-enables its button in a
@@ -356,7 +366,7 @@ Deno.serve(async (req) => {
       const best = pickBestPriceRow(rowsForItem);
       if (!best) return json({ error: `No supplier price on file for ${product.name}` }, 409);
       const { discountWholesalePct, discountRetailPct } = resolveDiscountPcts(product, presets);
-      const priced = computeFloorPrice(product, best, Number(it.qty), discountWholesalePct, discountRetailPct);
+      const priced = computeFloorPrice(product, best, Number(it.qty), discountWholesalePct, discountRetailPct, defaultMarkup);
       if (!priced) return json({ error: `Could not price ${product.name}` }, 409);
 
       const key = `${product.id}::${variantIdx == null ? "" : variantIdx}`;

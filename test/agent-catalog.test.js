@@ -82,7 +82,30 @@ const code = strip(src);
     // qty 1 is always a rung -- the bug that let an order of 5 be shown the
     // qty-12 volume price while submit charged the flat one.
     t.check(ladder[0].minQty === 1, `the ladder starts at qty 1 (${ladder[0].minQty})`);
+
+    // The shop default rule, as the optional LAST argument (older callers
+    // and fixtures pass nothing and get the old behavior byte for byte).
+    const bare = { name: 'No rule Nails' };
+    const withDflt = fns.computeFloorPrice(bare, priceRow, 1, 0, 0, { retailType: 'percent', retailValue: 20 });
+    t.check(!!withDflt && withDflt.ourPrice === 1440 && withDflt.floorPrice === 1440,
+      `a ruleless product carries the shop default margin (got ${JSON.stringify(withDflt)})`);
+    const noDflt = fns.computeFloorPrice(bare, priceRow, 1, 0, 0);
+    t.check(noDflt.ourPrice === noDflt.cost,
+      'and with no default handed in, a ruleless product still floors at cost');
   }
+
+  /* The plumbing, pinned: the default is read once from the same presets
+     blob the agent discounts ride in, and passes into EVERY pricing call
+     -- the price action, both list probes, and both ladders. A call that
+     forgets it would quietly show the old cost-floor for ruleless items. */
+  t.check(/const defaultMarkup = presets\.defaultMarkup \|\| null;/.test(code),
+    'the default is derived where the presets land');
+  t.check(code.includes('computeFloorPrice(product, best, Number(qty), discountWholesalePct, discountRetailPct, defaultMarkup)')
+    && code.includes('computeFloorPrice(p, best, 1, discountWholesalePct, discountRetailPct, defaultMarkup)')
+    && code.includes('computeFloorPrice(p, best, Number(best.pack_qty), discountWholesalePct, discountRetailPct, defaultMarkup)')
+    && code.includes('buildFloorPriceLadder(product, best, discountWholesalePct, discountRetailPct, defaultMarkup)')
+    && code.includes('buildFloorPriceLadder(p, best, discountWholesalePct, discountRetailPct, defaultMarkup)'),
+    'and threaded into every pricing call — price, both list probes, both ladders');
 }
 
 /* ---------- 3. the list response is an explicit whitelist ------------- */

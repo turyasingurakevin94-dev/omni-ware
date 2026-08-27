@@ -155,6 +155,47 @@ const row = { wholesale: 1000, retail: 1200, pack_qty: 12, unit: 'pc', pack_unit
     `agent-catalog and agent-submit-order price identically (${compared} combinations${first ? `, first difference ${first}` : ''})`);
 }
 
+/* ---------- 4b. the shop default rule reaches the agents app ---------- */
+/*
+ * The admin app's shop-wide default (app_settings.presets.defaultMarkup)
+ * is threaded into both copies as an ARGUMENT — never module state;
+ * requests interleave in one isolate. A ruleless product carries the
+ * shop's margin again, a product's own rule still wins, and the floor
+ * still never goes below cost.
+ */
+{
+  const dflt = { retailType: 'percent', retailValue: 20, wholesaleType: 'fixed', wholesaleValue: 6000 };
+  const bare = { name: 'nothing set' };
+
+  const d1 = shown.computeFloorPrice(bare, row, 1, 0, 0, dflt);
+  eq(d1.ourPrice, 1440, 'a ruleless product now carries the default margin (1200 + 20%)');
+  eq(d1.floorPrice, 1440, 'and at 0% discount the agent pays the full default price');
+  const d2 = shown.computeFloorPrice(bare, row, 1, 0, 50, dflt);
+  eq(d2.floorPrice, 1320, 'a 50% share hands over half of the DEFAULT margin');
+  const dw = shown.computeFloorPrice(bare, row, 12, 0, 0, dflt);
+  eq(dw.floorPrice, 1500, 'a fixed wholesale default spreads across the pack (1000 + 6000/12)');
+
+  const own = shown.computeFloorPrice(product, row, 1, 0, 0, dflt);
+  const ownNo = shown.computeFloorPrice(product, row, 1, 0, 0);
+  eq(own.floorPrice, ownNo.floorPrice, 'a product\'s own rule wins — the default changes nothing for it');
+
+  const clamped = shown.computeFloorPrice(bare, row, 1, 0, 150, dflt);
+  eq(clamped.floorPrice, clamped.cost, 'and the never-below-cost clamp holds under the default too');
+
+  let dMismatches = 0, dCompared = 0;
+  [0, 40, 100].forEach((pct) => [1, 5, 12, 60].forEach((qty) => {
+    const a = shown.computeFloorPrice(bare, row, qty, pct, pct, dflt);
+    const b = charged.computeFloorPrice(bare, row, qty, pct, pct, dflt);
+    dCompared++;
+    if (a.floorPrice !== b.floorPrice) dMismatches++;
+  }));
+  t.check(dCompared === 12 && dMismatches === 0,
+    'the shown default price and the charged default price agree in every combination');
+  t.check(read('supabase/functions/agent-submit-order/index.ts')
+    .includes('computeFloorPrice(product, best, Number(it.qty), discountWholesalePct, discountRetailPct, defaultMarkup)'),
+    'and the charging call site actually passes the default — shown and charged read the same book');
+}
+
 /* ---------- 5. what is on file is held to a real share ---------------- */
 {
   const presets = { agentDiscountWholesalePct: 40, agentDiscountRetailPct: 30 };
