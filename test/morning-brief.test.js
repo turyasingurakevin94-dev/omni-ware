@@ -117,6 +117,16 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
     SQ_STATUSES: { preparing: { label: 'Preparing' }, completed: { label: 'Completed' } },
   };
   const scope = compileScope([
+  /* Payables now include consignment that has sold and not been
+     settled -- money owed with no bill yet. The chain comes along so
+     the figure is the real one; a fixture holding nothing on
+     consignment simply reads zero. */
+  extractFunction(src, 'consignmentHeld', 'index.html'),
+  extractFunction(src, 'consignmentAccrued', 'index.html'),
+  extractFunction(src, 'consignmentSettlements', 'index.html'),
+  extractFunction(src, 'consignmentSettled', 'index.html'),
+  extractFunction(src, 'consignmentRows', 'index.html'),
+  extractFunction(src, 'consignmentOwedTotal', 'index.html'),
     extractFunction(src, 'orderStageOverdue', 'index.html'),
     extractFunction(src, 'cashIsMoneyIn', 'index.html'),
     extractFunction(src, 'cashIsDebtCollection', 'index.html'),

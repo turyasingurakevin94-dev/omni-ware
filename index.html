@@ -7298,6 +7298,11 @@
         <!-- Named for what they answer, not for the table they draw. The
              old names are kept as search keywords so the word an
              accountant would type still finds them. -->
+        <button data-tab="consignment" title="Consignment — goods held for a supplier" data-keywords="consigned consign sale or return goods held not ours owed supplier drawer">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+          <span class="nav-label">Consignment</span>
+          <b class="nav-badge" id="navBadgeConsign" hidden></b>
+        </button>
         <button data-tab="chase" title="Chase debts" data-keywords="collect chasing remind overdue late payment demand follow money owed">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"/><path d="M7 8l-3 3 3 3"/><path d="M14 15h5"/><path d="M14 19h7"/></svg>
           <span class="nav-label">Chase debts</span>
@@ -7848,6 +7853,18 @@
     <!-- CREDITORS LIST -->
     <!-- CHASE DEBTS. The Debtors list says who owes; this says who to
          ask today and hands over the words. Nothing sends itself. -->
+    <!-- CONSIGNMENT. Goods the shop holds but does not own, and the part
+         of the takings that belongs to whoever left them. -->
+    <section id="tab-consignment" style="display:none;">
+      <div class="page-head">
+        <h1>Consignment</h1>
+        <p>Goods a supplier has left with you to sell and be paid for as they sell. They sit on your shelf and can be sold like anything else — but they are not yours, so they are not counted in what your stock is worth, and the moment one sells, part of the money in the drawer belongs to whoever left it. That running figure is what this screen exists for. Settling raises an ordinary supplier bill for what has sold, which you then pay the usual way; unsold goods can go back at any time, owing nothing.</p>
+      </div>
+      <div class="panel">
+        <div id="consign_body"></div>
+      </div>
+    </section>
+
     <section id="tab-chase" style="display:none;">
       <div class="page-head">
         <h1>Chase debts</h1>
@@ -12497,7 +12514,8 @@ function buildSyncRows(d, shopId){
       // balance, so a marker lost on the round trip would let the next
       // save of that supplier double what the shop believes it owes.
       payload:{customerName:pi.customerName, supplierId:pi.supplierId, supplierName:pi.supplierName, items:pi.items, amountPaid:pi.amountPaid, payments:pi.payments, voided:pi.voided,
-        ...(pi.openingBalance ? {openingBalance:true} : {})}
+        ...(pi.openingBalance ? {openingBalance:true} : {}),
+        ...(pi.consignSettlement ? {consignSettlement:true} : {})}
     })),
     supplierCommissions: d.supplierCommissions.map(c=>({
       id:c.id, shop_id:shopId, supplier_id:c.supplierId, period:c.period, amount:c.amount, notes:c.notes||null
@@ -15899,6 +15917,7 @@ function goToTab(tab){
   if(tab==='sourcing') renderSourcing();
   if(tab==='buying') renderPurchasePlanPanel();
   if(tab==='chase') renderChaseScreen();
+  if(tab==='consignment') renderConsignment();
   if(tab==='prices-watch') renderPriceWatch();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
@@ -19901,9 +19920,29 @@ function quoteItemSellPrice(it){
    A bare clause rather than a finished sentence, because the item picker
    has its own warning to deliver at the same moment and two toasts in a
    row means the second one wins and the first is never read. */
+/* What the next units off this shelf will cost the shop. For ordinary
+   stock that is money already spent, so a low price is a thin margin;
+   for CONSIGNED stock it is money that will have to be handed over, so
+   a low price is a straight loss on somebody else's goods. Only the
+   consigned case is read here, because it is the one a shelf line
+   cannot otherwise see -- `it.price` is zero on a sale from stock. */
+function consignedUnitCostForSale(it){
+  if(!it || !it.productId) return null;
+  const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
+  const lot = ((data.stockLots||{})[key] || []).find(l=> l.qty > 0);
+  return (lot && lot.consign && lot.cost != null) ? Number(lot.cost) : null;
+}
 function sellBelowCostClause(it){
   if(!it || it.sellPrice==null || it.sellPrice==='') return '';
   const sell = Number(it.sellPrice)||0;
+  const consigned = consignedUnitCostForSale(it);
+  if(consigned != null && sell < consigned){
+    const each = consigned - sell;
+    const qty = Number(it.qty)||0;
+    const unit = it.unit ? ` per ${String(it.unit).toLowerCase()}` : ' each';
+    return `${fmtUGX(sell)} is below the ${fmtUGX(consigned)} you will owe on these consigned goods:`
+      + ` ${fmtUGX(each)} out of your own pocket${unit}${qty>1 ? `, ${fmtUGX(each*qty)} over ${qty}` : ''}`;
+  }
   const buy = Number(it.price)||0;
   if(!(sell < buy)) return '';
   const each = buy - sell;
@@ -25327,6 +25366,96 @@ async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayN
     voided: false
   });
   return id;
+}
+
+/* Settling up with a consignor.
+
+   What the shop owes them has been accruing sale by sale; this turns
+   that reading into an ordinary supplier bill, itemised by what
+   actually sold. From here it behaves like every other bill -- it shows
+   in Purchase invoices, in Who you owe, in the payables, and is paid by
+   the usual door -- so there is no second place to reconcile and
+   nothing new to learn. The flag is what stops it being double-counted:
+   the accrual reads sales, this reads settlements, and owed is the
+   difference between them. */
+function consignmentSoldLines(supplierId){
+  const byKey = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    (q.items||[]).forEach(it=>{
+      (it._stockLots||[]).forEach(l=>{
+        if(l.consign !== supplierId) return;
+        const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) + '|' + (l.cost||0);
+        const rec = byKey.get(key) || { productId: it.productId,
+          variantIdx: it.variantIdx==null?null:it.variantIdx,
+          productName: it.productName || it.name || '', unit: it.unit || '',
+          packUnit: '', packQty: 0, qty: 0, price: Number(l.cost)||0 };
+        rec.qty += Number(l.qty)||0;
+        byKey.set(key, rec);
+      });
+    });
+  });
+  return [...byKey.values()];
+}
+async function settleConsignment(supplierId){
+  const row = consignmentRows().find(r=> r.supplierId === supplierId);
+  if(!row || !(row.owed > 0.5)) return null;
+  const lines = consignmentSoldLines(supplierId);
+  if(!lines.length) return null;
+  /* Everything sold to date goes on the bill, and everything settled
+     before is netted off as one line rather than left out -- so the bill
+     totals exactly what is owed today and still shows the goods behind
+     it. A shop that settles monthly should be able to read the paper. */
+  const settledBefore = row.settled;
+  const items = lines.slice();
+  if(settledBefore > 0.5) items.push({ productId: null, variantIdx: null,
+    productName: 'Less: already settled', unit: '', packUnit: '', packQty: 0,
+    qty: 1, price: -Math.round(settledBefore) });
+  const id = await issueRowId('purchaseInvoice');
+  data.purchaseInvoices.push({
+    id, quoteId: null, customerName: '',
+    supplierId, supplierName: supplierName(supplierId),
+    date: todayISO(),
+    items,
+    amountPaid: 0, payments: [], voided: false,
+    consignSettlement: true,
+  });
+  saveData();
+  return id;
+}
+
+/* Sending unsold goods back.
+
+   The units leave the shelf and nothing is owed for them -- they were
+   never bought. Taken from the CONSIGNED lots specifically rather than
+   the front of the queue, or a return would eat the shop's own stock
+   and leave the consignor's on the shelf. */
+function returnConsignedStock(productId, variantIdx, supplierId, qty){
+  const want = Math.max(0, Number(qty)||0);
+  if(!want) return 0;
+  const key = stockKey(productId, variantIdx);
+  const lots = (data.stockLots || {})[key] || [];
+  let left = want, taken = 0;
+  lots.forEach(lot=>{
+    if(left <= 0 || lot.consign !== supplierId) return;
+    const take = Math.min(lot.qty, left);
+    lot.qty -= take; left -= take; taken += take;
+  });
+  if(!taken) return 0;
+  data.stockLots[key] = lots.filter(l=> l.qty > 0);
+  const before = Number(data.stock[key]) || 0;
+  data.stock[key] = Math.max(0, before - taken);
+  const product = (data.products||[]).find(x=> x.id === productId);
+  data.stockLog.push({
+    id: allocRowId('stockLog'), key, productId,
+    variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
+    label: product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId,
+    type: 'correction', delta: -taken, qtyAfter: data.stock[key],
+    note: `Returned unsold to ${supplierName(supplierId)} — held on consignment, nothing owed`,
+    date: todayISO(), at: new Date().toISOString(), cost: null, supplierId: null,
+  });
+  saveData();
+  return taken;
 }
 
 const PI_SORT_STATE = {key:'date', dir:-1};
@@ -32202,6 +32331,92 @@ function renderDebtorsPosition(){
   }));
 }
 
+/* The consignment screen: one card per consignor, and the one sentence
+   the owner asked for at the top -- how much of the money in the drawer
+   is not theirs. */
+function renderConsignment(){
+  const el = document.getElementById('consign_body');
+  if(!el) return;
+  const rows = consignmentRows();
+  const f = n=> fmtUGX(Math.round(n));
+  const owedTotal = consignmentOwedTotal();
+
+  if(!rows.length){
+    el.innerHTML = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing is held on consignment. When a supplier leaves goods to be paid for as they sell, receive them on the Inventory screen and tick "on consignment" — no bill is raised, and what you owe will build here as they sell.</p>`;
+    return;
+  }
+
+  const card = (r)=> {
+    const held = consignmentHeldLines(r.supplierId);
+    return `<div class="chase-row" data-id="${esc(r.supplierId)}">
+      <div class="chase-head"><b>${esc(r.name)}</b>
+        <span class="chase-amt">${f(Math.max(0, r.owed))}</span></div>
+      <div class="chase-sub">${r.heldQty > 0
+        ? `holding <b>${Math.round(r.heldQty)}</b> of theirs across ${r.lines} line${r.lines===1?'':'s'}, worth ${f(r.heldValue)} to them`
+        : 'nothing of theirs left on the shelf'} · sold <b>${Math.round(r.soldQty)}</b> so far${
+        r.settled > 0.5 ? ` · ${f(r.settled)} settled` : ''}</div>
+      ${held.length ? `<div class="buy-tail"><h4>On the shelf</h4>${held.map((h,i)=>`
+        <div class="buy-row"><div class="buy-main"><b>${esc(h.name)}</b>
+          <em>${Math.round(h.qty)} left · you owe ${f(h.cost)} each as they sell</em></div>
+          <button type="button" class="btn btn-ghost cons-return" data-sup="${esc(r.supplierId)}" data-i="${i}">Send back</button>
+        </div>`).join('')}</div>` : ''}
+      <div class="chase-acts">
+        ${r.owed > 0.5
+          ? `<button type="button" class="btn btn-accent cons-settle" data-sup="${esc(r.supplierId)}">Settle ${f(r.owed)}</button>`
+          : '<span class="chase-none">nothing owed right now</span>'}
+      </div>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <p class="buy-note" style="margin:0 0 12px;">Of the money you are holding, <b>${f(owedTotal)}</b> belongs to ${
+      rows.filter(r=> r.owed > 0.5).length === 1 ? 'a supplier' : 'suppliers'} — it is takings from goods that were never yours.</p>
+    ${rows.map(card).join('')}`;
+
+  el.querySelectorAll('.cons-settle').forEach(btn=> btn.addEventListener('click', async ()=>{
+    const sup = btn.dataset.sup;
+    const row = consignmentRows().find(r=> r.supplierId === sup);
+    if(!row) return;
+    /* Money, so it is asked for plainly first -- and the wording says
+       what this does NOT do. Settling raises the bill; paying it is the
+       same door as every other supplier bill. */
+    if(!confirm(`Settle with ${row.name}?\n\n`
+      + `This raises a supplier bill for ${f(row.owed)} — what their goods have sold for so far`
+      + `${row.settled > 0.5 ? ', less what you have already settled' : ''}.\n\n`
+      + `It does not pay them. The bill appears under Purchase invoices and Who you owe, and you pay it the usual way.`)) return;
+    const id = await settleConsignment(sup);
+    if(id == null){ toast('Nothing to settle'); return; }
+    renderConsignment();
+    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    refreshNavBadges();
+    toast(`Bill raised for ${row.name} — pay it from Purchase invoices`);
+  }));
+
+  el.querySelectorAll('.cons-return').forEach(btn=> btn.addEventListener('click', async ()=>{
+    const sup = btn.dataset.sup;
+    const line = consignmentHeldLines(sup)[Number(btn.dataset.i)];
+    if(!line) return;
+    const raw = prompt(`Send back to ${supplierName(sup)}\n\n`
+      + `${line.name} — ${Math.round(line.qty)} of theirs on the shelf.\n`
+      + `How many are going back? Nothing is owed on returned goods.`,
+      String(Math.round(line.qty)));
+    if(raw == null) return;
+    const qty = Math.min(line.qty, Number(raw) || 0);
+    if(!(qty > 0)){ toast('Nothing was sent back'); return; }
+    const taken = returnConsignedStock(line.productId, line.variantIdx, sup, qty);
+    if(!taken){ toast('Nothing was sent back'); return; }
+    renderConsignment();
+    renderInventory();
+    refreshNavBadges();
+    toast(`${taken} sent back to ${supplierName(sup)} — nothing owed on them`);
+  }));
+}
+// On the rail: the number of suppliers waiting to be settled.
+function renderConsignBadge(){
+  setNavBadge('navBadgeConsign', consignmentRows().filter(r=> r.owed > 0.5).length,
+    'consignor(s) to settle');
+}
+
 /* The chase queue on screen. Each row carries the message in a box the
    owner can edit before taking it -- their words, their thumb. */
 function renderChaseScreen(){
@@ -36531,12 +36746,20 @@ function getStockQty(productId, variantIdx){ return Number(data.stock[stockKey(p
 // reflects the oldest unsold units first, the way FIFO costing works when
 // the same item has been bought from different suppliers or at different
 // prices over time.
-function addStockLot(productId, variantIdx, qty, cost){
+/* `consign` is the supplier who still OWNS these units: goods handed
+   over to be sold, paid for as they sell. It rides on the lot because a
+   lot is a delivery, and a delivery is either bought or consigned --
+   never half of each. Everything downstream falls out of that: the sale
+   already records which lots it consumed, so what is owed is a reading
+   of sales that have happened, not a second ledger to keep in step. */
+function addStockLot(productId, variantIdx, qty, cost, consign){
   if(qty<=0) return;
   if(!data.stockLots) data.stockLots = {};
   const key = stockKey(productId, variantIdx);
   if(!data.stockLots[key]) data.stockLots[key] = [];
-  data.stockLots[key].push({qty, cost: (cost==null || cost==='' || isNaN(cost)) ? null : Number(cost)});
+  const lot = {qty, cost: (cost==null || cost==='' || isNaN(cost)) ? null : Number(cost)};
+  if(consign) lot.consign = consign;
+  data.stockLots[key].push(lot);
 }
 // Returns the lots it actually took, oldest first, so a reversal can put
 // those same units back at those same costs. Without that record the only
@@ -36551,7 +36774,13 @@ function consumeStockLots(productId, variantIdx, qty){
   while(remaining>0 && lots.length>0){
     const lot = lots[0];
     const take = Math.min(lot.qty, remaining);
-    taken.push({qty: take, cost: lot.cost});
+    /* Whose units these were travels with them onto the invoice line.
+       That is what makes "owed to the consignor" a reading of the sales
+       that happened rather than a running total somebody has to
+       maintain -- and it is what a reversal needs to put back. */
+    const t = {qty: take, cost: lot.cost};
+    if(lot.consign) t.consign = lot.consign;
+    taken.push(t);
     lot.qty -= take;
     remaining -= take;
     if(lot.qty<=0) lots.shift();
@@ -36568,7 +36797,14 @@ function restoreStockLots(productId, variantIdx, lots){
   if(!data.stockLots) data.stockLots = {};
   const key = stockKey(productId, variantIdx);
   const clean = lots
-    .map(l=>({qty: Number(l && l.qty)||0, cost: (l && l.cost!=null && !isNaN(l.cost)) ? Number(l.cost) : null}))
+    .map(l=>{
+      const c = {qty: Number(l && l.qty)||0, cost: (l && l.cost!=null && !isNaN(l.cost)) ? Number(l.cost) : null};
+      // Rebuilt field by field, so the consignor has to be carried
+      // ACROSS deliberately: dropping it here would hand the shop
+      // somebody else's goods every time a sale was un-invoiced.
+      if(l && l.consign) c.consign = l.consign;
+      return c;
+    })
     .filter(l=>l.qty>0);
   if(!clean.length) return false;
   data.stockLots[key] = clean.concat(data.stockLots[key] || []);
@@ -36592,6 +36828,8 @@ function getFIFOUnitCost(productId, variantIdx){
 //                        can remember them against whatever caused it
 //   restoreLots       -- an increase puts those exact lots back instead of
 //                        pushing a fresh one
+//   consign           -- an increase marks the new lot as belonging to
+//                        that supplier until it is sold and settled
 // Omitting both keeps the original behaviour, which is what a plain
 // restock or a stock-count correction wants.
 function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplierId, opts){
@@ -36606,7 +36844,7 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
     // and must still fall back to adding a plain lot rather than silently
     // returning stock with no lot behind it at all.
     if(!(opts && restoreStockLots(productId, variantIdx, opts.restoreLots))){
-      addStockLot(productId, variantIdx, actualChange, cost);
+      addStockLot(productId, variantIdx, actualChange, cost, opts && opts.consign);
     }
   } else if(actualChange<0){
     const taken = consumeStockLots(productId, variantIdx, -actualChange);
@@ -43109,6 +43347,7 @@ function invRenderList(query){
 }
 function invShowSearchView(){
   invProductId = null; invVariantIdx = null; invPresetAction = null; invPurchaseSupplierId = null;
+  invPurchaseConsign = false;
   invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
   document.getElementById('invModalTitle').textContent = 'Adjust stock';
   document.getElementById('inv_stage_view').style.display = 'none';
@@ -43140,6 +43379,7 @@ function invSelectProduct(id, variantIdx=null, action=null, preset=null){
   invVariantIdx = variantIdx==null ? null : Number(variantIdx);
   invPresetAction = action;
   invPurchaseSupplierId = null;
+  invPurchaseConsign = false;
   invPurchaseQtyRaw = ''; invPurchaseQtyUnitMode = 'unit'; invPurchasePriceUnitMode = 'unit';
   // After the resets, or they would wipe it. Quantity is always in
   // loose units: that is what the plan counts in.
@@ -43340,8 +43580,10 @@ function invPurchasePriceNote(rawPrice, unit, packQty){
 // breakpoint) as horizontal cards, then quantity + price-purchased-at
 // fields underneath. The best card's price auto-fills "Price purchased
 // at", which stays a normal editable field either way.
+let invPurchaseConsign = false;
 function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn){
   const allRows = productPriceRows(invProductId, variantIdx).filter(r=>!r.outOfStock);
+  const supplierLabelForConsign = invPurchaseSupplierId ? supplierName(invPurchaseSupplierId) : '';
 
   // A typed "3" means something different depending on whether it's 3
   // loose units or 3 packs, and that depends on units-per-pack -- which
@@ -43405,6 +43647,14 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
          <div class="q-supplier-cards-h">${cardsHtml}</div>`
       : `<div class="q-empty-hint" style="margin-top:14px;">No priced suppliers for this item yet — add prices in the Price Registry tab.</div>`}
 
+    <label class="sq-select-all-label" style="margin-top:14px;">
+      <input type="checkbox" id="inv_purchase_consign" ${invPurchaseConsign ? 'checked' : ''}>
+      These goods are on consignment — pay for them as they sell
+    </label>
+    <div class="q-empty-hint" id="inv_purchase_consign_note" style="margin-top:6px;${invPurchaseConsign ? '' : 'display:none;'}">
+      No bill is raised now. The goods go on the shelf as ${esc(supplierLabelForConsign || 'the supplier')}'s, and what you owe grows only as they sell — you will see it on Consignment, and settle when they come round.
+    </div>
+
     <div class="q-qty-row q-qty-row-noted" style="margin-top:14px;">
       <div class="field q-qty-field">
         <label>Quantity purchased</label>
@@ -43434,6 +43684,13 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
     });
   });
 
+  /* Re-rendered rather than toggled by hand: the note under it names the
+     supplier, and the supplier can change with the quantity. */
+  const consignBox = document.getElementById('inv_purchase_consign');
+  if(consignBox) consignBox.addEventListener('change', ()=>{
+    invPurchaseConsign = consignBox.checked;
+    renderInvPurchaseStage(wrap, product, variantIdx, displayName, current, backBtn);
+  });
   const qtyInput = document.getElementById('inv_purchase_qty');
   const qtyUnitSel = document.getElementById('inv_purchase_qty_unit');
   qtyInput.addEventListener('input', ()=>{
@@ -43501,20 +43758,32 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
     // instead of letting it go stale. confirms, because this is a
     // purchase: buying at the SAME price is proof of it too.
     syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true});
-    applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId);
+    /* Consignment: the goods arrive, the money does not move. No bill is
+       raised, because nothing is owed until something sells -- what IS
+       owed is read off the sales as they happen. The lot carries whose
+       goods these are so every reading downstream can tell. */
+    const onConsignment = !!(invPurchaseConsign && invPurchaseSupplierId);
+    if(onConsignment) note = `Received on consignment from ${supplierName(invPurchaseSupplierId)}`
+      + (price!=null ? ` — owed ${fmtUGX(price)} per ${unit||'unit'} as they sell` : '');
+    applyStockDelta(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId,
+      onConsignment ? { consign: invPurchaseSupplierId } : null);
     /* The row applyStockDelta just pushed. Marked as a purchase made from
        THIS screen, and tied to the bill it raises below -- the two facts a
        correction needs, and neither of which can be worked out afterwards
        from a note. */
     const logRow = data.stockLog[data.stockLog.length - 1];
     if(logRow) logRow.source = 'inv-purchase';
-    const piId = await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
+    if(logRow && onConsignment) logRow.consign = invPurchaseSupplierId;
+    const piId = onConsignment ? null
+      : await generatePurchaseInvoiceForRestock(invProductId, invVariantIdx, displayName, q, price, invPurchaseSupplierId, selectedRow);
     if(logRow && piId != null) logRow.piId = piId;
     saveData();
     closeModal('invModal');
     renderInventory();
     renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
-    toast('Stock updated');
+    toast(onConsignment
+      ? `On the shelf as ${supplierName(invPurchaseSupplierId)}'s — no bill raised, you owe as they sell`
+      : 'Stock updated');
   }));
 }
 
@@ -44232,27 +44501,170 @@ function repairStockLotDrift(key){
   return row;
 }
 
+/* ================= GOODS HELD, AND CASH THAT IS NOT OURS =============
+
+   Consignment is a supplier leaving goods in the shop to be sold and
+   paid for as they sell. Two things follow, and the shop has to be able
+   to see both at any moment:
+
+   THE GOODS ARE NOT THE SHOP'S. They sit on the shelf and can be sold,
+   so they count as stock ON HAND; they are not owned, so they are not
+   counted in what the stock is WORTH. Stating someone else's goods as
+   the shop's wealth is how a business feels richer than it is.
+
+   THE CASH IS NOT THE SHOP'S EITHER. The moment a consigned item sells,
+   the money in the drawer includes the consignor's share. That is the
+   figure this exists to keep in front of the owner.
+
+   All three readings below come from records the shop already keeps: a
+   lot knows whose it is, a sale records the lots it consumed, and a
+   settlement is an ordinary supplier bill. Nothing here is a second
+   ledger to be kept in step with the first. */
+
+// Consigned units still on the shelf: the consignor's goods, in the shop.
+function consignmentHeld(supplierId){
+  const out = new Map();
+  Object.keys(data.stockLots || {}).forEach(key=>{
+    (data.stockLots[key] || []).forEach(lot=>{
+      if(!lot.consign || !(lot.qty > 0)) return;
+      if(supplierId && lot.consign !== supplierId) return;
+      const rec = out.get(lot.consign) || { supplierId: lot.consign, qty: 0, value: 0, keys: new Set() };
+      rec.qty += Number(lot.qty)||0;
+      rec.value += (Number(lot.qty)||0) * (Number(lot.cost)||0);
+      rec.keys.add(key);
+      out.set(lot.consign, rec);
+    });
+  });
+  return [...out.values()].map(r=> ({ ...r, lines: r.keys.size }));
+}
+
+/* What has SOLD, and is therefore owed. Read from invoiced, non-void
+   orders: the lots each line consumed are written on the line, so this
+   counts money the shop has actually taken for somebody else's goods.
+   A draft order owes nothing -- nothing has been sold. */
+function consignmentAccrued(supplierId, asOf){
+  const out = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    const day = String(q.invoicedAt || q.date || '').slice(0,10);
+    if(asOf && day > asOf) return;
+    (q.items||[]).forEach(it=>{
+      (it._stockLots||[]).forEach(l=>{
+        if(!l.consign) return;
+        if(supplierId && l.consign !== supplierId) return;
+        const rec = out.get(l.consign) || { supplierId: l.consign, qty: 0, value: 0 };
+        rec.qty += Number(l.qty)||0;
+        rec.value += (Number(l.qty)||0) * (Number(l.cost)||0);
+        out.set(l.consign, rec);
+      });
+    });
+  });
+  return [...out.values()];
+}
+
+/* Settling up raises an ordinary supplier bill, flagged as this. So
+   "what has been settled" is a reading of the purchase invoices, and
+   the money reaches Who you owe, the payables and the cash book by the
+   route every other bill takes -- no separate account to reconcile. */
+function consignmentSettlements(supplierId, asOf){
+  return (data.purchaseInvoices||[]).filter(pi=>
+    pi.consignSettlement && !pi.voided
+    && (!supplierId || pi.supplierId === supplierId)
+    && (!asOf || String(pi.date||'') <= asOf));
+}
+function consignmentSettled(supplierId, asOf){
+  return consignmentSettlements(supplierId, asOf)
+    .reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0);
+}
+
+/* One row per consignor: what they have here, what has sold, what has
+   been settled, and the difference -- which is the part of the shop's
+   cash that belongs to them. */
+function consignmentRows(asOf){
+  const bySupplier = new Map();
+  const touch = (id)=>{
+    if(!bySupplier.has(id)) bySupplier.set(id, { supplierId: id, name: supplierName(id),
+      heldQty: 0, heldValue: 0, soldQty: 0, accrued: 0, settled: 0, owed: 0, lines: 0 });
+    return bySupplier.get(id);
+  };
+  consignmentHeld().forEach(h=>{
+    const r = touch(h.supplierId);
+    r.heldQty = h.qty; r.heldValue = h.value; r.lines = h.lines;
+  });
+  consignmentAccrued(null, asOf).forEach(a=>{
+    const r = touch(a.supplierId);
+    r.soldQty = a.qty; r.accrued = a.value;
+  });
+  bySupplier.forEach(r=>{
+    r.settled = consignmentSettled(r.supplierId, asOf);
+    r.owed = r.accrued - r.settled;
+  });
+  return [...bySupplier.values()]
+    .filter(r=> r.heldQty > 0 || Math.abs(r.owed) > 0.5 || r.accrued > 0)
+    .sort((a,b)=> b.owed - a.owed);
+}
+// What one consignor has on the shelf, line by line -- what the screen
+// lists and what a return is taken from.
+function consignmentHeldLines(supplierId){
+  const out = [];
+  Object.keys(data.stockLots || {}).forEach(key=>{
+    (data.stockLots[key] || []).forEach(lot=>{
+      if(lot.consign !== supplierId || !(lot.qty > 0)) return;
+      const [productId, vRaw] = String(key).split('::');
+      const variantIdx = vRaw === undefined ? null : Number(vRaw);
+      const product = (data.products||[]).find(x=> x.id === productId);
+      const prev = out.find(r=> r.key === key && r.cost === lot.cost);
+      if(prev){ prev.qty += Number(lot.qty)||0; return; }
+      out.push({ key, productId, variantIdx,
+        name: product ? productVariantLabel(product, variantIdx) : productId,
+        qty: Number(lot.qty)||0, cost: Number(lot.cost)||0 });
+    });
+  });
+  return out.sort((a,b)=> b.qty * b.cost - a.qty * a.cost);
+}
+
+// The headline: how much of the money in the drawer is somebody else's.
+function consignmentOwedTotal(asOf){
+  return consignmentRows(asOf).reduce((s,r)=> s + Math.max(0, r.owed), 0);
+}
+
 function inventoryValue(){
   let value = 0, uncostedQty = 0;
   const lots = data.stockLots || {};
   const stock = data.stock || {};
   const keys = new Set(Object.keys(stock).concat(Object.keys(lots)));
+  /* CONSIGNED UNITS ARE ON THE SHELF BUT NOT OWNED, so they are counted
+     out of what the stock is WORTH and reported separately. Their qty
+     still counts as stock on hand everywhere else -- they can be sold,
+     which is the whole point -- but calling them the shop's wealth
+     would state somebody else's goods as its own. */
+  let consignedQty = 0, consignedValue = 0;
   keys.forEach(k=>{
     const qty = Number(stock[k])||0;
     if(qty <= 0) return;
     const rows = lots[k]||[];
-    const costed = rows.filter(l=> l.cost != null);
+    const mine = rows.filter(l=> !l.consign);
+    rows.filter(l=> l.consign).forEach(l=>{
+      consignedQty += Number(l.qty)||0;
+      consignedValue += (Number(l.qty)||0) * (Number(l.cost)||0);
+    });
+    /* What the shelf holds that is the shop's own. Where consigned lots
+       account for part of the count, only the rest can be valued. */
+    const ownedOnShelf = Math.max(0, qty - rows.filter(l=> l.consign)
+      .reduce((n,l)=> n + (Number(l.qty)||0), 0));
+    if(ownedOnShelf <= 0) return;
+    const costed = mine.filter(l=> l.cost != null);
     const costedQty = costed.reduce((s,l)=> s + (Number(l.qty)||0), 0);
-    if(costedQty <= 0){ uncostedQty += qty; return; }
+    if(costedQty <= 0){ uncostedQty += ownedOnShelf; return; }
     const costedValue = costed.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
     // Priced at what the lots say a unit cost. Where the shelf holds more
     // than the lots account for, the surplus has no cost behind it.
     const unit = costedValue / costedQty;
-    const priced = Math.min(qty, costedQty);
+    const priced = Math.min(ownedOnShelf, costedQty);
     value += priced * unit;
-    if(qty > costedQty) uncostedQty += qty - costedQty;
+    if(ownedOnShelf > costedQty) uncostedQty += ownedOnShelf - costedQty;
   });
-  return { value, uncostedQty };
+  return { value, uncostedQty, consignedQty, consignedValue };
 }
 
 /* Trading for a period.
@@ -44379,9 +44791,16 @@ function receivablesAsAt(asOf){
   }, 0);
 }
 
+/* Consigned goods that have SOLD and not been settled are owed, bill or
+   no bill -- the shop is holding the consignor's money. Left out, the
+   accounts would understate what is owed at exactly the moment the cash
+   is in the drawer, which is the error this whole feature exists to
+   prevent. Once settled it becomes an ordinary supplier bill and is
+   counted through dashTotalCreditors like any other, so the two can
+   never double up. */
 function payablesAsAt(asOf){
   const today = todayISO();
-  if(!asOf || asOf >= today) return dashTotalCreditors();
+  if(!asOf || asOf >= today) return dashTotalCreditors() + consignmentOwedTotal();
   /* Reached through the supplier list, the same way dashTotalCreditors
      is. That rule loses an invoice whose supplier was deleted -- which
      is deliberate elsewhere in the app, since a document pointing at a
@@ -44396,7 +44815,7 @@ function payablesAsAt(asOf){
         .filter(p=> String(p.date||'') <= asOf)
         .reduce((n,p)=> n + (Number(p.amount)||0), 0);
       return s + Math.max(0, purchaseInvoiceTotal(pi) - paid);
-    }, 0);
+    }, 0) + consignmentOwedTotal(asOf);
 }
 
 function duesOwedAsAt(asOf){
@@ -48843,6 +49262,10 @@ function morningBriefData(dateISO, nowMs){
     ranOut: ranOut.slice(0, 8), ranOutCount: ranOut.length,
     stuck: stuck.slice(0, 6), stuckCount: stuck.length,
     followUps: { count: fu.length, names: fu.slice(0, 4).map(r=> r.name) },
+    /* Read as at TODAY, not as at yesterday: this is a live claim about
+       the cash in the drawer right now, and the owner is reading it with
+       that drawer in front of them. */
+    consignOwed: Math.round(consignmentOwedTotal()),
   };
 }
 
@@ -48879,9 +49302,15 @@ function morningBriefHTML(b){
       ? [row(esc(b.followUps.names.join(', ') + (b.followUps.count > b.followUps.names.length
           ? ` and ${b.followUps.count - b.followUps.names.length} more` : '')))] : []),
   ].join('');
+  /* Said before the day starts, because it changes what the money in
+     the drawer means. Only when there IS some -- a shop holding nothing
+     on consignment should never see the sentence. */
+  const notOurs = b.consignOwed > 0
+    ? `<p class="buy-note" style="margin:10px 0 0;">Of what you are holding, <b>${fmtUGX(b.consignOwed)}</b> belongs to a supplier — takings from goods on consignment, not yet settled.</p>`
+    : '';
   return `<div class="brief-grid">${stats}</div>` + (blocks
     ? `<div class="brief-blocks">${blocks}</div>`
-    : `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing carried over — a clean start.</p>`);
+    : `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing carried over — a clean start.</p>`) + notOurs;
 }
 
 function renderMorningBrief(){
@@ -48927,6 +49356,8 @@ function renderDashboard(){
   const netMargin = curTotals.sales>0 ? netProfit/curTotals.sales*100 : 0;
 
   const cashBalance = dashCashBalanceAllTime();
+  // Part of the drawer that is a consignor's, read live.
+  const consignOwed = Math.round(consignmentOwedTotal());
   const burn = dashMonthlyBurn();
   const runwayMonths = burn>0 ? cashBalance/burn : null;
 
@@ -48977,11 +49408,20 @@ function renderDashboard(){
       /* A negative balance has no runway. Dividing it by burn printed
          "-0.4 months of runway", which reads as a small number rather
          than as money already gone. */
-      sub: cashBalance < 0
-        ? 'Overdrawn — this is money already spent, not months remaining'
-        : runwayMonths==null
-          ? 'Nothing going out lately, so there is no burn rate to measure'
-          : `${runwayMonths.toFixed(1)} months at ${fmtUGX(Math.round(burn))} a month going out`
+      /* When goods are held on consignment, part of this figure is
+         somebody else's money and saying only the runway would flatter
+         it. Named first, because it changes what the number means. */
+      sub: consignOwed > 0
+        ? `${fmtUGX(consignOwed)} of it belongs to a consignor — ${
+            cashBalance < 0 ? 'and the drawer is already overdrawn'
+              : runwayMonths==null ? 'nothing going out lately to measure runway against'
+              : `${runwayMonths.toFixed(1)} months of cover on the rest`}`
+        : cashBalance < 0
+          ? 'Overdrawn — this is money already spent, not months remaining'
+          : runwayMonths==null
+            ? 'Nothing going out lately, so there is no burn rate to measure'
+            : `${runwayMonths.toFixed(1)} months at ${fmtUGX(Math.round(burn))} a month going out`,
+      tone2: consignOwed > 0 ? 'warn' : null
     },
     {
       label:'Owed to you by customers', value: fmtUGX(Math.round(totalDebtors)),
@@ -53185,6 +53625,7 @@ function refreshNavBadges(){
   updateDebtorsNavBadge();
   renderSourcingBadge();
   renderChaseBadge();
+  renderConsignBadge();
 }
 function renderAll(){
   renderPresets();

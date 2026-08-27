@@ -67,6 +67,11 @@ const env = {
   inventoryValue: () => ({ value: 0, uncostedQty: 0 }),
 };
 const NAMES = [
+  /* Payables now include consignment that has sold and not been settled
+     -- money owed with no bill yet -- so its chain comes along. A
+     fixture holding nothing on consignment simply reads zero. */
+  'consignmentHeld', 'consignmentAccrued', 'consignmentSettlements',
+  'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
   'cashIsMoneyIn', 'cashIsMoneyOut', 'cashIsOperatingExpense', 'cashIsTradingIncome', 'cashIsOwnerWithdrawal', 'cashIsDebtCollection', 'invoiceBackedCashTxnIds',
   'cashIsCashShortage', 'cashIsCashOverage',
   'dashCashTxnsInRange', 'purchaseInvoiceTotal', 'payablesAsAt', 'receivablesAsAt',

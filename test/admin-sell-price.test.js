@@ -43,6 +43,12 @@ const scope = compileScope([
   extractFunction(src, 'quoteSuggestedPrice', 'index.html'),
   extractFunction(src, 'quoteSuggestedStockPrice', 'index.html'),
   extractFunction(src, 'quoteItemSellPrice', 'index.html'),
+  /* The clause also reads the shelf now: a line sold from stock carries
+     no buy price of its own, and when those units belong to a consignor,
+     pricing under what will be owed is a loss out of the shop's own
+     pocket. A fixture with no consigned lots reads exactly as before. */
+  extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
   extractFunction(src, 'sellBelowCostClause', 'index.html'),
 ], {
   data,
@@ -205,12 +211,18 @@ const line = (over) => Object.assign({
     const told = [];
     const box = { item: null };
     const run = compileScope([
+      // Same chain as above: the clause reads the shelf for consigned units.
+      extractFunction(src, 'stockKey', 'index.html'),
+      extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
       extractFunction(src, 'sellBelowCostClause', 'index.html'),
       handler,
       'function setItem(i){ box.item = i; item = i; }',
       'let item = null;',
     ], {
       box, told,
+      // No consigned lots in this fixture, so the clause reads exactly as
+      // it did before -- which is what these cases are checking.
+      data: { stockLots: {} },
       fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
       toast: (m) => { told.push(String(m)); },
       saveData: () => {}, renderQuoteItems: () => {},

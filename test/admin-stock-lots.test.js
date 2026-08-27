@@ -123,8 +123,8 @@ if (fns) {
 {
   t.check(/const taken = consumeStockLots\(productId, variantIdx, -actualChange\);\s*\n\s*if\(opts && typeof opts\.onConsumed === 'function'\) opts\.onConsumed\(taken\);/.test(code),
     'a decrease reports the lots it consumed');
-  t.check(/if\(!\(opts && restoreStockLots\(productId, variantIdx, opts\.restoreLots\)\)\)\{\s*\n\s*addStockLot\(productId, variantIdx, actualChange, cost\);/.test(code),
-    'an increase restores them when it has them, and adds a plain lot when it does not');
+  t.check(/if\(!\(opts && restoreStockLots\(productId, variantIdx, opts\.restoreLots\)\)\)\{\s*\n\s*addStockLot\(productId, variantIdx, actualChange, cost, opts && opts\.consign\);/.test(code),
+    'an increase restores them when it has them, and adds a fresh lot when it does not — marked with the consignor when the goods are somebody else\'s');
 
   t.check(/onConsumed: lots => \{ it\._stockLots = lots; \}/.test(code),
     'a sale remembers them against the line it came from');
@@ -133,8 +133,12 @@ if (fns) {
     'clearing both afterwards, so a second reversal cannot restore the same units twice');
 
   // The paths that must NOT have changed.
-  t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId\);/.test(code),
-    'a restock still passes its purchase price and no opts');
+  /* A restock still passes its purchase price, and still hands over NO
+     lot options when the goods were bought outright -- consignment is
+     the only thing that puts anything in that slot, so an ordinary
+     purchase behaves exactly as it always did. */
+  t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId,\s*\n\s*onConsignment \? \{ consign: invPurchaseSupplierId \} : null\);/.test(code),
+    'a restock still passes its purchase price, and nothing extra unless the goods are consigned');
   t.check(/applyStockDelta\(invProductId, invVariantIdx, d, 'correction', note\);/.test(code),
     'and a stock-count correction still passes neither');
 }

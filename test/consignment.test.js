@@ -1,0 +1,257 @@
+#!/usr/bin/env node
+'use strict';
+/*
+ * Consignment: whose goods, and whose cash.
+ *
+ * A supplier leaves goods to be sold and paid for as they sell. Two
+ * facts follow, and the shop must be able to see both at any moment:
+ * the goods on the shelf are not its own, and the moment one sells,
+ * part of the money in the drawer belongs to somebody else.
+ *
+ * The rules this file holds to account:
+ *
+ *   RECEIVING OWES NOTHING. No bill is raised when consigned goods
+ *   arrive, because nothing is owed until something sells.
+ *
+ *   THE MARKER SURVIVES EVERYTHING. A lot knows whose it is; a sale
+ *   records the lots it consumed; an un-invoice puts them back exactly.
+ *   Lose the marker anywhere along that chain and the shop has quietly
+ *   helped itself to someone else's goods.
+ *
+ *   ONE READING, NOT A SECOND LEDGER. Owed = what sold (read from
+ *   invoiced sales) minus what was settled (read from the bills those
+ *   settlements raised). Nothing to keep in step by hand.
+ *
+ *   THE ACCOUNTS AGREE. Consigned goods are stock ON HAND but not part
+ *   of what the stock is WORTH; unsettled consignment IS a payable.
+ *
+ * Run: node test/consignment.test.js   (or: npm test)
+ */
+const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+
+const t = createReporter('consignment');
+const src = read('index.html');
+const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
+
+const TODAY = '2026-08-27';
+
+const data = {
+  products: [
+    { id: 'P1', name: 'Roto Sofa Legs', variants: [] },
+    { id: 'P2', name: 'Our Own Cement', variants: [] },
+  ],
+  suppliers: [{ id: 'S1', name: 'Roto Industry' }, { id: 'S2', name: 'Okuosi' }],
+  stock: {},
+  stockLots: {},
+  stockLog: [],
+  savedQuotes: [],
+  purchaseInvoices: [],
+  customers: [],
+};
+
+let rowId = 1;
+const env = {
+  data,
+  todayISO: () => TODAY,
+  saveData: () => {},
+  allocRowId: () => rowId++,
+  supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || String(id),
+  productVariantLabel: (p) => p.name,
+  purchaseInvoiceTotal: (pi) => (pi.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.price) || 0), 0),
+  fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+};
+
+let scope = null; let err = null;
+try {
+  scope = compileScope([
+    'stockKey', 'getStockQty', 'addStockLot', 'consumeStockLots', 'restoreStockLots',
+    'applyStockDelta', 'getFIFOUnitCost', 'inventoryValue',
+    'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued',
+    'consignmentSettlements', 'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
+    'consignmentSoldLines', 'returnConsignedStock', 'consignedUnitCostForSale', 'sellBelowCostClause',
+  ].map((n) => extractFunction(src, n, 'index.html')),
+  env, ['addStockLot', 'applyStockDelta', 'consumeStockLots', 'restoreStockLots', 'inventoryValue',
+    'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
+    'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
+    'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements']);
+} catch (e) { err = e; }
+t.check(!!scope, `the consignment chain compiles${err ? ` (${err.message})` : ''}`);
+
+/* ---------- 1. goods arrive owing nothing ----------------------------- */
+if (scope) {
+  // 20 of Roto's legs, we will owe 2,000 each as they sell.
+  scope.applyStockDelta('P1', null, 20, 'restock', 'Received on consignment', 2000, 'S1', { consign: 'S1' });
+  // 10 cement of our own, bought and paid for.
+  scope.applyStockDelta('P2', null, 10, 'restock', 'Purchased', 28000, 'S2', null);
+
+  eq(scope.getStockQty('P1', null), 20, 'consigned goods are on the shelf and can be sold');
+  t.check(data.stockLots.P1[0].consign === 'S1', 'and the lot knows whose they are');
+  t.check(data.stockLots.P2[0].consign === undefined, 'while goods the shop bought carry no such mark');
+
+  const held = scope.consignmentHeld();
+  t.check(held.length === 1 && held[0].supplierId === 'S1' && held[0].qty === 20,
+    'what a consignor has in the shop is readable at any moment');
+  eq(held[0].value, 40000, 'valued at what will be owed for it');
+
+  eq(scope.consignmentOwedTotal(), 0,
+    'and NOTHING is owed yet — goods that have not sold owe nobody anything');
+}
+
+/* ---------- 2. the accounts keep them apart --------------------------- */
+if (scope) {
+  const inv = scope.inventoryValue();
+  eq(Math.round(inv.value), 280000,
+    'the stock is worth only what the shop OWNS — 10 cement at 28,000, and not a shilling of Roto\'s legs');
+  eq(inv.consignedQty, 20, 'the consigned units are reported apart');
+  eq(inv.consignedValue, 40000, 'with what they would cost to keep');
+}
+
+/* ---------- 3. selling turns goods into someone else's money ---------- */
+if (scope) {
+  // Six legs sell. The sale consumes lots and records what it took.
+  const taken = scope.consumeStockLots('P1', null, 6);
+  data.stock.P1 = 14;
+  t.check(taken.length === 1 && taken[0].consign === 'S1' && taken[0].cost === 2000,
+    'the sale records whose units it consumed, and at what they will cost');
+
+  const q = { id: 1, invoiced: true, voided: false, invoicedAt: '2026-08-20',
+    items: [{ productId: 'P1', variantIdx: null, productName: 'Roto Sofa Legs', qty: 6,
+      unit: 'pc', supplierId: '__stock__', sellPrice: 3000, _stockLots: taken }] };
+  data.savedQuotes.push(q);
+
+  eq(scope.consignmentOwedTotal(), 12000,
+    'six sold at 2,000 each is 12,000 of the drawer that belongs to Roto');
+  const row = scope.consignmentRows()[0];
+  t.check(row.soldQty === 6 && row.accrued === 12000 && row.settled === 0 && row.owed === 12000,
+    'and the consignor\'s row says so, sold and owed');
+  eq(row.heldQty, 14, 'with what is still theirs on the shelf');
+
+  // A draft order owes nobody anything.
+  data.savedQuotes.push({ id: 2, invoiced: false, voided: false, date: '2026-08-21',
+    items: [{ productId: 'P1', variantIdx: null, qty: 5, supplierId: '__stock__',
+      _stockLots: [{ qty: 5, cost: 2000, consign: 'S1' }] }] });
+  eq(scope.consignmentOwedTotal(), 12000, 'a draft order has sold nothing, so it owes nothing');
+
+  // Nor does a voided one.
+  data.savedQuotes.push({ id: 3, invoiced: true, voided: true, invoicedAt: '2026-08-21',
+    items: [{ productId: 'P1', variantIdx: null, qty: 5, supplierId: '__stock__',
+      _stockLots: [{ qty: 5, cost: 2000, consign: 'S1' }] }] });
+  eq(scope.consignmentOwedTotal(), 12000, 'and a voided sale is a sale that did not happen');
+  data.savedQuotes = data.savedQuotes.filter((x) => x.id === 1);
+}
+
+/* ---------- 4. un-invoicing must not launder the goods ---------------- */
+if (scope) {
+  const q = data.savedQuotes[0];
+  const lots = q.items[0]._stockLots;
+  scope.restoreStockLots('P1', null, lots);
+  data.stock.P1 = 20;
+  const back = data.stockLots.P1.find((l) => l.qty === 6);
+  t.check(back && back.consign === 'S1',
+    'units put back by an un-invoice are STILL the consignor\'s — the marker is rebuilt, so it has to be carried across deliberately');
+  eq(scope.consignmentHeld()[0].qty, 20, 'and they are held for them again');
+  // Put the sale back for the rest of the file.
+  scope.consumeStockLots('P1', null, 6);
+  data.stock.P1 = 14;
+}
+
+/* ---------- 5. settling raises an ordinary bill ----------------------- */
+if (scope) {
+  const lines = scope.consignmentSoldLines('S1');
+  t.check(lines.length === 1 && lines[0].qty === 6 && lines[0].price === 2000,
+    'the settlement is itemised by what actually sold, at what was agreed');
+
+  // The bill settleConsignment would write, applied here directly: the
+  // async id issue is the app's, the arithmetic is what matters.
+  data.purchaseInvoices.push({ id: 90, quoteId: null, supplierId: 'S1', supplierName: 'Roto Industry',
+    date: '2026-08-25', items: lines, amountPaid: 0, payments: [], voided: false, consignSettlement: true });
+
+  eq(scope.consignmentSettled('S1'), 12000, 'the bill counts as settled against what accrued');
+  eq(scope.consignmentOwedTotal(), 0,
+    'so nothing is owed any more — the money is now an ordinary supplier bill, not loose cash');
+  const row = scope.consignmentRows()[0];
+  t.check(row.accrued === 12000 && row.settled === 12000 && row.owed === 0,
+    'and the row shows the whole story rather than resetting to nothing');
+
+  // Selling more starts it again.
+  data.savedQuotes.push({ id: 4, invoiced: true, voided: false, invoicedAt: '2026-08-26',
+    items: [{ productId: 'P1', variantIdx: null, qty: 2, supplierId: '__stock__',
+      _stockLots: [{ qty: 2, cost: 2000, consign: 'S1' }] }] });
+  eq(scope.consignmentOwedTotal(), 4000, 'what sells after a settlement is owed again');
+
+  // A voided settlement is not a settlement.
+  data.purchaseInvoices[0].voided = true;
+  eq(scope.consignmentOwedTotal(), 16000, 'and a voided bill settles nothing');
+  data.purchaseInvoices[0].voided = false;
+}
+
+/* ---------- 6. sending unsold goods back owes nothing ----------------- */
+if (scope) {
+  const before = scope.consignmentOwedTotal();
+  // Our own cement must not be touched by a return of Roto's goods.
+  scope.addStockLot('P1', null, 5, 1500);          // 5 of the shop's own, same product
+  data.stock.P1 = (data.stock.P1 || 0) + 5;
+  const heldBefore = scope.consignmentHeld()[0].qty;
+
+  const sent = scope.returnConsignedStock('P1', null, 'S1', 4);
+  eq(sent, 4, 'the units go back');
+  eq(scope.consignmentHeld()[0].qty, heldBefore - 4, 'and leave the consignor\'s holding');
+  t.check(data.stockLots.P1.some((l) => !l.consign && l.qty === 5),
+    'while the shop\'s OWN units on the same product are untouched — a return takes from the consigned lots, not the front of the queue');
+  eq(scope.consignmentOwedTotal(), before,
+    'and nothing is owed for goods that went back unsold');
+  const log = data.stockLog[data.stockLog.length - 1];
+  t.check(/Returned unsold to Roto Industry/.test(log.note) && log.delta === -4,
+    'with the movement written down plainly');
+}
+
+/* ---------- 7. selling below what will be owed ------------------------ */
+if (scope) {
+  data.stockLots.P3 = [{ qty: 10, cost: 5000, consign: 'S1' }];
+  data.stock.P3 = 10;
+  const warn = scope.sellBelowCostClause({ productId: 'P3', variantIdx: null, qty: 3,
+    unit: 'pc', sellPrice: 4000, price: 0 });
+  t.check(/below the 5,000 UGX you will owe/.test(warn) && /out of your own pocket/.test(warn),
+    `a shelf sale under the consigned cost is named as the loss it is (${warn})`);
+  t.check(/3,000 UGX over 3/.test(warn), 'with what it costs over the whole line');
+
+  const fine = scope.sellBelowCostClause({ productId: 'P3', variantIdx: null, qty: 3,
+    unit: 'pc', sellPrice: 6000, price: 0 });
+  eq(fine, '', 'and a price above it says nothing');
+
+  data.stockLots.P4 = [{ qty: 10, cost: 5000 }];
+  data.stock.P4 = 10;
+  eq(scope.sellBelowCostClause({ productId: 'P4', variantIdx: null, qty: 1, sellPrice: 4000, price: 0 }), '',
+    'goods the shop owns are not judged by this rule — that margin is the shop\'s own business');
+}
+
+/* ---------- 8. the wiring --------------------------------------------- */
+{
+  t.check(/id="tab-consignment"/.test(src) && /data-tab="consignment"/.test(src),
+    'Consignment is its own screen on the rail');
+  const go = extractFunction(src, 'goToTab', 'index.html');
+  t.check(/if\(tab==='consignment'\) renderConsignment\(\);/.test(go), 'and redraws on entry');
+
+  const save = src.slice(src.indexOf('inv_purchase_save_btn'));
+  t.check(/const onConsignment = !!\(invPurchaseConsign && invPurchaseSupplierId\);/.test(save)
+    && /const piId = onConsignment \? null/.test(save),
+    'receiving on consignment raises NO bill — nothing is owed until something sells');
+  t.check(/consign: invPurchaseSupplierId/.test(save),
+    'and the lot is marked as the consignor\'s');
+
+  t.check(/\.\.\.\(pi\.consignSettlement \? \{consignSettlement:true\} : \{\}\)/.test(src),
+    'the settlement flag rides the payload like openingBalance, so no migration is needed');
+
+  const pay = extractFunction(src, 'payablesAsAt', 'index.html');
+  t.check(/consignmentOwedTotal\(\)/.test(pay) && /consignmentOwedTotal\(asOf\)/.test(pay),
+    'unsettled consignment counts as a payable, today and as at any date');
+
+  const brief = extractFunction(src, 'morningBriefData', 'index.html');
+  t.check(/consignOwed: Math\.round\(consignmentOwedTotal\(\)\)/.test(brief),
+    'the morning brief carries it');
+  const dash = extractFunction(src, 'renderDashboard', 'index.html');
+  t.check(/belongs to a consignor/.test(dash),
+    'and the cash tile says how much of the drawer is not the shop\'s');
+}
+
+process.exit(t.done() ? 1 : 0);

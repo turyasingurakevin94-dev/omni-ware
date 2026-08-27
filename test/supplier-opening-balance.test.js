@@ -40,6 +40,11 @@ const env = {
   todayISO: () => '2026-08-21',
 };
 const NAMES = [
+  /* Payables now include consignment that has sold and not been settled
+     -- money owed with no bill yet -- so its chain comes along. A
+     fixture holding nothing on consignment simply reads zero. */
+  'consignmentHeld', 'consignmentAccrued', 'consignmentSettlements',
+  'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
   'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
   'purchaseInvoiceIsOpeningBalance', 'supplierOpeningInvoice', 'createSupplierOpeningBalance',
   'creditorOutstandingInvoices', 'creditorTotalOwed', 'creditorOldestDueDate',
