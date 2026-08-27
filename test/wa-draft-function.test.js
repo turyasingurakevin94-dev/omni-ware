@@ -321,8 +321,17 @@ const vercel = read('vercel.json');
     'the image road: render, upload, then wa-send\'s send-image action');
   t.check(/caption: 'Order ' \+ receipt\.invoice \+ ' — we are preparing it\.'/.test(chain),
     'with the order number riding the caption');
-  t.check(/if\(!sentImage\)\{ await waSendReply\(waOrderReceiptText\(receipt\)\); return; \}/.test(chain),
+  t.check(/if\(!sentImage\)\{[\s\S]*?await waSendReply\(waOrderReceiptText\(receipt\)\);[\s\S]*?return;/.test(chain),
     'ANY miss on the image road — including a wa-send deployed before send-image existed — sends the text twin through the composer door');
+  /* The first live test fell back and nothing said why. The miss keeps
+     its reason — the server's own error body, excavated the way
+     waSendReply does — and the OWNER gets it as a toast. Never the
+     customer: the text twin is built from the receipt alone. */
+  t.check(/error\.context\.json\(\)/.test(chain)
+    && /toast\('Confirmation sent as text — the receipt image could not go: ' \+ why, 10000\)/.test(chain),
+    'a fallback names its reason to the owner — a silent miss cannot be diagnosed');
+  t.check(!/waSendReply\([^)]*why/.test(chain),
+    'and the reason never rides a message to the customer');
   t.check(!/uploadProductImageBlob/.test(chain) && !!up && !/uploadProductImageBlob/.test(up),
     'and never through the product-photo road, which would JPEG the text and index the receipt');
 }

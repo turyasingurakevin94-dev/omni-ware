@@ -14281,21 +14281,41 @@ async function waUploadReceiptBlob(blob){
    on the version before send-image existed — and the SAME receipt goes
    as text through waSendReply, where the 24-hour window check still
    governs. The customer always gets the confirmation; the image is an
-   upgrade, never a dependency. */
+   upgrade, never a dependency.
+
+   But a silent fallback is a dead end for the OWNER: the first live
+   test fell back and nothing said why. So the miss keeps its reason —
+   the server's own error body when there is one, the thrown message
+   otherwise — and after the text twin goes out, a toast hands that
+   reason to the owner. The customer never sees it. */
 async function waSendOrderReceipt(receipt){
-  let sentImage = false;
+  let sentImage = false; let why = '';
   try{
     const canvas = document.createElement('canvas');
     waDrawOrderReceipt(canvas, receipt);
     const blob = await new Promise((res, rej)=>
-      canvas.toBlob(b=> b ? res(b) : rej(new Error('no blob')), 'image/png'));
+      canvas.toBlob(b=> b ? res(b) : rej(new Error('the receipt could not be drawn')), 'image/png'));
     const link = await waUploadReceiptBlob(blob);
     const { data: out, error } = await sb.functions.invoke('wa-send', {
       body: { shopId: currentShopId, action: 'send-image', conversationId: waInbox.active,
         link, caption: 'Order ' + receipt.invoice + ' — we are preparing it.' } });
-    sentImage = !error && !!(out && out.sent);
-  }catch(_e){ /* fall through to the text twin */ }
-  if(!sentImage){ await waSendReply(waOrderReceiptText(receipt)); return; }
+    if(error){
+      // The useful message is in the response body, not error.message —
+      // the same excavation waSendReply does. "Unknown action" here
+      // means the deployed wa-send predates send-image.
+      let m = error.message;
+      try{ const b = await error.context.json(); if(b && b.error) m = b.error; }catch(_e){}
+      throw new Error(m);
+    }
+    sentImage = !!(out && out.sent);
+    if(!sentImage) why = 'the send was refused';
+  }catch(e){ why = (e && e.message) || 'unknown'; }
+  if(!sentImage){
+    console.warn('receipt image road failed:', why);
+    await waSendReply(waOrderReceiptText(receipt));
+    toast('Confirmation sent as text — the receipt image could not go: ' + why, 10000);
+    return;
+  }
   await waFetchThread(waInbox.active);
   await waFetchConvs();
   waRenderInbox();
