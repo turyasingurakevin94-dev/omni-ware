@@ -23247,17 +23247,21 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
   return applied + unapplied;
 }
 
-/* Who actually paid debt on a day — MONEY, not bookkeeping. The debt
-   ledger's invoice-owned rows are applyInvoiceDebtCharge's ECHOES: a
-   sale paid at the counter, an invoice edited, a void, all write
-   "payment" deltas there with no shilling of debt collected — counting
-   them told the owner three customers paid who had not. So a day's
-   collections are exactly two things:
-     - invoice payments (q.payments) whose linked cash receipt is a
-       debt-collection category — an agent settling their order is the
-       agents' flow, not this one;
-     - the customer ledger's USER-owned payment rows, the general-
-       balance collections recordCustomerPayment writes.
+/* Who actually paid on a day — MONEY, not bookkeeping. Two live lies
+   taught this function its two gates:
+     - the ledger's invoice-owned rows are applyInvoiceDebtCharge's
+       ECHOES (a counter-paid sale, an edit, a void), and the drift
+       REPAIR writes payment-shaped correction rows whose own wording
+       says "no money moves" — neither is a shilling collected. So a
+       ledger row counts only when it is user-owned AND carries the
+       cashTxnId of the receipt its money arrived on; corrections
+       carry null.
+     - invoice payments (q.payments) each link their cash receipt.
+       Three writers exist: invoice-picker allocations ('Debt
+       Payment'), the invoice screen's own form ('Invoice Payment' —
+       the category that silently dropped Maria, Grace and Jjaja from
+       the first brief), and an agent settling their order ('Agent
+       Payment' — the agents' flow, the one to keep out).
    Shared by the morning brief and the assistant's debtor_payments, so
    the two can never tell the owner different stories. */
 function debtCollectionsOn(dateISO){
@@ -23275,14 +23279,14 @@ function debtCollectionsOn(dateISO){
     (q.payments||[]).forEach(p=>{
       if(!p || String(p.date||'').slice(0, 10) !== day) return;
       const t = txnById.get(p.cashTxnId);
-      if(!t || !cashIsDebtCollection(t)) return;
+      if(!t || !cashIsMoneyIn(t) || t.category === 'Agent Payment') return;
       const c = q.customerId != null ? (data.customers||[]).find(x=> x.id === q.customerId) : null;
       add(c ? c.id : null, c ? c.name : ((q.client && q.client.name) || ''), Number(p.amount)||0);
     });
   });
   (data.customers||[]).forEach(c=>{
     (c.debtLog||[]).forEach(l=>{
-      if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l)) return;
+      if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l) || l.cashTxnId == null) return;
       if(String(l.date||'').slice(0, 10) !== day) return;
       add(c.id, c.name, Number(l.amount)||0);
     });

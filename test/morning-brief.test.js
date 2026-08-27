@@ -56,18 +56,26 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
         { type: 'payment', date: '2026-08-20', amount: 50000 },
         { type: 'charge', date: Y, amount: 999999 }] },
       // A timestamped date must still count for its day.
-      { id: 'C2', name: 'Auma', debtLog: [{ type: 'payment', date: Y + 'T09:12:00', amount: 80000 }] },
+      { id: 'C2', name: 'Auma', debtLog: [{ type: 'payment', date: Y + 'T09:12:00', amount: 80000, cashTxnId: 904 }] },
       { id: 'C3', name: 'Quiet', debtLog: [] },
-      /* THE LIVE LIE: the invoice sync's echo row — written when a sale
+      /* LIVE LIE #1: the invoice sync's echo row — written when a sale
          is paid at the counter, an invoice edited, or voided. David
          paid nothing; the first brief listed him at 2,500,000. */
       { id: 'C5', name: 'David', debtLog: [
         { type: 'payment', date: Y, amount: 2500000, quoteId: 77, note: 'Auto-sync — INV-0210' }] },
+      /* LIVE LIE #2: the drift-repair row — payment-shaped, dated the
+         day the owner clicked Repair, and its own wording says "no
+         money moves". It carries no cashTxnId, because none exists. */
+      { id: 'C6', name: 'Repaired', debtLog: [
+        { type: 'payment', date: Y, amount: 700000, cashTxnId: null,
+          note: 'Balance correction — history did not add up to the balance shown' }] },
       { id: 'C4', name: 'Ken' },
     ],
     cashTxns: [
       { id: 901, date: Y, type: 'receipt', category: 'Debt Payment', amount: 200000 },
-      { id: 902, date: Y, type: 'receipt', category: 'Debt Payment', amount: 150000 },
+      /* The invoice screen's own form stamps 'Invoice Payment' — the
+         category that silently dropped the REAL payers at first. */
+      { id: 902, date: Y, type: 'receipt', category: 'Invoice Payment', amount: 150000 },
       { id: 903, date: Y, type: 'receipt', category: 'Agent Payment', amount: 99999 },
     ],
     stockLog: [
@@ -129,9 +137,11 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
   eq(b.paid.count, 3, 'three real collections yesterday');
   eq(b.paid.total, 430000, 'and only MONEY sums — never bookkeeping');
   eq(b.paid.rows.map((r) => r.name).join(','), 'Mukasa,Ken,Auma',
-    'largest first — general-balance rows and invoice-allocated payments both counted');
+    'largest first — a general-balance receipt, an Invoice Payment receipt, both roads counted');
   t.check(!b.paid.rows.some((r) => r.name === 'David'),
-    'the invoice sync\'s echo row is NOT a collection — the live lie, pinned dead');
+    'the invoice sync\'s echo row is NOT a collection — live lie #1, pinned dead');
+  t.check(!b.paid.rows.some((r) => r.name === 'Repaired'),
+    'a drift-repair correction is NOT a collection — live lie #2, pinned dead: no cash receipt, no money');
   t.check(!b.paid.rows.some((r) => r.name === 'Agent order'),
     'an agent settling their order is not customer debt collected');
   t.check(!b.paid.rows.some((r) => r.name === 'Quiet'), 'nobody is invented, and a charge is not a payment');

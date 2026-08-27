@@ -245,7 +245,11 @@ const run = (name, input) => T[name].run(input || {});
  * the exact day it matters that they appear.
  */
 {
-  const pay = (date, amount)=> ({ id: nextId++, date, type: 'payment', amount, note: '' });
+  /* Real payments carry the id of the cash receipt their money arrived
+     on — recordCustomerPayment always writes one. A payment row with
+     cashTxnId null is a CORRECTION (the drift repair's shape) and must
+     not count, which is exactly what the last case below holds. */
+  const pay = (date, amount)=> ({ id: nextId++, date, type: 'payment', amount, note: '', cashTxnId: 9000 + nextId });
   const charge = (date, amount)=> ({ id: nextId++, date, type: 'charge', amount, note: '' });
   data.customers = [
     { id: 1, name: 'Mulongo Hardware', phone: '', debt: 400000,
@@ -282,6 +286,15 @@ const run = (name, input) => T[name].run(input || {});
   t.check(other.paid_count === 1 && other.paid[0].name === 'Onora Peter'
     && other.not_paid_count === 2,
     'any other day partitions by ITS ledger entries');
+
+  /* The drift repair writes a payment-shaped correction row with no
+     cash receipt behind it — "no money moves", its own confirm says.
+     It must never turn a repair into a collection. */
+  data.customers[3].debtLog.push({ id: nextId++, date: TODAY, type: 'payment', amount: 200000,
+    cashTxnId: null, note: 'Balance correction — history did not add up to the balance shown' });
+  const repaired = run('debtor_payments', {});
+  t.check(repaired.paid_count === 2 && repaired.not_paid.some(r=> r.name === 'Dad'),
+    'a drift-repair correction is not a collection — Dad still has not paid');
 
   const ld = run('list_debtors', {});
   t.check(ld.debtors[0].last_paid !== undefined
