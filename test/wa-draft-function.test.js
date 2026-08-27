@@ -134,6 +134,15 @@ const vercel = read('vercel.json');
          not sell it. */
       { id: 'P3', name: 'Soft Close Mulper Half Bend', type: 'simple', category: 'Furniture' },
       { id: 'P4', name: 'Ruleless bracket', type: 'simple', category: 'Fittings' },
+      /* The INV-0241 pair, kept as fixtures: "c channels" drafted the
+         Wall Angle variant (substring 'c' is in every Channel), and the
+         screws landed on a cost-less card while its sellable sibling
+         sat one row later. Array order matters — the wrong picks come
+         FIRST, exactly as they did live. */
+      { id: 'P5', name: 'GYPSUM Channels', type: 'variable', category: 'Gypsum',
+        variants: [{ label: 'Wall Angle' }, { label: 'C Channel' }, { label: 'F Channel' }] },
+      { id: 'P6', name: 'ABC Black Screws Fine / 1"', type: 'simple', category: 'Fasteners' },
+      { id: 'P7', name: 'Black Screws 6* / Fine / 1"', type: 'simple', category: 'Fasteners' },
     ],
     stock: { P1: 40, P3: 0 },
   };
@@ -143,22 +152,28 @@ const vercel = read('vercel.json');
     P2: { retail: { price: 9000, unit: 'pc', packQty: 0, packUnit: '' } },
     P3: { wholesale: { price: 265000, unit: 'Pc', packQty: 20, packUnit: 'Ctn' } },
     P4: {},
+    P5: { retail: { price: 4500, unit: 'Pc', packQty: 0, packUnit: '' } },
+    P6: {},
+    P7: { retail: { price: 15500, unit: 'Box', packQty: 0, packUnit: '' } },
   };
   const env = {
     data,
     allProductVariantEntries: (tokens) => data.products
       .filter((p) => !tokens.length || tokens.every((tk) => p.name.toLowerCase().includes(tk)))
-      .map((p) => ({ p, variantIdx: null })),
+      .flatMap((p) => (p.variants && p.variants.length)
+        ? p.variants.map((_v, i) => ({ p, variantIdx: i }))
+        : [{ p, variantIdx: null }]),
     searchTokens: (s) => String(s || '').toLowerCase().split(/\s+/).filter(Boolean),
     catalogueSellAtQty: (p, idx, qty, basis) => (PRICEBOOK[p.id] || {})[basis] || null,
     catalogueBreaks: () => [{ qty: 10, price: 43500 }],
     getStockQty: (pid) => Number(data.stock[pid]) || 0,
-    productVariantLabel: (p) => p.name,
+    productVariantLabel: (p, vi) => (vi == null || !p.variants) ? p.name : p.name + ' ' + p.variants[vi].label,
     todayISO: () => '2026-08-26',
   };
   const scope = compileScope([
     extractDeclaration(app, 'WA_DRAFT_TOOLS', 'index.html'),
     extractFunction(app, 'waCustomerPriceAt', 'index.html'),
+    extractFunction(app, 'waPickEntries', 'index.html'),
     extractFunction(app, 'waDraftThreadMessages', 'index.html'),
     'let waInbox = { msgs: [] }; function setMsgs(m){ waInbox.msgs = m; }',
     'function names(){ return { WA_DRAFT_TOOLS, waDraftThreadMessages, setMsgs }; }',
@@ -210,8 +225,9 @@ const vercel = read('vercel.json');
     && order.lines[0].qty === 5 && order.lines[0].price === 45000,
     `a commitment resolves to priced lines the app can turn into an order (got ${JSON.stringify(order.lines)})`);
   t.check(order.total === 225000, 'with the total already right');
-  t.check(order.unpriced.length === 1 && order.unpriced[0] === 'Ruleless bracket',
-    'a match with no price is UNPRICED — we sell it, the owner quotes it — never unmatched');
+  t.check(order.unpriced.length === 1 && order.unpriced[0].name === 'Ruleless bracket'
+    && order.unpriced[0].qty === 2,
+    'a match with no price is UNPRICED with its qty kept — we sell it, the owner quotes it, the receipt can name it');
   t.check(order.unmatched.length === 1 && order.unmatched[0] === 'flying elephant',
     'and what could not be matched is NAMED, never silently dropped');
   t.check(JSON.stringify(data) === before,
@@ -220,6 +236,21 @@ const vercel = read('vercel.json');
   const bulk = T.wa_take_order.run({ items: [{ query: 'simba cement', qty: 12 }] });
   t.check(bulk.lines[0].price === 40000,
     'a pack-sized order earns the wholesale side — the counter\'s own law, by arithmetic');
+
+  /* THE TIE-BREAK: entries used to come back in raw catalogue order and
+     the first was taken blind. Whole-word hits first, then whichever
+     the price book can actually sell. */
+  const chan = T.wa_take_order.run({ items: [{ query: 'c channels', qty: 2 }] });
+  t.check(chan.lines.length === 1 && chan.lines[0].variantIdx === 1
+    && chan.lines[0].name === 'GYPSUM Channels C Channel',
+    `"c channels" lands on the C Channel variant, not whichever variant came first (got ${JSON.stringify(chan.lines)})`);
+  const screws = T.wa_take_order.run({ items: [{ query: 'black screws fine', qty: 3 }] });
+  t.check(screws.lines.length === 1 && screws.lines[0].productId === 'P7'
+    && screws.lines[0].price === 15500,
+    'a sellable product beats a same-name card the price book cannot price');
+  const screwsPriced = T.wa_product_price.run({ query: 'black screws fine' });
+  t.check(screwsPriced.matches[0].price === 15500,
+    'and the price tool leads with the sellable one too');
 
   /* the thread mapper: customer is user, shop is assistant */
   setMsgs([
@@ -259,6 +290,10 @@ const vercel = read('vercel.json');
     'stamped WhatsApp-born, so the insights count it like a webhook cart order');
   t.check(/await waSendOrderReceipt\(\{/.test(createFn) && !/d\.text/.test(createFn),
     'and the confirmation is the code-composed receipt — never the model\'s pre-order prose');
+  t.check(/toConfirm: \(d\.order\.unpriced\|\|\[\]\)/.test(createFn)
+    && /notFound: \(d\.order\.unmatched\|\|\[\]\)/.test(createFn)
+    && /quote by hand and follow up/.test(createFn),
+    'the leftovers ride the receipt AND come back to the owner as a toast — the card that held them dies with the draft');
   t.check(/waInbox\.creating = true/.test(createFn) && /waInbox\.creating = false/.test(createFn)
     && /\|\| waInbox\.creating\) return;/.test(createFn),
     'a double-tap on Create order cannot make two orders');
@@ -299,7 +334,25 @@ const vercel = read('vercel.json');
     t.check(rows[4] === 'We are preparing your order — thank you.',
       'and it closes as a done deal');
     t.check(!/confirm/i.test(text),
-      'NO confirm-ask anywhere — the customer already committed; this is the confirmation');
+      'a fully-priced receipt has no "confirm" in it at all — the customer already committed');
+
+    /* The INV-0241 silence, pinned dead: three items asked, one priced,
+       and the receipt said NOTHING about the other two. What the order
+       cannot carry yet is named under the total — and still no ask. */
+    const withLeft = R.waOrderReceiptText({ invoice: 'INV-0241',
+      lines: [{ qty: 5, unit: 'Bag', name: 'SAHARA Filler', price: 35000, amount: 175000 }],
+      total: 175000,
+      toConfirm: [{ name: 'GYPSUM Channels C Channel', qty: 2 }],
+      notFound: ['flying elephant'] });
+    const lrows = withLeft.split('\n');
+    t.check(lrows[2] === 'TOTAL *UGX 175,000*'
+      && lrows[3] === '*2*× GYPSUM Channels C Channel — price to confirm, we will send it',
+      `an unpriced ask is NAMED under the total, with its quantity (got ${JSON.stringify(lrows[3])})`);
+    t.check(lrows[4] === '"flying elephant" — we are checking on this one',
+      'and an unmatched ask is named too, never silently dropped');
+    t.check(lrows[lrows.length - 1] === 'We are preparing your order — thank you.'
+      && !/Confirm and/.test(withLeft) && !/\?/.test(withLeft),
+      'still closing as a done deal — a note about pending prices is never a confirm-ask');
   }
 
   const draw = (/function waDrawOrderReceipt\(canvas, receipt\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
@@ -309,6 +362,8 @@ const vercel = read('vercel.json');
     'headed as an order and closed with an emphasized total');
   t.check(/c\.scale\(2, 2\)/.test(draw),
     'oversampled 2× so WhatsApp compression cannot blur the figures');
+  t.check(/'STILL TO CONFIRM'/.test(draw) && /extras\.length \? 34 \+ extras\.length\*20/.test(draw),
+    'the image twin carries the leftovers block too, with the height to hold it');
   t.check(!!draw && !/(cost|margin|profit|supplier|debt)/i.test(draw),
     'nothing beyond the agreed order is in reach of the renderer — the waDrawStatus law');
 

@@ -356,6 +356,15 @@ const run = (name, input) => T[name].run(input || {});
   t.check(priced.no_markup_rule === true && /wholesale/.test(priced.note),
     'and no wholesale rule on file is said, with what to do, never a guessed figure');
 
+  /* The shop default reaches the assistant through the same resolver,
+     and is NAMED as the default — claiming a product-specific rule
+     that is not there would be a lie. */
+  data.presetDefaultMarkup = { wholesaleType: 'percent', wholesaleValue: 20 };
+  const defaulted = run('recommended_price', { product_id: 'P1', variant_index: 1 });
+  t.check(defaulted.recommended_sell === 8400 && defaulted.via_shop_default === true,
+    `with a shop default set, the ruleless variant prices at cost + default and says which book it came from (got ${JSON.stringify(defaulted)})`);
+  delete data.presetDefaultMarkup;
+
   let threw = false;
   try{ run('recommended_price', { product_id: 'P999' }); } catch(e){ threw = true; }
   t.check(threw, 'a product that does not exist is an error, not an empty guess');

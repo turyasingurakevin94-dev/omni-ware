@@ -1177,6 +1177,10 @@
     background:var(--bg);border-radius:999px;padding:1px 7px;min-width:22px;text-align:center;
   }
   .preset-tab.active .pset-count{background:var(--panel);color:var(--accent);}
+  /* A type selector and its amount as one control (the default price rule). */
+  .input-pair{display:flex;gap:8px;}
+  .input-pair select{flex:0 0 auto;}
+  .input-pair input{flex:1;min-width:0;}
   /* Empty rather than a zero: a list nobody has filled in yet is not the
      same news as one deliberately emptied, and a column of 0s reads as a
      broken screen. */
@@ -2119,6 +2123,9 @@
   .cat-markup>div{display:flex;align-items:baseline;gap:5px;white-space:nowrap;}
   .cat-markup span{color:var(--ow-ink-400);font-weight:700;flex-shrink:0;}
   .cat-markup b{color:var(--ink);}
+  /* A side priced by the shop default, not a rule of its own: present
+     but visibly borrowed. */
+  .cat-markup-default{color:var(--ow-ink-400);font-weight:600;font-style:italic;}
   .cat-actions{display:flex;gap:5px;flex-shrink:0;}
   /* The card stacks on its own; only the note needs releasing, since it
      was clipped to one line to keep a column aligned and there is no
@@ -8792,6 +8799,8 @@
               <span>Units</span><b class="pset-count" data-count="units"></b></button>
             <button type="button" class="preset-tab" data-ptab="attributes">
               <span>Attributes</span><b class="pset-count" data-count="attributes"></b></button>
+            <button type="button" class="preset-tab" data-ptab="pricing">
+              <span>Default price rule</span></button>
 
             <div class="pset-nav-group">The cash book</div>
             <button type="button" class="preset-tab" data-ptab="income-cats">
@@ -8886,6 +8895,30 @@
                 <button type="button" id="preset_location_add">Add</button>
               </div>
               <div id="presetLocationsWrap"></div>
+            </div>
+
+            <div class="preset-pane" id="ppane-pricing" style="display:none;">
+              <header class="pset-head">
+                <h3>Default price rule</h3>
+                <p>The selling rule for every product that has none of its own. A product without a markup rule cannot be sold by the counter, the assistant, or the catalogues &mdash; this fills that gap in one move. A rule set on a product (or a variant) always wins over this default, and clearing it drops the product back here.</p>
+              </header>
+              <section class="pset-group">
+                <h4>When no rule is set on the product</h4>
+                <p class="pset-note">Percent adds on top of the item's cheapest supplier cost and scales with the item &mdash; the safe choice across a whole catalogue. Fixed adds a flat amount: per <b>pack</b> on the wholesale side, per <b>piece</b> on retail, the same way product rules work. A product with no supplier cost on file still cannot be priced by any rule &mdash; there is nothing to add on top of. Leave a side at 0 for no default on that side.</p>
+                <div class="form-grid pset-fields">
+                  <div class="field"><label>Wholesale default</label>
+                    <div class="input-pair">
+                      <select id="preset_default_markup_wholesale_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                      <input type="number" id="preset_default_markup_wholesale_value" min="0" step="any" placeholder="e.g. 12">
+                    </div></div>
+                  <div class="field"><label>Retail default</label>
+                    <div class="input-pair">
+                      <select id="preset_default_markup_retail_type"><option value="percent">+ %</option><option value="fixed">+ UGX</option></select>
+                      <input type="number" id="preset_default_markup_retail_value" min="0" step="any" placeholder="e.g. 18">
+                    </div></div>
+                </div>
+                <p class="pset-note" id="preset_default_markup_caption"></p>
+              </section>
             </div>
 
             <div class="preset-pane" id="ppane-agent-discounts" style="display:none;">
@@ -10587,7 +10620,7 @@
         <div class="pf-pane" id="pfpane-pricing" style="display:none;">
           <header class="pset-head">
             <h3 id="p_markup_panel_title">Default markup rules</h3>
-            <p>Added on top of a supplier's wholesale or retail price to suggest a selling price in Compare Prices. Leave a value blank or 0 to skip it. On a variable product this is the fallback whenever a variant sets no rule of its own.</p>
+            <p>Added on top of a supplier's wholesale or retail price to suggest a selling price in Compare Prices. Leave a value blank or 0 to skip it. On a variable product this is the fallback whenever a variant sets no rule of its own. <span id="p_markup_default_hint"></span></p>
           </header>
           <div class="markup-rules-grid">
             <div>
@@ -12091,6 +12124,10 @@ async function loadData(shopId){
     presetFollowUp: presets.followUp || {},
     presetAgentDiscountWholesalePct: Number(presets.agentDiscountWholesalePct)||0,
     presetAgentDiscountRetailPct: Number(presets.agentDiscountRetailPct)||0,
+    // The shop default price rule: what effectiveMarkupRule falls back to
+    // when neither the variant nor the product has one. Same shape as a
+    // product rule (percent | fixed per side); value 0 = no default.
+    presetDefaultMarkup: presets.defaultMarkup || {},
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
     /* Who the shop is, on paper. printedShopName() has been the entire
@@ -12358,7 +12395,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -14079,13 +14116,38 @@ function waCustomerPriceAt(p, idx, qty){
   return { at: pick, basisKey: pick === wholesale ? 'wholesale' : 'retail' };
 }
 
+/* The matcher hands entries back in raw catalogue order, and its token
+   matching is substring — "c" is inside every "Channel". Two live
+   misses came from that: "C Channels" drafted the Wall Angle variant,
+   and "black screws 1 fine" landed on a card with no cost on file
+   while its costed sibling sat one row later. So the two customer-
+   facing tools re-rank the strict matches before picking:
+     1. whole-word hits — tokens matching a full word of the entry's
+        name/variant/category, not merely a substring of one;
+     2. sellable first — an entry the price book can price at this
+        quantity beats one it cannot;
+     3. catalogue order, as the stable tail.
+   The global inventory search keeps its own behavior untouched. */
+function waPickEntries(entries, tokens, qty){
+  const scored = (entries||[]).map((e, i)=>{
+    const words = (productVariantLabel(e.p, e.variantIdx) + ' ' + (e.p.category||''))
+      .toLowerCase().split(/[^a-z0-9"]+/).filter(Boolean);
+    return { e, i,
+      hits: (tokens||[]).filter(t=> words.includes(t)).length,
+      priced: waCustomerPriceAt(e.p, e.variantIdx, Math.max(1, Number(qty)||1)) ? 1 : 0 };
+  });
+  scored.sort((a,b)=> (b.hits - a.hits) || (b.priced - a.priced) || (a.i - b.i));
+  return scored.map(s=> s.e);
+}
+
 const WA_DRAFT_TOOLS = {
   wa_catalogue_names: { run(){
     const all = data.products||[];
     return { names: all.slice(0, 300).map(p=> p.name), truncated: all.length > 300 };
   }},
   wa_product_price: { run(input){
-    const entries = allProductVariantEntries(searchTokens(String(input.query||'')));
+    const tokens = searchTokens(String(input.query||''));
+    const entries = waPickEntries(allProductVariantEntries(tokens), tokens, 1);
     const out = [];
     for(const {p, variantIdx} of entries){
       /* Existence and price are SEPARATE facts. A matched product with
@@ -14123,15 +14185,17 @@ const WA_DRAFT_TOOLS = {
     const lines = []; const unmatched = []; const unpriced = [];
     (Array.isArray(input.items) ? input.items : []).slice(0, 10).forEach(it=>{
       const qty = Number(it.qty)||0;
-      const entries = allProductVariantEntries(searchTokens(String(it.query||'')));
-      const first = entries[0] || null;
+      const tokens = searchTokens(String(it.query||''));
+      const first = waPickEntries(allProductVariantEntries(tokens), tokens, qty)[0] || null;
       if(!first || !(qty > 0)){ unmatched.push(String(it.query||'')); return; }
       /* Priced at the ORDER's quantity through the shared resolver, so
          a pack-sized order earns the wholesale side by arithmetic. A
          match with no rule on either side is an UNPRICED line -- we do
-         sell it; the owner quotes it by hand -- never an unmatched one. */
+         sell it; the owner quotes it by hand -- never an unmatched one.
+         The qty rides along so the receipt can NAME the line instead of
+         dropping it without a word. */
       const r = waCustomerPriceAt(first.p, first.variantIdx, Math.max(1, qty));
-      if(!r){ unpriced.push(productVariantLabel(first.p, first.variantIdx)); return; }
+      if(!r){ unpriced.push({ name: productVariantLabel(first.p, first.variantIdx), qty }); return; }
       lines.push({ productId: first.p.id,
         variantIdx: first.variantIdx==null ? null : first.variantIdx,
         name: productVariantLabel(first.p, first.variantIdx), qty,
@@ -14167,6 +14231,15 @@ function waOrderReceiptText(receipt){
     out.push('*' + f(l.qty) + '* ' + (l.unit || 'pc') + ' ' + l.name + rate + ' — *UGX ' + f(l.amount) + '*');
   });
   out.push('TOTAL *UGX ' + f(receipt.total) + '*');
+  /* What the customer asked for but the order cannot price or place yet
+     is NAMED, never dropped — the live INV-0241 receipt listed one item
+     of the three asked and said nothing about the other two, which
+     reads as a shop that forgot. The total above covers the priced
+     lines only; these ride below it. */
+  (receipt.toConfirm||[]).forEach(u=>
+    out.push('*' + f(u.qty) + '*× ' + u.name + ' — price to confirm, we will send it'));
+  (receipt.notFound||[]).forEach(q=>
+    out.push('"' + q + '" — we are checking on this one'));
   out.push('We are preparing your order — thank you.');
   return out.join('\n');
 }
@@ -14189,7 +14262,13 @@ function waReceiptClip(ctx, text, maxW){
 function waDrawOrderReceipt(canvas, receipt){
   const rowH = 40, headerH = 122, footerH = 120;
   const rows = receipt.lines || [];
-  const w = 640, h = headerH + rows.length*rowH + 70 + footerH;
+  const f0 = n=> Number(n||0).toLocaleString('en-UG');
+  /* The asked-for items the order cannot carry yet, as one muted block
+     under the total — the same no-silent-drop law as the text twin. */
+  const extras = (receipt.toConfirm||[]).map(u=> `${f0(u.qty)} × ${u.name} — price to confirm`)
+    .concat((receipt.notFound||[]).map(q=> `"${q}" — we are checking on this one`));
+  const extraH = extras.length ? 34 + extras.length*20 + 6 : 0;
+  const w = 640, h = headerH + rows.length*rowH + 70 + extraH + footerH;
   canvas.width = w*2; canvas.height = h*2;
   const c = canvas.getContext('2d');
   c.scale(2, 2);
@@ -14251,6 +14330,15 @@ function waDrawOrderReceipt(canvas, receipt){
   c.fillStyle = ACCENT;
   c.fillText('UGX ' + f(receipt.total), w-32, y);
   c.textAlign = 'left';
+
+  if(extras.length){
+    y += 34;
+    c.fillStyle = FAINT; c.font = '700 11px ' + SANS;
+    c.fillText('STILL TO CONFIRM', 32, y);
+    c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
+    extras.forEach(t=>{ y += 20; c.fillText(waReceiptClip(c, t, w-64), 32, y); });
+    y += 6;
+  }
 
   y += 44;
   c.fillStyle = FAINT; c.font = '500 11.5px ' + SANS;
@@ -14349,6 +14437,12 @@ async function waCreateOrderFromChat(){
     refreshNavBadges();
     delete waInbox.aiDrafts[String(waInbox.active)];
     waRenderInbox();
+    /* The card that reminded the owner about unpriced items dies with
+       the draft, so the reminder moves to a toast — and the leftovers
+       ride the receipt itself, named to the customer. */
+    const leftovers = (d.order.unpriced||[]).length + (d.order.unmatched||[]).length;
+    if(leftovers) toast(leftovers + (leftovers===1 ? ' item from this chat still needs' : ' items from this chat still need')
+      + ' a price — quote by hand and follow up.', 9000);
     const ident = shopIdentity();
     await waSendOrderReceipt({
       shopName: ident.name, phone: ident.phone || data.presetWaPhone || '',
@@ -14357,6 +14451,8 @@ async function waCreateOrderFromChat(){
       lines: d.order.lines.map(l=> ({ qty: l.qty, unit: l.unit, name: l.name,
         price: l.price, amount: Math.round(l.qty * l.price) })),
       total: d.order.total,
+      toConfirm: (d.order.unpriced||[]).map(u=> ({ name: u.name, qty: u.qty })),
+      notFound: (d.order.unmatched||[]).slice(),
     });
   } finally {
     waInbox.creating = false;
@@ -14929,7 +15025,7 @@ function waRenderInbox(){
                 <div class="wa-suggest-body" id="wa_ai_body">${waWaMarkupHTML(d.text)}</div>
                 ${hasOrder ? `<div class="wa-suggest-order">${d.order.lines.map(l=>
                   `${esc(String(l.qty))} × ${esc(l.name)} @ ${fmtUGX(l.price)}`).join(' · ')} — ${fmtUGX(d.order.total)}${
-                  (d.order.unpriced||[]).length ? ` · no price set (quote by hand): ${esc(d.order.unpriced.join(', '))}` : ''}${
+                  (d.order.unpriced||[]).length ? ` · no price set (quote by hand): ${esc(d.order.unpriced.map(u=> `${u.qty} × ${u.name}`).join(', '))}` : ''}${
                   (d.order.unmatched||[]).length ? ` · could not match: ${esc(d.order.unmatched.join(', '))}` : ''}</div>` : ''}
                 <div class="btn-row" style="margin-top:8px;">
                   ${hasOrder ? `<button type="button" class="btn btn-accent" id="wa_ai_order">Create order &amp; send</button>
@@ -19520,9 +19616,19 @@ function sellBelowCostClause(it){
 
 // Resolves which markup rule actually applies for a product/variant + kind
 // ('wholesale' or 'retail'): a variant's own rule if it has set one (value >
-// 0), otherwise the product's rule, otherwise none. Centralizes the
-// fallback logic used both for calculating a suggested price and for
-// labelling which rule is in effect in the UI.
+// 0), otherwise the product's rule, otherwise the SHOP DEFAULT (a rule the
+// owner sets once in Settings for everything that has none of its own),
+// otherwise none. Centralizes the fallback logic used both for calculating
+// a suggested price and for labelling which rule is in effect in the UI.
+// The default is per-side like every rule — a retail read only ever uses
+// the retail default — and it can never price a product with no cost on
+// file, because there is nothing to add the markup to.
+function shopDefaultMarkupRule(kind){
+  const d = data && data.presetDefaultMarkup;
+  const val = d ? Number(d[kind+'Value'])||0 : 0;
+  if(val<=0) return null;
+  return {type: d[kind+'Type']==='fixed' ? 'fixed' : 'percent', value:val, source:'default'};
+}
 function effectiveMarkupRule(product, variantIdx, kind){
   if(!product) return null;
   if(variantIdx!=null && product.variants && product.variants[variantIdx]){
@@ -19532,6 +19638,11 @@ function effectiveMarkupRule(product, variantIdx, kind){
   }
   const pVal = Number(product[kind+'MarkupValue'])||0;
   if(pVal>0) return {type:product[kind+'MarkupType'], value:pVal, source:'product'};
+  // Inlined rather than delegated to shopDefaultMarkupRule: this function
+  // is extracted ALONE into several test scopes, and must stay whole.
+  const d = data && data.presetDefaultMarkup;
+  const dVal = d ? Number(d[kind+'Value'])||0 : 0;
+  if(dVal>0) return {type: d[kind+'Type']==='fixed' ? 'fixed' : 'percent', value:dVal, source:'default'};
   return null;
 }
 
@@ -20459,7 +20570,7 @@ function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
   }
   const wRule = effectiveMarkupRule(product, variantIdx, 'wholesale');
   const rRule = effectiveMarkupRule(product, variantIdx, 'retail');
-  const fmtRule = r => r ? `${markupRuleLabel(r.type, r.value)}${r.source==='variant'?' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>':''}` : 'No rule set';
+  const fmtRule = r => r ? `${markupRuleLabel(r.type, r.value)}${r.source==='variant'?' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>':r.source==='default'?' <em style="font-style:normal;color:var(--ow-ink-400);">(shop default)</em>':''}` : 'No rule set';
   bits.push(`Price rule: Wholesale <strong>${fmtRule(wRule)}</strong>&nbsp;·&nbsp;Retail <strong>${fmtRule(rRule)}</strong>`);
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
@@ -33749,9 +33860,17 @@ document.getElementById('crp_save').addEventListener('click', ()=>{
 
 /* ================= PRODUCTS ================= */
 let editingProductId = null;
-function markupRuleLabel(type, value){
+function markupRuleLabel(type, value, kind){
   const val = Number(value)||0;
-  if(!val) return '<span class="variance-pending">No rule</span>';
+  if(!val){
+    // Pass `kind` where "no own rule" should show the shop default that
+    // will actually price the item — "No rule" would misreport what the
+    // counter and the catalogues now do. Callers that mean the product's
+    // OWN fields only (editors, captions) omit it and keep "No rule".
+    const d = kind ? shopDefaultMarkupRule(kind) : null;
+    if(d) return `<span class="cat-markup-default">default ${markupRuleLabel(d.type, d.value)}</span>`;
+    return '<span class="variance-pending">No rule</span>';
+  }
   return type==='fixed' ? `+${fmtUGX(val)}` : `+${val}%`;
 }
 const MARKUP_TYPE_OPTIONS = `<option value="percent">Percentage (%)</option><option value="fixed">Fixed amount (UGX)</option>`;
@@ -34375,8 +34494,8 @@ function productLineHTML(r, tokens){
         : 'No price on file'}
     </div>
     <div class="cat-markup">
-      <div><span>W</span> <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue)}</b></div>
-      <div><span>R</span> <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue)}</b></div>
+      <div><span>W</span> <b>${markupRuleLabel(p.wholesaleMarkupType, p.wholesaleMarkupValue, 'wholesale')}</b></div>
+      <div><span>R</span> <b>${markupRuleLabel(p.retailMarkupType, p.retailMarkupValue, 'retail')}</b></div>
     </div>`}
   </div>`;
 }
@@ -35210,8 +35329,19 @@ function saveOnceAtATime(btn, run){
   };
 }
 function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
+// The pricing pane's reminder that an empty rule is not an unpriced
+// product any more — the shop default catches it. Set at open time from
+// both doors into the modal, so it always reflects the current default.
+function refreshMarkupDefaultHint(){
+  const el = document.getElementById('p_markup_default_hint');
+  if(!el) return;
+  const w = shopDefaultMarkupWords('wholesale'), r = shopDefaultMarkupWords('retail');
+  el.textContent = (!w && !r) ? ''
+    : `Left empty, the shop default applies: wholesale ${w || 'none'} · retail ${r || 'none'}.`;
+}
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if(!p) return;
+  refreshMarkupDefaultHint();
   editingProductId = id;
   document.getElementById('p_id').value = p.id;
   document.getElementById('p_id').disabled = true;
@@ -35323,6 +35453,7 @@ document.getElementById('sr_save_btn').addEventListener('click', ()=>{
   toast('Stock pricing rule saved');
 });
 function resetProductForm(){
+  refreshMarkupDefaultHint();
   editingProductId = null;
   ['p_id','p_name','p_category','p_subcategory','p_short_desc','p_notes','p_wholesale_markup_value','p_retail_markup_value','p_agent_discount_wholesale','p_agent_discount_retail'].forEach(id=>document.getElementById(id).value='');
   refreshPresetDatalists();
@@ -41155,6 +41286,7 @@ function renderPresets(){
   renderPresetOrderLimits();
   renderPresetPriceReview();
   renderPresetAgentDiscounts();
+  renderPresetDefaultMarkup();
   // Last, so the rail can only ever say what the panes have just drawn.
   // Every add and every delete routes through here, so the counts cannot
   // go stale behind an edit.
@@ -41185,6 +41317,46 @@ document.getElementById('preset_agent_cluster_wait_days').addEventListener('chan
   e.target.value = data.presetAgentClusterWaitDays;
   saveData();
   toast('Cluster bonus wait period updated');
+});
+// The default rule as words, one way for every caption that mentions it:
+// "+12% on cost" / "+5,000 UGX per pack" (wholesale-fixed is per pack,
+// the same reading as a product's own fixed wholesale rule) — null when
+// that side has no default.
+function shopDefaultMarkupWords(kind){
+  const r = shopDefaultMarkupRule(kind);
+  if(!r) return null;
+  if(r.type === 'fixed') return '+' + fmtUGX(r.value) + (kind === 'wholesale' ? ' per pack' : ' per piece');
+  return '+' + r.value + '% on cost';
+}
+function renderPresetDefaultMarkup(){
+  const el = id=> document.getElementById(id);
+  if(!el('preset_default_markup_wholesale_type')) return;
+  const d = data.presetDefaultMarkup || {};
+  el('preset_default_markup_wholesale_type').value = d.wholesaleType === 'fixed' ? 'fixed' : 'percent';
+  el('preset_default_markup_wholesale_value').value = Number(d.wholesaleValue)||'';
+  el('preset_default_markup_retail_type').value = d.retailType === 'fixed' ? 'fixed' : 'percent';
+  el('preset_default_markup_retail_value').value = Number(d.retailValue)||'';
+  const w = shopDefaultMarkupWords('wholesale'), r = shopDefaultMarkupWords('retail');
+  el('preset_default_markup_caption').textContent = (!w && !r)
+    ? 'No default set — products without their own rule stay unpriced.'
+    : 'Right now: wholesale ' + (w || 'no default') + ' · retail ' + (r || 'no default') + '.';
+}
+['wholesale','retail'].forEach(kind=>{
+  const typeEl = document.getElementById('preset_default_markup_' + kind + '_type');
+  const valEl = document.getElementById('preset_default_markup_' + kind + '_value');
+  const save = ()=>{
+    if(!data.presetDefaultMarkup) data.presetDefaultMarkup = {};
+    data.presetDefaultMarkup[kind + 'Type'] = typeEl.value === 'fixed' ? 'fixed' : 'percent';
+    data.presetDefaultMarkup[kind + 'Value'] = Math.max(0, Number(valEl.value)||0);
+    saveData();
+    renderPresetDefaultMarkup();
+    // The product cards' rule chips read this default, so the list must
+    // not keep saying "No rule" against products it now prices.
+    triggerProductsRender();
+    toast('Default price rule updated');
+  };
+  typeEl.addEventListener('change', save);
+  valEl.addEventListener('change', save);
 });
 // One time-limit field per Order Tracking step (draft/preparing/pending
 // delivery/completed), built from SQ_STATUS_ORDER so it stays in sync if
@@ -51856,7 +52028,8 @@ function apRuleWords(kind, r){
       ? apRound(r.value).toLocaleString('en-US')
         + (kind==='wholesale' ? ' UGX added on each pack' : ' UGX added per unit')
       : r.value + '% on cost')
-    + (r.source==='variant' ? ' (set on this variant itself)' : '');
+    + (r.source==='variant' ? ' (set on this variant itself)'
+      : r.source==='default' ? ' (the shop default — this product has no rule of its own)' : '');
 }
 /* Variant attributes, sanitised exactly as the product form sanitises
    its own: trimmed names, trimmed non-empty values, empties dropped,
@@ -52349,9 +52522,13 @@ const ASSISTANT_TOOLS = {
     const sell = suggestedSellingPrice(p, cost, kind, vi, packQty);
     if(sell==null) return { no_markup_rule: true, name: label, unit: best.unit||'',
       cost: apRound(cost), basis: kind, ...extras,
-      note: 'A cost is on file but no ' + kind + ' markup rule — set one in Products and this becomes a sell price.' };
+      note: 'A cost is on file but no ' + kind + ' markup rule and no shop default — set either and this becomes a sell price.' };
+    const rule = effectiveMarkupRule(p, vi, kind);
     return { name: label, unit: best.unit||'', cost: apRound(cost),
-      recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi), ...extras };
+      recommended_sell: apRound(sell), basis: kind, in_stock: getStockQty(p.id, vi),
+      /* Flagged so the assistant says which book the figure came from --
+         claiming a product-specific rule that is not there is a lie. */
+      ...(rule && rule.source==='default' ? { via_shop_default: true } : {}), ...extras };
   }},
 
   /* The dossier behind "what do we know about X": stock, the suppliers

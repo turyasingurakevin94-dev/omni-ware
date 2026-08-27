@@ -160,6 +160,47 @@ if (scope) {
   eq(unbuilt.price, undefined, 'and carries no price to print');
 }
 
+/* ---------- 4b. the shop default rule fills the ruleless gap ---------- *
+ * The owner's ask, verbatim: "a general default markup rule that applies
+ * to any product where no markup is set. When the user sets for the
+ * product it should overwrite the default." So the default is the LAST
+ * step of effectiveMarkupRule — a product's own rule always wins — and
+ * a product with no cost on file stays unpriceable, because no rule can
+ * invent a cost to add itself to.
+ */
+if (scope) {
+  data.products = [
+    product('P015', 'Ruled its own way'),
+    product('P016', 'Ruleless channel', { retailMarkupType: null, retailMarkupValue: null,
+      wholesaleMarkupType: null, wholesaleMarkupValue: null }),
+    product('P017', 'Ruleless, costless', { retailMarkupType: null, retailMarkupValue: null,
+      wholesaleMarkupType: null, wholesaleMarkupValue: null }),
+  ];
+  data.prices = [
+    price(15, 'P015', [{ minQty: 1, price: 1000 }]),
+    price(16, 'P016', [{ minQty: 1, price: 3000 }]),
+  ];
+  data.presetDefaultMarkup = { retailType: 'percent', retailValue: 20,
+    wholesaleType: 'fixed', wholesaleValue: 50000 };
+
+  const rule = scope.effectiveMarkupRule(data.products[1], null, 'retail');
+  t.check(!!rule && rule.source === 'default' && rule.value === 20,
+    'a product with no rule of its own resolves to the shop default, marked as borrowed');
+  eq(Math.round(scope.catalogueSellAtQty(data.products[1], null, 1, 'retail').price), 3600,
+    'and prices at cost + the default — the C Channel stops being unsellable');
+  eq(Math.round(scope.catalogueSellAtQty(data.products[0], null, 1, 'retail').price), 1250,
+    'while a product\'s own rule still overrides the default entirely');
+  /* A fixed WHOLESALE default keeps the per-pack reading every fixed
+     wholesale rule has: 50,000 across the 50-bag pallet is 1,000 a bag. */
+  eq(Math.round(scope.catalogueSellAtQty(data.products[1], null, 1, 'wholesale').price), 4000,
+    'a fixed wholesale default spreads across the pack like any fixed wholesale rule');
+  eq(scope.catalogueSellAtQty(data.products[2], null, 1, 'retail'), null,
+    'no cost on file stays unpriceable — a default cannot invent a cost');
+  const printed = scope.catalogueSections(data.products.map(row), 'retail');
+  eq(printed.printable.length, 2, 'the printed catalogue now carries the default-priced product too');
+  delete data.presetDefaultMarkup;
+}
+
 /* ---------- 5. grouped and ordered the way a document is read -------- */
 if (scope) {
   data.products = [
