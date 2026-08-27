@@ -781,6 +781,17 @@
   .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
   .chase-done{font-size:11.5px;font-weight:600;color:var(--accent);}
   .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
+  /* ---- Supplier prices over time ---- */
+  .pw-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .pw-row:last-child{border-bottom:none;}
+  .pw-main{min-width:0;flex:1;}
+  .pw-main b{color:var(--ink);}
+  .pw-main em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .pw-move{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;
+    background:var(--bg);color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .pw-move.up{background:var(--ow-oxide-soft);color:var(--accent);}
+  .pw-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .pw-trail{font-variant-numeric:tabular-nums;}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -7236,6 +7247,10 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
           <span class="nav-label">Compare prices</span>
         </button>
+        <button data-tab="prices-watch" title="Supplier prices over time" data-keywords="cost rise increase creeping history trend charged watch registry out of date">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 3v6h-6"/></svg>
+          <span class="nav-label">Supplier prices</span>
+        </button>
         <button data-tab="sourcing" title="Sourcing" data-keywords="source research find importer unknown item request wanted funnel we dont sell it yet">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></svg>
           <span class="nav-label">Sourcing</span>
@@ -9154,6 +9169,22 @@
     </section>
 
     <!-- SOURCING FUNNEL -->
+    <!-- SUPPLIER PRICES OVER TIME. Compare prices asks who is cheapest
+         today; this asks what each of them has been doing to you. -->
+    <section id="tab-prices-watch" style="display:none;">
+      <div class="page-head">
+        <h1>Supplier prices</h1>
+        <p>What each supplier has actually charged you, from your own purchase invoices — so a price creeping up becomes visible instead of invisible. Ranked by money rather than percentage: a small rise on something bought every week costs more than a big rise on something bought once. Prices are only ever compared against prices for the same unit, and a single purchase is never called a trend. The last section is the one to watch — where the Price Registry no longer matches what you actually pay, which is the file the buying plan costs everything from.</p>
+      </div>
+      <div class="panel">
+        <div class="buy-controls">
+          <label>Look back <input type="number" id="pw_days" min="1" step="1"> days</label>
+          <span class="buy-controls-note" id="pw_summary"></span>
+        </div>
+        <div id="pw_body"></div>
+      </div>
+    </section>
+
     <section id="tab-sourcing" style="display:none;">
       <div class="page-head">
         <h1>Sourcing</h1>
@@ -12244,6 +12275,7 @@ async function loadData(shopId){
     // How many days of stock the buying copilot refills to. 14 unless
     // the shop tunes it on the What-to-buy panel itself.
     presetRestockCoverDays: presets.restockCoverDays != null ? Number(presets.restockCoverDays) : 14,
+    presetPriceWatchDays: presets.priceWatchDays != null ? Number(presets.priceWatchDays) : 180,
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
     /* When each debtor was last chased, customer id -> date. Kept with
@@ -12519,7 +12551,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -12894,7 +12926,7 @@ function fmtUGXPerUnitPack(n, row){
 // dashAlerts is five rather than twenty-four: it is a ranked to-do list on
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
-const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5 };
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -12923,6 +12955,9 @@ const LIST_PAGE_RERENDER = {
   suppliers: ()=> renderSuppliers(document.getElementById('s_search').value),
   dashAlerts: ()=> renderDashboard(),
   buyPlan: ()=> renderPurchasePlanPanel(),
+  priceUp: ()=> renderPriceWatch(),
+  priceDown: ()=> renderPriceWatch(),
+  priceFile: ()=> renderPriceWatch(),
   // Redraws from rows already in hand -- expanding the list must not
   // re-query the server.
   sessions: ()=> renderLoginSessions(),
@@ -15824,6 +15859,7 @@ function goToTab(tab){
   if(tab==='sourcing') renderSourcing();
   if(tab==='buying') renderPurchasePlanPanel();
   if(tab==='chase') renderChaseScreen();
+  if(tab==='prices-watch') renderPriceWatch();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -47494,32 +47530,193 @@ function dashInventoryHealth(){
 // computed, and claiming it was is what made the card confident as well as
 // wrong. It now reports only the cost rise, which is real.
 const DASH_COST_RISE_PCT = 5;
-function dashSupplierPriceInflation(){
-  const series = new Map();   // product|variant|supplier -> [{date, price, name, supplierName}]
+
+/* ================= WHAT SUPPLIERS CHARGE, OVER TIME ==================
+
+   This shop buys most of its goods to order, so the price a supplier
+   charges IS the margin -- and nothing here used to show one creeping
+   up. The evidence was already being built and thrown away: the
+   dashboard flag below computed a full price series per
+   product+supplier and kept the top three risers.
+
+   So the series becomes the thing, and the flag reads from it.
+
+   Two rules keep it honest, and both take rows out:
+
+   ONE UNIT ONLY. A price is only comparable with a price for the same
+   thing. A product re-recorded from pieces to cartons would show a
+   twentyfold "rise" that never happened, so only points carrying the
+   LATEST point's unit are compared, and the rest are counted rather
+   than quietly dropped.
+
+   TWO DATED PURCHASES, ON DIFFERENT DAYS. One purchase is a price, not
+   a trend; several on one day is one delivery. Neither says anything
+   about change, and neither is allowed to. */
+/* The watch on screen. Every row carries its own trail, so a claim
+   that a price moved can be checked against the invoices that say so
+   without leaving the page. */
+function renderPriceWatch(){
+  const el = document.getElementById('pw_body');
+  if(!el) return;
+  const w = supplierPriceWatch(todayISO());
+  const daysEl = document.getElementById('pw_days');
+  if(daysEl && document.activeElement !== daysEl) daysEl.value = w.days;
+  const f = n=> fmtUGX(Math.round(n));
+  const label = (sr)=> sr.name || productDisplayLabel(
+    (data.products||[]).find(p=> p.id === sr.productId) || {name: sr.productId}, sr.variantIdx);
+  const move = (sr)=> `<span class="pw-move${sr.rise > 0 ? ' up' : ''}">${
+    sr.rise > 0 ? '+' : ''}${Math.round(sr.risePct)}%</span>`;
+  /* The prices themselves, in order. Three at most: the first, so the
+     rise has a starting point, and the two most recent. */
+  const trail = (sr)=> {
+    const pts = sr.points;
+    const shown = pts.length <= 3 ? pts : [pts[0], pts[pts.length-2], pts[pts.length-1]];
+    return shown.map((pt,i)=> (i && shown.length === 3 && pts.length > 3 && i === 1 ? '… ' : '')
+      + f(pt.price) + ' <span class="pw-trail">(' + esc(fmtShortDate(pt.date)) + ')</span>').join(' → ');
+  };
+  const skipped = (sr)=> sr.skippedOtherUnit
+    ? ` · ${sr.skippedOtherUnit} earlier purchase${sr.skippedOtherUnit===1?'':'s'} in another unit, not compared`
+    : '';
+
+  const movedRow = (sr)=> `
+    <div class="pw-row">${move(sr)}
+      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
+        <em>${trail(sr)}${skipped(sr)}</em>
+        <em>the ${sr.units} you bought in these ${w.days} days would ${sr.rise > 0 ? 'now cost' : 'now be'} <b>${f(Math.abs(sr.extra))}</b> ${sr.rise > 0 ? 'more' : 'less'}</em></div>
+      <span class="pw-cost">${f(sr.last.price)}</span>
+    </div>`;
+
+  const fileRow = (sr, i)=> `
+    <div class="pw-row">
+      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
+        <em>last paid <b>${f(sr.last.price)}</b> on ${esc(fmtShortDate(sr.last.date))}, but the Price Registry says <b>${f(sr.onFile)}</b> at that quantity — a gap of ${f(Math.abs(sr.fileGap))} ${sr.fileGap > 0 ? 'above' : 'below'} the file the buying plan costs from.</em></div>
+      <button type="button" class="btn btn-ghost pw-fix" data-i="${i}">Update the file</button>
+    </div>`;
+
+  let html = '';
+  if(!w.series.length){
+    html = `<p class="dash-panel-note" style="margin:6px 0 0;">No purchase invoices in the last ${w.days} days, so there is nothing to compare yet. Record what you buy and this fills itself in.</p>`;
+  } else if(!w.up.length && !w.down.length && !w.outOfStep.length){
+    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing has moved: every supplier is charging what they charged, and the Price Registry agrees with what you actually paid.</p>`;
+  } else {
+    if(w.up.length) html += `<div class="buy-tail"><h4>Going up</h4>${
+      listPageSlice('priceUp', w.up).map(movedRow).join('')}${
+      listMoreButtonHTML('priceUp', w.up.length, 'risers')}</div>`;
+    if(w.down.length) html += `<div class="buy-tail"><h4>Come down</h4>${
+      listPageSlice('priceDown', w.down).map(movedRow).join('')}${
+      listMoreButtonHTML('priceDown', w.down.length, 'falls')}</div>`;
+    if(w.outOfStep.length) html += `<div class="buy-tail"><h4>Price Registry out of step with what you pay</h4>${
+      listPageSlice('priceFile', w.outOfStep).map(fileRow).join('')}${
+      listMoreButtonHTML('priceFile', w.outOfStep.length, 'rows')}</div>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.pw-fix').forEach(btn=> btn.addEventListener('click', ()=>{
+    const sr = listPageSlice('priceFile', w.outOfStep)[Number(btn.dataset.i)];
+    if(!sr) return;
+    /* The same door the buying plan uses for a product with no price:
+       the price form, opened on that product. What it says there is the
+       owner's to decide -- this screen never edits the file itself. */
+    goToTab('prices');
+    refreshPriceDropdowns();
+    resetPriceForm();
+    selectPrProduct(sr.productId, sr.variantIdx);
+    openModal('priceModal');
+  }));
+  const sum = document.getElementById('pw_summary');
+  if(sum){
+    const moved = w.up.length + w.down.length;
+    sum.textContent = w.series.length
+      ? `${w.series.length} supplier price${w.series.length===1?'':'s'} watched · ${moved} moved · ${w.outOfStep.length} out of step with the file`
+      : '';
+  }
+}
+document.getElementById('pw_days').addEventListener('change', e=>{
+  const v = Math.round(Number(e.target.value)||0);
+  data.presetPriceWatchDays = v >= 1 ? v : 180;
+  e.target.value = data.presetPriceWatchDays;
+  saveData();
+  renderPriceWatch();
+});
+
+const PRICE_WATCH_FILE_TOLERANCE_PCT = 2;
+function supplierPriceSeries(dateISO){
+  const today = dateISO || todayISO();
+  const days = Math.max(1, Number(data.presetPriceWatchDays) || 180);
+  const groups = new Map();
   (data.purchaseInvoices||[]).forEach(pi=>{
-    if(pi.voided) return;
+    if(pi.voided || !pi.date) return;
+    if(waDaysBetween(pi.date, today) > days) return;   // older than the look-back
     (pi.items||[]).forEach(it=>{
       const price = Number(it.price)||0;
-      if(!(price>0)) return;
-      const key = `${it.productId}|${it.variantIdx==null?'':it.variantIdx}|${pi.supplierId}`;
-      if(!series.has(key)) series.set(key, []);
-      series.get(key).push({date: pi.date||'', price, name: it.productName||'', supplierName: pi.supplierName||''});
+      if(!it.productId || !(price > 0)) return;
+      const variantIdx = (it.variantIdx==null || it.variantIdx==='') ? null : it.variantIdx;
+      const key = it.productId + '|' + (variantIdx==null ? '' : variantIdx) + '|' + pi.supplierId;
+      if(!groups.has(key)) groups.set(key, { key, productId: it.productId, variantIdx,
+        supplierId: pi.supplierId, name: it.productName || '', supplierName: pi.supplierName || '',
+        points: [] });
+      groups.get(key).points.push({ date: pi.date, price, qty: Number(it.qty)||0,
+        unit: String(it.unit || '').trim().toLowerCase() });
     });
   });
 
-  const flags = [];
-  series.forEach(rows=>{
-    rows.sort((a,b)=> (a.date||'').localeCompare(b.date||''));
-    const first = rows[0], last = rows[rows.length-1];
-    // Two purchases on different days, or there is no trend to report --
-    // a single purchase, or several on one day, says nothing about change.
-    if(rows.length<2 || !first.date || !last.date || first.date===last.date) return;
-    const growth = (last.price-first.price)/first.price*100;
-    if(growth > DASH_COST_RISE_PCT){
-      flags.push({name:last.name, supplierName:last.supplierName, first:first.price, last:last.price, growth, since:first.date});
-    }
+  const out = [];
+  groups.forEach(g=>{
+    g.points.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+    const latestUnit = g.points[g.points.length-1].unit;
+    const comparable = g.points.filter(pt=> pt.unit === latestUnit);
+    const skippedOtherUnit = g.points.length - comparable.length;
+    const first = comparable[0], last = comparable[comparable.length-1];
+    const units = comparable.reduce((t,pt)=> t + pt.qty, 0);
+    /* What the file says today, priced at the quantity last bought, so
+       a volume tier is never mistaken for the price having moved. */
+    const row = productPriceRows(g.productId, g.variantIdx)
+      .find(r=> r.supplierId === g.supplierId);
+    const onFile = row ? purchasePriceAtQty(row, last.qty) : null;
+    const rise = comparable.length > 1 ? last.price - first.price : 0;
+    const trend = comparable.length > 1 && first.date !== last.date;
+    out.push({ ...g, points: comparable, skippedOtherUnit, first, last, units,
+      trend,
+      rise: trend ? rise : 0,
+      risePct: trend && first.price > 0 ? rise/first.price*100 : 0,
+      // The same quantity, at the new price. A statement about what was
+      // already bought -- never a claim about what will be.
+      extra: trend ? rise * units : 0,
+      onFile: onFile == null ? null : Math.round(onFile),
+      fileGap: onFile == null ? null : Math.round(last.price - onFile),
+      fileStale: onFile == null ? false
+        : Math.abs(last.price - onFile) > Math.max(1, onFile * PRICE_WATCH_FILE_TOLERANCE_PCT/100),
+    });
   });
-  return flags.sort((a,b)=>b.growth-a.growth).slice(0,3);
+  return out;
+}
+
+/* The three sections the watch screen shows, and the ranking behind
+   them: MONEY, not percentage. A 2% rise on the thing the shop buys
+   every week costs more than a 40% rise on something it bought once,
+   and a list ordered by percentage puts the wrong one first. */
+function supplierPriceWatch(dateISO){
+  const all = supplierPriceSeries(dateISO);
+  const up = all.filter(s=> s.trend && s.rise > 0).sort((a,b)=> b.extra - a.extra);
+  const down = all.filter(s=> s.trend && s.rise < 0).sort((a,b)=> a.extra - b.extra);
+  /* Where the Price Registry disagrees with what was actually paid.
+     The buying plan costs every line from that file, so a row that has
+     drifted makes the plan wrong in silence -- which is exactly the
+     kind of quiet error this screen exists to end. */
+  const outOfStep = all.filter(s=> s.fileStale)
+    .sort((a,b)=> Math.abs(b.fileGap * b.units) - Math.abs(a.fileGap * a.units));
+  return { series: all, up, down, outOfStep,
+    days: Math.max(1, Number(data.presetPriceWatchDays) || 180) };
+}
+
+// The dashboard's cost-rise flag: the same series, cut to what a card
+// can hold. One derivation, so the alert and the watch screen can never
+// disagree about who put their prices up.
+function dashSupplierPriceInflation(){
+  return supplierPriceWatch().up
+    .filter(s=> s.risePct > DASH_COST_RISE_PCT)
+    .slice(0, 3)
+    .map(s=> ({ name: s.name, supplierName: s.supplierName, first: s.first.price,
+      last: s.last.price, growth: s.risePct, since: s.first.date }));
 }
 // Flags regular customers who've gone quiet: compares the gap since their
 // last order against their OWN historical average gap between orders, so

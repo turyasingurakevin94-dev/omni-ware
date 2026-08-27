@@ -23,13 +23,21 @@ const data = { products: [], prices: [], cashTxns: [], purchaseInvoices: [], sto
 const env = {
   data,
   todayISO: () => TODAY,
+  supplierName: (id) => String(id),
   anShiftDate: shift,
   daysSinceDate: (d) => Math.round((new Date(TODAY) - new Date(d)) / 86400000),
 };
 const NAMES = ['dashCashTxnsInRange', 'dashMonthlyBurn', 'dashSupplierPriceInflation'];
+/* The cost-rise flag is a cut of the supplier price watch now, so its
+   chain comes with it -- including the registry lookup the watch uses
+   to compare the file against what was actually paid. The flag itself
+   still reports only what the invoices say; the case below proves it. */
+const CHAIN = ['supplierPriceWatch', 'supplierPriceSeries', 'waDaysBetween',
+  'productPriceRows', 'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind'];
 const fn = compileScope([
   extractDeclaration(src, 'DASH_COST_RISE_PCT', 'index.html'),
-  ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+  extractDeclaration(src, 'PRICE_WATCH_FILE_TOLERANCE_PCT', 'index.html'),
+  ...NAMES.concat(CHAIN).map((n) => extractFunction(src, n, 'index.html')),
 ], env, NAMES);
 
 /* ---------- 0. dates shift by whole days, wherever you are ------------ */
@@ -190,12 +198,17 @@ const inv = (date, supplier, name, price, variantIdx = null, voided = false) => 
   ];
   t.check(fn.dashSupplierPriceInflation().length === 0,
     'two suppliers in the price registry cannot by themselves raise a cost-rise flag');
-  const fnSrc = extractFunction(src, 'dashSupplierPriceInflation', 'index.html')
+  /* The source pin follows the derivation to where it now lives. The
+     watch DOES read the price registry -- to say where the file has
+     drifted from what the shop actually pays -- but the movement it
+     reports comes from the invoices alone, which is what the case above
+     proves at runtime. */
+  const seriesSrc = extractFunction(src, 'supplierPriceSeries', 'index.html')
     .split(/\r?\n/).map((l) => l.replace(/\/\/.*$/, '')).join('\n');
-  t.check(!/data\.prices/.test(fnSrc),
-    'because it no longer reads the price registry, which has no history to read');
-  t.check(/data\.purchaseInvoices/.test(fnSrc),
-    'and reads the purchase invoices, which do');
+  t.check(/data\.purchaseInvoices/.test(seriesSrc),
+    'because the prices it compares are read from the purchase invoices, which have history');
+  t.check(/points\.push/.test(seriesSrc) && !/points\.push[\s\S]{0,200}data\.prices/.test(seriesSrc),
+    'and nothing from the registry, which has none, is ever pushed onto that trail');
 }
 {
   // Ranked worst-first and capped, so the card names the ones worth acting on.
