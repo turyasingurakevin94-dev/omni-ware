@@ -769,6 +769,18 @@
   .buy-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
   .buy-note b{color:var(--ink);}
   .buy-tail h4{font-size:10.5px;margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
+  /* ---- Chase debts ---- */
+  .chase-row{padding:14px 0;border-bottom:1px dashed var(--line);}
+  .chase-row:last-child{border-bottom:none;}
+  .chase-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .chase-head b{font-size:14px;color:var(--ink);}
+  .chase-head .chase-amt{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .chase-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .chase-msg{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-family:inherit;font-size:12.5px;line-height:1.5;color:var(--ink);background:var(--bg);resize:vertical;min-height:150px;}
+  .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .chase-done{font-size:11.5px;font-weight:600;color:var(--accent);}
+  .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -7270,6 +7282,11 @@
         <!-- Named for what they answer, not for the table they draw. The
              old names are kept as search keywords so the word an
              accountant would type still finds them. -->
+        <button data-tab="chase" title="Chase debts" data-keywords="collect chasing remind overdue late payment demand follow money owed">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 5h12a3 3 0 0 1 0 6H7"/><path d="M7 8l-3 3 3 3"/><path d="M14 15h5"/><path d="M14 19h7"/></svg>
+          <span class="nav-label">Chase debts</span>
+          <b class="nav-badge" id="navBadgeChase" hidden></b>
+        </button>
         <button data-tab="analytics-debtors" title="Who owes you" data-keywords="debtors receivables credit owing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           <span class="nav-label">Who owes you</span>
@@ -7813,6 +7830,23 @@
     </section>
 
     <!-- CREDITORS LIST -->
+    <!-- CHASE DEBTS. The Debtors list says who owes; this says who to
+         ask today and hands over the words. Nothing sends itself. -->
+    <section id="tab-chase" style="display:none;">
+      <div class="page-head">
+        <h1>Chase debts</h1>
+        <p>Everyone whose balance is past the shop's terms, worst-aged first, each with a message already written from their own invoices. Nobody is chased inside the grace period, nobody is chased twice in the same few days, and a customer whose balance does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Read the message, change it if you like, then send it with your own thumb — the app never sends anything by itself.</p>
+      </div>
+      <div class="panel">
+        <div class="buy-controls">
+          <label>Chase after <input type="number" id="chase_after" min="0" step="1"> days</label>
+          <label>Rest <input type="number" id="chase_rest" min="0" step="1"> days between chases</label>
+          <span class="buy-controls-note" id="chase_summary"></span>
+        </div>
+        <div id="chase_list"></div>
+      </div>
+    </section>
+
     <section id="tab-analytics-creditors" style="display:none;">
       <div class="page-head">
         <h1>Creditors list</h1>
@@ -12210,6 +12244,14 @@ async function loadData(shopId){
     // How many days of stock the buying copilot refills to. 14 unless
     // the shop tunes it on the What-to-buy panel itself.
     presetRestockCoverDays: presets.restockCoverDays != null ? Number(presets.restockCoverDays) : 14,
+    presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
+    presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
+    /* When each debtor was last chased, customer id -> date. Kept with
+       the shop's settings rather than on the customer, because it is not
+       a fact about the customer -- it is a note about what WE did, and
+       the customers table syncs a fixed set of columns. Pruned on write
+       to whoever still owes, so it cannot grow past the debtors list. */
+    presetDebtChases: (presets.debtChases && typeof presets.debtChases === 'object') ? presets.debtChases : {},
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
     /* Who the shop is, on paper. printedShopName() has been the entire
@@ -12477,7 +12519,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -15781,6 +15823,7 @@ function goToTab(tab){
   if(tab==='fasteners') renderFasteners();
   if(tab==='sourcing') renderSourcing();
   if(tab==='buying') renderPurchasePlanPanel();
+  if(tab==='chase') renderChaseScreen();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -31584,6 +31627,135 @@ function customerDebtProgress(c){
 function updateDebtorsNavBadge(){
   setNavBadge('navBadgeDebtors', debAllRows().filter(r=> r.debt > 0).length, 'customers owing');
 }
+/* ================= CHASING WHAT IS OWED ==========================
+
+   The Debtors list answers "who owes me". This answers the question
+   that follows it — who do I chase today, and what do I actually say —
+   because a balance nobody asks for is a balance nobody pays.
+
+   Three rules keep it honest, and each of them takes rows OUT:
+
+   GRACE. Nobody is chased before the shop's own terms have run. A
+   customer inside the grace period is not late; asking them for money
+   as though they were is how a good account is lost.
+
+   REST. Somebody chased two days ago is not chased again today. The
+   queue remembers, so the shop does not have to.
+
+   A BALANCE THAT ADDS UP. A customer whose stored balance disagrees
+   with its own ledger is NEVER put in the queue. The app already knows
+   that gap (customerDebtDrift) and already offers the repair; sending a
+   demand for a figure the shop cannot itself explain is the one mistake
+   here that costs more than the debt.
+
+   Nothing sends itself. Every message is written for the owner to read,
+   edit if they like, and send with their own thumb. */
+function debtChaseRows(){
+  const grace = Math.max(0, Number(data.presetChaseAfterDays) || 0);
+  const rest = Math.max(0, Number(data.presetChaseRestDays) || 0);
+  const chases = data.presetDebtChases || {};
+  const due = []; const resting = []; const blocked = [];
+  debAllRows().forEach(r=>{
+    if(!(r.debt > 0.5)) return;
+    const c = (data.customers||[]).find(x=> x.id === r.id);
+    if(!c) return;
+    /* An age nobody knows cannot be measured against the shop's terms,
+       so it is not chased on a guess -- it is named for a look. */
+    if(!(r.ageDays >= 0)){ blocked.push({ ...r, why: 'undated' }); return; }
+    if(customerDebtDrift(c) !== 0){ blocked.push({ ...r, why: 'drift' }); return; }
+    const lastChased = chases[r.id] || null;
+    const row = { ...r, phone: (c.phone || c.phone2 || '').trim(),
+      lastChased, chasedDaysAgo: lastChased ? daysSinceDate(lastChased) : null,
+      invoices: debtChaseInvoices(r.id) };
+    if(r.ageDays < grace) return;                       // not late yet
+    if(row.chasedDaysAgo != null && row.chasedDaysAgo < rest){ resting.push(row); return; }
+    due.push(row);
+  });
+  /* Oldest band first, then the biggest inside it -- the order a person
+     collecting money would work in. */
+  const bandRank = (k)=> AGING_BANDS.findIndex(b=> b.key === k);
+  due.sort((a,b)=> (bandRank(b.band) - bandRank(a.band)) || (b.debt - a.debt));
+  resting.sort((a,b)=> a.chasedDaysAgo - b.chasedDaysAgo);
+  blocked.sort((a,b)=> b.debt - a.debt);
+  return { due, resting, blocked, graceDays: grace, restDays: rest };
+}
+
+// The invoices behind one customer's balance, oldest first. Only what is
+// genuinely still due: the same figure the Invoices screen shows.
+function debtChaseInvoices(customerId){
+  return customerOrdersFor(customerId)
+    .filter(q=> q.invoiced && !q.voided && invoiceBalanceDue(q) > 0.5)
+    .map(q=> ({ no: invoiceNumberLabel(q), date: q.invoicedAt || q.date || '',
+      due: invoiceBalanceDue(q) }))
+    .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
+}
+
+/* The message itself, written from this customer's own records.
+
+   It names the invoices because a demand for a round total is a demand
+   somebody has to go and check before they can pay it. What the invoices
+   do NOT cover is said plainly as carried from earlier rather than
+   silently folded into the total -- and if they somehow cover MORE than
+   the balance, no breakdown is printed at all: the shop would be asking
+   for a figure it cannot stand behind.
+
+   It ends by inviting a correction. The shop's records are good, not
+   perfect, and a customer who spots a payment we missed should be told
+   to say so rather than argued with. */
+const DEBT_CHASE_INVOICE_LINES = 6;
+function debtChaseMessage(row, ident){
+  const who = (ident && ident.name) || '';
+  const f = n=> fmtUGX(Math.round(n));
+  const lines = [];
+  lines.push('Hello ' + (row.name || 'there') + ',');
+  lines.push('');
+  lines.push((who ? who + ' here. ' : '') + 'Our records show *' + f(row.debt)
+    + '* still outstanding on your account.');
+  const listed = (row.invoices||[]).reduce((s,i)=> s + i.due, 0);
+  if(row.invoices && row.invoices.length && listed <= row.debt + 0.5){
+    lines.push('');
+    row.invoices.slice(0, DEBT_CHASE_INVOICE_LINES).forEach(i=>{
+      lines.push(i.no + (i.date ? ' · ' + fmtShortDate(i.date) : '') + ' — ' + f(i.due));
+    });
+    const more = row.invoices.length - DEBT_CHASE_INVOICE_LINES;
+    if(more > 0) lines.push('and ' + more + ' more invoice' + (more === 1 ? '' : 's') + '.');
+    const carried = row.debt - listed;
+    if(carried > 0.5) lines.push('and ' + f(carried) + ' carried on the account from earlier.');
+  }
+  lines.push('');
+  lines.push('The oldest of this has been outstanding ' + agingDaysLabel(row.ageDays).toLowerCase() + '.'
+    + (row.lastPaid ? ' Your last payment reached us on ' + fmtShortDate(row.lastPaid) + '.'
+                    : ' We have not received a payment on this account yet.'));
+  lines.push('');
+  lines.push('Please let us know when we can expect payment. If any of this does not match your own records, tell us and we will check it.');
+  lines.push('');
+  lines.push('Thank you,');
+  lines.push([who, (ident && ident.phone) || ''].filter(Boolean).join(' · '));
+  return lines.join('\n').trim();
+}
+
+// Stamped when the owner takes the message away -- opens WhatsApp with
+// it, or copies it. The app cannot see WhatsApp itself, so this records
+// that the message was TAKEN, which is why the row offers to undo it.
+function markDebtChased(customerId, dateISO){
+  if(!data.presetDebtChases) data.presetDebtChases = {};
+  data.presetDebtChases[customerId] = dateISO || todayISO();
+  pruneDebtChases();
+  saveData();
+}
+function unmarkDebtChased(customerId){
+  if(data.presetDebtChases) delete data.presetDebtChases[customerId];
+  saveData();
+}
+// Kept to whoever still owes. A stamp for a customer who has paid up is
+// a note about a conversation that is over.
+function pruneDebtChases(){
+  const owing = new Set((data.customers||[]).filter(c=> (Number(c.debt)||0) > 0.5).map(c=> c.id));
+  Object.keys(data.presetDebtChases||{}).forEach(id=>{
+    if(!owing.has(id)) delete data.presetDebtChases[id];
+  });
+}
+
 function debRowsForList(filter=''){
   const hideNoDebt = document.getElementById('deb_hide_no_debt').checked;
   const tokens = searchTokens(filter);
@@ -31918,6 +32090,125 @@ function renderDebtorsPosition(){
     renderDebtorsList(document.getElementById('deb_search').value);
   }));
 }
+
+/* The chase queue on screen. Each row carries the message in a box the
+   owner can edit before taking it -- their words, their thumb. */
+function renderChaseScreen(){
+  const el = document.getElementById('chase_list');
+  if(!el) return;
+  const q = debtChaseRows();
+  const ident = shopIdentity();
+  const afterEl = document.getElementById('chase_after');
+  const restEl = document.getElementById('chase_rest');
+  if(afterEl && document.activeElement !== afterEl) afterEl.value = q.graceDays;
+  if(restEl && document.activeElement !== restEl) restEl.value = q.restDays;
+  const f = n=> fmtUGX(Math.round(n));
+  const pill = (r)=> `<span class="age-pill age-${r.band}">${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
+
+  const row = (r)=> {
+    const chased = r.chasedDaysAgo != null;
+    const msg = debtChaseMessage(r, ident);
+    /* Sized to the message. A box that clips what is about to be sent
+       invites sending something nobody read to the end of. */
+    const rows = Math.min(20, Math.max(9, msg.split('\n').length + 1));
+    return `<div class="chase-row" data-id="${esc(r.id)}">
+      <div class="chase-head"><b>${esc(r.name)}</b>${pill(r)}
+        <span class="chase-amt">${f(r.debt)}</span></div>
+      <div class="chase-sub">${r.location ? esc(r.location) + ' · ' : ''}${
+        r.phone ? esc(r.phone) : '<span class="chase-none">no phone number on file</span>'}${
+        r.invoices.length ? ' · ' + r.invoices.length + ' invoice' + (r.invoices.length === 1 ? '' : 's') + ' still due' : ''}${
+        r.lastPaid ? ' · last paid ' + esc(fmtShortDate(r.lastPaid)) : ' · never paid'}</div>
+      <textarea class="chase-msg" data-msg="${esc(r.id)}" rows="${rows}">${esc(msg)}</textarea>
+      <div class="chase-acts">
+        <button type="button" class="btn btn-accent chase-send" data-id="${esc(r.id)}">Send on WhatsApp</button>
+        <button type="button" class="btn btn-ghost chase-copy" data-id="${esc(r.id)}">Copy</button>
+        <button type="button" class="btn btn-ghost chase-receive" data-id="${esc(r.id)}">Received payment</button>
+        ${chased ? `<span class="chase-done">Chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</span>
+          <button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">not sent</button>` : ''}
+      </div>
+    </div>`;
+  };
+
+  let html = '';
+  if(!q.due.length){
+    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nobody to chase: nothing is past ${q.graceDays} days${
+      q.resting.length ? `, and ${q.resting.length} ${q.resting.length === 1 ? 'debtor was' : 'debtors were'} chased in the last ${q.restDays} days` : ''}.</p>`;
+  } else {
+    html = q.due.map(row).join('');
+  }
+  /* Chased recently, and deliberately not offered again yet -- named so
+     the queue's silence about them is visible rather than mysterious. */
+  if(q.resting.length) html += `<div class="buy-tail"><h4>Chased in the last ${q.restDays} days</h4>${
+    q.resting.map(r=> `<div class="buy-row"><div class="buy-main"><b>${esc(r.name)}</b><em>${
+      f(r.debt)} · chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</em></div>
+      <button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">chase again</button></div>`).join('')}</div>`;
+  if(q.blocked.length) html += `<div class="buy-tail"><h4>Held back until the balance is checked</h4>${
+    q.blocked.map(r=> `<div class="buy-row"><div class="buy-main"><b>${esc(r.name)}</b><em>${f(r.debt)} — ${
+      r.why === 'drift'
+        ? 'this balance does not match its own history, so no demand is written for it. Fix it on Who owes you.'
+        : 'nothing dated behind this balance, so there is no age to measure against your terms.'}</em></div></div>`).join('')}</div>`;
+  el.innerHTML = html;
+
+  const msgFor = (id)=> {
+    const box = el.querySelector(`[data-msg="${CSS.escape(id)}"]`);
+    return box ? box.value : '';
+  };
+  const rowFor = (id)=> q.due.find(r=> r.id === id);
+  el.querySelectorAll('.chase-send').forEach(btn=> btn.addEventListener('click', ()=>{
+    const r = rowFor(btn.dataset.id);
+    if(!r) return;
+    /* The same door the quote sender and the supplier notice use: it
+       opens WhatsApp with the message written, for any number, and
+       needs no reply window to have been opened first. */
+    window.open(waComposeUrl(r.phone, msgFor(r.id)), '_blank');
+    markDebtChased(r.id);
+    toast('Marked as chased today — say "not sent" on the row if it did not go');
+    renderChaseScreen();
+    renderChaseBadge();
+  }));
+  el.querySelectorAll('.chase-copy').forEach(btn=> btn.addEventListener('click', async ()=>{
+    const r = rowFor(btn.dataset.id);
+    if(!r) return;
+    try{ await navigator.clipboard.writeText(msgFor(r.id)); toast('Message copied'); }
+    catch(err){ toast('Could not copy — select the text and copy it by hand'); return; }
+    markDebtChased(r.id);
+    renderChaseScreen();
+    renderChaseBadge();
+  }));
+  el.querySelectorAll('.chase-undo').forEach(btn=> btn.addEventListener('click', ()=>{
+    unmarkDebtChased(btn.dataset.id);
+    renderChaseScreen();
+    renderChaseBadge();
+  }));
+  el.querySelectorAll('.chase-receive').forEach(btn=> btn.addEventListener('click', ()=>{
+    openCustomerDebtModal(btn.dataset.id, 'payment');
+  }));
+  const sum = document.getElementById('chase_summary');
+  if(sum) sum.textContent = q.due.length
+    ? `${q.due.length} to chase · ${f(q.due.reduce((t,r)=> t + r.debt, 0))} between them`
+    : '';
+}
+// How many are waiting to be chased, on the rail. Same derivation, so
+// the count and the list can never disagree.
+function renderChaseBadge(){
+  setNavBadge('navBadgeChase', debtChaseRows().due.length, 'debtor(s) to chase');
+}
+document.getElementById('chase_after').addEventListener('change', e=>{
+  const v = Math.round(Number(e.target.value)||0);
+  data.presetChaseAfterDays = v >= 0 ? v : 7;
+  e.target.value = data.presetChaseAfterDays;
+  saveData();
+  renderChaseScreen();
+  renderChaseBadge();
+});
+document.getElementById('chase_rest').addEventListener('change', e=>{
+  const v = Math.round(Number(e.target.value)||0);
+  data.presetChaseRestDays = v >= 0 ? v : 3;
+  e.target.value = data.presetChaseRestDays;
+  saveData();
+  renderChaseScreen();
+  renderChaseBadge();
+});
 
 function renderDebtorsList(filter=''){
   const wrap = document.getElementById('deb_tableWrap');
@@ -52363,6 +52654,7 @@ function refreshNavBadges(){
   updateOrderStatusBar();
   updateDebtorsNavBadge();
   renderSourcingBadge();
+  renderChaseBadge();
 }
 function renderAll(){
   renderPresets();
