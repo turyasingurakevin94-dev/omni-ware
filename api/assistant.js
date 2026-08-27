@@ -57,6 +57,8 @@ const SYSTEM_PROMPT = [
   '',
   'Out of scope: voiding or editing invoices, stock adjustments, deleting anything. Name the app screen where the owner does it (for example the Order tracking or Cash Book screen) and stop.',
   '',
+  'Buying advice: purchase_plan turns real records — sales pace, stock held, the cheapest priced supplier, cash on hand — into a ranked buy list with the arithmetic on every line. Present it as advice carrying its evidence, never as a done deal; when the owner says to source something, that goes through add_sourcing_lead with its confirmation card.',
+  '',
   'Style: short answers — a few plain sentences, totals before detail. Your replies are often read aloud through a headset, so they must be speakable: no tables, no bullet lists longer than three items, no headings, and no markdown except one mark — wrap the figures that decide things (costs, suggested prices, pack sizes, amounts owed) in double asterisks, like **9,500 UGX per piece** or **20 pieces per carton**. The app highlights them on screen; they change nothing in speech.',
   '',
   'When you ask the owner a question, offer your best guesses as tap buttons: end the reply with one line — [choices: first | second] — two to four short options, most likely first, each worded exactly as the owner would answer (for example [choices: 10,000 | 100,000] or [choices: Both sizes | Only the 2 inch]). Only when asking, never on a plain answer, and the sentences above the line must still carry the question in full. The app turns the line into buttons and never speaks it.',
@@ -70,7 +72,7 @@ const SYSTEM_PROMPT = [
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
 ].join('\n');
 
-/* Twenty-six tools in FIXED order — the array is part of the cached
+/* Twenty-seven tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -153,6 +155,15 @@ const TOOLS = [
     name: 'stock_overview',
     description: 'The shop’s stock at a glance: total shelf value, how many lines are in stock, the biggest holdings by value (quantities and pack counts), what has RUN OUT (had stock before, none now), and lines with no cost on file. An optional query narrows it to a category or name. For one specific product use product_details. Use for "update me about the stock", "how is our stock".',
     input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Empty for the whole shop; words to narrow it ("cement").' } }, required: [], additionalProperties: false },
+  },
+  {
+    name: 'purchase_plan',
+    description: 'The buying copilot: a ranked buy list derived from real records — each line names what to buy, how many (rounded to the supplier’s pack), from which supplier at what cost, with its evidence (days of stock left, sold in 30 days, holding). Budget defaults to cash on hand. Also returns what did not fit the budget and fast movers with no supplier price (source those first). Use for "what should I buy", "I have 5m — what do I restock". It creates nothing; sourcing an item goes through add_sourcing_lead.',
+    input_schema: {
+      type: 'object',
+      properties: { budget: { type: 'number', exclusiveMinimum: 0, description: 'UGX available to spend. Omit to use cash on hand.' } },
+      required: [], additionalProperties: false,
+    },
   },
   {
     name: 'catalogue_names',

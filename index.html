@@ -748,6 +748,23 @@
   .brief-row span{min-width:0;color:var(--ink);font-weight:600;}
   .brief-row b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
   .brief-row em{font-style:normal;font-weight:500;color:var(--ow-ink-400);}
+  /* ---- What to buy (the Procurement Copilot) ---- */
+  .dash-buy{margin-bottom:20px;}
+  .dash-buy-controls{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--ink-soft);}
+  .dash-buy-controls label{display:flex;gap:6px;align-items:center;font-weight:600;}
+  .dash-buy-controls input{width:110px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;}
+  .dash-buy-controls input#dash_buy_cover{width:56px;}
+  .buy-row{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  .buy-row:last-child{border-bottom:none;}
+  .buy-main{min-width:0;flex:1;}
+  .buy-main b{color:var(--ink);}
+  .buy-main em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
+  .buy-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .buy-days{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
+  .buy-days.now{background:var(--ow-oxide-soft);color:var(--accent);}
+  .buy-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
+  .buy-note b{color:var(--ink);}
+  .buy-tail h4{font-size:10.5px;margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -7348,6 +7365,20 @@
         <div id="dash_morningBrief"></div>
       </div>
 
+      <!-- -0.5 WHAT TO BUY. The Procurement Copilot: a ranked buy list
+           derived from real demand, real stock, the cheapest priced
+           supplier at the needed quantity, and the cash on hand. Every
+           row carries its evidence; nothing is predicted. -->
+      <div class="panel dash-buy">
+        <div class="dash-panel-title"><h2>What to buy</h2>
+          <span class="dash-buy-controls">
+            <label>Budget <input type="number" id="dash_buy_budget" min="0" step="any"></label>
+            <label>Cover <input type="number" id="dash_buy_cover" min="1" step="1"> days</label>
+          </span>
+        </div>
+        <div id="dash_buyPlan"></div>
+      </div>
+
       <!-- 0. WHAT NEEDS YOU TODAY.
            Above the vitals on purpose: the four figures are how the shop
            IS, this is what to do about it, and the thing with a deadline
@@ -12158,6 +12189,9 @@ async function loadData(shopId){
     // when neither the variant nor the product has one. Same shape as a
     // product rule (percent | fixed per side); value 0 = no default.
     presetDefaultMarkup: presets.defaultMarkup || {},
+    // How many days of stock the buying copilot refills to. 14 unless
+    // the shop tunes it on the What-to-buy panel itself.
+    presetRestockCoverDays: presets.restockCoverDays != null ? Number(presets.restockCoverDays) : 14,
     presetAgentClusterWaitDays: presets.agentClusterWaitDays!=null ? Number(presets.agentClusterWaitDays) : 7,
     presetWaPhone: presets.waPhone || '',
     /* Who the shop is, on paper. printedShopName() has been the entire
@@ -12425,7 +12459,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -47200,30 +47234,150 @@ function dashDebtorExposure(){
     .sort((a,b)=>b.debt-a.debt)
     .slice(0,3);
 }
-function dashStockOutExposure(){
-  const cutoff = anShiftDate(todayISO(), -30);
-  const velocity = new Map(); // key -> qty sold in last 30d
-  data.stockLog.forEach(l=>{
-    if(l.type==='sale' && l.date>=cutoff) velocity.set(l.key, (velocity.get(l.key)||0) + Math.abs(Number(l.delta)||0));
-  });
-  const entries = allProductVariantEntries([]);
+/* ---------------- The Procurement Copilot ----------------
+
+   "What should I buy, with the money I have" — a ranked buy list the
+   owner can check line by line against the screens. Not a prediction:
+   every figure is derived from records that already exist. Velocity is
+   the WhatsApp picker's own demand measure (waSalesByKey — invoiced,
+   non-void orders, INCLUDING bought-to-order lines: demand is what
+   restocking answers to, and an item the shop keeps buying per order
+   is exactly the item worth holding). One derivation feeds the
+   dashboard panel, the assistant's purchase_plan tool, and the
+   stock-out alert below, so no two surfaces can tell two stories. */
+
+// Every line with real demand, ranked by how soon it runs out.
+function restockRiskRows(dateISO){
+  const sales = waSalesByKey(dateISO || todayISO());
   const rows = [];
-  entries.forEach(({p, variantIdx})=>{
+  allProductVariantEntries([]).forEach(({p, variantIdx})=>{
     const key = stockKey(p.id, variantIdx);
-    const v = velocity.get(key);
-    if(!v) return;
+    const s = sales.get(key);
+    if(!s || !(s.units30 > 0)) return;   // no sales history → no advice
     const qty = getStockQty(p.id, variantIdx);
-    const dailyRate = v/30;
-    const daysLeft = dailyRate>0 ? qty/dailyRate : Infinity;
-    if(daysLeft < 10){
-      // key/dailyRate carried out so the dashboard can price what running
-      // out actually costs, joined exactly rather than by name.
-      rows.push({key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx, dailyRate,
-        name: productDisplayLabel(p, variantIdx==null?null:variantIdx), qty, daysLeft});
-    }
+    const dailyRate = s.units30/30;
+    rows.push({ key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx,
+      name: productDisplayLabel(p, variantIdx==null?null:variantIdx),
+      qty, units30: s.units30, dailyRate, daysLeft: qty/dailyRate });
   });
-  return rows.sort((a,b)=>a.daysLeft-b.daysLeft).slice(0,3);
+  return rows.sort((a,b)=> a.daysLeft - b.daysLeft);
 }
+
+/* The plan itself. Deterministic and explainable:
+   - a line qualifies when it holds fewer days of cover than coverDays;
+   - the refill tops it back up to coverDays, rounded UP to the chosen
+     supplier's pack;
+   - the supplier is the cheapest AT the needed quantity (tier-aware);
+     the unit cost is then re-read at the rounded quantity — a bigger
+     buy can only reach a better tier. The supplier pick is not
+     re-ranked at the rounded quantity, deliberately: re-ranking could
+     oscillate between two suppliers' pack sizes forever.
+   - the budget is spent greedily in risk order, and what did not fit
+     is NAMED — never silently dropped;
+   - demand with no priced supplier is a "source it first" line, never
+     a guessed figure. */
+function purchasePlan(budget, coverDays, dateISO){
+  const cover = Math.max(1, Number(coverDays) || Number(data.presetRestockCoverDays) || 14);
+  const lines = []; const didNotFit = []; const sourceFirst = [];
+  let spend = 0;
+  restockRiskRows(dateISO).forEach(r=>{
+    if(!(r.daysLeft < cover)) return;
+    const needUnits = Math.max(1, Math.ceil(cover * r.dailyRate - r.qty));
+    const row = rankedPurchaseRowsAtQty(r.productId, r.variantIdx, needUnits)
+      .find(x=> x.purchasePrice != null);
+    if(!row){
+      sourceFirst.push({ name: r.name, qty: needUnits, daysLeft: r.daysLeft, units30: r.units30 });
+      return;
+    }
+    const packQty = Number(row.packQty) || 0;
+    const buyQty = packQty > 0 ? Math.ceil(needUnits / packQty) * packQty : needUnits;
+    const unitCost = purchasePriceAtQty(row, buyQty) ?? row.purchasePrice;
+    const cost = Math.round(buyQty * unitCost);
+    const line = { key: r.key, productId: r.productId, variantIdx: r.variantIdx,
+      name: r.name, held: r.qty, units30: r.units30, daysLeft: r.daysLeft,
+      buyQty, unit: row.unit || '', packQty, packUnit: row.packUnit || '',
+      supplierId: row.supplierId, supplier: row.sname || supplierName(row.supplierId),
+      unitCost: Math.round(unitCost), cost };
+    if(budget != null && spend + cost > budget){ didNotFit.push(line); return; }
+    spend += cost;
+    lines.push(line);
+  });
+  return { budget: budget == null ? null : Math.round(budget), coverDays: cover,
+    lines, spend: Math.round(spend), didNotFit, sourceFirst };
+}
+
+// The dashboard's stock-out alert, now a thin read of the SAME rows —
+// the alert and the copilot can never disagree about what is running
+// out. Same return shape as before, so dashAlerts' consumer and its
+// tests stand untouched.
+function dashStockOutExposure(){
+  return restockRiskRows(todayISO())
+    .filter(r=> r.daysLeft < 10)
+    .slice(0, 3)
+    .map(r=> ({ key: r.key, productId: r.productId, variantIdx: r.variantIdx,
+      dailyRate: r.dailyRate, name: r.name, qty: r.qty, daysLeft: r.daysLeft }));
+}
+
+/* ---- the What-to-buy panel ---- */
+let dashBuyBudget = null;   // per-view override; null = spend up to cash on hand
+let dashBuyLast = null;     // the plan behind the Source-it buttons, index-addressed
+
+function renderPurchasePlanPanel(){
+  const el = document.getElementById('dash_buyPlan');
+  if(!el) return;
+  const cash = cashOnHandByAccount().total;
+  const budget = dashBuyBudget != null ? dashBuyBudget : Math.max(0, cash);
+  const plan = purchasePlan(budget, null, todayISO());
+  dashBuyLast = plan;
+  const budgetEl = document.getElementById('dash_buy_budget');
+  const coverEl = document.getElementById('dash_buy_cover');
+  if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget || '';
+  if(coverEl && document.activeElement !== coverEl) coverEl.value = plan.coverDays;
+  const f = n=> fmtUGX(Math.round(n));
+  const chip = d=> `<span class="buy-days${d < 2 ? ' now' : ''}">${d <= 0 ? 'OUT' : Math.floor(d) + 'd left'}</span>`;
+  /* Every row carries its evidence — days left, 30-day sales, holding,
+     supplier, pack arithmetic — so any line can be checked against
+     Inventory and the Price Registry before a shilling moves. */
+  const row = (l, list, i)=> `
+    <div class="buy-row">${chip(l.daysLeft)}
+      <div class="buy-main"><b>${esc(l.name)}</b>
+        <em>buy <b>${l.buyQty}</b> ${esc(l.unit || 'pc')}${l.packQty > 1 ? ` = ${Math.round(l.buyQty/l.packQty)} ${esc(l.packUnit || 'pack')}` : ''} · ${esc(l.supplier)} @ ${f(l.unitCost)} · sold ${l.units30} in 30d · holding ${l.held}</em></div>
+      <span class="buy-cost">${f(l.cost)}</span>
+      <button type="button" class="btn btn-ghost buy-source" data-list="${list}" data-i="${i}">Source it</button>
+    </div>`;
+  let html = '';
+  if(!plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length){
+    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing runs out within ${plan.coverDays} days — no buying needed.</p>`;
+  } else {
+    html = plan.lines.map((l,i)=> row(l, 'lines', i)).join('');
+    if(plan.lines.length) html += `<p class="buy-note">Plan total <b>${f(plan.spend)}</b> of ${f(plan.budget)} budget.</p>`;
+    if(plan.didNotFit.length) html += `<div class="buy-tail"><h4>Over this budget</h4>${plan.didNotFit.map((l,i)=> row(l, 'didNotFit', i)).join('')}</div>`;
+    if(plan.sourceFirst.length) html += `<div class="buy-tail"><h4>Selling with no supplier price — source first</h4>${
+      plan.sourceFirst.map(sf=> `<div class="buy-row">${chip(sf.daysLeft)}<div class="buy-main"><b>${esc(sf.name)}</b><em>needs about <b>${sf.qty}</b> · sold ${sf.units30} in 30d — no price on file anywhere</em></div></div>`).join('')}</div>`;
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.buy-source').forEach(btn=> btn.addEventListener('click', ()=>{
+    const l = ((dashBuyLast && dashBuyLast[btn.dataset.list]) || [])[Number(btn.dataset.i)];
+    if(!l) return;
+    /* Through the same door every other ask travels: a sourcing lead
+       with the quantity and the reason on it. */
+    captureSourcingLeadAndSave({ name: l.name, source: 'copilot', qty: l.buyQty,
+      note: `Restock — about ${Math.max(0, Math.floor(l.daysLeft))} days of stock left` });
+  }));
+}
+document.getElementById('dash_buy_budget').addEventListener('change', e=>{
+  const v = Number(e.target.value);
+  dashBuyBudget = e.target.value === '' || !(v >= 0) ? null : v;
+  renderPurchasePlanPanel();
+});
+document.getElementById('dash_buy_cover').addEventListener('change', e=>{
+  const v = Math.round(Number(e.target.value)||0);
+  data.presetRestockCoverDays = v >= 1 ? v : 14;
+  e.target.value = data.presetRestockCoverDays;
+  saveData();
+  renderPurchasePlanPanel();
+  toast('Cover target updated — the plan refills to ' + data.presetRestockCoverDays + ' days of stock');
+});
 function dashWeeklyBuckets(numWeeks){
   // Returns numWeeks buckets, oldest first, each {from,to,label}
   const buckets = [];
@@ -47724,6 +47878,7 @@ function maybeShowMorningBrief(){
 
 function renderDashboard(){
   renderMorningBrief();
+  renderPurchasePlanPanel();
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
   const prevTo = anShiftDate(from, -1);
@@ -52869,6 +53024,28 @@ const ASSISTANT_TOOLS = {
     };
     if(tokens.length) out.filter = String(input.query||'').trim();
     return out;
+  }},
+
+  /* The Procurement Copilot's voice: the same purchasePlan the
+     What-to-buy panel renders, so "I have 5m, what should I buy" and
+     the dashboard can never disagree. Read-only by design -- sourcing
+     what it suggests goes through add_sourcing_lead, with its card. */
+  purchase_plan: { confirm: false, run(input){
+    const budget = input.budget != null ? Number(input.budget) : cashOnHandByAccount().total;
+    const plan = purchasePlan(budget, null, todayISO());
+    return {
+      budget: apRound(plan.budget), cover_days: plan.coverDays,
+      plan_total: apRound(plan.spend),
+      cash_on_hand: apRound(cashOnHandByAccount().total),
+      lines: plan.lines.slice(0, 10).map(l=> ({ name: l.name, buy_qty: l.buyQty,
+        unit: l.unit || 'pc',
+        packs: l.packQty > 1 ? Math.round(l.buyQty/l.packQty) + ' ' + (l.packUnit || 'pack') : null,
+        supplier: l.supplier, unit_cost: apRound(l.unitCost), cost: apRound(l.cost),
+        days_of_stock_left: Math.max(0, Math.round(l.daysLeft)), sold_30d: l.units30, holding: l.held })),
+      more_lines: Math.max(0, plan.lines.length - 10),
+      over_budget: plan.didNotFit.slice(0, 5).map(l=> ({ name: l.name, cost: apRound(l.cost) })),
+      source_first: plan.sourceFirst.slice(0, 5).map(s=> ({ name: s.name, needs_about: s.qty, sold_30d: s.units30 })),
+    };
   }},
 
   /* The whole catalogue in one call -- names and variant labels only.
