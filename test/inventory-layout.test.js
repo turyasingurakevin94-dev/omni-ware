@@ -36,6 +36,9 @@ const scope = compileScope([
   extractDeclaration(src, 'INVENTORY_SORTS', 'index.html'),
   extractFunction(src, 'stockKey', 'index.html'),
   extractFunction(src, 'getStockQty', 'index.html'),
+  // The card now shows the shop's own restock level, so the rule that
+  // reads it comes with the line builder.
+  extractFunction(src, 'reorderRuleFor', 'index.html'),
   extractFunction(src, 'inventoryLineFor', 'index.html'),
   extractFunction(src, 'inventoryLineStats', 'index.html'),
   extractFunction(src, 'sortInventoryLines', 'index.html'),

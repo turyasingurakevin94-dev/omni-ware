@@ -117,9 +117,14 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
+    'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
     'purchasePlan', 'dashStockOutExposure',
   ].map((n) => extractFunction(src, n, 'index.html'))
-    .concat([extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html')]),
+    .concat([
+      extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html'),
+      extractDeclaration(src, 'LEAD_TIME_WINDOW_DAYS', 'index.html'),
+      extractDeclaration(src, 'LEAD_TIME_MIN_DELIVERIES', 'index.html'),
+    ]),
   env, ['waSalesByKey', 'restockRiskRows', 'stockingCandidates', 'buyLineReason',
     'purchasePlan', 'dashStockOutExposure']);
 } catch (e) { err = e; }

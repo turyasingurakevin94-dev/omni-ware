@@ -792,6 +792,7 @@
   .pw-move.up{background:var(--ow-oxide-soft);color:var(--accent);}
   .pw-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
   .pw-trail{font-variant-numeric:tabular-nums;}
+  .pack-pill.inv-low-pill{background:var(--ow-oxide-soft);color:var(--accent);font-weight:700;}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -11113,6 +11114,35 @@
 </div>
 
 <!-- STOCK PRICING RULE MODAL -->
+<div class="modal-overlay" id="reorderModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Restock level</h2>
+      <button class="modal-close" id="reorderModalClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="q-stage-name" id="reorderItemName" style="margin-bottom:6px;"></div>
+      <p class="dash-panel-note" id="reorderNote" style="margin:0 0 14px;"></p>
+      <div class="form-grid">
+        <div class="field"><label>Never go below</label>
+          <input type="number" id="ro_min" min="0" step="any" placeholder="no floor set">
+          <div class="field-hint">However slowly it sells, the buying plan tops it back up to this many. Leave blank for no floor.</div>
+        </div>
+        <div class="field"><label>Days of cover for this one</label>
+          <input type="number" id="ro_cover" min="0" step="1">
+          <div class="field-hint" id="ro_cover_hint"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-accent" id="ro_save">Save</button>
+        <button class="btn btn-ghost" id="ro_clear">Follow the shop default</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="stockRuleModal">
   <div class="modal">
     <div class="modal-head">
@@ -12276,6 +12306,11 @@ async function loadData(shopId){
     // the shop tunes it on the What-to-buy panel itself.
     presetRestockCoverDays: presets.restockCoverDays != null ? Number(presets.restockCoverDays) : 14,
     presetPriceWatchDays: presets.priceWatchDays != null ? Number(presets.priceWatchDays) : 180,
+    /* Per-product restock rules, stockKey -> {minUnits, coverDays}. Kept
+       with the shop's settings rather than on the product, which syncs a
+       fixed set of columns -- so this needs no migration, and the shop
+       stocks few enough lines for the map to stay small. */
+    presetReorderRules: (presets.reorderRules && typeof presets.reorderRules === 'object') ? presets.reorderRules : {},
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
     /* When each debtor was last chased, customer id -> date. Kept with
@@ -12551,7 +12586,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -13037,6 +13072,7 @@ const ICON_NO_STOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy=
 const ICON_RESTOCK = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/></svg>';
 const ICON_PURCHASE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 3v11m0 0-4-4m4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>';
 const ICON_ADJUST = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 12h16M14 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM4 18h16M8 18a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/></svg>';
+const ICON_REORDER = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h9"/><path d="M17 15v6M14 18h6"/></svg>';
 const ICON_PRICE_RULE = '<svg class="icon" viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
 const ICON_INFO = '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg>';
 const ICON_WARN = '<svg class="icon" viewBox="0 0 24 24"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>';
@@ -35937,6 +35973,49 @@ function editProduct(id){
    for supplier-sourced quotes. Leaving it blank falls back to the default
    rule automatically -- see effectiveStockMarkupRule(). */
 let srProductId = null, srVariantIdx = null;
+/* The per-line restock rule, set where the shelf is looked at.
+
+   Both fields are overrides and both may be left empty: a line with
+   neither follows the shop's cover setting exactly as it always has.
+   The note above them says what that default currently is and what the
+   line's own sales pace makes of it, so a number typed here is typed
+   against the evidence rather than into a vacuum. */
+let roProductId = null, roVariantIdx = null;
+function openReorderEditor(productId, variantIdx){
+  const p = data.products.find(x=>x.id===productId); if(!p) return;
+  roProductId = productId; roVariantIdx = variantIdx==null ? null : Number(variantIdx);
+  const rule = reorderRuleFor(roProductId, roVariantIdx);
+  document.getElementById('reorderItemName').textContent = productVariantLabel(p, roVariantIdx);
+  const shopCover = Math.max(1, Number(data.presetRestockCoverDays) || 14);
+  const risk = restockRiskRows(todayISO()).find(r=> r.key === stockKey(roProductId, roVariantIdx));
+  const qty = getStockQty(roProductId, roVariantIdx);
+  document.getElementById('reorderNote').textContent = risk
+    ? `${qty} on the shelf, selling about ${Math.round(risk.dailyRate*10)/10} a day — about ${Math.max(0, Math.floor(risk.daysLeft))} days of cover.`
+    : `${qty} on the shelf. Nothing has sold off the shelf here in the last 30 days, so there is no pace to measure against.`;
+  document.getElementById('ro_min').value = rule && rule.minUnits ? rule.minUnits : '';
+  document.getElementById('ro_cover').value = rule && rule.coverDays ? rule.coverDays : '';
+  document.getElementById('ro_cover').placeholder = String(shopCover);
+  document.getElementById('ro_cover_hint').textContent =
+    `The shop buys ${shopCover} days of cover by default. Leave blank to follow it.`;
+  openModal('reorderModal');
+}
+document.getElementById('reorderModalClose').addEventListener('click', ()=> closeModal('reorderModal'));
+document.getElementById('ro_save').addEventListener('click', ()=>{
+  if(!roProductId) return;
+  setReorderRule(roProductId, roVariantIdx,
+    document.getElementById('ro_min').value, document.getElementById('ro_cover').value);
+  closeModal('reorderModal');
+  renderInventory();
+  toast(reorderRuleFor(roProductId, roVariantIdx) ? 'Restock level saved' : 'Following the shop default again');
+});
+document.getElementById('ro_clear').addEventListener('click', ()=>{
+  if(!roProductId) return;
+  setReorderRule(roProductId, roVariantIdx, 0, 0);
+  closeModal('reorderModal');
+  renderInventory();
+  toast('Following the shop default again');
+});
+
 function openPriceRuleEditor(productId, variantIdx){
   const p = data.products.find(x=>x.id===productId); if(!p) return;
   srProductId = productId;
@@ -42288,8 +42367,13 @@ function inventoryLineFor(p, variantIdx){
     const rem = qty % packInfo.packQty;
     packsLabel = `${packs} ${packInfo.packUnit}` + (rem > 0 ? ` + ${rem} ${packInfo.unit || 'unit'}` : '');
   }
+  const rule = reorderRuleFor(p.id, variantIdx);
   return {
     p, variantIdx, qty, unitCost, costUnit, packsLabel,
+    rule,
+    // Said on the card, because a floor nobody can see is a floor
+    // nobody trusts -- and this is the one number the shop set by hand.
+    belowFloor: !!(rule && rule.minUnits && qty < rule.minUnits),
     /* null, not 0, when nothing on the shelf has a recorded cost. "This
        line is worth nothing" and "nobody wrote down what it cost" are
        different facts, and the balance sheet already declares the second
@@ -42457,6 +42541,15 @@ function renderInventory(){
       const { p, variantIdx, qty, unitCost, costUnit, packsLabel } = l;
       const subLabel = variantIdx==null ? p.id : `${variantLabel(p.variants[variantIdx].combo)} · ${p.variants[variantIdx].sku || `${p.id}-${variantIdx+1}`}`;
       const vidxAttr = variantIdx==null ? '' : variantIdx;
+      /* Built as a list rather than three interpolations run together:
+         a value sitting straight against the next span is the very fault
+         the flex-gap rule watches for, and it reads worse besides. */
+      const metaPills = [
+        p.category ? `<span class="pack-pill">${esc(p.category)}</span>` : '',
+        l.rule && l.rule.minUnits
+          ? `<span class="pack-pill${l.belowFloor ? ' inv-low-pill' : ''}">${l.belowFloor ? 'below ' : 'keep '}${l.rule.minUnits}</span>` : '',
+        l.rule && l.rule.coverDays ? `<span class="pack-pill">${l.rule.coverDays} days cover</span>` : '',
+      ].filter(Boolean).join('');
       return `<div class="inv-card">
         <div class="inv-card-head">
           ${productThumbHTML(p, variantIdx)}
@@ -42465,7 +42558,7 @@ function renderInventory(){
             <div class="inv-card-sub">${esc(subLabel)}</div>
           </div>
         </div>
-        <div class="inv-card-meta">${p.category ? `<span class="pack-pill">${esc(p.category)}</span>` : ''}</div>
+        <div class="inv-card-meta">${metaPills}</div>
         <div class="inv-card-foot">
           <div class="inv-card-stats">
             <div class="inv-qty-wrap">
@@ -42493,6 +42586,7 @@ function renderInventory(){
           <div class="pc-actions">
             <button type="button" class="pc-icon-btn inv-action-btn" title="Purchase (restock)" data-action="purchase" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PURCHASE}</button>
             <button type="button" class="pc-icon-btn inv-action-btn" title="Adjust stock" data-action="adjust" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_ADJUST}</button>
+            <button type="button" class="pc-icon-btn inv-reorder-btn" title="Restock level" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_REORDER}</button>
             <button type="button" class="pc-icon-btn inv-price-rule-btn" title="Override price rule" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PRICE_RULE}</button>
           </div>
         </div>
@@ -42503,6 +42597,12 @@ function renderInventory(){
       btn.addEventListener('click', ()=>{
         const vidx = btn.dataset.vidx===''? null : Number(btn.dataset.vidx);
         openInventoryModal(btn.dataset.id, vidx, btn.dataset.action);
+      });
+    });
+    wrap.querySelectorAll('.inv-reorder-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const vidx = btn.dataset.vidx===''? null : Number(btn.dataset.vidx);
+        openReorderEditor(btn.dataset.id, vidx);
       });
     });
     wrap.querySelectorAll('.inv-price-rule-btn').forEach(btn=>{
@@ -47532,6 +47632,71 @@ function dashInventoryHealth(){
 // wrong. It now reports only the cost rise, which is real.
 const DASH_COST_RISE_PCT = 5;
 
+/* ================= HOW LONG A SUPPLIER TAKES =========================
+
+   The buying plan asked the shelf to cover N days and then behaved as
+   though goods arrived the moment they were ordered. They do not: a
+   supplier who takes nine days turns a fortnight of cover into five,
+   and the shop finds out by standing there with nothing to sell.
+
+   Nobody has to type this in. Every time goods are ticked in against an
+   order the arrival is stamped (receipts[].at), and the order carries
+   its own date, so the days between them are already on file. Measured,
+   never guessed.
+
+   The MEDIAN, not the average: one delivery that took two months after
+   a supplier's lorry broke down should not move the number the plan
+   runs on. And a single delivery states no typical time at all -- one
+   arrival is an anecdote, so it is reported as exactly that. */
+const LEAD_TIME_WINDOW_DAYS = 365;
+const LEAD_TIME_MIN_DELIVERIES = 2;
+function supplierLeadTimes(dateISO){
+  const today = dateISO || todayISO();
+  const bySupplier = new Map();
+  (data.savedQuotes||[]).forEach(q=>{
+    if(q.voided || !q.date) return;
+    (q.items||[]).forEach(it=>{
+      const sid = it.supplierId;
+      if(!sid || sid === '__stock__') return;
+      const arrivals = Array.isArray(it.receipts) && it.receipts.length
+        ? it.receipts.map(r=> r.at).filter(Boolean)
+        : (it.receivedAt ? [it.receivedAt] : []);
+      arrivals.forEach(at=>{
+        const day = String(at).slice(0, 10);
+        if(waDaysBetween(day, today) > LEAD_TIME_WINDOW_DAYS) return;
+        const days = waDaysBetween(q.date, day);
+        /* An arrival stamped before its own order is a record nobody can
+           read as a waiting time. Counted as unusable rather than folded
+           in as a zero, which would drag every average toward instant. */
+        const rec = bySupplier.get(sid) || { supplierId: sid, days: [], unusable: 0 };
+        if(days >= 0) rec.days.push(days); else rec.unusable++;
+        bySupplier.set(sid, rec);
+      });
+    });
+  });
+  const out = [];
+  bySupplier.forEach(rec=>{
+    const sorted = rec.days.slice().sort((a,b)=> a-b);
+    const n = sorted.length;
+    const median = n === 0 ? null
+      : n % 2 ? sorted[(n-1)/2]
+      : Math.round((sorted[n/2 - 1] + sorted[n/2]) / 2);
+    out.push({ supplierId: rec.supplierId, name: supplierName(rec.supplierId),
+      deliveries: n, unusable: rec.unusable,
+      days: median,
+      fastest: n ? sorted[0] : null, slowest: n ? sorted[n-1] : null,
+      // One arrival is an anecdote. It is shown, but never used to plan.
+      typical: n >= LEAD_TIME_MIN_DELIVERIES });
+  });
+  return out.sort((a,b)=> (b.days == null ? -1 : b.days) - (a.days == null ? -1 : a.days));
+}
+// What the plan should actually wait for, or null when the shop has not
+// yet had enough deliveries from this supplier to say.
+function supplierLeadDays(supplierId, dateISO){
+  const hit = supplierLeadTimes(dateISO).find(x=> x.supplierId === supplierId);
+  return hit && hit.typical ? hit.days : null;
+}
+
 /* ================= WHAT SUPPLIERS CHARGE, OVER TIME ==================
 
    This shop buys most of its goods to order, so the price a supplier
@@ -47885,6 +48050,37 @@ function dashDebtorExposure(){
    purchase_plan tool, and the dashboard stock-out alert, so no two
    surfaces can tell two stories. */
 
+/* What this line's own restock rule says, if the shop set one.
+
+   Two overrides, both optional and both meaning "the shop knows
+   something the sales figures do not":
+
+     minUnits   never let the shelf fall below this many, however
+                slowly it sells -- the staple you refuse to be out of;
+     coverDays  carry more (or less) than the shop's usual cover for
+                this one line.
+
+   Absent, a line follows the shop default exactly as before. */
+function reorderRuleFor(productId, variantIdx){
+  const r = (data.presetReorderRules || {})[stockKey(productId, variantIdx)];
+  if(!r) return null;
+  const minUnits = Number(r.minUnits) || 0;
+  const coverDays = Number(r.coverDays) || 0;
+  if(!(minUnits > 0) && !(coverDays > 0)) return null;
+  return { minUnits: minUnits > 0 ? minUnits : 0, coverDays: coverDays > 0 ? coverDays : 0 };
+}
+function setReorderRule(productId, variantIdx, minUnits, coverDays){
+  if(!data.presetReorderRules) data.presetReorderRules = {};
+  const key = stockKey(productId, variantIdx);
+  const min = Number(minUnits) || 0;
+  const cover = Number(coverDays) || 0;
+  // A rule that says nothing is not a rule: it is removed rather than
+  // stored as zeroes, so the line reads as following the shop default.
+  if(!(min > 0) && !(cover > 0)) delete data.presetReorderRules[key];
+  else data.presetReorderRules[key] = { minUnits: min > 0 ? min : 0, coverDays: cover > 0 ? cover : 0 };
+  saveData();
+}
+
 // Every line the SHELF is running out of, soonest first. An item the
 // shop never stocks cannot run out of it -- it appears, if it earns
 // its place, as a stocking candidate below.
@@ -47900,7 +48096,8 @@ function restockRiskRows(dateISO){
     rows.push({ key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx,
       name: productDisplayLabel(p, variantIdx==null?null:variantIdx),
       qty, units30: s.shelfUnits30, soldTotal30: s.units30, orders30: s.orders30,
-      profit30: s.profit30, dailyRate, daysLeft: qty/dailyRate });
+      profit30: s.profit30, dailyRate, daysLeft: qty/dailyRate,
+      rule: reorderRuleFor(p.id, variantIdx==null?null:variantIdx) });
   });
   return rows.sort((a,b)=> a.daysLeft - b.daysLeft);
 }
@@ -47993,7 +48190,12 @@ function buyLineReason(l){
   const earned = l.profit30 > 0 ? `, earning ${money(l.profit30)}` : '';
   const shelf = l.held <= 0 ? 'The shelf is empty now.'
     : `${Math.round(l.held)} left — about ${Math.max(0, Math.floor(l.daysLeft))} days.`;
-  return `Sold ${pace} off the shelf across ${orders(l.orders30)}${earned}. ${shelf}`;
+  const floor = l.belowFloor ? ` That is under the ${l.floor} you asked to always keep.` : '';
+  /* The wait, when the shop's own deliveries say what it is. A cover of
+     14 days from a supplier who takes 9 is 5 days of shelf, and the line
+     is bought big enough to say so. */
+  const wait = l.leadDays ? ` ${l.supplier} has taken about ${l.leadDays} days to deliver, so this covers the wait as well as the ${l.coverDays} days.` : '';
+  return `Sold ${pace} off the shelf across ${orders(l.orders30)}${earned}. ${shelf}${floor}${wait}`;
 }
 
 /* The plan itself. Deterministic and explainable:
@@ -48011,11 +48213,37 @@ function purchasePlan(budget, coverDays, dateISO){
   const cover = Math.max(1, Number(coverDays) || Number(data.presetRestockCoverDays) || 14);
   const candidates = []; const noPrice = [];
   restockRiskRows(dateISO).forEach(r=>{
-    if(!(r.daysLeft < cover)) return;
-    const need = Math.max(1, Math.ceil(cover * r.dailyRate - r.qty));
-    const line = buyLineFor(r, need, 'refill');
-    if(!line){ noPrice.push({ name: r.name, qty: need, daysLeft: r.daysLeft,
+    /* The shop's cover, unless this line carries its own. */
+    const lineCover = (r.rule && r.rule.coverDays) ? r.rule.coverDays : cover;
+    const floor = (r.rule && r.rule.minUnits) || 0;
+    const belowFloor = floor > 0 && r.qty < floor;
+    /* THE QUESTION IS WHETHER IT RUNS OUT BEFORE A REFILL COULD ARRIVE.
+
+       The first version asked only whether the shelf held less than the
+       cover, and then bought a little extra for the wait -- which reads
+       sensibly and is wrong in the case that matters: fifteen days of
+       cover from a supplier who takes ten is a shelf that empties five
+       days before the lorry comes, and the old test called it healthy.
+
+       So the wait is part of the test, not a top-up applied after it.
+       Who supplies the line decides the wait, so a supplier is picked
+       first at the plain need -- that pick is about price at a
+       quantity, and it does not move with the extra days. */
+    const plainNeed = Math.ceil(lineCover * r.dailyRate - r.qty);
+    const probe = buyLineFor(r, Math.max(1, plainNeed), 'refill');
+    const leadDays = probe ? supplierLeadDays(probe.supplierId, dateISO) : null;
+    const need = Math.max(
+      Math.ceil((lineCover + (leadDays || 0)) * r.dailyRate - r.qty),
+      floor > 0 ? Math.ceil(floor - r.qty) : 0);
+    // The shelf covers the wait and clears any floor: nothing to do.
+    if(!(need > 0)) return;
+    if(!probe){ noPrice.push({ name: r.name, qty: need, daysLeft: r.daysLeft,
       units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx }); return; }
+    const line = need > Math.max(1, plainNeed) ? (buyLineFor(r, need, 'refill') || probe) : probe;
+    line.coverDays = lineCover;
+    line.floor = floor;
+    line.belowFloor = belowFloor;
+    line.leadDays = leadDays;
     candidates.push(line);
   });
   stockingCandidates(dateISO).forEach(r=>{

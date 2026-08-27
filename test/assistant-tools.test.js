@@ -77,7 +77,7 @@ const NAMES = [
   'sourcingLeadsAll', 'sourcingCaptureToast', 'leadDistinctAskers',
   'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull', 'tiersFromLegacyRow',
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId', 'ensurePresetCategory',
-  'allProductVariantEntries', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
+  'allProductVariantEntries', 'reorderRuleFor', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
   'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   'todayISO', 'accountLabel',
 ];
