@@ -45,6 +45,9 @@ const data = {
     { id: 'P4', name: 'Once Only', variants: [] },
     { id: 'P5', name: 'Same Day', variants: [] },
     { id: 'P6', name: 'Switched Unit', variants: [] },
+    { id: 'P7', name: 'Steady Item', variants: [] },
+    { id: 'P8', name: 'Unit Split', variants: [] },
+    { id: 'P9', name: 'Free Sample', variants: [] },
   ],
   purchaseInvoices: [
     // P1: a small rise on a big volume — 2,500 → 2,600 over 600 units.
@@ -67,6 +70,22 @@ const data = {
     pi(11, 150, 'S1', 'Okuosi Gypsum', [line('P6', 'Switched Unit', 500, 100, 'pc')]),
     pi(12, 80, 'S1', 'Okuosi Gypsum', [line('P6', 'Switched Unit', 10000, 5, 'ctn')]),
     pi(13, 15, 'S1', 'Okuosi Gypsum', [line('P6', 'Switched Unit', 10400, 5, 'ctn')]),
+    // P7: bought again and again at the very same price. The only case
+    // the old "every supplier is charging what they charged" sentence
+    // was ever entitled to describe.
+    pi(16, 100, 'S1', 'Okuosi Gypsum', [line('P7', 'Steady Item', 3000, 50)]),
+    pi(17, 55, 'S1', 'Okuosi Gypsum', [line('P7', 'Steady Item', 3000, 50)]),
+    pi(18, 12, 'S1', 'Okuosi Gypsum', [line('P7', 'Steady Item', 3000, 50)]),
+    // P8: two purchases, but the FIRST is in another unit — so only one
+    // point survives the guard and there is nothing to compare.
+    pi(19, 70, 'S2', 'Roto', [line('P8', 'Unit Split', 400, 100, 'pc')]),
+    pi(20, 18, 'S2', 'Roto', [line('P8', 'Unit Split', 9000, 4, 'ctn')]),
+    // Lines the watch cannot read at all: one names no product, one
+    // carries no price. Both must be COUNTED, not silently dropped.
+    pi(21, 30, 'S1', 'Okuosi Gypsum', [
+      { productId: null, variantIdx: null, productName: 'Sundries', price: 5000, qty: 1, unit: 'pc' },
+      line('P9', 'Free Sample', 0, 10),
+    ]),
     // Voided, and outside the look-back: neither counts for anything.
     pi(14, 5, 'S1', 'Okuosi Gypsum', [line('P1', 'Wall Angle', 9999, 500)], true),
     pi(15, 400, 'S1', 'Okuosi Gypsum', [line('P1', 'Wall Angle', 100, 500)]),
@@ -165,6 +184,40 @@ if (scope) {
     'nothing on file is reported as nothing on file — a different answer from agreeing');
 }
 
+/* ---------- 3b. the screen accounts for what it read ------------------ */
+/*
+ * The first version of the empty state said "nothing has moved: every
+ * supplier is charging what they charged, and the Price Registry agrees
+ * with what you actually paid". Both halves overclaim: a supplier bought
+ * from ONCE has never charged twice, and a pair with no registry row
+ * agrees with nothing. A screen with nothing to report owes an account
+ * of what it read.
+ */
+if (scope) {
+  const w = scope.supplierPriceWatch(TODAY);
+  const r = w.reasons;
+
+  eq(r.once, 1, 'a pair bought once is counted as such, not as a supplier holding their price');
+  eq(r.sameDay, 1, 'and so is one bought several times on a single day');
+  eq(r.unitSplit, 1, 'a pair left with one comparable point by the unit guard is counted too');
+  t.check(w.steady.map((s) => s.name).join(',') === 'Steady Item',
+    'a supplier who really did hold their price is NAMED');
+  eq(r.steady, 1, 'and counted');
+  eq(r.moved, 4, 'with the movers counted beside them');
+  eq(r.once + r.sameDay + r.unitSplit + r.steady + r.moved, r.pairs,
+    'every pair is in exactly one bucket — the account adds up to the whole list');
+
+  eq(r.linesNoProduct, 1, 'a purchase line naming no product is counted, never silently skipped');
+  eq(r.linesNoPrice, 1, 'and so is one carrying no price');
+  t.check(r.linesRead > r.pairs, 'against the total lines actually read');
+  t.check(r.noFileRow >= 1, 'pairs the Price Registry has never priced are counted — the file check cannot speak for them');
+
+  const steady = w.steady[0];
+  t.check(steady.silence === 'steady' && steady.rise === 0
+    && !w.up.includes(steady) && !w.down.includes(steady),
+    'and a held price is in neither Going up nor Come down');
+}
+
 /* ---------- 4. one derivation, one story ------------------------------ */
 if (scope) {
   const flags = scope.dashSupplierPriceInflation();
@@ -193,6 +246,12 @@ if (scope) {
     'each section shows the few that matter, with the rest one tap away');
   t.check(/selectPrProduct\(sr\.productId, sr\.variantIdx\)/.test(panel) && /openModal\('priceModal'\)/.test(panel),
     'and an out-of-step row opens the price form — this screen never edits the file itself');
+  t.check(!/every supplier is charging what they charged/.test(panel),
+    'the empty state no longer reassures — it accounts for what it read');
+  t.check(/accountLines/.test(panel) && /Read <b>\$\{r\.linesRead\}<\/b> purchase line/.test(panel),
+    'saying how many lines it read and how many pairs they make');
+  t.check(/listPageSlice\('priceSteady', w\.steady\)/.test(panel),
+    'and naming the suppliers who held their price rather than claiming it of everyone');
   t.check(/priceWatchDays:d\.presetPriceWatchDays/.test(src)
     && /presetPriceWatchDays: presets\.priceWatchDays != null \? Number\(presets\.priceWatchDays\) : 180/.test(src),
     'the look-back loads and persists like every other shop setting');

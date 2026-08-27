@@ -12926,7 +12926,7 @@ function fmtUGXPerUnitPack(n, row){
 // dashAlerts is five rather than twenty-four: it is a ranked to-do list on
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
-const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6 };
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -12958,6 +12958,7 @@ const LIST_PAGE_RERENDER = {
   priceUp: ()=> renderPriceWatch(),
   priceDown: ()=> renderPriceWatch(),
   priceFile: ()=> renderPriceWatch(),
+  priceSteady: ()=> renderPriceWatch(),
   // Redraws from rows already in hand -- expanding the list must not
   // re-query the server.
   sessions: ()=> renderLoginSessions(),
@@ -47593,11 +47594,39 @@ function renderPriceWatch(){
       <button type="button" class="btn btn-ghost pw-fix" data-i="${i}">Update the file</button>
     </div>`;
 
+  const steadyRow = (sr)=> `
+    <div class="pw-row"><span class="pw-move">held</span>
+      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
+        <em>${sr.points.length} purchases since ${esc(fmtShortDate(sr.first.date))}, every one at the same price${skipped(sr)}</em></div>
+      <span class="pw-cost">${f(sr.last.price)}</span>
+    </div>`;
+
+  /* What the screen looked at and what it could say about it. The first
+     version of this said "nothing has moved: every supplier is charging
+     what they charged" -- which is a claim about suppliers the shop has
+     bought from ONCE, who have never charged twice, and about registry
+     rows that do not exist. A screen with nothing to report owes an
+     account of what it read, not a reassurance. */
+  const r = w.reasons;
+  const accountLines = ()=> {
+    const bits = [];
+    if(r.once) bits.push(`<b>${r.once}</b> bought only once in these ${w.days} days — nothing to compare against yet`);
+    if(r.sameDay) bits.push(`<b>${r.sameDay}</b> bought only on a single day — one delivery is not a price change`);
+    if(r.unitSplit) bits.push(`<b>${r.unitSplit}</b> whose unit changed, so the old prices cannot honestly be compared with the new`);
+    if(r.steady) bits.push(`<b>${r.steady}</b> bought again at the very same price`);
+    if(r.moved) bits.push(`<b>${r.moved}</b> that moved`);
+    if(r.noFileRow) bits.push(`<b>${r.noFileRow}</b> with no Price Registry row, so the file cannot be checked against them`);
+    return bits;
+  };
+  const account = ()=> `<p class="buy-note">Read <b>${r.linesRead}</b> purchase line${r.linesRead===1?'':'s'} in these ${w.days} days, making <b>${r.pairs}</b> product-and-supplier pair${r.pairs===1?'':'s'}: ${
+    accountLines().join('; ')}.${
+    r.linesNoProduct || r.linesNoPrice ? ` ${[r.linesNoProduct ? `<b>${r.linesNoProduct}</b> line${r.linesNoProduct===1?'':'s'} named no product` : '', r.linesNoPrice ? `<b>${r.linesNoPrice}</b> carried no price` : ''].filter(Boolean).join(' and ')} — those cannot be watched at all.` : ''}${
+    r.once > r.pairs/2 ? ` Most pairs have a single purchase in this window; a longer look-back would find more.` : ''}</p>`;
+
   let html = '';
   if(!w.series.length){
-    html = `<p class="dash-panel-note" style="margin:6px 0 0;">No purchase invoices in the last ${w.days} days, so there is nothing to compare yet. Record what you buy and this fills itself in.</p>`;
-  } else if(!w.up.length && !w.down.length && !w.outOfStep.length){
-    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing has moved: every supplier is charging what they charged, and the Price Registry agrees with what you actually paid.</p>`;
+    html = `<p class="dash-panel-note" style="margin:6px 0 0;">No purchase invoices in the last ${w.days} days${
+      r.linesRead ? `, and the ${r.linesRead} purchase line${r.linesRead===1?'':'s'} there ${r.linesRead===1?'was':'were'} missing a product or a price` : ''}, so there is nothing to compare yet. Record what you buy and this fills itself in.</p>`;
   } else {
     if(w.up.length) html += `<div class="buy-tail"><h4>Going up</h4>${
       listPageSlice('priceUp', w.up).map(movedRow).join('')}${
@@ -47605,9 +47634,17 @@ function renderPriceWatch(){
     if(w.down.length) html += `<div class="buy-tail"><h4>Come down</h4>${
       listPageSlice('priceDown', w.down).map(movedRow).join('')}${
       listMoreButtonHTML('priceDown', w.down.length, 'falls')}</div>`;
+    if(w.steady.length) html += `<div class="buy-tail"><h4>Held their price</h4>${
+      listPageSlice('priceSteady', w.steady).map(steadyRow).join('')}${
+      listMoreButtonHTML('priceSteady', w.steady.length, 'suppliers')}</div>`;
     if(w.outOfStep.length) html += `<div class="buy-tail"><h4>Price Registry out of step with what you pay</h4>${
       listPageSlice('priceFile', w.outOfStep).map(fileRow).join('')}${
       listMoreButtonHTML('priceFile', w.outOfStep.length, 'rows')}</div>`;
+    html += account();
+    /* Said once, plainly, because it is the question this screen invites:
+       the registry holds today's price and no history, which is why the
+       trail above is read from invoices instead. */
+    html += `<p class="buy-note" style="color:var(--ow-ink-400);">A price is only counted here once you have BOUGHT at it. The Price Registry keeps today's figure and no history — a new price a supplier quotes you appears here after the first purchase at it, not before.</p>`;
   }
   el.innerHTML = html;
   el.querySelectorAll('.pw-fix').forEach(btn=> btn.addEventListener('click', ()=>{
@@ -47623,12 +47660,9 @@ function renderPriceWatch(){
     openModal('priceModal');
   }));
   const sum = document.getElementById('pw_summary');
-  if(sum){
-    const moved = w.up.length + w.down.length;
-    sum.textContent = w.series.length
-      ? `${w.series.length} supplier price${w.series.length===1?'':'s'} watched · ${moved} moved · ${w.outOfStep.length} out of step with the file`
-      : '';
-  }
+  if(sum) sum.textContent = w.series.length
+    ? `${r.pairs} product-and-supplier pair${r.pairs===1?'':'s'} · ${r.moved} moved · ${r.steady} held · ${r.once + r.sameDay + r.unitSplit} not yet comparable · ${w.outOfStep.length} out of step with the file`
+    : '';
 }
 document.getElementById('pw_days').addEventListener('change', e=>{
   const v = Math.round(Number(e.target.value)||0);
@@ -47643,12 +47677,18 @@ function supplierPriceSeries(dateISO){
   const today = dateISO || todayISO();
   const days = Math.max(1, Number(data.presetPriceWatchDays) || 180);
   const groups = new Map();
+  /* Counted, not discarded. A line the watch cannot read is a line the
+     shop wrote and will never see mentioned again -- and "we could read
+     nothing of yours" is a different answer from "nothing moved". */
+  const unread = { linesRead: 0, linesNoProduct: 0, linesNoPrice: 0 };
   (data.purchaseInvoices||[]).forEach(pi=>{
     if(pi.voided || !pi.date) return;
     if(waDaysBetween(pi.date, today) > days) return;   // older than the look-back
     (pi.items||[]).forEach(it=>{
       const price = Number(it.price)||0;
-      if(!it.productId || !(price > 0)) return;
+      unread.linesRead++;
+      if(!it.productId){ unread.linesNoProduct++; return; }
+      if(!(price > 0)){ unread.linesNoPrice++; return; }
       const variantIdx = (it.variantIdx==null || it.variantIdx==='') ? null : it.variantIdx;
       const key = it.productId + '|' + (variantIdx==null ? '' : variantIdx) + '|' + pi.supplierId;
       if(!groups.has(key)) groups.set(key, { key, productId: it.productId, variantIdx,
@@ -47674,7 +47714,17 @@ function supplierPriceSeries(dateISO){
     const onFile = row ? purchasePriceAtQty(row, last.qty) : null;
     const rise = comparable.length > 1 ? last.price - first.price : 0;
     const trend = comparable.length > 1 && first.date !== last.date;
+    /* Why this series says nothing, when it says nothing. Exactly one
+       of these is true for every series, so they add up to the whole
+       list -- which is what lets the screen account for itself instead
+       of asserting that nothing happened. */
+    const silence = comparable.length < 2
+      ? (skippedOtherUnit > 0 ? 'unitSplit' : 'once')
+      : first.date === last.date ? 'sameDay'
+      : last.price === first.price ? 'steady'
+      : 'moved';
     out.push({ ...g, points: comparable, skippedOtherUnit, first, last, units,
+      silence,
       trend,
       rise: trend ? rise : 0,
       risePct: trend && first.price > 0 ? rise/first.price*100 : 0,
@@ -47687,6 +47737,7 @@ function supplierPriceSeries(dateISO){
         : Math.abs(last.price - onFile) > Math.max(1, onFile * PRICE_WATCH_FILE_TOLERANCE_PCT/100),
     });
   });
+  out.unread = unread;
   return out;
 }
 
@@ -47698,14 +47749,30 @@ function supplierPriceWatch(dateISO){
   const all = supplierPriceSeries(dateISO);
   const up = all.filter(s=> s.trend && s.rise > 0).sort((a,b)=> b.extra - a.extra);
   const down = all.filter(s=> s.trend && s.rise < 0).sort((a,b)=> a.extra - b.extra);
+  /* Bought again and again at the same price. The only claim the screen
+     is entitled to make about a supplier holding their price -- and it
+     NAMES them, rather than saying it of everybody. */
+  const steady = all.filter(s=> s.silence === 'steady')
+    .sort((a,b)=> b.units * b.last.price - a.units * a.last.price);
   /* Where the Price Registry disagrees with what was actually paid.
      The buying plan costs every line from that file, so a row that has
      drifted makes the plan wrong in silence -- which is exactly the
      kind of quiet error this screen exists to end. */
   const outOfStep = all.filter(s=> s.fileStale)
     .sort((a,b)=> Math.abs(b.fileGap * b.units) - Math.abs(a.fileGap * a.units));
-  return { series: all, up, down, outOfStep,
-    days: Math.max(1, Number(data.presetPriceWatchDays) || 180) };
+  const count = (k)=> all.filter(s=> s.silence === k).length;
+  return { series: all, up, down, steady, outOfStep,
+    days: Math.max(1, Number(data.presetPriceWatchDays) || 180),
+    /* The screen's working, shown. Every pair is in exactly one of
+       once / sameDay / unitSplit / steady / moved, and noFileRow counts
+       the pairs the registry has never priced -- which is why the file
+       check can say nothing about them. */
+    reasons: { pairs: all.length, once: count('once'), sameDay: count('sameDay'),
+      unitSplit: count('unitSplit'), steady: steady.length, moved: up.length + down.length,
+      noFileRow: all.filter(s=> s.onFile == null).length,
+      linesRead: all.unread.linesRead, linesNoProduct: all.unread.linesNoProduct,
+      linesNoPrice: all.unread.linesNoPrice },
+  };
 }
 
 // The dashboard's cost-rise flag: the same series, cut to what a card
