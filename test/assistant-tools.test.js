@@ -68,6 +68,7 @@ const NAMES = [
   'periodEndDate', 'daysBetweenISO', 'periodLabel',
   'collectableDebts', 'customerOldestOpenChargeDate', 'customerOpenCharges', 'daysSinceDate',
   'cashOnHandFor', 'cashOnHandByAccount', 'cashAnchorFor', 'cashIsMoneyIn', 'cashIsMoneyOut',
+  'debtCollectionsOn', 'debtLogIsInvoiceOwned', 'cashIsDebtCollection',
   'getStockQty', 'stockKey',
   'buildProductSuggestionEntries', 'supplierSkuIndex', 'searchTokens', 'matchesAllTokens',
   'productSearchText', 'productVariantLabel', 'variantLabel',
@@ -256,6 +257,11 @@ const run = (name, input) => T[name].run(input || {});
     { id: 4, name: 'Dad', phone: '', debt: 200000,
       debtLog: [charge('2026-06-30', 200000)] },
   ];
+  /* debtor_payments now also reads invoice payments and their cash
+     receipts (debtCollectionsOn) — start this section from none, so
+     quotes left behind by earlier sections cannot leak into the day. */
+  data.savedQuotes = [];
+  data.cashTxns = [];
 
   const day = run('debtor_payments', {});
   t.check(day.date === TODAY && day.paid_count === 2 && day.paid_total === 250000,

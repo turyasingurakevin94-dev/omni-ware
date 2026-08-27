@@ -52,12 +52,23 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
   const data = {
     customers: [
       { id: 'C1', name: 'Mukasa', debtLog: [
-        { type: 'payment', date: Y, amount: 200000 },
+        { type: 'payment', date: Y, amount: 200000, cashTxnId: 901 },
         { type: 'payment', date: '2026-08-20', amount: 50000 },
         { type: 'charge', date: Y, amount: 999999 }] },
       // A timestamped date must still count for its day.
       { id: 'C2', name: 'Auma', debtLog: [{ type: 'payment', date: Y + 'T09:12:00', amount: 80000 }] },
       { id: 'C3', name: 'Quiet', debtLog: [] },
+      /* THE LIVE LIE: the invoice sync's echo row — written when a sale
+         is paid at the counter, an invoice edited, or voided. David
+         paid nothing; the first brief listed him at 2,500,000. */
+      { id: 'C5', name: 'David', debtLog: [
+        { type: 'payment', date: Y, amount: 2500000, quoteId: 77, note: 'Auto-sync — INV-0210' }] },
+      { id: 'C4', name: 'Ken' },
+    ],
+    cashTxns: [
+      { id: 901, date: Y, type: 'receipt', category: 'Debt Payment', amount: 200000 },
+      { id: 902, date: Y, type: 'receipt', category: 'Debt Payment', amount: 150000 },
+      { id: 903, date: Y, type: 'receipt', category: 'Agent Payment', amount: 99999 },
     ],
     stockLog: [
       // crossed to zero yesterday, still out this morning -> news
@@ -74,6 +85,13 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
       { id: 2, status: 'preparing', stageEnteredAt: NOW - 2 * 3600000, client: { name: 'Nsubuga' } },
       { id: 3, status: 'completed', stageEnteredAt: NOW - 99 * 3600000, client: { name: 'Done' } },
       { id: 4, status: 'preparing', stageEnteredAt: NOW - 9 * 3600000, client: { name: 'Voided' }, voided: true },
+      // An invoice-allocated payment: real money, linked to its
+      // debt-collection cash receipt.
+      { id: 5, status: 'completed', customerId: 'C4', client: { name: 'Ken' },
+        payments: [{ date: Y, amount: 150000, cashTxnId: 902 }] },
+      // An agent settling their order: the agents' flow, not this one.
+      { id: 6, status: 'completed', client: { name: 'Agent order' },
+        payments: [{ date: Y, amount: 99999, cashTxnId: 903 }] },
     ],
     presetOrderStageLimits: { preparing: 60 },
   };
@@ -92,6 +110,10 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
   };
   const scope = compileScope([
     extractFunction(src, 'orderStageOverdue', 'index.html'),
+    extractFunction(src, 'cashIsMoneyIn', 'index.html'),
+    extractFunction(src, 'cashIsDebtCollection', 'index.html'),
+    extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
+    extractFunction(src, 'debtCollectionsOn', 'index.html'),
     extractFunction(src, 'morningBriefData', 'index.html'),
   ], env, ['morningBriefData']);
   const b = scope.morningBriefData(Y, NOW);
@@ -104,9 +126,14 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
   eq(b.cash.moneyIn, 700000, 'cash in comes from the cash book\'s own day position');
   t.check(b.cash.counted === true && b.cash.variance === -5000, 'with the count and its shortfall');
 
-  eq(b.paid.count, 2, 'two customers paid yesterday');
-  eq(b.paid.total, 280000, 'and their payments sum');
-  eq(b.paid.rows[0].name, 'Mukasa', 'largest payment first');
+  eq(b.paid.count, 3, 'three real collections yesterday');
+  eq(b.paid.total, 430000, 'and only MONEY sums — never bookkeeping');
+  eq(b.paid.rows.map((r) => r.name).join(','), 'Mukasa,Ken,Auma',
+    'largest first — general-balance rows and invoice-allocated payments both counted');
+  t.check(!b.paid.rows.some((r) => r.name === 'David'),
+    'the invoice sync\'s echo row is NOT a collection — the live lie, pinned dead');
+  t.check(!b.paid.rows.some((r) => r.name === 'Agent order'),
+    'an agent settling their order is not customer debt collected');
   t.check(!b.paid.rows.some((r) => r.name === 'Quiet'), 'nobody is invented, and a charge is not a payment');
 
   eq(b.ranOut.join(','), 'Simba Cement',

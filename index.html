@@ -732,18 +732,22 @@
      only the blocks that carry news. Sits above everything else on
      the dashboard, and the first visit of each day lands here. */
   .dash-brief{margin-bottom:20px;}
-  .brief-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px;}
-  .brief-stat{display:flex;flex-direction:column;gap:2px;background:var(--bg);border-radius:10px;padding:10px 12px;}
-  .brief-stat span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ow-ink-400);}
-  .brief-stat b{font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink);}
-  .brief-stat em{font-style:normal;font-size:11.5px;color:var(--ink-soft);}
-  .brief-blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 20px;margin-top:10px;}
-  .brief-block h4{font-size:11px;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ow-ink-400);}
-  .brief-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line);}
+  .brief-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:10px 0 4px;}
+  .brief-stat{display:flex;flex-direction:column;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px 11px;position:relative;overflow:hidden;}
+  /* The oxide hairline is the receipts' brand mark, carried over — the
+     brief is the same house's paper. */
+  .brief-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);opacity:0.85;}
+  .brief-stat span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);}
+  .brief-stat b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1.15;}
+  .brief-stat em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .brief-stat em.warn{color:var(--ow-amber-ink);}
+  .brief-blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px 28px;margin-top:16px;}
+  .brief-block h4{font-size:10.5px;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
+  .brief-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);}
   .brief-row:last-child{border-bottom:none;}
-  .brief-row span{min-width:0;}
-  .brief-row b{font-variant-numeric:tabular-nums;white-space:nowrap;}
-  .brief-row em{font-style:normal;color:var(--ink-soft);}
+  .brief-row span{min-width:0;color:var(--ink);font-weight:600;}
+  .brief-row b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .brief-row em{font-style:normal;font-weight:500;color:var(--ow-ink-400);}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
      weight, and the one thing with a deadline -- the shop's biggest
@@ -23241,6 +23245,52 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
     }
   }
   return applied + unapplied;
+}
+
+/* Who actually paid debt on a day — MONEY, not bookkeeping. The debt
+   ledger's invoice-owned rows are applyInvoiceDebtCharge's ECHOES: a
+   sale paid at the counter, an invoice edited, a void, all write
+   "payment" deltas there with no shilling of debt collected — counting
+   them told the owner three customers paid who had not. So a day's
+   collections are exactly two things:
+     - invoice payments (q.payments) whose linked cash receipt is a
+       debt-collection category — an agent settling their order is the
+       agents' flow, not this one;
+     - the customer ledger's USER-owned payment rows, the general-
+       balance collections recordCustomerPayment writes.
+   Shared by the morning brief and the assistant's debtor_payments, so
+   the two can never tell the owner different stories. */
+function debtCollectionsOn(dateISO){
+  const day = String(dateISO||'').slice(0, 10);
+  const rows = new Map();
+  const add = (id, name, amount)=>{
+    if(!(amount > 0)) return;
+    const key = id != null ? 'c' + id : 'n' + String(name||'').trim().toLowerCase();
+    const r = rows.get(key) || { id: id == null ? null : id, name: name || '(unnamed)', amount: 0 };
+    r.amount += amount;
+    rows.set(key, r);
+  };
+  const txnById = new Map((data.cashTxns||[]).map(t=> [t.id, t]));
+  (data.savedQuotes||[]).forEach(q=>{
+    (q.payments||[]).forEach(p=>{
+      if(!p || String(p.date||'').slice(0, 10) !== day) return;
+      const t = txnById.get(p.cashTxnId);
+      if(!t || !cashIsDebtCollection(t)) return;
+      const c = q.customerId != null ? (data.customers||[]).find(x=> x.id === q.customerId) : null;
+      add(c ? c.id : null, c ? c.name : ((q.client && q.client.name) || ''), Number(p.amount)||0);
+    });
+  });
+  (data.customers||[]).forEach(c=>{
+    (c.debtLog||[]).forEach(l=>{
+      if(!l || l.type !== 'payment' || debtLogIsInvoiceOwned(l)) return;
+      if(String(l.date||'').slice(0, 10) !== day) return;
+      add(c.id, c.name, Number(l.amount)||0);
+    });
+  });
+  const list = [...rows.values()].filter(r=> r.amount > 0.5)
+    .map(r=> ({ id: r.id, name: r.name, amount: Math.round(r.amount) }))
+    .sort((a,b)=> b.amount - a.amount);
+  return { rows: list, total: list.reduce((s,r)=> s + r.amount, 0), count: list.length };
 }
 
 // Converts a completed quote into an invoice, or reverts it back -- only
@@ -47561,16 +47611,11 @@ function morningBriefData(dateISO, nowMs){
   const tot = anOverallTotals(anInvoicesInRange(y, y));
   // Cash movement and the count, from the cash book's own day position.
   const pos = cbDayPosition(y);
-  // Who paid: every payment entry in every customer's debt ledger
-  // dated y — the same rows the debtor_payments tool reads.
-  const paidRows = [];
-  (data.customers||[]).forEach(c=>{
-    const got = (c.debtLog||[]).filter(e=> e && e.type==='payment'
-      && String(e.date||'').slice(0,10) === y)
-      .reduce((s,e)=> s + (Number(e.amount)||0), 0);
-    if(got > 0.5) paidRows.push({ name: c.name, amount: Math.round(got) });
-  });
-  paidRows.sort((a,b)=> b.amount - a.amount);
+  // Who paid: real collections only, through the same derivation the
+  // debtor_payments tool uses — money that arrived, never the invoice
+  // sync's bookkeeping echoes (which listed three customers as having
+  // paid who had not).
+  const col = debtCollectionsOn(y);
   // Ran out: stock-log rows dated y whose delta crossed the count to
   // nothing — the inverse of followUpBackInStock's crossing test — and
   // whose line is STILL empty this morning (a restock since un-rings
@@ -47602,8 +47647,8 @@ function morningBriefData(dateISO, nowMs){
       margin: tot.margin, estimated: (tot.estimatedQty||0) > 0 },
     cash: { moneyIn: Math.round(pos.in), moneyOut: Math.round(pos.out),
       counted: pos.countedAccounts > 0, variance: Math.round(pos.varianceTotal) },
-    paid: { count: paidRows.length,
-      total: paidRows.reduce((s,r)=> s + r.amount, 0), rows: paidRows.slice(0, 6) },
+    paid: { count: col.count, total: col.total,
+      rows: col.rows.slice(0, 6).map(r=> ({ name: r.name, amount: r.amount })) },
     debts: { total: Math.round(debts.reduce((s,r)=> s + r.debt, 0)), rows: debts.slice(0, 3) },
     ranOut: ranOut.slice(0, 8), ranOutCount: ranOut.length,
     stuck: stuck.slice(0, 6), stuckCount: stuck.length,
@@ -47613,7 +47658,7 @@ function morningBriefData(dateISO, nowMs){
 
 function morningBriefHTML(b){
   const money = n=> fmtUGX(Math.round(n));
-  const stat = (label, value, note)=> `<div class="brief-stat"><span>${esc(label)}</span><b>${esc(value)}</b>${note ? `<em>${esc(note)}</em>` : ''}</div>`;
+  const stat = (label, value, note, noteClass)=> `<div class="brief-stat"><span>${esc(label)}</span><b>${esc(value)}</b>${note ? `<em${noteClass ? ` class="${noteClass}"` : ''}>${esc(note)}</em>` : ''}</div>`;
   const row = (main, side)=> `<div class="brief-row"><span>${main}</span>${side ? `<b>${esc(side)}</b>` : ''}</div>`;
   const block = (title, rows)=> rows.length
     ? `<div class="brief-block"><h4>${esc(title)}</h4>${rows.join('')}</div>` : '';
@@ -47621,7 +47666,8 @@ function morningBriefHTML(b){
   const stats = [
     stat('Cash in', money(b.cash.moneyIn), b.cash.counted && Math.abs(b.cash.variance) >= 1
       ? (b.cash.variance < 0 ? 'short ' : 'over ') + money(Math.abs(b.cash.variance))
-      : (b.cash.counted ? 'count matched' : 'not counted')),
+      : (b.cash.counted ? 'count matched' : 'not counted'),
+      b.cash.counted && b.cash.variance < -0.5 ? 'warn' : ''),
     stat('Sales invoiced', money(b.sales.total),
       b.sales.count ? b.sales.count + (b.sales.count===1 ? ' invoice' : ' invoices') : 'none recorded'),
     /* ≈ says the honest thing: part of the cost side was estimated, so
@@ -52617,19 +52663,19 @@ const ASSISTANT_TOOLS = {
      debtors-only view, which is exactly the wrong day to forget them. */
   debtor_payments: { confirm: false, run(input){
     const day = String(input.date || todayISO()).slice(0, 10);
-    const paidOn = (c)=> ((c && c.debtLog) || [])
-      .filter(e=> e.type === 'payment' && String(e.date||'').slice(0, 10) === day)
-      .reduce((s, e)=> s + (Number(e.amount)||0), 0);
-    const paid = [];
-    (data.customers||[]).forEach(c=>{
-      const sum = paidOn(c);
-      if(sum > 0) paid.push({ name: c.name, paid: apRound(sum), still_owes: apRound(c.debt) });
+    /* Through debtCollectionsOn — money, not bookkeeping. Reading the
+       ledger raw counted the invoice sync's echo rows and reported
+       counter-paying customers as debt payers. */
+    const col = debtCollectionsOn(day);
+    const paid = col.rows.map(r=>{
+      const c = r.id != null ? apCustomerById(r.id) : null;
+      return { name: r.name, paid: apRound(r.amount), still_owes: c ? apRound(c.debt) : null };
     });
-    paid.sort((a,b)=> b.paid - a.paid);
-    const unpaid = collectableDebts().filter(r=> !(paidOn(apCustomerById(r.id)) > 0));
+    const paidIds = new Set(col.rows.filter(r=> r.id != null).map(r=> r.id));
+    const unpaid = collectableDebts().filter(r=> !paidIds.has(r.id));
     return { date: day,
       paid_count: paid.length,
-      paid_total: apRound(paid.reduce((s,r)=> s + r.paid, 0)),
+      paid_total: apRound(col.total),
       paid: paid.slice(0, 15),
       not_paid_count: unpaid.length,
       not_paid_total: apRound(unpaid.reduce((s,r)=> s + r.debt, 0)),
