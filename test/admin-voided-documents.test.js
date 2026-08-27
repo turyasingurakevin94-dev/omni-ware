@@ -114,7 +114,9 @@ const INV = (over = {}) => ({
     'a voided invoice has no balance due');
   t.check(/\.filter\(q=>q\.customerId===customerId && q\.invoiced && !q\.voided && invoiceBalanceDue\(q\)>0\)/.test(code),
     'and is not one of a customer\'s outstanding invoices');
-  t.check(/if\(!q\.voided\)\{ totalAmt \+= total; totalPaid \+= paid; totalDue \+= due; \}/.test(code),
+  // Summed in its own pass since the table was paged, so that the total
+  // describes the range and not the page. Same rule, different place.
+  t.check(/if\(q\.voided\) return;[\s\S]{0,160}totalAmt \+= total; totalPaid \+= paid; totalDue \+= total - paid;/.test(code),
     'the Invoices tab leaves it out of its totals');
   t.check(/if\(hideVoided\) invoices = invoices\.filter\(q=>!q\.voided\);/.test(code),
     'while still being able to LIST it, which is why that list is not a bug');

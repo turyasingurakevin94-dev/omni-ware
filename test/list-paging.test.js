@@ -193,6 +193,53 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and nothing clears it on the way into a render');
 }
 
+/* ---------- 4b. the invoice tables, where the summary is money -------- */
+/*
+ * The owner opened Invoices to seventy rows on one page and asked for
+ * some of them to be hidden. These two tables are the sharpest case of
+ * the risk this file was written for: each ends in a Total row, and
+ * both used to accumulate that total INSIDE the loop that drew the
+ * rows. Harmless while the loop drew everything; the moment it draws
+ * two dozen, "Total 45,408,740" silently becomes the total of whatever
+ * is on screen — a wrong figure, in money, presented as the answer to
+ * the filter the owner set.
+ */
+{
+  const code = stripComments(src);
+  const renderers = [
+    { fn: 'renderInvoices', id: 'invoices', totalOf: 'savedQuoteTotal' },
+    { fn: 'renderPurchaseInvoices', id: 'purchaseInvoices', totalOf: 'purchaseInvoiceTotal' },
+  ];
+  renderers.forEach(({ fn, id, totalOf }) => {
+    const body = stripComments(extractFunction(src, fn, 'index.html'));
+    const totalsAt = body.indexOf(`invoices.forEach(`);
+    const sliceAt = body.indexOf(`listPageSlice('${id}', invoices)`);
+    const rowsAt = body.indexOf('const rowsHtml = shown.map(');
+    t.check(totalsAt > 0 && sliceAt > totalsAt,
+      `${fn}: the totals are summed over the whole range BEFORE the page is cut`);
+    t.check(rowsAt > sliceAt,
+      `${fn}: and the rows are drawn from the page, not from everything`);
+    t.check(new RegExp(`invoices\\.forEach\\([\\s\\S]{0,220}${totalOf}\\(`).test(body),
+      `${fn}: the totalling pass reads the unsliced list`);
+    t.check(!/shown\.forEach\(|shown\.reduce\(/.test(body),
+      `${fn}: and nothing is summed from the page — that is the whole hazard`);
+    t.check(new RegExp(`listMoreButtonHTML\\('${id}', invoices\\.length`).test(body),
+      `${fn}: the button promises the FULL count, which is what pressing it delivers`);
+    /* A footer reading "Total" beside two dozen rows reads as their
+       total. When a page is cut it has to say which total it is. */
+    t.check(/const totalLabel = cut \? `Total \(all \$\{invoices\.length\}\)` : 'Total';/.test(body),
+      `${fn}: and the footer says so when a page is being shown`);
+    /* Selection can only reach drawn checkboxes, and the bulk actions
+       behind it include voiding. The label must not imply the rest. */
+    t.check(/const selectAllLabel = cut \? `Select all \$\{shown\.length\} shown`/.test(body),
+      `${fn}: select-all says what it can actually take`);
+  });
+
+  // Printing the list is not paging: it still covers the whole range.
+  t.check(/piLastRows = invoices;/.test(code) && /invLastRows = invoices;/.test(code),
+    'the print list keeps every row the filters matched, page or no page');
+}
+
 /* ---------- 5. it shares the stock log's control, not a copy of it ---- */
 {
   t.check(/\.log-more-row\{/.test(src),

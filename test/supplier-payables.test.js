@@ -350,9 +350,13 @@ const seed = (...invoices) => { data.purchaseInvoices = invoices; };
     const src = extractFunction(adminSrc, fnName, 'index.html');
     return new RegExp(guard).test(src);
   };
-  t.check(totalsBlock('renderPurchaseInvoices', 'if\\(!pi\\.voided\\)\\{ totalAmt \\+= total'),
+  /* The totals moved out of the row loop when these tables were paged --
+     a total summed from the visible page would be a different (and
+     wrong) figure. The rule they are checked for is unchanged: a voided
+     document is drawn, struck through, and counted towards nothing. */
+  t.check(totalsBlock('renderPurchaseInvoices', 'invoices\\.forEach\\(pi=>\\{\\s*\\n\\s*if\\(pi\\.voided\\) return;'),
     'the Purchase Invoices totals row skips voided invoices');
-  t.check(totalsBlock('renderInvoices', 'if\\(!q\\.voided\\)\\{ totalAmt \\+= total'),
+  t.check(totalsBlock('renderInvoices', 'invoices\\.forEach\\(q=>\\{\\s*\\n\\s*if\\(q\\.voided\\) return;'),
     'the Invoices totals row skips voided invoices');
 }
 {

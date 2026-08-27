@@ -12961,7 +12961,8 @@ function fmtUGXPerUnitPack(n, row){
 // dashAlerts is five rather than twenty-four: it is a ranked to-do list on
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
-const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5 };
+const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
+  invoices: 24, purchaseInvoices: 24 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -12994,6 +12995,8 @@ const LIST_PAGE_RERENDER = {
   priceDown: ()=> renderPriceWatch(),
   priceFile: ()=> renderPriceWatch(),
   priceSteady: ()=> renderPriceWatch(),
+  invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
+  purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
   // re-query the server.
   sessions: ()=> renderLoginSessions(),
@@ -24390,16 +24393,31 @@ function renderInvoices(filter=''){
       <span class="deb-prog-pct">${pct}%</span>
     </div>`;
   };
+  /* THE TOTALS ARE OF THE RANGE, NOT OF THE PAGE.
+
+     Computed here, over every invoice the filters matched, and before a
+     single row is drawn. They used to accumulate inside the row loop,
+     which was harmless only while the loop drew everything -- the moment
+     it draws two dozen, a footer reading "Total 45,408,740" would
+     quietly become the total of what happens to be on screen. That is
+     the exact fault this app's paging rule exists to prevent.
+
+     Same rule as the Purchase Invoices totals: a voided invoice shows
+     its own figures but isn't money anyone owes, and the Debtors list
+     already leaves it out. */
   let totalAmt=0, totalPaid=0, totalDue=0;
+  invoices.forEach(q=>{
+    if(q.voided) return;
+    const total = savedQuoteTotal(q);
+    const paid = Number(q.amountPaid)||0;
+    totalAmt += total; totalPaid += paid; totalDue += total - paid;
+  });
+  const shown = listPageSlice('invoices', invoices);
   const cardsArr = [];
-  const rowsHtml = invoices.map((q,i)=>{
+  const rowsHtml = shown.map((q,i)=>{
     const total = savedQuoteTotal(q);
     const paid = Number(q.amountPaid)||0;
     const due = total - paid;
-    // Same rule as the Purchase Invoices totals: a voided invoice shows its
-    // own figures but isn't money anyone owes, and the Debtors list already
-    // leaves it out.
-    if(!q.voided){ totalAmt += total; totalPaid += paid; totalDue += due; }
     const status = invoicePaymentStatusLabel(q);
     const notesLabel = (q.payments&&q.payments.length) ? `${q.payments.length} payment${q.payments.length===1?'':'s'}` : '';
     const actionsHtml = `<button type="button" class="pc-icon-btn inv-doc-print" data-id="${q.id}" title="Print invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
@@ -24452,6 +24470,13 @@ function renderInvoices(filter=''){
     </tr>`;
   }).join('');
 
+  /* A page is being shown, so both of these have to say so. A "Total"
+     beside two dozen rows reads as their total, and a "Select all" that
+     can only reach what is drawn must not imply the other forty-six --
+     the bulk actions behind it include voiding. */
+  const cut = shown.length < invoices.length;
+  const totalLabel = cut ? `Total (all ${invoices.length})` : 'Total';
+  const selectAllLabel = cut ? `Select all ${shown.length} shown` : 'Select all';
   wrap.innerHTML = `<div class="an-scroll pi-table-wrap"><table>
     <thead><tr>
       <th><input type="checkbox" id="inv_doc_select_all_th"></th>
@@ -24469,18 +24494,19 @@ function renderInvoices(filter=''){
     <tbody>${rowsHtml}</tbody>
     <tfoot><tr class="inv-total-row">
       <td></td><td></td><td></td><td></td>
-      <td class="inv-total-label">Total</td>
+      <td class="inv-total-label">${totalLabel}</td>
       <td class="price">${fmtUGX(Math.round(totalAmt))}</td>
       <td class="price">${fmtUGX(Math.round(totalPaid))}</td>
       <td class="price">${fmtUGX(Math.round(totalDue))}</td>
       <td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>
+  ${listMoreButtonHTML('invoices', invoices.length, 'invoices')}
   <div class="pi-cards">
-    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="inv_doc_select_all_cards"> Select all</label>
+    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="inv_doc_select_all_cards"> ${selectAllLabel}</label>
     ${cardsArr.join('')}
     <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>Total</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>${totalLabel}</span></div>
       <div class="sc-stat"><b>${fmtUGX(Math.round(totalPaid))}</b><span>Paid</span></div>
       <div class="sc-stat"><b>${fmtUGX(Math.round(totalDue))}</b><span>Balance</span></div>
     </div>
@@ -25450,18 +25476,29 @@ function renderPurchaseInvoices(filter=''){
   }
 
   const sortArrow = (key)=> PI_SORT_STATE.key===key ? `<span class="sort-arrow">${PI_SORT_STATE.dir===1?'▲':'▼'}</span>` : '';
+  /* Totalled over the whole range before any of it is drawn -- see the
+     same note on renderInvoices. A voided row still shows its own
+     figures (struck through), but must not count towards the totals: a
+     cancelled purchase isn't money owed, and the Creditors list already
+     excludes them, so counting them here made the two disagree. Only
+     reachable with "Hide voided" unchecked, which is exactly when
+     someone is reviewing what was cancelled. */
   let totalAmt=0, totalPaid=0, totalDue=0;
+  invoices.forEach(pi=>{
+    if(pi.voided) return;
+    const total = purchaseInvoiceTotal(pi);
+    const paid = Number(pi.amountPaid)||0;
+    totalAmt += total; totalPaid += paid; totalDue += total - paid;
+  });
+  const shown = listPageSlice('purchaseInvoices', invoices);
+  const cut = shown.length < invoices.length;
+  const totalLabel = cut ? `Total (all ${invoices.length})` : 'Total';
+  const selectAllLabel = cut ? `Select all ${shown.length} shown` : 'Select all';
   const cardsArr = [];
-  const rowsHtml = invoices.map((pi,i)=>{
+  const rowsHtml = shown.map((pi,i)=>{
     const total = purchaseInvoiceTotal(pi);
     const paid = Number(pi.amountPaid)||0;
     const due = total - paid;
-    // A voided row still shows its own figures (struck through), but must
-    // not count towards the totals -- a cancelled purchase isn't money owed,
-    // and the Creditors list already excludes them, so counting them here
-    // made the two disagree. Only reachable with "Hide voided" unchecked,
-    // which is exactly when someone is reviewing what was cancelled.
-    if(!pi.voided){ totalAmt += total; totalPaid += paid; totalDue += due; }
     const status = purchaseInvoicePaymentStatusLabel(pi);
     const collectionPct = purchaseInvoiceCollectionPct(pi);
     const isRestock = collectionPct===null;
@@ -25550,18 +25587,19 @@ function renderPurchaseInvoices(filter=''){
     <tbody>${rowsHtml}</tbody>
     <tfoot><tr class="inv-total-row">
       <td></td><td></td><td></td><td></td><td></td>
-      <td class="inv-total-label">Total</td>
+      <td class="inv-total-label">${totalLabel}</td>
       <td class="price">${fmtUGX(Math.round(totalAmt))}</td>
       <td class="price">${fmtUGX(Math.round(totalPaid))}</td>
       <td class="price">${fmtUGX(Math.round(totalDue))}</td>
       <td></td><td></td><td></td>
     </tr></tfoot>
   </table></div>
+  ${listMoreButtonHTML('purchaseInvoices', invoices.length, 'bills')}
   <div class="pi-cards">
-    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="pi_doc_select_all_cards"> Select all</label>
+    <label class="sq-select-all-label pi-cards-select-all"><input type="checkbox" id="pi_doc_select_all_cards"> ${selectAllLabel}</label>
     ${cardsArr.join('')}
     <div class="pi-cards-summary">
-      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>Total</span></div>
+      <div class="sc-stat"><b>${fmtUGX(Math.round(totalAmt))}</b><span>${totalLabel}</span></div>
       <div class="sc-stat"><b>${fmtUGX(Math.round(totalPaid))}</b><span>Paid</span></div>
       <div class="sc-stat"><b>${fmtUGX(Math.round(totalDue))}</b><span>Balance</span></div>
     </div>
