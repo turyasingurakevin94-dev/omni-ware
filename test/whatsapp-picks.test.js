@@ -62,6 +62,13 @@ const env = {
   WA_ROTATION_DAYS: 14, WA_SITTING_DAYS: 30, WA_PICK_COUNT: 3,
   WA_JUSTIN_DAYS: 7, WA_DEPTH_DAYS: 5,
   WA_DAY_NAMES: ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'],
+  /* The demand record also carries what each line earned and where it
+     came from, for the buying copilot. That arithmetic is proven
+     against the REAL costing chain in purchase-plan.test.js; here it
+     is stubbed like the rest of pricing, because these cases are about
+     which orders count as demand, not what they were worth. */
+  quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
+  invoiceLineCost: (it) => ({ cost: (Number(it.qty)||0) * (Number(it.price)||0), estimatedQty: 0 }),
   catalogueSellAtQty: (p, idx, qty, basis) => {
     basisAsked.push(basis);
     const v = sellFixture.get(p.id + (idx==null ? '' : '::'+idx));
