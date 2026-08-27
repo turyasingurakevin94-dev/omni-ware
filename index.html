@@ -748,12 +748,14 @@
   .brief-row span{min-width:0;color:var(--ink);font-weight:600;}
   .brief-row b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
   .brief-row em{font-style:normal;font-weight:500;color:var(--ow-ink-400);}
-  /* ---- What to buy (the Procurement Copilot) ---- */
-  .dash-buy{margin-bottom:20px;}
-  .dash-buy-controls{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--ink-soft);}
-  .dash-buy-controls label{display:flex;gap:6px;align-items:center;font-weight:600;}
-  .dash-buy-controls input{width:110px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;}
-  .dash-buy-controls input#dash_buy_cover{width:56px;}
+  /* ---- What to buy (the Procurement Copilot) ----
+     Its own screen, not a dashboard panel: the plan plus its
+     over-budget and source-first tails is a working document. */
+  .buy-controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .buy-controls label{display:flex;gap:6px;align-items:center;font-weight:600;}
+  .buy-controls input{width:110px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;}
+  .buy-controls input#buy_cover{width:56px;}
+  .buy-controls-note{margin-left:auto;font-weight:500;color:var(--ow-ink-400);}
   .buy-row{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
   .buy-row:last-child{border-bottom:none;}
   .buy-main{min-width:0;flex:1;}
@@ -7207,6 +7209,15 @@
       </div>
       <div class="nav-group">
         <div class="nav-section-label">Buy</div>
+        <!-- Deliberately NOT carrying "restock", for the reason in the
+             Follow-ups note above: search matches on SUBSTRINGS, so the
+             word contains "stock" and put this screen above Inventory
+             for the most obvious search in the app. "runs out" and
+             "reorder" say the same thing without stealing it. -->
+        <button data-tab="buying" title="What to buy" data-keywords="reorder replenish refill buying budget plan copilot runs out running low purchase">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="nav-label">What to buy</span>
+        </button>
         <button data-tab="compare" title="Compare prices" data-keywords="best supplier cheapest quote sourcing">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8H2l3-5 3 5H5zm0 0v6a3 3 0 0 0 6 0V8"/><path d="M19 8h-3l3-5 3 5h-3zm0 0v6a3 3 0 0 1-6 0V8"/></svg>
           <span class="nav-label">Compare prices</span>
@@ -7363,20 +7374,6 @@
       <div class="panel dash-brief">
         <div class="dash-panel-title"><h2>Morning brief</h2><span class="dash-asof" id="dash_brief_date"></span></div>
         <div id="dash_morningBrief"></div>
-      </div>
-
-      <!-- -0.5 WHAT TO BUY. The Procurement Copilot: a ranked buy list
-           derived from real demand, real stock, the cheapest priced
-           supplier at the needed quantity, and the cash on hand. Every
-           row carries its evidence; nothing is predicted. -->
-      <div class="panel dash-buy">
-        <div class="dash-panel-title"><h2>What to buy</h2>
-          <span class="dash-buy-controls">
-            <label>Budget <input type="number" id="dash_buy_budget" min="0" step="any"></label>
-            <label>Cover <input type="number" id="dash_buy_cover" min="1" step="1"> days</label>
-          </span>
-        </div>
-        <div id="dash_buyPlan"></div>
       </div>
 
       <!-- 0. WHAT NEEDS YOU TODAY.
@@ -9060,6 +9057,25 @@
     <div id="printArea"></div>
 
     <!-- COMPARE -->
+    <!-- WHAT TO BUY: the Procurement Copilot's own screen. A ranked
+         restock plan derived from real demand, real stock, the cheapest
+         priced supplier at the needed quantity, and the cash on hand.
+         Every row carries its evidence; nothing is predicted. -->
+    <section id="tab-buying" style="display:none;">
+      <div class="page-head">
+        <h1>What to buy</h1>
+        <p>A restock plan worked out from the shop's own records — what actually sold in the last 30 days, what is on the shelf, and the cheapest priced supplier at the quantity needed, volume discounts included. The budget starts at the cash on hand and the most urgent lines are fitted into it first. A product with no sales history is never suggested, and a seller with no supplier price on file is listed to source first — nothing here is a guess.</p>
+      </div>
+      <div class="panel">
+        <div class="buy-controls">
+          <label>Budget <input type="number" id="buy_budget" min="0" step="any"></label>
+          <label>Cover <input type="number" id="buy_cover" min="1" step="1"> days</label>
+          <span class="buy-controls-note">Cover is how many days of selling the plan should leave on the shelf.</span>
+        </div>
+        <div id="buy_plan"></div>
+      </div>
+    </section>
+
     <section id="tab-compare" style="display:none;">
       <div class="page-head">
         <h1>Compare Prices</h1>
@@ -15723,6 +15739,7 @@ function goToTab(tab){
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
   if(tab==='sourcing') renderSourcing();
+  if(tab==='buying') renderPurchasePlanPanel();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -47318,19 +47335,19 @@ function dashStockOutExposure(){
       dailyRate: r.dailyRate, name: r.name, qty: r.qty, daysLeft: r.daysLeft }));
 }
 
-/* ---- the What-to-buy panel ---- */
-let dashBuyBudget = null;   // per-view override; null = spend up to cash on hand
-let dashBuyLast = null;     // the plan behind the Source-it buttons, index-addressed
+/* ---- the What-to-buy screen ---- */
+let buyBudget = null;    // per-view override; null = spend up to cash on hand
+let buyPlanLast = null;  // the plan behind the Source-it buttons, index-addressed
 
 function renderPurchasePlanPanel(){
-  const el = document.getElementById('dash_buyPlan');
+  const el = document.getElementById('buy_plan');
   if(!el) return;
   const cash = cashOnHandByAccount().total;
-  const budget = dashBuyBudget != null ? dashBuyBudget : Math.max(0, cash);
+  const budget = buyBudget != null ? buyBudget : Math.max(0, cash);
   const plan = purchasePlan(budget, null, todayISO());
-  dashBuyLast = plan;
-  const budgetEl = document.getElementById('dash_buy_budget');
-  const coverEl = document.getElementById('dash_buy_cover');
+  buyPlanLast = plan;
+  const budgetEl = document.getElementById('buy_budget');
+  const coverEl = document.getElementById('buy_cover');
   if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget || '';
   if(coverEl && document.activeElement !== coverEl) coverEl.value = plan.coverDays;
   const f = n=> fmtUGX(Math.round(n));
@@ -47357,7 +47374,7 @@ function renderPurchasePlanPanel(){
   }
   el.innerHTML = html;
   el.querySelectorAll('.buy-source').forEach(btn=> btn.addEventListener('click', ()=>{
-    const l = ((dashBuyLast && dashBuyLast[btn.dataset.list]) || [])[Number(btn.dataset.i)];
+    const l = ((buyPlanLast && buyPlanLast[btn.dataset.list]) || [])[Number(btn.dataset.i)];
     if(!l) return;
     /* Through the same door every other ask travels: a sourcing lead
        with the quantity and the reason on it. */
@@ -47365,12 +47382,12 @@ function renderPurchasePlanPanel(){
       note: `Restock — about ${Math.max(0, Math.floor(l.daysLeft))} days of stock left` });
   }));
 }
-document.getElementById('dash_buy_budget').addEventListener('change', e=>{
+document.getElementById('buy_budget').addEventListener('change', e=>{
   const v = Number(e.target.value);
-  dashBuyBudget = e.target.value === '' || !(v >= 0) ? null : v;
+  buyBudget = e.target.value === '' || !(v >= 0) ? null : v;
   renderPurchasePlanPanel();
 });
-document.getElementById('dash_buy_cover').addEventListener('change', e=>{
+document.getElementById('buy_cover').addEventListener('change', e=>{
   const v = Math.round(Number(e.target.value)||0);
   data.presetRestockCoverDays = v >= 1 ? v : 14;
   e.target.value = data.presetRestockCoverDays;
@@ -47611,7 +47628,7 @@ function dashAlerts(ctx){
       title: `${s.name} runs out in ${s.daysLeft < 1 ? 'under a day' : agingDaysLabel(Math.round(s.daysLeft))}`,
       detail: `${Math.round(s.qty)} left, selling about ${s.dailyRate.toFixed(1)} a day.${
         row && row.profit > 0 ? ` It earned ${fmtUGX(Math.round(row.profit))} of profit this period.` : ''}`,
-      action: 'Reorder it',
+      action: 'Reorder it — What to buy has the plan.',
     });
   });
 
@@ -47878,7 +47895,6 @@ function maybeShowMorningBrief(){
 
 function renderDashboard(){
   renderMorningBrief();
-  renderPurchasePlanPanel();
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
   const prevTo = anShiftDate(from, -1);

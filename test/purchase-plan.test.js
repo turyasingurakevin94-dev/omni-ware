@@ -157,10 +157,16 @@ if (scope) {
 
 /* ---------- 4. the wiring ---------------------------------------------- */
 {
-  t.check(/id="dash_buyPlan"/.test(src) && /id="dash_buy_budget"/.test(src) && /id="dash_buy_cover"/.test(src),
-    'the What-to-buy panel exists with its budget and cover controls');
+  t.check(/id="tab-buying"/.test(src) && /data-tab="buying"/.test(src),
+    'What to buy is its own screen on the rail — the plan outgrew a dashboard panel');
+  t.check(/id="buy_plan"/.test(src) && /id="buy_budget"/.test(src) && /id="buy_cover"/.test(src),
+    'with its budget and cover controls');
+  const go = extractFunction(src, 'goToTab', 'index.html');
+  t.check(/if\(tab==='buying'\) renderPurchasePlanPanel\(\);/.test(go),
+    'and redraws on entry, like every other data screen');
   const dash = extractFunction(src, 'renderDashboard', 'index.html');
-  t.check(/renderPurchasePlanPanel\(\);/.test(dash), 'and renders with the dashboard');
+  t.check(!/renderPurchasePlanPanel/.test(dash),
+    'the dashboard no longer draws it — one home, not two');
   const panel = extractFunction(src, 'renderPurchasePlanPanel', 'index.html');
   t.check(/cashOnHandByAccount\(\)\.total/.test(panel),
     'the default budget is the cash actually on hand');
