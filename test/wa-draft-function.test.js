@@ -88,8 +88,14 @@ const vercel = read('vercel.json');
     'pack arithmetic is shown, and an unknown pack size is a question');
   t.check(/Mirror the customer’s language/.test(src),
     'English or Luganda, matching the customer');
-  t.check(/in stock \(come today\) or to order \(we bring it in\)/.test(src),
-    'availability is two words, said plainly');
+  /* The live leak this law comes from: a quote told a customer
+     "(to order)" — the shop's operations, and exactly the middleman
+     impression the no-hedging law exists to prevent. */
+  t.check(!/come today|we bring it in/.test(src)
+    && /NEVER say whether something is in stock or to order/.test(src),
+    'availability talk is banned — the shop confirms it, the draft never guesses');
+  t.check(/close with exactly "We will confirm availability and get back to you\."/.test(src),
+    'and the promised close is written out for the model to copy verbatim');
   t.check(/NEVER claim an order already exists/.test(src)
     && /never call wa_take_order for a question that is only asking prices/.test(src),
     'and an order exists only after the owner makes it — commitment detected, never presumed');
@@ -184,14 +190,12 @@ const vercel = read('vercel.json');
   t.check(priced.matches.length === 1 && priced.matches[0].name === 'Simba Cement',
     'the price tool finds the product');
   const keys = Object.keys(priced.matches[0]).sort().join(',');
-  t.check(keys === 'breaks,in_stock,name,pack_qty,pack_unit,price,unit',
-    `a match carries EXACTLY the customer-safe fields — nothing else exists to leak (got ${keys})`);
+  t.check(keys === 'breaks,name,pack_qty,pack_unit,price,unit',
+    `a match carries EXACTLY the customer-safe fields — availability included in what does not exist (got ${keys})`);
   t.check(priced.matches[0].pack_qty === 12 && priced.matches[0].pack_unit === 'Ctn',
     'packing is public — the model can convert cartons to units');
-  t.check(priced.matches[0].in_stock === 'yes',
-    'availability is a word, never a count');
-  t.check(T.wa_product_price.run({ query: 'secret cost hinge' }).matches[0].in_stock === 'to order',
-    'and no stock reads as to-order, not as a number');
+  t.check(!('in_stock' in priced.matches[0]),
+    'availability is NOT a field — "(to order)" read as a middleman restocking, so the model cannot see it');
 
   /* THE HALF BEND LAW: a wholesale-only product answers with its
      wholesale price — a missing retail rule must never read as a
@@ -213,6 +217,8 @@ const vercel = read('vercel.json');
   const toolsSrc = extractDeclaration(app, 'WA_DRAFT_TOOLS', 'index.html');
   t.check(!/purchasePrice|supplierId|debt|rankedPriceRows/.test(toolsSrc),
     'no cost-bearing function is even referenced by these executors');
+  t.check(!/in_stock|getStockQty/.test(toolsSrc),
+    'and no stock signal either — availability is the shop\'s to confirm, structurally');
 
   /* the order-taker resolves and prices — and CREATES nothing */
   const before = JSON.stringify(data);
@@ -288,8 +294,9 @@ const vercel = read('vercel.json');
     'the order is created through create_quote.run — the same door the owner\'s assistant uses');
   t.check(/q\.originWa = true; q\.waConversationId = conv\.id;/.test(createFn),
     'stamped WhatsApp-born, so the insights count it like a webhook cart order');
-  t.check(/await waSendOrderReceipt\(\{/.test(createFn) && !/d\.text/.test(createFn),
-    'and the confirmation is the code-composed receipt — never the model\'s pre-order prose');
+  t.check(/await waSendDocImage\(receipt, 'Order ' \+ res\.invoice \+ ' — we are preparing it\.', waOrderReceiptText\(receipt\)\)/.test(createFn)
+    && !/d\.text/.test(createFn),
+    'and the confirmation is the code-composed receipt, order number in the caption — never the model\'s pre-order prose');
   t.check(/toConfirm: \(d\.order\.unpriced\|\|\[\]\)/.test(createFn)
     && /notFound: \(d\.order\.unmatched\|\|\[\]\)/.test(createFn)
     && /quote by hand and follow up/.test(createFn),
@@ -360,6 +367,9 @@ const vercel = read('vercel.json');
     'the image twin is a real table — the agents-app renderer, adapted');
   t.check(/'ORDER RECEIVED'/.test(draw) && /'TOTAL'/.test(draw) && /'UGX ' \+ f\(receipt\.total\)/.test(draw),
     'headed as an order and closed with an emphasized total');
+  t.check(/'QUOTATION'/.test(draw)
+    && /'We will confirm availability and get back to you\.'/.test(draw),
+    'and the same renderer heads the QUOTE, closing with the availability promise instead of the preparing line');
   t.check(/c\.scale\(2, 2\)/.test(draw),
     'oversampled 2× so WhatsApp compression cannot blur the figures');
   t.check(/'STILL TO CONFIRM'/.test(draw) && /extras\.length \? 34 \+ extras\.length\*20/.test(draw),
@@ -371,24 +381,69 @@ const vercel = read('vercel.json');
   t.check(/receipts\/\$\{crypto\.randomUUID\(\)\}\.png/.test(up) && /contentType: 'image\/png'/.test(up),
     'stored as PNG under the shop\'s receipts/ folder — sharp text, invisible to the media library');
 
-  const chain = (/async function waSendOrderReceipt\(receipt\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  const chain = (/async function waSendDocImage\(receipt, caption, textTwin\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
   t.check(/waUploadReceiptBlob\(blob\)/.test(chain) && /action: 'send-image'/.test(chain),
-    'the image road: render, upload, then wa-send\'s send-image action');
-  t.check(/caption: 'Order ' \+ receipt\.invoice \+ ' — we are preparing it\.'/.test(chain),
-    'with the order number riding the caption');
-  t.check(/if\(!sentImage\)\{[\s\S]*?await waSendReply\(waOrderReceiptText\(receipt\)\);[\s\S]*?return;/.test(chain),
+    'the image road: render, upload, then wa-send\'s send-image action — ONE road for both documents');
+  t.check(/if\(!sentImage\)\{[\s\S]*?await waSendReply\(textTwin\);[\s\S]*?return;/.test(chain),
     'ANY miss on the image road — including a wa-send deployed before send-image existed — sends the text twin through the composer door');
   /* The first live test fell back and nothing said why. The miss keeps
      its reason — the server's own error body, excavated the way
      waSendReply does — and the OWNER gets it as a toast. Never the
-     customer: the text twin is built from the receipt alone. */
+     customer: the text twin is code-composed before the road is tried. */
   t.check(/error\.context\.json\(\)/.test(chain)
-    && /toast\('Confirmation sent as text — the receipt image could not go: ' \+ why, 10000\)/.test(chain),
+    && /toast\('Sent as text — the image could not go: ' \+ why, 10000\)/.test(chain),
     'a fallback names its reason to the owner — a silent miss cannot be diagnosed');
   t.check(!/waSendReply\([^)]*why/.test(chain),
     'and the reason never rides a message to the customer');
   t.check(!/uploadProductImageBlob/.test(chain) && !!up && !/uploadProductImageBlob/.test(up),
     'and never through the product-photo road, which would JPEG the text and index the receipt');
+}
+
+/* ---------- 7c. the quotation: an offer, not an operation -------------- */
+/*
+ * The owner's complaint, verbatim: the draft told a customer
+ * "(to order)" — the shop's operations — and the quote should be "some
+ * sort of quotation with total" as an IMAGE, warning "let's confirm
+ * availability and get back to you". So the quote is the same drawn
+ * document as the receipt, headed QUOTATION, and availability words
+ * cannot appear on it because nothing on this road knows them.
+ */
+{
+  let Q = null; let qErr = null;
+  try {
+    Q = compileScope([extractFunction(app, 'waQuoteText', 'index.html')], {}, ['waQuoteText']);
+  } catch (e) { qErr = e; }
+  t.check(!!Q, `waQuoteText compiles alone${qErr ? ` (${qErr.message})` : ''}`);
+  if (Q) {
+    const qt = Q.waQuoteText({
+      lines: [
+        { qty: 5, unit: 'Bag', name: 'SAHARA Filler', price: 35000, amount: 175000 },
+        { qty: 3, unit: 'Box', name: 'Black Screws', price: 15500, amount: 46500 },
+      ],
+      total: 221500,
+      toConfirm: [{ name: 'GYPSUM Channels F Channel', qty: 2 }],
+      notFound: [] });
+    const qrows = qt.split('\n');
+    t.check(qrows[0] === 'Your quotation:' && qrows[3] === 'TOTAL *UGX 221,500*',
+      `the quote twin opens as an offer and still totals (got ${JSON.stringify([qrows[0], qrows[3]])})`);
+    t.check(qrows[4] === '*2*× GYPSUM Channels F Channel — price to confirm',
+      'unpriced asks are named on the quote too');
+    t.check(qrows[qrows.length - 1] === 'We will confirm availability and get back to you.',
+      'closing with the availability promise — the shop confirms, the quote never guesses');
+    t.check(!/in stock|to order|preparing|Order \*/.test(qt),
+      'no availability words, no order claims — a quotation is only prices');
+  }
+
+  t.check(/id="wa_ai_send">Send quote</.test(app)
+    && /if\(d\.order && \(d\.order\.lines\|\|\[\]\)\.length\)\{ waSendQuoteFromChat\(\); return; \}/.test(app),
+    'a draft carrying a resolved order sends the drawn quotation, never the model\'s prose');
+  const quoteFn = (/async function waSendQuoteFromChat\(\)\{[\s\S]*?\n\}/.exec(app) || [''])[0];
+  t.check(/kind: 'quote'/.test(quoteFn)
+    && /'Your quotation — we will confirm availability and get back to you\.'/.test(quoteFn)
+    && /waQuoteText\(quote\)/.test(quoteFn) && !/d\.text/.test(quoteFn),
+    'headed QUOTATION with the availability caption, built from the approved lines alone');
+  t.check(!/delete waInbox\.aiDrafts/.test(quoteFn) && !/create_quote/.test(quoteFn),
+    'the quote creates NOTHING and the draft survives it — Create order & send still works after');
 }
 
 /* ---------- 8. dry-run: the handler's order is the security ----------- */

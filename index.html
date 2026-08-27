@@ -14154,9 +14154,12 @@ const WA_DRAFT_TOOLS = {
          no rule on either side is still returned, flagged — the first
          version skipped it, and a customer was told we did not sell a
          product that sat in the catalogue with a supplier price. */
+      /* No availability field, deliberately: "in stock" / "to order" is
+         the shop's operations, and a draft that says "to order" reads as
+         a middleman restocking. What the model cannot see, it cannot
+         say — the shop confirms availability itself, after. */
       const r = waCustomerPriceAt(p, variantIdx, 1);
-      const row = { name: productVariantLabel(p, variantIdx),
-        in_stock: getStockQty(p.id, variantIdx) > 0 ? 'yes' : 'to order' };
+      const row = { name: productVariantLabel(p, variantIdx) };
       if(r){
         row.price = Math.round(r.at.price);
         row.unit = r.at.unit || '';
@@ -14244,6 +14247,26 @@ function waOrderReceiptText(receipt){
   return out.join('\n');
 }
 
+/* The quotation twin: same rows, no order number, no "preparing" — a
+   price offer, closed with the availability line the prompt promises.
+   The words "in stock" / "to order" can never appear on it: nothing
+   here knows them. */
+function waQuoteText(receipt){
+  const f = n=> Number(n||0).toLocaleString('en-UG');
+  const out = ['Your quotation:'];
+  (receipt.lines||[]).forEach(l=>{
+    const rate = l.qty > 1 ? ' @ ' + f(l.price) : '';
+    out.push('*' + f(l.qty) + '* ' + (l.unit || 'pc') + ' ' + l.name + rate + ' — *UGX ' + f(l.amount) + '*');
+  });
+  out.push('TOTAL *UGX ' + f(receipt.total) + '*');
+  (receipt.toConfirm||[]).forEach(u=>
+    out.push('*' + f(u.qty) + '*× ' + u.name + ' — price to confirm'));
+  (receipt.notFound||[]).forEach(q=>
+    out.push('"' + q + '" — we are checking on this one'));
+  out.push('We will confirm availability and get back to you.');
+  return out.join('\n');
+}
+
 // Canvas has no ellipsis: a long product name would run under the RATE
 // column, so it is measured down to fit its cell instead.
 function waReceiptClip(ctx, text, maxW){
@@ -14279,15 +14302,20 @@ function waDrawOrderReceipt(canvas, receipt){
   c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, h);
   c.fillStyle = ACCENT; c.fillRect(0, 0, w, 6);
 
+  // Two documents share this layout: the order receipt (default) and,
+  // with kind 'quote', the quotation — same table, different promises.
+  const isQuote = receipt.kind === 'quote';
   c.fillStyle = INK; c.font = '700 22px ' + SANS;
   c.fillText(receipt.shopName || 'Omni-Ware', 32, 48);
   c.fillStyle = ACCENT; c.font = '700 13px ' + SANS;
-  c.fillText('ORDER RECEIVED', 32, 68);
+  c.fillText(isQuote ? 'QUOTATION' : 'ORDER RECEIVED', 32, 68);
   c.textAlign = 'right';
   c.fillStyle = INK; c.font = '700 13px ' + SANS;
-  c.fillText('Order ' + (receipt.invoice || ''), w-32, 48);
-  c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
-  c.fillText(receipt.dateLabel || '', w-32, 68);
+  c.fillText(isQuote ? (receipt.dateLabel || '') : 'Order ' + (receipt.invoice || ''), w-32, 48);
+  if(!isQuote){
+    c.fillStyle = MUTE; c.font = '600 12px ' + SANS;
+    c.fillText(receipt.dateLabel || '', w-32, 68);
+  }
   c.textAlign = 'left';
 
   c.strokeStyle = '#E9EBEF'; c.lineWidth = 1;
@@ -14342,7 +14370,8 @@ function waDrawOrderReceipt(canvas, receipt){
 
   y += 44;
   c.fillStyle = FAINT; c.font = '500 11.5px ' + SANS;
-  c.fillText('We are preparing your order — thank you.', 32, y);
+  c.fillText(isQuote ? 'We will confirm availability and get back to you.'
+    : 'We are preparing your order — thank you.', 32, y);
   const who = [receipt.shopName, receipt.phone].filter(Boolean).join(' · ');
   if(who){
     y += 22;
@@ -14365,28 +14394,30 @@ async function waUploadReceiptBlob(blob){
 }
 
 /* Image first, words always: render → upload → wa-send "send-image".
-   ANY miss on that road — canvas, storage, or a deployed wa-send still
-   on the version before send-image existed — and the SAME receipt goes
-   as text through waSendReply, where the 24-hour window check still
-   governs. The customer always gets the confirmation; the image is an
+   One road for both documents — the order receipt and the quotation;
+   the caller hands in the drawn receipt, the caption, and the TEXT
+   TWIN to fall back to. ANY miss — canvas, storage, or a deployed
+   wa-send still on the version before send-image existed — and the
+   twin goes through waSendReply, where the 24-hour window check still
+   governs. The customer always gets the document; the image is an
    upgrade, never a dependency.
 
-   But a silent fallback is a dead end for the OWNER: the first live
+   And a silent fallback is a dead end for the OWNER: the first live
    test fell back and nothing said why. So the miss keeps its reason —
    the server's own error body when there is one, the thrown message
    otherwise — and after the text twin goes out, a toast hands that
    reason to the owner. The customer never sees it. */
-async function waSendOrderReceipt(receipt){
+async function waSendDocImage(receipt, caption, textTwin){
   let sentImage = false; let why = '';
   try{
     const canvas = document.createElement('canvas');
     waDrawOrderReceipt(canvas, receipt);
     const blob = await new Promise((res, rej)=>
-      canvas.toBlob(b=> b ? res(b) : rej(new Error('the receipt could not be drawn')), 'image/png'));
+      canvas.toBlob(b=> b ? res(b) : rej(new Error('the document could not be drawn')), 'image/png'));
     const link = await waUploadReceiptBlob(blob);
     const { data: out, error } = await sb.functions.invoke('wa-send', {
       body: { shopId: currentShopId, action: 'send-image', conversationId: waInbox.active,
-        link, caption: 'Order ' + receipt.invoice + ' — we are preparing it.' } });
+        link, caption } });
     if(error){
       // The useful message is in the response body, not error.message —
       // the same excavation waSendReply does. "Unknown action" here
@@ -14399,14 +14430,35 @@ async function waSendOrderReceipt(receipt){
     if(!sentImage) why = 'the send was refused';
   }catch(e){ why = (e && e.message) || 'unknown'; }
   if(!sentImage){
-    console.warn('receipt image road failed:', why);
-    await waSendReply(waOrderReceiptText(receipt));
-    toast('Confirmation sent as text — the receipt image could not go: ' + why, 10000);
+    console.warn('doc image road failed:', why);
+    await waSendReply(textTwin);
+    toast('Sent as text — the image could not go: ' + why, 10000);
     return;
   }
   await waFetchThread(waInbox.active);
   await waFetchConvs();
   waRenderInbox();
+}
+
+/* "Send quote": the same document road, headed QUOTATION — no order is
+   created, nothing is promised beyond prices, and the availability
+   line replaces the preparing one. The aiDraft survives the send, so
+   the owner can still turn the same proposal into an order after. */
+async function waSendQuoteFromChat(){
+  const d = waInbox.aiDrafts[String(waInbox.active)];
+  if(!d || !d.order || !(d.order.lines||[]).length || waInbox.sending || waInbox.creating) return;
+  const ident = shopIdentity();
+  const quote = {
+    kind: 'quote',
+    shopName: ident.name, phone: ident.phone || data.presetWaPhone || '',
+    dateLabel: new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }),
+    lines: d.order.lines.map(l=> ({ qty: l.qty, unit: l.unit, name: l.name,
+      price: l.price, amount: Math.round(l.qty * l.price) })),
+    total: d.order.total,
+    toConfirm: (d.order.unpriced||[]).map(u=> ({ name: u.name, qty: u.qty })),
+    notFound: (d.order.unmatched||[]).slice(),
+  };
+  await waSendDocImage(quote, 'Your quotation — we will confirm availability and get back to you.', waQuoteText(quote));
 }
 
 /* The owner's tap that makes a chat commitment REAL: a draft order in
@@ -14444,7 +14496,7 @@ async function waCreateOrderFromChat(){
     if(leftovers) toast(leftovers + (leftovers===1 ? ' item from this chat still needs' : ' items from this chat still need')
       + ' a price — quote by hand and follow up.', 9000);
     const ident = shopIdentity();
-    await waSendOrderReceipt({
+    const receipt = {
       shopName: ident.name, phone: ident.phone || data.presetWaPhone || '',
       invoice: res.invoice,
       dateLabel: new Date().toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -14453,7 +14505,8 @@ async function waCreateOrderFromChat(){
       total: d.order.total,
       toConfirm: (d.order.unpriced||[]).map(u=> ({ name: u.name, qty: u.qty })),
       notFound: (d.order.unmatched||[]).slice(),
-    });
+    };
+    await waSendDocImage(receipt, 'Order ' + res.invoice + ' — we are preparing it.', waOrderReceiptText(receipt));
   } finally {
     waInbox.creating = false;
   }
@@ -15029,7 +15082,7 @@ function waRenderInbox(){
                   (d.order.unmatched||[]).length ? ` · could not match: ${esc(d.order.unmatched.join(', '))}` : ''}</div>` : ''}
                 <div class="btn-row" style="margin-top:8px;">
                   ${hasOrder ? `<button type="button" class="btn btn-accent" id="wa_ai_order">Create order &amp; send</button>
-                  <button type="button" class="btn btn-ghost" id="wa_ai_send">Send reply only</button>` :
+                  <button type="button" class="btn btn-ghost" id="wa_ai_send">Send quote</button>` :
                   `<button type="button" class="btn btn-accent" id="wa_ai_send">Send draft</button>`}
                   <button type="button" class="btn btn-ghost" id="wa_ai_edit">Edit first</button>
                 </div>
@@ -15143,6 +15196,11 @@ function waRenderInbox(){
   if(aiSend) aiSend.addEventListener('click', ()=>{
     const d = waInbox.aiDrafts[String(waInbox.active)];
     if(!d || !d.text) return;
+    /* A draft that carries a resolved order sends the drawn QUOTATION,
+       not the model's prose — code composes documents, the model
+       composes conversation. The draft is KEPT on this road, so
+       "Create order & send" still works right after the quote. */
+    if(d.order && (d.order.lines||[]).length){ waSendQuoteFromChat(); return; }
     delete waInbox.aiDrafts[String(waInbox.active)];
     /* Through the same door as a hand-typed reply: waSendReply carries
        it to wa-send, where the 24h window check still governs. */
