@@ -773,8 +773,14 @@ if (scope) {
     'and the confirm says so before the bill is raised');
   t.check(/pay later from Purchase invoices/.test(render),
     'while closing that box without paying is still an option, as it was before');
-  const pay = src.slice(src.indexOf('function openPiPaymentModal'));
-  t.check(/renderConsignment\(\);/.test(pay.slice(0, 4000)),
+  /* Scoped to where the claim actually lives -- the save handler -- and
+     not to a slice of the first 4,000 characters after the modal opens.
+     Adding one line to the open handler pushed renderConsignment past
+     that mark and failed a payment path that redraws the card perfectly
+     well. A window measured in characters is not a boundary. */
+  const payFrom = src.indexOf("getElementById('pip_save')");
+  const pay = src.slice(payFrom, src.indexOf('\n});\n', payFrom));
+  t.check(/renderConsignment\(\);/.test(pay),
     'and a payment redraws the consignment card, which reports the balance it just changed');
 }
 

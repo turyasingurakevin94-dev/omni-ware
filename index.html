@@ -10866,6 +10866,7 @@
             <option value="bank">Bank</option>
           </select>
         </div>
+        <div class="field"><label for="cd_date" id="cd_date_label">Date received</label><input id="cd_date" type="date"></div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="cd_note" placeholder="e.g. Goods on credit / part payment"></div>
       </div>
       <div id="cd_invoice_picker_section" style="display:none;">
@@ -10902,6 +10903,12 @@
             <option value="bank">Bank</option>
           </select>
         </div>
+        <!-- The day the money ARRIVED, not the day somebody got round to
+             typing it. Defaulted to today, so the ordinary case needs no
+             thought; changed when a Saturday payment is entered on
+             Monday, which used to put Saturday's takings into Monday and
+             leave a variance on a day nothing happened. -->
+        <div class="field"><label for="ip_date">Date received</label><input id="ip_date" type="date"></div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="ip_note" placeholder="e.g. Cash, mobile money, bank transfer..."></div>
       </div>
       <div class="cc-history" id="invPaymentHistory" style="margin-top:14px;"></div>
@@ -10939,6 +10946,11 @@
             <option value="settled-before">Already settled — before this system (no cash moves)</option>
           </select>
         </div>
+        <div class="field" id="pip_date_field"><label for="pip_date">Date paid</label><input id="pip_date" type="date"></div>
+        <!-- A DIFFERENT QUESTION, and only one of the two is ever shown.
+             "Settled on" dates a bill paid off before this system existed
+             and moves no cash; "Date paid" dates money leaving the till
+             today or a few days ago. -->
         <div class="field" id="pip_settled_date_field" style="display:none;"><label>Settled on</label><input id="pip_settled_date" type="date"></div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="pip_note" placeholder="e.g. Cash, mobile money, bank transfer..."></div>
         <div class="field" id="pip_settled_hint" style="grid-column:1/-1;display:none;"></div>
@@ -10972,6 +10984,7 @@
             <option value="bank">Bank</option>
           </select>
         </div>
+        <div class="field"><label for="crp_date">Date paid</label><input id="crp_date" type="date"></div>
         <div class="field" style="grid-column:1/-1;"><label>Note</label><input id="crp_note" placeholder="e.g. Cash, mobile money, bank transfer..."></div>
       </div>
       <p style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;">Applied to this supplier's oldest outstanding purchase invoices first. If it settles one fully, the rest carries over to the next.</p>
@@ -13414,6 +13427,48 @@ function fmtShortDate(iso){
   const d = new Date(iso+'T00:00:00Z');
   if(isNaN(d.getTime())) return String(iso);
   return d.toLocaleDateString('en-UG', {day:'numeric', month:'short', year:'numeric', timeZone:'UTC'});
+}
+
+/* ---- The day a payment actually happened -----------------------------
+
+   Four forms take money -- an invoice receipt, a purchase-invoice
+   payment, a lump-sum supplier payment, a payment against a customer's
+   debt -- and every one of them used to stamp today and never ask. The
+   plumbing underneath already carried a date: addCashReceipt,
+   addCashPayment, recordCustomerPayment and payDue all take one. Only
+   the forms were silent.
+
+   It is not a small silence. Money received on Saturday and entered on
+   Monday landed in Monday's takings: Saturday read short, Monday read
+   over, and a variance appeared on a day nothing happened. The morning
+   brief's "who paid" reads payment dates, so a late entry never showed
+   on the day it happened. And payablesAsAt re-sums payments dated on or
+   before the date it is asked about, so a payment stamped today never
+   appeared on last month's balance sheet at all.
+
+   BLANK MEANS TODAY. A cleared box is not a claim about another day.
+
+   A FUTURE DATE IS REFUSED rather than warned about. Almost everything
+   in this app is said and then allowed, because commercial decisions
+   belong to the shop -- but money that has not arrived yet is not a
+   payment, and dating one forward puts takings on a day the shop has
+   not traded and cannot count. That is the books lying, which is the
+   one thing that does get refused. */
+function paymentDateFrom(inputId){
+  const el = document.getElementById(inputId);
+  const v = el ? String(el.value || '').trim() : '';
+  if(!v) return todayISO();
+  if(v > todayISO()){
+    toast('That date is in the future — a payment cannot have arrived yet', 5000);
+    return null;
+  }
+  return v;
+}
+/* Said back only when it is NOT today. An ordinary payment gets an
+   ordinary message; a backdated one names its date, so a slip of the
+   finger is caught at the counter rather than found in a month. */
+function paymentDatedSuffix(dateISO){
+  return dateISO && dateISO !== todayISO() ? `, dated ${fmtShortDate(dateISO)}` : '';
 }
 
 const ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
@@ -25169,6 +25224,9 @@ function openInvoicePaymentModal(id){
   document.getElementById('inv_pay_summary').innerHTML = invPaymentSummaryHTML(q);
   document.getElementById('ip_amount').value = due>0 ? due : '';
   document.getElementById('ip_note').value = '';
+  // Defaulted here rather than in the reset, because the open handler is
+  // the one thing that always runs before the form is seen.
+  document.getElementById('ip_date').value = todayISO();
   renderInvPaymentHistory(q);
   openModal('invPaymentModal');
 }
@@ -25430,13 +25488,15 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   if(amount<=0){ toast('Enter an amount greater than 0'); return; }
   const note = document.getElementById('ip_note').value.trim();
   const account = document.getElementById('ip_account').value;
+  const paidOn = paymentDateFrom('ip_date');
+  if(!paidOn) return;
   if(!q.payments) q.payments = [];
-  const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`, null, q.id);
+  const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`, paidOn, q.id);
   /* `method` is the account the form already asked for and used to
      throw away -- a receipt that says how the money arrived settles an
      argument months later. `id` is what makes this payment's receipt
      number survive a LATER payment being reversed. */
-  const payment = {date: todayISO(), amount, note, cashTxnId, method: account, id: nextPaymentId(q)};
+  const payment = {date: paidOn, amount, note, cashTxnId, method: account, id: nextPaymentId(q)};
   q.payments.push(payment);
   q.amountPaid = (Number(q.amountPaid)||0) + amount;
   syncInvoiceDebtCharge(q);
@@ -25446,7 +25506,7 @@ document.getElementById('ip_save').addEventListener('click', ()=>{
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
-  toast('Payment recorded');
+  toast('Payment recorded' + paymentDatedSuffix(paidOn));
   /* Money in, paper out -- the supermarket moment, and the only one that
      prints without being asked. Last, so a printer that is off or a
      dialog that is cancelled cannot cost the shop the payment record
@@ -26635,6 +26695,7 @@ function openPiPaymentModal(id){
   document.getElementById('pip_amount').value = due>0 ? due : '';
   document.getElementById('pip_note').value = '';
   document.getElementById('pip_account').value = 'cash';
+  document.getElementById('pip_date').value = todayISO();
   // Defaulted to the bill's own date: the debt was never real, so dating
   // the settlement with it keeps every historic balance sheet clean too,
   // not just today's.
@@ -26699,6 +26760,11 @@ document.getElementById('pip_cancel').addEventListener('click', ()=> closeModalA
 function pipRefreshSettledBefore(){
   const on = document.getElementById('pip_account').value === 'settled-before';
   document.getElementById('pip_settled_date_field').style.display = on ? '' : 'none';
+  /* The two ask different things and must never be on screen together:
+     "Settled on" dates a bill paid off before this system and moves no
+     cash, "Date paid" dates money leaving the till. Two date boxes side
+     by side is a form nobody can answer confidently. */
+  document.getElementById('pip_date_field').style.display = on ? 'none' : '';
   const hint = document.getElementById('pip_settled_hint');
   hint.style.display = on ? '' : 'none';
   if(on){
@@ -26761,8 +26827,10 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
     toast(`${fmtUGX(Math.round(amount))} marked as settled before this system — no cash moved`, 6000);
     return;
   }
-  const cashTxnId = addCashPayment(account, amount, 'Stock Purchase', note || `Payment — ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName||''}`);
-  pi.payments.push({date: todayISO(), amount, note, cashTxnId});
+  const paidOn = paymentDateFrom('pip_date');
+  if(!paidOn) return;
+  const cashTxnId = addCashPayment(account, amount, 'Stock Purchase', note || `Payment — ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName||''}`, paidOn);
+  pi.payments.push({date: paidOn, amount, note, cashTxnId});
   pi.amountPaid = (Number(pi.amountPaid)||0) + amount;
   saveData();
   closeModal('piPaymentModal');
@@ -26772,7 +26840,8 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
-  toast(amountEntered>due ? `Payment recorded — capped at the ${fmtUGX(Math.round(due))} still owed` : 'Payment recorded');
+  toast((amountEntered>due ? `Payment recorded — capped at the ${fmtUGX(Math.round(due))} still owed` : 'Payment recorded')
+    + paymentDatedSuffix(paidOn));
 });
 
 document.getElementById('pi_doc_search').addEventListener('input', e=>renderPurchaseInvoices(e.target.value));
@@ -32380,6 +32449,11 @@ function openCustomerDebtModal(id, type){
   document.getElementById('customerDebtModalTitle').textContent = (type==='charge' ? 'Add charge — ' : 'Record payment — ') + c.name;
   document.getElementById('cd_amount').value = '';
   document.getElementById('cd_note').value = '';
+  document.getElementById('cd_date').value = todayISO();
+  /* A charge is a dated event too -- goods handed over on Friday and
+     written up on Monday age three days late on the debtors list, and
+     the chase queue measures its grace period off that age. */
+  document.getElementById('cd_date_label').textContent = (type==='charge') ? 'Date of the charge' : 'Date received';
   document.getElementById('cd_account_field').style.display = (type==='payment') ? '' : 'none';
   document.getElementById('cd_account').value = 'cash';
   const pickerSection = document.getElementById('cd_invoice_picker_section');
@@ -32399,6 +32473,7 @@ function resetCustomerDebtForm(){
   editingCustomerDebtId = null;
   document.getElementById('cd_amount').value = '';
   document.getElementById('cd_note').value = '';
+  document.getElementById('cd_date').value = todayISO();
   document.getElementById('cd_invoice_picker_section').style.display = 'none';
   document.getElementById('cd_invoice_picker_wrap').innerHTML = '';
 }
@@ -32407,10 +32482,12 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   const amount = Number(document.getElementById('cd_amount').value)||0;
   if(amount<=0){ toast('Enter an amount greater than 0'); return; }
   const note = document.getElementById('cd_note').value.trim();
+  const happenedOn = paymentDateFrom('cd_date');
+  if(!happenedOn) return;
   if(!c.debtLog) c.debtLog = [];
   if(editingCustomerDebtType==='charge'){
     c.debt = Math.max(0, (Number(c.debt)||0) + amount);
-    c.debtLog.push({id: allocRowId('debtLog'), date: todayISO(), type:'charge', amount, note, cashTxnId:null});
+    c.debtLog.push({id: allocRowId('debtLog'), date: happenedOn, type:'charge', amount, note, cashTxnId:null});
   } else {
     const account = document.getElementById('cd_account').value;
     const pickerVisible = document.getElementById('cd_invoice_picker_section').style.display !== 'none';
@@ -32424,13 +32501,15 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
     // onto c.debt, silently undoing this payment. Only whatever's left
     // over (debt never tied to an invoice, e.g. a manual charge) reduces
     // c.debt directly.
-    recordCustomerPayment(c.id, amount, account, note, selections);
+    // The seventh argument has always been there. Only the form was silent.
+    recordCustomerPayment(c.id, amount, account, note, selections, null, happenedOn);
   }
   saveData();
   closeModal('customerDebtModal'); resetCustomerDebtForm();
   renderCustomers(document.getElementById('c_search').value);
   renderDebtorsList(document.getElementById('deb_search') ? document.getElementById('deb_search').value : '');
-  toast(editingCustomerDebtType==='charge' ? 'Charge recorded' : 'Payment recorded');
+  toast((editingCustomerDebtType==='charge' ? 'Charge recorded' : 'Payment recorded')
+    + paymentDatedSuffix(happenedOn));
 });
 document.getElementById('cd_cancel').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
 document.getElementById('customerDebtModalClose').addEventListener('click', ()=>closeModalAndReset('customerDebtModal', resetCustomerDebtForm));
@@ -35715,6 +35794,7 @@ function openCreditorPaymentModal(supplierId){
   const owed = creditorTotalOwed(supplierId);
   document.getElementById('crp_amount').value = owed>0 ? Math.round(owed) : '';
   document.getElementById('crp_note').value = '';
+  document.getElementById('crp_date').value = todayISO();
   wireCreditorPaymentHistory(supplierId);
   openModal('creditorPaymentModal');
 }
@@ -35722,12 +35802,19 @@ function resetCreditorPaymentForm(){
   creditorPaymentSupplierId = null;
   document.getElementById('crp_amount').value = '';
   document.getElementById('crp_note').value = '';
+  document.getElementById('crp_date').value = todayISO();
 }
 // Allocates a lump-sum supplier payment across their outstanding purchase
 // invoices, oldest first, each portion going through the same addCashPayment
 // path a single-invoice payment would -- so it's indistinguishable from a
 // normal payment in the Cash Book, just possibly several lines instead of one.
-function allocateCreditorPayment(supplierId, amount, account, note){
+/* dateISO reaches BOTH the cash entry and every bill row it settles.
+   One lump sum can close three invoices, and three rows dated today
+   behind a payment made last Friday put the money on the wrong day in
+   the cash book and on the wrong side of any balance sheet asked about
+   a date in between. */
+function allocateCreditorPayment(supplierId, amount, account, note, dateISO){
+  const paidOn = dateISO || todayISO();
   const invoices = creditorOutstandingInvoices(supplierId);
   let remaining = amount;
   let applied = 0;
@@ -35737,8 +35824,8 @@ function allocateCreditorPayment(supplierId, amount, account, note){
     const pay = Math.min(remaining, due);
     if(pay<=0) continue;
     if(!pi.payments) pi.payments = [];
-    const cashTxnId = addCashPayment(account, pay, 'Stock Purchase', note || `Payment — ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName||''}`);
-    pi.payments.push({date: todayISO(), amount: pay, note, cashTxnId});
+    const cashTxnId = addCashPayment(account, pay, 'Stock Purchase', note || `Payment — ${purchaseInvoiceNumberLabel(pi)} — ${pi.supplierName||''}`, paidOn);
+    pi.payments.push({date: paidOn, amount: pay, note, cashTxnId});
     pi.amountPaid = (Number(pi.amountPaid)||0) + pay;
     remaining -= pay;
     applied += pay;
@@ -35757,7 +35844,9 @@ document.getElementById('crp_save').addEventListener('click', ()=>{
   const amount = Math.min(amountEntered, owed);
   const note = document.getElementById('crp_note').value.trim();
   const account = document.getElementById('crp_account').value;
-  allocateCreditorPayment(supplierId, amount, account, note);
+  const paidOn = paymentDateFrom('crp_date');
+  if(!paidOn) return;
+  allocateCreditorPayment(supplierId, amount, account, note, paidOn);
   saveData();
   closeModal('creditorPaymentModal');
   resetCreditorPaymentForm();
@@ -35768,7 +35857,8 @@ document.getElementById('crp_save').addEventListener('click', ()=>{
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
-  toast(amountEntered>owed ? `Payment recorded — capped at the ${fmtUGX(Math.round(owed))} owed` : 'Payment recorded');
+  toast((amountEntered>owed ? `Payment recorded — capped at the ${fmtUGX(Math.round(owed))} owed` : 'Payment recorded')
+    + paymentDatedSuffix(paidOn));
 });
 
 /* ================= PRODUCTS ================= */

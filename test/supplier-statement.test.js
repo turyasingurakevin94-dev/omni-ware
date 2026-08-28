@@ -197,10 +197,15 @@ const paid = (date, amount, note) => ({ date, amount, note: note || '', cashTxnI
   /* Both writers land in pi.payments. If either stopped, this statement
      would silently miss payments the creditors list had already taken
      off the balance. */
-  t.check(/pi\.payments\.push\(\{date: todayISO\(\), amount, note, cashTxnId\}\);/.test(code),
+  t.check(/pi\.payments\.push\(\{date: paidOn, amount, note, cashTxnId\}\);/.test(code),
     'paying one invoice writes there');
-  t.check(/pi\.payments\.push\(\{date: todayISO\(\), amount: pay, note, cashTxnId\}\);/.test(code),
+  t.check(/pi\.payments\.push\(\{date: paidOn, amount: pay, note, cashTxnId\}\);/.test(code),
     'and so does a lump sum spread across the oldest first');
+  /* Both now carry the day the money actually moved rather than the day
+     somebody typed it, which is what lets a statement asked about a past
+     date show what was really outstanding then. */
+  t.check(!/pi\.payments\.push\(\{date: todayISO\(\)/.test(code),
+    'and neither stamps today regardless of when the payment was made');
 
   /* ONE supplier's invoices, not the shop's. Every other test here has a
      single supplier on file, which cannot tell a working filter from a
