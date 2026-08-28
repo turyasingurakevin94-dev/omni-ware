@@ -426,6 +426,13 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { type: 'method', message: 'POST only.' } });
   }
+  /* OUTER CATCH, around everything. The Manager's first live outing died
+     as a bare platform 500 — no JSON, no sentence — because whatever
+     threw did so outside the inner try, and Vercel's crash page carries
+     nothing a shopkeeper (or their developer) can act on. Every failure
+     inside this function must leave as a worded JSON with the real
+     message in it: the panel is the only log the shop can read. */
+  try {
 
   /* Auth before anything that can spend money. The token is the caller's
      own Supabase session JWT; auth/v1/user re-validates it server-side —
@@ -543,6 +550,13 @@ module.exports = async (req, res) => {
     if (err instanceof Anthropic.APIError) {
       return res.status(502).json({ error: { type: 'api_error', message: 'The AI service returned an error (' + (err.status || 'unknown') + '). Try again shortly.' } });
     }
-    return res.status(500).json({ error: { type: 'server_error', message: 'Something went wrong on the server. Try again.' } });
+    return res.status(500).json({ error: { type: 'server_error', message: 'The server hit a bug — ' + String((err && err.message) || err).slice(0, 300) } });
+  }
+  } catch (err) {
+    /* A throw from OUTSIDE the inner try — validation, auth plumbing,
+       client construction, anything unforeseen. Still a sentence. */
+    try {
+      return res.status(500).json({ error: { type: 'crash', message: 'The server hit a bug — ' + String((err && err.message) || err).slice(0, 300) } });
+    } catch (e2) { /* the response was already gone; nothing left to say it to */ }
   }
 };
