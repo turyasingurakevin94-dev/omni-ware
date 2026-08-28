@@ -70,6 +70,8 @@ const SYSTEM_PROMPT = [
   'Language: the owner may write or speak in English or Luganda. Reply in the language of their message.',
   '',
   'The [Today is YYYY-MM-DD] line at the start of the owner’s message is authoritative — use it for "today", "this month", and date defaults.',
+  '',
+  'When money moved: the five money tools (record_customer_payment, pay_supplier, pay_staff_or_rent, add_expense, record_other_income) all take a date — the day the money ACTUALLY moved, not the day it is being entered. Omit it when it is today; send it whenever the owner says otherwise ("she paid on Saturday", "that was last Friday", "I paid them on the 25th"), worked out from the [Today is] line. Never guess a day the owner did not give, and never send one in the future — it is refused. The confirmation card names the date whenever it is not today, so a misheard day is caught before the money moves; if the owner is vague ("some time last week"), ask which day rather than picking one.',
 ].join('\n');
 
 /* Twenty-seven tools in FIXED order — the array is part of the cached
@@ -210,12 +212,12 @@ const TOOLS = [
   },
   {
     name: 'pay_supplier',
-    description: 'Pay a supplier the shop owes. Clamps to what is actually owed and settles their oldest bills first. supplier_id comes from suppliers_owed.',
+    description: 'Pay a supplier the shop owes. Clamps to what is actually owed and settles their oldest bills first. supplier_id comes from suppliers_owed. date is the day the money actually left, YYYY-MM-DD; omit it for today.',
     input_schema: {
       type: 'object',
       properties: {
         supplier_id: { type: 'string' }, amount: { type: 'number', exclusiveMinimum: 0 },
-        account: ACCOUNT_ENUM, note: { type: 'string' },
+        account: ACCOUNT_ENUM, note: { type: 'string' }, date: { type: 'string' },
       },
       required: ['supplier_id', 'amount', 'account'], additionalProperties: false,
     },

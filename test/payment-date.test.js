@@ -285,4 +285,78 @@ const BACK = '2026-08-25';
     'and a day counted at 140,000 that looked 40,000 over now reconciles exactly');
 }
 
+/* ---------- 8. the assistant obeys the same rules ------------------
+
+   Five tools move money. Four of them already took a date and one --
+   pay_supplier -- could not carry one at all, so the assistant could
+   backdate a customer payment and not a supplier payment. Worse, NONE
+   of the five said the date on the card the owner presses Confirm on:
+   "pay Karddia forty-two thousand for last Friday" could set a day the
+   owner never saw, and a misheard "twenty-fifth" could not be caught
+   before the money moved. That is the card's whole job.
+
+   And a tool that allowed a future date would simply be the way round
+   the guard the payment forms now carry. */
+{
+  const NAMES = ['apMovementDate', 'apDatedClause', 'fmtShortDate'];
+  const fns = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    { todayISO: () => TODAY }, NAMES);
+  const { apMovementDate, apDatedClause } = fns;
+
+  eq(apMovementDate({}), TODAY, 'a tool called with no date means today');
+  eq(apMovementDate({ date: '' }), TODAY, 'and so does an empty one');
+  eq(apMovementDate({ date: BACK }), BACK, 'a real past date is taken as given');
+
+  let threw = null;
+  try { apMovementDate({ date: '2026-09-30' }); } catch (e) { threw = e.message; }
+  t.check(/future/.test(threw || ''),
+    `a future date THROWS rather than being clamped (${JSON.stringify(threw)}) — otherwise the tools are the way round the forms' guard`);
+
+  threw = null;
+  try { apMovementDate({ date: 'last Friday' }); } catch (e) { threw = e.message; }
+  t.check(/YYYY-MM-DD/.test(threw || ''),
+    'and words the model failed to resolve are refused, not stored as a date nothing can read');
+
+  /* The card is the last place a wrong date can be caught, so the
+     summary must never quietly drop one that run() will reject — the
+     owner would have already agreed by then. */
+  eq(apDatedClause({}), '', 'an ordinary movement adds nothing to the card');
+  eq(apDatedClause({ date: TODAY }), '', 'nor does one explicitly dated today');
+  t.check(/25 Aug 2026/.test(apDatedClause({ date: BACK })),
+    `a backdated one names the day on the card (${JSON.stringify(apDatedClause({ date: BACK }))})`);
+  t.check(/future/.test(apDatedClause({ date: '2026-09-30' })),
+    'a future date is called out on the card too, rather than being agreed to and then refused');
+  t.check(/not a date/.test(apDatedClause({ date: 'last Friday' })),
+    'and so is one the model could not turn into a day');
+
+  // Every money tool: takes the date, and says it on its card.
+  const MONEY = ['record_customer_payment', 'pay_supplier', 'pay_staff_or_rent', 'add_expense', 'record_other_income'];
+  MONEY.forEach((name) => {
+    const from = code.indexOf(`  ${name}: {`);
+    t.check(from > -1, `${name} is registered`);
+    const body = code.slice(from, code.indexOf('\n\n', from));
+    t.check(/apDatedClause\(input\)/.test(body),
+      `${name}'s card names the date, so a misheard day is caught before the money moves`);
+    t.check(/apMovementDate\(input\)/.test(body),
+      `${name} takes it through the one validator, so all five obey the same rules`);
+    t.check(!/input\.date \|\| todayISO\(\)/.test(body),
+      `${name} does not default the date itself — that is how one tool ends up accepting what another refuses`);
+  });
+
+  // The schemas have to offer it, or the model can never send one.
+  const api = read('api/assistant.js');
+  MONEY.forEach((name) => {
+    const from = api.indexOf(`name: '${name}'`);
+    const body = api.slice(from, api.indexOf('\n  },', from));
+    t.check(/date: \{ type: 'string' \}/.test(body),
+      `${name} declares date in its schema, or the model could never send one`);
+  });
+  t.check(/day the money actually left/.test(api),
+    'and pay_supplier — the one that could not carry a date at all — says what its date means');
+  t.check(/the day the money ACTUALLY moved, not the day it is being entered/.test(api),
+    'the prompt tells the assistant which day it is asking for');
+  t.check(/never send one in the future/.test(api),
+    'and that a future one is refused, so it does not waste a card finding out');
+}
+
 process.exit(t.done() ? 1 : 0);

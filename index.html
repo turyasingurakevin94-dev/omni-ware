@@ -55653,6 +55653,46 @@ function apMonthRange(from, to){
   return { from: from || (today.slice(0,7) + '-01'), to: to || today };
 }
 function apCustomerById(id){ return (data.customers||[]).find(c=> c.id === id) || null; }
+
+/* ---- The day an assistant-recorded movement actually happened --------
+
+   Five tools move money: a customer payment in, a supplier payment out,
+   a wage or rent month, an expense, other income. Four of them already
+   took a date and one did not, and NONE of them said so on the card the
+   owner presses Confirm on -- so "pay Karddia forty-two thousand for
+   last Friday" could set a day the owner never saw, and a misheard
+   "twenty-fifth" could not be caught before the money moved.
+
+   That is the card's whole job. Money never moves in this app without a
+   plain sentence first, and a sentence that omits the day is not the
+   full claim.
+
+   The future is refused here for the same reason the payment forms
+   refuse it: money that has not arrived is not a payment, and dating
+   one forward puts a movement on a day the shop has not traded and
+   cannot count. A tool that allowed it would simply be the way round
+   the guard on the forms. */
+function apMovementDate(input){
+  const raw = input && input.date ? String(input.date).trim() : '';
+  if(!raw) return todayISO();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(raw))
+    throw new Error('That date is not a real date — give it as YYYY-MM-DD.');
+  if(raw > todayISO())
+    throw new Error('That date is in the future — money that has not moved yet cannot be recorded.');
+  return raw;
+}
+/* Said on the card only when it is NOT today, so an ordinary movement
+   reads as one sentence and a backdated one carries the day it claims.
+   Invalid dates are named rather than swallowed: the card is the last
+   place a wrong one can be caught, and a summary that quietly drops it
+   would let run() throw AFTER the owner had already agreed. */
+function apDatedClause(input){
+  const raw = input && input.date ? String(input.date).trim() : '';
+  if(!raw) return '';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return ' Dated "' + raw + '", which is not a date the shop can use.';
+  if(raw > todayISO()) return ' Dated ' + fmtShortDate(raw) + ', which is in the future and will be refused.';
+  return raw === todayISO() ? '' : ' Dated ' + fmtShortDate(raw) + '.';
+}
 // The app's own name-match pattern -- NEVER resolveInvoiceCustomer here,
 // which creates a customer when the name misses.
 function apCustomerByName(q){
@@ -56371,7 +56411,8 @@ const ASSISTANT_TOOLS = {
     summary(input){
       const c = apCustomerById(input.customer_id);
       return 'Receive ' + fmtUGX(apRound(input.amount)) + ' from ' + (c ? c.name : 'customer #' + input.customer_id)
-        + (c ? ' — owes ' + fmtUGX(apRound(c.debt)) : '') + ' — into ' + accountLabel(input.account) + '.';
+        + (c ? ' — owes ' + fmtUGX(apRound(c.debt)) : '') + ' — into ' + accountLabel(input.account) + '.'
+        + apDatedClause(input);
     },
     run(input){
       const c = apCustomerById(input.customer_id);
@@ -56386,7 +56427,7 @@ const ASSISTANT_TOOLS = {
         const pay = Math.min(remaining, invoiceBalanceDue(q));
         if(pay>0){ selections.push({ quoteId: q.id, amount: pay }); remaining -= pay; }
       });
-      const received = recordCustomerPayment(c.id, amount, input.account, input.note||'', selections, undefined, input.date);
+      const received = recordCustomerPayment(c.id, amount, input.account, input.note||'', selections, undefined, apMovementDate(input));
       saveData();
       return { done: true, received: apRound(received),
         applied_to_invoices: selections.length, new_balance: apRound(c.debt) };
@@ -56398,14 +56439,16 @@ const ASSISTANT_TOOLS = {
       const amt = Math.min(apRound(input.amount), apRound(owed));
       return 'Pay ' + fmtUGX(amt) + ' to ' + supplierName(input.supplier_id)
         + ' — owed ' + fmtUGX(apRound(owed)) + ' — from ' + accountLabel(input.account)
-        + '. Oldest bills are settled first.';
+        + '. Oldest bills are settled first.' + apDatedClause(input);
     },
     run(input){
       const owed = creditorTotalOwed(input.supplier_id);
       if(owed <= 0.5) throw new Error(supplierName(input.supplier_id) + ' is not owed anything.');
       const amt = Math.min(apRound(input.amount), apRound(owed));
       if(amt<=0) throw new Error('The amount must be above zero.');
-      const res = allocateCreditorPayment(input.supplier_id, amt, input.account, input.note||'');
+      // One lump sum can close several bills, and the date reaches every
+      // row it settles as well as each cash entry behind them.
+      const res = allocateCreditorPayment(input.supplier_id, amt, input.account, input.note||'', apMovementDate(input));
       saveData();   // allocateCreditorPayment deliberately leaves saving to its caller
       return { done: true, paid: apRound(res.applied), supplier: supplierName(input.supplier_id),
         still_owed: apRound(creditorTotalOwed(input.supplier_id)) };
@@ -56418,12 +56461,12 @@ const ASSISTANT_TOOLS = {
       const bal = dueBalance(due);
       return 'Pay ' + fmtUGX(apRound(input.amount)) + ' for ' + dueName(due) + ' (' + periodLabel(due.period) + ')'
         + (bal==null ? ' — NOT COSTED yet' : ' — balance ' + fmtUGX(apRound(bal)))
-        + ' — from ' + accountLabel(input.account) + '.';
+        + ' — from ' + accountLabel(input.account) + '.' + apDatedClause(input);
     },
     run(input){
       const due = (data.dues||[]).find(d=> d.id === input.due_id);
       if(!due) throw new Error('No wage or rent month with that id — use dues_owed again.');
-      const paid = payDue(input.due_id, apRound(input.amount), input.account, input.date);
+      const paid = payDue(input.due_id, apRound(input.amount), input.account, apMovementDate(input));
       if(paid==null) throw new Error('That month is not costed yet — enter the days worked in Payroll first.');
       return { done: true, paid: apRound(paid), name: dueName(due), period: due.period,
         balance_left: dueBalance(due)==null ? null : apRound(dueBalance(due)) };
@@ -56432,7 +56475,7 @@ const ASSISTANT_TOOLS = {
   add_expense: { confirm: true,
     summary(input){
       return 'Record ' + fmtUGX(apRound(input.amount)) + ' out of ' + accountLabel(input.account)
-        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.';
+        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.' + apDatedClause(input);
     },
     run(input){
       const cats = data.presetExpenseCategories||[];
@@ -56440,14 +56483,14 @@ const ASSISTANT_TOOLS = {
         throw new Error('"' + input.category + '" is not one of the shop\'s expense categories. Valid: ' + cats.join(', ') + '.');
       const amount = apRound(input.amount);
       if(amount<=0) throw new Error('The amount must be above zero.');
-      addCashPayment(input.account, amount, input.category, input.description||'', input.date || todayISO());
+      addCashPayment(input.account, amount, input.category, input.description||'', apMovementDate(input));
       return { done: true, recorded: amount, category: input.category };
     }},
 
   record_other_income: { confirm: true,
     summary(input){
       return 'Record ' + fmtUGX(apRound(input.amount)) + ' into ' + accountLabel(input.account)
-        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.';
+        + ' — ' + (input.category||'') + ': ' + (input.description||'') + '.' + apDatedClause(input);
     },
     run(input){
       const cats = data.presetIncomeCategories||[];
@@ -56455,7 +56498,7 @@ const ASSISTANT_TOOLS = {
         throw new Error('"' + input.category + '" is not one of the shop\'s income categories. Valid: ' + cats.join(', ') + '.');
       const amount = apRound(input.amount);
       if(amount<=0) throw new Error('The amount must be above zero.');
-      addCashReceipt(input.account, amount, input.category, input.description||'', input.date || todayISO());
+      addCashReceipt(input.account, amount, input.category, input.description||'', apMovementDate(input));
       return { done: true, recorded: amount, category: input.category };
     }},
 
