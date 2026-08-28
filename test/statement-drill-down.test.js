@@ -32,6 +32,11 @@ const env = {
   data: store,
   todayISO: () => '2026-08-21',
   fmtUGX: (n) => `${Math.round(Number(n) || 0)} UGX`,
+  /* The consignment accrual now asks whether the customer has actually
+     paid, so it needs the invoice's own total to measure a part-payment
+     against -- a debt that falls due on the invoice is not the same as
+     cash the shop is holding. */
+  savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
   esc: (x) => String(x == null ? '' : x),
   anShiftDate: (iso, d) => {
     const dt = new Date(iso + 'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate() + d);

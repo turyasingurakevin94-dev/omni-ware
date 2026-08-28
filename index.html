@@ -26521,6 +26521,7 @@ function removePiPayment(id, idx){
   `;
   document.getElementById('pip_amount').value = (total-paid)>0 ? (total-paid) : '';
   renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  renderConsignment();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -26589,6 +26590,10 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
     resetPiPaymentForm();
     renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
     if(typeof renderCreditorsList === 'function') renderCreditorsList(document.getElementById('cred_search') ? document.getElementById('cred_search').value : '');
+    // A consignment settlement is one of these bills, and the card
+    // reports what is still to pay on it -- so it is stale the moment a
+    // payment lands anywhere else.
+    renderConsignment();
     refreshNavBadges();
     toast(`${fmtUGX(Math.round(amount))} marked as settled before this system — no cash moved`, 6000);
     return;
@@ -26600,6 +26605,7 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
   closeModal('piPaymentModal');
   resetPiPaymentForm();
   renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  renderConsignment();
   if(document.getElementById('tab-cashbook') && document.getElementById('tab-cashbook').style.display !== 'none'){
     renderCbTransactions(); renderCbSummary(); renderCbTriggers();
   }
@@ -33005,6 +33011,7 @@ function renderConsignment(){
   const card = (r)=> {
     const held = consignmentHeldLines(r.supplierId);
     const gap = gapHTML(r);
+    const dueNow = consignmentDueNow(r);
     const stat = (v, label, cls)=>
       `<div class="sc-stat${cls?' '+cls:''}"><b>${v}</b><span>${esc(label)}</span></div>`;
     return `<div class="cons-card" data-id="${esc(r.supplierId)}">
@@ -33016,16 +33023,16 @@ function renderConsignment(){
             ? `${r.lines} line${r.lines===1?'':'s'} of theirs on your shelf`
             : 'nothing of theirs left on the shelf'}</div>
         </div>
-        <div class="cons-owed${r.owed > 0.5 ? ' due' : ''}">
-          <b>${f(Math.max(0, r.owed))}</b>
-          <span>${r.owed > 0.5 ? 'owed to them' : 'nothing owed'}</span>
+        <div class="cons-owed${dueNow > 0.5 ? ' due' : ''}">
+          <b>${f(dueNow)}</b>
+          <span>${dueNow > 0.5 ? 'owed to them' : 'nothing owed'}</span>
         </div>
       </div>
       <div class="sc-stats">
         ${stat(Math.round(r.heldQty), 'on the shelf', r.heldQty ? '' : 'zero')}
         ${stat(f(r.heldValue), 'worth to them', r.heldValue ? '' : 'zero')}
         ${stat(Math.round(r.soldQty), 'sold so far', r.soldQty ? '' : 'zero')}
-        ${stat(f(r.settled), 'settled', r.settled > 0.5 ? '' : 'zero')}
+        ${stat(f(r.settled), 'billed to them', r.settled > 0.5 ? '' : 'zero')}
       </div>
       ${gap}
       ${held.length ? `<div class="cons-goods">
@@ -33042,8 +33049,15 @@ function renderConsignment(){
       </div>` : ''}
       <div class="cons-card-foot">
         <span class="cons-foot-note">${r.owed > 0.5
-          ? 'Settling raises an ordinary supplier bill — it does not pay them.'
-          : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now')}</span>
+          ? 'Settling raises their bill and then asks how much you are paying now.'
+          /* Once everything has sold been billed, the card used to go
+             quiet -- "nothing owed right now" -- while the whole amount
+             was still sitting unpaid on that bill. What is owed did not
+             go away; it moved to Purchase invoices, and the card says
+             where. */
+          : (r.settlementDue > 0.5
+            ? `All of it is billed — ${f(r.settlementDue)} still to pay, on their bill under Purchase invoices.`
+            : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now'))}</span>
         ${r.owed > 0.5
           ? `<button type="button" class="btn btn-accent cons-settle" data-sup="${esc(r.supplierId)}">Settle ${f(r.owed)}</button>`
           : ''}
@@ -33060,18 +33074,39 @@ function renderConsignment(){
   const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
     <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
 
+  /* WHAT THIS FIGURE IS, SAID PROPERLY.
+
+     It read "of your cash is theirs", and that was wrong three ways.
+     The debt falls due on the INVOICE, so a sale on credit owes the
+     consignor while the shop is holding nothing for them. Money that
+     was collected is not set aside and may already be spent. And the
+     figure can be larger than everything in the drawer, which makes the
+     sentence arithmetically impossible.
+
+     It is a liability. So the label says owed, and the line under it
+     earns back what the owner actually wanted to know -- how much of
+     the drawer is not theirs -- out of figures the app can derive:
+     how much of it is still out with customers, and what is actually
+     held. Those two together are the answer; the old sentence was a
+     guess dressed as one. */
+  const uncollected = rows.reduce((n,r)=> n + Math.max(0, r.uncollected||0), 0);
+  const cashHeld = cashOnHandByAccount().total;
+  // The strip totals the same reading the cards do, so the headline and
+  // the cards under it cannot disagree about one figure.
+  const dueTotal = rows.reduce((n,r)=> n + consignmentDueNow(r), 0);
+
   el.innerHTML = blocked + `
     <div class="sum-strip">
-      ${cell(f(owedTotal), 'of your cash is theirs', owedTotal > 0.5 ? 'warn' : '')}
+      ${cell(f(dueTotal), 'owed to suppliers', dueTotal > 0.5 ? 'warn' : '')}
       ${cell(f(heldValue), 'of their goods here')}
       ${cell(rows.length, rows.length === 1 ? 'consignor' : 'consignors')}
-      ${settled > 0.5 ? cell(f(settled), 'settled so far', 'good') : ''}
+      ${settled > 0.5 ? cell(f(settled), 'billed to them', 'good') : ''}
     </div>
-    <!-- Said because it had to be asked. A consignor is owed the moment
-         their goods leave the shop; whether the customer has paid is a
-         separate question, and answering it here would let a shop spend
-         money it is only holding. -->
-    <p class="cons-basis">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet.</p>
+    <p class="cons-basis">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet.${
+      dueTotal > 0.5 && uncollected > 0.5
+        ? ` <b>${f(Math.min(uncollected, dueTotal))} of it is still on invoices customers have not paid.</b>` : ''}${
+      dueTotal > 0.5
+        ? ` You are holding ${f(cashHeld)} in cash${cashHeld < dueTotal ? ' — less than you owe them' : ''}.` : ''}</p>
     <div class="cons-list">${rows.map(card).join('')}</div>`
     + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
   wireMarkAlreadyHere(el);
@@ -33101,19 +33136,25 @@ function renderConsignment(){
     const sup = btn.dataset.sup;
     const row = consignmentRows().find(r=> r.supplierId === sup);
     if(!row) return;
-    /* Money, so it is asked for plainly first -- and the wording says
-       what this does NOT do. Settling raises the bill; paying it is the
-       same door as every other supplier bill. */
+    /* Money, so it is asked for plainly first -- and the wording names
+       BOTH steps, because it now takes both. */
     if(!confirm(`Settle with ${row.name}?\n\n`
       + `This raises a supplier bill for ${f(row.owed)} — what their goods have sold for so far`
       + `${row.settled > 0.5 ? ', less what you have already settled' : ''}.\n\n`
-      + `It does not pay them. The bill appears under Purchase invoices and Who you owe, and you pay it the usual way.`)) return;
+      + `You will then be asked how much you are paying now. Pay all of it, part of it, or close that box and pay later from Purchase invoices.`)) return;
     const id = await settleConsignment(sup);
     if(id == null){ toast('Nothing to settle'); return; }
     renderConsignment();
     renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
     refreshNavBadges();
-    toast(`Bill raised for ${row.name} — pay it from Purchase invoices`);
+    /* Straight into the ordinary supplier-payment door rather than
+       sending the owner to find the bill on another screen. It arrives
+       pre-filled with the whole balance and caps anything larger, so
+       "settle part of it" is typing a smaller number -- and the cash
+       book, the payables and the statements are written by the same code
+       that writes every other supplier payment. Closing the box without
+       paying leaves the bill standing, which is what this did before. */
+    openPiPaymentModal(id);
   }));
 
   el.querySelectorAll('.cons-return').forEach(btn=> btn.addEventListener('click', async ()=>{
@@ -45519,13 +45560,34 @@ function consignmentAccrued(supplierId, asOf){
     if(!q.invoiced || q.voided) return;
     const day = String(q.invoicedAt || q.date || '').slice(0,10);
     if(asOf && day > asOf) return;
+    /* HAS THE SHOP ACTUALLY BEEN PAID FOR THESE?
+
+       The debt to the consignor falls due on the invoice, which is
+       right -- their goods have gone. But the screen went on to call
+       the total "of your cash is theirs", and that is a different
+       claim: a sale on credit owes the consignor while the shop is
+       holding nothing at all for them.
+
+       A part-payment is taken to have paid for a PROPORTION of the
+       invoice. It is an assumption -- a customer paying half does not
+       say which half -- and it is the only one available without asking
+       them to allocate every payment by line. The wording on screen
+       says "on invoices customers have not paid" rather than claiming
+       to know which goods the money was for. */
+    const billed = savedQuoteTotal(q);
+    const paid = Number(q.amountPaid)||0;
+    const share = billed > 0 ? Math.min(1, Math.max(0, paid / billed)) : 1;
     (q.items||[]).forEach(it=>{
       (it._stockLots||[]).forEach(l=>{
         if(!l.consign) return;
         if(supplierId && l.consign !== supplierId) return;
-        const rec = out.get(l.consign) || { supplierId: l.consign, qty: 0, value: 0 };
+        const rec = out.get(l.consign)
+          || { supplierId: l.consign, qty: 0, value: 0, collected: 0, uncollected: 0 };
+        const v = (Number(l.qty)||0) * (Number(l.cost)||0);
         rec.qty += Number(l.qty)||0;
-        rec.value += (Number(l.qty)||0) * (Number(l.cost)||0);
+        rec.value += v;
+        rec.collected += v * share;
+        rec.uncollected += v * (1 - share);
         out.set(l.consign, rec);
       });
     });
@@ -45547,6 +45609,19 @@ function consignmentSettled(supplierId, asOf){
   return consignmentSettlements(supplierId, asOf)
     .reduce((s,pi)=> s + purchaseInvoiceTotal(pi), 0);
 }
+/* What is still to pay on those bills.
+
+   consignmentSettled sums bill TOTALS, which is right for the accrual --
+   once the goods are on a bill they are the bill's business, and
+   offsetting by anything else would count the same money twice. But the
+   screen called that figure "settled", so the moment Settle was tapped
+   the card read "settled 2,295,000 · nothing owed" while not one
+   shilling had moved. Billed and paid are two facts and the card now
+   carries both. */
+function consignmentSettlementDue(supplierId, asOf){
+  return consignmentSettlements(supplierId, asOf)
+    .reduce((s,pi)=> s + purchaseInvoiceBalanceDue(pi), 0);
+}
 
 /* One row per consignor: what they have here, what has sold, what has
    been settled, and the difference -- which is the part of the shop's
@@ -45555,7 +45630,8 @@ function consignmentRows(asOf){
   const bySupplier = new Map();
   const touch = (id)=>{
     if(!bySupplier.has(id)) bySupplier.set(id, { supplierId: id, name: supplierName(id),
-      heldQty: 0, heldValue: 0, soldQty: 0, accrued: 0, settled: 0, owed: 0, lines: 0 });
+      heldQty: 0, heldValue: 0, soldQty: 0, accrued: 0, collected: 0, uncollected: 0,
+      settled: 0, settlementDue: 0, owed: 0, lines: 0 });
     return bySupplier.get(id);
   };
   consignmentHeld().forEach(h=>{
@@ -45565,9 +45641,13 @@ function consignmentRows(asOf){
   consignmentAccrued(null, asOf).forEach(a=>{
     const r = touch(a.supplierId);
     r.soldQty = a.qty; r.accrued = a.value;
+    r.collected = a.collected; r.uncollected = a.uncollected;
   });
   bySupplier.forEach(r=>{
     r.settled = consignmentSettled(r.supplierId, asOf);
+    // Not the same number, and the difference is the whole point: what
+    // has been put on a bill, against what is still to hand over.
+    r.settlementDue = consignmentSettlementDue(r.supplierId, asOf);
     r.owed = r.accrued - r.settled;
   });
   return [...bySupplier.values()]
@@ -45594,9 +45674,25 @@ function consignmentHeldLines(supplierId){
   return out.sort((a,b)=> b.qty * b.cost - a.qty * a.cost);
 }
 
-// The headline: how much of the money in the drawer is somebody else's.
+// What has SOLD and has no bill behind it yet. Deliberately not the
+// whole debt: payablesAsAt counts settlement bills on the ordinary
+// creditors leg, and adding them here as well would count the same
+// money twice. See consignmentDueNow for what a person means by "what
+// do I owe them".
 function consignmentOwedTotal(asOf){
   return consignmentRows(asOf).reduce((s,r)=> s + Math.max(0, r.owed), 0);
+}
+/* What a consignor is owed RIGHT NOW, whichever side of the settle line
+   it sits on: goods sold that have no bill yet, PLUS whatever is still
+   unpaid on the bills already raised.
+
+   The card used to headline the first alone, so the moment a bill was
+   raised it read "0 UGX · nothing owed" about a supplier still waiting
+   for every shilling. Billed is not paid. A shop owner asking what they
+   owe Okuosi means both, and this screen is the one place where there is
+   no second leg to double against -- it shows the whole relationship. */
+function consignmentDueNow(r){
+  return Math.max(0, r && r.owed || 0) + Math.max(0, r && r.settlementDue || 0);
 }
 
 /* What ONE shelf is worth, and how much of what stands on it is not the
@@ -46951,8 +47047,22 @@ function stDrillData(key, ctx){
         return { d: pi.date || null, l: purchaseInvoiceNumberLabel(pi), s: pi.supplierName || '', v: Math.max(0, purchaseInvoiceTotal(pi) - paid), go: `pinv:${pi.id}` };
       })
       .filter(r=> r.v > 0.5);
+    /* CONSIGNED GOODS THAT HAVE SOLD AND NOT BEEN BILLED are inside
+       `expect` -- payablesAsAt adds consignmentOwedTotal -- and were in
+       none of the rows, which list bills. So every shop holding an
+       unsettled consignment saw a drill-down whose rows fell short of
+       the total they claimed to explain, with nothing saying why. It is
+       real money owed with no bill behind it yet, which is exactly the
+       thing a list of bills cannot show; so it is stated as its own
+       row, dated today because that is when the reading is taken. */
+    const accrued = consignmentOwedTotal(asOf);
+    if(accrued > 0.5) rows.push({ d: asOf, l: 'Consigned goods sold, not yet billed',
+      s: consignmentRows(asOf).filter(r=> r.owed > 0.5).map(r=> r.name).join(', '),
+      v: accrued, go: 'screen:consignment' });
     return { title: 'Owed to suppliers', expect: bs.payables,
-      note: 'Every bill still carrying a balance' + (asOf < today ? ` as at ${asOf}` : '') + '. The Creditors screen is the working view of the same money.',
+      note: 'Every bill still carrying a balance' + (asOf < today ? ` as at ${asOf}` : '')
+        + (accrued > 0.5 ? ', and consigned goods that have sold but have no bill raised yet' : '')
+        + '. The Creditors screen is the working view of the same money.',
       rows: byDateDesc(rows) };
   }
   if(key === 'bs:duesowed'){
@@ -47064,7 +47174,7 @@ function stDrillPanelHTML(ctx){
     ${rows.length === 0
       ? '<div class="st-drill-hint">No records behind this figure in this period.</div>'
       : `<div class="st-drill-list">${shown.map(r=> `
-        <div class="st-drill-row${r.go ? ' st-drill-go' : ''}"${r.go ? ` data-st-go="${esc(r.go)}" tabindex="0" role="button" title="Open this document"` : ''}>
+        <div class="st-drill-row${r.go ? ' st-drill-go' : ''}"${r.go ? ` data-st-go="${esc(r.go)}" tabindex="0" role="button" title="${String(r.go).startsWith('screen:') ? 'Open the screen this figure comes from' : 'Open this document'}"` : ''}>
           <span class="st-drill-main"><b>${esc(r.l)}</b>${r.s ? `<span>${esc(r.s)}</span>` : ''}</span>
           <span class="st-drill-meta">${r.d ? `<span class="st-drill-date">${esc(r.d)}</span>` : ''}<span class="st-drill-val">${amt(r.v)}</span></span>
         </div>`).join('')}
@@ -47514,6 +47624,12 @@ function stHandleDrillAction(e){
       }
     } else if(kind === 'pinv'){
       revealPurchaseInvoice(id);
+    } else if(kind === 'screen'){
+      // A row that is a READING rather than a document -- consigned
+      // goods sold with no bill behind them yet. It still has somewhere
+      // to go, and a row styled as clickable that does nothing is worse
+      // than one that is not clickable at all.
+      goToTab(rawId);
     }
     return true;
   }

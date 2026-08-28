@@ -59,6 +59,9 @@ const env = {
   productVariantLabel: (p) => p.name,
   purchaseInvoiceTotal: (pi) => (pi.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.price) || 0), 0),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+  // The accrual now asks whether the customer has actually paid, so it
+  // needs the invoice's own total to measure a part-payment against.
+  savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
   quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
     || !!(it.receivedAt && Number(it.receivedQty) > 0)),
 };
@@ -69,7 +72,8 @@ try {
     'stockKey', 'getStockQty', 'addStockLot', 'consumeStockLots', 'restoreStockLots',
     'applyStockDelta', 'getFIFOUnitCost', 'shelfValueForKey', 'inventoryValue',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued',
-    'consignmentSettlements', 'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
+    'consignmentSettlements', 'consignmentSettled', 'consignmentSettlementDue',
+    'purchaseInvoiceBalanceDue', 'consignmentRows', 'consignmentOwedTotal', 'consignmentDueNow',
     'consignmentSoldLines', 'returnConsignedStock', 'consignedUnitCostForSale', 'sellBelowCostClause',
     'peekStockLots', 'consignTally', 'consignedForLine',
     'unmarkedSalesByKey', 'consignmentUnmarkedSales',
@@ -80,6 +84,7 @@ try {
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
     'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
     'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements',
+    'consignmentSettlementDue', 'purchaseInvoiceBalanceDue', 'consignmentDueNow',
     'consignmentMarkPlan', 'consignmentMarkApply', 'unmarkedSalesByKey', 'consignmentUnmarkedSales']);
 } catch (e) { err = e; }
 t.check(!!scope, `the consignment chain compiles${err ? ` (${err.message})` : ''}`);
@@ -586,7 +591,7 @@ if (scope) {
     'the figures the screen exists for are in the strip every other screen uses for them');
   t.check(/class="sc-stats"/.test(render)
     && /'on the shelf'/.test(render) && /'worth to them'/.test(render)
-    && /'sold so far'/.test(render) && /'settled'/.test(render),
+    && /'sold so far'/.test(render) && /'billed to them'/.test(render),
     'and the four that make up one consignment sit together where they can be compared');
   t.check(/cons-goods-table/.test(render) && !/class="buy-row"/.test(render),
     'their goods are a table, so the figures line up down the column');
@@ -635,6 +640,142 @@ if (scope) {
     'a finding with nothing markable gets its own sentence');
   t.check(/g\.qty > 0 \? `<button type="button" class="btn btn-accent cons-gap-fix"/.test(render),
     'and no button, because there is nothing the app can do about it');
+}
+
+/* ---------- 13. billed is not paid, and neither is "your cash" -------- */
+/*
+ * Settling raises a bill. The accrual is offset by that bill's TOTAL --
+ * which is right, because the bill leg carries total-less-paid, so the
+ * money is counted once however much of it has been handed over. But the
+ * card called the offset "settled", so the moment Settle was tapped it
+ * read "settled 2,295,000 · nothing owed" while not one shilling had
+ * moved.
+ *
+ * The sequence below is the property the whole settle design rests on,
+ * and nothing pinned it.
+ */
+if (scope) {
+  data.stock = {}; data.stockLots = {}; data.savedQuotes = []; data.purchaseInvoices = [];
+  data.stockLots.PA = [{ qty: 20, cost: 5000, consign: 'S1' }];
+  data.stock.PA = 20;
+  data.savedQuotes.push({ id: 300, invoiced: true, voided: false, invoicedAt: '2026-08-20',
+    items: [{ productId: 'PA', variantIdx: null, qty: 20, supplierId: '__stock__', sellPrice: 8000,
+      _stockLots: [{ qty: 20, cost: 5000, consign: 'S1' }] }] });
+
+  const owed = () => scope.consignmentOwedTotal();
+  const billDue = () => scope.consignmentSettlementDue('S1');
+  // The bill leg, the way creditorTotalOwed reads it.
+  const creditors = () => (data.purchaseInvoices || [])
+    .filter((pi) => !pi.voided).reduce((n, pi) => n + scope.purchaseInvoiceBalanceDue(pi), 0);
+  const payable = () => owed() + creditors();
+
+  eq(owed(), 100000, 'their goods sold, so they are owed for them');
+  eq(payable(), 100000, 'and that is what the shop owes, bill or no bill');
+
+  const bill = { id: 9, supplierId: 'S1', consignSettlement: true, voided: false,
+    date: '2026-08-27', amountPaid: 0, payments: [],
+    items: [{ productId: 'PA', variantIdx: null, qty: 20, price: 5000 }] };
+  data.purchaseInvoices.push(bill);
+  eq(owed(), 0, 'raising the bill moves it off the accrual');
+  eq(billDue(), 100000, 'and onto the bill, where none of it is paid yet');
+  eq(payable(), 100000, 'so what the shop owes has not changed — counted once, not twice');
+
+  bill.amountPaid = 40000;
+  bill.payments.push({ date: '2026-08-27', amount: 40000 });
+  eq(owed(), 0, 'a part-payment does not put anything back on the accrual');
+  eq(billDue(), 60000, 'it comes off the bill');
+  eq(payable(), 60000, 'and off what the shop owes — never 120,000, which is what an offset by AMOUNT PAID would have given');
+
+  bill.amountPaid = 100000;
+  eq(billDue(), 0, 'paying the rest clears the bill');
+  eq(payable(), 0, 'and the debt');
+
+  // A voided bill is not a settlement, on either leg.
+  bill.voided = true; bill.amountPaid = 0;
+  eq(billDue(), 0, 'a voided settlement bill owes nothing');
+  eq(owed(), 100000, 'and puts what it billed back on the accrual, where it can be settled again');
+}
+
+/* ---------- 13b. how much of it has the shop actually been paid? ------ */
+/*
+ * The screen read "2,295,000 UGX of your cash is theirs". It is not
+ * cash. The debt falls due on the INVOICE, so a sale on credit owes the
+ * consignor while the shop is holding nothing at all for them; collected
+ * money is not set aside; and the figure can exceed everything in the
+ * drawer, which makes the sentence arithmetically impossible.
+ */
+if (scope) {
+  const sale = (id, qty, paidShare) => ({ id, invoiced: true, voided: false, invoicedAt: '2026-08-20',
+    amountPaid: qty * 8000 * paidShare,
+    items: [{ productId: 'PA', variantIdx: null, qty, supplierId: '__stock__', sellPrice: 8000,
+      _stockLots: [{ qty, cost: 5000, consign: 'S1' }] }] });
+  const split = () => {
+    const a = scope.consignmentAccrued('S1')[0] || { collected: 0, uncollected: 0 };
+    return [Math.round(a.collected), Math.round(a.uncollected)];
+  };
+
+  data.purchaseInvoices = [];
+  data.savedQuotes = [sale(310, 10, 1)];
+  t.check(String(split()) === '50000,0', `a paid invoice is money the shop has (${split()})`);
+
+  data.savedQuotes = [sale(311, 10, 0)];
+  t.check(String(split()) === '0,50000', `an unpaid one is not — it is owed by the customer and owed to the consignor (${split()})`);
+
+  data.savedQuotes = [sale(312, 10, 0.5)];
+  t.check(String(split()) === '25000,25000',
+    `and a part-payment is taken to have paid for a proportion of the invoice (${split()})`);
+
+  // A sale that did not happen is neither.
+  data.savedQuotes = [Object.assign(sale(313, 10, 1), { voided: true })];
+  t.check(String(split()) === '0,0', 'a voided sale is collected nothing and owed nothing');
+  data.savedQuotes = [Object.assign(sale(314, 10, 1), { invoiced: false })];
+  t.check(String(split()) === '0,0', 'and so is a draft');
+
+  const render = extractFunction(src, 'renderConsignment', 'index.html');
+  // Over the code, not the comment above it, which quotes the sentence
+  // it exists to explain.
+  t.check(!/of your cash is theirs/.test(render.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'the screen no longer calls a liability cash');
+  t.check(/'owed to suppliers'/.test(render), 'it calls it what it is');
+  t.check(/still on invoices customers have not paid/.test(render)
+    && /You are holding \$\{f\(cashHeld\)\} in cash/.test(render),
+    'and answers the question that sentence was reaching for, out of figures it can actually derive');
+  t.check(/'billed to them'/.test(render) && /still to pay, on their bill/.test(render),
+    'billed and paid are two facts, and the card carries both');
+  /* And the headline is the whole debt, not the half of it that has no
+     bill yet. It read "0 UGX · nothing owed" the moment Settle was
+     tapped, about a supplier still waiting for every shilling -- the
+     same complaint that started this, one layer down. */
+  t.check(/consignmentDueNow\(r\)/.test(render) && /<b>\$\{f\(dueNow\)\}<\/b>/.test(render),
+    'and the headline counts what is billed-but-unpaid as owed, because it is');
+  const dn = scope.consignmentDueNow;
+  eq(dn({ owed: 100000, settlementDue: 0 }), 100000, 'nothing billed: what is owed is what has sold');
+  eq(dn({ owed: 0, settlementDue: 60000 }), 60000, 'all billed, part paid: what is owed is what is left on the bill');
+  eq(dn({ owed: 40000, settlementDue: 60000 }), 100000, 'some of each: both, because a supplier is waiting for both');
+  eq(dn({ owed: 0, settlementDue: 0 }), 0, 'and paid up is nothing');
+  /* consignmentOwedTotal must NOT follow it there: payablesAsAt counts
+     settlement bills on the ordinary creditors leg, so adding them to
+     the accrual as well would count the money twice. */
+  eq(scope.consignmentOwedTotal(), 0,
+    'while the payables reading still counts only what has no bill yet — the bills are counted on their own leg');
+}
+
+/* ---------- 13c. settling asks how much you are paying now ------------ */
+{
+  const render = extractFunction(src, 'renderConsignment', 'index.html');
+  t.check(/openPiPaymentModal\(id\)/.test(render),
+    'settling goes straight into the ordinary supplier-payment door');
+  /* No new money code: that modal already caps the entry at the balance,
+     writes the cash book through addCashPayment and keeps a history, so
+     a consignment payment is written by the same code as every other
+     supplier payment. */
+  t.check(/asked how much you are paying now/.test(render),
+    'and the confirm says so before the bill is raised');
+  t.check(/pay later from Purchase invoices/.test(render),
+    'while closing that box without paying is still an option, as it was before');
+  const pay = src.slice(src.indexOf('function openPiPaymentModal'));
+  t.check(/renderConsignment\(\);/.test(pay.slice(0, 4000)),
+    'and a payment redraws the consignment card, which reports the balance it just changed');
 }
 
 process.exit(t.done() ? 1 : 0);

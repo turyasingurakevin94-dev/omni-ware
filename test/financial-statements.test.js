@@ -134,6 +134,11 @@ const scope = compileScope([
 ], {
   data,
   todayISO: () => TODAY,
+  /* The consignment accrual now asks whether the customer has actually
+     paid, so it needs the invoice's own total to measure a part-payment
+     against -- a debt that falls due on the invoice is not the same as
+     cash the shop is holding. */
+  savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
   quoteItemSellPrice: (it) => Number(it.sellPrice) || 0,
   dashTotalCreditors: () => 0,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
