@@ -566,4 +566,75 @@ if (scope) {
     'and asks first, naming the count');
 }
 
+/* ---------- 12. the screen has its own shape ------------------------- */
+/*
+ * It was wearing three other screens' clothes: .chase-row (a name, an
+ * amount and a sentence -- right for a customer who owes you, wrong for
+ * an account with four figures worth comparing and a list of goods under
+ * them), .buy-tail/.buy-row (a shopping list), .buy-controls (a filter
+ * bar). Together they read as a screen assembled from spare parts, which
+ * is what it was. It is built on the supplier card's shape now -- the
+ * app's existing answer to "one party, several figures, some actions".
+ */
+{
+  const render = extractFunction(src, 'renderConsignment', 'index.html');
+  const form = extractFunction(src, 'markAlreadyHereHTML', 'index.html');
+
+  t.check(/class="cons-card"/.test(render) && !/class="chase-row"/.test(render),
+    'a consignor is a card of its own, not a debt-chase row');
+  t.check(/class="sum-strip"/.test(render) && /of your cash is theirs/.test(render),
+    'the figures the screen exists for are in the strip every other screen uses for them');
+  t.check(/class="sc-stats"/.test(render)
+    && /'on the shelf'/.test(render) && /'worth to them'/.test(render)
+    && /'sold so far'/.test(render) && /'settled'/.test(render),
+    'and the four that make up one consignment sit together where they can be compared');
+  t.check(/cons-goods-table/.test(render) && !/class="buy-row"/.test(render),
+    'their goods are a table, so the figures line up down the column');
+  t.check(/class="form-panel cons-mark"/.test(form) && /class="form-grid"/.test(form)
+    && !/class="buy-controls"/.test(form),
+    'and marking goods is a form, not a row of inline controls reading like a filter bar');
+
+  /* The empty state was a bare paragraph and the blocked notice a
+     coloured one -- both of them the shape of a placeholder. */
+  t.check(/class="cons-empty"/.test(render), 'nothing held reads as an empty state, not a stray sentence');
+  t.check(/class="cons-blocked"/.test(render), 'and the migration notice as a notice');
+
+  const css = (sel) => (new RegExp(`\\${sel}\\{([^}]*)\\}`).exec(src) || ['', ''])[1];
+  t.check(/border-radius/.test(css('.cons-card')) && /border:1px solid/.test(css('.cons-card')),
+    'the card carries its own border and corner rather than a dashed rule between rows');
+  /* Five columns -- name, count, unit cost, value, button -- came to more
+     than 375px however tightly they were set, and the right-hand end left
+     the screen. Measured in a real 375px frame after the fix: nothing
+     crosses the edge. */
+  t.check(/@media \(max-width:640px\)\{[\s\S]{0,600}?\.cons-goods-table tr\{display:grid/.test(src),
+    'and on a phone the row stacks rather than running off the side');
+}
+
+/* ---------- 12b. a finding with nothing to fix is not a warning ------- */
+/*
+ * consignmentUnmarkedSales reports a product where units sold that no
+ * marking can reach, even when none of them are markable. Rendered
+ * through the fixable wording that read:
+ *
+ *   "0 of Ceiling Tile 600x600 have already sold on  — recorded as
+ *    nobody's, so the 0 UGX they would owe is not counted above"
+ *
+ * -- a sentence about nothing, under a warning icon, with an empty
+ * invoice list where the evidence should be. Found by rendering it.
+ */
+{
+  const render = extractFunction(src, 'renderConsignment', 'index.html');
+  // Counted over the code, not the comment above it, which quotes the
+  // sentence it exists to explain.
+  const body = render.replace(/\/\*[\s\S]*?\*\//g, '');
+  t.check((body.match(/have already sold/g) || []).length === 1,
+    'the fixable wording is written once');
+  t.check(/const fixable = \(g\)=>/.test(render) && /g\.qty > 0\s*\?\s*fixable\(g\)/.test(render),
+    'and reached only when there is something to fix');
+  t.check(/sold without a trace/.test(render),
+    'a finding with nothing markable gets its own sentence');
+  t.check(/g\.qty > 0 \? `<button type="button" class="btn btn-accent cons-gap-fix"/.test(render),
+    'and no button, because there is nothing the app can do about it');
+}
+
 process.exit(t.done() ? 1 : 0);

@@ -5022,6 +5022,103 @@
     text-transform:uppercase;padding:2px 7px;border-radius:999px;
     background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);
     margin-left:7px;vertical-align:middle;white-space:nowrap;}
+  /* ---- Consignment -------------------------------------------------
+     Its own vocabulary, because it was wearing three other screens'.
+     .chase-row is a name, an amount and a sentence -- right for a
+     customer who owes you, wrong for an account with four figures worth
+     comparing and a list of goods beneath them; .buy-tail/.buy-row is a
+     shopping list; .buy-controls is a filter bar. Together they read as
+     a screen assembled from spare parts, which is what it was.
+
+     Built instead on the supplier card's shape (avatar, title, figure
+     strip), which is the app's existing answer to "one party, several
+     figures, some actions" -- so this looks like the rest of the app
+     rather than like a fourth idea. */
+  .cons-list{display:flex;flex-direction:column;gap:14px;}
+  .cons-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px 14px;display:flex;flex-direction:column;gap:13px;}
+  .cons-card-head{display:flex;align-items:flex-start;gap:12px;}
+  .cons-card-sub{font-size:11.5px;color:var(--ink-soft);}
+  /* The headline: how much of the cash in the drawer is not the shop's.
+     Right-aligned against the name, with its own label under it -- a
+     bare figure beside a supplier's name could be read as anything. */
+  .cons-owed{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:2px;}
+  .cons-owed b{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.1;color:var(--ink-soft);}
+  .cons-owed span{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .cons-owed.due b{color:var(--accent);}
+  /* The stats strip is shared with the supplier cards, but there it
+     closes a card and here it opens the body -- so the border moves to
+     the bottom and the auto top margin comes off. */
+  .cons-card .sc-stats{margin-top:0;padding-top:0;padding-bottom:13px;
+    border-top:none;border-bottom:1px solid var(--line);}
+  .cons-goods-head{font-size:10.5px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:6px;}
+  /* A table, because these are four figures per row that a reader
+     compares down the column. As a flex row with the numbers inside a
+     sentence they lined up nowhere. */
+  .cons-goods-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .cons-goods-table td{padding:7px 0;border-bottom:1px solid var(--ow-rule-soft);vertical-align:middle;}
+  .cons-goods-table tr:last-child td{border-bottom:none;}
+  /* width:1% shrinks each figure column to its content, so the numbers
+     cluster on the right instead of drifting apart across the table --
+     the name column takes all the slack, which is the one that wants it. */
+  .cons-goods-table td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    text-align:right;white-space:nowrap;padding-left:16px;width:1%;}
+  .cons-goods-name{font-weight:600;color:var(--ink);min-width:0;}
+  .cons-goods-each{color:var(--ink-soft);font-size:12px;}
+  .cons-goods-val{font-weight:700;}
+  .cons-goods-act{text-align:right;padding-left:14px;width:1%;white-space:nowrap;}
+  /* Compact inside a table row. A full-size .btn in every row of a list
+     shouts louder than the figures the row exists to show, and this is
+     the rare action, not the common one. Admin-only surface: the 44px
+     tap floor is enforced on the agent and worker apps, which are the
+     ones used one-handed in a stockroom. */
+  .cons-goods-act .btn{padding:7px 13px;font-size:12.5px;}
+  .cons-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;padding-top:2px;}
+  .cons-foot-note{margin:0;font-size:11.5px;color:var(--ink-soft);}
+  .cons-basis{margin:-6px 0 16px;font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  .cons-blocked{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;padding:13px 15px;
+    border-radius:11px;background:var(--ow-oxide-soft);color:var(--ink);font-size:12.5px;line-height:1.55;}
+  .cons-blocked svg{flex-shrink:0;width:18px;height:18px;color:var(--accent);margin-top:1px;}
+  .cons-blocked code{display:block;margin:7px 0;padding:8px 10px;background:var(--panel);
+    border-radius:8px;font-size:12px;}
+  .cons-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;margin-bottom:16px;
+    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
+  .cons-empty b{font-size:13.5px;color:var(--ink);}
+  .cons-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
+  /* The item names are long ("GYPSUM Board — Normal / 9mm") and the
+     grid's 160px track cut them mid-word, which is the one field where
+     picking the wrong row marks the wrong goods as somebody else's. */
+  .cons-mark .form-grid{grid-template-columns:minmax(240px,1.6fr) minmax(180px,1.2fr) minmax(130px,1fr) minmax(130px,1fr);}
+  @media (max-width:760px){.cons-mark .form-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));}}
+  .cons-mark-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;
+    flex-wrap:wrap;margin-top:14px;}
+  .cons-mark-note{margin:0;flex:1 1 260px;font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
+  /* On a phone the row cannot hold five columns -- name, count, unit
+     cost, value and a button came to more than 375px however tightly
+     they were set, and the right-hand end simply left the screen. So
+     the name takes its own line and the two figures that decide
+     anything keep theirs; the unit cost, which is the same number
+     already shown on every card, is the one that goes. */
+  @media (max-width:640px){
+    .cons-goods-table tr{display:grid;grid-template-columns:1fr auto auto;gap:2px 12px;
+      align-items:center;padding:9px 0;border-bottom:1px solid var(--ow-rule-soft);}
+    .cons-goods-table tr:last-child{border-bottom:none;}
+    .cons-goods-table td{border:none;padding:0;}
+    .cons-goods-name{grid-column:1 / -1;}
+    .cons-goods-table td.cons-goods-qty{grid-column:1;text-align:left;padding-left:0;}
+    .cons-goods-table td.cons-goods-each{display:none;}
+    .cons-goods-table td.cons-goods-val{grid-column:2;padding-left:0;}
+    .cons-goods-act{grid-column:3;padding-left:0;}
+  }
+  @media (max-width:560px){
+    .cons-card-head{flex-wrap:wrap;}
+    .cons-owed{flex-basis:100%;text-align:left;flex-direction:row;align-items:baseline;gap:8px;}
+  }
+
   /* Goods on our shelf that are not ours. Shaped after .both-tag -- a
      fact about the thing, trailing its name -- and carried on AMBER
      rather than the oxide those wear: consignment is an arrangement the
@@ -32832,14 +32929,18 @@ function renderConsignment(){
      cannot be KEPT: it would show here until the page reloaded and then
      vanish, which is exactly how this shipped broken. */
   const blocked = !stockLotConsignColumn ? `
-    <p class="buy-note" style="margin:0 0 12px;color:var(--accent);">
+    <div class="cons-blocked">${ICON_WARN}<div>
       <b>This screen cannot record anything yet.</b> Consignment needs one update to your database — a place to store which supplier owns each delivery. Until it is applied, receiving on consignment is refused rather than accepted and lost. Send this to whoever manages the database, or paste it into the Supabase SQL editor:
-      <code style="display:block;margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px;">alter table stock_lots add column if not exists consign text;</code>
-      It takes effect within half a minute, without reloading.</p>` : '';
+      <code>alter table stock_lots add column if not exists consign text;</code>
+      It takes effect within half a minute, without reloading.</div></div>` : '';
 
   if(!rows.length){
-    el.innerHTML = blocked + `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing is held on consignment. When a supplier leaves goods to be paid for as they sell, receive them on the Inventory screen and tick "on consignment" — no bill is raised, and what you owe will build here as they sell.</p>`
+    el.innerHTML = blocked + `<div class="cons-empty">
+        <b>Nothing is held on consignment.</b>
+        <span>When a supplier leaves goods to be paid for as they sell, receive them on the Inventory screen and tick "on consignment" — no bill is raised, and what you owe builds here as they sell.</span>
+      </div>`
       + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
+    wireMarkAlreadyHere(el);
     return;
   }
 
@@ -32858,16 +32959,30 @@ function renderConsignment(){
   const gapHTML = (r)=>{
     const gaps = consignmentUnmarkedSales(r.supplierId);
     if(!gaps.length) return '';
-    return `<div class="cons-gap">${gaps.map(g=>`
+    /* Two findings, written out separately rather than one wearing the
+       other's sentence. Where nothing is markable the fixable wording
+       rendered "0 of Ceiling Tile 600x600 [have sold] on  — recorded as
+       nobody's, so the 0 UGX they would owe is not counted above": a
+       sentence about nothing, under a warning icon, with an empty
+       invoice list where the evidence should be. Only the first finding
+       gets a button, because only the first is something the app can do
+       anything about. */
+    const fixable = (g)=> `<b>${Math.round(g.qty)} of ${esc(g.name)} have already sold</b> on ${
+        esc(g.sales.slice(0, 4).map(x=> x.invoice).join(', '))}${
+        g.sales.length > 4 ? ` and ${g.sales.length - 4} more` : ''} — recorded as nobody's, so the ${
+        f(g.value)} they would owe ${esc(r.name)} is not counted above.`;
+    // `more` is whether a fixable finding is already stated above it. On
+    // its own the count and the name are in the bold line right above,
+    // so repeating them reads as two findings where there is one.
+    const untraceable = (g, more)=> `<span class="cons-gap-dim">${more
+        ? `${Math.round(g.unrecorded)} more sold on invoices that kept no record of which stock they took, so those cannot be marked here.`
+        : `They went out on invoices that kept no record of which stock they took, so nothing here can mark them — if they were ${esc(r.name)}'s, settle for them by hand.`}</span>`;
+    return `<div class="cons-gap">${gaps.map(g=> `
       <div class="cons-gap-row">
         ${ICON_WARN}
-        <div class="cons-gap-main">
-          <b>${Math.round(g.qty)} of ${esc(g.name)} have already sold</b> on ${
-            esc(g.sales.slice(0, 4).map(x=> x.invoice).join(', '))}${
-            g.sales.length > 4 ? ` and ${g.sales.length - 4} more` : ''} — recorded as nobody's,
-          so the ${f(g.value)} they would owe ${esc(r.name)} is not counted above.
-          ${g.unrecorded ? `<span class="cons-gap-dim">${Math.round(g.unrecorded)} more sold on invoices that kept no record of which stock they took; those cannot be marked here.</span>` : ''}
-        </div>
+        <div class="cons-gap-main">${g.qty > 0
+          ? fixable(g) + (g.unrecorded ? untraceable(g, true) : '')
+          : `<b>${Math.round(g.unrecorded)} of ${esc(g.name)} sold without a trace.</b>` + untraceable(g, false)}</div>
         ${g.qty > 0 ? `<button type="button" class="btn btn-accent cons-gap-fix"
           data-sup="${esc(r.supplierId)}" data-pid="${esc(g.productId)}"
           data-vidx="${g.variantIdx==null?'':g.variantIdx}"
@@ -32875,42 +32990,90 @@ function renderConsignment(){
       </div>`).join('')}</div>`;
   };
 
+  /* One card per consignor, built like the supplier cards rather than
+     like a debt chase. It was borrowing .chase-row, whose shape is a
+     name, an amount and a sentence -- fine for a customer who owes you,
+     wrong for an account with four figures worth comparing and a list of
+     goods under it. Four figures in a strip, the goods as a table, and
+     the actions in a foot.
+
+     The four are the whole relationship: what of theirs is here, what
+     that is worth to THEM (not to the shop -- it is not the shop's), how
+     much has sold, and how much of that has been paid over. Owed is the
+     difference, and it is the headline because it is the money in the
+     drawer that is not the shop's. */
   const card = (r)=> {
     const held = consignmentHeldLines(r.supplierId);
     const gap = gapHTML(r);
-    return `<div class="chase-row" data-id="${esc(r.supplierId)}">
-      <div class="chase-head"><b>${esc(r.name)}</b>
-        <span class="chase-amt">${f(Math.max(0, r.owed))}</span></div>
-      <div class="chase-sub">${r.heldQty > 0
-        ? `holding <b>${Math.round(r.heldQty)}</b> of theirs across ${r.lines} line${r.lines===1?'':'s'}, worth ${f(r.heldValue)} to them`
-        : 'nothing of theirs left on the shelf'} · sold <b>${Math.round(r.soldQty)}</b> so far${
-        r.settled > 0.5 ? ` · ${f(r.settled)} settled` : ''}</div>
+    const stat = (v, label, cls)=>
+      `<div class="sc-stat${cls?' '+cls:''}"><b>${v}</b><span>${esc(label)}</span></div>`;
+    return `<div class="cons-card" data-id="${esc(r.supplierId)}">
+      <div class="cons-card-head">
+        <div class="sc-avatar">${esc(nameInitials(r.name))}</div>
+        <div class="sc-title">
+          <div class="sc-name">${esc(r.name)}</div>
+          <div class="cons-card-sub">${r.heldQty > 0
+            ? `${r.lines} line${r.lines===1?'':'s'} of theirs on your shelf`
+            : 'nothing of theirs left on the shelf'}</div>
+        </div>
+        <div class="cons-owed${r.owed > 0.5 ? ' due' : ''}">
+          <b>${f(Math.max(0, r.owed))}</b>
+          <span>${r.owed > 0.5 ? 'owed to them' : 'nothing owed'}</span>
+        </div>
+      </div>
+      <div class="sc-stats">
+        ${stat(Math.round(r.heldQty), 'on the shelf', r.heldQty ? '' : 'zero')}
+        ${stat(f(r.heldValue), 'worth to them', r.heldValue ? '' : 'zero')}
+        ${stat(Math.round(r.soldQty), 'sold so far', r.soldQty ? '' : 'zero')}
+        ${stat(f(r.settled), 'settled', r.settled > 0.5 ? '' : 'zero')}
+      </div>
       ${gap}
-      ${held.length ? `<div class="buy-tail"><h4>On the shelf</h4>${held.map((h,i)=>`
-        <div class="buy-row"><div class="buy-main"><b>${esc(h.name)}</b>
-          <em>${Math.round(h.qty)} left · you owe ${f(h.cost)} each as they sell</em></div>
-          <button type="button" class="btn btn-ghost cons-return" data-sup="${esc(r.supplierId)}" data-i="${i}">Send back</button>
-        </div>`).join('')}</div>` : ''}
-      <div class="chase-acts">
+      ${held.length ? `<div class="cons-goods">
+        <div class="cons-goods-head">Their goods on your shelf</div>
+        <table class="cons-goods-table"><tbody>${held.map((h,i)=>`
+          <tr>
+            <td class="cons-goods-name">${esc(h.name)}</td>
+            <td class="num cons-goods-qty">${Math.round(h.qty)}</td>
+            <td class="num cons-goods-each">${f(h.cost)} each</td>
+            <td class="num cons-goods-val">${f(h.qty * h.cost)}</td>
+            <td class="cons-goods-act"><button type="button" class="btn btn-ghost cons-return"
+              data-sup="${esc(r.supplierId)}" data-i="${i}">Send back</button></td>
+          </tr>`).join('')}</tbody></table>
+      </div>` : ''}
+      <div class="cons-card-foot">
+        <span class="cons-foot-note">${r.owed > 0.5
+          ? 'Settling raises an ordinary supplier bill — it does not pay them.'
+          : (gap ? 'nothing recorded as owed — see above' : 'nothing owed right now')}</span>
         ${r.owed > 0.5
           ? `<button type="button" class="btn btn-accent cons-settle" data-sup="${esc(r.supplierId)}">Settle ${f(r.owed)}</button>`
-          : `<span class="chase-none">${gap
-              ? 'nothing recorded as owed — see above'
-              : 'nothing owed right now'}</span>`}
+          : ''}
       </div>
     </div>`;
   };
 
+  /* The figures the screen exists for, at the top, in the strip every
+     other screen in the app uses for exactly this. The sentence they
+     replaced said the headline number and buried the other three in a
+     run-on line inside each card. */
+  const heldValue = rows.reduce((n,r)=> n + r.heldValue, 0);
+  const settled = rows.reduce((n,r)=> n + r.settled, 0);
+  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
+
   el.innerHTML = blocked + `
-    <p class="buy-note" style="margin:0 0 12px;">Of the money you are holding, <b>${f(owedTotal)}</b> belongs to ${
-      rows.filter(r=> r.owed > 0.5).length === 1 ? 'a supplier' : 'suppliers'} — it is takings from goods that were never yours.</p>
+    <div class="sum-strip">
+      ${cell(f(owedTotal), 'of your cash is theirs', owedTotal > 0.5 ? 'warn' : '')}
+      ${cell(f(heldValue), 'of their goods here')}
+      ${cell(rows.length, rows.length === 1 ? 'consignor' : 'consignors')}
+      ${settled > 0.5 ? cell(f(settled), 'settled so far', 'good') : ''}
+    </div>
     <!-- Said because it had to be asked. A consignor is owed the moment
          their goods leave the shop; whether the customer has paid is a
          separate question, and answering it here would let a shop spend
          money it is only holding. -->
-    <p class="dash-panel-note" style="margin:-6px 0 14px;">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet.</p>
-    ${rows.map(card).join('')}` + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
-
+    <p class="cons-basis">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet.</p>
+    <div class="cons-list">${rows.map(card).join('')}</div>`
+    + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
   wireMarkAlreadyHere(el);
 
   /* One tap, and still asked for first. The count and the money are read
@@ -32990,17 +33153,33 @@ function markAlreadyHereHTML(){
     return `<option value="${esc(k)}">${esc(productVariantLabel(p, vi))} — ${Math.round(Number(data.stock[k])||0)} on the shelf</option>`;
   }).filter(Boolean).join('');
   if(!opts) return '';
-  return `<div class="buy-tail"><h4>Goods already here that are a supplier's</h4>
-    <p class="dash-panel-note" style="margin:0 0 8px;">Marks stock you already hold as held on consignment — including any of it already sold, which is money you owe them.</p>
-    <div class="buy-controls">
-      <label>Item <select id="cons_mark_key" style="min-width:220px;">${opts}</select></label>
-      <label>Belongs to <select id="cons_mark_sup">${
-        (data.suppliers||[]).map(x=> `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
-      <label>How many <input type="number" id="cons_mark_shelf" min="0" step="any" style="width:90px;"></label>
-      <label>Already sold <input type="number" id="cons_mark_sold" min="0" step="any" style="width:90px;"></label>
-      <button type="button" class="btn btn-ghost" id="cons_mark_btn">Mark as theirs</button>
+  /* A form, laid out like every other form in the app rather than as a
+     row of inline controls with their labels beside them. Four fields
+     that each need a moment's thought -- which goods, whose, how many
+     here, how many already gone -- do not belong on one line reading
+     like a filter bar. */
+  return `<div class="form-panel cons-mark">
+    <div class="form-panel-head">
+      <span class="fp-icon">${ICON_STORE}</span>
+      <div class="form-panel-title">Goods already here that are a supplier's
+        <small>Marks stock you already hold as held on consignment — including any of it already sold, which is money you owe them.</small></div>
     </div>
-    <p class="dash-panel-note" id="cons_mark_note" style="margin:6px 0 0;"></p></div>`;
+    <div class="form-grid">
+      <div class="field"><label for="cons_mark_key">Item</label>
+        <select id="cons_mark_key">${opts}</select></div>
+      <div class="field"><label for="cons_mark_sup">Belongs to</label>
+        <select id="cons_mark_sup">${
+          (data.suppliers||[]).map(x=> `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="cons_mark_shelf">How many on the shelf</label>
+        <input type="number" id="cons_mark_shelf" min="0" step="any"></div>
+      <div class="field"><label for="cons_mark_sold">How many already sold</label>
+        <input type="number" id="cons_mark_sold" min="0" step="any"></div>
+    </div>
+    <div class="cons-mark-foot">
+      <p class="cons-mark-note" id="cons_mark_note"></p>
+      <button type="button" class="btn btn-accent" id="cons_mark_btn">Mark as theirs</button>
+    </div>
+  </div>`;
 }
 function wireMarkAlreadyHere(el){
   const btn = el.querySelector('#cons_mark_btn');
