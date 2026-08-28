@@ -748,24 +748,7 @@
   .brief-row span{min-width:0;color:var(--ink);font-weight:600;}
   .brief-row b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
   .brief-row em{font-style:normal;font-weight:500;color:var(--ow-ink-400);}
-  /* ---- What to buy (the Procurement Copilot) ----
-     Its own screen, not a dashboard panel: the plan plus its
-     over-budget and source-first tails is a working document. */
-  .buy-controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
-  .buy-controls label{display:flex;gap:6px;align-items:center;font-weight:600;}
-  .buy-controls input{width:110px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12.5px;font-variant-numeric:tabular-nums;}
-  .buy-controls input#buy_cover{width:56px;}
-  .buy-controls-note{margin-left:auto;font-weight:500;color:var(--ow-ink-400);}
-  .buy-row{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;}
-  .buy-row:last-child{border-bottom:none;}
-  .buy-main{min-width:0;flex:1;}
-  .buy-main b{color:var(--ink);}
-  .buy-main em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
-  /* The argument, above the arithmetic that backs it. */
-  .buy-main em.buy-why{font-size:12.5px;color:var(--ink);margin-top:3px;}
-  .buy-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
-  .buy-days{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
-  .buy-days.now{background:var(--ow-oxide-soft);color:var(--accent);}
+  /* ---- What to buy (the Procurement Copilot) ---- */
   /* ---- The plan itself ----
      Its own classes, not the .buy-* above. Those are shared with Chase
      debts and Supplier prices, and restyling them would redesign two
@@ -821,19 +804,68 @@
     .pp-act{order:4;margin-left:auto;}
   }
 
-  .buy-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
-  .buy-note b{color:var(--ink);}
-  .buy-tail h4{font-size:10.5px;margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
+  /* THE .buy-* AND OLD .chase-* ROW CLASSES ARE GONE.
+
+     .buy-controls was a filter bar, .buy-row/.buy-main a shopping list,
+     .buy-tail a heading over one -- and four screens wore them because
+     they were there, not because any of them was a list of things to
+     buy. Consignment, What to buy, Supplier prices and Chase debts each
+     have their own shape now, so these are dead; deleted rather than
+     left standing, because a spare part in the drawer is how the next
+     screen ends up wearing one too.
+
+     .dash-note is the one survivor of .buy-note, renamed for the single
+     place still using it: the dashboard's line about consigned takings,
+     which is a note on a panel and never was a note about buying. */
+  .dash-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
+  .dash-note b{color:var(--ink);}
   /* ---- Chase debts ---- */
-  .chase-row{padding:14px 0;border-bottom:1px dashed var(--line);}
-  .chase-row:last-child{border-bottom:none;}
-  .chase-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
-  .chase-head b{font-size:14px;color:var(--ink);}
-  .chase-head .chase-amt{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
-  .chase-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  /* A card each, like the consignor cards. Every one of these carries a
+     name, a figure, an age, three facts, an editable message and four
+     controls -- more than a dashed rule between rows can hold apart,
+     which is all it had. */
+  .chase-list{display:flex;flex-direction:column;gap:14px;}
+  .chase-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px 14px;display:flex;flex-direction:column;gap:11px;}
+  .chase-card-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .chase-contact{font-size:11.5px;color:var(--ink-soft);}
+  .chase-owed{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:2px;margin-left:auto;}
+  .chase-owed b{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;
+    font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent);}
+  .chase-owed span{font-size:10px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .chase-facts{display:flex;flex-wrap:wrap;gap:3px 16px;}
+  .chase-fact{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .chase-fact b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:700;color:var(--ink);}
+  .chase-fact.chased b{color:var(--accent);}
+  .chase-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
+    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
+  /* The two tails are lists of names with a reason, not shopping rows.
+     The reason takes the slack and the money lines up on the right. */
+  .chase-mini{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:10px 0;
+    border-bottom:1px solid var(--ow-rule-soft);font-size:12.5px;}
+  .chase-mini:last-child{border-bottom:none;}
+  .chase-mini-name{font-weight:700;color:var(--ink);}
+  .chase-mini-why{flex:1 1 220px;min-width:0;color:var(--ink-soft);line-height:1.5;}
+  .chase-mini-amt{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-weight:700;color:var(--ink);white-space:nowrap;}
+  .chase-mini-act{padding:6px 12px;font-size:12px;flex-shrink:0;}
+  .chase-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;
+    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
+  .chase-empty b{font-size:13.5px;color:var(--ink);}
+  .chase-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
+  .chase-controls .form-grid{grid-template-columns:repeat(2, minmax(170px, 250px));}
+  @media (max-width:560px){
+    .chase-controls .form-grid{grid-template-columns:1fr;}
+    .chase-owed{margin-left:0;text-align:left;flex-basis:100%;flex-direction:row;align-items:baseline;gap:8px;}
+  }
   .chase-msg{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
     font-family:inherit;font-size:12.5px;line-height:1.5;color:var(--ink);background:var(--bg);resize:vertical;min-height:150px;}
-  .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  /* Right-aligned, with the strongest action last -- the eye lands
+     where the thumb goes. It was left-aligned with Send first, so the
+     three quieter buttons trailed off after the loud one. */
+  .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-top:2px;}
   .chase-done{font-size:11.5px;font-weight:600;color:var(--accent);}
   .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
   /* Goods of a consignor's that have sold and are recorded as nobody's.
@@ -8107,10 +8139,22 @@
         <p>Everyone whose balance is past the shop's terms, worst-aged first, each with a message already written from their own invoices. Nobody is chased inside the grace period, nobody is chased twice in the same few days, and a customer whose balance does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Read the message, change it if you like, then send it with your own thumb — the app never sends anything by itself.</p>
       </div>
       <div class="panel">
-        <div class="buy-controls">
-          <label>Chase after <input type="number" id="chase_after" min="0" step="1"> days</label>
-          <label>Rest <input type="number" id="chase_rest" min="0" step="1"> days between chases</label>
-          <span class="buy-controls-note" id="chase_summary"></span>
+        <!-- The two rules the queue obeys, as a form. They were a filter
+             bar with the count and the money crammed into a hint beside
+             them. The ids stay: the listeners below bind to them at
+             parse time with no null guard. -->
+        <div class="form-panel chase-controls">
+          <div class="form-panel-head">
+            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div class="form-panel-title">When a debt becomes a chase
+              <small>Nobody is asked inside the grace period, and nobody is asked twice inside the rest period — so a customer is never chased two days running.</small></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label for="chase_after">Chase after (days past terms)</label>
+              <input type="number" id="chase_after" min="0" step="1"></div>
+            <div class="field"><label for="chase_rest">Rest between chases (days)</label>
+              <input type="number" id="chase_rest" min="0" step="1"></div>
+          </div>
         </div>
         <div id="chase_list"></div>
       </div>
@@ -33426,42 +33470,80 @@ function renderChaseScreen(){
     /* Sized to the message. A box that clips what is about to be sent
        invites sending something nobody read to the end of. */
     const rows = Math.min(20, Math.max(9, msg.split('\n').length + 1));
-    return `<div class="chase-row" data-id="${esc(r.id)}">
-      <div class="chase-head"><b>${esc(r.name)}</b>${pill(r)}
-        <span class="chase-amt">${f(r.debt)}</span></div>
-      <div class="chase-sub">${r.location ? esc(r.location) + ' · ' : ''}${
-        r.phone ? esc(r.phone) : '<span class="chase-none">no phone number on file</span>'}${
-        r.invoices.length ? ' · ' + r.invoices.length + ' invoice' + (r.invoices.length === 1 ? '' : 's') + ' still due' : ''}${
-        r.lastPaid ? ' · last paid ' + esc(fmtShortDate(r.lastPaid)) : ' · never paid'}</div>
+    /* A card, like the consignor cards next door. Each of these carries
+       a name, a figure, four facts, an editable message and four
+       controls -- more than a dashed rule between rows can hold apart,
+       which is what it had. */
+    return `<div class="chase-card" data-id="${esc(r.id)}">
+      <div class="chase-card-head">
+        <div class="sc-avatar">${esc(nameInitials(r.name))}</div>
+        <div class="sc-title">
+          <div class="sc-name">${esc(r.name)}</div>
+          <div class="chase-contact">${r.location ? esc(r.location) + ' · ' : ''}${
+            r.phone ? esc(r.phone) : '<span class="chase-none">no phone number on file</span>'}</div>
+        </div>
+        ${/* The pill sits with the name, not after the money: it is a
+             fact about the debt's age, and the age pill and the "owed"
+             label were both carrying it, side by side, saying 67 days
+             twice. */''}
+        ${pill(r)}
+        <div class="chase-owed">
+          <b>${f(r.debt)}</b>
+          <span>owed</span>
+        </div>
+      </div>
+      <div class="chase-facts">
+        ${r.invoices.length ? `<span class="chase-fact"><b>${r.invoices.length}</b> invoice${r.invoices.length === 1 ? '' : 's'} still due</span>` : ''}
+        <span class="chase-fact">${r.lastPaid
+          ? `last paid <b>${esc(fmtShortDate(r.lastPaid))}</b>`
+          : '<b>never</b> paid'}</span>
+        ${chased ? `<span class="chase-fact chased">chased <b>${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</b></span>` : ''}
+      </div>
       <textarea class="chase-msg" data-msg="${esc(r.id)}" rows="${rows}">${esc(msg)}</textarea>
       <div class="chase-acts">
-        <button type="button" class="btn btn-accent chase-send" data-id="${esc(r.id)}">Send on WhatsApp</button>
-        <button type="button" class="btn btn-ghost chase-copy" data-id="${esc(r.id)}">Copy</button>
+        ${chased ? `<button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">It did not go</button>` : ''}
         <button type="button" class="btn btn-ghost chase-receive" data-id="${esc(r.id)}">Received payment</button>
-        ${chased ? `<span class="chase-done">Chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</span>
-          <button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">not sent</button>` : ''}
+        <button type="button" class="btn btn-ghost chase-copy" data-id="${esc(r.id)}">Copy</button>
+        <button type="button" class="btn btn-accent chase-send" data-id="${esc(r.id)}">Send on WhatsApp</button>
       </div>
     </div>`;
   };
 
-  let html = '';
+  /* What the queue holds, at the top. It was a count and a total in a
+     hint beside the settings, which is where a reader looks last. */
+  const owed = q.due.reduce((t,r)=> t + r.debt, 0);
+  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
+  let html = `<div class="sum-strip">
+    ${cell(q.due.length, q.due.length === 1 ? 'to chase' : 'to chase', q.due.length ? 'warn' : '')}
+    ${cell(f(owed), 'between them')}
+    ${q.resting.length ? cell(q.resting.length, 'resting', 'good') : ''}
+    ${q.blocked.length ? cell(q.blocked.length, 'held back', 'warn') : ''}
+  </div>`;
   if(!q.due.length){
-    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nobody to chase: nothing is past ${q.graceDays} days${
-      q.resting.length ? `, and ${q.resting.length} ${q.resting.length === 1 ? 'debtor was' : 'debtors were'} chased in the last ${q.restDays} days` : ''}.</p>`;
+    html += `<div class="chase-empty"><b>Nobody to chase.</b>
+      <span>Nothing is past ${q.graceDays} ${q.graceDays === 1 ? 'day' : 'days'}${
+      q.resting.length ? `, and ${q.resting.length} ${q.resting.length === 1 ? 'debtor was' : 'debtors were'} chased in the last ${q.restDays} ${q.restDays === 1 ? 'day' : 'days'}` : ''}.</span></div>`;
   } else {
-    html = q.due.map(row).join('');
+    html += `<div class="chase-list">${q.due.map(row).join('')}</div>`;
   }
   /* Chased recently, and deliberately not offered again yet -- named so
      the queue's silence about them is visible rather than mysterious. */
-  if(q.resting.length) html += `<div class="buy-tail"><h4>Chased in the last ${q.restDays} days</h4>${
-    q.resting.map(r=> `<div class="buy-row"><div class="buy-main"><b>${esc(r.name)}</b><em>${
-      f(r.debt)} · chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</em></div>
-      <button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">chase again</button></div>`).join('')}</div>`;
-  if(q.blocked.length) html += `<div class="buy-tail"><h4>Held back until the balance is checked</h4>${
-    q.blocked.map(r=> `<div class="buy-row"><div class="buy-main"><b>${esc(r.name)}</b><em>${f(r.debt)} — ${
-      r.why === 'drift'
-        ? 'this balance does not match its own history, so no demand is written for it. Fix it on Who owes you.'
-        : 'nothing dated behind this balance, so there is no age to measure against your terms.'}</em></div></div>`).join('')}</div>`;
+  if(q.resting.length) html += `<div class="chase-tail"><h4>Chased in the last ${q.restDays} ${q.restDays === 1 ? 'day' : 'days'}</h4>${
+    q.resting.map(r=> `<div class="chase-mini">
+      <span class="chase-mini-name">${esc(r.name)}</span>
+      <span class="chase-mini-why">chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</span>
+      <span class="chase-mini-amt">${f(r.debt)}</span>
+      <button type="button" class="btn btn-ghost chase-mini-act chase-undo" data-id="${esc(r.id)}">Chase again</button>
+    </div>`).join('')}</div>`;
+  if(q.blocked.length) html += `<div class="chase-tail"><h4>Held back until the balance is checked</h4>${
+    q.blocked.map(r=> `<div class="chase-mini">
+      <span class="chase-mini-name">${esc(r.name)}</span>
+      <span class="chase-mini-why">${r.why === 'drift'
+        ? 'this balance does not match its own history, so no demand is written for it — fix it on Who owes you'
+        : 'nothing dated behind this balance, so there is no age to measure against your terms'}</span>
+      <span class="chase-mini-amt">${f(r.debt)}</span>
+    </div>`).join('')}</div>`;
   el.innerHTML = html;
 
   const msgFor = (id)=> {
@@ -33498,10 +33580,6 @@ function renderChaseScreen(){
   el.querySelectorAll('.chase-receive').forEach(btn=> btn.addEventListener('click', ()=>{
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
-  const sum = document.getElementById('chase_summary');
-  if(sum) sum.textContent = q.due.length
-    ? `${q.due.length} to chase · ${f(q.due.reduce((t,r)=> t + r.debt, 0))} between them`
-    : '';
 }
 // How many are waiting to be chased, on the rail. Same derivation, so
 // the count and the list can never disagree.
@@ -50683,7 +50761,7 @@ function morningBriefHTML(b){
      the drawer means. Only when there IS some -- a shop holding nothing
      on consignment should never see the sentence. */
   const notOurs = b.consignOwed > 0
-    ? `<p class="buy-note" style="margin:10px 0 0;">Of what you are holding, <b>${fmtUGX(b.consignOwed)}</b> belongs to a supplier — takings from goods on consignment, not yet settled.</p>`
+    ? `<p class="dash-note">Of what you are holding, <b>${fmtUGX(b.consignOwed)}</b> belongs to a supplier — takings from goods on consignment, not yet settled.</p>`
     : '';
   return `<div class="brief-grid">${stats}</div>` + (blocks
     ? `<div class="brief-blocks">${blocks}</div>`

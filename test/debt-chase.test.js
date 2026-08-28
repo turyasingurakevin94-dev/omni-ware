@@ -224,4 +224,46 @@ if (scope) {
     'the terms and the chase stamps load and persist with the shop settings');
 }
 
+/* ---------- 6. the queue is a set of cards, not a stack of rules ----- */
+/*
+ * The last screen wearing the spare parts. .buy-controls held the two
+ * settings with the whole state of the queue -- how many to chase and
+ * how much they owe between them -- crammed into a hint beside them,
+ * which is where a reader looks last. .buy-tail/.buy-row carried the
+ * two tails as shopping rows. And each debtor, who has a name, a
+ * figure, an age, three facts, an editable message and four controls,
+ * was held apart from the next one by a dashed line.
+ */
+{
+  const panel = extractFunction(src, 'renderChaseScreen', 'index.html');
+
+  t.check(/class="chase-card"/.test(panel) && !/class="chase-row"/.test(panel),
+    'a debtor is a card, which is what that much content needs');
+  t.check(/class="sum-strip"/.test(panel) && /'to chase'/.test(panel) && /'between them'/.test(panel),
+    'what the queue holds is in the strip every other screen uses for it');
+  t.check(!/chase_summary/.test(src),
+    'and not in a hint beside the settings — that element is gone');
+  t.check(/class="chase-tail"/.test(panel) && !/class="buy-tail"/.test(panel)
+    && !/class="buy-row"/.test(panel),
+    'the resting and held-back tails wear their own classes');
+  t.check(/class="form-panel chase-controls"/.test(src) && /<label for="chase_after">/.test(src),
+    'the two rules the queue obeys are labelled fields in a form');
+  t.check(/id="chase_after"/.test(src) && /id="chase_rest"/.test(src),
+    'keeping the ids — the listeners bind to them at parse time with no null guard');
+
+  /* Send last. It was first, so the three quieter buttons trailed off
+     after the loud one and the eye had to come back for them. */
+  const iSend = panel.indexOf('chase-send');
+  const iCopy = panel.indexOf('chase-copy');
+  const iReceive = panel.indexOf('chase-receive');
+  t.check(iReceive > 0 && iReceive < iCopy && iCopy < iSend,
+    'and the strongest action is last in the row, where the thumb lands');
+
+  /* THE SPARE PARTS ARE GONE. Four screens wore them because they were
+     there. A dead rule in the stylesheet is how a fifth ends up in one. */
+  t.check(!/\.buy-row\{/.test(src) && !/\.buy-controls\{/.test(src) && !/\.buy-tail h4\{/.test(src)
+    && !/\.chase-row\{/.test(src) && !/\.chase-head\{/.test(src),
+    'the borrowed classes are deleted, not left in the drawer');
+}
+
 process.exit(t.done() ? 1 : 0);

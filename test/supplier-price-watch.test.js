@@ -303,10 +303,15 @@ if (scope) {
   t.check(/id="pw_days"/.test(src),
     'keeping the id — the listener binds to it at parse time with no null guard');
 
-  /* Chase debts is still wearing .buy-controls and .buy-row. This screen
-     moved off them; it did not take them with it. */
-  t.check(/\.buy-row\{/.test(src) && /\.buy-controls\{/.test(src),
-    'the shared classes are left standing for the screen still using them');
+  /* THE SPARE PARTS ARE GONE. Consignment, What to buy, Supplier prices
+     and Chase debts each have their own shape now, so .buy-controls,
+     .buy-row, .buy-main and .buy-tail are dead and deleted. A dead rule
+     in the stylesheet is how the next screen ends up wearing one. */
+  // Matched as RULE selectors, not as prose: the comments explaining why
+  // they went naturally name them, and a test that cannot tell a rule
+  // from a sentence about a rule is a test that fails on its own record.
+  t.check(!/\.buy-row\{/.test(src) && !/\.buy-controls\{/.test(src) && !/\.buy-tail h4\{/.test(src),
+    'the borrowed classes are retired, not left in the drawer');
   t.check(!/class="buy-row"/.test(panel) && !/class="buy-note"/.test(panel),
     'while this one wears its own');
 

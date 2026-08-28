@@ -197,10 +197,17 @@ if (scope) {
   const boughtIn = { productId: 'P1', variantIdx: null, qty: 4, supplierId: 'S2' };
   eq(scope.consignedForLine(boughtIn).qty, 0,
     'a line bought in from another supplier owes that supplier, not the consignor');
-  // An order quoted from stock before the sentinel existed carries no
-  // supplier at all, and the picker already reads that as our shelf.
-  eq(scope.consignedForLine({ productId: 'P1', variantIdx: null, qty: 4 }).qty, 4,
-    'while a line naming no supplier is off our shelf, as the picker reads it');
+  /* And neither is a line with no supplier chosen yet. This asserted the
+     opposite when it was written, on the reasoning that the picker reads
+     a supplier-less line as our shelf -- but quoteLineComesOffShelf is
+     the rule INVOICING follows, and it says such a line is not off the
+     shelf until it is quoted from stock or received. A forecast made on
+     any other rule describes a deduction that will not happen.
+
+     This check has been failing since the day the two were aligned. The
+     file had no exit code, so nothing reported it. */
+  eq(scope.consignedForLine({ productId: 'P1', variantIdx: null, qty: 4 }).qty, 0,
+    'and neither is a line with no supplier chosen yet — invoicing would deduct nothing for it');
 }
 
 /* ---------- 4. money on one invoice ----------------------------------- */
@@ -386,4 +393,11 @@ if (scope) {
     'while still ellipsising a long supplier name when the row is genuinely tight');
 }
 
-t.done();
+/* The exit code, which this file did not have.
+ *
+ * Every other suite ends `process.exit(t.done() ? 1 : 0)`. This one
+ * ended with a bare `t.done()`, so it printed its failures and exited
+ * 0 -- and npm test called that a pass. One check below had been
+ * failing since the day it was written and nothing said so. A test that
+ * cannot fail is not a test. */
+process.exit(t.done() ? 1 : 0);
