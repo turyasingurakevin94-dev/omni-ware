@@ -117,6 +117,7 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
+    'buyLineFacts', 'buyLineWhy',
     'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
     'purchasePlan', 'dashStockOutExposure',
   ].map((n) => extractFunction(src, n, 'index.html'))
@@ -126,7 +127,7 @@ try {
       extractDeclaration(src, 'LEAD_TIME_MIN_DELIVERIES', 'index.html'),
     ]),
   env, ['waSalesByKey', 'restockRiskRows', 'stockingCandidates', 'buyLineReason',
-    'purchasePlan', 'dashStockOutExposure']);
+    'buyLineFacts', 'buyLineWhy', 'purchasePlan', 'dashStockOutExposure']);
 } catch (e) { err = e; }
 t.check(!!scope, `the copilot chain compiles${err ? ` (${err.message})` : ''}`);
 
@@ -282,6 +283,119 @@ if (scope) {
     'the server offers it, budget optional');
   t.check(/worth stocking/.test(api),
     'and tells the model there are two kinds of line');
+}
+
+/* ---------- 6. the screen is a decision, not a paragraph ------------- */
+/*
+ * Every row read as forty words of prose carrying six figures, and the
+ * one line that said what to actually DO -- buy 1 Ctn from Roto -- was
+ * the smallest, faintest text in it. Figures inside sentences also
+ * cannot be compared down a list: the shop could not see which of
+ * thirteen lines earned most without reading all thirteen.
+ *
+ * buyLineReason keeps the prose, because the assistant speaks it. The
+ * screen takes the same fields as figures.
+ */
+if (scope) {
+  const refill = { kind: 'refill', name: 'Cement', held: 7, units30: 28, orders30: 5,
+    profit30: 370000, daysLeft: 7, coverDays: 7, floor: 0, belowFloor: false, leadDays: 1,
+    unit: 'bag', buyQty: 10, supplier: 'Roto', unitCost: 30000, cost: 300000 };
+  const label = (fs, l) => (fs.find((x) => x.label === l) || {}).v;
+
+  let fs = scope.buyLineFacts(refill);
+  eq(label(fs, 'sold in 30 days'), 28, 'a refill is bought on what the shelf sold');
+  eq(label(fs, 'earned'), '370,000 UGX', 'and what that earned, which is the ranking');
+  eq(label(fs, 'on the shelf'), 7, 'against what is left');
+  eq(label(fs, 'to deliver'), '1 day', 'and how long the supplier takes — "1 day", not "1 days"');
+  eq(scope.buyLineFacts({ ...refill, leadDays: 10 }).find((x) => x.label === 'to deliver').v,
+    '10 days', 'ten of them are days');
+
+  /* A fact the app does not have is ABSENT. Nothing earned and nothing
+     recorded as earned are different facts, and a zero standing in a row
+     of figures reads as the first. */
+  fs = scope.buyLineFacts({ ...refill, leadDays: null, profit30: 0 });
+  t.check(!fs.some((x) => x.label === 'to deliver'),
+    'no measured lead time, no wait figure — rather than a confident zero');
+  t.check(!fs.some((x) => x.label === 'earned'), 'and nothing earned is left out, not shown as 0');
+
+  // A shelf under its floor, and an empty one, are marked rather than
+  // described in another sentence.
+  t.check(scope.buyLineFacts({ ...refill, held: 2, belowFloor: true })
+    .find((x) => x.label === 'on the shelf').cls === 'bad', 'a shelf under its floor is marked');
+  t.check(scope.buyLineFacts({ ...refill, held: 0 })
+    .find((x) => x.label === 'on the shelf').cls === 'bad', 'so is an empty one');
+
+  const stock = { kind: 'stock', name: 'Wall Angle', held: 0, units30: 20, orders30: 3,
+    profit30: 40000, paid30: 260000, bulkCost: 220000, allPriced: true, daysLeft: null,
+    unit: 'Box', buyQty: 20, supplier: 'SJS', unitCost: 11000, cost: 220000 };
+  fs = scope.buyLineFacts(stock);
+  eq(label(fs, 'buy-ins this month'), 3, 'a buy-in line is bought on how often it was bought in');
+  eq(label(fs, 'paid across them'), '260,000 UGX', 'and what those trips actually cost');
+  eq(label(fs, 'saved buying once'), '40,000 UGX', 'against the price on file for the same total in one');
+  eq(scope.buyLineFacts({ ...stock, orders30: 1 })
+    .find((x) => x.label === 'buy-in this month').v, 1, 'one of them is a buy-in, singular');
+
+  /* No saving is claimed on a half-recorded cost history: arithmetic
+     against a blank flatters itself every time. */
+  t.check(!scope.buyLineFacts({ ...stock, allPriced: false }).some((x) => x.label === 'saved buying once'),
+    'a buy-in whose history is missing prices shows no saving — it cannot be worked out');
+  t.check(!scope.buyLineFacts({ ...stock, bulkCost: 300000 }).some((x) => x.label === 'saved buying once'),
+    'and neither does one where buying once costs more');
+
+  /* The argument still has words, because "7 on the shelf · 1 day to
+     deliver" says what is true and not why that means buy today. */
+  const why = scope.buyLineWhy(refill);
+  t.check(/Runs out in about 7 days/.test(why) && /covers the wait/.test(why),
+    `a refill says why now (${why})`);
+  t.check(/under a day/.test(scope.buyLineWhy({ ...refill, daysLeft: 0.4 })),
+    'a shelf with hours left says under a day, not "about 0 days"');
+  t.check(/Nothing left to sell/.test(scope.buyLineWhy({ ...refill, held: 0, daysLeft: 0 })),
+    'an empty shelf says so first');
+  t.check(/under the 12 you asked to always keep/.test(
+    scope.buyLineWhy({ ...refill, floor: 12, belowFloor: true })), 'and a floor is named');
+  t.check(/never held here/.test(scope.buyLineWhy(stock)), 'a buy-in line says what it is');
+
+  /* The same two faults in the SPOKEN text, which the assistant reads
+     out: "Roto Industry has taken about 1 days to deliver" was on the
+     owner's screen, and a shelf with half a day left was rounded down
+     and then reported as "about 0 days". */
+  const said = scope.buyLineReason(refill);
+  t.check(/about 1 day to deliver/.test(said) && !/1 days/.test(said),
+    `the spoken reason says "1 day" (${said})`);
+  t.check(/about 10 days to deliver/.test(scope.buyLineReason({ ...refill, leadDays: 10 })),
+    'and "10 days"');
+  const hours = scope.buyLineReason({ ...refill, daysLeft: 0.4 });
+  t.check(/less than a day/.test(hours) && !/about 0 days/.test(hours),
+    `a shelf with hours left is not rounded down to nothing (${hours})`);
+}
+
+/* ---------- 6b. and the screen is built like the rest of the app ----- */
+{
+  const panel = extractFunction(src, 'renderPurchasePlanPanel', 'index.html');
+
+  // The instruction first, the arithmetic under it, the argument last.
+  const iDo = panel.indexOf('class="pp-do"');
+  const iFacts = panel.indexOf('${facts(l)}');
+  const iWhy = panel.indexOf('class="pp-why buy-why"');
+  t.check(iDo > 0 && iDo < iFacts && iFacts < iWhy,
+    'the row says what to buy before it says why — it used to be the other way round, in the smallest text on the screen');
+
+  t.check(/class="sum-strip"/.test(panel) && /'the plan comes to'/.test(panel)
+    && /'left of your budget'/.test(panel),
+    'the two figures the screen turns on are in the strip every other screen uses for them');
+  t.check(!/Plan total <b>/.test(panel), 'and no longer a footnote under the list');
+
+  t.check(/class="form-panel pp-controls"/.test(src) && /<label for="buy_budget">/.test(src),
+    'the controls are a form with its fields labelled, not a filter bar');
+  t.check(/id="buy_budget"/.test(src) && /id="buy_cover"/.test(src),
+    'keeping the ids — the listeners bind to them at parse time with no null guard');
+
+  /* .buy-row and .buy-controls are still worn by Chase debts and
+     Supplier prices. This screen moved off them; it did not take them. */
+  t.check(/\.buy-row\{/.test(src) && /\.buy-controls\{/.test(src),
+    'the shared classes are left standing for the screens still using them');
+  t.check(!/class="buy-row"/.test(panel) && !/class="buy-controls"/.test(panel),
+    'while this one wears its own');
 }
 
 process.exit(t.done() ? 1 : 0);

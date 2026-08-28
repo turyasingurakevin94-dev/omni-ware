@@ -766,6 +766,61 @@
   .buy-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
   .buy-days{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--ink-soft);white-space:nowrap;}
   .buy-days.now{background:var(--ow-oxide-soft);color:var(--accent);}
+  /* ---- The plan itself ----
+     Its own classes, not the .buy-* above. Those are shared with Chase
+     debts and Supplier prices, and restyling them would redesign two
+     screens nobody asked about. Built on the same pieces the
+     Consignment pass settled on -- .sum-strip for the figures the
+     screen turns on, .form-panel for the controls -- so this reads as
+     the same app rather than a fifth idea about what a list looks like. */
+  /* Two numbers, not two paragraphs. The auto-fit grid stretched each
+     input to half the panel, which reads as a form expecting an essay. */
+  .pp-controls .form-grid{grid-template-columns:repeat(2, minmax(160px, 230px));}
+  /* Two 160px columns plus the panel's padding is wider than a phone,
+     and a grid track cannot shrink below a minimum it was given. */
+  @media (max-width:560px){.pp-controls .form-grid{grid-template-columns:1fr;}}
+  .pp-list{display:flex;flex-direction:column;gap:2px;}
+  .pp-row{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .pp-row:last-child{border-bottom:none;}
+  .pp-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .pp-name{font-size:14px;font-weight:700;color:var(--ink);min-width:0;flex:1 1 auto;}
+  /* margin-left:auto pins the money and the button to the right edge
+     however long the name is, and lets both drop to their own line
+     together on a phone rather than one at a time. */
+  .pp-cost{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .pp-act{padding:7px 14px;font-size:12.5px;flex-shrink:0;}
+  .pp-when{flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:0.3px;padding:3px 9px;
+    border-radius:999px;background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;}
+  .pp-when.now{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  .pp-when.out{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  /* The instruction. It was the smallest, faintest line in the row --
+     under forty words of prose -- and it is the only line that says
+     what to actually do. */
+  .pp-do{margin-top:7px;font-size:13px;color:var(--ink);line-height:1.5;}
+  .pp-do b{font-weight:700;}
+  .pp-facts{display:flex;flex-wrap:wrap;gap:3px 16px;margin-top:6px;}
+  .pp-fact{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .pp-fact b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:12.5px;font-weight:700;color:var(--ink);}
+  .pp-fact-good b{color:var(--good);}
+  .pp-fact-bad b{color:var(--accent);}
+  .pp-why{margin-top:6px;font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  .pp-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
+    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .pp-more{margin:8px 0 0;font-size:12px;color:var(--ink-soft);}
+  .pp-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;
+    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
+  .pp-empty b{font-size:13.5px;color:var(--ink);}
+  .pp-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
+  @media (max-width:560px){
+    /* The name takes the row and the money and button share the next,
+       rather than three things fighting over 375px. */
+    .pp-name{flex-basis:100%;order:2;}
+    .pp-cost{order:3;margin-left:0;}
+    .pp-act{order:4;margin-left:auto;}
+  }
+
   .buy-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
   .buy-note b{color:var(--ink);}
   .buy-tail h4{font-size:10.5px;margin:14px 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
@@ -9279,10 +9334,24 @@
         <p>What is worth buying, worked out from the shop's own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held — where the price on file for the whole month's quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget starts at the cash on hand; what does not fit is named rather than dropped. Nothing here is a forecast — every figure comes from an invoice or the Price Registry.</p>
       </div>
       <div class="panel">
-        <div class="buy-controls">
-          <label>Budget <input type="number" id="buy_budget" min="0" step="any"></label>
-          <label>Cover <input type="number" id="buy_cover" min="1" step="1"> days</label>
-          <span class="buy-controls-note">Cover is how many days of selling the plan should leave on the shelf.</span>
+        <!-- A form, not a filter bar. Two figures that change what the
+             whole screen recommends deserve their names above them and
+             room to be read; .buy-controls put them on one line with
+             their labels beside them, which is the shape of something
+             you skim past. The ids stay: the listeners below bind to
+             them at parse time with no null guard. -->
+        <div class="form-panel pp-controls">
+          <div class="form-panel-head">
+            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div class="form-panel-title">What the plan is working to
+              <small>Cover is how many days of selling the plan should leave on the shelf. The budget starts at the cash on hand.</small></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label for="buy_budget">Budget (UGX)</label>
+              <input type="number" id="buy_budget" min="0" step="any"></div>
+            <div class="field"><label for="buy_cover">Cover (days of selling)</label>
+              <input type="number" id="buy_cover" min="1" step="1"></div>
+          </div>
         </div>
         <div id="buy_plan"></div>
       </div>
@@ -49722,6 +49791,9 @@ function buyLineFor(r, needUnits, kind){
 function buyLineReason(l){
   const money = n=> fmtUGX(Math.round(n));
   const orders = (n)=> n + (n === 1 ? ' order' : ' orders');
+  // orders() guarded its singular from the first version and days never
+  // did, so a supplier who delivers overnight read "about 1 days".
+  const days = (n)=> n + (n === 1 ? ' day' : ' days');
   if(l.kind === 'stock'){
     const head = `Bought in for ${orders(l.orders30)} this month — ${l.units30} ${l.unit || 'pc'}`
       + (l.paid30 > 0 ? `, ${money(l.paid30)} paid` : '') + '. Never held here.';
@@ -49742,14 +49814,84 @@ function buyLineReason(l){
     ? `about ${rate >= 10 ? Math.round(rate) : Math.round(rate*10)/10} a day`
     : `${l.units30} in 30 days`;
   const earned = l.profit30 > 0 ? `, earning ${money(l.profit30)}` : '';
+  /* "about 0 days" was the app rounding a shelf with half a day left
+     down to nothing and then saying it in words. Under a day is under a
+     day, and it is the most urgent thing this screen can report. */
+  const dl = Math.max(0, Math.floor(l.daysLeft));
   const shelf = l.held <= 0 ? 'The shelf is empty now.'
-    : `${Math.round(l.held)} left — about ${Math.max(0, Math.floor(l.daysLeft))} days.`;
+    : `${Math.round(l.held)} left — ${dl < 1 ? 'less than a day' : `about ${days(dl)}`}.`;
   const floor = l.belowFloor ? ` That is under the ${l.floor} you asked to always keep.` : '';
   /* The wait, when the shop's own deliveries say what it is. A cover of
      14 days from a supplier who takes 9 is 5 days of shelf, and the line
      is bought big enough to say so. */
-  const wait = l.leadDays ? ` ${l.supplier} has taken about ${l.leadDays} days to deliver, so this covers the wait as well as the ${l.coverDays} days.` : '';
+  const wait = l.leadDays ? ` ${l.supplier} has taken about ${days(l.leadDays)} to deliver, so this covers the wait as well as the ${days(l.coverDays)}.` : '';
   return `Sold ${pace} off the shelf across ${orders(l.orders30)}${earned}. ${shelf}${floor}${wait}`;
+}
+
+/* The same argument, to be SCANNED rather than read.
+
+   buyLineReason is spoken text -- the assistant carries it, and it
+   reads well out loud. On screen it was forty words of prose carrying
+   six figures, and figures inside sentences cannot be compared down a
+   list: the shop could not see which of thirteen lines earned most
+   without reading all thirteen.
+
+   So the numbers come out and stand in a row. The words stay, shorter,
+   because the argument is still the thing the owner asked for when the
+   first version printed arithmetic and no reasoning at all.
+
+   A fact the app does not have is ABSENT, never a zero: nothing earned
+   and nothing recorded as earned are different, and a zero in a row of
+   figures reads as the first. */
+function buyLineFacts(l){
+  const money = n=> fmtUGX(Math.round(n));
+  const out = [];
+  if(l.kind === 'stock'){
+    if(l.orders30 > 0) out.push({ v: l.orders30, label: l.orders30 === 1 ? 'buy-in this month' : 'buy-ins this month' });
+    if(l.units30 > 0) out.push({ v: `${l.units30}${l.unit ? ' ' + l.unit : ''}`, label: 'bought in' });
+    if(l.paid30 > 0) out.push({ v: money(l.paid30), label: 'paid across them' });
+    // Only where every one of those buy-ins carried a price. Arithmetic
+    // against a blank flatters itself every time.
+    const saved = (l.allPriced && l.paid30 > 0 && l.bulkCost != null)
+      ? Math.round(l.paid30 - l.bulkCost) : 0;
+    if(saved > 0) out.push({ v: money(saved), label: 'saved buying once', cls: 'good' });
+    return out;
+  }
+  /* A pace is rounded to a tenth, not a whole -- 2.5 a day reported as
+     "about 3" is a fifth more than the shelf actually sells. */
+  const rate = l.units30 / 30;
+  out.push(rate >= 1
+    ? { v: rate >= 10 ? Math.round(rate) : Math.round(rate*10)/10, label: 'sold a day' }
+    : { v: l.units30, label: 'sold in 30 days' });
+  if(l.profit30 > 0) out.push({ v: money(l.profit30), label: 'earned' });
+  out.push({ v: Math.round(l.held), label: 'on the shelf', cls: l.belowFloor ? 'bad' : (l.held <= 0 ? 'bad' : '') });
+  if(l.leadDays) out.push({ v: `${l.leadDays} ${l.leadDays === 1 ? 'day' : 'days'}`, label: 'to deliver' });
+  return out;
+}
+
+/* The argument in one line, with the figures taken out of it.
+
+   The facts above say WHAT is true of this item. They do not say why
+   that means buy it today, and that is the whole question the screen
+   answers -- so the sentence stays, carrying only the reasoning. It is
+   short because the numbers have left it. */
+function buyLineWhy(l){
+  const days = (n)=> `${n} ${n === 1 ? 'day' : 'days'}`;
+  if(l.kind === 'stock'){
+    const head = 'Bought in order after order and never held here.';
+    if(!l.allPriced || !(l.paid30 > 0) || l.bulkCost == null)
+      return head + ' Some of those buys carry no price, so the saving cannot be worked out.';
+    return Math.round(l.paid30 - l.bulkCost) > 0
+      ? head + ' Buying the month in one go costs less than those trips did — the cash sits in stock instead.'
+      : head + ' One buy costs about the same, so the gain is the trips saved and being able to serve from stock.';
+  }
+  const floor = l.belowFloor ? ` That is under the ${l.floor} you asked to always keep.` : '';
+  if(l.held <= 0) return `Nothing left to sell.${floor} This puts ${days(l.coverDays)} of selling back on the shelf${l.leadDays ? ', and covers their wait' : ''}.`;
+  const left = Math.max(0, Math.floor(l.daysLeft));
+  return `Runs out in ${left < 1 ? 'under a day' : 'about ' + days(left)}.${floor} `
+    + (l.leadDays
+      ? `They take about ${days(l.leadDays)} to deliver, so this covers the wait as well as ${days(l.coverDays)} of selling.`
+      : `This buys ${days(l.coverDays)} of selling.`);
 }
 
 /* The plan itself. Deterministic and explainable:
@@ -49853,41 +49995,80 @@ function renderPurchasePlanPanel(){
   if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget || '';
   if(coverEl && document.activeElement !== coverEl) coverEl.value = plan.coverDays;
   const f = n=> fmtUGX(Math.round(n));
+  const days = n=> `${n} ${n === 1 ? 'day' : 'days'}`;
   /* Two kinds, said plainly. A shelf line that has run out is urgent
      and looks it; a repeat buy-in was never held, so calling it "OUT"
      would be the crying wolf that made the first version unreadable. */
   const chip = (l)=> l.kind === 'stock'
-    ? '<span class="buy-days">BUY-IN</span>'
-    : `<span class="buy-days${l.daysLeft < 2 ? ' now' : ''}">${l.daysLeft <= 0 ? 'OUT' : Math.floor(l.daysLeft) + 'd left'}</span>`;
-  /* Every row carries its own argument in a sentence, then the
-     arithmetic under it -- supplier, pack, unit cost -- so any line can
-     be checked against Invoices and the Price Registry before a
-     shilling moves. */
+    ? '<span class="pp-when">Buy-in</span>'
+    : `<span class="pp-when${l.daysLeft <= 0 ? ' out' : (l.daysLeft < 2 ? ' now' : '')}">${
+        l.daysLeft <= 0 ? 'Out now' : (l.daysLeft < 1 ? 'Today' : Math.floor(l.daysLeft) + 'd left')}</span>`;
+  /* WHAT TO DO, THEN WHY.
+
+     The row used to lead with forty words of prose and end with the one
+     line that says what to actually buy, in the smallest, faintest text
+     on the screen. So the order is inverted and the numbers come out of
+     the sentences: the action reads first, the figures stand in a row
+     where they can be compared down the list, and the argument -- which
+     is the thing this screen was asked for -- keeps its own line,
+     shorter now that it is not also carrying the arithmetic. */
+  const facts = (l)=> {
+    const fs = buyLineFacts(l);
+    if(!fs.length) return '';
+    return `<div class="pp-facts">${fs.map(x=>
+      `<span class="pp-fact${x.cls ? ' pp-fact-' + x.cls : ''}"><b>${esc(String(x.v))}</b> ${esc(x.label)}</span>`).join('')}</div>`;
+  };
+  const packNote = (l)=> l.packQty > 1
+    ? ` (${Math.round(l.buyQty/l.packQty)} ${esc(l.packUnit || 'pack')})` : '';
   const row = (l, list, i)=> `
-    <div class="buy-row">${chip(l)}
-      <div class="buy-main"><b>${esc(l.name)}</b>
-        <em class="buy-why">${esc(l.reason || '')}</em>
-        <em>buy <b>${l.buyQty}</b> ${esc(l.unit || 'pc')}${l.packQty > 1 ? ` = ${Math.round(l.buyQty/l.packQty)} ${esc(l.packUnit || 'pack')}` : ''} · ${esc(l.supplier)} @ ${f(l.unitCost)} each</em></div>
-      <span class="buy-cost">${f(l.cost)}</span>
-      <button type="button" class="btn btn-ghost buy-act" data-list="${list}" data-i="${i}">Buy it</button>
+    <div class="pp-row">
+      <div class="pp-top">
+        ${chip(l)}
+        <span class="pp-name">${esc(l.name)}</span>
+        <span class="pp-cost">${f(l.cost)}</span>
+        <button type="button" class="btn btn-ghost pp-act buy-act" data-list="${list}" data-i="${i}">Buy it</button>
+      </div>
+      <div class="pp-do">Buy <b>${l.buyQty} ${esc(l.unit || 'pc')}</b>${packNote(l)} from <b>${esc(l.supplier)}</b> at ${f(l.unitCost)} each</div>
+      ${facts(l)}
+      <div class="pp-why buy-why">${esc(buyLineWhy(l))}</div>
     </div>`;
   let html = '';
   if(!plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length){
-    html = `<p class="dash-panel-note" style="margin:6px 0 0;">Nothing to buy: nothing on the shelf runs out within ${plan.coverDays} days, and nothing is being bought in order after order.</p>`;
+    html = `<div class="pp-empty"><b>Nothing to buy.</b>
+      <span>Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.</span></div>`;
   } else {
+    /* The two figures the whole screen turns on, at the top, in the
+       strip every other screen uses for exactly this. They were a
+       footnote under the list. */
+    const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
+    const out = plan.lines.filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
+    const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+      <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
+    html = `<div class="sum-strip">
+      ${cell(f(plan.spend), 'the plan comes to')}
+      ${left == null ? '' : cell(f(left), 'left of your budget', left > 0 ? 'good' : '')}
+      ${cell(plan.lines.length, plan.lines.length === 1 ? 'line' : 'lines')}
+      ${out ? cell(out, out === 1 ? 'has run out' : 'have run out', 'warn') : ''}
+    </div>`;
     /* The best few, by what they earn. The rest are one tap away --
        the owner asked for a recommendation, not a catalogue. */
-    html = listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('');
-    if(plan.lines.length){
-      html += `<p class="buy-note">Plan total <b>${f(plan.spend)}</b> of ${f(plan.budget)} budget.</p>`;
-      html += listMoreButtonHTML('buyPlan', plan.lines.length, 'lines');
-    }
-    if(plan.didNotFit.length) html += `<div class="buy-tail"><h4>Over this budget</h4>${
-      plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join('')}${
-      plan.didNotFit.length > 3 ? `<p class="buy-note">and ${plan.didNotFit.length - 3} more.</p>` : ''}</div>`;
-    if(plan.sourceFirst.length) html += `<div class="buy-tail"><h4>Selling with no supplier price on file</h4>${
-      plan.sourceFirst.slice(0, 3).map((sf,i)=> `<div class="buy-row"><span class="buy-days">NO PRICE</span><div class="buy-main"><b>${esc(sf.name)}</b><em class="buy-why">Sold ${sf.units30} in 30 days, and no supplier price is on file anywhere — nothing can be costed until one is.</em></div><button type="button" class="btn btn-ghost buy-price" data-i="${i}">Add a price</button></div>`).join('')}${
-      plan.sourceFirst.length > 3 ? `<p class="buy-note">and ${plan.sourceFirst.length - 3} more.</p>` : ''}</div>`;
+    html += `<div class="pp-list">${listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')}</div>`;
+    if(plan.lines.length) html += listMoreButtonHTML('buyPlan', plan.lines.length, 'lines');
+    if(plan.didNotFit.length) html += `<div class="pp-tail"><h4>Over this budget</h4>
+      <div class="pp-list">${plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join('')}</div>${
+      plan.didNotFit.length > 3 ? `<p class="pp-more">and ${plan.didNotFit.length - 3} more.</p>` : ''}</div>`;
+    if(plan.sourceFirst.length) html += `<div class="pp-tail"><h4>Selling with no supplier price on file</h4>
+      <div class="pp-list">${plan.sourceFirst.slice(0, 3).map((sf,i)=> `
+        <div class="pp-row">
+          <div class="pp-top">
+            <span class="pp-when">No price</span>
+            <span class="pp-name">${esc(sf.name)}</span>
+            <button type="button" class="btn btn-ghost pp-act buy-price" data-i="${i}">Add a price</button>
+          </div>
+          <div class="pp-facts"><span class="pp-fact"><b>${sf.units30}</b> sold in 30 days</span><span class="pp-fact"><b>${Math.ceil(sf.qty)}</b> needed</span></div>
+          <div class="pp-why buy-why">No supplier price is on file anywhere, so nothing here can be costed until one is.</div>
+        </div>`).join('')}</div>${
+      plan.sourceFirst.length > 3 ? `<p class="pp-more">and ${plan.sourceFirst.length - 3} more.</p>` : ''}</div>`;
   }
   el.innerHTML = html;
   /* Both buttons open a door that already exists, with the line's own
@@ -49924,7 +50105,8 @@ document.getElementById('buy_cover').addEventListener('change', e=>{
   e.target.value = data.presetRestockCoverDays;
   saveData();
   renderPurchasePlanPanel();
-  toast('Cover target updated — the plan refills to ' + data.presetRestockCoverDays + ' days of stock');
+  toast('Cover target updated — the plan refills to ' + data.presetRestockCoverDays
+    + (data.presetRestockCoverDays === 1 ? ' day' : ' days') + ' of stock');
 });
 function dashWeeklyBuckets(numWeeks){
   // Returns numWeeks buckets, oldest first, each {from,to,label}
