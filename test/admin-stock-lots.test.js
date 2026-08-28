@@ -139,8 +139,11 @@ if (fns) {
      purchase behaves exactly as it always did. */
   t.check(/applyStockDelta\(invProductId, invVariantIdx, q, 'restock', note, price, invPurchaseSupplierId,\s*\n\s*onConsignment \? \{ consign: invPurchaseSupplierId \} : null\);/.test(code),
     'a restock still passes its purchase price, and nothing extra unless the goods are consigned');
-  t.check(/applyStockDelta\(invProductId, invVariantIdx, d, 'correction', note\);/.test(code),
-    'and a stock-count correction still passes neither');
+  /* A stock count now CAN carry a cost -- counting goods in without one
+     is what made units the balance sheet values at nothing -- but it
+     still names no supplier, because nobody was billed for a count. */
+  t.check(/applyStockDelta\(invProductId, invVariantIdx, d, 'correction', fullNote, costPerUnit\);/.test(code),
+    'a stock-count correction passes what the goods cost, and no supplier, because a count bills nobody');
 }
 
 process.exit(t.done() ? 1 : 0);

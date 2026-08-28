@@ -49,19 +49,20 @@ const stripComments = (s) => s
   .replace(/(?<![\w"'])\/\*[\s\S]*?\*\//g, ' ')
   .split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
+/* The note takes its unit mode as an ARGUMENT rather than reading module
+   state, because the stock-count screen now asks the same question about
+   the same product and keeps its own selector. That makes it a pure
+   function of what it is handed -- so these checks pass the mode
+   directly, and there is no module variable left for them to set. */
 const scope = compileScope([
-  extractDeclaration(src, 'invPurchasePriceUnitMode', 'index.html'),
   extractFunction(src, 'invPurchaseQtyValue', 'index.html'),
   extractFunction(src, 'invPurchasePriceValue', 'index.html'),
   extractFunction(src, 'invPurchasePriceNote', 'index.html'),
-  // Test plumbing, not app logic: the mode is module state with no setter
-  // of its own, and these checks need to put it in both positions.
-  'function __setMode(v){ invPurchasePriceUnitMode = v; }',
 ], {
   esc: (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
-}, ['invPurchaseQtyValue', 'invPurchasePriceValue', 'invPurchasePriceNote', '__setMode']);
+}, ['invPurchaseQtyValue', 'invPurchasePriceValue', 'invPurchasePriceNote']);
 
-const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote, __setMode } = scope;
+const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote } = scope;
 
 /* ---------- 1. the conversion, both ways ------------------------------ */
 {
@@ -144,29 +145,31 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote, __setM
 
 /* ---------- 5. the conversion is shown, not just performed ------------ */
 {
-  __setMode('pack');
-  const note = invPurchasePriceNote('220000', 'Box', 5);
+  const note = invPurchasePriceNote('220000', 'Box', 5, 'pack');
   t.check(/44,000/.test(note), `the per-unit figure is on screen (${JSON.stringify(note)})`);
   t.check(/per Box/.test(note), 'named with the unit it is per');
   t.check(!/220,000/.test(note),
     'and it reports the converted figure rather than echoing what was typed');
 
-  t.check(invPurchasePriceNote('', 'Box', 5) === '',
+  t.check(invPurchasePriceNote('', 'Box', 5, 'pack') === '',
     'nothing is claimed about a blank price');
-  t.check(invPurchasePriceNote('220000', 'Box', 0) === '',
+  t.check(invPurchasePriceNote('220000', 'Box', 0, 'pack') === '',
     'nor about a row with no pack to convert from');
 
-  __setMode('unit');
-  t.check(invPurchasePriceNote('44000', 'Box', 5) === '',
+  t.check(invPurchasePriceNote('44000', 'Box', 5, 'unit') === '',
     'and a per-unit price needs no conversion line, so none appears');
 
   // A price that does not divide evenly must not be rounded into a
   // different price -- 100,000 over 3 is 33,333.33, and reporting 33,333
   // understates a carton by a shilling.
-  __setMode('pack');
-  t.check(/33,333\.33/.test(invPurchasePriceNote('100000', 'Box', 3)),
-    `an uneven division keeps its fraction (${invPurchasePriceNote('100000', 'Box', 3)})`);
-  __setMode('unit');
+  t.check(/33,333\.33/.test(invPurchasePriceNote('100000', 'Box', 3, 'pack')),
+    `an uneven division keeps its fraction (${invPurchasePriceNote('100000', 'Box', 3, 'pack')})`);
+
+  /* The two screens can be open at different settings, so the mode has
+     to travel with the call. Reading it off module state again is how
+     the stock count would start reporting the purchase screen's unit. */
+  t.check(!/invPurchasePriceUnitMode/.test(extractFunction(src, 'invPurchasePriceNote', 'index.html')),
+    'and the note reads no module state, so two screens cannot share one selector by accident');
 }
 
 /* ---------- 6. the form is wired to the converter ---------------------- */
@@ -202,8 +205,8 @@ const { invPurchaseQtyValue, invPurchasePriceValue, invPurchasePriceNote, __setM
   // input handler writes to. A style with nothing to style styles nothing.
   t.check(/id="inv_purchase_price_note"/.test(stage) && /class="q-price-per-unit"/.test(stage),
     'the conversion line is rendered, in the element its handler updates');
-  t.check(/getElementById\('inv_purchase_price_note'\)\.innerHTML =\s*invPurchasePriceNote\(priceInput\.value, unit, packQty\)/.test(stage),
-    'and it recomputes from what is in the field');
+  t.check(/getElementById\('inv_purchase_price_note'\)\.innerHTML =\s*invPurchasePriceNote\(priceInput\.value, unit, packQty, invPurchasePriceUnitMode\)/.test(stage),
+    'and it recomputes from what is in the field, in the unit the price selector is on');
   // The line above only proves the updater EXISTS. Nothing was listening
   // to the price input and every check still passed, because the body of
   // refreshPriceNote matched whether or not anything ever called it -- so

@@ -8677,6 +8677,7 @@
           <label class="p-toolbar-checkbox"><input type="checkbox" id="inv_hide_zero" checked>Hide no stock</label>
         </div>
         <div id="invLotDrift"></div>
+        <div id="invUncosted"></div>
         <div id="invSummary"></div>
         <div id="invTableWrap"></div>
       </div>
@@ -37948,7 +37949,13 @@ function applyStockDelta(productId, variantIdx, delta, type, note, cost, supplie
   data.stockLog.push({
     id: allocRowId('stockLog'), key, productId, variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
     label, type, delta: after-before, qtyAfter: after, note: note||'', date: todayISO(), at: new Date().toISOString(),
-    cost: (type==='restock' && cost!=null && cost!=='') ? Number(cost) : null,
+    /* A COUNT CAN CARRY A COST TOO. This read `type==='restock'` alone,
+       so a stock count entered with what the goods cost put the figure
+       on the lot and then dropped it from the only history that could
+       explain the lot -- and the row that raised the shelf's value was
+       the one row unable to say why. Types that consume rather than add
+       are still excluded: a cost argument means nothing to them. */
+    cost: (cost!=null && cost!=='' && (type==='restock' || type==='correction')) ? Number(cost) : null,
     supplierId: (type==='restock' && supplierId) ? supplierId : null
   });
   return after;
@@ -43853,6 +43860,72 @@ function renderStockLotDrift(){
   const all = wrap.querySelector('#inv_lotfix_all');
   if(all) all.addEventListener('click', ()=> fixStockLotDrift(null));
 }
+
+/* The other half of the same conversation, and deliberately a SEPARATE
+   banner: a shelf that disagrees with its cost records and a shelf whose
+   cost records are blank are different problems with different answers,
+   and one banner saying both would leave the shop unsure which button
+   did which. Drift is fixed first -- its shortfall branch creates
+   uncosted lots, so pricing before fixing would leave new blanks behind. */
+function renderUncostedStock(){
+  const wrap = document.getElementById('invUncosted');
+  if(!wrap) return;
+  const rows = uncostedStockRows().filter(r=> r.qty > 0);
+  if(!rows.length){ wrap.innerHTML = ''; return; }
+  const units = Math.round(rows.reduce((n,r)=> n + r.qty, 0));
+  /* One unit on one shelf is a real case and the commonest way a shop
+     first meets this screen. Written with a plural verb it read "1 unit
+     across 1 product have no cost on file", which is the kind of sentence
+     that makes somebody trust the rest of the paragraph less. */
+  const one = units === 1;
+  wrap.innerHTML = `<div class="cb-chain-break">
+    <div><b>${units} unit${one?'':'s'} ${one?'has':'have'} no cost on file${rows.length > 1 ? `, across ${rows.length} products` : ''}.</b></div>
+    <div><b>What did ${one?'it cost you':'they cost you, each'}?</b> Press the button beside ${rows.length===1?'it':'a product'} and say.
+      If you genuinely do not know, leave it — this is a real state, not a mistake, and it is better said than guessed.</div>
+    <div class="deb-drift-why">Until then ${one?'it is':'they are'} valued at nothing, so your stock is understated by
+      whatever ${one?'it':'they'} really cost, and ${one?'its':'their'} whole sale value shows as profit when
+      ${one?'it sells':'they sell'}. This moves no stock and no money — it only records what goods already on your
+      shelf cost.</div>
+    ${rows.map(r=> `<div class="inv-lot-row">
+      <span class="inv-lot-name">${esc(r.label)}</span>
+      <span class="inv-lot-figs"><b>${Math.round(r.qty)}</b> with no cost${r.consignQty ? ` · ${Math.round(r.consignQty)} held on consignment` : ''}</span>
+      <button type="button" class="btn btn-ghost" data-costfix="${esc(r.key)}">Put a cost on ${r.qty===1?'it':'these'}</button>
+    </div>`).join('')}
+  </div>`;
+  wrap.querySelectorAll('[data-costfix]').forEach(btn=>
+    btn.addEventListener('click', ()=> askUncostedStockPrice(btn.dataset.costfix)));
+}
+
+/* Asks for the figure, names exactly what it will and will not do, then
+   writes it. Prefilled with what one would cost to replace today, which
+   is the number the shop would otherwise go and look up -- and which is
+   still only a suggestion until somebody reads it and presses OK. */
+function askUncostedStockPrice(key){
+  const row = uncostedStockRows().find(r=> r.key === key);
+  if(!row || row.qty <= 0){ toast('Those units already have a cost on file'); return; }
+  const one = Math.round(row.qty) === 1;
+  const typed = prompt(`What did ${one?'it cost':'these cost, each'}?\n\n`
+    + `${row.label} — ${Math.round(row.qty)} unit${one?'':'s'} on the shelf with no cost on file.\n\n`
+    + `This changes no stock count and moves no money. It records what ${one?'that unit cost, so it stops':'those goods cost, so they stop'} `
+    + `being valued at nothing.`
+    + (row.consignQty ? `\n\n${Math.round(row.consignQty)} more are held on consignment and are left alone — `
+      + `what those cost is what you owe their supplier, and that is settled on the Consignment screen.` : ''),
+    row.suggest != null ? String(row.suggest) : '');
+  if(typed == null || String(typed).trim() === '') return;
+  const cost = Number(String(typed).replace(/[^0-9.\-]/g, ''));
+  if(!isFinite(cost) || cost < 0){ toast('That is not a cost — nothing was changed'); return; }
+  const done = priceUncostedStock(key, cost);
+  if(!done){ toast('Nothing was changed — those units already have a cost on file'); return; }
+  saveData();
+  renderInventory();
+  toast(`${done.label} — ${Math.round(done.priced)} unit${done.priced===1?'':'s'} now costed at ${fmtUGX(Math.round(cost))} each`, 5000);
+  /* Said separately, because a consignor's units are still uncosted
+     afterwards and a banner that shrinks by less than expected is how
+     somebody decides the button did not work. */
+  if(done.blockedByConsign > 0) toast(
+    `${Math.round(done.blockedByConsign)} of them are held on consignment and were not touched — `
+    + `pricing those would change what you owe their supplier. Settle them on the Consignment screen.`, 9000);
+}
 /* Applies the repair, to one product or to all of them. Asks first, and
    names what changes -- and what does not, because "correcting stock" is
    exactly what this is NOT doing and the shop has to be sure of that
@@ -43889,6 +43962,7 @@ function fixStockLotDrift(key){
 }
 function renderInventory(){
   renderStockLotDrift();
+  renderUncostedStock();
   const wrap = document.getElementById('invTableWrap');
   const strip = document.getElementById('invSummary');
   const searchEl = document.getElementById('inv_table_search');
@@ -44593,6 +44667,26 @@ function renderInvStage(){
     </div>
     ${packCtx.hasPack ? '<div class="inv-eq-say" id="inv_eq_say"></div>' : ''}
 
+    <!-- Only when the count goes UP, because only then are units being
+         added that could carry a cost. Counting down consumes lots that
+         already have one, and asking there would be a question with no
+         meaning behind it. -->
+    <div class="field" id="inv_cost_wrap" style="margin-top:10px;display:none;">
+      <label for="inv_cost">What did the extra ones cost, each?</label>
+      <div class="inv-eq-entry">
+        <input type="number" id="inv_cost" class="inv-eq-input" step="any" min="0" placeholder="Leave blank if you do not know">
+        ${packCtx.hasPack ? `<select id="inv_cost_unit" class="inv-eq-unit">
+          <option value="unit">per ${esc(packCtx.unit || 'unit')}</option>
+          <option value="pack">per ${esc(packCtx.packUnit)}</option>
+        </select>` : (packCtx.unit ? `<span class="inv-eq-unit-flat">per ${esc(packCtx.unit)}</span>` : '')}
+      </div>
+      <div class="q-price-per-unit" id="inv_cost_note"></div>
+      <div class="hint">Blank is a real answer — it means nobody knows. Goods with no cost on file are
+        valued at nothing on your balance sheet and named there until you say what they cost.
+        <b>If you know what these cost and who they came from, use Purchase instead</b> — that raises the
+        supplier's bill as well.</div>
+    </div>
+
     <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="inv_note" rows="3" placeholder="e.g. Delivery from Kirinya Steel, damaged during transport, reason for correction..."></textarea></div>
     <div class="btn-row">
       <button class="btn btn-accent" id="inv_save_btn">Save</button>
@@ -44627,7 +44721,23 @@ function renderInvStage(){
     else if(adjusted<0){ card.classList.add('down'); icon.innerHTML = ICON_DOWN; }
     else { icon.innerHTML = ICON_FLAT; }
     document.getElementById('inv_eq_result_value').textContent = `${sign}${adjusted}`;
+    const costWrap = document.getElementById('inv_cost_wrap');
+    if(costWrap) costWrap.style.display = adjusted > 0 ? '' : 'none';
+    updateCostNote();
   };
+  const costInput = document.getElementById('inv_cost');
+  const costUnitSel = document.getElementById('inv_cost_unit');
+  const costUnitMode = ()=> costUnitSel ? costUnitSel.value : 'unit';
+  // Same live conversion the purchase screen shows, for the same reason:
+  // a carton price typed while the selector says per piece is caught by
+  // a line reading a fraction of what anyone expects, before Save.
+  const updateCostNote = ()=>{
+    const el = document.getElementById('inv_cost_note');
+    if(el) el.innerHTML = costInput
+      ? invPurchasePriceNote(costInput.value, packCtx.unit, packCtx.packQty, costUnitMode()) : '';
+  };
+  if(costInput) costInput.addEventListener('input', updateCostNote);
+  if(costUnitSel) costUnitSel.addEventListener('change', updateCostNote);
   actualInput.addEventListener('input', updatePreview);
   if(unitSel) unitSel.addEventListener('change', updatePreview);
   updatePreview();
@@ -44637,15 +44747,36 @@ function renderInvStage(){
     const d = actual - current;
     if(d===0){ toast('Actual stock matches current stock — nothing to adjust'); return; }
     const note = document.getElementById('inv_note').value.trim();
+    /* Only read when the count went up, so a cost left in the box from a
+       figure typed and then reversed cannot ride along on a count DOWN,
+       where applyStockDelta would carry it into a log row describing
+       goods leaving the shelf. Blank stays null, never 0: "nobody knows
+       what these cost" and "these cost nothing" are different claims and
+       only one of them belongs in a lot. */
+    const costPerUnit = d > 0 && costInput
+      ? invPurchasePriceValue(costInput.value, costUnitMode(), packCtx.packQty) : null;
+    if(costPerUnit != null && !(costPerUnit >= 0)){
+      toast('That cost is not a number — leave it blank if you do not know'); return;
+    }
     // Says what this will and will not touch, when it looks like it might
     // be undoing a purchase rather than counting a shelf.
     const billWarning = stockCountBillWarning(invProductId, invVariantIdx, d);
     if(billWarning && !confirm(billWarning)) return;
-    applyStockDelta(invProductId, invVariantIdx, d, 'correction', note);
+    /* Named in the note as well as stored, because the log is the only
+       place a shop can later ask why a shelf's value moved -- and "the
+       count was corrected" alone does not answer it. */
+    const fullNote = costPerUnit != null
+      ? (note ? `${note} — ` : '') + `counted in at ${fmtUGX(Math.round(costPerUnit))} per ${packCtx.unit||'unit'}`
+      : note;
+    applyStockDelta(invProductId, invVariantIdx, d, 'correction', fullNote, costPerUnit);
     saveData();
     closeModal('invModal');
     renderInventory();
-    toast('Stock updated');
+    toast(costPerUnit != null
+      ? `Stock updated — ${d} counted in at ${fmtUGX(Math.round(costPerUnit))} each`
+      : (d > 0
+        ? `Stock updated — the ${d} added have no cost on file and are valued at nothing until you give them one`
+        : 'Stock updated'), costPerUnit != null ? 4000 : 6000);
   });
 }
 
@@ -44715,8 +44846,12 @@ function invPurchasePriceValue(rawPrice, unitMode, packQty){
    price typed while the selector says "per Box" is contradicted by a line
    reading five times what anyone expects, before Save is pressed rather
    than a month later on a stock report. */
-function invPurchasePriceNote(rawPrice, unit, packQty){
-  if(invPurchasePriceUnitMode!=='pack' || !(packQty>0)) return '';
+/* unitMode is passed rather than read off invPurchasePriceUnitMode,
+   because the stock-count screen asks the same question about the same
+   product and needs the same answer -- and it keeps its own selector,
+   since the two screens can be open at different settings. */
+function invPurchasePriceNote(rawPrice, unit, packQty, unitMode){
+  if(unitMode!=='pack' || !(packQty>0)) return '';
   const per = invPurchasePriceValue(rawPrice, 'pack', packQty);
   if(per==null) return '';
   const shown = Math.round(per*100)/100;
@@ -44820,7 +44955,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
           <input type="number" id="inv_purchase_price" min="0" step="any" value="${startPrice}">
           <select id="inv_purchase_price_unit">${priceUnitOptionsHTML}</select>
         </div>
-        <div class="q-price-per-unit" id="inv_purchase_price_note">${invPurchasePriceNote(startPrice, unit, packQty)}</div>
+        <div class="q-price-per-unit" id="inv_purchase_price_note">${invPurchasePriceNote(startPrice, unit, packQty, invPurchasePriceUnitMode)}</div>
       </div>
     </div>
     <div class="q-chosen-line" id="inv_purchase_preview">New stock will be: <strong>${Math.max(0, current + qty)}</strong></div>
@@ -44881,7 +45016,7 @@ function renderInvPurchaseStage(wrap, product, variantIdx, displayName, current,
   const priceUnitSel = document.getElementById('inv_purchase_price_unit');
   const refreshPriceNote = ()=>{
     document.getElementById('inv_purchase_price_note').innerHTML =
-      invPurchasePriceNote(priceInput.value, unit, packQty);
+      invPurchasePriceNote(priceInput.value, unit, packQty, invPurchasePriceUnitMode);
   };
   priceInput.addEventListener('input', refreshPriceNote);
   priceUnitSel.addEventListener('change', ()=>{
@@ -45707,6 +45842,90 @@ function repairStockLotDrift(key){
     date: todayISO(), at: new Date().toISOString(), cost: null, supplierId: null,
   });
   return row;
+}
+
+/* ================= STOCK ON THE SHELF WITH NO COST ON FILE ===========
+
+   A lot can exist and carry no cost. A stock count entered without one
+   makes one; so does the drift repair's shortfall branch, which books
+   the surplus as an uncosted lot rather than guessing a price for goods
+   nobody priced. Every valuation then reads those units as worth
+   nothing -- correctly, and the balance sheet says so in three places
+   and fails a check over it.
+
+   What was missing was the way back. The app made it easy to create the
+   state, told the shop about it on every statement, and offered nothing
+   to do about it: the only route was to count the units back down and
+   re-enter them as a purchase, which nobody would work out and whose
+   first step throws a bill warning. Naming a problem without a door out
+   of it is only half the job.
+
+   THE UNITS ARE NOT MOVED. This puts a cost on lots that already exist
+   and have none; the shelf count is untouched, and so is any lot that
+   already carries a cost -- a figure somebody recorded is evidence, and
+   this is not the screen to overwrite it from. */
+function uncostedStockRows(){
+  const lots = data.stockLots || {};
+  const out = [];
+  Object.keys(lots).forEach(k=>{
+    const rows = lots[k] || [];
+    let qty = 0, consignQty = 0;
+    rows.forEach(l=>{
+      const q = Number(l.qty)||0;
+      if(q <= 0 || l.cost != null) return;
+      if(l.consign) consignQty += q; else qty += q;
+    });
+    if(qty <= 0 && consignQty <= 0) return;
+    const [pid, vRaw] = String(k).split('::');
+    const product = (data.products||[]).find(x=> x.id === pid);
+    const variantIdx = (vRaw == null || vRaw === '') ? null : (isNaN(Number(vRaw)) ? vRaw : Number(vRaw));
+    /* What it WOULD cost to put one back on the shelf, offered as the
+       starting figure and never written on its own. The shop is being
+       asked what these cost; the cheapest supplier's price at one unit
+       is the most useful thing to have already typed in the box, and
+       still has to be read and accepted before anything is stored. */
+    const ref = rankedPriceRows(pid, variantIdx)[0] || null;
+    out.push({
+      key: k, productId: pid, variantIdx,
+      label: product ? productVariantLabel(product, variantIdx) : pid,
+      qty, consignQty,
+      suggest: ref ? Math.round(purchasePriceAtQty(ref, Math.max(1, qty))) : null,
+    });
+  });
+  return out.sort((a,b)=> (b.qty + b.consignQty) - (a.qty + a.consignQty));
+}
+
+/* Puts one figure on every one of a product's own uncosted lots.
+
+   A CONSIGNOR'S LOTS ARE NEVER TOUCHED. Their cost is what the shop
+   owes per unit as those goods sell, so writing one here would invent a
+   debt to somebody who never agreed it -- the same rule, for the same
+   reason, that stops the drift repair trimming their holdings. They are
+   counted and named instead, and settled on the Consignment screen. */
+function priceUncostedStock(key, unitCost){
+  const cost = Number(unitCost);
+  if(!isFinite(cost) || cost < 0) return null;
+  const rows = uncostedStockRows();
+  const row = rows.find(r=> r.key === key);
+  if(!row || row.qty <= 0) return null;
+  let priced = 0;
+  (data.stockLots[key] || []).forEach(l=>{
+    const q = Number(l.qty)||0;
+    if(q <= 0 || l.cost != null || l.consign) return;
+    l.cost = cost;
+    priced += q;
+  });
+  const product = (data.products||[]).find(x=> x.id === row.productId);
+  data.stockLog.push({
+    id: allocRowId('stockLog'), key, productId: row.productId,
+    variantIdx: (row.variantIdx==null||row.variantIdx==='') ? null : row.variantIdx,
+    label: product ? productVariantLabel(product, row.variantIdx) : row.productId,
+    type: 'correction', delta: 0, qtyAfter: Number((data.stock||{})[key]) || 0,
+    note: `Cost put on ${Math.round(priced)} unit${priced===1?'':'s'} that had none — ${fmtUGX(Math.round(cost))} each`
+      + (row.consignQty ? `. ${Math.round(row.consignQty)} held on consignment left alone` : ''),
+    date: todayISO(), at: new Date().toISOString(), cost, supplierId: null,
+  });
+  return { ...row, priced, blockedByConsign: row.consignQty };
 }
 
 /* ================= GOODS HELD, AND CASH THAT IS NOT OURS =============

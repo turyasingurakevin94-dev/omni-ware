@@ -153,7 +153,12 @@ if (fns) {
     'the count screen asks the question');
   t.check(/if\(billWarning && !confirm\(billWarning\)\) return;/.test(body),
     'and stops there if the answer is no');
-  t.check(body.indexOf('stockCountBillWarning') < body.indexOf('applyStockDelta'),
+  /* Both sides are matched as CALLS. Measured on the bare names, a
+     comment explaining why a cost must not ride along on a count down --
+     which names applyStockDelta in its prose -- moved the "stock moves"
+     mark 700 characters up the body and failed a correctly ordered
+     handler. Prose about the code is not the code. */
+  t.check(body.indexOf('stockCountBillWarning(invProductId') < body.indexOf('applyStockDelta(invProductId'),
     'asked BEFORE the stock moves, not after — a warning that follows the act is a receipt');
 }
 

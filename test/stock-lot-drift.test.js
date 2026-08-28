@@ -149,7 +149,10 @@ if (fns) {
 /* ---------- 7. the shape of the screen ------------------------------- */
 {
   t.check(/function renderStockLotDrift\(\)/.test(code), 'the Inventory screen reports the drift');
-  t.check(/renderStockLotDrift\(\);\s*\n\s*const wrap = document\.getElementById\('invTableWrap'\);/.test(code),
+  /* What matters is that renderInventory drives it every time, not what
+     sits between -- the uncosted-stock banner is rendered from the same
+     place and had to be allowed to. */
+  t.check(/renderStockLotDrift\(\);\s*\n\s*renderUncostedStock\(\);\s*\n\s*const wrap = document\.getElementById\('invTableWrap'\);/.test(code),
     'every time it renders, so a repair elsewhere cannot leave a stale warning');
   const banner = (/function renderStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
   const fix = (/function fixStockLotDrift[\s\S]*?\n\}/.exec(code) || [''])[0];
