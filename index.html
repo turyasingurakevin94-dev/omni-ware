@@ -25412,11 +25412,28 @@ async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayN
    let the person who can check it decide. Nothing here happens without
    that decision -- consignmentMarkPlan says exactly what will change,
    and only then does consignmentMarkApply do it. */
-function consignmentMarkPlan(productId, variantIdx, supplierId){
+/* HOW MANY of them are theirs.
+
+   The first version marked every unmarked unit of the item, which is
+   right when a supplier's delivery is the only stock of that thing on
+   the shelf and wrong the moment there is a mix -- and a mix is
+   ordinary: a shop that already stocks something and then takes a
+   consignment of the same thing has both under one key. Claiming the
+   shop's own goods as the supplier's would overstate what is owed, in
+   money, quietly, in the direction that costs the shop.
+
+   So both quantities are arguments, each defaulting to everything
+   unmarked. The shelf is taken oldest lot first, the FIFO order the
+   rest of the app keeps, splitting a lot when the number falls inside
+   one. The SOLD figure is asked rather than worked out from the shelf:
+   which past sales came off whose goods is not knowable, and inventing
+   a split would be exactly the kind of confident guess this app
+   refuses to make. */
+function consignmentMarkPlan(productId, variantIdx, supplierId, shelfWanted, soldWanted){
   const key = stockKey(productId, variantIdx);
   const lots = ((data.stockLots||{})[key] || []).filter(l=> l.qty > 0 && !l.consign);
-  const shelfQty = lots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
-  const shelfValue = lots.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+  const shelfAvailable = lots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+
   const sales = [];
   (data.savedQuotes||[]).forEach(q=>{
     if(!q.invoiced || q.voided) return;
@@ -25430,32 +25447,95 @@ function consignmentMarkPlan(productId, variantIdx, supplierId){
         value: unmarked.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0) });
     });
   });
-  return { key, productId, variantIdx, supplierId, supplierName: supplierName(supplierId),
-    shelfQty, shelfValue,
-    soldQty: sales.reduce((s,r)=> s + r.qty, 0),
-    soldValue: sales.reduce((s,r)=> s + r.value, 0),
-    sales: sales.sort((a,b)=> String(a.date).localeCompare(String(b.date))) };
-}
-function consignmentMarkApply(productId, variantIdx, supplierId){
-  const plan = consignmentMarkPlan(productId, variantIdx, supplierId);
-  if(!plan.shelfQty && !plan.soldQty) return null;
-  ((data.stockLots||{})[plan.key] || []).forEach(l=>{ if(l.qty > 0 && !l.consign) l.consign = supplierId; });
-  (data.savedQuotes||[]).forEach(q=>{
-    if(!q.invoiced || q.voided) return;
-    (q.items||[]).forEach(it=>{
-      if(!it.productId) return;
-      if(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) !== plan.key) return;
-      (it._stockLots||[]).forEach(l=>{ if(!l.consign) l.consign = supplierId; });
-    });
+  sales.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+  const soldAvailable = sales.reduce((s,r)=> s + r.qty, 0);
+
+  const shelfQty = shelfWanted == null ? shelfAvailable
+    : Math.max(0, Math.min(shelfAvailable, Number(shelfWanted) || 0));
+  const soldQty = soldWanted == null ? soldAvailable
+    : Math.max(0, Math.min(soldAvailable, Number(soldWanted) || 0));
+
+  /* Valued by walking the same lots the apply will walk, so the figure
+     shown and the figure charged are one arithmetic rather than two. */
+  let left = shelfQty, shelfValue = 0;
+  lots.forEach(l=>{
+    if(left <= 0) return;
+    const take = Math.min(Number(l.qty)||0, left);
+    shelfValue += take * (Number(l.cost)||0);
+    left -= take;
   });
+  let soldLeft = soldQty, soldValue = 0;
+  const touched = [];
+  sales.forEach(r=>{
+    if(soldLeft <= 0) return;
+    const take = Math.min(r.qty, soldLeft);
+    soldValue += take * (r.qty ? r.value / r.qty : 0);
+    soldLeft -= take;
+    touched.push({ ...r, taking: take });
+  });
+
+  return { key, productId, variantIdx, supplierId, supplierName: supplierName(supplierId),
+    shelfAvailable, soldAvailable,
+    shelfQty, shelfValue: Math.round(shelfValue),
+    soldQty, soldValue: Math.round(soldValue),
+    sales: touched };
+}
+
+function consignmentMarkApply(productId, variantIdx, supplierId, shelfWanted, soldWanted){
+  const plan = consignmentMarkPlan(productId, variantIdx, supplierId, shelfWanted, soldWanted);
+  if(!plan.shelfQty && !plan.soldQty) return null;
+
+  /* The shelf, oldest lot first. A lot that is only PARTLY theirs is
+     split in two -- the same thing consumeStockLots does when a sale
+     takes part of a lot -- so the shop's own units keep their own cost
+     and their own place in the queue. */
+  const lots = (data.stockLots||{})[plan.key] || [];
+  const rebuilt = [];
+  let left = plan.shelfQty;
+  lots.forEach(l=>{
+    const qty = Number(l.qty)||0;
+    if(left <= 0 || l.consign || qty <= 0){ rebuilt.push(l); return; }
+    const take = Math.min(qty, left);
+    left -= take;
+    if(take >= qty){ rebuilt.push({ ...l, consign: supplierId }); return; }
+    rebuilt.push({ ...l, qty: take, consign: supplierId });
+    rebuilt.push({ ...l, qty: qty - take });
+  });
+  if(lots.length) data.stockLots[plan.key] = rebuilt;
+
+  /* The sales, oldest invoice first and only as many units as were
+     asked for. A line that is partly theirs is split the same way, so
+     what is owed counts those units and no others. */
+  let soldLeft = plan.soldQty;
+  (data.savedQuotes||[]).slice()
+    .sort((a,b)=> String(a.invoicedAt||a.date||'').localeCompare(String(b.invoicedAt||b.date||'')))
+    .forEach(q=>{
+      if(soldLeft <= 0 || !q.invoiced || q.voided) return;
+      (q.items||[]).forEach(it=>{
+        if(soldLeft <= 0 || !it.productId) return;
+        if(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) !== plan.key) return;
+        const next = [];
+        (it._stockLots||[]).forEach(l=>{
+          const qty = Number(l.qty)||0;
+          if(soldLeft <= 0 || l.consign || qty <= 0){ next.push(l); return; }
+          const take = Math.min(qty, soldLeft);
+          soldLeft -= take;
+          if(take >= qty){ next.push({ ...l, consign: supplierId }); return; }
+          next.push({ ...l, qty: take, consign: supplierId });
+          next.push({ ...l, qty: qty - take });
+        });
+        it._stockLots = next;
+      });
+    });
+
   const product = (data.products||[]).find(x=> x.id === productId);
   data.stockLog.push({
     id: allocRowId('stockLog'), key: plan.key, productId,
     variantIdx: (variantIdx==null||variantIdx==='') ? null : variantIdx,
     label: product ? productVariantLabel(product, variantIdx==null?null:variantIdx) : productId,
     type: 'correction', delta: 0, qtyAfter: Number((data.stock||{})[plan.key]) || 0,
-    note: `Marked as ${plan.supplierName}'s — held on consignment`
-      + (plan.soldQty ? `, including ${plan.soldQty} already sold` : ''),
+    note: `${plan.shelfQty} marked as ${plan.supplierName}'s — held on consignment`
+      + (plan.soldQty ? `, and ${plan.soldQty} already sold` : ''),
     date: todayISO(), at: new Date().toISOString(), cost: null, supplierId: null,
   });
   saveData();
@@ -32540,30 +32620,64 @@ function markAlreadyHereHTML(){
       <label>Item <select id="cons_mark_key" style="min-width:220px;">${opts}</select></label>
       <label>Belongs to <select id="cons_mark_sup">${
         (data.suppliers||[]).map(x=> `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
+      <label>How many <input type="number" id="cons_mark_shelf" min="0" step="any" style="width:90px;"></label>
+      <label>Already sold <input type="number" id="cons_mark_sold" min="0" step="any" style="width:90px;"></label>
       <button type="button" class="btn btn-ghost" id="cons_mark_btn">Mark as theirs</button>
-    </div></div>`;
+    </div>
+    <p class="dash-panel-note" id="cons_mark_note" style="margin:6px 0 0;"></p></div>`;
 }
 function wireMarkAlreadyHere(el){
   const btn = el.querySelector('#cons_mark_btn');
   if(!btn) return;
+  const keySel = el.querySelector('#cons_mark_key');
+  const supSel = el.querySelector('#cons_mark_sup');
+  const shelfBox = el.querySelector('#cons_mark_shelf');
+  const soldBox = el.querySelector('#cons_mark_sold');
+  const noteEl = el.querySelector('#cons_mark_note');
+  const parts = ()=>{
+    const [pid, vRaw] = String(keySel.value).split('::');
+    return { pid, variantIdx: vRaw === undefined ? null : Number(vRaw) };
+  };
+  /* Both boxes start at everything unmarked, and the note says what
+     that means -- so a shelf holding a mix is a number to change rather
+     than a trap to notice afterwards. */
+  const refresh = ()=>{
+    const { pid, variantIdx } = parts();
+    const full = consignmentMarkPlan(pid, variantIdx, supSel.value);
+    shelfBox.value = full.shelfAvailable || 0;
+    shelfBox.max = full.shelfAvailable || 0;
+    soldBox.value = full.soldAvailable || 0;
+    soldBox.max = full.soldAvailable || 0;
+    noteEl.textContent = full.shelfAvailable || full.soldAvailable
+      ? `${Math.round(full.shelfAvailable)} on the shelf are not yet marked as anybody's`
+        + (full.soldAvailable
+          ? `, and ${Math.round(full.soldAvailable)} more have already sold on ${full.sales.map(x=> x.invoice).join(', ')}. Change either number if only part of it is theirs.`
+          : '. Change the number if only part of it is theirs.')
+      : 'Everything here is already marked.';
+  };
+  keySel.addEventListener('change', refresh);
+  supSel.addEventListener('change', refresh);
+  refresh();
   btn.addEventListener('click', ()=>{
-    const key = el.querySelector('#cons_mark_key').value;
-    const supplierId = el.querySelector('#cons_mark_sup').value;
-    const [pid, vRaw] = String(key).split('::');
-    const variantIdx = vRaw === undefined ? null : Number(vRaw);
-    const plan = consignmentMarkPlan(pid, variantIdx, supplierId);
-    if(!plan.shelfQty && !plan.soldQty){ toast('Nothing here to mark — this stock is already marked, or there is none'); return; }
+    const supplierId = supSel.value;
+    const { pid, variantIdx } = parts();
+    const plan = consignmentMarkPlan(pid, variantIdx, supplierId,
+      shelfBox.value === '' ? null : Number(shelfBox.value),
+      soldBox.value === '' ? null : Number(soldBox.value));
+    if(!plan.shelfQty && !plan.soldQty){ toast('Nothing to mark — set how many are theirs, or this stock is already marked'); return; }
     const f = n=> fmtUGX(Math.round(n));
     /* Every figure that will move, before it moves. The sales matter
        most: marking them ADDS to what the shop owes, and nobody should
        meet that number for the first time afterwards. */
     if(!confirm(`Mark as ${plan.supplierName}'s?\n\n`
-      + `${Math.round(plan.shelfQty)} on the shelf, worth ${f(plan.shelfValue)} to them.\n`
+      + `${Math.round(plan.shelfQty)} of the ${Math.round(plan.shelfAvailable)} on the shelf, worth ${f(plan.shelfValue)} to them.\n`
       + (plan.soldQty
         ? `${Math.round(plan.soldQty)} already sold on ${plan.sales.map(x=> x.invoice).join(', ')} — that adds ${f(plan.soldValue)} to what you owe them.\n`
-        : 'None of it has sold yet, so nothing is owed.\n')
-      + `\nThis says the goods were always theirs. It does not move any money.`)) return;
-    const done = consignmentMarkApply(pid, variantIdx, supplierId);
+        : 'None of the sold ones are being marked, so nothing is added to what you owe.\n')
+      + (plan.shelfAvailable > plan.shelfQty
+        ? `\nThe other ${Math.round(plan.shelfAvailable - plan.shelfQty)} on the shelf stay yours.\n` : '')
+      + `\nThis says those goods were always theirs. It does not move any money.`)) return;
+    const done = consignmentMarkApply(pid, variantIdx, supplierId, plan.shelfQty, plan.soldQty);
     if(!done){ toast('Nothing was marked'); return; }
     renderConsignment();
     renderInventory();

@@ -312,6 +312,67 @@ if (scope) {
     'marking it twice would do nothing, so it cannot double the debt');
 }
 
+/* ---------- 7e. when only PART of the shelf is theirs ----------------- */
+/*
+ * The first version marked every unmarked unit of the item. Right when a
+ * consignment is the only stock of that thing, and wrong the moment
+ * there is a mix -- which is ordinary. Claiming the shop's own goods as
+ * the supplier's overstates what is owed, in money, in the direction
+ * that costs the shop.
+ */
+if (scope) {
+  // 50 on the shelf in two lots at different costs; 20 already sold
+  // across two invoices. Only 30 of the shelf and 8 of the sold are the
+  // consignor's, and the owner is the one who knows that.
+  data.stockLots.PA = [{ qty: 20, cost: 1000 }, { qty: 30, cost: 1100 }];
+  data.stock.PA = 50;
+  data.products.push({ id: 'PA', name: 'Mixed Shelf', variants: [] });
+  data.savedQuotes.push({ id: 60, invoiced: true, voided: false, invoicedAt: '2026-08-10',
+    items: [{ productId: 'PA', variantIdx: null, qty: 12, supplierId: '__stock__',
+      sellPrice: 1500, _stockLots: [{ qty: 12, cost: 1000 }] }] });
+  data.savedQuotes.push({ id: 61, invoiced: true, voided: false, invoicedAt: '2026-08-22',
+    items: [{ productId: 'PA', variantIdx: null, qty: 8, supplierId: '__stock__',
+      sellPrice: 1500, _stockLots: [{ qty: 8, cost: 1100 }] }] });
+
+  const full = scope.consignmentMarkPlan('PA', null, 'S1');
+  t.check(full.shelfAvailable === 50 && full.soldAvailable === 20,
+    'the plan reports everything that COULD be marked');
+  t.check(full.shelfQty === 50 && full.soldQty === 20,
+    'and defaults to all of it, so leaving the boxes alone behaves exactly as before');
+
+  const part = scope.consignmentMarkPlan('PA', null, 'S1', 30, 8);
+  eq(part.shelfQty, 30, 'a smaller number marks only that many');
+  eq(part.shelfValue, 31000, 'valued oldest lot first — 20 at 1,000 and 10 at 1,100');
+  eq(part.soldQty, 8, 'and the sold figure is its own number, not derived from the shelf');
+  eq(part.soldValue, 8000, 'taken from the OLDEST invoice first');
+
+  const owedBefore = scope.consignmentOwedTotal();
+  scope.consignmentMarkApply('PA', null, 'S1', 30, 8);
+  eq(scope.consignmentOwedTotal(), owedBefore + 8000,
+    'applying adds exactly the sold value the plan named, and not a shilling of the rest');
+
+  const lots = data.stockLots.PA;
+  eq(lots.reduce((s, l) => s + (l.consign === 'S1' ? l.qty : 0), 0), 30, '30 on the shelf are theirs');
+  eq(lots.reduce((s, l) => s + (l.consign ? 0 : l.qty), 0), 20, 'and 20 are still the shop\'s own');
+  t.check(lots.some((l) => l.consign === 'S1' && l.qty === 10 && l.cost === 1100)
+    && lots.some((l) => !l.consign && l.qty === 20 && l.cost === 1100),
+    'a lot the number falls inside is SPLIT, so the shop\'s own units keep their own cost');
+
+  const first = data.savedQuotes.find((q) => q.id === 60);
+  const second = data.savedQuotes.find((q) => q.id === 61);
+  t.check(first.items[0]._stockLots.every((l) => l.consign === 'S1') === false
+    && first.items[0]._stockLots.some((l) => l.consign === 'S1'),
+    'the oldest invoice is partly marked — 8 of its 12');
+  t.check(second.items[0]._stockLots.every((l) => !l.consign),
+    'and the later invoice is untouched, because only 8 were asked for');
+
+  // Marking the rest later must not double anything already counted.
+  const owedMid = scope.consignmentOwedTotal();
+  scope.consignmentMarkApply('PA', null, 'S1', 5, 4);
+  eq(scope.consignmentOwedTotal(), owedMid + 4000,
+    'a second, smaller marking adds only its own units — the first ones are already theirs');
+}
+
 /* ---------- 8. the wiring --------------------------------------------- */
 {
   t.check(/id="tab-consignment"/.test(src) && /data-tab="consignment"/.test(src),
