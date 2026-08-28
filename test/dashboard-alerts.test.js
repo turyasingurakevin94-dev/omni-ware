@@ -270,7 +270,14 @@ if (scope) {
  * paging every long page in this app uses.
  */
 {
-  t.check(/const alerts = dashAlerts\(\{/.test(render), 'the alerts are built once');
+  /* Once, and from the ONE context builder -- dashboardContext() now
+     feeds the dashboard and the Manager's shop_pulse alike, so the
+     literal inline object this used to assert would itself be the
+     second copy it exists to forbid. */
+  t.check(/const alerts = dashAlerts\(dctx\);/.test(render), 'the alerts are built once');
+  t.check(/const dctx = dashboardContext\(from, to\);/.test(render),
+    'from the shared context builder, so the dashboard and shop_pulse cannot drift');
+  t.check(!/dashAlerts\(\{/.test(render), 'and no inline second copy of the context remains');
   t.check(/dash_actionList'\)\.innerHTML = alerts\.length/.test(render),
     'and drawn in one place');
   t.check(!/dash_threatList/.test(code),

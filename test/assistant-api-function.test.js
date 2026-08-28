@@ -69,13 +69,20 @@ const pkg = read('package.json');
   t.check(/max_tokens: 3000/.test(src), 'output is capped, sized to the 60s window (a bulk import call at 2000 was cut off mid-JSON)');
   t.check(/output_config: \{ effort: 'medium' \}/.test(src),
     'effort is medium — deep thinking spent the output budget before a word was said, and it is the owner\'s money');
-  const sys = /system: \[\{ type: 'text', text: SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}\]/.test(src);
+  /* Two minds now share one cached prefix: the assistant sends the one
+     block, manager mode APPENDS its extension as a second block so the
+     big shared prefix stays cached across both. Both carry breakpoints. */
+  const sys = /\{ type: 'text', text: SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}/.test(src);
   t.check(sys, 'the system prompt carries a cache breakpoint');
+  t.check(/\{ type: 'text', text: MANAGER_EXTENSION, cache_control: \{ type: 'ephemeral' \} \}/.test(src),
+    'and so does the manager extension, appended as a second block rather than a second copy');
+  t.check(/req\.body && req\.body\.mode === 'manager'/.test(src),
+    'selected by the request naming a mode — the client names a mind, it can never supply one');
   const lastTool = src.lastIndexOf("name: 'add_sourcing_lead'");
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all twenty-seven');
+    'and so does the LAST tool, closing the cached prefix over all twenty-nine');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -135,7 +142,7 @@ const pkg = read('package.json');
 /* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 27, `twenty-seven tools defined (got ${names.length})`);
+  t.check(names.length === 29, `twenty-nine tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead'];

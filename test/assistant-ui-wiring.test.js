@@ -265,8 +265,11 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
   t.check(/login has expired/.test(call), 'a dead session says what to do');
   t.check(/check the internet/.test(call), 'and so does a dead connection');
   t.check(/Bearer ' \+ token/.test(call), 'every request carries the owner’s own login');
-  t.check(/JSON\.stringify\(\{ messages: assistantThread \}\)/.test(call),
-    'and only the thread — tools and prompt live server-side where they cache');
+  /* The thread plus, at most, WHICH mind answers -- mode names the
+     manager, it cannot carry a prompt. Tools and prompts stay
+     server-side where they cache. */
+  t.check(/JSON\.stringify\(\{ messages: assistantThread, \.\.\.\(apMode \? \{ mode: apMode \} : \{\}\) \}\)/.test(call),
+    'and only the thread and the mode name — tools and prompts live server-side where they cache');
 }
 
 /* ---------- 10. the professional pass --------------------------------- */

@@ -958,6 +958,31 @@
   .dash-alert-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.35;}
   .dash-alert-detail{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
   .dash-alert-action{font-size:12px;font-weight:700;color:var(--ink);margin-top:1px;}
+  /* ---- The Manager ---- */
+  .mgr-invite{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:13px 16px;margin:0 0 14px;}
+  .mgr-invite p{margin:0;font-size:13.5px;color:var(--ink-soft);max-width:60ch;}
+  .mgr-invite b{color:var(--ink);}
+  .mgr-meet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+    margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .mgr-meet-note{font-size:12.5px;color:var(--ink-soft);max-width:56ch;line-height:1.5;}
+  .mgr-sec-title{font-size:12.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--ink-soft);margin:18px 0 8px;}
+  .mgr-keyline{background:var(--bg);border:1px dashed var(--line);border-radius:10px;
+    padding:10px 13px;font-size:13.5px;color:var(--ink);margin:0 0 12px;}
+  .mgr-move{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:12px 15px;margin:0 0 10px;}
+  .mgr-move.done{border-left-color:var(--good);}
+  .mgr-move.skipped{border-left-color:var(--line);opacity:.75;}
+  .mgr-move-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .mgr-move-title{font-weight:700;font-size:14.5px;color:var(--ink);}
+  .mgr-worth{font-weight:700;font-size:13px;color:var(--accent-ink);white-space:nowrap;}
+  .mgr-why{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:4px 0 9px;}
+  .mgr-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .mgr-state{font-size:12px;color:var(--ink-soft);margin-left:auto;text-align:right;}
+  .mgr-hist-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;
+    color:var(--ink-soft);padding:8px 2px;border-bottom:1px solid var(--line);}
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
     background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
@@ -7604,6 +7629,10 @@
       </div>
       <div class="nav-group">
         <div class="nav-section-label">Insight</div>
+        <button data-tab="manager" title="Manager — the morning meeting" data-keywords="manager meeting plan advice strategy moves run the business mind">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+          <span class="nav-label">Manager</span>
+        </button>
         <button data-tab="analytics-sales" title="Sales analytics" data-keywords="demand trends best sellers reports">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
           <span class="nav-label">Sales analytics</span>
@@ -7674,6 +7703,13 @@
         </div>
         <div class="dash-asof" id="dash_asof"></div>
       </div>
+
+      <!-- The Manager's standing offer. One tap holds the meeting; it
+           never runs itself, because each meeting spends a little of the
+           owner's AI money. Hidden once today's meeting is held (a
+           per-device localStorage stamp, same convention as the brief's
+           first-open marker). -->
+      <div id="dash_managerCard"></div>
 
       <!-- -1. THE MORNING BRIEF. Yesterday's picture before today's
            choices — above even "what needs you", because it is the
@@ -8327,6 +8363,22 @@
     </section>
 
     <!-- STAFF -->
+    <section id="tab-manager" style="display:none;">
+      <div class="page-head">
+        <p class="wv-eyebrow" style="margin:0 0 2px;color:var(--ink-soft);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Insight</p>
+        <h1>Manager</h1>
+        <p>A manager's morning meeting: the whole shop read in one pass, the few moves worth making
+          today ranked by the money on them, and an honest account of what yesterday's advice earned.
+          It prepares everything and moves nothing — every action below is one tap that stays yours,
+          and every figure it argues from is in your own books.</p>
+      </div>
+      <div id="managerMemoryNote"></div>
+      <div id="managerMeetingWrap"></div>
+      <div id="managerAccountWrap"></div>
+      <div id="managerPlanWrap"></div>
+      <div id="managerHistoryWrap"></div>
+    </section>
+
     <section id="tab-map" style="display:none;">
       <div class="page-head">
         <h1>Map</h1>
@@ -12358,7 +12410,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR, lotConsignColR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, managerNotesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -12372,7 +12424,8 @@ async function loadData(shopId){
     sb.from('sourcing_leads').select('image').limit(1),
     sb.from('prices').select('last_asked_at').limit(1),
     sb.from('cash_txns').select('transfer_id').limit(1),
-    sb.from('stock_lots').select('consign').limit(1)
+    sb.from('stock_lots').select('consign').limit(1),
+    sb.from('manager_notes').select('id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
     .forEach(r=>{ if(r.error) throw r.error; });
@@ -12417,6 +12470,11 @@ async function loadData(shopId){
      is there the app refuses to take a consignment at all rather than
      accept one it cannot keep. */
   stockLotConsignColumn = !(lotConsignColR && lotConsignColR.error);
+  /* 0081. Not a column on a busy write but a whole table of its own, so
+     the stakes are smaller: with it missing the Manager still holds a
+     meeting, and simply cannot REMEMBER one -- the screen says so
+     rather than letting advice quietly evaporate. */
+  managerNotesTable = !(managerNotesR && managerNotesR.error);
   /* 0076, its own probe like the two above. Guards a busy write: every
      cash entry goes up on every save, so sending transfer_id before the
      migration lands would fail the whole cash_txns upsert and the shop
@@ -12737,6 +12795,7 @@ let sourcingVariantColumn = false;
 let sourcingImageColumn = false;
 let priceAskedColumn = false;
 let stockLotConsignColumn = false;
+let managerNotesTable = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -16334,6 +16393,7 @@ function goToTab(tab){
   if(tab==='staff') loadLoginSessions();
   if(tab==='map') renderMap();
   if(tab==='statements') renderStatements();
+  if(tab==='manager') renderManager();
   // Every other data tab redraws on entry; this one only ever drew at
   // boot. It mattered little when the panes were the whole screen, and
   // it matters now the rail carries counts -- a count is a claim about
@@ -51201,6 +51261,327 @@ function runStageAlerts(){
   return due;
 }
 
+/* ================= THE MANAGER =======================================
+
+   "A mind of a great businessman that acts upon this data" -- the
+   owner's words, built to this shop's laws. A great manager hired to
+   run somebody else's shop reads the whole position, picks the few
+   moves that matter, executes what is agreed, and ACCOUNTS for what his
+   advice earned. He does not secretly move the owner's money. So the
+   Manager here proposes and prepares -- every move lands as a card
+   whose button opens the exact screen, and the one tap that moves
+   money stays the owner's. The confirm-tap is not a limitation being
+   engineered around; it is the management contract.
+
+   The meeting itself is a conversation in the assistant's own loop,
+   with a second system prompt on the server (mode: 'manager'). The
+   prose streams into the panel like any answer; the [plan:] block at
+   the end is stripped before display and becomes the cards below.
+
+   MEMORY is a table of its own (manager_notes, migration 0081), read
+   and written directly like the WhatsApp tables -- not part of the
+   synced data blob. Outcomes are never stored: what happened to each
+   move is DERIVED from the books at render time, so the account the
+   Manager gives of itself cannot be flattered by anything it wrote. */
+
+const MANAGER_DOORS = {
+  chase: { tab: 'chase', label: 'Open Chase debts' },
+  buy: { tab: 'buying', label: 'Open What to buy' },
+  prices: { tab: 'prices', label: 'Open the Price registry' },
+  'prices-watch': { tab: 'prices-watch', label: 'Open Supplier prices' },
+  consignment: { tab: 'consignment', label: 'Open Consignment' },
+  orders: { tab: 'quote-saved', label: 'Open Order tracking' },
+  invoices: { tab: 'invoices', label: 'Open Invoices' },
+  debtors: { tab: 'analytics-debtors', label: 'Open Who owes you' },
+  creditors: { tab: 'analytics-creditors', label: 'Open Who you owe' },
+  followups: { tab: 'followups', label: 'Open Follow-ups' },
+  inventory: { tab: 'inventory', label: 'Open Inventory' },
+  statements: { tab: 'statements', label: 'Open Statements' },
+  whatsapp: { tab: 'whatsapp', label: 'Open WhatsApp' },
+  sourcing: { tab: 'sourcing', label: 'Open Sourcing' },
+  cashbook: { tab: 'cashbook', label: 'Open the Cash book' },
+  payroll: { tab: 'payroll', label: 'Open Payroll & rent' },
+};
+
+let managerMeetingRunning = false;
+/* Today's meeting when the memory table is missing: the plan lives for
+   the session, statuses in memory, and the screen says plainly that
+   nothing will be remembered. */
+let managerToday = null;
+const MANAGER_MEETING_KEY = 'owManagerMeetingOn';
+
+/* What the books say happened to one advised move -- DERIVED, never
+   stored. A chase is answered by the customer's own ledger (only rows
+   that carry a cash link: the invoice sync's echo rows do not, which is
+   the debtCollectionsOn lesson); a restock by the stock log; an invoice
+   by the order's own flag. A kind nothing can derive returns null and
+   the card shows only its Done/Skip state -- named, not guessed. */
+function deriveMoveOutcome(row){
+  const b = (row && row.body) || {};
+  const subj = b.subject || {};
+  const since = String(row && row.date || '');
+  let derived = null;
+  if(b.mkind === 'chase' && subj.customerId != null){
+    const c = (data.customers||[]).find(x=> String(x.id) === String(subj.customerId));
+    const paid = c ? (c.debtLog||[]).filter(r=> r.type === 'payment' && r.cashTxnId
+      && String(r.date) >= since).reduce((n,r)=> n + (Number(r.amount)||0), 0) : 0;
+    derived = paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since';
+  } else if(b.mkind === 'buy' && subj.key){
+    const got = (data.stockLog||[]).some(l=> l.key === subj.key && l.type === 'restock'
+      && String(l.date) >= since);
+    derived = got ? 'restocked since' : 'not restocked yet';
+  } else if(b.mkind === 'invoice' && subj.orderId != null){
+    const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(subj.orderId));
+    derived = !q ? 'order no longer on file' : (q.invoiced ? 'invoiced' : 'still not invoiced');
+  } else if(b.mkind === 'settle' && subj.supplierId){
+    const paidSince = (data.purchaseInvoices||[]).some(pi=> pi.supplierId === subj.supplierId
+      && (pi.payments||[]).some(pp=> String(pp.date) >= since));
+    derived = paidSince ? 'a payment went to them since' : 'nothing paid to them since';
+  }
+  return { status: (row && row.status) || 'open', derived };
+}
+
+/* ---- the journal: direct reads and writes, wa_* style ---- */
+async function managerSaveMeeting(plan){
+  if(!managerNotesTable) return null;
+  const ins = await sb.from('manager_notes').insert({
+    shop_id: currentShopId, kind: 'meeting', date: todayISO(),
+    body: { keyline: String(plan.keyline||'').slice(0, 300),
+      rejected: String(plan.rejected||'').slice(0, 400), moves: (plan.moves||[]).length },
+    status: 'held',
+  }).select('id').single();
+  if(ins.error || !ins.data){ console.warn('Manager: meeting not saved:', ins.error && ins.error.message); return null; }
+  const rows = (plan.moves||[]).slice(0, 5).map(m=> ({
+    shop_id: currentShopId, kind: 'move', meeting_id: ins.data.id, date: todayISO(),
+    body: { title: String(m.title||'').slice(0, 200), why: String(m.why||'').slice(0, 500),
+      worth: apRound(m.worth||0), door: String(m.door||''), mkind: String(m.kind||'other'),
+      /* Only ids, only known keys -- the block is model output and is
+         stored as data, never trusted as structure. */
+      subject: {
+        ...(m.subject && m.subject.customerId != null ? { customerId: m.subject.customerId } : {}),
+        ...(m.subject && m.subject.supplierId != null ? { supplierId: m.subject.supplierId } : {}),
+        ...(m.subject && m.subject.key != null ? { key: String(m.subject.key) } : {}),
+        ...(m.subject && m.subject.orderId != null ? { orderId: m.subject.orderId } : {}),
+      } },
+    status: 'open',
+  }));
+  if(rows.length){
+    const r2 = await sb.from('manager_notes').insert(rows);
+    if(r2.error) console.warn('Manager: moves not saved:', r2.error.message);
+  }
+  return ins.data.id;
+}
+
+async function managerSetMoveStatus(rowId, status, skipReason){
+  if(!managerNotesTable || rowId == null){
+    // Session-only fallback: the card still answers, the note says why
+    // it will not be remembered.
+    if(managerToday && managerToday.plan){
+      const m = (managerToday.plan.moves||[])[Number(String(rowId).replace('mem:',''))];
+      if(m){ m._status = status; if(skipReason) m._skipReason = skipReason; }
+    }
+    renderManager();
+    return;
+  }
+  const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
+  const body = (cur.data && cur.data.body) || {};
+  if(skipReason) body.skipReason = String(skipReason).slice(0, 200);
+  const up = await sb.from('manager_notes').update({ status, body }).eq('shop_id', currentShopId).eq('id', rowId);
+  if(up.error) toast('Could not record that — ' + up.error.message);
+  renderManager();
+}
+
+async function managerLoadState(){
+  if(!managerNotesTable) return { today: null, prior: [] };
+  const meetR = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'meeting')
+    .order('date', { ascending: false }).order('id', { ascending: false }).limit(6);
+  if(meetR.error) return { error: meetR.error.message, today: null, prior: [] };
+  const meetings = meetR.data || [];
+  const ids = meetings.map(m=> m.id);
+  const movesR = ids.length
+    ? await sb.from('manager_notes').select('id, meeting_id, date, body, status')
+        .eq('shop_id', currentShopId).eq('kind', 'move').in('meeting_id', ids)
+    : { data: [] };
+  const movesBy = {};
+  ((movesR && movesR.data) || []).forEach(x=>{ (movesBy[x.meeting_id] = movesBy[x.meeting_id] || []).push(x); });
+  const withMoves = meetings.map(m=> ({ meeting: m, moves: movesBy[m.id] || [] }));
+  const today = todayISO();
+  return {
+    today: withMoves.find(w=> w.meeting.date === today) || null,
+    prior: withMoves.filter(w=> w.meeting.date !== today),
+  };
+}
+
+/* ---- the meeting itself ---- */
+async function runManagerMeeting(){
+  if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
+  managerMeetingRunning = true;
+  /* A fresh meeting is a fresh conversation -- and it STAYS in manager
+     mode afterwards, so follow-up questions in the panel are answered
+     by the person who made the plan. */
+  apMode = 'manager';
+  assistantThread = [];
+  apLastPlan = null;
+  renderManager();
+  apOpenPanel();
+  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the morning meeting.' });
+  apRenderUser('Hold the morning meeting.');
+  try{
+    await apRunLoop();
+  } finally {
+    managerMeetingRunning = false;
+    if(apLastPlan && Array.isArray(apLastPlan.moves) && apLastPlan.moves.length){
+      managerToday = { plan: apLastPlan, date: todayISO() };
+      lsSet(MANAGER_MEETING_KEY, todayISO());
+      await managerSaveMeeting(apLastPlan);
+    } else if(!apLastPlan){
+      /* The meeting spoke but the plan sheet never arrived, or arrived
+         unreadable. The prose in the panel still stands -- say so
+         rather than showing an empty screen over a full transcript. */
+      toast('The meeting is in the assistant panel — no plan sheet came back to turn into cards', 6000);
+    }
+    renderManager();
+    renderManagerCard();
+  }
+}
+
+/* The dashboard's standing offer -- one tap, never an auto-run. */
+function renderManagerCard(){
+  const el = document.getElementById('dash_managerCard');
+  if(!el) return;
+  const seen = lsGet(MANAGER_MEETING_KEY);
+  if(seen && String(seen) >= todayISO()){ el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="mgr-invite">
+    <p><b>Your manager is ready.</b> One tap holds the morning meeting: yesterday's advice accounted
+      for, and today's few moves ranked by the money on them. A meeting spends a little AI credit.</p>
+    <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
+  </div>`;
+  el.querySelector('#mgrInviteBtn').addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
+}
+
+function mgrMoveView(row, idx){
+  const b = row.body || {};
+  const out = deriveMoveOutcome(row);
+  const door = MANAGER_DOORS[b.door] || null;
+  const open = out.status === 'open';
+  const stateBits = [];
+  if(out.status === 'done') stateBits.push('done');
+  if(out.status === 'skipped') stateBits.push('skipped' + (b.skipReason ? ` — ${esc(b.skipReason)}` : ''));
+  if(out.derived) stateBits.push(esc(out.derived));
+  return `<div class="mgr-move ${esc(out.status === 'open' ? '' : out.status)}" data-mid="${esc(String(row.id))}">
+    <div class="mgr-move-top">
+      <span class="mgr-move-title">${esc(b.title || '')}</span>
+      ${Number(b.worth) > 0 ? `<span class="mgr-worth">${fmtUGX(Math.round(b.worth))}</span>` : ''}
+    </div>
+    <div class="mgr-why">${esc(b.why || '')}</div>
+    <div class="mgr-acts">
+      ${door ? `<button type="button" class="btn btn-accent mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}
+      ${open ? `<button type="button" class="btn btn-ghost mgr-done">Done</button>
+      <button type="button" class="btn btn-ghost mgr-skip">Skip</button>` : ''}
+      ${stateBits.length ? `<span class="mgr-state">${stateBits.join(' · ')}</span>` : ''}
+      <button type="button" class="btn btn-ghost mgr-discuss" data-title="${esc(b.title || '')}">Discuss</button>
+    </div>
+  </div>`;
+}
+
+function renderManager(){
+  const memoryNote = document.getElementById('managerMemoryNote');
+  if(!memoryNote) return;
+  memoryNote.innerHTML = managerNotesTable ? '' : `<div class="cb-chain-break">
+    <div><b>The manager cannot remember yet.</b> Meetings run, but nothing is kept — no advice,
+      no account of what it earned. One database update fixes it.</div>
+    <div class="deb-drift-why">Paste <b>supabase/migrations/0081_manager_notes.sql</b> into the
+      Supabase SQL editor and reload once. Until then, today's plan lives only until this page closes.</div>
+  </div>`;
+
+  const meet = document.getElementById('managerMeetingWrap');
+  meet.innerHTML = managerMeetingRunning
+    ? `<div class="mgr-meet"><div class="mgr-meet-note"><b>The manager is reading the shop…</b>
+        The meeting is happening in the assistant panel — the tools being consulted are the same
+        screens you would read yourself.</div></div>`
+    : `<div class="mgr-meet">
+        <div class="mgr-meet-note"><b>${managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO() ? 'Hold another meeting' : 'Hold the morning meeting'}.</b>
+          It opens by accounting for its own last advice, reads the whole position, and brings
+          at most five moves ranked by the money on them. A meeting spends a little AI credit,
+          and it never runs itself.</div>
+        <button type="button" class="btn btn-accent" id="mgrRunBtn">Hold the meeting</button>
+      </div>`;
+  const runBtn = document.getElementById('mgrRunBtn');
+  if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
+
+  const acct = document.getElementById('managerAccountWrap');
+  const planWrap = document.getElementById('managerPlanWrap');
+  const hist = document.getElementById('managerHistoryWrap');
+
+  const renderPlanCards = (title, plan, rows)=>{
+    const cards = rows.map((r, i)=> mgrMoveView(r, i)).join('');
+    return `<div class="mgr-sec-title">${esc(title)}</div>`
+      + (plan && plan.keyline ? `<div class="mgr-keyline"><b>The one thing:</b> ${esc(plan.keyline)}</div>` : '')
+      + cards
+      + (plan && plan.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(plan.rejected)}</div>` : '');
+  };
+  const wire = (root)=>{
+    root.querySelectorAll('.mgr-door').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.tab)));
+    root.querySelectorAll('.mgr-discuss').forEach(btn=> btn.addEventListener('click', ()=>{
+      apOpenPanel();
+      const input = document.getElementById('apInput');
+      if(input){ input.value = `About "${btn.dataset.title}" — `; input.focus(); }
+    }));
+    root.querySelectorAll('.mgr-move').forEach(card=>{
+      const id = card.dataset.mid;
+      const done = card.querySelector('.mgr-done');
+      const skip = card.querySelector('.mgr-skip');
+      if(done) done.addEventListener('click', ()=> managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'done'));
+      if(skip) skip.addEventListener('click', ()=>{
+        const why = prompt('Skipping it — why? One line. The manager reads this tomorrow.', '');
+        if(why === null) return;
+        managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'skipped', why);
+      });
+    });
+  };
+
+  if(!managerNotesTable){
+    /* Memoryless: today's plan from the session, no account, no history. */
+    if(managerToday && managerToday.plan){
+      const rows = (managerToday.plan.moves||[]).map((m, i)=> ({
+        id: 'mem:' + i, date: managerToday.date, status: m._status || 'open',
+        body: { title: m.title, why: m.why, worth: m.worth, door: m.door, mkind: m.kind,
+          subject: m.subject || {}, skipReason: m._skipReason },
+      }));
+      planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
+      wire(planWrap);
+    } else planWrap.innerHTML = '';
+    acct.innerHTML = ''; hist.innerHTML = '';
+    return;
+  }
+
+  /* With memory: the shells now, the journal when it answers. */
+  managerLoadState().then(st=>{
+    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; hist.innerHTML =
+      `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
+    planWrap.innerHTML = st.today
+      ? renderPlanCards("Today's plan", st.today.meeting.body || {}, st.today.moves)
+      : '';
+    wire(planWrap);
+    /* The last meeting before today, answered by the books -- the
+       account the owner reads before holding the next one. */
+    const prev = st.prior[0];
+    acct.innerHTML = prev
+      ? `<div class="mgr-sec-title">The last meeting — ${esc(fmtShortDate(prev.meeting.date))}</div>`
+        + prev.moves.map((r,i)=> mgrMoveView(r,i)).join('')
+      : '';
+    wire(acct);
+    hist.innerHTML = st.prior.length > 1
+      ? `<div class="mgr-sec-title">Earlier meetings</div>` + st.prior.slice(1).map(w=>{
+          const done = w.moves.filter(x=> x.status === 'done').length;
+          return `<div class="mgr-hist-row"><span>${esc(fmtShortDate(w.meeting.date))} — ${esc((w.meeting.body||{}).keyline || '')}</span>
+            <span>${done} of ${w.moves.length} done</span></div>`;
+        }).join('')
+      : '';
+  });
+}
+
 function morningBriefData(dateISO, nowMs){
   const y = dateISO;
   // Sales and gross profit on the same accrual definition the
@@ -51325,29 +51706,67 @@ function maybeShowMorningBrief(){
   return true;
 }
 
+/* Everything dashAlerts needs to rank the shop's troubles, built in ONE
+   place. This lived inline in renderDashboard, which was fine while the
+   dashboard was its only reader -- the Manager's shop_pulse tool is a
+   second one, and two hand-built copies of this object would disagree
+   within a month, exactly the drift shelfValueForKey was extracted to
+   kill. The dashboard destructures what it also shows; the tool feeds
+   the whole thing straight to dashAlerts. */
+function dashboardContext(from, to){
+  const curInvoices = anInvoicesInRange(from, to);
+  const curTotals = anOverallTotals(curInvoices);
+  const curOpex = cashOpexTotal(dashCashTxnsInRange(from,to));
+  const netProfit = curTotals.profit - curOpex;
+  const cashBalance = dashCashBalanceAllTime();
+  const burn = dashMonthlyBurn();
+  const runwayMonths = burn>0 ? cashBalance/burn : null;
+  const inv = dashInventoryHealth();
+  /* The oldest money owed, so the debt picture is about age as well as
+     size -- see the vital card's comment below. */
+  const debtorRows = data.customers
+    .map(c=>({ name: c.name || 'Unnamed customer', debt: Number(c.debt)||0,
+      ageDays: (Number(c.debt)||0) > 0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1 }))
+    .filter(r=> r.debt > 0.5);
+  const goingQuiet = dashGoingQuietCustomers();
+  const breadth = dashDemandBreadth(curInvoices);
+  // Only worth flagging among products that actually move volume -- a
+  // low-volume item bought entirely by one customer isn't a real
+  // dependency risk, it's just a niche item.
+  const concentration = breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,5)
+    .filter(r=>r.concentration>=60)
+    .slice(0,3);
+  const itemRows = anRowsByItem(curInvoices).filter(r=>r.qty>0);
+  return {
+    from, to, invoices: curInvoices, breadth,
+    itemRows, totals: curTotals, opex: curOpex,
+    grossProfit: curTotals.profit, netProfit,
+    cashBalance, burn, runwayMonths, inv,
+    debtors: debtorRows, goingQuiet, concentration,
+    stockOut: dashStockOutExposure(), inflation: dashSupplierPriceInflation(),
+  };
+}
+
 function renderDashboard(){
   renderMorningBrief();
+  renderManagerCard();
   const {from, to} = dashGetRange();
   const days = dashRangeSpanDays(from, to);
   const prevTo = anShiftDate(from, -1);
   const prevFrom = anShiftDate(prevTo, -(days-1));
 
-  const curInvoices = anInvoicesInRange(from, to);
+  const dctx = dashboardContext(from, to);
+  const { invoices: curInvoices, totals: curTotals, opex: curOpex, netProfit,
+    cashBalance, burn, runwayMonths, inv, debtors: debtorRows, goingQuiet,
+    concentration, itemRows, breadth } = dctx;
   const prevInvoices = anInvoicesInRange(prevFrom, prevTo);
-  const curTotals = anOverallTotals(curInvoices);
   const prevTotals = anOverallTotals(prevInvoices);
-
-  const curOpex = cashOpexTotal(dashCashTxnsInRange(from,to));
   const prevOpex = cashOpexTotal(dashCashTxnsInRange(prevFrom,prevTo));
-  const netProfit = curTotals.profit - curOpex;
   const prevNetProfit = prevTotals.profit - prevOpex;
   const netMargin = curTotals.sales>0 ? netProfit/curTotals.sales*100 : 0;
 
-  const cashBalance = dashCashBalanceAllTime();
   // Part of the drawer that is a consignor's, read live.
   const consignOwed = Math.round(consignmentOwedTotal());
-  const burn = dashMonthlyBurn();
-  const runwayMonths = burn>0 ? cashBalance/burn : null;
 
   const totalDebtors = dashTotalDebtors();
   /* Everything the shop owes short-term, not only its suppliers. Wages
@@ -51358,8 +51777,6 @@ function renderDashboard(){
   const totalCreditors = dashTotalCreditors() + owedToStaffAndLandlord;
   const wcGap = totalDebtors - totalCreditors;
 
-  const inv = dashInventoryHealth();
-
   document.getElementById('dash_asof').textContent = `As of ${new Date().toLocaleDateString('en-UG',{day:'numeric',month:'short',year:'numeric'})}`;
 
   const profitDelta = prevNetProfit!==0 ? ((netProfit-prevNetProfit)/Math.abs(prevNetProfit)*100) : (netProfit>0?100:0);
@@ -51368,11 +51785,7 @@ function renderDashboard(){
   /* The oldest money owed, so the debt card can be about age as well as
      size -- 15,556,600 owed for a fortnight and the same figure owed for
      three months are not the same fact, and the card showed one number
-     for both. */
-  const debtorRows = data.customers
-    .map(c=>({ name: c.name || 'Unnamed customer', debt: Number(c.debt)||0,
-      ageDays: (Number(c.debt)||0) > 0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1 }))
-    .filter(r=> r.debt > 0.5);
+     for both. debtorRows itself comes from dashboardContext above. */
   const oldestDebt = debtorRows.reduce((m,r)=> (r.ageDays >= 0 && (!m || r.ageDays > m.ageDays)) ? r : m, null);
 
   const vitalCards = [
@@ -51448,24 +51861,10 @@ function renderDashboard(){
     `<div class="cashbridge-legend"><span><i style="background:var(--good);"></i>Cash In</span><span><i style="background:var(--danger);"></i>Cash Out</span></div>`;
 
 
-  const goingQuiet = dashGoingQuietCustomers();
-  const breadth = dashDemandBreadth(curInvoices);
-  // Only worth flagging among products that actually move volume -- a
-  // low-volume item bought entirely by one customer isn't a real
-  // dependency risk, it's just a niche item.
-  const concentration = breadth.slice().sort((a,b)=>b.qty-a.qty).slice(0,5)
-    .filter(r=>r.concentration>=60)
-    .slice(0,3);
-
-  const itemRows = anRowsByItem(curInvoices).filter(r=>r.qty>0);
-  /* One ranked list, built once. The block at the top of the page and
-     the panel below it are the same alerts, so the two cannot drift. */
-  const alerts = dashAlerts({
-    itemRows, totals: curTotals, opex: curOpex, grossProfit: curTotals.profit, netProfit,
-    cashBalance, burn, runwayMonths, inv,
-    debtors: debtorRows, goingQuiet, concentration,
-    stockOut: dashStockOutExposure(), inflation: dashSupplierPriceInflation(),
-  });
+  /* One ranked list, built once, from the ONE context builder. The block
+     at the top of the page, the panel below it, and the Manager's
+     shop_pulse are the same alerts, so the three cannot drift. */
+  const alerts = dashAlerts(dctx);
 
   const alertCardHTML = (a)=>{
     const band = DASH_BANDS[a.band];
@@ -55860,6 +56259,16 @@ document.getElementById('adminSignoutBtn').addEventListener('click', signOutAndR
 const AP_MAX_THREAD = 24;   // messages kept; trimmed at exchange boundaries
 const AP_MAX_STEPS = 10;    // tool round-trips per question (a product heard by sound costs a re-call)
 let assistantThread = [];
+/* Which mind the conversation is with. null is the counter assistant;
+   'manager' is the meeting, and it STAYS manager for the follow-up
+   questions in the same thread -- discussing the plan with the person
+   who made it, rather than with somebody who has never seen it. A new
+   meeting resets the thread; closing the panel does not. */
+let apMode = null;
+// The last [plan:] block a manager turn carried, parsed. Stashed by the
+// renderer (which strips it from the screen) and read by the meeting
+// runner once the loop settles.
+let apLastPlan = null;
 let assistantBusy = false;
 let apVoiceMode = false;    // hands-free conversation on
 let apWasCutOff = false;    // last answer hit max_tokens; next send says so
@@ -56536,6 +56945,91 @@ const ASSISTANT_TOOLS = {
      What-to-buy panel renders, so "I have 5m, what should I buy" and
      the dashboard can never disagree. Read-only by design -- sourcing
      what it suggests goes through add_sourcing_lead, with its card. */
+  /* The whole shop in one reading -- what the Manager's meeting opens
+     with, and a fair answer to "how is the shop doing" in either mode.
+     COUNTS AND TOP ITEMS, never full dumps: every list is capped, so a
+     meeting costs a few tool round trips rather than ten, and the model
+     drills with the narrower tools only where a figure needs support.
+     Every number here comes from the same functions the screens render,
+     through the one dashboardContext the dashboard itself reads. */
+  shop_pulse: { confirm: false, run(){
+    const today = todayISO();
+    const dctx = dashboardContext(anShiftDate(today, -29), today);
+    const chase = debtChaseRows();
+    const plan = purchasePlan(cashOnHandByAccount().total, null, today);
+    const held = cashOnHandByAccount();
+    const cash = { total: apRound(held.total) };
+    held.byAccount.forEach(a=>{ cash[a.key] = apRound(a.amount); });
+    const consign = consignmentRows().filter(r=> r.owed > 0.5);
+    const brief = morningBriefData(anShiftDate(today, -1), Date.now());
+    return {
+      as_of: today, period: 'last 30 days',
+      cash,
+      alerts: dashAlerts(dctx).slice(0, 8).map(a=> ({
+        band: a.band, title: a.title, money: apRound(a.money||0), action: a.action })),
+      debts: {
+        chase_now: chase.due.slice(0, 6).map(r=> ({ name: r.name, owed: apRound(r.debt), age_days: r.ageDays })),
+        chase_count: chase.due.length,
+        held_for_checking: chase.blocked.length,
+        resting: chase.resting.length,
+      },
+      buying: {
+        top_lines: plan.lines.slice(0, 6).map(l=> ({ name: l.name, why: l.reason,
+          cost: apRound(l.cost), supplier: l.supplier })),
+        line_count: plan.lines.length,
+        over_budget: plan.didNotFit.length,
+        no_price_on_file: plan.sourceFirst.length,
+      },
+      prices_to_check: priceReviewCandidates().slice(0, 5).map(r=> ({
+        item: r.pname, supplier: r.sname, at_risk: apRound(r.moneyAtRisk||0) })),
+      /* The board's own stage-timer rule, through the brief's derivation
+         -- an empty list here can mean nothing is late OR that no limits
+         are set, and the count of limits says which. */
+      orders_sitting_too_long: brief.stuck.map(x=> ({ client: x.name, stage: x.statusLabel, over_minutes: x.overMinutes })),
+      stage_limits_set: SQ_STATUS_ORDER.some(st=> (Number((data.presetOrderStageLimits||{})[st])||0) > 0),
+      follow_ups_due: followUpClientsToContact(Date.now()).slice(0, 5).map(r=> ({ name: r.name, has_news: !!r.hasNews })),
+      consignment: { owed_total: apRound(consign.reduce((n,r)=> n + r.owed, 0)), consignors: consign.length },
+      dead_stock: { value: apRound(dctx.inv.deadValue), units: Math.round(dctx.inv.deadQty) },
+      yesterday: {
+        sales: apRound(brief.sales.total), invoices: brief.sales.count,
+        gross_profit: apRound(brief.sales.profit), profit_partly_estimated: !!brief.sales.estimated,
+        collected: apRound(brief.paid.total), ran_out: brief.ranOutCount,
+        cash_counted: !!brief.cash.counted,
+      },
+    };
+  }},
+
+  /* What the Manager advised before, and what actually happened to it --
+     read at the top of every meeting, so today opens with an account
+     instead of amnesia. Outcomes are DERIVED here, never read from a
+     stored verdict: a chase move is answered by the customer's own
+     ledger, a restock by the stock log. See deriveMoveOutcome. */
+  manager_history: { confirm: false, async run(input){
+    if(!managerNotesTable) return {
+      memory: 'not set up',
+      note: 'The manager_notes table is missing, so past advice was not kept. Advise from today alone, and say the memory migration (0081) is still to be applied.' };
+    const limit = Math.max(1, Math.min(Number(input && input.limit) || 3, 5));
+    const meetings = await sb.from('manager_notes').select('id, date, body')
+      .eq('shop_id', currentShopId).eq('kind', 'meeting')
+      .order('date', { ascending: false }).order('id', { ascending: false }).limit(limit);
+    if(meetings.error) return { error: meetings.error.message };
+    const ids = (meetings.data||[]).map(m=> m.id);
+    const movesR = ids.length
+      ? await sb.from('manager_notes').select('id, meeting_id, date, body, status')
+          .eq('shop_id', currentShopId).eq('kind', 'move').in('meeting_id', ids)
+      : { data: [] };
+    if(movesR.error) return { error: movesR.error.message };
+    return { meetings: (meetings.data||[]).map(m=> ({
+      date: m.date, keyline: (m.body||{}).keyline || '',
+      moves: (movesR.data||[]).filter(x=> x.meeting_id === m.id).map(x=>{
+        const out = deriveMoveOutcome(x);
+        return { title: (x.body||{}).title || '', status: out.status,
+          ...(out.derived ? { what_the_books_say: out.derived } : {}),
+          ...(((x.body||{}).skipReason) ? { skip_reason: x.body.skipReason } : {}) };
+      }),
+    })) };
+  }},
+
   purchase_plan: { confirm: false, run(input){
     const budget = input.budget != null ? Number(input.budget) : cashOnHandByAccount().total;
     const plan = purchasePlan(budget, null, todayISO());
@@ -57123,6 +57617,50 @@ function apExtractChoices(text){
     .replace(/[ \t]+\n/g, '\n').trim();
   return { clean, choices };
 }
+/* The Manager's plan sheet, carried the same way a question carries its
+   [choices:] -- one machine block at the end of the prose, stripped from
+   what is shown and spoken, parsed into cards. The [choices:] lessons
+   apply verbatim: tolerant of drift, and the RAW BLOCK MUST NEVER REACH
+   THE SCREEN. JSON brings one new hazard a split() never had -- the
+   payload can itself contain ']' inside strings -- so the end of the
+   block is found by walking the braces with string-awareness, not by a
+   regex that stops at the first bracket. */
+function apExtractPlan(text){
+  const s = String(text||'');
+  const start = s.search(/\[\s*plan\s*:/i);
+  if(start < 0) return { clean: s, plan: null };
+  /* Brace characters spelled as char codes (123/125), not literals: the
+     test harness's function extractor counts braces without reading
+     strings or comments, so spelling either one anywhere in this
+     function — code OR prose — reads to it as an unclosed block. */
+  const OPEN = String.fromCharCode(123), CLOSE = String.fromCharCode(125);
+  const braceAt = s.indexOf(OPEN, start);
+  let end = -1;
+  if(braceAt > -1){
+    let depth = 0, inStr = false, escp = false;
+    for(let i = braceAt; i < s.length; i++){
+      const ch = s[i];
+      if(escp){ escp = false; continue; }
+      if(ch === '\\'){ escp = true; continue; }
+      if(ch === '"'){ inStr = !inStr; continue; }
+      if(inStr) continue;
+      if(ch === OPEN) depth++;
+      else if(ch === CLOSE){ depth--; if(depth === 0){ end = i; break; } }
+    }
+  }
+  /* A block that cannot be walked is stripped to the end of the text --
+     showing half a JSON object is the same failure as showing all of it. */
+  const closeAt = end > -1 ? s.indexOf(']', end) : -1;
+  const clean = (s.slice(0, start) + (closeAt > -1 ? s.slice(closeAt + 1) : ''))
+    .replace(/[ \t]+\n/g, '\n').trim();
+  let plan = null;
+  if(end > -1){
+    try{ plan = JSON.parse(s.slice(braceAt, end + 1)); }catch(e){ plan = null; }
+  }
+  if(plan && !Array.isArray(plan.moves)) plan = null;
+  return { clean, plan };
+}
+
 function apClearChoices(){
   const el = document.getElementById('apChoices');
   if(el) el.remove();
@@ -57149,7 +57687,12 @@ function apRenderChoices(choices){
   apScroll();
 }
 function apRenderAssistant(text){
-  const { clean, choices } = apExtractChoices(text);
+  /* The plan is stripped FIRST and unconditionally -- whichever mode the
+     panel is in. A machine block on screen is the plumbing showing, and
+     the mode flag is not what should stand between the owner and that. */
+  const { clean: noPlan, plan } = apExtractPlan(text);
+  if(plan) apLastPlan = plan;
+  const { clean, choices } = apExtractChoices(noPlan);
   if(clean) apBubble('bot', apFormatText(clean));
   if(choices.length) apRenderChoices(choices);
 }
@@ -57321,7 +57864,10 @@ async function apCallServer(){
     resp = await fetch('/api/assistant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ messages: assistantThread }),
+      /* mode selects which mind answers: the counter assistant, or the
+         Manager holding a meeting. The PROMPTS both live on the server
+         -- this only names one; it cannot supply one. */
+      body: JSON.stringify({ messages: assistantThread, ...(apMode ? { mode: apMode } : {}) }),
     });
   } catch(e){
     apHideTyping();
@@ -57489,7 +58035,7 @@ function apSpeak(text){
     AP_TTS.cancel();
     /* "1,250,000 UGX" reads as letters; "shillings" reads as money.
        The ** emphasis marks are visual only -- never spoken. */
-    const spoken = String(text).replace(/\[\s*choices\s*:[^\]]*\]/gi, '')
+    const spoken = apExtractPlan(String(text)).clean.replace(/\[\s*choices\s*:[^\]]*\]/gi, '')
       .replace(/\*\*/g, '').replace(/\bUGX\b/g, 'shillings');
     const u = new SpeechSynthesisUtterance(spoken);
     u.lang = 'en-GB';

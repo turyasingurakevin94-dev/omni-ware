@@ -74,7 +74,25 @@ const SYSTEM_PROMPT = [
   'When money moved: the five money tools (record_customer_payment, pay_supplier, pay_staff_or_rent, add_expense, record_other_income) all take a date — the day the money ACTUALLY moved, not the day it is being entered. Omit it when it is today; send it whenever the owner says otherwise ("she paid on Saturday", "that was last Friday", "I paid them on the 25th"), worked out from the [Today is] line. Never guess a day the owner did not give, and never send one in the future — it is refused. The confirmation card names the date whenever it is not today, so a misheard day is caught before the money moves; if the owner is vague ("some time last week"), ask which day rather than picking one.',
 ].join('\n');
 
-/* Twenty-seven tools in FIXED order — the array is part of the cached
+/* The second mind: the same assistant, convening. Sent as a SECOND
+   system block after SYSTEM_PROMPT (its own cache breakpoint), so the
+   big shared prefix stays cached across both modes and every rule above
+   still binds — this only adds the meeting on top. */
+const MANAGER_EXTENSION = [
+  'THE MORNING MEETING. When the message is "Hold the morning meeting", you are the manager the owner hired to run this shop, opening the day across the desk. Everything above still binds — tools first, resolved names, speakable prose — and the rules below bind harder here.',
+  '',
+  'Order of work: call manager_history FIRST and open by accounting for your own last advice — done, skipped, ignored, and what the books say happened — bluntly and briefly; a skipped move that cost money is named with its cost, from recorded figures only, and advice the owner keeps skipping is advice to rethink, not repeat. Then call shop_pulse for the whole position. Drill with at most two or three narrower tools where a figure needs support. Do not re-tell the owner their dashboard — they can read it; your job is judgement.',
+  '',
+  'Compose the day: pick AT MOST FIVE moves, ranked by shillings at stake — cash first, then margin, then stock turns, then debt age. Each move in one or two sentences: what to do, the evidence with its figures, and what it is worth. Name ONE thing you considered and rejected and why — a plan with nothing rejected was not thought about. End with the single thing that matters most today, in one sentence. On a thin book — few records, little history — say so plainly and make the best move the one that improves the records themselves; never pad thin evidence into confident advice.',
+  '',
+  'Never forecast: argue only from what is recorded — "at the last 30 days\u2019 rate this runs out in 6 days" is arithmetic on the books; "sales will grow" is a guess and forbidden. You move nothing and send nothing — the owner acts. Never claim an action happened, and never present a move as already done.',
+  '',
+  'After the prose, end with EXACTLY ONE machine block the app turns into action cards — never mention it, it is stripped before display: [plan: {"moves":[{"title":"Chase Milly today","why":"Owes 840,000, oldest charge 62 days old, last paid 3 Aug","worth":840000,"door":"chase","kind":"chase","subject":{"customerId":7}}],"rejected":"one sentence on the option you turned down and why","keyline":"the one thing that matters most today"}]. door is one of: chase, buy, prices, prices-watch, consignment, orders, invoices, debtors, creditors, followups, inventory, statements, whatsapp, sourcing, cashbook, payroll. kind is one of: chase, buy, invoice, settle, price, other. subject carries ONLY ids a tool returned in this conversation (customerId, supplierId, key, orderId) — never invent one, and omit subject entirely when you have none. worth is whole shillings, 0 when no honest figure exists.',
+  '',
+  'Follow-up questions in the same conversation stay with you as the manager: answer against the plan you gave, revise it plainly when the owner pushes back, and emit a fresh [plan:] block only when the owner asks you to re-plan.',
+].join('\n');
+
+/* Twenty-nine tools in FIXED order — the array is part of the cached
    prefix, so reordering it would re-bill the whole prefix for nothing.
    Every schema closes with additionalProperties:false so a drifted call
    fails loudly instead of half-working. */
@@ -373,6 +391,20 @@ const TOOLS = [
     },
   },
   {
+    name: 'shop_pulse',
+    description: 'The whole shop in one reading: ranked alerts with the money at stake, cash by account, who to chase, the top of the buy plan, prices to check, orders sitting too long, follow-ups due, consignment owed, dead stock, and yesterday in one line. Counts and top items only, capped — drill with the narrower tools where a figure needs support. Use it for the morning meeting, or any broad "how is the shop doing".',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'manager_history',
+    description: 'The Manager\u2019s own past advice with what the books say happened to each move — read it FIRST in a meeting so today opens with an account rather than amnesia. limit: how many recent meetings to read (default 3, max 5).',
+    input_schema: {
+      type: 'object',
+      properties: { limit: { type: 'number' } },
+      required: [], additionalProperties: false,
+    },
+  },
+  {
     name: 'add_sourcing_lead',
     description: 'Put an item on the sourcing queue — something the shop does not stock (or could not find) that should be hunted from suppliers. Repeating a name that is already on the queue revives it rather than duplicating it.',
     input_schema: {
@@ -484,7 +516,10 @@ module.exports = async (req, res) => {
       fallbacks: 'default',
       /* No `thinking` (adaptive is this model's default; a budget would
          400) and no sampling params (removed on this model). */
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      system: req.body && req.body.mode === 'manager'
+        ? [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+           { type: 'text', text: MANAGER_EXTENSION, cache_control: { type: 'ephemeral' } }]
+        : [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages,
     });
