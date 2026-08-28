@@ -80,6 +80,16 @@ const scope = compileScope([
   extractFunction(src, 'cashPositionForBuying', 'index.html'),
   extractFunction(src, 'cashPositionHTML', 'index.html'),
   extractFunction(src, 'cashToBuyBannerHTML', 'index.html'),
+  /* The row now says whose the goods are as well as where they are, so
+     the reading behind that comes with it. */
+  extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'peekStockLots', 'index.html'),
+  extractFunction(src, 'consignTally', 'index.html'),
+  extractFunction(src, 'consignedForLine', 'index.html'),
+  extractFunction(src, 'consignTagLabel', 'index.html'),
+  extractFunction(src, 'consignTagTitle', 'index.html'),
+  extractFunction(src, 'consignTagHTML', 'index.html'),
+  extractFunction(src, 'consignedForOrder', 'index.html'),
   extractFunction(src, 'orderMetaRowHTML', 'index.html'),
   extractFunction(src, 'orderCashStripHTML', 'index.html'),
   extractFunction(src, 'openBuyingList', 'index.html'),

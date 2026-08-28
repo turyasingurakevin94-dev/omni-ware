@@ -65,13 +65,15 @@ let scope = null; let err = null;
 try {
   scope = compileScope([
     'stockKey', 'getStockQty', 'addStockLot', 'consumeStockLots', 'restoreStockLots',
-    'applyStockDelta', 'getFIFOUnitCost', 'inventoryValue',
+    'applyStockDelta', 'getFIFOUnitCost', 'shelfValueForKey', 'inventoryValue',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued',
     'consignmentSettlements', 'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
     'consignmentSoldLines', 'returnConsignedStock', 'consignedUnitCostForSale', 'sellBelowCostClause',
+    'peekStockLots', 'consignTally', 'consignedForLine',
     'consignmentMarkPlan', 'consignmentMarkApply', 'invoiceNumberLabel',
   ].map((n) => extractFunction(src, n, 'index.html')),
   env, ['addStockLot', 'applyStockDelta', 'consumeStockLots', 'restoreStockLots', 'inventoryValue',
+    'shelfValueForKey',
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
     'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
     'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements',
@@ -400,6 +402,36 @@ if (scope) {
   const dash = extractFunction(src, 'renderDashboard', 'index.html');
   t.check(/belongs to a consignor/.test(dash),
     'and the cash tile says how much of the drawer is not the shop\'s');
+}
+
+/* ---------- 10. one reading of what a shelf is worth ------------------ */
+/*
+ * inventoryValue counted a consignor's goods out of what the stock was
+ * worth, and the Stock on hand card worked out its own figure over the
+ * whole shelf. They disagreed by exactly the consigned holding: a shop
+ * could ask what its stock was worth in two places and get two answers,
+ * and the bigger one was other people's goods. Both now read
+ * shelfValueForKey, so the drift has nowhere to come from.
+ */
+if (scope) {
+  data.stock = {}; data.stockLots = {}; data.savedQuotes = []; data.purchaseInvoices = [];
+  data.stockLots.P1 = [{ qty: 20, cost: 2000 }, { qty: 30, cost: 5000, consign: 'S1' }];
+  data.stock.P1 = 50;
+  data.stockLots.P2 = [{ qty: 10, cost: 8000 }];
+  data.stock.P2 = 10;
+
+  const k = scope.shelfValueForKey('P1');
+  eq(k.qty, 50, 'the shelf count is everything standing on it');
+  eq(k.ownedQty, 20, 'of which the shop owns this much');
+  eq(k.value, 40000, 'and only that much is the shop\'s money');
+  eq(k.consignedValue, 150000, 'the rest belongs to whoever left it');
+
+  const whole = scope.inventoryValue();
+  eq(Math.round(['P1', 'P2'].reduce((s, key) => s + scope.shelfValueForKey(key).value, 0)),
+    Math.round(whole.value),
+    'summing the per-shelf reading IS the balance sheet figure — one function, so they cannot drift');
+  eq(whole.consignedQty, 30, 'with the consigned units reported apart');
+  eq(whole.consignedValue, 150000, 'at what they would cost to keep');
 }
 
 process.exit(t.done() ? 1 : 0);

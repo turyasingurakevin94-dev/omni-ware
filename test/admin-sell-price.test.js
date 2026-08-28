@@ -48,6 +48,12 @@ const scope = compileScope([
      pricing under what will be owed is a loss out of the shop's own
      pocket. A fixture with no consigned lots reads exactly as before. */
   extractFunction(src, 'stockKey', 'index.html'),
+  /* Read across every consigned unit the line reaches, not off the front
+     of the queue: 2 of the shop's own standing ahead of 8 a consignor
+     left used to answer "none of theirs" to a line of 10. */
+  extractFunction(src, 'peekStockLots', 'index.html'),
+  extractFunction(src, 'consignTally', 'index.html'),
+  extractFunction(src, 'consignedForLine', 'index.html'),
   extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
   extractFunction(src, 'sellBelowCostClause', 'index.html'),
 ], {
@@ -213,6 +219,9 @@ const line = (over) => Object.assign({
     const run = compileScope([
       // Same chain as above: the clause reads the shelf for consigned units.
       extractFunction(src, 'stockKey', 'index.html'),
+      extractFunction(src, 'peekStockLots', 'index.html'),
+      extractFunction(src, 'consignTally', 'index.html'),
+      extractFunction(src, 'consignedForLine', 'index.html'),
       extractFunction(src, 'consignedUnitCostForSale', 'index.html'),
       extractFunction(src, 'sellBelowCostClause', 'index.html'),
       handler,

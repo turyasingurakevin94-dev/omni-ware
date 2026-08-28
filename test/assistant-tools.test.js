@@ -78,6 +78,7 @@ const NAMES = [
   'buildVariantPriceRow', 'deriveWholesaleRetail', 'piecesPerUnitOrNull', 'tiersFromLegacyRow',
   'supFindDuplicate', 'supNormalisedName', 'firstFreeEntityId', 'ensurePresetCategory',
   'allProductVariantEntries', 'reorderRuleFor', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
+  'shelfValueForKey', 'consignTally', 'consignedOnShelf',
   'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
   'todayISO', 'accountLabel',
 ];

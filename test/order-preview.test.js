@@ -40,6 +40,15 @@ const scope = compileScope([
   extractFunction(worker, 'itemPickAnswered', 'shared-worker.js'),
   extractFunction(worker, 'itemOrderedQty', 'shared-worker.js'),
   extractFunction(worker, 'itemPickedQty', 'shared-worker.js'),
+  /* The row now says whose the goods are as well as where they are, so
+     the reading behind that comes with it. */
+  extractFunction(src, 'stockKey', 'index.html'),
+  extractFunction(src, 'peekStockLots', 'index.html'),
+  extractFunction(src, 'consignTally', 'index.html'),
+  extractFunction(src, 'consignedForLine', 'index.html'),
+  extractFunction(src, 'consignTagLabel', 'index.html'),
+  extractFunction(src, 'consignTagTitle', 'index.html'),
+  extractFunction(src, 'consignTagHTML', 'index.html'),
   extractFunction(src, 'orderPreviewLines', 'index.html'),
   extractFunction(src, 'orderPreviewSummary', 'index.html'),
   /* The rail itself is shared with the sourcing funnel -- one stepper,

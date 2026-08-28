@@ -124,6 +124,7 @@ const scope = compileScope([
   extractFunction(src, 'loansOutstandingAt', 'index.html'),
   extractFunction(src, 'loanInterestForPeriod', 'index.html'),
   extractFunction(src, 'loanFeesForPeriod', 'index.html'),
+  extractFunction(src, 'shelfValueForKey', 'index.html'),
   extractFunction(src, 'inventoryValue', 'index.html'),
   extractFunction(src, 'incomeStatement', 'index.html'),
   extractFunction(src, 'balanceSheetToday', 'index.html'),

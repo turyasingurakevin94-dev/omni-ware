@@ -2278,6 +2278,9 @@
      than shown as 0 -- the balance sheet calls this understated stock,
      not worthless stock, and the two screens must not disagree. */
   .inv-cost-none{color:var(--ow-ink-400);}
+  /* Money standing on our shelf that is somebody else's. Same amber as
+     the tag beside it, so the two read as one fact rather than two. */
+  .inv-cost-consign{color:var(--ow-amber-ink);}
   /* Movements: the count and the net effect of whatever is filtered, so
      the fifty-row cap is never mistaken for the whole answer. */
   .log-count{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
@@ -4040,7 +4043,10 @@
   .q-supplier-card.best.selected{border-color:var(--good);box-shadow:0 0 0 1px var(--good);}
   .q-sc-radio{width:17px;height:17px;flex-shrink:0;accent-color:var(--navy);cursor:pointer;}
   .q-sc-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
-  .q-sc-top{display:flex;align-items:center;gap:8px;min-width:0;}
+  /* Wraps: the consignor's tag joins this row, and a long company name
+     was squeezing "130 in stock" down to "130 in...". The quantity is
+     the reason anybody reads the row at all. */
+  .q-sc-top{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;}
   .q-sc-rank{
     flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:0.3px;padding:2px 6px;border-radius:20px;
     background:#EEF1F3;color:var(--ink-soft);
@@ -4049,7 +4055,12 @@
   .q-sc-rank.stock{background:var(--accent);color:#fff;}
   .q-supplier-card.stock-card{border-color:#EBC26F;background:#FFFBF2;}
   .q-supplier-card.stock-card.selected{border-color:var(--accent);background:#FFF6E4;box-shadow:0 0 0 1px var(--accent);}
-  .q-sc-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px;}
+  /* Takes what it needs rather than all that is left. Growing to fill
+     the row left the consignor's tag beside it nowhere to go but into
+     the quantity, which is the reason the row is read at all -- and a
+     long supplier name still shrinks and ellipsises when the row is
+     genuinely tight, because shrinking is still allowed. */
+  .q-sc-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:13px;}
   .q-sc-prices{font-size:11px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;white-space:nowrap;}
   .q-sc-prices .price{color:var(--ink);font-weight:600;}
   .q-sc-sep{color:var(--line);}
@@ -5001,6 +5012,24 @@
     text-transform:uppercase;padding:2px 7px;border-radius:999px;
     background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);
     margin-left:7px;vertical-align:middle;white-space:nowrap;}
+  /* Goods on our shelf that are not ours. Shaped after .both-tag -- a
+     fact about the thing, trailing its name -- and carried on AMBER
+     rather than the oxide those wear: consignment is an arrangement the
+     shop wants, not a fault, so it must catch the eye without reading
+     as an error. Oxide is also already spoken for beside it on the
+     inventory card by .inv-low-pill. --ow-amber-ink on --ow-amber-soft
+     clears 4.5:1; the lighter --ow-amber does not, and the suite
+     measures it rather than taking anyone's word. */
+  /* NOT uppercased, unlike its siblings. Those carry two fixed words;
+     this one carries a company's name, and "OKUOSI GYPSUM (U) LTD'S"
+     set in capitals shouts a fact that only needs to be noticed. */
+  .consign-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;
+    background:var(--ow-amber-soft);color:var(--ow-amber-ink);
+    vertical-align:middle;white-space:nowrap;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;}
+  /* Keeps its pill shape when the row wraps rather than stretching into
+     a band the width of the card. */
+  .q-sc-top .consign-tag{flex:0 1 auto;}
   .cc-both{display:flex;align-items:center;justify-content:space-between;
     gap:10px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;border-radius:8px;
     background:var(--ow-steel-050);font-size:12px;color:var(--ink-soft);}
@@ -5693,6 +5722,13 @@
   .inv-pay-summary .ip-cell{display:flex;flex-direction:column;gap:3px;}
   .inv-pay-summary .ip-label{font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:var(--ink-soft);font-weight:700;}
   .inv-pay-summary .ip-value{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;}
+  /* Its own row across the strip, not a fourth column. It is a sentence
+     rather than a figure, and money that is not the shop's should not be
+     read as a running mate of the three that are. */
+  .inv-pay-summary .ip-consign{flex:1 0 100%;display:flex;align-items:flex-start;gap:8px;
+    margin-top:2px;padding-top:10px;border-top:1px solid var(--line);
+    font-size:12.5px;line-height:1.45;color:var(--ow-amber-ink);}
+  .inv-pay-summary .ip-consign svg{flex-shrink:0;width:16px;height:16px;margin-top:1px;}
 
   /* A5 quote sheet (built into #printArea, only shown via window.print) */
   .a5-page{font-family:'IBM Plex Mono',monospace;color:#000;padding:6mm;box-sizing:border-box;}
@@ -17907,10 +17943,17 @@ function cashToBuyBannerHTML(group){
 function orderMetaRowHTML(q){
   const items = (q.items||[]).length;
   const fromStock = (q.items||[]).filter(it=>!orderLineIsBoughtIn(it)).length;
+  /* "From stock" is true of the shelf and silent about who owns it. An
+     order that is quietly selling a consignor's goods is an order where
+     part of the money coming in is already somebody else's, and that is
+     worth knowing from the board rather than from the one screen a
+     person would have to think to visit. */
+  const consign = consignedForOrder(q);
   return `<div class="sq-meta">
     <span title="In this step for">${ICON_CLOCK}${esc(savedAgoLabel(q.stageEnteredAt || q.savedAt))}</span>
     <span title="${items} line${items===1?'':'s'} — open the order to see what they are">${ICON_ITEMS}${items}</span>
     ${fromStock ? `<span class="stocked" title="${fromStock} line${fromStock===1?'':'s'} already on our shelf">${ICON_SHELF}${fromStock} from stock</span>` : ''}
+    ${consignTagHTML(consign, consign.certain)}
   </div>`;
 }
 
@@ -17933,13 +17976,21 @@ function orderPreviewLines(q){
     // thing from having picked none of it -- 0 means the shelf was empty.
     const picked = typeof itemPickedQty === 'function' ? itemPickedQty(it) : null;
     const buyUnit = Number(it.price) || 0;
+    /* "From stock" answers where the goods are, not whose they are. The
+       two are the same question for nearly every line and a different
+       one for consigned goods, which is exactly why the difference has
+       to be said rather than left to whoever remembers. */
+    const consign = consignedForLine(it);
     return {
       name: it.productName || 'Item',
       unit: it.unit || '',
       qty, sell, lineTotal: qty * sell,
       picked, short: picked != null && picked < qty,
       fromStock,
-      source: fromStock ? 'From stock' : supplierName(it.supplierId),
+      consign: consign.qty > 0 ? consign : null,
+      source: fromStock
+        ? (consign.qty > 0 ? `From stock — ${consignTagLabel(consign)}` : 'From stock')
+        : supplierName(it.supplierId),
       buyCost: fromStock ? null : buyUnit * qty,
       unpriced: !fromStock && !(buyUnit > 0),
     };
@@ -17953,6 +18004,11 @@ function orderPreviewSummary(q){
     total: lines.reduce((s,l)=> s + l.lineTotal, 0),
     fromStock: lines.filter(l=> l.fromStock).length,
     toBuy: lines.filter(l=> !l.fromStock).length,
+    // Counted apart from `fromStock` rather than deducted from it: these
+    // lines ARE on our shelf, which is the fact that column reports.
+    // Whose they are is a second fact, and one that decides what happens
+    // to the money rather than where somebody walks to fetch the goods.
+    consignedLines: lines.filter(l=> l.consign).length,
     /* Only counted where there is a price. A line with none is reported
        as a gap rather than silently costed at nothing.
 
@@ -18120,7 +18176,7 @@ function orderPreviewHTML(q){
           ? '<span class="op-dim">not yet</span>'
           : `${l.short ? `<b class="op-short-num">${l.picked}</b>` : l.picked}`}</td>` : ''}
         <td>${l.fromStock
-          ? '<span class="op-src stock">From stock</span>'
+          ? `<span class="op-src stock">From stock</span>${consignTagHTML(l.consign, l.consign && l.consign.certain)}`
           : `<span class="op-src buy">${esc(l.source)}</span>${l.unpriced ? ' <span class="op-dim">no price on file</span>' : ''}`}</td>
         <td class="r num">${fmtUGX(Math.round(l.lineTotal))}</td>
       </tr>`).join('')}</tbody>
@@ -18128,7 +18184,8 @@ function orderPreviewHTML(q){
         <td>${s.lines.length} ${plural(s.lines.length,'line','lines')}</td>
         <td class="r"></td>
         ${s.picking ? '<td class="r"></td>' : ''}
-        <td>${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} to buy` : ''}</td>
+        <td>${s.fromStock} from stock${s.toBuy ? `, ${s.toBuy} to buy` : ''}${
+          s.consignedLines ? `, ${s.consignedLines} not ours` : ''}</td>
         <td class="r num"><b>${fmtUGX(Math.round(s.total))}</b></td>
       </tr></tfoot>
     </table>`;
@@ -19948,27 +20005,166 @@ function quoteItemSellPrice(it){
    A bare clause rather than a finished sentence, because the item picker
    has its own warning to deliver at the same moment and two toasts in a
    row means the second one wins and the first is never read. */
-/* What the next units off this shelf will cost the shop. For ordinary
-   stock that is money already spent, so a low price is a thin margin;
-   for CONSIGNED stock it is money that will have to be handed over, so
-   a low price is a straight loss on somebody else's goods. Only the
-   consigned case is read here, because it is the one a shelf line
-   cannot otherwise see -- `it.price` is zero on a sale from stock. */
+/* ---- WHOSE GOODS ARE THESE ------------------------------------------
+
+   Consignment shipped as a screen, and everywhere else in the app
+   somebody else's goods looked exactly like the shop's. The person
+   pricing a quote, reading an order, taking cash over the counter or
+   counting what the shelf is worth saw no difference, and so handled
+   them as if there were none -- which is the mistake the whole feature
+   exists to prevent.
+
+   Every one of those readings comes from here, so the marker cannot say
+   one thing on one screen and something else on the next. Names are
+   NOT resolved at this level: what is owed and to which id is a fact
+   about the money, and only the label layer below needs a supplier
+   record to exist. */
+
+// Folds lot records -- off the shelf, or off a sale line's own record of
+// what it took -- into whose they are and how much.
+function consignTally(lots){
+  const by = new Map();
+  let qty = 0, value = 0, total = 0;
+  (lots||[]).forEach(l=>{
+    const n = Number(l && l.qty)||0;
+    if(!(n > 0)) return;
+    total += n;
+    if(!l.consign) return;
+    const v = n * (Number(l.cost)||0);
+    qty += n; value += v;
+    const rec = by.get(l.consign) || {supplierId: l.consign, qty: 0, value: 0};
+    rec.qty += n; rec.value += v;
+    by.set(l.consign, rec);
+  });
+  return { qty, value, ownedQty: Math.max(0, total - qty), total,
+    consignors: [...by.values()].sort((a,b)=> b.qty - a.qty) };
+}
+
+// What is on ONE shelf that the shop does not own. One key lookup and
+// one pass over a short array -- cheap enough to ask of every card in a
+// grid, which is what the inventory screen does.
+function consignedOnShelf(productId, variantIdx){
+  const vidx = variantIdx==null ? null : variantIdx;
+  const t = consignTally((data.stockLots||{})[stockKey(productId, vidx)] || []);
+  /* The shelf COUNT is the authority on how many are standing there;
+     the lots may not account for all of them. So what the shop owns is
+     the count less the consigned part, never the lots' own subtraction
+     -- the same rule inventoryValue follows when it values a shelf. */
+  const shelf = getStockQty(productId, vidx);
+  return { ...t, ownedQty: Math.max(0, shelf - t.qty), total: shelf };
+}
+
+/* Whose goods a sale line is made of.
+
+   An INVOICED line records the lots it actually took, so that is a
+   fact. A draft has taken nothing yet, so the shelf is read instead --
+   which makes it a forecast, and `certain` is how a screen knows which
+   of the two it is holding. Saying "came off" where only "will come
+   off" is known would be the app asserting what it cannot see.
+
+   A line bought in for the order is never off our shelf, whatever the
+   shelf happens to hold of the same product. */
+function consignedForLine(it){
+  const lots = it && it._stockLots;
+  if(Array.isArray(lots) && lots.length) return { ...consignTally(lots), certain: true };
+  /* A line with NO supplier named is off our shelf too -- that is how
+     the picker reads it, and how an order quoted from stock before the
+     sentinel existed still reads. Only a line pointing at a real
+     supplier is bought in, and a bought-in line is never off our shelf
+     whatever the shelf happens to hold of the same product. */
+  if(!it || !it.productId || (it.supplierId && it.supplierId !== '__stock__')){
+    return { ...consignTally([]), certain: false };
+  }
+  return { ...consignTally(peekStockLots(it.productId,
+    it.variantIdx==null ? null : it.variantIdx, Number(it.qty)||0)), certain: false };
+}
+
+/* One whole order folded into one answer, for a card or a modal that
+   speaks about the document rather than a line of it.
+
+   Priced at the cost that falls due to the consignor -- the same basis
+   consignmentAccrued reads -- so the payment modal, the order board and
+   the Consignment screen cannot state different money about one sale.
+   Line by line through consignedForLine, so an invoiced order answers
+   from the lots it took and a draft answers from the shelf. */
+function consignedForOrder(q){
+  const rows = [];
+  ((q && q.items) || []).forEach(it=>{
+    consignedForLine(it).consignors.forEach(r=>
+      rows.push({ qty: r.qty, cost: r.qty > 0 ? r.value / r.qty : 0, consign: r.supplierId }));
+  });
+  return { ...consignTally(rows), certain: !!(q && q.invoiced) };
+}
+
+/* The marker, said the same way everywhere it appears.
+
+   Shaped after the "Also a customer" tag: a fact about the thing,
+   trailing its name. Amber rather than red, because consignment is an
+   arrangement the shop wants rather than a fault -- and every instance
+   carries the reason in full, because a pill nobody can decode is
+   decoration. The leading space is not cosmetic: these sit in flex rows
+   whose gap does the separating on screen while the text still reads as
+   one run to a screen reader or a copy-paste. */
+function consignTagLabel(c){
+  if(!c || !(c.qty > 0)) return null;
+  // Two consignors on one shelf cannot both be named in a pill, so the
+  // pill stops claiming to and the title carries every name.
+  const whose = c.consignors.length > 1 ? 'Consigned' : `${supplierName(c.consignors[0].supplierId)}'s`;
+  // "105 of 130" only where part of it IS the shop's. Saying it of a
+  // shelf that is entirely the consignor's reads as a partial holding.
+  const part = c.ownedQty > 0 ? `${c.qty} of ${c.qty + c.ownedQty} ` : '';
+  return part + whose;
+}
+function consignTagTitle(c, certain){
+  if(!c || !(c.qty > 0)) return '';
+  const who = c.consignors.map(r=> `${supplierName(r.supplierId)} (${r.qty})`).join(', ');
+  const money = fmtUGX(Math.round(c.value));
+  /* Two sentences, because these are two different facts. Goods still
+     on the shelf are held and the money is not owed yet; goods that
+     have gone are sold and the money IS owed, whatever the customer has
+     paid. Saying "will fall due" over a sale that already happened is
+     how a debt gets treated as a maybe. */
+  return certain === true
+    ? `Sold from goods held on consignment: ${who}. ${money} is owed to them for these.`
+    : `Held on consignment from ${who} — not the shop's own goods. ${money} falls due to them as these sell.`;
+}
+function consignTagHTML(c, certain){
+  const label = consignTagLabel(c);
+  if(!label) return '';
+  return ` <span class="consign-tag" title="${esc(consignTagTitle(c, certain))}">${esc(label)}</span>`;
+}
+/* What the units this line takes will cost the shop. For ordinary stock
+   that is money already spent, so a low price is a thin margin; for
+   CONSIGNED stock it is money that will have to be handed over, so a low
+   price is a straight loss on somebody else's goods. Only the consigned
+   case is read here, because it is the one a shelf line cannot otherwise
+   see -- `it.price` is zero on a sale from stock.
+
+   Averaged over every consigned unit the line reaches, not read off the
+   front of the queue. A shelf holding 2 of the shop's own ahead of 8 a
+   consignor left answered "none of theirs" to a line of 10, and the
+   warning that exists for exactly that sale never fired. */
 function consignedUnitCostForSale(it){
   if(!it || !it.productId) return null;
-  const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
-  const lot = ((data.stockLots||{})[key] || []).find(l=> l.qty > 0);
-  return (lot && lot.consign && lot.cost != null) ? Number(lot.cost) : null;
+  const c = consignedForLine(it);
+  return c.qty > 0 ? c.value / c.qty : null;
 }
 function sellBelowCostClause(it){
   if(!it || it.sellPrice==null || it.sellPrice==='') return '';
   const sell = Number(it.sellPrice)||0;
   const consigned = consignedUnitCostForSale(it);
   if(consigned != null && sell < consigned){
-    const each = consigned - sell;
-    const qty = Number(it.qty)||0;
+    // Rounded: an average across two lots at different costs is not a
+    // price anybody quoted, and a shilling of it on screen reads as
+    // precision the figure does not have.
+    const each = Math.round(consigned - sell);
+    /* The CONSIGNED units, not the whole line. Where only part of a line
+       comes off a consignor's goods, charging the shortfall against every
+       unit would overstate the loss -- and a figure that overstates is
+       one nobody trusts the next time it is right. */
+    const qty = consignedForLine(it).qty;
     const unit = it.unit ? ` per ${String(it.unit).toLowerCase()}` : ' each';
-    return `${fmtUGX(sell)} is below the ${fmtUGX(consigned)} you will owe on these consigned goods:`
+    return `${fmtUGX(sell)} is below the ${fmtUGX(Math.round(consigned))} you will owe on these consigned goods:`
       + ` ${fmtUGX(each)} out of your own pocket${unit}${qty>1 ? `, ${fmtUGX(each*qty)} over ${qty}` : ''}`;
   }
   const buy = Number(it.price)||0;
@@ -21138,18 +21334,29 @@ function renderIpStage(){
     else if(suggRetail!=null) effectiveRecType = 'retail';
   }
 
+  /* Whose goods the shelf is holding, said where the choice is made.
+     The card called every shelf line "OUR STOCK" and priced it "Bought
+     at", which is a purchase that never happened when a consignor left
+     the goods here -- and the person setting the price is exactly the
+     person who has to know that the figure is a debt rather than a cost
+     already met. The units THIS line would take, in FIFO order, not the
+     shelf at large: what sits behind them is not this line's business. */
+  const stockConsign = consignTally(peekStockLots(ipProductId, variantIdx, Math.max(1, qty||1)));
+  const stockShelfConsign = consignedOnShelf(ipProductId, variantIdx);
   const stockCardHtml = stockQty>0 ? `<label class="q-supplier-card stock-card ${ipSelectedSupplierId==='__stock__'?'selected':''}">
     <input type="radio" class="q-sc-radio" name="ip_stage_supplier_radio" value="__stock__" ${ipSelectedSupplierId==='__stock__'?'checked':''}>
     <div class="q-sc-body">
       <div class="q-sc-top">
         <span class="q-sc-rank stock">OUR STOCK</span>
-        <span class="q-sc-name">${stockQty} in stock</span>
+        <span class="q-sc-name">${stockQty} in stock</span>${consignTagHTML(stockShelfConsign, false)}
       </div>
-      <div class="q-sc-prices">${stockCost!=null
-        ? `Bought at ${fmtUGX(stockCost)} each`
-        : (refRow
-            ? `No purchase cost on file — costed at ${fmtUGX(ipLineBuyPrice('__stock__', refRow, qty, null))} to replace`
-            : 'No purchase cost on file, and no supplier price to estimate one from')}</div>
+      <div class="q-sc-prices">${stockConsign.qty > 0
+        ? `Owed to ${stockConsign.consignors.length > 1 ? 'their consignors' : esc(supplierName(stockConsign.consignors[0].supplierId))} at ${fmtUGX(Math.round(stockConsign.value / stockConsign.qty))} each as they sell`
+        : (stockCost!=null
+          ? `Bought at ${fmtUGX(stockCost)} each`
+          : (refRow
+              ? `No purchase cost on file — costed at ${fmtUGX(ipLineBuyPrice('__stock__', refRow, qty, null))} to replace`
+              : 'No purchase cost on file, and no supplier price to estimate one from'))}</div>
     </div>
   </label>` : '';
 
@@ -21443,6 +21650,12 @@ function renderQuoteItems(){
     // Shared between the desktop table cell and the mobile card -- same
     // markup, same classes, so the single wiring pass below (keyed off
     // data-line + these child classes) works against either container.
+    /* Whose goods this line will take off the shelf, said beside the
+       name on both layouts. The picker cell is deliberately NOT the
+       place for it: that input's value is matched against supplier
+       names, and a marker inside it would be typed over or matched. */
+    const lineConsign = consignedForLine(it);
+    const consignTag = consignTagHTML(lineConsign.qty > 0 ? lineConsign : null, lineConsign.certain);
     const supplierPickerHTML = `<div class="q-supplier-picker searchable-select">
         <input type="text" class="q-supplier-select q-supplier-search" value="${esc(supplierDisplayLabel(it.supplierId, it))}" autocomplete="off">
         <input type="hidden" class="q-supplier" value="${esc(it.supplierId)}">
@@ -21457,7 +21670,7 @@ function renderQuoteItems(){
       <div class="qc-card-top">
         <div class="qc-card-title">
           <span class="q-row-num">${idx+1}</span>
-          <div><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></div>
+          <div><div class="q-item-name">${esc(it.productName)}${consignTag}</div><div class="q-item-unit">${esc(it.unit)}</div></div>
         </div>
         <button class="q-remove-icon" title="Remove item"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
@@ -21478,7 +21691,7 @@ function renderQuoteItems(){
         <span class="q-row-num">${idx+1}</span>
         <button class="q-remove-icon" title="Remove item"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div></td>
-      <td><div class="q-item-name">${esc(it.productName)}</div><div class="q-item-unit">${esc(it.unit)}</div></td>
+      <td><div class="q-item-name">${esc(it.productName)}${consignTag}</div><div class="q-item-unit">${esc(it.unit)}</div></td>
       <td><input type="number" class="qty-input q-qty" min="1" step="any" value="${it.qty}"></td>
       <td>${sellCellHTML}</td>
       <td class="q-line-total price">${fmtUGX(lineSell)}</td>
@@ -24643,6 +24856,34 @@ function toggleInvoiceVoided(id){
   toast(q.voided ? 'Invoice voided' : 'Invoice unvoided');
 }
 
+/* The three figures at the head of the payment modal, written once.
+
+   They were written twice -- here and again after a payment was pulled
+   back -- which is two places for one arithmetic to be corrected in,
+   and the second one was already a copy nobody would think to look at.
+
+   The fourth line is the point of this: money coming over the counter
+   for goods the shop does not own. It is stated as what is OWED rather
+   than as a share of what has been received, because a customer paying
+   half does not halve the debt -- the consignor is owed for every unit
+   that left the shelf the moment the invoice was raised. Somebody
+   looking at a full drawer needs to know which part of it is spoken
+   for before they spend it. */
+function invPaymentSummaryHTML(q){
+  const total = savedQuoteTotal(q);
+  const paid = Number(q.amountPaid)||0;
+  const consign = consignedForOrder(q);
+  const cells = `
+    <div class="ip-cell"><div class="ip-label">Total amt</div><div class="ip-value">${fmtUGX(Math.round(total))}</div></div>
+    <div class="ip-cell"><div class="ip-label">Receipt made</div><div class="ip-value">${fmtUGX(Math.round(paid))}</div></div>
+    <div class="ip-cell"><div class="ip-label">Balance due</div><div class="ip-value">${fmtUGX(Math.round(total-paid))}</div></div>`;
+  if(!(consign.qty > 0)) return cells;
+  const who = consign.consignors.length > 1
+    ? consign.consignors.map(r=> supplierName(r.supplierId)).join(' and ')
+    : supplierName(consign.consignors[0].supplierId);
+  return cells + `
+    <div class="ip-consign">${ICON_WARN}<span>${esc(fmtUGX(Math.round(consign.value)))} of this is ${esc(who)}'s — consigned goods sold on this invoice, owed to them whether or not it is paid in full.</span></div>`;
+}
 let invPaymentId = null;
 function openInvoicePaymentModal(id){
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -24652,11 +24893,7 @@ function openInvoicePaymentModal(id){
   const paid = Number(q.amountPaid)||0;
   const due = total - paid;
   document.getElementById('invPaymentModalTitle').textContent = `Receive payment — ${invoiceNumberLabel(q)}`;
-  document.getElementById('inv_pay_summary').innerHTML = `
-    <div class="ip-cell"><div class="ip-label">Total amt</div><div class="ip-value">${fmtUGX(Math.round(total))}</div></div>
-    <div class="ip-cell"><div class="ip-label">Receipt made</div><div class="ip-value">${fmtUGX(Math.round(paid))}</div></div>
-    <div class="ip-cell"><div class="ip-label">Balance due</div><div class="ip-value">${fmtUGX(Math.round(due))}</div></div>
-  `;
+  document.getElementById('inv_pay_summary').innerHTML = invPaymentSummaryHTML(q);
   document.getElementById('ip_amount').value = due>0 ? due : '';
   document.getElementById('ip_note').value = '';
   renderInvPaymentHistory(q);
@@ -24702,11 +24939,7 @@ function removeInvoicePayment(id, idx){
   renderInvPaymentHistory(q);
   const total = savedQuoteTotal(q);
   const paid = Number(q.amountPaid)||0;
-  document.getElementById('inv_pay_summary').innerHTML = `
-    <div class="ip-cell"><div class="ip-label">Total amt</div><div class="ip-value">${fmtUGX(Math.round(total))}</div></div>
-    <div class="ip-cell"><div class="ip-label">Receipt made</div><div class="ip-value">${fmtUGX(Math.round(paid))}</div></div>
-    <div class="ip-cell"><div class="ip-label">Balance due</div><div class="ip-value">${fmtUGX(Math.round(total-paid))}</div></div>
-  `;
+  document.getElementById('inv_pay_summary').innerHTML = invPaymentSummaryHTML(q);
   document.getElementById('ip_amount').value = (total-paid)>0 ? (total-paid) : '';
   renderInvoices(document.getElementById('inv_doc_search').value);
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
@@ -37063,6 +37296,32 @@ function consumeStockLots(productId, variantIdx, qty){
   data.stockLots[key] = lots;
   return taken;
 }
+/* What the next `qty` units off this shelf WOULD be, without taking
+   them. The same walk as consumeStockLots, deliberately: a forecast
+   that disagreed with what the sale then does would be worse than no
+   forecast at all. Used wherever a line has not been invoiced yet and
+   the question is whose goods it is about to consume.
+
+   The head lot is not the answer to that question. A shelf holding 2 of
+   the shop's own in front of 8 a consignor left is a shelf where a line
+   of 10 is mostly somebody else's, and reading only the front of the
+   queue said it was none of theirs. */
+function peekStockLots(productId, variantIdx, qty){
+  if(!(qty > 0)) return [];
+  const lots = (data.stockLots||{})[stockKey(productId, variantIdx)] || [];
+  const out = [];
+  let remaining = qty;
+  for(let i=0; i<lots.length && remaining>0; i++){
+    const lot = lots[i];
+    const take = Math.min(Number(lot.qty)||0, remaining);
+    if(take <= 0) continue;
+    const t = {qty: take, cost: lot.cost};
+    if(lot.consign) t.consign = lot.consign;
+    out.push(t);
+    remaining -= take;
+  }
+  return out;
+}
 // Puts consumed lots back where they came from: at the FRONT, in their
 // original order. They were taken off the front, so that is where they
 // belong -- appending them would leave newer stock costing out ahead of
@@ -42919,23 +43178,47 @@ function inventoryLineFor(p, variantIdx){
     packsLabel = `${packs} ${packInfo.packUnit}` + (rem > 0 ? ` + ${rem} ${packInfo.unit || 'unit'}` : '');
   }
   const rule = reorderRuleFor(p.id, variantIdx);
+  /* The card used to work out its own value -- quantity times the FIFO
+     unit cost, over the whole shelf -- and so counted a consignor's
+     goods as the shop's money while the balance sheet counted them out.
+     Both now read the same function, so the two cannot disagree. */
+  const val = shelfValueForKey(stockKey(p.id, variantIdx));
+  const consign = consignedOnShelf(p.id, variantIdx);
   return {
     p, variantIdx, qty, unitCost, costUnit, packsLabel,
     rule,
     // Said on the card, because a floor nobody can see is a floor
     // nobody trusts -- and this is the one number the shop set by hand.
     belowFloor: !!(rule && rule.minUnits && qty < rule.minUnits),
-    /* null, not 0, when nothing on the shelf has a recorded cost. "This
-       line is worth nothing" and "nobody wrote down what it cost" are
-       different facts, and the balance sheet already declares the second
-       as understating stock rather than valuing it at zero. */
-    value: unitCost == null ? null : qty * unitCost,
-    uncosted: qty > 0 && unitCost == null,
+    /* null, not 0, when the figure would understate. "This line is worth
+       nothing" and "nobody wrote down what it cost" are different facts,
+       and the balance sheet already declares the second as understating
+       stock rather than valuing it at zero.
+
+       Two ways to be unpriceable, and both have to be asked. Some of the
+       shop's OWN units having no cost behind them is the plain one. The
+       other is a shelf with nothing on it and no cost ever recorded --
+       nothing to value AND nothing to value it at -- which reads
+       differently from an empty shelf whose cost is known and which
+       therefore is worth exactly 0.
+
+       A shelf that is entirely a consignor's values at 0 and says so:
+       the shop owns none of it, which is a known quantity rather than a
+       missing one, and what it is worth to the person who does own it
+       is stated beside it. */
+    value: (val.uncostedQty > 0 || unitCost == null) ? null : val.value,
+    uncosted: qty > 0 && (val.uncostedQty > 0 || unitCost == null),
+    // Not deducted from `qty`: they are on the shelf and can be sold,
+    // which is what that count reports. They are only taken out of what
+    // the shelf is WORTH.
+    consign: consign.qty > 0 ? consign : null,
+    consignedQty: val.consignedQty,
+    consignedValue: val.consignedValue,
   };
 }
 
 function inventoryLineStats(lines){
-  let value = 0, zero = 0, uncosted = 0;
+  let value = 0, zero = 0, uncosted = 0, consigned = 0, consignedLines = 0;
   lines.forEach(l=>{
     /* `!= null` is EQUIVALENT to `+= (l.value||0)` here and is kept for
        what it says: only a costed line contributes. A mutation run
@@ -42946,8 +43229,9 @@ function inventoryLineStats(lines){
     if(l.value != null) value += l.value;
     if(l.qty <= 0) zero++;
     if(l.uncosted) uncosted++;
+    if(l.consign){ consigned += l.consignedValue; consignedLines++; }
   });
-  return { lines: lines.length, value, zero, uncosted };
+  return { lines: lines.length, value, zero, uncosted, consigned, consignedLines };
 }
 
 function sortInventoryLines(lines, mode){
@@ -43063,7 +43347,14 @@ function renderInventory(){
   // under it when a filter is on.
   if(strip){
     strip.innerHTML = lines.length ? `<div class="sum-strip">
-      ${cell(fmtUGX(Math.round(s.value)), 'on the shelf')}
+      ${/* Said, not dropped -- and the two are stated as separate money,
+            not as a part and its whole. Consigned goods were never inside
+            the shelf figure; they are a second pile standing beside it,
+            and "of it not ours" would have invited the reader to subtract
+            one from the other. The first label only names its side when
+            there IS another side. */''}
+      ${cell(fmtUGX(Math.round(s.value)), s.consigned ? 'ours on the shelf' : 'on the shelf')}
+      ${s.consigned ? cell(fmtUGX(Math.round(s.consigned)), 'held for others', 'warn') : ''}
       ${cell(s.lines, s.lines===1?'line':'lines')}
       ${cell(s.zero, 'nothing left', s.zero ? 'warn' : '')}
       ${s.uncosted ? cell(s.uncosted, 'with no cost on file', 'warn') : ''}
@@ -43097,6 +43388,10 @@ function renderInventory(){
          the flex-gap rule watches for, and it reads worse besides. */
       const metaPills = [
         p.category ? `<span class="pack-pill">${esc(p.category)}</span>` : '',
+        // First of the three, because whose goods these are outranks
+        // every other fact about the line: it decides whether the figure
+        // under "Value here" is the shop's money at all.
+        consignTagHTML(l.consign, false).trim(),
         l.rule && l.rule.minUnits
           ? `<span class="pack-pill${l.belowFloor ? ' inv-low-pill' : ''}">${l.belowFloor ? 'below ' : 'keep '}${l.rule.minUnits}</span>` : '',
         l.rule && l.rule.coverDays ? `<span class="pack-pill">${l.rule.coverDays} days cover</span>` : '',
@@ -43133,6 +43428,13 @@ function renderInventory(){
               <span class="inv-qty-label">${l.uncosted ? 'No cost on file' : 'Value here'}</span>
               <span class="inv-cost${l.uncosted?' inv-cost-none':''}">${l.value!=null ? fmtUGX(Math.round(l.value)) : '—'}</span>
             </div>
+            <!-- Named rather than silently missing from the figure above.
+                 A shelf whose value dropped with no explanation is a
+                 shelf somebody counts again by hand. -->
+            ${l.consign ? `<div class="inv-qty-wrap">
+              <span class="inv-qty-label">Not ours</span>
+              <span class="inv-cost inv-cost-consign">${fmtUGX(Math.round(l.consignedValue))}</span>
+            </div>` : ''}
           </div>
           <div class="pc-actions">
             <button type="button" class="pc-icon-btn inv-action-btn" title="Purchase (restock)" data-action="purchase" data-id="${esc(p.id)}" data-vidx="${vidxAttr}">${ICON_PURCHASE}</button>
@@ -44918,41 +45220,51 @@ function consignmentOwedTotal(asOf){
   return consignmentRows(asOf).reduce((s,r)=> s + Math.max(0, r.owed), 0);
 }
 
+/* What ONE shelf is worth, and how much of what stands on it is not the
+   shop's to value.
+
+   This was the body of inventoryValue's loop and nothing else could
+   reach it, so the Stock on hand screen wrote its own arithmetic for the
+   same question -- quantity times the FIFO unit cost, over the whole
+   shelf. The two then disagreed by exactly the consigned holding: the
+   balance sheet counted a consignor's goods out and the card counted
+   them in, and a shop could read what its stock was worth in two places
+   and get two answers. One reading, two readers, is the fix.
+
+   CONSIGNED UNITS ARE ON THE SHELF BUT NOT OWNED, so they are counted
+   out of what the stock is WORTH and reported separately. Their qty
+   still counts as stock on hand everywhere else -- they can be sold,
+   which is the whole point -- but calling them the shop's wealth would
+   state somebody else's goods as its own. */
+function shelfValueForKey(key){
+  const qty = Number((data.stock||{})[key])||0;
+  const rows = (data.stockLots||{})[key] || [];
+  const consigned = rows.filter(l=> l.consign);
+  const consignedQty = consigned.reduce((n,l)=> n + (Number(l.qty)||0), 0);
+  const consignedValue = consigned.reduce((n,l)=> n + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+  const out = { qty, consignedQty, consignedValue,
+    ownedQty: Math.max(0, qty - consignedQty), value: 0, uncostedQty: 0, unitCost: null };
+  if(out.ownedQty <= 0) return out;
+  const costed = rows.filter(l=> !l.consign && l.cost != null);
+  const costedQty = costed.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+  if(costedQty <= 0){ out.uncostedQty = out.ownedQty; return out; }
+  const costedValue = costed.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+  // Priced at what the lots say a unit cost. Where the shelf holds more
+  // than the lots account for, the surplus has no cost behind it.
+  out.unitCost = costedValue / costedQty;
+  const priced = Math.min(out.ownedQty, costedQty);
+  out.value = priced * out.unitCost;
+  if(out.ownedQty > costedQty) out.uncostedQty = out.ownedQty - costedQty;
+  return out;
+}
 function inventoryValue(){
-  let value = 0, uncostedQty = 0;
-  const lots = data.stockLots || {};
-  const stock = data.stock || {};
-  const keys = new Set(Object.keys(stock).concat(Object.keys(lots)));
-  /* CONSIGNED UNITS ARE ON THE SHELF BUT NOT OWNED, so they are counted
-     out of what the stock is WORTH and reported separately. Their qty
-     still counts as stock on hand everywhere else -- they can be sold,
-     which is the whole point -- but calling them the shop's wealth
-     would state somebody else's goods as its own. */
-  let consignedQty = 0, consignedValue = 0;
+  let value = 0, uncostedQty = 0, consignedQty = 0, consignedValue = 0;
+  const keys = new Set(Object.keys(data.stock || {}).concat(Object.keys(data.stockLots || {})));
   keys.forEach(k=>{
-    const qty = Number(stock[k])||0;
-    if(qty <= 0) return;
-    const rows = lots[k]||[];
-    const mine = rows.filter(l=> !l.consign);
-    rows.filter(l=> l.consign).forEach(l=>{
-      consignedQty += Number(l.qty)||0;
-      consignedValue += (Number(l.qty)||0) * (Number(l.cost)||0);
-    });
-    /* What the shelf holds that is the shop's own. Where consigned lots
-       account for part of the count, only the rest can be valued. */
-    const ownedOnShelf = Math.max(0, qty - rows.filter(l=> l.consign)
-      .reduce((n,l)=> n + (Number(l.qty)||0), 0));
-    if(ownedOnShelf <= 0) return;
-    const costed = mine.filter(l=> l.cost != null);
-    const costedQty = costed.reduce((s,l)=> s + (Number(l.qty)||0), 0);
-    if(costedQty <= 0){ uncostedQty += ownedOnShelf; return; }
-    const costedValue = costed.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
-    // Priced at what the lots say a unit cost. Where the shelf holds more
-    // than the lots account for, the surplus has no cost behind it.
-    const unit = costedValue / costedQty;
-    const priced = Math.min(ownedOnShelf, costedQty);
-    value += priced * unit;
-    if(ownedOnShelf > costedQty) uncostedQty += ownedOnShelf - costedQty;
+    const r = shelfValueForKey(k);
+    if(r.qty <= 0) return;
+    value += r.value; uncostedQty += r.uncostedQty;
+    consignedQty += r.consignedQty; consignedValue += r.consignedValue;
   });
   return { value, uncostedQty, consignedQty, consignedValue };
 }
@@ -54776,6 +55088,11 @@ const ASSISTANT_TOOLS = {
       && ((((data.stockLots||{})[stockKey(l.p.id, l.variantIdx)])||[]).length > 0));
     const out = {
       total_value: apRound(s.value),
+      // The shop's own goods only, as on the balance sheet. Consigned
+      // stock is reported apart rather than folded in, so the assistant
+      // cannot answer "what is my stock worth" with somebody else's.
+      consigned_value: apRound(s.consigned),
+      consigned_lines: s.consignedLines,
       lines_in_stock: inStock.length,
       uncosted_lines: s.uncosted,
       top_by_value: sortInventoryLines(inStock, 'value').slice(0, 8).map(l=>({

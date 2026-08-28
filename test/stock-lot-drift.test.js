@@ -30,7 +30,7 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 
 const store = { stock: {}, stockLots: {}, products: [] };
 const NAMES = ['stockKey', 'stockLotDrift', 'repairStockLotDrift', 'consumeStockLots',
-  'addStockLot', 'inventoryValue', 'productVariantLabel', 'variantLabel'];
+  'addStockLot', 'shelfValueForKey', 'inventoryValue', 'productVariantLabel', 'variantLabel'];
 let fns = null, err = null;
 try { fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')), { data: store }, NAMES); }
 catch (e) { err = e; }

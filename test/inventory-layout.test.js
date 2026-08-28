@@ -39,6 +39,13 @@ const scope = compileScope([
   // The card now shows the shop's own restock level, so the rule that
   // reads it comes with the line builder.
   extractFunction(src, 'reorderRuleFor', 'index.html'),
+  /* The card no longer works out its own value: it reads the same
+     per-shelf function the balance sheet does, and says whose the goods
+     are beside it. Both come with the line builder. */
+  extractFunction(src, 'shelfValueForKey', 'index.html'),
+  extractFunction(src, 'consignTally', 'index.html'),
+  extractFunction(src, 'consignedOnShelf', 'index.html'),
+  extractFunction(src, 'stockKey', 'index.html'),
   extractFunction(src, 'inventoryLineFor', 'index.html'),
   extractFunction(src, 'inventoryLineStats', 'index.html'),
   extractFunction(src, 'sortInventoryLines', 'index.html'),
