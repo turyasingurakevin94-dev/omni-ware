@@ -257,4 +257,67 @@ if (scope) {
     'the look-back loads and persists like every other shop setting');
 }
 
+/* ---------- 6. the screen is a report, not a paragraph ---------------- */
+/*
+ * It wore the same spare parts as the buy plan: a filter bar with the
+ * whole account of the screen crammed into a right-aligned hint beside
+ * the look-back box, shopping-list rows, and a sixty-word paragraph of
+ * semicolons where a breakdown of ninety pairs into five buckets
+ * belongs. What a row here has to say is that a price moved and what
+ * that move is worth -- and the worth was the second sub-line, in the
+ * smallest text on the row, under the trail it explains.
+ */
+{
+  const panel = extractFunction(src, 'renderPriceWatch', 'index.html');
+
+  t.check(/class="sum-strip"/.test(panel) && /'pairs compared'/.test(panel)
+    && /'held their price'/.test(panel) && /'out of step with the file'/.test(panel),
+    'what the screen read is in the strip every other screen uses for it');
+  t.check(!/pw_summary/.test(src),
+    'and not squeezed into a hint beside the look-back box — that element is gone');
+
+  /* The file section first. Everything else here is information; a
+     registry row that no longer matches what the shop pays is the one
+     thing on the screen silently costing the buying plan its accuracy. */
+  const iFile = panel.indexOf("listPageSlice('priceFile'");
+  const iUp = panel.indexOf("listPageSlice('priceUp'");
+  const iSteady = panel.indexOf("listPageSlice('priceSteady'");
+  t.check(iFile > 0 && iFile < iUp && iUp < iSteady,
+    'the out-of-step rows lead, because they are the ones with something to do about them');
+
+  // The consequence, then the evidence.
+  const iWhat = panel.indexOf('class="pw-what"');
+  const iTrail = panel.indexOf('class="pw-trailline"');
+  t.check(iWhat > 0 && iWhat < iTrail,
+    'a row says what the move is worth before it shows the prices behind it');
+
+  /* Each bucket its own row. A breakdown wants a column of counts that
+     can be added up by eye. */
+  t.check(/bits\.push\(\{ n: r\.once, why:/.test(panel) && /class="pw-account-row"/.test(panel),
+    'the account is a breakdown, not a semicolon chain');
+  t.check(/accountLines/.test(panel) && /Read <b>\$\{r\.linesRead\}<\/b> purchase line/.test(panel),
+    'still saying how many lines it read and how many pairs they make');
+
+  t.check(/class="form-panel pw-controls"/.test(src) && /<label for="pw_days">/.test(src),
+    'the look-back is a labelled field in a form');
+  t.check(/id="pw_days"/.test(src),
+    'keeping the id — the listener binds to it at parse time with no null guard');
+
+  /* Chase debts is still wearing .buy-controls and .buy-row. This screen
+     moved off them; it did not take them with it. */
+  t.check(/\.buy-row\{/.test(src) && /\.buy-controls\{/.test(src),
+    'the shared classes are left standing for the screen still using them');
+  t.check(!/class="buy-row"/.test(panel) && !/class="buy-note"/.test(panel),
+    'while this one wears its own');
+
+  /* Three kinds of row, three different chips, and none of them is a
+     percentage pretending to be the other two. A steady row showing
+     "+0%" would be a price change that never happened. */
+  t.check(/<span class="pw-move">held<\/span>/.test(panel)
+    && /<span class="pw-move file">file<\/span>/.test(panel),
+    'a held row says held and a file row says file — the chip is passed in, not derived');
+  t.check(/pw-move\$\{sr\.rise > 0 \? ' up' : ' down'\}/.test(panel),
+    'and only a moved row carries a percentage, up or down');
+}
+
 process.exit(t.done() ? 1 : 0);

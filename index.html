@@ -846,17 +846,55 @@
   .cons-gap-row svg{flex-shrink:0;width:17px;height:17px;margin-top:1px;color:var(--ow-amber-ink);}
   .cons-gap-main{flex:1 1 220px;min-width:0;font-size:12.5px;line-height:1.5;color:var(--ink);}
   .cons-gap-dim{display:block;margin-top:4px;color:var(--ow-ink-600);}
-  /* ---- Supplier prices over time ---- */
-  .pw-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+  /* ---- Supplier prices over time ----
+     Its own shape, like the plan next door and for the same reason: the
+     .buy-* row this wore is a shopping list, and what a row here has to
+     say is that a price moved and what that move is worth. Same pieces
+     as the rest of the app -- .sum-strip for the account of itself,
+     .form-panel for the window. */
+  .pw-list{display:flex;flex-direction:column;gap:2px;}
+  .pw-row{padding:12px 0;border-bottom:1px solid var(--ow-rule-soft);}
   .pw-row:last-child{border-bottom:none;}
-  .pw-main{min-width:0;flex:1;}
-  .pw-main b{color:var(--ink);}
-  .pw-main em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .pw-move{flex-shrink:0;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;
-    background:var(--bg);color:var(--ink-soft);font-variant-numeric:tabular-nums;}
-  .pw-move.up{background:var(--ow-oxide-soft);color:var(--accent);}
-  .pw-cost{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .pw-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .pw-name{font-size:13.5px;font-weight:700;color:var(--ink);min-width:0;}
+  .pw-who{font-size:12px;color:var(--ink-soft);min-width:0;flex:1 1 auto;}
+  .pw-cost{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .pw-act{margin-left:auto;padding:7px 13px;font-size:12.5px;flex-shrink:0;}
+  .pw-move{flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:0.3px;padding:3px 9px;
+    border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums;
+    background:var(--ow-steel-050);color:var(--ink-soft);}
+  .pw-move.up{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
+  .pw-move.down{background:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  .pw-move.file{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
+  /* What the move is WORTH -- the figure this screen ranks by, and the
+     reason it is read at all. It was the second sub-line, in the
+     smallest text on the row, under the trail. */
+  .pw-what{margin-top:7px;font-size:13px;color:var(--ink);line-height:1.5;}
+  .pw-trailline{margin-top:5px;font-size:11.5px;color:var(--ink-soft);line-height:1.5;
+    font-variant-numeric:tabular-nums;}
   .pw-trail{font-variant-numeric:tabular-nums;}
+  .pw-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
+    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
+  /* The breakdown: a column of counts that can be added up by eye. It
+     was a sixty-word paragraph of semicolons. */
+  .pw-account{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
+  .pw-account-row{display:flex;align-items:baseline;gap:12px;font-size:12.5px;color:var(--ink-soft);
+    line-height:1.5;}
+  .pw-account-row b{flex:0 0 42px;text-align:right;font-family:'IBM Plex Mono',monospace;
+    font-variant-numeric:tabular-nums;font-size:13.5px;color:var(--ink);}
+  .pw-account-head{margin:8px 0 0;font-size:12.5px;color:var(--ink);}
+  .pw-account-note{margin:10px 0 0;font-size:11.5px;color:var(--ow-ink-400);line-height:1.55;}
+  .pw-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;
+    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
+  .pw-empty b{font-size:13.5px;color:var(--ink);}
+  .pw-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
+  .pw-controls .form-grid{grid-template-columns:minmax(160px, 230px);}
+  @media (max-width:560px){
+    .pw-name{flex-basis:100%;}
+    .pw-cost, .pw-act{margin-left:0;}
+    .pw-account-row b{flex-basis:34px;}
+  }
   .pack-pill.inv-low-pill{background:var(--ow-oxide-soft);color:var(--accent);font-weight:700;}
   /* ---- What needs you today -------------------------------------
      The dashboard opened on four figures and eight panels of equal
@@ -9407,9 +9445,20 @@
         <p>What each supplier has actually charged you, from your own purchase invoices — so a price creeping up becomes visible instead of invisible. Ranked by money rather than percentage: a small rise on something bought every week costs more than a big rise on something bought once. Prices are only ever compared against prices for the same unit, and a single purchase is never called a trend. The last section is the one to watch — where the Price Registry no longer matches what you actually pay, which is the file the buying plan costs everything from.</p>
       </div>
       <div class="panel">
-        <div class="buy-controls">
-          <label>Look back <input type="number" id="pw_days" min="1" step="1"> days</label>
-          <span class="buy-controls-note" id="pw_summary"></span>
+        <!-- The window, and what it means, as a form. It was a filter
+             bar with the whole summary of the screen crammed into a
+             right-aligned hint beside it. The id stays: the listener
+             below binds to it at parse time with no null guard. -->
+        <div class="form-panel pw-controls">
+          <div class="form-panel-head">
+            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
+            <div class="form-panel-title">How far back to look
+              <small>Only purchases inside this window are compared. A supplier bought from once has no price to compare against yet, so a longer window finds more.</small></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label for="pw_days">Look back (days)</label>
+              <input type="number" id="pw_days" min="1" step="1"></div>
+          </div>
         </div>
         <div id="pw_body"></div>
       </div>
@@ -49353,7 +49402,7 @@ function renderPriceWatch(){
   const f = n=> fmtUGX(Math.round(n));
   const label = (sr)=> sr.name || productDisplayLabel(
     (data.products||[]).find(p=> p.id === sr.productId) || {name: sr.productId}, sr.variantIdx);
-  const move = (sr)=> `<span class="pw-move${sr.rise > 0 ? ' up' : ''}">${
+  const move = (sr)=> `<span class="pw-move${sr.rise > 0 ? ' up' : ' down'}">${
     sr.rise > 0 ? '+' : ''}${Math.round(sr.risePct)}%</span>`;
   /* The prices themselves, in order. Three at most: the first, so the
      rise has a starting point, and the two most recent. */
@@ -49367,26 +49416,45 @@ function renderPriceWatch(){
     ? ` · ${sr.skippedOtherUnit} earlier purchase${sr.skippedOtherUnit===1?'':'s'} in another unit, not compared`
     : '';
 
+  /* WHAT IT COST, THEN THE PRICES BEHIND IT.
+
+     Every row used to open with a product name and a trail of figures
+     and leave the consequence -- what the change is worth on what the
+     shop actually buys -- to the second sub-line in the smallest text.
+     That figure is the reason this screen is ranked by money at all, so
+     it leads. The trail sits under it as evidence, which is what a
+     trail is for. */
+  const who = (sr)=> `<span class="pw-who">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>`;
+  // The chip is passed in rather than derived: a steady row says "held"
+  // and an out-of-step row says "file", and neither is a percentage.
+  const head = (sr, chip, right)=> `
+      <div class="pw-top">
+        ${chip}
+        <span class="pw-name">${esc(label(sr))}</span>
+        ${who(sr)}
+        ${right}
+      </div>`;
+
   const movedRow = (sr)=> `
-    <div class="pw-row">${move(sr)}
-      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
-        <em>${trail(sr)}${skipped(sr)}</em>
-        <em>the ${sr.units} you bought in these ${w.days} days would ${sr.rise > 0 ? 'now cost' : 'now be'} <b>${f(Math.abs(sr.extra))}</b> ${sr.rise > 0 ? 'more' : 'less'}</em></div>
-      <span class="pw-cost">${f(sr.last.price)}</span>
+    <div class="pw-row">
+      ${head(sr, move(sr), `<span class="pw-cost">${f(sr.last.price)}</span>`)}
+      <div class="pw-what">The <b>${sr.units}</b> you bought in these ${w.days} days would ${
+        sr.rise > 0 ? 'now cost' : 'now be'} <b>${f(Math.abs(sr.extra))}</b> ${sr.rise > 0 ? 'more' : 'less'}</div>
+      <div class="pw-trailline">${trail(sr)}${skipped(sr)}</div>
     </div>`;
 
   const fileRow = (sr, i)=> `
     <div class="pw-row">
-      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
-        <em>last paid <b>${f(sr.last.price)}</b> on ${esc(fmtShortDate(sr.last.date))}, but the Price Registry says <b>${f(sr.onFile)}</b> at that quantity — a gap of ${f(Math.abs(sr.fileGap))} ${sr.fileGap > 0 ? 'above' : 'below'} the file the buying plan costs from.</em></div>
-      <button type="button" class="btn btn-ghost pw-fix" data-i="${i}">Update the file</button>
+      ${head(sr, '<span class="pw-move file">file</span>', `<button type="button" class="btn btn-ghost pw-act pw-fix" data-i="${i}">Update the file</button>`)}
+      <div class="pw-what">You last paid <b>${f(sr.last.price)}</b>; the Price Registry says <b>${f(sr.onFile)}</b> at that quantity — ${
+        f(Math.abs(sr.fileGap))} ${sr.fileGap > 0 ? 'above' : 'below'} the file the buying plan costs everything from.</div>
+      <div class="pw-trailline">last bought ${esc(fmtShortDate(sr.last.date))}</div>
     </div>`;
 
   const steadyRow = (sr)=> `
-    <div class="pw-row"><span class="pw-move">held</span>
-      <div class="pw-main"><b>${esc(label(sr))}</b> <span class="chase-none">${esc(sr.supplierName || supplierName(sr.supplierId))}</span>
-        <em>${sr.points.length} purchases since ${esc(fmtShortDate(sr.first.date))}, every one at the same price${skipped(sr)}</em></div>
-      <span class="pw-cost">${f(sr.last.price)}</span>
+    <div class="pw-row">
+      ${head(sr, '<span class="pw-move">held</span>', `<span class="pw-cost">${f(sr.last.price)}</span>`)}
+      <div class="pw-trailline"><b>${sr.points.length}</b> purchases since ${esc(fmtShortDate(sr.first.date))}, every one at the same price${skipped(sr)}</div>
     </div>`;
 
   /* What the screen looked at and what it could say about it. The first
@@ -49396,43 +49464,77 @@ function renderPriceWatch(){
      rows that do not exist. A screen with nothing to report owes an
      account of what it read, not a reassurance. */
   const r = w.reasons;
+  /* Each bucket as its own row, not another clause in a semicolon
+     chain. This is a breakdown of one number into four or five, and a
+     breakdown wants a column of counts you can add up by eye -- the
+     paragraph it replaced ran to sixty words and had to be read twice
+     to find out where ninety pairs went. */
   const accountLines = ()=> {
     const bits = [];
-    if(r.once) bits.push(`<b>${r.once}</b> bought only once in these ${w.days} days — nothing to compare against yet`);
-    if(r.sameDay) bits.push(`<b>${r.sameDay}</b> bought only on a single day — one delivery is not a price change`);
-    if(r.unitSplit) bits.push(`<b>${r.unitSplit}</b> whose unit changed, so the old prices cannot honestly be compared with the new`);
-    if(r.steady) bits.push(`<b>${r.steady}</b> bought again at the very same price`);
-    if(r.moved) bits.push(`<b>${r.moved}</b> that moved`);
-    if(r.noFileRow) bits.push(`<b>${r.noFileRow}</b> with no Price Registry row, so the file cannot be checked against them`);
+    if(r.once) bits.push({ n: r.once, why: `bought only once in these ${w.days} days — nothing to compare against yet` });
+    if(r.sameDay) bits.push({ n: r.sameDay, why: 'bought only on a single day — one delivery is not a price change' });
+    if(r.unitSplit) bits.push({ n: r.unitSplit, why: 'whose unit changed, so the old prices cannot honestly be compared with the new' });
+    if(r.steady) bits.push({ n: r.steady, why: 'bought again at the very same price' });
+    if(r.moved) bits.push({ n: r.moved, why: 'that moved' });
+    if(r.noFileRow) bits.push({ n: r.noFileRow, why: 'with no Price Registry row, so the file cannot be checked against them' });
     return bits;
   };
-  const account = ()=> `<p class="buy-note">Read <b>${r.linesRead}</b> purchase line${r.linesRead===1?'':'s'} in these ${w.days} days, making <b>${r.pairs}</b> product-and-supplier pair${r.pairs===1?'':'s'}: ${
-    accountLines().join('; ')}.${
-    r.linesNoProduct || r.linesNoPrice ? ` ${[r.linesNoProduct ? `<b>${r.linesNoProduct}</b> line${r.linesNoProduct===1?'':'s'} named no product` : '', r.linesNoPrice ? `<b>${r.linesNoPrice}</b> carried no price` : ''].filter(Boolean).join(' and ')} — those cannot be watched at all.` : ''}${
-    r.once > r.pairs/2 ? ` Most pairs have a single purchase in this window; a longer look-back would find more.` : ''}</p>`;
+  const account = ()=> {
+    const unwatchable = [
+      r.linesNoProduct ? `<b>${r.linesNoProduct}</b> line${r.linesNoProduct===1?'':'s'} named no product` : '',
+      r.linesNoPrice ? `<b>${r.linesNoPrice}</b> carried no price` : '',
+    ].filter(Boolean).join(' and ');
+    return `<div class="pw-tail"><h4>What this screen read</h4>
+      <p class="pw-account-head">Read <b>${r.linesRead}</b> purchase line${r.linesRead===1?'':'s'} in these ${w.days} days, making <b>${r.pairs}</b> product-and-supplier pair${r.pairs===1?'':'s'}.</p>
+      <div class="pw-account">${accountLines().map(b=>
+        `<div class="pw-account-row"><b>${b.n}</b><span>${b.why}</span></div>`).join('')}</div>
+      ${unwatchable ? `<p class="pw-account-note">${unwatchable} — those cannot be watched at all.</p>` : ''}
+      ${r.once > r.pairs/2 ? '<p class="pw-account-note">Most pairs have a single purchase in this window; a longer look-back would find more.</p>' : ''}</div>`;
+  };
 
   let html = '';
   if(!w.series.length){
-    html = `<p class="dash-panel-note" style="margin:6px 0 0;">No purchase invoices in the last ${w.days} days${
-      r.linesRead ? `, and the ${r.linesRead} purchase line${r.linesRead===1?'':'s'} there ${r.linesRead===1?'was':'were'} missing a product or a price` : ''}, so there is nothing to compare yet. Record what you buy and this fills itself in.</p>`;
+    html = `<div class="pw-empty"><b>Nothing to compare yet.</b>
+      <span>No purchase invoices in the last ${w.days} days${
+      r.linesRead ? `, and the ${r.linesRead} purchase line${r.linesRead===1?'':'s'} there ${r.linesRead===1?'was':'were'} missing a product or a price` : ''}. Record what you buy and this fills itself in.</span></div>`;
   } else {
-    if(w.up.length) html += `<div class="buy-tail"><h4>Going up</h4>${
-      listPageSlice('priceUp', w.up).map(movedRow).join('')}${
-      listMoreButtonHTML('priceUp', w.up.length, 'risers')}</div>`;
-    if(w.down.length) html += `<div class="buy-tail"><h4>Come down</h4>${
-      listPageSlice('priceDown', w.down).map(movedRow).join('')}${
-      listMoreButtonHTML('priceDown', w.down.length, 'falls')}</div>`;
-    if(w.steady.length) html += `<div class="buy-tail"><h4>Held their price</h4>${
-      listPageSlice('priceSteady', w.steady).map(steadyRow).join('')}${
-      listMoreButtonHTML('priceSteady', w.steady.length, 'suppliers')}</div>`;
-    if(w.outOfStep.length) html += `<div class="buy-tail"><h4>Price Registry out of step with what you pay</h4>${
-      listPageSlice('priceFile', w.outOfStep).map(fileRow).join('')}${
-      listMoreButtonHTML('priceFile', w.outOfStep.length, 'rows')}</div>`;
+    /* The screen's own account of itself, at the top: how much was
+       compared, how much of it moved, and how much of the file no longer
+       matches. It was a run-on hint beside the look-back box. */
+    const notYet = r.once + r.sameDay + r.unitSplit;
+    const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+      <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
+    html = `<div class="sum-strip">
+      ${cell(r.pairs, r.pairs === 1 ? 'pair compared' : 'pairs compared')}
+      ${cell(r.moved, r.moved === 1 ? 'price moved' : 'prices moved', r.moved ? 'warn' : '')}
+      ${cell(r.steady, 'held their price', r.steady ? 'good' : '')}
+      ${cell(w.outOfStep.length, 'out of step with the file', w.outOfStep.length ? 'warn' : '')}
+      ${notYet ? cell(notYet, 'not comparable yet') : ''}
+    </div>`;
+    /* The wrapper is shared; the list id is NOT passed into it. Every
+       listPageSlice('x', …) and listMoreButtonHTML('x', …) stays written
+       out here where list-paging.test.js can see it -- that suite reads
+       the source to prove every paging button has a page size and a
+       re-render behind it, and a button with neither is one that does
+       nothing when pressed. */
+    const section = (title, rows, moreHTML, render)=> `<div class="pw-tail"><h4>${title}</h4>
+      <div class="pw-list">${rows.map(render).join('')}</div>${moreHTML}</div>`;
+    /* The file first. Everything else on this screen is information; a
+       registry row that no longer matches what the shop pays is the one
+       thing here that is silently costing the buying plan its accuracy. */
+    if(w.outOfStep.length) html += section('Price Registry out of step with what you pay',
+      listPageSlice('priceFile', w.outOfStep), listMoreButtonHTML('priceFile', w.outOfStep.length, 'rows'), fileRow);
+    if(w.up.length) html += section('Going up',
+      listPageSlice('priceUp', w.up), listMoreButtonHTML('priceUp', w.up.length, 'risers'), movedRow);
+    if(w.down.length) html += section('Come down',
+      listPageSlice('priceDown', w.down), listMoreButtonHTML('priceDown', w.down.length, 'falls'), movedRow);
+    if(w.steady.length) html += section('Held their price',
+      listPageSlice('priceSteady', w.steady), listMoreButtonHTML('priceSteady', w.steady.length, 'suppliers'), steadyRow);
     html += account();
     /* Said once, plainly, because it is the question this screen invites:
        the registry holds today's price and no history, which is why the
        trail above is read from invoices instead. */
-    html += `<p class="buy-note" style="color:var(--ow-ink-400);">A price is only counted here once you have BOUGHT at it. The Price Registry keeps today's figure and no history — a new price a supplier quotes you appears here after the first purchase at it, not before.</p>`;
+    html += `<p class="pw-account-note">A price is only counted here once you have <b>bought</b> at it. The Price Registry keeps today's figure and no history — a new price a supplier quotes you appears here after the first purchase at it, not before.</p>`;
   }
   el.innerHTML = html;
   el.querySelectorAll('.pw-fix').forEach(btn=> btn.addEventListener('click', ()=>{
@@ -49447,10 +49549,6 @@ function renderPriceWatch(){
     selectPrProduct(sr.productId, sr.variantIdx);
     openModal('priceModal');
   }));
-  const sum = document.getElementById('pw_summary');
-  if(sum) sum.textContent = w.series.length
-    ? `${r.pairs} product-and-supplier pair${r.pairs===1?'':'s'} · ${r.moved} moved · ${r.steady} held · ${r.once + r.sameDay + r.unitSplit} not yet comparable · ${w.outOfStep.length} out of step with the file`
-    : '';
 }
 document.getElementById('pw_days').addEventListener('change', e=>{
   const v = Math.round(Number(e.target.value)||0);
