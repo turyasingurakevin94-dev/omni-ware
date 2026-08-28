@@ -95,6 +95,8 @@ const scope = compileScope([
   extractFunction(src, 'openBuyingList', 'index.html'),
 ], {
   data,
+  quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
+    || !!(it.receivedAt && Number(it.receivedQty) > 0)),
   // The carousel is DOM plumbing shared with the two run modals; this
   // scope has no DOM, so it is stubbed and its wiring pinned on the
   // source instead.

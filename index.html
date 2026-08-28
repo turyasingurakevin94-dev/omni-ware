@@ -781,6 +781,16 @@
   .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
   .chase-done{font-size:11.5px;font-weight:600;color:var(--accent);}
   .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
+  /* Goods of a consignor's that have sold and are recorded as nobody's.
+     Amber and inside the card, not a page banner: it is a fact about
+     THIS consignor, and it has to sit where their figures are for the
+     mismatch between them to be visible at all. */
+  .cons-gap{margin-top:10px;border-radius:9px;background:var(--ow-amber-soft);padding:10px 12px;}
+  .cons-gap-row{display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap;}
+  .cons-gap-row + .cons-gap-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--ow-rule-soft);}
+  .cons-gap-row svg{flex-shrink:0;width:17px;height:17px;margin-top:1px;color:var(--ow-amber-ink);}
+  .cons-gap-main{flex:1 1 220px;min-width:0;font-size:12.5px;line-height:1.5;color:var(--ink);}
+  .cons-gap-dim{display:block;margin-top:4px;color:var(--ow-ink-600);}
   /* ---- Supplier prices over time ---- */
   .pw-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px;}
   .pw-row:last-child{border-bottom:none;}
@@ -20067,12 +20077,15 @@ function consignedOnShelf(productId, variantIdx){
 function consignedForLine(it){
   const lots = it && it._stockLots;
   if(Array.isArray(lots) && lots.length) return { ...consignTally(lots), certain: true };
-  /* A line with NO supplier named is off our shelf too -- that is how
-     the picker reads it, and how an order quoted from stock before the
-     sentinel existed still reads. Only a line pointing at a real
-     supplier is bought in, and a bought-in line is never off our shelf
-     whatever the shelf happens to hold of the same product. */
-  if(!it || !it.productId || (it.supplierId && it.supplierId !== '__stock__')){
+  /* quoteLineComesOffShelf decides, because it is the rule the INVOICING
+     path follows -- a forecast made on any other rule describes a
+     deduction that will not happen. This function first used its own
+     (anything not pointing at a real supplier came off the shelf), which
+     read a line with no supplier chosen yet as ours and would have
+     forecast a consignor's units for a line invoicing never touches.
+     A line bought in for the order is never off our shelf, whatever the
+     shelf happens to hold of the same product. */
+  if(!it || !it.productId || !quoteLineComesOffShelf(it)){
     return { ...consignTally([]), certain: false };
   }
   return { ...consignTally(peekStockLots(it.productId,
@@ -25662,26 +25675,66 @@ async function generatePurchaseInvoiceForRestock(productId, variantIdx, displayN
    which past sales came off whose goods is not knowable, and inventing
    a split would be exactly the kind of confident guess this app
    refuses to make. */
+/* Everything that has SOLD and is recorded as nobody's, by shelf key.
+
+   One walk of the sales rather than one per product. The mark form did
+   this walk for the single item in its dropdown, which was fine; the
+   Consignment screen has to ask it of every line every consignor holds,
+   and twenty lines meant twenty passes over every order the shop has
+   ever invoiced.
+
+   `unrecorded` is the part this cannot offer to fix, and it is counted
+   rather than left out. A sale line records the lots it took, but four
+   things leave it without one: the shelf read zero at invoicing, the
+   count and the lot ledger had drifted apart, an order was edited
+   between load and save, or it was invoiced before the app kept lots at
+   all. Those units left the shelf all the same. Reporting only what can
+   be marked would understate the gap in exactly the direction that
+   costs a consignor money. */
+function unmarkedSalesByKey(){
+  const out = new Map();
+  const touch = (key)=>{
+    if(!out.has(key)) out.set(key, { key, qty: 0, value: 0, unrecorded: 0, sales: [] });
+    return out.get(key);
+  };
+  (data.savedQuotes||[]).forEach(q=>{
+    if(!q.invoiced || q.voided) return;
+    (q.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      if(!quoteLineComesOffShelf(it)) return;
+      const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
+      const lots = it._stockLots||[];
+      const unmarked = lots.filter(l=> !l.consign);
+      /* What the line SOLD against what its lots account for. The lots
+         can cover less than the quantity -- a short take leaves the rest
+         uncosted -- and that remainder is exactly what no repair can
+         reach. */
+      const covered = lots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+      const gap = Math.max(0, (Number(it.qty)||0) - covered);
+      if(!unmarked.length && !gap) return;
+      const rec = touch(key);
+      rec.unrecorded += gap;
+      if(!unmarked.length) return;
+      const qty = unmarked.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+      const value = unmarked.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0);
+      rec.qty += qty; rec.value += value;
+      rec.sales.push({ quoteId: q.id, invoice: invoiceNumberLabel(q),
+        date: q.invoicedAt || q.date || '', qty, value });
+    });
+  });
+  out.forEach(r=> r.sales.sort((a,b)=> String(a.date).localeCompare(String(b.date))));
+  return out;
+}
+
 function consignmentMarkPlan(productId, variantIdx, supplierId, shelfWanted, soldWanted){
   const key = stockKey(productId, variantIdx);
   const lots = ((data.stockLots||{})[key] || []).filter(l=> l.qty > 0 && !l.consign);
   const shelfAvailable = lots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
 
-  const sales = [];
-  (data.savedQuotes||[]).forEach(q=>{
-    if(!q.invoiced || q.voided) return;
-    (q.items||[]).forEach(it=>{
-      if(!it.productId) return;
-      if(stockKey(it.productId, it.variantIdx==null?null:it.variantIdx) !== key) return;
-      const unmarked = (it._stockLots||[]).filter(l=> !l.consign);
-      if(!unmarked.length) return;
-      sales.push({ quoteId: q.id, invoice: invoiceNumberLabel(q), date: q.invoicedAt || q.date || '',
-        qty: unmarked.reduce((s,l)=> s + (Number(l.qty)||0), 0),
-        value: unmarked.reduce((s,l)=> s + (Number(l.qty)||0)*(Number(l.cost)||0), 0) });
-    });
-  });
-  sales.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
-  const soldAvailable = sales.reduce((s,r)=> s + r.qty, 0);
+  const found = unmarkedSalesByKey().get(key) || { qty: 0, unrecorded: 0, sales: [] };
+  const sales = found.sales;
+  const soldAvailable = found.qty;
+  const soldUnrecorded = found.unrecorded;
 
   const shelfQty = shelfWanted == null ? shelfAvailable
     : Math.max(0, Math.min(shelfAvailable, Number(shelfWanted) || 0));
@@ -25709,9 +25762,36 @@ function consignmentMarkPlan(productId, variantIdx, supplierId, shelfWanted, sol
 
   return { key, productId, variantIdx, supplierId, supplierName: supplierName(supplierId),
     shelfAvailable, soldAvailable,
+    // Carried out so every reader can say it. Units that left the shelf
+    // on an invoice which kept no record of what it took: real sales
+    // that no marking can reach.
+    soldUnrecorded,
     shelfQty, shelfValue: Math.round(shelfValue),
     soldQty, soldValue: Math.round(soldValue),
     sales: touched };
+}
+
+/* Where a consignor's goods have sold without being recorded as theirs.
+
+   The screen's two halves come from two stores that nothing joins: what
+   is HELD reads the shelf's lots, what is SOLD reads the lot record on
+   each invoice line. Mark a shelf after some of it has already gone and
+   the halves disagree for good -- the card reads "sold 0 so far ·
+   nothing owed right now", which is a confident, healthy-looking claim
+   about money the shop is holding for somebody else.
+
+   So the screen asks. For every product a consignor still holds, this
+   reports what has sold of it and been recorded as nobody's -- which is
+   the shop's own goods or theirs, and only the owner knows which. It is
+   put to them rather than assumed. */
+function consignmentUnmarkedSales(supplierId){
+  const found = unmarkedSalesByKey();
+  return consignmentHeldLines(supplierId).map(h=>{
+    const rec = found.get(h.key);
+    if(!rec || (!(rec.qty > 0) && !(rec.unrecorded > 0))) return null;
+    return { key: h.key, productId: h.productId, variantIdx: h.variantIdx, name: h.name,
+      qty: rec.qty, value: rec.value, unrecorded: rec.unrecorded, sales: rec.sales };
+  }).filter(Boolean).sort((a,b)=> b.value - a.value);
 }
 
 function consignmentMarkApply(productId, variantIdx, supplierId, shelfWanted, soldWanted){
@@ -32763,8 +32843,41 @@ function renderConsignment(){
     return;
   }
 
+  /* GOODS OF THEIRS THAT HAVE ALREADY GONE, RECORDED AS NOBODY'S.
+
+     What is held and what has sold come from two stores nothing joins,
+     so the card could say "sold 0 so far · nothing owed right now" about
+     a shelf that had quietly sold ninety-five of somebody's boards --
+     and it read as a healthy, settled card. That is the state this
+     block exists to make impossible.
+
+     The units are not CLAIMED for the consignor: goods sold before
+     anybody marked them may have been the shop's own. It is put to the
+     owner with the count, the money and the invoices, and marked only
+     when they say so. */
+  const gapHTML = (r)=>{
+    const gaps = consignmentUnmarkedSales(r.supplierId);
+    if(!gaps.length) return '';
+    return `<div class="cons-gap">${gaps.map(g=>`
+      <div class="cons-gap-row">
+        ${ICON_WARN}
+        <div class="cons-gap-main">
+          <b>${Math.round(g.qty)} of ${esc(g.name)} have already sold</b> on ${
+            esc(g.sales.slice(0, 4).map(x=> x.invoice).join(', '))}${
+            g.sales.length > 4 ? ` and ${g.sales.length - 4} more` : ''} — recorded as nobody's,
+          so the ${f(g.value)} they would owe ${esc(r.name)} is not counted above.
+          ${g.unrecorded ? `<span class="cons-gap-dim">${Math.round(g.unrecorded)} more sold on invoices that kept no record of which stock they took; those cannot be marked here.</span>` : ''}
+        </div>
+        ${g.qty > 0 ? `<button type="button" class="btn btn-accent cons-gap-fix"
+          data-sup="${esc(r.supplierId)}" data-pid="${esc(g.productId)}"
+          data-vidx="${g.variantIdx==null?'':g.variantIdx}"
+          data-qty="${Math.round(g.qty)}">Record as theirs</button>` : ''}
+      </div>`).join('')}</div>`;
+  };
+
   const card = (r)=> {
     const held = consignmentHeldLines(r.supplierId);
+    const gap = gapHTML(r);
     return `<div class="chase-row" data-id="${esc(r.supplierId)}">
       <div class="chase-head"><b>${esc(r.name)}</b>
         <span class="chase-amt">${f(Math.max(0, r.owed))}</span></div>
@@ -32772,6 +32885,7 @@ function renderConsignment(){
         ? `holding <b>${Math.round(r.heldQty)}</b> of theirs across ${r.lines} line${r.lines===1?'':'s'}, worth ${f(r.heldValue)} to them`
         : 'nothing of theirs left on the shelf'} · sold <b>${Math.round(r.soldQty)}</b> so far${
         r.settled > 0.5 ? ` · ${f(r.settled)} settled` : ''}</div>
+      ${gap}
       ${held.length ? `<div class="buy-tail"><h4>On the shelf</h4>${held.map((h,i)=>`
         <div class="buy-row"><div class="buy-main"><b>${esc(h.name)}</b>
           <em>${Math.round(h.qty)} left · you owe ${f(h.cost)} each as they sell</em></div>
@@ -32780,7 +32894,9 @@ function renderConsignment(){
       <div class="chase-acts">
         ${r.owed > 0.5
           ? `<button type="button" class="btn btn-accent cons-settle" data-sup="${esc(r.supplierId)}">Settle ${f(r.owed)}</button>`
-          : '<span class="chase-none">nothing owed right now</span>'}
+          : `<span class="chase-none">${gap
+              ? 'nothing recorded as owed — see above'
+              : 'nothing owed right now'}</span>`}
       </div>
     </div>`;
   };
@@ -32788,9 +32904,36 @@ function renderConsignment(){
   el.innerHTML = blocked + `
     <p class="buy-note" style="margin:0 0 12px;">Of the money you are holding, <b>${f(owedTotal)}</b> belongs to ${
       rows.filter(r=> r.owed > 0.5).length === 1 ? 'a supplier' : 'suppliers'} — it is takings from goods that were never yours.</p>
+    <!-- Said because it had to be asked. A consignor is owed the moment
+         their goods leave the shop; whether the customer has paid is a
+         separate question, and answering it here would let a shop spend
+         money it is only holding. -->
+    <p class="dash-panel-note" style="margin:-6px 0 14px;">Counted from the invoice, not the payment — their goods are owed for the moment they leave, whether or not the customer has paid yet.</p>
     ${rows.map(card).join('')}` + (stockLotConsignColumn ? markAlreadyHereHTML() : '');
 
   wireMarkAlreadyHere(el);
+
+  /* One tap, and still asked for first. The count and the money are read
+     back from the plan rather than from the button, so the figure the
+     owner agrees to is the figure that moves. */
+  el.querySelectorAll('.cons-gap-fix').forEach(btn=> btn.addEventListener('click', ()=>{
+    const sup = btn.dataset.sup;
+    const vidx = btn.dataset.vidx === '' ? null : Number(btn.dataset.vidx);
+    const qty = Number(btn.dataset.qty) || 0;
+    // shelf side zero: this is about goods that have already gone. What
+    // is still standing on the shelf is marked by the form below.
+    const plan = consignmentMarkPlan(btn.dataset.pid, vidx, sup, 0, qty);
+    if(!plan || !plan.soldQty){ toast('Nothing left to record'); return; }
+    if(!confirm(`Record ${Math.round(plan.soldQty)} already-sold as ${plan.supplierName}'s?\n\n`
+      + `On ${plan.sales.map(x=> `${x.invoice} (${Math.round(x.taking)})`).join(', ')}.\n\n`
+      + `${plan.supplierName} will be owed ${f(plan.soldValue)} for them. Nothing on the shelf changes, `
+      + `and no money moves until you settle.`)) return;
+    consignmentMarkApply(btn.dataset.pid, vidx, sup, 0, qty);
+    renderConsignment();
+    renderInventory();
+    refreshNavBadges();
+    toast(`${Math.round(plan.soldQty)} recorded as ${plan.supplierName}'s — ${f(plan.soldValue)} now owed`);
+  }));
   el.querySelectorAll('.cons-settle').forEach(btn=> btn.addEventListener('click', async ()=>{
     const sup = btn.dataset.sup;
     const row = consignmentRows().find(r=> r.supplierId === sup);
@@ -43308,14 +43451,25 @@ function fixStockLotDrift(key){
     + `\n\nNo stock count changes and no money moves — the shelf figures stay exactly as they are. `
     + `Only the record of what those goods cost is brought back into line with them.\n\n`
     + `Where the record carries more than the shelf, the oldest entries are dropped: what is still on the shelf is `
-    + `the newest stock, so the entries that outlived their goods are the oldest ones.\n\nThis cannot be undone automatically.`;
+    + `the newest stock, so the entries that outlived their goods are the oldest ones. `
+    + `Entries for goods held on consignment are left alone — dropping those would erase what a supplier is owed.`
+    + `\n\nThis cannot be undone automatically.`;
   if(!confirm(msg)) return;
-  doing.forEach(r=> repairStockLotDrift(r.key));
+  const done = doing.map(r=> repairStockLotDrift(r.key)).filter(Boolean);
   saveData();
   renderInventory();
+  renderConsignment();
+  /* What it could NOT do, said as loudly as what it did. A consignor's
+     entries are left alone, so a shelf whose excess is theirs comes out
+     of this still mismatched -- and silently reporting it as matched is
+     how somebody would stop looking at a real problem. */
+  const stuck = done.filter(r=> r.blockedByConsign > 0);
   toast(doing.length === 1
     ? `${doing[0].label} — cost record matched to the ${doing[0].onShelf} on the shelf`
     : `${doing.length} cost records matched to their shelves`, 6000);
+  if(stuck.length) toast(stuck.length === 1
+    ? `${stuck[0].label} still does not match: ${Math.round(stuck[0].blockedByConsign)} of the extra entries are goods held on consignment, and those are not the app's to drop. Check the Consignment screen.`
+    : `${stuck.length} of them still do not match — the extra entries are goods held on consignment. Check the Consignment screen.`, 9000);
 }
 function renderInventory(){
   renderStockLotDrift();
@@ -45088,8 +45242,54 @@ function repairStockLotDrift(key){
   const rows = stockLotDrift();
   const row = rows.find(r=> r.key === key);
   if(!row) return null;
-  if(row.drift > 0) consumeStockLots(row.productId, row.variantIdx, row.drift);
-  else addStockLot(row.productId, row.variantIdx, -row.drift, null);
+  if(row.drift > 0){
+    /* THE SHOP'S OWN LOTS GO FIRST, and a consignor's are not touched at
+       all. This used to call consumeStockLots and throw the result away
+       -- which walks the front of the queue and takes whatever is there.
+       Where the oldest lots were a consignor's, pressing Fix deleted
+       their goods: what they held dropped, nothing was recorded as sold
+       against them, and so what they were owed simply stopped existing.
+       No log row named it either, because this function wrote none.
+
+       Excess lots are a bookkeeping error, not a sale. Correcting one
+       must never be the way somebody else's money disappears, so the
+       trim takes only units the shop can account for as its own, and
+       says plainly when it could not take them all. */
+    const lots = (data.stockLots||{})[row.key] || [];
+    let left = row.drift;
+    const rebuilt = [];
+    lots.forEach(l=>{
+      const qty = Number(l.qty)||0;
+      if(left <= 0 || l.consign || qty <= 0){ rebuilt.push(l); return; }
+      const take = Math.min(qty, left);
+      left -= take;
+      if(take < qty) rebuilt.push({ ...l, qty: qty - take });
+    });
+    data.stockLots[row.key] = rebuilt;
+    row.trimmed = row.drift - left;
+    row.blockedByConsign = left;
+  } else {
+    // Booked as the shop's own: nothing on file says these were anyone
+    // else's, and claiming them for a consignor would invent a debt.
+    addStockLot(row.productId, row.variantIdx, -row.drift, null);
+    row.trimmed = 0;
+    row.blockedByConsign = 0;
+  }
+  /* Written down, because it moves the cost ledger. This function wrote
+     no log row at all, so a shop whose stock value changed had nothing
+     to look at that said why. */
+  const product = (data.products||[]).find(x=> x.id === row.productId);
+  data.stockLog.push({
+    id: allocRowId('stockLog'), key: row.key, productId: row.productId,
+    variantIdx: (row.variantIdx==null||row.variantIdx==='') ? null : row.variantIdx,
+    label: product ? productVariantLabel(product, row.variantIdx) : row.productId,
+    type: 'correction', delta: 0, qtyAfter: Number((data.stock||{})[row.key]) || 0,
+    note: row.drift > 0
+      ? `Cost records trimmed to the shelf — ${Math.round(row.trimmed)} removed`
+        + (row.blockedByConsign ? `, ${Math.round(row.blockedByConsign)} left because they are held on consignment` : '')
+      : `Cost records topped up to the shelf — ${Math.round(-row.drift)} added with no cost on file`,
+    date: todayISO(), at: new Date().toISOString(), cost: null, supplierId: null,
+  });
   return row;
 }
 

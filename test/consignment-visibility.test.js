@@ -72,6 +72,8 @@ const env = {
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '(unknown supplier)',
   savedQuoteTotal: (q) => (q.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.sellPrice) || 0), 0),
   ICON_WARN: '<svg class="icon"></svg>',
+  quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
+    || !!(it.receivedAt && Number(it.receivedQty) > 0)),
 };
 
 let scope = null; let err = null;

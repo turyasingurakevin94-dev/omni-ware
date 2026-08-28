@@ -59,6 +59,8 @@ const env = {
   productVariantLabel: (p) => p.name,
   purchaseInvoiceTotal: (pi) => (pi.items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.price) || 0), 0),
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+  quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
+    || !!(it.receivedAt && Number(it.receivedQty) > 0)),
 };
 
 let scope = null; let err = null;
@@ -70,6 +72,7 @@ try {
     'consignmentSettlements', 'consignmentSettled', 'consignmentRows', 'consignmentOwedTotal',
     'consignmentSoldLines', 'returnConsignedStock', 'consignedUnitCostForSale', 'sellBelowCostClause',
     'peekStockLots', 'consignTally', 'consignedForLine',
+    'unmarkedSalesByKey', 'consignmentUnmarkedSales',
     'consignmentMarkPlan', 'consignmentMarkApply', 'invoiceNumberLabel',
   ].map((n) => extractFunction(src, n, 'index.html')),
   env, ['addStockLot', 'applyStockDelta', 'consumeStockLots', 'restoreStockLots', 'inventoryValue',
@@ -77,7 +80,7 @@ try {
     'consignmentHeld', 'consignmentHeldLines', 'consignmentAccrued', 'consignmentSettled',
     'consignmentRows', 'consignmentOwedTotal', 'consignmentSoldLines', 'returnConsignedStock',
     'sellBelowCostClause', 'getFIFOUnitCost', 'getStockQty', 'stockKey', 'consignmentSettlements',
-    'consignmentMarkPlan', 'consignmentMarkApply']);
+    'consignmentMarkPlan', 'consignmentMarkApply', 'unmarkedSalesByKey', 'consignmentUnmarkedSales']);
 } catch (e) { err = e; }
 t.check(!!scope, `the consignment chain compiles${err ? ` (${err.message})` : ''}`);
 
@@ -213,19 +216,25 @@ if (scope) {
 if (scope) {
   data.stockLots.P3 = [{ qty: 10, cost: 5000, consign: 'S1' }];
   data.stock.P3 = 10;
+  /* `supplierId: '__stock__'` is not decoration. The clause reads the
+     shelf only for a line that is actually coming off it, by the same
+     rule invoicing uses (quoteLineComesOffShelf) -- a fixture that left
+     it out was asking production code to guess, and production code was
+     bent to satisfy the guess. */
   const warn = scope.sellBelowCostClause({ productId: 'P3', variantIdx: null, qty: 3,
-    unit: 'pc', sellPrice: 4000, price: 0 });
+    supplierId: '__stock__', unit: 'pc', sellPrice: 4000, price: 0 });
   t.check(/below the 5,000 UGX you will owe/.test(warn) && /out of your own pocket/.test(warn),
     `a shelf sale under the consigned cost is named as the loss it is (${warn})`);
   t.check(/3,000 UGX over 3/.test(warn), 'with what it costs over the whole line');
 
   const fine = scope.sellBelowCostClause({ productId: 'P3', variantIdx: null, qty: 3,
-    unit: 'pc', sellPrice: 6000, price: 0 });
+    supplierId: '__stock__', unit: 'pc', sellPrice: 6000, price: 0 });
   eq(fine, '', 'and a price above it says nothing');
 
   data.stockLots.P4 = [{ qty: 10, cost: 5000 }];
   data.stock.P4 = 10;
-  eq(scope.sellBelowCostClause({ productId: 'P4', variantIdx: null, qty: 1, sellPrice: 4000, price: 0 }), '',
+  eq(scope.sellBelowCostClause({ productId: 'P4', variantIdx: null, qty: 1,
+    supplierId: '__stock__', sellPrice: 4000, price: 0 }), '',
     'goods the shop owns are not judged by this rule — that margin is the shop\'s own business');
 }
 
@@ -432,6 +441,129 @@ if (scope) {
     'summing the per-shelf reading IS the balance sheet figure — one function, so they cannot drift');
   eq(whole.consignedQty, 30, 'with the consigned units reported apart');
   eq(whole.consignedValue, 150000, 'at what they would cost to keep');
+}
+
+/* ---------- 11. the two halves have to be asked whether they agree ----
+ *
+ * What is HELD reads the shelf's lots; what is SOLD reads the lot record
+ * on each invoice line. Nothing joins them. Mark a shelf after some of
+ * it has already gone and they disagree for good -- and the card said
+ * "sold 0 so far · nothing owed right now" about a shop holding
+ * 2,422,500 UGX of somebody else's takings, in the tone of a settled
+ * account. The owner had to notice it themselves.
+ *
+ * The two fixtures below are the reported case and its healthy twin.
+ * They differ in ONE thing: whether the goods were marked before or
+ * after they sold.
+ */
+if (scope) {
+  const sellOff = (id, qty, day) => {
+    const lots = scope.consumeStockLots('P9', null, qty);
+    data.stock.P9 = scope.getStockQty('P9', null);
+    const q = { id, client: { name: 'Adinan' }, invoiced: true, voided: false,
+      invoicedAt: day, date: day,
+      items: [{ productId: 'P9', variantIdx: null, qty, supplierId: '__stock__', _stockLots: lots }] };
+    data.savedQuotes.push(q);
+    return q;
+  };
+  const fresh = () => {
+    data.stock = {}; data.stockLots = {}; data.savedQuotes = []; data.purchaseInvoices = [];
+    data.products.push({ id: 'P9', name: 'Gypsum board 9mm', variants: [] });
+  };
+
+  // MARKED FIRST, then sold: the chain carries the stamp all the way.
+  fresh();
+  scope.applyStockDelta('P9', null, 105, 'restock', 'Received on consignment', 25500, 'S1', { consign: 'S1' });
+  sellOff(254, 95, '2026-08-25');
+  let row = scope.consignmentRows().find(r => r.supplierId === 'S1');
+  eq(Math.round(row.heldQty), 10, 'marked first: ten of theirs left on the shelf');
+  eq(Math.round(row.soldQty), 95, 'and the ninety-five that went are recorded as sold');
+  eq(row.owed, 2422500, 'so they are owed for them');
+  eq(scope.consignmentUnmarkedSales('S1').length, 0,
+    'nothing is unaccounted for, so the card carries no warning');
+
+  // SOLD FIRST, then only the shelf marked: the reported screen exactly.
+  fresh();
+  scope.applyStockDelta('P9', null, 105, 'restock', 'Purchased', 25500, 'S1', {});
+  sellOff(254, 95, '2026-08-25');
+  scope.consignmentMarkApply('P9', null, 'S1', null, 0);   // shelf only, sold left at zero
+  row = scope.consignmentRows().find(r => r.supplierId === 'S1');
+  eq(Math.round(row.heldQty), 10, 'sold first: the same ten held');
+  eq(Math.round(row.heldValue), 255000, 'worth the same 255,000 to them');
+  eq(Math.round(row.soldQty), 0, 'and the same "sold 0 so far" — the two screens are indistinguishable');
+  eq(row.owed, 0, 'with nothing recorded as owed');
+
+  // Which is the whole reason the screen has to ask.
+  const gaps = scope.consignmentUnmarkedSales('S1');
+  eq(gaps.length, 1, 'the gap is found');
+  eq(Math.round(gaps[0].qty), 95, 'and counted');
+  eq(Math.round(gaps[0].value), 2422500, 'and priced at what they would be owed');
+  t.check(gaps[0].sales.length === 1 && /254/.test(gaps[0].sales[0].invoice),
+    `and the invoice it sold on is named, so the owner can check it rather than take the app's word (${gaps[0].sales.map(x=>x.invoice).join(', ')})`);
+
+  // Taking the offer moves it, and taking it twice cannot.
+  scope.consignmentMarkApply('P9', null, 'S1', 0, Math.round(gaps[0].qty));
+  row = scope.consignmentRows().find(r => r.supplierId === 'S1');
+  eq(Math.round(row.soldQty), 95, 'recording them makes the sale count');
+  eq(row.owed, 2422500, 'and the consignor is owed exactly what the warning said');
+  eq(Math.round(row.heldQty), 10, 'while what is on the shelf is untouched — this was about goods that had gone');
+  eq(scope.consignmentUnmarkedSales('S1').length, 0, 'the gap closes');
+  scope.consignmentMarkApply('P9', null, 'S1', 0, 95);
+  eq(scope.consignmentRows().find(r => r.supplierId === 'S1').owed, 2422500,
+    'and running it again cannot double what is owed — there is nothing unmarked left to take');
+}
+
+/* ---------- 11b. sales the repair cannot reach are still counted ------ */
+/*
+ * A line records the lots it took, but four things leave it without one:
+ * the shelf read zero at invoicing, the count and the lot ledger had
+ * drifted, an order was edited between load and save, or it predates the
+ * record entirely. Those units left the shelf all the same. Reporting
+ * only what CAN be marked would understate the gap in the one direction
+ * that costs a consignor money.
+ */
+if (scope) {
+  data.stock = {}; data.stockLots = {}; data.savedQuotes = []; data.purchaseInvoices = [];
+  data.stockLots.P9 = [{ qty: 10, cost: 25500, consign: 'S1' }, { qty: 4, cost: 25500 }];
+  data.stock.P9 = 14;
+  // One sale that kept its lots, one that kept none.
+  data.savedQuotes.push({ id: 260, invoiced: true, voided: false, invoicedAt: '2026-08-26',
+    items: [{ productId: 'P9', variantIdx: null, qty: 6, supplierId: '__stock__',
+      _stockLots: [{ qty: 6, cost: 25500 }] }] });
+  data.savedQuotes.push({ id: 261, invoiced: true, voided: false, invoicedAt: '2026-08-27',
+    items: [{ productId: 'P9', variantIdx: null, qty: 12, supplierId: '__stock__' }] });
+
+  const plan = scope.consignmentMarkPlan('P9', null, 'S1');
+  eq(plan.soldAvailable, 6, 'only the sale with lots on file can be marked');
+  eq(plan.soldUnrecorded, 12, 'and the one without is counted apart rather than left out');
+  const gap = scope.consignmentUnmarkedSales('S1')[0];
+  eq(Math.round(gap.qty), 6, 'the card offers what it can fix');
+  eq(Math.round(gap.unrecorded), 12, 'and names what it cannot');
+
+  // A bought-in line never came off our shelf, so it is not this shelf's business.
+  data.savedQuotes.push({ id: 262, invoiced: true, voided: false, invoicedAt: '2026-08-27',
+    items: [{ productId: 'P9', variantIdx: null, qty: 50, supplierId: 'S2' }] });
+  eq(scope.consignmentMarkPlan('P9', null, 'S1').soldUnrecorded, 12,
+    'a line bought in from another supplier is not a sale off this shelf');
+}
+
+/* ---------- 11c. the screen says both of these things ----------------- */
+{
+  const render = extractFunction(src, 'renderConsignment', 'index.html');
+  t.check(/consignmentUnmarkedSales\(r\.supplierId\)/.test(render),
+    'the card asks whether the two halves agree');
+  t.check(/nothing recorded as owed — see above/.test(render),
+    'and stops calling itself settled while they do not');
+  t.check(/cannot be marked here/.test(render),
+    'what no marking can reach is named on the card, not dropped');
+  /* The owner had to ask which it was. A screen that reports money owed
+     must say what makes it owed. */
+  t.check(/Counted from the invoice, not the payment/.test(render),
+    'and the screen says the basis: invoiced, not paid');
+  t.check(/consignmentMarkApply\(btn\.dataset\.pid, vidx, sup, 0, qty\)/.test(render),
+    'the fix marks the SOLD side only — what is on the shelf is a separate decision');
+  t.check(/if\(!confirm\(`Record \$\{Math\.round\(plan\.soldQty\)\}/.test(render),
+    'and asks first, naming the count');
 }
 
 process.exit(t.done() ? 1 : 0);

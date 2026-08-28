@@ -59,6 +59,8 @@ const scope = compileScope([
 ], {
   data,
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
+  quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
+    || !!(it.receivedAt && Number(it.receivedQty) > 0)),
 }, ['quoteItemSellPrice', 'sellBelowCostClause', 'effectiveMarkupRule']);
 
 const product = (over) => {
@@ -232,6 +234,8 @@ const line = (over) => Object.assign({
       // No consigned lots in this fixture, so the clause reads exactly as
       // it did before -- which is what these cases are checking.
       data: { stockLots: {} },
+      quoteLineComesOffShelf: (it) => !!it && (it.supplierId === '__stock__'
+        || !!(it.receivedAt && Number(it.receivedQty) > 0)),
       fmtUGX: (n) => Number(n || 0).toLocaleString('en-US') + ' UGX',
       toast: (m) => { told.push(String(m)); },
       saveData: () => {}, renderQuoteItems: () => {},

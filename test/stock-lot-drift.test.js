@@ -26,13 +26,17 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('stock lot drift');
 const src = read('index.html');
+const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringify(got)}, want ${JSON.stringify(want)})`);
 const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
-const store = { stock: {}, stockLots: {}, products: [] };
+const store = { stock: {}, stockLots: {}, products: [], stockLog: [] };
 const NAMES = ['stockKey', 'stockLotDrift', 'repairStockLotDrift', 'consumeStockLots',
   'addStockLot', 'shelfValueForKey', 'inventoryValue', 'productVariantLabel', 'variantLabel'];
 let fns = null, err = null;
-try { fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')), { data: store }, NAMES); }
+try {
+  fns = compileScope(NAMES.map(n => extractFunction(src, n, 'index.html')),
+    { data: store, todayISO: () => '2026-08-28', allocRowId: () => 1 }, NAMES);
+}
 catch (e) { err = e; }
 t.check(!!fns, `the drift routines compile${err ? ` (${err.message})` : ''}`);
 
@@ -44,7 +48,7 @@ if (fns) {
       { id: 'P042', name: 'Normal Mulper — Flat' },
       { id: 'P051', name: 'Nice Door', variants: [{ combo: { Color: 'Red' } }, { combo: { Color: 'Blue' } }] },
     ];
-    store.stock = {}; store.stockLots = {};
+    store.stock = {}; store.stockLots = {}; store.stockLog = [];
   };
 
   /* ---------- 1. the reported case is found and named --------------- */
@@ -172,6 +176,64 @@ if (fns) {
     'saying plainly that the shelf and the money are not what is being changed');
   t.check(/cost record \$\{r\.inLots\} → \$\{r\.onShelf\}/.test(fix),
     'and naming each record from and to before it commits');
+}
+
+/* ---------- consigned lots are not this button's to drop -------------
+ *
+ * The repair used to call consumeStockLots for the excess and throw the
+ * result away -- which walks the FRONT of the queue and takes whatever
+ * is there. Where the oldest lots were a consignor's, pressing Fix
+ * deleted their goods: what they held dropped, nothing was recorded as
+ * sold against them, and so what they were owed simply stopped existing.
+ * No log row named it either, because this function wrote none.
+ *
+ * A mismatch in the cost ledger is a bookkeeping error. Correcting one
+ * must never be the way somebody else's money disappears.
+ */
+if (fns) {
+  const { stockLotDrift, repairStockLotDrift } = fns;
+  const heldFor = (sup) => Object.keys(store.stockLots).reduce((n, k) =>
+    n + (store.stockLots[k] || []).filter(l => l.consign === sup)
+      .reduce((s, l) => s + (Number(l.qty) || 0), 0), 0);
+
+  store.products = [{ id: 'P042', name: 'Gypsum board 9mm' }];
+  store.stock = { P042: 10 };
+  store.stockLog = [];
+  // The consignor's delivery is the OLDEST lot, which is exactly where a
+  // front-of-queue trim would have taken from.
+  store.stockLots = { P042: [{ qty: 10, cost: 25500, consign: 'S1' }, { qty: 6, cost: 24000 }] };
+
+  const row = repairStockLotDrift('P042');
+  eq(heldFor('S1'), 10, 'the consignor still holds every one of theirs');
+  eq(row.trimmed, 6, 'the shop\'s own entries are what came off');
+  eq(row.blockedByConsign, 0, 'and there was enough of the shop\'s own to cover the whole excess');
+  eq((store.stockLots.P042 || []).length, 1, 'leaving one lot behind');
+
+  /* And where there is NOT enough of the shop's own, it stops rather
+     than helping itself to the rest -- and says how many it left. */
+  store.stock = { P042: 4 };
+  store.stockLots = { P042: [{ qty: 10, cost: 25500, consign: 'S1' }] };
+  store.stockLog = [];
+  const stuck = repairStockLotDrift('P042');
+  eq(heldFor('S1'), 10, 'a shelf whose excess is ALL a consignor\'s comes out untouched');
+  eq(stuck.trimmed, 0, 'nothing was trimmed');
+  eq(stuck.blockedByConsign, 6, 'and the six it could not take are reported, not swallowed');
+  t.check(stockLotDrift().length === 1,
+    'so the drift is still there afterwards, which is the honest outcome');
+
+  // Written down either way: it moves the cost ledger, and a shop whose
+  // stock value changed had nothing to look at that said why.
+  const log = store.stockLog[store.stockLog.length - 1];
+  t.check(log && log.type === 'correction' && log.delta === 0,
+    'a correction row is written, moving no count');
+  t.check(log && /held on consignment/.test(log.note),
+    `and it names why it stopped (${log && log.note})`);
+
+  const fix = extractFunction(src, 'fixStockLotDrift', 'index.html');
+  t.check(/Entries for goods held on consignment are left alone/.test(fix),
+    'the confirm says so before the tap');
+  t.check(/blockedByConsign > 0/.test(fix) && /Check the Consignment screen/.test(fix),
+    'and what it could not do is reported as loudly as what it did');
 }
 
 process.exit(t.done() ? 1 : 0);
