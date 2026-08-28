@@ -9358,6 +9358,20 @@
               </header>
               <div class="form-grid pset-fields" id="presetOrderLimitsWrap"></div>
 
+              <label class="pset-toggle-row">
+                <input type="checkbox" id="preset_stage_alerts">
+                <span><b>Tell me when an order goes past its limit</b><br>
+                  <span class="pset-toggle-note">A notification the moment a card goes over, instead of a flag that
+                    only warns whoever happens to be looking at the board. Each order is mentioned once per step,
+                    so a busy morning does not turn into a queue of the same reminder.</span></span>
+              </label>
+              <div class="pset-note" id="preset_stage_alerts_state">
+                <b>Only while the app is open.</b> This shop's notifications reach a picker's phone through their
+                worker app; there is no such channel for you, so a closed browser cannot be reached. Keep the app
+                open on the counter machine and it works all day. Set at least one limit above, or there is
+                nothing to go past.
+              </div>
+
               <section class="pset-group">
                 <h4>Price checking</h4>
                 <p class="pset-note">The registry refreshes itself only where the shop is busy — quoting an item, restocking it, receiving it — so anything you do not trade regularly is never questioned again. These two settings drive the Prices To Check report on the dashboard. Where an item has enough dated purchase invoices to show how fast its own price moves, that is used instead of the limit below; where it has not, the limit below applies.</p>
@@ -12649,6 +12663,10 @@ async function loadData(shopId){
     presetExpenseCategories: withPresetCategory(presets.expenseCategories || seed.presetExpenseCategories, CASH_SHORTAGE_CATEGORY),
     presetAttributes: presets.attributes || seed.presetAttributes,
     presetOrderStageLimits: presets.orderStageLimits || {},
+    // Off by default: an alert nobody asked for is an interruption, and
+    // the limits themselves ship unset, so there would be nothing to
+    // alert about anyway.
+    presetStageAlerts: !!presets.stageAlerts,
     // Rides in the same presets blob as everything above it, so the
     // review's two settings need no column and no migration.
     presetPriceReview: presets.priceReview || {},
@@ -12945,7 +12963,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -19659,6 +19677,10 @@ function wireBuyingListReceiving(){
          retire it and it would sit on the list claiming to be on its
          way after the van had gone. */
       const closed = closeArrivedSupplierTrips();
+      // Before saveData, so the move rides the same write rather than a
+      // second one -- and before the renders, so the board is drawn once
+      // in its new shape.
+      const advanced = autoAdvanceReceivedOrders();
       saveData();
       renderInventory();
       openBuyingList();
@@ -19667,8 +19689,9 @@ function wireBuyingListReceiving(){
         movedSupplier ? ` — now billed to ${supplierName(it.supplierId)}` : ''}${stillOwed > 0
         ? ` — still ${stillOwed} short for ${quoteClientName(q)}`
         : (topUp ? ' — this line is now complete' : '')}${
-        closed ? ` · ${closed} supplier ${closed===1?'delivery':'deliveries'} now complete` : ''}`,
-        (stillOwed > 0 || movedSupplier) ? 6000 : undefined);
+        closed ? ` · ${closed} supplier ${closed===1?'delivery':'deliveries'} now complete` : ''}${
+        autoAdvanceNote(advanced)}`,
+        (stillOwed > 0 || movedSupplier || advanced.length) ? 6000 : undefined);
     });
   });
   // Send someone for a whole run.
@@ -19748,13 +19771,17 @@ function wireBuyingListReceiving(){
         + '\n\nThis puts the goods on the shelf and bills the supplier for what arrived.')) return;
       const res = confirmCollectionTrip(trip.id);
       if(!res) return;
+      // A trip closes several orders' last lines at once, so this is the
+      // call site where the move matters most.
+      const advanced = autoAdvanceReceivedOrders();
       saveData();
       renderInventory();
       renderSavedQuotes();
       openBuyingList();
       toast(`Checked in — ${res.received} onto the shelf across ${res.lines} line${res.lines===1?'':'s'}`
-        + (res.missing ? ` · ${res.missing} line${res.missing===1?'':'s'} no longer on their order` : ''),
-        res.missing ? 7000 : 4000);
+        + (res.missing ? ` · ${res.missing} line${res.missing===1?'':'s'} no longer on their order` : '')
+        + autoAdvanceNote(advanced),
+        (res.missing || advanced.length) ? 7000 : 4000);
     });
   });
   document.querySelectorAll('#buyingListBody .bl-undo').forEach(btn=>{
@@ -22716,6 +22743,50 @@ function deliveryAssigneeLabel(q){
   return DELIVERY_SELF_CARRIERS[String(q.assignedDeliveryId)] || staffName(q.assignedDeliveryId);
 }
 
+/* ---- An order stops waiting the moment its last item is in ----------
+
+   Awaiting Goods is a stage about ONE thing: something has to arrive.
+   The moment the last incoming line is checked in, the answer to "is
+   this order still waiting" is no -- and the app already knew it, but
+   the card sat there until somebody walked to the board and pushed it.
+
+   Which is the wrong place to expect anybody to be. A delivery is
+   checked in at the counter or off a trip; the board is a screen nobody
+   is looking at while they are counting cartons off a van. So orders
+   that were only ever waiting on goods went on reading as waiting for
+   hours after they were ready, and the picker who could have started
+   was never told.
+
+   MOVED WITH NOBODY ASSIGNED, deliberately. Being Prepared normally
+   asks the admin who is picking, but a worker's own app takes the
+   oldest unassigned order in exactly this state (autoAssignNextOrder),
+   so the pick starts without anybody choosing. The board flags an order
+   with no picker either way, so nothing is hidden by it.
+
+   ONLY THE GOODS GATE. An agent who has not paid still blocks the same
+   move, and this does not step past that -- it answers the one question
+   the arriving goods actually settled. */
+function ordersReadyToLeaveAwaitingGoods(){
+  return (data.savedQuotes||[]).filter(q=>
+    q && !q.voided && q.status === 'awaiting_goods'
+    && !orderAwaitsGoods(q)
+    && !agentPaymentBlocksPreparing(q));
+}
+/* Returns what it moved, so the caller can say so in the same breath as
+   "received onto the shelf" -- a card that moves on its own with no
+   word about it is how somebody loses track of their own board. */
+function autoAdvanceReceivedOrders(){
+  const moved = ordersReadyToLeaveAwaitingGoods();
+  moved.forEach(q=> setSavedQuoteStatus(q.id, 'preparing'));
+  return moved;
+}
+function autoAdvanceNote(moved){
+  if(!moved || !moved.length) return '';
+  return moved.length === 1
+    ? ` · ${quoteClientName(moved[0])}'s order is ready to prepare`
+    : ` · ${moved.length} orders are now ready to prepare`;
+}
+
 function setSavedQuoteStatus(id, status){
   if(!SQ_STATUSES[status]) return;
   const q = data.savedQuotes.find(x=>x.id===id);
@@ -22959,6 +23030,9 @@ function orderDraftReady(q){
 function setOrderSupplierConfirm(orderId, supplierId, state, note){
   const q = data.savedQuotes.find(x=> x.id === orderId);
   if(!q) return null;
+  // Read before the write, so "was it already ready" can be told apart
+  // from "did this answer make it ready" -- only the second is news.
+  const wasReady = q.status === 'draft' && orderDraftReady(q);
   if(!q.supplierConfirms) q.supplierConfirms = {};
   const key = String(supplierId);
   const prev = q.supplierConfirms[key] || {};
@@ -22988,6 +23062,22 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
   }
   saveData();
   renderSavedQuotes();
+  /* THE LAST CONFIRMATION IS NEWS, AND IT IS SAID -- BUT THE ORDER IS
+     NOT MOVED.
+
+     Every other automation on this board acts. This one deliberately
+     only speaks, because leaving Draft is not just a stage change: it
+     copies the order to the sales group and opens WhatsApp for a paste.
+     That is a person's act, and a card that moved itself would either
+     skip the group silently or try to open WhatsApp at a moment nobody
+     asked it to.
+
+     So the shop is told the waiting is over, and the arrow stays theirs
+     to press. The card carries the same state as a pill, because a
+     toast is gone in four seconds and this is worth finding again. */
+  if(!wasReady && q.status === 'draft' && orderDraftReady(q)){
+    toast(`All suppliers have confirmed — ${quoteClientName(q)}'s order is ready to go to the group`, 6000);
+  }
   return q.supplierConfirms[key] || null;
 }
 function markOrderSupplierAsked(orderId, supplierId){
@@ -23056,8 +23146,13 @@ function orderConfirmRowHTML(q){
   const problem = states.filter(s=> s === 'problem').length;
   const stale = states.filter(s=> s === 'stale').length;
   if(!left){
-    return `<div class="sq-goods-row in" title="Every supplier has confirmed — this order can go to the sales group">
-      ${ICON_CHECK}<span>All ${groups.length} supplier${groups.length===1?'':'s'} confirmed</span>
+    /* Named as the NEXT ACTION, not as the fact behind it. "All 3
+       suppliers confirmed" is true and leaves the reader to work out
+       that the waiting is over and the arrow is now theirs to press --
+       which is the one thing the row exists to say. The count stays,
+       because it is the evidence for the claim. */
+    return `<div class="sq-goods-row in" title="Every supplier has confirmed — press the arrow to send this to the sales group">
+      ${ICON_CHECK}<span>Ready to go — all ${groups.length} supplier${groups.length===1?'':'s'} confirmed</span>
       <button type="button" class="sq-confirm-btn" data-id="${q.id}">Review</button>
     </div>`;
   }
@@ -24545,6 +24640,13 @@ function updateOrderStatusBar(){
 setInterval(()=>{
   const tab = document.getElementById('tab-quote-saved');
   if(tab && tab.style.display !== 'none') renderSavedQuotes();
+  /* Deliberately NOT behind the board being visible, unlike the render
+     above. The whole point is to reach somebody who is looking at
+     something else -- an alert that only fires while you are watching
+     the board is the blinking flag again. Hidden tabs are skipped
+     though: a toast nobody can see is spent, and the check will find
+     the same order still late the moment the tab comes back. */
+  if(!document.hidden) runStageAlerts();
 }, 60000);
 
 let sqActiveMobileStep = 'draft'; // which .sq-col the phone step-switcher currently shows
@@ -43478,7 +43580,51 @@ function renderPresetOrderLimits(){
       toast('Order tracking limits updated');
     });
   });
+  renderStageAlertToggle();
 }
+/* The toggle beside the limits, and the one permission it needs.
+
+   Asked for at the moment it is switched ON, not at boot: a browser
+   that pops a permission prompt at somebody who never asked for
+   notifications gets Block, and Block is very hard to walk back. Asking
+   on the tick means the shop has already said what it wants.
+
+   Turning it on with no limits set is allowed and SAID -- refusing
+   would be the app arguing with a shop about the order it does two
+   things in. */
+function renderStageAlertToggle(){
+  const box = document.getElementById('preset_stage_alerts');
+  const note = document.getElementById('preset_stage_alerts_state');
+  if(!box) return;
+  box.checked = !!data.presetStageAlerts;
+  if(note){
+    const anyLimit = SQ_STATUS_ORDER.some(st=> (Number((data.presetOrderStageLimits||{})[st])||0) > 0);
+    note.style.opacity = box.checked ? '1' : '.7';
+    const blocked = typeof Notification !== 'undefined' && Notification.permission === 'denied';
+    note.querySelector('.pset-note-extra')?.remove();
+    const extra = document.createElement('div');
+    extra.className = 'pset-note-extra';
+    extra.style.marginTop = '8px';
+    extra.innerHTML = !box.checked ? ''
+      : !anyLimit
+        ? '<b>Nothing to go past yet</b> — every step above is blank, so no order can be late. Put a limit on the one where orders actually stall.'
+        : blocked
+          ? '<b>This browser is blocking notifications</b>, so these arrive as an on-screen message instead. Allow notifications for this site to get them outside the tab.'
+          : '';
+    if(extra.innerHTML) note.appendChild(extra);
+  }
+}
+document.getElementById('preset_stage_alerts').addEventListener('change', async (e)=>{
+  data.presetStageAlerts = !!e.target.checked;
+  if(data.presetStageAlerts && typeof Notification !== 'undefined' && Notification.permission === 'default'){
+    try{ await Notification.requestPermission(); }catch(err){}
+  }
+  saveData();
+  renderStageAlertToggle();
+  toast(data.presetStageAlerts
+    ? 'You will be told when an order goes past its limit'
+    : 'Order timing alerts turned off — the blinking flag on the board stays');
+});
 /* The review's two settings. Blank means "use the default", which is why
    a zero or an empty box is not stored as a limit of nothing -- see
    priceReviewTarget and priceReviewStaleDays, both of which fall back
@@ -50975,6 +51121,84 @@ function dashAlerts(ctx){
 function orderStageOverdue(q, stageLimits, nowMs){
   const limitMin = Number((stageLimits||{})[q.status])||0;
   return limitMin>0 && !!q.stageEnteredAt && (nowMs - q.stageEnteredAt) > limitMin*60000;
+}
+
+/* ---- Telling somebody an order has sat too long ---------------------
+
+   The stage limits were a blinking flag on a card and a block in the
+   morning brief. Both need somebody to already be looking -- at the
+   board, or at yesterday. The one moment the limit is actually about is
+   the moment it is crossed, and nothing said anything then.
+
+   WHAT THIS CAN AND CANNOT DO, stated plainly because the setting says
+   so too. A picker's phone is reached through their worker app, which
+   holds a push subscription tied to their staff row. The owner is not
+   staff and has no such row, so there is no channel to a closed
+   browser: reaching one would need a push subscription that does not
+   exist, a service worker, and something server-side to notice that
+   time has passed -- and time passing fires no webhook, so it would
+   need a scheduled job as well. This does the achievable thing instead
+   and is honest in the setting about the limit.
+
+   ONCE PER ORDER PER STEP. The key carries stageEnteredAt, so an order
+   pushed back and forward again is a new wait and is mentioned again,
+   while one sitting in the same step all morning is mentioned once.
+   Kept in localStorage rather than memory, or a reload would start the
+   whole queue over. */
+const STAGE_ALERT_KEY = 'owStageAlertsSeen';
+function stageAlertSeen(){
+  try{ return JSON.parse(lsGet(STAGE_ALERT_KEY) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function stageAlertRemember(seen){
+  /* Trimmed to what is still live. Without it this row grows for the
+     life of the device, and localStorage is a fixed budget shared with
+     everything else the app keeps there. */
+  const live = {};
+  (data.savedQuotes||[]).forEach(q=>{
+    const k = `${q.id}:${q.stageEnteredAt||0}`;
+    if(seen[k]) live[k] = 1;
+  });
+  try{ lsSet(STAGE_ALERT_KEY, JSON.stringify(live)); }catch(e){}
+}
+// The orders that have crossed their limit and have not been mentioned
+// for THIS wait. Pure, so a test can drive it without a clock or a DOM.
+function stageAlertsDue(nowMs, seen){
+  const limits = data.presetOrderStageLimits || {};
+  return (data.savedQuotes||[])
+    .filter(q=> q && !q.voided && q.status !== 'completed' && !quoteAgedOffBoard(q)
+      && orderStageOverdue(q, limits, nowMs)
+      && !seen[`${q.id}:${q.stageEnteredAt||0}`])
+    .sort((a,b)=> (a.stageEnteredAt||0) - (b.stageEnteredAt||0));
+}
+function stageAlertLine(q){
+  const label = (SQ_STATUSES[q.status] && SQ_STATUSES[q.status].label) || q.status;
+  const over = Math.max(1, Math.round((Date.now() - (q.stageEnteredAt||0))/60000
+    - (Number((data.presetOrderStageLimits||{})[q.status])||0)));
+  const howLong = over >= 1440 ? `${Math.round(over/1440)}d` : over >= 60 ? `${Math.round(over/60)}h` : `${over}min`;
+  return `${quoteClientName(q)} — ${label.replace(/^Step \d+\. /,'')} · ${howLong} over`;
+}
+function runStageAlerts(){
+  if(!data.presetStageAlerts) return [];
+  const seen = stageAlertSeen();
+  const due = stageAlertsDue(Date.now(), seen);
+  if(!due.length) return [];
+  due.forEach(q=>{ seen[`${q.id}:${q.stageEnteredAt||0}`] = 1; });
+  stageAlertRemember(seen);
+  const lines = due.map(stageAlertLine);
+  /* A real notification where the browser allows one, and the app's own
+     toast either way -- so turning the setting on always does something
+     visible, rather than silently depending on a permission the shop
+     may never have been asked for. */
+  try{
+    if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+      new Notification(due.length === 1 ? 'An order has sat too long' : `${due.length} orders have sat too long`,
+        { body: lines.join('\n'), tag: 'ow-stage-overdue' });
+    }
+  }catch(e){}
+  toast(due.length === 1 ? `Sitting too long — ${lines[0]}`
+    : `${due.length} orders sitting too long — ${lines[0]}, and ${due.length-1} more`, 8000);
+  return due;
 }
 
 function morningBriefData(dateISO, nowMs){

@@ -74,6 +74,7 @@ const scope = compileScope([
   openSupplierConfirmModal: (id) => { calls.panelOpened = id; },
   toast: (m) => { calls.toasts.push(String(m)); },
   supplierName: (id) => 'Supplier ' + id,
+  quoteClientName: (q) => (q && q.client && q.client.name) || 'Walk-in',
   fmtUGX: (n) => 'UGX ' + Number(n).toLocaleString('en-UG'),
   // The real rule, not a flat answer: an order with anything bought in is
   // waiting on goods. Which is also what keeps the step under test landing
