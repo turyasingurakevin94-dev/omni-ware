@@ -57880,7 +57880,20 @@ async function apCallServer(){
   if(resp.status === 401){ apRenderError((body && body.error && body.error.message) || 'Your login has expired — reload the page and sign in again.'); return null; }
   if(body && body.not_configured){ apRenderSetupCard(); return null; }
   if(!resp.ok || (body && body.error)){
-    apRenderError((body && body.error && body.error.message) || 'Something went wrong. Try again.');
+    /* The status is the one fact that diagnoses a bodyless failure -- a
+       Vercel platform page mid-deploy, a gateway timeout -- and the old
+       wording threw it away. "Something went wrong (HTTP 504)" is a
+       sentence somebody can act on; the bare version was anonymous. */
+    apRenderError((body && body.error && body.error.message)
+      || ('Something went wrong (HTTP ' + resp.status + '). Try again.'));
+    return null;
+  }
+  /* An OK status wrapping an unreadable body used to fall through and
+     return null -- which the loop reads as "error already rendered" and
+     ends the turn showing NOTHING. A dead panel is the one failure this
+     loop must never allow. */
+  if(!body){
+    apRenderError('The server answered with something unreadable (HTTP ' + resp.status + '). Try again.');
     return null;
   }
   return body;

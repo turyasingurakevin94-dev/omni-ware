@@ -212,4 +212,19 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'and the speaker reads the stripped prose — a JSON block read aloud is the plumbing speaking');
 }
 
+/* ---------- 8. a failure is never anonymous, a panel never dead ------ */
+/* Found live on the Manager's first outing: a tap that landed mid-deploy
+   got a platform page back -- no JSON, no message -- and the owner read
+   a bare "Something went wrong" with nothing to act on. And one branch
+   over, an OK status wrapping an unreadable body returned null, which
+   the loop reads as "error already rendered" and ends the turn showing
+   NOTHING at all. */
+{
+  const call = extractFunction(src, 'apCallServer', 'index.html');
+  t.check(/'Something went wrong \(HTTP ' \+ resp\.status \+ '\)\. Try again\.'/.test(call),
+    'a bodyless failure names its HTTP status — the one fact that diagnoses it');
+  t.check(/something unreadable \(HTTP ' \+ resp\.status/.test(call),
+    'and an OK status with an unreadable body says so instead of ending the turn silent');
+}
+
 process.exit(t.done() ? 1 : 0);
