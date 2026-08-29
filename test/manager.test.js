@@ -109,7 +109,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     anRowsByCustomer: () => [],
     uncostedStockRows: () => [],
     dashAlerts: () => many(12, (i) => ({ band: 'now', title: 'Alert ' + i, money: 1000 * i, action: 'Act', detail: '<b>html</b>', extra: 'x' })),
-    debtChaseRows: () => ({ due: many(9, (i) => ({ name: 'C' + i, debt: 5000 * i, ageDays: i })), resting: [1, 2], blocked: [{ why: 'drift' }], promised: [], graceDays: 7, restDays: 3 }),
+    debtChaseRows: () => ({
+      due: many(9, (i) => ({ name: 'C' + i, debt: 5000 * i, ageDays: i }))
+        .concat([{ name: 'Broke Their Word', debt: 640000, ageDays: 40, brokenPromises: 2,
+          promise: { id: 9, promisedOn: '2026-08-20', madeOn: '2026-08-12', amount: null, state: 'broken' } }]),
+      resting: [1, 2], blocked: [{ why: 'drift' }],
+      promised: [{ name: 'Dad', debt: 1436000, ageDays: 59, brokenPromises: 0,
+        promise: { id: 1, promisedOn: '2026-09-20', madeOn: '2026-08-29', amount: null, state: 'waiting' } }],
+      graceDays: 7, restDays: 3 }),
     purchasePlan: () => ({ lines: many(11, (i) => ({ name: 'P' + i, reason: 'why ' + i, cost: 100 * i, supplier: 'S' })), didNotFit: [1, 2, 3], sourceFirst: [1] }),
     cashOnHandByAccount: () => ({ total: 3545644, byAccount: [{ key: 'cash', amount: 1000 }, { key: 'momo', amount: 2000 }, { key: 'bank', amount: 3000 }] }),
     CASH_AHEAD_DAYS: 30,
@@ -147,7 +154,33 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   eq(Object.keys(pulse.alerts[0]).sort().join(','), 'action,band,money,title',
     'and each alert carries exactly the four fields, never the raw card with its HTML');
   eq(pulse.debts.chase_now.length, 6, 'the chase list is capped');
-  eq(pulse.debts.chase_count, 9, 'while the true count still travels — capped is not concealed');
+  eq(pulse.debts.chase_count, 10, 'while the true count still travels — capped is not concealed');
+
+  /* A COUNT IS NOT A FACT ANYBODY CAN ACT ON.
+   *
+   * The pulse used to say "1 customer is waiting on a promise" and never
+   * which one, so the meeting opened by demanding "Dad: a dated plan
+   * today or off the working book" while Dad's dated plan sat on two
+   * other screens, made and written down. Advice that asks for what the
+   * owner has already done is advice they stop reading — and this
+   * reading exists so the mind and the screens cannot disagree.
+   */
+  eq(pulse.debts.waiting_on_a_promise.length, 1, 'a customer waiting on a promise reaches the meeting');
+  eq(pulse.debts.waiting_on_a_promise[0].name, 'Dad', 'BY NAME, so the advice can be about them');
+  eq(pulse.debts.waiting_on_a_promise[0].said_they_would_pay_on, '2026-09-20', 'with the day they named');
+  eq(pulse.debts.waiting_on_a_promise[0].said_it_on, '2026-08-29', 'and the day they said it');
+  eq(pulse.debts.waiting_on_a_promise_count, 1, 'and the true count travels beside the capped list');
+
+  /* `r.broken` was not a field on the row — `brokenPromises` is. So every
+     broken promise reached the meeting with its count silently absent:
+     the half-fact this whole reading exists to prevent. */
+  const broke = pulse.debts.broke_their_word;
+  eq(broke.length, 1, 'a broken promise reaches it too');
+  eq(broke[0].name, 'Broke Their Word', 'named');
+  eq(broke[0].broken_before, 2,
+    'carrying how many they have broken — read off the field the row actually has, not one spelled a different way');
+  t.check(broke[0].broken_before !== undefined,
+    'and never undefined, which JSON drops silently so the meeting would never know it was missing');
   eq(pulse.buying.top_lines.length, 6, 'the buy plan is capped');
   eq(pulse.prices_to_check.length, 5, 'prices to check are capped');
   eq(pulse.follow_ups_due.length, 5, 'follow-ups are capped');

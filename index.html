@@ -59872,10 +59872,15 @@ const ASSISTANT_TOOLS = {
         chase_count: chase.due.length,
         held_for_checking: chase.blocked.length,
         resting: chase.resting.length,
-        waiting_on_a_promise: chase.promised.length,
+        waiting_on_a_promise: chase.promised.slice(0, 6).map(r=> ({ name: r.name,
+          owed: apRound(r.debt), said_they_would_pay_on: r.promise.promisedOn,
+          said_it_on: r.promise.madeOn,
+          amount: r.promise.amount == null ? null : apRound(r.promise.amount),
+          broken_before: r.brokenPromises })),
+        waiting_on_a_promise_count: chase.promised.length,
         broke_their_word: chase.due.filter(r=> r.promise && r.promise.state === 'broken')
           .slice(0, 5).map(r=> ({ name: r.name, owed: apRound(r.debt),
-            said: r.promise.promisedOn, broken_before: r.broken })),
+            said: r.promise.promisedOn, broken_before: r.brokenPromises })),
       },
       buying: {
         top_lines: plan.lines.slice(0, 6).map(l=> ({ name: l.name, why: l.reason,
