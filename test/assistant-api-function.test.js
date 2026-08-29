@@ -82,7 +82,7 @@ const pkg = read('package.json');
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all thirty-four');
+    'and so does the LAST tool, closing the cached prefix over all thirty-five');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -142,7 +142,7 @@ const pkg = read('package.json');
 /* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 34, `thirty-four tools defined (got ${names.length})`);
+  t.check(names.length === 35, `thirty-five tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
@@ -152,7 +152,7 @@ const pkg = read('package.json');
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details', 'stock_overview',
     'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data',
-    'standing_policies']
+    'standing_policies', 'month_and_quarter']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
   /* AN ID IS WHATEVER THE BOOKS MINTED. Customer ids are issued as
      C001-style strings (issueEntityId) while the oldest rows are plain

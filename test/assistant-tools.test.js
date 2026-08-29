@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: thirty-four entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: thirty-five entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -150,8 +150,8 @@ const run = (name, input) => T[name].run(input || {});
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
-    'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies'];
-  t.check(Object.keys(T).length === 34, `thirty-four executors (got ${Object.keys(T).length})`);
+    'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies', 'month_and_quarter'];
+  t.check(Object.keys(T).length === 35, `thirty-five executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -159,7 +159,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 34 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 35 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
   // The three Manager reads join the free side of the ledger.
   t.check(T.shop_pulse && T.shop_pulse.confirm === false, 'shop_pulse answers freely — it reads and nothing more');
