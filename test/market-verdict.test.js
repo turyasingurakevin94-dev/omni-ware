@@ -77,10 +77,10 @@ const makeData = () => ({
     { id: 8, productId: 'P6', variantIdx: null, rival: 'Haidery', price: 5000, unit: '', seenOn: TODAY, note: '' },
   ],
   savedQuotes: [{ id: 1, invoiced: true, voided: false, date: shift(TODAY, -5), items: [
-    { productId: 'P1', variantIdx: 0, qty: 4, supplierId: '__stock__', sellPrice: 105000, _stockLots: [{ qty: 4, cost: 100000 }] },
-    { productId: 'P2', variantIdx: null, qty: 500, supplierId: '__stock__', sellPrice: 1100, _stockLots: [{ qty: 500, cost: 900 }] },
-    { productId: 'P3', variantIdx: null, qty: 10, supplierId: '__stock__', sellPrice: 22000, _stockLots: [{ qty: 10, cost: 20000 }] },
-    { productId: 'P4', variantIdx: null, qty: 3, supplierId: '__stock__', sellPrice: 5500, _stockLots: [{ qty: 3, cost: 5000 }] },
+    { productId: 'P1', variantIdx: 0, qty: 4, packQty: 1, supplierId: '__stock__', sellPrice: 105000, _stockLots: [{ qty: 4, cost: 100000 }] },
+    { productId: 'P2', variantIdx: null, qty: 500, packQty: 12, supplierId: '__stock__', sellPrice: 1100, _stockLots: [{ qty: 500, cost: 900 }] },
+    { productId: 'P3', variantIdx: null, qty: 10, packQty: 1, supplierId: '__stock__', sellPrice: 22000, _stockLots: [{ qty: 10, cost: 20000 }] },
+    { productId: 'P4', variantIdx: null, qty: 3, packQty: 4, supplierId: '__stock__', sellPrice: 5500, _stockLots: [{ qty: 3, cost: 5000 }] },
     { productId: 'P6', variantIdx: null, qty: 20, supplierId: '__stock__', sellPrice: 5500, _stockLots: [{ qty: 20, cost: 4000 }] },
   ] }],
 });
@@ -92,6 +92,8 @@ const env = (data, over) => ({
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
   apRound: (n) => Math.round(Number(n) || 0),
   supplierName: (id) => String(id),
+  RIVAL_SIDES: ['wholesale', 'retail'],
+  rivalPriceSideColumn: true,
   productDisplayLabel: (p, vi) => (vi == null ? p.name : `${p.name} 12"`),
   allProductVariantEntries: () => data.products.flatMap((p) => (p.variants && p.variants.length)
     ? p.variants.map((_v, i) => ({ p, variantIdx: i })) : [{ p, variantIdx: null }]),
@@ -100,6 +102,7 @@ const env = (data, over) => ({
 });
 
 const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor', 'ourCostFor',
+  'rivalSide', 'rivalSideSaid', 'rivalSideLabel',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind', 'productPackInfo', 'productUnitLabel',
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule',
@@ -228,7 +231,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     esc: (x) => String(x == null ? '' : x),
     listPageSlice: (id, rows) => { paged.push(id); return rows.slice(0, 5); },
     listMoreButtonHTML: () => '',
-    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '',
+    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '', mkSide: 'wholesale',
   });
   s.renderMarket();
   const html = el.innerHTML;
@@ -264,7 +267,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     document: { getElementById: (id) => (id === 'mk_body' ? el : null) },
     esc: (x) => String(x == null ? '' : x),
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
-    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '',
+    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '', mkSide: 'wholesale',
   });
   s2.renderMarket();
   t.check(/0087_rival_prices\.sql/.test(el.innerHTML),

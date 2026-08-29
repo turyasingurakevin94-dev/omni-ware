@@ -75,11 +75,14 @@ const env = (data, over) => ({
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
   apRound: (n) => Math.round(Number(n) || 0),
   supplierName: (id) => String(id),
+  RIVAL_SIDES: ['wholesale', 'retail'],
+  rivalPriceSideColumn: true,
   console, Date, JSON, Math, Number, String, Array, Object, Map, Promise, Boolean,
   ...(over || {}),
 });
 
 const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor', 'ourCostFor',
+  'rivalSide', 'rivalSideSaid', 'rivalSideLabel',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind',
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule'];
@@ -204,8 +207,8 @@ const build = (data, extraSrc, names, over) => compileScope(
     t.check(html.includes('Haidery') && html.includes('118,000'), 'the freshest sighting for each');
     t.check(!html.includes('124,000'), 'and never the stale one it replaced');
     t.check(/seen 3 days ago/.test(html), 'each saying how old it is');
-    t.check(/4,000 above yours/.test(html),
-      'and the gap against OUR price — Kasese at 109,000 is 4,000 ABOVE our 105,000, which is exactly what turns "margin is thin" into "there is room to lift"');
+    t.check(/4,000 above your wholesale/.test(html),
+      'and the gap against OUR price ON THAT SIDE — Kasese at 109,000 is 4,000 ABOVE our 105,000 wholesale, which is exactly what turns "margin is thin" into "there is room to lift", and naming the side is what stops a shelf ticket being weighed against a pack price');
     t.check(/You sell it at/.test(html) && html.includes('105,000'), 'with our own price said plainly');
     t.check(/rv_shop/.test(html) && /rv_price/.test(html), 'and a box to add what the owner saw');
 

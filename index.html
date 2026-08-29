@@ -840,6 +840,15 @@
   .rv-move.thin .rv-mtext{color:var(--ow-amber-ink);}
   .rv-move.none .rv-mtext{color:var(--ink-soft);font-style:italic;}
   .rv-match{padding:4px 11px;font-size:12px;white-space:nowrap;}
+  /* Which of the shop's two prices a sighting argues with. Named, not
+     colour-coded alone: the two are not good and bad, they are two
+     different questions. */
+  .rv-side{font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    padding:1px 6px;border-radius:5px;white-space:nowrap;
+    background:var(--ow-rule-soft);color:var(--ink-soft);}
+  .rv-side.retail{background:var(--ow-rule-soft);color:var(--accent);}
+  .rv-side.none{background:transparent;border:1px dashed var(--line);color:var(--ow-ink-400);
+    font-weight:600;text-transform:none;letter-spacing:0;}
   .rv-basis{font-size:11px;color:var(--ow-ink-400);margin-top:5px;}
   .rv-never{margin-top:6px;}
   .rv-entry{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
@@ -9708,6 +9717,7 @@
               <select id="mk_group">
                 <option value="shop">Shop</option>
                 <option value="line">Line</option>
+                <option value="side">Side</option>
               </select>
             </div>
           </div>
@@ -12582,7 +12592,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, managerNotesR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, rivalSideColR, managerNotesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -12597,6 +12607,7 @@ async function loadData(shopId){
     sb.from('prices').select('last_asked_at').limit(1),
     sb.from('cash_txns').select('transfer_id').limit(1),
     sb.from('stock_lots').select('consign').limit(1),
+    sb.from('rival_prices').select('side').limit(1),
     sb.from('manager_notes').select('id').limit(1)
   ]);
   [suppliersR, staffR, customersR, debtLogR, productsR, pricesR, stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR, savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR, mediaR, mediaFoldersR, waPostsR, rentAgreementsR, duesR, placesR]
@@ -12642,6 +12653,14 @@ async function loadData(shopId){
      is there the app refuses to take a consignment at all rather than
      accept one it cannot keep. */
   stockLotConsignColumn = !(lotConsignColR && lotConsignColR.error);
+  /* 0088. WHICH SIDE a rival's price was -- the column that stops a
+     shelf ticket being weighed against a pack price. Reads survive it
+     missing (the mapper sees undefined and the row reads as "nobody
+     said"), but a write does not: PostgREST refuses the whole insert
+     for one unknown column, so the sighting would be lost rather than
+     the side. Until it is there the app records sightings without a
+     side, exactly as it did yesterday. */
+  rivalPriceSideColumn = !(rivalSideColR && rivalSideColR.error);
   /* 0081. Not a column on a busy write but a whole table of its own, so
      the stakes are smaller: with it missing the Manager still holds a
      meeting, and simply cannot REMEMBER one -- the screen says so
@@ -12845,6 +12864,10 @@ async function loadData(shopId){
       variantIdx: r.variant_idx==null ? null : Number(r.variant_idx),
       rival: r.rival||'', price: Number(r.price)||0, unit: r.unit||'',
       seenOn: r.seen_on, note: r.note||'',
+      /* Null, and only null, means nobody said. An empty string would
+         be a side nobody can name; the readings must be able to tell
+         "not said" from "wholesale". */
+      side: r.side === 'wholesale' || r.side === 'retail' ? r.side : null,
     })),
     sourcingLeads: sourcingLeadRows.map(r=>({
       id:r.id, name:r.name||'', notes:r.notes||'', status:r.status,
@@ -12995,6 +13018,7 @@ let managerNotesTable = false;
    screens say so plainly rather than offering a box that swallows
    what the owner types. */
 let rivalPricesTable = false;
+let rivalPriceSideColumn = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -14437,11 +14461,21 @@ function waSalesByKey(dateISO){
       const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
       const s = out.get(key) || { units: 0, units30: 0, byWeekday: [0,0,0,0,0,0,0],
         shelfUnits30: 0, inUnits30: 0, inSpend30: 0, inPricedUnits30: 0,
-        orders30: 0, inOrders30: 0, profit30: 0, sales30: 0, estQty30: 0 };
+        orders30: 0, inOrders30: 0, profit30: 0, sales30: 0, estQty30: 0,
+        wholesaleUnits30: 0, retailUnits30: 0 };
       const qty = Number(it.qty)||0;
       s.units += qty; s.byWeekday[wd] += qty;
       if(inWindow){
         s.units30 += qty;
+        /* WHICH SIDE OF THE COUNTER THIS WAS. The same line
+           quoteItemSellPrice uses to choose which markup a quantity
+           earns -- at or above the pack is a wholesale sale, below it
+           retail -- so the split here and the price that was charged
+           cannot disagree. Nothing in this app had ever counted the two
+           apart, and without it a rival's RETAIL price gets ranked on
+           volume that was almost all sold by the pack. */
+        const lineSide = (Number(it.packQty)||0) > 0 && qty >= (Number(it.packQty)||0) ? 'wholesale' : 'retail';
+        if(lineSide === 'wholesale') s.wholesaleUnits30 += qty; else s.retailUnits30 += qty;
         if(!countedThisOrder.has(key)){ s.orders30 += 1; countedThisOrder.add(key); }
         if(it.supplierId === '__stock__'){
           s.shelfUnits30 += qty;
@@ -37822,6 +37856,26 @@ document.getElementById('ro_clear').addEventListener('click', ()=>{
    it, not a rule. */
 const RIVAL_STALE_DAYS = 90;
 
+/* WHICH OF THIS SHOP'S TWO PRICES A SIGHTING ARGUES WITH.
+
+   The ladder has always had both sides -- a product carries a stock
+   rule for each, the printed catalogue makes the reader choose which
+   one sets the price, a quote line picks a side from quantity against
+   pack size -- and only the market record had nowhere to say it. So a
+   rival's shelf ticket, which is nearly always a RETAIL price, was
+   weighed against this shop's WHOLESALE price and the difference
+   between two different things was ranked by money.
+
+   THREE STATES, NOT TWO. A row written before the column existed says
+   nothing, and an observation is never rewritten, so it cannot be told
+   what it was. Null is read as wholesale -- that is the price the
+   screen was showing beside it when somebody typed it in -- and the row
+   SAYS the assumption rather than letting it pass as a fact. */
+const RIVAL_SIDES = ['wholesale', 'retail'];
+function rivalSide(r){ return (r && RIVAL_SIDES.indexOf(r.side) > -1) ? r.side : 'wholesale'; }
+function rivalSideSaid(r){ return !!(r && RIVAL_SIDES.indexOf(r.side) > -1); }
+function rivalSideLabel(kind){ return kind === 'retail' ? 'retail' : 'wholesale'; }
+
 function rivalPricesFor(productId, variantIdx){
   const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
   return (data.rivalPrices || [])
@@ -37840,8 +37894,12 @@ function rivalPriceLatest(productId, variantIdx, dateISO){
   const today = dateISO || todayISO();
   const seen = new Map();
   rivalPricesFor(productId, variantIdx).forEach(r=>{
-    const k = String(r.rival).trim().toLowerCase();
+    /* Per shop AND SIDE. One shop can quote a pack price and a piece
+       price for the same line; keyed on the shop alone, whichever was
+       seen later would silently hide the other. */
+    const k = String(r.rival).trim().toLowerCase() + '||' + rivalSide(r);
     if(!seen.has(k)) seen.set(k, { rival: String(r.rival).trim(), price: Math.round(Number(r.price)),
+      side: rivalSide(r), sideSaid: rivalSideSaid(r),
       unit: r.unit || '', seenOn: r.seenOn, note: r.note || '',
       daysOld: Math.max(0, daysSinceDate(r.seenOn || today)) });
   });
@@ -37870,10 +37928,17 @@ function ourCostFor(productId, variantIdx){
 /* What this shop charges for the same line, so the two can be put side
    by side. Derived through the same ladder every other selling price in
    the app comes from -- never a second opinion about our own price. */
-function ourPriceFor(productId, variantIdx){
+function ourPriceFor(productId, variantIdx, kind){
   const c = ourCostFor(productId, variantIdx);
   if(!c) return null;
-  const sug = suggestedStockSellingPrice(c.product, c.cost, 'wholesale', c.variantIdx, c.packQty);
+  /* Wholesale unless asked otherwise, so every reading written before
+     the market had two sides means what it always meant. Null where
+     that side has no rule -- half this shop's catalogue carries a
+     wholesale rule and no retail one, and a line with no retail rule
+     has no retail price to compare against, which is a different answer
+     from a price of nothing. */
+  const side = kind === 'retail' ? 'retail' : 'wholesale';
+  const sug = suggestedStockSellingPrice(c.product, c.cost, side, c.variantIdx, c.packQty);
   return sug == null ? null : Math.round(sug);
 }
 
@@ -37892,15 +37957,23 @@ function ourPriceFor(productId, variantIdx){
 
    Null where there is no cost on file: an offer the app cannot price
    is not made at all. */
-function priceRuleForTarget(productId, variantIdx, target){
+function priceRuleForTarget(productId, variantIdx, target, kind){
   const c = ourCostFor(productId, variantIdx);
   const aim = Math.round(Number(target) || 0);
   if(!c || !(aim > 0) || c.cost == null) return null;
+  const side = kind === 'retail' ? 'retail' : 'wholesale';
   const kept = aim - c.cost;
   const keptPct = Math.round(kept / aim * 100);
-  return { cost: Math.round(c.cost), target: aim, packQty: c.packQty,
+  /* A FIXED RULE MEANS DIFFERENT THINGS ON EACH SIDE. Wholesale fixed
+     is an amount on each PACK, which suggestedStockSellingPrice divides
+     back over the pack; retail fixed is an amount on each piece and is
+     not divided. Inverting the wholesale form for a retail target
+     writes a rule packQty times too large, and the price lands nowhere
+     near the figure the owner was shown. */
+  const spread = side === 'wholesale' ? (c.packQty || 1) : 1;
+  return { cost: Math.round(c.cost), target: aim, packQty: c.packQty, side,
     unit: c.unit, packUnit: c.packUnit, supplier: c.supplier,
-    type: 'fixed', value: Math.round(kept * (c.packQty || 1)),
+    type: 'fixed', value: Math.round(kept * spread),
     keptPct, thin: keptPct < THIN_MARGIN_PCT, pays: aim > c.cost };
 }
 
@@ -37947,11 +38020,16 @@ function rivalMarketRows(dateISO){
       if(!parts) return;                                  // the line has left the catalogue
       if(!(Number(r.price) > 0) || !String(r.rival||'').trim()) return;
       const shop = String(r.rival).trim();
-      const once = key + '||' + shop.toLowerCase();
+      /* Per line, per shop, AND PER SIDE. One shop can quote a pack
+         price and a piece price for the same line; without the side in
+         the key the later sighting silently hides the earlier one and
+         half the market disappears. */
+      const side = rivalSide(r);
+      const once = key + '||' + shop.toLowerCase() + '||' + side;
       if(seen.has(once)) return;
       seen.add(once);
       const said = Math.round(Number(r.price));
-      const ours = ourPriceFor(r.productId, r.variantIdx);
+      const ours = ourPriceFor(r.productId, r.variantIdx, side);
       const days = Math.max(0, daysSinceDate(r.seenOn || today));
       /* WHAT THE PRICE IS PER, which decides whether it may be compared
          at all. Our own price is always per base unit; a sighting
@@ -37977,7 +38055,7 @@ function rivalMarketRows(dateISO){
       out.push({ id: r.id, key, shop, productId: r.productId,
         variantIdx: r.variantIdx == null ? null : Number(r.variantIdx),
         line: productDisplayLabel(parts.product, parts.variantIdx),
-        theirs, theirsSaid: said, ours,
+        theirs, theirsSaid: said, ours, side, sideSaid: rivalSideSaid(r),
         gap: (ours == null || !comparable) ? null : theirs - ours,
         comparable, saidUnit, ownUnit,
         packQty: converts ? packQty : 0, packUnit: converts ? pack.packUnit : '',
@@ -38011,26 +38089,39 @@ function marketVerdict(dateISO){
   const sales = waSalesByKey(today);
   const best = new Map();
   let notCompared = 0;
+  let noRule = 0;
   rivalMarketRows(today).forEach(r=>{
     if(!r.comparable){ notCompared += 1; return; }
-    if(r.gap == null) return;                       // no price of our own to compare
-    const cur = best.get(r.key);
-    if(!cur || r.theirs < cur.theirs) best.set(r.key, r);
+    /* No price of our own on THAT SIDE. Half this shop's catalogue
+       carries a wholesale rule and no retail one, so a retail sighting
+       there has nothing to argue with -- counted and named, never
+       dropped in silence and never shown as a gap against nought. */
+    if(r.ours == null){ if(r.sideSaid) noRule += 1; return; }
+    if(r.gap == null) return;
+    const at = r.key + '||' + r.side;
+    const cur = best.get(at);
+    if(!cur || r.theirs < cur.theirs) best.set(at, r);
   });
   const under = []; const lift = [];
-  best.forEach((r, key)=>{
-    const s = sales.get(key);
-    const units30 = s ? s.units30 : 0;
+  best.forEach((r)=>{
+    const s = sales.get(r.key);
+    /* EACH SIDE ON ITS OWN VOLUME. A retail price ranked on a month
+       that was almost all sold by the pack claims money that was never
+       at stake on that side at all. */
+    const units30 = !s ? 0
+      : r.side === 'retail' ? (s.retailUnits30 || 0) : (s.wholesaleUnits30 || 0);
     if(!(units30 > 0) || !r.gap) return;
-    const row = { key, productId: r.productId, variantIdx: r.variantIdx, line: r.line,
+    const row = { key: r.key, productId: r.productId, variantIdx: r.variantIdx, line: r.line,
       shop: r.shop, ours: r.ours, theirs: r.theirs, theirsSaid: r.theirsSaid, gap: r.gap,
+      side: r.side, sideSaid: r.sideSaid,
       units30, atStake: Math.round(units30 * Math.abs(r.gap)),
       daysOld: r.daysOld, stale: r.stale, packQty: r.packQty, packUnit: r.packUnit };
     (r.gap < 0 ? under : lift).push(row);
   });
   const rank = (a, b)=> b.atStake - a.atStake || String(a.line).localeCompare(String(b.line));
   under.sort(rank); lift.sort(rank);
-  return { under, lift, notCompared, atStake: under.reduce((n, x)=> n + x.atStake, 0) };
+  return { under, lift, notCompared, noRule,
+    atStake: under.reduce((n, x)=> n + x.atStake, 0) };
 }
 
 /* WHAT TO GO AND LOOK AT. The lines this shop actually sells with
@@ -38090,9 +38181,15 @@ async function addRivalPrice(input){
   const vi = input.variantIdx == null || input.variantIdx === '' ? null : Number(input.variantIdx);
   if(vi != null && !(p.variants && p.variants[vi])) return { ok: false, why: p.name + ' has no variant ' + vi + '.' };
   const seenOn = /^\d{4}-\d{2}-\d{2}$/.test(String(input.seenOn||'')) ? input.seenOn : todayISO();
+  /* The side is dropped rather than guessed where the column is not
+     there yet: a sighting recorded without it reads as "nobody said",
+     which is true, and losing the whole row to an unknown column would
+     lose the price as well. */
+  const side = RIVAL_SIDES.indexOf(String(input.side||'')) > -1 ? String(input.side) : null;
   const row = { shop_id: currentShopId, product_id: productId, variant_idx: vi,
     rival: rival.slice(0, 80), price, unit: String(input.unit||'').slice(0, 24) || null,
-    seen_on: seenOn, note: String(input.note||'').slice(0, 200) || null };
+    seen_on: seenOn, note: String(input.note||'').slice(0, 200) || null,
+    ...(rivalPriceSideColumn && side ? { side } : {}) };
   const ins = await sb.from('rival_prices').insert(row).select('id').single();
   if(ins.error){
     return { ok: false, why: /relation .* does not exist/i.test(ins.error.message||'')
@@ -38103,7 +38200,7 @@ async function addRivalPrice(input){
      rather than after the next reload. */
   if(!data.rivalPrices) data.rivalPrices = [];
   data.rivalPrices.push({ id: ins.data && ins.data.id, productId, variantIdx: vi, rival: rival.slice(0, 80),
-    price, unit: row.unit || '', seenOn, note: row.note || '' });
+    price, unit: row.unit || '', seenOn, note: row.note || '', side: row.side || null });
   return { ok: true, id: ins.data && ins.data.id };
 }
 
@@ -38118,6 +38215,7 @@ async function addRivalPrice(input){
    Three things, in the order they are useful: what the market says, what
    this shop has never looked at, and a form for entering a round of it. */
 let mkGroupBy = 'shop';
+let mkSide = 'wholesale';
 let mkShop = '';
 let mkSeenOn = '';
 
@@ -38153,14 +38251,18 @@ function renderMarket(){
 
   /* One row, whichever way the list is grouped: the other side of the
      pair is what changes, so the label is passed in. */
+  const sideChip = (x)=> x.sideSaid
+    ? `<span class="rv-side ${x.side}">${esc(rivalSideLabel(x.side))}</span>`
+    : `<span class="rv-side none" title="Nobody said which price this was">no side said</span>`;
   const row = (r, label)=> `<div class="rv-mrow${r.stale ? ' stale' : ''}">
       <span class="rv-mname">${esc(label)}</span>
+      ${sideChip(r)}
       <span class="rv-mprice">${f(r.theirs)}</span>
       ${r.packQty > 1 ? `<span class="rv-basis">${f(r.theirsSaid)} a ${esc(r.packUnit)} of ${r.packQty}</span>` : ''}
       ${!r.comparable
         ? `<span class="rv-gap none">recorded per ${esc(r.saidUnit)}, you price per ${esc(r.ownUnit)}</span>`
         : r.gap == null
-        ? '<span class="rv-gap none">you have no price of your own</span>'
+        ? `<span class="rv-gap none">no ${esc(rivalSideLabel(r.side))} price of your own on this line</span>`
         : Math.abs(r.gap) < 1
           ? '<span class="rv-gap">same as yours</span>'
           : `<span class="rv-gap ${r.gap > 0 ? 'over' : 'under'}">${f(Math.abs(r.gap))} ${r.gap > 0 ? 'above' : 'below'} yours</span>`}
@@ -38178,7 +38280,7 @@ function renderMarket(){
      with one tap on a phone; the sentence says so and names the fix,
      and the rule editor is still a tap away on the line itself. */
   const moveLine = (x, mode)=>{
-    const m = priceRuleForTarget(x.productId, x.variantIdx, x.theirs);
+    const m = priceRuleForTarget(x.productId, x.variantIdx, x.theirs, x.side);
     if(!m) return `<div class="rv-move none">No cost on file for this line, so nothing here can say whether matching them would pay.</div>`;
     const verdict = !m.pays
       ? `Matching them would sell below the ${f(m.cost)} it costs you. The fix is the supplier, not the shelf.`
@@ -38189,7 +38291,8 @@ function renderMarket(){
         <span class="rv-mtext">${mode === 'under' ? 'Match' : 'Lift to'} ${esc(x.shop)}’s ${f(x.theirs)} — costs you ${f(m.cost)}. ${verdict}</span>
         ${m.pays ? `<button type="button" class="btn btn-ghost rv-match" data-pid="${esc(String(x.productId))}"
           data-vi="${x.variantIdx == null ? '' : esc(String(x.variantIdx))}"
-          data-to="${esc(String(x.theirs))}">Charge ${f(x.theirs)}</button>` : ''}
+          data-side="${esc(x.side)}"
+          data-to="${esc(String(x.theirs))}">Charge ${f(x.theirs)} ${esc(rivalSideLabel(x.side))}</button>` : ''}
       </div>`;
   };
 
@@ -38199,12 +38302,13 @@ function renderMarket(){
   const vrow = (x, mode)=> `<div class="rv-vrow${x.stale ? ' stale' : ''}">
       <div class="rv-vtop">
         <span class="rv-mname">${esc(x.line)}</span>
+        ${sideChip(x)}
         <span class="rv-vstake">${f(x.atStake)}</span>
       </div>
       <div class="pp-facts">
         <span class="pp-fact"><b>${f(x.theirs)}</b> at ${esc(x.shop)}</span>
-        <span class="pp-fact"><b>${f(x.ours)}</b> yours</span>
-        <span class="pp-fact"><b>${x.units30}</b> sold in 30 days</span>
+        <span class="pp-fact"><b>${f(x.ours)}</b> your ${esc(rivalSideLabel(x.side))}</span>
+        <span class="pp-fact"><b>${x.units30}</b> sold ${x.side === 'retail' ? 'by the piece' : 'by the pack'} in 30 days</span>
         <span class="pp-fact${x.stale ? ' pp-fact-bad' : ''}">${x.daysOld === 0 ? 'seen today'
           : x.daysOld === 1 ? 'seen yesterday' : `seen ${x.daysOld} days ago`}</span>
       </div>
@@ -38229,6 +38333,11 @@ function renderMarket(){
       <div class="pw-list">${listPageSlice('marketLift', v.lift).map(x=> vrow(x, 'lift')).join('')}</div>${
       listMoreButtonHTML('marketLift', v.lift.length, 'lines')}</div>`;
   }
+  if(v.noRule){
+    html += `<p class="pp-more">${v.noRule} ${v.noRule === 1 ? 'sighting names a side' : 'sightings name a side'} this line has no price rule for, so ${
+      v.noRule === 1 ? 'it is' : 'they are'} on the record below but in neither list. Set that side's rule on the line and ${
+      v.noRule === 1 ? 'it joins' : 'they join'} the ranking.</p>`;
+  }
   if(v.notCompared){
     html += `<p class="pp-more">${v.notCompared} ${v.notCompared === 1 ? 'sighting was' : 'sightings were'} recorded in a unit that does not match how you price the line, so ${
       v.notCompared === 1 ? 'it is' : 'they are'} on the record below but in neither list.</p>`;
@@ -38241,8 +38350,9 @@ function renderMarket(){
   } else {
     const groups = new Map();
     rows.forEach(r=>{
-      const k = mkGroupBy === 'line' ? r.key : r.shop.toLowerCase();
-      if(!groups.has(k)) groups.set(k, { head: mkGroupBy === 'line' ? r.line : r.shop, rows: [] });
+      const k = mkGroupBy === 'line' ? r.key : mkGroupBy === 'side' ? r.side : r.shop.toLowerCase();
+      if(!groups.has(k)) groups.set(k, { head: mkGroupBy === 'line' ? r.line
+        : mkGroupBy === 'side' ? 'Their ' + rivalSideLabel(r.side) + ' prices' : r.shop, rows: [] });
       groups.get(k).rows.push(r);
     });
     /* Freshest group first: a shop checked this week is the one whose
@@ -38257,9 +38367,9 @@ function renderMarket(){
           <span class="rv-gsub">${g.rows.length} ${g.rows.length === 1 ? 'line' : 'lines'} ·
             last seen ${g.freshest === 0 ? 'today' : g.freshest === 1 ? 'yesterday' : `${g.freshest} days ago`}</span>
         </div>
-        ${g.rows.map(r=> row(r, mkGroupBy === 'line' ? r.shop : r.line)).join('')}
+        ${g.rows.map(r=> row(r, mkGroupBy === 'shop' ? r.line : r.shop + ' — ' + r.line)).join('')}
       </div>`).join('')}</div>`
-      + listMoreButtonHTML('market', ordered.length, mkGroupBy === 'line' ? 'lines' : 'shops');
+      + listMoreButtonHTML('market', ordered.length, mkGroupBy === 'line' ? 'lines' : mkGroupBy === 'side' ? 'sides' : 'shops');
   }
 
   /* WHERE TO WALK. Ranked on what each line earned in thirty days, the
@@ -38283,6 +38393,10 @@ function renderMarket(){
       <div class="rv-erow">
         <input type="text" class="rv-in" id="mk_shop" placeholder="Which shop" value="${esc(mkShop)}">
         <input type="date" class="rv-in rv-num" id="mk_seen" value="${esc(mkSeenOn || todayISO())}">
+        ${rivalPriceSideColumn ? `<select class="rv-in rv-num" id="mk_side">
+          <option value="wholesale"${mkSide === 'wholesale' ? ' selected' : ''}>Their wholesale</option>
+          <option value="retail"${mkSide === 'retail' ? ' selected' : ''}>Their retail</option>
+        </select>` : ''}
       </div>
       <div class="rv-erow">
         <select class="rv-in" id="mk_line"><option value="">Pick a line…</option>${
@@ -38291,7 +38405,9 @@ function renderMarket(){
         <input type="number" class="rv-in rv-num" id="mk_price" min="0" step="any" placeholder="Their price">
         <button type="button" class="btn btn-accent" id="mk_add">Add</button>
       </div>
-      <div class="rv-ehint">The shop and the day stay put, so a round of the market goes in line after line.</div>
+      <div class="rv-ehint">The shop, the day and the side stay put, so a round of the market goes in line after line.${
+        rivalPriceSideColumn ? ' A shelf ticket in their shop is usually their retail price.'
+        : ' Paste supabase/migrations/0088_rival_price_side.sql into the Supabase SQL editor to record which side a price is.'}</div>
     </div></div>`;
 
   el.innerHTML = html;
@@ -38304,19 +38420,24 @@ function renderMarket(){
   el.querySelectorAll('.rv-match').forEach(b=> b.addEventListener('click', ()=>{
     const pid = b.dataset.pid;
     const vi = b.dataset.vi === '' ? null : Number(b.dataset.vi);
-    const m = priceRuleForTarget(pid, vi, Number(b.dataset.to));
+    const side = b.dataset.side === 'retail' ? 'retail' : 'wholesale';
+    const m = priceRuleForTarget(pid, vi, Number(b.dataset.to), side);
     if(!m || !m.pays){ toast('That price is no longer one this line can carry'); return; }
-    const was = ourPriceFor(pid, vi);
+    const was = ourPriceFor(pid, vi, side);
     /* Read BEFORE the write: afterwards the rule has changed and the
        hold has already ended, so nothing could tell it ever stood. */
     const held = buyHoldFor(stockKey(pid, vi));
     const stood = !!(held && !held.over);
-    if(!confirm('Charge ' + fmtUGX(m.target) + ' instead of ' + fmtUGX(was) + '?\n\n'
-      + 'It costs you ' + fmtUGX(m.cost) + ', so you would keep ' + m.keptPct + '%.')) return;
-    if(!setStockPriceRule(pid, vi, { wholesaleType: m.type, wholesaleValue: m.value })){
+    if(!confirm('Charge ' + fmtUGX(m.target) + ' ' + rivalSideLabel(side) + ' instead of ' + fmtUGX(was) + '?\n\n'
+      + 'It costs you ' + fmtUGX(m.cost) + ', so you would keep ' + m.keptPct + '%.'
+      + '\n\nYour ' + rivalSideLabel(side === 'retail' ? 'wholesale' : 'retail') + ' price is not touched.')) return;
+    /* The rule for THAT side and no other: a retail sighting must not
+       move what the pack sells for, and the value written is already
+       spread the way that side's ladder reads it. */
+    if(!setStockPriceRule(pid, vi, { [side + 'Type']: m.type, [side + 'Value']: m.value })){
       toast('Could not change that price'); return;
     }
-    toast('Now ' + fmtUGX(ourPriceFor(pid, vi)) + ' — keeping ' + m.keptPct + '%'
+    toast('Now ' + fmtUGX(ourPriceFor(pid, vi, side)) + ' ' + rivalSideLabel(side) + ' — keeping ' + m.keptPct + '%'
       + (stood ? '. The hold on this line has ended: the price it objected to has changed.' : ''), 8000);
     renderMarket();
   }));
@@ -38327,8 +38448,10 @@ function renderMarket(){
     if(!parts){ toast('Pick a line first'); return; }
     mkShop = (document.getElementById('mk_shop')||{}).value || '';
     mkSeenOn = (document.getElementById('mk_seen')||{}).value || todayISO();
+    mkSide = ((document.getElementById('mk_side')||{}).value === 'retail') ? 'retail' : 'wholesale';
     const r = await addRivalPrice({ productId: parts.productId, variantIdx: parts.variantIdx,
-      rival: mkShop, price: Number((document.getElementById('mk_price')||{}).value), seenOn: mkSeenOn });
+      rival: mkShop, price: Number((document.getElementById('mk_price')||{}).value),
+      seenOn: mkSeenOn, side: mkSide });
     if(!r.ok){ toast(r.why, 8000); return; }
     toast('Kept — and the manager reads it when it argues about that price');
     renderMarket();
@@ -38345,10 +38468,15 @@ function renderRivalPrices(productId, variantIdx){
   if(!wrap) return;
   const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
   const rows = rivalPricesTable ? rivalPriceLatest(productId, vi) : [];
-  const ours = ourPriceFor(productId, vi);
+  const ourSide = { wholesale: ourPriceFor(productId, vi, 'wholesale'), retail: ourPriceFor(productId, vi, 'retail') };
+  const ours = ourSide.wholesale;
   const form = `<div class="rv-add">
       <input type="text" class="rv-in" id="rv_shop" placeholder="Which shop">
       <input type="number" class="rv-in rv-num" id="rv_price" min="0" step="any" placeholder="Their price">
+      ${rivalPriceSideColumn ? `<select class="rv-in rv-num" id="rv_side">
+        <option value="wholesale">Their wholesale</option>
+        <option value="retail">Their retail</option>
+      </select>` : ''}
       <button type="button" class="btn btn-ghost" id="rv_add">Add</button>
     </div>`;
   if(!rivalPricesTable){
@@ -38362,26 +38490,34 @@ function renderRivalPrices(productId, variantIdx){
         /* Against OUR price, because that is the comparison being made.
            Withheld when we have no price of our own rather than
            comparing their figure against nothing. */
-        const gap = ours == null ? null : r.price - ours;
-        const tag = gap == null ? ''
-          : (Math.abs(gap) < 1 ? '<span class="rv-gap">same as yours</span>'
-            : `<span class="rv-gap ${gap > 0 ? 'over' : 'under'}">${fmtUGX(Math.abs(gap))} ${gap > 0 ? 'above' : 'below'} yours</span>`);
+        const mine = ourSide[r.side];
+        const gap = mine == null ? null : r.price - mine;
+        const tag = gap == null ? `<span class="rv-gap none">no ${esc(rivalSideLabel(r.side))} price of your own</span>`
+          : (Math.abs(gap) < 1 ? `<span class="rv-gap">same as your ${esc(rivalSideLabel(r.side))}</span>`
+            : `<span class="rv-gap ${gap > 0 ? 'over' : 'under'}">${fmtUGX(Math.abs(gap))} ${gap > 0 ? 'above' : 'below'} your ${esc(rivalSideLabel(r.side))}</span>`);
         return `<div class="rv-row">
           <span class="rv-shop">${esc(r.rival)}</span>
           <span class="rv-price">${fmtUGX(r.price)}</span>
+          ${r.sideSaid ? `<span class="rv-side ${r.side}">${esc(rivalSideLabel(r.side))}</span>`
+            : '<span class="rv-side none">no side said</span>'}
           ${tag}
           <span class="rv-when">${r.daysOld === 0 ? 'seen today'
             : r.daysOld === 1 ? 'seen yesterday' : `seen ${r.daysOld} days ago`}</span>
         </div>`; }).join('')}</div>`
       : `<div class="q-empty-hint">Nothing on file for this line yet — so nothing here says you are
           the cheapest, only that nobody has looked. Add what you have seen.</div>`)
-    + (ours == null ? '' : `<div class="rv-ours">You sell it at <strong>${fmtUGX(ours)}</strong>.</div>`)
+    + (ourSide.wholesale == null && ourSide.retail == null ? ''
+      : `<div class="rv-ours">You sell it at ${[
+          ourSide.wholesale == null ? null : `<strong>${fmtUGX(ourSide.wholesale)}</strong> wholesale`,
+          ourSide.retail == null ? null : `<strong>${fmtUGX(ourSide.retail)}</strong> retail`,
+        ].filter(Boolean).join(', ')}.</div>`)
     + form;
   const btn = wrap.querySelector('#rv_add');
   if(btn) btn.addEventListener('click', async ()=>{
     const shop = (wrap.querySelector('#rv_shop')||{}).value;
     const price = Number((wrap.querySelector('#rv_price')||{}).value);
-    const r = await addRivalPrice({ productId, variantIdx: vi, rival: shop, price });
+    const side = ((wrap.querySelector('#rv_side')||{}).value === 'retail') ? 'retail' : 'wholesale';
+    const r = await addRivalPrice({ productId, variantIdx: vi, rival: shop, price, side });
     if(!r.ok){ toast(r.why, 8000); return; }
     toast('Kept — and the manager reads it when it argues about this price');
     renderRivalPrices(productId, vi);
@@ -41502,7 +41638,9 @@ document.getElementById('priceModalClose').addEventListener('click', ()=>closeMo
 (function wireMarketControls(){
   const g = document.getElementById('mk_group');
   if(!g) return;
-  g.addEventListener('change', ()=>{ mkGroupBy = g.value === 'line' ? 'line' : 'shop'; renderMarket(); });
+  g.addEventListener('change', ()=>{
+    mkGroupBy = g.value === 'line' ? 'line' : g.value === 'side' ? 'side' : 'shop';
+    renderMarket(); });
 })();
 document.getElementById('pr_search').addEventListener('input', triggerPricesRender);
 wireSupplierFilterSearch('pr_supplier_filter_search', 'pr_supplier_filter', 'pr_supplier_filter_suggestions', triggerPricesRender);
@@ -53066,8 +53204,12 @@ async function managerAnswerQuestion(rowId, answer){
   const figure = /^[\d,.\s]+$/.test(text) ? Math.round(Number(text.replace(/[,\s]/g, ''))) : 0;
   let filed = null, refused = null;
   if(parts && body.rival && figure > 0){
+    /* The Manager argues about what the shop sells by the pack, and its
+       questions are asked in those terms, so the answer is filed as a
+       wholesale sighting rather than as a side nobody named. */
     const r = await addRivalPrice({ productId: parts.productId, variantIdx: parts.variantIdx,
-      rival: body.rival, price: figure, seenOn: todayISO(), note: 'Answered the manager' });
+      rival: body.rival, price: figure, seenOn: todayISO(), side: 'wholesale',
+      note: 'Answered the manager' });
     /* A refused sighting must not cost the shop its answer: the note is
        kept either way and the reason is said out loud. */
     if(r.ok){ filed = productVariantLabel(parts.product, parts.variantIdx); body.recorded = { rival: body.rival, price: figure }; }
@@ -59007,6 +59149,11 @@ const ASSISTANT_TOOLS = {
       const rivals = rivalPriceLatest(p.id, vi);
       if(rivals.length) out.other_shops_charge = rivals.map(r=> ({ shop: r.rival,
         price: apRound(r.price), seen_days_ago: r.daysOld,
+        /* WHICH OF THIS SHOP'S TWO PRICES IT ARGUES WITH. A shelf
+           ticket is usually their retail; weighed against a pack price
+           it is not a gap at all. Absent where nobody said, which is
+           every sighting recorded before the record could hold it. */
+        ...(r.sideSaid ? { side: r.side } : { side_not_said: true }),
         ...(r.note ? { note: r.note } : {}) }));
       /* The headline packing, so it is present even when only the top of
          the dossier is read. Same productPackInfo the shelf uses. */
@@ -59418,7 +59565,7 @@ const ASSISTANT_TOOLS = {
     const marketHurts = rivalPricesTable
       ? marketVerdict(todayISO()).under.slice(0, 3).map(r=> ({ product_id: r.productId,
           variant_index: r.variantIdx, line: r.line, their_price: apRound(r.theirs),
-          shop: r.shop, ours: apRound(r.ours), sold_30: r.units30,
+          shop: r.shop, ours: apRound(r.ours), sold_30: r.units30, side: r.side,
           at_stake_30d: apRound(r.atStake), seen_days_ago: r.daysOld }))
       : [];
     /* Where the shop stands against what this manager itself said it
@@ -60020,12 +60167,13 @@ const ASSISTANT_TOOLS = {
         const p = (data.products||[]).find(x=> x.id === it.product_id);
         const vi = it.variant_index==null ? null : it.variant_index;
         const name = p ? productVariantLabel(p, vi) : String(it.product_id||'');
-        const ours = p ? ourPriceFor(p.id, vi) : null;
+        const side = it.side === 'retail' ? 'retail' : 'wholesale';
+        const ours = p ? ourPriceFor(p.id, vi, side) : null;
         const theirs = apRound(Number(it.price)||0);
-        const gap = ours == null ? 'you have no price of your own'
-          : theirs > ours ? fmtUGX(theirs - ours) + ' above your ' + fmtUGX(ours)
-          : theirs < ours ? fmtUGX(ours - theirs) + ' below your ' + fmtUGX(ours)
-          : 'the same as yours';
+        const gap = ours == null ? 'you have no ' + side + ' price of your own'
+          : theirs > ours ? fmtUGX(theirs - ours) + ' above your ' + side + ' ' + fmtUGX(ours)
+          : theirs < ours ? fmtUGX(ours - theirs) + ' below your ' + side + ' ' + fmtUGX(ours)
+          : 'the same as your ' + side;
         return '\u2022 ' + name + ' \u2014 ' + fmtUGX(theirs) + ' (' + gap + ')';
       });
       const when = /^\d{4}-\d{2}-\d{2}$/.test(String(input.seen_on||'')) && input.seen_on !== todayISO()
@@ -60040,7 +60188,7 @@ const ASSISTANT_TOOLS = {
       for(const it of items){
         const r = await addRivalPrice({ productId: it.product_id,
           variantIdx: it.variant_index==null ? null : it.variant_index,
-          rival: input.rival, price: it.price, unit: it.unit,
+          rival: input.rival, price: it.price, unit: it.unit, side: it.side,
           seenOn: input.seen_on, note: input.note });
         if(r.ok) written.push(it.product_id); else refused.push({ product_id: it.product_id, why: r.why });
       }

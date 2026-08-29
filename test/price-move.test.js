@@ -75,11 +75,11 @@ const makeData = () => ({
     { id: 5, productId: 'P5', variantIdx: null, rival: 'Zauja', price: 10000, unit: '', seenOn: TODAY, note: '' },
   ],
   savedQuotes: [{ id: 1, invoiced: true, voided: false, date: shift(TODAY, -5), items: [
-    { productId: 'P1', variantIdx: 0, qty: 4, supplierId: '__stock__', sellPrice: 105000, _stockLots: [{ qty: 4, cost: 96000 }] },
-    { productId: 'P2', variantIdx: null, qty: 500, supplierId: '__stock__', sellPrice: 1100, _stockLots: [{ qty: 500, cost: 1000 }] },
-    { productId: 'P3', variantIdx: null, qty: 10, supplierId: '__stock__', sellPrice: 25000, _stockLots: [{ qty: 10, cost: 20000 }] },
-    { productId: 'P4', variantIdx: null, qty: 8, supplierId: '__stock__', sellPrice: 6000, _stockLots: [{ qty: 8, cost: 5000 }] },
-    { productId: 'P5', variantIdx: null, qty: 20, supplierId: '__stock__', sellPrice: 9500, _stockLots: [{ qty: 20, cost: 9000 }] },
+    { productId: 'P1', variantIdx: 0, qty: 4, packQty: 1, supplierId: '__stock__', sellPrice: 105000, _stockLots: [{ qty: 4, cost: 96000 }] },
+    { productId: 'P2', variantIdx: null, qty: 500, packQty: 12, supplierId: '__stock__', sellPrice: 1100, _stockLots: [{ qty: 500, cost: 1000 }] },
+    { productId: 'P3', variantIdx: null, qty: 10, packQty: 1, supplierId: '__stock__', sellPrice: 25000, _stockLots: [{ qty: 10, cost: 20000 }] },
+    { productId: 'P4', variantIdx: null, qty: 8, packQty: 1, supplierId: '__stock__', sellPrice: 6000, _stockLots: [{ qty: 8, cost: 5000 }] },
+    { productId: 'P5', variantIdx: null, qty: 20, packQty: 1, supplierId: '__stock__', sellPrice: 9500, _stockLots: [{ qty: 20, cost: 9000 }] },
   ] }],
 });
 
@@ -90,6 +90,8 @@ const env = (data, over) => ({
   fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
   apRound: (n) => Math.round(Number(n) || 0),
   supplierName: (id) => String(id),
+  RIVAL_SIDES: ['wholesale', 'retail'],
+  rivalPriceSideColumn: true,
   productDisplayLabel: (p, vi) => (vi == null ? p.name : `${p.name} 12"`),
   allProductVariantEntries: () => data.products.flatMap((p) => (p.variants && p.variants.length)
     ? p.variants.map((_v, i) => ({ p, variantIdx: i })) : [{ p, variantIdx: null }]),
@@ -99,6 +101,7 @@ const env = (data, over) => ({
 });
 
 const CHAIN = ['ourCostFor', 'ourPriceFor', 'priceRuleForTarget', 'setStockPriceRule',
+  'rivalSide', 'rivalSideSaid', 'rivalSideLabel',
   'rivalPricesFor', 'rivalPriceLatest',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind', 'productPackInfo', 'productUnitLabel',
@@ -224,7 +227,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     document: { getElementById: (id) => (id === 'mk_body' ? el : null) },
     esc: (x) => String(x == null ? '' : x),
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
-    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '',
+    mkGroupBy: 'shop', mkShop: '', mkSeenOn: '', mkSide: 'wholesale',
   });
   s.renderMarket();
   const html = el.innerHTML;
@@ -244,6 +247,8 @@ const build = (data, extraSrc, names, over) => compileScope(
     'the lifting side reads as lifting, and ten per cent exactly is not flagged');
   t.check(/Lift to Zauja’s 10,000 — costs you 9,000\. You would keep 10%\.(?![^<]*under your)/.test(html),
     'with no thin warning on it at all');
+  t.check(/Charge 10,000 wholesale/.test(html),
+    'and the button names the SIDE it would move, because a shop has two prices and only one of them is being changed');
   t.check(/You would keep 17%\./.test(html), 'and a comfortable line simply says the share');
 }
 
@@ -261,7 +266,7 @@ const build = (data, extraSrc, names, over) => compileScope(
       document: { getElementById: (id) => (id === 'mk_body' ? el : null) },
       esc: (x) => String(x == null ? '' : x),
       listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
-      mkGroupBy: 'shop', mkShop: '', mkSeenOn: '',
+      mkGroupBy: 'shop', mkShop: '', mkSeenOn: '', mkSide: 'wholesale',
       toast: (m) => seen.toasts.push(m),
       confirm: (m) => { seen.confirms.push(m); return over.say !== false; },
       buyHoldFor: () => over.hold || null,
@@ -276,8 +281,10 @@ const build = (data, extraSrc, names, over) => compileScope(
   /* Declined. */
   let r = run({ say: false });
   eq(r.seen.confirms.length, 1, 'the tap ASKS first — a price decides every sale after it, and a mis-tap leaves nothing behind to notice');
-  t.check(/Charge 100,000 instead of 105,000\?/.test(r.seen.confirms[0]),
-    'naming both figures, the one it would leave and the one it would set');
+  t.check(/Charge 100,000 wholesale instead of 105,000\?/.test(r.seen.confirms[0]),
+    'naming both figures and the side, the one it would leave and the one it would set');
+  t.check(/Your retail price is not touched\./.test(r.seen.confirms[0]),
+    'and saying out loud what it will NOT do — a shop has two prices and this moves one');
   t.check(/It costs you 96,000, so you would keep 4%\./.test(r.seen.confirms[0]),
     'and the consequence again, in the dialog itself');
   eq(r.data.products[0].variants[0].stockWholesaleMarkupValue, 9000,
@@ -288,7 +295,8 @@ const build = (data, extraSrc, names, over) => compileScope(
   r = run({ say: true });
   eq(r.data.products[0].variants[0].stockWholesaleMarkupValue, 4000, 'a confirmed tap writes the rule');
   eq(r.s.ourPriceFor('P1', 0), 100000, 'and the line now sells at the figure on the button');
-  t.check(/Now 100,000 — keeping 4%/.test(r.seen.toasts[0]), 'and says what it now charges and keeps');
+  t.check(/Now 100,000 wholesale — keeping 4%/.test(r.seen.toasts[0]),
+    'and says what it now charges, on which side, and what it keeps');
   t.check(!/hold/i.test(r.seen.toasts[0]),
     'with no word about a hold, because none stood');
 
