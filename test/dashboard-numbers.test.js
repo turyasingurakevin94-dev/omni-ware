@@ -245,11 +245,24 @@ const inv = (date, supplier, name, price, variantIdx = null, voided = false) => 
 
 /* ---------- 4. stock with no recorded cost is not worth nothing ------- */
 {
-  const health = extractFunction(src, 'dashInventoryHealth', 'index.html');
-  t.check(!/getFIFOUnitCost\(p\.id, variantIdx\) \|\| 0/.test(health),
+  /* The shelf walk moved into stockAgeRows so the clearance screen could
+     have the per-line list the dashboard had always thrown away. The
+     cost cascade travelled with it and must still be the same one. */
+  const rows = extractFunction(src, 'stockAgeRows', 'index.html');
+  t.check(!/getFIFOUnitCost\(p\.id, variantIdx\) \|\| 0/.test(rows),
     'inventory value no longer treats unknown cost as zero');
-  t.check(/rankedPriceRows\(p\.id, variantIdx\)\[0\]/.test(health) && /purchasePriceAtQty\(fallbackRow, qty\)/.test(health),
+  t.check(/rankedPriceRows\(p\.id, variantIdx\)\[0\]/.test(rows) && /purchasePriceAtQty\(fallbackRow, qty\)/.test(rows),
     'and falls back to what replacing the unit would cost, like the quote line does');
+
+  /* ONE READING. dashInventoryHealth is now derived from those rows and
+     must not walk the shelf a second time — two walks are two answers,
+     and the dashboard card, the Manager's dead-stock target and the
+     clearance screen all quote this figure at the owner. */
+  const health = extractFunction(src, 'dashInventoryHealth', 'index.html');
+  t.check(/stockAgeRows\(\)/.test(health),
+    'the dashboard reads the one shelf walk rather than repeating it');
+  t.check(!/allProductVariantEntries|getStockQty|getFIFOUnitCost/.test(health),
+    'and reaches for none of the pieces itself — the moment it does, the screen and the card can disagree about what is dead');
 }
 
 process.exit(t.done() ? 1 : 0);

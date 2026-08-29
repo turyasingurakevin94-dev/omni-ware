@@ -86,6 +86,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     stockOut: [{ key: 'P1', name: 'Runners Masasi 12 inch', qty: 1, daysLeft: 0.5, dailyRate: 2.13 }],
   };
   const env = {
+    /* The shelf the clearance reading walks. Empty here: these files are
+       about the meeting, and a dead line of their own would only make
+       these fixtures argue with the ones in dead-stock.test.js. */
+    allProductVariantEntries: () => [],
+    getStockQty: () => 0,
+    getFIFOUnitCost: () => null,
+    rankedPriceRows: () => [],
+    purchasePriceAtQty: () => null,
+    productDisplayLabel: (p) => (p && p.name) || '',
+    stockKey: (pid, vi) => (vi == null || vi === '') ? pid : `${pid}::${vi}`,
+    contactPhones: (c) => [c && c.phone].filter(Boolean),
+    daysSinceDate: () => 0,
     data,
     todayISO: () => '2026-08-29', anShiftDate: () => '2026-07-31',
     apRound: (n) => Math.round(Number(n) || 0),
@@ -114,6 +126,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+    /* The clearance reading the meeting now argues from. Whole, not
+       stubbed: the Manager and the screen must not disagree about what
+       is dead or what the owner has already marked. */
+    extractFunction(src, 'stockAgeRows', 'index.html'),
+    extractFunction(src, 'deadStockRows', 'index.html'),
+    extractFunction(src, 'deadStockBuyers', 'index.html'),
+    extractFunction(src, 'deadStockQuietDays', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
   const pulse = scope.names().ASSISTANT_TOOLS.shop_pulse.run();

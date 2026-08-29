@@ -96,6 +96,22 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
   const data = { presetOrderStageLimits: {}, customers: [] };
   const env = {
+    /* The shelf the clearance reading walks. Empty here: these files are
+       about the meeting, and a dead line of their own would only make
+       these fixtures argue with the ones in dead-stock.test.js. */
+    /* ONE DEAD LINE, so the meeting's dead-stock reading has something
+       it must actually carry. The Manager advised clearing this shop's
+       dead stock for weeks against a bare total and could never say
+       WHICH — a count is not something anybody can act on. */
+    allProductVariantEntries: () => [{ p: { id: 'D1', name: 'Sitting Still' }, variantIdx: null }],
+    getStockQty: () => 7,
+    getFIFOUnitCost: () => 30000,
+    rankedPriceRows: () => [],
+    purchasePriceAtQty: () => null,
+    productDisplayLabel: (p) => (p && p.name) || '',
+    stockKey: (pid, vi) => (vi == null || vi === '') ? pid : `${pid}::${vi}`,
+    contactPhones: (c) => [c && c.phone].filter(Boolean),
+    daysSinceDate: () => 0,
     data,
     todayISO: () => '2026-08-28', anShiftDate: (d, n) => '2026-07-30',
     apRound: (n) => Math.round(Number(n) || 0),
@@ -145,6 +161,13 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'buyPriceNow', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+    /* The clearance reading the meeting now argues from. Whole, not
+       stubbed: the Manager and the screen must not disagree about what
+       is dead or what the owner has already marked. */
+    extractFunction(src, 'stockAgeRows', 'index.html'),
+    extractFunction(src, 'deadStockRows', 'index.html'),
+    extractFunction(src, 'deadStockBuyers', 'index.html'),
+    extractFunction(src, 'deadStockQuietDays', 'index.html'),
     extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
@@ -186,6 +209,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   eq(pulse.follow_ups_due.length, 5, 'follow-ups are capped');
   eq(pulse.consignment.owed_total, 2295000, 'consignment counts only real balances');
   eq(pulse.consignment.consignors, 1, 'and only consignors actually owed');
+
+  /* THE LINES, NOT JUST THE TOTAL. "Sell the dead stock" was advised and
+     skipped twenty-three times at this shop, and the reason was that the
+     meeting was handed one number with nothing under it. */
+  eq(pulse.dead_stock.worst_lines.length, 1, 'a dead line reaches the meeting by name');
+  eq(pulse.dead_stock.worst_lines[0].line, 'Sitting Still', 'named');
+  eq(pulse.dead_stock.worst_lines[0].value, 210000, 'with the money standing in it');
+  eq(pulse.dead_stock.worst_lines[0].never_sold, true,
+    'and whether anybody has ever bought it — a line with no buyer needs different advice from one with a queue');
+  eq(pulse.dead_stock.buyers_who_took_it_before, undefined, 'the count is on the line, not the block');
+  eq(pulse.dead_stock.lines_marked_to_clear, 0,
+    'and what the owner has already dealt with, so the advice can move on to the rest');
   eq(pulse.stage_limits_set, false,
     'an empty late-orders list says whether it means "nothing late" or "no limits set"');
   t.check(pulse.yesterday.profit_partly_estimated === true,
