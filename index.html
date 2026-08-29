@@ -1048,6 +1048,13 @@
   .mgr-play-name{font-weight:700;font-size:14px;color:var(--ink);}
   .mgr-play-tag{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
   .mgr-play-sized{font-size:12.5px;color:var(--accent-ink);margin:0 0 6px;}
+  /* What the books did over the same weeks. Deliberately quiet and
+     deliberately neutral by default: a green number beside a strategy
+     reads as credit, and nothing here has earned credit. */
+  .mgr-play-moved{font-size:12px;color:var(--ink-soft);margin:0 0 6px;line-height:1.5;
+    padding:5px 9px;border-radius:7px;background:var(--ow-steel-050);}
+  .mgr-play-moved.good{color:var(--good);background:var(--good-bg);}
+  .mgr-play-moved.bad{color:var(--accent);background:var(--ow-oxide-soft);}
   .mgr-policies{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 15px 11px;}
   .mgr-pol-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;
     padding:8px 0;border-bottom:1px solid var(--line);}
@@ -52131,9 +52138,16 @@ async function managerPlaybook(){
     problem: MANAGER_PROBLEMS[(x.body||{}).treats] || 'Other',
     how: (x.body||{}).how || '', sized: (x.body||{}).sized || '', watch: (x.body||{}).watch || '',
     source: (x.body||{}).source === 'owner' ? 'owner' : 'manager',
+    baseline: (x.body||{}).baseline == null ? null : Number((x.body||{}).baseline),
     proposed_on: x.date, started_on: (x.body||{}).startedOn || null, ended_on: (x.body||{}).endedOn || null });
+  const running = rows.filter(x=> x.status === 'running').map(view);
+  /* What moved alongside each running play, worked out here so the
+     screen and the weekly review are looking at the same arithmetic.
+     Every running play is passed in, because the other plays live in
+     the same weeks are the rival explanations. */
+  running.forEach(p=>{ p.progress = managerPlayProgress(p, todayISO(), running); });
   return {
-    running: rows.filter(x=> x.status === 'running').map(view),
+    running,
     proposed: rows.filter(x=> x.status === 'proposed').map(view),
     dropped: rows.filter(x=> x.status === 'dropped' || x.status === 'done').map(x=> ({ ...view(x), status: x.status })),
   };
@@ -52141,11 +52155,127 @@ async function managerPlaybook(){
 
 /* Trying a play, stopping it, or setting it aside -- the dates that
    cannot be worked out later are stamped here. */
+/* HOW EACH PROBLEM IS MEASURED, where the books can measure it at all.
+
+   The playbook could name a problem and propose a treatment, and then
+   nothing ever asked whether the treatment did anything. "It worked"
+   was a button the owner pressed. A manager that cannot tell a working
+   strategy from a failing one is guessing every Monday.
+
+   Five of the eight problems have an honest measure here. Three do not,
+   and are said to have none rather than fitted to the nearest number:
+   depending on one buyer, supplier cost and 'other' are real problems
+   this app cannot weigh, and the manager is told to ask the owner
+   instead of dressing up a figure that does not answer the question.
+
+   MARGIN needs no baseline and that matters most, because margin is
+   this shop's binding problem: gross profit and sales are both FLOWS,
+   computable for any past window, so the share kept before a play
+   started is derivable today, retroactively, for a play nobody thought
+   to stamp. The three level problems cannot be: where the shop stood
+   three weeks ago is nowhere in the books, so those stamp a baseline
+   when the play is switched on -- the same thing an adopted target
+   does, for the same reason. */
+/* How far back the records actually reach. Any before-and-after has to
+   ask this first: a comparison whose earlier half runs off the start of
+   the books is not a comparison, it is a short window against a shorter
+   one. One reading, so the longer arc and the strategy review can never
+   disagree about when this shop's books begin. */
+function booksStartDate(){
+  return (data.savedQuotes||[]).filter(q=> !q.voided && q.invoiced)
+    .map(q=> String(q.invoicedAt || q.date || '')).filter(Boolean).sort()[0] || null;
+}
+
+const MANAGER_PROBLEM_METRICS = {
+  margin: { label: 'the share kept', unit: 'pct', kind: 'flow', direction: 'up',
+    measure: (from, to)=>{
+      const tot = anOverallTotals(anInvoicesInRange(from, to));
+      return tot.sales > 0 ? Math.round(tot.profit / tot.sales * 1000) / 10 : null; } },
+  growth: { label: 'sales', unit: 'money', kind: 'flow', direction: 'up',
+    measure: (from, to)=> MANAGER_METRICS.sales.measure(from, to) },
+  cash: { label: 'cash in hand', unit: 'money', kind: 'level', direction: 'up',
+    measure: ()=> MANAGER_METRICS.cash_on_hand.measure() },
+  debt: { label: 'money owed to you', unit: 'money', kind: 'level', direction: 'down',
+    measure: ()=> MANAGER_METRICS.debtors_total.measure() },
+  dead_stock: { label: 'dead stock', unit: 'money', kind: 'level', direction: 'down',
+    measure: ()=> MANAGER_METRICS.dead_stock_value.measure() },
+};
+
+/* WHAT MOVED WHILE A PLAY RAN -- and never what the play DID.
+
+   The distinction is the whole honesty of this feature. Margin going
+   from 4% to 11% across the weeks a shop charged for cutting does not
+   mean the cutting charge did it: two below-cost lines may have been
+   repriced in the same fortnight, or one fat order may have carried the
+   month. Claiming the credit would be the worst thing this app could
+   learn to do -- not a wrong figure, which the owner would catch, but a
+   false lesson they would build the next year of strategy on.
+
+   So this answers one question only: over the span this play has run,
+   and over the SAME NUMBER OF DAYS before it started, what did the
+   thing it treats do? It also names the other plays running in that
+   window, because those are real, derivable rival explanations. The
+   judgement of whether the play caused it is the manager's to argue and
+   the owner's to make, and the prompt says so in those words. */
+function managerPlayProgress(view, dateISO, plays){
+  const m = MANAGER_PROBLEM_METRICS[String((view||{}).treats||'')];
+  if(!m) return null;
+  const today = dateISO || todayISO();
+  const started = (view||{}).started_on || (view||{}).proposed_on;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(started||''))) return null;
+  const days = Math.max(0, daysSinceDate(started));
+  const out = { measures: m.label, unit: m.unit, direction: m.direction,
+    started_on: started, days_running: days };
+  /* Under a week is noise wearing a verdict. */
+  if(days < 7){ out.too_early = true; return out; }
+
+  if(m.kind === 'flow'){
+    const since = m.measure(started, today);
+    const beforeFrom = anShiftDate(started, -days);
+    const beforeTo = anShiftDate(started, -1);
+    /* Like for like, or not at all: a shorter 'before' than 'after'
+       flatters or damns by nothing but the length of the window. */
+    const first = booksStartDate();
+    if(first && beforeFrom < first){
+      out.since = since;
+      out.no_before = 'the books do not reach back far enough for the same number of days before it started';
+      return out;
+    }
+    const before = m.measure(beforeFrom, beforeTo);
+    out.since = since; out.before = before;
+    out.before_span = `${beforeFrom} to ${beforeTo}`;
+    if(since != null && before != null) out.moved = Math.round((since - before) * 10) / 10;
+  } else {
+    const base = (view||{}).baseline;
+    if(base == null || !(Number(base) >= 0)){
+      out.no_before = 'this play was switched on before the shop began stamping where it stood, so there is nothing to compare with';
+      out.now = m.measure();
+      return out;
+    }
+    out.before = Math.round(Number(base));
+    out.now = Math.round(m.measure());
+    out.moved = out.now - out.before;
+  }
+  /* The rival explanations the books CAN name. */
+  const others = (plays||[]).filter(p=> p && p.id !== view.id && p.started_on && p.started_on <= today
+    && p.started_on >= anShiftDate(started, -days)).map(p=> p.name);
+  if(others.length) out.also_running = others.slice(0, 4);
+  return out;
+}
+
 async function managerPlayStatus(rowId, status){
   if(!managerNotesTable || rowId == null) return;
   const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
   const body = (cur.data && cur.data.body) || {};
-  if(status === 'running') body.startedOn = todayISO();
+  if(status === 'running'){
+    body.startedOn = todayISO();
+    /* Where the shop stands the moment it is switched on. Only for the
+       problems whose measure reads a LEVEL -- a flow can be worked out
+       backwards from the invoices, a level cannot be worked out at all
+       once the day has passed. */
+    const m = MANAGER_PROBLEM_METRICS[String(body.treats||'')];
+    if(m && m.kind === 'level') body.baseline = Math.round(m.measure());
+  }
   if(status === 'dropped' || status === 'done') body.endedOn = todayISO();
   const up = await sb.from('manager_notes').update({ status, body })
     .eq('shop_id', currentShopId).eq('id', rowId);
@@ -52169,6 +52299,9 @@ async function managerAddOwnPlay(name, how){
   if(n.length < 3){ toast('Give the play a name first'); return; }
   const ins = await sb.from('manager_notes').insert({
     shop_id: currentShopId, kind: 'play', date: todayISO(),
+    /* treats 'other' by default, which has no measure -- so there is no
+       baseline to stamp, and the manager is told to ASK the owner what
+       this one is meant to move rather than invent a figure for it. */
     body: { name: n.slice(0, 120), treats: 'other', how: String(how||'').trim().slice(0, 400),
       sized: '', watch: '', source: 'owner', startedOn: todayISO() },
     status: 'running',
@@ -52468,11 +52601,31 @@ function renderManager(){
   if(playWrap){
     if(!managerNotesTable) playWrap.innerHTML = '';
     else managerPlaybook().then(book=>{
+      /* WHAT MOVED WHILE IT RAN -- said as movement, never as credit.
+         The owner reads exactly what the weekly review reads, from the
+         same arithmetic, and the wording refuses the causal claim on
+         both: "alongside it", never "because of it". */
+      const moved = (p)=>{
+        const g = p.progress;
+        if(!g) return '';
+        const num = (v)=> g.unit === 'pct' ? `${v}%` : fmtUGX(Math.round(v));
+        if(g.too_early) return `<div class="mgr-play-moved">Too new to judge — ${g.days_running} ${
+          g.days_running === 1 ? 'day' : 'days'} in. A week is the least that says anything.</div>`;
+        if(g.no_before) return `<div class="mgr-play-moved">Running ${g.days_running} days · ${
+          esc(g.measures)} now ${g.now != null ? num(g.now) : (g.since != null ? num(g.since) : '—')} · ${esc(g.no_before)}</div>`;
+        if(g.moved == null) return '';
+        const good = g.direction === 'up' ? g.moved > 0 : g.moved < 0;
+        const from = g.before, to = g.now != null ? g.now : g.since;
+        return `<div class="mgr-play-moved${g.moved === 0 ? '' : (good ? ' good' : ' bad')}">
+          Running ${g.days_running} days · ${esc(g.measures)} ${num(from)} → ${num(to)} alongside it${
+          g.also_running ? ` · so did ${esc(g.also_running.join(', '))}` : ''}</div>`;
+      };
       const card = (p, buttons)=> `<div class="mgr-play" data-pid="${esc(String(p.id))}">
         <div class="mgr-play-top"><span class="mgr-play-name">${esc(p.name)}</span>
           <span class="mgr-play-tag">${esc(p.problem)}${p.source === 'owner' ? ' · yours' : ''}</span></div>
         ${p.how ? `<div class="mgr-why" style="margin:3px 0 6px;">${esc(p.how)}</div>` : ''}
         ${p.sized ? `<div class="mgr-play-sized">${esc(p.sized)}</div>` : ''}
+        ${moved(p)}
         ${p.watch ? `<div class="mgr-why" style="margin:3px 0 6px;">Watch: ${esc(p.watch)}</div>` : ''}
         <div class="mgr-acts">${buttons}</div>
       </div>`;
@@ -58304,8 +58457,7 @@ const ASSISTANT_TOOLS = {
 
     /* How far the records actually reach. A quarter comparison on six
        weeks of books is noise wearing a suit. */
-    const firstDate = (data.savedQuotes||[]).filter(q=> !q.voided && q.invoiced)
-      .map(q=> String(q.invoicedAt || q.date || '')).filter(Boolean).sort()[0] || null;
+    const firstDate = booksStartDate();
     const monthsOnFile = firstDate
       ? Math.max(0, (y * 12 + m) - (Number(firstDate.slice(0, 4)) * 12 + Number(firstDate.slice(5, 7)))) : 0;
 
@@ -58380,6 +58532,30 @@ const ASSISTANT_TOOLS = {
        the top of them every week. */
     const prev = managerReviewBrief((await managerRecentReviews(1))[0]);
     if(prev) out.previous_review = prev;
+    /* THE STRATEGIES THE SHOP IS ACTUALLY WORKING, and what moved
+       alongside them. The review is the one occasion whose whole job is
+       judging whether the advice worked, and until now it could not see
+       a single play: the manager could propose a strategy on Monday,
+       the owner switch it on, and Saturday would never hear of it.
+
+       `moved` is what the books did over the span, NOT what the play
+       did. Nothing here attributes anything: also_running names the
+       other plays live in the same weeks precisely so the review has to
+       reckon with them. */
+    const book = await managerPlaybook();
+    if(book.running.length) out.strategies = book.running.map(p=> ({
+      name: p.name, treats: p.treats, whose: p.source, since: p.started_on,
+      ...(p.how ? { how: p.how } : {}),
+      ...(p.progress ? { alongside_it: p.progress }
+        : { nothing_measures_it: 'This app cannot weigh ' + (MANAGER_PROBLEMS[p.treats] || 'that').toLowerCase()
+            + ' — ask the owner what they have seen instead of reaching for a number that does not answer it.' }),
+    }));
+    /* And the lines it told the shop not to refill. A hold standing
+       three weeks with nothing repriced is exactly the advice-that-went-
+       nowhere this review exists to catch. */
+    const held = buyHoldsStanding(todayISO());
+    if(held.length) out.holds = held.map(h=> ({ line: buyKeyLabel(h.key), reason: h.reason,
+      held_for_days: h.days, placed_by: h.by }));
     out.advice = {
       meetings_held: (meetR.data||[]).length,
       /* The thinness is a FACT of the review, not a failure of it --

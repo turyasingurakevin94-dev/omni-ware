@@ -50,6 +50,13 @@ const base = {
   managerNotesTable: true, currentShopId: 'shop-1',
   todayISO: () => TODAY,
   apRound: (n) => Math.round(Number(n) || 0),
+  /* managerPlaybook now works out what moved alongside each running
+     play, so the reading needs the books it measures against. */
+  data: { savedQuotes: [], customers: [] },
+  daysSinceDate: (d) => Math.round((new Date(TODAY + 'T00:00:00Z') - new Date(d + 'T00:00:00Z')) / 86400000),
+  anShiftDate: (iso, n) => { const x = new Date(iso + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); },
+  anInvoicesInRange: () => [], anOverallTotals: () => ({ sales: 0, profit: 0, count: 0 }),
+  dashInventoryHealth: () => ({ deadValue: 0 }), cashOnHandByAccount: () => ({ total: 0, byAccount: [] }),
   console, Date, JSON, Math, Number, String, Array, Object, Promise,
 };
 
@@ -137,6 +144,10 @@ const base = {
     ];
     const book = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
       q.limit = () => Promise.resolve({ data: rows, error: null }); return q; } } },
@@ -153,6 +164,10 @@ const base = {
 
     const none = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, managerNotesTable: false,
       sb: { from(){ throw new Error('reached for a table that is not there'); } } },
@@ -162,6 +177,10 @@ const base = {
 
     const errBook = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
       q.limit = () => Promise.resolve({ data: null, error: { message: 'no such kind' } }); return q; } } },
@@ -176,6 +195,7 @@ const base = {
       const s = compileScope([
         extractFunction(src, 'managerPlayStatus', 'index.html'),
         extractFunction(src, 'managerAddOwnPlay', 'index.html'),
+        extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
         'function names(){ return { managerPlayStatus, managerAddOwnPlay }; }',
       ], { ...base, toast: (m) => toasts.push(m), renderManager: () => {},
         sb: { from: () => ({
@@ -240,6 +260,9 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
@@ -279,6 +302,9 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
@@ -309,7 +335,11 @@ const base = {
       'the screen draws the playbook from the same function the tool calls');
     t.check(/managerPlayStatus\(id, status\)/.test(render) && /managerAddOwnPlay\(/.test(render),
       'with the taps that try, stop and add one');
-    const rest = src.replace(extractFunction(src, 'managerPlaybook', 'index.html'), '')
+    const rest = src.replace(extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'), '')
       .replace(extractFunction(src, 'managerAddOwnPlay', 'index.html'), '');
     eq((rest.match(/\.eq\('kind', 'play'\)/g) || []).length, 0,
       'and nothing else in the app reads a play row on its own — two readings are two chances to disagree');

@@ -122,6 +122,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   // travels out inside one — the same trick assistant-tools.test.js uses.
   const scope = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'managerPlaybook', 'index.html'),
+    extractFunction(src, 'managerPlayProgress', 'index.html'),
+    extractFunction(src, 'booksStartDate', 'index.html'),
+    extractFunction(src, 'buyHoldsStanding', 'index.html'),
+    extractFunction(src, 'buyHoldFor', 'index.html'),
+    extractFunction(src, 'buyKeyParts', 'index.html'),
+    extractFunction(src, 'buyKeyLabel', 'index.html'),
+    extractFunction(src, 'buyPriceStamp', 'index.html'),
+    extractFunction(src, 'buyPriceNow', 'index.html'),
+    extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+    extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+    extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
   const pulse = scope.names().ASSISTANT_TOOLS.shop_pulse.run();
@@ -366,6 +378,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     };
     const scope = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractFunction(src, 'buyHoldsStanding', 'index.html'),
+      extractFunction(src, 'buyHoldFor', 'index.html'),
+      extractFunction(src, 'buyKeyParts', 'index.html'),
+      extractFunction(src, 'buyKeyLabel', 'index.html'),
+      extractFunction(src, 'buyPriceStamp', 'index.html'),
+      extractFunction(src, 'buyPriceNow', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+      extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
@@ -409,6 +433,18 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
        and the database is never touched. */
     const scope2 = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'booksStartDate', 'index.html'),
+      extractFunction(src, 'buyHoldsStanding', 'index.html'),
+      extractFunction(src, 'buyHoldFor', 'index.html'),
+      extractFunction(src, 'buyKeyParts', 'index.html'),
+      extractFunction(src, 'buyKeyLabel', 'index.html'),
+      extractFunction(src, 'buyPriceStamp', 'index.html'),
+      extractFunction(src, 'buyPriceNow', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
+      extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),

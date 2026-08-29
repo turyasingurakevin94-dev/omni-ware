@@ -24,7 +24,7 @@
  *
  * Run: node test/manager-arc.test.js   (or: npm test)
  */
-const { read, extractDeclaration, compileScope, createReporter } = require('./_extract');
+const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('the longer arc');
 const src = read('index.html');
@@ -65,6 +65,7 @@ const env = {
 };
 const scope = compileScope([
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+  extractFunction(src, 'booksStartDate', 'index.html'),
   'function names(){ return { ASSISTANT_TOOLS }; }',
 ], env, ['names']);
 const T = scope.names().ASSISTANT_TOOLS;
@@ -144,6 +145,7 @@ const out = T.month_and_quarter.run();
 
   const young = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'booksStartDate', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], { ...env, data: { ...env.data,
     savedQuotes: [{ voided: false, invoiced: true, invoicedAt: '2026-08-02', date: '2026-08-02' }] } }, ['names'])
@@ -154,6 +156,7 @@ const out = T.month_and_quarter.run();
 
   const empty = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'booksStartDate', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], { ...env, data: { ...env.data, savedQuotes: [] } }, ['names'])
     .names().ASSISTANT_TOOLS.month_and_quarter.run();
