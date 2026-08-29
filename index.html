@@ -993,6 +993,17 @@
   .mgr-week td{padding:5px 8px 5px 0;border-top:1px solid var(--line);color:var(--ink);}
   .mgr-week td:first-child{color:var(--ink-soft);}
   .mgr-week .mgr-prior{color:var(--ink-soft);font-size:12px;text-align:right;}
+  .mgr-basis{display:block;font-weight:400;font-size:11px;color:var(--ink-soft);text-align:right;margin-top:1px;}
+  .mgr-objective{background:var(--accent-soft,var(--bg));border-left:3px solid var(--accent);
+    border-radius:8px;padding:9px 13px;font-size:13.5px;color:var(--ink);margin:0 0 10px;}
+  .mgr-unlocks{font-size:12px;color:var(--accent-ink);margin-top:4px;}
+  .mgr-asks{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:13px 15px;margin:0 0 14px;}
+  .mgr-ask{padding:9px 0;border-top:1px solid var(--line);}
+  .mgr-ask-q{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+  .mgr-ask-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .mgr-ask-input{flex:1 1 260px;min-width:0;}
+  .mgr-ask-when{font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
   .mgr-policies{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 15px 11px;}
   .mgr-pol-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;
     padding:8px 0;border-bottom:1px solid var(--line);}
@@ -8391,6 +8402,7 @@
       <div id="managerMeetingWrap"></div>
       <div id="managerAccountWrap"></div>
       <div id="managerPlanWrap"></div>
+      <div id="managerQuestionsWrap"></div>
       <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
       <div id="managerPoliciesWrap"></div>
@@ -51334,6 +51346,29 @@ function standingPoliciesData(){
   };
 }
 
+/* WHAT A FIGURE MEANS. A debt balance and a month's gross profit are
+   different quantities over different spans, and the first plans ranked
+   them against each other as though they were the same money -- a
+   3,330,000 balance above a 340,000 month, every meeting, because debts
+   are always the biggest number in a shop. Every worth now carries its
+   basis, and the card prints the basis beside the figure so the two can
+   never be silently compared again. */
+const MANAGER_WORTH_BASES = {
+  cash_freed: 'cash tied up',
+  profit_30d: 'profit in 30 days',
+  loss_avoided: 'loss avoided',
+  cost_saved: 'cost saved',
+  none: '',
+};
+/* WHICH LEVER A MOVE PULLS. Left to itself the mind picks the biggest
+   numbers, which are always debts, and a plan of five collections is not
+   a plan -- it is one move written five times. */
+const MANAGER_LEVERS = ['collect', 'sell', 'buy', 'price', 'cost', 'system'];
+/* The week's aim, named by the Manager and defended from the figures. */
+const MANAGER_OBJECTIVES = {
+  cash: 'Cash first', margin: 'Margin first', growth: 'Growth first', recovery: 'Recovery',
+};
+
 const MANAGER_DOORS = {
   chase: { tab: 'chase', label: 'Open Chase debts' },
   buy: { tab: 'buying', label: 'Open What to buy' },
@@ -51405,10 +51440,15 @@ function deriveMoveOutcome(row){
 /* ---- the journal: direct reads and writes, wa_* style ---- */
 async function managerSaveMeeting(plan){
   if(!managerNotesTable) return null;
+  const obj = plan.objective || {};
   const ins = await sb.from('manager_notes').insert({
     shop_id: currentShopId, kind: 'meeting', date: todayISO(),
     body: { keyline: String(plan.keyline||'').slice(0, 300),
-      rejected: String(plan.rejected||'').slice(0, 400), moves: (plan.moves||[]).length },
+      rejected: String(plan.rejected||'').slice(0, 400), moves: (plan.moves||[]).length,
+      /* The week's aim and the figures that chose it, kept so the review
+         can judge the plan against what it set out to do. */
+      objective: MANAGER_OBJECTIVES[String(obj.name||'')] ? String(obj.name) : null,
+      objectiveWhy: String(obj.why||'').slice(0, 300) },
     status: 'held',
   }).select('id').single();
   if(ins.error || !ins.data){ console.warn('Manager: meeting not saved:', ins.error && ins.error.message); return null; }
@@ -51416,6 +51456,12 @@ async function managerSaveMeeting(plan){
     shop_id: currentShopId, kind: 'move', meeting_id: ins.data.id, date: todayISO(),
     body: { title: String(m.title||'').slice(0, 200), why: String(m.why||'').slice(0, 500),
       worth: apRound(m.worth||0), door: String(m.door||''), mkind: String(m.kind||'other'),
+      /* What the figure MEANS, and which lever the move pulls -- both
+         whitelisted, so an unknown word becomes nothing rather than a
+         label the screen would print unchallenged. */
+      worthBasis: MANAGER_WORTH_BASES[String(m.worth_basis||'')] ? String(m.worth_basis) : null,
+      lever: MANAGER_LEVERS.includes(String(m.lever||'')) ? String(m.lever) : null,
+      unlocks: String(m.unlocks||'').slice(0, 200) || null,
       /* Only ids, only known keys -- the block is model output and is
          stored as data, never trusted as structure. */
       subject: {
@@ -51429,6 +51475,17 @@ async function managerSaveMeeting(plan){
   if(rows.length){
     const r2 = await sb.from('manager_notes').insert(rows);
     if(r2.error) console.warn('Manager: moves not saved:', r2.error.message);
+  }
+  /* What the books cannot answer. Stored open, shown on the screen with
+     a box to answer in, and read back at the top of the next meeting --
+     the shop's own eyes and ears, which no database holds. */
+  const asks = (Array.isArray(plan.asks) ? plan.asks : [])
+    .map(q=> String(q||'').trim()).filter(q=> q.length > 3).slice(0, 3)
+    .map(q=> ({ shop_id: currentShopId, kind: 'question', meeting_id: ins.data.id, date: todayISO(),
+      body: { question: q.slice(0, 300) }, status: 'open' }));
+  if(asks.length){
+    const r3 = await sb.from('manager_notes').insert(asks);
+    if(r3.error) console.warn('Manager: questions not saved:', r3.error.message);
   }
   return ins.data.id;
 }
@@ -51489,6 +51546,28 @@ async function managerSetMoveStatus(rowId, status, skipReason){
   renderManager();
 }
 
+/* The shop answering its manager. One line is enough -- the answer is
+   evidence at the next meeting, not a document. */
+async function managerAnswerQuestion(rowId, answer){
+  if(!managerNotesTable || rowId == null) return;
+  const text = String(answer||'').trim();
+  if(!text) return;
+  const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
+  const body = (cur.data && cur.data.body) || {};
+  body.answer = text.slice(0, 500);
+  body.answeredOn = todayISO();
+  const up = await sb.from('manager_notes').update({ status: 'answered', body })
+    .eq('shop_id', currentShopId).eq('id', rowId);
+  if(up.error){
+    toast(/check constraint/i.test(up.error.message||'')
+      ? 'The answer could not be kept — paste supabase/migrations/0084_manager_questions.sql into the Supabase SQL editor and reload.'
+      : 'Could not keep that answer — ' + up.error.message, 9000);
+    return;
+  }
+  toast('Kept — the manager reads it at the next meeting');
+  renderManager();
+}
+
 async function managerLoadState(){
   if(!managerNotesTable) return { today: null, prior: [], reviews: [], weekMeetings: 0 };
   const meetR = await sb.from('manager_notes').select('id, date, body, status')
@@ -51508,6 +51587,9 @@ async function managerLoadState(){
   /* Reviews before 0082 simply do not exist yet -- an empty read here is
      the honest answer, and the save path names the migration if a write
      is refused. */
+  const qR = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
+    .order('id', { ascending: false }).limit(6);
   const revR = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'review')
     .order('date', { ascending: false }).order('id', { ascending: false }).limit(4);
@@ -51522,6 +51604,7 @@ async function managerLoadState(){
     today: withMoves.find(w=> w.meeting.date === today) || null,
     prior: withMoves.filter(w=> w.meeting.date !== today),
     reviews: (revR.data) || [],
+    questions: (qR.error ? [] : (qR.data || [])),
     weekMeetings: (wkR && wkR.count) || 0,
   };
 }
@@ -51617,9 +51700,12 @@ function mgrMoveView(row, idx){
   return `<div class="mgr-move ${esc(out.status === 'open' ? '' : out.status)}" data-mid="${esc(String(row.id))}">
     <div class="mgr-move-top">
       <span class="mgr-move-title">${esc(b.title || '')}</span>
-      ${Number(b.worth) > 0 ? `<span class="mgr-worth">${fmtUGX(Math.round(b.worth))}</span>` : ''}
+      ${Number(b.worth) > 0 ? `<span class="mgr-worth">${fmtUGX(Math.round(b.worth))}${
+        MANAGER_WORTH_BASES[b.worthBasis] ? `<span class="mgr-basis">${esc(MANAGER_WORTH_BASES[b.worthBasis])}</span>` : ''
+      }</span>` : ''}
     </div>
-    <div class="mgr-why">${esc(b.why || '')}</div>
+    <div class="mgr-why">${esc(b.why || '')}${
+      b.unlocks ? `<div class="mgr-unlocks">Unlocks: ${esc(b.unlocks)}</div>` : ''}</div>
     <div class="mgr-acts">
       ${door ? `<button type="button" class="btn btn-accent mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}
       ${open ? `<button type="button" class="btn btn-ghost mgr-done">Done</button>
@@ -51664,6 +51750,7 @@ function renderManager(){
 
   const acct = document.getElementById('managerAccountWrap');
   const planWrap = document.getElementById('managerPlanWrap');
+  const qWrap = document.getElementById('managerQuestionsWrap');
   const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
 
@@ -51689,6 +51776,8 @@ function renderManager(){
   const renderPlanCards = (title, plan, rows)=>{
     const cards = rows.map((r, i)=> mgrMoveView(r, i)).join('');
     return `<div class="mgr-sec-title">${esc(title)}</div>`
+      + (plan && MANAGER_OBJECTIVES[plan.objective]
+        ? `<div class="mgr-objective"><b>${esc(MANAGER_OBJECTIVES[plan.objective])}.</b> ${esc(plan.objectiveWhy || '')}</div>` : '')
       + (plan && plan.keyline ? `<div class="mgr-keyline"><b>The one thing:</b> ${esc(plan.keyline)}</div>` : '')
       + cards
       + (plan && plan.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(plan.rejected)}</div>` : '');
@@ -51724,13 +51813,13 @@ function renderManager(){
       planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
       wire(planWrap);
     } else planWrap.innerHTML = '';
-    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = '';
+    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = '';
     return;
   }
 
   /* With memory: the shells now, the journal when it answers. */
   managerLoadState().then(st=>{
-    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML =
+    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; hist.innerHTML =
       `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
     /* The offer says how much evidence a review would stand on, before
        the owner spends credit on one. */
@@ -51749,6 +51838,30 @@ function renderManager(){
         + prev.moves.map((r,i)=> mgrMoveView(r,i)).join('')
       : '';
     wire(acct);
+    /* What the manager needs to know. The one place the shop's own eyes
+       reach past the database -- answered in a line, read back at the
+       top of the next meeting. */
+    const qs = st.questions || [];
+    qWrap.innerHTML = qs.length
+      ? `<div class="mgr-sec-title">What the manager needs to know</div>`
+        + `<div class="mgr-asks"><div class="mgr-why" style="margin:0 0 9px;">It could not find these in your books.
+            Answer in a line and it argues from them tomorrow.</div>`
+        + qs.map(q=> `<div class="mgr-ask" data-qid="${esc(String(q.id))}">
+            <div class="mgr-ask-q">${esc((q.body||{}).question || '')}</div>
+            <div class="mgr-ask-row">
+              <input type="text" class="mgr-ask-input" placeholder="What you found out — one line">
+              <button type="button" class="btn btn-accent mgr-ask-save">Answer</button>
+            </div>
+            <div class="mgr-ask-when">asked ${esc(fmtShortDate(q.date))}</div>
+          </div>`).join('') + `</div>`
+      : '';
+    qWrap.querySelectorAll('.mgr-ask').forEach(card=>{
+      const id = Number(card.dataset.qid);
+      const input = card.querySelector('.mgr-ask-input');
+      const send = ()=> managerAnswerQuestion(id, input.value);
+      card.querySelector('.mgr-ask-save').addEventListener('click', send);
+      input.addEventListener('keydown', e=>{ if(e.key === 'Enter') send(); });
+    });
     /* The latest review: verdict and lessons from the model, the week
        table from the stored derivation -- never from model text. */
     const rev = st.reviews[0];
@@ -57236,6 +57349,49 @@ const ASSISTANT_TOOLS = {
       follow_ups_due: followUpClientsToContact(Date.now()).slice(0, 5).map(r=> ({ name: r.name, has_news: !!r.hasNews })),
       consignment: { owed_total: apRound(consign.reduce((n,r)=> n + r.owed, 0)), consignors: consign.length },
       dead_stock: { value: apRound(dctx.inv.deadValue), units: Math.round(dctx.inv.deadQty) },
+      /* THE PROFIT AND GROWTH SIDE OF THE SHOP. dashboardContext already
+         derives every figure below and the dashboard already draws them;
+         the Manager could not argue margin, mix or a shrinking customer
+         because none of it ever reached the meeting. Nothing here is a
+         second calculation -- it is the same reading, capped for a
+         meeting rather than a screen. */
+      profit: {
+        gross_profit_30d: apRound(dctx.grossProfit),
+        net_profit_30d: apRound(dctx.netProfit),
+        opex_30d: apRound(dctx.opex),
+        monthly_burn: apRound(dctx.burn),
+        /* Months of cover at the present burn -- arithmetic on the past,
+           never a forecast. Null when nothing is being spent. */
+        runway_months: dctx.runwayMonths == null ? null : Math.round(dctx.runwayMonths*10)/10,
+        margin_pct: dctx.totals.sales > 0 ? Math.round(dctx.grossProfit/dctx.totals.sales*1000)/10 : null,
+        profit_partly_estimated: (dctx.totals.estimatedQty||0) > 0,
+      },
+      /* What actually earns, and what sells well while earning little --
+         the second list is the margin lever the plans kept missing. */
+      best_lines: dctx.itemRows.slice().sort((a,b)=> (b.sales-b.cost) - (a.sales-a.cost)).slice(0, 6)
+        .map(r=> ({ item: r.name + (r.variant ? ' — ' + r.variant : ''), sold: Math.round(r.qty),
+          sales: apRound(r.sales), profit: apRound(r.sales - r.cost),
+          margin_pct: r.sales > 0 ? Math.round((r.sales-r.cost)/r.sales*1000)/10 : 0 })),
+      worst_margin_lines: dctx.itemRows.filter(r=> r.sales > 0)
+        .slice().sort((a,b)=> ((a.sales-a.cost)/a.sales) - ((b.sales-b.cost)/b.sales)).slice(0, 4)
+        .map(r=> ({ item: r.name + (r.variant ? ' — ' + r.variant : ''), sold: Math.round(r.qty),
+          sales: apRound(r.sales), profit: apRound(r.sales - r.cost),
+          margin_pct: r.sales > 0 ? Math.round((r.sales-r.cost)/r.sales*1000)/10 : 0 })),
+      best_customers: anRowsByCustomer(dctx.invoices).sort((a,b)=> b.profit - a.profit).slice(0, 5)
+        .map(r=> ({ name: r.name, orders: r.count, sales: apRound(r.sales), profit: apRound(r.profit),
+          margin_pct: Math.round(r.margin*10)/10 })),
+      /* Customers slipping away, lines the shop depends on one buyer for,
+         suppliers whose prices are climbing, and what runs out next. */
+      going_quiet: dctx.goingQuiet.slice(0, 5).map(r=> ({ name: r.name,
+        usual_gap_days: Math.round(r.avgGapDays), silent_days: Math.round(r.sinceLastDays), orders: r.orderCount })),
+      dependency: dctx.concentration.map(r=> ({ item: r.name, buyers: r.buyers,
+        top_buyer: r.topBuyerName, share_pct: Math.round(r.concentration) })),
+      cost_rises: dctx.inflation.map(r=> ({ item: r.name, supplier: r.supplierName,
+        was: apRound(r.first), now: apRound(r.last), up_pct: Math.round(r.growth*10)/10, since: r.since })),
+      running_out_soon: dctx.stockOut.map(r=> ({ item: r.name, left: Math.round(r.qty),
+        days_left: Math.round(r.daysLeft), a_day: Math.round(r.dailyRate*10)/10 })),
+      /* Stock the balance sheet cannot value -- understated shelf. */
+      uncosted_lines: uncostedStockRows().length,
       yesterday: {
         sales: apRound(brief.sales.total), invoices: brief.sales.count,
         gross_profit: apRound(brief.sales.profit), profit_partly_estimated: !!brief.sales.estimated,
@@ -57325,7 +57481,23 @@ const ASSISTANT_TOOLS = {
           .eq('shop_id', currentShopId).eq('kind', 'move').in('meeting_id', ids)
       : { data: [] };
     if(movesR.error) return { error: movesR.error.message };
-    return { meetings: (meetings.data||[]).map(m=> ({
+    /* What the Manager asked the shop to find out, and what came back.
+       Read here rather than in a tool of its own because every meeting
+       already opens with manager_history -- so an answer reaches the
+       next meeting without the mind having to remember to look. */
+    const qs = await sb.from('manager_notes').select('id, date, body, status')
+      .eq('shop_id', currentShopId).eq('kind', 'question')
+      .order('id', { ascending: false }).limit(20);
+    const qRows = (qs.error ? [] : (qs.data||[]));
+    const answered = qRows.filter(q=> q.status === 'answered' && (q.body||{}).answer)
+      .slice(0, 8).map(q=> ({ asked: (q.body||{}).question || '', answer: q.body.answer,
+        asked_on: q.date, answered_on: (q.body||{}).answeredOn || null }));
+    const open = qRows.filter(q=> q.status !== 'answered')
+      .slice(0, 8).map(q=> ({ asked: (q.body||{}).question || '', asked_on: q.date,
+        days_open: Math.max(0, daysSinceDate(q.date)) }));
+    return { ...(answered.length ? { answered_questions: answered } : {}),
+      ...(open.length ? { open_questions: open } : {}),
+      meetings: (meetings.data||[]).map(m=> ({
       date: m.date, keyline: (m.body||{}).keyline || '',
       moves: (movesR.data||[]).filter(x=> x.meeting_id === m.id).map(x=>{
         const out = deriveMoveOutcome(x);

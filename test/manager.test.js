@@ -96,7 +96,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     data,
     todayISO: () => '2026-08-28', anShiftDate: (d, n) => '2026-07-30',
     apRound: (n) => Math.round(Number(n) || 0),
-    dashboardContext: () => ({ inv: { deadValue: 123456.7, deadQty: 40.2 } }),
+    /* The whole shape dashboardContext really returns. It was a stub of
+       one key until the pulse learned to read the profit side; a fixture
+       thinner than the contract only proves the tool never looked. */
+    dashboardContext: () => ({ inv: { deadValue: 123456.7, deadQty: 40.2 },
+      grossProfit: 0, netProfit: 0, opex: 0, burn: 0, runwayMonths: null,
+      totals: { sales: 0, estimatedQty: 0 }, invoices: [], itemRows: [],
+      goingQuiet: [], concentration: [], inflation: [], stockOut: [] }),
+    anRowsByCustomer: () => [],
+    uncostedStockRows: () => [],
     dashAlerts: () => many(12, (i) => ({ band: 'now', title: 'Alert ' + i, money: 1000 * i, action: 'Act', detail: '<b>html</b>', extra: 'x' })),
     debtChaseRows: () => ({ due: many(9, (i) => ({ name: 'C' + i, debt: 5000 * i, ageDays: i })), resting: [1, 2], blocked: [{ why: 'drift' }], graceDays: 7, restDays: 3 }),
     purchasePlan: () => ({ lines: many(11, (i) => ({ name: 'P' + i, reason: 'why ' + i, cost: 100 * i, supplier: 'S' })), didNotFit: [1, 2, 3], sourceFirst: [1] }),
