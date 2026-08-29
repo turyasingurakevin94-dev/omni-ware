@@ -85,7 +85,14 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     eq(homes, 1, `the rule survives the split, in exactly one block: ${r.replace(/\\/g, '')}`);
   });
 
-  t.check(meeting.length + common.length < 15000,
+  /* A SMELL DETECTOR, not a budget. The morning is not made good by a
+     character count — it is made good by carrying no review rules and
+     demanding no recitals, and both of those are asserted above. This
+     catches the drift that produced the problem: eight builds each
+     adding a paragraph nobody weighed. It has moved once, deliberately,
+     when the market rule was added, and moving it should always cost a
+     deliberate act and a line of explanation. */
+  t.check(meeting.length + common.length < 16000,
     `the morning's rulebook is materially smaller than the 17,806 it was (now ${meeting.length + common.length})`);
   t.check(review.length + common.length < 8000,
     `and the review's is a third of what it was (now ${review.length + common.length})`);

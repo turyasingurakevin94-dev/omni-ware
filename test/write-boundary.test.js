@@ -49,6 +49,14 @@ const lockBody = lockCode.slice(lockCode.indexOf('do $$'));
 const lockList = lockBody.slice(lockBody.indexOf('array[') + 6, lockBody.indexOf(']'));
 const lockedTables = [...lockList.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 
+/* A table added AFTER 0083 declares the same restriction in its own
+   migration rather than being retro-fitted into a list that has already
+   been applied to the live database. What matters is that the policy
+   exists, not which file wrote it — so the boundary is read from every
+   migration, and a new table is locked by locking it. */
+[...allSql.matchAll(/create policy "owner writes only" on ([a-z_]+)/g)]
+  .forEach((m) => { if (!lockedTables.includes(m[1])) lockedTables.push(m[1]); });
+
 /* What the worker app actually writes: addDiffOps(ops, <collection>,
    '<table>', ...). Parsed, never typed out. */
 const worker = read('worker.html');

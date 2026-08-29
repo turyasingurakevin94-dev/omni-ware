@@ -234,6 +234,13 @@ BLOCKS.forEach((n) => blockText(n).split('\n').forEach((line) => {
   t.check(/Everything above still binds — tools first, resolved names, speakable prose/.test(meeting),
     'and the base rules still bind — the manager is the same assistant on a different occasion, never a looser one');
 
+  t.check(/PRICING HAS TWO SIDES/.test(meeting),
+    'PRICING HAS TWO SIDES: a thin margin argues for lifting a price only if the line is not already dearer than the shop up the road');
+  t.check(/put it in asks when it is missing on a line you are arguing about/.test(meeting),
+    'and where the shop has never looked, the manager asks — a walk down the street answers what no book can');
+  t.check(/Never treat an empty record as proof this shop is the cheapest: it is proof that nobody has looked/.test(meeting),
+    'and an empty record is never read as proof of being cheapest — the difference between no evidence and evidence of none');
+
   t.check(/Order of work: call manager_history FIRST, then shop_pulse for the whole position/.test(meeting),
     'THE ORDER OF WORK — the paragraph I deleted in the last build, which nothing would have caught');
   t.check(/at most two or three narrower tools where a figure needs support/.test(meeting),

@@ -789,6 +789,24 @@
   .pp-fact-good b{color:var(--good);}
   .pp-fact-bad b{color:var(--accent);}
   .pp-why{margin-top:6px;font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  /* What other shops charge. Quiet, because it is evidence rather than
+     an instruction -- the owner is deciding, not being told. */
+  .rv-head{font-size:10.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:7px;}
+  .rv-rows{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;}
+  .rv-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:12.5px;}
+  .rv-shop{font-weight:600;color:var(--ink);}
+  .rv-price{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-weight:700;color:var(--ink);}
+  .rv-gap{font-size:11.5px;color:var(--ink-soft);}
+  .rv-gap.over{color:var(--good);}
+  .rv-gap.under{color:var(--accent);}
+  .rv-when{font-size:11px;color:var(--ow-ink-400);margin-left:auto;white-space:nowrap;}
+  .rv-ours{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
+  .rv-add{display:flex;gap:7px;flex-wrap:wrap;}
+  .rv-in{flex:1 1 120px;min-width:0;padding:7px 10px;font-size:12.5px;
+    border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);}
+  .rv-num{flex:0 1 120px;font-family:'IBM Plex Mono',monospace;}
   /* THE HOLD. It sits above the recommendation because it is about
      whether to follow it at all -- put underneath, it would read as a
      footnote to a decision already taken. Oxide rather than amber: a
@@ -11638,6 +11656,10 @@
     <div class="modal-body">
       <div class="q-stage-name" id="stockRuleItemName" style="margin-bottom:10px;"></div>
       <div id="stockRuleCompareWrap" style="margin-bottom:14px;"></div>
+      <!-- What the shop down the road charges. The registry answers what
+           this line COSTS; only this answers what the customer can pay
+           elsewhere, which is the other half of every pricing decision. -->
+      <div id="rivalWrap" style="margin-bottom:14px;"></div>
 
       <div class="form-panel">
         <div class="form-panel-head">
@@ -12492,7 +12514,7 @@ async function loadData(shopId){
     stockR, stockLotsR, stockLogR, cashDaysR, cashTxnsR,
     savedQuotesR, purchaseInvoicesR, settingsR, agentsR, supplierCommissionsR, fixedAssetsR, loansR,
     mediaR, mediaFoldersR, waPostsR,
-    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, managerNotesR
+    rentAgreementsR, duesR, placesR, collectionTripsR, sourcingLeadsR, followUpsR, rivalPricesR, variantColR, imageColR, askedColR, transferColR, lotConsignColR, managerNotesR
   ] = await Promise.all([
     sel('suppliers'), sel('staff'), sel('customers'), sel('customer_debt_log'), sel('products'), sel('prices'),
     sel('stock'), sel('stock_lots'), sel('stock_log'), sel('cash_days'), sel('cash_txns'),
@@ -12501,7 +12523,7 @@ async function loadData(shopId){
     sel('agents'), sel('supplier_commissions'), sel('fixed_assets'), sel('loans'),
     sel('media'), sel('media_folders'), sel('wa_posts'),
     sel('rent_agreements'), sel('dues'), sel('places'), sel('collection_trips'), sel('sourcing_leads'),
-    sel('follow_ups'),
+    sel('follow_ups'), sel('rival_prices'),
     sb.from('sourcing_leads').select('variant_attrs').limit(1),
     sb.from('sourcing_leads').select('image').limit(1),
     sb.from('prices').select('last_asked_at').limit(1),
@@ -12568,6 +12590,12 @@ async function loadData(shopId){
   // not landed yet has no follow-ups, which is the truth, rather than a
   // shop that will not open.
   const followUpRows = (followUpsR && !followUpsR.error && followUpsR.data) || [];
+  /* And rival_prices (0087), newest of all. Same tolerance: a shop whose
+     migration has not landed yet simply knows nothing about the market,
+     which is exactly what it knew yesterday -- not a shop that refuses
+     to open over a feature nothing else depends on. */
+  const rivalPriceRows = (rivalPricesR && !rivalPricesR.error && rivalPricesR.data) || [];
+  rivalPricesTable = !(rivalPricesR && rivalPricesR.error);
 
   const debtByCustomer = {};
   (debtLogR.data||[]).forEach(l=>{
@@ -12741,6 +12769,15 @@ async function loadData(shopId){
       acceptedAt:r.accepted_at, collectedAt:r.collected_at, confirmedAt:r.confirmed_at,
       note:r.note||'', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
     })),
+    /* WHAT OTHER SHOPS CHARGE. Observations, newest last, each with the
+       day it was seen -- never a price list, because nobody publishes
+       one and a figure with no date is a rumour. */
+    rivalPrices: rivalPriceRows.map(r=>({
+      id:r.id, productId:r.product_id,
+      variantIdx: r.variant_idx==null ? null : Number(r.variant_idx),
+      rival: r.rival||'', price: Number(r.price)||0, unit: r.unit||'',
+      seenOn: r.seen_on, note: r.note||'',
+    })),
     sourcingLeads: sourcingLeadRows.map(r=>({
       id:r.id, name:r.name||'', notes:r.notes||'', status:r.status,
       assignedStaffId:r.assigned_staff_id, productId:r.product_id,
@@ -12885,6 +12922,11 @@ let sourcingImageColumn = false;
 let priceAskedColumn = false;
 let stockLotConsignColumn = false;
 let managerNotesTable = false;
+/* Whether 0087 has landed. A shop without it knows nothing about the
+   market -- which is what every shop here knew until now -- so the
+   screens say so plainly rather than offering a box that swallows
+   what the owner types. */
+let rivalPricesTable = false;
 let cashTransferColumn = false;
 
 // cloneJSON() / keyRowsById() now live in shared-worker.js.
@@ -37689,6 +37731,141 @@ document.getElementById('ro_clear').addEventListener('click', ()=>{
   toast('Following the shop default again');
 });
 
+/* ---- what other shops charge ----
+
+   The registry has always answered "what does this cost me". Nothing
+   has ever answered "what does the customer pay up the street", and
+   that is the figure a pricing decision actually turns on: a thin
+   margin is a reason to lift the price only if the line is not already
+   dearer than the shop next door.
+
+   OBSERVATIONS, NEVER A PRICE LIST. Each row is one thing somebody saw
+   on one day, kept with its date and never overwritten. Two readings
+   only, so the screens and the tools cannot disagree: everything seen
+   for a line, and the freshest sighting per rival. */
+function rivalPricesFor(productId, variantIdx){
+  const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  return (data.rivalPrices || [])
+    .filter(r=> r.productId === productId
+      && (r.variantIdx == null ? null : Number(r.variantIdx)) === vi
+      && Number(r.price) > 0 && String(r.rival||'').trim())
+    .sort((a, b)=> String(b.seenOn||'').localeCompare(String(a.seenOn||'')) || (b.id||0) - (a.id||0));
+}
+
+/* One line per rival, the newest sighting each. A shop quoted three
+   times over a year is one competitor at its latest price, not three
+   competitors -- and how stale that sighting is travels with it,
+   because a price seen in March is a different fact from one seen
+   yesterday and the screen must never present them as the same. */
+function rivalPriceLatest(productId, variantIdx, dateISO){
+  const today = dateISO || todayISO();
+  const seen = new Map();
+  rivalPricesFor(productId, variantIdx).forEach(r=>{
+    const k = String(r.rival).trim().toLowerCase();
+    if(!seen.has(k)) seen.set(k, { rival: String(r.rival).trim(), price: Math.round(Number(r.price)),
+      unit: r.unit || '', seenOn: r.seenOn, note: r.note || '',
+      daysOld: Math.max(0, daysSinceDate(r.seenOn || today)) });
+  });
+  return [...seen.values()].sort((a, b)=> a.price - b.price);
+}
+
+/* What this shop charges for the same line, so the two can be put side
+   by side. Derived through the same ladder every other selling price in
+   the app comes from -- never a second opinion about our own price. */
+function ourPriceFor(productId, variantIdx){
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return null;
+  const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  const best = rankedPurchaseRowsAtQty(productId, vi, 1).find(x=> x.purchasePrice != null);
+  if(!best) return null;
+  const sug = suggestedStockSellingPrice(p, best.purchasePrice, 'wholesale', vi, Number(best.packQty) || 0);
+  return sug == null ? null : Math.round(sug);
+}
+
+/* Written straight to the table rather than through the settings blob:
+   these accumulate, they carry dates, and they are records of the world
+   rather than choices this shop made -- the same reasoning that keeps
+   the stock log out of it. */
+async function addRivalPrice(input){
+  const productId = String((input||{}).productId || '');
+  const rival = String((input||{}).rival || '').trim();
+  const price = Math.round(Number((input||{}).price) || 0);
+  if(!productId || !rival || !(price > 0)) return { ok: false, why: 'A rival price needs the line, the shop and a price above zero.' };
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return { ok: false, why: 'No product with id ' + productId + '.' };
+  const vi = input.variantIdx == null || input.variantIdx === '' ? null : Number(input.variantIdx);
+  if(vi != null && !(p.variants && p.variants[vi])) return { ok: false, why: p.name + ' has no variant ' + vi + '.' };
+  const seenOn = /^\d{4}-\d{2}-\d{2}$/.test(String(input.seenOn||'')) ? input.seenOn : todayISO();
+  const row = { shop_id: currentShopId, product_id: productId, variant_idx: vi,
+    rival: rival.slice(0, 80), price, unit: String(input.unit||'').slice(0, 24) || null,
+    seen_on: seenOn, note: String(input.note||'').slice(0, 200) || null };
+  const ins = await sb.from('rival_prices').insert(row).select('id').single();
+  if(ins.error){
+    return { ok: false, why: /relation .* does not exist/i.test(ins.error.message||'')
+      ? 'The market record needs one update — paste supabase/migrations/0087_rival_prices.sql into the Supabase SQL editor and reload.'
+      : ins.error.message };
+  }
+  /* Kept locally too, so the screen that asked for it shows it now
+     rather than after the next reload. */
+  if(!data.rivalPrices) data.rivalPrices = [];
+  data.rivalPrices.push({ id: ins.data && ins.data.id, productId, variantIdx: vi, rival: rival.slice(0, 80),
+    price, unit: row.unit || '', seenOn, note: row.note || '' });
+  return { ok: true, id: ins.data && ins.data.id };
+}
+
+/* THE OTHER HALF OF THE DECISION, on the screen where the decision is
+   made. Beneath what the line costs, what it sells for elsewhere -- and
+   an empty state that says plainly the shop does not know yet, with the
+   box to say so, rather than a silence that reads as "nobody is
+   cheaper". */
+function renderRivalPrices(productId, variantIdx){
+  const wrap = document.getElementById('rivalWrap');
+  if(!wrap) return;
+  const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  const rows = rivalPricesTable ? rivalPriceLatest(productId, vi) : [];
+  const ours = ourPriceFor(productId, vi);
+  const form = `<div class="rv-add">
+      <input type="text" class="rv-in" id="rv_shop" placeholder="Which shop">
+      <input type="number" class="rv-in rv-num" id="rv_price" min="0" step="any" placeholder="Their price">
+      <button type="button" class="btn btn-ghost" id="rv_add">Add</button>
+    </div>`;
+  if(!rivalPricesTable){
+    wrap.innerHTML = `<div class="rv-head">What other shops charge</div>
+      <div class="q-empty-hint">The market record needs one update — paste
+        supabase/migrations/0087_rival_prices.sql into the Supabase SQL editor and reload.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="rv-head">What other shops charge</div>`
+    + (rows.length ? `<div class="rv-rows">${rows.map(r=>{
+        /* Against OUR price, because that is the comparison being made.
+           Withheld when we have no price of our own rather than
+           comparing their figure against nothing. */
+        const gap = ours == null ? null : r.price - ours;
+        const tag = gap == null ? ''
+          : (Math.abs(gap) < 1 ? '<span class="rv-gap">same as yours</span>'
+            : `<span class="rv-gap ${gap > 0 ? 'over' : 'under'}">${fmtUGX(Math.abs(gap))} ${gap > 0 ? 'above' : 'below'} yours</span>`);
+        return `<div class="rv-row">
+          <span class="rv-shop">${esc(r.rival)}</span>
+          <span class="rv-price">${fmtUGX(r.price)}</span>
+          ${tag}
+          <span class="rv-when">${r.daysOld === 0 ? 'seen today'
+            : r.daysOld === 1 ? 'seen yesterday' : `seen ${r.daysOld} days ago`}</span>
+        </div>`; }).join('')}</div>`
+      : `<div class="q-empty-hint">Nothing on file for this line yet — so nothing here says you are
+          the cheapest, only that nobody has looked. Add what you have seen.</div>`)
+    + (ours == null ? '' : `<div class="rv-ours">You sell it at <strong>${fmtUGX(ours)}</strong>.</div>`)
+    + form;
+  const btn = wrap.querySelector('#rv_add');
+  if(btn) btn.addEventListener('click', async ()=>{
+    const shop = (wrap.querySelector('#rv_shop')||{}).value;
+    const price = Number((wrap.querySelector('#rv_price')||{}).value);
+    const r = await addRivalPrice({ productId, variantIdx: vi, rival: shop, price });
+    if(!r.ok){ toast(r.why, 8000); return; }
+    toast('Kept — and the manager reads it when it argues about this price');
+    renderRivalPrices(productId, vi);
+  });
+}
+
 function openPriceRuleEditor(productId, variantIdx){
   const p = data.products.find(x=>x.id===productId); if(!p) return;
   srProductId = productId;
@@ -37708,6 +37885,7 @@ function openPriceRuleEditor(productId, variantIdx){
   document.getElementById('sr_retail_value').placeholder = defaultR ? `Default: ${markupRuleLabel(defaultR.type, defaultR.value).replace(/<[^>]+>/g,'')}` : 'Default: no rule';
 
   renderStockRuleCompare(p, variantIdx);
+  renderRivalPrices(productId, variantIdx);
   openModal('stockRuleModal');
 }
 // Shows how the cost of what's currently on the shelf stacks up against
@@ -58241,6 +58419,15 @@ const ASSISTANT_TOOLS = {
       const suppliers = ranked.concat(oos).slice(0, 8).map(supplierRow);
       const out = { variant_index: vi, ...price, suppliers,
         suppliers_out_of_stock: oos.length };
+      /* WHAT OTHER SHOPS CHARGE for this same line. Everything else in
+         this dossier is what it COSTS; this is the only thing here that
+         says what the customer can pay elsewhere, and no pricing
+         argument is complete without it. Absent when nobody has looked,
+         which is a different answer from nobody being cheaper. */
+      const rivals = rivalPriceLatest(p.id, vi);
+      if(rivals.length) out.other_shops_charge = rivals.map(r=> ({ shop: r.rival,
+        price: apRound(r.price), seen_days_ago: r.daysOld,
+        ...(r.note ? { note: r.note } : {}) }));
       /* The headline packing, so it is present even when only the top of
          the dossier is read. Same productPackInfo the shelf uses. */
       const pk = productPackInfo(p.id, vi);
@@ -59197,6 +59384,37 @@ const ASSISTANT_TOOLS = {
      becomes a NEW supplier -- said plainly on the card -- through the
      same two-save gate the graduation uses, because a price row naming
      a supplier that never reached the server is a dangling foreign key. */
+  /* RECORDING WHAT A RIVAL CHARGES. A write, so it confirms like every
+     other one -- but note what it is NOT: it changes no price of this
+     shop's own, moves no money and touches no stock. It writes down
+     something somebody saw, and the owner decides what to do about it. */
+  add_rival_price: { confirm: true,
+    summary(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      const vi = input.variant_index==null ? null : input.variant_index;
+      const line = p ? productVariantLabel(p, vi) : String(input.product_id||'');
+      const ours = p ? ourPriceFor(p.id, vi) : null;
+      const gap = ours == null ? '' : (Number(input.price) > ours
+        ? ' — ' + fmtUGX(apRound(Number(input.price) - ours)) + ' ABOVE your ' + fmtUGX(ours)
+        : Number(input.price) < ours
+          ? ' — ' + fmtUGX(apRound(ours - Number(input.price))) + ' BELOW your ' + fmtUGX(ours)
+          : ' — the same as yours');
+      return 'Write down that ' + String(input.rival||'') + ' sells ' + line + ' at '
+        + fmtUGX(apRound(Number(input.price)||0)) + gap
+        + '. It records what you saw and changes none of your own prices.';
+    },
+    async run(input){
+      const r = await addRivalPrice({ productId: input.product_id,
+        variantIdx: input.variant_index==null ? null : input.variant_index,
+        rival: input.rival, price: input.price, unit: input.unit,
+        seenOn: input.seen_on, note: input.note });
+      if(!r.ok) throw new Error(r.why);
+      const vi = input.variant_index==null ? null : input.variant_index;
+      return { written: true, other_shops_charge: rivalPriceLatest(input.product_id, vi)
+        .map(x=> ({ shop: x.rival, price: apRound(x.price), seen_days_ago: x.daysOld })),
+        you_sell_at: ourPriceFor(input.product_id, vi) };
+    }},
+
   add_supplier_price: { confirm: true,
     summary(input){
       let parts;

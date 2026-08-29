@@ -63,6 +63,10 @@ const data = {
 
 const env = {
   data,
+  /* product_details now reads what other shops charge, and that
+     reading dates each sighting. */
+  todayISO: () => '2026-08-29',
+  daysSinceDate: () => 0,
   supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '',
   productVariantLabel: (p) => p.name,
   variantLabel: () => '',
@@ -82,6 +86,8 @@ const env = {
 
 const scope = compileScope([
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+  extractFunction(src, 'rivalPriceLatest', 'index.html'),
+  extractFunction(src, 'rivalPricesFor', 'index.html'),
   extractFunction(src, 'productPriceRows', 'index.html'),
   extractFunction(src, 'rankedPriceRows', 'index.html'),
   extractFunction(src, 'productPackInfo', 'index.html'),
