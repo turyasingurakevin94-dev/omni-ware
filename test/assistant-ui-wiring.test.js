@@ -346,8 +346,13 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'and even an unexpected empty shape renders an honest line');
   t.check(/toolBlocks/.test(loop) && !/stop_reason !== 'tool_use'/.test(loop),
     'tool calls run whenever complete ones arrived — a truncated turn with a whole call still executes it and lets the model continue');
-  t.check(/resp\.content\.length\)\s*\n?\s*assistantThread\.push/.test(loop),
+  t.check(/turnContent\.length\)\s*\n?\s*assistantThread\.push/.test(loop),
     'an empty content array never joins the thread — the API rejects empty assistant turns, which would jam every later send');
+  /* Stronger than it was: the length now guards the CLEANED turn, so a
+     turn of nothing but blank text is also refused entry (see
+     assistant-turn-hygiene). */
+  t.check(/apAssistantTurnContent\(resp\.content\)/.test(loop),
+    'and the turn is cleaned of empty text blocks before that check — an empty block inside a full turn is refused by the API too');
 }
 
 process.exit(t.done() ? 1 : 0);

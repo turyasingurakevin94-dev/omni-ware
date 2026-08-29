@@ -51756,6 +51756,11 @@ async function managerLoadState(){
 async function runManagerMeeting(){
   if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
   managerMeetingRunning = true;
+  /* A meeting reads the books, not a picture -- and it pushes its own
+     turn straight into the thread, so an attached photo would never go
+     with it. Said and set aside rather than left sitting in the
+     composer claiming it is about to be sent. */
+  if(apPendingPhoto){ apClearPhoto(); toast('Photo set aside — a meeting reads the books, not a picture', 5000); }
   /* A fresh meeting is a fresh conversation -- and it STAYS in manager
      mode afterwards, so follow-up questions in the panel are answered
      by the person who made the plan. */
@@ -51794,6 +51799,11 @@ async function runManagerMeeting(){
 async function runManagerReview(){
   if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
   managerMeetingRunning = true;
+  /* A meeting reads the books, not a picture -- and it pushes its own
+     turn straight into the thread, so an attached photo would never go
+     with it. Said and set aside rather than left sitting in the
+     composer claiming it is about to be sent. */
+  if(apPendingPhoto){ apClearPhoto(); toast('Photo set aside — a meeting reads the books, not a picture', 5000); }
   apMode = 'manager';
   assistantThread = [];
   apLastReview = null;
@@ -58688,6 +58698,34 @@ async function apCallServer(){
   return body;
 }
 
+/* WHAT MAY GO BACK INTO THE THREAD.
+   The model's turn is pushed back verbatim so tool calls and their
+   reasoning survive intact -- but an EMPTY text block among them is
+   rejected by the API on the next request, and the model emits one
+   readily when tool calls follow a pause. The panel already skips empty
+   text when rendering; the thread did not, so the empty block travelled
+   and the whole next call was refused with a 400 that named nothing.
+   Everything else -- thinking, tool_use, their order, their signatures
+   -- passes through untouched. */
+function apAssistantTurnContent(content){
+  if(!Array.isArray(content)) return content;
+  return content.filter(b=> !(b && b.type === 'text' && !String(b.text||'').trim()));
+}
+
+/* A tool result is always a NON-EMPTY STRING.
+   JSON.stringify(undefined) is undefined, not text -- so one executor
+   path that falls through without returning builds a malformed block
+   and the API refuses the request. And a result that cannot be encoded
+   at all (a circular object) used to throw straight out of the loop,
+   ending the turn with a dead panel. Both are answered here, in words
+   the model can act on. */
+function apToolResultText(result){
+  let text;
+  try{ text = JSON.stringify(result); }
+  catch(e){ return '{"error":"the result could not be encoded — say what you needed and try a narrower question"}'; }
+  return (typeof text === 'string' && text.length) ? text : '{"ok":true}';
+}
+
 async function apRunLoop(){
   assistantBusy = true;
   document.getElementById('apSendBtn').disabled = true;
@@ -58700,8 +58738,9 @@ async function apRunLoop(){
       /* An empty content array must not join the thread -- the API
          rejects empty assistant turns, which would jam every send
          after a truncated one. */
-      if(Array.isArray(resp.content) && resp.content.length)
-        assistantThread.push({ role: 'assistant', content: resp.content });
+      const turnContent = apAssistantTurnContent(resp.content);
+      if(Array.isArray(turnContent) && turnContent.length)
+        assistantThread.push({ role: 'assistant', content: turnContent });
       let spokeText = '';
       (resp.content||[]).forEach(block=>{
         if(block.type === 'text' && block.text){ apRenderAssistant(block.text); spokeText += (spokeText?' ':'') + block.text; }
@@ -58754,7 +58793,7 @@ async function apRunLoop(){
           catch(e){ result = { error: e.message }; isError = true; }
         }
         results.push({ type: 'tool_result', tool_use_id: block.id,
-          content: JSON.stringify(result), ...(isError ? { is_error: true } : {}) });
+          content: apToolResultText(result), ...(isError ? { is_error: true } : {}) });
       }
       if(wroteSomething){
         /* The idiom the poll itself uses after swapping data: re-render

@@ -608,6 +608,19 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: { type: 'network', message: 'Could not reach the AI service. Check the internet connection and try again.' } });
     }
     if (err instanceof Anthropic.APIError) {
+      /* A 4xx is a verdict on OUR OWN REQUEST -- "text content blocks
+         must be non-empty", "tool_result ... unexpected" -- and names a
+         part of the payload this file built. None of it is the shop's
+         data, and without it the panel can only say a number, which
+         diagnoses nothing. A 5xx is the service's own internals and
+         still means nothing to a shop, so that one keeps its sentence. */
+      const status = err.status || 0;
+      if (status >= 400 && status < 500) {
+        const detail = String((err && err.message) || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+        return res.status(502).json({ error: { type: 'api_error',
+          message: 'The AI service rejected the request (' + status + ')'
+            + (detail ? ' — ' + detail : '') + '.' } });
+      }
       return res.status(502).json({ error: { type: 'api_error', message: 'The AI service returned an error (' + (err.status || 'unknown') + '). Try again shortly.' } });
     }
     return res.status(500).json({ error: { type: 'server_error', message: 'The server hit a bug — ' + String((err && err.message) || err).slice(0, 300) } });
