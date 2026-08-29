@@ -58,6 +58,9 @@ const FNS = ['priceAgeDays', 'stockKey', 'anShiftDate', 'daysBetweenISO', 'getSt
   'applySupplierReply', 'syncPriceRegistryFromPurchase', 'purchasePriceAtQty',
   'purchasePriceSlotAtQty', 'tiersForKind', 'cheaperSmallerQuantity', 'purchasePricePoints',
   'tieredUnitPrice', 'deriveWholesaleRetail', 'priceReplySlots'];
+/* The registry write now refuses a price quoted in a unit the row is not
+   priced in, so the comparison it makes comes into the scope too. */
+DECLS.push('cmpUnitKey');
 const scope = compileScope([
   ...DECLS.map((n) => extractDeclaration(src, n, 'index.html')),
   ...FNS.map((n) => extractFunction(src, n, 'index.html')),
@@ -955,6 +958,49 @@ const sold = (productId, qty, date) => data.stockLog.push({
   eq(scope.purchasePriceAtQty(data.prices[0], 3), 250000, 'and is what an order of three now costs');
   t.check(data.prices[0].wholesale === 250000,
     'the headline follows it, because that tier is the lowest on its side');
+
+  /* A PRICE IS A NUMBER AND A UNIT, AND THE NUMBER ALONE IS NOT A FACT.
+   *
+   * The live shop that found this: ELEPHANT King is 310,000 a carton on
+   * file and 15,500 a dozen on the invoices — twenty dozen to the
+   * carton, so the SAME price written two ways. setLineSupplier moves a
+   * line to whoever is cheapest today and deliberately leaves the
+   * packing alone, so the dozen figure can arrive here against the
+   * carton row. Written through, the carton tier reads 15,500 — and the
+   * buying plan, which costs every line from this file, then prices a
+   * carton at a twentieth of what it costs. Silently, in the one place
+   * everything else is measured from.
+   */
+  reset();
+  data.prices = [price(1, { wholesale: 310000, retail: null, packQty: 1, unit: 'Ctn',
+    tiers: [{ minQty: 3, price: 310000 }], date: '2026-01-01' })];
+  scope.syncPriceRegistryFromPurchase('P1', null, 'S1', 15500, 3, { confirms: true, unit: 'Dzn' });
+  eq(data.prices[0].tiers[0].price, 310000,
+    'a price quoted per dozen is REFUSED by a row priced per carton — the two are the same money in different units, and writing one into the other is not an update, it is damage');
+  eq(data.prices[0].wholesale, 310000, 'the headline is untouched too');
+  eq(data.prices[0].date, '2026-01-01',
+    'and nothing is dated as confirmed — a write nobody could trust must not leave a footprint saying it was checked today');
+
+  /* The same figure, in the unit the row is actually kept in, still
+     lands. The guard has to refuse a mismatch without refusing work. */
+  scope.syncPriceRegistryFromPurchase('P1', null, 'S1', 250000, 3, { confirms: true, unit: 'Ctn' });
+  eq(data.prices[0].tiers[0].price, 250000, 'the same call in the row’s own unit goes through');
+
+  /* Case and spacing are not a unit change. "Ctn" and " ctn " are the
+     same carton, and refusing there would block honest work over
+     whitespace. */
+  scope.syncPriceRegistryFromPurchase('P1', null, 'S1', 240000, 3, { confirms: true, unit: ' ctn ' });
+  eq(data.prices[0].tiers[0].price, 240000, 'and so does the same unit typed differently');
+
+  /* A BLANK UNIT IS NOT A MISMATCH. The app snapshots the unit off this
+     same row when it writes a line, so blank on one side usually means
+     blank on both; refusing then would block every shop that has never
+     typed a unit, to guard a case that cannot be told from it. */
+  reset();
+  data.prices = [price(2, { wholesale: 10000, unit: 'Bag', tiers: [], date: '2026-01-01' })];
+  scope.syncPriceRegistryFromPurchase('P1', null, 'S1', 11000, 1, { confirms: true, unit: '' });
+  eq(data.prices[0].wholesale, 11000,
+    'a caller that names no unit is trusted, because the alternative blocks the ordinary work of a shop that has never typed one');
 
   /* Two breaks are two questions. Recording either against the other is
      how a quote comes out wrong at exactly the quantities people order.

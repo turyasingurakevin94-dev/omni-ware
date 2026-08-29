@@ -112,6 +112,8 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
       { id: 'C9', name: 'Roto Debtor', debt: 900000, ageDays: 30 },
       { id: 'C8', name: 'Second', debt: 100000, ageDays: 3 },
     ],
+    fmtShortDate: (d) => String(d),
+    todayISO: () => '2026-08-29',
     followUpClientsToContact: () => [{ name: 'Mulongo' }, { name: 'Achen' }],
     getStockQty: (pid) => (pid === 'P2' ? 12 : 0),
     SQ_STATUSES: { preparing: { label: 'Preparing' }, completed: { label: 'Completed' } },
@@ -132,6 +134,12 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
     extractFunction(src, 'cashIsDebtCollection', 'index.html'),
     extractFunction(src, 'debtLogIsInvoiceOwned', 'index.html'),
     extractFunction(src, 'debtCollectionsOn', 'index.html'),
+    /* The brief now says what a debtor promised, so the promise model
+       comes in whole — a stub would let the brief and the chase queue
+       disagree about who has named a day. */
+    extractFunction(src, 'promisesFor', 'index.html'),
+    extractFunction(src, 'promiseState', 'index.html'),
+    extractFunction(src, 'promiseLatest', 'index.html'),
     extractFunction(src, 'morningBriefData', 'index.html'),
   ], env, ['morningBriefData']);
   const b = scope.morningBriefData(Y, NOW);
@@ -167,6 +175,33 @@ const NOW = Date.parse('2026-08-27T06:30:00.000Z');
 
   eq(b.debts.rows[0].name, 'Roto Debtor', 'the debt book\'s standing picture rides along');
   eq(b.debts.total, 1000000, 'with its total');
+
+  /* WHAT THEY SAID, BESIDE WHAT THEY OWE.
+   *
+   * Chase debts keeps a customer who has named a day out of the queue
+   * until it comes. This block had never heard of a promise, so it
+   * handed them straight back at breakfast — and breakfast is where the
+   * ringing gets decided. One screen learned the lesson and the first
+   * screen of the day did not.
+   */
+  data.paymentPromises = [{ id: 1, customerId: 'C9', promisedOn: '2026-09-20', madeOn: Y, amount: null }];
+  data.customers.push({ id: 'C9', name: 'Roto Debtor', debt: 900000, debtLog: [] });
+  const withPromise = scope.morningBriefData(Y, NOW);
+  t.check(!!withPromise.debts.rows[0].promise,
+    'a debtor who has named a day carries what they said into the brief');
+  eq(withPromise.debts.rows[0].promise.state, 'waiting', 'and the state is derived here too, not stamped');
+  t.check(!withPromise.debts.rows[1].promise,
+    'while a debtor who has said nothing carries nothing — no promise is invented for them');
+  /* The balance is still real and the row stays: this block is the
+     BIGGEST DEBTS, not a list of who to ring. Dropping them would be a
+     different lie from the one being fixed. */
+  eq(withPromise.debts.rows.length, 2, 'and nobody is dropped for having promised — they still owe it');
+  eq(withPromise.debts.total, 1000000, 'so the total is unmoved');
+
+  data.paymentPromises = [{ id: 1, customerId: 'C9', promisedOn: '2026-08-01', madeOn: '2026-07-25', amount: null }];
+  eq(scope.morningBriefData(Y, NOW).debts.rows[0].promise.state, 'broken',
+    'and a day that has gone reads as broken — the fact worth having before the first call of the day');
+  data.paymentPromises = [];
   eq(b.followUps.count, 2, 'and today\'s follow-up count');
 }
 

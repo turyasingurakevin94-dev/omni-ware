@@ -20793,6 +20793,29 @@ function syncPriceRegistryFromPurchase(productId, variantIdx, supplierId, price,
   if(!supplierId || supplierId==='__stock__' || price==null) return;
   const priceRow = data.prices.find(p=>p.productId===productId && (p.variantIdx==null?null:p.variantIdx)===variantIdx && p.supplierId===supplierId);
   if(!priceRow) return;
+  /* COMPARE LIKE WITH LIKE -- AND NEVER WRITE ACROSS THE GAP.
+
+     `price` is per whatever unit the LINE was written in, and that label
+     is a snapshot taken when the line was made, not a live pointer at
+     this row. setLineSupplier swaps who a line is bought from and leaves
+     the packing deliberately alone, so a figure quoted by the dozen can
+     arrive at a row the shop prices by the carton. Written through, a
+     15,500 dozen lands in a 310,000 carton tier -- and the buying plan
+     then costs cartons at a twentieth of what they cost, silently, in
+     the one file it costs everything from.
+
+     A blank unit is not a mismatch. The app snapshots the unit off this
+     same row when it writes a line, so blank on one side usually means
+     blank on both; refusing then would block the ordinary work of every
+     shop that has never typed a unit, to guard against a case that
+     cannot be told apart from it. The READ side is stricter, because
+     declining to compare there costs nothing but a counted line. */
+  const saidUnit = String((opts && opts.unit) || '').trim();
+  if(saidUnit && cmpUnitKey(saidUnit) !== cmpUnitKey(priceRow.unit)){
+    if(typeof toast === 'function')
+      toast(`Not saved to the Price registry: that ${fmtUGX(price)} is per ${saidUnit}, and this supplier\u2019s price is kept per ${priceRow.unit || 'unit'}. Writing it across would put a ${saidUnit} price on a ${priceRow.unit || 'unit'} line and the buying plan costs everything from that file. Set it on the Price registry, in the unit you were quoted.`, 11000);
+    return;
+  }
   const atQty = Number(qty)||0;
   const was = purchasePriceAtQty(priceRow, atQty);
   if(Number(was)!==Number(price)){
@@ -22681,7 +22704,10 @@ function renderQuoteItems(){
       item.price = Number(e.target.value) || 0;
       // At THIS line's quantity -- the price was agreed for this many, and
       // the price book records it against that.
-      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty);
+      /* item.unit was snapshotted from whoever this line was quoted
+         against; setLineSupplier may since have moved it to a supplier
+         who prices in something else. */
+      syncPriceRegistryFromPurchase(item.productId, item.variantIdx==null?null:item.variantIdx, item.supplierId, item.price, item.qty, {unit: item.unit});
       saveData(); renderQuoteItems();
     });
     row.querySelector('.q-sell').addEventListener('change', (e)=>{
@@ -39843,7 +39869,8 @@ function applyStockPurchaseEdit(logId, next){
      wrong one. Leaving it holding a price the shop has just said it never
      paid is worse than re-asking. */
   if(newSupplierId && newCost != null){
-    syncPriceRegistryFromPurchase(e.productId, vIdx, newSupplierId, newCost, newQty, {confirms: true});
+    syncPriceRegistryFromPurchase(e.productId, vIdx, newSupplierId, newCost, newQty,
+      {confirms: true, unit: (pi && pi.items && pi.items[0]) ? pi.items[0].unit : ''});
   }
   return {ok: true, row, pi, overpaid, tookBack: takeBack, soldFromThis,
     billAdopted, billBefore, billAfter};
@@ -39961,7 +39988,7 @@ function receiveQuoteLine(it, qty, price, q){
      second small trip is genuinely priced as a small trip. Where that
      reads oddly against the tiers already on file, the sync says so. */
   syncPriceRegistryFromPurchase(it.productId, it.variantIdx == null ? null : it.variantIdx,
-    it.supplierId, it.receivedPrice, n, {confirms: true});
+    it.supplierId, it.receivedPrice, n, {confirms: true, unit: it.unit});
 
   applyStockDelta(it.productId, it.variantIdx, n, 'restock',
     `Received from ${supplierName(it.supplierId)}${q && q.client && q.client.name ? ` for ${q.client.name}` : ''}`,
@@ -41214,9 +41241,12 @@ function applySupplierReply(entries){
       out.confirmed++;
       return;
     }
+    /* `row` IS the registry row, so the quote was read against its own
+       unit -- passed anyway, so the guard is not silently skipped here
+       by omission rather than by argument. */
     syncPriceRegistryFromPurchase(row.productId,
       row.variantIdx == null ? null : row.variantIdx, row.supplierId, said, atQty,
-      {confirms: true, source: 'confirmed'});
+      {confirms: true, source: 'confirmed', unit: row.unit});
     out.changed++;
   });
   return out;
@@ -46676,7 +46706,7 @@ __btn_inv_purchase_save_btn.addEventListener('click', saveOnceAtATime(__btn_inv_
     // means their price has changed -- keep the Price Registry current
     // instead of letting it go stale. confirms, because this is a
     // purchase: buying at the SAME price is proof of it too.
-    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true});
+    syncPriceRegistryFromPurchase(invProductId, variantIdx, invPurchaseSupplierId, price, q, {confirms: true, unit});
     /* Consignment: the goods arrive, the money does not move. No bill is
        raised, because nothing is owed until something sells -- what IS
        owed is read off the sales as they happen. The lot carries whose
@@ -51499,6 +51529,7 @@ function renderPriceWatch(){
     if(r.steady) bits.push({ n: r.steady, why: 'bought again at the very same price' });
     if(r.moved) bits.push({ n: r.moved, why: 'that moved' });
     if(r.noFileRow) bits.push({ n: r.noFileRow, why: 'with no Price Registry row, so the file cannot be checked against them' });
+    if(r.fileUnitSplit) bits.push({ n: r.fileUnitSplit, why: 'bought in a unit the Price Registry row is not priced in, so the two are not comparable and neither is called wrong' });
     return bits;
   };
   const account = ()=> {
@@ -51619,7 +51650,15 @@ function supplierPriceSeries(dateISO){
        a volume tier is never mistaken for the price having moved. */
     const row = productPriceRows(g.productId, g.variantIdx)
       .find(r=> r.supplierId === g.supplierId);
-    const onFile = row ? purchasePriceAtQty(row, last.qty) : null;
+    /* THE SAME RULE, ON THE FILE SIDE. The block above splits the invoice
+       trail by unit and then measured the result against a registry row
+       that was never held to it -- so a line bought by the dozen was
+       compared with a row priced by the carton and reported as a 294,500
+       drift that did not exist. Ranked TOP of the section, too, since the
+       ranking multiplies the gap by how much the shop buys: the more of
+       it it bought, the bigger the phantom grew. */
+    const fileUnitSplit = !!row && cmpUnitKey(row.unit) !== cmpUnitKey(latestUnit);
+    const onFile = (row && !fileUnitSplit) ? purchasePriceAtQty(row, last.qty) : null;
     const rise = comparable.length > 1 ? last.price - first.price : 0;
     const trend = comparable.length > 1 && first.date !== last.date;
     /* Why this series says nothing, when it says nothing. Exactly one
@@ -51632,6 +51671,7 @@ function supplierPriceSeries(dateISO){
       : last.price === first.price ? 'steady'
       : 'moved';
     out.push({ ...g, points: comparable, skippedOtherUnit, first, last, units,
+      fileUnitSplit,
       silence,
       trend,
       rise: trend ? rise : 0,
@@ -51672,12 +51712,15 @@ function supplierPriceWatch(dateISO){
   return { series: all, up, down, steady, outOfStep,
     days: Math.max(1, Number(data.presetPriceWatchDays) || 180),
     /* The screen's working, shown. Every pair is in exactly one of
-       once / sameDay / unitSplit / steady / moved, and noFileRow counts
-       the pairs the registry has never priced -- which is why the file
-       check can say nothing about them. */
+       once / sameDay / unitSplit / steady / moved. noFileRow counts the
+       pairs the registry has never priced and fileUnitSplit those it
+       prices in a different unit from the one they are bought in --
+       which is why the file check can say nothing about either, and why
+       they are two counts and not one: there IS a row for the second. */
     reasons: { pairs: all.length, once: count('once'), sameDay: count('sameDay'),
       unitSplit: count('unitSplit'), steady: steady.length, moved: up.length + down.length,
-      noFileRow: all.filter(s=> s.onFile == null).length,
+      noFileRow: all.filter(s=> s.onFile == null && !s.fileUnitSplit).length,
+      fileUnitSplit: all.filter(s=> s.fileUnitSplit).length,
       linesRead: all.unread.linesRead, linesNoProduct: all.unread.linesNoProduct,
       linesNoPrice: all.unread.linesNoPrice },
   };
@@ -54364,7 +54407,8 @@ function morningBriefData(dateISO, nowMs){
       counted: pos.countedAccounts > 0, variance: Math.round(pos.varianceTotal) },
     paid: { count: col.count, total: col.total,
       rows: col.rows.slice(0, 6).map(r=> ({ name: r.name, amount: r.amount })) },
-    debts: { total: Math.round(debts.reduce((s,r)=> s + r.debt, 0)), rows: debts.slice(0, 3) },
+    debts: { total: Math.round(debts.reduce((s,r)=> s + r.debt, 0)),
+      rows: debts.slice(0, 3).map(r=> ({ ...r, promise: promiseLatest(r.id) })) },
     ranOut: ranOut.slice(0, 8), ranOutCount: ranOut.length,
     stuck: stuck.slice(0, 6), stuckCount: stuck.length,
     followUps: { count: fu.length, names: fu.slice(0, 4).map(r=> r.name) },
@@ -54402,8 +54446,17 @@ function morningBriefHTML(b){
       b.ranOut.map(n=> row(esc(n)))),
     block('Orders sitting too long' + (b.stuckCount > b.stuck.length ? ` (${b.stuckCount})` : ''),
       b.stuck.map(s=> row(`${esc(s.name)} <em>· ${esc(s.statusLabel)}</em>`, overLabel(s.overMinutes)))),
+    /* WHAT THEY SAID, beside what they owe. Chase debts keeps somebody
+       who named a day out of the queue until it comes; without this the
+       brief handed them back at breakfast, and the ringing is decided
+       here. A day already gone is the louder half and says so. */
     block('Biggest debts this morning', b.debts.rows.map(r=>
-      row(`${esc(r.name)}${r.ageDays > 0 ? ` <em>· ${r.ageDays}d</em>` : ''}`, fmtUGX(Math.round(r.debt))))),
+      row(`${esc(r.name)}${r.ageDays > 0 ? ` <em>· ${r.ageDays}d</em>` : ''}${
+        r.promise && r.promise.state === 'waiting'
+          ? ` <em>· said ${esc(fmtShortDate(r.promise.promisedOn))}</em>` : ''}${
+        r.promise && r.promise.state === 'broken'
+          ? ` <em class="warn">· said ${esc(fmtShortDate(r.promise.promisedOn))}, did not pay</em>` : ''}`,
+        fmtUGX(Math.round(r.debt))))),
     block('To follow up today', b.followUps.count
       ? [row(esc(b.followUps.names.join(', ') + (b.followUps.count > b.followUps.names.length
           ? ` and ${b.followUps.count - b.followUps.names.length} more` : '')))] : []),

@@ -102,6 +102,13 @@ const data = {
        price would have called it drift. */
     { id: 3, productId: 'P3', variantIdx: null, supplierId: 'S1', wholesale: 700, retail: 750,
       unit: 'pc', packQty: 50, packUnit: 'ctn', tiers: [{ minQty: 100, price: 600 }], outOfStock: false },
+    /* THE LIVE SHOP'S ROW. P6 is bought by the carton (the last two
+       invoices above) while the file prices it by the piece — the same
+       price, two bases. Compared straight, the file reads 9,500 out of
+       step on every carton and the section ranks it FIRST, because the
+       ranking multiplies the gap by how much is bought. */
+    { id: 4, productId: 'P6', variantIdx: null, supplierId: 'S1', wholesale: 500, retail: 520,
+      unit: 'pc', packQty: 20, packUnit: 'ctn', tiers: [], outOfStock: false },
   ],
 };
 
@@ -119,6 +126,8 @@ try {
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
       extractDeclaration(src, 'PRICE_WATCH_FILE_TOLERANCE_PCT', 'index.html'),
+      /* The unit check the file side now goes through. */
+      extractDeclaration(src, 'cmpUnitKey', 'index.html'),
       extractDeclaration(src, 'DASH_COST_RISE_PCT', 'index.html'),
     ]),
   env, ['supplierPriceSeries', 'supplierPriceWatch', 'dashSupplierPriceInflation']);
@@ -179,6 +188,21 @@ if (scope) {
   t.check(!names.includes('Screws'),
     'and neither is one whose VOLUME TIER matches what was paid at that quantity — a tier is not drift');
 
+  /* COMPARE LIKE WITH LIKE, ON BOTH SIDES. The invoice trail was split
+     by unit and then measured against a registry row that was never held
+     to the same rule. Switched Unit is bought by the carton at 10,400 and
+     priced in the file by the piece at 500 — the same money, two bases —
+     and the straight subtraction called the file 9,900 out of step on
+     every carton. It was ranked FIRST, too: the ranking multiplies the
+     gap by how much the shop buys, so the more of it it bought the
+     bigger the thing that was not happening grew. */
+  t.check(!names.includes('Switched Unit'),
+    'a row the file prices by the piece and the invoices buy by the carton is NOT called drift — it is the same price in two units, and subtracting one from the other is not a comparison');
+  const split = scope.supplierPriceSeries(TODAY).find((s) => s.name === 'Switched Unit');
+  t.check(split.fileUnitSplit === true, 'the pair says why it could not be checked');
+  t.check(split.onFile === null && split.fileStale === false,
+    'and no figure is put beside it — a number nobody can stand behind is worse than none');
+
   const once = scope.supplierPriceSeries(TODAY).find((s) => s.name === 'Once Only');
   t.check(once.onFile === null && once.fileStale === false,
     'nothing on file is reported as nothing on file — a different answer from agreeing');
@@ -211,6 +235,14 @@ if (scope) {
   eq(r.linesNoPrice, 1, 'and so is one carrying no price');
   t.check(r.linesRead > r.pairs, 'against the total lines actually read');
   t.check(r.noFileRow >= 1, 'pairs the Price Registry has never priced are counted — the file check cannot speak for them');
+  /* NAMED RATHER THAN DROPPED, and named ACCURATELY. Folding these into
+     noFileRow would have the screen say "no Price Registry row" about a
+     pair that has one — true-sounding, and false. */
+  eq(r.fileUnitSplit, 1,
+    'a pair the file prices in another unit is its own count, not quietly folded into "no row on file"');
+  t.check(scope.supplierPriceSeries(TODAY)
+    .filter((s) => s.fileUnitSplit).every((s) => s.onFile === null),
+    'and every one of them declined to compare rather than comparing badly');
 
   const steady = w.steady[0];
   t.check(steady.silence === 'steady' && steady.rise === 0

@@ -353,19 +353,30 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
   t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
-  t.check(calls.some((c) => /,\s*q,\s*\{confirms: true\}$/.test(c.trim())),
+  t.check(calls.some((c) => /,\s*q,\s*\{confirms: true, unit\}$/.test(c.trim())),
     'the restock passes what was actually bought');
   /* THIS receipt's quantity, not the line's running total. A line that
      came back short and was fetched again is two purchases at two
      prices, kept as two receipts -- and a second small trip is honestly
      priced as a small trip. */
-  t.check(calls.some((c) => /it\.receivedPrice,\s*n,\s*\{confirms: true\}/.test(c)),
+  t.check(calls.some((c) => /it\.receivedPrice,\s*n,\s*\{confirms: true, unit: it\.unit\}/.test(c)),
     'and goods received pass the price actually paid, at the quantity that actually arrived');
   /* The correction passes the CORRECTED pair, not the original one. A
      write-back carrying the figures being thrown away would re-teach the
      registry the very mistake the shop just came here to fix. */
-  t.check(calls.some((c) => /newCost,\s*newQty,\s*\{confirms: true\}/.test(c)),
+  t.check(calls.some((c) => /newCost,\s*newQty,[\s\S]*?confirms: true/.test(c)),
     'and a corrected purchase passes what it turned out to be, not what was first typed');
+
+  /* AND THE UNIT THAT PRICE IS IN. A price is a number and a unit, and
+     the number alone is not a fact -- setLineSupplier moves a line to a
+     supplier who may price in something else and deliberately leaves the
+     packing alone, so a dozen price can arrive at a carton row. Written
+     through, it lands in the file the buying plan costs everything from.
+     Every call site hands the unit over, or the guard inside is skipped
+     by omission rather than by argument. */
+  const noUnit = calls.filter((c) => !/\bunit\b/.test(c));
+  t.check(noUnit.length === 0,
+    `every call site passes the unit its price is quoted in (${JSON.stringify(noUnit.map((c) => c.slice(0, 60)))})`);
 
   /* `confirms` does not mean "money moved" — it means SOMETHING ASSERTED
      THIS PRICE TODAY, so an unchanged figure still earns a fresh date.
