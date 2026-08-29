@@ -115,7 +115,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),
       extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'),
       extractDeclaration(src, 'MANAGER_OBJECTIVES', 'index.html'),
-    ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
+    ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
         select: () => ({ single: () => Promise.resolve({ data: { id: 21 }, error: null }) }) }; } }) },
       Promise, console,
@@ -147,7 +147,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const adopt = compileScope([
       extractFunction(src, 'managerAdoptTarget', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
-    ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
+    ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       toast: (m) => toasts.push(m), renderManager: () => {},
       sb: { from: () => ({
         select: () => ({ eq: () => ({ eq: () => ({ single: () => Promise.resolve({
@@ -180,7 +180,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
-    ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
+    ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
         q.limit = () => Promise.resolve({ data: rows, error: null }); return q; } }, Promise,
     }, ['managerScoreboard']).managerScoreboard;
@@ -213,7 +213,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       'function names(){ return { ASSISTANT_TOOLS }; }',
-    ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
+    ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
       data: { ...data, stockLog: [], savedQuotes: [], purchaseInvoices: [] },
       daysSinceDate: () => 3, fmtUGX: (n) => String(n), Promise,
       sb: { from: () => { const q = { _kind: null };

@@ -49,7 +49,7 @@ const journal = {
 };
 const env = {
   data: { customers: [], stockLog: [], savedQuotes: [], purchaseInvoices: [], cashTxns: [] },
-  managerNotesTable: true, currentShopId: 'shop-1',
+  managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
   todayISO: () => TODAY, anShiftDate: shift,
   daysSinceDate: (d) => Math.round((new Date(TODAY + 'T00:00:00Z') - new Date(d + 'T00:00:00Z')) / 86400000),
   apRound: (n) => Math.round(Number(n) || 0),

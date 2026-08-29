@@ -369,7 +369,7 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
           extractFunction(src, 'deriveMoveOutcome', 'index.html'),
           'function names(){ return { ASSISTANT_TOOLS, setBuyHold }; }']),
       { ...makeEnv(data), apRound: (n) => Math.round(Number(n) || 0),
-        managerNotesTable: true, currentShopId: 'shop-1', Promise,
+        managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1', Promise,
         anShiftDate: shift, anInvoicesInRange: () => [],
         anOverallTotals: () => ({ sales: 0, profit: 0, count: 0, estimatedQty: 0 }),
         debtCollectionsOn: () => ({ total: 0 }),
@@ -414,7 +414,7 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
           extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'),
           extractDeclaration(src, 'MANAGER_OBJECTIVES', 'index.html'),
         ]),
-      { ...makeEnv(data), managerNotesTable: true, currentShopId: 'shop-1', Promise,
+      { ...makeEnv(data), managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1', Promise,
         apRound: (n) => Math.round(Number(n) || 0),
         sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
           select: () => ({ single: () => Promise.resolve({ data: { id: 77 }, error: null }) }) }; } }) },

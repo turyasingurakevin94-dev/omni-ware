@@ -1081,6 +1081,7 @@
   .mgr-ask-q{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;}
   .mgr-ask-row{display:flex;gap:8px;flex-wrap:wrap;}
   .mgr-ask-input{flex:1 1 260px;min-width:0;}
+  .mgr-ask-side{font-size:12px;color:var(--ink-soft);margin:-2px 0 7px;}
   .mgr-ask-when{font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
   .mgr-play{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
     border-radius:12px;padding:11px 15px;margin:0 0 9px;}
@@ -52445,11 +52446,28 @@ async function managerSaveMeeting(plan){
     .forEach(h=> setBuyHold(String(h.key), String(h.reason), 'manager'));
   /* What the books cannot answer. Stored open, shown on the screen with
      a box to answer in, and read back at the top of the next meeting --
-     the shop's own eyes and ears, which no database holds. */
+     the shop's own eyes and ears, which no database holds.
+
+     AN ASK THAT NAMES A LINE AND A SHOP is answerable with a figure
+     rather than a sentence, and that figure becomes a dated sighting in
+     the market record instead of prose nothing can price against. So
+     the identity is resolved HERE, at the asking, through the same
+     validating reader the holds use -- a product that has left the
+     catalogue makes it an ordinary question rather than nothing, and a
+     line with no shop named beside it cannot become a sighting either,
+     because a price nobody is charging is not an observation. A bare
+     string is still an ask: most of them name no line at all. */
   const asks = (Array.isArray(plan.asks) ? plan.asks : [])
-    .map(q=> String(q||'').trim()).filter(q=> q.length > 3).slice(0, 3)
-    .map(q=> ({ shop_id: currentShopId, kind: 'question', meeting_id: ins.data.id, date: todayISO(),
-      body: { question: q.slice(0, 300) }, status: 'open' }));
+    .map(a=> (a && typeof a === 'object') ? a : { q: a })
+    .filter(a=> String(a.q||'').trim().length > 3).slice(0, 3)
+    .map(a=>{
+      const parts = buyKeyParts(stockKey(String(a.product_id||''), a.variant_index));
+      const rival = String(a.rival||'').trim().slice(0, 80);
+      return { shop_id: currentShopId, kind: 'question', meeting_id: ins.data.id, date: todayISO(),
+        body: { question: String(a.q).trim().slice(0, 300),
+          ...(parts && rival ? { productId: parts.productId, variantIdx: parts.variantIdx, rival } : {}) },
+        status: 'open' };
+    });
   if(asks.length){
     const r3 = await sb.from('manager_notes').insert(asks);
     if(r3.error) console.warn('Manager: questions not saved:', r3.error.message);
@@ -52785,7 +52803,17 @@ async function managerAddOwnPlay(name, how){
 }
 
 /* The shop answering its manager. One line is enough -- the answer is
-   evidence at the next meeting, not a document. */
+   evidence at the next meeting, not a document.
+
+   AND WHEN THE QUESTION NAMED A LINE AND A SHOP, an answer that is
+   nothing but the figure stops being a sentence in a box: it is filed
+   as a dated sighting, so Rival prices, product_details and every
+   argument about a price can read it. The line and the shop come from
+   the question -- only the amount comes from the owner, and it must be
+   the WHOLE answer. Nothing is scraped out of a sentence: a price read
+   wrongly out of prose argues for the wrong shelf price, and "12 inch
+   is 118,000" would file 12. "They don't stock it" is a real answer
+   and is kept as the note it is. */
 async function managerAnswerQuestion(rowId, answer){
   if(!managerNotesTable || rowId == null) return;
   const text = String(answer||'').trim();
@@ -52794,6 +52822,17 @@ async function managerAnswerQuestion(rowId, answer){
   const body = (cur.data && cur.data.body) || {};
   body.answer = text.slice(0, 500);
   body.answeredOn = todayISO();
+  const parts = body.productId ? buyKeyParts(stockKey(body.productId, body.variantIdx)) : null;
+  const figure = /^[\d,.\s]+$/.test(text) ? Math.round(Number(text.replace(/[,\s]/g, ''))) : 0;
+  let filed = null, refused = null;
+  if(parts && body.rival && figure > 0){
+    const r = await addRivalPrice({ productId: parts.productId, variantIdx: parts.variantIdx,
+      rival: body.rival, price: figure, seenOn: todayISO(), note: 'Answered the manager' });
+    /* A refused sighting must not cost the shop its answer: the note is
+       kept either way and the reason is said out loud. */
+    if(r.ok){ filed = productVariantLabel(parts.product, parts.variantIdx); body.recorded = { rival: body.rival, price: figure }; }
+    else refused = r.why;
+  }
   const up = await sb.from('manager_notes').update({ status: 'answered', body })
     .eq('shop_id', currentShopId).eq('id', rowId);
   if(up.error){
@@ -52802,7 +52841,10 @@ async function managerAnswerQuestion(rowId, answer){
       : 'Could not keep that answer — ' + up.error.message, 9000);
     return;
   }
-  toast('Kept — the manager reads it at the next meeting');
+  toast(filed ? 'Recorded — ' + body.rival + ' ' + fmtUGX(figure) + ' for ' + filed
+    : refused ? 'Kept, but the market record was not updated — ' + refused
+    : (parts && body.rival) ? 'Kept as a note — no figure in that, so the market record is unchanged'
+    : 'Kept — the manager reads it at the next meeting', refused ? 9000 : 5000);
   renderManager();
 }
 
@@ -53281,16 +53323,30 @@ function renderManager(){
       ? `<div class="mgr-sec-title">What the manager needs to know</div>`
         + `<div class="mgr-asks"><div class="mgr-why" style="margin:0 0 9px;">It could not find these in your books.
             Answer in a line and it argues from them tomorrow.</div>`
-        + qs.map(q=> `<div class="mgr-ask" data-qid="${esc(String(q.id))}">
-            <div class="mgr-ask-q">${esc((q.body||{}).question || '')}</div>
+        + qs.map(q=>{
+            /* A question that named a line and a shop is asking for a
+               FIGURE -- the shop is already known, so the answer is just
+               the price and it lands in the market record. Our own price
+               sits beside it so a wrong figure looks wrong as it is
+               typed, rather than after it has argued for something. */
+            const b = q.body || {};
+            const parts = b.productId && b.rival ? buyKeyParts(stockKey(b.productId, b.variantIdx)) : null;
+            const ours = parts ? ourPriceFor(parts.productId, parts.variantIdx) : null;
+            return `<div class="mgr-ask" data-qid="${esc(String(q.id))}">
+            <div class="mgr-ask-q">${esc(b.question || '')}</div>
+            ${parts ? `<div class="mgr-ask-side">${esc(b.rival)}${
+              ours == null ? '' : ' · you charge ' + esc(fmtUGX(ours))}</div>` : ''}
             <div class="mgr-ask-row">
-              <input type="text" class="mgr-ask-input" placeholder="What you found out — one line">
+              <input type="text" class="mgr-ask-input"${parts ? ' inputmode="decimal"' : ''} placeholder="${
+                parts ? esc('What ' + b.rival + ' charges — just the figure') : 'What you found out — one line'}">
               <button type="button" class="btn btn-accent mgr-ask-save">Answer</button>
             </div>
             <div class="mgr-ask-when">asked ${esc(fmtShortDate(q.date))}</div>
-          </div>`).join('') + `</div>`
+          </div>`; }).join('') + `</div>`
       : '';
-    qWrap.querySelectorAll('.mgr-ask').forEach(card=>{
+    /* Scoped by attribute, as the targets above are: the two kinds of
+       card share a class and a bare selector would bind the wrong one. */
+    qWrap.querySelectorAll('.mgr-ask[data-qid]').forEach(card=>{
       const id = Number(card.dataset.qid);
       const input = card.querySelector('.mgr-ask-input');
       const send = ()=> managerAnswerQuestion(id, input.value);
@@ -59096,10 +59152,23 @@ const ASSISTANT_TOOLS = {
     const qRows = (qs.error ? [] : (qs.data||[]));
     const answered = qRows.filter(q=> q.status === 'answered' && (q.body||{}).answer)
       .slice(0, 8).map(q=> ({ asked: (q.body||{}).question || '', answer: q.body.answer,
-        asked_on: q.date, answered_on: (q.body||{}).answeredOn || null }));
+        asked_on: q.date, answered_on: (q.body||{}).answeredOn || null,
+        /* Answered with a figure, so it was filed as a sighting in the
+           same tap: the mind argues from it and never asks the owner to
+           write down a price they have already written down. */
+        ...((q.body||{}).recorded ? { on_the_market_record: true } : {}) }));
     const open = qRows.filter(q=> q.status !== 'answered')
       .slice(0, 8).map(q=> ({ asked: (q.body||{}).question || '', asked_on: q.date,
         days_open: Math.max(0, daysSinceDate(q.date)) }));
+    /* WHERE TO WALK. The lines this shop earns most on with nothing at
+       all on file about the market -- the only place the mind can find
+       a rival ask that is worth the walk, and the ids it must copy into
+       that ask. Without this it can only ask about a line it happened
+       to open, which is not the same as the line that matters. */
+    const neverChecked = rivalPricesTable
+      ? rivalNeverChecked(todayISO(), 3).map(r=> ({ product_id: r.productId,
+          variant_index: r.variantIdx, line: r.line, earned_30: r.earned30 }))
+      : [];
     /* Where the shop stands against what this manager itself said it
        would do -- derived now, from the books, every time. */
     const score = await managerScoreboard();
@@ -59199,6 +59268,7 @@ const ASSISTANT_TOOLS = {
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed.slice(0, 4) } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),
+      ...(neverChecked.length ? { never_checked: neverChecked } : {}),
       meetings: (meetings.data||[]).map(m=> ({
       date: m.date, keyline: (m.body||{}).keyline || '',
       ...((m.body||{}).cutOff ? { ran_out_of_room: true } : {}),

@@ -47,7 +47,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 const TODAY = '2026-08-29';
 const base = {
-  managerNotesTable: true, currentShopId: 'shop-1',
+  managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
   todayISO: () => TODAY,
   apRound: (n) => Math.round(Number(n) || 0),
   /* managerPlaybook now works out what moved alongside each running

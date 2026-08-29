@@ -223,8 +223,11 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractDeclaration(src, 'MANAGER_WORTH_BASES', 'index.html'),
       extractDeclaration(src, 'MANAGER_LEVERS', 'index.html'),
       extractDeclaration(src, 'MANAGER_OBJECTIVES', 'index.html'),
+      extractFunction(src, 'buyKeyParts', 'index.html'),
+      extractFunction(src, 'stockKey', 'index.html'),
     ], {
       managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => '2026-08-29',
+      data: { products: [] },
       apRound: (n) => Math.round(Number(n) || 0),
       sb: { from: () => ({ insert: (row) => { inserted.push(row); return {
         select: () => ({ single: () => Promise.resolve({ data: { id: 11 }, error: null }) }) }; } }) },
@@ -289,7 +292,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       'function names(){ return { ASSISTANT_TOOLS }; }',
     ], {
       data: { customers: [], stockLog: [], savedQuotes: [], purchaseInvoices: [] },
-      managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => '2026-08-29',
+      managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1', todayISO: () => '2026-08-29',
       anShiftDate: (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
       daysSinceDate: () => 9, apRound: (n) => Math.round(Number(n) || 0),
       fmtUGX: (n) => String(n), sb: { from: q },

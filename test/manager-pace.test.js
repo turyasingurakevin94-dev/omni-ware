@@ -189,7 +189,7 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
     extractFunction(src, 'managerScoreProgress', 'index.html'),
     extractFunction(src, 'deriveMoveOutcome', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
-  ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
+  ], { ...env, managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1',
     data: { ...data, stockLog: [], savedQuotes: [], purchaseInvoices: [] },
     daysSinceDate: () => 2, fmtUGX: (n) => String(n), Promise,
     sb: { from: () => { const q = { _kind: null };
