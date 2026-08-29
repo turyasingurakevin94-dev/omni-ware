@@ -275,6 +275,7 @@ const PRODUCTS = [
   ];
   const run = (over) => compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'managerSkippedAdvice', 'index.html'),
     extractFunction(src, 'buyHoldsStanding', 'index.html'),
     extractFunction(src, 'buyHoldFor', 'index.html'),
     extractFunction(src, 'buyKeyLabel', 'index.html'),
@@ -298,6 +299,8 @@ const PRODUCTS = [
     fmtUGX: (n) => String(n),
     sb: { from: () => { const q = { _kind: null };
       q.select = () => q; q.order = () => q; q.in = () => q;
+      /* The date window managerSkippedAdvice reads over. */
+      q.gte = () => q; q.lte = () => q;
       q.eq = (c, v) => { if (c === 'kind') q._kind = v; return q; };
       q.limit = () => Promise.resolve({ data: [], error: null });
       q.then = (res) => res({ data: [], error: null });
@@ -335,6 +338,7 @@ const PRODUCTS = [
   ] };
   const tools = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'managerSkippedAdvice', 'index.html'),
     extractFunction(src, 'buyHoldsStanding', 'index.html'),
     extractFunction(src, 'buyHoldFor', 'index.html'),
     extractFunction(src, 'buyKeyLabel', 'index.html'),
@@ -356,6 +360,8 @@ const PRODUCTS = [
     daysSinceDate: () => 1, apRound: (n) => Math.round(Number(n) || 0), fmtUGX: (n) => String(n),
     sb: { from: () => { const q = { _kind: null };
       q.select = () => q; q.order = () => q; q.in = () => q;
+      /* The date window managerSkippedAdvice reads over. */
+      q.gte = () => q; q.lte = () => q;
       q.eq = (c, v) => { if (c === 'kind') q._kind = v; return q; };
       q.limit = () => Promise.resolve({ data: rows[q._kind] || [], error: null });
       q.then = (res) => res({ data: rows[q._kind] || [], error: null });

@@ -8671,6 +8671,9 @@
       <div id="managerQuestionsWrap"></div>
       <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
+      <!-- Advice skipped again and again: the manager is told to stop
+           proposing it, and the owner is told that it has. -->
+      <div id="managerPassedWrap"></div>
       <div id="managerPlaysWrap"></div>
       <div id="managerPoliciesWrap"></div>
     </section>
@@ -54509,7 +54512,39 @@ async function managerSaveMeeting(plan){
     status: 'held',
   }).select('id').single();
   if(ins.error || !ins.data){ console.warn('Manager: meeting not saved:', ins.error && ins.error.message); return null; }
-  const rows = (plan.moves||[]).slice(0, 5).map(m=> ({
+  const kept = (plan.moves||[]).slice(0, 5);
+  /* WHICH MOVE WAITS ON WHICH. `unlocks` has always said WHY one move
+     helps another, in the model's own words, and nothing ever said
+     WHICH -- so a plan was a list where the manager meant a sequence.
+     `after` is the 1-based position of the move this one waits on,
+     inside this plan, resolved here and never trusted raw.
+
+     Refused rather than repaired: a position outside the plan, a move
+     waiting on itself, or a ring of moves each waiting on the next.
+     A dependency the screen could not honour is worse than none --
+     it would draw an order that does not exist. */
+  const after = kept.map(m=>{
+    const n = Number(m && m.after);
+    if(!Number.isInteger(n) || n < 1 || n > kept.length) return null;
+    const i = n - 1;
+    return i;
+  });
+  after.forEach((from, i)=>{
+    if(from == null) return;
+    /* Walk the chain: a cycle would loop the renderer for ever, and
+       every valid chain is at most five long. A move waiting on ITSELF
+       is the shortest cycle there is and needs no separate guard --
+       one was written here and no test could tell it from this walk,
+       which is a good enough reason for it not to exist. */
+    const seen = new Set([i]);
+    let at = from, steps = 0;
+    while(at != null && steps++ <= kept.length){
+      if(seen.has(at)){ after[i] = null; return; }
+      seen.add(at);
+      at = after[at];
+    }
+  });
+  const rows = kept.map((m, mi)=> ({
     shop_id: currentShopId, kind: 'move', meeting_id: ins.data.id, date: todayISO(),
     body: { title: String(m.title||'').slice(0, 200), why: String(m.why||'').slice(0, 500),
       worth: apRound(m.worth||0), door: String(m.door||''), mkind: String(m.kind||'other'),
@@ -54522,6 +54557,10 @@ async function managerSaveMeeting(plan){
       worthBasis: MANAGER_WORTH_BASES[String(m.worth_basis||'')] ? String(m.worth_basis) : null,
       lever: MANAGER_LEVERS.includes(String(m.lever||'')) ? String(m.lever) : null,
       unlocks: String(m.unlocks||'').slice(0, 200) || null,
+      /* Stored as the position within this meeting's own plan. The move
+         rows go in as one insert in plan order, so id order IS plan
+         order, and every reader sorts by id before using this. */
+      ...(after[mi] != null ? { after: after[mi] } : {}),
       /* Only ids, only known keys -- the block is model output and is
          stored as data, never trusted as structure. */
       subject: {
@@ -54743,6 +54782,78 @@ function managerReviewBrief(row){
   return { held_on: row.date, days_ago: Math.max(0, daysSinceDate(row.date)),
     verdict: String(b.verdict||''),
     lessons: (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> String(x||'').trim()).slice(0, 3) };
+}
+
+/* ADVICE THIS SHOP HAS DECIDED AGAINST.
+
+   The rulebook has said since the day the Manager was built that
+   "advice the owner keeps skipping is advice to rethink, not repeat",
+   and nothing ever computed it: do_not_repeat carried questions, plays
+   and held lines and not one move, so a move skipped on Monday with a
+   typed reason came back the following Monday unchanged and the reason
+   went unread.
+
+   WHAT MAKES TWO MOVES THE SAME MOVE. The kind and the id of the thing
+   it is about -- an identity that is a customer number, not a turn of
+   phrase, and one that only became computable when the reading started
+   handing back ids. Where a move carried no subject the title has to
+   stand in, and that is a weaker claim: it is reported as `by_wording`
+   so the mind knows which kind of match it has been given.
+
+   TWICE, NOT ONCE. A move skipped once is usually timing -- somebody
+   was travelling, a supplier was shut. Skipped twice with nothing done
+   in between is a decision. And a fingerprint the owner has EVER
+   marked done is not on this list at all: they came round, and telling
+   the manager otherwise would be telling it something untrue. */
+async function managerSkippedAdvice(todayISO_){
+  /* The window and the threshold leave WITH the rows, so the sentence
+     the screen writes about this list and the list itself are drawn
+     from one reading and cannot come to disagree. */
+  const days = 35, times = 2;
+  const empty = { rows: [], days, times };
+  if(!managerNotesTable) return empty;
+  const today = todayISO_ || todayISO();
+  const r = await sb.from('manager_notes').select('date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'move')
+    .gte('date', anShiftDate(today, -days)).lte('date', today);
+  if(r.error){ console.warn('Manager: skipped advice not read:', r.error.message); return empty; }
+  const fingerprint = (b)=>{
+    const subj = b.subject || {};
+    const id = subj.customerId != null ? subj.customerId
+      : subj.key != null ? subj.key
+      : subj.orderId != null ? subj.orderId
+      : subj.supplierId != null ? subj.supplierId : null;
+    return id != null
+      ? { key: String(b.mkind || 'other') + '|' + String(id), byWording: false }
+      : { key: String(b.mkind || 'other') + '|~' + String(b.title || '').trim().toLowerCase(), byWording: true };
+  };
+  const by = new Map();
+  (r.data || []).forEach(row=>{
+    const b = row.body || {};
+    if(!String(b.title || '').trim()) return;
+    const fp = fingerprint(b);
+    const cur = by.get(fp.key) || { title: b.title, byWording: fp.byWording,
+      skipped: 0, done: 0, reasons: [], lastOn: '' };
+    if(row.status === 'skipped'){
+      cur.skipped += 1;
+      const why = String(b.skipReason || '').trim();
+      /* The owner's own words, and only once each: the same reason
+         typed twice is one reason, and a list that repeats it reads as
+         two objections where there is one. */
+      if(why && !cur.reasons.includes(why)) cur.reasons.push(why);
+    } else if(row.status === 'done') cur.done += 1;
+    if(String(row.date || '') > cur.lastOn){ cur.lastOn = String(row.date || ''); cur.title = b.title; }
+    by.set(fp.key, cur);
+  });
+  const rows = [...by.values()]
+    .filter(x=> x.skipped >= times && x.done === 0)
+    .sort((a, b)=> (b.skipped - a.skipped) || String(b.lastOn).localeCompare(String(a.lastOn)))
+    .map(x=> ({ title: x.title, times: x.skipped, last_on: x.lastOn,
+      reasons: x.reasons.slice(0, 3),
+      /* A match on wording is a weaker claim than a match on an id, and
+         the mind is told which it has rather than left to assume. */
+      ...(x.byWording ? { matched_by_wording: true } : {}) }));
+  return { rows, days, times };
 }
 
 /* THE SHOP'S OWN STRATEGY BOOK, read once for the screen and the mind
@@ -54997,8 +55108,15 @@ async function managerLoadState(){
   const meetings = meetR.data || [];
   const ids = meetings.map(m=> m.id);
   const movesR = ids.length
+    /* ORDERED BY ID, which IS the plan's own order: the move rows go in
+       as one insert in the order the manager ranked them. Left
+       unordered, the cards were drawn in whatever order the database
+       happened to return -- so "ranked by the money on them" was a
+       claim the screen did not keep, and `after` could not be resolved
+       by position at all. */
     ? await sb.from('manager_notes').select('id, meeting_id, date, body, status')
         .eq('shop_id', currentShopId).eq('kind', 'move').in('meeting_id', ids)
+        .order('id', { ascending: true })
     : { data: [] };
   const movesBy = {};
   ((movesR && movesR.data) || []).forEach(x=>{ (movesBy[x.meeting_id] = movesBy[x.meeting_id] || []).push(x); });
@@ -55187,12 +55305,42 @@ async function renderManagerPace(){
   el.querySelectorAll('.mgr-pace-open').forEach(b=> b.addEventListener('click', ()=> goToTab('manager')));
 }
 
-function mgrMoveView(row, idx){
+/* THE PLAN IN THE ORDER THE MANAGER MEANT IT. Rows arrive in plan
+   order (by id), and a move that waits on another is drawn after it.
+   A stable pass, never a re-ranking: the manager ranked these by what
+   the action changes this week and that ranking is not the screen's to
+   overturn -- all this does is refuse to draw a move above the one it
+   is waiting on. */
+function mgrMoveOrder(rows){
+  const out = [];
+  const placed = new Set();
+  const place = (i, guard)=>{
+    if(placed.has(i) || guard.has(i)) return;
+    guard.add(i);
+    const at = ((rows[i] || {}).body || {}).after;
+    if(Number.isInteger(at) && at >= 0 && at < rows.length && at !== i) place(at, guard);
+    if(placed.has(i)) return;
+    placed.add(i); out.push(rows[i]);
+  };
+  rows.forEach((_, i)=> place(i, new Set()));
+  return out;
+}
+
+function mgrMoveView(row, idx, all){
   const b = row.body || {};
   const out = deriveMoveOutcome(row);
   const door = MANAGER_DOORS[b.door] || null;
   const open = out.status === 'open';
   const stateBits = [];
+  /* WHAT THIS ONE WAITS ON, while it is still waiting. Said and never
+     enforced: the owner may do the day in any order they like, and a
+     Done button the app switched off would be the app deciding
+     something that is theirs to decide. */
+  const rows = Array.isArray(all) ? all : [];
+  const at = b.after;
+  const blocker = (Number.isInteger(at) && rows[at]) ? rows[at] : null;
+  if(blocker && blocker.status !== 'done')
+    stateBits.push('waiting on: ' + esc(((blocker.body||{}).title) || 'an earlier move'));
   if(out.status === 'done') stateBits.push('done');
   if(out.status === 'skipped') stateBits.push('skipped' + (b.skipReason ? ` — ${esc(b.skipReason)}` : ''));
   if(out.derived) stateBits.push(esc(out.derived));
@@ -55258,6 +55406,7 @@ function renderManager(){
   const qWrap = document.getElementById('managerQuestionsWrap');
   const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
+  const passed = document.getElementById('managerPassedWrap');
 
   /* THE PLAYBOOK -- the strategies the shop is actually working, beside
      the standing rules because they are cousins: a rule the app watches
@@ -55351,7 +55500,10 @@ function renderManager(){
     </div>`;
 
   const renderPlanCards = (title, plan, rows)=>{
-    const cards = rows.map((r, i)=> mgrMoveView(r, i)).join('');
+    /* `after` is a position in the plan, so every card is handed the
+       plan in ITS OWN order -- not the drawing order, which the
+       sequence pass may have changed. */
+    const cards = mgrMoveOrder(rows).map((r, i)=> mgrMoveView(r, i, rows)).join('');
     return `<div class="mgr-sec-title">${esc(title)}</div>`
       + (plan && MANAGER_OBJECTIVES[plan.objective]
         ? `<div class="mgr-objective"><b>${esc(MANAGER_OBJECTIVES[plan.objective])}.</b> ${esc(plan.objectiveWhy || '')}</div>` : '')
@@ -55389,18 +55541,27 @@ function renderManager(){
       const rows = (managerToday.plan.moves||[]).map((m, i)=> ({
         id: 'mem:' + i, date: managerToday.date, status: m._status || 'open',
         body: { title: m.title, why: m.why, worth: m.worth, door: m.door, mkind: m.kind,
-          subject: m.subject || {}, skipReason: m._skipReason },
+          subject: m.subject || {}, skipReason: m._skipReason,
+          /* Same position, same rule as the saved path: 1-based from the
+             model, 0-based here, and nothing that points outside the
+             plan or at itself survives. */
+          ...(Number.isInteger(Number(m.after)) && Number(m.after) >= 1
+            && Number(m.after) <= (managerToday.plan.moves||[]).length
+            && Number(m.after) - 1 !== i ? { after: Number(m.after) - 1 } : {}) },
       }));
       planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
       wire(planWrap);
     } else planWrap.innerHTML = '';
     acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = '';
+    /* Nothing is remembered without the journal, so nothing can have
+       been passed on twice — the mirror stays empty rather than stale. */
+    if(passed) passed.innerHTML = '';
     return;
   }
 
   /* With memory: the shells now, the journal when it answers. */
   managerLoadState().then(st=>{
-    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; hist.innerHTML =
+    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; if(passed) passed.innerHTML = ''; hist.innerHTML =
       `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
     /* The offer says how much evidence a review would stand on, before
        the owner spends credit on one. */
@@ -55530,6 +55691,23 @@ function renderManager(){
     hist.innerHTML = histRows.length
       ? `<div class="mgr-sec-title">Earlier meetings</div>` + histRows.map(r=> r.html).join('')
       : '';
+    /* WHAT THE MANAGER HAS STOPPED PROPOSING, said to the owner.
+       The mind is told to leave this advice alone; a shop where advice
+       quietly disappears and nobody is told is a shop where the app
+       decided something on its own. No buttons — it is a mirror, and
+       the way back is simply to do one of them. */
+    managerSkippedAdvice(todayISO()).then(pa=>{
+      if(!passed) return;
+      passed.innerHTML = pa.rows.length
+        ? `<div class="mgr-sec-title">Advice you have passed on</div>
+          <div class="mgr-why" style="margin-bottom:6px;">Skipped ${pa.times} times or more in the last
+            ${pa.days} days and never done, so the manager has been told to stop proposing ${
+            pa.rows.length === 1 ? 'it' : 'them'} and think of something else. Doing one is all it takes to bring it back.</div>
+          ${pa.rows.map(p=> `<div class="mgr-hist-row">
+            <span>${esc(p.title)}${p.reasons.length ? ` — <i>${esc(p.reasons.join('; '))}</i>` : ''}</span>
+            <span>passed on ${p.times} times</span></div>`).join('')}`
+        : '';
+    });
   });
 }
 
@@ -61462,6 +61640,7 @@ const ASSISTANT_TOOLS = {
     const movesR = ids.length
       ? await sb.from('manager_notes').select('id, meeting_id, date, body, status')
           .eq('shop_id', currentShopId).eq('kind', 'move').in('meeting_id', ids)
+          .order('id', { ascending: true })
       : { data: [] };
     if(movesR.error) return { error: movesR.error.message };
     /* What the Manager asked the shop to find out, and what came back.
@@ -61584,11 +61763,18 @@ const ASSISTANT_TOOLS = {
     if(lastReview && isNew(lastReview.held_on)) worth.push({ kind: 'new_review',
       verdict: lastReview.verdict, lessons: lastReview.lessons });
 
+    /* THE FIFTH KEY, and the one the rulebook has demanded since the
+       day it was written. Names ALONE would be a ban with no argument
+       behind it, and a mind told only "don't" proposes the same thing
+       wearing a different hat -- so the owner's own reasons travel
+       with each, because the rule says RETHINK, not avoid. */
+    const passedOn = await managerSkippedAdvice(todayISO());
     const doNot = {
       ...(open.length ? { open_questions: open.slice(0, 8).map(q=> q.asked) } : {}),
       ...((book.running||[]).length ? { plays_running: book.running.slice(0, 8).map(pl=> pl.name) } : {}),
       ...((book.dropped||[]).length ? { plays_dropped: book.dropped.slice(0, 8).map(pl=> pl.name) } : {}),
       ...(held.length ? { lines_held: held.slice(0, 6).map(h=> h.name) } : {}),
+      ...(passedOn.rows.length ? { advice_you_keep_passing_on: passedOn.rows.slice(0, 6) } : {}),
     };
 
     return {

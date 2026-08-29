@@ -133,6 +133,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   };
   const scope = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'managerSkippedAdvice', 'index.html'),
     extractFunction(src, 'buyHoldsStanding', 'index.html'),
     extractFunction(src, 'buyHoldFor', 'index.html'),
     extractFunction(src, 'buyKeyLabel', 'index.html'),
@@ -314,12 +315,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     const q = () => {
       const o = { _kind: null };
       o.select = () => o; o.order = () => o; o.limit = () => o; o.in = () => o;
+      /* The date window managerSkippedAdvice reads over. */
+      o.gte = () => o; o.lte = () => o;
       o.eq = (c, v) => { if (c === 'kind') o._kind = v; return o; };
       o.then = (res) => res({ data: rows[o._kind] || [], error: null });
       return o;
     };
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
       extractFunction(src, 'buyHoldsStanding', 'index.html'),
       extractFunction(src, 'buyHoldFor', 'index.html'),
       extractFunction(src, 'buyKeyLabel', 'index.html'),

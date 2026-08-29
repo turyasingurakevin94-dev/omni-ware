@@ -166,6 +166,7 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
+      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
