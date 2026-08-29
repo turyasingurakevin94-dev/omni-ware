@@ -87,7 +87,7 @@ const MANAGER_EXTENSION = [
   '',
   'NAME THE WEEK\u2019S OBJECTIVE FIRST, and defend it in one sentence from the figures: cash (cover is thin \u2014 free money and stop spend), margin (sales hold but too little sticks), growth (cash and margin are sound \u2014 win customers, lines and turns), or recovery (something is broken and must be fixed before anything else). Read cash cover, the 30-day margin, what is going quiet and what is running out before you choose. EVERY MOVE MUST SERVE THAT OBJECTIVE OR BE DROPPED. The owner can overrule it; when they do, re-plan against theirs without argument.',
   '',
-  'Compose the day: pick AT MOST FIVE moves. Rank them by WHAT THE ACTION CHANGES THIS WEEK, never by the biggest number standing near it \u2014 a 3,000,000 debt balance is not three times better than a 1,000,000 saving, it is a different quantity over a different span. So every move states its worth AND its worth_basis: cash_freed (money already yours, being released), profit_30d (what the line earned in the last 30 days), loss_avoided, cost_saved, or none. TWO MOVES MAY NEVER CLAIM THE SAME SHILLINGS: if one move buys a line and another sets a standing rule on that same line, only one carries the figure and the other carries the loss it prevents, or 0 with the reason said. Each move also names the lever it pulls \u2014 collect, sell, buy, price, cost or system \u2014 and AT MOST TWO MOVES MAY SHARE ONE LEVER: five collections is one move written five times, not a plan. If the figures truly support only one lever, say so plainly instead of padding. Where a move makes another possible, name it in unlocks (\'frees the cash the two stocking buy-ins need\'). Each move in one or two sentences: what to do, the evidence with its figures, and what it is worth. Name ONE thing you considered and rejected and why — a plan with nothing rejected was not thought about. End with the single thing that matters most today, in one sentence. On a thin book — few records, little history — say so plainly and make the best move the one that improves the records themselves; never pad thin evidence into confident advice.',
+  'Compose the day: pick AT MOST FIVE moves. Rank them by WHAT THE ACTION CHANGES THIS WEEK, never by the biggest number standing near it \u2014 a 3,000,000 debt balance is not three times better than a 1,000,000 saving, it is a different quantity over a different span. So every move states its worth AND its worth_basis: cash_freed (money already yours, being released), profit_30d (what the line earned in the last 30 days), loss_avoided, cost_saved, or none. TWO MOVES MAY NEVER CLAIM THE SAME SHILLINGS: if one move buys a line and another sets a standing rule on that same line, only one carries the figure and the other carries the loss it prevents, or 0 with the reason said. Each move also names the lever it pulls \u2014 collect, sell, buy, price, cost or system \u2014 and AT MOST TWO MOVES MAY SHARE ONE LEVER: five collections is one move written five times, not a plan. If the figures truly support only one lever, say so plainly instead of padding. Where a move makes another possible, name it in unlocks (\'frees the cash the two stocking buy-ins need\'). Each move in one or two sentences: what to do, the evidence with its figures, and what it is worth. KEEP THE PROSE SHORT \u2014 the cards on the Manager screen carry every move in full, so writing each one out at length and then again inside the block spends the answer twice and risks running out mid-sentence. A few tight sentences of argument, then the block. If the answer is running long, shorten the PROSE: the block is the part that must never be lost. Name ONE thing you considered and rejected and why — a plan with nothing rejected was not thought about. End with the single thing that matters most today, in one sentence. On a thin book — few records, little history — say so plainly and make the best move the one that improves the records themselves; never pad thin evidence into confident advice.',
   '',
   'Never forecast: argue only from what is recorded — "at the last 30 days\u2019 rate this runs out in 6 days" is arithmetic on the books; "sales will grow" is a guess and forbidden. You move nothing and send nothing — the owner acts. Never claim an action happened, and never present a move as already done.',
   '',
@@ -129,7 +129,7 @@ const TOOLS = [
   {
     name: 'customer_statement',
     description: 'One customer’s full position: balance, open invoices oldest first, and their recent debt history (charges and payments, dated). Use for "what does X owe", "read me X’s history", and follow-up questions about their statement.',
-    input_schema: { type: 'object', properties: { customer_id: { type: 'number' } }, required: ['customer_id'], additionalProperties: false },
+    input_schema: { type: 'object', properties: { customer_id: { type: ['string', 'number'], description: 'Exactly as find_customer or list_debtors returned it — ids may be text like C106.' } }, required: ['customer_id'], additionalProperties: false },
   },
   {
     name: 'list_debtors',
@@ -159,7 +159,7 @@ const TOOLS = [
   {
     name: 'recent_invoices',
     description: 'Recent sales invoices, newest first, optionally for one customer. Shows number, date, customer, total, paid and balance.',
-    input_schema: { type: 'object', properties: { customer_id: { type: 'number' }, limit: { type: 'integer', minimum: 1, maximum: 10 } }, required: [], additionalProperties: false },
+    input_schema: { type: 'object', properties: { customer_id: { type: ['string', 'number'], description: 'Exactly as find_customer or list_debtors returned it — ids may be text like C106.' }, limit: { type: 'integer', minimum: 1, maximum: 10 } }, required: [], additionalProperties: false },
   },
   {
     name: 'financial_summary',
@@ -234,7 +234,7 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        customer_id: { type: 'number' }, amount: { type: 'number', exclusiveMinimum: 0 },
+        customer_id: { type: ['string', 'number'], description: 'Exactly as find_customer or list_debtors returned it — ids may be text like C106.' }, amount: { type: 'number', exclusiveMinimum: 0 },
         account: ACCOUNT_ENUM, note: { type: 'string' }, date: { type: 'string' },
       },
       required: ['customer_id', 'amount', 'account'], additionalProperties: false,

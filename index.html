@@ -51791,6 +51791,33 @@ async function managerLoadState(){
   };
 }
 
+/* The plan this app has already journalled. Identity, not a flag: a
+   plan is committed exactly once no matter how many turns it took to
+   arrive, and a re-run cannot double-write the meeting. */
+let managerCommittedPlan = null;
+
+/* A MEETING IS COMMITTED WHEN ITS PLAN ARRIVES, not when the first turn
+   ends. Live: a meeting ran past max_tokens, the owner said "continue"
+   twice, the manager finished with five moves, two targets and three
+   questions -- and none of them existed. The commit sat in the finally
+   of the FIRST apRunLoop, where apLastPlan was still null; the turns
+   that carried the plan went through apSend, and nothing there saved
+   anything. The whole meeting was lost while its author announced it.
+
+   So the commit belongs to the plan. Every turn taken in manager mode
+   calls this, and the one that finally carries a plan writes it. */
+async function managerCommitPlan(){
+  if(!apLastPlan || managerCommittedPlan === apLastPlan) return false;
+  if(!Array.isArray(apLastPlan.moves) || !apLastPlan.moves.length) return false;
+  managerCommittedPlan = apLastPlan;
+  managerToday = { plan: apLastPlan, date: todayISO() };
+  lsSet(MANAGER_MEETING_KEY, todayISO());
+  await managerSaveMeeting(apLastPlan);
+  renderManager();
+  renderManagerCard();
+  return true;
+}
+
 /* ---- the meeting itself ---- */
 async function runManagerMeeting(){
   if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
@@ -51806,6 +51833,7 @@ async function runManagerMeeting(){
   apMode = 'manager';
   assistantThread = [];
   apLastPlan = null;
+  managerCommittedPlan = null;
   renderManager();
   apOpenPanel();
   assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the morning meeting.' });
@@ -51814,14 +51842,13 @@ async function runManagerMeeting(){
     await apRunLoop();
   } finally {
     managerMeetingRunning = false;
-    if(apLastPlan && Array.isArray(apLastPlan.moves) && apLastPlan.moves.length){
-      managerToday = { plan: apLastPlan, date: todayISO() };
-      lsSet(MANAGER_MEETING_KEY, todayISO());
-      await managerSaveMeeting(apLastPlan);
-    } else if(!apLastPlan){
+    const committed = await managerCommitPlan();
+    if(!committed && !apLastPlan && !apWasCutOff){
       /* The meeting spoke but the plan sheet never arrived, or arrived
          unreadable. The prose in the panel still stands -- say so
-         rather than showing an empty screen over a full transcript. */
+         rather than showing an empty screen over a full transcript.
+         NOT said when the answer was merely cut off: that plan is still
+         coming, and the panel has already offered "continue". */
       toast('The meeting is in the assistant panel — no plan sheet came back to turn into cards', 6000);
     }
     renderManager();
@@ -56868,7 +56895,18 @@ function apMonthRange(from, to){
   const today = todayISO();
   return { from: from || (today.slice(0,7) + '-01'), to: to || today };
 }
-function apCustomerById(id){ return (data.customers||[]).find(c=> c.id === id) || null; }
+/* Ids here are minted as C001-style strings (issueEntityId) while the
+   oldest rows carry plain numbers, so the ONE thing this must not do is
+   care which. Strict equality missed every prefixed id -- live, the
+   Manager reported "the statement tool rejects his id, C106" and it was
+   right: the statement, the invoice list and RECORDING A PAYMENT were
+   all shut to any customer created since ids gained their prefix. Same
+   tolerance deriveMoveOutcome already applies to the same ids. */
+function apCustomerById(id){
+  if(id == null) return null;
+  const want = String(id);
+  return (data.customers||[]).find(c=> String(c.id) === want) || null;
+}
 
 /* ---- The day an assistant-recorded movement actually happened --------
 
@@ -57297,7 +57335,8 @@ const ASSISTANT_TOOLS = {
 
   customer_statement: { confirm: false, run(input){
     const c = apCustomerById(input.customer_id);
-    if(!c) throw new Error('No customer with that id — use find_customer first.');
+    if(!c) throw new Error('No customer with the id ' + JSON.stringify(input.customer_id)
+      + ' — use find_customer and pass the id exactly as it comes back.');
     const open = customerOutstandingInvoices(c.id).slice(0,10).map(q=>({
       invoice: invoiceNumberLabel(q), date: q.invoicedAt || q.date,
       total: apRound(savedQuoteTotal(q)), paid: apRound(q.amountPaid),
@@ -58000,7 +58039,8 @@ const ASSISTANT_TOOLS = {
     },
     run(input){
       const c = apCustomerById(input.customer_id);
-      if(!c) throw new Error('No customer with that id — it may have changed; use find_customer again.');
+      if(!c) throw new Error('No customer with the id ' + JSON.stringify(input.customer_id)
+        + ' — it may have changed; use find_customer again and pass the id exactly as it comes back.');
       const amount = apRound(input.amount);
       if(amount<=0) throw new Error('The amount must be above zero.');
       // Oldest open invoices first; the remainder reduces the general
@@ -58838,7 +58878,8 @@ async function apRunLoop(){
              the model its answer was cut off, so it resumes smaller
              instead of repeating -- no burnt round re-explaining. */
           apWasCutOff = true;
-          apRenderError('I had to stop mid-answer — that was too much for one go. Say "continue" and I will pick up where I stopped, in smaller pieces.');
+          apRenderError('I had to stop mid-answer — that was too much for one go. Say "continue" and I will pick up where I stopped, in smaller pieces.'
+            + (apMode === 'manager' ? ' The plan is not lost: it is kept the moment the meeting finishes.' : ''));
         } else if(!spokeText){
           apRenderError('I got an empty answer back — say that again.');
         }
@@ -58885,6 +58926,9 @@ async function apRunLoop(){
   } finally {
     assistantBusy = false;
     document.getElementById('apSendBtn').disabled = false;
+    /* A plan that arrives two "continue"s after the meeting began is
+       the same plan: whichever turn carries it, it is journalled. */
+    if(apMode === 'manager'){ try{ await managerCommitPlan(); }catch(e){ console.warn('Manager: plan not committed:', e); } }
     apTrimThread();
     apSetState(apVoiceMode ? 'speaking' : null);
     if(apVoiceMode && finalText){

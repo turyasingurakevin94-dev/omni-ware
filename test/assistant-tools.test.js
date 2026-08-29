@@ -92,6 +92,12 @@ const scope = compileScope([
   extractDeclaration(src, 'apRound', 'index.html'),
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
+  /* Explicit because it is a real dependency of every money-moving tool.
+     It used to arrive by accident: apCustomerById was a one-liner and
+     the extractor swept the next 29 lines in with it, this function
+     among them. Widening apCustomerById removed the accident and left
+     the dependency standing in the open, where it belongs. */
+  extractFunction(src, 'apMovementDate', 'index.html'),
   extractFunction(src, 'apCustomerByName', 'index.html'),
   extractFunction(src, 'apPriceBasis', 'index.html'),
   extractFunction(src, 'apRuleWords', 'index.html'),
@@ -551,8 +557,30 @@ const run = (name, input) => T[name].run(input || {});
 
   let threw = false;
   try{ run('record_customer_payment', { customer_id: 99, amount: 1000, account: 'cash' }); }
-  catch(e){ threw = /find_customer/.test(e.message); }
-  t.check(threw, 'a vanished customer id fails with what to do — re-resolve — not a silent zero');
+  catch(e){ threw = /find_customer/.test(e.message) && /99/.test(e.message); }
+  t.check(threw,
+    'a vanished customer id fails with what to do — re-resolve — AND names the id it was handed, so a mismatch diagnoses itself');
+
+  /* AN ID IS WHATEVER THE BOOKS MINTED. Ids are issued as C001-style
+     strings (issueEntityId) while the oldest rows are plain numbers, and
+     the schemas used to demand a number: live, the Manager reported "the
+     statement tool rejects his id, C106" and it was right — the
+     statement, the invoice list and RECORDING A PAYMENT were shut to
+     every customer created since ids gained their prefix. */
+  data.customers.push({ id: 'C106', name: 'Kasozi Traders', phone: '', debt: 250000, debtLog: [] });
+  const byText = run('customer_statement', { customer_id: 'C106' });
+  t.check(byText && /Kasozi/.test(JSON.stringify(byText)),
+    'a C###-style id opens its own statement');
+  const paidText = run('record_customer_payment', { customer_id: 'C106', amount: 50000, account: 'cash' });
+  t.check(paidText.done === true && data.customers[1].debt === 200000,
+    `and can be PAID — the defect shut the money path, not just a report (got ${data.customers[1].debt})`);
+  const byNum = run('customer_statement', { customer_id: 1 });
+  t.check(byNum && /Mulongo/.test(JSON.stringify(byNum)),
+    'while a numeric id from the older rows still resolves — the fix widens, it never swaps one for the other');
+  const asText = run('customer_statement', { customer_id: '1' });
+  t.check(asText && /Mulongo/.test(JSON.stringify(asText)),
+    'and the same id sent as text finds the same customer, since a model writes ids as words');
+  data.customers.pop();
 }
 
 /* ---------- 5. paying a supplier: clamped, oldest first, saved -------- */

@@ -154,6 +154,20 @@ const pkg = read('package.json');
     'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data',
     'standing_policies']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
+  /* AN ID IS WHATEVER THE BOOKS MINTED. Customer ids are issued as
+     C001-style strings (issueEntityId) while the oldest rows are plain
+     numbers. Declaring customer_id a number shut the statement, the
+     invoice list and RECORDING A PAYMENT to every customer created
+     since ids gained their prefix — reported live by the Manager
+     itself: "the statement tool rejects his id, C106". The executors
+     cannot catch this; only the schema can, which is why it is
+     asserted here. */
+  t.check(!/customer_id: \{ type: 'number' \}/.test(src),
+    'no tool demands a NUMBER for a customer id — the books mint text ids like C106');
+  t.check((src.match(/customer_id: \{ type: \['string', 'number'\]/g) || []).length === 3,
+    'all three customer-id tools take the id exactly as the finder returned it, text or number');
+  t.check(/product_id: \{ type: 'string' \}/.test(src) && /supplier_id: \{ type: 'string' \}/.test(src),
+    'while product and supplier ids stay text, as they always were');
   t.check((src.match(/additionalProperties: false/g) || []).length >= 30,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');
   t.check(/maxItems: 20/.test(src),
