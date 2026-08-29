@@ -94,6 +94,7 @@ try {
   scope = compileScope([
     'debtChaseRows', 'debtChaseInvoices', 'debtChaseMessage',
     'markDebtChased', 'unmarkDebtChased', 'pruneDebtChases',
+    'promisesFor', 'promiseState', 'promiseLatest', 'promisesBroken',
     'debAllRows', 'customerOpenCharges', 'customerOldestOpenChargeDate',
     'customerDebtProgress', 'customerDebtDrift', 'customerLedgerTotal', 'customerOrdersFor',
     'invoiceBalanceDue', 'invoiceNumberLabel', 'agingBandFor', 'agingDaysLabel',

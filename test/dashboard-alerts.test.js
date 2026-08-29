@@ -40,10 +40,15 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const NAMES = ['dashAlerts', 'dashBandFor', 'agingDaysLabel'];
+/* dashAlerts reads a debtor's promises, so the promise model comes into
+   the scope whole rather than as a stub -- a stub would let the alert
+   and the chase queue disagree about what "broken" means. */
+const PROMISE_NAMES = ['promisesFor', 'promiseState', 'promiseLatest'];
+const promiseData = { paymentPromises: [], customers: [] };
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
+    ...NAMES.concat(PROMISE_NAMES).map((n) => extractFunction(src, n, 'index.html')),
     extractDeclaration(src, 'DASH_URGENT_DAYS', 'index.html'),
     extractDeclaration(src, 'DASH_SOON_DAYS', 'index.html'),
     extractDeclaration(src, 'DASH_BANDS', 'index.html'),
@@ -54,6 +59,8 @@ try {
     fmtUGX: (n) => `${Math.round(n).toLocaleString('en-US')} UGX`,
     fmtShortDate: (s) => String(s),
     esc: (s) => String(s),
+    todayISO: () => '2026-08-29',
+    data: promiseData,
   }, [...NAMES, 'readBands']);
 } catch (e) { err = e; }
 t.check(!!scope, `the alert engine compiles${err ? ` (${err.message})` : ''}`);
@@ -224,6 +231,51 @@ if (scope) {
   const undated = scope.dashAlerts(CTX({ debtors: [{ name: 'Somebody', debt: 500000, ageDays: -1 }] }));
   t.check(/none of it with a date behind it/.test(byId(undated, 'debt:all').detail),
     'while debt nothing dates says so rather than claiming an age');
+}
+
+/* ---------- 6b. a broken promise is a deadline that has passed ------- *
+ * Old debt has no date, so it sits in `chronic` and rightly loses to
+ * things with days on them. A customer who NAMED a day and let it go by
+ * is news, dated today -- and the whole point of writing the promise
+ * down is that the app can now tell the two apart.
+ */
+if (scope) {
+  const debtors = [{ id: 'C1', name: 'Mukisa Hardware', debt: 4025600, ageDays: 84 }];
+  promiseData.customers = [{ id: 'C1', name: 'Mukisa Hardware', debt: 4025600, debtLog: [] }];
+
+  // Nothing said: unchanged from section 6.
+  promiseData.paymentPromises = [];
+  eq(byId(scope.dashAlerts(CTX({ debtors })), 'debt:all').dueDays, null,
+    'debt nobody has given their word on still carries no deadline');
+
+  // They said the 20th; it is the 29th.
+  promiseData.paymentPromises = [{ id: 1, customerId: 'C1', promisedOn: '2026-08-20',
+    madeOn: '2026-08-15', amount: null }];
+  const broke = byId(scope.dashAlerts(CTX({ debtors })), 'debt:all');
+  eq(broke.dueDays, 0, 'a day that has gone is a deadline of today, not an absent one');
+  eq(broke.band, 'now', 'so it lands in front of the owner instead of in the chronic pile');
+  t.check(/promised for a day that has gone/.test(broke.title),
+    'and the card says what actually happened, not just that money is owed');
+  t.check(/Mukisa Hardware said 2026-08-20/.test(broke.detail),
+    'naming who said it and when -- the two facts a chase needs');
+
+  // The same promise, still ahead of them.
+  promiseData.paymentPromises = [{ id: 1, customerId: 'C1', promisedOn: '2026-09-05',
+    madeOn: '2026-08-15', amount: null }];
+  const waiting = byId(scope.dashAlerts(CTX({ debtors })), 'debt:all');
+  eq(waiting.dueDays, null, 'a promise whose day has not come raises no alarm at all');
+  t.check(/is sitting with customers/.test(waiting.title),
+    'nobody is called a liar before the day they named');
+
+  // Paid what they said, on time.
+  promiseData.paymentPromises = [{ id: 1, customerId: 'C1', promisedOn: '2026-08-20',
+    madeOn: '2026-08-15', amount: 4025600 }];
+  promiseData.customers = [{ id: 'C1', name: 'Mukisa Hardware', debt: 4025600,
+    debtLog: [{ type: 'payment', date: '2026-08-19', amount: 4025600 }] }];
+  eq(byId(scope.dashAlerts(CTX({ debtors })), 'debt:all').dueDays, null,
+    'and a promise KEPT is not a broken one, even while a later balance is outstanding');
+
+  promiseData.paymentPromises = []; promiseData.customers = [];
 }
 
 /* ---------- 7. the join that priced every stock-out at zero ---------- *

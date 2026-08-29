@@ -124,6 +124,22 @@ const loopBlock = allSql.slice(allSql.indexOf("foreach t in array array[\n    's
     'deleting stays owner-only, exactly as 0058 left it');
   t.check(!/drop policy "owner only deletes"/.test(lock),
     'and 0083 does not disturb it');
+
+  /* A TABLE ADDED AFTER 0083 CARRIES BOTH LOCKS OR NEITHER IS WORTH
+     HAVING. 0058 and 0083 each ran a loop over the tables that existed
+     when they were pasted; everything since declares its own pair in
+     its own migration. Section 2 above derives the WRITE lock that way,
+     which meant a new table could ship write-locked and still let any
+     member delete its rows -- caught by nothing here, because the delete
+     rule was only ever read out of 0058. So: whoever declares one
+     declares the other. */
+  const ownWrites = [...allSql.matchAll(/create policy "owner writes only" on ([a-z_]+)/g)].map((m) => m[1]);
+  const ownDeletes = new Set([...allSql.matchAll(/create policy "owner only deletes" on ([a-z_]+)/g)].map((m) => m[1]));
+  t.check(ownWrites.length > 0,
+    `tables declaring their own write lock were found, not silently zero (${JSON.stringify(ownWrites)})`);
+  const halfLocked = ownWrites.filter((tbl) => !ownDeletes.has(tbl));
+  t.check(halfLocked.length === 0,
+    `and every one of them locks deletes too — a table members can write but anyone can empty is the hole with the bigger blast radius (${JSON.stringify(halfLocked)})`);
 }
 
 /* ---------- 6. a table this database never got is not an error ------ */

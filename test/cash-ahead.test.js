@@ -12,16 +12,22 @@
  * the wages due on Friday included. The buy plan was telling the shop
  * to spend the rent.
  *
- * Four laws:
+ * Five laws:
  *
- *   ONLY DATED MONEY GOES ON THE LINE  three things in this app carry a
- *       real forward date: a raised due, a loan instalment, and the day
- *       of the month a rent agreement falls on. There is no promised
- *       payment date anywhere, no invoice due date and no supplier
- *       terms -- so a debtor's money and a supplier's bill have an age
- *       and nothing else. Putting either on a calendar would mean
- *       inventing the day, and a forecast built on an invented day is
- *       worse than one that says plainly it does not know.
+ *   ONLY DATED MONEY GOES ON THE LINE  three things the shop OWES carry
+ *       a real forward date: a raised due, a loan instalment, and the
+ *       day of the month a rent agreement falls on. There is still no
+ *       invoice due date and no supplier terms, so a supplier's bill
+ *       has an age and nothing else. Putting it on a calendar would
+ *       mean inventing the day, and a forecast built on an invented day
+ *       is worse than one that says plainly it does not know.
+ *   A DEBTOR'S WORD IS NOT THE SHOP'S MONEY  since 0089 a customer CAN
+ *       name a day, and it is written down. It rides a band of its own:
+ *       not in commitments, not in committed, not in the floor of the
+ *       line, and above all not in safe to spend. The budget the buying
+ *       screen offers stays built on what the shop actually holds --
+ *       buying stock on the strength of a promise is precisely the
+ *       mistake this file exists to prevent.
  *   UNCOSTED IS NOT NOTHING  dueBalance returns null for a month nobody
  *       has counted the days on. Folded in at zero, the line is short
  *       by exactly the wages of the people who did the work. It travels
@@ -61,7 +67,14 @@ const makeData = () => ({
     { id: 5, kind: 'wage', refId: '10', period: '2026-09', dueDate: '2026-09-30', amount: 1200000, paid: 0, payments: [] },
   ],
   loans: [{ id: 1, lender: 'Centenary', closedOn: null }],
-  customers: [], purchaseInvoices: [], suppliers: [],
+  /* The two collectableDebts returns, so a promise can be attached to a
+     real balance rather than to a name. */
+  customers: [
+    { id: 1, name: 'Milly', debt: 840000, debtLog: [] },
+    { id: 2, name: 'Mulongo', debt: 160000, debtLog: [] },
+  ],
+  paymentPromises: [],
+  purchaseInvoices: [], suppliers: [],
 });
 
 const env = (data, over) => ({
@@ -90,7 +103,10 @@ const env = (data, over) => ({
 });
 
 const NAMES = ['cashCommitments', 'cashAhead', 'dueBalance', 'dueName', 'findDue',
-  'rentAgreementsFor', 'periodOf', 'periodShift', 'periodEndDate'];
+  'rentAgreementsFor', 'periodOf', 'periodShift', 'periodEndDate',
+  /* Whole, not stubbed: the forecast and the chase queue must agree
+     about what "waiting" and "broken" mean, or one of them is lying. */
+  'promisesFor', 'promiseState', 'promiseLatest', 'promisesBroken'];
 
 const build = (data, extraSrc, names, over) => compileScope(
   NAMES.map((n) => extractFunction(src, n, 'index.html'))
@@ -214,10 +230,71 @@ const build = (data, extraSrc, names, over) => compileScope(
   eq(a.committed, 2500000, 'and neither is in what is committed');
 }
 
+/* ---------- 5b. what they SAID they would pay ------------------------ *
+ * The dangerous part of this feature is not the storage. safeToSpend
+ * sets the shop's buying budget, and a promised inflow raising it would
+ * mean buying stock on the strength of a debtor's word.
+ */
+{
+  const d = makeData();
+  d.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-09-10', madeOn: '2026-08-29', amount: null }];
+  const a = build(d).cashAhead(TODAY, 30);
+
+  eq(a.promised.length, 1, 'a customer who named a day is carried as a dated inflow');
+  eq(a.promised[0].date, '2026-09-10', 'on the day they said');
+  eq(a.promised[0].amount, 840000, 'at their balance, no figure having been named');
+  eq(a.promised[0].whole, true, 'and knowing that is what it is');
+  eq(a.promised[0].inDays, 12, 'with how far off it is');
+  eq(a.promisedTotal, 840000, 'totalled');
+
+  /* THE LAW OF THIS BUILD, in four assertions. */
+  eq(a.safeToSpend, 2500000,
+    'NOT ONE SHILLING of it reaches safe to spend — the buying budget stays built on what the shop actually holds');
+  eq(a.committed, 2500000, 'nor what is committed');
+  eq(a.tightest.balance, 2500000, 'nor the floor of the line');
+  eq(a.commitments.length, 5, 'and it is not on the line at all — the same five dated promises, unchanged');
+
+  /* COUNTED ONCE. On the band AND in the pool is the same money said
+     twice, and the second saying is the one somebody spends. */
+  eq(a.owedToYou.count, 1, 'a promised debtor leaves the undated pool');
+  eq(a.owedToYou.total, 160000, 'which leaves exactly the rest of it');
+
+  const late = makeData();
+  late.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-08-20', madeOn: '2026-08-15', amount: null }];
+  const b = build(late).cashAhead(TODAY, 30);
+  eq(b.promised.length, 0,
+    'a BROKEN promise is not a forecast — a day that has gone is a chase, not money coming');
+  eq(b.owedToYou.count, 2, 'and the money goes back to being counted with no date on it');
+
+  const far = makeData();
+  far.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-11-01', madeOn: '2026-08-29', amount: null }];
+  const c = build(far).cashAhead(TODAY, 30);
+  eq(c.promised.length, 0, 'a day beyond the window is not in the window');
+  eq(c.owedToYou.count, 2, 'and stays in the pool, where it can still be seen');
+
+  const part = makeData();
+  part.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-09-10', madeOn: '2026-08-29', amount: 400000 }];
+  const e = build(part).cashAhead(TODAY, 30);
+  eq(e.promised[0].amount, 400000, 'a part payment is carried at what they said, not at the whole balance');
+  eq(e.promised[0].whole, false, 'and says which of the two it is');
+
+  /* A LEDGER, NOT A STAMP. */
+  const twice = makeData();
+  twice.paymentPromises = [
+    { id: 1, customerId: 1, promisedOn: '2026-08-15', madeOn: '2026-08-10', amount: null },
+    { id: 2, customerId: 1, promisedOn: '2026-09-10', madeOn: '2026-08-20', amount: null },
+  ];
+  const g = build(twice).cashAhead(TODAY, 30);
+  eq(g.promised.length, 1, 'the latest promise is the one on the band');
+  eq(g.promised[0].date, '2026-09-10', 'and it is the later one, not the first they made');
+  eq(g.promised[0].brokenBefore, 1,
+    'carrying how many they have already broken — a second promise from somebody who broke the first is a different fact, and overwriting the row would have lost it');
+}
+
 /* ---------- 6. the screen -------------------------------------------- */
 {
   const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
-  const draw = (over) => { build(makeData(), [extractFunction(src, 'renderAhead', 'index.html')], ['renderAhead'], Object.assign({
+  const draw = (over, d) => { build(d || makeData(), [extractFunction(src, 'renderAhead', 'index.html')], ['renderAhead'], Object.assign({
     document: { getElementById: (id) => (id === 'ah_body' ? el : null) },
     esc: (x) => String(x == null ? '' : x),
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
@@ -237,9 +314,26 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/not raised yet/.test(html), 'a rent derived from the agreement says it has not been raised');
   t.check(/Money with no date on it/.test(html) && /oldest 62 days/.test(html),
     'what has no date sits beside the line with its age');
-  t.check(/there is nowhere to write it down/.test(html),
-    'and says WHY it is not on the line — nobody has ever been asked to record when');
+  t.check(/Nobody has named a day for any of this/.test(html),
+    'and says WHY it is not on the line — nobody has said when');
+  t.check(/They promised/.test(html) && /Chase debts/.test(html),
+    'pointing at where a day IS written down, now that there is somewhere');
+  t.check(!/What they said they would pay/.test(html),
+    'while a shop nobody has promised anything gets no band at all rather than an empty heading');
   t.check(!/short of/.test(html), 'a shop that can cover its promises is not told it is short');
+
+  const pd = makeData();
+  pd.paymentPromises = [{ id: 1, customerId: 1, promisedOn: '2026-09-10', madeOn: '2026-08-29', amount: null }];
+  const band = draw(null, pd);
+  t.check(/What they said they would pay/.test(band), 'a promise gets its own band, between the line and the undated pools');
+  t.check(/If these are kept/.test(band) && /840,000/.test(band) && /by 2026-09-10/.test(band),
+    'saying what it comes to and by when');
+  t.check(/Not counted in what is safe to spend/.test(band),
+    'and saying so out loud — the one sentence standing between a promise and the buy plan spending it');
+  t.check(/the whole balance/.test(band), 'a promise with no figure named is the whole balance');
+  t.check(/their word, not cash/.test(band), 'and the row never dresses itself up as money in the drawer');
+  t.check(/safe to spend/.test(band) && /2,500,000/.test(band),
+    'the figure itself being untouched by any of it');
 
   const tight = draw({ cashOnHandByAccount: () => ({ total: 1000000, byAccount: [] }) });
   t.check(/comes to more than you hold/.test(tight), 'a shop that cannot is told plainly');
