@@ -113,7 +113,8 @@ const CHAIN = ['ourCostFor', 'ourPriceFor', 'boughtInPriceFor', 'suggestedSellin
 const build = (data, extraSrc, names, over) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))
     .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),
-      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html')])
+      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
+      extractFunction(src, 'targetMarginPct', 'index.html')])
     .concat(extraSrc || []),
   env(data, over), names);
 
@@ -330,6 +331,7 @@ const build = (data, extraSrc, names, over) => compileScope(
       .concat([extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
         extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),
         extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
+      extractFunction(src, 'targetMarginPct', 'index.html'),
         extractFunction(src, 'productVariantLabel', 'index.html'),
         extractFunction(src, 'variantLabel', 'index.html'),
         extractFunction(src, 'apRuleWords', 'index.html'),

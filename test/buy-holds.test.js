@@ -101,6 +101,9 @@ const CHAIN = [
   'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
   'buyLineFacts', 'buyLineWhy', 'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'purchasePlan',
+  /* The thin mark is the owner's now, so the reading that resolves it
+     travels with the chain that judges against it. */
+  'targetMarginPct',
 ];
 const CONSTS = ['REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
   'THIN_MARGIN_PCT', 'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS'];

@@ -949,6 +949,21 @@
     font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent);}
   .chase-owed span{font-size:10px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
     color:var(--ink-soft);}
+  /* MARGIN. Shares the clearance row's bones, because it is the same
+     kind of card: a line, the facts bearing on it, then one decision.
+     The stale-rule block is set apart in amber, because it is a finding
+     rather than a figure -- the rule has not changed, the world has. */
+  .mg-row{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:0 0 10px;
+    background:var(--panel);}
+  .mg-row.stale{border-left:3px solid var(--ow-amber);}
+  .mg-stale{margin:9px 0 0;font-size:12.5px;line-height:1.45;padding:8px 11px;border-radius:9px;
+    background:var(--ow-amber-soft);color:var(--ink);}
+  .mg-stale b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .mg-note{margin:7px 0 0;font-size:11.5px;color:var(--ow-ink-400);}
+  .mg-act{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin:11px 0 0;}
+  .mg-aim{font-size:12.5px;color:var(--ink-soft);}
+  .mg-aim b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
   /* CLEARANCE. A row is a decision, so it reads top-down: what it is
      and what it is worth, the facts that bear on it, the price, then
      what that price would mean. The verdict is the last thing under the
@@ -7813,6 +7828,11 @@
           <span class="nav-label">Consignment</span>
           <b class="nav-badge" id="navBadgeConsign" hidden></b>
         </button>
+        <button data-tab="margin" title="Your margin" data-keywords="markup margin kept thin profit share pricing rule per cent percentage">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M6 19V9"/><path d="M11 19V5"/><path d="M16 19v-7"/><path d="M19 6l-3.5 3.5"/></svg>
+          <span class="nav-label">Your margin</span>
+          <b class="nav-badge" id="navBadgeMargin" hidden></b>
+        </button>
         <button data-tab="clearance" title="Clearance" data-keywords="dead slow stock clearance discount unsold sitting shift offload sale">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 7h16l-1.5 12a2 2 0 0 1-2 1.8H7.5a2 2 0 0 1-2-1.8Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M9.5 14.5l5-5"/><path d="M9.6 10.1h.01"/><path d="M14.4 14.9h.01"/></svg>
           <span class="nav-label">Clearance</span>
@@ -8392,6 +8412,26 @@
       </div>
       <div class="panel">
         <div id="consign_body"></div>
+      </div>
+    </section>
+
+    <section id="tab-margin" style="display:none;">
+      <div class="page-head">
+        <h1>Your margin</h1>
+        <p>What every line you sold actually kept, against what the rule pricing it says it should. The two are different questions: a gap between them is a line being sold off its own rule, and a rule that yields almost nothing is a rule that has gone stale — a fixed markup of five thousand was a fair mark on a ten thousand item and is a rounding error on a hundred thousand one, and nothing here had ever divided the one by the other. Ranked by what lifting each to your target would have added over the units that really sold, so the work starts at your biggest sellers. Nothing changes until you tap it and confirm it.</p>
+      </div>
+      <div class="panel">
+        <div class="form-panel">
+          <div class="fp-head">
+            <svg class="fp-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 15l6-6"/><path d="M9.5 9.5h.01"/><path d="M14.5 14.5h.01"/></svg>
+            <div><b>The share you mean to keep</b>
+              <span>Out of every shilling a customer pays. The app has judged your prices against ten per cent since it was written, without ever asking you.</span></div>
+          </div>
+          <div class="fp-row">
+            <label>Target margin (%)<input type="number" id="mg_target" min="1" max="99" step="any"></label>
+          </div>
+        </div>
+        <div id="mg_body"></div>
       </div>
     </section>
 
@@ -13083,6 +13123,7 @@ async function loadData(shopId){
     presetRestockCoverDays: presets.restockCoverDays != null ? Number(presets.restockCoverDays) : 14,
     presetPriceWatchDays: presets.priceWatchDays != null ? Number(presets.priceWatchDays) : 180,
     presetDeadStockDays: presets.deadStockDays != null ? Number(presets.deadStockDays) : 60,
+    presetTargetMarginPct: presets.targetMarginPct != null ? Number(presets.targetMarginPct) : 10,
     /* What the owner has decided to clear a line at, stockKey -> {price,
        setOn, offeredOn}. Beside the buy holds because it is the same
        kind of thing: a working decision about a line, not a money
@@ -13392,7 +13433,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -13777,7 +13818,7 @@ function fmtUGXPerUnitPack(n, row){
 // grids somebody scans.
 const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
   market: 8, marketUnder: 5, marketLift: 5, ahead: 12, invoices: 24, purchaseInvoices: 24,
-  clearance: 6, clearanceOffers: 5 };
+  clearance: 6, clearanceOffers: 5, margin: 6 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -13816,6 +13857,7 @@ const LIST_PAGE_RERENDER = {
   ahead: ()=> renderAhead(),
   clearance: ()=> renderClearance(),
   clearanceOffers: ()=> renderClearance(),
+  margin: ()=> renderMargin(),
   invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
   purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
@@ -16778,6 +16820,7 @@ function goToTab(tab){
   if(tab==='prices'){ refreshPriceDropdowns(); triggerPricesRender(); }
   if(tab==='media') renderMedia();
   if(tab==='clearance') renderClearance();
+  if(tab==='margin') renderMargin();
   if(tab==='whatsapp'){ renderWhatsApp(); renderWaInsights(); waInboxEnter(); }
   if(tab==='compare') refreshCompareDropdown();
   if(tab==='fasteners') renderFasteners();
@@ -34686,6 +34729,140 @@ function renderChaseScreen(){
     openCustomerDebtModal(btn.dataset.id, 'payment');
   }));
 }
+/* WHERE THE MARGIN GOES, AND THE ONE TAP THAT MOVES IT.
+
+   The Manager has said margin is this shop's binding problem for weeks,
+   and said in the same breath that its own pricing advice "did not reach
+   the high-volume lines". That is a tooling failure, not a listening
+   one: there was no list ordered by what a fix is worth. */
+function renderMargin(){
+  const el = document.getElementById('mg_body');
+  if(!el) return;
+  const f = (x)=> fmtUGX(Math.round(x));
+  const box = document.getElementById('mg_target');
+  if(box && document.activeElement !== box) box.value = targetMarginPct();
+
+  const target = targetMarginPct();
+  const rows = marginRows();
+  const under = rows.filter(r=> r.atStake > 0);
+  const atOrOver = rows.length - under.length;
+  const stale = rows.filter(r=> r.staleFixed).length;
+  const sold = under.reduce((t, r)=> t + r.sold30, 0);
+  const kept = under.reduce((t, r)=> t + r.earned30, 0);
+  const stake = under.reduce((t, r)=> t + r.atStake, 0);
+  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(v))}</div><div class="sum-label">${esc(label)}</div></div>`;
+
+  let html = `<div class="sum-strip">
+    ${cell(under.length, under.length === 1 ? 'line under target' : 'lines under target', under.length ? 'warn' : 'good')}
+    ${cell(f(sold), 'they sold in 30 days')}
+    ${cell(sold > 0 ? (Math.round(kept / sold * 1000) / 10) + '%' : '—', 'kept on them', 'warn')}
+    ${stake ? cell(f(stake), 'lifting them would have added', 'good') : ''}
+  </div>`;
+
+  if(!rows.length){
+    html += `<div class="pw-empty"><b>Nothing has sold in the last 30 days that can be costed.</b>
+      <span>This reads what your invoices earned against what they cost, so a month with no sales — or with no cost on file behind them — leaves it nothing to judge.</span></div>`;
+    el.innerHTML = html;
+    return;
+  }
+  if(!under.length){
+    html += `<div class="pw-empty"><b>Every line you sold is at or above ${target}%.</b>
+      <span>Nothing here needs lifting. Raise the target above if that reads as too easy a bar for this trade.</span></div>`;
+  }
+
+  const row = (r)=>{
+    const lift = marginLiftFor(r, target);
+    const ruleTxt = r.rule
+      ? `${r.rule.type === 'fixed' ? '+' + f(r.rule.value) : '+' + r.rule.value + '%'}${
+          r.ruleSource === 'default' ? ' <em>(shop default)</em>'
+          : (r.ruleSource === 'variant' || r.ruleSource === 'variant-stock') ? ' <em>(this variant)</em>' : ''}`
+      : '<i>no rule set</i>';
+    /* THE DIVISION NOBODY WAS DOING. A fixed rule is a shilling figure
+       and reads as a decision; what it is worth is the share of the
+       price it makes, and that moves every time the cost does. */
+    const stale = r.staleFixed
+      ? `<div class="mg-stale">That <b>${f(r.rule.value)}</b> is <b>${r.ruleYieldPct}%</b> of the price it makes, on a cost of ${f(r.cost)}. A fixed mark does not grow with the cost — it was a fair mark once and has not been repriced since.</div>`
+      : '';
+    const est = r.estShare >= 20
+      ? `<div class="mg-note">${r.estShare}% of these units were costed by estimate, so the kept share is a good figure rather than a certain one.</div>`
+      : '';
+    return `<div class="mg-row${r.staleFixed ? ' stale' : ''}">
+      <div class="cl-top">
+        <span class="cl-name">${esc(r.line)}</span>
+        <span class="cl-when">${r.kind === 'retail' ? 'sold by the piece' : 'sold by the pack'}</span>
+        <span class="cl-val">${r.atStake ? f(r.atStake) : '—'}<span class="cl-sub">${r.atStake ? 'lifting would add' : 'at or above target'}</span></span>
+      </div>
+      <div class="cl-facts">
+        <span class="cl-fact"><b>${r.units30}</b> sold in 30 days</span>
+        <span class="cl-fact"><b>${f(r.sold30)}</b> taken</span>
+        <span class="cl-fact"><b>${r.keptPct == null ? '—' : r.keptPct + '%'}</b> kept</span>
+        <span class="cl-fact">rule ${ruleTxt}</span>
+        ${r.ruleYieldPct != null ? `<span class="cl-fact">worth <b>${r.ruleYieldPct}%</b> at today’s cost</span>` : ''}
+      </div>
+      ${stale}${est}
+      ${lift ? `<div class="mg-act">
+        <span class="mg-aim">${f(r.price)} → <b>${f(lift.target)}</b> keeps ${lift.keptPct}%</span>
+        <button type="button" class="btn btn-accent mg-lift" data-key="${esc(r.key)}">Charge ${f(lift.target)}</button>
+      </div>` : ''}
+    </div>`;
+  };
+
+  html += `<div class="mg-list">${listPageSlice('margin', under.length ? under : rows).map(row).join('')}</div>`;
+  html += listMoreButtonHTML('margin', (under.length ? under : rows).length, 'lines');
+
+  /* THE SCREEN ACCOUNTS FOR ITSELF. Every line read lands in exactly one
+     of these, and they sum to what was read -- the law the supplier
+     price watch already keeps, and the only thing that lets a reader
+     trust a list for what it does NOT say. */
+  const sk = rows.skipped || { noCost: 0, noSales: 0 };
+  const readTotal = rows.length + sk.noCost;
+  html += `<div class="cl-tail"><h4>What this screen read</h4>
+    <p class="pw-account-head">Read <b>${readTotal}</b> line${readTotal === 1 ? '' : 's'} that sold in the last 30 days.</p>
+    <div class="pw-account">
+      ${under.length ? `<div class="pw-account-row"><b>${under.length}</b><span>under your ${target}% target</span></div>` : ''}
+      ${stale ? `<div class="pw-account-row"><b>${stale}</b><span>of those priced by a fixed mark that has stopped keeping ${target}%</span></div>` : ''}
+      ${atOrOver ? `<div class="pw-account-row"><b>${atOrOver}</b><span>at or above it already</span></div>` : ''}
+      ${sk.noCost ? `<div class="pw-account-row"><b>${sk.noCost}</b><span>with no cost on file, so nothing here can say what they kept</span></div>` : ''}
+    </div></div>`;
+  el.innerHTML = html;
+
+  el.querySelectorAll('.mg-lift').forEach(btn=> btn.addEventListener('click', ()=>{
+    const r = rows.find(x=> x.key === btn.dataset.key);
+    if(!r) return;
+    const lift = marginLiftFor(r, target);
+    if(!lift) return;
+    /* Confirmed by name and by figure, and saying out loud that it moves
+       BOTH prices -- the thing the market screen's own button does not
+       do, and the reason a line bought in to order kept its old price
+       there while the toast reported success. */
+    if(!confirm(`Charge ${fmtUGX(lift.target)} for ${r.line} instead of ${fmtUGX(r.price)}?\n\n`
+      + `It costs ${fmtUGX(r.cost)}, so you would keep ${lift.keptPct}%.`
+      + (lift.addsOverWindow ? ` Over the ${r.units30} that sold in the last 30 days that is ${fmtUGX(lift.addsOverWindow)} more.` : '')
+      + `\n\nThis moves the ${lift.kind} price BOTH ways you sell it — off your own shelf and bought in to order. Your ${lift.kind === 'retail' ? 'wholesale' : 'retail'} price is not touched.`)) return;
+    if(!setLineMarginRule(r.productId, r.variantIdx, lift.kind, lift.type, lift.value)){
+      toast('That line could not be repriced'); return;
+    }
+    const now = ourPriceFor(r.productId, r.variantIdx, lift.kind);
+    toast(`Now ${fmtUGX(now)} ${lift.kind} — keeping ${lift.keptPct}%`, 6000);
+    renderMargin(); renderMarginBadge();
+  }));
+}
+
+// Lines under the shop's own target. Same derivation as the screen, so
+// the count on the rail and the list cannot disagree.
+function renderMarginBadge(){
+  setNavBadge('navBadgeMargin', marginRows().filter(r=> r.atStake > 0).length, 'line(s) under target');
+}
+document.getElementById('mg_target').addEventListener('change', e=>{
+  const v = Number(e.target.value) || 0;
+  data.presetTargetMarginPct = (v > 0 && v < 100) ? v : 10;
+  e.target.value = data.presetTargetMarginPct;
+  saveData();
+  renderMargin();
+  renderMarginBadge();
+});
+
 /* WHAT IS SITTING THERE, AND WHO WOULD TAKE IT.
 
    The dashboard has named this money for months and could never show a
@@ -38776,7 +38953,7 @@ function priceRuleForTarget(productId, variantIdx, target, kind){
   return { cost: Math.round(c.cost), target: aim, packQty: c.packQty, side,
     unit: c.unit, packUnit: c.packUnit, supplier: c.supplier,
     type: 'fixed', value: Math.round(kept * spread),
-    keptPct, thin: keptPct < THIN_MARGIN_PCT, pays: aim > c.cost };
+    keptPct, thin: keptPct < targetMarginPct(), pays: aim > c.cost };
 }
 
 /* THE ONE DOOR a stock pricing rule is written through. The price-rule
@@ -39087,7 +39264,7 @@ function renderMarket(){
     const verdict = !m.pays
       ? `Matching them would sell below the ${f(m.cost)} it costs you. The fix is the supplier, not the shelf.`
       : m.thin
-        ? `You would keep ${m.keptPct}% — under your ${THIN_MARGIN_PCT}% mark.`
+        ? `You would keep ${m.keptPct}% — under your ${targetMarginPct()}% mark.`
         : `You would keep ${m.keptPct}%.`;
     return `<div class="rv-move${!m.pays ? ' none' : (m.thin ? ' thin' : '')}">
         <span class="rv-mtext">${mode === 'under' ? 'Match' : 'Lift to'} ${esc(x.shop)}’s ${f(x.theirs)} — costs you ${f(m.cost)}. ${verdict}</span>
@@ -42596,6 +42773,156 @@ function suggestedSellingPrice(product, basePrice, kind, variantIdx=null, packQt
     return basePrice+fixedPerUnit;
   }
   return basePrice*(1+rule.value/100);
+}
+
+/* WHERE THE MARGIN ACTUALLY GOES.
+
+   This shop turned 31,436,660 of sales into 1,598,160 gross -- 5.1% --
+   and its biggest line sells at 105,000 on a 100,000 cost. That is a
+   `+5,000 fixed` rule: sensible on a 10,000 item, a rounding error on a
+   100,000 one. NOTHING IN THIS APP HAS EVER DIVIDED A RULE'S VALUE BY
+   THE COST IT IS APPLIED TO, so a fixed rule that has quietly stopped
+   making sense is invisible. It looks like a rule right up until you do
+   the division, and nobody was doing it.
+
+   TWO DIFFERENT NUMBERS, AND THEY MUST NOT BE CONFUSED. `keptPct` is
+   what the line ACTUALLY returned, out of the books -- profit over
+   sales, on the same costing every other profit figure here uses.
+   `ruleYieldPct` is what the rule governing it WOULD return at today's
+   cost. A gap between them is a line being sold off-rule; a low
+   ruleYieldPct is the rule itself having gone stale. The fixes are
+   different, so the screen must never quote one as the other.
+
+   RANKED BY MONEY, over the units that actually sold. The Manager's own
+   verdict is that its pricing advice "did not reach the high-volume
+   lines" -- a list ordered by percentage puts a 2% line nobody buys
+   above a 4.8% line carrying 6,615,000 of trade. */
+function marginRuleFor(productId, variantIdx, kind){
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return null;
+  /* The rule a line off our own shelf is priced by, which is the one the
+     counter uses for stock in hand. effectiveStockMarkupRule already
+     falls through to the default when no stock rule is set, so this is
+     the governing rule either way and says which it found. */
+  return effectiveStockMarkupRule(p, variantIdx, kind);
+}
+
+/* What a rule yields AS A SHARE OF THE PRICE IT MAKES, at a given cost.
+   A percent rule is not its own answer: +20% on cost keeps 16.7% of the
+   price, and margin in this app has always meant the share of what the
+   customer paid. */
+function ruleYieldPct(rule, cost, packQty, kind){
+  if(!rule || !(Number(cost) > 0)) return null;
+  const base = Number(cost);
+  const add = rule.type === 'fixed'
+    ? ((kind === 'wholesale' && Number(packQty) > 0) ? rule.value / Number(packQty) : rule.value)
+    : base * (Number(rule.value) || 0) / 100;
+  const price = base + add;
+  return price > 0 ? Math.round(add / price * 1000) / 10 : null;
+}
+
+/* The price that WOULD keep the target share, and the rule that lands
+   on it -- inverted the same way priceRuleForTarget inverts one, because
+   the single lever in this app is a markup on cost. */
+function marginTargetPrice(cost, targetPct){
+  const c = Number(cost) || 0;
+  const t = Number(targetPct) || 0;
+  if(!(c > 0) || !(t > 0) || t >= 100) return null;
+  return Math.round(c / (1 - t / 100));
+}
+
+function marginRows(asOfISO){
+  const today = asOfISO || todayISO();
+  const target = targetMarginPct();
+  const sales = waSalesByKey(today);
+  const out = [];
+  const skipped = { noCost: 0, noSales: 0 };
+  sales.forEach((s, key)=>{
+    if(!(s.units30 > 0)){ skipped.noSales += 1; return; }
+    const parts = buyKeyParts(key);
+    if(!parts) return;
+    const c = ourCostFor(parts.productId, parts.variantIdx);
+    /* A LINE NOBODY CAN COST CANNOT BE RANKED. Its kept share would
+       read as everything, and it would sit at the top of a screen about
+       thin margins telling the owner the opposite of the truth. Counted
+       and named instead. */
+    if(!c || c.cost == null){ skipped.noCost += 1; return; }
+    const kind = (s.wholesaleUnits30 || 0) >= (s.retailUnits30 || 0) ? 'wholesale' : 'retail';
+    const rule = marginRuleFor(parts.productId, parts.variantIdx, kind);
+    const price = ourPriceFor(parts.productId, parts.variantIdx, kind);
+    const tPrice = marginTargetPrice(c.cost, target);
+    const yieldPct = ruleYieldPct(rule, c.cost, c.packQty, kind);
+    const keptPct = s.sales30 > 0 ? Math.round(s.profit30 / s.sales30 * 1000) / 10 : null;
+    out.push({ key, line: productDisplayLabel(c.product, c.variantIdx),
+      productId: parts.productId, variantIdx: parts.variantIdx,
+      units30: s.units30, sold30: Math.round(s.sales30), earned30: Math.round(s.profit30),
+      keptPct, kind,
+      /* Said out loud rather than folded in. A profit part of which was
+         costed by estimate is a good figure, not a certain one. */
+      estShare: s.units30 > 0 ? Math.round((s.estQty30 || 0) / s.units30 * 100) : 0,
+      cost: Math.round(c.cost), price, packQty: c.packQty,
+      rule, ruleSource: rule ? rule.source : null, ruleYieldPct: yieldPct,
+      /* THE FINDING THIS SCREEN EXISTS FOR: a fixed rule whose share has
+         fallen under the target. Named apart from a merely thin line,
+         because the rule is not wrong about the shilling -- it is wrong
+         about the shilling NOW, and that is a different repair. */
+      staleFixed: !!(rule && rule.type === 'fixed' && yieldPct != null && yieldPct < target),
+      target, targetPrice: tPrice,
+      /* Over the units that ACTUALLY SOLD, in one window. Never a
+         projection: this says what the last thirty days would have
+         returned at the target, and the screen states the assumption. */
+      atStake: (tPrice != null && price != null && tPrice > price)
+        ? Math.round((tPrice - price) * s.units30) : 0,
+      thin: keptPct != null && keptPct < target });
+  });
+  out.sort((a, b)=> (b.atStake - a.atStake) || (b.sold30 - a.sold30));
+  out.skipped = skipped;
+  return out;
+}
+
+/* LIFTING A LINE TO THE TARGET.
+
+   BOTH RULES, NOT ONE. This app keeps a stock rule for goods off its own
+   shelf and a default rule for goods bought in to order, and the market
+   screen writes only the first -- so a shop that buys a line in order
+   after order could set a price, be told it worked, and go on charging
+   the old one. That was found on this shop's own screen. A margin
+   decision is about the LINE, not about which shelf it came off, so this
+   moves both and says so.
+
+   The lever is a markup on cost, so landing on a chosen price means
+   inverting the rule that produces it -- the same arithmetic
+   priceRuleForTarget does, and a fixed wholesale rule is multiplied back
+   up by the pack because that is how suggestedSellingPrice divides it. */
+function marginLiftFor(row, targetPct){
+  if(!row || row.cost == null) return null;
+  const t = Number(targetPct) || row.target;
+  const aim = marginTargetPrice(row.cost, t);
+  if(aim == null || !(aim > row.cost)) return null;
+  const spread = row.kind === 'wholesale' ? (Number(row.packQty) || 1) : 1;
+  return { kind: row.kind, was: row.price, target: aim,
+    type: 'fixed', value: Math.round((aim - row.cost) * spread),
+    keptPct: Math.round((aim - row.cost) / aim * 1000) / 10,
+    addsOverWindow: row.price != null ? Math.round((aim - row.price) * row.units30) : null };
+}
+
+/* Written through setStockPriceRule for the shelf side -- the declared
+   one door -- and through the same fields the default ladder reads for
+   the bought-in side. Both, or the change is a change the owner cannot
+   see the whole of. */
+function setLineMarginRule(productId, variantIdx, kind, type, value){
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return false;
+  const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  if(vi != null && !(p.variants && p.variants[vi])) return false;
+  const side = kind === 'retail' ? 'retail' : 'wholesale';
+  const ok = setStockPriceRule(productId, vi, { [side + 'Type']: type, [side + 'Value']: value });
+  if(!ok) return false;
+  const target = vi != null ? p.variants[vi] : p;
+  target[side + 'MarkupType'] = type === 'fixed' ? 'fixed' : 'percent';
+  target[side + 'MarkupValue'] = Math.max(0, Number(value) || 0);
+  saveData();
+  return true;
 }
 
 /* ================= WHO TO BUY FROM ================================
@@ -52788,7 +53115,17 @@ function buyLineReason(l){
    "thin" means in this trade, whether the shop is selling a line or
    buying it. That function keeps its own copy because it is extracted
    ALONE into several test scopes and must stay whole. */
+/* THE MARK, AND WHOSE IT IS. The market screen has been telling this
+   shop "under your 10% mark" since the day it was written, about a
+   number nobody ever asked them for. Ten stays the default so nothing
+   moves for a shop that never touches it -- but a trade that lives on
+   3% and one that will not get out of bed under 30 are both real, and
+   the sentence is only true once the figure is theirs. */
 const THIN_MARGIN_PCT = 10;
+function targetMarginPct(){
+  const v = Number(data && data.presetTargetMarginPct);
+  return v > 0 && v < 100 ? v : THIN_MARGIN_PCT;
+}
 
 function buyLineFacts(l){
   const money = n=> fmtUGX(Math.round(n));
@@ -52796,7 +53133,7 @@ function buyLineFacts(l){
      can be the best earner on the screen and its thinnest at once --
      that is precisely the case this fact exists for. */
   const kept = ()=> l.keptPct == null ? null
-    : { v: l.keptPct + '%', label: 'kept', cls: l.keptPct < THIN_MARGIN_PCT ? 'bad' : '' };
+    : { v: l.keptPct + '%', label: 'kept', cls: l.keptPct < targetMarginPct() ? 'bad' : '' };
   const out = [];
   if(l.kind === 'stock'){
     if(l.orders30 > 0) out.push({ v: l.orders30, label: l.orders30 === 1 ? 'buy-in this month' : 'buy-ins this month' });
@@ -59380,6 +59717,7 @@ function refreshNavBadges(){
   renderChaseBadge();
   renderConsignBadge();
   renderClearanceBadge();
+  renderMarginBadge();
 }
 function renderAll(){
   renderPresets();
@@ -60455,6 +60793,27 @@ const ASSISTANT_TOOLS = {
       },
       prices_to_check: priceReviewCandidates().slice(0, 5).map(r=> ({
         item: r.pname, supplier: r.sname, at_risk: apRound(r.moneyAtRisk||0) })),
+      /* WHERE THE MARGIN GOES, BY LINE. The meeting has called margin
+         the binding problem for weeks and could only ever hand back a
+         percentage -- and said itself that its pricing advice "did not
+         reach the high-volume lines", which is what a reading with no
+         lines in it does to advice. */
+      margin: (()=>{
+        const mr = marginRows(today);
+        const under = mr.filter(r=> r.atStake > 0);
+        return { target_pct: targetMarginPct(),
+          lines_under_target: under.length,
+          lifting_them_would_add_over_30_days: apRound(under.reduce((t, r)=> t + r.atStake, 0)),
+          worst_lines: under.slice(0, 5).map(r=> ({ line: r.line,
+            sold_30_days: apRound(r.sold30), units: r.units30, kept_pct: r.keptPct,
+            rule: r.rule ? (r.rule.type === 'fixed' ? '+' + apRound(r.rule.value) : '+' + r.rule.value + '%') : null,
+            rule_is_worth_pct_now: r.ruleYieldPct,
+            /* A fixed mark that has stopped keeping the target is a
+               different diagnosis from a line simply sold too cheap. */
+            fixed_rule_gone_stale: r.staleFixed,
+            lifting_adds: apRound(r.atStake) })),
+          could_not_cost: (mr.skipped || {}).noCost || 0 };
+      })(),
       /* The board's own stage-timer rule, through the brief's derivation
          -- an empty list here can mean nothing is late OR that no limits
          are set, and the count of limits says which. */

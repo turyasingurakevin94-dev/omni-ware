@@ -103,6 +103,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
        it must actually carry. The Manager advised clearing this shop's
        dead stock for weeks against a bare total and could never say
        WHICH — a count is not something anybody can act on. */
+    waSalesByKey: () => new Map(),
+    buyKeyParts: (k) => ({ productId: String(k).split('::')[0],
+      variantIdx: String(k).indexOf('::') < 0 ? null : Number(String(k).split('::')[1]) }),
+    ourCostFor: () => null,
+    ourPriceFor: () => null,
+    effectiveStockMarkupRule: () => null,
     allProductVariantEntries: () => [{ p: { id: 'D1', name: 'Sitting Still' }, variantIdx: null }],
     getStockQty: () => 7,
     getFIFOUnitCost: () => 30000,
@@ -164,6 +170,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     /* The clearance reading the meeting now argues from. Whole, not
        stubbed: the Manager and the screen must not disagree about what
        is dead or what the owner has already marked. */
+    /* The margin reading the meeting now argues from. Whole, not
+       stubbed: the mind and the screen must not disagree about which
+       lines are thin or what lifting them is worth. */
+    extractFunction(src, 'marginRows', 'index.html'),
+    extractFunction(src, 'marginRuleFor', 'index.html'),
+    extractFunction(src, 'ruleYieldPct', 'index.html'),
+    extractFunction(src, 'marginTargetPrice', 'index.html'),
+    extractFunction(src, 'targetMarginPct', 'index.html'),
+    extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
     extractFunction(src, 'stockAgeRows', 'index.html'),
     extractFunction(src, 'deadStockRows', 'index.html'),
     extractFunction(src, 'deadStockBuyers', 'index.html'),

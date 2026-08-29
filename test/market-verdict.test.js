@@ -114,7 +114,8 @@ const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor', 'ourCostFor'
 const build = (data, extraSrc, names, over) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))
     .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),
-      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html')])
+      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
+      extractFunction(src, 'targetMarginPct', 'index.html')])
     .concat(extraSrc || []),
   env(data, over), names);
 
