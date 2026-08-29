@@ -100,7 +100,7 @@ const env = (data, over) => ({
   ...(over || {}),
 });
 
-const CHAIN = ['ourCostFor', 'ourPriceFor', 'priceRuleForTarget', 'setStockPriceRule',
+const CHAIN = ['ourCostFor', 'ourPriceFor', 'boughtInPriceFor', 'suggestedSellingPrice', 'priceRuleForTarget', 'setStockPriceRule',
   'rivalSide', 'rivalSideSaid', 'rivalSideLabel',
   'rivalPricesFor', 'rivalPriceLatest',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
@@ -285,8 +285,20 @@ const build = (data, extraSrc, names, over) => compileScope(
     'naming both figures and the side, the one it would leave and the one it would set');
   t.check(/Your retail price is not touched\./.test(r.seen.confirms[0]),
     'and saying out loud what it will NOT do — a shop has two prices and this moves one');
-  t.check(/It costs you 96,000, so you would keep 4%\./.test(r.seen.confirms[0]),
-    'and the consequence again, in the dialog itself');
+  /* NAMED FOR WHAT IT IS. That 96,000 is the cheapest price on FILE at
+     quantity one — a registry quote, possibly from a supplier this shop
+     has never bought a thing from. "It costs you" claimed it was what
+     the shop paid, which is a different figure the app also holds. */
+  t.check(/The cheapest price on file for it is 96,000, so you would keep 4%\./.test(r.seen.confirms[0]),
+    'and the consequence again, in the dialog itself — with the cost named for what it actually is');
+  /* WHICH PRICE, EXACTLY. setStockPriceRule writes the STOCK rule: the
+     one a line off the shop's own shelf is priced by. A line bought in
+     to order reads the product's default rule and does not move, which
+     is the deliberate design and was nowhere on the card — so a shop
+     that buys a line in order after order could tap this, be told it
+     worked, and go on charging the old price. */
+  t.check(/sets the price for goods sold off your own shelf/.test(r.seen.confirms[0]),
+    'and says WHICH of the two prices it is setting, rather than letting "wholesale" stand for both');
   eq(r.data.products[0].variants[0].stockWholesaleMarkupValue, 9000,
     'and a declined tap changes NOTHING');
   eq(r.seen.toasts.length, 0, 'and says nothing');
@@ -343,6 +355,53 @@ const build = (data, extraSrc, names, over) => compileScope(
   t.check(/TWO RULES CAN EXIST ON ONE LINE/.test(desc), 'and the mind is told the two tiers exist');
   t.check(/shelf_price_unchanged/.test(desc), 'and what the flag it may get back means');
   t.check(/Thirty-six tools in FIXED order/.test(api), 'with no new tool added: still thirty-six');
+}
+
+/* ---------- 6. the modal must name the rule it is actually using ----- *
+ *
+ * Caught live, on this shop's own screen. The item picker printed
+ *
+ *     Price rule: Wholesale +5,000 UGX · Retail +6% (shop default)
+ *
+ * above a recommended wholesale of 160,000, over a cost of 135,000 —
+ * arithmetic that visibly refuses to work, because the price came from
+ * the STOCK rule the market screen had just written (+25,000) while the
+ * line printed the default one.
+ *
+ * quoteItemSellPrice prices a line off our own shelf by the stock rule
+ * and every other line by the default: a deliberate split. Naming the
+ * wrong half of it turns a correct price into one the owner cannot check.
+ */
+{
+  const product = { id: 'P1', name: 'Runners', wholesaleMarkupType: 'fixed', wholesaleMarkupValue: 5000,
+    stockWholesaleMarkupType: 'fixed', stockWholesaleMarkupValue: 25000,
+    retailMarkupType: 'percent', retailMarkupValue: 6 };
+
+  const line = (fromStock) => compileScope([
+    extractFunction(src, 'ipStageSummaryLine', 'index.html'),
+    extractFunction(src, 'effectiveMarkupRule', 'index.html'),
+    extractFunction(src, 'effectiveStockMarkupRule', 'index.html'),
+    extractFunction(src, 'markupRuleLabel', 'index.html'),
+  ], {
+    data: { presetDefaultMarkup: null },
+    esc: (x) => String(x == null ? '' : x),
+    ipSelectedSupplierId: fromStock ? '__stock__' : 'S1',
+    fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
+    Number, String, Math, Object, Array, Boolean,
+  }, ['ipStageSummaryLine']).ipStageSummaryLine(product, null, 'Ctn', null);
+
+  const stock = line(true);
+  t.check(/25,000/.test(stock),
+    'a line off our own shelf names the STOCK rule — the one its price is actually computed from');
+  t.check(!/\+5,000/.test(stock),
+    'and not the default rule, which is what made the modal disagree with its own recommended price');
+  t.check(/own shelf/.test(stock),
+    'saying which of the two it is, because the shop has both and they differ');
+
+  const boughtIn = line(false);
+  t.check(/5,000/.test(boughtIn) && !/25,000/.test(boughtIn),
+    'while a line bought in from a supplier names the default rule, which IS the one it is priced by');
+  t.check(!/own shelf/.test(boughtIn), 'and does not claim to be off the shelf');
 }
 
 })().then(() => { process.exit(t.done() ? 1 : 0); })

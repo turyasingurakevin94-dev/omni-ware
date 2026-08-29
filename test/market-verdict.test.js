@@ -158,6 +158,27 @@ const build = (data, extraSrc, names, over) => compileScope(
   const bare = by('Haidery', 'P6');
   eq(bare.comparable, true, 'a sighting with no unit at all is in our own basis — that is what a person typing into a screen showing our price means');
   eq(bare.gap, null, 'though with no price of our own there is still nothing to compare');
+
+  /* A UNIT NOBODY RECORDED IS NOT A UNIT THAT MATCHES.
+   *
+   * The gate used to read `!saidUnit || converts || !ownUnit || same(...)`
+   * — so when the PRODUCT had no unit on file, any sighting was waved
+   * through whatever it was priced in. A carton price against a per-piece
+   * line entered the ranking, the money-at-stake, and a button that
+   * writes a selling price; and the unit the person had typed was never
+   * even shown, because the row only prints it on the not-comparable
+   * branch. The assistant's own tool invites that unit ("Per what, when
+   * the owner says: Ctn, Box, Pc"), so it arrives from voice too.
+   */
+  const noUnitProduct = JSON.parse(JSON.stringify(data));
+  noUnitProduct.prices = (noUnitProduct.prices || []).map((r) =>
+    (r.productId === 'P2' ? { ...r, unit: '', packUnit: '', packQty: 0 } : r));
+  const s2 = build(noUnitProduct, [], ['rivalMarketRows']);
+  const blind = s2.rivalMarketRows(TODAY).find((r) => r.shop === 'Haidery' && r.key === 'P2');
+  eq(blind.comparable, false,
+    'a Box sighting on a line the shop prices in nothing-recorded is NOT comparable — not knowing our own unit is not the same as knowing it matches');
+  eq(blind.gap, null, 'so it carries no gap, and cannot reach the ranking or the button');
+  eq(blind.saidUnit, 'Box', 'while still saying what was recorded, so the screen can explain itself');
 }
 
 /* ---------- 2. the two sides, one row per line ----------------------- */
@@ -244,6 +265,29 @@ const build = (data, extraSrc, names, over) => compileScope(
     'ABOVE the record: the answer first, the evidence under it');
   t.check(/at stake this month/.test(html) && html.includes('70,000'),
     'with what it comes to across the lot, in the strip');
+
+  /* ZERO IS ONLY GOOD NEWS IF SOMEBODY LOOKED.
+   *
+   * `never checked` counts lines sold in the last 30 days with no
+   * sighting on file — so a shop that has invoiced nothing for a month
+   * scores 0 and the strip painted it GREEN, directly above an empty
+   * state saying nothing has been recorded. A green nought reads as "the
+   * market is checked", which is the one lesson this screen exists to
+   * never teach.
+   */
+  t.check(/never checked/.test(html), 'the strip carries what has never been checked');
+  const empty = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+  const bare = build(Object.assign(makeData(), { rivalPrices: [], savedQuotes: [] }),
+    [extractFunction(src, 'renderMarket', 'index.html')], ['renderMarket'], {
+      rivalPricesTable: true,
+      document: { getElementById: (id) => (id === 'mk_body' ? empty : null) },
+      esc: (x) => String(x == null ? '' : x),
+      listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
+      mkGroupBy: 'shop', mkShop: '', mkSeenOn: '', mkSide: 'wholesale',
+    });
+  bare.renderMarket();
+  t.check(!/sum-cell good/.test(empty.innerHTML),
+    'a shop that has recorded NOTHING gets no green cell — a green nought beside "nothing recorded yet" is the screen congratulating somebody for never having looked');
 
   t.check(/A customer buying your month’s 500 at Haidery’s price saves 50,000\./.test(html),
     'and the argument is the CUSTOMER’S arithmetic — being dearer risks the sale, it does not take money out of the till, and the sentence never says it did');

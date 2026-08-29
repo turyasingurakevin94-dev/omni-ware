@@ -110,7 +110,7 @@ const env = (data, over) => ({
 });
 
 const CHAIN = ['rivalSide', 'rivalSideSaid', 'rivalSideLabel',
-  'rivalPricesFor', 'rivalPriceLatest', 'ourCostFor', 'ourPriceFor',
+  'rivalPricesFor', 'rivalPriceLatest', 'ourCostFor', 'ourPriceFor', 'boughtInPriceFor', 'suggestedSellingPrice',
   'priceRuleForTarget', 'setStockPriceRule',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind', 'productPackInfo', 'productUnitLabel',

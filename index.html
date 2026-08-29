@@ -22044,10 +22044,25 @@ function ipStageSummaryLine(product, selectedRow, unit, variantIdx){
   } else if(unit){
     bits.push(`Packaging: sold per ${esc(unit)}`);
   }
-  const wRule = effectiveMarkupRule(product, variantIdx, 'wholesale');
-  const rRule = effectiveMarkupRule(product, variantIdx, 'retail');
-  const fmtRule = r => r ? `${markupRuleLabel(r.type, r.value)}${r.source==='variant'?' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>':r.source==='default'?' <em style="font-style:normal;color:var(--ow-ink-400);">(shop default)</em>':''}` : 'No rule set';
-  bits.push(`Price rule: Wholesale <strong>${fmtRule(wRule)}</strong>&nbsp;·&nbsp;Retail <strong>${fmtRule(rRule)}</strong>`);
+  /* THE RULE THAT IS ACTUALLY GOVERNING THIS LINE, not the other one.
+     quoteItemSellPrice prices a line from our own stock by the STOCK
+     rule and every other line by the default -- a deliberate split. This
+     printed the default whatever was selected, so a shop that had just
+     set a stock rule from the market screen read "Wholesale +5,000"
+     above a recommended 160,000 that came from +25,000, over a cost of
+     135,000, with the arithmetic visibly refusing to work. */
+  const fromStock = ipSelectedSupplierId === '__stock__';
+  const ruleFor = (kind)=> fromStock
+    ? effectiveStockMarkupRule(product, variantIdx, kind)
+    : effectiveMarkupRule(product, variantIdx, kind);
+  const wRule = ruleFor('wholesale');
+  const rRule = ruleFor('retail');
+  const srcLabel = (r)=> !r ? ''
+    : r.source === 'variant' || r.source === 'variant-stock' ? ' <em style="font-style:normal;color:var(--accent-ink);">(this variant)</em>'
+    : r.source === 'default' ? ' <em style="font-style:normal;color:var(--ow-ink-400);">(shop default)</em>' : '';
+  const fmtRule = r => r ? `${markupRuleLabel(r.type, r.value)}${srcLabel(r)}` : 'No rule set';
+  bits.push(`Price rule: Wholesale <strong>${fmtRule(wRule)}</strong>&nbsp;·&nbsp;Retail <strong>${fmtRule(rRule)}</strong>`
+    + (fromStock ? ' <em style="font-style:normal;color:var(--ow-ink-400);">— for goods off your own shelf</em>' : ''));
   return bits.map(b=>`<div>${b}</div>`).join('');
 }
 
@@ -38392,6 +38407,20 @@ function ourPriceFor(productId, variantIdx, kind){
   return sug == null ? null : Math.round(sug);
 }
 
+/* THE SAME LINE, PRICED THE OTHER WAY. quoteItemSellPrice prices a line
+   off our own shelf by the stock rule and a line bought in to order by
+   the product's default rule -- a deliberate split, and one the market
+   screen's button touches only one half of. This is the half it does
+   not touch, so the card can say so before the tap rather than leave
+   the owner to find out from a quote. */
+function boughtInPriceFor(productId, variantIdx, kind){
+  const c = ourCostFor(productId, variantIdx);
+  if(!c) return null;
+  const side = kind === 'retail' ? 'retail' : 'wholesale';
+  const sug = suggestedSellingPrice(c.product, c.cost, side, c.variantIdx, c.packQty);
+  return sug == null ? null : Math.round(sug);
+}
+
 /* WHAT IT WOULD MEAN TO CHARGE A PARTICULAR PRICE -- the arithmetic
    nothing in this app had ever done, and the one the decision actually
    turns on. The market screen can say a rival is 5,000 cheaper; it
@@ -38500,7 +38529,7 @@ function rivalMarketRows(dateISO){
       const sameUnit = (a, b)=> String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase();
       const packQty = Number(pack && pack.packQty) || 0;
       const converts = !!saidUnit && packQty > 1 && sameUnit(saidUnit, pack.packUnit);
-      const comparable = !saidUnit || converts || !ownUnit || sameUnit(saidUnit, ownUnit);
+      const comparable = !saidUnit || converts || sameUnit(saidUnit, ownUnit);
       const theirs = converts ? Math.round(said / packQty) : said;
       out.push({ id: r.id, key, shop, productId: r.productId,
         variantIdx: r.variantIdx == null ? null : Number(r.variantIdx),
@@ -38695,7 +38724,7 @@ function renderMarket(){
     ${cell(shops, shops === 1 ? 'shop on file' : 'shops on file')}
     ${cell(lines, lines === 1 ? 'line checked' : 'lines checked')}
     ${cell(stale, `seen over ${RIVAL_STALE_DAYS} days ago`, stale ? 'warn' : '')}
-    ${cell(never.length, never.length === 1 ? 'never checked' : 'never checked', never.length ? 'warn' : 'good')}
+    ${cell(never.length, 'never checked', never.length ? 'warn' : (rows.length ? 'good' : ''))}
     ${v.atStake ? cell(f(v.atStake), 'at stake this month', 'warn') : ''}
   </div>`;
 
@@ -38878,9 +38907,17 @@ function renderMarket(){
        hold has already ended, so nothing could tell it ever stood. */
     const held = buyHoldFor(stockKey(pid, vi));
     const stood = !!(held && !held.over);
+    /* What the OTHER rule would price this at. When it differs, a line
+       bought in to order will not move with this change, and the owner
+       has to be told before the tap, not after. */
+    const boughtIn = boughtInPriceFor(pid, vi, side);
+    const drifts = boughtIn != null && Math.abs(boughtIn - m.target) > 0.5;
     if(!confirm('Charge ' + fmtUGX(m.target) + ' ' + rivalSideLabel(side) + ' instead of ' + fmtUGX(was) + '?\n\n'
-      + 'It costs you ' + fmtUGX(m.cost) + ', so you would keep ' + m.keptPct + '%.'
-      + '\n\nYour ' + rivalSideLabel(side === 'retail' ? 'wholesale' : 'retail') + ' price is not touched.')) return;
+      + 'The cheapest price on file for it is ' + fmtUGX(m.cost) + ', so you would keep ' + m.keptPct + '%.'
+      + '\n\nThis sets the price for goods sold off your own shelf.'
+      + (drifts ? ' A line you buy in to order still prices at ' + fmtUGX(boughtIn)
+        + ' from the product\u2019s own rule, which this does not touch.' : '')
+      + '\nYour ' + rivalSideLabel(side === 'retail' ? 'wholesale' : 'retail') + ' price is not touched.')) return;
     /* The rule for THAT side and no other: a retail sighting must not
        move what the pack sells for, and the value written is already
        spread the way that side's ladder reads it. */
