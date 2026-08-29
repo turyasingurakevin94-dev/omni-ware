@@ -49,7 +49,7 @@ const on = (days) => new Date(Date.parse(TODAY + 'T00:00:00Z') + days * 86400000
 
 /* ---------- 1. the table ---------------------------------------------- */
 {
-  t.check(/create table payment_promises/.test(sql), '0089 creates the table');
+  t.check(/create table (if not exists )?payment_promises/.test(sql), '0089 creates the table');
   t.check(/primary key \(shop_id, id\)/.test(sql),
     'keyed by shop and row id — the same block scheme every other synced table uses');
   ['customer_id', 'promised_on', 'made_on', 'amount', 'note'].forEach((c) =>
@@ -77,6 +77,30 @@ const on = (days) => new Date(Date.parse(TODAY + 'T00:00:00Z') + days * 86400000
     'the id counter is seeded, or the first promise on a live shop has no id to take');
   t.check(/on conflict \(shop_id, kind\) do nothing/.test(sql),
     'and seeding twice is not an error — the file is pasted by hand and may be pasted again');
+
+  /* SAFE TO RUN TWICE, AND THE COUNTER SEED IS NOT ENOUGH ON ITS OWN.
+     Migrations here go into a database whose real state is whatever
+     somebody pasted before. A file that stops dead on "relation already
+     exists" is worse than one that simply errors: if the FIRST run had
+     stopped partway — a typo, a dropped connection, a policy that failed
+     — the retry meant to finish the job fails on line one and leaves the
+     table exactly as broken as it found it, while looking to the reader
+     like it was already done. 0083 learned this and drops every policy
+     before creating it. */
+  t.check(/create table if not exists payment_promises/.test(sql),
+    'the table is created only if it is not already there');
+  t.check(/create index if not exists payment_promises_customer_idx/.test(sql),
+    'and so is its index');
+  const made = [...sql.matchAll(/create policy "([^"]+)" on payment_promises/g)].map((m) => m[1]);
+  const dropped = new Set([...sql.matchAll(/drop policy if exists "([^"]+)" on payment_promises/g)].map((m) => m[1]));
+  eq(made.length, 4, 'four policies are declared');
+  const undropped = made.filter((p) => !dropped.has(p));
+  t.check(undropped.length === 0,
+    `and every one is dropped first, so a second paste replaces it rather than failing (${JSON.stringify(undropped)})`);
+  const outOfOrder = made.filter((p) =>
+    sql.indexOf(`drop policy if exists "${p}" on payment_promises`) > sql.indexOf(`create policy "${p}" on payment_promises`));
+  t.check(outOfOrder.length === 0,
+    `with the drop BEFORE the create — after it, a re-run would delete the policy it had just made (${JSON.stringify(outOfOrder)})`);
 }
 
 /* ---------- 2. kept, broken, or still waiting ------------------------- */

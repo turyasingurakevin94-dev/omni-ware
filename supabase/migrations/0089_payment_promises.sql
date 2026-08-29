@@ -24,6 +24,15 @@
 -- "kept" and a ledger that disagrees with it is the drift this app has
 -- already had to write a repair banner for once.
 --
+-- SAFE TO RUN TWICE. Migrations here are pasted by hand, into a database
+-- whose real state is whatever somebody pasted before -- and the first
+-- version of this file was not re-runnable, so a second paste stopped
+-- dead on "relation payment_promises already exists" and every statement
+-- after it was skipped. That is worse than an error: if the FIRST run had
+-- stopped partway, the retry that was supposed to finish the job would
+-- fail on line one and leave the table exactly as broken as it found it.
+-- 0083 already learned this and drops each policy before creating it.
+--
 -- No FK to customers deliberately, the same reasoning as stock_log and
 -- rival_prices: deleting a customer should not silently erase what they
 -- promised, and the row simply stops resolving and drops out of every
@@ -31,7 +40,7 @@
 -- figure, and writing the balance in at the time would freeze a number
 -- that moves.
 
-create table payment_promises (
+create table if not exists payment_promises (
   shop_id uuid not null references shops(id) on delete cascade,
   id bigint not null,
   customer_id text not null,
@@ -44,11 +53,12 @@ create table payment_promises (
 );
 
 -- Every read is "what has this customer promised", newest first.
-create index payment_promises_customer_idx
+create index if not exists payment_promises_customer_idx
   on payment_promises (shop_id, customer_id, promised_on desc);
 
 alter table payment_promises enable row level security;
 
+drop policy if exists "shop members full access" on payment_promises;
 create policy "shop members full access" on payment_promises
   for all using (is_shop_member(shop_id)) with check (is_shop_member(shop_id));
 
@@ -57,10 +67,13 @@ create policy "shop members full access" on payment_promises
 -- writes or amends (0083). A promise decides whether a customer is
 -- chased and what the forecast shows, so an account that cannot change
 -- a debt must not be able to change the expectation of one either.
+drop policy if exists "owner only deletes" on payment_promises;
 create policy "owner only deletes" on payment_promises
   as restrictive for delete using (is_shop_owner(shop_id));
+drop policy if exists "owner writes only" on payment_promises;
 create policy "owner writes only" on payment_promises
   as restrictive for insert with check (is_shop_admin(shop_id));
+drop policy if exists "owner updates only" on payment_promises;
 create policy "owner updates only" on payment_promises
   as restrictive for update using (is_shop_admin(shop_id)) with check (is_shop_admin(shop_id));
 
@@ -73,3 +86,10 @@ on conflict (shop_id, kind) do nothing;
 -- Look first: what is already on file, if this ran once before.
 -- select customer_id, count(*) as promises, max(promised_on) as latest
 --   from payment_promises group by 1 order by 3 desc;
+--
+-- And afterwards, that the guards really landed -- rls true, four
+-- policies. A table with row level security off is readable by anyone
+-- holding the public key, so this is the line worth reading.
+-- select c.relrowsecurity as rls_on,
+--        (select count(*) from pg_policies where tablename = 'payment_promises') as policies
+--   from pg_class c where c.relname = 'payment_promises';
