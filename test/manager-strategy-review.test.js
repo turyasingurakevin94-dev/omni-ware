@@ -335,7 +335,7 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
 
   /* ---------- 8. the discipline the mind is held to ---------------- */
   {
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
     t.check(/JUDGE THE STRATEGIES, AND NEVER TAKE CREDIT FOR THEM/.test(ext),
       'the law, said first: the review accounts for every strategy and claims none of them');
     t.check(/is WHAT MOVED, never what the play DID/.test(ext),

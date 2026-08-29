@@ -33,6 +33,11 @@ const mk = () => {
   const scope = compileScope([
     'let apLastPlan = null;',
     'let managerToday = null;',
+    // Whether this sitting ever ran out of room. The commit stamps it on
+    // the plan, so the card drawn today and the one drawn from the
+    // journal tomorrow cannot disagree about it.
+    'let apCutOffThisSitting = false;',
+    'function sayCutOff(){ apCutOffThisSitting = true; }',
     // The real marker, declared as the app declares it — the identity
     // check that makes a commit idempotent is the point of this file.
     extractDeclaration(src, 'managerCommittedPlan', 'index.html'),
@@ -47,7 +52,7 @@ const mk = () => {
     renderManager: () => { state.renders++; },
     renderManagerCard: () => {},
     Array, String, Promise,
-  }, ['managerCommitPlan', 'setPlan', 'today']);
+  }, ['managerCommitPlan', 'setPlan', 'today', 'sayCutOff']);
   return scope;
 };
 
@@ -60,6 +65,26 @@ const mk = () => {
     s.setPlan({ keyline: 'k', moves: [] });
     eq(await s.managerCommitPlan(), false, 'a plan with no moves is not a plan');
     eq(state.saved.length, 0, 'so still nothing is written');
+  }
+
+  /* A meeting that ran out of room says so on the record. The fact
+     used to live for one send and then vanish, so nobody could tell
+     afterwards whether the instructions had grown too heavy to answer
+     in one go -- which is the only evidence that would show it. */
+  {
+    state.saved.length = 0;
+    const s = mk();
+    s.setPlan({ keyline: 'k', moves: [{ title: 'Chase Mulongo', why: 'w' }] });
+    eq(await s.managerCommitPlan(), true, 'a whole meeting commits');
+    eq(state.saved[0].cutOff, undefined, 'and says nothing about running out of room, because it did not');
+
+    state.saved.length = 0;
+    const s2 = mk();
+    s2.sayCutOff();
+    s2.setPlan({ keyline: 'k', moves: [{ title: 'Chase Mulongo', why: 'w' }] });
+    eq(await s2.managerCommitPlan(), true, 'a cut-off meeting still commits — that law is older than this one');
+    eq(state.saved[0].cutOff, true,
+      'and carries the fact that it ran out of room into the journal with it');
   }
 
   /* ---------- 2. the plan that lands two turns later is kept --------- */
@@ -135,7 +160,7 @@ const mk = () => {
 
   /* ---------- 6. the meeting stops writing itself twice -------------- */
   {
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
     t.check(/KEEP THE PROSE SHORT/.test(ext), 'the meeting is told to keep its prose short');
     t.check(/the cards on the Manager screen carry every move in full/.test(ext),
       'because the cards already carry each move — writing both at length spends the answer twice');

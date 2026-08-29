@@ -216,7 +216,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 7. the second mind, on the server ------------------------ */
 {
-  t.check(/const MANAGER_EXTENSION = \[/.test(api), 'the manager prompt lives on the server like the first one');
+  t.check(/const MANAGER_COMMON = \[/.test(api) && /const MANAGER_MEETING = \[/.test(api)
+    && /const MANAGER_REVIEW = \[/.test(api),
+    'the manager prompt lives on the server like the first one — as three blocks now, one per occasion plus what binds on both');
   t.check(/AT MOST FIVE moves/.test(api), 'at most five moves — a plan of twenty is a dashboard, not judgement');
   t.check(/Never forecast/.test(api), 'forecasting is forbidden in as many words');
   t.check(/manager_history FIRST/.test(api), 'the meeting opens with its own account');

@@ -38,7 +38,7 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 1. the mind is taught to manage, not to list ------------- */
 {
-  const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+  const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
   t.check(/NAME THE WEEK\\u2019S OBJECTIVE FIRST/.test(ext) || /NAME THE WEEK’S OBJECTIVE FIRST/.test(ext),
     'the meeting opens by naming the week’s objective');
   t.check(/EVERY MOVE MUST SERVE THAT OBJECTIVE OR BE DROPPED/.test(ext),

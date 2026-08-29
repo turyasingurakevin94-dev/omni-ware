@@ -51900,7 +51900,13 @@ async function managerSaveMeeting(plan){
       /* The week's aim and the figures that chose it, kept so the review
          can judge the plan against what it set out to do. */
       objective: MANAGER_OBJECTIVES[String(obj.name||'')] ? String(obj.name) : null,
-      objectiveWhy: String(obj.why||'').slice(0, 300) },
+      objectiveWhy: String(obj.why||'').slice(0, 300),
+      /* WHETHER THIS MEETING RAN OUT OF ROOM. The fact existed for one
+         send and was then cleared, so nobody could ever tell whether the
+         manager's instructions had grown too heavy for one answer --
+         which is the only evidence that would say so. Written down with
+         the meeting it belongs to, and only when true. */
+      ...(plan.cutOff ? { cutOff: true } : {}) },
     status: 'held',
   }).select('id').single();
   if(ins.error || !ins.data){ console.warn('Manager: meeting not saved:', ins.error && ins.error.message); return null; }
@@ -52397,6 +52403,11 @@ async function managerCommitPlan(){
   if(!apLastPlan || managerCommittedPlan === apLastPlan) return false;
   if(!Array.isArray(apLastPlan.moves) || !apLastPlan.moves.length) return false;
   managerCommittedPlan = apLastPlan;
+  /* Stamped on the plan ITSELF, so the card drawn from memory this
+     morning and the card drawn from the journal tomorrow say the same
+     thing. Two readings of "was this meeting cut short" would be two
+     chances to disagree about it. */
+  if(apCutOffThisSitting) apLastPlan.cutOff = true;
   managerToday = { plan: apLastPlan, date: todayISO() };
   lsSet(MANAGER_MEETING_KEY, todayISO());
   await managerSaveMeeting(apLastPlan);
@@ -52421,6 +52432,7 @@ async function runManagerMeeting(){
   assistantThread = [];
   apLastPlan = null;
   managerCommittedPlan = null;
+  apCutOffThisSitting = false;
   renderManager();
   apOpenPanel();
   assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the morning meeting.' });
@@ -52457,9 +52469,14 @@ async function runManagerReview(){
      with it. Said and set aside rather than left sitting in the
      composer claiming it is about to be sent. */
   if(apPendingPhoto){ apClearPhoto(); toast('Photo set aside — a meeting reads the books, not a picture', 5000); }
-  apMode = 'manager';
+  /* The review is a DIFFERENT OCCASION, and now says so: it wants the
+     rules for judging a week, not the twelve thousand characters about
+     planning a day. The trigger sentence still selects the behaviour;
+     the mode selects the rulebook. */
+  apMode = 'manager-review';
   assistantThread = [];
   apLastReview = null;
+  apCutOffThisSitting = false;
   renderManager();
   apOpenPanel();
   assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the weekly review.' });
@@ -52692,7 +52709,11 @@ function renderManager(){
         ? `<div class="mgr-objective"><b>${esc(MANAGER_OBJECTIVES[plan.objective])}.</b> ${esc(plan.objectiveWhy || '')}</div>` : '')
       + (plan && plan.keyline ? `<div class="mgr-keyline"><b>The one thing:</b> ${esc(plan.keyline)}</div>` : '')
       + cards
-      + (plan && plan.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(plan.rejected)}</div>` : '');
+      + (plan && plan.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(plan.rejected)}</div>` : '')
+      /* Said out loud rather than left as a silent gap: a meeting that
+         ran out of room may have had more to propose than reached this
+         card, and the owner is the one who would otherwise wonder. */
+      + (plan && plan.cutOff ? `<div class="mgr-why" style="margin-top:2px;">This meeting ran out of room mid-answer — there may have been more to it.</div>` : '');
   };
   const wire = (root)=>{
     root.querySelectorAll('.mgr-door').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.tab)));
@@ -57542,6 +57563,12 @@ let apLastReview = null;
 let assistantBusy = false;
 let apVoiceMode = false;    // hands-free conversation on
 let apWasCutOff = false;    // last answer hit max_tokens; next send says so
+/* WHETHER THIS SITTING WAS EVER CUT SHORT. apWasCutOff lives for one
+   send and is then cleared, so after a meeting nothing anywhere knew it
+   had run out of room -- which is exactly the fact needed to tell
+   whether the instructions are still too heavy. This one survives the
+   whole meeting and is written into the journal with it. */
+let apCutOffThisSitting = false;
 let apRecognition = null;   // the live SpeechRecognition, when listening
 let apQuoteInFlight = false; // one INV- number per confirm, ever
 
@@ -58625,15 +58652,85 @@ const ASSISTANT_TOOLS = {
     const held = buyHoldsStanding(todayISO()).slice(0, 6).map(h=> ({
       key: h.key, name: buyKeyLabel(h.key), reason: h.reason,
       held_for_days: h.days, placed_by: h.by }));
-    return { ...(Object.keys(playbook).length ? { playbook } : {}),
+    /* TWO KINDS OF FACT, AND THEY ARE NOT THE SAME JOB.
+
+       This answer used to be one flat pile: the playbook, the holds,
+       the scoreboard, every question answered and open, the last
+       review, three meetings of moves. All of it true, all of it handed
+       over at once -- and the prompt then piled obligations to account
+       for the lot, until the morning brief opened with six paragraphs
+       of bookkeeping before it said what to do today.
+
+       The fix is not another rule asking for restraint. A rule that
+       says "be brief" is weaker than an answer that hands less, so the
+       reading itself now sorts what it knows:
+
+         WORTH_SAYING   what is off course or genuinely new since the
+                        last meeting. These are the sentences a morning
+                        is for, and there are rarely more than three.
+         DO_NOT_REPEAT  names only, so the mind can avoid re-asking,
+                        re-proposing and re-recommending. Needed for
+                        restraint, never for prose.
+
+       An honest limit, stated rather than papered over: nothing stores
+       what the scoreboard READ at the last meeting, so "collections
+       moved 400,000 since yesterday" is not derivable here and is not
+       claimed. Off course, which pace gives honestly, is. */
+    const lastMeetingOn = ((meetings.data||[])[0]||{}).date || null;
+    const isNew = (d)=> !lastMeetingOn || (d && String(d) >= lastMeetingOn);
+
+    const worth = [];
+    /* A target behind its own pace, with how far. One on course needs
+       no sentence -- that is the whole point of a pace line. */
+    score.targets.filter(x=> x.pace && x.pace.on_course === false).slice(0, 3).forEach(x=>{
+      worth.push({ kind: 'target_behind', metric: x.metric, label: x.label, aim: x.aim,
+        stands_at: x.actual, behind_by: x.pace.behind_by, days_left: x.days_left,
+        at_this_rate: x.pace.at_this_rate });
+    });
+    /* An answer the shop went and found since the last meeting is
+       EVIDENCE, and it is the freshest thing in the whole journal. */
+    answered.filter(q=> isNew(q.answered_on)).slice(0, 3).forEach(q=>{
+      worth.push({ kind: 'question_answered', asked: q.asked, answer: q.answer });
+    });
+    /* A hold that has stood a fortnight with nothing repriced is advice
+       that went nowhere -- the manager's own business to raise. */
+    held.filter(h=> h.held_for_days >= 14).slice(0, 2).forEach(h=>{
+      worth.push({ kind: 'hold_going_stale', line: h.name, reason: h.reason, held_for_days: h.held_for_days });
+    });
+    /* A running strategy that has actually moved something. */
+    (book.running||[]).filter(pl=> pl.progress && pl.progress.moved != null && pl.progress.moved !== 0)
+      .slice(0, 2).forEach(pl=>{
+        worth.push({ kind: 'play_moving', name: pl.name, measures: pl.progress.measures,
+          before: pl.progress.before, now: pl.progress.now != null ? pl.progress.now : pl.progress.since,
+          days_running: pl.progress.days_running,
+          caution: 'what moved alongside it, never what it did' });
+      });
+    /* A review written since the last meeting: today is the first
+       chance to act on its lessons. */
+    if(lastReview && isNew(lastReview.held_on)) worth.push({ kind: 'new_review',
+      verdict: lastReview.verdict, lessons: lastReview.lessons });
+
+    const doNot = {
+      ...(open.length ? { open_questions: open.slice(0, 8).map(q=> q.asked) } : {}),
+      ...((book.running||[]).length ? { plays_running: book.running.slice(0, 8).map(pl=> pl.name) } : {}),
+      ...((book.dropped||[]).length ? { plays_dropped: book.dropped.slice(0, 8).map(pl=> pl.name) } : {}),
+      ...(held.length ? { lines_held: held.slice(0, 6).map(h=> h.name) } : {}),
+    };
+
+    return {
+      ...(worth.length ? { worth_saying: worth }
+        : { worth_saying: [], nothing_new: 'Nothing is off course and nothing new has come in since the last meeting. Say that in a handful of words and go straight to what today is about.' }),
+      ...(Object.keys(doNot).length ? { do_not_repeat: doNot } : {}),
+      ...(Object.keys(playbook).length ? { playbook } : {}),
       ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
-      ...(score.targets.length ? { scoreboard: score.targets } : {}),
-      ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed } : {}),
+      ...(score.targets.length ? { scoreboard: score.targets.slice(0, 6) } : {}),
+      ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed.slice(0, 4) } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),
       meetings: (meetings.data||[]).map(m=> ({
       date: m.date, keyline: (m.body||{}).keyline || '',
+      ...((m.body||{}).cutOff ? { ran_out_of_room: true } : {}),
       moves: (movesR.data||[]).filter(x=> x.meeting_id === m.id).map(x=>{
         const out = deriveMoveOutcome(x);
         return { title: (x.body||{}).title || '', status: out.status,
@@ -59715,6 +59812,7 @@ async function apRunLoop(){
           apWasCutOff = true;
           apRenderError('I had to stop mid-answer — that was too much for one go. Say "continue" and I will pick up where I stopped, in smaller pieces.'
             + (apMode === 'manager' ? ' The plan is not lost: it is kept the moment the meeting finishes.' : ''));
+          if(apMode === 'manager' || apMode === 'manager-review') apCutOffThisSitting = true;
         } else if(!spokeText){
           apRenderError('I got an empty answer back — say that again.');
         }
@@ -59763,6 +59861,9 @@ async function apRunLoop(){
     document.getElementById('apSendBtn').disabled = false;
     /* A plan that arrives two "continue"s after the meeting began is
        the same plan: whichever turn carries it, it is journalled. */
+    /* THE MEETING ONLY. A review emits no [plan:] block by contract, so
+       committing on one could only ever journal a stale plan from
+       earlier in the panel as if today's review had proposed it. */
     if(apMode === 'manager'){ try{ await managerCommitPlan(); }catch(e){ console.warn('Manager: plan not committed:', e); } }
     apTrimThread();
     apSetState(apVoiceMode ? 'speaking' : null);

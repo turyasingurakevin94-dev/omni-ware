@@ -74,10 +74,11 @@ const pkg = read('package.json');
      big shared prefix stays cached across both. Both carry breakpoints. */
   const sys = /\{ type: 'text', text: SYSTEM_PROMPT, cache_control: \{ type: 'ephemeral' \} \}/.test(src);
   t.check(sys, 'the system prompt carries a cache breakpoint');
-  t.check(/\{ type: 'text', text: MANAGER_EXTENSION, cache_control: \{ type: 'ephemeral' \} \}/.test(src),
+  t.check(/\{ type: 'text', text: managerExtension\(mgrMode\), cache_control: \{ type: 'ephemeral' \} \}/.test(src),
     'and so does the manager extension, appended as a second block rather than a second copy');
-  t.check(/req\.body && req\.body\.mode === 'manager'/.test(src),
-    'selected by the request naming a mode — the client names a mind, it can never supply one');
+  t.check(/rawMode === 'manager' \|\| rawMode === 'manager-review'/.test(src)
+    && /system: mgrMode/.test(src),
+    'selected by the request naming a mode — the client names a mind, it can never supply one, and a mode this app does not send is the plain assistant rather than the wrong rulebook');
   const lastTool = src.lastIndexOf("name: 'add_sourcing_lead'");
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);

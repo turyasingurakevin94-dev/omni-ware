@@ -235,15 +235,17 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
 
   /* ---------- 6. the mind is told it will be measured ---------------- */
   {
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
     t.check(/BE MEASURED\./.test(ext), 'the mind is told to propose targets');
     t.check(/AT MOST TWO targets/.test(ext), 'bounded to two — a scoreboard of ten is a dashboard');
     ['collections', 'gross_profit', 'sales', 'debtors_total', 'dead_stock_value', 'cash_on_hand']
       .forEach((m) => t.check(ext.includes(m), `${m} is offered as a metric`));
     t.check(/Never propose a target for something no tool here measures/.test(ext),
       'and nothing outside what the app can measure');
-    t.check(/you must open by accounting for it before anything else/.test(ext),
-      'every meeting opens by answering for the scoreboard');
+    t.check(!/you must open by accounting for it before anything else/.test(ext),
+      'the scoreboard no longer CLAIMS the opening sentence — it was the third rule to do so, and three cannot all be first');
+    t.check(/A target behind pace is in worth_saying, and it MUST leave the meeting with either a move against it TODAY or an honest re-plan/.test(ext),
+      'but the obligation that mattered survives whole: a target behind pace is answered, not merely noted');
     t.check(/never quietly replace it with an easier one/.test(ext),
       'a missed target is said, not swapped — the whole point of being measured');
     t.check(/"targets":\[\{"metric":"collections","aim":3000000/.test(ext),

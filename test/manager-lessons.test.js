@@ -139,10 +139,10 @@ const N = scope.names();
 
   /* ---------- 5. both minds are told to use them --------------------- */
   {
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
-    t.check(/SAY WHICH OF THOSE LESSONS TODAY\\u2019S PLAN ACTS ON/.test(ext),
-      'a meeting must name the lesson today’s plan acts on');
-    t.check(/name the lesson you are setting aside and why today outranks it/.test(ext),
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
+    t.check(/the lesson from the last review that today acts on/.test(ext),
+      'a meeting must name the lesson today’s plan acts on — now inside the one rule that says how a morning reads, rather than as a fourth claim on the opening sentence');
+    t.check(/or the one you are setting aside and why/.test(ext),
       'and when it acts on none of them, say which it is setting aside and why');
     t.check(/say plainly that it is dead and stop carrying it/.test(ext),
       'a lesson the owner keeps passing on is retired, not repeated forever — the twice-rejected-rule judgement, applied to itself');

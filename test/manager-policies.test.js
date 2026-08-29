@@ -180,7 +180,8 @@ const { ASSISTANT_TOOLS: T, standingPoliciesData, deriveMoveOutcome } = scope.na
 /* ---------- 6. the mind's discipline, and the server's offer --------- */
 {
   t.check(/STANDING POLICIES\./.test(api), 'the policy discipline lives in the manager extension');
-  t.check(/Read standing_policies FIRST/.test(api), 'what stands is read before anything is proposed');
+  t.check(/Read standing_policies before you propose one/.test(api),
+    'what stands is read before anything is proposed — no longer claiming to be the first thing read, which collided with the meeting’s own first call');
   t.check(/At most ONE policy proposal per meeting or review/.test(api),
     'one proposal per occasion — a constitution is not rewritten daily');
   t.check(/never taste/.test(api), 'every number grounded in a derived figure, never taste');

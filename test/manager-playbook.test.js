@@ -351,7 +351,7 @@ const base = {
 
   /* ---------- 7. the discipline the mind is held to ------------------ */
   {
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
     t.check(/NEVER NAME A PROBLEM WITHOUT NAMING A PLAY THAT TREATS IT/.test(ext),
       'the whole point, said first: a diagnosis with no treatment is half a manager');
     t.check(/A play is CRAFT, not measurement/.test(ext),

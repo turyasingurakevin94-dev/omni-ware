@@ -158,13 +158,13 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
 
 /* ---------- 6. the mind judges by pace, not by the raw figure --------- */
 {
-  const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
-  t.check(/Judge it by PACE, not by the raw figure/.test(ext), 'the meeting is told to judge by pace');
+  const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
+  t.check(/judged by PACE and never by the raw figure/.test(ext), 'the meeting is told to judge by pace');
   t.check(/where a target on course would stand TODAY for the days elapsed/.test(ext),
     'with what expected means spelled out');
   ['expected', 'on_course', 'behind_by', 'at_this_rate'].forEach((k) =>
     t.check(ext.includes(k), `${k} is named for the mind that reads it`));
-  t.check(/must leave the meeting with either a move against it TODAY or an honest re-plan/.test(ext),
+  t.check(/MUST leave the meeting with either a move against it TODAY or an honest re-plan/.test(ext),
     'and a target behind pace cannot leave the meeting untouched — the whole point of watching');
   t.check(/Each live target carries its pace/.test(api),
     'the tool’s own description says pace rides along');

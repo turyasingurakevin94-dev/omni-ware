@@ -166,7 +166,7 @@ const out = T.month_and_quarter.run();
 
 /* ---------- 6. the mind is taught when and how to use it ------------- */
 {
-  const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+  const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
   t.check(/THE LONGER ARC\./.test(ext), 'the longer arc is taught');
   t.check(/Call month_and_quarter when the objective is growth/.test(ext),
     'called when the objective is growth, where the horizon matters');

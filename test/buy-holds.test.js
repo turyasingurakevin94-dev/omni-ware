@@ -459,7 +459,7 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
       && /presetBuyHolds: \(presets\.buyHolds/.test(src),
       'holds load and persist with the shop’s other settings — no migration, and nothing for the owner to paste');
 
-    const ext = api.slice(api.indexOf('const MANAGER_EXTENSION'), api.indexOf('].join', api.indexOf('const MANAGER_EXTENSION')));
+    const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
     t.check(/A SENTENCE IS NOT ENOUGH/.test(ext),
       'the rule that closes the whole complaint: rejecting a buy in prose leaves the screen recommending it tomorrow');
     t.check(/put it in holds with its key copied exactly from the tool/.test(ext),
