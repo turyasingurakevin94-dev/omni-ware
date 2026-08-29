@@ -166,6 +166,83 @@ const countIn = (key) => scope.debAgingProfile().bands.find((b) => b.key === key
   eq(r.band, 'b30', 'so it bands as recent debt, which is what it is');
 }
 
+/* ---------- 4b. a payment that names an invoice pays that invoice ---- *
+ *
+ * THE SAME MONEY, CREDITED TWO DIFFERENT WAYS, AND BOTH ADDING UP.
+ *
+ * The ledger records which invoice a payment was for. This walk threw
+ * that away and poured every shilling into the oldest bucket instead —
+ * so the invoice list and the age line disagreed about which debts were
+ * still open, while their TOTALS matched exactly, which is the only
+ * thing customerDebtDrift compares. Nothing complained.
+ *
+ * Live, on this shop: a customer paid 735,000 against INV-0223. The
+ * invoice list held it there and went on showing INV-0197 of 21 August
+ * as unpaid. This walk spent the same 735,000 on the oldest charges
+ * instead, and reported the oldest outstanding as 24 August. The chase
+ * message printed BOTH — the 21 August invoice in its list, and
+ * "outstanding 5 days" underneath — and went to the customer arguing
+ * with itself.
+ *
+ * And it made the debt look younger than it is. Age decides who is
+ * chased at all.
+ */
+{
+  const inv = (days, amount, quoteId) => ({ id: nextId++, date: ago(days), type: 'charge', amount, quoteId });
+  const pay = (days, amount, quoteId) => ({ id: nextId++, date: ago(days), type: 'payment', amount, quoteId });
+  const log = [
+    inv(19, 450000),            // carried on the account from earlier — names no invoice
+    inv(8, 285000, 197),
+    inv(5, 715000, 208),
+    inv(3, 1570000, 223),
+    pay(1, 735000, 223),        // paid against INV-0223, and said so
+  ];
+  data.customers = [{ id: 'CX', name: 'Mulongo', location: '', debtLog: log,
+    debt: log.reduce((s, l) => s + (l.type === 'charge' ? l.amount : -l.amount), 0) }];
+
+  const r = scope.debAllRows()[0];
+  eq(r.debt, 2285000, 'the balance is unmoved — the same money, in different buckets');
+  eq(r.ageDays, 19,
+    'the payment goes to the invoice it NAMES, so the 450,000 carried from earlier is still the oldest thing owed — 19 days, not the 5 the oldest-first walk reported');
+  eq(r.band, 'b30', 'and it bands on the truth');
+
+  /* The remainder of a named payment still goes oldest first: paying
+     more against one invoice than it is worth is not a reason to leave
+     the rest unallocated. */
+  data.customers[0].debtLog = [
+    inv(19, 450000),
+    inv(8, 285000, 197),
+    inv(3, 100000, 223),
+    pay(1, 550000, 223),        // 100,000 clears INV-0223; 450,000 is loose
+  ];
+  data.customers[0].debt = 285000;
+  eq(scope.debAllRows()[0].ageDays, 8,
+    'what is left over after the named invoice is settled still runs oldest first — the 450,000 goes, and the charge behind it is what remains');
+
+  /* AND THE ORDINARY CASE IS UNTOUCHED. Most payments name nothing —
+     money handed across a counter for no stated reason — and oldest
+     first is the right rule for those. */
+  data.customers[0].debtLog = [
+    inv(19, 450000),
+    inv(8, 285000, 197),
+    pay(1, 450000),             // names nothing
+  ];
+  data.customers[0].debt = 285000;
+  eq(scope.debAllRows()[0].ageDays, 8,
+    'a payment naming no invoice still clears the oldest charge first, exactly as before');
+
+  /* A payment naming an invoice this customer has no charge for cannot
+     vanish: it falls through to oldest-first rather than being lost. */
+  data.customers[0].debtLog = [
+    inv(19, 450000),
+    inv(8, 285000, 197),
+    pay(1, 450000, 999),        // no charge on file for 999
+  ];
+  data.customers[0].debt = 285000;
+  eq(scope.debAllRows()[0].ageDays, 8,
+    'and one naming an invoice with no charge behind it is not silently dropped — it pays the oldest, because the money did arrive');
+}
+
 /* ---------- 5. when they last paid anything -------------------------- *
  * The clearest read there is on whether a customer has gone quiet, and
  * the list never carried it.

@@ -33290,9 +33290,38 @@ function customerOpenCharges(c){
   log.forEach(entry=>{
     const amt = Number(entry.amount)||0;
     if(entry.type==='charge'){
-      open.push({date: entry.date, original: amt, remaining: amt});
+      open.push({date: entry.date, original: amt, remaining: amt, quoteId: entry.quoteId});
     } else if(entry.type==='payment'){
       let rem = amt;
+      /* A PAYMENT THAT NAMES AN INVOICE PAYS THAT INVOICE.
+         The ledger records which invoice a payment was for, and this walk
+         used to throw that away and pour every shilling into the oldest
+         bucket instead -- so the SAME payment was credited two different
+         ways by two different readings, and both came to the same total,
+         so nothing ever complained.
+
+         What it cost, live: a customer paid 735,000 against INV-0223.
+         The invoice list held it there and went on showing INV-0197 of
+         21 August as unpaid; this walk spent it on the oldest charges
+         instead and reported the oldest outstanding as 24 August. The
+         chase message printed both -- the 21 August invoice in its list
+         and "outstanding 5 days" underneath it -- and went to the
+         customer arguing with itself.
+
+         It also made the shop's debt look YOUNGER than it is, and age is
+         what decides who gets chased at all. */
+      if(entry.quoteId != null){
+        for(const ch of open){
+          if(rem<=0) break;
+          if(ch.quoteId == null || String(ch.quoteId) !== String(entry.quoteId)) continue;
+          const take = Math.min(ch.remaining, rem);
+          ch.remaining -= take; rem -= take;
+        }
+      }
+      /* Whatever is left over -- and every payment that names nothing,
+         which is most of them -- still goes oldest first. That is the
+         ordinary rule for money handed across a counter for no stated
+         reason, and it is unchanged. */
       for(const ch of open){
         if(rem<=0) break;
         const take = Math.min(ch.remaining, rem);
