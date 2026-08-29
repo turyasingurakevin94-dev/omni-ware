@@ -48,7 +48,7 @@ const NAMES = [
   'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
   'purchaseInvoiceIsOpeningBalance', 'supplierOpeningInvoice', 'createSupplierOpeningBalance',
   'creditorOutstandingInvoices', 'creditorTotalOwed', 'creditorOldestDueDate',
-  'daysSinceDate', 'agingBandFor', 'credOpenInvoices', 'payablesAsAt', 'dashTotalCreditors',
+  'daysSinceDate', 'agingBandFor', 'billDueDate', 'credOpenInvoices', 'payablesAsAt', 'dashTotalCreditors',
 ];
 let fns = null, err = null;
 try {

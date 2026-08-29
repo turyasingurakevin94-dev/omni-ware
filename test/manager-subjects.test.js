@@ -82,7 +82,17 @@ const books = () => ({
   savedQuotes: [{ id: 'Q9', invoiced: false },
     { id: 'Q1', client: { name: 'Dad' }, savedAt: '2024-01-01T08:00:00Z' },
     { id: 'Q2', client: { name: 'Dad' }, savedAt: '2024-01-11T08:00:00Z' }],
-  purchaseInvoices: [{ supplierId: 'S3', payments: [{ date: '2026-08-27', amount: 5000 }] }],
+  /* Two open bills from S3 — one the owner has named a day for and one
+     they have not — plus the payment that makes a settle move derivable.
+     The dated one is what who_you_owe must hand back with its supplierId
+     attached; the undated one is what must NOT reach the cash line. */
+  purchaseInvoices: [
+    { id: 'PINV-1', supplierId: 'S3', date: '2026-08-01', dueDate: '2026-09-05',
+      items: [{ qty: 1, price: 400000 }], amountPaid: 0,
+      payments: [{ date: '2026-08-27', amount: 5000 }] },
+    { id: 'PINV-2', supplierId: 'S3', date: '2026-07-10',
+      items: [{ qty: 1, price: 900000 }], amountPaid: 0, payments: [] },
+  ],
   presetReorderRules: { D1: { min: 4 } },
   cashTxns: [], products: [], prices: [],
   presetOrderStageLimits: {},
@@ -201,6 +211,12 @@ const books = () => ({
       invoices: [{ client: { name: 'Milly' }, items: [] }],
       stockOut: [{ key: 'D1', name: 'Sitting Still', qty: 2, daysLeft: 3, dailyRate: 1 }] }),
     anInvoiceTotals: () => ({ sales: 900000, cost: 810000, qty: 3, estimatedQty: 0 }),
+    supplierName: () => 'Roto',
+    purchaseInvoiceTotal: (pi) => (pi.items || []).reduce((n, i) => n + i.qty * i.price, 0),
+    purchaseInvoiceBalanceDue: (pi) => (pi.items || []).reduce((n, i) => n + i.qty * i.price, 0)
+      - (Number(pi.amountPaid) || 0),
+    agingBandFor: () => 'b30',
+    agingDaysLabel: (n) => n + ' days',
     uncostedStockRows: () => [],
     dashAlerts: () => [],
     debtChaseRows: () => ({
@@ -230,6 +246,12 @@ const books = () => ({
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
     extractFunction(src, 'deriveMoveOutcome', 'index.html'),
     extractFunction(src, 'anRowsByCustomer', 'index.html'),
+    /* The supplier side, WHOLE rather than stubbed: whether the
+       supplierId who_you_owe hands back is one deriveMoveOutcome can
+       follow is exactly what this file is for. */
+    extractFunction(src, 'credDueRows', 'index.html'),
+    extractFunction(src, 'credOpenInvoices', 'index.html'),
+    extractFunction(src, 'billDueDate', 'index.html'),
     extractFunction(src, 'marginRows', 'index.html'),
     extractFunction(src, 'ruleYieldPct', 'index.html'),
     extractFunction(src, 'marginTargetPrice', 'index.html'),
@@ -276,6 +298,12 @@ const books = () => ({
     ['policy', 'key', 'margin.worst_lines', pulse.margin.worst_lines],
     ['invoice', 'orderId', 'orders_sitting_too_long', pulse.orders_sitting_too_long],
     ['settle', 'supplierId', 'buying.top_lines', pulse.buying.top_lines],
+    /* THE FOURTH SUBJECT TYPE. A settle move has had a derivation since
+       the Manager was built and the reading never named a supplier to
+       point one at, so no advice about paying anybody could ever be
+       weighed. */
+    ['settle', 'supplierId', 'who_you_owe.due_in_the_window', pulse.who_you_owe.due_in_the_window],
+    ['settle', 'supplierId', 'who_you_owe.biggest_with_no_day', pulse.who_you_owe.biggest_with_no_day],
   ];
   const answer = (kind, idKey, id) => N.deriveMoveOutcome({ date: '2026-08-25', status: 'open',
     body: { mkind: kind, subject: { [idKey]: id } } });

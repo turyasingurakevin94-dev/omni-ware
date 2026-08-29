@@ -47,6 +47,7 @@ const scope = compileScope([
   extractFunction(src, 'creditorTotalOwed', 'index.html'),
   extractFunction(src, 'creditorLastPaymentDate', 'index.html'),
   extractFunction(src, 'credOpenInvoices', 'index.html'),
+  extractFunction(src, 'billDueDate', 'index.html'),
   extractFunction(src, 'credAgingProfile', 'index.html'),
   extractFunction(src, 'credAllRows', 'index.html'),
   extractFunction(src, 'credRowAmount', 'index.html'),

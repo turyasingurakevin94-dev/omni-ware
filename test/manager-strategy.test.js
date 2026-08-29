@@ -114,6 +114,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     cashOnHandByAccount: () => ({ total: 500000, byAccount: [] }),
     CASH_AHEAD_DAYS: 30,
       cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, promised: [], promisedTotal: 0, safeToSpend: 500000, tightest: { date: '2026-08-29', balance: 500000 } }),
+    /* The supplier side the pulse now reads. Stubbed empty here:
+       these files are about the meeting's shape and its caps, and
+       whether an emitted supplierId actually resolves is the one
+       claim manager-subjects.test.js exists to make. */
+    credDueRows: () => ({ undated: [], ahead: [], missed: [], total: 0, count: 0 }),
+    supplierName: (id) => 'Supplier ' + id,
     consignmentRows: () => [],
     morningBriefData: () => ({ sales: { total: 0, count: 0, profit: 0, estimated: false },
       cash: { counted: true }, paid: { total: 0, count: 0 }, stuck: [], ranOutCount: 0 }),
