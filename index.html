@@ -51726,6 +51726,36 @@ async function managerScoreboard(){
   return { targets: open, proposed };
 }
 
+/* THE JUDGEMENT THE MANAGER FORMED ABOUT ITS OWN WEEK, read back.
+   The review wrote a verdict and up to three lessons and then nothing
+   ever read them again: manager_history handed the meeting the
+   scoreboard, the questions and the past moves, and not one word of
+   what the shop had learned. A manager that writes lessons it never
+   re-reads is keeping a diary. One reading serves the screen and both
+   minds, so the owner and the manager can never be shown different
+   lessons -- and a row with no verdict is skipped rather than surfaced
+   as a blank. */
+async function managerRecentReviews(limit){
+  if(!managerNotesTable) return [];
+  const r = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'review')
+    .order('date', { ascending: false }).order('id', { ascending: false })
+    .limit(Math.max(1, Math.min(Number(limit) || 4, 10)));
+  if(r.error){ console.warn('Manager: reviews not read:', r.error.message); return []; }
+  return (r.data||[]).filter(x=> String(((x.body||{}).verdict)||'').trim());
+}
+
+/* One review as the mind reads it: the judgement, the lessons, and how
+   long ago -- days_ago derived here, never stored, so it cannot go
+   stale in the journal. */
+function managerReviewBrief(row){
+  if(!row) return null;
+  const b = row.body || {};
+  return { held_on: row.date, days_ago: Math.max(0, daysSinceDate(row.date)),
+    verdict: String(b.verdict||''),
+    lessons: (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> String(x||'').trim()).slice(0, 3) };
+}
+
 /* The shop answering its manager. One line is enough -- the answer is
    evidence at the next meeting, not a document. */
 async function managerAnswerQuestion(rowId, answer){
@@ -51771,10 +51801,7 @@ async function managerLoadState(){
   const qR = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
     .order('id', { ascending: false }).limit(6);
-  const revR = await sb.from('manager_notes').select('id, date, body, status')
-    .eq('shop_id', currentShopId).eq('kind', 'review')
-    .order('date', { ascending: false }).order('id', { ascending: false }).limit(4);
-  if(revR.error) console.warn('Manager: reviews not read:', revR.error.message);
+  const reviews = await managerRecentReviews(4);
   /* How much evidence a review would stand on -- the same 7-day window
      week_review_data reads, counted so the offer can say it is thin
      BEFORE the owner spends credit on it. */
@@ -51784,7 +51811,7 @@ async function managerLoadState(){
   return {
     today: withMoves.find(w=> w.meeting.date === today) || null,
     prior: withMoves.filter(w=> w.meeting.date !== today),
-    reviews: (revR.data) || [],
+    reviews,
     questions: (qR.error ? [] : (qR.data || [])),
     score,
     weekMeetings: (wkR && wkR.count) || 0,
@@ -57755,6 +57782,11 @@ const ASSISTANT_TOOLS = {
     }).slice(0, 15);
     const score = await managerScoreboard();
     if(score.targets.length) out.scoreboard = score.targets;
+    /* The review before this one: the only way to say whether the
+       lessons it gave were learned, rather than drawing fresh ones over
+       the top of them every week. */
+    const prev = managerReviewBrief((await managerRecentReviews(1))[0]);
+    if(prev) out.previous_review = prev;
     out.advice = {
       meetings_held: (meetR.data||[]).length,
       /* The thinness is a FACT of the review, not a failure of it --
@@ -57804,7 +57836,11 @@ const ASSISTANT_TOOLS = {
     /* Where the shop stands against what this manager itself said it
        would do -- derived now, from the books, every time. */
     const score = await managerScoreboard();
-    return { ...(score.targets.length ? { scoreboard: score.targets } : {}),
+    /* What the shop learned last week, so today's plan can be held
+       against it instead of starting over. */
+    const lastReview = managerReviewBrief((await managerRecentReviews(1))[0]);
+    return { ...(lastReview ? { last_review: lastReview } : {}),
+      ...(score.targets.length ? { scoreboard: score.targets } : {}),
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),

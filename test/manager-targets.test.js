@@ -176,6 +176,8 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     ];
     const board = compileScope([
       extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'managerRecentReviews', 'index.html'),
+      extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
     ], { ...env, managerNotesTable: true, currentShopId: 'shop-1',
@@ -200,6 +202,8 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'managerRecentReviews', 'index.html'),
+      extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),

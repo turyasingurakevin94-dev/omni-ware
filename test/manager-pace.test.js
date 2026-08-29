@@ -179,6 +179,8 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
     extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
     extractFunction(src, 'managerScoreboard', 'index.html'),
+    extractFunction(src, 'managerRecentReviews', 'index.html'),
+    extractFunction(src, 'managerReviewBrief', 'index.html'),
     extractFunction(src, 'managerScoreProgress', 'index.html'),
     extractFunction(src, 'deriveMoveOutcome', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',

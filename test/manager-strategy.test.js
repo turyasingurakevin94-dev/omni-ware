@@ -272,6 +272,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'managerRecentReviews', 'index.html'),
+      extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       'function names(){ return { ASSISTANT_TOOLS }; }',
