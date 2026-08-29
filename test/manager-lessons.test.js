@@ -70,6 +70,8 @@ const fakeSb = { from: () => { const q = { _kind: null };
 
 const scope = compileScope([
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+  extractFunction(src, 'managerPlaybook', 'index.html'),
+  extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
   extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
   extractFunction(src, 'managerRecentReviews', 'index.html'),
   extractFunction(src, 'managerReviewBrief', 'index.html'),

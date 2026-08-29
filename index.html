@@ -1026,6 +1026,12 @@
   .mgr-ask-row{display:flex;gap:8px;flex-wrap:wrap;}
   .mgr-ask-input{flex:1 1 260px;min-width:0;}
   .mgr-ask-when{font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
+  .mgr-play{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:11px 15px;margin:0 0 9px;}
+  .mgr-play-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .mgr-play-name{font-weight:700;font-size:14px;color:var(--ink);}
+  .mgr-play-tag{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .mgr-play-sized{font-size:12.5px;color:var(--accent-ink);margin:0 0 6px;}
   .mgr-policies{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 15px 11px;}
   .mgr-pol-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;
     padding:8px 0;border-bottom:1px solid var(--line);}
@@ -8428,6 +8434,7 @@
       <div id="managerQuestionsWrap"></div>
       <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
+      <div id="managerPlaysWrap"></div>
       <div id="managerPoliciesWrap"></div>
     </section>
 
@@ -51487,6 +51494,16 @@ function managerScoreProgress(row){
     finished: !!to && to < today, met, pct, pace, why: b.why || '' };
 }
 
+/* WHAT A PLAY TREATS. A strategy loose in the world is a listicle; one
+   attached to a named problem is management. Whitelisted, so an
+   invented category becomes nothing rather than a heading the screen
+   would print unchallenged. */
+const MANAGER_PROBLEMS = {
+  margin: 'Margin', cash: 'Cash', dead_stock: 'Dead stock', debt: 'Debt',
+  concentration: 'Depending on one buyer', supplier_cost: 'Supplier cost',
+  growth: 'Growth', other: 'Other',
+};
+
 const MANAGER_DOORS = {
   chase: { tab: 'chase', label: 'Open Chase debts' },
   buy: { tab: 'buying', label: 'Open What to buy' },
@@ -51577,6 +51594,9 @@ async function managerSaveMeeting(plan){
       /* What the figure MEANS, and which lever the move pulls -- both
          whitelisted, so an unknown word becomes nothing rather than a
          label the screen would print unchallenged. */
+      /* The strategy this move belongs to, so a card is never an orphan
+         action with no argument behind it. */
+      play: String(m.play||'').slice(0, 120) || null,
       worthBasis: MANAGER_WORTH_BASES[String(m.worth_basis||'')] ? String(m.worth_basis) : null,
       lever: MANAGER_LEVERS.includes(String(m.lever||'')) ? String(m.lever) : null,
       unlocks: String(m.unlocks||'').slice(0, 200) || null,
@@ -51607,6 +51627,22 @@ async function managerSaveMeeting(plan){
   if(targets.length){
     const r4 = await sb.from('manager_notes').insert(targets);
     if(r4.error) console.warn('Manager: targets not saved:', r4.error.message);
+  }
+  /* THE STRATEGIES THEMSELVES, proposed and never adopted by the writing
+     of them. A play is craft -- the judgement half of managing, which no
+     tool can derive -- so it is offered, sized in this shop's figures,
+     and worked only if the owner taps it. */
+  const plays = (Array.isArray(plan.plays) ? plan.plays : [])
+    .filter(x=> x && String(x.name||'').trim() && MANAGER_PROBLEMS[String(x.treats||'')])
+    .slice(0, 2)
+    .map(x=> ({ shop_id: currentShopId, kind: 'play', meeting_id: ins.data.id, date: todayISO(),
+      body: { name: String(x.name).trim().slice(0, 120), treats: String(x.treats),
+        how: String(x.how||'').slice(0, 400), sized: String(x.sized||'').slice(0, 300),
+        watch: String(x.watch||'').slice(0, 200), source: 'manager' },
+      status: 'proposed' }));
+  if(plays.length){
+    const r5 = await sb.from('manager_notes').insert(plays);
+    if(r5.error) console.warn('Manager: plays not saved:', r5.error.message);
   }
   /* What the books cannot answer. Stored open, shown on the screen with
      a box to answer in, and read back at the top of the next meeting --
@@ -51754,6 +51790,73 @@ function managerReviewBrief(row){
   return { held_on: row.date, days_ago: Math.max(0, daysSinceDate(row.date)),
     verdict: String(b.verdict||''),
     lessons: (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> String(x||'').trim()).slice(0, 3) };
+}
+
+/* THE SHOP'S OWN STRATEGY BOOK, read once for the screen and the mind
+   alike. What is running, what was tried and dropped -- so a play the
+   owner has ruled out is never proposed a second time, and a play that
+   is working is known to be working rather than re-invented. */
+async function managerPlaybook(){
+  if(!managerNotesTable) return { running: [], proposed: [], dropped: [] };
+  const r = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'play')
+    .order('id', { ascending: false }).limit(30);
+  if(r.error){ console.warn('Manager: playbook not read:', r.error.message); return { running: [], proposed: [], dropped: [] }; }
+  const rows = (r.data||[]).filter(x=> String(((x.body||{}).name)||'').trim());
+  const view = (x)=> ({ id: x.id, name: (x.body||{}).name, treats: (x.body||{}).treats || 'other',
+    problem: MANAGER_PROBLEMS[(x.body||{}).treats] || 'Other',
+    how: (x.body||{}).how || '', sized: (x.body||{}).sized || '', watch: (x.body||{}).watch || '',
+    source: (x.body||{}).source === 'owner' ? 'owner' : 'manager',
+    proposed_on: x.date, started_on: (x.body||{}).startedOn || null, ended_on: (x.body||{}).endedOn || null });
+  return {
+    running: rows.filter(x=> x.status === 'running').map(view),
+    proposed: rows.filter(x=> x.status === 'proposed').map(view),
+    dropped: rows.filter(x=> x.status === 'dropped' || x.status === 'done').map(x=> ({ ...view(x), status: x.status })),
+  };
+}
+
+/* Trying a play, stopping it, or setting it aside -- the dates that
+   cannot be worked out later are stamped here. */
+async function managerPlayStatus(rowId, status){
+  if(!managerNotesTable || rowId == null) return;
+  const cur = await sb.from('manager_notes').select('body').eq('shop_id', currentShopId).eq('id', rowId).single();
+  const body = (cur.data && cur.data.body) || {};
+  if(status === 'running') body.startedOn = todayISO();
+  if(status === 'dropped' || status === 'done') body.endedOn = todayISO();
+  const up = await sb.from('manager_notes').update({ status, body })
+    .eq('shop_id', currentShopId).eq('id', rowId);
+  if(up.error){
+    toast(/check constraint/i.test(up.error.message||'')
+      ? 'The playbook needs one update — paste supabase/migrations/0086_manager_plays.sql into the Supabase SQL editor and reload.'
+      : 'Could not change that play — ' + up.error.message, 9000);
+    return;
+  }
+  toast(status === 'running' ? 'Running — the manager knows it is on and will not propose it again'
+    : status === 'done' ? 'Marked as worked — it stays on the record'
+    : 'Set aside — it will not be proposed again');
+  renderManager();
+}
+
+/* The owner's own play. Their trade, their research, their judgement --
+   and the manager is told these outrank anything it thought of. */
+async function managerAddOwnPlay(name, how){
+  if(!managerNotesTable) return;
+  const n = String(name||'').trim();
+  if(n.length < 3){ toast('Give the play a name first'); return; }
+  const ins = await sb.from('manager_notes').insert({
+    shop_id: currentShopId, kind: 'play', date: todayISO(),
+    body: { name: n.slice(0, 120), treats: 'other', how: String(how||'').trim().slice(0, 400),
+      sized: '', watch: '', source: 'owner', startedOn: todayISO() },
+    status: 'running',
+  });
+  if(ins.error){
+    toast(/check constraint/i.test(ins.error.message||'')
+      ? 'The playbook needs one update — paste supabase/migrations/0086_manager_plays.sql into the Supabase SQL editor and reload.'
+      : 'Could not keep that play — ' + ins.error.message, 9000);
+    return;
+  }
+  toast('Kept — the manager reads it as the shop\'s own from the next meeting');
+  renderManager();
 }
 
 /* The shop answering its manager. One line is enough -- the answer is
@@ -51983,6 +52086,7 @@ function mgrMoveView(row, idx){
       }</span>` : ''}
     </div>
     <div class="mgr-why">${esc(b.why || '')}${
+      b.play ? `<div class="mgr-unlocks">Play: ${esc(b.play)}</div>` : ''}${
       b.unlocks ? `<div class="mgr-unlocks">Unlocks: ${esc(b.unlocks)}</div>` : ''}</div>
     <div class="mgr-acts">
       ${door ? `<button type="button" class="btn btn-accent mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}
@@ -52032,6 +52136,58 @@ function renderManager(){
   const qWrap = document.getElementById('managerQuestionsWrap');
   const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
+
+  /* THE PLAYBOOK -- the strategies the shop is actually working, beside
+     the standing rules because they are cousins: a rule the app watches
+     by itself, a play the shop works deliberately. */
+  const playWrap = document.getElementById('managerPlaysWrap');
+  if(playWrap){
+    if(!managerNotesTable) playWrap.innerHTML = '';
+    else managerPlaybook().then(book=>{
+      const card = (p, buttons)=> `<div class="mgr-play" data-pid="${esc(String(p.id))}">
+        <div class="mgr-play-top"><span class="mgr-play-name">${esc(p.name)}</span>
+          <span class="mgr-play-tag">${esc(p.problem)}${p.source === 'owner' ? ' · yours' : ''}</span></div>
+        ${p.how ? `<div class="mgr-why" style="margin:3px 0 6px;">${esc(p.how)}</div>` : ''}
+        ${p.sized ? `<div class="mgr-play-sized">${esc(p.sized)}</div>` : ''}
+        ${p.watch ? `<div class="mgr-why" style="margin:3px 0 6px;">Watch: ${esc(p.watch)}</div>` : ''}
+        <div class="mgr-acts">${buttons}</div>
+      </div>`;
+      playWrap.innerHTML = `<div class="mgr-sec-title">The playbook</div>`
+        + `<div class="mgr-why" style="margin:0 0 10px;">The strategies this shop is working. A play is
+            judgement, not arithmetic — it becomes real only when you try it, and the manager never
+            proposes one you have set aside.</div>`
+        + (book.proposed.length ? book.proposed.map(p=> card(p,
+            `<button type="button" class="btn btn-accent mgr-play-run">Try it</button>
+             <button type="button" class="btn btn-ghost mgr-play-drop">Set aside</button>`)).join('') : '')
+        + (book.running.length ? `<div class="mgr-sec-title" style="margin-top:14px;">Running</div>`
+            + book.running.map(p=> card(p,
+            `<span class="mgr-state">since ${esc(fmtShortDate(p.started_on || p.proposed_on))}</span>
+             <button type="button" class="btn btn-ghost mgr-play-done">It worked</button>
+             <button type="button" class="btn btn-ghost mgr-play-drop">Stop it</button>`)).join('') : '')
+        + (book.dropped.length ? `<div class="mgr-hist-row" style="margin-top:12px;"><span>Tried and set aside: ${
+            book.dropped.map(p=> esc(p.name)).join(', ')}</span><span></span></div>` : '')
+        + `<div class="mgr-asks" style="margin-top:12px;">
+            <div class="mgr-ask-q">Add your own play</div>
+            <div class="mgr-why" style="margin:2px 0 7px;">Something you know works in this trade. The
+              manager treats your own plays as the shop's, above anything it suggests.</div>
+            <div class="mgr-ask-row">
+              <input type="text" class="mgr-ask-input" id="mgrPlayName" placeholder="Name it — e.g. Charge for cutting">
+            </div>
+            <div class="mgr-ask-row" style="margin-top:6px;">
+              <input type="text" class="mgr-ask-input" id="mgrPlayHow" placeholder="How it works — one line">
+              <button type="button" class="btn btn-accent" id="mgrPlayAdd">Add</button>
+            </div>
+          </div>`;
+      playWrap.querySelectorAll('.mgr-play').forEach(el=>{
+        const id = Number(el.dataset.pid);
+        const on = (sel, status)=>{ const b = el.querySelector(sel); if(b) b.addEventListener('click', ()=> managerPlayStatus(id, status)); };
+        on('.mgr-play-run', 'running'); on('.mgr-play-drop', 'dropped'); on('.mgr-play-done', 'done');
+      });
+      const addBtn = playWrap.querySelector('#mgrPlayAdd');
+      if(addBtn) addBtn.addEventListener('click', ()=> managerAddOwnPlay(
+        (playWrap.querySelector('#mgrPlayName')||{}).value, (playWrap.querySelector('#mgrPlayHow')||{}).value));
+    });
+  }
 
   /* The standing rules -- from the same standingPoliciesData reading
      the standing_policies tool answers with, so the screen and the
@@ -57952,7 +58108,17 @@ const ASSISTANT_TOOLS = {
     /* What the shop learned last week, so today's plan can be held
        against it instead of starting over. */
     const lastReview = managerReviewBrief((await managerRecentReviews(1))[0]);
-    return { ...(lastReview ? { last_review: lastReview } : {}),
+    /* What this shop is already working, and what it has ruled out --
+       so a play is never proposed twice and a running one is argued
+       from rather than re-invented. */
+    const book = await managerPlaybook();
+    const playbook = {
+      ...(book.running.length ? { running: book.running.map(p=> ({ name: p.name, treats: p.treats,
+        how: p.how, since: p.started_on, whose: p.source })) } : {}),
+      ...(book.dropped.length ? { tried_and_dropped: book.dropped.map(p=> p.name) } : {}),
+    };
+    return { ...(Object.keys(playbook).length ? { playbook } : {}),
+      ...(lastReview ? { last_review: lastReview } : {}),
       ...(score.targets.length ? { scoreboard: score.targets } : {}),
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),

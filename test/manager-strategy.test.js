@@ -107,6 +107,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   };
   const scope = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'managerPlaybook', 'index.html'),
+    extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
   ], env, ['names']);
   const pulse = scope.names().ASSISTANT_TOOLS.shop_pulse.run();
@@ -270,6 +272,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     };
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
