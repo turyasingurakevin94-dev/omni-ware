@@ -993,6 +993,19 @@
   .mgr-week td{padding:5px 8px 5px 0;border-top:1px solid var(--line);color:var(--ink);}
   .mgr-week td:first-child{color:var(--ink-soft);}
   .mgr-week .mgr-prior{color:var(--ink-soft);font-size:12px;text-align:right;}
+  .mgr-score{display:flex;flex-direction:column;gap:9px;margin:0 0 14px;}
+  .mgr-target{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:11px 15px;}
+  .mgr-target.met{border-left-color:var(--good);}
+  .mgr-target.missed{border-left-color:var(--bad,var(--line));opacity:.8;}
+  .mgr-target-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .mgr-target-name{font-weight:700;font-size:14px;color:var(--ink);}
+  .mgr-target-fig{font-weight:700;font-size:13.5px;color:var(--accent-ink);white-space:nowrap;text-align:right;}
+  .mgr-target-foot{font-size:12px;color:var(--ink-soft);margin-top:5px;}
+  .mgr-bar{height:6px;border-radius:99px;background:var(--bg);border:1px solid var(--line);
+    overflow:hidden;margin-top:7px;}
+  .mgr-bar span{display:block;height:100%;background:var(--accent);}
+  .mgr-target.met .mgr-bar span{background:var(--good);}
   .mgr-basis{display:block;font-weight:400;font-size:11px;color:var(--ink-soft);text-align:right;margin-top:1px;}
   .mgr-objective{background:var(--accent-soft,var(--bg));border-left:3px solid var(--accent);
     border-radius:8px;padding:9px 13px;font-size:13.5px;color:var(--ink);margin:0 0 10px;}
@@ -8402,6 +8415,7 @@
       <div id="managerMeetingWrap"></div>
       <div id="managerAccountWrap"></div>
       <div id="managerPlanWrap"></div>
+      <div id="managerScoreWrap"></div>
       <div id="managerQuestionsWrap"></div>
       <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
@@ -51369,6 +51383,71 @@ const MANAGER_OBJECTIVES = {
   cash: 'Cash first', margin: 'Margin first', growth: 'Growth first', recovery: 'Recovery',
 };
 
+/* WHAT MAY BE AIMED AT. A target the app cannot measure by itself is a
+   wish: somebody has to remember it, judge it, and be honest about it,
+   and none of that survives a busy week. So a metric earns its place
+   here only if the shop's own books can answer it on any day without
+   being asked -- and every one of these is measured by the same
+   function some screen already uses.
+
+   direction says which way is good. A flow is earned across the period
+   (collections, profit, sales); a level is read as it stands today
+   (debtors, dead stock, cash), so its baseline matters -- 8,000,000 of
+   debt coming down to 6,500,000 against an aim of 5,000,000 is half the
+   distance, not 130% of the target. */
+const MANAGER_METRICS = {
+  collections: { label: 'Collect', unit: 'money', kind: 'flow', direction: 'up',
+    measure: (from, to)=>{ let n = 0; const stop = to < todayISO() ? to : todayISO();
+      for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += debtCollectionsOn(d).total;
+      return n; } },
+  gross_profit: { label: 'Gross profit', unit: 'money', kind: 'flow', direction: 'up',
+    measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).profit },
+  sales: { label: 'Sales', unit: 'money', kind: 'flow', direction: 'up',
+    measure: (from, to)=> anOverallTotals(anInvoicesInRange(from, to)).sales },
+  debtors_total: { label: 'Money owed to you', unit: 'money', kind: 'level', direction: 'down',
+    measure: ()=> (data.customers||[]).reduce((n, c)=> n + (Number(c.debt) > 0.5 ? Number(c.debt) : 0), 0) },
+  dead_stock_value: { label: 'Dead stock', unit: 'money', kind: 'level', direction: 'down',
+    measure: ()=> dashInventoryHealth().deadValue },
+  cash_on_hand: { label: 'Cash in hand', unit: 'money', kind: 'level', direction: 'up',
+    measure: ()=> cashOnHandByAccount().total },
+};
+
+/* THE SCOREBOARD IS DERIVED, NEVER STORED -- the same law as a move's
+   outcome, for the same reason: a manager that keeps its own score can
+   flatter it. Only the aim, the baseline and the dates are written down;
+   where the shop actually stands is read from the books every time it is
+   shown, by the screen and by the tools alike. */
+function managerScoreProgress(row){
+  const b = (row && row.body) || {};
+  const m = MANAGER_METRICS[b.metric];
+  if(!m) return null;
+  const from = String(b.from || row.date || '');
+  const to = String(b.to || '');
+  const aim = Number(b.aim) || 0;
+  const baseline = Number(b.baseline) || 0;
+  const actual = m.measure(from, to);
+  const today = todayISO();
+  const daysLeft = to ? Math.max(0, Math.round((new Date(to + 'T00:00:00Z') - new Date(today + 'T00:00:00Z')) / 86400000)) : 0;
+  /* A flow starts at nothing and climbs to the aim. A level starts where
+     it was and has to travel to the aim, so the distance is what counts
+     -- and an aim already met before the week began is 100%, not more. */
+  let pct;
+  if(m.kind === 'flow') pct = aim > 0 ? Math.round(actual / aim * 100) : null;
+  else {
+    const span = baseline - aim;
+    pct = Math.abs(span) < 0.5 ? (m.direction === 'down' ? (actual <= aim ? 100 : 0) : (actual >= aim ? 100 : 0))
+      : Math.round((baseline - actual) / span * 100);
+  }
+  /* Capped at 100: beating a target is reported by met and by the two
+     figures standing side by side, never as "150% of target" -- a score
+     above the commitment is how a manager flatters itself. */
+  if(pct != null) pct = Math.max(0, Math.min(100, pct));
+  const met = m.direction === 'down' ? actual <= aim : actual >= aim;
+  return { metric: b.metric, label: m.label, aim, baseline, actual: Math.round(actual),
+    direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
+    finished: !!to && to < today, met, pct, why: b.why || '' };
+}
+
 const MANAGER_DOORS = {
   chase: { tab: 'chase', label: 'Open Chase debts' },
   buy: { tab: 'buying', label: 'Open What to buy' },
@@ -51476,6 +51555,20 @@ async function managerSaveMeeting(plan){
     const r2 = await sb.from('manager_notes').insert(rows);
     if(r2.error) console.warn('Manager: moves not saved:', r2.error.message);
   }
+  /* Targets are PROPOSED, never adopted by the writing of them: a number
+     the shop is measured against is a commitment, and commitments here
+     are made by a tap. Only metrics the app can measure itself survive
+     the whitelist -- anything else would need somebody to remember it. */
+  const targets = (Array.isArray(plan.targets) ? plan.targets : [])
+    .filter(x=> x && MANAGER_METRICS[String(x.metric||'')] && Number(x.aim) > 0)
+    .slice(0, 2)
+    .map(x=> ({ shop_id: currentShopId, kind: 'target', meeting_id: ins.data.id, date: todayISO(),
+      body: { metric: String(x.metric), aim: apRound(x.aim), why: String(x.why||'').slice(0, 200) },
+      status: 'proposed' }));
+  if(targets.length){
+    const r4 = await sb.from('manager_notes').insert(targets);
+    if(r4.error) console.warn('Manager: targets not saved:', r4.error.message);
+  }
   /* What the books cannot answer. Stored open, shown on the screen with
      a box to answer in, and read back at the top of the next meeting --
      the shop's own eyes and ears, which no database holds. */
@@ -51546,6 +51639,54 @@ async function managerSetMoveStatus(rowId, status, skipReason){
   renderManager();
 }
 
+/* Adopting a target fixes the two things that cannot be derived later:
+   the period it runs over, and WHERE THE SHOP STOOD when it was taken
+   on. A level target measured without its baseline reads as though the
+   whole debt book were this week's work. */
+async function managerAdoptTarget(rowId){
+  if(!managerNotesTable || rowId == null) return;
+  const cur = await sb.from('manager_notes').select('body, date').eq('shop_id', currentShopId).eq('id', rowId).single();
+  const body = (cur.data && cur.data.body) || {};
+  const m = MANAGER_METRICS[body.metric];
+  if(!m){ toast('That target is for something this app cannot measure'); return; }
+  const from = todayISO();
+  const to = anShiftDate(from, 6);
+  body.from = from;
+  body.to = to;
+  body.baseline = apRound(m.kind === 'level' ? m.measure(from, to) : m.measure(anShiftDate(from, -7), anShiftDate(from, -1)));
+  const up = await sb.from('manager_notes').update({ status: 'open', body })
+    .eq('shop_id', currentShopId).eq('id', rowId);
+  if(up.error){ toast('Could not adopt that target — ' + up.error.message, 8000); return; }
+  toast(m.label + ' target adopted — the scoreboard reads it from your books from now on');
+  renderManager();
+}
+async function managerDeclineTarget(rowId){
+  if(!managerNotesTable || rowId == null) return;
+  const up = await sb.from('manager_notes').update({ status: 'declined' })
+    .eq('shop_id', currentShopId).eq('id', rowId);
+  if(up.error){ toast('Could not set that aside — ' + up.error.message, 8000); return; }
+  renderManager();
+}
+
+/* Every target that is live or has just closed, with where the shop
+   stands against it. One read, used by the screen and by both tools --
+   so the manager cannot be told one score while the owner reads
+   another. */
+async function managerScoreboard(){
+  if(!managerNotesTable) return { targets: [] };
+  const r = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'target')
+    .order('id', { ascending: false }).limit(12);
+  if(r.error) return { targets: [], error: r.error.message };
+  const cutoff = anShiftDate(todayISO(), -7);
+  const open = (r.data||[]).filter(x=> x.status === 'open' && String((x.body||{}).to||'') >= cutoff)
+    .map(x=> ({ id: x.id, ...managerScoreProgress(x) })).filter(x=> x.metric);
+  const proposed = (r.data||[]).filter(x=> x.status === 'proposed')
+    .map(x=> ({ id: x.id, metric: (x.body||{}).metric, label: (MANAGER_METRICS[(x.body||{}).metric]||{}).label || '',
+      aim: Number((x.body||{}).aim)||0, why: (x.body||{}).why || '', date: x.date }));
+  return { targets: open, proposed };
+}
+
 /* The shop answering its manager. One line is enough -- the answer is
    evidence at the next meeting, not a document. */
 async function managerAnswerQuestion(rowId, answer){
@@ -51587,6 +51728,7 @@ async function managerLoadState(){
   /* Reviews before 0082 simply do not exist yet -- an empty read here is
      the honest answer, and the save path names the migration if a write
      is refused. */
+  const score = await managerScoreboard();
   const qR = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'question').eq('status', 'open')
     .order('id', { ascending: false }).limit(6);
@@ -51605,6 +51747,7 @@ async function managerLoadState(){
     prior: withMoves.filter(w=> w.meeting.date !== today),
     reviews: (revR.data) || [],
     questions: (qR.error ? [] : (qR.data || [])),
+    score,
     weekMeetings: (wkR && wkR.count) || 0,
   };
 }
@@ -51750,6 +51893,7 @@ function renderManager(){
 
   const acct = document.getElementById('managerAccountWrap');
   const planWrap = document.getElementById('managerPlanWrap');
+  const scoreWrap = document.getElementById('managerScoreWrap');
   const qWrap = document.getElementById('managerQuestionsWrap');
   const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
@@ -51813,13 +51957,13 @@ function renderManager(){
       planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
       wire(planWrap);
     } else planWrap.innerHTML = '';
-    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = '';
+    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = '';
     return;
   }
 
   /* With memory: the shells now, the journal when it answers. */
   managerLoadState().then(st=>{
-    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; hist.innerHTML =
+    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; hist.innerHTML =
       `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
     /* The offer says how much evidence a review would stand on, before
        the owner spends credit on one. */
@@ -51838,6 +51982,41 @@ function renderManager(){
         + prev.moves.map((r,i)=> mgrMoveView(r,i)).join('')
       : '';
     wire(acct);
+    /* THE SCOREBOARD, first thing on the screen: what this manager said
+       it would do, and where the books say it stands. */
+    const sb2 = st.score || { targets: [], proposed: [] };
+    const bar = (p)=> `<div class="mgr-bar"><span style="width:${Math.max(0, Math.min(100, Number(p)||0))}%"></span></div>`;
+    scoreWrap.innerHTML = (sb2.targets.length || (sb2.proposed||[]).length)
+      ? `<div class="mgr-sec-title">The scoreboard</div>`
+        + (sb2.targets.length ? `<div class="mgr-score">` + sb2.targets.map(x=> `<div class="mgr-target ${x.met ? 'met' : (x.finished ? 'missed' : '')}">
+            <div class="mgr-target-top">
+              <span class="mgr-target-name">${esc(x.label)}</span>
+              <span class="mgr-target-fig">${fmtUGX(x.actual)} <span class="mgr-basis">of ${fmtUGX(x.aim)}${
+                x.measure_kind === 'level' ? ' — from ' + fmtUGX(x.baseline) : ''}</span></span>
+            </div>
+            ${bar(x.pct)}
+            <div class="mgr-target-foot">${x.finished
+              ? (x.met ? 'Met' : 'Missed') + ' — week ended ' + esc(fmtShortDate(x.to))
+              : (x.pct == null ? '' : x.pct + '% there') + ' · ' + x.days_left + (x.days_left === 1 ? ' day left' : ' days left')}${
+              x.why ? ' · ' + esc(x.why) : ''}</div>
+          </div>`).join('') + `</div>` : '')
+        + ((sb2.proposed||[]).length ? `<div class="mgr-asks">
+            <div class="mgr-why" style="margin:0 0 9px;"><b>Targets it wants to be measured against.</b>
+              A number becomes a commitment only when you take it on.</div>`
+          + sb2.proposed.map(x=> `<div class="mgr-ask" data-tid="${esc(String(x.id))}">
+              <div class="mgr-ask-q">${esc(x.label)} ${fmtUGX(x.aim)} this week</div>
+              <div class="mgr-why" style="margin:2px 0 7px;">${esc(x.why)}</div>
+              <div class="mgr-ask-row">
+                <button type="button" class="btn btn-accent mgr-target-adopt">Take it on</button>
+                <button type="button" class="btn btn-ghost mgr-target-decline">Set aside</button>
+              </div>
+            </div>`).join('') + `</div>` : '')
+      : '';
+    scoreWrap.querySelectorAll('.mgr-ask[data-tid]').forEach(card=>{
+      const id = Number(card.dataset.tid);
+      card.querySelector('.mgr-target-adopt').addEventListener('click', ()=> managerAdoptTarget(id));
+      card.querySelector('.mgr-target-decline').addEventListener('click', ()=> managerDeclineTarget(id));
+    });
     /* What the manager needs to know. The one place the shop's own eyes
        reach past the database -- answered in a line, read back at the
        top of the next meeting. */
@@ -57449,6 +57628,8 @@ const ASSISTANT_TOOLS = {
         ...(o.derived ? { what_the_books_say: o.derived } : {}),
         ...((r.body||{}).skipReason ? { skip_reason: r.body.skipReason } : {}) };
     }).slice(0, 15);
+    const score = await managerScoreboard();
+    if(score.targets.length) out.scoreboard = score.targets;
     out.advice = {
       meetings_held: (meetR.data||[]).length,
       /* The thinness is a FACT of the review, not a failure of it --
@@ -57495,7 +57676,12 @@ const ASSISTANT_TOOLS = {
     const open = qRows.filter(q=> q.status !== 'answered')
       .slice(0, 8).map(q=> ({ asked: (q.body||{}).question || '', asked_on: q.date,
         days_open: Math.max(0, daysSinceDate(q.date)) }));
-    return { ...(answered.length ? { answered_questions: answered } : {}),
+    /* Where the shop stands against what this manager itself said it
+       would do -- derived now, from the books, every time. */
+    const score = await managerScoreboard();
+    return { ...(score.targets.length ? { scoreboard: score.targets } : {}),
+      ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed } : {}),
+      ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),
       meetings: (meetings.data||[]).map(m=> ({
       date: m.date, keyline: (m.body||{}).keyline || '',

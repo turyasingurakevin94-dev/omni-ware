@@ -343,8 +343,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       q.eq = (c, v) => { if (c === 'kind') q._f.kind = v; return q; };
       q.gte = (c, v) => { q._f.gte = v; return q; };
       q.lte = (c, v) => { q._f.lte = v; return q; };
-      q.then = (resolve) => resolve({ data: journal.filter((r) => r.kind === q._f.kind
-        && (!q._f.gte || String(r.date) >= q._f.gte) && (!q._f.lte || String(r.date) <= q._f.lte)), error: null });
+      // The week tool now also reads the scoreboard, which orders and limits.
+      q.order = () => q;
+      const rows = () => journal.filter((r) => r.kind === q._f.kind
+        && (!q._f.gte || String(r.date) >= q._f.gte) && (!q._f.lte || String(r.date) <= q._f.lte));
+      q.limit = () => Promise.resolve({ data: rows(), error: null });
+      q.then = (resolve) => resolve({ data: rows(), error: null });
       return q;
     } };
     const env = {
@@ -363,6 +367,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     const scope = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+      extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'managerScoreProgress', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       'function names(){ return { ASSISTANT_TOOLS }; }',
     ], env, ['names']);
     const tool = scope.names().ASSISTANT_TOOLS.week_review_data;
@@ -401,6 +408,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     const scope2 = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
+      extractFunction(src, 'managerScoreboard', 'index.html'),
+      extractFunction(src, 'managerScoreProgress', 'index.html'),
+      extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       'function names(){ return { ASSISTANT_TOOLS }; }',
     ], { ...env, managerNotesTable: false,
       sb: { from() { throw new Error('touched the database without the table'); } } }, ['names']);
