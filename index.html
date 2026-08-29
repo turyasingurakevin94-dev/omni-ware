@@ -789,6 +789,22 @@
   .pp-fact-good b{color:var(--good);}
   .pp-fact-bad b{color:var(--accent);}
   .pp-why{margin-top:6px;font-size:12px;color:var(--ink-soft);line-height:1.5;}
+  /* THE HOLD. It sits above the recommendation because it is about
+     whether to follow it at all -- put underneath, it would read as a
+     footnote to a decision already taken. Oxide rather than amber: a
+     manager saying "not yet" is not a soft warning. */
+  .pp-hold{margin:-2px 0 10px;padding:9px 12px;border-radius:9px;
+    background:var(--ow-oxide-soft);border-left:3px solid var(--accent);}
+  .pp-hold-top{font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    color:var(--ow-oxide-deep);}
+  .pp-hold-line{margin-top:3px;font-size:12.5px;color:var(--ink);line-height:1.55;max-width:70ch;}
+  .pp-hold-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+  .pp-hold-who{font-size:11px;color:var(--ink-soft);margin-right:auto;}
+  .pp-hold-acts .btn{padding:5px 11px;font-size:11.5px;}
+  /* An ending is news for a week, then it stops being news. Green,
+     because a hold that lifted itself means the shop acted. */
+  .pp-hold-done{background:var(--good-bg);border-left-color:var(--good);}
+  .pp-hold-done .pp-hold-line{color:var(--ink-soft);}
   .pp-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
     color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
   .pp-more{margin:8px 0 0;font-size:12px;color:var(--ink-soft);}
@@ -12803,6 +12819,13 @@ async function loadData(shopId){
        fixed set of columns -- so this needs no migration, and the shop
        stocks few enough lines for the map to stay small. */
     presetReorderRules: (presets.reorderRules && typeof presets.reorderRules === 'object') ? presets.reorderRules : {},
+    /* Lines the Manager (or the shop) has decided not to refill YET,
+       stockKey -> {reason, placedOn, by, rule, price}. Same home and
+       the same reasoning as the restock rules above: it is a per-line
+       setting the buy screen reads on every render, and purchasePlan is
+       synchronous -- reading it from the journal would make the whole
+       buy chain async, tool and dashboard alert included. */
+    presetBuyHolds: (presets.buyHolds && typeof presets.buyHolds === 'object') ? presets.buyHolds : {},
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
     /* When each debtor was last chased, customer id -> date. Kept with
@@ -13081,7 +13104,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -14269,6 +14292,13 @@ function waWeekday(dateISO){ return new Date(dateISO + 'T00:00:00Z').getUTCDay()
 //                  rests on, so it may never be the looser figure
 //   profit30       earned, on the same costing every other profit
 //                  figure in the app uses (invoiceLineCost)
+//   sales30        what those same units SOLD for -- profit30 alone
+//                  cannot say what share of the sale was kept, and a
+//                  shop's thinnest-margin line is invisible without it
+//   estQty30       how many of those units were costed by ESTIMATE
+//                  rather than evidence. A margin drawn over guessed
+//                  costs is a lie with a decimal point, so the share is
+//                  withheld when too much of the month rests on it.
 //
 // The distinction is the whole business: an empty shelf means nothing
 // for an item the shop never stocks, and a restock plan that cannot
@@ -14287,7 +14317,7 @@ function waSalesByKey(dateISO){
       const key = stockKey(it.productId, it.variantIdx==null?null:it.variantIdx);
       const s = out.get(key) || { units: 0, units30: 0, byWeekday: [0,0,0,0,0,0,0],
         shelfUnits30: 0, inUnits30: 0, inSpend30: 0, inPricedUnits30: 0,
-        orders30: 0, inOrders30: 0, profit30: 0 };
+        orders30: 0, inOrders30: 0, profit30: 0, sales30: 0, estQty30: 0 };
       const qty = Number(it.qty)||0;
       s.units += qty; s.byWeekday[wd] += qty;
       if(inWindow){
@@ -14302,7 +14332,11 @@ function waSalesByKey(dateISO){
           if(paid > 0) s.inPricedUnits30 += qty;
           if(!countedBuyIn.has(key)){ s.inOrders30 += 1; countedBuyIn.add(key); }
         }
-        s.profit30 += qty * quoteItemSellPrice(it) - invoiceLineCost(it).cost;
+        const sold = qty * quoteItemSellPrice(it);
+        const lc = invoiceLineCost(it);
+        s.profit30 += sold - lc.cost;
+        s.sales30 += sold;
+        s.estQty30 += lc.estimatedQty || 0;
       }
       out.set(key, s);
     });
@@ -50454,6 +50488,190 @@ function setReorderRule(productId, variantIdx, minUnits, coverDays){
   saveData();
 }
 
+/* ---- lines held back from the buy plan ----
+
+   THE MANAGER SAID "NOT YET" AND THE SCREEN WENT ON RECOMMENDING IT.
+
+   That was the whole fault: a rejection lived as one sentence in a
+   meeting card, and What-to-buy -- which ranks on thirty-day gross
+   profit and knows nothing else -- kept the same line at number one
+   with no warning at all. Two halves of one app, neither able to hear
+   the other. A hold is the piece of state that lets a judgement reach
+   the screen that acts.
+
+   A hold NEVER blocks. The line keeps its place, keeps its figures and
+   keeps its Buy it button; the card simply says, above all of it, what
+   was decided and why. Nothing is being sent and no money moves, so
+   there is nothing here that needs a tap to be true -- and quietly
+   dropping a fast line that is running out is exactly the kind of
+   silent suppression this app refuses everywhere else. */
+const BUY_HOLD_MAX_DAYS = 30;
+
+/* WHAT A REPRICING ACTUALLY IS, and why the snapshot is of the RULE.
+
+   Nothing in this app records when a selling price changed: markup
+   edits are silent overwrites, products carry no updated_at, and
+   lastRepricedDays already means "freshest supplier quote". But a price
+   here is never stored -- it is derived from a rule -- so a hold can
+   carry its own before-picture and the comparison becomes possible
+   without a single new column.
+
+   It must be the RULE and not the price. If a supplier raises its cost,
+   the derived selling price rises on its own while the share the shop
+   keeps is unchanged: nobody repriced anything, and a price-only test
+   would lift the hold on the strength of the very problem it was
+   placed for. */
+/* A stockKey split back into the product it names. One reading, used by
+   everything that has only the key and needs the line. */
+function buyKeyParts(key){
+  const bits = String(key || '').split('::');
+  const productId = bits[0];
+  if(!productId) return null;
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return null;
+  const variantIdx = bits.length > 1 && bits[1] !== '' ? Number(bits[1]) : null;
+  if(variantIdx != null && !(p.variants && p.variants[variantIdx])) return null;
+  return { product: p, productId, variantIdx };
+}
+function buyKeyLabel(key){
+  const parts = buyKeyParts(key);
+  return parts ? productDisplayLabel(parts.product, parts.variantIdx) : String(key || '');
+}
+
+function buyPriceStamp(key){
+  const parts = buyKeyParts(key);
+  if(!parts) return null;
+  const rule = (kind)=>{
+    const r = effectiveStockMarkupRule(parts.product, parts.variantIdx, kind);
+    return r ? `${r.type === 'fixed' ? 'fixed' : 'percent'}:${Number(r.value) || 0}` : 'none';
+  };
+  return { wholesale: rule('wholesale'), retail: rule('retail') };
+}
+
+/* What price that rule produces today, kept only so the lifting message
+   can speak in shillings the owner recognises. Never the test itself. */
+function buyPriceNow(key){
+  const parts = buyKeyParts(key);
+  if(!parts) return null;
+  const best = rankedPurchaseRowsAtQty(parts.productId, parts.variantIdx, 1)
+    .find(x=> x.purchasePrice != null);
+  if(!best) return null;
+  const sug = suggestedStockSellingPrice(parts.product, best.purchasePrice, 'wholesale',
+    parts.variantIdx, Number(best.packQty) || 0);
+  return sug == null ? null : Math.round(sug);
+}
+
+/* The hold on one line, and whether it still stands.
+
+   Three ends, and the hold says which one it met -- a hold that simply
+   vanishes teaches the shop nothing about whether the advice worked. */
+const BUY_HOLD_KEEP_DAYS = 7;
+
+function buyHoldFor(key, dateISO){
+  const h = (data.presetBuyHolds || {})[key];
+  if(!h || !String(h.reason || '').trim()) return null;
+  const today = dateISO || todayISO();
+  const base = { key, reason: h.reason, by: h.by === 'you' ? 'you' : 'manager', placedOn: h.placedOn,
+    days: Math.max(0, daysSinceDate(h.placedOn || today)) };
+  /* Already ended, and the ending is quoted from the record rather than
+     worked out again: the price it lifted at is the price it lifted at,
+     however far the books have moved since. */
+  if(h.endedOn) return { ...base, over: true, endedBecause: h.endedBecause || 'lifted',
+    endedOn: h.endedOn, note: h.note || '' };
+  /* The line itself is gone from the catalogue. Nothing will ever show
+     this hold again -- it cannot appear on a plan whose product does
+     not exist -- so it must end here or it sits in the settings for
+     ever, invisible and unliftable. */
+  if(!buyKeyParts(key)) return { ...base, over: true, endedBecause: 'gone',
+    note: 'The line is no longer in the catalogue, so the hold has ended.' };
+  const now = buyPriceStamp(key);
+  const was = h.rule || null;
+  /* Repriced: the rule that prices this line is not the rule it was
+     held under. Read fresh from the books every time, never stored. */
+  if(now && was && (now.wholesale !== was.wholesale || now.retail !== was.retail)){
+    const then = h.price == null ? null : Number(h.price);
+    const priceNow = buyPriceNow(key);
+    const d = base.days, dw = d === 1 ? 'day' : 'days';
+    return { ...base, over: true, endedBecause: 'repriced',
+      note: (then != null && priceNow != null && priceNow !== then)
+        ? `Held ${d} ${dw}. Lifted when you moved the price ${fmtUGX(then)} → ${fmtUGX(priceNow)}.`
+        : `Held ${d} ${dw}. Lifted when you changed how this line is priced.` };
+  }
+  /* Ran out. Without this a hold on a line that drops off the plan
+     would sit in the settings for ever, invisible and unliftable. */
+  if(base.days > BUY_HOLD_MAX_DAYS){
+    return { ...base, over: true, endedBecause: 'ran_out',
+      note: `Held ${base.days} days without a repricing, so the hold has run out.` };
+  }
+  return { ...base, over: false, endedBecause: null };
+}
+
+function setBuyHold(key, reason, by){
+  const text = String(reason || '').trim();
+  /* Only a line that exists, and only with a reason. A key nobody can
+     resolve becomes nothing rather than a warning band printed over no
+     product at all -- the same discipline a move's subject ids keep --
+     and a hold with no reason is not a judgement, it is a blank. */
+  if(!key || text.length < 3 || !buyKeyParts(key)) return false;
+  if(!data.presetBuyHolds) data.presetBuyHolds = {};
+  data.presetBuyHolds[key] = { reason: text.slice(0, 300), placedOn: todayISO(),
+    by: by === 'you' ? 'you' : 'manager',
+    rule: buyPriceStamp(key), price: buyPriceNow(key) };
+  saveData();
+  return true;
+}
+
+function liftBuyHold(key){
+  if(!data.presetBuyHolds) return;
+  delete data.presetBuyHolds[key];
+  saveData();
+}
+
+/* Every hold that still stands, for the screen and the manager alike --
+   one reading, so neither can be looking at a hold the other has
+   forgotten. Pure: it derives, it never writes. */
+function buyHoldsStanding(dateISO){
+  const out = [];
+  Object.keys(data.presetBuyHolds || {}).forEach(key=>{
+    const h = buyHoldFor(key, dateISO);
+    if(h && !h.over) out.push(h);
+  });
+  return out.sort((a, b)=> b.days - a.days);
+}
+
+/* Writing down the endings, once.
+
+   A hold that quietly disappeared the moment the owner repriced would
+   never tell them it had worked -- and telling them is the point: the
+   advice was taken, and here is the price that moved. So an ending is
+   STAMPED when it is first noticed, shown on the line for a week
+   afterwards, and only then forgotten. Called from the buy screen's
+   own render, where somebody is looking. */
+function buyHoldsSweep(dateISO){
+  const today = dateISO || todayISO();
+  let changed = false;
+  Object.keys(data.presetBuyHolds || {}).forEach(key=>{
+    const raw = data.presetBuyHolds[key];
+    if(!raw) return;
+    if(raw.endedOn){
+      if(daysSinceDate(raw.endedOn) > BUY_HOLD_KEEP_DAYS){ delete data.presetBuyHolds[key]; changed = true; }
+      return;
+    }
+    const h = buyHoldFor(key, today);
+    if(!h){ delete data.presetBuyHolds[key]; changed = true; return; }
+    /* An ending is kept for a week so it can be READ on the line's own
+       card. A line that has left the catalogue has no card, so there is
+       nobody to read it: that one goes at once rather than lingering as
+       a message nothing will ever show. */
+    if(h.over && h.endedBecause === 'gone'){ delete data.presetBuyHolds[key]; changed = true; return; }
+    if(h.over){
+      raw.endedOn = today; raw.endedBecause = h.endedBecause; raw.note = h.note;
+      changed = true;
+    }
+  });
+  if(changed) saveData();
+}
+
 // Every line the SHELF is running out of, soonest first. An item the
 // shop never stocks cannot run out of it -- it appears, if it earns
 // its place, as a stocking candidate below.
@@ -50469,7 +50687,8 @@ function restockRiskRows(dateISO){
     rows.push({ key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx,
       name: productDisplayLabel(p, variantIdx==null?null:variantIdx),
       qty, units30: s.shelfUnits30, soldTotal30: s.units30, orders30: s.orders30,
-      profit30: s.profit30, dailyRate, daysLeft: qty/dailyRate,
+      profit30: s.profit30, sales30: s.sales30, estQty30: s.estQty30,
+      dailyRate, daysLeft: qty/dailyRate,
       rule: reorderRuleFor(p.id, variantIdx==null?null:variantIdx) });
   });
   return rows.sort((a,b)=> a.daysLeft - b.daysLeft);
@@ -50497,7 +50716,7 @@ function stockingCandidates(dateISO){
     rows.push({ key, productId: p.id, variantIdx: variantIdx==null?null:variantIdx,
       name: productDisplayLabel(p, variantIdx==null?null:variantIdx),
       qty: 0, units30: s.inUnits30, soldTotal30: s.units30, orders30: s.inOrders30,
-      profit30: s.profit30, paid30: s.inSpend30,
+      profit30: s.profit30, sales30: s.sales30, estQty30: s.estQty30, paid30: s.inSpend30,
       allPriced: s.inPricedUnits30 === s.inUnits30 });
   });
   return rows.sort((a,b)=> b.profit30 - a.profit30);
@@ -50524,10 +50743,37 @@ function buyLineFor(r, needUnits, kind){
   return { kind, key: r.key, productId: r.productId, variantIdx: r.variantIdx,
     name: r.name, held: r.qty, units30: r.units30, soldTotal30: r.soldTotal30,
     orders30: r.orders30, profit30: r.profit30, paid30: r.paid30 == null ? null : r.paid30,
+    keptPct: buyKeptPct(r),
+    hold: buyHoldFor(r.key),
     allPriced: r.allPriced !== false, daysLeft: r.daysLeft == null ? null : r.daysLeft,
     buyQty, unit: row.unit || '', packQty, packUnit: row.packUnit || '',
     supplierId: row.supplierId, supplier: row.sname || supplierName(row.supplierId),
     unitCost: Math.round(unitCost), cost: Math.round(buyQty * unitCost) };
+}
+
+/* WHAT SHARE OF THE SALE THE SHOP ACTUALLY KEPT, over the same thirty
+   days the rest of the row is drawn from.
+
+   The screen ranked on profit30 and printed it as "340,000 earned",
+   which is a true figure that hides the thing a buyer most needs: a
+   line can earn the most shillings in the shop and still be its
+   thinnest. Without this the owner could not see what their manager
+   was objecting to.
+
+   Withheld, not guessed, in three cases: nothing sold, and the share
+   is of nothing; a loss, where a percentage of a negative reads as
+   arithmetic rather than trouble and the money figure already says it;
+   and -- the one that matters -- when more than half the month's units
+   were costed by ESTIMATE rather than evidence. invoiceLineCost counts
+   those for exactly this reason. A margin drawn over guessed costs is
+   a lie with a decimal point. */
+function buyKeptPct(r){
+  const sales = Number(r.sales30) || 0;
+  const profit = Number(r.profit30) || 0;
+  const units = Number(r.soldTotal30) || 0;
+  if(!(sales > 0) || !(profit > 0)) return null;
+  if(units > 0 && (Number(r.estQty30) || 0) > units / 2) return null;
+  return Math.round(profit / sales * 100);
 }
 
 /* Why this line is on the list, in a sentence, from its own figures.
@@ -50593,13 +50839,28 @@ function buyLineReason(l){
    A fact the app does not have is ABSENT, never a zero: nothing earned
    and nothing recorded as earned are different, and a zero in a row of
    figures reads as the first. */
+/* Below this share, a line is thin enough to say so on the card.
+
+   Deliberately the same ten per cent the quote builder flags amber at
+   (renderQuoteItems' own MARGIN_WARN_PCT): one judgement about what
+   "thin" means in this trade, whether the shop is selling a line or
+   buying it. That function keeps its own copy because it is extracted
+   ALONE into several test scopes and must stay whole. */
+const THIN_MARGIN_PCT = 10;
+
 function buyLineFacts(l){
   const money = n=> fmtUGX(Math.round(n));
+  /* The share the shop keeps, beside the shillings it earned. A line
+     can be the best earner on the screen and its thinnest at once --
+     that is precisely the case this fact exists for. */
+  const kept = ()=> l.keptPct == null ? null
+    : { v: l.keptPct + '%', label: 'kept', cls: l.keptPct < THIN_MARGIN_PCT ? 'bad' : '' };
   const out = [];
   if(l.kind === 'stock'){
     if(l.orders30 > 0) out.push({ v: l.orders30, label: l.orders30 === 1 ? 'buy-in this month' : 'buy-ins this month' });
     if(l.units30 > 0) out.push({ v: `${l.units30}${l.unit ? ' ' + l.unit : ''}`, label: 'bought in' });
     if(l.paid30 > 0) out.push({ v: money(l.paid30), label: 'paid across them' });
+    if(kept()) out.push(kept());
     // Only where every one of those buy-ins carried a price. Arithmetic
     // against a blank flatters itself every time.
     const saved = (l.allPriced && l.paid30 > 0 && l.bulkCost != null)
@@ -50614,6 +50875,7 @@ function buyLineFacts(l){
     ? { v: rate >= 10 ? Math.round(rate) : Math.round(rate*10)/10, label: 'sold a day' }
     : { v: l.units30, label: 'sold in 30 days' });
   if(l.profit30 > 0) out.push({ v: money(l.profit30), label: 'earned' });
+  if(kept()) out.push(kept());
   out.push({ v: Math.round(l.held), label: 'on the shelf', cls: l.belowFloor ? 'bad' : (l.held <= 0 ? 'bad' : '') });
   if(l.leadDays) out.push({ v: `${l.leadDays} ${l.leadDays === 1 ? 'day' : 'days'}`, label: 'to deliver' });
   return out;
@@ -50738,6 +51000,10 @@ function renderPurchasePlanPanel(){
   if(!el) return;
   const cash = cashOnHandByAccount().total;
   const budget = buyBudget != null ? buyBudget : Math.max(0, cash);
+  /* Settle the endings BEFORE the plan is drawn, so a hold the owner
+     has just answered by repricing shows its result on this render
+     rather than the next one. */
+  buyHoldsSweep(todayISO());
   const plan = purchasePlan(budget, null, todayISO());
   buyPlanLast = plan;
   const budgetEl = document.getElementById('buy_budget');
@@ -50770,8 +51036,37 @@ function renderPurchasePlanPanel(){
   };
   const packNote = (l)=> l.packQty > 1
     ? ` (${Math.round(l.buyQty/l.packQty)} ${esc(l.packUnit || 'pack')})` : '';
+  /* THE DECISION, ABOVE THE RECOMMENDATION.
+
+     The screen used to recommend a line at number one on the same
+     morning the manager had said in plain words not to buy it yet. The
+     band puts that decision where the buying happens, in the words it
+     was made in, with the door to the thing that would answer it.
+
+     It does not take the Buy it button away. The hold is an argument,
+     not a lock: the shop that wants to buy anyway knows something the
+     books do not, and this app has never pretended otherwise. */
+  const holdBand = (l)=>{
+    const h = l.hold;
+    if(!h) return '';
+    if(h.over) return `<div class="pp-hold pp-hold-done">
+      <div class="pp-hold-line"><b>Was held.</b> ${esc(h.note || 'The hold has ended.')}</div></div>`;
+    const whose = h.by === 'you' ? 'You' : 'The Manager';
+    const when = h.days === 0 ? 'today' : (h.days === 1 ? 'yesterday' : `${h.days} days ago`);
+    return `<div class="pp-hold" data-key="${esc(String(l.key))}">
+      <div class="pp-hold-top">On hold — not yet</div>
+      <div class="pp-hold-line">${esc(h.reason)}</div>
+      <div class="pp-hold-acts">
+        <span class="pp-hold-who">${esc(whose)} · ${esc(when)}</span>
+        <button type="button" class="btn btn-ghost pp-hold-fix" data-pid="${esc(String(l.productId))}"
+          data-vi="${l.variantIdx == null ? '' : esc(String(l.variantIdx))}">Fix the price</button>
+        <button type="button" class="btn btn-ghost pp-hold-lift">Lift it</button>
+      </div>
+    </div>`;
+  };
   const row = (l, list, i)=> `
     <div class="pp-row">
+      ${holdBand(l)}
       <div class="pp-top">
         ${chip(l)}
         <span class="pp-name">${esc(l.name)}</span>
@@ -50842,6 +51137,21 @@ function renderPurchasePlanPanel(){
     resetPriceForm();
     selectPrProduct(sf.productId, sf.variantIdx);
     openModal('priceModal');
+  }));
+  /* The door the hold is arguing for. openPriceRuleEditor already shows
+     what the shelf cost against the cheapest quote on file, which is
+     exactly the argument -- so the owner lands on the screen that can
+     answer the objection, not merely on the right tab. */
+  el.querySelectorAll('.pp-hold-fix').forEach(btn=> btn.addEventListener('click', ()=>{
+    const vi = btn.dataset.vi === '' ? null : Number(btn.dataset.vi);
+    openPriceRuleEditor(btn.dataset.pid, vi);
+  }));
+  el.querySelectorAll('.pp-hold-lift').forEach(btn=> btn.addEventListener('click', ()=>{
+    const band = btn.closest('.pp-hold');
+    if(!band || !band.dataset.key) return;
+    liftBuyHold(band.dataset.key);
+    toast('Hold lifted — this line is yours to buy');
+    renderPurchasePlanPanel();
   }));
 }
 document.getElementById('buy_budget').addEventListener('change', e=>{
@@ -51644,6 +51954,20 @@ async function managerSaveMeeting(plan){
     const r5 = await sb.from('manager_notes').insert(plays);
     if(r5.error) console.warn('Manager: plays not saved:', r5.error.message);
   }
+  /* THE LINES IT SAID NOT TO BUY YET.
+
+     A rejection used to be one sentence in this row's body that nothing
+     ever read again -- so What-to-buy went on recommending the very
+     line the manager had just turned down, at the top of the list, with
+     no warning at all. A hold is that same judgement in a form the buy
+     screen can act on. It does not live in this journal: it goes to the
+     shop's settings, because purchasePlan is synchronous and the whole
+     buy chain -- screen, tool and dashboard alert -- reads it on every
+     render. Two at most, and a key nobody can resolve becomes nothing. */
+  (Array.isArray(plan.holds) ? plan.holds : [])
+    .filter(h=> h && String(h.reason||'').trim().length > 2 && buyKeyParts(String(h.key||'')))
+    .slice(0, 2)
+    .forEach(h=> setBuyHold(String(h.key), String(h.reason), 'manager'));
   /* What the books cannot answer. Stored open, shown on the screen with
      a box to answer in, and read back at the top of the next meeting --
      the shop's own eyes and ears, which no database holds. */
@@ -58117,7 +58441,16 @@ const ASSISTANT_TOOLS = {
         how: p.how, since: p.started_on, whose: p.source })) } : {}),
       ...(book.dropped.length ? { tried_and_dropped: book.dropped.map(p=> p.name) } : {}),
     };
+    /* The lines it told the shop not to buy yet, and how long they have
+       stood. A hold nobody reads back is the old fault in a new place:
+       the manager would hold a line on Monday and recommend it again on
+       Tuesday. An old one with nothing repriced is the manager's own
+       business to raise. */
+    const held = buyHoldsStanding(todayISO()).slice(0, 6).map(h=> ({
+      key: h.key, name: buyKeyLabel(h.key), reason: h.reason,
+      held_for_days: h.days, placed_by: h.by }));
     return { ...(Object.keys(playbook).length ? { playbook } : {}),
+      ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
       ...(score.targets.length ? { scoreboard: score.targets } : {}),
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed } : {}),
@@ -58262,12 +58595,23 @@ const ASSISTANT_TOOLS = {
          lines is one nobody listens to. `why` is the same sentence
          the screen shows, so the two can never argue. */
       lines: plan.lines.slice(0, 8).map(l=> ({ name: l.name,
+        /* The line's own id. Without it a mind reading this plan could
+           name a line in prose and never point at it -- which is how a
+           rejection stayed a sentence and the screen went on
+           recommending what had just been turned down. */
+        key: l.key,
         kind: l.kind === 'stock' ? 'worth stocking — bought in repeatedly' : 'shelf refill',
         why: l.reason, buy_qty: l.buyQty,
         unit: l.unit || 'pc',
         packs: l.packQty > 1 ? Math.round(l.buyQty/l.packQty) + ' ' + (l.packUnit || 'pack') : null,
         supplier: l.supplier, unit_cost: apRound(l.unitCost), cost: apRound(l.cost),
         earned_30d: apRound(l.profit30), orders_30d: l.orders30,
+        /* The share of the sale kept, where the costing is solid enough
+           to say -- absent rather than guessed, so a null here means
+           "the books cannot answer", never "nothing was kept". */
+        kept_pct: l.keptPct,
+        ...(l.hold && !l.hold.over
+          ? { on_hold: { reason: l.hold.reason, days: l.hold.days, placed_by: l.hold.by } } : {}),
         days_of_stock_left: l.daysLeft == null ? null : Math.max(0, Math.round(l.daysLeft)),
         sold_30d: l.units30, holding: l.held })),
       more_lines: Math.max(0, plan.lines.length - 8),

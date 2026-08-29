@@ -201,6 +201,9 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
     const journal = { meeting: [{ id: 1, date: '2026-08-28', body: { keyline: 'k' } }], move: [], question: [], target: rows };
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'buyHoldsStanding', 'index.html'),
+      extractFunction(src, 'buyHoldFor', 'index.html'),
+      extractFunction(src, 'buyKeyLabel', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),

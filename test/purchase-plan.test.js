@@ -117,7 +117,10 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
-    'buyLineFacts', 'buyLineWhy',
+    'buyLineFacts', 'buyLineWhy', 'buyKeptPct',
+    'buyKeyParts', 'buyKeyLabel', 'buyPriceStamp', 'buyPriceNow',
+    'buyHoldFor', 'setBuyHold', 'liftBuyHold', 'buyHoldsStanding', 'buyHoldsSweep',
+    'effectiveMarkupRule', 'effectiveStockMarkupRule', 'suggestedStockSellingPrice',
     'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
     'purchasePlan', 'dashStockOutExposure',
   ].map((n) => extractFunction(src, n, 'index.html'))
@@ -125,6 +128,9 @@ try {
       extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_WINDOW_DAYS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_MIN_DELIVERIES', 'index.html'),
+      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
+      extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
+      extractDeclaration(src, 'BUY_HOLD_KEEP_DAYS', 'index.html'),
     ]),
   env, ['waSalesByKey', 'restockRiskRows', 'stockingCandidates', 'buyLineReason',
     'buyLineFacts', 'buyLineWhy', 'purchasePlan', 'dashStockOutExposure']);

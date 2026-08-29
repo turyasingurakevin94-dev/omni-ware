@@ -177,6 +177,9 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
   const journal = { meeting: [{ id: 9, date: '2026-08-25', body: { keyline: 'k' } }], move: [], question: [], target: rows };
   const tools = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'buyHoldsStanding', 'index.html'),
+    extractFunction(src, 'buyHoldFor', 'index.html'),
+    extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),

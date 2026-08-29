@@ -109,6 +109,7 @@ try {
     'quoteItemSellPrice', 'invoiceLineCost',
     'supplierLeadTimes', 'supplierLeadDays', 'reorderRuleFor', 'setReorderRule',
     'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason', 'purchasePlan',
+    'buyKeptPct', 'buyHoldFor',
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
       extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html'),

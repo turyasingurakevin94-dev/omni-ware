@@ -107,6 +107,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   };
   const scope = compileScope([
     extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+    extractFunction(src, 'buyHoldsStanding', 'index.html'),
+    extractFunction(src, 'buyHoldFor', 'index.html'),
+    extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     'function names(){ return { ASSISTANT_TOOLS }; }',
@@ -272,6 +275,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     };
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+      extractFunction(src, 'buyHoldsStanding', 'index.html'),
+      extractFunction(src, 'buyHoldFor', 'index.html'),
+      extractFunction(src, 'buyKeyLabel', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
