@@ -1002,6 +1002,15 @@
   .mgr-target-name{font-weight:700;font-size:14px;color:var(--ink);}
   .mgr-target-fig{font-weight:700;font-size:13.5px;color:var(--accent-ink);white-space:nowrap;text-align:right;}
   .mgr-target-foot{font-size:12px;color:var(--ink-soft);margin-top:5px;}
+  .mgr-pace{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:11px 15px;margin:0 0 14px;display:flex;align-items:center;
+    justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .mgr-pace.behind{border-left-color:var(--bad,var(--accent));}
+  .mgr-pace.ok{border-left-color:var(--good);}
+  .mgr-pace-line{font-size:13px;color:var(--ink-soft);line-height:1.5;max-width:64ch;}
+  .mgr-pace-line b{color:var(--ink);}
+  .mgr-pace-foot{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+  .mgr-pace-foot.behind{color:var(--bad,var(--ink-soft));}
   .mgr-bar{height:6px;border-radius:99px;background:var(--bg);border:1px solid var(--line);
     overflow:hidden;margin-top:7px;}
   .mgr-bar span{display:block;height:100%;background:var(--accent);}
@@ -51397,7 +51406,13 @@ const MANAGER_OBJECTIVES = {
    distance, not 130% of the target. */
 const MANAGER_METRICS = {
   collections: { label: 'Collect', unit: 'money', kind: 'flow', direction: 'up',
-    measure: (from, to)=>{ let n = 0; const stop = to < todayISO() ? to : todayISO();
+    /* Walks real days, so it must be handed real days: a row with no
+       period would otherwise step from nothing and never arrive. Every
+       adopted target carries both dates; this answers 0 for anything
+       else rather than spinning inside a render. */
+    measure: (from, to)=>{
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(from||'')) || !/^\d{4}-\d{2}-\d{2}$/.test(String(to||''))) return 0;
+      let n = 0; const stop = to < todayISO() ? to : todayISO();
       for(let d = from; d <= stop; d = anShiftDate(d, 1)) n += debtCollectionsOn(d).total;
       return n; } },
   gross_profit: { label: 'Gross profit', unit: 'money', kind: 'flow', direction: 'up',
@@ -51443,9 +51458,33 @@ function managerScoreProgress(row){
      above the commitment is how a manager flatters itself. */
   if(pct != null) pct = Math.max(0, Math.min(100, pct));
   const met = m.direction === 'down' ? actual <= aim : actual >= aim;
+  /* PACE -- where a target on course would stand TODAY. Progress alone
+     says 900,000 of 3,000,000; pace says 900,000 where 1,300,000 would
+     be level, with 3 days left, which is the difference between a
+     warning and a verdict. A flow accrues across the week; a level
+     travels from where it started. The projection is the observed rate
+     carried to the end of the period -- arithmetic on the past, said as
+     "at this rate", never a forecast. */
+  const dayNum = (iso)=> new Date(iso + 'T00:00:00Z').getTime();
+  const totalDays = (from && to) ? Math.max(1, Math.round((dayNum(to) - dayNum(from)) / 86400000) + 1) : 0;
+  const elapsedDays = totalDays
+    ? Math.max(0, Math.min(totalDays, Math.round((dayNum(today) - dayNum(from)) / 86400000) + 1)) : 0;
+  let pace = null;
+  if(totalDays && elapsedDays){
+    const share = elapsedDays / totalDays;
+    const expected = m.kind === 'flow' ? aim * share : baseline + (aim - baseline) * share;
+    const onCourse = m.direction === 'down' ? actual <= expected + 0.5 : actual >= expected - 0.5;
+    const projected = m.kind === 'flow'
+      ? actual / share
+      : baseline + (actual - baseline) / share;
+    pace = { elapsed_days: elapsedDays, total_days: totalDays,
+      expected: Math.round(expected), on_course: onCourse,
+      behind_by: onCourse ? 0 : Math.round(Math.abs(expected - actual)),
+      at_this_rate: Math.round(projected) };
+  }
   return { metric: b.metric, label: m.label, aim, baseline, actual: Math.round(actual),
     direction: m.direction, measure_kind: m.kind, from, to, days_left: daysLeft,
-    finished: !!to && to < today, met, pct, why: b.why || '' };
+    finished: !!to && to < today, met, pct, pace, why: b.why || '' };
 }
 
 const MANAGER_DOORS = {
@@ -51831,14 +51870,46 @@ async function runManagerReview(){
 function renderManagerCard(){
   const el = document.getElementById('dash_managerCard');
   if(!el) return;
+  /* TWO THINGS SHARE THIS SLOT, and they do NOT come and go together.
+     The invite is hidden once today's meeting is held; the pace of a
+     target the shop has taken on matters MOST after that meeting, all
+     week, without another one being held. The old card emptied the
+     whole slot, which would have taken the pace line with it. */
   const seen = lsGet(MANAGER_MEETING_KEY);
-  if(seen && String(seen) >= todayISO()){ el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="mgr-invite">
+  const heldToday = seen && String(seen) >= todayISO();
+  el.innerHTML = (heldToday ? '' : `<div class="mgr-invite">
     <p><b>Your manager is ready.</b> One tap holds the morning meeting: yesterday's advice accounted
       for, and today's few moves ranked by the money on them. A meeting spends a little AI credit.</p>
     <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
-  </div>`;
-  el.querySelector('#mgrInviteBtn').addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
+  </div>`) + `<div id="dash_managerPace"></div>`;
+  const btn = el.querySelector('#mgrInviteBtn');
+  if(btn) btn.addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
+  renderManagerPace();
+}
+
+/* Where the shop stands against what it took on, said WITHOUT being
+   asked and without spending a shilling of AI credit: every figure here
+   is the same derivation the Manager screen draws, compared to the
+   calendar. Behind first, at most two, and silent when there is nothing
+   live -- a dashboard that always says something teaches the eye to
+   skip it. */
+async function renderManagerPace(){
+  const el = document.getElementById('dash_managerPace');
+  if(!el || !managerNotesTable) return;
+  const board = await managerScoreboard();
+  const live = (board.targets||[]).filter(x=> x.pace && !x.finished);
+  if(!live.length){ el.innerHTML = ''; return; }
+  const behind = live.filter(x=> !x.pace.on_course);
+  const show = behind.concat(live.filter(x=> x.pace.on_course)).slice(0, 2);
+  el.innerHTML = show.map(x=> `<div class="mgr-pace ${x.pace.on_course ? 'ok' : 'behind'}">
+      <div class="mgr-pace-line"><b>${x.pace.on_course ? 'On course' : 'Behind'} — ${esc(x.label)}
+        ${fmtUGX(x.actual)} of ${fmtUGX(x.aim)}.</b>
+        ${x.pace.on_course ? '' : `Level today would be ${fmtUGX(x.pace.expected)} — ${fmtUGX(x.pace.behind_by)} short.`}
+        At this rate the week ends at ${fmtUGX(x.pace.at_this_rate)},
+        and ${x.days_left === 0 ? 'it ends today' : x.days_left + (x.days_left === 1 ? ' day is left' : ' days are left')}.</div>
+      <button type="button" class="btn btn-ghost mgr-pace-open">Open the Manager</button>
+    </div>`).join('');
+  el.querySelectorAll('.mgr-pace-open').forEach(b=> b.addEventListener('click', ()=> goToTab('manager')));
 }
 
 function mgrMoveView(row, idx){
@@ -52009,6 +52080,11 @@ function renderManager(){
               ? (x.met ? 'Met' : 'Missed') + ' — week ended ' + esc(fmtShortDate(x.to))
               : (x.pct == null ? '' : x.pct + '% there') + ' · ' + x.days_left + (x.days_left === 1 ? ' day left' : ' days left')}${
               x.why ? ' · ' + esc(x.why) : ''}</div>
+            ${(x.pace && !x.finished) ? `<div class="mgr-pace-foot ${x.pace.on_course ? 'ok' : 'behind'}">${
+              x.pace.on_course
+                ? 'On course — level today is ' + fmtUGX(x.pace.expected) + '.'
+                : 'Behind — level today would be ' + fmtUGX(x.pace.expected) + ', ' + fmtUGX(x.pace.behind_by) + ' short.'
+            } At this rate it ends at ${fmtUGX(x.pace.at_this_rate)}.</div>` : ''}
           </div>`).join('') + `</div>` : '')
         + ((sb2.proposed||[]).length ? `<div class="mgr-asks">
             <div class="mgr-why" style="margin:0 0 9px;"><b>Targets it wants to be measured against.</b>
