@@ -87,9 +87,11 @@ const MANAGER_EXTENSION = [
   '',
   'Never forecast: argue only from what is recorded — "at the last 30 days\u2019 rate this runs out in 6 days" is arithmetic on the books; "sales will grow" is a guess and forbidden. You move nothing and send nothing — the owner acts. Never claim an action happened, and never present a move as already done.',
   '',
-  'After the prose, end with EXACTLY ONE machine block the app turns into action cards — never mention it, it is stripped before display: [plan: {"moves":[{"title":"Chase Milly today","why":"Owes 840,000, oldest charge 62 days old, last paid 3 Aug","worth":840000,"door":"chase","kind":"chase","subject":{"customerId":7}}],"rejected":"one sentence on the option you turned down and why","keyline":"the one thing that matters most today"}]. door is one of: chase, buy, prices, prices-watch, consignment, orders, invoices, debtors, creditors, followups, inventory, statements, whatsapp, sourcing, cashbook, payroll. kind is one of: chase, buy, invoice, settle, price, other. subject carries ONLY ids a tool returned in this conversation (customerId, supplierId, key, orderId) — never invent one, and omit subject entirely when you have none. worth is whole shillings, 0 when no honest figure exists.',
+  'After the prose, end with EXACTLY ONE machine block the app turns into action cards — never mention it, it is stripped before display: [plan: {"moves":[{"title":"Chase Milly today","why":"Owes 840,000, oldest charge 62 days old, last paid 3 Aug","worth":840000,"door":"chase","kind":"chase","subject":{"customerId":7}}],"rejected":"one sentence on the option you turned down and why","keyline":"the one thing that matters most today"}]. door is one of: chase, buy, prices, prices-watch, consignment, orders, invoices, debtors, creditors, followups, inventory, statements, whatsapp, sourcing, cashbook, payroll, presets. kind is one of: chase, buy, invoice, settle, price, policy, other. subject carries ONLY ids a tool returned in this conversation (customerId, supplierId, key, orderId) — never invent one, and omit subject entirely when you have none. worth is whole shillings, 0 when no honest figure exists.',
   '',
   'THE WEEKLY REVIEW. When the message is "Hold the weekly review", you are the same manager on a different occasion: judging the week, not planning the day. Call week_review_data first; drill only where a figure needs support. Open with the verdict of the week in ONE sentence. Then account for your advice: what the done moves earned (figures from the tool only, collected_after_chases is the headline), what was skipped and any pattern in the owner\u2019s own skip reasons, and what was never acted on \u2014 bluntly, without scolding. Compare the week to the prior week on only the two or three figures that MOVED. Close with at most three lessons for next week, each grounded in a figure. When the tool says the week is thin, say so plainly and stop short \u2014 never pad thin evidence into a long review. DO NOT emit a [plan:] block in a review: the review judges, the next meeting plans. End instead with exactly one [review: {"verdict":"one sentence","lessons":["...","..."]}] block \u2014 never mention it, it is stripped before display.',
+  '',
+  'STANDING POLICIES. When the journal and the books show the same advice recurring — the same customer chased again and again, the same line bought over and over, orders sitting in one stage week after week — propose making it a standing rule instead of repeating yourself: chase timing (set_chase_timing), a per-line restock rule (set_restock_rule), or a stage time limit (set_stage_limit). Read standing_policies FIRST so you argue from what already stands. Ground every number in a derived figure — a selling rate, a supplier’s delivery wait, the ages in the debt book, the journal’s own repetition — never taste. At most ONE policy proposal per meeting or review, with its evidence said plainly. The card you raise executes nothing until the owner approves it; once adopted, the app itself watches the rule every day at no AI cost. In a plan, a policy move uses kind "policy" with the door that opens its screen (chase timings live on the chase screen, restock rules on buy, stage limits on presets).',
   '',
   'Follow-up questions in the same conversation stay with you as the manager: answer against the plan you gave, revise it plainly when the owner pushes back, and emit a fresh [plan:] block only when the owner asks you to re-plan.',
 ].join('\n');
@@ -410,6 +412,49 @@ const TOOLS = [
     name: 'week_review_data',
     description: 'The week for the Manager\u2019s weekly review: this rolling 7 days against the prior 7 (sales, invoices, gross profit, collected, cash in and out), plus every move advised in the week with its status, the owner\u2019s skip reasons, and what the books say happened — including the total collected after chases. Derived from the shop\u2019s own records; use it only when holding the weekly review.',
     input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'standing_policies',
+    description: 'Every standing rule the app watches daily, in one answer: the chase timings (days before a debt is chased, rest days between chases of one customer), the per-item restock rules (min units and/or own cover days) with the shop default cover, and the order-stage time limits with whether push alerts are on. Read this BEFORE proposing any policy change, so the argument starts from what already stands.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'set_chase_timing',
+    description: 'Set the shop’s debt-chasing policy: after_days (how many days after the sale a debt becomes chaseable) and/or rest_days (days to wait before chasing the same customer again). Whole days, 0–90; give at least one, the other keeps its current value. The chase queue re-forms immediately and the app watches the rule daily on its own.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        after_days: { type: 'integer', minimum: 0, maximum: 90 },
+        rest_days: { type: 'integer', minimum: 0, maximum: 90 },
+      },
+      required: [], additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_restock_rule',
+    description: 'Set a standing restock rule for ONE product (or one variant): min_units (never let the shelf fall below this many) and/or cover_days (this line keeps its own days of cover instead of the shop default). A side not given KEEPS its current value; setting both to 0 removes the rule and the line follows the shop default again. The What-to-buy plan watches the rule daily. Resolve the product with find_product first, and ground the numbers in derived figures (selling rate, delivery wait), never taste.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string' },
+        variant_index: { type: ['integer', 'null'] },
+        min_units: { type: 'number', minimum: 0 },
+        cover_days: { type: 'number', minimum: 0 },
+      },
+      required: ['product_id'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'set_stage_limit',
+    description: 'Set the order-tracking policy for one stage: how many minutes an order may sit there before the board flags it as sitting too long (and, when the owner has alerts on, pushes a notification). 0 removes the limit. One stage per call.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        stage: { type: 'string', enum: ['draft', 'awaiting_goods', 'preparing', 'pending_delivery', 'completed'] },
+        minutes: { type: 'number', minimum: 0, maximum: 20160 },
+      },
+      required: ['stage', 'minutes'], additionalProperties: false,
+    },
   },
   {
     name: 'add_sourcing_lead',

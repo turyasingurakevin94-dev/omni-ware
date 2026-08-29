@@ -82,7 +82,7 @@ const pkg = read('package.json');
   const cacheAfter = src.indexOf('cache_control', lastTool);
   const toolsEnd = src.indexOf('];', lastTool);
   t.check(lastTool > 0 && cacheAfter > 0 && cacheAfter < toolsEnd,
-    'and so does the LAST tool, closing the cached prefix over all thirty');
+    'and so does the LAST tool, closing the cached prefix over all thirty-four');
 }
 
 /* ---------- 4. the prefix must be byte-stable ------------------------- */
@@ -142,15 +142,17 @@ const pkg = read('package.json');
 /* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 30, `thirty tools defined (got ${names.length})`);
+  t.check(names.length === 34, `thirty-four tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
-    'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead'];
+    'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
+    'set_chase_timing', 'set_restock_rule', 'set_stage_limit'];
   writes.forEach(w => t.check(names.includes(w), `${w} is offered`));
   ['find_customer', 'find_supplier', 'find_product', 'customer_statement', 'list_debtors',
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details', 'stock_overview',
-    'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data']
+    'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data',
+    'standing_policies']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
   t.check((src.match(/additionalProperties: false/g) || []).length >= 30,
     'every schema (and the quote item) closes itself — a drifted call fails loudly');

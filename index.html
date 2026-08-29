@@ -993,6 +993,11 @@
   .mgr-week td{padding:5px 8px 5px 0;border-top:1px solid var(--line);color:var(--ink);}
   .mgr-week td:first-child{color:var(--ink-soft);}
   .mgr-week .mgr-prior{color:var(--ink-soft);font-size:12px;text-align:right;}
+  .mgr-policies{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 15px 11px;}
+  .mgr-pol-row{display:flex;justify-content:space-between;gap:14px;font-size:13px;
+    padding:8px 0;border-bottom:1px solid var(--line);}
+  .mgr-pol-row span:first-child{color:var(--ink);font-weight:600;white-space:nowrap;}
+  .mgr-pol-row span:last-child{color:var(--ink-soft);text-align:right;}
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
     background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
@@ -8388,6 +8393,7 @@
       <div id="managerPlanWrap"></div>
       <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
+      <div id="managerPoliciesWrap"></div>
     </section>
 
     <section id="tab-map" style="display:none;">
@@ -51295,6 +51301,39 @@ function runStageAlerts(){
    move is DERIVED from the books at render time, so the account the
    Manager gives of itself cannot be flattered by anything it wrote. */
 
+/* The shop's standing rules in ONE reading -- the same derivation feeds
+   the standing_policies tool, the Manager screen's own list, and the
+   mind's evidence when it argues a rule should change. These are the
+   dials the app already watches daily without AI credit: the chase
+   queue's two timings, the per-line restock rules, the order-stage
+   time limits. Gathered here so nobody has to remember where each
+   rule lives -- and so the tool and the screen can never disagree. */
+function standingPoliciesData(){
+  const reorder = [];
+  (data.products||[]).forEach(p=>{
+    const vis = (p.type === 'variable' && p.variants && p.variants.length)
+      ? p.variants.map((_, i)=> i) : [null];
+    vis.forEach(vi=>{
+      const r = reorderRuleFor(p.id, vi);
+      if(!r) return;
+      reorder.push({ item: productVariantLabel(p, vi), key: stockKey(p.id, vi),
+        min_units: r.minUnits || 0, cover_days: r.coverDays || 0 });
+    });
+  });
+  const limits = [];
+  SQ_STATUS_ORDER.forEach(st=>{
+    const m = Number((data.presetOrderStageLimits||{})[st])||0;
+    if(m > 0) limits.push({ stage: st, label: SQ_STATUSES[st].label, minutes: m });
+  });
+  return {
+    chase: { after_days: Math.max(0, Number(data.presetChaseAfterDays)||0),
+      rest_days: Math.max(0, Number(data.presetChaseRestDays)||0) },
+    restock: { default_cover_days: Number(data.presetRestockCoverDays)||14,
+      rules_count: reorder.length, rules: reorder },
+    stages: { limits, alerts_on: !!data.presetStageAlerts },
+  };
+}
+
 const MANAGER_DOORS = {
   chase: { tab: 'chase', label: 'Open Chase debts' },
   buy: { tab: 'buying', label: 'Open What to buy' },
@@ -51312,6 +51351,7 @@ const MANAGER_DOORS = {
   sourcing: { tab: 'sourcing', label: 'Open Sourcing' },
   cashbook: { tab: 'cashbook', label: 'Open the Cash book' },
   payroll: { tab: 'payroll', label: 'Open Payroll & rent' },
+  presets: { tab: 'presets', label: 'Open Presets' },
 };
 
 let managerMeetingRunning = false;
@@ -51353,6 +51393,11 @@ function deriveMoveOutcome(row){
     const paidSince = (data.purchaseInvoices||[]).some(pi=> pi.supplierId === subj.supplierId
       && (pi.payments||[]).some(pp=> String(pp.date) >= since));
     derived = paidSince ? 'a payment went to them since' : 'nothing paid to them since';
+  } else if(b.mkind === 'policy' && subj.key){
+    /* A policy on one line is answered by the presets themselves -- a
+       standing rule either stands today or it does not. */
+    derived = (data.presetReorderRules||{})[subj.key]
+      ? 'a standing rule now covers it' : 'no standing rule yet';
   }
   return { status: (row && row.status) || 'open', derived, money };
 }
@@ -51621,6 +51666,25 @@ function renderManager(){
   const planWrap = document.getElementById('managerPlanWrap');
   const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
+
+  /* The standing rules -- from the same standingPoliciesData reading
+     the standing_policies tool answers with, so the screen and the
+     mind can never disagree about what stands. Needs no journal. */
+  const polWrap = document.getElementById('managerPoliciesWrap');
+  const pol = standingPoliciesData();
+  const stageBits = pol.stages.limits.map(l=>
+    `${esc(l.label.replace(/^Step \d+\. /, ''))} ${l.minutes}m`).join(' · ');
+  polWrap.innerHTML = `<div class="mgr-sec-title">The standing rules</div>
+    <div class="mgr-policies">
+      <div class="mgr-pol-row"><span>Chasing debts</span><span>from ${pol.chase.after_days} ${pol.chase.after_days === 1 ? 'day' : 'days'} old,
+        resting ${pol.chase.rest_days} ${pol.chase.rest_days === 1 ? 'day' : 'days'} between chases</span></div>
+      <div class="mgr-pol-row"><span>Restocking</span><span>${pol.restock.rules_count
+        ? `${pol.restock.rules_count} standing rule${pol.restock.rules_count === 1 ? '' : 's'} · ` : ''}default cover ${pol.restock.default_cover_days} days</span></div>
+      <div class="mgr-pol-row"><span>Order stages</span><span>${pol.stages.limits.length
+        ? stageBits + (pol.stages.alerts_on ? ' · alerts on' : ' · alerts off') : 'no time limits set'}</span></div>
+      <div class="mgr-why" style="margin:6px 0 0;">The app watches these daily on its own. The manager may
+        propose changing one — a proposal becomes real only when you approve its card.</div>
+    </div>`;
 
   const renderPlanCards = (title, plan, rows)=>{
     const cards = rows.map((r, i)=> mgrMoveView(r, i)).join('');
@@ -57230,6 +57294,122 @@ const ASSISTANT_TOOLS = {
       }),
     })) };
   }},
+
+  /* Every standing rule in one answer -- what the app already watches
+     daily on its own. Read BEFORE proposing any policy change, so the
+     argument starts from what stands today. Same derivation as the
+     Manager screen's own list: the two can never disagree. */
+  standing_policies: { confirm: false, run(){
+    const pol = standingPoliciesData();
+    return { ...pol, restock: { ...pol.restock, rules: pol.restock.rules.slice(0, 12) } };
+  }},
+
+  /* Chase policy: the two dials the whole chase queue runs on. A change
+     here re-forms the queue on the spot, and the app keeps watching it
+     daily with no AI credit spent. */
+  set_chase_timing: { confirm: true,
+    summary(input){
+      const parts = [];
+      if(input.after_days != null) parts.push('start chasing ' + Math.round(Number(input.after_days))
+        + ' days after the sale (now ' + Math.max(0, Number(data.presetChaseAfterDays)||0) + ')');
+      if(input.rest_days != null) parts.push('rest ' + Math.round(Number(input.rest_days))
+        + ' days between chases of one customer (now ' + Math.max(0, Number(data.presetChaseRestDays)||0) + ')');
+      return 'Chase policy: ' + parts.join('; ') + '. The chase queue re-forms immediately.';
+    },
+    run(input){
+      const ops = [];
+      ['after_days', 'rest_days'].forEach(k=>{
+        if(input[k] == null) return;
+        const v = Math.round(Number(input[k]));
+        if(!(v >= 0 && v <= 90)) throw new Error('The ' + k.replace('_', ' ') + ' must be between 0 and 90.');
+        ops.push({ k, v });
+      });
+      if(!ops.length) throw new Error('Say at least one: after_days or rest_days.');
+      ops.forEach(({ k, v })=>{
+        if(k === 'after_days') data.presetChaseAfterDays = v; else data.presetChaseRestDays = v;
+      });
+      saveData();
+      renderChaseScreen();
+      renderChaseBadge();
+      const q = debtChaseRows();
+      return { done: true, after_days: Math.max(0, Number(data.presetChaseAfterDays)||0),
+        rest_days: Math.max(0, Number(data.presetChaseRestDays)||0),
+        queue_now: { to_chase: q.due.length, resting: q.resting.length } };
+    }},
+
+  /* A standing restock rule for ONE line: never below min_units, and/or
+     its own cover_days. A side not mentioned is KEPT -- a policy call
+     must never silently erase the half it did not talk about. Both
+     zero removes the rule and the line follows the shop default again
+     (the setReorderRule law). */
+  set_restock_rule: { confirm: true,
+    summary(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      const vi = input.variant_index==null ? null : input.variant_index;
+      const label = p ? productVariantLabel(p, vi) : String(input.product_id||'');
+      const cur = p ? reorderRuleFor(p.id, vi) : null;
+      const min = input.min_units != null ? Math.round(Number(input.min_units)) : (cur ? cur.minUnits : 0);
+      const cover = input.cover_days != null ? Math.round(Number(input.cover_days)) : (cur ? cur.coverDays : 0);
+      if(!(min > 0) && !(cover > 0))
+        return 'Remove the standing restock rule on ' + label + ' — it follows the shop default ('
+          + (Number(data.presetRestockCoverDays)||14) + ' days of cover) again.';
+      const words = (mu, cd)=> [mu > 0 ? 'never below ' + mu + ' units' : null,
+        cd > 0 ? cd + ' days of cover' : null].filter(Boolean).join(', ');
+      return 'Standing rule for ' + label + ': ' + words(min, cover)
+        + (cur ? ' (replaces ' + words(cur.minUnits, cur.coverDays) + ')' : '')
+        + '. The What-to-buy plan watches it daily.';
+    },
+    run(input){
+      const p = (data.products||[]).find(x=> x.id === input.product_id);
+      if(!p) throw new Error('No product with that id — use find_product first.');
+      const vi = input.variant_index==null ? null : input.variant_index;
+      if(vi!=null && !(p.type==='variable' && p.variants && p.variants[vi]))
+        throw new Error(p.name + ' has no variant ' + vi + '.');
+      if(input.min_units == null && input.cover_days == null)
+        throw new Error('Say at least one: min_units or cover_days (0 clears that side).');
+      const num = (v, name, cap)=>{
+        const n = Math.round(Number(v));
+        if(!(n >= 0 && n <= cap)) throw new Error('The ' + name + ' must be between 0 and ' + cap + '.');
+        return n;
+      };
+      const cur = reorderRuleFor(p.id, vi);
+      const min = input.min_units != null ? num(input.min_units, 'min_units', 1000000) : (cur ? cur.minUnits : 0);
+      const cover = input.cover_days != null ? num(input.cover_days, 'cover_days', 365) : (cur ? cur.coverDays : 0);
+      setReorderRule(p.id, vi, min, cover);
+      const now = reorderRuleFor(p.id, vi);
+      return { done: true, item: productVariantLabel(p, vi),
+        rule: now ? { min_units: now.minUnits, cover_days: now.coverDays }
+          : 'removed — the line follows the shop default again' };
+    }},
+
+  /* Order-tracking policy: how long an order may sit in one stage
+     before the board flags it (and, when alerts are on, pushes).
+     Minutes; 0 removes the limit -- the same dial the Presets screen
+     turns. */
+  set_stage_limit: { confirm: true,
+    summary(input){
+      const st = SQ_STATUSES[input.stage];
+      const label = st ? st.label : String(input.stage||'');
+      const cur = Number((data.presetOrderStageLimits||{})[input.stage])||0;
+      const m = Math.round(Number(input.minutes));
+      if(!(m > 0)) return 'Remove the time limit on ' + label + ' — orders sitting there stop being flagged.';
+      return 'Time limit for ' + label + ': flag any order sitting longer than ' + m + ' minutes'
+        + (cur > 0 ? ' (now ' + cur + ')' : ' (none stands today)') + '. The order board watches it from now on.';
+    },
+    run(input){
+      if(!SQ_STATUS_ORDER.includes(input.stage))
+        throw new Error('stage must be one of: ' + SQ_STATUS_ORDER.join(', ') + '.');
+      const m = Math.round(Number(input.minutes));
+      if(!(m >= 0 && m <= 20160)) throw new Error('minutes must be between 0 and 20160 (two weeks).');
+      if(!data.presetOrderStageLimits) data.presetOrderStageLimits = {};
+      data.presetOrderStageLimits[input.stage] = m;
+      saveData();
+      renderSavedQuotes();
+      const stages = standingPoliciesData().stages;
+      return { done: true, stage: SQ_STATUSES[input.stage].label, minutes: m || 'no limit',
+        limits_now: stages.limits, alerts_on: stages.alerts_on,
+        ...(stages.alerts_on ? {} : { note: 'Push alerts are OFF — the board still flags late orders on screen; the owner can switch alerts on beside the limits on the Presets screen.' }) };
+    }},
 
   purchase_plan: { confirm: false, run(input){
     const budget = input.budget != null ? Number(input.budget) : cashOnHandByAccount().total;
