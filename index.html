@@ -56901,9 +56901,16 @@ const ASSISTANT_TOOLS = {
       const best = rankedPriceRows(p.id, variantIdx)[0] || null;
       const { kind, cost } = apPriceBasis(best);
       const sell = best ? suggestedSellingPrice(p, cost, kind, variantIdx, Number(best.packQty)||0) : null;
+      /* Packing rides along on the FIRST hop: "what does a carton cost"
+         is one question, and answering it should not need a second call
+         -- nor a question back about a pack size the registry holds. */
+      const packQty = best ? Number(best.packQty)||0 : 0;
+      const hasPack = packQty > 0 && best && best.packUnit;
       return { product_id: p.id, variant_index: variantIdx,
         name: productVariantLabel(p, variantIdx),
         unit: best ? (best.unit||'') : '',
+        pack: hasPack ? (packQty + ' ' + (best.unit||'units') + ' in a ' + best.packUnit) : null,
+        pack_price: (hasPack && cost!=null) ? apRound(cost*packQty) : null,
         in_stock: getStockQty(p.id, variantIdx),
         cost: cost==null ? null : apRound(cost),
         suggested_sell_price: sell==null ? null : apRound(sell) };
@@ -57084,22 +57091,56 @@ const ASSISTANT_TOOLS = {
     if(!p) throw new Error('No product with that id — use find_product first.');
     const hasVariants = p.type==='variable' && p.variants && p.variants.length;
     const idxs = hasVariants ? p.variants.map((_, i)=> i) : [null];
+    /* One price row, said the way the PRICE REGISTRY says it.
+       The screen's own label builders do the talking -- prTierChipLabel
+       turns a base-unit rung into "1 Ctn+: 11,250 (180,000/Ctn)" and
+       priceSummaryLine's phrasing names the packing -- because the
+       registry is where the owner reads these figures, and an assistant
+       that words them differently makes the owner confirm what is
+       already on the screen in front of them. Base-unit numbers travel
+       too, for arithmetic; the SENTENCE is what gets quoted. */
+    const supplierRow = (r)=>{
+      const packQty = Number(r.packQty)||0;
+      const row = { supplier: r.sname,
+        wholesale: r.wholesale==null ? null : apRound(r.wholesale),
+        retail: r.retail==null ? null : apRound(r.retail),
+        unit: r.unit||'',
+        pack: (packQty>0 && r.packUnit) ? (packQty + ' ' + (r.unit||'') + ' per ' + r.packUnit) : null,
+        packing: (packQty>0 && r.packUnit)
+          ? (packQty + ' ' + (r.unit||'units') + ' in a ' + r.packUnit)
+          : (r.unit ? ('sold per ' + r.unit) : null),
+        date: r.date||'' };
+      if(r.piecesPerUnit != null && Number(r.piecesPerUnit) > 0)
+        row.pieces_per_unit = Number(r.piecesPerUnit);
+      if(r.supplierSku) row.supplier_sku = r.supplierSku;
+      /* Named, never merely counted: a supplier the owner can see on
+         the registry screen must be answerable here too. Ranked last
+         and flagged, so it can still never be called the cheapest. */
+      if(r.outOfStock) row.out_of_stock = true;
+      const tierRows = (r.tiers||[]).slice(0, 6);
+      if(tierRows.length){
+        row.tiers = tierRows.map(t=>{
+          const tier = { label: prTierChipLabel(t, r.unit, r.packUnit, packQty),
+            min_qty: t.minQty, price_per_unit: t.price==null ? null : apRound(t.price) };
+          if(packQty > 0 && t.minQty > 0 && t.minQty % packQty === 0) tier.min_qty_packs = t.minQty/packQty;
+          if(packQty > 0 && t.price != null) tier.price_per_pack = apRound(t.price*packQty);
+          return tier;
+        });
+        row.volume_pricing = priceTierSummaryPart(r.tiers, r.unit, r.packUnit, packQty);
+      }
+      return row;
+    };
     const variants = idxs.slice(0, 10).map(vi=>{
       const price = ASSISTANT_TOOLS.recommended_price.run({ product_id: p.id, variant_index: vi });
       const ranked = rankedPriceRows(p.id, vi);
-      const suppliers = ranked.slice(0, 5).map(r=>{
-        const row = { supplier: r.sname,
-          wholesale: r.wholesale==null ? null : apRound(r.wholesale),
-          retail: r.retail==null ? null : apRound(r.retail),
-          unit: r.unit||'',
-          pack: (Number(r.packQty)>0 && r.packUnit) ? (r.packQty + ' ' + (r.unit||'') + ' per ' + r.packUnit) : null,
-          date: r.date||'' };
-        const tiers = (r.tiers||[]).slice(0, 4).map(t=>({ min_qty: t.minQty, price: apRound(t.price) }));
-        if(tiers.length) row.tiers = tiers;
-        return row;
-      });
+      const oos = productPriceRows(p.id, vi).filter(r=> r.outOfStock);
+      const suppliers = ranked.concat(oos).slice(0, 8).map(supplierRow);
       const out = { variant_index: vi, ...price, suppliers,
-        suppliers_out_of_stock: productPriceRows(p.id, vi).length - ranked.length };
+        suppliers_out_of_stock: oos.length };
+      /* The headline packing, so it is present even when only the top of
+         the dossier is read. Same productPackInfo the shelf uses. */
+      const pk = productPackInfo(p.id, vi);
+      if(pk) out.packing = pk.packQty + ' ' + (pk.unit||'units') + ' in a ' + pk.packUnit;
       ['retail', 'wholesale'].forEach(kind=>{
         const r = effectiveMarkupRule(p, vi, kind);
         if(r && r.source==='variant') out[kind + '_markup_override'] = apRuleWords(kind, r);

@@ -47,6 +47,8 @@ const SYSTEM_PROMPT = [
   '',
   'Creating products: create_product adds a NEW product card — only after find_product found nothing AND the owner has confirmed it is genuinely new; never from a sound-alike guess, and never from a photo alone without the owner’s word. Sizes or types of one thing become VARIANTS on one product, not separate products. Ask the category when it is not obvious. After creating, record its supplier prices with add_supplier_price — and when the result says the connection has not confirmed the product yet, wait before pricing it.',
   '',
+  'Packing and volume prices are ON FILE, not something to ask about: product_details carries each supplier\u2019s packing ("16 Box in a Ctn"), any pieces in one unit, and the whole volume ladder in the Price Registry\u2019s own words ("1 Ctn+: 11,250 (180,000/Ctn)") with the per-unit and whole-pack figures beside it. Read it and STATE what it says \u2014 never ask the owner to confirm a pack size or a volume rung the registry already holds, and never make them repeat a figure they can see on their own screen. Quote a rung the way the registry shows it, so the answer and the screen match word for word. Asking rather than guessing applies to a document you are reading and to an item with nothing on file \u2014 never to a figure already in the registry. Suppliers marked out of stock are listed too, flagged: they answer "does this supplier sell it" honestly, but are never called the cheapest.',
+  '',
   'Markup rules: set_markup_rule sets how a selling price is suggested from cost — a fixed amount, or percent on cost (a fixed wholesale markup is added on each pack, a fixed retail one per unit). This shop’s markups are usually fixed amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. Value 0 clears a rule. Say the rule back in plain words before the card, treat an ambiguous figure like "10,0000" as a question to ask rather than a number to guess, and after saving tell the owner the new suggested price the tool returns — a misheard figure shows itself there at once.',
   '',
   'Quotes are drafts only: create_quote saves a draft. Invoicing, stock movement and order progression are done by the owner in the app — say so when it matters.',
@@ -115,7 +117,7 @@ const TOOLS = [
   },
   {
     name: 'find_product',
-    description: 'Find a product or a specific variant by any words: name, size, type, description, notes. Use before create_quote, recommended_price or add_sourcing_lead. Returns at most 5 entries with stock and price hints. Several matches for one product usually means the owner must pick a variant — ask them by the variant names.',
+    description: 'Find a product or a specific variant by any words: name, size, type, description, notes. Use before create_quote, recommended_price or add_sourcing_lead. Returns at most 5 entries with stock and price hints. Several matches for one product usually means the owner must pick a variant — ask them by the variant names. Each match carries its unit, its packing and what a whole pack costs, so a pack question can be answered without a second call.',
     input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'], additionalProperties: false },
   },
   {
@@ -172,7 +174,7 @@ const TOOLS = [
   },
   {
     name: 'product_details',
-    description: 'The full picture of one product: stock on hand, every supplier and what they charge (volume tiers included), the markup rules that apply, and the suggested selling price per variant. Use it when the owner asks what is known about a product, after find_product resolves the id.',
+    description: 'The full picture of one product: stock on hand, every supplier and what they charge (volume tiers included), the markup rules that apply, and the suggested selling price per variant. Use it when the owner asks what is known about a product, after find_product resolves the id. Each supplier row carries its packing, any pieces in one unit, the supplier\u2019s own code, and its volume ladder both as figures (per unit and whole pack) and as the exact sentence the Price Registry screen shows \u2014 read these instead of asking the owner about packing or a carton price. Suppliers marked out of stock are included and flagged.',
     input_schema: { type: 'object', properties: { product_id: { type: 'string', description: 'From find_product.' } }, required: ['product_id'], additionalProperties: false },
   },
   {

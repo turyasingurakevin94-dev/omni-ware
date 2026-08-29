@@ -80,6 +80,9 @@ const NAMES = [
   'allProductVariantEntries', 'reorderRuleFor', 'inventoryLineFor', 'inventoryLineStats', 'sortInventoryLines',
   'shelfValueForKey', 'consignTally', 'consignedOnShelf',
   'getFIFOUnitCost', 'productUnitLabel', 'productPackInfo', 'matchesSubsequence',
+  // The registry's own label builders: the dossier speaks its words,
+  // not a second set of its own (see assistant-price-vocabulary).
+  'prTierChipLabel', 'priceTierSummaryPart',
   'todayISO', 'accountLabel',
 ];
 const scope = compileScope([
@@ -449,15 +452,33 @@ const run = (name, input) => T[name].run(input || {});
   t.check(d.variant_count === 3 && d.variants.length === 3, 'every variant accounted for');
 
   const normal = d.variants[0];
-  t.check(normal.suppliers.length === 2
-    && normal.suppliers[0].supplier === 'Kampala Steel' && normal.suppliers[0].retail === 8000
+  t.check(normal.suppliers[0].supplier === 'Kampala Steel' && normal.suppliers[0].retail === 8000
     && normal.suppliers[1].supplier === 'Jinja Traders' && normal.suppliers[1].retail === 9000,
     `suppliers come cheapest first, by name and price (got ${JSON.stringify(normal.suppliers.map(s=>s.supplier))})`);
   t.check(normal.suppliers[0].pack === '20 Pc per Ctn', 'pack sizes ride along');
-  t.check(normal.suppliers[0].tiers.length === 2 && normal.suppliers[0].tiers[1].price === 7500,
-    'and so do volume tiers, so the model can speak the carton price');
+  t.check(normal.suppliers[0].packing === '20 Pc in a Ctn',
+    'in the Price Registry’s own words, so the owner is never asked to confirm their own screen');
+  t.check(normal.packing === '20 Pc in a Ctn',
+    'and the packing is stated at the head of the dossier too');
+  /* This assertion used to stop at the bare 7,500 while claiming the
+     model could "speak the carton price" — and the model, handed a
+     base-unit rung with no translation, asked the owner instead. The
+     claim is now actually tested. */
+  t.check(normal.suppliers[0].tiers.length === 2
+    && normal.suppliers[0].tiers[1].price_per_unit === 7500
+    && normal.suppliers[0].tiers[1].min_qty_packs === 1
+    && normal.suppliers[0].tiers[1].price_per_pack === 150000,
+    `volume tiers arrive translated into packs, so the model can SPEAK the carton price (got ${JSON.stringify(normal.suppliers[0].tiers[1])})`);
+  t.check(/1 Ctn\+: 7,500 UGX \(150,000 UGX\/Ctn\)/.test(normal.suppliers[0].volume_pricing || ''),
+    `and the whole ladder as the registry’s own sentence (got ${JSON.stringify(normal.suppliers[0].volume_pricing)})`);
+  const oosRow = normal.suppliers.find(s=> s.out_of_stock);
+  t.check(normal.suppliers.length === 3 && oosRow && oosRow.supplier === 'Mbale Hardware',
+    'an out-of-stock supplier is NAMED and flagged — "does this supplier sell it" is answerable');
+  t.check(normal.suppliers[normal.suppliers.length - 1].out_of_stock === true
+    && normal.suppliers[0].out_of_stock === undefined,
+    'ranked last, and never the one called cheapest');
   t.check(normal.suppliers_out_of_stock === 1,
-    'a supplier marked out of stock is counted, not silently dropped');
+    'and the count still travels beside the names');
   t.check(normal.in_stock === 140 && normal.cost === 8000 && normal.recommended_sell === 10400,
     `stock, best cost and the 30% suggestion (got ${JSON.stringify({ s: normal.in_stock, c: normal.cost, r: normal.recommended_sell })})`);
   const direct = run('recommended_price', { product_id: 'P1', variant_index: 0 });
