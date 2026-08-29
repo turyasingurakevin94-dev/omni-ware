@@ -33288,12 +33288,20 @@ function customerOpenCharges(c){
    A LEDGER, NOT A STAMP. Somebody who promises Friday, misses it and
    then promises Tuesday is telling you something no single field per
    customer can hold. Each promise is its own row, never rewritten: a
-   changed mind is a SECOND promise, and the pattern is the point. */
+   changed mind is a SECOND promise, and the pattern is the point.
+
+   NEWEST BY WHEN THEY SAID IT, not by which day is furthest out. Sorted
+   on promised_on, somebody who said the 25th and then rang back to bring
+   it forward to the 20th still read as the 25th -- so they stayed out of
+   the chase queue five days past their own word, and the screen showed
+   them the date they had already withdrawn. The latest word is the one
+   spoken last. */
 function promisesFor(customerId){
   return (data.paymentPromises || [])
     .filter(x=> String(x.customerId) === String(customerId)
       && /^\d{4}-\d{2}-\d{2}$/.test(String(x.promisedOn||'')))
-    .sort((a, b)=> String(b.promisedOn||'').localeCompare(String(a.promisedOn||'')) || (b.id||0) - (a.id||0));
+    .sort((a, b)=> String(b.madeOn||b.promisedOn||'').localeCompare(String(a.madeOn||a.promisedOn||''))
+      || (b.id||0) - (a.id||0));
 }
 
 /* KEPT, BROKEN OR STILL WAITING -- worked out from the debt ledger
@@ -34371,6 +34379,7 @@ function renderChaseScreen(){
       <span class="chase-mini-name">${esc(r.name)}</span>
       <span class="chase-mini-why">chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</span>
       <span class="chase-mini-amt">${f(r.debt)}</span>
+      <button type="button" class="btn btn-ghost chase-mini-act chase-promise" data-id="${esc(r.id)}">They promised…</button>
       <button type="button" class="btn btn-ghost chase-mini-act chase-undo" data-id="${esc(r.id)}">Chase again</button>
     </div>`).join('')}</div>`;
   /* THEY NAMED A DAY. Not chased until it comes: ringing somebody on
@@ -34383,6 +34392,7 @@ function renderChaseScreen(){
         r.promise.amount ? ' — ' + esc(f(r.promise.amount)) : ''}${
         r.brokenPromises ? ` · has broken ${r.brokenPromises} before` : ''}</span>
       <span class="chase-mini-amt">${f(r.debt)}</span>
+      <button type="button" class="btn btn-ghost chase-mini-act chase-promise" data-id="${esc(r.id)}">They said a different day</button>
       <button type="button" class="btn btn-ghost chase-mini-act chase-unpromise" data-pid="${esc(String(r.promise.id))}">They did not say that</button>
     </div>`).join('')}</div>`;
   if(q.blocked.length) html += `<div class="chase-tail"><h4>Held back until the balance is checked</h4>${

@@ -154,6 +154,26 @@ if (model) {
     'while the two they broke are still counted — one is a bad week, the third is the customer');
   eq(model.promisesFor('C2').length, 0, 'a customer who has promised nothing has nothing');
 
+  /* THE LATEST WORD IS THE ONE SPOKEN LAST. Sorted on the day promised,
+     somebody who said the 25th and then rang back to bring it forward to
+     the 20th still read as the 25th — so they sat out of the chase queue
+     five days past their own word, and the screen showed them a date they
+     had already withdrawn. */
+  modelData.paymentPromises = [
+    pr({ id: 1, promisedOn: on(9), madeOn: ago(3) }),
+    pr({ id: 2, promisedOn: on(4), madeOn: ago(1) }),
+  ];
+  eq(model.promiseLatest('C1', TODAY).promisedOn, on(4),
+    'bringing a promise FORWARD is the latest word, even though the day is nearer than the one it replaces');
+  eq(model.promisesFor('C1')[0].id, 2, 'and it heads the list the screen reads');
+
+  modelData.paymentPromises = [
+    pr({ id: 1, promisedOn: on(4), madeOn: ago(3) }),
+    pr({ id: 2, promisedOn: on(9), madeOn: ago(1) }),
+  ];
+  eq(model.promiseLatest('C1', TODAY).promisedOn, on(9),
+    'and pushing one BACK is the latest word just the same');
+
   modelData.paymentPromises = [pr({ promisedOn: '' }), pr({ id: 2, promisedOn: 'soon' })];
   eq(model.promisesFor('C1').length, 0,
     'a row with no real date is not a promise — it would otherwise sort to the top and decide the queue');
@@ -315,6 +335,23 @@ if (chase) {
     'the ones waiting are shown, so the queue’s silence about them is visible rather than mysterious');
   t.check(/chase-unpromise/.test(panel) && /deletePaymentPromise\(/.test(panel),
     'with a way to take back one entered by mistake');
+
+  /* WHERE THE CONVERSATION ACTUALLY HAPPENS. The person most likely to
+     name a day is the one you have just rung — and the moment you ring
+     them they leave the queue for the rest period, taking the button
+     with them. Somebody already on a promise who calls to move it needs
+     the same thing: a changed mind is a SECOND promise, which the model
+     was built around and the screen gave nowhere to make. */
+  const tail = (heading) => {
+    const from = panel.indexOf(heading);
+    return from < 0 ? '' : panel.slice(from, panel.indexOf('</div>`).join(\'\')}</div>`', from));
+  };
+  t.check(/chase-promise/.test(tail('Chased in the last')),
+    'a customer chased today who then rings back with a day can be written down without waiting out the rest period');
+  t.check(/chase-promise/.test(tail('Said when they would pay')),
+    'and one already on a promise can name a different day, which is a second promise rather than an edit');
+  t.check((panel.match(/chase-promise/g) || []).length >= 3,
+    'so the button is on all three places a customer can be standing, not only the queue');
   t.check(/has broken \$\{r\.brokenPromises\} before/.test(panel) || /broken \$\{r\.brokenPromises\}/.test(panel)
     || /r\.brokenPromises/.test(panel),
     'and a repeat offender is named as one');
