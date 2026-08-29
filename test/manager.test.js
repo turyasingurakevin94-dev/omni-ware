@@ -310,8 +310,17 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/AT MOST FIVE moves/.test(api), 'at most five moves — a plan of twenty is a dashboard, not judgement');
   t.check(/Never forecast/.test(api), 'forecasting is forbidden in as many words');
   t.check(/manager_history FIRST/.test(api), 'the meeting opens with its own account');
-  t.check(/never invent one, and omit subject entirely when you have none/.test(api),
+  t.check(/never invent one, and omit subject ONLY when the reading gave you none/.test(api),
     'subject ids come from tools or not at all');
+  /* THE WORD THAT CHANGED, AND WHY. "omit subject when you have none"
+     read as permission, and with shop_pulse handing back names and no
+     ids the model correctly had none every single time — so every
+     chase was saved with an empty subject and collected_after_chases,
+     which the review is told is its headline, was structurally zero
+     for as long as it had existed. The reading now carries the ids;
+     this turns omitting into the last resort it always meant to be. */
+  t.check(/an unnamed move can never be measured/.test(api),
+    'and the rule gives its reason: a move nothing can point at is a move nothing can weigh');
   t.check(/ONE thing you considered and rejected/.test(api),
     'a plan with nothing rejected was not thought about');
   const doors = extractDeclaration(src, 'MANAGER_DOORS', 'index.html');

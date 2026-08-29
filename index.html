@@ -28005,7 +28005,10 @@ function anRowsByCustomer(invoices){
     const t = anInvoiceTotals(q);
     if(!map.has(key)){
       const rec = data.customers.find(c=>(c.name||'').trim().toLowerCase()===key);
-      map.set(key, {name, location: rec ? (rec.location||'') : '', sales:0, cost:0, qty:0, count:0, estimatedQty:0});
+      // The record is already in hand for the location; the id costs
+      // nothing more and is what lets a caller point at this customer
+      // rather than only name them.
+      map.set(key, {id: rec ? rec.id : null, name, location: rec ? (rec.location||'') : '', sales:0, cost:0, qty:0, count:0, estimatedQty:0});
     }
     const row = map.get(key);
     row.sales += t.sales; row.cost += t.cost; row.qty += t.qty; row.count += 1;
@@ -28035,10 +28038,11 @@ function anFilterRows(rows, query){
      so removing it changes no answer, only the work done. Recorded here
      rather than chased with a fixture that cannot tell them apart. */
   if(!q) return rows;
-  /* `key` is an internal join field, not something anybody searched for.
-     Left in, typing "::" matched every row on every screen. */
+  /* `key` and `id` are internal join fields, not something anybody
+     searched for. Left in, typing "::" matched every row on every
+     screen, and a bare "3" would match every customer numbered 3. */
   return rows.filter(r => Object.entries(r)
-    .filter(([k]) => k !== 'key')
+    .filter(([k]) => k !== 'key' && k !== 'id')
     .map(([,v]) => v).join(' ').toLowerCase().includes(q));
 }
 function anSortRows(rows, sort){
@@ -52654,7 +52658,9 @@ function dashGoingQuietCustomers(){
     // customer who orders every couple of days isn't flagged over natural
     // day-to-day jitter.
     if(sinceLastDays >= avgGapDays*1.5 && sinceLastDays>=7){
-      rows.push({name:c.name||'Unnamed customer', avgGapDays, sinceLastDays, extraDays, orderCount:orderTimes.length});
+      // The id travels with the row: a mind advised to ring this
+      // customer must be able to point at them, not just name them.
+      rows.push({id:c.id, name:c.name||'Unnamed customer', avgGapDays, sinceLastDays, extraDays, orderCount:orderTimes.length});
     }
   });
   return rows.sort((a,b)=>b.extraDays-a.extraDays);
@@ -54192,6 +54198,28 @@ function deriveMoveOutcome(row){
   const since = String(row && row.date || '');
   let derived = null;
   let money = 0;
+  /* WHAT EACH KIND OF MOVE HAS TO NAME BEFORE THE BOOKS CAN ANSWER IT.
+     A chase answered by a customer's ledger needs to know WHOSE ledger.
+     Written out here rather than read off the branches below so the gap
+     can be named in the owner's own words instead of showing as a blank.
+
+     THE GAP, NAMED. A move whose kind the books CAN answer but which
+     was saved without the id that answer needs is not a move that
+     earned nothing -- it is a move nothing can weigh, and for months
+     the two were the same blank. Only the repairable gap speaks: a
+     price or an other move is a known limit, not a hole in the record,
+     and saying so on every card daily would teach the eye to skip the
+     line that matters. */
+  const needs = { chase: ['customerId', 'customer'], buy: ['key', 'line'],
+    invoice: ['orderId', 'order'], settle: ['supplierId', 'supplier'],
+    policy: ['key', 'line'] }[b.mkind];
+  /* A blank counts as unnamed. The branches below already refuse an
+     empty key, so a guard that accepted one would call the move
+     measurable and then measure nothing -- the two readings of "named"
+     have to be the same reading. */
+  const named = needs && subj[needs[0]] != null && subj[needs[0]] !== '';
+  const unmeasured = (needs && !named)
+    ? `nothing measures it — it named no ${needs[1]}` : null;
   if(b.mkind === 'chase' && subj.customerId != null){
     const c = (data.customers||[]).find(x=> String(x.id) === String(subj.customerId));
     const paid = c ? (c.debtLog||[]).filter(r=> r.type === 'payment' && r.cashTxnId
@@ -54200,7 +54228,12 @@ function deriveMoveOutcome(row){
        arithmetic -- and ONLY from here, so the cashTxnId law (echo rows
        are not money) is applied in exactly one place. */
     money = Math.round(paid);
-    derived = paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since';
+    /* A customer who is no longer on file is not a customer who did not
+       pay, and saying so was already the invoice branch's discipline.
+       Read as "no payment seen since", a deleted card looked exactly
+       like a debtor ignoring every chase. */
+    derived = !c ? 'that customer is no longer on file'
+      : (paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since');
   } else if(b.mkind === 'buy' && subj.key){
     const got = (data.stockLog||[]).some(l=> l.key === subj.key && l.type === 'restock'
       && String(l.date) >= since);
@@ -54208,7 +54241,7 @@ function deriveMoveOutcome(row){
   } else if(b.mkind === 'invoice' && subj.orderId != null){
     const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(subj.orderId));
     derived = !q ? 'order no longer on file' : (q.invoiced ? 'invoiced' : 'still not invoiced');
-  } else if(b.mkind === 'settle' && subj.supplierId){
+  } else if(b.mkind === 'settle' && named){
     const paidSince = (data.purchaseInvoices||[]).some(pi=> pi.supplierId === subj.supplierId
       && (pi.payments||[]).some(pp=> String(pp.date) >= since));
     derived = paidSince ? 'a payment went to them since' : 'nothing paid to them since';
@@ -54218,7 +54251,7 @@ function deriveMoveOutcome(row){
     derived = (data.presetReorderRules||{})[subj.key]
       ? 'a standing rule now covers it' : 'no standing rule yet';
   }
-  return { status: (row && row.status) || 'open', derived, money };
+  return { status: (row && row.status) || 'open', derived, money, unmeasured };
 }
 
 /* ---- the journal: direct reads and writes, wa_* style ---- */
@@ -54929,6 +54962,10 @@ function mgrMoveView(row, idx){
   if(out.status === 'done') stateBits.push('done');
   if(out.status === 'skipped') stateBits.push('skipped' + (b.skipReason ? ` — ${esc(b.skipReason)}` : ''));
   if(out.derived) stateBits.push(esc(out.derived));
+  /* Said on the card, not only in the review: the owner is the one who
+     can see that a move plainly WAS about Milly, and the only person
+     who would ever notice that the app cannot tell. */
+  if(out.unmeasured) stateBits.push(esc(out.unmeasured));
   return `<div class="mgr-move ${esc(out.status === 'open' ? '' : out.status)}" data-mid="${esc(String(row.id))}">
     <div class="mgr-move-top">
       <span class="mgr-move-title">${esc(b.title || '')}</span>
@@ -60769,23 +60806,36 @@ const ASSISTANT_TOOLS = {
       cash,
       alerts: dashAlerts(dctx).slice(0, 8).map(a=> ({
         band: a.band, title: a.title, money: apRound(a.money||0), action: a.action })),
+      /* EVERY ROW THAT NAMES ONE THING CARRIES THAT THING'S ID, spelled
+         the way a move's subject spells it -- customerId, key, orderId,
+         supplierId -- so the id is COPIED into the plan and never
+         translated. This reading gave names only, the plan block quite
+         correctly refuses an id no tool returned, and so every chase
+         ever advised was saved with an empty subject: deriveMoveOutcome
+         fell through every branch, and collected_after_chases, which
+         the review is told is its headline, was structurally zero for
+         as long as it has existed. purchase_plan learned this lesson
+         already and shop_pulse -- the one tool a meeting is TOLD to
+         read -- never did. */
       debts: {
-        chase_now: chase.due.slice(0, 6).map(r=> ({ name: r.name, owed: apRound(r.debt), age_days: r.ageDays })),
+        chase_now: chase.due.slice(0, 6).map(r=> ({ customerId: r.id, name: r.name,
+          owed: apRound(r.debt), age_days: r.ageDays })),
         chase_count: chase.due.length,
         held_for_checking: chase.blocked.length,
         resting: chase.resting.length,
-        waiting_on_a_promise: chase.promised.slice(0, 6).map(r=> ({ name: r.name,
+        waiting_on_a_promise: chase.promised.slice(0, 6).map(r=> ({ customerId: r.id, name: r.name,
           owed: apRound(r.debt), said_they_would_pay_on: r.promise.promisedOn,
           said_it_on: r.promise.madeOn,
           amount: r.promise.amount == null ? null : apRound(r.promise.amount),
           broken_before: r.brokenPromises })),
         waiting_on_a_promise_count: chase.promised.length,
         broke_their_word: chase.due.filter(r=> r.promise && r.promise.state === 'broken')
-          .slice(0, 5).map(r=> ({ name: r.name, owed: apRound(r.debt),
+          .slice(0, 5).map(r=> ({ customerId: r.id, name: r.name, owed: apRound(r.debt),
             said: r.promise.promisedOn, broken_before: r.brokenPromises })),
       },
       buying: {
-        top_lines: plan.lines.slice(0, 6).map(l=> ({ name: l.name, why: l.reason,
+        top_lines: plan.lines.slice(0, 6).map(l=> ({ key: l.key, supplierId: l.supplierId,
+          name: l.name, why: l.reason,
           cost: apRound(l.cost), supplier: l.supplier })),
         line_count: plan.lines.length,
         over_budget: plan.didNotFit.length,
@@ -60804,7 +60854,7 @@ const ASSISTANT_TOOLS = {
         return { target_pct: targetMarginPct(),
           lines_under_target: under.length,
           lifting_them_would_add_over_30_days: apRound(under.reduce((t, r)=> t + r.atStake, 0)),
-          worst_lines: under.slice(0, 5).map(r=> ({ line: r.line,
+          worst_lines: under.slice(0, 5).map(r=> ({ key: r.key, line: r.line,
             sold_30_days: apRound(r.sold30), units: r.units30, kept_pct: r.keptPct,
             rule: r.rule ? (r.rule.type === 'fixed' ? '+' + apRound(r.rule.value) : '+' + r.rule.value + '%') : null,
             rule_is_worth_pct_now: r.ruleYieldPct,
@@ -60817,9 +60867,11 @@ const ASSISTANT_TOOLS = {
       /* The board's own stage-timer rule, through the brief's derivation
          -- an empty list here can mean nothing is late OR that no limits
          are set, and the count of limits says which. */
-      orders_sitting_too_long: brief.stuck.map(x=> ({ client: x.name, stage: x.statusLabel, over_minutes: x.overMinutes })),
+      orders_sitting_too_long: brief.stuck.map(x=> ({ orderId: x.id, client: x.name,
+        stage: x.statusLabel, over_minutes: x.overMinutes })),
       stage_limits_set: SQ_STATUS_ORDER.some(st=> (Number((data.presetOrderStageLimits||{})[st])||0) > 0),
-      follow_ups_due: followUpClientsToContact(Date.now()).slice(0, 5).map(r=> ({ name: r.name, has_news: !!r.hasNews })),
+      follow_ups_due: followUpClientsToContact(Date.now()).slice(0, 5).map(r=> ({
+        customerId: r.customerId, name: r.name, has_news: !!r.hasNews })),
       consignment: { owed_total: apRound(consign.reduce((n,r)=> n + r.owed, 0)), consignors: consign.length },
       dead_stock: (()=>{
         const dead = deadStockRows(today);
@@ -60830,7 +60882,7 @@ const ASSISTANT_TOOLS = {
              was given and skipped for weeks because nothing could say
              WHICH. Six lines by money, with how long each has sat and
              how many people have ever bought it. */
-          worst_lines: dead.slice(0, 6).map(r=> ({ line: r.line, value: apRound(r.value),
+          worst_lines: dead.slice(0, 6).map(r=> ({ key: r.key, line: r.line, value: apRound(r.value),
             units: r.qty, quiet_days: r.daysQuiet,
             never_sold: r.daysQuiet == null,
             buyers_who_took_it_before: deadStockBuyers(r.key).length,
@@ -60867,17 +60919,17 @@ const ASSISTANT_TOOLS = {
           sales: apRound(r.sales), profit: apRound(r.sales - r.cost),
           margin_pct: r.sales > 0 ? Math.round((r.sales-r.cost)/r.sales*1000)/10 : 0 })),
       best_customers: anRowsByCustomer(dctx.invoices).sort((a,b)=> b.profit - a.profit).slice(0, 5)
-        .map(r=> ({ name: r.name, orders: r.count, sales: apRound(r.sales), profit: apRound(r.profit),
-          margin_pct: Math.round(r.margin*10)/10 })),
+        .map(r=> ({ customerId: r.id, name: r.name, orders: r.count, sales: apRound(r.sales),
+          profit: apRound(r.profit), margin_pct: Math.round(r.margin*10)/10 })),
       /* Customers slipping away, lines the shop depends on one buyer for,
          suppliers whose prices are climbing, and what runs out next. */
-      going_quiet: dctx.goingQuiet.slice(0, 5).map(r=> ({ name: r.name,
+      going_quiet: dctx.goingQuiet.slice(0, 5).map(r=> ({ customerId: r.id, name: r.name,
         usual_gap_days: Math.round(r.avgGapDays), silent_days: Math.round(r.sinceLastDays), orders: r.orderCount })),
       dependency: dctx.concentration.map(r=> ({ item: r.name, buyers: r.buyers,
         top_buyer: r.topBuyerName, share_pct: Math.round(r.concentration) })),
       cost_rises: dctx.inflation.map(r=> ({ item: r.name, supplier: r.supplierName,
         was: apRound(r.first), now: apRound(r.last), up_pct: Math.round(r.growth*10)/10, since: r.since })),
-      running_out_soon: dctx.stockOut.map(r=> ({ item: r.name, left: Math.round(r.qty),
+      running_out_soon: dctx.stockOut.map(r=> ({ key: r.key, item: r.name, left: Math.round(r.qty),
         days_left: Math.round(r.daysLeft), a_day: Math.round(r.dailyRate*10)/10 })),
       /* Stock the balance sheet cannot value -- understated shelf. */
       uncosted_lines: uncostedStockRows().length,
@@ -61041,15 +61093,37 @@ const ASSISTANT_TOOLS = {
       .eq('shop_id', currentShopId).eq('kind', 'move').gte('date', from).lte('date', today);
     if(movesR.error) return { error: movesR.error.message };
     const rows = movesR.data || [];
-    let done = 0, skipped = 0, open = 0, chaseMoney = 0;
+    let done = 0, skipped = 0, open = 0, unmeasured = 0;
     const moves = rows.map(r=>{
       const o = deriveMoveOutcome(r);
       if(o.status === 'done') done++; else if(o.status === 'skipped') skipped++; else open++;
-      chaseMoney += o.money || 0;
+      if(o.unmeasured) unmeasured++;
       return { title: (r.body||{}).title || '', status: o.status,
         ...(o.derived ? { what_the_books_say: o.derived } : {}),
+        ...(o.unmeasured ? { cannot_be_measured: o.unmeasured } : {}),
         ...((r.body||{}).skipReason ? { skip_reason: r.body.skipReason } : {}) };
     }).slice(0, 15);
+    /* ONE CUSTOMER, ONE COUNT. Two meetings in a week may both advise
+       chasing the same person. Each card honestly reports what the
+       books show since ITS OWN move, and that is right on a card --
+       but adding those together counts one payment twice and inflates
+       the very figure the review is told to lead with. The week credits
+       each customer once, from the EARLIEST move that named them, and
+       through deriveMoveOutcome so the cashTxnId law (an invoice
+       sync's echo row is not money) stays in exactly one place. */
+    const chases = rows.filter(r=> ((r.body||{}).mkind) === 'chase');
+    const firstChase = new Map();
+    chases.forEach(r=>{
+      const cid = ((r.body||{}).subject||{}).customerId;
+      if(cid == null) return;
+      const k = String(cid), at = String(r.date||'');
+      if(!firstChase.has(k) || at < firstChase.get(k)) firstChase.set(k, at);
+    });
+    let chaseMoney = 0;
+    firstChase.forEach((date, cid)=>{
+      chaseMoney += deriveMoveOutcome({ date, body: { mkind: 'chase', subject: { customerId: cid } } }).money || 0;
+    });
+    const chasesUnnamed = chases.length - chases.filter(r=> ((r.body||{}).subject||{}).customerId != null).length;
     const score = await managerScoreboard();
     if(score.targets.length) out.scoreboard = score.targets;
     /* The review before this one: the only way to say whether the
@@ -61088,6 +61162,16 @@ const ASSISTANT_TOOLS = {
       thin: (meetR.data||[]).length < 3,
       advised: rows.length, done, skipped, not_acted_on: open,
       collected_after_chases: apRound(chaseMoney),
+      /* THE FIGURE COMES WITH ITS ACCOUNTING. A bare zero here reads as
+         "the chases collected nothing" when what it often meant was
+         "no chase said who it was about". Those are opposite facts and
+         they looked identical for as long as this tool has existed. */
+      chases_advised: chases.length,
+      customers_chased: firstChase.size,
+      chases_not_measurable: chasesUnnamed,
+      ...(chases.length && !firstChase.size ? { collected_after_chases_cannot_be_read:
+        'Every chase advised this week was saved without the customer it named, so no payment can be attributed to one. The zero is a gap in the record, not a week with nothing collected — this_week.collected above is what the shop actually took in. Say so plainly and do not quote the zero.' } : {}),
+      moves_nothing_can_measure: unmeasured,
       moves,
     };
     return out;
@@ -61260,6 +61344,10 @@ const ASSISTANT_TOOLS = {
         const out = deriveMoveOutcome(x);
         return { title: (x.body||{}).title || '', status: out.status,
           ...(out.derived ? { what_the_books_say: out.derived } : {}),
+          /* So the mind reading its own past sees that a move went
+             unweighed because it named nobody -- and attaches the id
+             this time rather than repeating the omission. */
+          ...(out.unmeasured ? { cannot_be_measured: out.unmeasured } : {}),
           ...(((x.body||{}).skipReason) ? { skip_reason: x.body.skipReason } : {}) };
       }),
     })) };

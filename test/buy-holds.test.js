@@ -483,7 +483,14 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     t.check(/Keep rejected for options that are NOT a buy-plan line/.test(ext),
       'and the prose rejection keeps its own job');
     t.check(/"holds":\[\{"key":/.test(ext), 'the plan block carries holds in its stated shape');
-    t.check(/holds\[\]\.key is copied EXACTLY from a purchase_plan line/.test(ext),
+    /* "from a purchase_plan line's key" was true until shop_pulse
+       learned to carry line keys of its own, and then it quietly
+       forbade holding a line the morning reading had just named. The
+       rule is the same rule: a key the model READ, from whichever tool
+       returned it. */
+    t.check(/holds\[\]\.key is copied EXACTLY from a key a tool returned/.test(ext),
+      'a hold key is copied from a key some tool returned — not from one tool by name');
+    t.check(/a key you did not read resolves to no product and the hold becomes nothing/.test(ext),
       'with the warning that an invented key resolves to nothing');
     t.check(/And holds_you_placed: the buy-plan lines you told this shop not to refill yet/.test(api),
       'manager_history says in its own description that the holds travel with it');
