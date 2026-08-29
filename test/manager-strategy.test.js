@@ -94,6 +94,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     debtChaseRows: () => ({ due: [], resting: [], blocked: [], graceDays: 7, restDays: 3 }),
     purchasePlan: () => ({ lines: [], didNotFit: [], sourceFirst: [] }),
     cashOnHandByAccount: () => ({ total: 500000, byAccount: [] }),
+    CASH_AHEAD_DAYS: 30,
+      cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 500000, tightest: { date: '2026-08-29', balance: 500000 } }),
     consignmentRows: () => [],
     morningBriefData: () => ({ sales: { total: 0, count: 0, profit: 0, estimated: false },
       cash: { counted: true }, paid: { total: 0, count: 0 }, stuck: [], ranOutCount: 0 }),

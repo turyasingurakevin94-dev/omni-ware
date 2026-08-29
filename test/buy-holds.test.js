@@ -291,6 +291,8 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     ['renderPurchasePlanPanel'], {
       document: { getElementById: (id) => (id === 'buy_plan' ? el : null), activeElement: null },
       cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
+      CASH_AHEAD_DAYS: 30,
+      cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 5000000, tightest: { date: '2026-08-29', balance: 5000000 } }),
       esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
       listPageSlice: (_k, rows) => rows,
       listMoreButtonHTML: () => '',
@@ -333,7 +335,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         .concat([extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
           'function names(){ return { ASSISTANT_TOOLS, setBuyHold }; }']),
       { ...makeEnv(data), apRound: (n) => Math.round(Number(n) || 0),
-        cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }) },
+        cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
+      CASH_AHEAD_DAYS: 30,
+      cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 5000000, tightest: { date: '2026-08-29', balance: 5000000 } }) },
       ['names']);
     const N = scope.names();
     N.setBuyHold('P1::0', 'Lift the price first', 'manager');
@@ -375,6 +379,8 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         debtCollectionsOn: () => ({ total: 0 }),
         dashInventoryHealth: () => ({ deadValue: 0, deadQty: 0 }),
         cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
+      CASH_AHEAD_DAYS: 30,
+      cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 5000000, tightest: { date: '2026-08-29', balance: 5000000 } }),
         sb: { from: () => { const q = { _kind: null };
           q.select = () => q; q.order = () => q; q.in = () => q; q.gte = () => q; q.lte = () => q;
           q.eq = (c, v) => { if (c === 'kind') q._kind = v; return q; };

@@ -45,12 +45,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     daysSinceDate: () => 40, customerOldestOpenChargeDate: () => '2026-07-19',
     dashGoingQuietCustomers: () => [], dashDemandBreadth: () => [],
     anRowsByItem: () => [], dashStockOutExposure: () => [], dashSupplierPriceInflation: () => [],
+    todayISO: () => '2026-08-29', CASH_AHEAD_DAYS: 30,
+    cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0,
+      tightest: { date: '2026-08-29', balance: 500000 }, safeToSpend: 500000 }),
   }, NAMES);
   const ctx = fns.dashboardContext('2026-07-30', '2026-08-28');
   /* Every key dashAlerts reads must be on the object, or the tool would
      feed it a hole where the dashboard feeds it a figure. */
   ['itemRows', 'totals', 'opex', 'grossProfit', 'netProfit', 'cashBalance', 'burn',
-    'runwayMonths', 'inv', 'debtors', 'goingQuiet', 'concentration', 'stockOut', 'inflation']
+    'runwayMonths', 'inv', 'ahead', 'debtors', 'goingQuiet', 'concentration', 'stockOut', 'inflation']
     .forEach((k) => t.check(k in ctx, `dashboardContext carries ${k}, which dashAlerts reads`));
   eq(ctx.debtors.length, 1, 'and the debtor rows are derived inside it, not handed in');
   eq(ctx.runwayMonths, 5, 'runway is the same arithmetic the dashboard showed');
@@ -109,6 +112,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     debtChaseRows: () => ({ due: many(9, (i) => ({ name: 'C' + i, debt: 5000 * i, ageDays: i })), resting: [1, 2], blocked: [{ why: 'drift' }], graceDays: 7, restDays: 3 }),
     purchasePlan: () => ({ lines: many(11, (i) => ({ name: 'P' + i, reason: 'why ' + i, cost: 100 * i, supplier: 'S' })), didNotFit: [1, 2, 3], sourceFirst: [1] }),
     cashOnHandByAccount: () => ({ total: 3545644, byAccount: [{ key: 'cash', amount: 1000 }, { key: 'momo', amount: 2000 }, { key: 'bank', amount: 3000 }] }),
+    CASH_AHEAD_DAYS: 30,
+      cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 3545644, tightest: { date: '2026-08-29', balance: 3545644 } }),
     consignmentRows: () => [{ owed: 2295000 }, { owed: 0.2 }],
     morningBriefData: () => ({ sales: { total: 100, count: 2, profit: 50, estimated: true },
       cash: { counted: false }, paid: { total: 0, count: 0 },
