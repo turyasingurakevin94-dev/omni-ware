@@ -983,6 +983,16 @@
   .mgr-state{font-size:12px;color:var(--ink-soft);margin-left:auto;text-align:right;}
   .mgr-hist-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;
     color:var(--ink-soft);padding:8px 2px;border-bottom:1px solid var(--line);}
+  .mgr-review-offer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;
+    border-top:1px dashed var(--line);padding-top:10px;margin-top:2px;}
+  .mgr-review-thin{font-size:12px;color:var(--ink-soft);}
+  .mgr-review{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:12px;padding:12px 15px;margin:0 0 10px;}
+  .mgr-lesson{font-size:13px;color:var(--ink);line-height:1.55;}
+  .mgr-week{width:100%;border-collapse:collapse;margin-top:9px;font-size:13px;}
+  .mgr-week td{padding:5px 8px 5px 0;border-top:1px solid var(--line);color:var(--ink);}
+  .mgr-week td:first-child{color:var(--ink-soft);}
+  .mgr-week .mgr-prior{color:var(--ink-soft);font-size:12px;text-align:right;}
   .dash-alert-action::before{content:'→ ';color:var(--ink-soft);}
   .dash-allclear{font-size:13px;line-height:1.6;color:var(--ow-verdigris);
     background:var(--ow-verdigris-soft);border-radius:11px;padding:14px 16px;}
@@ -8376,6 +8386,7 @@
       <div id="managerMeetingWrap"></div>
       <div id="managerAccountWrap"></div>
       <div id="managerPlanWrap"></div>
+      <div id="managerReviewWrap"></div>
       <div id="managerHistoryWrap"></div>
     </section>
 
@@ -51321,10 +51332,15 @@ function deriveMoveOutcome(row){
   const subj = b.subject || {};
   const since = String(row && row.date || '');
   let derived = null;
+  let money = 0;
   if(b.mkind === 'chase' && subj.customerId != null){
     const c = (data.customers||[]).find(x=> String(x.id) === String(subj.customerId));
     const paid = c ? (c.debtLog||[]).filter(r=> r.type === 'payment' && r.cashTxnId
       && String(r.date) >= since).reduce((n,r)=> n + (Number(r.amount)||0), 0) : 0;
+    /* The number leaves as a number too, for the weekly review's
+       arithmetic -- and ONLY from here, so the cashTxnId law (echo rows
+       are not money) is applied in exactly one place. */
+    money = Math.round(paid);
     derived = paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since';
   } else if(b.mkind === 'buy' && subj.key){
     const got = (data.stockLog||[]).some(l=> l.key === subj.key && l.type === 'restock'
@@ -51338,7 +51354,7 @@ function deriveMoveOutcome(row){
       && (pi.payments||[]).some(pp=> String(pp.date) >= since));
     derived = paidSince ? 'a payment went to them since' : 'nothing paid to them since';
   }
-  return { status: (row && row.status) || 'open', derived };
+  return { status: (row && row.status) || 'open', derived, money };
 }
 
 /* ---- the journal: direct reads and writes, wa_* style ---- */
@@ -51372,6 +51388,43 @@ async function managerSaveMeeting(plan){
   return ins.data.id;
 }
 
+/* The weekly review: the model's verdict and lessons, and the week AS
+   THE BOOKS DERIVED IT AT THE TIME. Move outcomes are never stored
+   because they keep evolving; a review's week is a closed period that
+   the rolling window will walk away from, so the figures it judged are
+   frozen with the judgement -- from week_review_data's own derivation,
+   never from model text. */
+async function managerSaveReview(review, weekData){
+  if(!managerNotesTable) return null;
+  const wk = weekData || {}, tw = wk.this_week || {}, pw = wk.prior_week || {}, adv = wk.advice || {};
+  const ins = await sb.from('manager_notes').insert({
+    shop_id: currentShopId, kind: 'review', date: todayISO(),
+    body: {
+      verdict: String(review.verdict||'').slice(0, 300),
+      lessons: (Array.isArray(review.lessons) ? review.lessons : []).slice(0, 3).map(x=> String(x).slice(0, 300)),
+      week: {
+        sales: apRound(tw.sales||0), prior_sales: apRound(pw.sales||0),
+        gross_profit: apRound(tw.gross_profit||0), prior_gross_profit: apRound(pw.gross_profit||0),
+        collected: apRound(tw.collected||0),
+        meetings_held: Number(adv.meetings_held)||0, advised: Number(adv.advised)||0,
+        done: Number(adv.done)||0, skipped: Number(adv.skipped)||0,
+        not_acted_on: Number(adv.not_acted_on)||0,
+        collected_after_chases: apRound(adv.collected_after_chases||0),
+      },
+    },
+    status: 'held',
+  });
+  if(ins.error){
+    /* 0081's check constraint predates the review kind -- name the one
+       update that fixes it instead of failing quietly. */
+    toast(/check constraint/i.test(ins.error.message||'')
+      ? 'The review could not be kept — the journal needs one update. Paste supabase/migrations/0082_manager_reviews.sql into the Supabase SQL editor and reload.'
+      : 'The review could not be kept — ' + ins.error.message, 9000);
+    return null;
+  }
+  return true;
+}
+
 async function managerSetMoveStatus(rowId, status, skipReason){
   if(!managerNotesTable || rowId == null){
     // Session-only fallback: the card still answers, the note says why
@@ -51392,11 +51445,11 @@ async function managerSetMoveStatus(rowId, status, skipReason){
 }
 
 async function managerLoadState(){
-  if(!managerNotesTable) return { today: null, prior: [] };
+  if(!managerNotesTable) return { today: null, prior: [], reviews: [], weekMeetings: 0 };
   const meetR = await sb.from('manager_notes').select('id, date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'meeting')
     .order('date', { ascending: false }).order('id', { ascending: false }).limit(6);
-  if(meetR.error) return { error: meetR.error.message, today: null, prior: [] };
+  if(meetR.error) return { error: meetR.error.message, today: null, prior: [], reviews: [], weekMeetings: 0 };
   const meetings = meetR.data || [];
   const ids = meetings.map(m=> m.id);
   const movesR = ids.length
@@ -51407,9 +51460,24 @@ async function managerLoadState(){
   ((movesR && movesR.data) || []).forEach(x=>{ (movesBy[x.meeting_id] = movesBy[x.meeting_id] || []).push(x); });
   const withMoves = meetings.map(m=> ({ meeting: m, moves: movesBy[m.id] || [] }));
   const today = todayISO();
+  /* Reviews before 0082 simply do not exist yet -- an empty read here is
+     the honest answer, and the save path names the migration if a write
+     is refused. */
+  const revR = await sb.from('manager_notes').select('id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'review')
+    .order('date', { ascending: false }).order('id', { ascending: false }).limit(4);
+  if(revR.error) console.warn('Manager: reviews not read:', revR.error.message);
+  /* How much evidence a review would stand on -- the same 7-day window
+     week_review_data reads, counted so the offer can say it is thin
+     BEFORE the owner spends credit on it. */
+  const wkR = await sb.from('manager_notes').select('id', { count: 'exact', head: true })
+    .eq('shop_id', currentShopId).eq('kind', 'meeting')
+    .gte('date', anShiftDate(today, -6)).lte('date', today);
   return {
     today: withMoves.find(w=> w.meeting.date === today) || null,
     prior: withMoves.filter(w=> w.meeting.date !== today),
+    reviews: (revR.data) || [],
+    weekMeetings: (wkR && wkR.count) || 0,
   };
 }
 
@@ -51443,6 +51511,38 @@ async function runManagerMeeting(){
     }
     renderManager();
     renderManagerCard();
+  }
+}
+
+/* The weekly review: same mind, second occasion. The trigger sentence
+   selects the behaviour inside the server's manager extension, exactly
+   as the meeting's does -- no second mode. The verdict card's figures
+   are NOT read back from the model: the same week_review_data
+   derivation that fed the review feeds the journal row directly, so
+   the review cannot misquote the week it judged. */
+async function runManagerReview(){
+  if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
+  managerMeetingRunning = true;
+  apMode = 'manager';
+  assistantThread = [];
+  apLastReview = null;
+  renderManager();
+  apOpenPanel();
+  assistantThread.push({ role: 'user', content: '[Today is ' + todayISO() + ']\nHold the weekly review.' });
+  apRenderUser('Hold the weekly review.');
+  try{
+    await apRunLoop();
+  } finally {
+    managerMeetingRunning = false;
+    if(apLastReview && typeof apLastReview.verdict === 'string'){
+      const week = await ASSISTANT_TOOLS.week_review_data.run();
+      await managerSaveReview(apLastReview, week);
+    } else {
+      /* The judgement spoke but the verdict sheet never arrived -- the
+         prose in the panel still stands, say so over an empty screen. */
+      toast('The review is in the assistant panel — no verdict sheet came back to keep', 6000);
+    }
+    renderManager();
   }
 }
 
@@ -51506,12 +51606,20 @@ function renderManager(){
           at most five moves ranked by the money on them. A meeting spends a little AI credit,
           and it never runs itself.</div>
         <button type="button" class="btn btn-accent" id="mgrRunBtn">Hold the meeting</button>
+        <div class="mgr-review-offer">
+          <button type="button" class="btn btn-ghost" id="mgrReviewBtn">Hold the weekly review</button>
+          <span class="mgr-review-thin" id="mgrReviewThin">What the week did, what the advice earned,
+            what the skips cost — judged from the books alone.</span>
+        </div>
       </div>`;
   const runBtn = document.getElementById('mgrRunBtn');
   if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
+  const revBtn = document.getElementById('mgrReviewBtn');
+  if(revBtn) revBtn.addEventListener('click', runManagerReview);
 
   const acct = document.getElementById('managerAccountWrap');
   const planWrap = document.getElementById('managerPlanWrap');
+  const revWrap = document.getElementById('managerReviewWrap');
   const hist = document.getElementById('managerHistoryWrap');
 
   const renderPlanCards = (title, plan, rows)=>{
@@ -51552,14 +51660,19 @@ function renderManager(){
       planWrap.innerHTML = renderPlanCards("Today's plan", managerToday.plan, rows);
       wire(planWrap);
     } else planWrap.innerHTML = '';
-    acct.innerHTML = ''; hist.innerHTML = '';
+    acct.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML = '';
     return;
   }
 
   /* With memory: the shells now, the journal when it answers. */
   managerLoadState().then(st=>{
-    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; hist.innerHTML =
+    if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; hist.innerHTML =
       `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
+    /* The offer says how much evidence a review would stand on, before
+       the owner spends credit on one. */
+    const thinEl = document.getElementById('mgrReviewThin');
+    if(thinEl && st.weekMeetings < 3) thinEl.textContent =
+      `Only ${st.weekMeetings} meeting${st.weekMeetings === 1 ? '' : 's'} on record this week — the review will be as thin as that.`;
     planWrap.innerHTML = st.today
       ? renderPlanCards("Today's plan", st.today.meeting.body || {}, st.today.moves)
       : '';
@@ -51572,12 +51685,38 @@ function renderManager(){
         + prev.moves.map((r,i)=> mgrMoveView(r,i)).join('')
       : '';
     wire(acct);
-    hist.innerHTML = st.prior.length > 1
-      ? `<div class="mgr-sec-title">Earlier meetings</div>` + st.prior.slice(1).map(w=>{
-          const done = w.moves.filter(x=> x.status === 'done').length;
-          return `<div class="mgr-hist-row"><span>${esc(fmtShortDate(w.meeting.date))} — ${esc((w.meeting.body||{}).keyline || '')}</span>
-            <span>${done} of ${w.moves.length} done</span></div>`;
-        }).join('')
+    /* The latest review: verdict and lessons from the model, the week
+       table from the stored derivation -- never from model text. */
+    const rev = st.reviews[0];
+    if(rev){
+      const b = rev.body || {}, wk = b.week || {};
+      const lessons = (Array.isArray(b.lessons) ? b.lessons : []).filter(x=> x);
+      revWrap.innerHTML = `<div class="mgr-sec-title">The weekly review — ${esc(fmtShortDate(rev.date))}</div>
+        <div class="mgr-review">
+          <div class="mgr-keyline" style="margin:0;"><b>Verdict:</b> ${esc(b.verdict || '')}</div>
+          ${lessons.length ? `<div class="mgr-why" style="margin:9px 0 0;"><b>For next week:</b></div>`
+            + lessons.map(l=> `<div class="mgr-lesson">→ ${esc(l)}</div>`).join('') : ''}
+          <table class="mgr-week"><tbody>
+            <tr><td>Sales</td><td>${fmtUGX(wk.sales||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_sales||0)}</td></tr>
+            <tr><td>Gross profit</td><td>${fmtUGX(wk.gross_profit||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_gross_profit||0)}</td></tr>
+            <tr><td>Collected</td><td>${fmtUGX(wk.collected||0)}</td><td class="mgr-prior">after chases ${fmtUGX(wk.collected_after_chases||0)}</td></tr>
+            <tr><td>Advice</td><td>${Number(wk.done)||0} of ${Number(wk.advised)||0} done</td>
+              <td class="mgr-prior">${Number(wk.skipped)||0} skipped · ${Number(wk.not_acted_on)||0} untouched</td></tr>
+          </tbody></table>
+        </div>`;
+    } else revWrap.innerHTML = '';
+    /* Meetings and earlier reviews share one history, newest first. */
+    const histRows = [
+      ...st.prior.slice(1).map(w=>{
+        const done = w.moves.filter(x=> x.status === 'done').length;
+        return { date: String(w.meeting.date), html: `<div class="mgr-hist-row"><span>${esc(fmtShortDate(w.meeting.date))} — ${esc((w.meeting.body||{}).keyline || '')}</span>
+          <span>${done} of ${w.moves.length} done</span></div>` };
+      }),
+      ...st.reviews.slice(1).map(r=> ({ date: String(r.date),
+        html: `<div class="mgr-hist-row"><span>${esc(fmtShortDate(r.date))} — Weekly review — ${esc((r.body||{}).verdict || '')}</span><span></span></div>` })),
+    ].sort((a,b)=> a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    hist.innerHTML = histRows.length
+      ? `<div class="mgr-sec-title">Earlier meetings</div>` + histRows.map(r=> r.html).join('')
       : '';
   });
 }
@@ -56269,6 +56408,8 @@ let apMode = null;
 // renderer (which strips it from the screen) and read by the meeting
 // runner once the loop settles.
 let apLastPlan = null;
+// And the review's own block, same arrangement.
+let apLastReview = null;
 let assistantBusy = false;
 let apVoiceMode = false;    // hands-free conversation on
 let apWasCutOff = false;    // last answer hit max_tokens; next send says so
@@ -56999,6 +57140,66 @@ const ASSISTANT_TOOLS = {
     };
   }},
 
+  /* The week, for the review: this rolling 7 days against the prior 7,
+     and every move advised inside it with what the books say happened.
+     FIGURES ARE DERIVED HERE and the review screen renders this same
+     reading directly -- the model contributes judgement, never numbers,
+     so the review cannot misquote the week it is reviewing. The chase
+     money goes through deriveMoveOutcome and nowhere else, which is
+     where the cashTxnId law (echo rows are not money) already lives. */
+  week_review_data: { confirm: false, async run(){
+    const today = todayISO();
+    const weekOf = (endISO)=>{
+      const from = anShiftDate(endISO, -6);
+      const inv = anInvoicesInRange(from, endISO);
+      const tot = anOverallTotals(inv);
+      let collected = 0;
+      for(let i = 0; i < 7; i++) collected += debtCollectionsOn(anShiftDate(endISO, -i)).total;
+      let cashIn = 0, cashOut = 0;
+      (data.cashTxns||[]).forEach(t=>{
+        if(!t || String(t.date) < from || String(t.date) > endISO) return;
+        const amt = Number(t.amount)||0;
+        if(cashIsMoneyIn(t)) cashIn += amt; else cashOut += amt;
+      });
+      return { from, to: endISO, sales: apRound(tot.sales), invoices: tot.count,
+        gross_profit: apRound(tot.profit), profit_partly_estimated: (tot.estimatedQty||0) > 0,
+        collected: apRound(collected), cash_in: apRound(cashIn), cash_out: apRound(cashOut) };
+    };
+    const out = { this_week: weekOf(today), prior_week: weekOf(anShiftDate(today, -7)) };
+    if(!managerNotesTable){
+      out.advice = { memory: 'not set up',
+        note: 'The manager_notes table is missing, so no advice was kept to review. Review the week from the figures alone, and say the memory migration is still to be applied.' };
+      return out;
+    }
+    const from = anShiftDate(today, -6);
+    const meetR = await sb.from('manager_notes').select('id')
+      .eq('shop_id', currentShopId).eq('kind', 'meeting').gte('date', from).lte('date', today);
+    if(meetR.error) return { error: meetR.error.message };
+    const movesR = await sb.from('manager_notes').select('id, date, body, status')
+      .eq('shop_id', currentShopId).eq('kind', 'move').gte('date', from).lte('date', today);
+    if(movesR.error) return { error: movesR.error.message };
+    const rows = movesR.data || [];
+    let done = 0, skipped = 0, open = 0, chaseMoney = 0;
+    const moves = rows.map(r=>{
+      const o = deriveMoveOutcome(r);
+      if(o.status === 'done') done++; else if(o.status === 'skipped') skipped++; else open++;
+      chaseMoney += o.money || 0;
+      return { title: (r.body||{}).title || '', status: o.status,
+        ...(o.derived ? { what_the_books_say: o.derived } : {}),
+        ...((r.body||{}).skipReason ? { skip_reason: r.body.skipReason } : {}) };
+    }).slice(0, 15);
+    out.advice = {
+      meetings_held: (meetR.data||[]).length,
+      /* The thinness is a FACT of the review, not a failure of it --
+         said here so the model can say it plainly instead of padding. */
+      thin: (meetR.data||[]).length < 3,
+      advised: rows.length, done, skipped, not_acted_on: open,
+      collected_after_chases: apRound(chaseMoney),
+      moves,
+    };
+    return out;
+  }},
+
   /* What the Manager advised before, and what actually happened to it --
      read at the top of every meeting, so today opens with an account
      instead of amnesia. Outcomes are DERIVED here, never read from a
@@ -57625,9 +57826,13 @@ function apExtractChoices(text){
    payload can itself contain ']' inside strings -- so the end of the
    block is found by walking the braces with string-awareness, not by a
    regex that stops at the first bracket. */
-function apExtractPlan(text){
+function apExtractPlan(text, tag){
   const s = String(text||'');
-  const start = s.search(/\[\s*plan\s*:/i);
+  /* Two machine blocks now share the walker: the meeting's [plan:] and
+     the weekly review's [review:]. Same grammar, same law -- the raw
+     block must never reach the screen or the speaker. */
+  const name = tag || 'plan';
+  const start = s.search(new RegExp('\\[\\s*' + name + '\\s*:', 'i'));
   if(start < 0) return { clean: s, plan: null };
   /* Brace characters spelled as char codes (123/125), not literals: the
      test harness's function extractor counts braces without reading
@@ -57657,7 +57862,10 @@ function apExtractPlan(text){
   if(end > -1){
     try{ plan = JSON.parse(s.slice(braceAt, end + 1)); }catch(e){ plan = null; }
   }
-  if(plan && !Array.isArray(plan.moves)) plan = null;
+  /* Each tag carries its own required shape: a plan without moves and a
+     review without a verdict are both refused, not rendered. */
+  if(plan && name === 'plan' && !Array.isArray(plan.moves)) plan = null;
+  if(plan && name === 'review' && typeof plan.verdict !== 'string') plan = null;
   return { clean, plan };
 }
 
@@ -57692,7 +57900,9 @@ function apRenderAssistant(text){
      the mode flag is not what should stand between the owner and that. */
   const { clean: noPlan, plan } = apExtractPlan(text);
   if(plan) apLastPlan = plan;
-  const { clean, choices } = apExtractChoices(noPlan);
+  const { clean: noReview, plan: review } = apExtractPlan(noPlan, 'review');
+  if(review) apLastReview = review;
+  const { clean, choices } = apExtractChoices(noReview);
   if(clean) apBubble('bot', apFormatText(clean));
   if(choices.length) apRenderChoices(choices);
 }
@@ -58048,7 +58258,7 @@ function apSpeak(text){
     AP_TTS.cancel();
     /* "1,250,000 UGX" reads as letters; "shillings" reads as money.
        The ** emphasis marks are visual only -- never spoken. */
-    const spoken = apExtractPlan(String(text)).clean.replace(/\[\s*choices\s*:[^\]]*\]/gi, '')
+    const spoken = apExtractPlan(apExtractPlan(String(text)).clean, 'review').clean.replace(/\[\s*choices\s*:[^\]]*\]/gi, '')
       .replace(/\*\*/g, '').replace(/\bUGX\b/g, 'shillings');
     const u = new SpeechSynthesisUtterance(spoken);
     u.lang = 'en-GB';

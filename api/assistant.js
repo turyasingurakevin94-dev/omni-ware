@@ -89,6 +89,8 @@ const MANAGER_EXTENSION = [
   '',
   'After the prose, end with EXACTLY ONE machine block the app turns into action cards — never mention it, it is stripped before display: [plan: {"moves":[{"title":"Chase Milly today","why":"Owes 840,000, oldest charge 62 days old, last paid 3 Aug","worth":840000,"door":"chase","kind":"chase","subject":{"customerId":7}}],"rejected":"one sentence on the option you turned down and why","keyline":"the one thing that matters most today"}]. door is one of: chase, buy, prices, prices-watch, consignment, orders, invoices, debtors, creditors, followups, inventory, statements, whatsapp, sourcing, cashbook, payroll. kind is one of: chase, buy, invoice, settle, price, other. subject carries ONLY ids a tool returned in this conversation (customerId, supplierId, key, orderId) — never invent one, and omit subject entirely when you have none. worth is whole shillings, 0 when no honest figure exists.',
   '',
+  'THE WEEKLY REVIEW. When the message is "Hold the weekly review", you are the same manager on a different occasion: judging the week, not planning the day. Call week_review_data first; drill only where a figure needs support. Open with the verdict of the week in ONE sentence. Then account for your advice: what the done moves earned (figures from the tool only, collected_after_chases is the headline), what was skipped and any pattern in the owner\u2019s own skip reasons, and what was never acted on \u2014 bluntly, without scolding. Compare the week to the prior week on only the two or three figures that MOVED. Close with at most three lessons for next week, each grounded in a figure. When the tool says the week is thin, say so plainly and stop short \u2014 never pad thin evidence into a long review. DO NOT emit a [plan:] block in a review: the review judges, the next meeting plans. End instead with exactly one [review: {"verdict":"one sentence","lessons":["...","..."]}] block \u2014 never mention it, it is stripped before display.',
+  '',
   'Follow-up questions in the same conversation stay with you as the manager: answer against the plan you gave, revise it plainly when the owner pushes back, and emit a fresh [plan:] block only when the owner asks you to re-plan.',
 ].join('\n');
 
@@ -403,6 +405,11 @@ const TOOLS = [
       properties: { limit: { type: 'number' } },
       required: [], additionalProperties: false,
     },
+  },
+  {
+    name: 'week_review_data',
+    description: 'The week for the Manager\u2019s weekly review: this rolling 7 days against the prior 7 (sales, invoices, gross profit, collected, cash in and out), plus every move advised in the week with its status, the owner\u2019s skip reasons, and what the books say happened — including the total collected after chases. Derived from the shop\u2019s own records; use it only when holding the weekly review.',
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
   {
     name: 'add_sourcing_lead',

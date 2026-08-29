@@ -3,7 +3,7 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: twenty-nine entries,
+ * ASSISTANT_TOOLS is the executor map behind the chat: thirty entries,
  * each backed by the exact function the corresponding button uses. This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
@@ -141,7 +141,7 @@ const run = (name, input) => T[name].run(input || {});
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
     'stock_overview', 'purchase_plan', 'catalogue_names'];
-  t.check(Object.keys(T).length === 29, `twenty-nine executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 30, `thirty executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -149,11 +149,12 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 29 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 30 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
-  // The two Manager reads join the free side of the ledger.
+  // The three Manager reads join the free side of the ledger.
   t.check(T.shop_pulse && T.shop_pulse.confirm === false, 'shop_pulse answers freely — it reads and nothing more');
   t.check(T.manager_history && T.manager_history.confirm === false, 'manager_history answers freely — it reads and nothing more');
+  t.check(T.week_review_data && T.week_review_data.confirm === false, 'week_review_data answers freely — it reads and nothing more');
 }
 
 /* ---------- 2. finding people never creates them ---------------------- */
