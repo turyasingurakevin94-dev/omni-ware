@@ -807,6 +807,28 @@
   .rv-in{flex:1 1 120px;min-width:0;padding:7px 10px;font-size:12.5px;
     border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);}
   .rv-num{flex:0 1 120px;font-family:'IBM Plex Mono',monospace;}
+  /* The Rival prices screen. Its own shape for the same reason Supplier
+     prices has one: what a row here says is that another shop charges
+     something and how long ago anybody checked. */
+  .rv-groups{display:flex;flex-direction:column;gap:12px;margin:14px 0 0;}
+  .rv-group{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px 4px;}
+  .rv-ghead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .rv-gname{font-size:14.5px;font-weight:700;color:var(--ink);}
+  .rv-gsub{font-size:11.5px;color:var(--ink-soft);}
+  .rv-mrow,.rv-nrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    padding:7px 0;border-bottom:1px solid var(--ow-rule-soft);font-size:12.5px;}
+  .rv-mrow:last-child,.rv-nrow:last-child{border-bottom:none;}
+  .rv-mname{font-weight:600;color:var(--ink);flex:1 1 180px;min-width:0;}
+  .rv-mprice{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-weight:700;color:var(--ink);}
+  .rv-mwhen{font-size:11px;color:var(--ow-ink-400);white-space:nowrap;}
+  .rv-mrow.stale .rv-mwhen{color:var(--ow-amber-ink);font-weight:600;}
+  .rv-gap.none{color:var(--ow-ink-400);font-style:italic;}
+  .rv-drop{padding:3px 9px;font-size:11px;}
+  .rv-never{margin-top:6px;}
+  .rv-entry{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
+  .rv-erow{display:flex;gap:7px;flex-wrap:wrap;}
+  .rv-ehint{font-size:11.5px;color:var(--ink-soft);}
   /* THE HOLD. It sits above the recommendation because it is about
      whether to follow it at all -- put underneath, it would read as a
      footnote to a decision already taken. Oxide rather than amber: a
@@ -7640,6 +7662,10 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 3v6h-6"/></svg>
           <span class="nav-label">Supplier prices</span>
         </button>
+        <button data-tab="market" title="What other shops charge" data-keywords="rival competitor competition market street other shop charges research haidery undercut">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/></svg>
+          <span class="nav-label">Rival prices</span>
+        </button>
         <button data-tab="sourcing" title="Sourcing" data-keywords="source research find importer unknown item request wanted funnel we dont sell it yet">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></svg>
           <span class="nav-label">Sourcing</span>
@@ -9647,6 +9673,31 @@
       </div>
     </section>
 
+    <!-- WHAT OTHER SHOPS CHARGE. The registry is what this shop PAYS;
+         Supplier prices is what suppliers have been doing to it. This is
+         the third side and the only one about the customer's choice:
+         what they can pay if they walk out and go up the street. -->
+    <section id="tab-market" style="display:none;">
+      <div class="page-head">
+        <h1>Rival prices</h1>
+        <p>What other shops sell your lines for — everything you or the assistant have recorded, with the day it was seen. Nothing here is looked up for you: every figure is something a person saw, which is exactly why the manager is allowed to argue from it. An empty line means nobody has checked it, never that you are the cheapest.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row">
+          <h2 style="margin-bottom:0;">The market</h2>
+          <div class="btn-row" style="margin-top:0;">
+            <div class="field p-toolbar-filter" style="margin:0;">
+              <label for="mk_group">Group by</label>
+              <select id="mk_group">
+                <option value="shop">Shop</option>
+                <option value="line">Line</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="mk_body"></div>
+      </div>
+    </section>
     <!-- SOURCING FUNNEL -->
     <!-- SUPPLIER PRICES OVER TIME. Compare prices asks who is cheapest
          today; this asks what each of them has been doing to you. -->
@@ -13535,7 +13586,7 @@ function fmtUGXPerUnitPack(n, row){
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
 const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
-  invoices: 24, purchaseInvoices: 24 };
+  market: 8, invoices: 24, purchaseInvoices: 24 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -13568,6 +13619,7 @@ const LIST_PAGE_RERENDER = {
   priceDown: ()=> renderPriceWatch(),
   priceFile: ()=> renderPriceWatch(),
   priceSteady: ()=> renderPriceWatch(),
+  market: ()=> renderMarket(),
   invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
   purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
@@ -16527,6 +16579,7 @@ function goToTab(tab){
   if(tab==='chase') renderChaseScreen();
   if(tab==='consignment') renderConsignment();
   if(tab==='prices-watch') renderPriceWatch();
+  if(tab==='market') renderMarket();
   if(tab==='followups') renderFollowUps();
   if(tab==='cashbook') initCashBook();
   if(tab==='assets') renderFixedAssets();
@@ -37743,6 +37796,13 @@ document.getElementById('ro_clear').addEventListener('click', ()=>{
    on one day, kept with its date and never overwritten. Two readings
    only, so the screens and the tools cannot disagree: everything seen
    for a line, and the freshest sighting per rival. */
+/* A sighting is not a price forever, and less so than a supplier quote:
+   the shop up the road moves its prices to win the same customers. The
+   same ninety days the registry judges by, so the two screens age their
+   evidence alike -- a judgement, said on screen so a reader can discount
+   it, not a rule. */
+const RIVAL_STALE_DAYS = 90;
+
 function rivalPricesFor(productId, variantIdx){
   const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
   return (data.rivalPrices || [])
@@ -37782,6 +37842,88 @@ function ourPriceFor(productId, variantIdx){
   return sug == null ? null : Math.round(sug);
 }
 
+/* EVERYTHING THIS SHOP KNOWS ABOUT THE MARKET, in one reading, for the
+   screen that has to lay it out. One row per shop per line -- the
+   freshest sighting each -- carrying our own price beside theirs and how
+   long ago it was seen, because those are the two things that decide
+   whether a figure is worth acting on.
+
+   Both groupings come out of this same list, so "by shop" and "by line"
+   can never show a different market. */
+function rivalMarketRows(dateISO){
+  const today = dateISO || todayISO();
+  const out = [];
+  const seen = new Set();
+  /* Newest first, so the de-duplication below keeps the FRESHEST
+     sighting of each shop-and-line pair rather than whichever the
+     database happened to hand back first. */
+  (data.rivalPrices || []).slice()
+    .sort((a, b)=> String(b.seenOn||'').localeCompare(String(a.seenOn||'')) || (b.id||0) - (a.id||0))
+    .forEach(r=>{
+      const key = stockKey(r.productId, r.variantIdx);
+      const parts = buyKeyParts(key);
+      if(!parts) return;                                  // the line has left the catalogue
+      if(!(Number(r.price) > 0) || !String(r.rival||'').trim()) return;
+      const shop = String(r.rival).trim();
+      const once = key + '||' + shop.toLowerCase();
+      if(seen.has(once)) return;
+      seen.add(once);
+      const theirs = Math.round(Number(r.price));
+      const ours = ourPriceFor(r.productId, r.variantIdx);
+      const days = Math.max(0, daysSinceDate(r.seenOn || today));
+      out.push({ id: r.id, key, shop, productId: r.productId,
+        variantIdx: r.variantIdx == null ? null : Number(r.variantIdx),
+        line: productDisplayLabel(parts.product, parts.variantIdx),
+        theirs, ours, gap: ours == null ? null : theirs - ours,
+        unit: r.unit || '', note: r.note || '', seenOn: r.seenOn, daysOld: days,
+        stale: days > RIVAL_STALE_DAYS });
+    });
+  return out;
+}
+
+/* WHAT TO GO AND LOOK AT. The lines this shop actually sells with
+   nothing on file about the market, worth first -- ranked on the same
+   thirty-day gross profit the buying plan ranks on, because the line
+   that earns most is the line where being wrongly priced costs most.
+
+   This is the half that makes the record a piece of research rather
+   than a box: it says where to walk. */
+function rivalNeverChecked(dateISO, limit){
+  const today = dateISO || todayISO();
+  const known = new Set((data.rivalPrices || [])
+    .filter(r=> Number(r.price) > 0 && String(r.rival||'').trim())
+    .map(r=> stockKey(r.productId, r.variantIdx)));
+  const sales = waSalesByKey(today);
+  const rows = [];
+  allProductVariantEntries([]).forEach(({ p, variantIdx })=>{
+    const key = stockKey(p.id, variantIdx);
+    if(known.has(key)) return;
+    const s = sales.get(key);
+    if(!s || !(s.units30 > 0)) return;                   // not sold in a month: not worth a walk
+    rows.push({ key, productId: p.id, variantIdx: variantIdx == null ? null : variantIdx,
+      line: productDisplayLabel(p, variantIdx == null ? null : variantIdx),
+      earned30: Math.round(s.profit30), sold30: s.units30,
+      ours: ourPriceFor(p.id, variantIdx) });
+  });
+  rows.sort((a, b)=> b.earned30 - a.earned30 || String(a.line).localeCompare(String(b.line)));
+  return limit ? rows.slice(0, limit) : rows;
+}
+
+/* An observation can be REMOVED but never rewritten. A mistyped price
+   was not a thing anybody saw, so it goes; editing one in place would
+   quietly change what this shop recorded as seen, and every argument the
+   manager makes from this table rests on that not happening. */
+async function deleteRivalPrice(id){
+  const row = (data.rivalPrices || []).find(r=> r.id === id);
+  if(!row) return;
+  if(!confirm('Remove this sighting? It is deleted, not corrected — add the right one after.')) return;
+  const del = await sb.from('rival_prices').delete().eq('shop_id', currentShopId).eq('id', id);
+  if(del.error){ toast('Could not remove it — ' + del.error.message, 8000); return; }
+  data.rivalPrices = (data.rivalPrices || []).filter(r=> r.id !== id);
+  toast('Removed');
+  renderMarket();
+}
+
 /* Written straight to the table rather than through the settings blob:
    these accumulate, they carry dates, and they are records of the world
    rather than choices this shop made -- the same reasoning that keeps
@@ -37811,6 +37953,140 @@ async function addRivalPrice(input){
   data.rivalPrices.push({ id: ins.data && ins.data.id, productId, variantIdx: vi, rival: rival.slice(0, 80),
     price, unit: row.unit || '', seenOn, note: row.note || '' });
   return { ok: true, id: ins.data && ins.data.id };
+}
+
+/* ---- the Rival prices screen ----
+
+   Modelled on Supplier prices rather than on the registry: what this has
+   to lay out is rows grouped by a COUNTERPARTY with a how-stale column,
+   which is the shape that screen already solved. The registry's grid is
+   one card per quote, which would scatter a shop's prices across the
+   page.
+
+   Three things, in the order they are useful: what the market says, what
+   this shop has never looked at, and a form for entering a round of it. */
+let mkGroupBy = 'shop';
+let mkShop = '';
+let mkSeenOn = '';
+
+function renderMarket(){
+  const el = document.getElementById('mk_body');
+  if(!el) return;
+  const f = (n)=> fmtUGX(Math.round(n));
+  if(!rivalPricesTable){
+    el.innerHTML = `<div class="pw-empty"><b>The market record needs one update.</b>
+      <span>Paste supabase/migrations/0087_rival_prices.sql into the Supabase SQL editor and reload.</span></div>`;
+    return;
+  }
+  const rows = rivalMarketRows(todayISO());
+  const never = rivalNeverChecked(todayISO());
+
+  /* An account of what the screen read, not a reassurance about the
+     market. The count that matters most is the last one. */
+  const shops = new Set(rows.map(r=> r.shop.toLowerCase())).size;
+  const lines = new Set(rows.map(r=> r.key)).size;
+  const stale = rows.filter(r=> r.stale).length;
+  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(v))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  let html = `<div class="sum-strip">
+    ${cell(shops, shops === 1 ? 'shop on file' : 'shops on file')}
+    ${cell(lines, lines === 1 ? 'line checked' : 'lines checked')}
+    ${cell(stale, `seen over ${RIVAL_STALE_DAYS} days ago`, stale ? 'warn' : '')}
+    ${cell(never.length, never.length === 1 ? 'never checked' : 'never checked', never.length ? 'warn' : 'good')}
+  </div>`;
+
+  /* One row, whichever way the list is grouped: the other side of the
+     pair is what changes, so the label is passed in. */
+  const row = (r, label)=> `<div class="rv-mrow${r.stale ? ' stale' : ''}">
+      <span class="rv-mname">${esc(label)}</span>
+      <span class="rv-mprice">${f(r.theirs)}</span>
+      ${r.gap == null
+        ? '<span class="rv-gap none">you have no price of your own</span>'
+        : Math.abs(r.gap) < 1
+          ? '<span class="rv-gap">same as yours</span>'
+          : `<span class="rv-gap ${r.gap > 0 ? 'over' : 'under'}">${f(Math.abs(r.gap))} ${r.gap > 0 ? 'above' : 'below'} yours</span>`}
+      <span class="rv-mwhen">${r.daysOld === 0 ? 'seen today'
+        : r.daysOld === 1 ? 'seen yesterday' : `seen ${r.daysOld} days ago`}</span>
+      <button type="button" class="btn btn-ghost rv-drop" data-id="${esc(String(r.id))}" title="Remove this sighting">Remove</button>
+    </div>`;
+
+  if(!rows.length){
+    html += `<div class="pw-empty"><b>Nothing recorded yet.</b>
+      <span>So nothing here says you are the cheapest — only that nobody has looked.
+      ${never.length ? `The list below is what you sell and have never checked, the best earners first.` : ''}</span></div>`;
+  } else {
+    const groups = new Map();
+    rows.forEach(r=>{
+      const k = mkGroupBy === 'line' ? r.key : r.shop.toLowerCase();
+      if(!groups.has(k)) groups.set(k, { head: mkGroupBy === 'line' ? r.line : r.shop, rows: [] });
+      groups.get(k).rows.push(r);
+    });
+    /* Freshest group first: a shop checked this week is the one whose
+       figures are worth acting on today. */
+    const ordered = [...groups.values()]
+      .map(g=> ({ ...g, freshest: Math.min(...g.rows.map(x=> x.daysOld)) }))
+      .sort((a, b)=> a.freshest - b.freshest || String(a.head).localeCompare(String(b.head)));
+    html += `<div class="rv-groups">${listPageSlice('market', ordered).map(g=> `
+      <div class="rv-group">
+        <div class="rv-ghead">
+          <span class="rv-gname">${esc(g.head)}</span>
+          <span class="rv-gsub">${g.rows.length} ${g.rows.length === 1 ? 'line' : 'lines'} ·
+            last seen ${g.freshest === 0 ? 'today' : g.freshest === 1 ? 'yesterday' : `${g.freshest} days ago`}</span>
+        </div>
+        ${g.rows.map(r=> row(r, mkGroupBy === 'line' ? r.shop : r.line)).join('')}
+      </div>`).join('')}</div>`
+      + listMoreButtonHTML('market', ordered.length, mkGroupBy === 'line' ? 'lines' : 'shops');
+  }
+
+  /* WHERE TO WALK. Ranked on what each line earned in thirty days, the
+     same figure the buying plan ranks on: being wrongly priced costs
+     most on the line that earns most. */
+  if(never.length){
+    html += `<div class="pw-tail"><h4>Never checked — worth looking at first</h4>
+      <div class="rv-never">${never.slice(0, 8).map(n=> `<div class="rv-nrow">
+        <span class="rv-mname">${esc(n.line)}</span>
+        <span class="rv-gap">${f(n.earned30)} earned in 30 days</span>
+        <span class="rv-mwhen">${n.ours == null ? 'no price of your own' : `you sell at ${f(n.ours)}`}</span>
+      </div>`).join('')}</div>${
+      never.length > 8 ? `<p class="pp-more">and ${never.length - 8} more.</p>` : ''}</div>`;
+  }
+
+  /* A ROUND OF THE MARKET, entered in one sitting: the shop and the day
+     are picked once and stay, so line after line goes in without
+     re-typing who and when. */
+  html += `<div class="pw-tail"><h4>Record what you saw</h4>
+    <div class="rv-entry">
+      <div class="rv-erow">
+        <input type="text" class="rv-in" id="mk_shop" placeholder="Which shop" value="${esc(mkShop)}">
+        <input type="date" class="rv-in rv-num" id="mk_seen" value="${esc(mkSeenOn || todayISO())}">
+      </div>
+      <div class="rv-erow">
+        <select class="rv-in" id="mk_line"><option value="">Pick a line…</option>${
+          allProductVariantEntries([]).map(({ p, variantIdx })=>
+            `<option value="${esc(stockKey(p.id, variantIdx))}">${esc(productDisplayLabel(p, variantIdx == null ? null : variantIdx))}</option>`).join('')}</select>
+        <input type="number" class="rv-in rv-num" id="mk_price" min="0" step="any" placeholder="Their price">
+        <button type="button" class="btn btn-accent" id="mk_add">Add</button>
+      </div>
+      <div class="rv-ehint">The shop and the day stay put, so a round of the market goes in line after line.</div>
+    </div></div>`;
+
+  el.innerHTML = html;
+  const g = document.getElementById('mk_group');
+  if(g) g.value = mkGroupBy;
+  el.querySelectorAll('.rv-drop').forEach(b=> b.addEventListener('click', ()=> deleteRivalPrice(Number(b.dataset.id))));
+  const add = document.getElementById('mk_add');
+  if(add) add.addEventListener('click', async ()=>{
+    const key = (document.getElementById('mk_line')||{}).value || '';
+    const parts = buyKeyParts(key);
+    if(!parts){ toast('Pick a line first'); return; }
+    mkShop = (document.getElementById('mk_shop')||{}).value || '';
+    mkSeenOn = (document.getElementById('mk_seen')||{}).value || todayISO();
+    const r = await addRivalPrice({ productId: parts.productId, variantIdx: parts.variantIdx,
+      rival: mkShop, price: Number((document.getElementById('mk_price')||{}).value), seenOn: mkSeenOn });
+    if(!r.ok){ toast(r.why, 8000); return; }
+    toast('Kept — and the manager reads it when it argues about that price');
+    renderMarket();
+  });
 }
 
 /* THE OTHER HALF OF THE DECISION, on the screen where the decision is
@@ -40979,6 +41255,14 @@ document.getElementById('pr_save').addEventListener('click', ()=>{
 });
 document.getElementById('pr_cancel').addEventListener('click', ()=>closeModalAndReset('priceModal', resetPriceForm));
 document.getElementById('priceModalClose').addEventListener('click', ()=>closeModalAndReset('priceModal', resetPriceForm));
+/* The market screen's one control. Sticky in a module variable rather
+   than read from the select at render, so a redraw after adding a
+   sighting keeps the grouping the owner chose. */
+(function wireMarketControls(){
+  const g = document.getElementById('mk_group');
+  if(!g) return;
+  g.addEventListener('change', ()=>{ mkGroupBy = g.value === 'line' ? 'line' : 'shop'; renderMarket(); });
+})();
 document.getElementById('pr_search').addEventListener('input', triggerPricesRender);
 wireSupplierFilterSearch('pr_supplier_filter_search', 'pr_supplier_filter', 'pr_supplier_filter_suggestions', triggerPricesRender);
 document.getElementById('pr_category_filter').addEventListener('change', triggerPricesRender);
@@ -59384,35 +59668,55 @@ const ASSISTANT_TOOLS = {
      becomes a NEW supplier -- said plainly on the card -- through the
      same two-save gate the graduation uses, because a price row naming
      a supplier that never reached the server is a dangling foreign key. */
-  /* RECORDING WHAT A RIVAL CHARGES. A write, so it confirms like every
-     other one -- but note what it is NOT: it changes no price of this
-     shop's own, moves no money and touches no stock. It writes down
-     something somebody saw, and the owner decides what to do about it. */
-  add_rival_price: { confirm: true,
+  /* RECORDING WHAT OTHER SHOPS CHARGE. A write, so it confirms like
+     every other one — but note what it is NOT: it changes no price of
+     this shop's own, moves no money and touches no stock. It writes down
+     what somebody saw, and the owner decides what to do about it.
+
+     ONE SHOP, MANY LINES, ONE CARD. Research does not happen a price at
+     a time: you walk into Haidery and note five, or a customer hands you
+     a quotation with eight lines on it. Ten taps for one errand is a
+     feature nobody uses, so the shop and the day are said once and the
+     lines follow. */
+  record_rival_prices: { confirm: true,
     summary(input){
-      const p = (data.products||[]).find(x=> x.id === input.product_id);
-      const vi = input.variant_index==null ? null : input.variant_index;
-      const line = p ? productVariantLabel(p, vi) : String(input.product_id||'');
-      const ours = p ? ourPriceFor(p.id, vi) : null;
-      const gap = ours == null ? '' : (Number(input.price) > ours
-        ? ' — ' + fmtUGX(apRound(Number(input.price) - ours)) + ' ABOVE your ' + fmtUGX(ours)
-        : Number(input.price) < ours
-          ? ' — ' + fmtUGX(apRound(ours - Number(input.price))) + ' BELOW your ' + fmtUGX(ours)
-          : ' — the same as yours');
-      return 'Write down that ' + String(input.rival||'') + ' sells ' + line + ' at '
-        + fmtUGX(apRound(Number(input.price)||0)) + gap
-        + '. It records what you saw and changes none of your own prices.';
+      const items = Array.isArray(input.items) ? input.items.slice(0, 10) : [];
+      const shop = String(input.rival||'');
+      const lines = items.map(it=>{
+        const p = (data.products||[]).find(x=> x.id === it.product_id);
+        const vi = it.variant_index==null ? null : it.variant_index;
+        const name = p ? productVariantLabel(p, vi) : String(it.product_id||'');
+        const ours = p ? ourPriceFor(p.id, vi) : null;
+        const theirs = apRound(Number(it.price)||0);
+        const gap = ours == null ? 'you have no price of your own'
+          : theirs > ours ? fmtUGX(theirs - ours) + ' above your ' + fmtUGX(ours)
+          : theirs < ours ? fmtUGX(ours - theirs) + ' below your ' + fmtUGX(ours)
+          : 'the same as yours';
+        return '\u2022 ' + name + ' \u2014 ' + fmtUGX(theirs) + ' (' + gap + ')';
+      });
+      const when = /^\d{4}-\d{2}-\d{2}$/.test(String(input.seen_on||'')) && input.seen_on !== todayISO()
+        ? ', seen ' + fmtShortDate(input.seen_on) : '';
+      return 'Write down what ' + shop + ' charges' + when + ':\n' + lines.join('\n')
+        + '\nIt records what was seen and changes none of your own prices.';
     },
     async run(input){
-      const r = await addRivalPrice({ productId: input.product_id,
-        variantIdx: input.variant_index==null ? null : input.variant_index,
-        rival: input.rival, price: input.price, unit: input.unit,
-        seenOn: input.seen_on, note: input.note });
-      if(!r.ok) throw new Error(r.why);
-      const vi = input.variant_index==null ? null : input.variant_index;
-      return { written: true, other_shops_charge: rivalPriceLatest(input.product_id, vi)
-        .map(x=> ({ shop: x.rival, price: apRound(x.price), seen_days_ago: x.daysOld })),
-        you_sell_at: ourPriceFor(input.product_id, vi) };
+      const items = Array.isArray(input.items) ? input.items.slice(0, 10) : [];
+      if(!items.length) throw new Error('No lines to record.');
+      const written = []; const refused = [];
+      for(const it of items){
+        const r = await addRivalPrice({ productId: it.product_id,
+          variantIdx: it.variant_index==null ? null : it.variant_index,
+          rival: input.rival, price: it.price, unit: it.unit,
+          seenOn: input.seen_on, note: input.note });
+        if(r.ok) written.push(it.product_id); else refused.push({ product_id: it.product_id, why: r.why });
+      }
+      /* A part-written round says so rather than reporting success:
+         eight of ten kept is not ten kept, and the owner has to know
+         which two to go back for. */
+      if(!written.length) throw new Error(refused.length ? refused[0].why : 'Nothing could be recorded.');
+      if(typeof renderMarket === 'function') renderMarket();
+      return { written: written.length, shop: String(input.rival||''),
+        ...(refused.length ? { not_recorded: refused } : {}) };
     }},
 
   add_supplier_price: { confirm: true,

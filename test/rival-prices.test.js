@@ -47,6 +47,10 @@ const makeData = () => ({
     /* A line nobody has ever looked up. The empty state is the law this
        feature turns on, so it needs a line that genuinely has nothing. */
     { id: 'P3', name: 'Wall Angle', variants: [] },
+    /* A second unchecked line, earning less. With only one, the order
+       of the research list cannot be observed and a ranking by name
+       would pass unnoticed. */
+    { id: 'P4', name: 'Sofa Legs', variants: [] },
   ],
   prices: [
     { id: 1, productId: 'P1', variantIdx: 0, supplierId: 'S1', wholesale: 100000, retail: 106000,
@@ -230,9 +234,14 @@ const build = (data, extraSrc, names, over) => compileScope(
     const editor = extractFunction(src, 'openPriceRuleEditor', 'index.html');
     t.check(/renderRivalPrices\(productId, variantIdx\)/.test(editor),
       'the pricing screen draws the market from the one reading');
-    const rest = src.replace(extractFunction(src, 'rivalPricesFor', 'index.html'), '');
-    eq((rest.match(/data\.rivalPrices \|\| \[\]/g) || []).length, 0,
-      'and nothing else in the app reads the market rows on its own — two readings are two chances to disagree');
+    /* Three readings, each with one job, and NOTHING outside them
+       touches the rows: everything for a line, the freshest per shop,
+       and the whole market for the screen. A fourth reader would be a
+       fourth chance to disagree about what the shop knows. */
+    const READERS = ['rivalPricesFor', 'rivalNeverChecked', 'rivalMarketRows', 'addRivalPrice', 'deleteRivalPrice'];
+    const rest = READERS.reduce((acc, fn) => acc.replace(extractFunction(src, fn, 'index.html'), ''), src);
+    eq((rest.match(/data\.rivalPrices\b/g) || []).length, 0,
+      'nothing outside the named readings touches the market rows — two readings are two chances to disagree');
 
     t.check(/out\.other_shops_charge = rivals\.map/.test(src),
       'the product dossier carries what other shops charge, from that same reading');
@@ -240,12 +249,105 @@ const build = (data, extraSrc, names, over) => compileScope(
       'and omits it entirely where nobody has looked, rather than sending an empty list that reads as "none are cheaper"');
   }
 
+  /* ---------- 5b. the market, laid out --------------------------- */
+  {
+    const data = makeData();
+    /* P3 sells but nobody has ever checked it; P2 sells less and has a
+       sighting. The worklist must put P3 first and leave P2 out. */
+    data.savedQuotes = [{ id: 1, invoiced: true, voided: false, date: shift(TODAY, -5), items: [
+      { productId: 'P3', variantIdx: null, qty: 10, supplierId: '__stock__', sellPrice: 20000, _stockLots: [{ qty: 10, cost: 8000 }] },
+      { productId: 'P2', variantIdx: null, qty: 4, supplierId: '__stock__', sellPrice: 5000, _stockLots: [{ qty: 4, cost: 4000 }] },
+      { productId: 'P4', variantIdx: null, qty: 6, supplierId: '__stock__', sellPrice: 9000, _stockLots: [{ qty: 6, cost: 6000 }] },
+    ] }];
+    const MARKET = ['rivalMarketRows', 'rivalNeverChecked', 'buyKeyParts', 'stockKey',
+      'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
+      'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty'];
+    const s = compileScope(
+      CHAIN.concat(MARKET).map((n) => extractFunction(src, n, 'index.html'))
+        .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),
+          'function names(){ return { rivalMarketRows, rivalNeverChecked }; }']),
+      env(data, {
+        productDisplayLabel: (p, vi) => (vi == null ? p.name : `${p.name} 12"`),
+        allProductVariantEntries: () => data.products.flatMap((p) => (p.variants && p.variants.length)
+          ? p.variants.map((_v, i) => ({ p, variantIdx: i })) : [{ p, variantIdx: null }]),
+      }), ['names']).names();
+
+    const rows = s.rivalMarketRows(TODAY);
+    /* Four: two shops on Masasi, one on the screws, and the fixture's
+       bare-P1 row, which is a sighting against the product rather than
+       against its variant and is its own line. */
+    eq(rows.length, 4, 'one row per shop per line, across the whole market');
+    const masasi = rows.filter((r) => r.key === 'P1::0');
+    eq(masasi.length, 2, 'both shops on the same line');
+    t.check(!masasi.some((r) => r.theirs === 124000),
+      'and the stale sighting Haidery replaced is gone — the freshest of each pair, never both');
+    eq(masasi.find((r) => r.shop === 'Kasese Hardware').gap, 4000,
+      'each carrying the gap against OUR price, which is the comparison being made');
+    eq(masasi.find((r) => r.shop === 'Kasese Hardware').stale, false, 'ten days old is not stale');
+
+    /* Staleness, at the mark and past it. */
+    data.rivalPrices.push({ id: 20, productId: 'P2', variantIdx: null, rival: 'Old Shop',
+      price: 4000, unit: '', seenOn: shift(TODAY, -91), note: '' });
+    const withStale = s.rivalMarketRows(TODAY).find((r) => r.shop === 'Old Shop');
+    eq(withStale.stale, true, 'a sighting older than the stale mark says so');
+    eq(withStale.daysOld, 91, 'with its age, so the screen can show it rather than assert it');
+
+    const never = s.rivalNeverChecked(TODAY);
+    eq(never.length, 2, 'only lines that SELL and have nothing on file are worth a walk');
+    eq(never[0].line, 'Wall Angle',
+      'WORTH FIRST: Wall Angle earned 120,000 and Sofa Legs 18,000, so Wall Angle leads — by name it would be the other way round, and the whole point is to say where to walk first');
+    eq(never[1].line, 'Sofa Legs', 'and the smaller earner follows');
+    eq(never[0].earned30, 120000, 'ranked on what it earned in 30 days — the buy plan’s own ranking');
+    t.check(!never.some((n) => n.key === 'P2'),
+      'a line already checked is not on the list, however little is known about it');
+    t.check(!never.some((n) => n.key === 'P1::0'), 'nor one with two shops on file');
+  }
+
+  /* ---------- 5c. removing a sighting, never rewriting one -------- */
+  {
+    const data = makeData();
+    const deleted = [];
+    const toasts = [];
+    let confirmed = true;
+    const s = compileScope(
+      [extractFunction(src, 'deleteRivalPrice', 'index.html')],
+      { data, currentShopId: 'shop-1', confirm: () => confirmed,
+        toast: (m) => toasts.push(m), renderMarket: () => {},
+        sb: { from: () => ({ delete: () => ({ eq: () => ({ eq: (c, v) => { deleted.push(v); return Promise.resolve({ error: null }); } }) }) }) },
+        console, Promise, Number, String, Array, Object },
+      ['deleteRivalPrice']);
+
+    /* AWAITED, never returned. Written as `return …then(…)` this
+       returned from the whole async block and every section after it
+       silently never ran — three checks that read as passing were not
+       being executed at all. */
+    await s.deleteRivalPrice(3);
+    eq(deleted[0], 3, 'a sighting can be REMOVED — a mistyped price must not be permanent');
+    t.check(!data.rivalPrices.some((r) => r.id === 3), 'and it leaves the shop’s own copy at once');
+    confirmed = false;
+    await s.deleteRivalPrice(1);
+    eq(deleted.length, 1, 'and a refused confirmation removes nothing');
+    /* THE LAW: no edit path anywhere. */
+    t.check(!/rival_prices'\)\s*\.update/.test(src),
+      'NOTHING UPDATES A SIGHTING IN PLACE — editing one would quietly rewrite what this shop recorded as seen, and every argument the manager makes from this table rests on that not happening');
+    t.check(/deleted, not corrected/.test(src),
+      'and the owner is told so in those words when they remove one');
+  }
+
   /* ---------- 6. the rules ----------------------------------------- */
   {
     t.check(/WHAT OTHER SHOPS CHARGE\. This app knows what goods COST/.test(api),
       'the assistant is told the app knows costs and not what the competition charges');
-    t.check(/write it down with add_rival_price; it changes none of their own prices/.test(api),
-      'and to write down what it hears, with the reassurance that it changes no price of the shop’s own');
+    t.check(/write it down with record_rival_prices \\u2014 one call carrying every line they mentioned/.test(api),
+      'and to write down what it hears in ONE call carrying every line — research does not happen a price at a time');
+    t.check(/A QUOTATION FROM ANOTHER SHOP IS NOT A SUPPLIER PRICE/.test(api),
+      'A COMPETITOR’S QUOTE IS NEVER A SUPPLIER PRICE: without this the assistant reads a photographed quotation as an offer to this shop');
+    t.check(/would cost every line in the buying plan from a figure nobody will ever sell to this shop at/.test(api),
+      'with the damage said plainly — the registry is what this shop PAYS, and poisoning it costs every buy');
+    t.check(/If you cannot tell which it is, ask before you write/.test(api),
+      'and where it is genuinely unclear, it asks rather than guessing');
+    t.check(/one taken months back is weak evidence and is worth saying so and re-checking/.test(api),
+      'a sighting from months ago is weak evidence, never quoted as if seen yesterday');
     t.check(/say the shop does not know rather than treating silence as evidence that nobody is cheaper/.test(api),
       'and that an absent record is ignorance, not evidence');
 
@@ -257,17 +359,19 @@ const build = (data, extraSrc, names, over) => compileScope(
     t.check(/Never treat an empty record as proof this shop is the cheapest: it is proof that nobody has looked/.test(meeting),
       'and it may never read an empty record as proof of being cheapest — the same law the screen keeps, kept in the manager’s mouth');
 
-    t.check(/name: 'add_rival_price'/.test(api), 'the tool is offered to the model');
+    t.check(/name: 'record_rival_prices'/.test(api), 'the tool is offered to the model');
     t.check(/the only thing in this app that knows what a customer can pay elsewhere/.test(api),
       'described for what it is');
-    t.check(/required: \['product_id', 'rival', 'price'\]/.test(api),
-      'and it cannot be called without the line, the shop and the price');
+    t.check(/required: \['rival', 'items'\]/.test(api),
+      'and it cannot be called without the shop and at least one line');
+    t.check(/maxItems: 10/.test(api),
+      'bounded at ten lines a call — a round of the market, not an import');
 
-    const tool = src.slice(src.indexOf('add_rival_price: {'), src.indexOf('add_supplier_price: {'));
+    const tool = src.slice(src.indexOf('record_rival_prices: {'), src.indexOf('add_supplier_price: {'));
     t.check(/confirm: true/.test(tool),
       'it CONFIRMS like every other write — nothing reaches the books without the owner’s tap');
-    t.check(/ABOVE your|BELOW your/.test(tool),
-      'and the card says how it compares with our own price, so the owner confirms a fact they can judge');
+    t.check(/above your|below your/.test(tool),
+      'and the card says how each line compares with our own price, so the owner confirms facts they can judge');
 
     const mig = read('supabase/migrations/0087_rival_prices.sql');
     t.check(/create table rival_prices/.test(mig), '0087 creates the table');
