@@ -825,6 +825,16 @@
   .rv-mrow.stale .rv-mwhen{color:var(--ow-amber-ink);font-weight:600;}
   .rv-gap.none{color:var(--ow-ink-400);font-style:italic;}
   .rv-drop{padding:3px 9px;font-size:11px;}
+  /* The verdict above the record. Heavier than a sighting row on
+     purpose: one is evidence, this is what the evidence adds up to. */
+  .rv-vsub{font-size:12px;color:var(--ink-soft);margin:0 0 9px;}
+  .rv-vrow{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:11px 14px;margin:0 0 9px;}
+  .rv-vrow.stale{border-left:3px solid var(--ow-amber-ink);}
+  .rv-vtop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px;}
+  .rv-vstake{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+    font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .rv-basis{font-size:11px;color:var(--ow-ink-400);margin-top:5px;}
   .rv-never{margin-top:6px;}
   .rv-entry{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
   .rv-erow{display:flex;gap:7px;flex-wrap:wrap;}
@@ -13587,7 +13597,7 @@ function fmtUGXPerUnitPack(n, row){
 // the first screen of the app, not a grid to browse. The other four are
 // grids somebody scans.
 const LIST_PAGE_SIZES = { prices: 24, products: 24, customers: 24, suppliers: 24, dashAlerts: 5, sessions: 6, buyPlan: 5, priceUp: 6, priceDown: 4, priceFile: 6, priceSteady: 5,
-  market: 8, invoices: 24, purchaseInvoices: 24 };
+  market: 8, marketUnder: 5, marketLift: 5, invoices: 24, purchaseInvoices: 24 };
 const LIST_PAGE_DEFAULT = 24;
 // Sticky per list, and deliberately NOT reset when the filter changes:
 // somebody who has asked to see everything has asked about the list, not
@@ -13621,6 +13631,8 @@ const LIST_PAGE_RERENDER = {
   priceFile: ()=> renderPriceWatch(),
   priceSteady: ()=> renderPriceWatch(),
   market: ()=> renderMarket(),
+  marketUnder: ()=> renderMarket(),
+  marketLift: ()=> renderMarket(),
   invoices: ()=> renderInvoices(document.getElementById('inv_doc_search').value),
   purchaseInvoices: ()=> renderPurchaseInvoices(document.getElementById('pi_doc_search').value),
   // Redraws from rows already in hand -- expanding the list must not
@@ -37869,17 +37881,87 @@ function rivalMarketRows(dateISO){
       const once = key + '||' + shop.toLowerCase();
       if(seen.has(once)) return;
       seen.add(once);
-      const theirs = Math.round(Number(r.price));
+      const said = Math.round(Number(r.price));
       const ours = ourPriceFor(r.productId, r.variantIdx);
       const days = Math.max(0, daysSinceDate(r.seenOn || today));
+      /* WHAT THE PRICE IS PER, which decides whether it may be compared
+         at all. Our own price is always per base unit; a sighting
+         carries whatever unit the person said -- "118,000 a carton"
+         against a per-piece price of 9,000 is not a gap of 109,000, it
+         is the same thing measured two ways. Three cases:
+
+           nothing said  -- the same basis as ours. That is what a person
+                            typing into a screen showing our own price
+                            means, and every sighting entered on the
+                            screen has no unit at all.
+           our pack unit -- divided down, and the row says its working.
+           anything else -- NOT COMPARED. Shown on the record, kept out
+                            of every ranking, and counted out loud. */
+      const pack = productPackInfo(r.productId, r.variantIdx);
+      const saidUnit = String(r.unit||'').trim();
+      const ownUnit = (pack && pack.unit) || productUnitLabel(r.productId, r.variantIdx) || '';
+      const sameUnit = (a, b)=> String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase();
+      const packQty = Number(pack && pack.packQty) || 0;
+      const converts = !!saidUnit && packQty > 1 && sameUnit(saidUnit, pack.packUnit);
+      const comparable = !saidUnit || converts || !ownUnit || sameUnit(saidUnit, ownUnit);
+      const theirs = converts ? Math.round(said / packQty) : said;
       out.push({ id: r.id, key, shop, productId: r.productId,
         variantIdx: r.variantIdx == null ? null : Number(r.variantIdx),
         line: productDisplayLabel(parts.product, parts.variantIdx),
-        theirs, ours, gap: ours == null ? null : theirs - ours,
+        theirs, theirsSaid: said, ours,
+        gap: (ours == null || !comparable) ? null : theirs - ours,
+        comparable, saidUnit, ownUnit,
+        packQty: converts ? packQty : 0, packUnit: converts ? pack.packUnit : '',
         unit: r.unit || '', note: r.note || '', seenOn: r.seenOn, daysOld: days,
         stale: days > RIVAL_STALE_DAYS });
     });
   return out;
+}
+
+/* WHERE THE MARKET IS COSTING YOU -- the reading the whole record
+   exists for, and the one it did not have. A screen of sightings puts a
+   200-shilling gap on something sold twice a year beside a 7,000 gap on
+   the best earner and lets them read the same. What separates them is
+   VOLUME: the same arithmetic Supplier prices already does to a
+   supplier's rise, turned round to face the customer.
+
+   ONE ROW PER LINE, AND THE CHEAPEST RIVAL ON IT. Three shops on one
+   line are not three arguments: the customer walks to the cheapest, and
+   that is also the ceiling to lift towards.
+
+   WHAT THE FIGURE CLAIMS. Being dearer does not take money out of the
+   till -- it risks the sale. So the number is what is AT STAKE, said as
+   the customer's own arithmetic and never as a loss the books recorded.
+   A line that sold nothing in a month has nothing at stake and is not
+   here at all, the same rule the never-checked list keeps.
+
+   Derived from rivalMarketRows and nothing else, so the ranking and the
+   record underneath it cannot disagree about the market. */
+function marketVerdict(dateISO){
+  const today = dateISO || todayISO();
+  const sales = waSalesByKey(today);
+  const best = new Map();
+  let notCompared = 0;
+  rivalMarketRows(today).forEach(r=>{
+    if(!r.comparable){ notCompared += 1; return; }
+    if(r.gap == null) return;                       // no price of our own to compare
+    const cur = best.get(r.key);
+    if(!cur || r.theirs < cur.theirs) best.set(r.key, r);
+  });
+  const under = []; const lift = [];
+  best.forEach((r, key)=>{
+    const s = sales.get(key);
+    const units30 = s ? s.units30 : 0;
+    if(!(units30 > 0) || !r.gap) return;
+    const row = { key, productId: r.productId, variantIdx: r.variantIdx, line: r.line,
+      shop: r.shop, ours: r.ours, theirs: r.theirs, theirsSaid: r.theirsSaid, gap: r.gap,
+      units30, atStake: Math.round(units30 * Math.abs(r.gap)),
+      daysOld: r.daysOld, stale: r.stale, packQty: r.packQty, packUnit: r.packUnit };
+    (r.gap < 0 ? under : lift).push(row);
+  });
+  const rank = (a, b)=> b.atStake - a.atStake || String(a.line).localeCompare(String(b.line));
+  under.sort(rank); lift.sort(rank);
+  return { under, lift, notCompared, atStake: under.reduce((n, x)=> n + x.atStake, 0) };
 }
 
 /* WHAT TO GO AND LOOK AT. The lines this shop actually sells with
@@ -37981,6 +38063,9 @@ function renderMarket(){
   }
   const rows = rivalMarketRows(todayISO());
   const never = rivalNeverChecked(todayISO());
+  /* The answer before the evidence: the record is underneath, and this
+     is what it adds up to. */
+  const v = marketVerdict(todayISO());
 
   /* An account of what the screen read, not a reassurance about the
      market. The count that matters most is the last one. */
@@ -37994,6 +38079,7 @@ function renderMarket(){
     ${cell(lines, lines === 1 ? 'line checked' : 'lines checked')}
     ${cell(stale, `seen over ${RIVAL_STALE_DAYS} days ago`, stale ? 'warn' : '')}
     ${cell(never.length, never.length === 1 ? 'never checked' : 'never checked', never.length ? 'warn' : 'good')}
+    ${v.atStake ? cell(f(v.atStake), 'at stake this month', 'warn') : ''}
   </div>`;
 
   /* One row, whichever way the list is grouped: the other side of the
@@ -38001,7 +38087,10 @@ function renderMarket(){
   const row = (r, label)=> `<div class="rv-mrow${r.stale ? ' stale' : ''}">
       <span class="rv-mname">${esc(label)}</span>
       <span class="rv-mprice">${f(r.theirs)}</span>
-      ${r.gap == null
+      ${r.packQty > 1 ? `<span class="rv-basis">${f(r.theirsSaid)} a ${esc(r.packUnit)} of ${r.packQty}</span>` : ''}
+      ${!r.comparable
+        ? `<span class="rv-gap none">recorded per ${esc(r.saidUnit)}, you price per ${esc(r.ownUnit)}</span>`
+        : r.gap == null
         ? '<span class="rv-gap none">you have no price of your own</span>'
         : Math.abs(r.gap) < 1
           ? '<span class="rv-gap">same as yours</span>'
@@ -38010,6 +38099,46 @@ function renderMarket(){
         : r.daysOld === 1 ? 'seen yesterday' : `seen ${r.daysOld} days ago`}</span>
       <button type="button" class="btn btn-ghost rv-drop" data-id="${esc(String(r.id))}" title="Remove this sighting">Remove</button>
     </div>`;
+
+  /* WORST FIRST, and each row says what the figure is and is not. The
+     argument line never calls it a loss: nothing in the books says the
+     sale went elsewhere, only that the customer had a reason to. */
+  const vrow = (x, mode)=> `<div class="rv-vrow${x.stale ? ' stale' : ''}">
+      <div class="rv-vtop">
+        <span class="rv-mname">${esc(x.line)}</span>
+        <span class="rv-vstake">${f(x.atStake)}</span>
+      </div>
+      <div class="pp-facts">
+        <span class="pp-fact"><b>${f(x.theirs)}</b> at ${esc(x.shop)}</span>
+        <span class="pp-fact"><b>${f(x.ours)}</b> yours</span>
+        <span class="pp-fact"><b>${x.units30}</b> sold in 30 days</span>
+        <span class="pp-fact${x.stale ? ' pp-fact-bad' : ''}">${x.daysOld === 0 ? 'seen today'
+          : x.daysOld === 1 ? 'seen yesterday' : `seen ${x.daysOld} days ago`}</span>
+      </div>
+      <div class="pp-why">${mode === 'under'
+        ? `A customer buying your month’s ${x.units30} at ${esc(x.shop)}’s price saves ${f(x.atStake)}.`
+        : `Lifting to just under ${esc(x.shop)}’s ${f(x.theirs)} would add up to ${f(x.atStake)} a month, at the same volume.`}</div>
+      ${x.packQty > 1 ? `<div class="rv-basis">${f(x.theirsSaid)} a ${esc(x.packUnit)} of ${x.packQty} = ${f(x.theirs)} each</div>` : ''}
+    </div>`;
+  const staleNote = (list)=> list.some(x=> x.stale)
+    ? ` A sighting seen over ${RIVAL_STALE_DAYS} days ago is worth checking again before you act on it.` : '';
+
+  if(v.under.length){
+    html += `<div class="pw-tail"><h4>Where they are cheaper than you</h4>
+      <div class="rv-vsub">Worst first, by what a month of your own sales is worth at their price.${staleNote(v.under)}</div>
+      <div class="pw-list">${listPageSlice('marketUnder', v.under).map(x=> vrow(x, 'under')).join('')}</div>${
+      listMoreButtonHTML('marketUnder', v.under.length, 'lines')}</div>`;
+  }
+  if(v.lift.length){
+    html += `<div class="pw-tail"><h4>Where you are cheapest</h4>
+      <div class="rv-vsub">Every shop you have checked charges more. What lifting would add assumes you keep selling the same amount, which is the part nothing here can promise.${staleNote(v.lift)}</div>
+      <div class="pw-list">${listPageSlice('marketLift', v.lift).map(x=> vrow(x, 'lift')).join('')}</div>${
+      listMoreButtonHTML('marketLift', v.lift.length, 'lines')}</div>`;
+  }
+  if(v.notCompared){
+    html += `<p class="pp-more">${v.notCompared} ${v.notCompared === 1 ? 'sighting was' : 'sightings were'} recorded in a unit that does not match how you price the line, so ${
+      v.notCompared === 1 ? 'it is' : 'they are'} on the record below but in neither list.</p>`;
+  }
 
   if(!rows.length){
     html += `<div class="pw-empty"><b>Nothing recorded yet.</b>
@@ -59169,6 +59298,18 @@ const ASSISTANT_TOOLS = {
       ? rivalNeverChecked(todayISO(), 3).map(r=> ({ product_id: r.productId,
           variant_index: r.variantIdx, line: r.line, earned_30: r.earned30 }))
       : [];
+    /* WHERE THE MARKET IS ALREADY HURTING. never_checked says where to
+       walk; this says what the walking already found. Ranked on what a
+       month of this shop's own sales is worth at the rival's price, so
+       the line at the top is the one a pricing argument should be
+       about -- and it arrives with the ids, like every other reading
+       the mind is allowed to act on. */
+    const marketHurts = rivalPricesTable
+      ? marketVerdict(todayISO()).under.slice(0, 3).map(r=> ({ product_id: r.productId,
+          variant_index: r.variantIdx, line: r.line, their_price: apRound(r.theirs),
+          shop: r.shop, ours: apRound(r.ours), sold_30: r.units30,
+          at_stake_30d: apRound(r.atStake), seen_days_ago: r.daysOld }))
+      : [];
     /* Where the shop stands against what this manager itself said it
        would do -- derived now, from the books, every time. */
     const score = await managerScoreboard();
@@ -59268,6 +59409,7 @@ const ASSISTANT_TOOLS = {
       ...((score.proposed||[]).length ? { targets_awaiting_your_approval: score.proposed.slice(0, 4) } : {}),
       ...(answered.length ? { answered_questions: answered } : {}),
       ...(open.length ? { open_questions: open } : {}),
+      ...(marketHurts.length ? { where_the_market_hurts: marketHurts } : {}),
       ...(neverChecked.length ? { never_checked: neverChecked } : {}),
       meetings: (meetings.data||[]).map(m=> ({
       date: m.date, keyline: (m.body||{}).keyline || '',

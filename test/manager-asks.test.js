@@ -292,6 +292,7 @@ const PRODUCTS = [
     data: { products: PRODUCTS, customers: [], stockLog: [], savedQuotes: [], purchaseInvoices: [] },
     managerNotesTable: true, currentShopId: 'shop-1', todayISO: () => TODAY,
     rivalPricesTable: true, rivalNeverChecked: () => never,
+    marketVerdict: () => ({ under: [], lift: [], notCompared: 0, atStake: 0 }),
     anShiftDate: (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
     daysSinceDate: () => 9, apRound: (n) => Math.round(Number(n) || 0),
     fmtUGX: (n) => String(n),
@@ -350,6 +351,7 @@ const PRODUCTS = [
   ], {
     data: { products: PRODUCTS, customers: [], stockLog: [], savedQuotes: [], purchaseInvoices: [] },
     managerNotesTable: true, rivalPricesTable: false, currentShopId: 'shop-1', todayISO: () => TODAY,
+    marketVerdict: () => ({ under: [], lift: [], notCompared: 0, atStake: 0 }),
     anShiftDate: (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); },
     daysSinceDate: () => 1, apRound: (n) => Math.round(Number(n) || 0), fmtUGX: (n) => String(n),
     sb: { from: () => { const q = { _kind: null };
