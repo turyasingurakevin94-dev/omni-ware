@@ -834,6 +834,12 @@
   .rv-vtop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px;}
   .rv-vstake{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .rv-move{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-top:8px;
+    padding-top:8px;border-top:1px solid var(--ow-rule-soft);font-size:12.5px;}
+  .rv-mtext{flex:1 1 240px;min-width:0;color:var(--ink-soft);}
+  .rv-move.thin .rv-mtext{color:var(--ow-amber-ink);}
+  .rv-move.none .rv-mtext{color:var(--ink-soft);font-style:italic;}
+  .rv-match{padding:4px 11px;font-size:12px;white-space:nowrap;}
   .rv-basis{font-size:11px;color:var(--ow-ink-400);margin-top:5px;}
   .rv-never{margin-top:6px;}
   .rv-entry{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
@@ -37842,17 +37848,80 @@ function rivalPriceLatest(productId, variantIdx, dateISO){
   return [...seen.values()].sort((a, b)=> a.price - b.price);
 }
 
-/* What this shop charges for the same line, so the two can be put side
-   by side. Derived through the same ladder every other selling price in
-   the app comes from -- never a second opinion about our own price. */
-function ourPriceFor(productId, variantIdx){
+/* WHAT THE LINE COSTS, and which supplier row that came from.
+
+   Lifted out of ourPriceFor rather than written beside it, because
+   three different costs are already in play on adjacent screens -- the
+   shelf's own FIFO cost, the cheapest row flat, and this one -- and any
+   figure put NEXT TO our derived price has to be built on the very cost
+   that price was built on, or the two do not reconcile in front of the
+   owner. One reading, and the price is one of its readers. */
+function ourCostFor(productId, variantIdx){
   const p = (data.products || []).find(x=> x.id === productId);
   if(!p) return null;
   const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
   const best = rankedPurchaseRowsAtQty(productId, vi, 1).find(x=> x.purchasePrice != null);
   if(!best) return null;
-  const sug = suggestedStockSellingPrice(p, best.purchasePrice, 'wholesale', vi, Number(best.packQty) || 0);
+  return { product: p, variantIdx: vi, cost: best.purchasePrice,
+    packQty: Number(best.packQty) || 0, packUnit: best.packUnit || '', unit: best.unit || '',
+    supplier: best.sname || supplierName(best.supplierId) };
+}
+
+/* What this shop charges for the same line, so the two can be put side
+   by side. Derived through the same ladder every other selling price in
+   the app comes from -- never a second opinion about our own price. */
+function ourPriceFor(productId, variantIdx){
+  const c = ourCostFor(productId, variantIdx);
+  if(!c) return null;
+  const sug = suggestedStockSellingPrice(c.product, c.cost, 'wholesale', c.variantIdx, c.packQty);
   return sug == null ? null : Math.round(sug);
+}
+
+/* WHAT IT WOULD MEAN TO CHARGE A PARTICULAR PRICE -- the arithmetic
+   nothing in this app had ever done, and the one the decision actually
+   turns on. The market screen can say a rival is 5,000 cheaper; it
+   could never say whether matching them still pays.
+
+   THERE IS NO PRICE TO SET, ONLY A RULE. The single lever is a markup
+   on cost, so landing on a chosen price means inverting the rule that
+   produces it. FIXED rather than percent: fixed lands exactly on the
+   figure the owner was shown, a percent rounds and lands near it, and
+   this shop already thinks in fixed amounts. A wholesale fixed rule is
+   added on each PACK, which suggestedStockSellingPrice spreads back
+   over the pack -- so the value written is the gap times the pack.
+
+   Null where there is no cost on file: an offer the app cannot price
+   is not made at all. */
+function priceRuleForTarget(productId, variantIdx, target){
+  const c = ourCostFor(productId, variantIdx);
+  const aim = Math.round(Number(target) || 0);
+  if(!c || !(aim > 0) || c.cost == null) return null;
+  const kept = aim - c.cost;
+  const keptPct = Math.round(kept / aim * 100);
+  return { cost: Math.round(c.cost), target: aim, packQty: c.packQty,
+    unit: c.unit, packUnit: c.packUnit, supplier: c.supplier,
+    type: 'fixed', value: Math.round(kept * (c.packQty || 1)),
+    keptPct, thin: keptPct < THIN_MARGIN_PCT, pays: aim > c.cost };
+}
+
+/* THE ONE DOOR a stock pricing rule is written through. The price-rule
+   modal and the market screen both come here, so a rule can never be
+   set two ways that drift apart -- and so the one place that knows how
+   these fields are named stays one place. */
+function setStockPriceRule(productId, variantIdx, patch){
+  const p = (data.products || []).find(x=> x.id === productId);
+  if(!p) return false;
+  const vi = variantIdx == null || variantIdx === '' ? null : Number(variantIdx);
+  if(vi != null && !(p.variants && p.variants[vi])) return false;
+  const target = vi != null ? p.variants[vi] : p;
+  ['wholesale', 'retail'].forEach(kind=>{
+    const tKey = 'stock' + kind.charAt(0).toUpperCase() + kind.slice(1) + 'MarkupType';
+    const vKey = 'stock' + kind.charAt(0).toUpperCase() + kind.slice(1) + 'MarkupValue';
+    if(patch[kind + 'Type'] != null) target[tKey] = patch[kind + 'Type'] === 'fixed' ? 'fixed' : 'percent';
+    if(patch[kind + 'Value'] != null) target[vKey] = Math.max(0, Number(patch[kind + 'Value']) || 0);
+  });
+  saveData();
+  return true;
 }
 
 /* EVERYTHING THIS SHOP KNOWS ABOUT THE MARKET, in one reading, for the
@@ -38100,6 +38169,30 @@ function renderMarket(){
       <button type="button" class="btn btn-ghost rv-drop" data-id="${esc(String(r.id))}" title="Remove this sighting">Remove</button>
     </div>`;
 
+  /* CAN YOU AFFORD TO MATCH THEM -- the arithmetic the decision turns
+     on, and the one nothing here had ever done. The screen could say a
+     rival was 5,000 cheaper and never whether matching them still paid.
+
+     BELOW COST, NO BUTTON. Selling under what the goods cost is a real
+     decision a shop sometimes makes, and it is not a decision to make
+     with one tap on a phone; the sentence says so and names the fix,
+     and the rule editor is still a tap away on the line itself. */
+  const moveLine = (x, mode)=>{
+    const m = priceRuleForTarget(x.productId, x.variantIdx, x.theirs);
+    if(!m) return `<div class="rv-move none">No cost on file for this line, so nothing here can say whether matching them would pay.</div>`;
+    const verdict = !m.pays
+      ? `Matching them would sell below the ${f(m.cost)} it costs you. The fix is the supplier, not the shelf.`
+      : m.thin
+        ? `You would keep ${m.keptPct}% — under your ${THIN_MARGIN_PCT}% mark.`
+        : `You would keep ${m.keptPct}%.`;
+    return `<div class="rv-move${!m.pays ? ' none' : (m.thin ? ' thin' : '')}">
+        <span class="rv-mtext">${mode === 'under' ? 'Match' : 'Lift to'} ${esc(x.shop)}’s ${f(x.theirs)} — costs you ${f(m.cost)}. ${verdict}</span>
+        ${m.pays ? `<button type="button" class="btn btn-ghost rv-match" data-pid="${esc(String(x.productId))}"
+          data-vi="${x.variantIdx == null ? '' : esc(String(x.variantIdx))}"
+          data-to="${esc(String(x.theirs))}">Charge ${f(x.theirs)}</button>` : ''}
+      </div>`;
+  };
+
   /* WORST FIRST, and each row says what the figure is and is not. The
      argument line never calls it a loss: nothing in the books says the
      sale went elsewhere, only that the customer had a reason to. */
@@ -38118,6 +38211,7 @@ function renderMarket(){
       <div class="pp-why">${mode === 'under'
         ? `A customer buying your month’s ${x.units30} at ${esc(x.shop)}’s price saves ${f(x.atStake)}.`
         : `Lifting to just under ${esc(x.shop)}’s ${f(x.theirs)} would add up to ${f(x.atStake)} a month, at the same volume.`}</div>
+      ${moveLine(x, mode)}
       ${x.packQty > 1 ? `<div class="rv-basis">${f(x.theirsSaid)} a ${esc(x.packUnit)} of ${x.packQty} = ${f(x.theirs)} each</div>` : ''}
     </div>`;
   const staleNote = (list)=> list.some(x=> x.stale)
@@ -38204,6 +38298,28 @@ function renderMarket(){
   const g = document.getElementById('mk_group');
   if(g) g.value = mkGroupBy;
   el.querySelectorAll('.rv-drop').forEach(b=> b.addEventListener('click', ()=> deleteRivalPrice(Number(b.dataset.id))));
+  /* CHANGING THE PRICE FROM WHERE THE ARGUMENT IS. Confirmed by name
+     and by figure, because a price decides every sale after it and a
+     mis-tap on a phone leaves nothing behind to notice. */
+  el.querySelectorAll('.rv-match').forEach(b=> b.addEventListener('click', ()=>{
+    const pid = b.dataset.pid;
+    const vi = b.dataset.vi === '' ? null : Number(b.dataset.vi);
+    const m = priceRuleForTarget(pid, vi, Number(b.dataset.to));
+    if(!m || !m.pays){ toast('That price is no longer one this line can carry'); return; }
+    const was = ourPriceFor(pid, vi);
+    /* Read BEFORE the write: afterwards the rule has changed and the
+       hold has already ended, so nothing could tell it ever stood. */
+    const held = buyHoldFor(stockKey(pid, vi));
+    const stood = !!(held && !held.over);
+    if(!confirm('Charge ' + fmtUGX(m.target) + ' instead of ' + fmtUGX(was) + '?\n\n'
+      + 'It costs you ' + fmtUGX(m.cost) + ', so you would keep ' + m.keptPct + '%.')) return;
+    if(!setStockPriceRule(pid, vi, { wholesaleType: m.type, wholesaleValue: m.value })){
+      toast('Could not change that price'); return;
+    }
+    toast('Now ' + fmtUGX(ourPriceFor(pid, vi)) + ' — keeping ' + m.keptPct + '%'
+      + (stood ? '. The hold on this line has ended: the price it objected to has changed.' : ''), 8000);
+    renderMarket();
+  }));
   const add = document.getElementById('mk_add');
   if(add) add.addEventListener('click', async ()=>{
     const key = (document.getElementById('mk_line')||{}).value || '';
@@ -38322,24 +38438,19 @@ function renderStockRuleCompare(product, variantIdx){
 }
 document.getElementById('stockRuleModalClose').addEventListener('click', ()=>closeModal('stockRuleModal'));
 document.getElementById('sr_clear_btn').addEventListener('click', ()=>{
-  const p = data.products.find(x=>x.id===srProductId); if(!p) return;
-  const target = srVariantIdx!=null ? p.variants[srVariantIdx] : p;
-  target.stockWholesaleMarkupValue = 0;
-  target.stockRetailMarkupValue = 0;
-  saveData();
+  if(!setStockPriceRule(srProductId, srVariantIdx, { wholesaleValue: 0, retailValue: 0 })) return;
   document.getElementById('sr_wholesale_value').value = '';
   document.getElementById('sr_retail_value').value = '';
   renderInventory();
   toast('Reset to the default pricing rule');
 });
 document.getElementById('sr_save_btn').addEventListener('click', ()=>{
-  const p = data.products.find(x=>x.id===srProductId); if(!p) return;
-  const target = srVariantIdx!=null ? p.variants[srVariantIdx] : p;
-  target.stockWholesaleMarkupType = document.getElementById('sr_wholesale_type').value;
-  target.stockWholesaleMarkupValue = Number(document.getElementById('sr_wholesale_value').value)||0;
-  target.stockRetailMarkupType = document.getElementById('sr_retail_type').value;
-  target.stockRetailMarkupValue = Number(document.getElementById('sr_retail_value').value)||0;
-  saveData();
+  const ok = setStockPriceRule(srProductId, srVariantIdx, {
+    wholesaleType: document.getElementById('sr_wholesale_type').value,
+    wholesaleValue: Number(document.getElementById('sr_wholesale_value').value)||0,
+    retailType: document.getElementById('sr_retail_type').value,
+    retailValue: Number(document.getElementById('sr_retail_value').value)||0 });
+  if(!ok) return;
   closeModal('stockRuleModal');
   renderInventory();
   toast('Stock pricing rule saved');
@@ -59797,6 +59908,17 @@ const ASSISTANT_TOOLS = {
         target[kind + 'MarkupValue'] = value || 0;
         out[kind + '_rule'] = value > 0 ? apRuleWords(kind, { type, value }) : 'cleared';
       });
+      /* TWO TIERS, AND THIS TOOL WRITES ONE. The rule just set prices
+         this line FROM A SUPPLIER QUOTE. A line that already carries
+         its own STOCK rule is still priced off the shelf by that one --
+         so reporting a plain success here is the tool claiming a change
+         the shelf never saw. */
+      const stillRules = ops.map(({kind})=>{
+        const vKey = 'stock' + kind.charAt(0).toUpperCase() + kind.slice(1) + 'MarkupValue';
+        return Number(target[vKey]) > 0 ? kind : null;
+      }).filter(Boolean);
+      if(stillRules.length) out.shelf_price_unchanged = 'This line has its own stock pricing rule for '
+        + stillRules.join(' and ') + ', which still decides what it sells for off the shelf. The rule just set applies when the line is bought in for an order. Say so.';
       saveData();
       let preview = null;
       try{ preview = ASSISTANT_TOOLS.recommended_price.run({ product_id: p.id, variant_index: vi }); }

@@ -79,7 +79,7 @@ const env = (data, over) => ({
   ...(over || {}),
 });
 
-const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor',
+const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor', 'ourCostFor',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind',
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule'];

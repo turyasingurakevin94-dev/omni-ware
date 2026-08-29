@@ -335,7 +335,7 @@ const TOOLS = [
   },
   {
     name: 'set_markup_rule',
-    description: 'Set how the app suggests a selling price for one product (or one variant): a markup rule added on top of the supplier cost — a fixed amount, or percent on cost. This shop’s markups are usually FIXED amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. A fixed wholesale markup is added on each pack, a fixed retail markup per unit. Value 0 clears a rule. Product-level is the default for every variant; pass variant_index to give one variant its own rule. Resolve the product with find_product first.',
+    description: 'Set how the app suggests a selling price for one product (or one variant): a markup rule added on top of the supplier cost — a fixed amount, or percent on cost. This shop’s markups are usually FIXED amounts: treat a bare figure as fixed shillings, and use percent only when the owner says percent. A fixed wholesale markup is added on each pack, a fixed retail markup per unit. Value 0 clears a rule. TWO RULES CAN EXIST ON ONE LINE: this sets the rule used when the line is BOUGHT IN for an order, and a line may also carry its own STOCK rule that decides what it sells for off the shelf. Where it does, the result says shelf_price_unchanged \u2014 pass that on rather than reporting a change the shelf never saw; the owner changes a shelf price on the product\u2019s price rule or from Rival prices. Product-level is the default for every variant; pass variant_index to give one variant its own rule. Resolve the product with find_product first.',
     input_schema: {
       type: 'object',
       properties: {

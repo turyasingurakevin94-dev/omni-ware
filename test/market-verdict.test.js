@@ -99,17 +99,19 @@ const env = (data, over) => ({
   ...(over || {}),
 });
 
-const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor',
+const CHAIN = ['rivalPricesFor', 'rivalPriceLatest', 'ourPriceFor', 'ourCostFor',
   'rankedPurchaseRowsAtQty', 'rankedPriceRows', 'productPriceRows', 'purchasePriceAtQty',
   'tieredUnitPrice', 'tiersForKind', 'productPackInfo', 'productUnitLabel',
   'suggestedStockSellingPrice', 'effectiveStockMarkupRule', 'effectiveMarkupRule',
   'rivalMarketRows', 'rivalNeverChecked', 'marketVerdict', 'buyKeyParts', 'stockKey',
   'waSalesByKey', 'waDaysBetween', 'waWeekday', 'quoteItemSellPrice', 'invoiceLineCost',
-  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty'];
+  'quoteSuggestedPrice', 'quoteSuggestedStockPrice', 'getStockQty',
+  'priceRuleForTarget', 'setStockPriceRule'];
 
 const build = (data, extraSrc, names, over) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))
-    .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html')])
+    .concat([extractDeclaration(src, 'RIVAL_STALE_DAYS', 'index.html'),
+      extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html')])
     .concat(extraSrc || []),
   env(data, over), names);
 
