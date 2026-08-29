@@ -34,9 +34,26 @@
 -- read the shop's data; the worker app needs products, prices and
 -- orders to function at all.
 --
+-- A TABLE THIS DATABASE NEVER GOT IS SKIPPED, NOT AN ERROR. Migrations
+-- here are applied by hand, so the live schema is whatever was pasted:
+-- the first run of this file failed outright because airtel_transactions
+-- (0023, Airtel Money) had never been created. One missing table must
+-- not stop the other twenty-six from being locked, so each is checked
+-- with to_regclass and skipped with a notice if it is absent. Applying
+-- that feature's migration later leaves this one to re-run -- which is
+-- safe, because every policy is dropped before it is created.
+--
 -- LOOK FIRST -- who is attached to the shop, and with what rights:
 --   select role, count(*) from shop_members
 --   where shop_id = 'YOUR-SHOP-ID' group by role;
+--
+-- CHECK AFTERWARDS -- must return NO ROWS. Anything listed is a table
+-- members can still write, on THIS database:
+--   select tablename from pg_policies
+--   where policyname = 'shop members full access'
+--     and tablename not in ('saved_quotes', 'collection_trips')
+--     and tablename not in (
+--       select tablename from pg_policies where policyname = 'owner writes only');
 --
 -- ROLLBACK -- restores exactly today's behaviour:
 --   do $$ declare t text; begin
@@ -71,6 +88,14 @@ begin
     'airtel_transactions'
     -- NOT saved_quotes, NOT collection_trips: see the note above.
   ] loop
+    if to_regclass('public.' || t) is null then
+      raise notice 'skipped %: not on this database', t;
+      continue;
+    end if;
+    -- Dropped first so the file can be re-run: after a part-way failure,
+    -- or once a feature's own migration finally lands.
+    execute format('drop policy if exists "owner writes only" on %I', t);
+    execute format('drop policy if exists "owner updates only" on %I', t);
     execute format(
       'create policy "owner writes only" on %I as restrictive for insert with check (is_shop_admin(shop_id))', t);
     execute format(

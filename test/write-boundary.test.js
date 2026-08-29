@@ -118,7 +118,31 @@ const loopBlock = allSql.slice(allSql.indexOf("foreach t in array array[\n    's
     'and 0083 does not disturb it');
 }
 
-/* ---------- 6. the owner can look first, and go back ---------------- */
+/* ---------- 6. a table this database never got is not an error ------ */
+/* The first live run of 0083 failed outright: airtel_transactions (0023,
+   Airtel Money) had never been pasted into this shop's database, and one
+   missing table aborted the whole block, locking nothing. Migrations
+   here are applied by hand, so the live schema is whatever was pasted --
+   the file must survive that, and must be safe to run again afterwards. */
+{
+  t.check(/to_regclass\('public\.' \|\| t\) is null/.test(lockBody),
+    'each table is checked for existence before it is locked');
+  t.check(/raise notice 'skipped %: not on this database', t;/.test(lockBody)
+    && /continue;/.test(lockBody),
+    'a missing one is skipped and NAMED — silently locking nothing would be worse than failing');
+  t.check(/drop policy if exists "owner writes only" on %I/.test(lockBody)
+    && /drop policy if exists "owner updates only" on %I/.test(lockBody),
+    'and every policy is dropped before it is created, so the file can be run again once a missing feature lands');
+  const dropAt = lockBody.indexOf('drop policy if exists "owner writes only"');
+  const createAt = lockBody.indexOf('create policy "owner writes only"');
+  t.check(dropAt > 0 && createAt > dropAt,
+    'the drop comes FIRST — after it, a re-run would delete the policy it just made');
+  t.check(/select tablename from pg_policies/.test(lock)
+    && /policyname = 'shop members full access'/.test(lock),
+    'and the migration carries the query that proves completeness on the REAL database, whatever it holds');
+}
+
+/* ---------- 7. the owner can look first, and go back ---------------- */
 {
   t.check(/select role, count\(\*\) from shop_members/.test(lock),
     'the migration carries the query that shows who would be affected, before anything changes');
