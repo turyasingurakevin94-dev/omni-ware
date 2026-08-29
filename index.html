@@ -871,7 +871,8 @@
      to be mistaken for one at a glance. Dashed rules and an italic
      right-hand cell that says what the row is rather than what it
      leaves -- because nothing here changes the balance the line walks. */
-  .ah-row.promised{border-bottom-style:dashed;}
+  .ah-row.promised{border-bottom:1px dashed var(--ow-rule-soft);}
+  .ah-row.promised:last-child{border-bottom:none;}
   .ah-row.promised .ah-amt{color:var(--ow-verdigris);}
   .ah-row.promised .ah-left{font-style:italic;color:var(--ow-ink-400);}
   .ah-kind.broke{color:var(--ow-crimson);background:var(--ow-crimson-soft);}
@@ -52327,7 +52328,7 @@ function dashStockOutExposure(){
 }
 
 /* ---- the What-to-buy screen ---- */
-let buyBudget = null;    // per-view override; null = spend up to cash on hand
+let buyBudget = null;    // per-view override; null = use what the forecast says is safe
 let buyPlanLast = null;  // the plan behind the Source-it buttons, index-addressed
 
 function renderPurchasePlanPanel(){
@@ -52349,7 +52350,7 @@ function renderPurchasePlanPanel(){
   buyPlanLast = plan;
   const budgetEl = document.getElementById('buy_budget');
   const coverEl = document.getElementById('buy_cover');
-  if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget || '';
+  if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget == null ? '' : budget;
   if(coverEl && document.activeElement !== coverEl) coverEl.value = plan.coverDays;
   const f = n=> fmtUGX(Math.round(n));
   const days = n=> `${n} ${n === 1 ? 'day' : 'days'}`;
@@ -52420,11 +52421,23 @@ function renderPurchasePlanPanel(){
     </div>`;
   /* WHERE THE BUDGET CAME FROM, when the owner did not type one. The
      box shows the figure either way, so a screen that does not explain
-     it is a screen quietly disagreeing with the cash on the dashboard. */
+     it is a screen quietly disagreeing with the cash on the dashboard.
+
+     WHAT IS LATE AND WHAT IS NEXT ARE TWO DIFFERENT FACTS. cashCommitments
+     clamps an overdue payment's date to today so it sits at the head of
+     the line, keeping the day it was really due behind it -- so reading
+     the first row's dueOn printed "already promised in the next 30 days,
+     the first on 31 Jul 2026" onto a screen dated 29 August, a sentence
+     arguing with itself. Money already late is the more urgent half of
+     that and gets said first; the next day something actually falls is
+     found among the rows that are still ahead. */
+  const lateCount = ahead.commitments.filter(c=> c.overdue).length;
+  const nextUp = ahead.commitments.find(c=> !c.overdue);
   const budgetNote = (buyBudget == null && ahead.committed > 0)
     ? `<p class="pp-more">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
         f(ahead.committed)} is already promised in the next ${ahead.days} days${
-        ahead.commitments.length ? ', the first on ' + esc(fmtShortDate(ahead.commitments[0].dueOn)) : ''
+        lateCount ? `, ${lateCount} of them already overdue` : ''}${
+        nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
       }. What&#39;s coming has the dates — or type a budget here to overrule it.</p>`
     : '';
   let html = '';
@@ -52436,7 +52449,8 @@ function renderPurchasePlanPanel(){
        strip every other screen uses for exactly this. They were a
        footnote under the list. */
     const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
-    const out = plan.lines.filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
+    const out = plan.lines.concat(plan.didNotFit)
+      .filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
     const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
       <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
     html = `<div class="sum-strip">
@@ -52446,6 +52460,10 @@ function renderPurchasePlanPanel(){
       ${out ? cell(out, out === 1 ? 'has run out' : 'have run out', 'warn') : ''}
     </div>`;
     html += budgetNote;
+    if(plan.budget === 0 && buyBudget == null) html += `<p class="pp-more"><b>There is nothing safe to spend, so the plan is empty.</b>
+      Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
+      the moment there is something to buy it with — collecting is what makes it affordable, and Chase debts has who to ring.
+      Or type a budget above to overrule this.</p>`;
     /* The best few, by what they earn. The rest are one tap away --
        the owner asked for a recommendation, not a catalogue. */
     html += `<div class="pp-list">${listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')}</div>`;
@@ -54467,8 +54485,13 @@ function dashboardContext(from, to){
     ahead: (()=>{ const a = cashAhead(todayISO(), CASH_AHEAD_DAYS);
       return { days: a.days, committed: a.committed, safeToSpend: a.safeToSpend,
         tightestOn: a.tightest.date, tightestBalance: a.tightest.balance,
+        /* `on` is the day the money must LEAVE, which for an overdue
+           payment is today -- never the day it was due, or a reader
+           would print a date behind them as the next thing coming. */
         notCosted: a.unknown, next: a.commitments[0]
-          ? { on: a.commitments[0].dueOn, what: a.commitments[0].label, amount: a.commitments[0].amount } : null }; })(),
+          ? { on: a.commitments[0].date, dueOn: a.commitments[0].dueOn,
+              overdue: !!a.commitments[0].overdue,
+              what: a.commitments[0].label, amount: a.commitments[0].amount } : null }; })(),
     debtors: debtorRows, goingQuiet, concentration,
     stockOut: dashStockOutExposure(), inflation: dashSupplierPriceInflation(),
   };

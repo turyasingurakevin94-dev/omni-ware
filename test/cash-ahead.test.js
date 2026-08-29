@@ -332,6 +332,16 @@ const build = (data, extraSrc, names, over) => compileScope(
     'and saying so out loud — the one sentence standing between a promise and the buy plan spending it');
   t.check(/the whole balance/.test(band), 'a promise with no figure named is the whole balance');
   t.check(/their word, not cash/.test(band), 'and the row never dresses itself up as money in the drawer');
+
+  /* A BARE border-bottom-style IS NOT A BORDER. `.ah-row:last-child{
+     border-bottom:none}` resets the WIDTH to medium and the colour to
+     currentColor; setting only the style back re-lit both, and the last
+     promised row drew a 3px near-black dashed rule across the screen. */
+  const css = (/\.ah-row\.promised\{([^}]*)\}/.exec(src) || ['', ''])[1];
+  t.check(/border-bottom:\s*[\d.]+px\s+dashed\s+var\(/.test(css),
+    `the promised row states its whole border — width, style and colour (${css})`);
+  t.check(/\.ah-row\.promised:last-child\{[^}]*border-bottom:\s*none/.test(src),
+    'and re-asserts the last-child reset it would otherwise have overridden');
   t.check(/safe to spend/.test(band) && /2,500,000/.test(band),
     'the figure itself being untouched by any of it');
 
@@ -353,11 +363,14 @@ const build = (data, extraSrc, names, over) => compileScope(
 }
 
 /* ---------- 7. the buy plan stops offering the rent ------------------- */
-{
-  const asked = [];
+const buyAsked = [];
+const budgetBox = { value: 'untouched' };
+const drawBuy = (over) => {
   const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
-  compileScope([extractFunction(src, 'renderPurchasePlanPanel', 'index.html')], {
-    document: { getElementById: (id) => (id === 'buy_plan' ? el : null) },
+  buyAsked.length = 0;
+  budgetBox.value = 'untouched';
+  compileScope([extractFunction(src, 'renderPurchasePlanPanel', 'index.html')], Object.assign({
+    document: { getElementById: (id) => (id === 'buy_plan' ? el : id === 'buy_budget' ? budgetBox : null) },
     esc: (x) => String(x == null ? '' : x),
     fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
     fmtShortDate: (d) => String(d),
@@ -365,14 +378,23 @@ const build = (data, extraSrc, names, over) => compileScope(
     CASH_AHEAD_DAYS: 30,
     cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
     cashAhead: () => ({ days: 30, committed: 2500000, safeToSpend: 2500000, unknown: 0,
-      commitments: [{ dueOn: '2026-08-31', label: 'Milly', amount: 1200000 }],
+      commitments: [{ dueOn: '2026-08-31', date: '2026-08-31', overdue: false, label: 'Milly', amount: 1200000 }],
       tightest: { date: '2026-09-05', balance: 2500000 } }),
     buyBudget: null, buyPlanLast: null,
     buyHoldsSweep: () => {},
-    purchasePlan: (budget) => { asked.push(budget); return { budget, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [] }; },
+    purchasePlan: (budget) => { buyAsked.push(budget); return { budget, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [] }; },
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
+    /* The row's own rendering is tested where it lives; here it only has
+       to draw without throwing, so the strip above it can be read. */
+    buyLineFacts: () => '', buyLineWhy: () => '', buyLineWhen: () => '',
+    buyHoldFor: () => null, buyHoldLabel: () => '', agingDaysLabel: (n) => `${n} days`,
     Math, Number, String, Array, Object, Boolean, JSON,
-  }, ['renderPurchasePlanPanel']).renderPurchasePlanPanel();
+  }, over || {}), ['renderPurchasePlanPanel']).renderPurchasePlanPanel();
+  return el.innerHTML;
+};
+{
+  const asked = buyAsked;
+  const el = { innerHTML: drawBuy() };
 
   eq(asked[0], 2500000,
     'the plan is budgeted on what is SAFE, not the 5,000,000 in hand — the rent and the wages were in that figure until the day they leave, and offering it was the plan telling the shop to spend money it had already promised');
@@ -389,6 +411,92 @@ const build = (data, extraSrc, names, over) => compileScope(
     'the Manager’s pulse budgets on the same figure, so the screen and the mind cannot disagree');
   t.check(/input\.budget != null \? Number\(input\.budget\) : cashAhead\(todayISO\(\), CASH_AHEAD_DAYS\)\.safeToSpend/.test(src),
     'and so does the spoken buy plan');
+}
+
+/* ---------- 7b. the shop that is over-committed ---------------------- *
+ * The live shop that prompted this: 2,608,644 in the drawer against
+ * 3,471,156 promised, so the line dips below nothing and safeToSpend
+ * floors at 0. Nothing had ever walked the buying screen down that path,
+ * and it broke in three places at once — each of them a thing the screen
+ * SAYS rather than a figure it computes, which is why the arithmetic
+ * cross-check passed while the screen misled.
+ */
+{
+  /* A DATE IN THE PAST IS NOT THE NEXT THING DUE. cashCommitments clamps
+     an overdue payment's `date` to today so it heads the line, keeping
+     the day it was really due in `dueOn` behind it — and reading that off
+     row 0 printed "already promised in the next 30 days, the first on 31
+     Jul 2026" onto a screen dated 29 August. */
+  const overdue = drawBuy({
+    cashAhead: () => ({ days: 30, committed: 2500000, safeToSpend: 2500000, unknown: 0,
+      commitments: [
+        { dueOn: '2026-07-31', date: TODAY, overdue: true, label: 'Edrine', amount: 21098 },
+        { dueOn: '2026-08-31', date: '2026-08-31', overdue: false, label: 'Milly', amount: 1200000 },
+      ],
+      tightest: { date: '2026-09-05', balance: 2500000 } }),
+  });
+  t.check(!/2026-07-31/.test(overdue),
+    'a day already gone is never named as something falling due in the next 30 — the sentence would be arguing with itself');
+  t.check(/1 of them already overdue/.test(overdue),
+    'it is named as what it is: money that is late, which is the more urgent half of the fact');
+  t.check(/the next on 2026-08-31/.test(overdue),
+    'and the next day something actually falls is found among the rows still ahead');
+
+  const clean = drawBuy();
+  t.check(/the first on 2026-08-31/.test(clean) && !/already overdue/.test(clean),
+    'while a shop with nothing late still reads "the first on", and is not told about overdue payments it does not have');
+
+  /* SILENCE IS NOT EVIDENCE. With nothing safe to spend, every candidate
+     goes to didNotFit and `lines` is empty — so a run-out count taken
+     over `lines` reported that nothing had run out on the exact morning
+     the shelves were emptiest and there was no money to fill them. */
+  const broke = (plan) => drawBuy({
+    cashAhead: () => ({ days: 30, committed: 3471156, safeToSpend: 0, unknown: 0,
+      commitments: [{ dueOn: '2026-08-31', date: '2026-08-31', overdue: false, label: 'Milly', amount: 1200000 }],
+      tightest: { date: '2026-09-25', balance: -862512 } }),
+    purchasePlan: (budget) => { buyAsked.push(budget); return Object.assign({ budget, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [] }, plan || {}); },
+  });
+
+  const emptyPlan = broke({ didNotFit: [{ kind: 'shelf', daysLeft: 0, name: 'ABC Black Screws', cost: 210000, qty: 20,
+    reason: 'Out now', supplier: 'ABC', unitCost: 10500, unit: 'Box', units30: 1, earned30: 116000, kept: 4 }] });
+  t.check(/have run out|has run out/.test(emptyPlan),
+    'a line that has run out is COUNTED even when the shop cannot afford it — being broke is a reason to say it louder, not to fall silent');
+  eq(buyAsked[0], 0, 'the plan is still budgeted on nought rather than on the cash in hand');
+
+  /* WHY THE PLAN IS EMPTY. Three noughts over a list headed "Over this
+     budget" states a conclusion and withholds its reason — and the reason
+     is not "nothing needs buying". */
+  t.check(/There is nothing safe to spend, so the plan is empty/.test(emptyPlan),
+    'and the screen says WHY it is empty, rather than leaving three noughts to be read as "nothing needed"');
+  t.check(/Chase debts/.test(emptyPlan), 'pointing at the thing that changes it');
+  t.check(!/There is nothing safe to spend/.test(clean),
+    'while a shop with a budget is not told it has none');
+
+  /* A BLANK BOX MEANS "NO LIMIT". Zero is falsy, so `budget || ''`
+     emptied the field on the one render where the answer is "nothing" —
+     showing the state the change handler reads back as null. */
+  broke();
+  eq(budgetBox.value, 0,
+    'a computed budget of nought is WRITTEN into the box — an empty box is the state meaning "no override", which is the opposite of what is true here');
+  drawBuy();
+  eq(budgetBox.value, 2500000, 'and a real budget still fills it');
+}
+
+/* ---------- 7c. the same trap, one screen over ----------------------- *
+ * dashboardContext exposes `ahead.next` built exactly the way the buy
+ * screen's sentence was. Nothing renders it yet, which is precisely why
+ * it is worth pinning: it is a loaded gun for whoever writes the first
+ * renderer, and by then the fault will look like theirs.
+ */
+{
+  const ctxSrc = extractFunction(src, 'dashboardContext', 'index.html');
+  const nextBlock = (/next: a\.commitments\[0\][\s\S]{0,320}?\)/.exec(ctxSrc) || [''])[0];
+  t.check(/on: a\.commitments\[0\]\.date/.test(nextBlock),
+    '`on` is the day the money must LEAVE — for an overdue payment that is today, never the day behind them it was due');
+  t.check(/overdue: !!a\.commitments\[0\]\.overdue/.test(nextBlock),
+    'and the row says whether it is late, so a reader cannot print a past date as upcoming without choosing to');
+  t.check(!/on: a\.commitments\[0\]\.dueOn/.test(nextBlock),
+    'the field that caused this on the buying screen is not the one keyed as "next"');
 }
 
 /* ---------- 8. one reading, two readers ------------------------------ */
