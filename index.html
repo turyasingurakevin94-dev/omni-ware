@@ -7875,6 +7875,13 @@
       </div>
       <div class="nav-group">
         <div class="nav-section-label">Insight</div>
+        <!-- Deliberately NOT carrying "sales", "orders" or "stock":
+             those words belong to screens named after them, and a
+             keyword outranks nothing but it does compete. -->
+        <button data-tab="day" title="The day — one day as it happened" data-keywords="today yesterday what happened diary journal log back">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 15h3"/></svg>
+          <span class="nav-label">The day</span>
+        </button>
         <button data-tab="manager" title="Manager — the morning meeting" data-keywords="manager meeting plan advice strategy moves run the business mind">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
           <span class="nav-label">Manager</span>
@@ -8654,6 +8661,33 @@
     </section>
 
     <!-- STAFF -->
+    <!-- ONE DAY, WHOLE. Everything here is what the books recorded ON
+         that day; nothing is a live balance, so a Tuesday reads as
+         Tuesday rather than as Tuesday's sales beside this afternoon's
+         debtors. -->
+    <section id="tab-day" style="display:none;">
+      <div class="page-head">
+        <p class="wv-eyebrow" style="margin:0 0 2px;color:var(--ink-soft);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Insight</p>
+        <h1>The day</h1>
+        <p>One day as it happened — who bought, who paid, what moved on the shelf, what the orders did,
+          and the meeting held that morning with what became of each move. Every figure is what the books
+          recorded on the day itself, never how things stand now.</p>
+      </div>
+      <div class="panel">
+        <div class="an-toolbar">
+          <button type="button" class="btn btn-ghost" id="day_prev" title="The day before">← Day before</button>
+          <div class="field" style="min-width:180px;">
+            <label>Day</label>
+            <input type="date" id="day_date">
+          </div>
+          <button type="button" class="btn btn-ghost" id="day_next" title="The day after">Day after →</button>
+          <button type="button" class="btn btn-ghost" id="day_today">Today</button>
+        </div>
+      </div>
+      <div id="dayBody"></div>
+      <div id="dayMeetingWrap"></div>
+    </section>
+
     <section id="tab-manager" style="display:none;">
       <div class="page-head">
         <p class="wv-eyebrow" style="margin:0 0 2px;color:var(--ink-soft);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Insight</p>
@@ -16882,6 +16916,10 @@ function goToTab(tab){
   if(tab==='analytics-purchase') renderPurchaseAnalytics();
   if(tab==='analytics-debtors') renderDebtorsList();
   if(tab==='analytics-creditors') renderCreditorsList();
+  /* Opens on today unless the owner has already walked back to a day --
+     coming back to the screen you left should show the day you left it
+     on, not silently jump to now. */
+  if(tab==='day') dayGo(dayShown || todayISO());
 }
 
 tabButtons.forEach(btn=>{
@@ -16889,6 +16927,18 @@ tabButtons.forEach(btn=>{
     goToTab(btn.dataset.tab);
   });
 });
+
+/* Walking the days. The arrows move one day; the box takes any day.
+   Nothing here is bounded to the past -- a day ahead simply has nothing
+   in it, and says so, which is a truer answer than a disabled button. */
+{
+  const on = (id, fn)=>{ const el = document.getElementById(id); if(el) el.addEventListener('click', fn); };
+  on('day_prev', ()=> dayGo(anShiftDate(dayShown || todayISO(), -1)));
+  on('day_next', ()=> dayGo(anShiftDate(dayShown || todayISO(), 1)));
+  on('day_today', ()=> dayGo(todayISO()));
+  const box = document.getElementById('day_date');
+  if(box) box.addEventListener('change', ()=> dayGo(box.value || todayISO()));
+}
 
 /* ---------------- Instructions on demand ----------------
 
@@ -55192,6 +55242,7 @@ async function runManagerMeeting(){
      by the person who made the plan. */
   apMode = 'manager';
   assistantThread = [];
+  apDaySeeded = false;
   apLastPlan = null;
   managerCommittedPlan = null;
   apCutOffThisSitting = false;
@@ -55237,6 +55288,7 @@ async function runManagerReview(){
      the mode selects the rulebook. */
   apMode = 'manager-review';
   assistantThread = [];
+  apDaySeeded = false;
   apLastReview = null;
   apCutOffThisSitting = false;
   renderManager();
@@ -55709,6 +55761,252 @@ function renderManager(){
         : '';
     });
   });
+}
+
+/* ================== ONE DAY, AS IT HAPPENED =========================
+
+   Every record in this app carries a date and nothing ever read a day
+   ACROSS them, so a shop that wanted to look back at last Tuesday had
+   to piece it together from four screens.
+
+   AS AT THAT DAY, NEVER AS AT NOW. This is the one law that separates
+   looking back from being briefed. morningBriefData mixes in debts and
+   follow-ups as they stand TODAY, and says so -- right for a morning
+   briefing, and quietly wrong under a heading that says Tuesday, where
+   it would show this afternoon's debtors as though they were hers.
+   Nothing here reads a live balance: every figure is what the books
+   recorded on the day itself.
+
+   IN NAMES, NOT IN TOTALS. The totals already exist on four other
+   screens. What was missing is who came, who paid, what moved. */
+const DAY_ROWS = 8;
+function dayRecord(dateISO){
+  const day = String(dateISO || todayISO()).slice(0, 10);
+
+  /* Sold: the statements' own accrual definition, so the day and the
+     month can never disagree about what a sale was. */
+  const invoices = anInvoicesInRange(day, day);
+  const tot = anOverallTotals(invoices);
+  const byClient = new Map();
+  invoices.forEach(q=>{
+    const name = ((q.client && q.client.name) || '').trim() || 'Walk-in';
+    const cur = byClient.get(name) || { name, orders: 0, total: 0 };
+    cur.orders += 1; cur.total += savedQuoteTotal(q);
+    byClient.set(name, cur);
+  });
+  const clients = [...byClient.values()]
+    .map(c=> ({ ...c, total: Math.round(c.total) }))
+    .sort((a, b)=> b.total - a.total);
+
+  /* Paid: through debtCollectionsOn and nowhere else. The cashTxnId law
+     -- an invoice sync's echo row is bookkeeping and not money -- lives
+     inside it, and a second reading of debtLog here would be a second
+     chance to get that wrong. */
+  const col = debtCollectionsOn(day);
+
+  /* Cash: from the txns themselves. NOT through cbDayPosition, which
+     calls getDayRecord and CREATES a day row when one is missing -- a
+     screen somebody is merely looking at must not write a day into the
+     cash book as a side effect of being rendered. credCashOnHand
+     records the same trap for the same reason. */
+  let cashIn = 0, cashOut = 0, cashCount = 0;
+  (data.cashTxns || []).forEach(t=>{
+    if(!t || String(t.date || '').slice(0, 10) !== day) return;
+    cashCount += 1;
+    const amt = Number(t.amount) || 0;
+    if(cashIsMoneyIn(t)) cashIn += amt; else cashOut += amt;
+  });
+
+  /* The shelf. A count is neither a delivery nor a sale and is kept
+     apart: it is the shop correcting its own record, which is a
+     different fact about the day. */
+  const inRows = [], outRows = [], countRows = [], ranOut = [];
+  (data.stockLog || []).forEach(l=>{
+    if(!l || String(l.date || '').slice(0, 10) !== day) return;
+    const delta = Number(l.delta) || 0;
+    const after = Number(l.qtyAfter) || 0;
+    const row = { key: l.key, line: l.label || l.key, delta: Math.round(delta),
+      left: Math.round(after), note: l.note || '' };
+    if(l.type === 'count') countRows.push(row);
+    else if(delta > 0) inRows.push(row);
+    else if(delta < 0) outRows.push(row);
+    /* Crossed to nothing on this day -- the same test the morning brief
+       makes, so the two can never disagree about what ran out. */
+    if(delta < 0 && after <= 0 && (after - delta) > 0) ranOut.push(row);
+  });
+
+  /* Orders that moved on this day, by the stamp the board itself keeps.
+     A stage limit is about time, so the stamp is a moment; the day is
+     the first ten characters of it. */
+  const moved = [], completed = [];
+  (data.savedQuotes || []).forEach(q=>{
+    if(!q || q.voided) return;
+    const at = String(q.stageEnteredAt || '').slice(0, 10);
+    if(at !== day) return;
+    const row = { id: q.id, client: (q.client && q.client.name) || 'Walk-in',
+      stage: (SQ_STATUSES[q.status] && SQ_STATUSES[q.status].label) || q.status };
+    if(q.status === 'completed') completed.push(row); else moved.push(row);
+  });
+
+  /* Days a customer named, on the day they named them. */
+  const promises = (data.paymentPromises || [])
+    .filter(p=> String(p.madeOn || '').slice(0, 10) === day)
+    .map(p=>{
+      const c = (data.customers || []).find(x=> String(x.id) === String(p.customerId));
+      return { name: c ? c.name : '(customer no longer on file)',
+        said: p.promisedOn, amount: p.amount == null ? null : Math.round(p.amount) };
+    });
+
+  const sold = { count: tot.count, total: Math.round(tot.sales),
+    profit: Math.round(tot.profit), estimated: (tot.estimatedQty || 0) > 0,
+    clients: clients.slice(0, DAY_ROWS), clientCount: clients.length };
+
+  /* A DAY WITH NOTHING IN IT SAYS SO. Padding an empty Tuesday is how a
+     screen teaches the eye to skip it on a busy one. */
+  const quiet = !sold.count && !col.count && !inRows.length && !outRows.length
+    && !countRows.length && !moved.length && !completed.length
+    && !promises.length && !cashCount;
+
+  return { date: day, quiet, sold,
+    paid: { count: col.count, total: col.total, rows: col.rows.slice(0, DAY_ROWS) },
+    stock: { in: inRows.slice(0, DAY_ROWS), out: outRows.slice(0, DAY_ROWS),
+      counted: countRows.slice(0, DAY_ROWS), ranOut,
+      inCount: inRows.length, outCount: outRows.length, countedCount: countRows.length },
+    orders: { moved: moved.slice(0, DAY_ROWS), completed: completed.slice(0, DAY_ROWS),
+      movedCount: moved.length, completedCount: completed.length },
+    cash: { in: Math.round(cashIn), out: Math.round(cashOut), entries: cashCount },
+    promises: promises.slice(0, DAY_ROWS), promiseCount: promises.length };
+}
+
+/* The day on screen. Everything above is derived; this only draws it,
+   and the meeting is filled in when the journal answers -- the same
+   two-speed pattern renderManager uses, because the books are in memory
+   and the journal is a round trip. */
+let dayShown = null;
+function dayGo(iso){
+  dayShown = String(iso || todayISO()).slice(0, 10);
+  const el = document.getElementById('day_date');
+  if(el && document.activeElement !== el) el.value = dayShown;
+  renderDay();
+}
+
+function renderDay(){
+  const body = document.getElementById('dayBody');
+  if(!body) return;
+  const day = dayShown || todayISO();
+  const d = dayRecord(day);
+  const f = (n)=> fmtUGX(Math.round(n));
+  const today = todayISO();
+  const when = day === today ? 'Today' : day === anShiftDate(today, -1) ? 'Yesterday' : fmtShortDate(day);
+
+  if(d.quiet){
+    body.innerHTML = `<div class="panel"><div class="pw-empty">
+      <b>Nothing was recorded on ${esc(when)}.</b>
+      <span>No sale, no payment, no stock movement and no cash entry carries this date.
+        ${day > today ? 'It has not happened yet.' : 'Either the shop was shut, or the day never reached the books.'}</span>
+    </div></div>`;
+    renderDayMeeting(day);
+    return;
+  }
+
+  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
+    <div class="sum-value">${esc(String(v))}</div><div class="sum-label">${esc(label)}</div></div>`;
+  const rows = (title, sub, list)=> list.length ? `<div class="pw-tail"><h4>${esc(title)}</h4>${
+    sub ? `<div class="ah-sub">${sub}</div>` : ''}<div class="ah-rows">${list.join('')}</div></div>` : '';
+  const row = (left, mid, right, tail)=> `<div class="ah-row">
+    <span class="ah-when">${left}</span>
+    <span class="ah-what">${mid}</span>
+    <span class="ah-amt">${right}</span>
+    <span class="ah-left">${tail || ''}</span></div>`;
+  const more = (shown, total, noun)=> total > shown
+    ? `<p class="pp-more">${total - shown} more ${esc(noun)} not listed.</p>` : '';
+
+  let html = `<div class="panel">
+    <div class="mgr-sec-title">${esc(when)}${day === today ? '' : ' — ' + esc(fmtShortDate(day))}</div>
+    <div class="sum-strip">
+      ${cell(f(d.sold.total), d.sold.count === 1 ? '1 sale' : d.sold.count + ' sales')}
+      ${cell(f(d.sold.profit), 'gross profit' + (d.sold.estimated ? ' *' : ''))}
+      ${cell(f(d.paid.total), d.paid.count === 1 ? '1 person paid' : d.paid.count + ' people paid')}
+      ${cell(f(d.cash.in - d.cash.out), 'through the till')}
+    </div>
+    ${d.sold.estimated ? `<p class="pp-more">* part of that profit was costed by estimate, so it is a good figure rather than a certain one.</p>` : ''}
+  </div>`;
+
+  html += `<div class="panel">`;
+
+  html += rows('Who bought', '', d.sold.clients.map(c=>
+    row('', esc(c.name) + ` <span class="ah-kind">${c.orders === 1 ? '1 order' : c.orders + ' orders'}</span>`, f(c.total), '')))
+    + more(d.sold.clients.length, d.sold.clientCount, 'buyers');
+
+  html += rows('Who paid', 'Money that arrived — not the bookkeeping that follows an invoice.',
+    d.paid.rows.map(p=> row('', esc(p.name), f(p.amount), '')))
+    + more(d.paid.rows.length, d.paid.count, 'payers');
+
+  html += rows('What came in', '', d.stock.in.map(s=>
+    row('', esc(s.line) + (s.note ? ` <span class="ah-kind">${esc(s.note)}</span>` : ''),
+      '+' + s.delta, s.left + ' on the shelf')))
+    + more(d.stock.in.length, d.stock.inCount, 'deliveries');
+
+  html += rows('What went out', '', d.stock.out.map(s=>
+    row('', esc(s.line) + (s.note ? ` <span class="ah-kind">${esc(s.note)}</span>` : ''),
+      String(s.delta), s.left + ' left')))
+    + more(d.stock.out.length, d.stock.outCount, 'movements');
+
+  html += rows('Counted', 'The shop correcting its own record — neither a delivery nor a sale.',
+    d.stock.counted.map(s=> row('', esc(s.line), String(s.delta > 0 ? '+' + s.delta : s.delta), s.left + ' counted')))
+    + more(d.stock.counted.length, d.stock.countedCount, 'counts');
+
+  if(d.stock.ranOut.length) html += `<p class="pp-more"><b>Ran out on this day:</b> ${
+    d.stock.ranOut.map(s=> esc(s.line)).join(', ')}.</p>`;
+
+  html += rows('Orders that moved', '', d.orders.moved.map(o=>
+    row('', esc(o.client), '', '<span class="ah-kind">' + esc(o.stage) + '</span>')))
+    + more(d.orders.moved.length, d.orders.movedCount, 'orders');
+
+  html += rows('Finished', '', d.orders.completed.map(o=>
+    row('', esc(o.client), '', '<span class="ah-kind">' + esc(o.stage) + '</span>')))
+    + more(d.orders.completed.length, d.orders.completedCount, 'orders');
+
+  html += rows('Days named', 'What a customer said, on the day they said it.',
+    d.promises.map(p=> row(esc(fmtShortDate(p.said)), esc(p.name),
+      p.amount == null ? '<i>the whole balance</i>' : f(p.amount), '')))
+    + more(d.promises.length, d.promiseCount, 'promises');
+
+  if(d.cash.entries) html += `<p class="pp-more">${d.cash.entries} cash ${
+    d.cash.entries === 1 ? 'entry' : 'entries'} on this day: ${f(d.cash.in)} in, ${f(d.cash.out)} out.</p>`;
+
+  html += `</div>`;
+  body.innerHTML = html;
+  renderDayMeeting(day);
+}
+
+/* The meeting held that morning, and what became of each move. Read
+   from the journal rather than remembered, and ordered by id -- which
+   is the order the manager ranked them in. */
+async function renderDayMeeting(day){
+  const wrap = document.getElementById('dayMeetingWrap');
+  if(!wrap) return;
+  if(!managerNotesTable){ wrap.innerHTML = ''; return; }
+  const meetR = await sb.from('manager_notes').select('id, date, body')
+    .eq('shop_id', currentShopId).eq('kind', 'meeting').eq('date', day)
+    .order('id', { ascending: false }).limit(1);
+  if(meetR.error || !(meetR.data || []).length){ wrap.innerHTML = ''; return; }
+  /* The day may have moved on while the journal was answering. */
+  if((dayShown || todayISO()) !== day) return;
+  const meeting = meetR.data[0];
+  const movesR = await sb.from('manager_notes').select('id, meeting_id, date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'move').eq('meeting_id', meeting.id)
+    .order('id', { ascending: true });
+  if((dayShown || todayISO()) !== day) return;
+  const moves = (movesR.error ? [] : (movesR.data || []));
+  const b = meeting.body || {};
+  wrap.innerHTML = `<div class="panel">
+    <div class="mgr-sec-title">The meeting that morning</div>
+    ${MANAGER_OBJECTIVES[b.objective] ? `<div class="mgr-objective"><b>${esc(MANAGER_OBJECTIVES[b.objective])}.</b> ${esc(b.objectiveWhy || '')}</div>` : ''}
+    ${b.keyline ? `<div class="mgr-keyline"><b>The one thing:</b> ${esc(b.keyline)}</div>` : ''}
+    ${mgrMoveOrder(moves).map((r, i)=> mgrMoveView(r, i, moves)).join('')}
+    ${b.rejected ? `<div class="mgr-why" style="margin-top:2px;">Considered and rejected: ${esc(b.rejected)}</div>` : ''}
+  </div>`;
 }
 
 function morningBriefData(dateISO, nowMs){
@@ -60419,6 +60717,9 @@ let assistantThread = [];
    who made it, rather than with somebody who has never seen it. A new
    meeting resets the thread; closing the panel does not. */
 let apMode = null;
+/* Whether this thread has already been handed the day. Reset wherever
+   the thread is, so a fresh conversation is told afresh. */
+let apDaySeeded = false;
 // The last [plan:] block a manager turn carried, parsed. Stashed by the
 // renderer (which strips it from the screen) and read by the meeting
 // runner once the loop settles.
@@ -62903,12 +63204,85 @@ function apToolResultText(result){
   return (typeof text === 'string' && text.length) ? text : '{"ok":true}';
 }
 
+/* WHAT THE DAY HAS DONE SO FAR, in one line, for the first question of
+   a thread.
+
+   The thread is an array in memory. Within one sitting it carries the
+   morning -- a meeting leaves the panel in manager mode deliberately,
+   so follow-ups are answered by the mind that made the plan. Reload the
+   page, or come back after the tablet slept, and it is gone: at four in
+   the afternoon the assistant knew nothing about eight in the morning.
+
+   Persisting the conversation would be the wrong repair -- stale turns
+   are noise and every one of them is re-sent. What is needed is not the
+   conversation but the DAY, which is on record either way. So the first
+   question of a thread carries it: today's keyline, the moves still
+   open, and one sentence of what the books have done.
+
+   Empty when there is nothing to say, so a quiet morning costs nothing.
+   It rides inside the user turn, after the cached system prefix, the
+   same way the date already does. */
+const DAY_THREAD_MAX = 600;
+async function dayThreadLine(){
+  const today = todayISO();
+  const bits = [];
+  if(managerNotesTable){
+    try{
+      const meetR = await sb.from('manager_notes').select('id, body')
+        .eq('shop_id', currentShopId).eq('kind', 'meeting').eq('date', today)
+        .order('id', { ascending: false }).limit(1);
+      const meeting = (meetR.error ? [] : (meetR.data || []))[0];
+      if(meeting){
+        const key = String((meeting.body || {}).keyline || '').trim();
+        if(key) bits.push('This morning you agreed: ' + key);
+        const movesR = await sb.from('manager_notes').select('id, body, status')
+          .eq('shop_id', currentShopId).eq('kind', 'move').eq('meeting_id', meeting.id)
+          .order('id', { ascending: true });
+        const moves = (movesR.error ? [] : (movesR.data || []));
+        /* Open means open. A move the owner marked done or skipped is
+           not still waiting on them, and saying it is would be the one
+           thing this line must never do. */
+        const open = moves.filter(m=> (m.status || 'open') === 'open')
+          .map(m=> String((m.body || {}).title || '').trim()).filter(Boolean);
+        if(open.length) bits.push('Still not done: ' + open.slice(0, 4).join('; ') + '.');
+        else if(moves.length) bits.push('Every move from it is settled.');
+      }
+    } catch(e){ /* The journal is a convenience here, never a gate. */ }
+  }
+  const d = dayRecord(today);
+  if(!d.quiet){
+    const said = [];
+    if(d.sold.count) said.push(d.sold.count + (d.sold.count === 1 ? ' sale' : ' sales')
+      + ' worth ' + fmtUGX(d.sold.total));
+    if(d.paid.count) said.push(fmtUGX(d.paid.total) + ' collected from '
+      + d.paid.rows.slice(0, 2).map(p=> p.name).join(' and ')
+      + (d.paid.count > 2 ? ' and others' : ''));
+    if(d.stock.ranOut.length) said.push('ran out of ' + d.stock.ranOut.slice(0, 2).map(s=> s.line).join(' and '));
+    if(said.length) bits.push('So far today: ' + said.join(', ') + '.');
+  }
+  return bits.join(' ').slice(0, DAY_THREAD_MAX);
+}
+
 async function apRunLoop(){
   assistantBusy = true;
   document.getElementById('apSendBtn').disabled = true;
   apSetState('thinking');
   let finalText = '';
   try{
+    /* Once per thread, and never in manager mode: a meeting reads all of
+       this through its own tools and would be told it twice. */
+    if(!apDaySeeded && apMode !== 'manager' && assistantThread.length === 1){
+      apDaySeeded = true;
+      const line = await dayThreadLine();
+      const turn = assistantThread[0];
+      if(line && turn && turn.role === 'user'){
+        if(typeof turn.content === 'string') turn.content = '[' + line + ']\n' + turn.content;
+        else if(Array.isArray(turn.content)){
+          const text = turn.content.find(x=> x && x.type === 'text');
+          if(text) text.text = '[' + line + ']\n' + text.text;
+        }
+      }
+    }
     for(let step=0; step<AP_MAX_STEPS; step++){
       const resp = await apCallServer();
       if(!resp) return;
@@ -63156,6 +63530,7 @@ document.getElementById('assistantOpenBtnMobile').addEventListener('click', apTo
 document.getElementById('apCloseBtn').addEventListener('click', apClosePanel);
 document.getElementById('apNewChatBtn').addEventListener('click', ()=>{
   assistantThread = [];
+  apDaySeeded = false;
   apLogEl().innerHTML = '';
   apRenderWelcome();
 });
