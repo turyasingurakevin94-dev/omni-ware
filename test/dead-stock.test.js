@@ -330,6 +330,16 @@ if (scope) {
   const badge = extractFunction(src, 'renderClearanceBadge', 'index.html');
   t.check(/deadStockRows\(\)/.test(badge),
     'the rail badge counts from the same reading, so the number and the list cannot disagree');
+  /* WHAT IS DEAD, NOT WHAT IS DEALT WITH. It counted lines the owner had
+     MARKED and read "1" beside a shelf holding 22 dead lines worth
+     5,310,000 — the one place that could have said money was sitting
+     still instead reported one small errand. Every other badge on the
+     rail counts work WAITING: debtors owing, lines under target,
+     debtors to chase. */
+  t.check(!/r\.clearance != null/.test(badge),
+    'and it counts what is DEAD, not what the owner has already marked — every other badge on the rail counts work waiting');
+  t.check(/'line\(s\) sitting dead'/.test(badge),
+    'and its tooltip says which of the two it is counting');
 
   const at = src.indexOf('dead_stock: (()=>{');
   const pulse = src.slice(at, at + 1400);
