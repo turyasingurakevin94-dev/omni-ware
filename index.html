@@ -17300,21 +17300,39 @@ async function waRenderBroadcasts(){
 document.getElementById('wa_bc_refresh').addEventListener('click', ()=> waRenderBroadcasts());
 
 /* ---------------- Tabs ---------------- */
-const tabButtons = document.querySelectorAll('nav button[data-tab]');
+/* THE RAIL IS READ WHEN IT IS USED, NOT WHEN THE PAGE IS PARSED.
+
+   This was `const tabButtons = document.querySelectorAll(...)`: a
+   STATIC list, taken once, at parse time. querySelectorAll does not
+   return a live collection, so a nav row created, moved or replaced
+   after that one line ran was invisible to it forever -- it would never
+   gain the active class and it would never navigate, both in complete
+   silence. Nothing in the app rebuilt a nav row, so nothing broke,
+   which is exactly why this is worth fixing BEFORE something does.
+
+   The phone's More sheet already worked this way and states the law in
+   its own comment: "a listener bound to the markup that was there at
+   parse time would be bound to nothing." Same law, now on the rail.
+
+   The selector is unchanged, so this matches the same buttons it always
+   did -- the sidebar's rows and the phone's bottom bar, both of which
+   are <nav> elements on purpose. */
+function tabButtonsNow(){ return document.querySelectorAll('nav button[data-tab]'); }
 // The five flyout containers are gone with the regroup -- every
 // destination is a button in a job section now, so the active state lives
-// on the button itself and tabButtons already manages it.
+// on the button itself and the query above already manages it.
 
 let currentActiveTab = 'quote';
 function goToTab(tab){
   currentActiveTab = tab;
   lsSet('pbLastTab', tab);
-  tabButtons.forEach(b=>b.classList.remove('active'));
+  const navButtons = tabButtonsNow();
+  navButtons.forEach(b=>b.classList.remove('active'));
   // filter, not find. A destination now has up to three buttons -- the top
   // bar's menu, the sidebar rail, and the phone's sheet -- and `find`
   // lit only whichever appeared first in the document, so the sidebar
   // showed no active row for anything the top bar also carried.
-  [...tabButtons].filter(b=>b.dataset.tab===tab).forEach(b=>b.classList.add('active'));
+  [...navButtons].filter(b=>b.dataset.tab===tab).forEach(b=>b.classList.add('active'));
   updateTopbarWhere(tab);
   /* The rail is taller than the viewport, so the row that just became
      the active one can easily be off-screen -- which is how a nav that
@@ -17381,10 +17399,18 @@ function goToTab(tab){
   if(tab==='day') dayGo(dayShown || todayISO());
 }
 
-tabButtons.forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    goToTab(btn.dataset.tab);
-  });
+/* ONE delegated listener rather than forty-five bound ones. Same
+   selector, so it reaches exactly the same buttons -- and it keeps
+   reaching them after the rail is rebuilt, which a listener bound to a
+   button that no longer exists does not.
+
+   Nothing between a nav row and the document stops propagation: the
+   three handlers that do (the instruction bubble, the top bar's menu
+   heading, the nav search's Escape) sit on other elements entirely. */
+document.addEventListener('click', (e)=>{
+  const t = e.target;
+  const btn = t && t.closest ? t.closest('nav button[data-tab]') : null;
+  if(btn) goToTab(btn.dataset.tab);
 });
 
 /* Walking the days. The arrows move one day; the box takes any day.
@@ -17724,7 +17750,7 @@ tbGroups.forEach(g=>{
     if(!wasOpen){ g.classList.add('open'); top.setAttribute('aria-expanded', 'true'); }
   });
   // Picking something closes the menu it was picked from. The click that
-  // navigates has already been handled by tabButtons above, or by the
+  // navigates has already been handled by the delegated nav listener, or by the
   // action buttons' own listeners.
   g.querySelector('.tb-menu').addEventListener('click', ()=>{
     g.classList.remove('open');
@@ -17933,7 +17959,7 @@ document.getElementById('tbSignoutBtn').addEventListener('click', ()=>{
 
 /* ---------------- Mobile shell ----------------
    Bottom-nav's 4 tab buttons live inside a <nav>, so they're already part
-   of `tabButtons` above and need no extra wiring. What's left: the topbar
+   of the delegated nav handler above and need no extra wiring. What's left: the topbar
    title, the FAB, and the "More" sheet covering every other destination. */
 /* THE PHONE'S TITLE BAR, and a regression this went out with.
 
