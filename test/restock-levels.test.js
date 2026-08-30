@@ -108,7 +108,8 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'supplierLeadTimes', 'supplierLeadDays', 'reorderRuleFor', 'setReorderRule',
-    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
+    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineMerge',
+    'buyLineReason', 'buyLineAlsoReason',
     'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted', 'purchasePlan',
     'buyKeptPct', 'buyHoldFor',
   ].map((n) => extractFunction(src, n, 'index.html'))

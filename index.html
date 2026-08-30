@@ -53844,6 +53844,49 @@ function buyLineFor(r, needUnits, kind){
     unitCost: Math.round(unitCost), cost: Math.round(buyQty * unitCost) };
 }
 
+/* ONE PRODUCT, ONE DECISION.
+
+   From the owner's own screen: ABC Black Screws stood on the plan
+   twice. It had sold off the shelf and run out -- a refill, 20 Box,
+   210,000 -- and it had been bought in for seven separate orders that
+   month and never held -- worth stocking, 240 Box, 2,520,000. Two
+   arguments, both true, about one product from one supplier.
+
+   But it is ONE decision: how many do I buy from ABC. Ordering the 240
+   covers the 20. Showing both leaves the owner to notice that
+   themselves, and the buying basket -- which can tick both -- would
+   cheerfully raise an order for 2,730,000 worth of goods the shop
+   wanted 2,520,000 of.
+
+   THE BIGGER QUANTITY WINS, and it is re-read at that quantity rather
+   than assumed: the cheapest supplier at 240 is not always the cheapest
+   at 20, and the line that survives is the one actually costed at what
+   is being bought. Bigger is not automatic -- a shop that sells mostly
+   off its own shelf can need more for the shelf than it has ever bought
+   in -- so the comparison is made, never presumed.
+
+   NEITHER ARGUMENT IS LOST. The row carries the case it did not keep,
+   and the sentence says both, because a merged row that reads as one
+   thing has quietly thrown away half the reason to buy it. */
+function buyLineMerge(a, b){
+  const keep = (a.buyQty >= b.buyQty) ? a : b;
+  const drop = (keep === a) ? b : a;
+  keep.alsoKind = drop.kind;
+  keep.alsoQty = drop.buyQty;
+  keep.alsoUnits30 = drop.units30;
+  keep.alsoOrders30 = drop.orders30;
+  keep.alsoSupplier = drop.supplier;
+  /* THE MORE URGENT TRUTH TRAVELS. A stocking line knows nothing about
+     the shelf, so a merge that kept only its own figures would drop
+     "the shelf is empty" -- the one fact on this row with a deadline
+     attached to it, and the one that decides the chip. */
+  if(keep.daysLeft == null && drop.daysLeft != null) keep.daysLeft = drop.daysLeft;
+  if(drop.belowFloor){ keep.belowFloor = true; keep.floor = drop.floor; }
+  if(keep.leadDays == null && drop.leadDays != null) keep.leadDays = drop.leadDays;
+  if(keep.coverDays == null && drop.coverDays != null) keep.coverDays = drop.coverDays;
+  return keep;
+}
+
 /* WHAT SHARE OF THE SALE THE SHOP ACTUALLY KEPT, over the same thirty
    days the rest of the row is drawn from.
 
@@ -53889,12 +53932,13 @@ function buyLineReason(l){
     /* No saving is claimed on a half-recorded cost history: `allPriced`
        is false the moment one of those buy-ins went in without a price,
        and arithmetic against a blank flatters itself every time. */
+    const also = buyLineAlsoReason(l);
     if(!l.allPriced || !(l.paid30 > 0) || l.bulkCost == null)
-      return head + ' Some of those buys carry no price, so what one buy would have saved cannot be worked out.';
+      return head + ' Some of those buys carry no price, so what one buy would have saved cannot be worked out.' + also;
     const saved = Math.round(l.paid30 - l.bulkCost);
     if(!(saved > 0))
-      return head + ` Buying the month's ${l.units30} in one go from ${l.supplier} costs about the same, so the gain is the trips saved and being able to serve from stock.`;
-    return head + ` The same ${l.units30} bought once from ${l.supplier} is ${money(saved)} less than was paid across those buys — the cash sits in stock instead.`;
+      return head + ` Buying the month's ${l.units30} in one go from ${l.supplier} costs about the same, so the gain is the trips saved and being able to serve from stock.` + also;
+    return head + ` The same ${l.units30} bought once from ${l.supplier} is ${money(saved)} less than was paid across those buys — the cash sits in stock instead.` + also;
   }
   /* A pace is rounded to a tenth, not to a whole: 2.5 a day reported as
      "about 3" is a fifth more than the shelf actually sells. */
@@ -53914,7 +53958,20 @@ function buyLineReason(l){
      14 days from a supplier who takes 9 is 5 days of shelf, and the line
      is bought big enough to say so. */
   const wait = l.leadDays ? ` ${l.supplier} has taken about ${days(l.leadDays)} to deliver, so this covers the wait as well as the ${days(l.coverDays)}.` : '';
-  return `Sold ${pace} off the shelf across ${orders(l.orders30)}${earned}. ${shelf}${floor}${wait}`;
+  return `Sold ${pace} off the shelf across ${orders(l.orders30)}${earned}. ${shelf}${floor}${wait}${buyLineAlsoReason(l)}`;
+}
+
+/* The half of the argument the merge did not keep. Said in one sentence
+   on the row that kept the other half, so a line standing on two cases
+   still reads as two cases -- a merged row that argues only one of them
+   has thrown away half the reason to buy it. */
+function buyLineAlsoReason(l){
+  if(!l || !l.alsoKind) return '';
+  if(l.alsoKind === 'stock')
+    return ` It is also bought in for ${l.alsoOrders30} ${l.alsoOrders30 === 1 ? 'order' : 'orders'} a month`
+      + ` and never held — ${l.buyQty} covers both, so this is one buy instead of the refill and those trips.`;
+  return ` The shelf is empty too` + (l.alsoQty ? ` and wanted ${l.alsoQty} ${l.unit || 'pc'} of its own` : '')
+    + `, so this one buy answers both.`;
 }
 
 /* The same argument, to be SCANNED rather than read.
@@ -53964,6 +54021,11 @@ function buyLineFacts(l){
     if(l.units30 > 0) out.push({ v: `${l.units30}${l.unit ? ' ' + l.unit : ''}`, label: 'bought in' });
     if(l.paid30 > 0) out.push({ v: money(l.paid30), label: 'paid across them' });
     if(kept()) out.push(kept());
+    /* A merged line has a shelf, and it is empty. A stocking row that
+       never held anything has nothing to say here -- but one that ALSO
+       ran out is the row where "0 on the shelf" is the whole urgency,
+       and leaving it off put the figures out of step with the chip. */
+    if(l.alsoKind === 'refill') out.push({ v: Math.round(l.held), label: 'on the shelf', cls: 'bad' });
     // Only where every one of those buy-ins carried a price. Arithmetic
     // against a blank flatters itself every time.
     const saved = (l.allPriced && l.paid30 > 0 && l.bulkCost != null)
@@ -53992,21 +54054,28 @@ function buyLineFacts(l){
    short because the numbers have left it. */
 function buyLineWhy(l){
   const days = (n)=> `${n} ${n === 1 ? 'day' : 'days'}`;
+  /* THE CASE THE MERGE DID NOT KEEP, on the sentence the SCREEN shows.
+
+     buyLineReason carries it too, but that one is spoken text for the
+     assistant -- the card renders this. Adding the tail to only one of
+     them is how a merge that was built, tested and correct still read
+     on screen as though half of it had never happened. */
+  const also = buyLineAlsoReason(l);
   if(l.kind === 'stock'){
     const head = 'Bought in order after order and never held here.';
     if(!l.allPriced || !(l.paid30 > 0) || l.bulkCost == null)
-      return head + ' Some of those buys carry no price, so the saving cannot be worked out.';
-    return Math.round(l.paid30 - l.bulkCost) > 0
+      return head + ' Some of those buys carry no price, so the saving cannot be worked out.' + also;
+    return (Math.round(l.paid30 - l.bulkCost) > 0
       ? head + ' Buying the month in one go costs less than those trips did — the cash sits in stock instead.'
-      : head + ' One buy costs about the same, so the gain is the trips saved and being able to serve from stock.';
+      : head + ' One buy costs about the same, so the gain is the trips saved and being able to serve from stock.') + also;
   }
   const floor = l.belowFloor ? ` That is under the ${l.floor} you asked to always keep.` : '';
-  if(l.held <= 0) return `Nothing left to sell.${floor} This puts ${days(l.coverDays)} of selling back on the shelf${l.leadDays ? ', and covers their wait' : ''}.`;
+  if(l.held <= 0) return `Nothing left to sell.${floor} This puts ${days(l.coverDays)} of selling back on the shelf${l.leadDays ? ', and covers their wait' : ''}.` + also;
   const left = Math.max(0, Math.floor(l.daysLeft));
   return `Runs out in ${left < 1 ? 'under a day' : 'about ' + days(left)}.${floor} `
     + (l.leadDays
       ? `They take about ${days(l.leadDays)} to deliver, so this covers the wait as well as ${days(l.coverDays)} of selling.`
-      : `This buys ${days(l.coverDays)} of selling.`);
+      : `This buys ${days(l.coverDays)} of selling.`) + also;
 }
 
 /* The plan itself. Deterministic and explainable:
@@ -54109,6 +54178,35 @@ function purchasePlan(budget, coverDays, dateISO){
     line.bulkCost = Math.round(r.units30 * line.unitCost);
     candidates.push(line);
   });
+  /* ONE PRODUCT, ONE DECISION — before the ranking, so a merged line is
+     ranked once on the figures it will actually be bought at.
+
+     The two readings can BOTH fire for one key: it sold off the shelf
+     and ran out, and it has been bought in order after order. The
+     screen showed both rows, which is two prices for one shelf and one
+     supplier, and let the owner order both. */
+  const byKey = new Map();
+  const oneEach = [];
+  candidates.forEach(l=>{
+    const k = String(l.key);
+    const prev = byKey.get(k);
+    if(!prev){ byKey.set(k, l); oneEach.push(l); return; }
+    const win = buyLineMerge(prev, l);
+    if(win !== prev){ oneEach[oneEach.indexOf(prev)] = win; byKey.set(k, win); }
+  });
+  /* A line still being recommended is not a line "covered by an order
+     already out". One reading can cover the refill while the other
+     still wants goods, and printing both would have the screen saying
+     the same product is handled and unhandled in the same breath. */
+  for(let i = coming.length - 1; i >= 0; i--) if(byKey.has(String(coming[i].key))) coming.splice(i, 1);
+  /* And a key with no price on file needs saying once, not twice. */
+  const seenNoPrice = new Set();
+  for(let i = noPrice.length - 1; i >= 0; i--){
+    const k = noPrice[i].productId + '::' + (noPrice[i].variantIdx == null ? '' : noPrice[i].variantIdx);
+    if(seenNoPrice.has(k)) noPrice.splice(i, 1); else seenNoPrice.add(k);
+  }
+  candidates.length = 0;
+  oneEach.forEach(l=> candidates.push(l));
   candidates.sort((a,b)=> (b.profit30 - a.profit30)
     || ((a.daysLeft == null ? Infinity : a.daysLeft) - (b.daysLeft == null ? Infinity : b.daysLeft)));
 
@@ -54270,7 +54368,12 @@ function renderPurchasePlanPanel(){
   /* Two kinds, said plainly. A shelf line that has run out is urgent
      and looks it; a repeat buy-in was never held, so calling it "OUT"
      would be the crying wolf that made the first version unreadable. */
-  const chip = (l)=> l.kind === 'stock'
+  /* THE SHELF BEFORE THE KIND. A merged line is a buy-in AND a shelf
+     that has run out, and the chip is the only urgent thing on the row
+     -- reading `kind` first labelled a line with nothing left to sell
+     as a quiet "Buy-in", which is the crying-wolf failure inverted:
+     falling silent on the one row that should be loudest. */
+  const chip = (l)=> (l.daysLeft == null)
     ? '<span class="pp-when">Buy-in</span>'
     : `<span class="pp-when${l.daysLeft <= 0 ? ' out' : (l.daysLeft < 2 ? ' now' : '')}">${
         l.daysLeft <= 0 ? 'Out now' : (l.daysLeft < 1 ? 'Today' : Math.floor(l.daysLeft) + 'd left')}</span>`;
@@ -54680,22 +54783,16 @@ function renderBuyOrderReview(){
     by.get(k).lines.push(l);
   });
   const groups = [...by.values()];
-  /* THE SAME GOODS TWICE. A product that both ran out and is bought in
-     order after order is on the plan twice, and both rows can be
-     ticked -- which is two orders for one shelf, and the larger almost
-     always covers the smaller. Said rather than prevented: a shop that
-     means it knows something the books do not, and this app has never
-     pretended otherwise. */
-  const seen = new Map();
-  lines.forEach(l=> seen.set(String(l.key), (seen.get(String(l.key)) || 0) + 1));
-  const twice = lines.filter(l=> seen.get(String(l.key)) > 1)
-    .map(l=> l.name).filter((n, i, a)=> a.indexOf(n) === i);
-  if(note) note.textContent = (twice.length
-    ? `${twice.join(', ')} ${twice.length === 1 ? 'is' : 'are'} on this order twice — once as a shelf refill and once as a repeat buy-in. The bigger one covers the smaller; drop a quantity to nothing to leave it out. `
-    : '')
-    + (groups.length === 1
-      ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
-      : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`);
+  /* The warning that used to stand here -- "this product is on the
+     order twice" -- is gone, because the thing it warned about is gone:
+     purchasePlan merges the two arguments into one line before the
+     screen ever sees them (see buyLineMerge). A message nothing can
+     reach is clutter for the next reader, and the guard that matters
+     survives where it belongs: every row carries its own id, so an
+     order can only ever be for the row that was ticked. */
+  if(note) note.textContent = groups.length === 1
+    ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
+    : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`;
   wrap.innerHTML = groups.map(g=>{
     const total = g.lines.reduce((n, l)=> n + l.buyQty * l.unitCost, 0);
     const noPhone = !supplierWaNumber(g.supplierId);
