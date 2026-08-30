@@ -143,7 +143,7 @@ const pkg = read('package.json');
 /* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 37, `thirty-seven tools defined (got ${names.length})`);
+  t.check(names.length === 38, `thirty-eight tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
@@ -153,7 +153,7 @@ const pkg = read('package.json');
     'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed', 'recent_invoices',
     'financial_summary', 'recommended_price', 'product_details', 'stock_overview',
     'purchase_plan', 'catalogue_names', 'shop_pulse', 'manager_history', 'week_review_data',
-    'standing_policies', 'month_and_quarter']
+    'standing_policies', 'month_and_quarter', 'invoice_lines']
     .forEach(r => t.check(names.includes(r), `${r} is offered`));
   /* AN ID IS WHATEVER THE BOOKS MINTED. Customer ids are issued as
      C001-style strings (issueEntityId) while the oldest rows are plain
@@ -165,8 +165,10 @@ const pkg = read('package.json');
      asserted here. */
   t.check(!/customer_id: \{ type: 'number' \}/.test(src),
     'no tool demands a NUMBER for a customer id — the books mint text ids like C106');
-  t.check((src.match(/customer_id: \{ type: \['string', 'number'\]/g) || []).length === 3,
-    'all three customer-id tools take the id exactly as the finder returned it, text or number');
+  const customerIdDecls = src.match(/customer_id: \{ type: [^}]*\}/g) || [];
+  t.check(customerIdDecls.length >= 4 && customerIdDecls.every(d => /\['string', 'number'\]/.test(d)),
+    'EVERY customer-id tool takes the id exactly as the finder returned it, text or number '
+    + `(checked ${customerIdDecls.length})`);
   t.check(/product_id: \{ type: 'string' \}/.test(src) && /supplier_id: \{ type: 'string' \}/.test(src),
     'while product and supplier ids stay text, as they always were');
   t.check((src.match(/additionalProperties: false/g) || []).length >= 30,

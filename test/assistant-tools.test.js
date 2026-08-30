@@ -3,8 +3,9 @@
 /*
  * The assistant's hands, on the shop's own controls.
  *
- * ASSISTANT_TOOLS is the executor map behind the chat: thirty-five entries,
- * each backed by the exact function the corresponding button uses. This
+ * ASSISTANT_TOOLS is the executor map behind the chat: one entry per tool
+ * the server offers, each backed by the exact function the corresponding
+ * button uses (the count itself is asserted below, not narrated here). This
  * file compiles the map together with those REAL functions and drives it
  * against fixtures, because the whole promise of the assistant is that
  * it is a second pair of hands on the same controls — never a second
@@ -90,6 +91,7 @@ const scope = compileScope([
   extractDeclaration(src, 'AP_MAX_THREAD', 'index.html'),
   extractDeclaration(src, 'AP_MAX_STEPS', 'index.html'),
   extractDeclaration(src, 'apRound', 'index.html'),
+  extractDeclaration(src, 'AP_INVOICE_LINES_MAX', 'index.html'),
   extractFunction(src, 'apMonthRange', 'index.html'),
   extractFunction(src, 'apCustomerById', 'index.html'),
   /* Explicit because it is a real dependency of every money-moving tool.
@@ -108,6 +110,13 @@ const scope = compileScope([
   extractFunction(src, 'apSameCombo', 'index.html'),
   extractFunction(src, 'apImportParts', 'index.html'),
   extractFunction(src, 'apLastPaymentDate', 'index.html'),
+  /* The lines behind an invoice's total. Their own arithmetic — pricing
+     a line the rule priced, and refusing to value an uncosted one at
+     zero — is guarded in invoice-lines.test.js; what this file owes them
+     is the door: which sale a number reaches, and whose sales come back
+     when a customer is named instead. */
+  extractFunction(src, 'invoiceLineRows', 'index.html'),
+  extractFunction(src, 'invoiceLineReading', 'index.html'),
   ...NAMES.map(n => extractFunction(src, n, 'index.html')),
   'let apQuoteInFlight = false;',
   extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
@@ -158,9 +167,9 @@ const run = (name, input) => T[name].run(input || {});
     'place_buy_order'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
-    'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
+    'recent_invoices', 'invoice_lines', 'financial_summary', 'recommended_price', 'product_details',
     'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies', 'month_and_quarter'];
-  t.check(Object.keys(T).length === 37, `thirty-seven executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 38, `thirty-eight executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -168,7 +177,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 37 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 38 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
   // The three Manager reads join the free side of the ledger.
   t.check(T.shop_pulse && T.shop_pulse.confirm === false, 'shop_pulse answers freely — it reads and nothing more');
@@ -646,6 +655,64 @@ const run = (name, input) => T[name].run(input || {});
   const again = run('add_sourcing_lead', { item_name: 'mulper gold hinges 4 inch' });
   t.check(data.sourcingLeads.length === 1 && again.already_on_queue === true,
     'asking twice does not duplicate — the existing dedup path answers');
+}
+
+/* ---------- 7b. which sale a number reaches --------------------------- */
+{
+  const it = (o) => Object.assign({ productId: 'P2', variantIdx: null, productName: 'Cement',
+    unit: 'Bag', packUnit: '', packQty: 0, qty: 2, supplierId: 'S1', supplierName: 'Karddia',
+    price: 32000, sellPrice: 36000 }, o);
+  const inv = (id, o) => Object.assign({ id, invoiced: true, voided: false,
+    invoicedAt: '2026-08-2' + (id % 10), invoicedTs: id, date: '2026-08-20',
+    client: { name: 'Joan JEZONA' }, customerId: 7, amountPaid: 0, items: [it({})] }, o);
+
+  data.customers = [{ id: 7, name: 'Joan JEZONA', phone: '', debt: 0, debtLog: [] }];
+  data.savedQuotes = [
+    inv(230, { items: [it({ qty: 40 }), it({ productName: 'Nails 4"', qty: 5 })] }),
+    inv(212), inv(182), inv(150), inv(120), inv(99),
+    inv(88, { voided: true }),
+    /* Older sales often carry no customerId at all — they are hers by
+       the name on the paper. customerOrdersFor is the app's own answer
+       to whose orders are whose, and this tool must not have a second. */
+    inv(70, { customerId: null }),
+  ];
+
+  const byLabel = run('invoice_lines', { invoice: 'INV-0230' });
+  t.check(byLabel.invoices.length === 1 && byLabel.invoices[0].invoice === 'INV-0230',
+    'the number as the shop writes it opens the sale');
+  t.check(byLabel.invoices[0].lines.length === 2 && byLabel.invoices[0].lines[0].qty === 40,
+    'and the lines come back — the thing recent_invoices could never answer');
+  ['0230', '230', 230, 'inv-0230'].forEach(v => {
+    t.check(run('invoice_lines', { invoice: v }).invoices[0].invoice === 'INV-0230',
+      `${JSON.stringify(v)} reaches the same sale — a number read off a screen arrives in whatever form it was said`);
+  });
+
+  let threw = '';
+  try { run('invoice_lines', { invoice: 'INV-9999' }); } catch (e) { threw = e.message; }
+  t.check(/recent_invoices|customer_statement/.test(threw),
+    'an unknown number fails by naming the doors that hand out real ones');
+  threw = '';
+  try { run('invoice_lines', {}); } catch (e) { threw = e.message; }
+  t.check(/customer_id/.test(threw), 'and asked about nothing in particular it says what it needs');
+  threw = '';
+  try { run('invoice_lines', { customer_id: 'C999' }); } catch (e) { threw = e.message; }
+  t.check(/find_customer/.test(threw), 'an id nobody owns is refused, not answered emptily');
+
+  const byCustomer = run('invoice_lines', { customer_id: 7 });
+  t.check(byCustomer.invoices.length === 3, 'a customer opens three of her sales by default');
+  t.check(byCustomer.invoices[0].invoice === 'INV-0230', 'newest first');
+  t.check(byCustomer.invoice_count === 7 && byCustomer.older_not_shown === 4,
+    'with how many she has and how many are older — a capped list still says what it capped');
+  t.check(byCustomer.invoices.every(v => v.invoice !== 'INV-0088'),
+    'a cancelled sale is not something she took, so it is not in her list');
+  t.check(run('invoice_lines', { invoice: 88 }).invoices[0].voided === true,
+    'though asked for by number it is found and flagged — the owner asking has a reason to');
+  t.check(byCustomer.invoice_count === 7 && data.savedQuotes.some(q => q.id === 70 && q.customerId == null),
+    'and a sale linked only by the name on the paper is still hers');
+
+  const five = run('invoice_lines', { customer_id: 7, limit: 9 });
+  t.check(five.invoices.length === 5,
+    'five is the ceiling however many are asked for — every line of every sale is re-billed each turn');
 }
 
 /* ---------- 8. a draft quote through the shared builder --------------- */

@@ -62644,6 +62644,112 @@ function apCustomerById(id){
   return (data.customers||[]).find(c=> String(c.id) === want) || null;
 }
 
+/* ---- WHAT THEY ACTUALLY TOOK, AND WHAT WE CHARGED FOR IT -------------
+
+   recent_invoices carries the envelope -- number, date, total, paid,
+   still due -- and for a long time that was everything the assistant
+   could reach about a sale. Asked to list the items a customer took and
+   the prices we gave her, it had to say it could not and send the owner
+   to the Invoices screen. The lines were on the record the whole time.
+   Nothing handed them over.
+
+   Price comes from quoteItemSellPrice, never from it.sellPrice raw: a
+   line with no price typed on it is priced by the markup rule at sale
+   time, and reading the empty field would report the shop charging
+   nothing for it. `priced` says which of the two happened, because "we
+   gave her 1,700 each" and "the rule gave her 1,700 each" are different
+   answers to the same question and only the first is a decision anyone
+   made.
+
+   Cost is the delicate half. it.price is what the goods cost us and it
+   is genuinely absent on some lines -- stock counted in before it was
+   costed is the ordinary way. Read as zero it turns such a line into
+   pure profit, which is the most flattering lie these books could tell.
+   So an uncosted line reports cost null and margin null, is COUNTED
+   rather than quietly dropped, and the invoice's profit is withheld
+   whole until every line carries a cost. Something is not better than
+   nothing when the something is wrong in the shop's favour. */
+function invoiceLineRows(q){
+  return (q.items || []).map((it, i)=>{
+    const qty = Number(it.qty)||0;
+    const sell = quoteItemSellPrice(it);
+    const cost = Number(it.price) > 0 ? Number(it.price) : null;
+    const packQty = Number(it.packQty)||0;
+    const row = {
+      line: i + 1,
+      product: it.productName || it.name || 'Item',
+      qty: qty,
+      unit: it.unit || '',
+      price_each: apRound(sell),
+      line_total: apRound(qty * sell),
+      priced: (it.sellPrice != null && it.sellPrice !== '') ? 'typed in' : 'from the markup rule'
+    };
+    if(packQty > 0){
+      row.pack = packQty + (it.packUnit ? ' per ' + it.packUnit : '');
+      /* Which side of the pack size the QUANTITY fell on -- a fact about
+         how much was sold, not a claim about which rule was applied. It
+         decides the markup only on lines priced from the rule. */
+      row.qty_side = qty >= packQty ? 'wholesale' : 'retail';
+    }
+    if(it.supplierId === '__stock__') row.from_our_stock = true;
+    else if(it.supplierName) row.bought_in_from = it.supplierName;
+    if(cost == null){
+      row.cost_each = null;
+      row.made_on_it = null;
+      row.no_cost_on_record = true;
+    }else{
+      row.cost_each = apRound(cost);
+      row.made_on_it = apRound(qty * (sell - cost));
+    }
+    return row;
+  });
+}
+
+/* At most this many lines of one invoice go back. A bulk order can run
+   to hundreds and the whole result is re-billed on every following turn;
+   what is cut off is named rather than lost. */
+const AP_INVOICE_LINES_MAX = 40;
+
+function invoiceLineReading(q){
+  const rows = invoiceLineRows(q);
+  let cost = 0, salesCosted = 0, sales = 0, uncosted = 0;
+  (q.items || []).forEach(it=>{
+    const qty = Number(it.qty)||0;
+    const c = Number(it.price) > 0 ? Number(it.price) : null;
+    const line = qty * quoteItemSellPrice(it);
+    sales += line;
+    if(c == null){ uncosted++; return; }
+    cost += qty * c;
+    salesCosted += line;
+  });
+  /* Whose sale, then what it came to, then what it made, and the lines
+     last. The summary before the detail, so a reading that is cut short
+     is cut in the goods rather than in the money. */
+  return {
+    invoice: invoiceNumberLabel(q),
+    date: q.invoicedAt || q.date,
+    customer: (q.client && q.client.name) || '',
+    ...(q.customerId != null ? { customer_id: q.customerId } : {}),
+    ...(q.voided ? { voided: true } : {}),
+    ...(q.invoiced ? {} : { not_invoiced_yet: true }),
+    total: apRound(savedQuoteTotal(q)),
+    paid: apRound(q.amountPaid),
+    due: apRound(invoiceBalanceDue(q)),
+    cost_of_goods: apRound(cost),
+    lines_with_no_cost_on_record: uncosted,
+    /* The whole-invoice profit exists only when the whole invoice is
+       costed. Where it does not, the costed lines are still reported --
+       but as their own figure, against their own sales, so the two
+       sides of it are the same lines. */
+    made_on_it: uncosted ? null : apRound(sales - cost),
+    ...(uncosted ? { made_on_the_costed_lines: apRound(salesCosted - cost) } : {}),
+    line_count: rows.length,
+    ...(rows.length > AP_INVOICE_LINES_MAX
+      ? { lines_not_shown: rows.length - AP_INVOICE_LINES_MAX } : {}),
+    lines: rows.slice(0, AP_INVOICE_LINES_MAX)
+  };
+}
+
 /* ---- The day an assistant-recorded movement actually happened --------
 
    Five tools move money: a customer payment in, a supplier payment out,
@@ -63165,6 +63271,46 @@ const ASSISTANT_TOOLS = {
       customer: (q.client && q.client.name) || '',
       total: apRound(savedQuoteTotal(q)), paid: apRound(q.amountPaid),
       due: apRound(invoiceBalanceDue(q)) })) };
+  }},
+
+  /* The lines behind the totals recent_invoices returns. Two doors: one
+     invoice by its number, or a customer's last few in full.
+
+     The number is taken as the shop writes it and as anyone would say
+     it -- INV-0230, 0230, 230 all reach the same sale -- because a
+     number read back off a screen or out of a voice note arrives in
+     whichever of those forms the person happened to use.
+
+     A voided invoice is FOUND by number and flagged, never reported
+     missing: the owner asking about one by name has a reason to, and
+     "no such invoice" would be the wrong answer to a real question. On
+     the customer side it is excluded, through customerOrdersFor -- the
+     app's own definition of whose orders are whose, name fallback and
+     all -- because a cancelled sale is not something they took. */
+  invoice_lines: { confirm: false, run(input){
+    const all = (data.savedQuotes||[]);
+    const raw = input.invoice == null ? '' : String(input.invoice).trim();
+    if(raw){
+      const digits = raw.replace(/\D+/g, '');
+      const q = all.find(x=> invoiceNumberLabel(x) === raw.toUpperCase())
+        || (digits ? all.find(x=> String(x.id) === String(Number(digits))) : null);
+      if(!q) throw new Error('No invoice ' + JSON.stringify(raw)
+        + ' — use recent_invoices or customer_statement to get the number as the shop writes it.');
+      return { invoices: [invoiceLineReading(q)] };
+    }
+    if(input.customer_id == null) throw new Error(
+      'Name the invoice, by number, or the customer_id whose invoices to open — this reads the lines on a sale and cannot guess whose.');
+    const c = apCustomerById(input.customer_id);
+    if(!c) throw new Error('No customer with the id ' + JSON.stringify(input.customer_id)
+      + ' — use find_customer and pass the id exactly as it comes back.');
+    const lim = Math.min(Math.max(Number(input.limit)||3, 1), 5);
+    const mine = customerOrdersFor(c.id)
+      .filter(q=> q.invoiced)
+      .sort((a,b)=> (b.invoicedTs||0) - (a.invoicedTs||0));
+    const out = { customer: c.name, invoice_count: mine.length,
+      invoices: mine.slice(0, lim).map(invoiceLineReading) };
+    if(mine.length > lim) out.older_not_shown = mine.length - lim;
+    return out;
   }},
 
   financial_summary: { confirm: false, run(input){

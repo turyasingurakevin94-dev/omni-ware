@@ -207,6 +207,11 @@ const TOOLS = [
     input_schema: { type: 'object', properties: { customer_id: { type: ['string', 'number'], description: 'Exactly as find_customer or list_debtors returned it — ids may be text like C106.' }, limit: { type: 'integer', minimum: 1, maximum: 10 } }, required: [], additionalProperties: false },
   },
   {
+    name: 'invoice_lines',
+    description: 'What was ON a sale: every line of an invoice — product, quantity, unit, the price each and the line total, with what the goods cost us and what the line made where the cost is on record. Use this whenever the question is what somebody took, what price they were given, or what a past sale was worth; recent_invoices and customer_statement carry only totals and cannot answer it. Pass invoice for one sale (INV-0230, 0230 and 230 all work) or customer_id for that customer’s last few in full. priced says whether the price was typed in on the line or came from the markup rule — only the first was somebody’s decision. qty_side says which side of the pack size the quantity fell on, and decides the markup only on lines priced from the rule. A line whose cost is not on record reports cost_each null and is counted in lines_with_no_cost_on_record; when there is one, made_on_it is null for the whole invoice and made_on_the_costed_lines covers only the lines that carry a cost. Never fill an absent cost with a guess and never call an uncosted line pure profit. Voided invoices are found by number and flagged; they are left out of a customer’s list because a cancelled sale is not something they took.',
+    input_schema: { type: 'object', properties: { invoice: { type: ['string', 'number'], description: 'One invoice number, as written or as said: INV-0230, 0230, 230.' }, customer_id: { type: ['string', 'number'], description: 'Exactly as find_customer returned it — ids may be text like C106.' }, limit: { type: 'integer', minimum: 1, maximum: 5, description: 'How many of that customer’s invoices to open in full. Default 3.' } }, required: [], additionalProperties: false },
+  },
+  {
     name: 'financial_summary',
     description: 'The shop’s statements: income (profit and loss), balance_sheet, or cash_flow. Dates are YYYY-MM-DD; omitted dates default to this month (balance_sheet uses as_of, defaulting to today).',
     input_schema: {
