@@ -940,6 +940,24 @@
      on a narrow screen and left Clear stranded on a line of its own,
      reading as an action of equal weight to the one it undoes. */
   .pp-basket-acts{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  /* WHO TO RING, AND WHAT THEIR MONEY BUYS. Two facts per row, the
+     person on the left and the consequence on the right, so the list
+     can be read down either column. */
+  .ctb-list{display:flex;flex-direction:column;gap:2px;margin-top:8px;}
+  .ctb-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .ctb-row:last-child{border-bottom:none;}
+  .ctb-who{display:flex;flex-direction:column;font-size:13px;font-weight:650;
+    color:var(--ink);flex:1 1 180px;min-width:0;}
+  .ctb-who em{font-style:normal;font-weight:400;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .ctb-gets{display:flex;flex-direction:column;font-size:12.5px;color:var(--ink);
+    flex:1 1 220px;min-width:0;font-variant-numeric:tabular-nums;}
+  .ctb-gets em{font-style:normal;font-size:11.5px;color:var(--ink-soft);margin-top:2px;
+    font-variant-numeric:normal;}
+  /* Not enough is an answer, not a warning: the customer has done
+     nothing wrong by owing less than the shelf needs. */
+  .ctb-short{color:var(--ink-soft);}
+  .ctb-row .btn{padding:5px 11px;font-size:11.5px;flex:0 0 auto;}
   .pp-basket-say b{font-variant-numeric:tabular-nums;}
   /* A ticked row, so the list itself says what is in the basket. */
   .pp-row.picked{background:var(--ow-oxide-soft);border-radius:9px;padding-left:9px;padding-right:9px;}
@@ -54126,6 +54144,78 @@ function purchasePlan(budget, coverDays, dateISO){
     lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice, coming };
 }
 
+/* ================= WHAT COLLECTING WOULD PAY FOR =================
+
+   The owner's own screen, this morning: a budget of nothing, eleven
+   lines under "Over this budget", and one sentence of advice --
+   "collecting is what makes it affordable, and Chase debts has who to
+   ring". True, and a shrug. It names nobody, no amount, and nothing
+   that collecting would actually buy, so the owner is left to do the
+   arithmetic that the books could do for them.
+
+   This is that arithmetic. What is short, who owes it, and -- by the
+   SAME greedy rule the plan itself spends by -- exactly which lines
+   each collection would put back inside the budget. It is the first
+   reading in this app that joins the debt book to the buy plan, which
+   is the join a manager makes when it says "collect this, then buy
+   that" instead of listing both and leaving them side by side.
+
+   THE CONDITION IS STATED, NEVER HIDDEN. "Collected today" is an
+   if-then on money the books already hold, not a claim that it will
+   be. And a debtor's word is not the shop's money: cashAhead keeps
+   that line deliberately, and so does this -- a promised day is
+   REPORTED beside the name and never allowed to move a figure. */
+function collectToBuy(plan, dateISO){
+  const over = ((plan && plan.didNotFit) || []).slice();
+  if(!plan || plan.budget == null || !over.length) return null;
+  const today = dateISO || todayISO();
+  const left = Math.max(0, Math.round(plan.budget) - Math.round(plan.spend));
+  /* THE SAME GREEDY RULE THE PLAN SPENDS BY, applied to the lines it
+     could not reach -- it skips what does not fit and keeps going, so
+     a cheap line below an expensive one still gets bought. Any other
+     rule here would promise a set the buying screen would never
+     actually buy. */
+  const fits = (extra)=>{
+    let spend = 0; const got = [];
+    over.forEach(l=>{ if(spend + l.cost > left + extra) return; spend += l.cost; got.push(l); });
+    return { count: got.length, spend: Math.round(spend), names: got.map(l=> l.name) };
+  };
+  const debts = collectableDebts();
+  const owed = debts.reduce((n, d)=> n + d.debt, 0);
+  const cheapest = over.reduce((n, l)=> Math.min(n, l.cost), Infinity);
+  /* THE BIGGEST DEBTS, not the oldest. collectableDebts ranks by age
+     because that is what decides who to chase; this list answers a
+     different question -- what would buy the most -- and ranking it by
+     age would put a nine-month 40,000 above the 1.4m that covers half
+     the plan. Both orders are right for their own question, which is
+     exactly why this one re-sorts rather than reusing. */
+  const candidates = debts.slice().sort((a, b)=> b.debt - a.debt).slice(0, 3).map(d=>{
+    const f = fits(d.debt);
+    const pr = promiseLatest(d.id, today);
+    return { customerId: d.id, name: d.name, debt: d.debt, ageDays: d.ageDays,
+      /* Their word, beside their name and never inside a figure. */
+      promisedOn: (pr && pr.state === 'waiting') ? pr.promisedOn : null,
+      brokenBefore: promisesBroken(d.id, today),
+      lines: f.count, spend: f.spend, covers: f.names.slice(0, 3) };
+  });
+  const all = fits(owed);
+  return {
+    leftOfBudget: left,
+    over: over.length,
+    overTotal: Math.round(over.reduce((n, l)=> n + l.cost, 0)),
+    /* TWO ANSWERS TO "HOW MUCH MORE", because they are different
+       questions. A screen that gives only the best earner's gap tells
+       a shop 800,000 short that it can do nothing, when 90,000 would
+       buy something today. */
+    needForNext: Math.max(0, Math.round(over[0].cost - left)), nextLine: over[0].name,
+    needForCheapest: Math.max(0, Math.round(cheapest - left)),
+    owedToYou: Math.round(owed), debtors: debts.length,
+    candidates,
+    allCollected: { debt: Math.round(owed), lines: all.count, spend: all.spend,
+      whole: all.count === over.length },
+  };
+}
+
 // The dashboard's stock-out alert, now a thin read of the SAME rows —
 // the alert and the copilot can never disagree about what is running
 // out. Same return shape as before, so dashAlerts' consumer and its
@@ -54359,7 +54449,8 @@ function renderPurchasePlanPanel(){
       it comes off the cash line only when the goods arrive and you name the day you will pay.</p>`;
     if(plan.budget === 0 && buyBudget == null) html += `<p class="pp-more"><b>There is nothing safe to spend, so the plan is empty.</b>
       Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
-      the moment there is something to buy it with — collecting is what makes it affordable, and Chase debts has who to ring.
+      the moment there is something to buy it with. Collecting is what makes it affordable, and Chase debts has who to ring —
+      <b>What collecting would pay for</b>, underneath, works out which of them, and exactly what their money would buy.
       Or type a budget above to overrule this.</p>`;
     /* The best few, by what they earn. The rest are one tap away --
        the owner asked for a recommendation, not a catalogue. */
@@ -54368,6 +54459,10 @@ function renderPurchasePlanPanel(){
     if(plan.didNotFit.length) html += `<div class="pp-tail"><h4>Over this budget</h4>
       <div class="pp-list">${plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join('')}</div>${
       plan.didNotFit.length > 3 ? `<p class="pp-more">and ${plan.didNotFit.length - 3} more.</p>` : ''}</div>`;
+    /* AND WHAT WOULD PAY FOR THEM. The screen used to end the argument
+       at "collecting is what makes it affordable" and leave the owner
+       to work out who and how much. This does the arithmetic. */
+    html += collectToBuyHTML(collectToBuy(plan, todayISO()));
     html += comingHTML;
     if(plan.sourceFirst.length) html += `<div class="pp-tail"><h4>Selling with no supplier price on file</h4>
       <div class="pp-list">${plan.sourceFirst.slice(0, 3).map((sf,i)=> `
@@ -54407,6 +54502,13 @@ function renderPurchasePlanPanel(){
      supplier and the plan is per line: ticking four lines that come
      from two suppliers is two orders, and asking the owner to notice
      that themselves is asking them to do the app's arithmetic. */
+  /* The door to the thing this section is arguing for. The chase screen
+     is where the ringing is actually done, and it already drafts the
+     message -- landing the owner anywhere else would be a section that
+     names an action and then hides it. */
+  el.querySelectorAll('.ctb-go').forEach(btn=> btn.addEventListener('click', ()=>{
+    goToTab('chase');
+  }));
   el.querySelectorAll('.buy-pick').forEach(btn=> btn.addEventListener('click', ()=>{
     const k = String(btn.dataset.tag || '');
     if(!k) return;
@@ -54493,6 +54595,52 @@ function renderPurchasePlanPanel(){
     toast('Hold lifted — this line is yours to buy');
     renderPurchasePlanPanel();
   }));
+}
+
+/* The section itself. Separate from the reading so the Manager and the
+   screen can never disagree about the arithmetic -- one derivation, two
+   readers, the discipline the whole app is built on. */
+function collectToBuyHTML(c){
+  if(!c) return '';
+  const f = n=> fmtUGX(Math.round(n));
+  /* NOTHING OWED IS ITS OWN ANSWER, and a useful one: it means the
+     money is not out with customers, so collecting is not the lever
+     and the owner should stop looking for it there. */
+  if(!c.debtors) return `<div class="pp-tail"><h4>What collecting would pay for</h4>
+    <p class="pp-more">Nothing. Nobody owes you anything, so there is nothing to collect —
+      what is over budget is over budget until the shop sells its way there or you decide to spend more than is safe.</p></div>`;
+  const gap = c.needForCheapest < c.needForNext
+    ? `The best earner left — <b>${esc(c.nextLine)}</b> — needs <b>${f(c.needForNext)}</b> more than you can safely spend, though <b>${f(c.needForCheapest)}</b> would buy the cheapest of them.`
+    : `The next line — <b>${esc(c.nextLine)}</b> — needs <b>${f(c.needForNext)}</b> more than you can safely spend.`;
+  const row = (x)=>{
+    const who = `<span class="ctb-who">${esc(x.name)}<em>${f(x.debt)} · ${x.ageDays < 0 ? 'no date on record' : agingDaysLabel(x.ageDays)}${
+      /* Their word, said and never counted. */
+      x.promisedOn ? ' · said ' + esc(fmtShortDate(x.promisedOn)) : ''}${
+      x.brokenBefore ? ' · broke their word ' + x.brokenBefore + (x.brokenBefore === 1 ? ' time' : ' times') : ''}</em></span>`;
+    /* The headline and its detail are TWO children of the column, not
+       four. A bare <b> inside a flex column becomes a flex item of its
+       own, which broke "covers 3 lines — 1,100,000" over three lines
+       with the number stranded in the middle of them. */
+    const gets = x.lines
+      ? `<span class="ctb-gets"><span>covers <b>${x.lines}</b> ${x.lines === 1 ? 'line' : 'lines'} — ${f(x.spend)}</span><em>${esc(x.covers.join(', '))}</em></span>`
+      /* NOT ENOUGH IS AN ANSWER TOO, and the answer is what is STILL
+         short after their money, never the gap as it stood before it.
+         "the cheapest line still needs 90,000" beside a customer owing
+         40,000 reads as if collecting from them did nothing at all. */
+      : `<span class="ctb-gets ctb-short"><span>not enough on its own — ${f(x.debt)} would leave the cheapest line ${f(Math.max(0, c.needForCheapest - x.debt))} short</span></span>`;
+    return `<div class="ctb-row">${who}${gets}
+      <button type="button" class="btn btn-ghost ctb-go" data-id="${esc(String(x.customerId))}">Chase them</button></div>`;
+  };
+  const all = c.allCollected;
+  const whole = c.debtors > 1 ? `<p class="pp-more">Everything owed to you is <b>${f(c.owedToYou)}</b> across ${
+    c.debtors} ${c.debtors === 1 ? 'customer' : 'customers'}. ${all.whole
+      ? `Collected today, the whole of what is over budget fits.`
+      : `Collected today it would cover <b>${all.lines}</b> of the ${c.over}, at ${f(all.spend)}.`}</p>` : '';
+  return `<div class="pp-tail"><h4>What collecting would pay for</h4>
+    <p class="pp-more">${gap} All ${c.over} of them need <b>${f(Math.max(0, c.overTotal - c.leftOfBudget))}</b>.
+      Every figure below is what that money would buy <b>if it were in the drawer today</b> — a day somebody named is not money in the drawer.</p>
+    <div class="ctb-list">${c.candidates.map(row).join('')}</div>
+    ${whole}</div>`;
 }
 
 /* ---- Reviewing what is about to be ordered ----
@@ -62646,6 +62794,28 @@ const ASSISTANT_TOOLS = {
           due_on: o.expectedOn, late: o.late })),
         on_order_total: apRound(buyOrdersOpenRows(today).reduce((n, o)=> n + o.total, 0)),
         on_order_late: buyOrdersOpenRows(today).filter(o=> o.late).length,
+        /* THE JOIN BETWEEN THE DEBT BOOK AND THE BUY PLAN. Without it a
+           meeting can say "chase Mulongo" and "buy cement" and never
+           that the first is what pays for the second -- two lists side
+           by side where a sequence belonged. Every figure is an if-then
+           on money the books already hold: a debtor's word is reported
+           and never counted. */
+        what_collecting_would_buy: (()=>{
+          const c = collectToBuy(plan, today);
+          if(!c) return null;
+          return { the_next_line: c.nextLine, it_needs: apRound(c.needForNext),
+            cheapest_line_needs: apRound(c.needForCheapest),
+            all_of_them_need: apRound(Math.max(0, c.overTotal - c.leftOfBudget)),
+            owed_to_you: apRound(c.owedToYou), debtors: c.debtors,
+            if_collected_today: c.candidates.map(x=> ({ customerId: x.customerId, name: x.name,
+              owes: apRound(x.debt), days: x.ageDays,
+              /* Their word, said and never used to move a figure. */
+              said_they_would_pay_on: x.promisedOn, broken_before: x.brokenBefore,
+              would_buy_lines: x.lines, would_buy: apRound(x.spend), namely: x.covers })),
+            everything_collected: { lines: c.allCollected.lines, spend: apRound(c.allCollected.spend),
+              covers_the_whole_plan: c.allCollected.whole },
+            the_condition: 'Every figure here assumes the money is IN THE DRAWER TODAY. It is an if-then on what the books hold, never a claim that it will be collected — a day a debtor named is not money, and must never be spent as if it were.' };
+        })(),
       },
       prices_to_check: priceReviewCandidates().slice(0, 5).map(r=> ({
         item: r.pname, supplier: r.sname, at_risk: apRound(r.moneyAtRisk||0) })),
@@ -63363,6 +63533,24 @@ const ASSISTANT_TOOLS = {
         due_on: o.expectedOn, late: o.late })),
       lines_covered_by_an_order: plan.coming.slice(0, 6).map(c=> ({ key: c.key,
         name: c.name, on_the_way: c.qty, was_short: c.needed })),
+      /* WHAT WOULD PAY FOR WHAT DID NOT FIT. The tool used to end at
+         "over_budget" and leave the mind to say "collect more", which
+         is advice with no arithmetic behind it. */
+      what_collecting_would_buy: (()=>{
+        const c = collectToBuy(plan, todayISO());
+        if(!c) return null;
+        return { the_next_line: c.nextLine, it_needs: apRound(c.needForNext),
+          cheapest_line_needs: apRound(c.needForCheapest),
+          all_of_them_need: apRound(Math.max(0, c.overTotal - c.leftOfBudget)),
+          owed_to_you: apRound(c.owedToYou), debtors: c.debtors,
+          if_collected_today: c.candidates.map(x=> ({ customerId: x.customerId, name: x.name,
+            owes: apRound(x.debt), days: x.ageDays,
+            said_they_would_pay_on: x.promisedOn, broken_before: x.brokenBefore,
+            would_buy_lines: x.lines, would_buy: apRound(x.spend), namely: x.covers })),
+          everything_collected: { lines: c.allCollected.lines, spend: apRound(c.allCollected.spend),
+            covers_the_whole_plan: c.allCollected.whole },
+          the_condition: 'Every figure here assumes the money is IN THE DRAWER TODAY. It is an if-then on what the books hold, never a claim that it will be collected.' };
+      })(),
       /* Ranked by what each item EARNED, and capped: the owner asked
          for the best few, and a spoken answer that runs to twenty
          lines is one nobody listens to. `why` is the same sentence

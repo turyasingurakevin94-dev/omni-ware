@@ -143,6 +143,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     /* Nothing on order here: these files are about the meeting's shape.
        What an order does to the plan is buy-orders.test.js's claim. */
     buyOrdersOpenRows: () => [],
+    /* The debt-book-to-buy-plan join is collect-to-buy.test.js's claim. */
+    collectToBuy: () => null,
     cashOnHandByAccount: () => ({ total: 3545644, byAccount: [{ key: 'cash', amount: 1000 }, { key: 'momo', amount: 2000 }, { key: 'bank', amount: 3000 }] }),
     CASH_AHEAD_DAYS: 30,
       cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, promised: [], promisedTotal: 0, safeToSpend: 3545644, tightest: { date: '2026-08-29', balance: 3545644 } }),

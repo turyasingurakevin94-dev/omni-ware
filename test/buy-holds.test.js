@@ -315,6 +315,10 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
       supplierName: () => 'A supplier',
       fmtShortDate: (d) => String(d),
       saveData: () => {},
+        /* What collecting would pay for is its own reading, and
+           collect-to-buy.test.js owns that claim. Stubbed away here so
+           two files cannot half-own it. */
+        collectToBuy: () => null, collectToBuyHTML: () => '',
     });
 
   scope.setBuyHold('P1::0', 'Buying your thinnest-margin line before repricing is buying work', 'manager');
@@ -360,6 +364,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
         supplierName: () => 'A supplier',
         document: { getElementById: () => null },
+        /* What collecting would pay for is its own reading, and
+           collect-to-buy.test.js owns that claim. */
+        collectToBuy: () => null,
       CASH_AHEAD_DAYS: 30,
       cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 5000000, tightest: { date: '2026-08-29', balance: 5000000 } }) },
       ['names']);

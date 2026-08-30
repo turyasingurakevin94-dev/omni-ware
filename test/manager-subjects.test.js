@@ -231,6 +231,15 @@ const books = () => ({
       reason: 'out now', cost: 400000, supplier: 'Roto' }], didNotFit: [], sourceFirst: [],
       coming: [], onOrder: 0, budgetBefore: 100, budget: 100 }),
     buyOrdersOpenRows: () => [],
+    /* HOW the join is worked out is collect-to-buy.test.js's claim; that
+       its rows carry an id the books can follow is THIS file's, and a
+       null here would have exempted the newest reading from the one law
+       this file exists to enforce. */
+    collectToBuy: () => ({ nextLine: 'Sitting Still', needForNext: 400000, needForCheapest: 400000,
+      overTotal: 400000, leftOfBudget: 0, over: 1, owedToYou: 840000, debtors: 1,
+      candidates: [{ customerId: 7, name: 'Milly', debt: 840000, ageDays: 62,
+        promisedOn: null, brokenBefore: 0, lines: 1, spend: 400000, covers: ['Sitting Still'] }],
+      allCollected: { debt: 840000, lines: 1, spend: 400000, whole: true } }),
     cashOnHandByAccount: () => ({ total: 100, byAccount: [] }),
     CASH_AHEAD_DAYS: 30,
     cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, promised: [],
@@ -306,6 +315,11 @@ const books = () => ({
        weighed. */
     ['settle', 'supplierId', 'who_you_owe.due_in_the_window', pulse.who_you_owe.due_in_the_window],
     ['settle', 'supplierId', 'who_you_owe.biggest_with_no_day', pulse.who_you_owe.biggest_with_no_day],
+    /* The newest reading, and the one most likely to be quoted in prose:
+       "collect from Milly and the cement fits" is a CHASE move, and it
+       has to be weighable afterwards like every other. */
+    ['chase', 'customerId', 'buying.what_collecting_would_buy.if_collected_today',
+      pulse.buying.what_collecting_would_buy.if_collected_today],
   ];
   const answer = (kind, idKey, id) => N.deriveMoveOutcome({ date: '2026-08-25', status: 'open',
     body: { mkind: kind, subject: { [idKey]: id } } });

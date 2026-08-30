@@ -386,6 +386,10 @@ const drawBuy = (over) => {
        stubbed away here: what an order does to that budget belongs to
        buy-orders.test.js, which owns the claim. */
     buyOrdersSweep: () => {}, buyOrdersOpenRows: () => [],
+    /* What collecting would pay for is its own reading, and
+       collect-to-buy.test.js owns that claim. Stubbed away here so
+       two files cannot half-own it. */
+    collectToBuy: () => null, collectToBuyHTML: () => '',
     purchasePlan: (budget) => { buyAsked.push(budget); return { budget, budgetBefore: budget, onOrder: 0, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [], coming: [] }; },
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
     /* The row's own rendering is tested where it lives; here it only has
@@ -473,6 +477,12 @@ const drawBuy = (over) => {
   t.check(/There is nothing safe to spend, so the plan is empty/.test(emptyPlan),
     'and the screen says WHY it is empty, rather than leaving three noughts to be read as "nothing needed"');
   t.check(/Chase debts/.test(emptyPlan), 'pointing at the thing that changes it');
+  /* And at the reading that does the arithmetic that sentence used to
+     stand in for. "Collecting is what makes it affordable" names a
+     lever and no hand to pull it; the section underneath names who,
+     how much, and which lines their money would buy. */
+  t.check(/What collecting would pay for/.test(emptyPlan),
+    'and at the section that works out WHICH of them, and what their money would actually buy');
   t.check(!/There is nothing safe to spend/.test(clean),
     'while a shop with a budget is not told it has none');
 

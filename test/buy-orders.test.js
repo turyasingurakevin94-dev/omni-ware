@@ -438,6 +438,10 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         listPageSlice: (_k, rows) => rows,
         listMoreButtonHTML: () => '',
         targetMarginPct: () => 10,
+        /* What collecting would pay for is its own reading, and
+           collect-to-buy.test.js owns that claim. Stubbed away here so
+           two files cannot half-own it. */
+        collectToBuy: () => null, collectToBuyHTML: () => '',
       });
     s.placeBuyOrder('S2', [{ key: 'P1', productId: 'P1', variantIdx: null, name: 'Cement',
       unit: 'bag', packQty: 10, packUnit: 'lot', qty: 30, unitCost: 27000 }], shift(TODAY, -1));
@@ -490,6 +494,10 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
         listPageSlice: (_k, rows) => rows,
         listMoreButtonHTML: () => '',
         targetMarginPct: () => 10,
+        /* What collecting would pay for is its own reading, and
+           collect-to-buy.test.js owns that claim. Stubbed away here so
+           two files cannot half-own it. */
+        collectToBuy: () => null, collectToBuyHTML: () => '',
       });
 
     const plan = s.purchasePlan(9000000, null, TODAY);
