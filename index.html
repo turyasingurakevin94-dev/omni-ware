@@ -1223,7 +1223,10 @@
   .mgr-meet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
     margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
   .mgr-meet-note{font-size:12.5px;color:var(--ink-soft);max-width:56ch;line-height:1.5;}
-  .mgr-sec-title{font-size:12.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  /* A HEADING, not a field label. At 12.5px uppercase tracked grey this
+     was the identical treatment .field label gets, so "THE SCOREBOARD"
+     and a form's "Amount" carried exactly the same weight on the page. */
+  .mgr-sec-title{font-size:15px;font-weight:600;letter-spacing:-.01em;text-transform:none;
     color:var(--ink-soft);margin:18px 0 8px;}
   .mgr-keyline{background:var(--bg);border:1px dashed var(--line);border-radius:10px;
     padding:10px 13px;font-size:13.5px;color:var(--ink);margin:0 0 12px;}
@@ -7801,8 +7804,26 @@
     gap:var(--ow-sp-16);align-items:start;}
   .ow-side{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
   .ow-stack{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+
+  /* ---- layout: the record ----
+     The Manager's twelve sections are flat siblings, so two columns cost
+     no restructuring at all: the things that carry cards or a table span
+     both, and the six that are LISTS take one each. Every child is
+     classed rather than reached with `> *`, because a bare universal
+     selector in this layer would be a selector that leaves it.
+
+     :empty earns its place. These twelve divs are filled by JavaScript
+     and several of them stay empty on an ordinary week -- nothing was
+     passed on, no note, no review yet. Left in the grid they would
+     contribute a row and a 16px gap each, so the page would open with a
+     column of measured nothing. */
+  .ow-rec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:var(--ow-sp-16);align-items:start;padding-top:var(--ow-sp-16);}
+  .ow-rec .ow-full{grid-column:1 / -1;}
+  .ow-rec .ow-full:empty,.ow-rec .ow-half:empty{display:none;}
   @media (max-width:1180px){
     .ow-grid{grid-template-columns:minmax(0,1fr);}
+    .ow-rec{grid-template-columns:minmax(0,1fr);}
   }
 
   /* ---- one size modifier on the EXISTING button family, not a new one ---- */
@@ -9058,33 +9079,46 @@
     </section>
 
     <section id="tab-manager" style="display:none;">
-      <div class="page-head">
-        <p class="wv-eyebrow" style="margin:0 0 2px;color:var(--ink-soft);font-size:12px;letter-spacing:.06em;text-transform:uppercase;">Insight</p>
-        <h1>Manager</h1>
-        <p>A manager's morning meeting: the whole shop read in one pass, the few moves worth making
-          today ranked by the money on them, and an honest account of what yesterday's advice earned.
-          It prepares everything and moves nothing — every action below is one tap that stays yours,
-          and every figure it argues from is in your own books.</p>
+      <!-- The record, and one way into the conversation.
+
+           The chat is not embedded here on purpose. It already lives in
+           the panel, reachable from all forty screens with Ctrl+J, and a
+           second one on this screen would be a second implementation to
+           keep in step. So this screen is the memory -- what it advised,
+           what came of it, what has never worked -- and "Talk to it" is
+           the door.
+
+           The four lines of prose that used to sit here explained what a
+           manager is, above the fold, on a screen opened every morning
+           for months. The "Insight" eyebrow said what the breadcrumb one
+           line above already says. -->
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">The Manager</h1>
+        <p class="ow-ph-sub">Reads your books, keeps score on its own advice, and moves nothing without you.</p>
+        <span class="ow-ph-sp"></span>
+        <button type="button" class="btn btn-accent ow-sm" id="mgrTalkBtn">Talk to it</button>
       </div>
-      <div id="managerMemoryNote"></div>
-      <div id="managerMeetingWrap"></div>
-      <div id="managerAccountWrap"></div>
-      <div id="managerPlanWrap"></div>
-      <div id="managerScoreWrap"></div>
-      <div id="managerQuestionsWrap"></div>
-      <div id="managerReviewWrap"></div>
-      <div id="managerHistoryWrap"></div>
-      <!-- Advice skipped again and again: the manager is told to stop
-           proposing it, and the owner is told that it has. -->
-      <div id="managerPassedWrap"></div>
-      <!-- The longest memory the Manager has: what it has advised on
-           again and again, and what the books say followed each time.
-           Beside the two advice sections because they are the same
-           question asked three ways — did you turn it down, is it not
-           reaching you, and does it ever actually work. -->
-      <div id="managerTrackWrap"></div>
-      <div id="managerPlaysWrap"></div>
-      <div id="managerPoliciesWrap"></div>
+      <div class="ow-rec">
+        <div id="managerMemoryNote" class="ow-full"></div>
+        <div id="managerMeetingWrap" class="ow-full"></div>
+        <div id="managerAccountWrap" class="ow-full"></div>
+        <div id="managerPlanWrap" class="ow-full"></div>
+        <div id="managerScoreWrap" class="ow-full"></div>
+        <div id="managerQuestionsWrap" class="ow-half"></div>
+        <div id="managerReviewWrap" class="ow-half"></div>
+        <div id="managerHistoryWrap" class="ow-half"></div>
+        <!-- Advice skipped again and again: the manager is told to stop
+             proposing it, and the owner is told that it has. -->
+        <div id="managerPassedWrap" class="ow-half"></div>
+        <!-- The longest memory the Manager has: what it has advised on
+             again and again, and what the books say followed each time.
+             Beside the two advice sections because they are the same
+             question asked three ways — did you turn it down, is it not
+             reaching you, and does it ever actually work. -->
+        <div id="managerTrackWrap" class="ow-half"></div>
+        <div id="managerPlaysWrap" class="ow-full"></div>
+        <div id="managerPoliciesWrap" class="ow-half"></div>
+      </div>
     </section>
 
     <section id="tab-map" style="display:none;">
@@ -17901,8 +17935,19 @@ document.getElementById('tbSignoutBtn').addEventListener('click', ()=>{
    Bottom-nav's 4 tab buttons live inside a <nav>, so they're already part
    of `tabButtons` above and need no extra wiring. What's left: the topbar
    title, the FAB, and the "More" sheet covering every other destination. */
+/* THE PHONE'S TITLE BAR, and a regression this went out with.
+
+   This read '.page-head h1' and nothing else. Today was rebuilt on the
+   console header -- .ow-ph / .ow-ph-t -- and so on a phone it has been
+   showing an EMPTY title bar since that release. Nothing failed: the
+   function ends `h1 ? h1.textContent : ''`, so a screen it cannot find
+   is silently given no name at all.
+
+   It now knows both headers. Any screen converted from here on gets its
+   name on the phone without anyone having to remember this exists --
+   which is exactly what went wrong the first time. */
 function updateMobileTopbarTitle(tab){
-  const h1 = document.querySelector('#tab-'+tab+' .page-head h1');
+  const h1 = document.querySelector('#tab-'+tab+' .page-head h1, #tab-'+tab+' .ow-ph-t');
   const el = document.getElementById('mobileTopbarTitle');
   if(el) el.textContent = h1 ? h1.textContent : '';
 }
@@ -57555,6 +57600,19 @@ function renderManager(){
   if(runBtn) runBtn.addEventListener('click', runManagerMeeting);
   const revBtn = document.getElementById('mgrReviewBtn');
   if(revBtn) revBtn.addEventListener('click', runManagerReview);
+  /* This screen is the RECORD -- what was advised, what came of it, what
+     never lands. The conversation lives in the panel, on all forty
+     screens, and this is the door to it from the one screen that is
+     about the mind having it. No second chat: one implementation, or
+     two that drift.
+
+     It opens the panel and nothing else. It does NOT set apMode:
+     'manager' is an OCCASION -- a meeting, a review -- and it makes the
+     run loop commit a plan to the journal when the turn ends and skip
+     seeding the day. Asking "what did Joan take" down that path would
+     write a plan out of a question. */
+  const talkBtn = document.getElementById('mgrTalkBtn');
+  if(talkBtn) talkBtn.addEventListener('click', apOpenPanel);
 
   const acct = document.getElementById('managerAccountWrap');
   const planWrap = document.getElementById('managerPlanWrap');
