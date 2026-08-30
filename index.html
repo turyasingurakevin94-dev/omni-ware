@@ -8197,6 +8197,14 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
           <span class="nav-label">Manager</span>
         </button>
+        <!-- The seven panels that used to sit below the fold of the
+             dashboard. They answer real questions; they are just not
+             the morning, which is why they now have a door of their
+             own instead of a scroll nobody reached the end of. -->
+        <button data-tab="analysis" title="Analysis — margin, cash and stale prices" data-keywords="analysis charts trends margin quadrant demand breadth cash bridge leakage quiet prices to check">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <span class="nav-label">Analysis</span>
+        </button>
         <button data-tab="analytics-sales" title="Sales analytics" data-keywords="demand trends best sellers reports">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>
           <span class="nav-label">Sales analytics</span>
@@ -8247,13 +8255,75 @@
   <main>
 
     <!-- EXECUTIVE DASHBOARD -->
+    <!-- ================= TODAY =================
+         The front door. It was the "Executive Dashboard": ten panels
+         headed "profitability, liquidity, debt exposure", of which the
+         owner said plainly "honestly, I stop at the top". So the seven
+         that are analysis rather than this morning moved to their own
+         screen, and what is left is the three things a shop opens for:
+         where it stands, what needs doing, and what changed yesterday.
+
+         The tab key and every dash_* id are UNCHANGED on purpose. The
+         suite is keyed on ids and function names, not on the visible
+         title, so rebuilding in place costs a handful of test edits
+         instead of thirty. Today is a name and a layout, not a new tab. -->
     <section id="tab-dashboard" style="display:none;">
-      <div class="page-head">
-        <h1>Executive Dashboard</h1>
-        <p>A snapshot of profitability, liquidity, debt exposure, and inventory risk — pulled live from your quotes, invoices, cash book, and stock records.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Today</h1>
+        <p class="ow-ph-sub" id="dash_asof"></p>
+        <span class="ow-ph-sp"></span>
       </div>
 
-      <div class="dash-range-bar">
+      <div class="ow-stack" style="padding-top:16px;">
+        <!-- 1. WHERE THE SHOP STANDS. One strip, hairline dividers. -->
+        <div class="ow-strip" id="dash_vitalGrid"></div>
+
+        <div id="dash_managerCard"></div>
+        <div id="dash_managerPace"></div>
+
+        <div class="ow-grid">
+          <!-- 2. WHAT NEEDS YOU. One list, two tiers that are never
+               interleaved: the Manager's moves in the order IT ranked
+               them (a move waiting on another must never be drawn above
+               it), then the app's own watch. Each row says which it is,
+               because advice and arithmetic are different things and the
+               owner is entitled to know which one is talking. -->
+          <div class="ow-pan">
+            <div class="ow-pan-h">
+              <span class="ow-pan-t">What needs you</span>
+              <span class="ow-pan-n" id="dash_actionNote"></span>
+            </div>
+            <div id="dash_mgrQueue"></div>
+            <div id="dash_actionList"></div>
+            <div id="dash_actionMore"></div>
+          </div>
+
+          <!-- 3. WHAT CHANGED. -->
+          <div class="ow-side">
+            <div class="ow-pan">
+              <div class="ow-pan-h">
+                <span class="ow-pan-t">Yesterday</span>
+                <span class="ow-pan-n" id="dash_brief_date"></span>
+              </div>
+              <div id="dash_morningBrief"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ANALYSIS =================
+         The seven panels that were below the fold of the old dashboard.
+         Not deleted -- they answer real questions -- but they are not
+         the morning, and keeping them on the front door was the reason
+         the front door was never read to the bottom. Their dash_* ids
+         come with them, so every renderer still finds them by id. -->
+    <section id="tab-analysis" style="display:none;">
+      <div class="page-head">
+        <h1>Analysis</h1>
+        <p>Where the margin is, where the cash went, and which prices have gone stale. Read this when you have a question, not every morning.</p>
+      </div>
+<div class="dash-range-bar">
         <div class="field" style="min-width:170px;">
           <label>Sales &amp; profit window</label>
           <select id="dash_range_preset">
@@ -8267,54 +8337,12 @@
         </div>
         <div class="dash-asof" id="dash_asof"></div>
       </div>
-
-      <!-- The Manager's standing offer. One tap holds the meeting; it
-           never runs itself, because each meeting spends a little of the
-           owner's AI money. Hidden once today's meeting is held (a
-           per-device localStorage stamp, same convention as the brief's
-           first-open marker). -->
-      <div id="dash_managerCard"></div>
-
-      <!-- -1. THE MORNING BRIEF. Yesterday's picture before today's
-           choices — above even "what needs you", because it is the
-           context those actions are read against. The first visit of
-           each day lands on this tab (maybeShowMorningBrief). -->
-      <div class="panel dash-brief">
-        <div class="dash-panel-title"><h2>Morning brief</h2><span class="dash-asof" id="dash_brief_date"></span></div>
-        <div id="dash_morningBrief"></div>
-      </div>
-
-      <!-- 0. WHAT NEEDS YOU TODAY.
-           Above the vitals on purpose: the four figures are how the shop
-           IS, this is what to do about it, and the thing with a deadline
-           was previously fifth in a panel in the second row. -->
-      <div class="panel dash-action-panel">
-        <div class="dash-panel-title"><h2>What needs you today</h2></div>
-        <p class="dash-panel-note" id="dash_actionNote"></p>
-        <div class="dash-action-list" id="dash_actionList"></div>
-        <!-- Outside the grid: the list is auto-fit columns, and a button
-             inside it would be laid out as another card. -->
-        <div id="dash_actionMore"></div>
-      </div>
-
-      <!-- 1. VITAL SIGNS -->
-      <div class="vital-grid" id="dash_vitalGrid"></div>
-
-      <!-- 2. FINANCIAL HEALTH.
-           "Everything flagged" used to sit beside this. Its own note said
-           what it was: "the same list in full, in the same order — the top
-           of it is what needs you today". Same array, same card function,
-           so the top five were drawn twice, verbatim, one screen apart,
-           and a reader had to compare them to discover they were the same.
-           It is one ranked list now, with the rest one press away. -->
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Cash In vs Cash Out</h2></div>
         <p class="dash-panel-note" id="dash_cashbridge_note"></p>
         <div id="dash_cashbridge"></div>
       </div>
-
-      <!-- 4. REVENUE & DEMAND TRENDS -->
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Demand Trajectory</h2></div>
         <p class="dash-panel-note">Weekly units sold vs weekly revenue — a gap opening between the two usually means prices are moving, not real volume.</p>
         <div class="dash-trend-grid">
@@ -8328,8 +8356,7 @@
           </div>
         </div>
       </div>
-
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Margin Leaders vs Capital Traps</h2></div>
         <p class="dash-panel-note" id="dash_quadrant_note"></p>
         <div class="quadrant-wrap">
@@ -8342,9 +8369,7 @@
           </div>
         </div>
       </div>
-
-      <!-- 5. TOP PERFORMERS & LEAKAGE -->
-      <div class="dash-leak-grid">
+<div class="dash-leak-grid">
         <div class="panel">
           <div class="dash-panel-title"><h2>Top Margin Performers</h2></div>
           <p class="dash-panel-note">Highest gross-profit items in the selected window.</p>
@@ -8356,23 +8381,17 @@
           <div id="dash_leakage"></div>
         </div>
       </div>
-
-      <!-- 6. CUSTOMERS GOING QUIET -->
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Customers Going Quiet</h2></div>
         <p class="dash-panel-note">Regular customers overdue against their own usual ordering rhythm — worth a call before a competitor gets there first.</p>
         <div id="dash_goingQuiet"></div>
       </div>
-
-      <!-- 8. PRICES GOING OUT OF DATE -->
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Prices To Check</h2></div>
         <p class="dash-panel-note">The registry only refreshes itself where the shop is busy — quoting an item, restocking it, receiving it. Anything you do not trade regularly is never questioned again, so this is the list to go and ask about, ordered by what being wrong would actually cost. Items nobody has bought, quoted or stocked are left off: a stale price on those costs nothing until it comes up.</p>
         <div id="dash_priceReview"></div>
       </div>
-
-      <!-- 7. DEMAND BREADTH -->
-      <div class="panel">
+<div class="panel">
         <div class="dash-panel-title"><h2>Demand Breadth</h2></div>
         <p class="dash-panel-note">Top sellers in the selected window, ranked by unique buyers rather than just volume — a product moving big numbers through one or two customers is more exposed than the same volume spread across many.</p>
         <div id="dash_demandBreadth"></div>
@@ -17236,6 +17255,7 @@ function goToTab(tab){
   document.getElementById('tab-'+tab).style.display='block';
   updateMobileTopbarTitle(tab);
   if(tab==='dashboard') renderDashboard();
+  if(tab==='analysis') renderAnalysis();
   // Redrawn on entry, respecting whatever filters are set. The registry
   // now carries a summary strip, and a count is a claim about current
   // data -- it cannot be left saying what was true when the page loaded.
@@ -29487,7 +29507,7 @@ function saveSupplierReply(){
   supplierReplyFor = null;
   triggerPricesRender();
   if(document.getElementById('tab-dashboard')
-    && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+    && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
   const said = [];
   if(r.changed) said.push(`${r.changed} moved`);
   if(r.confirmed) said.push(`${r.confirmed} unchanged`);
@@ -43150,7 +43170,7 @@ function confirmPriceStillRight(id){
   if(!confirmPriceUnchanged(id)) return;
   saveData(); triggerPricesRender();
   if(document.getElementById('tab-dashboard')
-    && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+    && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
   toast('Marked checked today — the price itself is untouched');
 }
 function toggleOutOfStock(id){
@@ -46533,7 +46553,7 @@ function renderPresetPriceReview(){
     // The dashboard is built off both of these, so it must not go on
     // reporting against the old ones.
     if(document.getElementById('tab-dashboard')
-      && document.getElementById('tab-dashboard').style.display !== 'none') renderDashPriceReview();
+      && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
     toast('Price checking updated');
   });
   save('staleDays', stale);
@@ -57608,25 +57628,7 @@ function renderManager(){
          card, and the owner is the one who would otherwise wonder. */
       + (plan && plan.cutOff ? `<div class="mgr-why" style="margin-top:2px;">This meeting ran out of room mid-answer — there may have been more to it.</div>` : '');
   };
-  const wire = (root)=>{
-    root.querySelectorAll('.mgr-door').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.tab)));
-    root.querySelectorAll('.mgr-discuss').forEach(btn=> btn.addEventListener('click', ()=>{
-      apOpenPanel();
-      const input = document.getElementById('apInput');
-      if(input){ input.value = `About "${btn.dataset.title}" — `; input.focus(); }
-    }));
-    root.querySelectorAll('.mgr-move').forEach(card=>{
-      const id = card.dataset.mid;
-      const done = card.querySelector('.mgr-done');
-      const skip = card.querySelector('.mgr-skip');
-      if(done) done.addEventListener('click', ()=> managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'done'));
-      if(skip) skip.addEventListener('click', ()=>{
-        const why = prompt('Skipping it — why? One line. The manager reads this tomorrow.', '');
-        if(why === null) return;
-        managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'skipped', why);
-      });
-    });
-  };
+  const wire = mgrWirePlan;
 
   if(!managerNotesTable){
     /* Memoryless: today's plan from the session, no account, no history. */
@@ -58308,6 +58310,116 @@ function dashboardContext(from, to){
   };
 }
 
+function mgrWirePlan(root){
+  root.querySelectorAll('.mgr-door').forEach(btn=> btn.addEventListener('click', ()=> goToTab(btn.dataset.tab)));
+  root.querySelectorAll('.mgr-discuss').forEach(btn=> btn.addEventListener('click', ()=>{
+    apOpenPanel();
+    const input = document.getElementById('apInput');
+    if(input){ input.value = `About "${btn.dataset.title}" — `; input.focus(); }
+  }));
+  root.querySelectorAll('.mgr-move').forEach(card=>{
+    const id = card.dataset.mid;
+    const done = card.querySelector('.mgr-done');
+    const skip = card.querySelector('.mgr-skip');
+    if(done) done.addEventListener('click', ()=> managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'done'));
+    if(skip) skip.addEventListener('click', ()=>{
+      const why = prompt('Skipping it — why? One line. The manager reads this tomorrow.', '');
+      if(why === null) return;
+      managerSetMoveStatus(id.startsWith('mem:') ? id : Number(id), 'skipped', why);
+    });
+  });
+}
+
+/* ---- THE WORK QUEUE, and the one thing it must not do ---------------
+
+   Today shows two kinds of thing in one list: what the Manager advised
+   this morning, and what the app's own watch has noticed. They are the
+   same KIND of thing -- something that needs you, with money on it --
+   and having them in two places, ranked two ways, was the reason the
+   front door had to be read twice.
+
+   They are merged, and they are never interleaved. The Manager's moves
+   come first, in the order IT put them (mgrMoveOrder resolves the
+   `after` dependencies: a move that waits on another must never be drawn
+   above the one it waits on, and that ordering is not this screen's to
+   overturn). The watch follows in its own band order. Every row says
+   which tier it came from, because advice and arithmetic are different
+   things and the owner is entitled to know which one is talking.
+
+   Nothing is suppressed. A move about Mulongo and an alert about Mulongo
+   may both appear. A duplicate row is visible and harmless; a wrong
+   suppression hides a real alert, and nothing shows that it happened. */
+const OW_CARET = '<svg class="ow-q-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>';
+const OW_CARET_C = '<svg class="ow-q-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>';
+
+/* One delegated listener for every queue on every screen, bound once at
+   parse time rather than re-bound on each render -- so a row the owner
+   opens does not depend on which render last finished wiring it. */
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest && e.target.closest('.ow-qtog');
+  if(t && t.parentElement) t.parentElement.classList.toggle('ow-open');
+});
+
+/* The Manager's moves as queue rows. The same fields mgrMoveView reads
+   -- deriveMoveOutcome for the status and for what the books can say
+   about it, MANAGER_DOORS for where the move goes -- so the two screens
+   cannot end up describing the same move differently. */
+function mgrQueueRowHTML(row, all){
+  const b = row.body || {};
+  const out = deriveMoveOutcome(row);
+  const door = MANAGER_DOORS[b.door] || null;
+  const open = out.status === 'open';
+  const rows = Array.isArray(all) ? all : [];
+  const at = b.after;
+  const blocker = (Number.isInteger(at) && rows[at]) ? rows[at] : null;
+  const bits = [];
+  if(blocker && blocker.status !== 'done')
+    bits.push('waiting on: ' + esc(((blocker.body||{}).title) || 'an earlier move'));
+  if(out.derived) bits.push(esc(out.derived));
+  if(out.unmeasured) bits.push(esc(out.unmeasured));
+  const worth = Number(b.worth) > 0;
+  const money = worth ? fmtUGX(Math.round(b.worth)) : '\u2014';
+  const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no figure on it';
+  const state = out.status === 'done' ? '<span class="ow-cp ow-good">Done</span>'
+    : out.status === 'skipped' ? '<span class="ow-cp">Not now</span>' : '';
+  const chips = `<span class="ow-cp ow-mg">Manager</span>${state}`;
+  const acts = `<div class="ow-q-a">${
+    door ? `<button type="button" class="btn btn-accent ow-sm mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}${
+    open ? `<button type="button" class="btn btn-ghost ow-sm mgr-done">Done</button><button type="button" class="btn btn-ghost ow-sm mgr-skip">Not now</button>` : ''}<button type="button" class="btn btn-ghost ow-sm mgr-discuss" data-title="${esc(b.title || '')}">Ask</button></div>`;
+  return `<div class="ow-q" data-mid="${esc(String(row.id))}">
+    <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
+      <span class="ow-q-t">${esc(b.title || '')}</span>
+      <span class="ow-q-m">${chips}</span>
+      <span class="ow-q-v${worth ? ' ow-bad' : ''}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(basis)}</span></span>
+    </button>
+    <button type="button" class="ow-q-card ow-qtog">
+      <span class="ow-q-cm">${chips}${OW_CARET_C}</span>
+      <p class="ow-q-ct">${esc(b.title || '')}</p>
+      <span class="ow-q-cv${worth ? ' ow-bad' : ''}">${esc(money)}<span class="ow-q-b">${esc(basis)}</span></span>
+    </button>
+    <div class="ow-q-x">
+      <p class="ow-q-why">${esc(b.why || '')}</p>${
+      b.unlocks ? `<div class="ow-q-un">Unlocks: ${esc(b.unlocks)}</div>` : ''}${
+      bits.length ? `<p class="ow-q-note">${bits.join(' \u00b7 ')}</p>` : ''}${acts}</div>
+  </div>`;
+}
+
+/* Fills the Manager's tier when the journal answers, into its OWN
+   container above the watch's -- so the two never reorder each other and
+   a row the owner is already reading does not jump when the second
+   list lands underneath it. */
+function renderTodayPlan(){
+  if(!document.getElementById('dash_mgrQueue')) return;
+  managerLoadState().then((st)=>{
+    const box = document.getElementById('dash_mgrQueue');
+    if(!box) return;
+    const rows = (st && st.today && st.today.rows) || [];
+    if(!rows.length){ box.innerHTML = ''; return; }
+    box.innerHTML = mgrMoveOrder(rows).map(r=> mgrQueueRowHTML(r, rows)).join('');
+    mgrWirePlan(box);
+  }).catch(()=>{});
+}
+
 function renderDashboard(){
   renderMorningBrief();
   renderManagerCard();
@@ -58409,17 +58521,12 @@ function renderDashboard(){
     }
   ];
   document.getElementById('dash_vitalGrid').innerHTML = vitalCards.map(c=>`
-    <div class="vital-card tone-${c.tone}">
-      <div class="vital-label">${esc(c.label)}</div>
-      <div class="vital-value tone-${c.tone}">${c.value}</div>
-      <div class="vital-sub">${c.sub}</div>
+    <div class="ow-mt ow-${esc(c.tone)}">
+      <p class="ow-mt-l">${esc(c.label)}</p>
+      <span class="ow-mt-v">${c.value}</span>
+      <p class="ow-mt-s">${c.sub}</p>
     </div>`).join('');
 
-  // Cash bridge
-  const bridge = dashCashBridgeData();
-  document.getElementById('dash_cashbridge_note').textContent = 'Weekly cash collected vs cash paid out (supplier payments, expenses), last 8 weeks.';
-  document.getElementById('dash_cashbridge').innerHTML = dashGroupedBarSVG(bridge, 'var(--good)', 'var(--danger)') +
-    `<div class="cashbridge-legend"><span><i style="background:var(--good);"></i>Cash In</span><span><i style="background:var(--danger);"></i>Cash Out</span></div>`;
 
 
   /* One ranked list, built once, from the ONE context builder. The block
@@ -58427,16 +58534,32 @@ function renderDashboard(){
      shop_pulse are the same alerts, so the three cannot drift. */
   const alerts = dashAlerts(dctx);
 
+  /* One row, not a card. A card per alert put five things on a screen
+     that holds seven; a 44px row with the reasoning folded underneath
+     puts all of them there, and the reasoning is one click away rather
+     than permanently in the way. */
   const alertCardHTML = (a)=>{
     const band = DASH_BANDS[a.band];
-    return `<div class="dash-alert ${esc(band.cls)}">
-      <div class="dash-alert-head">
-        <span class="dash-alert-band ${esc(band.cls)}">${esc(band.label)}</span>
-        ${a.money > 0 ? `<span class="dash-alert-money">${esc(fmtUGX(Math.round(a.money)))}</span>` : ''}
+    const has = Number(a.money) > 0;
+    const money = has ? fmtUGX(Math.round(a.money)) : '\u2014';
+    const basis = has ? 'at stake' : 'nothing at stake yet';
+    const chips = `<span class="ow-cp">Watch</span><span class="ow-cp ow-${esc(band.cls)}">${
+      band.cls === 'bad' ? '<i class="ow-cp-d"></i>' : ''}${esc(band.label)}</span>`;
+    return `<div class="ow-q">
+      <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
+        <span class="ow-q-t">${esc(a.title)}</span>
+        <span class="ow-q-m">${chips}</span>
+        <span class="ow-q-v${has ? ' ow-bad' : ''}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${basis}</span></span>
+      </button>
+      <button type="button" class="ow-q-card ow-qtog">
+        <span class="ow-q-cm">${chips}${OW_CARET_C}</span>
+        <p class="ow-q-ct">${esc(a.title)}</p>
+        <span class="ow-q-cv${has ? ' ow-bad' : ''}">${esc(money)}<span class="ow-q-b">${basis}</span></span>
+      </button>
+      <div class="ow-q-x">
+        <p class="ow-q-why">${a.detail}</p>
+        <p class="ow-q-note">${esc(a.action)}</p>
       </div>
-      <div class="dash-alert-title">${esc(a.title)}</div>
-      <div class="dash-alert-detail">${a.detail}</div>
-      <div class="dash-alert-action">${esc(a.action)}</div>
     </div>`;
   };
   /* Five, then the rest on request. A list that runs to twenty is a list
@@ -58455,10 +58578,8 @@ function renderDashboard(){
   document.getElementById('dash_actionMore').innerHTML =
     listMoreButtonHTML('dashAlerts', alerts.length, 'flags');
   document.getElementById('dash_actionNote').textContent = alerts.length
-    ? (urgent.length
-      ? `${urgent.length} ${urgent.length===1?'thing has':'things have'} a deadline. Ranked by when they bite, then by what is on them.`
-      : 'Nothing has a deadline today — these are the things quietly costing money.')
-    : '';
+    ? String(alerts.length)
+    : 'nothing';
 
   /* Asks the database separately, because this is the one flag that cannot
      be worked out from what the admin app loads: a detached order is
@@ -58475,6 +58596,28 @@ function renderDashboard(){
     action: 'Open each order and set its agent again.',
   }));
 
+  renderTodayPlan();
+  renderDashPriceReview();
+  renderAnalysis();
+}
+
+/* THE SEVEN PANELS THAT ARE NOT THE MORNING.
+
+   Split out of renderDashboard, not deleted. Asked which of the old
+   dashboard's ten panels they actually read, the owner answered
+   "honestly, I stop at the top" -- so these went to their own screen
+   and Today keeps the three bands a shop opens for.
+
+   Still called at the end of renderDashboard as well as on entry to
+   Analysis. The waste is one pass over data already in memory; the
+   alternative is a screen that shows last week's chart because nobody
+   opened the dashboard today, and stale is worse than cheap. */
+function renderAnalysis(){
+  // Cash bridge
+  const bridge = dashCashBridgeData();
+  document.getElementById('dash_cashbridge_note').textContent = 'Weekly cash collected vs cash paid out (supplier payments, expenses), last 8 weeks.';
+  document.getElementById('dash_cashbridge').innerHTML = dashGroupedBarSVG(bridge, 'var(--good)', 'var(--danger)') +
+    `<div class="cashbridge-legend"><span><i style="background:var(--good);"></i>Cash In</span><span><i style="background:var(--danger);"></i>Cash Out</span></div>`;
   // Demand trajectory
   const trend = dashDemandTrendData();
   document.getElementById('dash_unitsTrend').innerHTML = dashAreaSVG(trend.map(t=>t.qty), trend.map(t=>t.label), '#3B82C4');
@@ -58515,7 +58658,6 @@ function renderDashboard(){
     <tbody>${breadthRows.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${r.qty.toLocaleString('en-UG',{maximumFractionDigits:2})}</td><td class="num"><span class="dash-badge ${r.buyers===1?'bad':(r.buyers<=4?'warn':'good')}" title="${r.buyers===1?`All from ${esc(r.topBuyerName)}`:''}">${r.buyers}</span></td></tr>`).join('')}</tbody></table>
   ` : `<div class="threat-empty">No sales in this window yet.</div>`;
 
-  renderDashPriceReview();
 }
 
 /* The report the shop gets without asking for it.

@@ -379,9 +379,25 @@ if (scope) {
   t.check(!/threats\.push\(/.test(code),
     'and the old unsorted, uncapped threat list is gone rather than left running beside it');
 
-  // Above the vitals: the figures are how the shop IS, this is what to do.
-  t.check(dashSection.indexOf('id="dash_actionList"') < dashSection.indexOf('id="dash_vitalGrid"'),
-    'the answer comes before the four figures, not in the second row');
+  /* THE ORDER FLIPPED, and it flipped for a reason worth writing down.
+
+     This used to read "above the vitals: the figures are how the shop
+     IS, this is what to do" -- put the answer first because the old
+     dashboard buried it under ten panels. That was a fix for a screen
+     that no longer exists.
+
+     Today is three bands: where the shop stands, what needs you, what
+     changed. The position comes first because it is what the work is
+     read AGAINST -- 3,330,000 tied up in one customer means one thing
+     with 2,140,000 in the drawer and another thing with 12,000,000. And
+     it is now one 64px strip rather than four cards in a second row, so
+     the work is still on the first screen either way. The old law was
+     "do not bury the answer"; the new one is "say where we stand, then
+     what to do about it", and nothing is buried by it. */
+  t.check(dashSection.indexOf('id="dash_vitalGrid"') < dashSection.indexOf('id="dash_actionList"'),
+    'the position comes first, and the work is read against it');
+  t.check(dashSection.indexOf('id="dash_mgrQueue"') < dashSection.indexOf('id="dash_actionList"'),
+    'and the Manager\'s tier sits above the watch\'s, in its own container, so neither reorders the other');
 }
 
 /* ---------- 9. the vital cards say what they mean --------------------- */
