@@ -1216,6 +1216,13 @@
   .mgr-worth{font-weight:700;font-size:13px;color:var(--accent-ink);white-space:nowrap;}
   .mgr-why{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:4px 0 9px;}
   .mgr-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  /* Its own line, above the buttons. As a flex item between Skip and
+     Discuss with margin-left:auto it was driven flush against Discuss,
+     and a done or skipped card -- which has no Skip button to push
+     against -- got the worst of it. A sentence is not a control. */
+  .mgr-reading{font-size:12px;color:var(--ow-ink-400);margin:0;padding:14px 0;}
+  .mgr-move-state{display:block;font-size:12px;color:var(--ink-soft);
+    margin:0 0 8px;max-width:76ch;line-height:1.45;}
   .mgr-state{font-size:12px;color:var(--ink-soft);margin-left:auto;text-align:right;}
   .mgr-hist-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;
     color:var(--ink-soft);padding:8px 2px;border-bottom:1px solid var(--line);}
@@ -57456,11 +57463,11 @@ function mgrMoveView(row, idx, all){
     <div class="mgr-why">${esc(b.why || '')}${
       b.play ? `<div class="mgr-unlocks">Play: ${esc(b.play)}</div>` : ''}${
       b.unlocks ? `<div class="mgr-unlocks">Unlocks: ${esc(b.unlocks)}</div>` : ''}</div>
+    ${stateBits.length ? `<p class="mgr-move-state">${stateBits.join(' · ')}</p>` : ''}
     <div class="mgr-acts">
       ${door ? `<button type="button" class="btn btn-accent mgr-door" data-tab="${esc(door.tab)}">${esc(door.label)}</button>` : ''}
       ${open ? `<button type="button" class="btn btn-ghost mgr-done">Done</button>
       <button type="button" class="btn btn-ghost mgr-skip">Skip</button>` : ''}
-      ${stateBits.length ? `<span class="mgr-state">${stateBits.join(' · ')}</span>` : ''}
       <button type="button" class="btn btn-ghost mgr-discuss" data-title="${esc(b.title || '')}">Discuss</button>
     </div>
   </div>`;
@@ -57476,17 +57483,38 @@ function renderManager(){
       Supabase SQL editor and reload once. Until then, today's plan lives only until this page closes.</div>
   </div>`;
 
+  /* THE OFFER IS BORN IN ITS SETTLED STATE.
+
+     This used to paint "Hold the meeting" in accent red every time, and
+     then -- a moment later, when the journal answered -- rewrite the
+     text to "Hold another anyway" and demote the button from red to
+     grey. The owner watched the main action of the screen change under
+     their eyes on every single visit, which reads as the app changing
+     its mind.
+
+     The stamp knows. lsGet(MANAGER_MEETING_KEY) is written the moment a
+     meeting is held on THIS device, so on the ordinary path it already
+     has the answer before any query runs. Paint from it, and the journal
+     only has to correct the one case the stamp cannot know about: a
+     meeting held on the owner's other device, or before this browser's
+     storage was cleared. */
+  const heldGuess = !!(managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO());
   const meet = document.getElementById('managerMeetingWrap');
   meet.innerHTML = managerMeetingRunning
     ? `<div class="mgr-meet"><div class="mgr-meet-note"><b>The manager is reading the shop…</b>
         The meeting is happening in the assistant panel — the tools being consulted are the same
         screens you would read yourself.</div></div>`
     : `<div class="mgr-meet">
-        <div class="mgr-meet-note" id="mgrMeetNote"><b>${managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO() ? 'Today’s plan is below' : 'Hold the morning meeting'}.</b>
-          It opens by accounting for its own last advice, reads the whole position, and brings
-          at most five moves ranked by the money on them. A meeting spends a little AI credit,
-          and it never runs itself.</div>
-        <button type="button" class="btn btn-accent" id="mgrRunBtn">Hold the meeting</button>
+        <div class="mgr-meet-note" id="mgrMeetNote"><b>${heldGuess ? 'Today’s plan is below' : 'Hold the morning meeting'}.</b>
+          ${heldGuess
+            ? `The meeting has been held. Another one spends more AI credit to read a position that
+               has not moved since this morning, and adds a second plan to the day rather than
+               replacing the first — worth it only if something real has changed.`
+            : `It opens by accounting for its own last advice, reads the whole position, and brings
+               at most five moves ranked by the money on them. A meeting spends a little AI credit,
+               and it never runs itself.`}</div>
+        <button type="button" class="btn ${heldGuess ? 'btn-ghost' : 'btn-accent'}" id="mgrRunBtn">${
+          heldGuess ? 'Hold another anyway' : 'Hold the meeting'}</button>
         <div class="mgr-review-offer">
           <button type="button" class="btn btn-ghost" id="mgrReviewBtn">Hold the weekly review</button>
           <span class="mgr-review-thin" id="mgrReviewThin">What the week did, what the advice earned,
@@ -57512,6 +57540,7 @@ function renderManager(){
   const playWrap = document.getElementById('managerPlaysWrap');
   if(playWrap){
     if(!managerNotesTable) playWrap.innerHTML = '';
+    else if(playWrap.innerHTML) playWrap.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
     else managerPlaybook().then(book=>{
       /* WHAT MOVED WHILE IT RAN -- said as movement, never as credit.
          The owner reads exactly what the weekly review reads, from the
@@ -57654,6 +57683,22 @@ function renderManager(){
     return;
   }
 
+  /* SAY IT IS READING, rather than leaving yesterday on the screen.
+
+     Four unawaited chains fill this page. Until each answers, whatever
+     the LAST render put there is still up -- so on a slow morning the
+     owner reads yesterday's plan as today's, with nothing on screen to
+     say otherwise. There is no visual difference between "this is your
+     plan" and "this is the plan from before you tapped Done", and the
+     second one is a lie the app tells silently.
+
+     A line is enough. It costs one paint and it cannot be mistaken for
+     an answer. */
+  [acct, planWrap, scoreWrap, qWrap, revWrap, hist, passed,
+   document.getElementById('managerTrackWrap')].forEach(el=>{
+    if(el) el.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
+  });
+
   /* With memory: the shells now, the journal when it answers. */
   managerLoadState().then(st=>{
     if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; if(passed) passed.innerHTML = ''; hist.innerHTML =
@@ -57662,14 +57707,24 @@ function renderManager(){
        thing that knows a meeting was held today on another device or
        before a reload, and it answers here -- so the invite stops
        inviting and the button becomes the quiet second choice. */
-    if(st.today){
+    if(!!st.today !== heldGuess){
+      /* Only when the journal DISAGREES with this device's stamp -- a
+         meeting held elsewhere, or a browser whose storage was cleared.
+         On every ordinary morning this branch does nothing, and the
+         button the owner is looking at never changes. */
       const note = document.getElementById('mgrMeetNote');
-      if(note) note.innerHTML = `<b>Today’s plan is below.</b> The meeting has been held.
-        Another one spends more AI credit to read a position that has not moved since this morning,
-        and adds a second plan to the day rather than replacing the first — worth it only if
-        something real has changed.`;
+      if(note) note.innerHTML = st.today
+        ? `<b>Today’s plan is below.</b> The meeting was held on another device.
+           Another one spends more AI credit to read a position that has not moved since this
+           morning, and adds a second plan to the day rather than replacing the first.`
+        : `<b>Hold the morning meeting.</b> No meeting is on the journal for today, whatever this
+           device remembered.`;
       const rb = document.getElementById('mgrRunBtn');
-      if(rb){ rb.textContent = 'Hold another anyway'; rb.classList.remove('btn-accent'); rb.classList.add('btn-ghost'); }
+      if(rb){
+        rb.textContent = st.today ? 'Hold another anyway' : 'Hold the meeting';
+        rb.classList.toggle('btn-accent', !st.today);
+        rb.classList.toggle('btn-ghost', !!st.today);
+      }
     }
     /* The offer says how much evidence a review would stand on, before
        the owner spends credit on one. */
