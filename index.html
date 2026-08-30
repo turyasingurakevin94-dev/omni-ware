@@ -186,6 +186,17 @@
   .tb-results button.cursor{background:var(--accent);color:#fff;}
   .tb-results button.cursor .tbr-group{color:rgba(255,255,255,0.75);}
   .tb-results .tbr-empty{padding:10px 10px 12px;font-size:12.5px;color:#8E9BA8;}
+  /* The Manager's row. Ruled off above so it reads as a different KIND
+     of answer rather than as one more screen -- everything above it goes
+     somewhere, this one asks something. */
+  .tb-results button.tbr-ask{border-top:1px solid rgba(255,255,255,0.12);
+    border-radius:0 0 7px 7px;margin-top:5px;padding-top:11px;}
+  /* One line, whatever was typed. A question long enough to be worth
+     asking is long enough to wrap this row to three lines and push the
+     screens above it off the top of the panel. */
+  .tb-results button.tbr-ask .tbr-q{color:#E4EAF0;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tb-results button.tbr-ask.cursor .tbr-q{color:#fff;}
   .tb-results mark{background:transparent;color:#fff;font-weight:700;}
   .tb-results button.cursor mark{color:#fff;text-decoration:underline;}
 
@@ -8066,10 +8077,10 @@
 
   <div class="tb-search" id="tbSearch">
     <svg class="tb-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input type="text" id="navSearch" placeholder="Search screens" autocomplete="off"
-      role="combobox" aria-expanded="false" aria-controls="navSearchResults" aria-label="Search screens">
+    <input type="text" id="navSearch" placeholder="Search screens, or ask the Manager" autocomplete="off"
+      role="combobox" aria-expanded="false" aria-controls="navSearchResults" aria-label="Search screens, or ask the Manager">
     <kbd class="tb-kbd" id="tbSearchKbd">Ctrl K</kbd>
-    <div class="tb-results" id="navSearchResults" role="listbox" aria-label="Screens"></div>
+    <div class="tb-results" id="navSearchResults" role="listbox" aria-label="Screens, and the Manager"></div>
   </div>
 
   <div class="tb-spacer"></div>
@@ -17973,18 +17984,64 @@ function navSearchMatches(q){
     .slice(0, 8);
 }
 
+/* The shortest thing worth putting to the Manager. Below three
+   characters what is in this box is somebody part-way through the name
+   of a screen, and offering to ask the shop about "c" is noise on every
+   single keystroke. */
+const NAV_ASK_MIN = 3;
+const NAV_ASK_ICON = '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
+/* ONE BOX, TWO KINDS OF ANSWER -- and no guessing between them.
+
+   Type "cement" and you want a screen. Type "what did Joan take on
+   Tuesday" and you want the Manager. A box that decided which by
+   sniffing at the words would be wrong sometimes, and being wrong here
+   means either a screen that will not open or a question that silently
+   became a search. So it does not decide: the screens are listed, and
+   the Manager is offered UNDER them, and the owner picks.
+
+   The order is the whole design. Screens first and the cursor on the
+   first of them, so typing "invo" and pressing Enter still lands on
+   Invoices exactly as it always has -- nothing anyone already does
+   changes. The Manager is last, and becomes the first and only option
+   only where this box used to be a dead end: "Nothing called that."
+   That sentence stays, because why there is no screen is worth knowing;
+   it just stops being the end of the road. */
 function renderNavSearch(){
   const q = navSearchInput.value.trim();
   if(!q){ closeNavSearch(); return; }
-  navSearchHits = navSearchMatches(q);
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const screens = navSearchMatches(q);
+  const asking = q.length >= NAV_ASK_MIN;
+  navSearchHits = asking ? screens.concat([{ ask:true, q }]) : screens;
   navSearchCursor = navSearchHits.length ? 0 : -1;
-  navSearchResults.innerHTML = navSearchHits.length
-    ? navSearchHits.map((x,i)=>
-        `<button type="button" role="option" data-i="${i}" class="${i===0?'cursor':''}">
-          ${x.icon}<span>${highlightTokens(x.label, q.toLowerCase().split(/\s+/).filter(Boolean))}</span>
-          ${x.group ? `<span class="tbr-group">${esc(x.group)}</span>` : ''}
-        </button>`).join('')
-    : `<div class="tbr-empty">Nothing called “${esc(q)}”.</div>`;
+
+  /* Built as ONE list of buttons in hit order, because
+     moveNavSearchCursor pairs the buttons it finds with navSearchHits by
+     position. The "nothing called that" line is a div and so does not
+     enter that count. */
+  const rows = screens.map((x,i)=>
+    `<button type="button" role="option" data-i="${i}" class="${i===navSearchCursor?'cursor':''}">
+      ${x.icon}<span>${highlightTokens(x.label, terms)}</span>
+      ${x.group ? `<span class="tbr-group">${esc(x.group)}</span>` : ''}
+    </button>`);
+  if(asking){
+    const i = screens.length;
+    rows.push(
+      `<button type="button" role="option" data-i="${i}" class="tbr-ask ${i===navSearchCursor?'cursor':''}">
+        ${NAV_ASK_ICON}<span class="tbr-q">Ask the Manager: “${esc(q)}”</span>
+      </button>`);
+  }
+  navSearchResults.innerHTML =
+    /* The words are already in the box directly above and about to be
+       repeated in the row below, so the long form said the same thing
+       three times over. It still SAYS there is no such screen, which is
+       the part worth knowing. */
+    (screens.length ? ''
+      : asking ? '<div class="tbr-empty">No screen by that name.</div>'
+      : `<div class="tbr-empty">Nothing called “${esc(q)}”.</div>`)
+    + rows.join('');
   navSearchResults.classList.add('show');
   navSearchInput.setAttribute('aria-expanded', 'true');
 }
@@ -18005,9 +18062,22 @@ function moveNavSearchCursor(step){
 function goToNavSearchHit(i){
   const hit = navSearchHits[i];
   if(!hit) return;
+  /* Read off the hit and not off the box: closeNavSearch empties the
+     hits, and the box has already been cleared by the time the question
+     would be sent. */
+  const ask = hit.ask ? String(hit.q || '') : '';
   navSearchInput.value = '';
   closeNavSearch();
   navSearchInput.blur();
+  if(hit.ask){
+    /* The panel, and the question straight into it. apMode is NOT set:
+       'manager' is an OCCASION -- a meeting, a review -- and it makes
+       the run loop commit a plan to the journal when the turn ends.
+       A question typed into the search box is not a meeting. */
+    apOpenPanel();
+    apSend(ask);
+    return;
+  }
   goToTab(hit.tab);
 }
 
