@@ -73,7 +73,7 @@ const scope = compileScope([
   extractFunction(src, 'buyHoldsStanding', 'index.html'),
   extractFunction(src, 'buyHoldFor', 'index.html'),
   extractFunction(src, 'buyKeyLabel', 'index.html'),
-  extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+  extractFunction(src, 'managerAdviceTally', 'index.html'),
   extractFunction(src, 'managerPlaybook', 'index.html'),
   extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
   extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),

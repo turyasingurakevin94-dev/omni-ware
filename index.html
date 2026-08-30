@@ -54890,18 +54890,18 @@ function managerReviewBrief(row){
    in between is a decision. And a fingerprint the owner has EVER
    marked done is not on this list at all: they came round, and telling
    the manager otherwise would be telling it something untrue. */
-async function managerSkippedAdvice(todayISO_){
-  /* The window and the threshold leave WITH the rows, so the sentence
-     the screen writes about this list and the list itself are drawn
-     from one reading and cannot come to disagree. */
-  const days = 35, times = 2;
-  const empty = { rows: [], days, times };
+async function managerAdviceTally(todayISO_){
+  /* The window and the thresholds leave WITH the rows, so the sentences
+     the screen writes about these lists and the lists themselves are
+     drawn from one reading and cannot come to disagree. */
+  const days = 35, times = 2, repeats = 3;
+  const empty = { passedOn: [], notLanding: [], days, times, repeats };
   if(!managerNotesTable) return empty;
   const today = todayISO_ || todayISO();
   const r = await sb.from('manager_notes').select('date, body, status')
     .eq('shop_id', currentShopId).eq('kind', 'move')
     .gte('date', anShiftDate(today, -days)).lte('date', today);
-  if(r.error){ console.warn('Manager: skipped advice not read:', r.error.message); return empty; }
+  if(r.error){ console.warn('Manager: advice tally not read:', r.error.message); return empty; }
   const fingerprint = (b)=>{
     const subj = b.subject || {};
     const id = subj.customerId != null ? subj.customerId
@@ -54918,7 +54918,11 @@ async function managerSkippedAdvice(todayISO_){
     if(!String(b.title || '').trim()) return;
     const fp = fingerprint(b);
     const cur = by.get(fp.key) || { title: b.title, byWording: fp.byWording,
-      skipped: 0, done: 0, reasons: [], lastOn: '' };
+      proposed: 0, skipped: 0, done: 0, reasons: [], lastOn: '' };
+    /* HOW OFTEN IT HAS BEEN PUT, whatever became of it. The counter this
+       tally never kept, and the only one that can see the manager
+       repeating itself: five meetings in one day, one idea, restated. */
+    cur.proposed += 1;
     if(row.status === 'skipped'){
       cur.skipped += 1;
       const why = String(b.skipReason || '').trim();
@@ -54930,15 +54934,31 @@ async function managerSkippedAdvice(todayISO_){
     if(String(row.date || '') > cur.lastOn){ cur.lastOn = String(row.date || ''); cur.title = b.title; }
     by.set(fp.key, cur);
   });
-  const rows = [...by.values()]
-    .filter(x=> x.skipped >= times && x.done === 0)
+  const all = [...by.values()];
+  /* A match on wording is a weaker claim than a match on an id, and the
+     mind is told which it has rather than left to assume. */
+  const wording = (x)=> (x.byWording ? { matched_by_wording: true } : {});
+
+  /* TWO LISTS, AND THEY CANNOT OVERLAP.
+
+     PASSED ON is a DECISION: the owner declined it, twice, and typed
+     why. The reasons are the whole of it.
+
+     NOT LANDING is the absence of one: put three times, never done and
+     never even turned down. That is not a shop that disagrees, it is
+     advice that is not reaching the shop at all -- and it needs the
+     opposite remedy, so folding the two together would lose the only
+     thing that tells them apart.
+
+     Three, not two. Twice is a busy week. */
+  const passedOn = all.filter(x=> x.skipped >= times && x.done === 0)
     .sort((a, b)=> (b.skipped - a.skipped) || String(b.lastOn).localeCompare(String(a.lastOn)))
     .map(x=> ({ title: x.title, times: x.skipped, last_on: x.lastOn,
-      reasons: x.reasons.slice(0, 3),
-      /* A match on wording is a weaker claim than a match on an id, and
-         the mind is told which it has rather than left to assume. */
-      ...(x.byWording ? { matched_by_wording: true } : {}) }));
-  return { rows, days, times };
+      reasons: x.reasons.slice(0, 3), ...wording(x) }));
+  const notLanding = all.filter(x=> x.proposed >= repeats && x.done === 0 && x.skipped === 0)
+    .sort((a, b)=> (b.proposed - a.proposed) || String(b.lastOn).localeCompare(String(a.lastOn)))
+    .map(x=> ({ title: x.title, times: x.proposed, last_on: x.lastOn, ...wording(x) }));
+  return { passedOn, notLanding, days, times, repeats };
 }
 
 /* THE SHOP'S OWN STRATEGY BOOK, read once for the screen and the mind
@@ -55264,8 +55284,36 @@ async function managerCommitPlan(){
 }
 
 /* ---- the meeting itself ---- */
+/* WHETHER A MEETING WAS ALREADY HELD TODAY, from the journal and not
+   from memory: managerToday is lost on reload and the localStorage
+   marker is per device, so on a second tablet or after a refresh both
+   would say no while the journal says yes. */
+async function managerHeldToday(){
+  if(!managerNotesTable) return false;
+  const r = await sb.from('manager_notes').select('id')
+    .eq('shop_id', currentShopId).eq('kind', 'meeting').eq('date', todayISO()).limit(1);
+  return !r.error && (r.data || []).length > 0;
+}
+
 async function runManagerMeeting(){
   if(assistantBusy || managerMeetingRunning){ toast('The manager is already in the middle of something'); return; }
+  /* ONE MEETING A DAY, CONFIRMED RATHER THAN REFUSED.
+
+     Five meetings were held on one morning, each spending credit to
+     re-read a position that had not moved since breakfast, and each
+     handing back the same idea in slightly different words.
+
+     But a morning where the shop HAS changed -- a big order in, a
+     supplier's price moved -- is a morning worth a second meeting, and
+     that is not the app's call. So the second tap costs a deliberate
+     yes, and never a no. The guard lives here rather than on the screen
+     because the dashboard has its own button into the same door. */
+  if(await managerHeldToday()){
+    if(!confirm('You have already held a meeting today, and its plan is on this screen.\n\n'
+      + 'Another one spends more AI credit to read a position that has not moved since this morning, '
+      + 'and adds a second plan to the day rather than replacing the first.\n\n'
+      + 'Hold another anyway?')) return;
+  }
   managerMeetingRunning = true;
   /* A meeting reads the books, not a picture -- and it pushes its own
      turn straight into the thread, so an attached photo would never go
@@ -55471,7 +55519,7 @@ function renderManager(){
         The meeting is happening in the assistant panel — the tools being consulted are the same
         screens you would read yourself.</div></div>`
     : `<div class="mgr-meet">
-        <div class="mgr-meet-note"><b>${managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO() ? 'Hold another meeting' : 'Hold the morning meeting'}.</b>
+        <div class="mgr-meet-note" id="mgrMeetNote"><b>${managerToday || lsGet(MANAGER_MEETING_KEY) === todayISO() ? 'Today’s plan is below' : 'Hold the morning meeting'}.</b>
           It opens by accounting for its own last advice, reads the whole position, and brings
           at most five moves ranked by the money on them. A meeting spends a little AI credit,
           and it never runs itself.</div>
@@ -55650,6 +55698,19 @@ function renderManager(){
   managerLoadState().then(st=>{
     if(st.error){ acct.innerHTML = ''; planWrap.innerHTML = ''; revWrap.innerHTML = ''; qWrap.innerHTML = ''; scoreWrap.innerHTML = ''; if(passed) passed.innerHTML = ''; hist.innerHTML =
       `<div class="mgr-why">The journal could not be read — ${esc(st.error)}</div>`; return; }
+    /* SAID BEFORE THE TAP, not only after it. The journal is the only
+       thing that knows a meeting was held today on another device or
+       before a reload, and it answers here -- so the invite stops
+       inviting and the button becomes the quiet second choice. */
+    if(st.today){
+      const note = document.getElementById('mgrMeetNote');
+      if(note) note.innerHTML = `<b>Today’s plan is below.</b> The meeting has been held.
+        Another one spends more AI credit to read a position that has not moved since this morning,
+        and adds a second plan to the day rather than replacing the first — worth it only if
+        something real has changed.`;
+      const rb = document.getElementById('mgrRunBtn');
+      if(rb){ rb.textContent = 'Hold another anyway'; rb.classList.remove('btn-accent'); rb.classList.add('btn-ghost'); }
+    }
     /* The offer says how much evidence a review would stand on, before
        the owner spends credit on one. */
     const thinEl = document.getElementById('mgrReviewThin');
@@ -55783,17 +55844,34 @@ function renderManager(){
        quietly disappears and nobody is told is a shop where the app
        decided something on its own. No buttons — it is a mirror, and
        the way back is simply to do one of them. */
-    managerSkippedAdvice(todayISO()).then(pa=>{
+    managerAdviceTally(todayISO()).then(pa=>{
       if(!passed) return;
-      passed.innerHTML = pa.rows.length
+      const declined = pa.passedOn.length
         ? `<div class="mgr-sec-title">Advice you have passed on</div>
           <div class="mgr-why" style="margin-bottom:6px;">Skipped ${pa.times} times or more in the last
             ${pa.days} days and never done, so the manager has been told to stop proposing ${
-            pa.rows.length === 1 ? 'it' : 'them'} and think of something else. Doing one is all it takes to bring it back.</div>
-          ${pa.rows.map(p=> `<div class="mgr-hist-row">
+            pa.passedOn.length === 1 ? 'it' : 'them'} and think of something else. Doing one is all it takes to bring it back.</div>
+          ${pa.passedOn.map(p=> `<div class="mgr-hist-row">
             <span>${esc(p.title)}${p.reasons.length ? ` — <i>${esc(p.reasons.join('; '))}</i>` : ''}</span>
             <span>passed on ${p.times} times</span></div>`).join('')}`
         : '';
+      /* A DIFFERENT FACT, AND A DIFFERENT REMEDY. Passed on means you
+         decided against it and said why. This means the manager has put
+         it to you again and again and you have neither done it nor
+         turned it down — which is not disagreement, it is advice that
+         is not reaching you. It is not silenced: the manager is told to
+         say so out loud and then spend the morning on something else. */
+      const ignored = pa.notLanding.length
+        ? `<div class="mgr-sec-title">Advice that is not landing</div>
+          <div class="mgr-why" style="margin-bottom:6px;">Put to you ${pa.repeats} times or more in the last
+            ${pa.days} days, never done and never turned down. The manager is told to say so rather than
+            give ${pa.notLanding.length === 1 ? 'it' : 'them'} again in different words. Do one, or skip
+            one with a reason, and it stops.</div>
+          ${pa.notLanding.map(p=> `<div class="mgr-hist-row">
+            <span>${esc(p.title)}</span>
+            <span>put to you ${p.times} times</span></div>`).join('')}`
+        : '';
+      passed.innerHTML = declined + ignored;
     });
   });
 }
@@ -62076,6 +62154,10 @@ const ASSISTANT_TOOLS = {
     const lastMeetingOn = ((meetings.data||[])[0]||{}).date || null;
     const isNew = (d)=> !lastMeetingOn || (d && String(d) >= lastMeetingOn);
 
+    /* Read BEFORE worth_saying, which now needs it: the two lists it
+       returns answer different questions and both are drawn here, from
+       one query. */
+    const tally = await managerAdviceTally(todayISO());
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
@@ -62106,13 +62188,35 @@ const ASSISTANT_TOOLS = {
        chance to act on its lessons. */
     if(lastReview && isNew(lastReview.held_on)) worth.push({ kind: 'new_review',
       verdict: lastReview.verdict, lessons: lastReview.lessons });
+    /* ADVICE THE MANAGER KEEPS GIVING AND NOBODY TOUCHES.
+       Five meetings in one day, one idea, restated four times, 0 of 5
+       done each time -- and nothing could see it, because the restraint
+       built for this watches advice the owner SKIPS and these were
+       never skipped. They were ignored.
+
+       The guidance rides with the entry, as nothing_new's does: a count
+       with no instruction leaves a mind free to say the same thing a
+       fourth time in different words, which is the exact failure. */
+    tally.notLanding.slice(0, 3).forEach(x=>{
+      worth.push({ kind: 'advice_not_landing', advice: x.title, times: x.times,
+        last_put: x.last_on,
+        ...(x.matched_by_wording ? { matched_by_wording: true } : {}),
+        what_to_do: 'You have put this to the owner ' + x.times
+          + ' times and they have neither done it nor turned it down. Say so plainly in one sentence,'
+          + ' and DO NOT propose it again in different words: either ask what is in the way, or spend'
+          + ' today’s plan on something else.' });
+    });
 
     /* THE FIFTH KEY, and the one the rulebook has demanded since the
        day it was written. Names ALONE would be a ban with no argument
        behind it, and a mind told only "don't" proposes the same thing
        wearing a different hat -- so the owner's own reasons travel
        with each, because the rule says RETHINK, not avoid. */
-    const passedOn = await managerSkippedAdvice(todayISO());
+    /* ADVICE THAT IS NOT LANDING GOES IN worth_saying, NOT HERE.
+       do_not_repeat means "never mention this", which would bury advice
+       the owner may still need. Advice nobody has touched needs the
+       opposite: said out loud, once, and then a different plan. */
+    const passedOn = { rows: tally.passedOn };
     const doNot = {
       ...(open.length ? { open_questions: open.slice(0, 8).map(q=> q.asked) } : {}),
       ...((book.running||[]).length ? { plays_running: book.running.slice(0, 8).map(pl=> pl.name) } : {}),

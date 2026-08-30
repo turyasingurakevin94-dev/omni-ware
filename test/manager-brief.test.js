@@ -166,7 +166,7 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
-      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+      extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
@@ -209,6 +209,36 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
     eq(out.worth_saying.length, 0, 'a quiet morning has nothing worth saying');
     t.check(/handful of words/.test(out.nothing_new || ''),
       'and is told to say so briefly rather than filling the silence with bookkeeping');
+  }
+
+  /* ADVICE THE MANAGER KEEPS GIVING AND NOBODY TOUCHES. Five meetings
+     in one day, one idea restated, 23 of 25 moves untouched that week —
+     and the restraint built for it never fired, because it watches
+     advice the owner DECLINES and these were only ignored. */
+  {
+    const putThrice = [1, 2, 3].map((i) => ({ date: '2026-08-2' + i, status: 'open',
+      body: { title: 'Get a dated commitment from Mulongo', mkind: 'chase', subject: { customerId: 9 } } }));
+    const out = await run(journal({ move: putThrice }));
+    const nl = out.worth_saying.filter((x) => x.kind === 'advice_not_landing');
+    eq(nl.length, 1, 'advice put three times and never touched is worth saying');
+    eq(nl[0].advice, 'Get a dated commitment from Mulongo', 'named');
+    eq(nl[0].times, 3, 'with how many times it was put');
+    /* A COUNT WITH NO INSTRUCTION leaves a mind free to say the same
+       thing a fourth time in different words, which is the exact
+       failure. The entry carries its own, as nothing_new does. */
+    t.check(/DO NOT propose it again in different words/.test(nl[0].what_to_do || ''),
+      'and carries its own instruction not to restate it');
+    t.check(/ask what is in the way, or spend/.test(nl[0].what_to_do || ''),
+      'saying what to do instead');
+    /* NOT SILENCED. do_not_repeat means "never mention this", which
+       would bury advice the owner may still need. */
+    const doNot = out.do_not_repeat || {};
+    t.check(!JSON.stringify(doNot).includes('Mulongo'),
+      'and it is NOT in do_not_repeat, which would bury advice the owner may still need');
+
+    const twice = await run(journal({ move: putThrice.slice(0, 2) }));
+    eq(twice.worth_saying.filter((x) => x.kind === 'advice_not_landing').length, 0,
+      'twice is a busy week, not a shop ignoring its manager');
   }
 
   /* A target behind its own pace is news; one on course is not. */

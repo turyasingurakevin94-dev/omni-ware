@@ -254,7 +254,7 @@ const base = {
     };
     const tools = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+      extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'buyHoldsStanding', 'index.html'),
       extractFunction(src, 'buyHoldFor', 'index.html'),
       extractFunction(src, 'buyKeyLabel', 'index.html'),
@@ -297,7 +297,7 @@ const base = {
     /* Nothing to say beats an empty heading. */
     const empty = compileScope([
       extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
-      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+      extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'buyHoldsStanding', 'index.html'),
       extractFunction(src, 'buyHoldFor', 'index.html'),
       extractFunction(src, 'buyKeyLabel', 'index.html'),

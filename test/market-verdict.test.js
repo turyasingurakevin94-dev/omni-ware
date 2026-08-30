@@ -337,7 +337,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     extractFunction(src, 'buyHoldFor', 'index.html'),
     extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'buyKeyParts', 'index.html'),
-    extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+    extractFunction(src, 'managerAdviceTally', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     extractFunction(src, 'deriveMoveOutcome', 'index.html'),
@@ -356,7 +356,7 @@ const build = (data, extraSrc, names, over) => compileScope(
     daysSinceDate: () => 1, apRound: (n) => Math.round(Number(n) || 0), fmtUGX: (n) => String(n),
     sb: { from: () => { const q = { _kind: null };
       q.select = () => q; q.order = () => q; q.in = () => q;
-      /* The date window managerSkippedAdvice reads over. */
+      /* The date window managerAdviceTally reads over. */
       q.gte = () => q; q.lte = () => q;
       q.eq = (c, val) => { if (c === 'kind') q._kind = val; return q; };
       q.limit = () => Promise.resolve({ data: [], error: null });

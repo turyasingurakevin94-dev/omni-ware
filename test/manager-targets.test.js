@@ -204,7 +204,7 @@ const { MANAGER_METRICS: M, managerScoreProgress } = scope.names();
       extractFunction(src, 'buyHoldsStanding', 'index.html'),
       extractFunction(src, 'buyHoldFor', 'index.html'),
       extractFunction(src, 'buyKeyLabel', 'index.html'),
-      extractFunction(src, 'managerSkippedAdvice', 'index.html'),
+      extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),

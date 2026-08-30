@@ -62,12 +62,12 @@ const advice = async (rows) => {
     q.select = () => q; q.eq = () => q; q.gte = () => q;
     q.lte = () => Promise.resolve({ data: rows, error: null });
     return q; } };
-  const s = compileScope([extractFunction(src, 'managerSkippedAdvice', 'index.html')],
+  const s = compileScope([extractFunction(src, 'managerAdviceTally', 'index.html')],
     { managerNotesTable: true, currentShopId: 'shop-1', sb,
       todayISO: () => TODAY, anShiftDate: shift,
       console, Date, Math, Number, String, Array, Object, Map, Set, Promise },
-    ['managerSkippedAdvice']);
-  return s.managerSkippedAdvice(TODAY);
+    ['managerAdviceTally']);
+  return s.managerAdviceTally(TODAY);
 };
 
 (async () => {
@@ -78,17 +78,17 @@ const advice = async (rows) => {
       move({ title: 'Chase Milly today', subject: { customerId: 7 }, status: 'skipped', why: 'still travelling', date: '2026-08-24' }),
       move({ title: 'Chase Dad today', subject: { customerId: 8 }, status: 'skipped', why: 'bad day for it' }),
     ]);
-    eq(out.rows.length, 1, 'only advice passed on more than once counts');
-    eq(out.rows[0].title, 'Chase Milly today', 'and it is named');
-    eq(out.rows[0].times, 2, 'with how many times');
-    eq(out.rows[0].last_on, '2026-08-24', 'and the day it was last put to them');
+    eq(out.passedOn.length, 1, 'only advice passed on more than once counts');
+    eq(out.passedOn[0].title, 'Chase Milly today', 'and it is named');
+    eq(out.passedOn[0].times, 2, 'with how many times');
+    eq(out.passedOn[0].last_on, '2026-08-24', 'and the day it was last put to them');
     /* A BAN WITH NO ARGUMENT IS A BAN THE MIND WILL ROUTE AROUND. The
        rule is RETHINK, not avoid: told only "don't", a mind proposes
        the same thing wearing a different hat. Told WHY, it can do
        something else. */
-    eq(out.rows[0].reasons.length, 2, 'and both reasons the owner typed');
-    eq(out.rows[0].reasons[0], 'she is travelling', 'in their own words');
-    t.check(!out.rows.some((r) => r.title === 'Chase Dad today'),
+    eq(out.passedOn[0].reasons.length, 2, 'and both reasons the owner typed');
+    eq(out.passedOn[0].reasons[0], 'she is travelling', 'in their own words');
+    t.check(!out.passedOn.some((r) => r.title === 'Chase Dad today'),
       'a move skipped once is timing, not a decision — it is not on this list');
 
     /* One reading: the window and the threshold leave with the rows, so
@@ -105,7 +105,7 @@ const advice = async (rows) => {
       move({ title: 'Chase Milly today', subject: { customerId: 7 }, status: 'skipped', why: 'still travelling', date: '2026-08-22' }),
       move({ title: 'Chase Milly today', subject: { customerId: 7 }, status: 'done', date: '2026-08-26' }),
     ]);
-    eq(out.rows.length, 0,
+    eq(out.passedOn.length, 0,
       'the owner came round and did it — telling the manager they never did would be telling it something untrue');
   }
 
@@ -119,7 +119,7 @@ const advice = async (rows) => {
       move({ title: 'Chase them today', subject: { customerId: 7 }, status: 'skipped', why: 'a' }),
       move({ title: 'Chase them today', subject: { customerId: 8 }, status: 'skipped', why: 'b' }),
     ]);
-    eq(out.rows.length, 0, 'two customers chased once each is not one piece of advice skipped twice');
+    eq(out.passedOn.length, 0, 'two customers chased once each is not one piece of advice skipped twice');
 
     /* And a move that named nobody can only be matched on its wording.
        Said out loud rather than passed off as the stronger claim. */
@@ -127,14 +127,14 @@ const advice = async (rows) => {
       move({ title: 'Tidy the shelf', kind: 'other', status: 'skipped', why: 'no time' }),
       move({ title: 'Tidy the shelf', kind: 'other', status: 'skipped', why: 'still no time' }),
     ]);
-    eq(byName.rows.length, 1, 'wording is the fallback when a move named nothing');
-    eq(byName.rows[0].matched_by_wording, true,
+    eq(byName.passedOn.length, 1, 'wording is the fallback when a move named nothing');
+    eq(byName.passedOn[0].matched_by_wording, true,
       'and it says so — a match on a title is the weaker of the two claims');
     const byId = await advice([
       move({ title: 'Chase Milly', subject: { customerId: 7 }, status: 'skipped', why: 'a' }),
       move({ title: 'Chase Milly', subject: { customerId: 7 }, status: 'skipped', why: 'b' }),
     ]);
-    t.check(!('matched_by_wording' in byId.rows[0]),
+    t.check(!('matched_by_wording' in byId.passedOn[0]),
       'while a match on an id claims nothing extra');
 
     /* Two KINDS of move about one customer are two pieces of advice. */
@@ -142,14 +142,99 @@ const advice = async (rows) => {
       move({ title: 'Chase Milly', kind: 'chase', subject: { customerId: 7 }, status: 'skipped', why: 'a' }),
       move({ title: 'Invoice Milly', kind: 'invoice', subject: { customerId: 7 }, status: 'skipped', why: 'b' }),
     ]);
-    eq(kinds.rows.length, 0, 'chasing somebody and invoicing them are different advice about one person');
+    eq(kinds.passedOn.length, 0, 'chasing somebody and invoicing them are different advice about one person');
+  }
+
+  /* ---------- 3b. not landing is not the same as passed on ------------ */
+  {
+    /* THE CASE THE FIRST LIST COULD NOT SEE. Five meetings in one day,
+       one idea, restated — and 23 of 25 moves untouched that week. Not
+       one was skipped, so the restraint built for exactly this never
+       fired: it watches advice the owner DECLINES, and these were
+       ignored. */
+    const put = (n) => Array.from({ length: n }, (_, i) => move({
+      title: 'Get a dated commitment from Mulongo', subject: { customerId: 9 },
+      status: 'open', date: '2026-08-2' + i }));
+
+    const thrice = await advice(put(3));
+    eq(thrice.notLanding.length, 1, 'advice put three times and never touched is advice that is not landing');
+    eq(thrice.notLanding[0].times, 3, 'with how many times it was put');
+    eq(thrice.notLanding[0].title, 'Get a dated commitment from Mulongo', 'and what it was');
+    eq(thrice.passedOn.length, 0, 'and it is NOT on the passed-on list — nobody declined it');
+    eq(thrice.repeats, 3, 'the threshold travels with the answer');
+
+    /* TWICE IS A BUSY WEEK. */
+    eq((await advice(put(2))).notLanding.length, 0,
+      'twice is a busy week, not a shop ignoring its manager');
+
+    /* A DECISION BELONGS ON THE OTHER LIST, WITH ITS REASON. The two
+       lists are exclusive by construction: fold them together and the
+       one thing that tells them apart — whether the owner said
+       anything — is the thing that is lost. */
+    const declined = await advice(put(3).concat([move({
+      title: 'Get a dated commitment from Mulongo', subject: { customerId: 9 },
+      status: 'skipped', why: 'he is away until October' })]));
+    eq(declined.notLanding.length, 0,
+      'a move the owner turned down even once is a decision, not advice that failed to reach them');
+    t.check(declined.passedOn.length === 0 || declined.passedOn[0].reasons.length > 0,
+      'and wherever it lands, their reason goes with it');
+
+    /* AND THEY CAME ROUND. */
+    const acted = await advice(put(3).concat([move({
+      title: 'Get a dated commitment from Mulongo', subject: { customerId: 9 }, status: 'done' })]));
+    eq(acted.notLanding.length, 0, 'a move they eventually did is not advice that never landed');
+  }
+
+  /* ---------- 3c. the mind is told to stop restating it ---------------- */
+  {
+    /* IT GOES IN worth_saying, NOT do_not_repeat. do_not_repeat means
+       "never mention this", which would bury advice the owner may still
+       need. This needs the opposite: said out loud once, then a
+       different plan. */
+    const hist = src.slice(src.indexOf("manager_history: { confirm: false"));
+    t.check(/kind: 'advice_not_landing'/.test(hist.slice(0, 12000)),
+      'advice that is not landing reaches the morning through worth_saying');
+    t.check(!/advice_not_landing[\s\S]{0,400}const doNot/.test(hist.slice(0, 12000))
+      || !/doNot[\s\S]{0,200}notLanding/.test(hist.slice(0, 12000)),
+      'and never through do_not_repeat, which would bury advice the owner may still need');
+    /* A COUNT WITH NO INSTRUCTION leaves a mind free to say the same
+       thing a fourth time in different words — the exact failure. */
+    t.check(/DO NOT propose it again in different words/.test(src),
+      'the entry carries its own instruction, the way nothing_new does');
+    t.check(/either ask what is in the way, or spend/.test(src),
+      'and says what to do instead of restating it');
+    t.check(/Restating it a fourth time in different words is the one response that is forbidden/.test(api),
+      'and the tool description argues it where the mind reads the data');
+  }
+
+  /* ---------- 3d. one meeting a day, confirmed and never refused ------- */
+  {
+    const run = extractFunction(src, 'runManagerMeeting', 'index.html');
+    t.check(/await managerHeldToday\(\)/.test(run),
+      'a second meeting on one day asks the journal first');
+    /* THE JOURNAL, NOT MEMORY. managerToday is lost on reload and the
+       localStorage marker is per device, so on a second tablet both
+       would say no while the journal says yes. */
+    const held = extractFunction(src, 'managerHeldToday', 'index.html');
+    t.check(/\.eq\('kind', 'meeting'\)\.eq\('date', todayISO\(\)\)/.test(held),
+      'and asks it about today specifically');
+    t.check(!/managerToday|MANAGER_MEETING_KEY/.test(held),
+      'never from memory, which a reload or a second device empties');
+
+    /* CONFIRMS, NEVER REFUSES. A morning where the shop really has
+       changed is worth a second meeting, and that is not the app's
+       call — what it gets to do is make the fifth one deliberate. */
+    t.check(/if\(!confirm\(/.test(run) && /Hold another anyway\?/.test(run),
+      'it confirms rather than refusing — the app does not decide a morning is not worth a meeting');
+    t.check(/spends more AI credit/.test(run) && /adds a second plan to the day/.test(run),
+      'and says exactly what saying yes will do');
   }
 
   /* ---------- 4. it reaches the mind, and the owner ------------------- */
   {
     t.check(/advice_you_keep_passing_on: passedOn\.rows/.test(src),
       'the restraint list carries it, where the mind is told to look');
-    t.check(/managerSkippedAdvice\(todayISO\(\)\)\.then/.test(src),
+    t.check(/managerAdviceTally\(todayISO\(\)\)\.then/.test(src),
       'and the Manager screen shows the owner what it has stopped proposing');
     t.check(/Advice you have passed on/.test(src),
       'under a heading in their own words — advice vanishing with nobody told would be the app deciding on its own');
