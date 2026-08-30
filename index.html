@@ -58688,7 +58688,9 @@ function renderDashboard(){
 
   renderTodayPlan();
   renderDashPriceReview();
-  renderAnalysis();
+  /* Handing over the context this function already built, rather than
+     making Analysis read the same window a second time. */
+  renderAnalysis(dctx);
 }
 
 /* THE SEVEN PANELS THAT ARE NOT THE MORNING.
@@ -58702,7 +58704,33 @@ function renderDashboard(){
    Analysis. The waste is one pass over data already in memory; the
    alternative is a screen that shows last week's chart because nobody
    opened the dashboard today, and stale is worse than cheap. */
-function renderAnalysis(){
+function renderAnalysis(dctx){
+  /* ITS OWN READING OF THE BOOKS.
+
+     These seven panels used to be the bottom half of renderDashboard and
+     read three of that function's locals -- itemRows, goingQuiet and
+     breadth, all destructured from its dashboardContext. Lifting them
+     into a function of their own left those three references behind,
+     pointing at a scope that no longer surrounds them.
+
+     Nothing failed on the screen where it was tested, because entering
+     Analysis was not the path that ran first. The path that ran first
+     was boot -> goToTab('dashboard') -> renderDashboard -> here, and
+     the ReferenceError it threw came out of boot's own promise BEFORE
+     `document.body.classList.remove('app-loading')` -- so the shell was
+     never revealed and the whole app came up blank. One undefined name
+     took the entire shop down, on the single most common path there is:
+     opening the app on the screen it opens on.
+
+     A function called from two places cannot borrow one caller's scope.
+     The caller that already has a context passes it in; the one that
+     does not gets it made here. */
+  if(!dctx){
+    const {from, to} = dashGetRange();
+    dctx = dashboardContext(from, to);
+  }
+  const { goingQuiet, itemRows, breadth } = dctx;
+
   // Cash bridge
   const bridge = dashCashBridgeData();
   document.getElementById('dash_cashbridge_note').textContent = 'Weekly cash collected vs cash paid out (supplier payments, expenses), last 8 weeks.';
