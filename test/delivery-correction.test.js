@@ -44,7 +44,11 @@ const src = read('index.html');
 const FNS = ['stockKey', 'addStockLot', 'consumeStockLots', 'isStockPurchaseRow', 'stockCostsEqual',
   'effectiveStockPurchase', 'stockPurchaseMinQty', 'takeBackPurchaseLots', 'stockPurchaseInvoiceFor',
   'applyStockPurchaseEdit', 'stockLogEditButtonHTML', 'ipeFillBillOptions',
-  'samePiLineTarget', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue'];
+  'samePiLineTarget', 'purchaseInvoiceTotal', 'purchaseInvoiceBalanceDue',
+  /* The whole-delivery undo, which is the other half of this: a line
+     cannot be corrected to nothing, so "none of it came" is its own
+     act. */
+  'undoDeliveryPlan', 'undoDelivery', 'buyOrderTotal', 'buyOrderIsOpen', 'buyOrderFor'];
 
 const data = {};
 const syncCalls = [];
@@ -66,6 +70,10 @@ const scope = compileScope(
     /* A stub DOM just wide enough for the form's bill panel: the three
        elements it reads, and nothing else. */
     document: { getElementById: (id) => dom[id] || null },
+    daysSinceDate: () => 0,
+    saveData: () => {},
+    BUY_ORDER_STALE_DAYS: 45,
+    Date,
   },
   FNS,
 );
@@ -98,6 +106,12 @@ function freshDelivery(over) {
         date: '2026-08-30', at: '2026-08-30T09:00:01.000Z',
         cost: 2300, supplierId: 'S1', source: 'buy-order', piId: 9 },
     ],
+    presetBuyOrders: o.noOrder ? {} : { o1: {
+      id: 'o1', supplierId: 'S1', placedOn: '2026-08-25', state: 'arrived',
+      closedOn: '2026-08-30', billId: 9, expectedOn: null,
+      lines: [{ key: 'P1', productId: 'P1', name: 'Cement', unit: 'bag', qty: 30, unitCost: 27000 },
+        { key: 'P2', productId: 'P2', name: 'Wall Angle', unit: 'pc', qty: 200, unitCost: 2300 }],
+      received: [{ key: 'P1', qty: 30, unitCost: 27000 }, { key: 'P2', qty: 200, unitCost: 2300 }] } },
     purchaseInvoices: [{
       id: 9, quoteId: null, customerName: '', supplierId: 'S1', supplierName: 'ABC',
       date: '2026-08-30', buyOrderId: 'o1',
@@ -277,6 +291,230 @@ const line = (pid) => bill().items.find((it) => it.productId === pid);
   scope.ipeFillBillOptions(data.stockLog[0], null);
   eq(dom.ipe_bill_note.textContent, '',
     'a bill of one line says nothing about other lines — there are none, and a sentence about them would be noise');
+}
+
+/* ================= THE LORRY THAT NEVER CAME =========================
+ *
+ * "It came" is one tap, and a shop makes mistakes with one taps: the
+ * wrong order marked arrived, a delivery recorded twice, goods signed
+ * for that turned back at the gate. Line-by-line cannot answer it — a
+ * line cannot be corrected to nothing, deliberately, because a form
+ * cannot tell "none of it came" from "I have not typed the number
+ * yet". So "none of it came" is its own act.
+ */
+
+/* ---------- 11. what it will do, before it does anything ------------ */
+{
+  freshDelivery();
+  const plan = scope.undoDeliveryPlan(9);
+  t.check(plan.ok, `a delivery with its goods still on the shelf can be undone${plan.ok ? '' : ' — ' + plan.why}`);
+  eq(plan.lines.length, 2, 'naming every line it will take back');
+  eq(plan.lines[0].qty, 30, 'with how many of each');
+  eq(plan.lines[1].qty, 200, 'both of them');
+  eq(plan.total, 1270000, 'and the money that stops being owed');
+  t.check(!!plan.order && plan.order.id === 'o1', 'and the order it came off');
+  /* SAID BEFORE ANYTHING MOVES. A repair the shop cannot read first is
+     a repair the shop cannot check. */
+  eq(data.stock.P1, 30, 'the plan is a reading — the shelf has not moved');
+  eq(bill().voided, false, 'and the bill still stands');
+}
+
+/* ---------- 12. and then it does it, on the record ------------------- */
+{
+  freshDelivery();
+  const res = scope.undoDelivery(9);
+  t.check(res.ok, `the delivery is undone${res.ok ? '' : ' — ' + res.why}`);
+  eq(data.stock.P1, 0, 'the cement comes off the shelf');
+  eq(data.stock.P2, 0, 'and so does the wall angle');
+  eq((data.stockLots.P1 || []).reduce((n, l) => n + l.qty, 0), 0, 'with its cost lots');
+  eq(bill().voided, true, 'the bill is voided, so nothing is owed for goods that never came');
+  eq(scope.purchaseInvoiceBalanceDue(bill()), 1270000,
+    'the bill still SAYS what it said — voiding is what stops it counting, not rewriting it');
+
+  /* POSTED, NOT PAINTED OVER. */
+  eq(data.stockLog[0].delta, 30, 'the row that said the goods came stays exactly as it was written');
+  const fixes = data.stockLog.filter((r) => r.type === 'correction');
+  eq(fixes.length, 2, 'and a correction movement carries each line back');
+  eq(fixes[0].delta, -30, 'in the direction the goods went');
+  eq(fixes[0].purchaseQty, 0,
+    'saying this purchase was for NOTHING — which is the whole claim, and the one a line-by-line form cannot make');
+  t.check(/never came/.test(fixes[0].note || ''), 'in words the next reader can act on');
+  eq(scope.effectiveStockPurchase(data.stockLog[0]).qty, 0, 'so what this purchase now says is nothing');
+
+  /* BACK TO WAITING, NOT CANCELLED. */
+  const order = scope.buyOrderFor('o1');
+  eq(order.state, 'placed',
+    'THE ORDER GOES BACK TO WAITING — nothing arrived, so the shop is still expecting it; calling it off is a different decision with its own reason');
+  eq(order.billId, null, 'carrying no bill any more');
+  eq(res.reopened, true, 'and the result says so, so the toast can point at it');
+}
+
+/* ---------- 13. money that has moved is not undone here -------------- */
+{
+  freshDelivery({ amountPaid: 400000 });
+  const plan = scope.undoDeliveryPlan(9);
+  eq(plan.ok, false,
+    'A BILL WITH MONEY AGAINST IT IS REFUSED — un-writing it would not un-write the payment, and the shop would be owed by somebody the books had stopped mentioning');
+  t.check(/400,000/.test(plan.why || ''), 'the refusal names what was paid');
+  t.check(/ABC/.test(plan.why || ''), 'and who has it');
+  eq(data.stock.P1, 30, 'and nothing moved');
+}
+
+/* ---------- 14. goods that have sold, existed ------------------------ */
+{
+  freshDelivery({ cementOnHand: 22 });
+  const plan = scope.undoDeliveryPlan(9);
+  eq(plan.ok, false,
+    'A DELIVERY WITH SOLD GOODS IS REFUSED — units that left the shelf existed, whatever the paperwork says');
+  t.check(/Cement — 8 of 30 gone/.test(plan.why || ''), 'naming the line and how many are gone');
+  t.check(/one at a time/.test(plan.why || ''), 'and pointing at the repair that is still open');
+  eq(plan.sold.length, 1, 'with the stuck lines carried for the screen');
+  eq(data.stock.P1, 22, 'and nothing moved');
+  eq(bill().voided, false, 'nor was the bill touched');
+}
+
+/* ---------- 15. and it cannot be done twice -------------------------- */
+{
+  freshDelivery();
+  scope.undoDelivery(9);
+  const again = scope.undoDeliveryPlan(9);
+  eq(again.ok, false, 'a delivery already undone cannot be undone again');
+  t.check(/already voided/.test(again.why || ''), 'and says why');
+  eq(bill().deliveryUndone, '2026-08-31',
+    'the bill is marked as undone, so it can never be un-voided back into a delivery the shelf and the order have both moved on from');
+}
+
+/* ---------- 16. a bill that never came off an order ------------------ */
+{
+  freshDelivery();
+  delete bill().buyOrderId;
+  const plan = scope.undoDeliveryPlan(9);
+  eq(plan.ok, false, 'a bill with no order behind it has no delivery to undo');
+  t.check(/line by line/.test(plan.why || ''), 'and is pointed at the repair that fits it');
+}
+
+/* ---------- 17. an order swept away is said, not silently skipped ---- */
+{
+  freshDelivery({ noOrder: true });
+  const res = scope.undoDelivery(9);
+  t.check(res.ok, `the shelf and the bill are still put right${res.ok ? '' : ' — ' + res.why}`);
+  eq(data.stock.P1, 0, 'the goods come back off');
+  eq(bill().voided, true, 'and the bill is voided');
+  eq(res.reopened, false, 'nothing was reopened');
+  eq(res.orderGone, true,
+    'AND THAT IS SAID — a screen quietly showing one fewer order than the owner is waiting for is worse than one that explains itself');
+}
+
+/* ---------- 18. a line already corrected to nothing is left alone ---- */
+{
+  freshDelivery();
+  /* The cement was corrected by hand first — down to 12 — and then the
+     whole delivery is undone. It must take back TWELVE, not thirty. */
+  applyStockPurchaseEdit(1, { qty: 12, price: 27000, supplierId: 'S1' });
+  eq(data.stock.P1, 12, 'the hand correction stands');
+  const plan = scope.undoDeliveryPlan(9);
+  t.check(plan.ok, `and the delivery can still be undone${plan.ok ? '' : ' — ' + plan.why}`);
+  const cement = plan.lines.find((l) => l.name === 'Cement');
+  eq(cement.qty, 12,
+    'TAKING BACK WHAT THE PURCHASE NOW SAYS, not what it said first — reading the original 30 would take eighteen units off a shelf that never had them');
+  scope.undoDelivery(9);
+  eq(data.stock.P1, 0, 'and the shelf lands on nothing rather than below it');
+}
+
+/* ---------- 19. and the DOOR, which is the void button --------------- *
+ *
+ * Everything above passes with the undo wired to nothing. Voiding was a
+ * silent flag flip: on a delivery bill that drops the money and leaves
+ * the goods on the shelf — the shop holding stock it owes nothing for,
+ * which is the exact hole the stock-count warning was written to close,
+ * on the other side of the same mistake.
+ */
+{
+  const asked = []; const said = [];
+  const ui = compileScope(
+    FNS.map((n) => extractFunction(src, n, 'index.html'))
+      .concat([extractFunction(src, 'togglePurchaseInvoiceVoided', 'index.html')]),
+    {
+      data,
+      STOCK_PURCHASE_NOTE_RE: /^Purchased\b/,
+      fmtUGX: (n) => `${Number(n).toLocaleString('en-US')} UGX`,
+      supplierName: (id) => (data.suppliers.find((s) => s.id === id) || {}).name || '(unknown)',
+      purchaseInvoiceNumberLabel: (pi) => 'PINV-' + String(pi.id).padStart(4, '0'),
+      productVariantLabel: (p) => p.name,
+      allocRowId: () => ++nextId,
+      todayISO: () => '2026-08-31',
+      esc: (x) => String(x == null ? '' : x),
+      syncPriceRegistryFromPurchase: () => {},
+      daysSinceDate: () => 0, saveData: () => {}, BUY_ORDER_STALE_DAYS: 45, Date,
+      confirm: (m) => { asked.push(m); return answer; },
+      toast: (m) => { said.push(m); },
+      renderPurchaseInvoices: () => {}, renderInventory: () => {}, refreshNavBadges: () => {},
+      renderPurchasePlanPanel: () => {},
+      document: { getElementById: () => null },
+    },
+    FNS.concat(['togglePurchaseInvoiceVoided']));
+  let answer = true;
+
+  freshDelivery();
+  asked.length = 0; said.length = 0;
+  ui.togglePurchaseInvoiceVoided(9);
+  t.check(asked.length === 1 && /Undo this whole delivery\?/.test(asked[0]),
+    'VOIDING A DELIVERY ASKS FIRST — it is an act, not a flag');
+  t.check(/Cement — 30 back off the shelf/.test(asked[0]), 'naming every line and how many');
+  t.check(/1,270,000 UGX is no longer owed/.test(asked[0]), 'and the money that stops being owed');
+  t.check(/back to waiting/.test(asked[0]), 'and what happens to the order');
+  eq(data.stock.P1, 0, 'and on yes, the goods come off the shelf');
+  eq(bill().voided, true, 'and the bill is voided');
+  t.check(said.some((m) => /2 lines back off the shelf/.test(m)), 'with a toast that names what moved');
+
+  /* On NO, nothing at all. */
+  answer = false;
+  freshDelivery();
+  ui.togglePurchaseInvoiceVoided(9);
+  eq(data.stock.P1, 30, 'on no, the shelf does not move');
+  eq(bill().voided, false, 'and the bill still stands');
+
+  /* A refused plan still offers the money half, and says exactly what
+     that leaves behind. */
+  answer = true;
+  freshDelivery({ amountPaid: 400000 });
+  asked.length = 0; said.length = 0;
+  ui.togglePurchaseInvoiceVoided(9);
+  t.check(/400,000/.test(asked[0] || ''), 'a refusal is put to the owner in full');
+  t.check(/Void the bill on its own anyway\?/.test(asked[0] || ''),
+    'AND THE MONEY HALF IS STILL OFFERED — it may be exactly what the shop wants');
+  t.check(/goods STAY on the shelf/.test(asked[0] || ''),
+    'told plainly what it leaves behind: stock the shop will owe nothing for');
+  eq(bill().voided, true, 'and on yes the bill alone is voided');
+  eq(data.stock.P1, 30, 'while the goods stay exactly where they are');
+
+  /* And an undone bill cannot be flipped back. */
+  freshDelivery();
+  ui.togglePurchaseInvoiceVoided(9);
+  said.length = 0;
+  ui.togglePurchaseInvoiceVoided(9);
+  eq(bill().voided, true,
+    'AN UNDONE BILL CANNOT BE UN-VOIDED — the shelf gave the goods back and the order went back to waiting, so the money has nothing behind it');
+  t.check(said.some((m) => /Receive it again from What to buy/.test(m)),
+    'and the owner is told where to record it when it really arrives');
+
+  /* An ordinary bill is untouched by any of this. */
+  freshDelivery();
+  delete bill().buyOrderId;
+  asked.length = 0;
+  ui.togglePurchaseInvoiceVoided(9);
+  eq(asked.length, 0, 'a bill with no delivery behind it still voids as it always did');
+  /* AND THE BUTTON SAYS WHICH IT IS. A tooltip still reading "Void
+     purchase invoice" on a delivery would be the one place the owner
+     could learn that it takes the shelf with it, saying nothing. */
+  const titles = read('index.html').slice(read('index.html').indexOf('pi-doc-void'));
+  t.check(/Undo this delivery — the goods come back off the shelf/.test(titles.slice(0, 900)),
+    'the void button names the act on a delivery bill');
+  t.check(/receive the order again from What to buy/.test(titles.slice(0, 900)),
+    'and says what to do instead once it is undone');
+  eq(bill().voided, true, 'flipped');
+  ui.togglePurchaseInvoiceVoided(9);
+  eq(bill().voided, false, 'and flipped back');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -27466,7 +27466,16 @@ function renderPurchaseInvoices(filter=''){
     const actionsHtml = `<button type="button" class="pc-icon-btn pi-doc-print" data-id="${pi.id}" title="Print purchase invoice (A5)"><svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg></button>
       ${(!pi.quoteId && !pi.voided) ? `<button type="button" class="pc-icon-btn pi-doc-edit" data-id="${pi.id}" title="Correct this bill (money only — no stock moves)"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z"/></svg></button>` : ''}
       <button type="button" class="pc-icon-btn pi-doc-pay" data-id="${pi.id}" title="Record payment to supplier"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10.5c0-1.4 1.4-2.5 3-2.5s3 .8 3 2c0 3-6 1.5-6 4.5 0 1.2 1.4 2 3 2s3-1.1 3-2.5"/></svg></button>
-      <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${pi.voided?'Unvoid purchase invoice':'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
+      <button type="button" class="pc-icon-btn danger pi-doc-void" data-id="${pi.id}" title="${
+        /* THE BUTTON SAYS WHAT IT WILL ACTUALLY DO. On a delivery bill
+           it is not a flag any more: it takes the goods back off the
+           shelf and puts the order back to waiting. A tooltip still
+           reading "Void purchase invoice" would be the one place the
+           owner could learn otherwise, saying nothing. */
+        pi.deliveryUndone ? 'This delivery was undone — receive the order again from What to buy when it really arrives'
+          : pi.voided ? 'Unvoid purchase invoice'
+          : pi.buyOrderId ? 'Undo this delivery — the goods come back off the shelf and nothing is owed'
+          : 'Void purchase invoice'}"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>`;
     const progressHtml = `<div class="pi-progress-bar ${isRestock?'restock':'collected'}" title="${isRestock ? `${Math.round(barPct)}% paid to supplier so far` : `${Math.round(barPct)}% of this order collected from the client so far`}">
         <div class="pi-progress-fill" style="width:${barPct}%;"></div>
       </div>
@@ -27597,9 +27606,53 @@ function renderPurchaseInvoices(filter=''){
 function togglePurchaseInvoiceVoided(id){
   const pi = data.purchaseInvoices.find(x=>x.id===id);
   if(!pi) return;
+  const after = ()=>{
+    saveData();
+    renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+    renderInventory();
+    if(document.getElementById('buy_plan')) renderPurchasePlanPanel();
+    refreshNavBadges();
+  };
+  /* A BILL THAT WAS UNDONE CANNOT BE UN-VOIDED. The shelf gave the
+     goods back and the order went back to waiting; flipping the flag
+     would put the money back on the books with nothing behind it. */
+  if(pi.voided && pi.deliveryUndone){
+    toast('That delivery was undone — the goods came off the shelf and the order is waiting again. '
+      + 'Receive it again from What to buy when it really arrives.', 9000);
+    return;
+  }
+  /* VOIDING A DELIVERY IS NOT A FLAG, IT IS AN ACT. The bill came off
+     one of the shop's own orders, and the goods it brought are on the
+     shelf: dropping the money alone leaves the shop holding stock it
+     owes nothing for -- exactly the hole the stock-count warning was
+     written to close, on the other side of the same mistake. */
+  if(!pi.voided && pi.buyOrderId){
+    const plan = undoDeliveryPlan(pi.id);
+    if(!plan.ok){
+      /* NAMED, AND STILL OFFERED. The stock half may be impossible --
+         sold goods, money paid -- and the money half may still be what
+         the shop wants. It is told exactly what it is getting. */
+      if(!confirm(plan.why + '\n\nVoid the bill on its own anyway?\n\n'
+        + 'The goods STAY on the shelf and you will owe nothing for them.')) return;
+      pi.voided = true;
+      after();
+      toast('Bill voided on its own — the goods are still on the shelf, and nothing is owed for them.', 9000);
+      return;
+    }
+    const lines = plan.lines.map(l=> `  ${l.name} — ${l.qty} back off the shelf`).join('\n');
+    if(!confirm(`Undo this whole delivery?\n\n${lines}\n\n`
+      + `${purchaseInvoiceNumberLabel(pi)} is voided, so the ${fmtUGX(plan.total)} is no longer owed to ${pi.supplierName || 'them'}.\n`
+      + `The order goes back to waiting — nothing arrived, so you are still expecting it.\n\n`
+      + `Every movement stays on the record, marked as undone.`)) return;
+    const res = undoDelivery(pi.id);
+    if(!res.ok){ toast(res.why, 9000); return; }
+    after();
+    toast(`Delivery undone — ${res.lines} ${res.lines === 1 ? 'line' : 'lines'} back off the shelf and ${fmtUGX(res.total)} no longer owed to ${res.supplier}.`
+      + (res.reopened ? ' The order is waiting again on What to buy.' : (res.orderGone ? ' The order itself is no longer on file.' : '')), 9000);
+    return;
+  }
   pi.voided = !pi.voided;
-  saveData();
-  renderPurchaseInvoices(document.getElementById('pi_doc_search').value);
+  after();
   toast(pi.voided ? 'Purchase invoice voided' : 'Purchase invoice unvoided');
 }
 
@@ -53719,6 +53772,131 @@ async function receiveBuyOrder(id, received){
   raw.received = got.map(l=> ({ key: l.key, qty: l.qty, unitCost: l.unitCost }));
   saveData();
   return { billId, total: got.reduce((n, l)=> n + l.qty * l.unitCost, 0), lines: got.length };
+}
+
+
+/* ================= THE LORRY THAT NEVER CAME =================
+
+   "It came" is one tap, and a shop makes mistakes with one taps: the
+   wrong order marked arrived, a delivery recorded twice, goods signed
+   for that turned back at the gate. Everything that tap does can be
+   corrected line by line -- but a line cannot be corrected to nothing,
+   deliberately, because a form cannot tell "none of it came" from "I
+   have not typed the number yet". So a delivery that never happened
+   had no way out but voiding its bill by hand and counting every line
+   down on the stock screen, which leaves no record that the two were
+   the same act.
+
+   This is that act, once. It says exactly what it will change before
+   it changes anything -- the same shape as the consignment marker,
+   for the same reason: a repair the shop cannot read first is a repair
+   the shop cannot check.
+
+   IT REFUSES MORE OFTEN THAN IT AGREES, and every refusal names its
+   cause:
+
+     MONEY HAS MOVED. A payment against this bill left the drawer and
+     reached a supplier. Un-writing the bill would not un-write that,
+     and the shop would be owed money by somebody the books had
+     stopped mentioning.
+
+     THE GOODS HAVE SOLD. Units that left the shelf existed. Taking
+     back more than is there would drive the shelf negative and
+     re-cost invoices already issued -- and if they sold, the delivery
+     did happen, whatever the paperwork says.
+
+   The order goes back to WAITING rather than being cancelled. Nothing
+   arrived, so the shop is still expecting it; calling it off is a
+   separate decision, made on the buy screen, with its own reason. */
+function undoDeliveryPlan(billId){
+  const pi = (data.purchaseInvoices || []).find(x=> String(x.id) === String(billId));
+  if(!pi) return { ok: false, why: 'No bill with that number.' };
+  if(!pi.buyOrderId) return { ok: false,
+    why: 'That bill did not come off one of your orders, so there is no delivery to undo. Correct it line by line, or void it.' };
+  if(pi.voided) return { ok: false, why: 'That bill is already voided.' };
+  if(Number(pi.amountPaid) > 0) return { ok: false,
+    why: `${fmtUGX(Math.round(Number(pi.amountPaid)))} has already been paid against ${purchaseInvoiceNumberLabel(pi)}. `
+      + `Money that has left the drawer is not undone here — settle it with ${pi.supplierName || 'the supplier'} first.` };
+  /* The shelf movements this delivery wrote, found by the bill stamped
+     on them. Never by date or supplier: two lorries from one supplier
+     on one morning is an ordinary Tuesday. */
+  const rows = (data.stockLog || []).filter(r=> r && r.source === 'buy-order'
+    && String(r.piId) === String(pi.id) && r.type === 'restock');
+  if(!rows.length) return { ok: false,
+    why: `Nothing on the shelf can be traced to ${purchaseInvoiceNumberLabel(pi)}, so there is nothing to take back. Void the bill if it is wrong.` };
+  const lines = []; const sold = [];
+  rows.forEach(r=>{
+    const eff = effectiveStockPurchase(r);
+    /* Already corrected to nothing by hand: there is nothing left of
+       this line to take back, and taking it again would take somebody
+       else's goods. */
+    if(!(eff.qty > 0)) return;
+    const onHand = Number(data.stock[r.key]) || 0;
+    const line = { logId: r.id, key: r.key, productId: r.productId,
+      variantIdx: (r.variantIdx == null || r.variantIdx === '') ? null : r.variantIdx,
+      name: r.label || r.productId, qty: eff.qty, cost: eff.cost, onHand };
+    if(onHand < eff.qty){ line.gone = eff.qty - onHand; sold.push(line); }
+    lines.push(line);
+  });
+  if(sold.length) return { ok: false, sold,
+    why: 'Some of these goods have already been sold or written off, so this delivery cannot be undone: '
+      + sold.map(l=> `${l.name} — ${l.gone} of ${l.qty} gone`).join('; ')
+      + '. Units that left the shelf existed, whatever the paperwork says. Correct the lines that are still here one at a time instead.' };
+  if(!lines.length) return { ok: false,
+    why: `Every line on ${purchaseInvoiceNumberLabel(pi)} has already been corrected to nothing, so there is nothing left to take back. Void the bill if it is still standing.` };
+  return { ok: true, bill: pi, lines,
+    total: Math.round(purchaseInvoiceTotal(pi)),
+    order: buyOrderFor(pi.buyOrderId) };
+}
+
+/* Doing it. Every check lives in the plan above, so this walks a list
+   it has already been told is safe -- and re-reads it rather than
+   trusting a plan handed in, because a plan built before a confirm and
+   applied after it is a plan the shop may have changed underneath. */
+function undoDelivery(billId){
+  const plan = undoDeliveryPlan(billId);
+  if(!plan.ok) return plan;
+  plan.lines.forEach(l=>{
+    const src = (data.stockLog || []).find(x=> x.id === l.logId);
+    const eff = effectiveStockPurchase(src);
+    takeBackPurchaseLots(l.productId, l.variantIdx, l.qty, l.cost);
+    data.stock[l.key] = Math.max(0, (Number(data.stock[l.key]) || 0) - l.qty);
+    /* POSTED, NOT PAINTED OVER. The row that said the goods came stays
+       exactly as it was written, and a movement carries the difference
+       -- which is how a ledger corrects anything, and what keeps every
+       later qtyAfter true. purchaseQty 0 is the whole claim: this
+       purchase was for nothing. */
+    const row = { id: allocRowId('stockLog'), key: l.key, productId: l.productId,
+      variantIdx: l.variantIdx, label: l.name,
+      type: 'correction', delta: -l.qty, qtyAfter: Number(data.stock[l.key]) || 0,
+      note: `Delivery on ${purchaseInvoiceNumberLabel(plan.bill)} undone — those goods never came`,
+      date: todayISO(), at: new Date().toISOString(),
+      cost: eff.cost, supplierId: src.supplierId,
+      source: 'buy-order', corrects: eff.tail.id, purchaseQty: 0, piId: plan.bill.id };
+    data.stockLog.push(row);
+    eff.tail.correctedBy = row.id;
+  });
+  plan.bill.voided = true;
+  /* Marked, so the bill can never be un-voided back into a delivery
+     that the shelf and the order have both moved on from. */
+  plan.bill.deliveryUndone = todayISO();
+  /* BACK TO WAITING, not cancelled. Nothing arrived, so the shop is
+     still expecting it — calling it off is a different decision, made
+     on the buy screen, with its own reason written down. */
+  const raw = (data.presetBuyOrders || {})[String(plan.bill.buyOrderId)];
+  let reopened = false;
+  if(raw && (raw.state || '') === 'arrived'){
+    raw.state = 'placed';
+    delete raw.closedOn; delete raw.billId; delete raw.received;
+    reopened = true;
+  }
+  saveData();
+  return { ok: true, lines: plan.lines.length, total: plan.total,
+    supplier: plan.bill.supplierName || 'the supplier', reopened,
+    /* An order swept away after it closed cannot come back, and saying
+       so is better than a screen that quietly shows one fewer order
+       than the owner is waiting for. */
+    orderGone: !raw };
 }
 
 /* Forgetting, once the record has nothing left to say. A closed order
