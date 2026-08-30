@@ -1219,6 +1219,11 @@
   .mgr-state{font-size:12px;color:var(--ink-soft);margin-left:auto;text-align:right;}
   .mgr-hist-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;
     color:var(--ink-soft);padding:8px 2px;border-bottom:1px solid var(--line);}
+  /* A LEVER THAT HAS NEVER WORKED. Oxide, not amber: this is not a
+     warning about the shop, it is a finding about the advice, and it
+     is the one row on the list that should stop the eye. */
+  .mgr-hist-row.bad{color:var(--ow-oxide-deep);}
+  .mgr-hist-row i{font-style:normal;color:var(--ink);}
   .mgr-review-offer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;
     border-top:1px dashed var(--line);padding-top:10px;margin-top:2px;}
   .mgr-review-thin{font-size:12px;color:var(--ink-soft);}
@@ -8788,6 +8793,12 @@
       <!-- Advice skipped again and again: the manager is told to stop
            proposing it, and the owner is told that it has. -->
       <div id="managerPassedWrap"></div>
+      <!-- The longest memory the Manager has: what it has advised on
+           again and again, and what the books say followed each time.
+           Beside the two advice sections because they are the same
+           question asked three ways — did you turn it down, is it not
+           reaching you, and does it ever actually work. -->
+      <div id="managerTrackWrap"></div>
       <div id="managerPlaysWrap"></div>
       <div id="managerPoliciesWrap"></div>
     </section>
@@ -55925,12 +55936,32 @@ const MANAGER_MEETING_KEY = 'owManagerMeetingOn';
    the debtCollectionsOn lesson); a restock by the stock log; an invoice
    by the order's own flag. A kind nothing can derive returns null and
    the card shows only its Done/Skip state -- named, not guessed. */
-function deriveMoveOutcome(row){
+function deriveMoveOutcome(row, untilISO){
   const b = (row && row.body) || {};
   const subj = b.subject || {};
   const since = String(row && row.date || '');
+  /* THE END OF THE WINDOW, when the caller has one.
+
+     Every reading until now asked "what happened SINCE this move",
+     which is right for one move and wrong for seven. Chase the same
+     customer seven times and each answer counts every payment since
+     its own date, so summing them counts the same money up to seven
+     times over -- the trap week_review_data escapes by taking only the
+     earliest move per customer, at the cost of never being able to say
+     which chases worked and which did not.
+
+     A window closed at the NEXT move about the same thing asks the
+     honest question: did anything happen after this one, before the
+     next? Absent by default, so every existing caller keeps exactly
+     the reading it had. */
+  const until = /^\d{4}-\d{2}-\d{2}$/.test(String(untilISO || '')) ? String(untilISO) : null;
+  const within = (d)=> String(d) >= since && (until == null || String(d) < until);
   let derived = null;
   let money = 0;
+  /* WHETHER THE THING HAPPENED, as a fact rather than a sentence. The
+     branches below already know it; reading it back off their prose is
+     how a track record comes to depend on the wording of a toast. */
+  let happened = null;
   /* WHAT EACH KIND OF MOVE HAS TO NAME BEFORE THE BOOKS CAN ANSWER IT.
      A chase answered by a customer's ledger needs to know WHOSE ledger.
      Written out here rather than read off the branches below so the gap
@@ -55956,7 +55987,7 @@ function deriveMoveOutcome(row){
   if(b.mkind === 'chase' && subj.customerId != null){
     const c = (data.customers||[]).find(x=> String(x.id) === String(subj.customerId));
     const paid = c ? (c.debtLog||[]).filter(r=> r.type === 'payment' && r.cashTxnId
-      && String(r.date) >= since).reduce((n,r)=> n + (Number(r.amount)||0), 0) : 0;
+      && within(r.date)).reduce((n,r)=> n + (Number(r.amount)||0), 0) : 0;
     /* The number leaves as a number too, for the weekly review's
        arithmetic -- and ONLY from here, so the cashTxnId law (echo rows
        are not money) is applied in exactly one place. */
@@ -55965,26 +55996,42 @@ function deriveMoveOutcome(row){
        pay, and saying so was already the invoice branch's discipline.
        Read as "no payment seen since", a deleted card looked exactly
        like a debtor ignoring every chase. */
+    happened = paid > 0;
     derived = !c ? 'that customer is no longer on file'
       : (paid > 0 ? `paid ${fmtUGX(Math.round(paid))} since` : 'no payment seen since');
   } else if(b.mkind === 'buy' && subj.key){
     const got = (data.stockLog||[]).some(l=> l.key === subj.key && l.type === 'restock'
-      && String(l.date) >= since);
+      && within(l.date));
+    happened = got;
     derived = got ? 'restocked since' : 'not restocked yet';
   } else if(b.mkind === 'invoice' && subj.orderId != null){
     const q = (data.savedQuotes||[]).find(x=> String(x.id) === String(subj.orderId));
+    /* A STATE, NOT AN EVENT. An order is invoiced or it is not, and it
+       stays invoiced -- so inside a window the honest answer is only
+       available when the day it happened was written down. Without
+       that day, happened stays null: unknowable in a window is not the
+       same as no. */
+    happened = !q ? false
+      : (until == null ? !!q.invoiced
+        : (q.invoicedAt ? (q.invoiced && within(q.invoicedAt)) : null));
     derived = !q ? 'order no longer on file' : (q.invoiced ? 'invoiced' : 'still not invoiced');
   } else if(b.mkind === 'settle' && named){
     const paidSince = (data.purchaseInvoices||[]).some(pi=> pi.supplierId === subj.supplierId
-      && (pi.payments||[]).some(pp=> String(pp.date) >= since));
+      && (pi.payments||[]).some(pp=> within(pp.date)));
+    happened = paidSince;
     derived = paidSince ? 'a payment went to them since' : 'nothing paid to them since';
   } else if(b.mkind === 'policy' && subj.key){
     /* A policy on one line is answered by the presets themselves -- a
        standing rule either stands today or it does not. */
-    derived = (data.presetReorderRules||{})[subj.key]
-      ? 'a standing rule now covers it' : 'no standing rule yet';
+    const ruled = !!(data.presetReorderRules||{})[subj.key];
+    /* A standing rule stands today or it does not, and nothing records
+       the day it was set -- so inside a window it cannot be answered
+       at all, and says so rather than claiming today's state for a
+       fortnight in March. */
+    happened = until == null ? ruled : null;
+    derived = ruled ? 'a standing rule now covers it' : 'no standing rule yet';
   }
-  return { status: (row && row.status) || 'open', derived, money, unmeasured };
+  return { status: (row && row.status) || 'open', derived, money, unmeasured, happened };
 }
 
 /* ---- the journal: direct reads and writes, wa_* style ---- */
@@ -56344,6 +56391,170 @@ function managerReviewBrief(row){
    in between is a decision. And a fingerprint the owner has EVER
    marked done is not on this list at all: they came round, and telling
    the manager otherwise would be telling it something untrue. */
+
+/* ================= WHAT THIS MANAGER HAS LEARNED =====================
+
+   The Manager read three to five meetings and thirty-five days of its
+   own moves. Everything older was in the journal and nothing looked at
+   it. So it could not say the one kind of thing a manager who has run a
+   shop for a year says:
+
+     "Every time you have chased Mulongo he has paid inside the week —
+      five times out of seven. Chase him."
+     "You have advised chasing David nine times and the books have never
+      once shown money after it. Chasing is not the lever here."
+
+   Both are derivable, and neither was derived. That is not a manager
+   that forgets a detail; it is a manager that cannot learn.
+
+   THE WINDOW IS THE WHOLE OF IT. Ask "what happened since this chase"
+   seven times about one customer and each answer counts every payment
+   since its own date -- so the seven sum to the same money counted
+   seven times. week_review_data escapes that by taking only the
+   EARLIEST move per customer, which is honest and can never say which
+   chases worked. Closing each occasion at the NEXT move about the same
+   thing asks the question that can: did anything happen after this one,
+   before the next?
+
+   ONLY WHAT WAS NAMED. A move with no id is a move nothing can weigh,
+   and a relationship claim built on matching titles would put two
+   customers' histories into one row. No id, no row -- and how many were
+   left out is counted rather than hidden.
+
+   THREE TIMES, NOT TWO. Twice is a coincidence. Three occasions is the
+   least that can be called a pattern, and the reading says so with the
+   rows so nobody can quote a claim without its threshold. */
+const TRACK_MOVES_READ = 400;   // roughly a year of five-move meetings
+const TRACK_MIN_TIMES = 3;      // twice is a coincidence, not a pattern
+/* The kinds whose answer is an EVENT with a date on it, so an occasion
+   can be closed at the next one. An invoice and a standing rule are
+   STATES -- they are true today and say nothing about a fortnight in
+   March -- so those are counted but never scored per occasion. */
+const TRACK_WINDOWED = { chase: true, buy: true, settle: true };
+
+async function managerTrackRecord(todayISO_){
+  const empty = { rows: [], movesRead: 0, since: null, unnamed: 0,
+    minTimes: TRACK_MIN_TIMES, span: TRACK_MOVES_READ };
+  if(!managerNotesTable) return empty;
+  const today = todayISO_ || todayISO();
+  const r = await sb.from('manager_notes').select('date, body, status')
+    .eq('shop_id', currentShopId).eq('kind', 'move')
+    .order('id', { ascending: false }).limit(TRACK_MOVES_READ);
+  if(r.error){ console.warn('Manager: track record not read:', r.error.message); return empty; }
+
+  const subjectId = (b)=>{
+    const s = (b && b.subject) || {};
+    return s.customerId != null ? { id: s.customerId, field: 'customerId' }
+      : s.key != null ? { id: s.key, field: 'key' }
+      : s.orderId != null ? { id: s.orderId, field: 'orderId' }
+      : s.supplierId != null ? { id: s.supplierId, field: 'supplierId' } : null;
+  };
+  const by = new Map();
+  let unnamed = 0, since = null;
+  (r.data || []).forEach(row=>{
+    const b = row.body || {};
+    if(!String(b.title || '').trim()) return;
+    const d = String(row.date || '');
+    if(d && (since == null || d < since)) since = d;
+    const sub = subjectId(b);
+    if(!sub){ unnamed += 1; return; }
+    const key = String(b.mkind || 'other') + '|' + String(sub.id);
+    const cur = by.get(key) || { kind: String(b.mkind || 'other'), field: sub.field,
+      id: sub.id, title: b.title, occasions: [] };
+    cur.occasions.push({ date: d, status: row.status, body: b, title: b.title });
+    by.set(key, cur);
+  });
+
+  const rows = [...by.values()].map(g=>{
+    /* Oldest first, so each occasion can be closed at the next. */
+    const occ = g.occasions.slice().sort((a, b)=> String(a.date).localeCompare(String(b.date)));
+    const windowed = !!TRACK_WINDOWED[g.kind];
+    let worked = 0, money = 0, scored = 0;
+    occ.forEach((o, i)=>{
+      if(!windowed) return;
+      /* The LAST occasion runs to today: it is still open, and closing
+         it at nothing would score it against an empty window. */
+      const until = i + 1 < occ.length ? occ[i + 1].date : null;
+      const out = deriveMoveOutcome({ date: o.date, status: o.status, body: o.body }, until);
+      if(out.happened == null) return;
+      scored += 1;
+      if(out.happened) worked += 1;
+      money += Math.round(Number(out.money) || 0);
+    });
+    /* A state kind is answered once, as it stands now -- never per
+       occasion, because it would read as the same thing happening
+       every time it was advised. */
+    const now = windowed ? null : deriveMoveOutcome({ date: occ[occ.length - 1].date,
+      status: occ[occ.length - 1].status, body: occ[occ.length - 1].body });
+    return { kind: g.kind, field: g.field, id: g.id,
+      title: occ[occ.length - 1].title,
+      times: occ.length,
+      done: occ.filter(o=> o.status === 'done').length,
+      skipped: occ.filter(o=> o.status === 'skipped').length,
+      firstOn: occ[0].date, lastOn: occ[occ.length - 1].date,
+      windowed, scored, worked, money: Math.round(money),
+      ...(now ? { standsNow: now.derived } : {}) };
+  }).filter(x=> x.times >= TRACK_MIN_TIMES)
+    .sort((a, b)=> b.times - a.times || b.money - a.money);
+
+  return { rows, movesRead: (r.data || []).length, since, unnamed,
+    minTimes: TRACK_MIN_TIMES, span: TRACK_MOVES_READ };
+}
+
+/* WHAT THE RECORD ARGUES, in the owner's own words.
+
+   Derived here rather than in the screen or the prompt, so the sentence
+   the shop reads and the sentence the Manager is handed come from one
+   arithmetic and can never drift apart. */
+function trackRecordName(row){
+  if(!row) return '';
+  if(row.field === 'customerId'){
+    const c = (data.customers || []).find(x=> String(x.id) === String(row.id));
+    return c ? (c.name || 'Unnamed customer') : (row.title || String(row.id));
+  }
+  if(row.field === 'supplierId') return supplierName(row.id) || String(row.id);
+  if(row.field === 'key') return buyKeyLabel(row.id) || String(row.id);
+  return row.title || String(row.id);
+}
+function trackRecordLine(row){
+  if(!row) return '';
+  const what = { chase: 'Chased', buy: 'Told to restock', settle: 'Told to pay',
+    invoice: 'Told to invoice', policy: 'Advised a standing rule on' }[row.kind] || 'Advised';
+  const head = `${what} ${row.times} times since ${fmtShortDate(row.firstOn)}`;
+  if(!row.windowed) return head + (row.standsNow ? ` — ${row.standsNow}` : '');
+  /* NOTHING SCORED IS NOT NOTHING EARNED. A run of occasions the books
+     could not answer is a gap in the record, and reading it as a
+     failure is exactly the lie the accounting repair was built to
+     stop. */
+  if(!row.scored) return head + ' — nothing in the books can weigh any of them';
+  if(!row.worked) return head + ` — and the books show nothing after any of ${row.scored === 1 ? 'it' : 'them'}`;
+  const money = row.money > 0 ? `, ${fmtUGX(row.money)} in all` : '';
+  return head + ` — it worked ${row.worked} of ${row.scored} times${money}`;
+}
+
+/* THE FINDING WORTH INTERRUPTING FOR: a lever that has never once
+   worked. Advised again and again, every occasion weighed, and the
+   books answered no every time. That is evidence about the LEVER, not
+   about the shop -- and it is the thing a manager with a memory says
+   and one without cannot. */
+function trackRecordDeadLevers(track){
+  /* NOTHING WEIGHED IS NOT NOTHING EARNED, and `scored` is the guard
+     that keeps those apart.
+
+     There was a second guard here -- scored >= minTimes -- and it was
+     removed because no mutation could tell it from the line above:
+     every windowed kind answers happened as a plain yes or no, so
+     scored always equals times, and times is already filtered at
+     minTimes when the rows are built. A guard that cannot fail is a
+     guard nobody can maintain. The invariant it rested on is pinned in
+     track-record.test.js instead, so a future windowed kind that CAN
+     answer "unknowable" fails a test rather than quietly widening what
+     this calls dead. */
+  return ((track && track.rows) || [])
+    .filter(x=> x.windowed && x.scored > 0 && x.worked === 0)
+    .sort((a, b)=> b.scored - a.scored);
+}
+
 async function managerAdviceTally(todayISO_){
   /* The window and the thresholds leave WITH the rows, so the sentences
      the screen writes about these lists and the lists themselves are
@@ -57391,6 +57602,38 @@ function renderManager(){
             <span>put to you ${p.times} times</span></div>`).join('')}`
         : '';
       passed.innerHTML = declined + ignored;
+    });
+    /* WHAT HAS ACTUALLY WORKED, over the whole journal.
+
+       The two sections above are about the ADVICE: passed on, or not
+       landing. This is about the SHOP -- which of these customers,
+       lines and suppliers move when the manager says to move them, and
+       which never have. It is the only reading in this app that looks
+       further back than five weeks, and it is the one that turns
+       repetition into evidence: "chased seven times, it worked five"
+       is a fact about Mulongo, not about the advice.
+
+       No buttons, like its neighbours. A mirror. */
+    managerTrackRecord(todayISO()).then(tr=>{
+      const el = document.getElementById('managerTrackWrap');
+      if(!el) return;
+      if(!tr.rows.length){ el.innerHTML = ''; return; }
+      const dead = trackRecordDeadLevers(tr);
+      el.innerHTML = `<div class="mgr-sec-title">What has worked, and what has not</div>
+        <div class="mgr-why" style="margin-bottom:6px;">Everything the manager has advised on ${
+          tr.minTimes} times or more since ${esc(fmtShortDate(tr.since))}, and what the books say
+          followed each time. Counted once per occasion — each one closed at the next time the same
+          thing was advised — so the same payment is never counted twice.${
+          tr.unnamed ? ` ${tr.unnamed} older ${tr.unnamed === 1 ? 'move names' : 'moves name'} nothing the books could follow, so ${
+            tr.unnamed === 1 ? 'it is' : 'they are'} not here.` : ''}</div>
+        ${tr.rows.slice(0, 8).map(x=> `<div class="mgr-hist-row${
+          x.windowed && x.scored >= tr.minTimes && !x.worked ? ' bad' : ''}">
+          <span>${esc(trackRecordName(x))} — <i>${esc(trackRecordLine(x))}</i></span>
+          <span>${x.windowed && x.scored ? `${x.worked} of ${x.scored}` : `${x.times} times`}</span></div>`).join('')}
+        ${dead.length ? `<div class="mgr-why" style="margin-top:6px;">${
+          dead.length === 1 ? 'One of these has' : dead.length + ' of these have'} never once worked.
+          The manager is told to say so and pull a different lever rather than advise
+          ${dead.length === 1 ? 'it' : 'them'} again.</div>` : ''}`;
     });
   });
 }
@@ -63734,6 +63977,12 @@ const ASSISTANT_TOOLS = {
        returns answer different questions and both are drawn here, from
        one query. */
     const tally = await managerAdviceTally(todayISO());
+    /* WHAT THIS MANAGER HAS LEARNED, over the whole journal rather than
+       the last five meetings. The tally above answers "am I repeating
+       myself"; this answers "does this advice ever work on this
+       customer" -- and no reading in this app could answer the second
+       until now. */
+    const track = await managerTrackRecord(todayISO());
     const worth = [];
     /* A target behind its own pace, with how far. One on course needs
        no sentence -- that is the whole point of a pace line. */
@@ -63797,6 +64046,26 @@ const ASSISTANT_TOOLS = {
        with the entry for the same reason: a count with no instruction
        leaves a mind free to carry the play into another week without
        saying anything, which is the exact failure. */
+    /* A LEVER THAT HAS NEVER ONCE WORKED.
+
+       Advised again and again, every occasion weighed against its own
+       window, and the books answered no every time. That is evidence
+       about the LEVER, not about the shop, and it is exactly the thing
+       a manager with a memory says and one reading five meetings
+       cannot. One at a time: a morning that opens with three findings
+       opens with none. */
+    trackRecordDeadLevers(track).slice(0, 1).forEach(x=>{
+      worth.push({ kind: 'this_has_never_worked', advice: x.title,
+        [x.field]: x.id, about: trackRecordName(x),
+        advised: x.times, weighed: x.scored, worked: 0,
+        since: x.firstOn, last_put: x.lastOn,
+        what_to_do: 'You have advised this ' + x.times + ' times since ' + x.firstOn
+          + ' and the books have weighed ' + x.scored + ' of them: nothing followed any one.'
+          + ' That is evidence about the LEVER, not about the shop — so do not advise it again'
+          + ' unchanged. Say what the record shows in one sentence, then pull a different lever'
+          + ' or ask the owner what they know that the books do not.' });
+    });
+
     managerPlaysPastSpan(book).slice(0, 2).forEach(p=>{
       worth.push({ kind: 'play_past_its_span', play: p.name, treats: p.problem,
         was_for_weeks: p.clock.weeks, has_run_days: p.clock.days, days_over: p.clock.daysOver,
@@ -63818,6 +64087,21 @@ const ASSISTANT_TOOLS = {
        do_not_repeat means "never mention this", which would bury advice
        the owner may still need. Advice nobody has touched needs the
        opposite: said out loud, once, and then a different plan. */
+    /* THE RECORD ITSELF, to argue FROM rather than to recite. Shelved
+       beside the market data and the scoreboard: evidence a move can
+       reach for when it needs it, never a list to read back. */
+    const trackOut = track.rows.length ? {
+      since: track.since, moves_read: track.movesRead, counted_from_times: track.minTimes,
+      ...(track.unnamed ? { moves_nothing_could_be_learned_from: track.unnamed } : {}),
+      rows: track.rows.slice(0, 8).map(x=> ({ about: trackRecordName(x), [x.field]: x.id,
+        kind: x.kind, advised: x.times, done: x.done, skipped: x.skipped,
+        first_on: x.firstOn, last_on: x.lastOn,
+        ...(x.windowed
+          ? { weighed: x.scored, it_worked: x.worked,
+              ...(x.money ? { money_after_it: apRound(x.money) } : {}) }
+          : { stands_now: x.standsNow || null }),
+        reads_as: trackRecordLine(x) })),
+    } : null;
     const passedOn = { rows: tally.passedOn };
     const doNot = {
       ...(open.length ? { open_questions: open.slice(0, 8).map(q=> q.asked) } : {}),
@@ -63831,6 +64115,12 @@ const ASSISTANT_TOOLS = {
       ...(worth.length ? { worth_saying: worth }
         : { worth_saying: [], nothing_new: 'Nothing is off course and nothing new has come in since the last meeting. Say that in a handful of words and go straight to what today is about.' }),
       ...(Object.keys(doNot).length ? { do_not_repeat: doNot } : {}),
+      /* EVIDENCE, NOT RESTRAINT. It sat inside do_not_repeat for one
+         build, which is the wrong shelf entirely: that list means
+         "never mention this", and the record is exactly the thing a
+         move should reach for and quote. It belongs here, beside the
+         scoreboard and the market. */
+      ...(trackOut ? { track_record: trackOut } : {}),
       ...(Object.keys(playbook).length ? { playbook } : {}),
       ...(held.length ? { holds_you_placed: held } : {}),
       ...(lastReview ? { last_review: lastReview } : {}),
