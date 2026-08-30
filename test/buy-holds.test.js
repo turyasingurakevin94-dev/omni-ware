@@ -98,6 +98,10 @@ const CHAIN = [
   'effectiveMarkupRule', 'effectiveStockMarkupRule',
   'buyKeyParts', 'buyKeyLabel', 'buyPriceStamp', 'buyPriceNow', 'buyKeptPct',
   'buyHoldFor', 'setBuyHold', 'liftBuyHold', 'buyHoldsStanding', 'buyHoldsSweep',
+  /* The plan now reads what is already ordered before it recommends
+     anything, so the ordering chain travels with it: without these the
+     scope compiles and purchasePlan throws on the first line it costs. */
+  'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',
   'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
   'buyLineFacts', 'buyLineWhy', 'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
   'purchasePlan',
@@ -106,7 +110,8 @@ const CHAIN = [
   'targetMarginPct',
 ];
 const CONSTS = ['REPEAT_BUYIN_ORDERS', 'LEAD_TIME_WINDOW_DAYS', 'LEAD_TIME_MIN_DELIVERIES',
-  'THIN_MARGIN_PCT', 'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS'];
+  'THIN_MARGIN_PCT', 'BUY_HOLD_MAX_DAYS', 'BUY_HOLD_KEEP_DAYS',
+  'BUY_ORDER_STALE_DAYS', 'BUY_ORDER_KEEP_DAYS'];
 
 const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
   CHAIN.map((n) => extractFunction(src, n, 'index.html'))
@@ -289,9 +294,17 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
 {
   const data = makeData();
   const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
-  const scope = build(data, ['let buyBudget = null; let buyPlanLast = null;',
+  const scope = build(data, ['let buyBudget = null; let buyPlanLast = null; let buyOrderBasket = new Set();',
+    /* The panel now sweeps and draws the orders too. They are extracted
+       rather than stubbed because a stub could not catch the panel
+       drawing an order it should not -- and the point of this block is
+       what actually reaches the screen. */
+    extractFunction(src, 'buyOrderFor', 'index.html'),
+    extractFunction(src, 'buyOrdersAll', 'index.html'),
+    extractFunction(src, 'buyOrdersOpenRows', 'index.html'),
+    extractFunction(src, 'buyOrdersSweep', 'index.html'),
     extractFunction(src, 'renderPurchasePlanPanel', 'index.html')],
-    ['renderPurchasePlanPanel'], {
+    ['renderPurchasePlanPanel', 'buyOrdersOpenRows'], {
       document: { getElementById: (id) => (id === 'buy_plan' ? el : null), activeElement: null },
       cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
       CASH_AHEAD_DAYS: 30,
@@ -299,6 +312,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
       esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
       listPageSlice: (_k, rows) => rows,
       listMoreButtonHTML: () => '',
+      supplierName: () => 'A supplier',
+      fmtShortDate: (d) => String(d),
+      saveData: () => {},
     });
 
   scope.setBuyHold('P1::0', 'Buying your thinnest-margin line before repricing is buying work', 'manager');
@@ -335,10 +351,15 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     const scope = compileScope(
       CHAIN.map((n) => extractFunction(src, n, 'index.html'))
         .concat(CONSTS.map((n) => extractDeclaration(src, n, 'index.html')))
-        .concat([extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
+        .concat([extractFunction(src, 'buyOrderFor', 'index.html'),
+          extractFunction(src, 'buyOrdersAll', 'index.html'),
+          extractFunction(src, 'buyOrdersOpenRows', 'index.html'),
+          extractDeclaration(src, 'ASSISTANT_TOOLS', 'index.html'),
           'function names(){ return { ASSISTANT_TOOLS, setBuyHold }; }']),
       { ...makeEnv(data), apRound: (n) => Math.round(Number(n) || 0),
         cashOnHandByAccount: () => ({ total: 5000000, byAccount: [] }),
+        supplierName: () => 'A supplier',
+        document: { getElementById: () => null },
       CASH_AHEAD_DAYS: 30,
       cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, safeToSpend: 5000000, tightest: { date: '2026-08-29', balance: 5000000 } }) },
       ['names']);

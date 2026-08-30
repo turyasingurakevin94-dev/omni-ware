@@ -122,6 +122,9 @@ try {
     'buyHoldFor', 'setBuyHold', 'liftBuyHold', 'buyHoldsStanding', 'buyHoldsSweep',
     'effectiveMarkupRule', 'effectiveStockMarkupRule', 'suggestedStockSellingPrice',
     'reorderRuleFor', 'supplierLeadTimes', 'supplierLeadDays',
+    /* The plan reads what is already on order before it costs a line,
+       so the ordering chain travels with it. */
+    'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted',
     'purchasePlan', 'dashStockOutExposure',
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
@@ -131,6 +134,8 @@ try {
       extractDeclaration(src, 'THIN_MARGIN_PCT', 'index.html'),
       extractDeclaration(src, 'BUY_HOLD_MAX_DAYS', 'index.html'),
       extractDeclaration(src, 'BUY_HOLD_KEEP_DAYS', 'index.html'),
+      extractDeclaration(src, 'BUY_ORDER_STALE_DAYS', 'index.html'),
+      extractDeclaration(src, 'BUY_ORDER_KEEP_DAYS', 'index.html'),
     ]),
   env, ['waSalesByKey', 'restockRiskRows', 'stockingCandidates', 'buyLineReason',
     'buyLineFacts', 'buyLineWhy', 'purchasePlan', 'dashStockOutExposure']);

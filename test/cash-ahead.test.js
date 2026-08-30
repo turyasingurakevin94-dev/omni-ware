@@ -380,9 +380,13 @@ const drawBuy = (over) => {
     cashAhead: () => ({ days: 30, committed: 2500000, safeToSpend: 2500000, unknown: 0,
       commitments: [{ dueOn: '2026-08-31', date: '2026-08-31', overdue: false, label: 'Milly', amount: 1200000 }],
       tightest: { date: '2026-09-05', balance: 2500000 } }),
-    buyBudget: null, buyPlanLast: null,
+    buyBudget: null, buyPlanLast: null, buyOrderBasket: new Set(),
     buyHoldsSweep: () => {},
-    purchasePlan: (budget) => { buyAsked.push(budget); return { budget, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [] }; },
+    /* This file is about the BUDGET the panel is handed, so orders are
+       stubbed away here: what an order does to that budget belongs to
+       buy-orders.test.js, which owns the claim. */
+    buyOrdersSweep: () => {}, buyOrdersOpenRows: () => [],
+    purchasePlan: (budget) => { buyAsked.push(budget); return { budget, budgetBefore: budget, onOrder: 0, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [], coming: [] }; },
     listPageSlice: (id, rows) => rows, listMoreButtonHTML: () => '',
     /* The row's own rendering is tested where it lives; here it only has
        to draw without throwing, so the strip above it can be read. */
@@ -454,7 +458,7 @@ const drawBuy = (over) => {
     cashAhead: () => ({ days: 30, committed: 3471156, safeToSpend: 0, unknown: 0,
       commitments: [{ dueOn: '2026-08-31', date: '2026-08-31', overdue: false, label: 'Milly', amount: 1200000 }],
       tightest: { date: '2026-09-25', balance: -862512 } }),
-    purchasePlan: (budget) => { buyAsked.push(budget); return Object.assign({ budget, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [] }, plan || {}); },
+    purchasePlan: (budget) => { buyAsked.push(budget); return Object.assign({ budget, budgetBefore: budget, onOrder: 0, coverDays: 14, lines: [], spend: 0, didNotFit: [], sourceFirst: [], coming: [] }, plan || {}); },
   });
 
   const emptyPlan = broke({ didNotFit: [{ kind: 'shelf', daysLeft: 0, name: 'ABC Black Screws', cost: 210000, qty: 20,
@@ -511,6 +515,11 @@ const drawBuy = (over) => {
     fmtUGX: (n) => Number(n || 0).toLocaleString('en-US'),
     fmtShortDate: (d) => String(d),
     todayISO: () => TODAY,
+    /* This block is about the cash line reaching the alerts. Whether a
+       late supplier order becomes an alert is dashboard-alerts.test.js's
+       claim, and it is stubbed empty here so the two files cannot both
+       half-own it. */
+    buyOrdersOpenRows: () => [],
     daysBetweenISO: (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000),
     daysSinceDate: () => 0, anShiftDate: (iso) => iso,
     data: { customers: [], suppliers: [], savedQuotes: [], products: [] },

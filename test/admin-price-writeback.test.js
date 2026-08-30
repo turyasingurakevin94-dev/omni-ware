@@ -349,12 +349,23 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
 {
   const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
   const calls = [...code.matchAll(/syncPriceRegistryFromPurchase\(([^;]*?)\);/g)].map(m => m[1]);
-  t.check(calls.length === 5, `every call site is accounted for (found ${calls.length})`);
+  t.check(calls.length === 6, `every call site is accounted for (found ${calls.length})`);
   t.check(calls.every((c) => c.split(',').length >= 5),
     'each one passes a quantity, or the price it records is a fact with the quantity torn off');
   t.check(calls.some((c) => /item\.qty/.test(c)), "the quote line passes that line's quantity");
   t.check(calls.some((c) => /,\s*q,\s*\{confirms: true, unit\}$/.test(c.trim())),
     'the restock passes what was actually bought');
+  /* THE FOURTH PURCHASE: a delivery received against a buy order.
+
+     It is a purchase in the fullest sense -- goods on the shelf, a bill
+     raised, money that will move -- and it is the one place where the
+     price is the SUPPLIER'S answer rather than the shop's guess: the
+     receiving screen lets the owner type what they were actually
+     charged, which is exactly the figure the registry most needs and
+     the one it would otherwise never see. Skipping it here would leave
+     the book quoting the price the shop ASKED for, for ever. */
+  t.check(calls.some((c) => /l\.unitCost,\s*l\.qty,\s*$/m.test(c) || /l\.unitCost, l\.qty,/.test(c)),
+    'a delivery received against an order teaches the registry what was really charged');
   /* THIS receipt's quantity, not the line's running total. A line that
      came back short and was fetched again is two purchases at two
      prices, kept as two receipts -- and a second small trip is honestly
@@ -390,8 +401,8 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
      date every price the admin merely scrolled past — and the registry
      would report a book kept current by nobody having looked at it. */
   const confirming = calls.filter((c) => /confirms:\s*true/.test(c));
-  t.check(confirming.length === 4,
-    `four callers assert a price rather than round-trip a field (found ${confirming.length})`);
+  t.check(confirming.length === 5,
+    `five callers assert a price rather than round-trip a field (found ${confirming.length})`);
   t.check(confirming.every((c) => !/item\.qty/.test(c)),
     'and the quote line is not one of them — a pre-filled field round-tripping is not a confirmation');
 
@@ -404,7 +415,7 @@ const warned = () => told.some((m) => /Buying more now costs more each/.test(m))
      move, and the corrected figure is what actually changed hands. */
   const asPurchase = confirming.filter((c) => !/source:/.test(c));
   const asConfirmed = confirming.filter((c) => /source: 'confirmed'/.test(c));
-  t.check(asPurchase.length === 3, `three of them are purchases (found ${asPurchase.length})`);
+  t.check(asPurchase.length === 4, `four of them are purchases (found ${asPurchase.length})`);
   t.check(asConfirmed.length === 1,
     `and the supplier's own word is filed as confirmed, not bought (found ${asConfirmed.length})`);
 

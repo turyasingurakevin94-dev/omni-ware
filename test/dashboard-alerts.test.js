@@ -44,11 +44,17 @@ const NAMES = ['dashAlerts', 'dashBandFor', 'agingDaysLabel'];
    the scope whole rather than as a stub -- a stub would let the alert
    and the chase queue disagree about what "broken" means. */
 const PROMISE_NAMES = ['promisesFor', 'promiseState', 'promiseLatest'];
-const promiseData = { paymentPromises: [], customers: [] };
+/* And an order past the day the supplier named is an alert now, so the
+   order reading comes in whole for the same reason: a stub could not
+   catch the alert calling an UNDATED order late, which is the one thing
+   it must never do. */
+const ORDER_NAMES = ['buyOrderTotal', 'buyOrderIsOpen', 'buyOrderFor', 'buyOrdersAll', 'buyOrdersOpenRows'];
+const promiseData = { paymentPromises: [], customers: [], presetBuyOrders: {} };
 let scope = null; let err = null;
 try {
   scope = compileScope([
-    ...NAMES.concat(PROMISE_NAMES).map((n) => extractFunction(src, n, 'index.html')),
+    ...NAMES.concat(PROMISE_NAMES).concat(ORDER_NAMES).map((n) => extractFunction(src, n, 'index.html')),
+    extractDeclaration(src, 'BUY_ORDER_STALE_DAYS', 'index.html'),
     extractDeclaration(src, 'DASH_URGENT_DAYS', 'index.html'),
     extractDeclaration(src, 'DASH_SOON_DAYS', 'index.html'),
     extractDeclaration(src, 'DASH_BANDS', 'index.html'),
@@ -60,6 +66,9 @@ try {
     fmtShortDate: (s) => String(s),
     esc: (s) => String(s),
     todayISO: () => '2026-08-29',
+    daysSinceDate: (d) => (d ? Math.round((Date.parse('2026-08-29') - Date.parse(String(d))) / 86400000) : -1),
+    daysBetweenISO: (a, b) => Math.round((Date.parse(String(b)) - Date.parse(String(a))) / 86400000),
+    supplierName: (id) => ({ S2: 'Roto' })[id] || String(id),
     data: promiseData,
   }, [...NAMES, 'readBands']);
 } catch (e) { err = e; }
@@ -398,6 +407,43 @@ if (scope) {
      first period showed "+0.0% vs prior period", which reads as flat. */
   t.check(/nothing to compare it with yet/.test(render),
     'and a first period says there is nothing to compare with rather than reporting no change');
+}
+
+/* ---------- 10. an order that never came ------------------------------ *
+ *
+ * The buy screen HIDES a line while its goods are in transit — which is
+ * right, and which means a delivery that never turns up is invisible
+ * everywhere until the shelf is empty. This alert is the only thing
+ * standing between the owner and that silence.
+ */
+if (scope) {
+  const order = (over) => Object.assign({
+    id: 'o1', supplierId: 'S2', placedOn: '2026-08-20', state: 'placed', expectedOn: null,
+    lines: [{ key: 'P1', name: 'Cement', qty: 30, unitCost: 27000 }],
+  }, over || {});
+
+  promiseData.presetBuyOrders = { o1: order({ expectedOn: '2026-08-26' }) };
+  const late = byId(scope.dashAlerts(CTX()), 'order:o1');
+  t.check(!!late, 'an order past the day the supplier named is ON the dashboard');
+  t.check(/Roto is 3 days late/.test(late.title), 'naming who, and how late');
+  eq(late.money, 810000, 'priced at what is tied up in it — committed, off the budget, and buying nothing yet');
+  t.check(/Nothing is owed for it/.test(late.detail),
+    'while saying plainly that it is not a debt — no bill exists until the goods come');
+
+  /* THE ONE THING IT MUST NEVER DO. An order nobody dated is not late,
+     however long it stands: only a day somebody named can be missed,
+     and this is the same law the bills and the promises keep. */
+  promiseData.presetBuyOrders = { o1: order({ placedOn: '2026-07-01' }) };
+  t.check(!byId(scope.dashAlerts(CTX()), 'order:o1'),
+    'AN UNDATED ORDER IS NEVER LATE — 59 days old and still not an alert, because nobody named a day to miss');
+
+  promiseData.presetBuyOrders = { o1: order({ expectedOn: '2026-09-05' }) };
+  t.check(!byId(scope.dashAlerts(CTX()), 'order:o1'), 'and a day still ahead is not late either');
+
+  promiseData.presetBuyOrders = { o1: order({ expectedOn: '2026-08-26', state: 'arrived' }) };
+  t.check(!byId(scope.dashAlerts(CTX()), 'order:o1'),
+    'nor is one that has already arrived — the goods are on the shelf and the bill is raised');
+  promiseData.presetBuyOrders = {};
 }
 
 process.exit(t.done() ? 1 : 0);

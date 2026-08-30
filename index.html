@@ -911,6 +911,58 @@
     border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
   .pp-empty b{font-size:13.5px;color:var(--ink);}
   .pp-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
+  /* WHAT HAS BEEN ORDERED AND NOT ARRIVED.
+
+     Above the plan, not below it: the first thing a buyer needs to know
+     is what is already coming, or they buy it twice. Steel rather than
+     oxide -- an order in transit is the shop working, not a warning. */
+  .pp-ord{padding:11px 12px;border:1px solid var(--line);border-radius:10px;
+    background:var(--ow-steel-050);margin-bottom:8px;}
+  .pp-ord.late{border-color:#EBD8AE;background:var(--ow-amber-soft);}
+  .pp-ord-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;}
+  .pp-ord-sup{font-size:13.5px;font-weight:650;color:var(--ink);margin-right:auto;}
+  .pp-ord-total{font-size:13px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .pp-ord-when{font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
+    color:var(--ink-soft);}
+  .pp-ord.late .pp-ord-when{color:var(--ow-amber-ink);}
+  .pp-ord-lines{margin-top:5px;font-size:12px;color:var(--ink-soft);line-height:1.6;max-width:74ch;}
+  .pp-ord-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
+  .pp-ord-acts .btn{padding:5px 11px;font-size:11.5px;}
+  .pp-ord-note{font-size:11px;color:var(--ink-soft);margin-right:auto;}
+  /* The basket. It only exists while something is ticked, so it is a
+     bar and not a panel: nothing to dismiss, nothing left behind. */
+  .pp-basket{position:sticky;bottom:0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;
+    gap:10px;margin-top:12px;padding:11px 13px;border-radius:11px;
+    background:var(--ow-oxide-soft);border:1px solid var(--accent);}
+  .pp-basket-say{font-size:12.5px;color:var(--ink);margin-right:auto;line-height:1.5;
+    flex:1 1 240px;min-width:0;}
+  /* The two buttons travel together. Loose in the bar they broke apart
+     on a narrow screen and left Clear stranded on a line of its own,
+     reading as an action of equal weight to the one it undoes. */
+  .pp-basket-acts{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .pp-basket-say b{font-variant-numeric:tabular-nums;}
+  /* A ticked row, so the list itself says what is in the basket. */
+  .pp-row.picked{background:var(--ow-oxide-soft);border-radius:9px;padding-left:9px;padding-right:9px;}
+  /* THE ORDER, GROUPED THE WAY IT WILL BE SENT: one supplier, one
+     message, one delivery, one bill. */
+  .bo-group{border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:12px;}
+  .bo-group-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;
+    padding-bottom:7px;border-bottom:1px solid var(--ow-rule-soft);}
+  .bo-sup{font-size:14px;font-weight:650;color:var(--ink);margin-right:auto;}
+  .bo-total{font-size:14px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .bo-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px;}
+  .bo-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;
+    color:var(--ow-ink-400);font-weight:700;text-align:left;padding:5px 6px;}
+  .bo-table th.r,.bo-table td.r{text-align:right;}
+  .bo-table td{padding:5px 6px;border-top:1px solid var(--ow-rule-soft);color:var(--ink);}
+  .bo-table input{width:92px;padding:5px 7px;font-size:12.5px;text-align:right;
+    border:1px solid var(--line);border-radius:7px;background:var(--ow-paper);color:var(--ink);}
+  .bo-when{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:9px;}
+  .bo-when label{font-size:11.5px;color:var(--ink-soft);}
+  .bo-when input{padding:5px 8px;font-size:12.5px;border:1px solid var(--line);
+    border-radius:7px;background:var(--ow-paper);color:var(--ink);}
+  .bo-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;}
+  .bo-drop{font-size:11px;color:var(--ink-soft);margin-right:auto;}
   @media (max-width:560px){
     /* The name takes the row and the money and button share the next,
        rather than three things fighting over 375px. */
@@ -10785,6 +10837,50 @@
   </div>
 </div>
 
+<!-- ORDERING WHAT THE PLAN RECOMMENDED. One group per supplier, because
+     that is how it will be sent, delivered and billed. Placing an order
+     writes the record and opens a WhatsApp draft; the shop's own hand
+     presses send. -->
+<div class="modal-overlay" id="buyOrderModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="buyOrderTitle">Order these</h2>
+      <button class="modal-close" id="buyOrderClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="cs-read cs-muted" id="buyOrderNote"></p>
+      <div id="buyOrderGroups"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="buyOrderCancel">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- THE LORRY CAME. What actually arrived, which is not always what was
+     ordered -- so every figure is editable, and the bill is written from
+     what came. -->
+<div class="modal-overlay" id="buyReceiveModal">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <h2 id="buyReceiveTitle">What came</h2>
+      <button class="modal-close" id="buyReceiveClose" aria-label="Close">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="cs-read cs-muted" id="buyReceiveNote"></p>
+      <div id="buyReceiveRows"></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-accent" id="buyReceiveSave">Put it on the shelf and raise the bill</button>
+        <button type="button" class="btn btn-ghost" id="buyReceiveCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- THE SUPPLIER'S ACCOUNT -->
 <div class="modal-overlay" id="supplierStatsModal">
   <div class="modal modal-wide">
@@ -13191,6 +13287,11 @@ async function loadData(shopId){
        synchronous -- reading it from the journal would make the whole
        buy chain async, tool and dashboard alert included. */
     presetBuyHolds: (presets.buyHolds && typeof presets.buyHolds === 'object') ? presets.buyHolds : {},
+    /* Orders raised from the buy plan and not yet arrived. Same blob as
+       the holds and for the same reason: the record is the owner's own
+       working state, it is small, and it is swept away once it has
+       nothing left to say. */
+    presetBuyOrders: (presets.buyOrders && typeof presets.buyOrders === 'object') ? presets.buyOrders : {},
     presetChaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     presetChaseRestDays: presets.chaseRestDays != null ? Number(presets.chaseRestDays) : 3,
     /* When each debtor was last chased, customer id -> date. Kept with
@@ -13488,7 +13589,7 @@ function buildSyncRows(d, shopId){
     })),
     settings: {
       shop_id: shopId,
-      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
+      presets:{categories:d.presetCategories, units:d.presetUnits, locations:d.presetLocations, incomeCategories:d.presetIncomeCategories, expenseCategories:d.presetExpenseCategories, attributes:d.presetAttributes, orderStageLimits:d.presetOrderStageLimits, stageAlerts:!!d.presetStageAlerts, priceReview:d.presetPriceReview, followUp:d.presetFollowUp, agentDiscountWholesalePct:d.presetAgentDiscountWholesalePct, agentDiscountRetailPct:d.presetAgentDiscountRetailPct, agentClusterWaitDays:d.presetAgentClusterWaitDays, defaultMarkup:d.presetDefaultMarkup||{}, restockCoverDays:d.presetRestockCoverDays, priceWatchDays:d.presetPriceWatchDays, reorderRules:d.presetReorderRules||{}, buyHolds:d.presetBuyHolds||{}, buyOrders:d.presetBuyOrders||{}, deadStockDays:d.presetDeadStockDays, clearance:d.presetClearance||{}, targetMarginPct:d.presetTargetMarginPct, chaseAfterDays:d.presetChaseAfterDays, chaseRestDays:d.presetChaseRestDays, debtChases:d.presetDebtChases||{}, waPhone:d.presetWaPhone||'', waMarketingRate:d.presetWaMarketingRate,
         shopLegalName:d.presetShopLegalName||'', shopAddress:d.presetShopAddress||'', shopPhone:d.presetShopPhone||'',
         shopTin:d.presetShopTin||'', receiptFooter:d.presetReceiptFooter||'', autoPrintReceipt:!!d.presetAutoPrintReceipt,
         idCounters:d.idCounters||{}},
@@ -53245,6 +53346,369 @@ function buyHoldsSweep(dateISO){
   if(changed) saveData();
 }
 
+/* ================= AN ORDER RAISED FROM THE PLAN =================
+
+   The screen could always say what to buy and never buy it. The owner
+   read the plan, left the app, wrote the supplier a message by hand,
+   and typed the goods in again when the lorry came. In between, the
+   plan knew nothing: the next morning it recommended the same twelve
+   bags against the same budget, because nothing in the books had moved
+   -- the shelf was still empty and no bill existed. The advice was
+   right and the app was arguing with a decision the owner had already
+   taken.
+
+   So an order is written down between the advice and the goods.
+
+   IT IS NOT A BILL AND NEVER BECOMES ONE BY ITSELF. Nothing is owed
+   until something arrives, and this app does not raise a liability on
+   the strength of a message somebody may not have sent. What an order
+   does is stop the plan saying the same thing twice:
+
+     - what is on the way comes off the NEED, so a line already in a
+       lorry is not recommended again;
+     - what it cost comes off the BUDGET, so the same shilling is not
+       offered to a second purchase.
+
+   It stays OFF the cash line. Money leaves on a day somebody named,
+   and nobody has named one -- the day is given when the goods arrive
+   and the bill is dated, on Who you owe, in the owner's own hand. The
+   same law the supplier bills already keep.
+
+   Riding the presets blob, beside the buy holds and the chases: no new
+   table and no migration to paste. The record is small and short-lived
+   by construction -- an order is swept away a fortnight after it
+   closes.
+
+   NOTHING SENDS ITSELF. Placing an order writes the record and opens a
+   WhatsApp draft. A person reads it and presses send, exactly as with
+   every other message this app composes. */
+
+// Placed this long ago with nothing heard: it has lapsed. It stops
+// holding budget and stops hiding the line from the plan, because a
+// shop cannot wait for ever on goods nobody chased.
+const BUY_ORDER_STALE_DAYS = 45;
+// How long a closed order stays readable on the screen.
+const BUY_ORDER_KEEP_DAYS = 14;
+
+function buyOrderTotal(raw){
+  return Math.round(((raw && raw.lines) || [])
+    .reduce((n, l)=> n + (Number(l.qty) || 0) * (Number(l.unitCost) || 0), 0));
+}
+
+/* Still waiting on goods. Read off the RAW record and nothing else, so
+   the plan's arithmetic never drags a supplier lookup into itself --
+   the same reason buyHoldsStanding keeps its own reading separate. */
+function buyOrderIsOpen(raw, todayISO_){
+  if(!raw || (raw.state || 'placed') !== 'placed') return false;
+  return Math.max(0, daysSinceDate(raw.placedOn || todayISO_)) <= BUY_ORDER_STALE_DAYS;
+}
+
+/* WHAT IS ALREADY IN A LORRY, by shelf key. The one reading the plan
+   and the screen share, so neither can recommend a line the other
+   knows is coming. */
+function buyOrdersOnTheWay(dateISO){
+  const today = dateISO || todayISO();
+  const out = new Map();
+  Object.keys(data.presetBuyOrders || {}).forEach(id=>{
+    const raw = (data.presetBuyOrders || {})[id];
+    if(!buyOrderIsOpen(raw, today)) return;
+    (raw.lines || []).forEach(l=>{
+      const k = String((l && l.key) || '');
+      if(!k) return;
+      const cur = out.get(k) || { qty: 0, cost: 0, unit: '', orders: [] };
+      cur.qty += Number(l.qty) || 0;
+      cur.cost += (Number(l.qty) || 0) * (Number(l.unitCost) || 0);
+      /* THE UNIT THE ORDER WAS WRITTEN IN, carried rather than assumed.
+         The screen said "30 pc ordered" of a line this shop counts in
+         bags, because the sentence had a unit hard-typed into it -- a
+         small lie, in the one place the owner is checking arithmetic
+         against a delivery note. Empty when the order never named one,
+         and the sentence then says the number alone. */
+      if(!cur.unit && l.unit) cur.unit = String(l.unit);
+      if(!cur.orders.includes(String(id))) cur.orders.push(String(id));
+      out.set(k, cur);
+    });
+  });
+  return out;
+}
+
+/* Money already spoken for. Every open order at what it was ordered at
+   -- not at today's price, because the price that matters is the one
+   the supplier was given. */
+function buyOrdersCommitted(dateISO){
+  const today = dateISO || todayISO();
+  return Object.keys(data.presetBuyOrders || {})
+    .filter(id=> buyOrderIsOpen((data.presetBuyOrders || {})[id], today))
+    .reduce((n, id)=> n + buyOrderTotal((data.presetBuyOrders || {})[id]), 0);
+}
+
+/* One order, read back with the things only today can answer. */
+function buyOrderFor(id, dateISO){
+  const raw = (data.presetBuyOrders || {})[String(id)];
+  if(!raw) return null;
+  const today = dateISO || todayISO();
+  const state = raw.state || 'placed';
+  const o = { id: String(id), supplierId: raw.supplierId,
+    supplier: supplierName(raw.supplierId) || 'Supplier',
+    placedOn: raw.placedOn || today,
+    days: Math.max(0, daysSinceDate(raw.placedOn || today)),
+    expectedOn: raw.expectedOn || null,
+    lines: (raw.lines || []).slice(),
+    total: buyOrderTotal(raw),
+    state, sentAt: raw.sentAt || null,
+    closedOn: raw.closedOn || null,
+    billId: raw.billId == null ? null : raw.billId,
+    reason: raw.reason || '' };
+  o.open = buyOrderIsOpen(raw, today);
+  /* LATE AGAINST THE DAY SOMEBODY NAMED, never against a guess. An
+     order with no expected day is not late, it is undated -- the same
+     distinction the bills keep, and for the same reason. */
+  o.late = !!(o.open && o.expectedOn && o.expectedOn < today);
+  o.lapsed = state === 'placed' && !o.open;
+  return o;
+}
+
+function buyOrdersAll(dateISO){
+  return Object.keys(data.presetBuyOrders || {})
+    .map(id=> buyOrderFor(id, dateISO)).filter(Boolean)
+    .sort((a, b)=> String(b.placedOn).localeCompare(String(a.placedOn)) || String(a.id).localeCompare(String(b.id)));
+}
+function buyOrdersOpenRows(dateISO){
+  return buyOrdersAll(dateISO).filter(o=> o.open)
+    .sort((a, b)=> (b.late - a.late) || String(a.expectedOn || '9999').localeCompare(String(b.expectedOn || '9999'))
+      || String(a.placedOn).localeCompare(String(b.placedOn)));
+}
+
+/* Placing one.
+
+   Returns null when there is nothing to place: a supplier nobody can
+   name and a list with no lines are both nothing, and writing either
+   would put a row on the screen saying a thing happened that did not.
+   The terms are COPIED, not referenced -- the price the supplier was
+   given is the price the supplier was given, however the registry
+   moves afterwards. */
+function placeBuyOrder(supplierId, lines, expectedOn){
+  const rows = (lines || [])
+    .filter(l=> l && l.key && Number(l.qty) > 0)
+    .map(l=> ({ key: String(l.key), productId: l.productId,
+      variantIdx: (l.variantIdx == null || l.variantIdx === '') ? null : l.variantIdx,
+      name: String(l.name || ''), unit: l.unit || '',
+      packQty: Number(l.packQty) || 0, packUnit: l.packUnit || '',
+      qty: Number(l.qty), unitCost: Math.round(Number(l.unitCost) || 0) }));
+  if(!supplierId || !rows.length) return null;
+  const id = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  if(!data.presetBuyOrders) data.presetBuyOrders = {};
+  data.presetBuyOrders[id] = { id, supplierId, placedOn: todayISO(),
+    expectedOn: /^\d{4}-\d{2}-\d{2}$/.test(String(expectedOn || '')) ? String(expectedOn) : null,
+    lines: rows, state: 'placed', sentAt: null };
+  saveData();
+  return buyOrderFor(id);
+}
+
+/* The day they said it would come. The owner's word about somebody
+   else's promise, which is still a day somebody named -- so it may be
+   set and it may be taken back, and neither invents anything. */
+function setBuyOrderExpected(id, iso){
+  const raw = (data.presetBuyOrders || {})[String(id)];
+  if(!raw) return { ok: false, why: 'That order is no longer on file.' };
+  const d = String(iso || '').trim();
+  if(d === ''){ delete raw.expectedOn; saveData(); return { ok: true, cleared: true }; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))
+    return { ok: false, why: 'A day is needed, as YYYY-MM-DD — that is the whole point of the record.' };
+  raw.expectedOn = d;
+  saveData();
+  return { ok: true };
+}
+
+/* Stamped when the draft is OPENED, because nothing can observe a send
+   -- the same honesty askSupplierForPrices keeps. It records "asked",
+   never "delivered". */
+function markBuyOrderSent(id){
+  const raw = (data.presetBuyOrders || {})[String(id)];
+  if(!raw) return false;
+  raw.sentAt = Date.now();
+  saveData();
+  return true;
+}
+
+/* Called off. The record stays for a fortnight so the screen can say
+   so, and stops holding budget at once. */
+function cancelBuyOrder(id, reason){
+  const raw = (data.presetBuyOrders || {})[String(id)];
+  if(!raw || (raw.state || 'placed') !== 'placed') return false;
+  raw.state = 'cancelled';
+  raw.closedOn = todayISO();
+  raw.reason = String(reason || '').trim().slice(0, 300);
+  saveData();
+  return true;
+}
+
+/* What the supplier is actually being asked for.
+
+   Carries the price, for the reason supplierConfirmMessage carries it:
+   an order that leaves the price out gets back "yes, we have them"
+   against a figure the supplier never saw, which is worse than not
+   asking because it looks like an answer. */
+function buyOrderMessage(o){
+  if(!o) return '';
+  const rows = (o.lines || []).map(l=>{
+    const qty = Number(l.qty) || 0;
+    const packs = (Number(l.packQty) > 0)
+      ? ` (${Math.round(qty / Number(l.packQty))} ${l.packUnit || 'pack'})` : '';
+    return `• ${l.name}${l.unit ? ' (' + l.unit + ')' : ''} — ${qty.toLocaleString('en-UG')}${packs} @ ${fmtUGX(Math.round(Number(l.unitCost) || 0))}`;
+  });
+  return [
+    `Hello *${o.supplier}*,`,
+    '',
+    'Please supply the following:',
+    '',
+    ...rows,
+    '',
+    `Total at these prices: *${fmtUGX(o.total)}*`,
+    '',
+    o.expectedOn
+      ? `We are expecting delivery by ${fmtShortDate(o.expectedOn)}. If anything has changed — stock or price — please tell us before you send it.`
+      : 'Please confirm the prices and tell us when you can deliver. If anything has changed, tell us before you send it.'
+  ].join('\n');
+}
+function buyOrderWaUrl(o){
+  return waComposeUrl(supplierWaNumber(o && o.supplierId), buyOrderMessage(o));
+}
+
+/* THE GOODS CAME. The one place an order turns into money owed.
+
+   Stock line by line, then ONE bill for the whole delivery -- which is
+   what the supplier hands over and what the owner will pay against.
+   Splitting it per line would leave the Who-you-owe screen listing
+   nine bills for one lorry.
+
+   THE BILL IS LEFT UNDATED ON PURPOSE. When the shop will pay is the
+   shop's word to give, and Who you owe is where it is given. Deriving
+   a day from the order would put money on the cash line that nobody
+   promised.
+
+   What actually came is what is recorded, never what was ordered: a
+   supplier who sends nine of twelve has sent nine, and a bill written
+   from the order would owe them for three bags on somebody's lorry. */
+async function receiveBuyOrder(id, received){
+  const o = buyOrderFor(id);
+  if(!o || o.state !== 'placed') return null;
+  const got = (received && received.length ? received : o.lines)
+    .map(l=> ({ ...l, qty: Number(l.qty) || 0, unitCost: Math.round(Number(l.unitCost) || 0) }))
+    .filter(l=> l.qty > 0);
+  if(!got.length) return null;
+  /* The number BEFORE anything moves. issueRowId can fail, and a
+     delivery that puts stock on the shelf and then cannot raise its
+     bill is goods the shop owns and does not owe for. */
+  const billId = await issueRowId('purchaseInvoice');
+  const items = [];
+  got.forEach(l=>{
+    const vi = (l.variantIdx == null || l.variantIdx === '') ? null : l.variantIdx;
+    /* Buying at a price is evidence about that price, whether it moved
+       or not -- the same call the purchase form makes, for the same
+       reason: a registry that only learns from surprises goes stale. */
+    syncPriceRegistryFromPurchase(l.productId, vi, o.supplierId, l.unitCost, l.qty,
+      { confirms: true, unit: l.unit || '' });
+    applyStockDelta(l.productId, vi, l.qty, 'restock',
+      `Received from ${o.supplier} on order — ${fmtUGX(l.unitCost)} per ${l.unit || 'unit'}`,
+      l.unitCost, o.supplierId, null);
+    /* The row applyStockDelta just pushed, tied to the bill it is on and
+       marked as having come off an order.
+
+       DELIBERATELY NOT 'inv-purchase', which is the marker the purchase
+       correction screen accepts. That screen repairs ONE line against
+       ONE bill -- it writes pi.items[0] and nothing else -- and a
+       delivery bill carries every line that came off the lorry. Letting
+       it through would have the owner correct the cement and silently
+       rewrite the wall angle's row with cement's figures. Until that
+       screen can repair a bill of many lines, the place to get a
+       delivery right is the receiving form, where every quantity and
+       every price is editable BEFORE anything is written; a delivery
+       already recorded wrong is repaired by voiding its bill. */
+    const logRow = data.stockLog[data.stockLog.length - 1];
+    if(logRow){ logRow.source = 'buy-order'; logRow.piId = billId; }
+    items.push({ productId: l.productId, variantIdx: vi, productName: l.name,
+      unit: l.unit || '', packUnit: l.packUnit || '', packQty: l.packQty || 0,
+      qty: l.qty, price: l.unitCost });
+  });
+  data.purchaseInvoices.push({ id: billId, quoteId: null, customerName: '',
+    supplierId: o.supplierId, supplierName: supplierName(o.supplierId),
+    date: todayISO(), items, amountPaid: 0, payments: [], voided: false,
+    // Which order this came off, so the two can never be told apart by
+    // guesswork afterwards.
+    buyOrderId: o.id });
+  const raw = data.presetBuyOrders[o.id];
+  raw.state = 'arrived';
+  raw.closedOn = todayISO();
+  raw.billId = billId;
+  raw.received = got.map(l=> ({ key: l.key, qty: l.qty, unitCost: l.unitCost }));
+  saveData();
+  return { billId, total: got.reduce((n, l)=> n + l.qty * l.unitCost, 0), lines: got.length };
+}
+
+/* Forgetting, once the record has nothing left to say. A closed order
+   is readable for a fortnight and then gone; one that lapsed unheard
+   is kept as long, counted from the day it stopped being open, so the
+   screen can tell the owner it lapsed rather than silently dropping
+   an order they are still waiting on. */
+function buyOrdersSweep(dateISO){
+  const today = dateISO || todayISO();
+  let changed = false;
+  Object.keys(data.presetBuyOrders || {}).forEach(id=>{
+    const raw = data.presetBuyOrders[id];
+    if(!raw){ delete data.presetBuyOrders[id]; changed = true; return; }
+    const state = raw.state || 'placed';
+    if(state === 'placed'){
+      const days = Math.max(0, daysSinceDate(raw.placedOn || today));
+      if(days > BUY_ORDER_STALE_DAYS + BUY_ORDER_KEEP_DAYS){ delete data.presetBuyOrders[id]; changed = true; }
+      return;
+    }
+    if(daysSinceDate(raw.closedOn || today) > BUY_ORDER_KEEP_DAYS){ delete data.presetBuyOrders[id]; changed = true; }
+  });
+  if(changed) saveData();
+}
+
+/* ONE RESOLUTION, READ TWICE. The confirm card and the act that
+   follows it must be describing the same order, and the only way to
+   guarantee that is to build it once from the same reading. A card
+   that said one thing and a write that did another would be this
+   app's worst failure: money committed on the strength of a sentence
+   the owner approved and the machine did not honour.
+
+   THE MODEL NEVER SUPPLIES A PRICE. It names lines by their key and
+   how many; the supplier, the unit and the cost come from today's
+   plan, which came from the Price Registry. So an order cannot be
+   placed at a figure somebody invented, and a key that is not on the
+   plan is refused BY NAME rather than quietly skipped. */
+function buyOrderToolLines(input){
+  const sid = (input && input.supplier_id) != null ? String(input.supplier_id) : '';
+  const sup = (data.suppliers || []).find(x=> String(x.id) === sid);
+  if(!sup) return { error: 'No supplier with that id — use find_supplier first.' };
+  const asked = ((input && input.lines) || []).filter(x=> x && x.key);
+  if(!asked.length) return { error: 'No lines were named. Say which keys to order, from the buy plan.' };
+  const plan = purchasePlan(cashAhead(todayISO(), CASH_AHEAD_DAYS).safeToSpend, null, todayISO());
+  const pool = plan.lines.concat(plan.didNotFit);
+  const lines = []; const missing = []; const elsewhere = [];
+  asked.forEach(a=>{
+    const l = pool.find(x=> String(x.key) === String(a.key));
+    if(!l){ missing.push(String(a.key)); return; }
+    if(String(l.supplierId) !== sid){ elsewhere.push(l.name + ' (the plan buys it from ' + l.supplier + ')'); return; }
+    const qty = a.qty != null ? Math.round(Number(a.qty)) : l.buyQty;
+    if(!(qty > 0)) return;
+    lines.push({ key: l.key, productId: l.productId, variantIdx: l.variantIdx, name: l.name,
+      unit: l.unit, packQty: l.packQty, packUnit: l.packUnit, qty, unitCost: l.unitCost });
+  });
+  if(elsewhere.length) return { error: 'Those lines are not this supplier\u2019s on today\u2019s plan: '
+    + elsewhere.join('; ') + '. Order each line from the supplier the plan costed it at, or say why not.' };
+  if(missing.length) return { error: 'Not on today\u2019s buy plan: ' + missing.join(', ')
+    + '. Read purchase_plan and order the keys it gives — a line the plan is not recommending cannot be ordered from here.' };
+  if(!lines.length) return { error: 'Every line came to zero — there is nothing to order.' };
+  const when = String((input && input.expected_on) || '');
+  return { supplierId: sup.id, supplier: supplierName(sup.id) || 'Supplier', lines,
+    total: Math.round(lines.reduce((n, l)=> n + l.qty * l.unitCost, 0)),
+    expectedOn: /^\d{4}-\d{2}-\d{2}$/.test(when) ? when : null };
+}
+
 // Every line the SHELF is running out of, soonest first. An item the
 // shop never stocks cannot run out of it -- it appears, if it earns
 // its place, as a stocking candidate below.
@@ -53502,7 +53966,12 @@ function buyLineWhy(l){
      line, never a guessed figure. */
 function purchasePlan(budget, coverDays, dateISO){
   const cover = Math.max(1, Number(coverDays) || Number(data.presetRestockCoverDays) || 14);
-  const candidates = []; const noPrice = [];
+  const candidates = []; const noPrice = []; const coming = [];
+  /* WHAT IS ALREADY IN A LORRY. Read once, before anything is costed:
+     a line the shop has already ordered is not a line the shop needs
+     to be told to order, and recommending it again is the plan
+     arguing with a decision the owner has already taken. */
+  const onWay = buyOrdersOnTheWay(dateISO);
   restockRiskRows(dateISO).forEach(r=>{
     /* The shop's cover, unless this line carries its own. */
     const lineCover = (r.rule && r.rule.coverDays) ? r.rule.coverDays : cover;
@@ -53523,14 +53992,42 @@ function purchasePlan(budget, coverDays, dateISO){
     const plainNeed = Math.ceil(lineCover * r.dailyRate - r.qty);
     const probe = buyLineFor(r, Math.max(1, plainNeed), 'refill');
     const leadDays = probe ? supplierLeadDays(probe.supplierId, dateISO) : null;
-    const need = Math.max(
+    const short = Math.max(
       Math.ceil((lineCover + (leadDays || 0)) * r.dailyRate - r.qty),
       floor > 0 ? Math.ceil(floor - r.qty) : 0);
     // The shelf covers the wait and clears any floor: nothing to do.
-    if(!(need > 0)) return;
+    if(!(short > 0)) return;
+    /* NAMED, NEVER DROPPED. A line whose shortfall is already covered
+       by goods on the way is not "nothing to do" -- it is done, by the
+       owner, and the screen owes them the record of it. What is on the
+       way covers only PART of the need, the rest is still a buy, and
+       the plan asks for the rest rather than the whole. */
+    const inTransit = Math.max(0, ((onWay.get(r.key) || {}).qty) || 0);
+    const need = short - inTransit;
+    if(inTransit > 0 && !(need > 0)){
+      coming.push({ key: r.key, productId: r.productId, variantIdx: r.variantIdx,
+        name: r.name, qty: inTransit, unit: (onWay.get(r.key) || {}).unit || '',
+        daysLeft: r.daysLeft, needed: short,
+        orders: ((onWay.get(r.key) || {}).orders || []).slice() });
+      return;
+    }
     if(!probe){ noPrice.push({ name: r.name, qty: need, daysLeft: r.daysLeft,
       units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx }); return; }
-    const line = need > Math.max(1, plainNeed) ? (buyLineFor(r, need, 'refill') || probe) : probe;
+    /* RE-COSTED WHENEVER THE ASK IS NOT THE ONE THE PROBE PRICED.
+
+       It used to re-cost only UPWARDS, for the extra days of the wait,
+       because that was the only way the need could move. Goods already
+       on the way move it the other way, and the probe -- priced at the
+       whole shortfall -- would then have the plan ordering the full
+       thirty bags on a line where twenty are in a lorry: the exact
+       double-buy this whole record exists to prevent, hidden inside an
+       arithmetic that looked like it had accounted for it. */
+    const want = Math.max(1, need);
+    const line = want === Math.max(1, plainNeed) ? probe : (buyLineFor(r, want, 'refill') || probe);
+    /* Part of it is coming and the rest is not. The line carries both,
+       so the row can say what it is topping up rather than reading as
+       a plan that has forgotten the lorry. */
+    if(inTransit > 0){ line.inTransit = inTransit; line.shortBefore = short; }
     line.coverDays = lineCover;
     line.floor = floor;
     line.belowFloor = belowFloor;
@@ -53538,6 +54035,16 @@ function purchasePlan(budget, coverDays, dateISO){
     candidates.push(line);
   });
   stockingCandidates(dateISO).forEach(r=>{
+    /* Nothing was ever held, so the whole month's quantity is the ask
+       -- and an order already placed for it is the whole answer. */
+    const inTransit = Math.max(0, ((onWay.get(r.key) || {}).qty) || 0);
+    if(inTransit >= r.units30){
+      coming.push({ key: r.key, productId: r.productId, variantIdx: r.variantIdx,
+        name: r.name, qty: inTransit, unit: (onWay.get(r.key) || {}).unit || '',
+        daysLeft: null, needed: r.units30,
+        orders: ((onWay.get(r.key) || {}).orders || []).slice() });
+      return;
+    }
     const line = buyLineFor(r, r.units30, 'stock');
     if(!line){ noPrice.push({ name: r.name, qty: r.units30, daysLeft: null,
       units30: r.units30, profit30: r.profit30, productId: r.productId, variantIdx: r.variantIdx }); return; }
@@ -53550,16 +54057,35 @@ function purchasePlan(budget, coverDays, dateISO){
     || ((a.daysLeft == null ? Infinity : a.daysLeft) - (b.daysLeft == null ? Infinity : b.daysLeft)));
 
   const lines = []; const didNotFit = [];
+  /* MONEY ALREADY SPOKEN FOR CANNOT BE OFFERED AGAIN.
+
+     An order placed this morning takes nothing out of the drawer until
+     the goods come, so nothing in the cash line moves and the budget
+     would happily be offered a second time this afternoon -- the same
+     shilling promised to two suppliers. So what is on open orders
+     comes off the budget here, once, and the plan says so out loud
+     rather than quietly recommending less.
+
+     It is NOT put on the cash line: no day has been named for paying
+     it, and only dated money goes on that line. */
+  const onOrder = Math.round(buyOrdersCommitted(dateISO));
+  const spendable = budget == null ? null : Math.max(0, Math.round(budget) - onOrder);
   let spend = 0;
   candidates.forEach(line=>{
     line.reason = buyLineReason(line);
-    if(budget != null && spend + line.cost > budget){ didNotFit.push(line); return; }
+    if(spendable != null && spend + line.cost > spendable){ didNotFit.push(line); return; }
     spend += line.cost;
     lines.push(line);
   });
   noPrice.sort((a,b)=> b.profit30 - a.profit30);
-  return { budget: budget == null ? null : Math.round(budget), coverDays: cover,
-    lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice };
+  coming.sort((a,b)=> (a.daysLeft == null ? Infinity : a.daysLeft) - (b.daysLeft == null ? Infinity : b.daysLeft));
+  return { budget: spendable, coverDays: cover,
+    /* Both figures, because they answer different questions: what was
+       safe to spend before any of this, and what is left after the
+       orders already out. A screen given only one of them cannot
+       explain the other. */
+    budgetBefore: budget == null ? null : Math.round(budget), onOrder,
+    lines, spend: Math.round(spend), didNotFit, sourceFirst: noPrice, coming };
 }
 
 // The dashboard's stock-out alert, now a thin read of the SAME rows —
@@ -53577,6 +54103,11 @@ function dashStockOutExposure(){
 /* ---- the What-to-buy screen ---- */
 let buyBudget = null;    // per-view override; null = use what the forecast says is safe
 let buyPlanLast = null;  // the plan behind the Source-it buttons, index-addressed
+/* WHAT IS TICKED FOR ORDERING. Keys, never lines: the review resolves
+   each one against the CURRENT plan, so a figure cannot be ordered at a
+   price the screen has since moved off. View state -- never saved, and
+   an order that is placed empties it. */
+let buyOrderBasket = new Set();
 
 function renderPurchasePlanPanel(){
   const el = document.getElementById('buy_plan');
@@ -53593,6 +54124,10 @@ function renderPurchasePlanPanel(){
      has just answered by repricing shows its result on this render
      rather than the next one. */
   buyHoldsSweep(todayISO());
+  /* And the orders, for the same reason and in the same place: a
+     record with nothing left to say should not be on the screen, and
+     one that lapsed should stop holding budget the day it lapses. */
+  buyOrdersSweep(todayISO());
   const plan = purchasePlan(budget, null, todayISO());
   buyPlanLast = plan;
   const budgetEl = document.getElementById('buy_budget');
@@ -53653,19 +54188,39 @@ function renderPurchasePlanPanel(){
       </div>
     </div>`;
   };
-  const row = (l, list, i)=> `
-    <div class="pp-row">
+  /* PART OF IT IS ALREADY COMING. Said on the row that is asking for
+     the rest, or the screen recommends eight bags with no hint that
+     four are on a lorry and the owner orders twelve. */
+  const transitNote = (l)=> l.inTransit
+    ? `<div class="pp-do"><b>${l.inTransit} ${esc(l.unit || 'pc')}</b> of the ${l.shortBefore} needed ${
+        l.inTransit === 1 ? 'is' : 'are'} already on the way — this is the rest.</div>`
+    : '';
+  /* TWO DOORS, AND THEY ARE NOT THE SAME DOOR.
+
+     "Buy it" is goods in hand: the purchase form, stock on the shelf,
+     a bill raised now. "Order it" is goods not yet here: a message to
+     the supplier and a record that the shop is waiting, with nothing
+     owed until the lorry comes. Reading them as one thing is how a
+     shop ends up owing for goods that never arrived. */
+  const row = (l, list, i)=> {
+    const picked = buyOrderBasket.has(String(l.key));
+    return `
+    <div class="pp-row${picked ? ' picked' : ''}">
       ${holdBand(l)}
       <div class="pp-top">
         ${chip(l)}
         <span class="pp-name">${esc(l.name)}</span>
         <span class="pp-cost">${f(l.cost)}</span>
+        <button type="button" class="btn ${picked ? 'btn-accent' : 'btn-ghost'} pp-act buy-pick" data-key="${esc(String(l.key))}">${
+          picked ? 'On the order' : 'Order it'}</button>
         <button type="button" class="btn btn-ghost pp-act buy-act" data-list="${list}" data-i="${i}">Buy it</button>
       </div>
       <div class="pp-do">Buy <b>${l.buyQty} ${esc(l.unit || 'pc')}</b>${packNote(l)} from <b>${esc(l.supplier)}</b> at ${f(l.unitCost)} each</div>
+      ${transitNote(l)}
       ${facts(l)}
       <div class="pp-why buy-why">${esc(buyLineWhy(l))}</div>
     </div>`;
+  };
   /* WHERE THE BUDGET CAME FROM, when the owner did not type one. The
      box shows the figure either way, so a screen that does not explain
      it is a screen quietly disagreeing with the cash on the dashboard.
@@ -53687,10 +54242,56 @@ function renderPurchasePlanPanel(){
         nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
       }. What&#39;s coming has the dates — or type a budget here to overrule it.</p>`
     : '';
-  let html = '';
+  /* WHAT IS ALREADY COMING, FIRST. A buyer who cannot see it buys it
+     again, which is the single most expensive mistake this screen can
+     cause -- and the one it caused every day before orders existed. */
+  const open = buyOrdersOpenRows(todayISO());
+  const ordHTML = !open.length ? '' : `<div class="pp-tail"><h4>On the way</h4>
+    ${open.map(o=> {
+      const names = o.lines.map(l=> `${esc(l.name)} — ${l.qty} ${esc(l.unit || 'pc')}`).join(' · ');
+      const when = o.late
+        ? `Was due ${esc(fmtShortDate(o.expectedOn))}`
+        : (o.expectedOn ? `Due ${esc(fmtShortDate(o.expectedOn))}` : 'No day named');
+      const placed = o.days === 0 ? 'ordered today'
+        : (o.days === 1 ? 'ordered yesterday' : `ordered ${o.days} days ago`);
+      return `<div class="pp-ord${o.late ? ' late' : ''}" data-id="${esc(o.id)}">
+        <div class="pp-ord-top">
+          <span class="pp-ord-sup">${esc(o.supplier)}</span>
+          <span class="pp-ord-when">${when}</span>
+          <span class="pp-ord-total">${f(o.total)}</span>
+        </div>
+        <div class="pp-ord-lines">${names}</div>
+        <div class="pp-ord-acts">
+          <span class="pp-ord-note">${esc(placed)}${o.sentAt ? '' : ' — the message was never opened'}</span>
+          <button type="button" class="btn btn-accent ord-came" data-id="${esc(o.id)}">It came</button>
+          <button type="button" class="btn btn-ghost ord-again" data-id="${esc(o.id)}">Message them</button>
+          <button type="button" class="btn btn-ghost ord-when" data-id="${esc(o.id)}">${o.expectedOn ? 'Change the day' : 'When is it due?'}</button>
+          <button type="button" class="btn btn-ghost ord-drop" data-id="${esc(o.id)}">It is off</button>
+        </div>
+      </div>`;
+    }).join('')}
+    <p class="pp-more">${f(open.reduce((n, o)=> n + o.total, 0))} on ${open.length === 1 ? 'this order' : 'these orders'}, already taken off the budget below.
+      Nothing is owed until it arrives — the bill is raised when you say it came.</p></div>`;
+  /* The need it covers, said once, so a line that has vanished off the
+     plan is not read as a line that stopped mattering. */
+  const comingHTML = !plan.coming.length ? '' : `<div class="pp-tail"><h4>Covered by an order already out</h4>
+    <div class="pp-list">${plan.coming.slice(0, 5).map(c=> `
+      <div class="pp-row">
+        <div class="pp-top">
+          <span class="pp-when">On the way</span>
+          <span class="pp-name">${esc(c.name)}</span>
+        </div>
+        <div class="pp-do"><b>${c.qty}${c.unit ? ' ' + esc(c.unit) : ''}</b> ordered against the <b>${c.needed}</b> this line needed, so it is not in the plan below.</div>
+      </div>`).join('')}</div>${
+    plan.coming.length > 5 ? `<p class="pp-more">and ${plan.coming.length - 5} more.</p>` : ''}</div>`;
+
+  let html = ordHTML;
   if(!plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length){
-    html = `<div class="pp-empty"><b>Nothing to buy.</b>
-      <span>Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.</span></div>` + budgetNote;
+    html += `<div class="pp-empty"><b>Nothing to buy.</b>
+      <span>${plan.coming.length
+        ? `Everything that was running short is on an order already out.`
+        : `Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.`}</span></div>`
+      + comingHTML + budgetNote;
   } else {
     /* The two figures the whole screen turns on, at the top, in the
        strip every other screen uses for exactly this. They were a
@@ -53700,13 +54301,21 @@ function renderPurchasePlanPanel(){
       .filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
     const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
       <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
-    html = `<div class="sum-strip">
+    html += `<div class="sum-strip">
       ${cell(f(plan.spend), 'the plan comes to')}
       ${left == null ? '' : cell(f(left), 'left of your budget', left > 0 ? 'good' : '')}
+      ${plan.onOrder ? cell(f(plan.onOrder), 'already on order') : ''}
       ${cell(plan.lines.length, plan.lines.length === 1 ? 'line' : 'lines')}
       ${out ? cell(out, out === 1 ? 'has run out' : 'have run out', 'warn') : ''}
     </div>`;
     html += budgetNote;
+    /* THE SAME SHILLING CANNOT BE OFFERED TWICE. Said in words as well
+       as in the strip, because a budget that quietly shrank is a screen
+       the owner stops trusting. */
+    if(plan.onOrder) html += `<p class="pp-more">${f(plan.onOrder)} is already out on ${
+      open.length === 1 ? 'an order' : open.length + ' orders'} that ${open.length === 1 ? 'has' : 'have'} not arrived,
+      so the plan is working to ${f(plan.budget)} rather than ${f(plan.budgetBefore)}. Nothing has left the drawer for it yet —
+      it comes off the cash line only when the goods arrive and you name the day you will pay.</p>`;
     if(plan.budget === 0 && buyBudget == null) html += `<p class="pp-more"><b>There is nothing safe to spend, so the plan is empty.</b>
       Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
       the moment there is something to buy it with — collecting is what makes it affordable, and Chase debts has who to ring.
@@ -53718,6 +54327,7 @@ function renderPurchasePlanPanel(){
     if(plan.didNotFit.length) html += `<div class="pp-tail"><h4>Over this budget</h4>
       <div class="pp-list">${plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join('')}</div>${
       plan.didNotFit.length > 3 ? `<p class="pp-more">and ${plan.didNotFit.length - 3} more.</p>` : ''}</div>`;
+    html += comingHTML;
     if(plan.sourceFirst.length) html += `<div class="pp-tail"><h4>Selling with no supplier price on file</h4>
       <div class="pp-list">${plan.sourceFirst.slice(0, 3).map((sf,i)=> `
         <div class="pp-row">
@@ -53731,7 +54341,80 @@ function renderPurchasePlanPanel(){
         </div>`).join('')}</div>${
       plan.sourceFirst.length > 3 ? `<p class="pp-more">and ${plan.sourceFirst.length - 3} more.</p>` : ''}</div>`;
   }
+  /* THE BASKET, at the foot, only while something is in it. A bar and
+     not a panel: there is nothing to dismiss and nothing left behind.
+     Keys that no longer resolve are dropped here rather than carried
+     into the review -- a line the plan has stopped recommending is not
+     a line to order on the strength of a figure nobody can still see. */
+  const pool = plan.lines.concat(plan.didNotFit);
+  const basket = [...buyOrderBasket].map(k=> pool.find(l=> String(l.key) === k)).filter(Boolean);
+  if(basket.length){
+    const sups = new Set(basket.map(l=> String(l.supplierId))).size;
+    const tot = basket.reduce((n, l)=> n + l.cost, 0);
+    html += `<div class="pp-basket">
+      <span class="pp-basket-say"><b>${basket.length}</b> ${basket.length === 1 ? 'line' : 'lines'} from
+        <b>${sups}</b> ${sups === 1 ? 'supplier' : 'suppliers'}, <b>${f(tot)}</b>.
+        ${sups === 1 ? 'One message' : sups + ' messages'} to send, ${sups === 1 ? 'one delivery' : 'one delivery each'}, nothing owed until they come.</span>
+      <span class="pp-basket-acts">
+        <button type="button" class="btn btn-accent" id="buy_basket_go">Review the order</button>
+        <button type="button" class="btn btn-ghost" id="buy_basket_clear">Clear</button>
+      </span>
+    </div>`;
+  }
   el.innerHTML = html;
+  /* ORDERING is a basket and not a button, because an order is per
+     supplier and the plan is per line: ticking four lines that come
+     from two suppliers is two orders, and asking the owner to notice
+     that themselves is asking them to do the app's arithmetic. */
+  el.querySelectorAll('.buy-pick').forEach(btn=> btn.addEventListener('click', ()=>{
+    const k = String(btn.dataset.key || '');
+    if(!k) return;
+    if(buyOrderBasket.has(k)) buyOrderBasket.delete(k); else buyOrderBasket.add(k);
+    renderPurchasePlanPanel();
+  }));
+  const goBtn = document.getElementById('buy_basket_go');
+  if(goBtn) goBtn.addEventListener('click', ()=> openBuyOrderReview());
+  const clearBtn = document.getElementById('buy_basket_clear');
+  if(clearBtn) clearBtn.addEventListener('click', ()=>{
+    buyOrderBasket = new Set();
+    renderPurchasePlanPanel();
+  });
+  /* AN ORDER'S OWN FOUR ANSWERS: it came, ask them again, name the day,
+     it is off. Only the first two touch anything outside the record --
+     one raises a bill, one opens a draft nobody has sent yet. */
+  el.querySelectorAll('.ord-came').forEach(btn=> btn.addEventListener('click', ()=> openBuyReceive(btn.dataset.id)));
+  el.querySelectorAll('.ord-again').forEach(btn=> btn.addEventListener('click', ()=>{
+    const o = buyOrderFor(btn.dataset.id);
+    if(!o) return;
+    markBuyOrderSent(o.id);
+    window.open(buyOrderWaUrl(o), '_blank');
+    toast('The message is drafted — send it to finish', 5000);
+    renderPurchasePlanPanel();
+  }));
+  el.querySelectorAll('.ord-when').forEach(btn=> btn.addEventListener('click', ()=>{
+    const o = buyOrderFor(btn.dataset.id);
+    if(!o) return;
+    const when = prompt('What day did ' + o.supplier + ' say the ' + f(o.total) + ' order would arrive?'
+      + '\n\nAs YYYY-MM-DD. Leave it empty to take the day back — an order with no day is not late, it is undated.',
+      o.expectedOn || todayISO());
+    if(when === null) return;
+    const res = setBuyOrderExpected(o.id, String(when || '').trim());
+    if(!res.ok){ toast(res.why, 9000); return; }
+    toast(res.cleared ? 'Day taken back — the order is undated' : 'Written down — due ' + fmtShortDate(String(when).trim()));
+    renderPurchasePlanPanel();
+  }));
+  el.querySelectorAll('.ord-drop').forEach(btn=> btn.addEventListener('click', ()=>{
+    const o = buyOrderFor(btn.dataset.id);
+    if(!o) return;
+    if(!confirm('Call off the ' + f(o.total) + ' order to ' + o.supplier + '?\n\n'
+      + 'Nothing was owed for it, so nothing is written off. The lines go back into the plan and the '
+      + f(o.total) + ' goes back onto the budget.')) return;
+    const why = prompt('Why was it called off? One line, so the record says what happened.', '');
+    if(why === null) return;
+    cancelBuyOrder(o.id, why);
+    toast('Called off — those lines are back in the plan');
+    renderPurchasePlanPanel();
+  }));
   /* Both buttons open a door that already exists, with the line's own
      figures in it. Neither moves money or stock on its own: the
      purchase form still has to be filled in and saved.
@@ -53770,6 +54453,195 @@ function renderPurchasePlanPanel(){
     renderPurchasePlanPanel();
   }));
 }
+
+/* ---- Reviewing what is about to be ordered ----
+
+   The basket is per line and an order is per supplier, so this is where
+   the two are reconciled: one group, one message, one delivery, one
+   bill. Every figure is the plan's own, resolved fresh when the panel
+   opens -- nothing here quotes a price the screen has since moved off.
+
+   The quantity is EDITABLE and the price is not. What to buy is the
+   shop's decision and the plan is only advice; what it costs is the
+   supplier's price on file, and typing a different one here would be
+   the shop telling itself a price the supplier never gave. Their real
+   answer arrives with the goods, and the receiving screen takes it. */
+function buyOrderReviewLines(){
+  const plan = buyPlanLast || { lines: [], didNotFit: [] };
+  const pool = (plan.lines || []).concat(plan.didNotFit || []);
+  return [...buyOrderBasket]
+    .map(k=> pool.find(l=> String(l.key) === k))
+    .filter(Boolean);
+}
+function renderBuyOrderReview(){
+  const wrap = document.getElementById('buyOrderGroups');
+  const note = document.getElementById('buyOrderNote');
+  if(!wrap) return;
+  const f = n=> fmtUGX(Math.round(n));
+  const lines = buyOrderReviewLines();
+  if(!lines.length){
+    wrap.innerHTML = '';
+    if(note) note.textContent = 'Nothing is ticked. Close this and tick the lines you want to order.';
+    return;
+  }
+  const by = new Map();
+  lines.forEach(l=>{
+    const k = String(l.supplierId);
+    if(!by.has(k)) by.set(k, { supplierId: l.supplierId, supplier: l.supplier, lines: [] });
+    by.get(k).lines.push(l);
+  });
+  const groups = [...by.values()];
+  if(note) note.textContent = groups.length === 1
+    ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
+    : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`;
+  wrap.innerHTML = groups.map(g=>{
+    const total = g.lines.reduce((n, l)=> n + l.buyQty * l.unitCost, 0);
+    const noPhone = !supplierWaNumber(g.supplierId);
+    return `<div class="bo-group" data-sup="${esc(String(g.supplierId))}">
+      <div class="bo-group-head">
+        <span class="bo-sup">${esc(g.supplier)}</span>
+        <span class="bo-total">${f(total)}</span>
+      </div>
+      <table class="bo-table">
+        <thead><tr><th>Item</th><th class="r">How many</th><th class="r">Each</th><th class="r">Comes to</th></tr></thead>
+        <tbody>${g.lines.map(l=> `<tr>
+          <td>${esc(l.name)}${l.packQty > 1 ? `<span class="bo-drop"> · ${esc(l.packUnit || 'pack')} of ${l.packQty}</span>` : ''}</td>
+          <td class="r"><input type="number" class="bo-qty" data-key="${esc(String(l.key))}" min="0" step="any" value="${l.buyQty}"></td>
+          <td class="r num">${f(l.unitCost)}</td>
+          <td class="r num">${f(l.buyQty * l.unitCost)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div class="bo-when">
+        <label for="bo_when_${esc(String(g.supplierId))}">When did they say it would come?</label>
+        <input type="date" id="bo_when_${esc(String(g.supplierId))}" class="bo-date">
+        <span class="bo-drop">Leave it empty if they have not said — an undated order is never called late.</span>
+      </div>
+      <div class="bo-acts">
+        ${noPhone ? '<span class="bo-drop">No WhatsApp number on file for them — the order is still written down, and the draft opens with no number.</span>' : ''}
+        <button type="button" class="btn btn-accent bo-place" data-sup="${esc(String(g.supplierId))}">Order it — open WhatsApp</button>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.bo-place').forEach(btn=> btn.addEventListener('click', ()=> placeBuyOrderFromReview(btn.dataset.sup)));
+}
+function openBuyOrderReview(){
+  if(!buyOrderReviewLines().length){ toast('Nothing is ticked'); return; }
+  renderBuyOrderReview();
+  openModal('buyOrderModal');
+}
+/* Placing one group.
+
+   The quantities are read off the boxes, so a line the owner zeroed is
+   dropped rather than ordered at nothing. The keys leave the basket
+   whether or not the message is ever sent, because the ORDER exists
+   either way -- and "Message them" on the row re-opens the draft. */
+function placeBuyOrderFromReview(supplierId){
+  const wrap = document.getElementById('buyOrderGroups');
+  /* Walked rather than selected. A supplier id goes through esc() on
+     the way into the attribute, so a CSS attribute selector built from
+     the raw id would miss the one group it is looking for the moment
+     an id is anything but a plain number. */
+  const group = wrap && [...wrap.querySelectorAll('.bo-group')]
+    .find(g=> String(g.dataset.sup) === String(supplierId));
+  if(!group) return;
+  const want = new Map();
+  group.querySelectorAll('.bo-qty').forEach(i=> want.set(String(i.dataset.key), Number(i.value) || 0));
+  const dateEl = group.querySelector('.bo-date');
+  const lines = buyOrderReviewLines()
+    .filter(l=> String(l.supplierId) === String(supplierId))
+    .map(l=> ({ key: l.key, productId: l.productId, variantIdx: l.variantIdx, name: l.name,
+      unit: l.unit, packQty: l.packQty, packUnit: l.packUnit,
+      qty: want.has(String(l.key)) ? want.get(String(l.key)) : l.buyQty,
+      unitCost: l.unitCost }));
+  const ordered = lines.filter(l=> l.qty > 0);
+  if(!ordered.length){ toast('Every line on this order is zero — nothing to order'); return; }
+  const o = placeBuyOrder(supplierId, ordered, dateEl ? dateEl.value : '');
+  if(!o){ toast('That order could not be written down'); return; }
+  lines.forEach(l=> buyOrderBasket.delete(String(l.key)));
+  markBuyOrderSent(o.id);
+  window.open(buyOrderWaUrl(o), '_blank');
+  renderBuyOrderReview();
+  if(!buyOrderReviewLines().length) closeModal('buyOrderModal');
+  renderPurchasePlanPanel();
+  toast(`${fmtUGX(o.total)} ordered from ${o.supplier} — send the message to finish. Nothing is owed until it arrives.`, 7000);
+}
+document.getElementById('buyOrderClose').addEventListener('click', ()=> closeModal('buyOrderModal'));
+document.getElementById('buyOrderCancel').addEventListener('click', ()=> closeModal('buyOrderModal'));
+
+/* ---- The lorry came ----
+
+   Every figure is editable here and nowhere else. A supplier who sends
+   nine of twelve has sent nine, and a price that moved between the
+   order and the delivery is the price the shop will be billed. Writing
+   the bill from the ORDER would have the shop owing for three bags on
+   somebody else's lorry, at a price nobody charged. */
+let buyReceiveFor = null;
+function openBuyReceive(id){
+  const o = buyOrderFor(id);
+  if(!o){ toast('That order is no longer on file'); return; }
+  buyReceiveFor = o.id;
+  const f = n=> fmtUGX(Math.round(n));
+  document.getElementById('buyReceiveTitle').textContent = `What came from ${o.supplier}`;
+  document.getElementById('buyReceiveNote').textContent =
+    'Change anything that came differently — fewer, or at a different price. What you leave here is what goes on the shelf and on the bill. '
+    + 'The bill is raised with no day to pay on: name that on Who you owe, and it goes onto the cash line.';
+  document.getElementById('buyReceiveRows').innerHTML = `
+    <table class="bo-table">
+      <thead><tr><th>Item</th><th class="r">Ordered</th><th class="r">Came</th><th class="r">Each</th></tr></thead>
+      <tbody>${o.lines.map(l=> `<tr>
+        <td>${esc(l.name)}${l.unit ? `<span class="bo-drop"> · ${esc(l.unit)}</span>` : ''}</td>
+        <td class="r num">${l.qty}</td>
+        <td class="r"><input type="number" class="brc-qty" data-key="${esc(String(l.key))}" min="0" step="any" value="${l.qty}"></td>
+        <td class="r"><input type="number" class="brc-cost" data-key="${esc(String(l.key))}" min="0" step="any" value="${Math.round(Number(l.unitCost) || 0)}"></td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <p class="pp-more">Ordered at ${f(o.total)}${o.expectedOn ? `, due ${esc(fmtShortDate(o.expectedOn))}` : ''}.</p>`;
+  openModal('buyReceiveModal');
+}
+document.getElementById('buyReceiveClose').addEventListener('click', ()=> closeModal('buyReceiveModal'));
+document.getElementById('buyReceiveCancel').addEventListener('click', ()=> closeModal('buyReceiveModal'));
+const __btn_buy_receive_save = document.getElementById('buyReceiveSave');
+__btn_buy_receive_save.addEventListener('click', saveOnceAtATime(__btn_buy_receive_save, async ()=>{
+  const o = buyOrderFor(buyReceiveFor);
+  if(!o){ toast('That order is no longer on file'); return; }
+  const qty = new Map(), cost = new Map();
+  document.querySelectorAll('#buyReceiveRows .brc-qty').forEach(i=> qty.set(String(i.dataset.key), Number(i.value) || 0));
+  document.querySelectorAll('#buyReceiveRows .brc-cost').forEach(i=> cost.set(String(i.dataset.key), Number(i.value) || 0));
+  const got = o.lines
+    .map(l=> ({ ...l, qty: qty.has(String(l.key)) ? qty.get(String(l.key)) : l.qty,
+      unitCost: cost.has(String(l.key)) ? cost.get(String(l.key)) : l.unitCost }))
+    .filter(l=> l.qty > 0);
+  if(!got.length){ toast('Nothing came, so there is nothing to receive. Call the order off instead.', 7000); return; }
+  const total = got.reduce((n, l)=> n + l.qty * l.unitCost, 0);
+  /* MONEY DOES NOT MOVE WITHOUT THE OWNER'S WORD. This raises a bill:
+     the shop owes it from this moment, and the confirm says exactly
+     that in the figures it will be raised at. */
+  if(!confirm(`Put these goods on the shelf and raise a bill of ${fmtUGX(Math.round(total))} to ${o.supplier}?\n\n`
+    + `${got.length} ${got.length === 1 ? 'line' : 'lines'}. You will owe it from today. `
+    + `It carries no day to pay on until you name one on Who you owe.`)) return;
+  const res = await receiveBuyOrder(o.id, got);
+  if(!res){ toast('That delivery could not be recorded'); return; }
+  closeModal('buyReceiveModal');
+  buyReceiveFor = null;
+  renderInventory();
+  renderPurchaseInvoices(document.getElementById('pi_doc_search') ? document.getElementById('pi_doc_search').value : '');
+  renderPurchasePlanPanel();
+  toast(`On the shelf. Bill ${res.billId} to ${o.supplier}, ${fmtUGX(Math.round(res.total))} — no day named yet.`, 8000);
+  /* THE DAY, ASKED WHERE THE BILL IS RAISED. It is the one moment the
+     owner has the supplier's terms in mind, and a bill with no day sits
+     off the cash line -- which is honest and also invisible. Asking is
+     not deriving: they may say no, and a bill with no day is a state
+     this app already knows how to say. */
+  const when = prompt(`What day will you pay ${o.supplier} the ${fmtUGX(Math.round(res.total))} on bill ${res.billId}?\n\n`
+    + 'As YYYY-MM-DD. It goes onto the cash line in What’s coming, and what you can safely spend drops by it.\n'
+    + 'Leave it empty if they have not given you terms — it stays owed with no day, and Who you owe will keep asking.', '');
+  if(when === null || !String(when).trim()) return;
+  const set = setBillDueDate(res.billId, String(when).trim());
+  if(!set.ok){ toast(set.why + ' The bill is raised — name the day on Who you owe.', 9000); return; }
+  renderPurchasePlanPanel();
+  toast('Written down — ' + fmtUGX(Math.round(res.total)) + ' to ' + o.supplier + ' on '
+    + fmtShortDate(String(when).trim()) + '. It is on the line in What’s coming now.', 7000);
+}));
 document.getElementById('buy_budget').addEventListener('change', e=>{
   const v = Number(e.target.value);
   buyBudget = e.target.value === '' || !(v >= 0) ? null : v;
@@ -54019,6 +54891,27 @@ function dashAlerts(ctx){
         row && row.profit > 0 ? ` It earned ${fmtUGX(Math.round(row.profit))} of profit this period.` : ''}`,
       action: 'Reorder it — What to buy has the plan.',
     });
+  });
+
+  /* AN ORDER PAST THE DAY THEY NAMED.
+
+     A shelf that is running out and an order that has not come are the
+     same trouble twice, and the buy screen deliberately hides the line
+     while the goods are in transit -- so without this the shop would
+     see nothing at all about a delivery that never turned up, right up
+     until the shelf was empty. The money is what is TIED UP in it:
+     committed, off the budget, and buying nothing yet.
+
+     Only against a day somebody named. An undated order is not late,
+     however long it stands. */
+  buyOrdersOpenRows(todayISO()).filter(o=> o.late).forEach(o=>{
+    const late = Math.max(1, daysBetweenISO(o.expectedOn, todayISO()));
+    add({ id: 'order:'+o.id, kind: 'order', dueDays: 0, money: o.total,
+      title: `${o.supplier} is ${agingDaysLabel(late)} late with an order`,
+      detail: `${o.lines.length === 1 ? 'One line' : o.lines.length + ' lines'} ordered ${
+        agingDaysLabel(o.days)} ago for ${fmtUGX(o.total)}, due ${fmtShortDate(o.expectedOn)}. `
+        + `Nothing is owed for it — but it is off what you can spend, and the shelf is waiting on it.`,
+      action: 'Chase them — What to buy has the order and the message.' });
   });
 
   /* Cash. Runway is only a warning while there IS runway -- once the
@@ -61683,6 +62576,22 @@ const ASSISTANT_TOOLS = {
         line_count: plan.lines.length,
         over_budget: plan.didNotFit.length,
         no_price_on_file: plan.sourceFirst.length,
+        /* WHAT THE OWNER HAS ALREADY ACTED ON. Without this the meeting
+           reads a plan the owner half-ordered yesterday and tells them
+           to order it again -- the same restating that costs the
+           Manager its credibility, in a place it cannot see. */
+        budget_before_orders: plan.budgetBefore == null ? null : apRound(plan.budgetBefore),
+        budget_after_orders: plan.budget == null ? null : apRound(plan.budget),
+        already_on_order: apRound(plan.onOrder),
+        lines_covered_by_an_order: plan.coming.length,
+        on_order: buyOrdersOpenRows(today).slice(0, 6).map(o=> ({ orderId: o.id,
+          supplierId: o.supplierId, supplier: o.supplier, cost: apRound(o.total),
+          lines: o.lines.length, ordered_on: o.placedOn, days_since: o.days,
+          /* Undated is not late. Only a day somebody named can be
+             missed, the same law the bills and the promises keep. */
+          due_on: o.expectedOn, late: o.late })),
+        on_order_total: apRound(buyOrdersOpenRows(today).reduce((n, o)=> n + o.total, 0)),
+        on_order_late: buyOrdersOpenRows(today).filter(o=> o.late).length,
       },
       prices_to_check: priceReviewCandidates().slice(0, 5).map(r=> ({
         item: r.pname, supplier: r.sname, at_risk: apRound(r.moneyAtRisk||0) })),
@@ -62386,6 +63295,20 @@ const ASSISTANT_TOOLS = {
       budget: apRound(plan.budget), cover_days: plan.coverDays,
       plan_total: apRound(plan.spend),
       cash_on_hand: apRound(cashOnHandByAccount().total),
+      /* WHAT THE OWNER HAS ALREADY ORDERED. The budget above is what is
+         left AFTER it, so quoting the budget without this describes a
+         figure that shrank for a reason the reader cannot see -- and
+         the lines already coming are missing from the plan for the same
+         reason. Nothing is owed for any of it yet: an order becomes a
+         bill on the day the goods arrive. */
+      budget_before_orders: apRound(plan.budgetBefore),
+      already_on_order: apRound(plan.onOrder),
+      on_order: buyOrdersOpenRows(todayISO()).slice(0, 6).map(o=> ({ orderId: o.id,
+        supplier: o.supplier, supplierId: o.supplierId, cost: apRound(o.total),
+        lines: o.lines.length, ordered_on: o.placedOn, days_since: o.days,
+        due_on: o.expectedOn, late: o.late })),
+      lines_covered_by_an_order: plan.coming.slice(0, 6).map(c=> ({ key: c.key,
+        name: c.name, on_the_way: c.qty, was_short: c.needed })),
       /* Ranked by what each item EARNED, and capped: the owner asked
          for the best few, and a spoken answer that runs to twenty
          lines is one nobody listens to. `why` is the same sentence
@@ -62415,6 +63338,54 @@ const ASSISTANT_TOOLS = {
       no_price_on_file: plan.sourceFirst.slice(0, 5).map(s=> ({ name: s.name, needs_about: s.qty, sold_30d: s.units30 })),
     };
   }},
+
+  /* RAISING THE ORDER THE PLAN ARGUED FOR.
+
+     The one place the Manager stops advising and acts. It was the
+     largest hole in "implement": the app could say buy twelve bags
+     from Kasese for 1.4m and the owner then had to leave, write the
+     message by hand, and type the goods in again a week later.
+
+     WHAT IT MAY AND MAY NOT DO.
+       - It may only order LINES THE PLAN IS RECOMMENDING, at the
+         supplier and price the plan costed them at. A key that is not
+         on today's plan is refused by name. The model never supplies a
+         price: that comes from the Price Registry, through the same
+         reading the screen shows, so an order can never be placed at a
+         figure a mind made up.
+       - It moves NO money and raises NO bill. Nothing is owed until
+         the goods arrive and the owner says so on the buy screen.
+       - It SENDS NOTHING. The order is written down and the WhatsApp
+         draft waits behind "Message them" on the row, for the owner to
+         read and send -- the same arrangement every other message in
+         this app keeps.
+       - The card confirms first, because an order commits budget: the
+         plan stops offering that money the moment this runs. */
+  place_buy_order: { confirm: true,
+    summary(input){
+      const r = buyOrderToolLines(input);
+      if(r.error) return r.error;
+      const when = r.expectedOn ? ' Expected ' + fmtShortDate(r.expectedOn) + '.' : '';
+      return 'Order from ' + r.supplier + ': '
+        + r.lines.map(l=> l.qty + ' ' + (l.unit || 'pc') + ' ' + l.name).join(', ')
+        + ' — ' + fmtUGX(r.total) + '.' + when
+        + ' Nothing is owed until it arrives; the WhatsApp draft waits on What to buy for you to send.'
+        + ' What you can spend on the rest of the plan drops by ' + fmtUGX(r.total) + '.';
+    },
+    run(input){
+      const r = buyOrderToolLines(input);
+      if(r.error) throw new Error(r.error);
+      const o = placeBuyOrder(r.supplierId, r.lines, r.expectedOn);
+      if(!o) throw new Error('That order could not be written down.');
+      if(document.getElementById('buy_plan')) renderPurchasePlanPanel();
+      return { done: true, orderId: o.id, supplier: o.supplier, cost: apRound(o.total),
+        lines: o.lines.map(l=> ({ key: l.key, name: l.name, qty: l.qty, unit: l.unit || 'pc',
+          unit_cost: apRound(l.unitCost) })),
+        due_on: o.expectedOn,
+        nothing_sent: 'The order is written down and the WhatsApp draft is waiting behind "Message them" on the What-to-buy screen. Tell the owner to open it and send it — this app sends nothing by itself.',
+        nothing_owed: 'No bill was raised. The shop owes nothing for this until the goods arrive and the owner records what came.',
+        budget_now: apRound(purchasePlan(cashAhead(todayISO(), CASH_AHEAD_DAYS).safeToSpend, null, todayISO()).budget) };
+    }},
 
   /* The whole catalogue in one call -- names and variant labels only.
      Built for bulk documents (a photographed price list): the model

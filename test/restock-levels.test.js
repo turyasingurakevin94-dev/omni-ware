@@ -108,13 +108,16 @@ try {
     'purchasePriceAtQty', 'tieredUnitPrice', 'tiersForKind',
     'quoteItemSellPrice', 'invoiceLineCost',
     'supplierLeadTimes', 'supplierLeadDays', 'reorderRuleFor', 'setReorderRule',
-    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason', 'purchasePlan',
+    'restockRiskRows', 'stockingCandidates', 'buyLineFor', 'buyLineReason',
+    'buyOrderTotal', 'buyOrderIsOpen', 'buyOrdersOnTheWay', 'buyOrdersCommitted', 'purchasePlan',
     'buyKeptPct', 'buyHoldFor',
   ].map((n) => extractFunction(src, n, 'index.html'))
     .concat([
       extractDeclaration(src, 'REPEAT_BUYIN_ORDERS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_WINDOW_DAYS', 'index.html'),
       extractDeclaration(src, 'LEAD_TIME_MIN_DELIVERIES', 'index.html'),
+      extractDeclaration(src, 'BUY_ORDER_STALE_DAYS', 'index.html'),
+      extractDeclaration(src, 'BUY_ORDER_KEEP_DAYS', 'index.html'),
     ]),
   env, ['supplierLeadTimes', 'supplierLeadDays', 'reorderRuleFor', 'setReorderRule',
     'restockRiskRows', 'purchasePlan', 'buyLineReason']);

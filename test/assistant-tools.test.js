@@ -148,12 +148,19 @@ const run = (name, input) => T[name].run(input || {});
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
-    'set_chase_timing', 'set_restock_rule', 'set_stage_limit'];
+    'set_chase_timing', 'set_restock_rule', 'set_stage_limit',
+    /* Raising a supplier order is a WRITE and gated like one. It moves
+       no money and raises no bill, but it commits budget the moment it
+       lands -- the plan stops offering that money -- and it puts the
+       shop's name on a quantity at a price. A card the owner approves
+       is the whole difference between the app acting on advice and the
+       app acting on its own. */
+    'place_buy_order'];
   const reads = ['find_customer', 'find_supplier', 'find_product', 'customer_statement',
     'list_debtors', 'debtor_payments', 'cash_on_hand', 'suppliers_owed', 'dues_owed',
     'recent_invoices', 'financial_summary', 'recommended_price', 'product_details',
     'stock_overview', 'purchase_plan', 'catalogue_names', 'standing_policies', 'month_and_quarter'];
-  t.check(Object.keys(T).length === 36, `thirty-six executors (got ${Object.keys(T).length})`);
+  t.check(Object.keys(T).length === 37, `thirty-seven executors (got ${Object.keys(T).length})`);
   writes.forEach(w => t.check(T[w] && T[w].confirm === true,
     `${w} demands a confirmation — it touches the books`));
   reads.forEach(r => t.check(T[r] && T[r].confirm === false,
@@ -161,7 +168,7 @@ const run = (name, input) => T[name].run(input || {});
   writes.forEach(w => t.check(typeof T[w].summary === 'function',
     `${w} can say what it is about to do, in words, for the card`));
   const serverNames = [...read('api/assistant.js').matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(serverNames.length === 36 && serverNames.every(n => T[n]),
+  t.check(serverNames.length === 37 && serverNames.every(n => T[n]),
     'every tool the server offers has an executor here — an offered tool with no hands is a hang');
   // The three Manager reads join the free side of the ledger.
   t.check(T.shop_pulse && T.shop_pulse.confirm === false, 'shop_pulse answers freely — it reads and nothing more');

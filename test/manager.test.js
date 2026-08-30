@@ -139,7 +139,10 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       promised: [{ name: 'Dad', debt: 1436000, ageDays: 59, brokenPromises: 0,
         promise: { id: 1, promisedOn: '2026-09-20', madeOn: '2026-08-29', amount: null, state: 'waiting' } }],
       graceDays: 7, restDays: 3 }),
-    purchasePlan: () => ({ lines: many(11, (i) => ({ name: 'P' + i, reason: 'why ' + i, cost: 100 * i, supplier: 'S' })), didNotFit: [1, 2, 3], sourceFirst: [1] }),
+    purchasePlan: () => ({ lines: many(11, (i) => ({ name: 'P' + i, reason: 'why ' + i, cost: 100 * i, supplier: 'S' })), didNotFit: [1, 2, 3], sourceFirst: [1], coming: [], onOrder: 0, budgetBefore: 3545644, budget: 3545644 }),
+    /* Nothing on order here: these files are about the meeting's shape.
+       What an order does to the plan is buy-orders.test.js's claim. */
+    buyOrdersOpenRows: () => [],
     cashOnHandByAccount: () => ({ total: 3545644, byAccount: [{ key: 'cash', amount: 1000 }, { key: 'momo', amount: 2000 }, { key: 'bank', amount: 3000 }] }),
     CASH_AHEAD_DAYS: 30,
       cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0, promised: [], promisedTotal: 0, safeToSpend: 3545644, tightest: { date: '2026-08-29', balance: 3545644 } }),

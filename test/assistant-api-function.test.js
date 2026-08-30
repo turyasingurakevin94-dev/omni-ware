@@ -143,7 +143,7 @@ const pkg = read('package.json');
 /* ---------- 5. twenty-seven tools, writes distinguishable --------------- */
 {
   const names = [...src.matchAll(/^\s{4}name: '([a-z_]+)',$/gm)].map(m => m[1]);
-  t.check(names.length === 36, `thirty-six tools defined (got ${names.length})`);
+  t.check(names.length === 37, `thirty-seven tools defined (got ${names.length})`);
   const writes = ['create_quote', 'record_customer_payment', 'pay_supplier',
     'pay_staff_or_rent', 'add_expense', 'record_other_income', 'set_markup_rule',
     'create_product', 'add_supplier_price', 'import_price_list', 'add_sourcing_lead',
