@@ -518,6 +518,15 @@
      Folded behind the title now. Hover, focus or tap the "i" and it is
      there; ignore it and the screen starts with the work. */
   .page-title-row{display:flex;align-items:center;gap:9px;margin-bottom:6px;flex-wrap:wrap;}
+  /* Inside the console header the wrapper is a flex ITEM sitting on the
+     same baseline as the one-line description beside it, so its own
+     bottom margin would lift the title off that line. */
+  .ow-ph .page-title-row{margin-bottom:0;gap:7px;}
+  /* .ow-ph-help is display:none where it is written, so that a header
+     never shows a paragraph if the fold has not run. Once the fold has
+     MOVED it into the bubble, it is the bubble's whole content and has
+     to come back. */
+  .page-info-bubble .ow-ph-help{display:block;}
   .page-title-row h1{margin-bottom:0;}
   .page-info{position:relative;display:inline-flex;}
   .page-info-btn{
@@ -7772,13 +7781,31 @@
     font-size:var(--ow-t-13);}
 
   /* ---- the sticky page header ---- */
+  /* The margin lives HERE rather than on whatever happens to follow.
+     Today put it on its stack and the Manager on its grid, which meant
+     every screen converted afterwards had to remember to add it -- and
+     the one that forgot would have its first row touching the hairline
+     with nothing to say why. */
   .ow-ph{position:sticky;top:var(--topbar-h);z-index:20;background:var(--bg);
     border-bottom:1px solid var(--ow-rule);padding:var(--ow-sp-16) 0 var(--ow-sp-12);
+    margin-bottom:var(--ow-sp-16);
     display:flex;align-items:flex-end;gap:var(--ow-sp-12);flex-wrap:wrap;}
   .ow-ph-t{font-family:'Archivo Black',sans-serif;font-size:19px;margin:0;
     letter-spacing:-.015em;line-height:1.1;}
   .ow-ph-sub{font-size:var(--ow-t-12);color:var(--ow-ink-400);margin:0 0 1px;}
   .ow-ph-sp{flex:1;}
+  /* The longer explanation. foldPageInstructions MOVES it into the "i"
+     bubble beside the title, so it is never seen here -- but if that
+     script ever fails to run, a paragraph of prose appearing in the
+     middle of a header row is a worse failure than nothing appearing at
+     all, and this is the one line that decides which.
+
+     The two rules that pair the console header WITH the fold's own
+     markup are not here. They name .page-title-row and
+     .page-info-bubble, which belong to the older machinery, and a
+     selector in this layer that reaches outside it is a selector that
+     has left it -- so they live beside the rules they couple to. */
+  .ow-ph-help{display:none;}
 
   /* ---- the metric strip: one row, hairline dividers, no cards ---- */
   .ow-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--ow-paper);
@@ -7879,7 +7906,7 @@
      contribute a row and a 16px gap each, so the page would open with a
      column of measured nothing. */
   .ow-rec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-    gap:var(--ow-sp-16);align-items:start;padding-top:var(--ow-sp-16);}
+    gap:var(--ow-sp-16);align-items:start;}
   .ow-rec .ow-full{grid-column:1 / -1;}
   .ow-rec .ow-full:empty,.ow-rec .ow-half:empty{display:none;}
   @media (max-width:1180px){
@@ -8393,7 +8420,7 @@
         <span class="ow-ph-sp"></span>
       </div>
 
-      <div class="ow-stack" style="padding-top:16px;">
+      <div class="ow-stack">
         <!-- 1. WHERE THE SHOP STANDS. One strip, hairline dividers. -->
         <div class="ow-strip" id="dash_vitalGrid"></div>
 
@@ -8519,16 +8546,19 @@
 
     <!-- NEW QUOTE -->
     <section id="tab-quote">
-      <div class="page-head">
-        <div class="qp-head">
-          <h1>Add New Quote</h1>
-          <button type="button" class="btn" id="qn_track_orders_btn">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-            Order tracking
-          </button>
-        </div>
-        <p>Build the client's order live on the call. Each item shows the cheapest supplier and a suggested price.</p>
-        <div class="qp-client-inline" style="margin-top:14px;">
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">New quote</h1>
+        <p class="ow-ph-sub">Build the order live, on the call.</p>
+        <p class="ow-ph-help">Build the client's order live on the call. Each item shows the cheapest supplier and a suggested price.</p>
+        <span class="ow-ph-sp"></span>
+        <button type="button" class="btn ow-sm" id="qn_track_orders_btn">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          Order tracking
+        </button>
+      </div>
+      <!-- Out of the header on purpose: who the quote is for is the first
+           thing you fill in, not a caption on the screen's name. -->
+      <div class="qp-client-inline">
           <div class="field q-client-ac-wrap">
             <label>Client name</label>
             <input type="text" id="q_client_name" placeholder="e.g. Sarah Namono" autocomplete="off">
@@ -8543,7 +8573,6 @@
           <div class="q-client-history" id="q_client_history"></div>
           <div class="q-client-usual" id="q_client_usual"></div>
         </div>
-      </div>
 
       <div class="quote-layout">
         <div class="panel qp-panel qp-items-panel">
@@ -8613,15 +8642,15 @@
 
     <!-- SAVED QUOTES -->
     <section id="tab-quote-saved" style="display:none;">
-      <div class="page-head">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-          <h1 style="margin:0;">Order tracking</h1>
-          <button type="button" class="btn" id="ot_back_to_new_quote_btn" title="Shortcut: press Q">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-            Add New Quote
-          </button>
-        </div>
-        <p>Come back and edit a saved quote, track it through prep and delivery, or select several to print together — each prints on its own A5 page.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Order tracking</h1>
+        <p class="ow-ph-sub">Every order, from saved quote to delivered.</p>
+        <p class="ow-ph-help">Come back and edit a saved quote, track it through prep and delivery, or select several to print together — each prints on its own A5 page.</p>
+        <span class="ow-ph-sp"></span>
+        <button type="button" class="btn ow-sm" id="ot_back_to_new_quote_btn" title="Shortcut: press Q">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          New quote
+        </button>
       </div>
 
       <!-- Outside the panel, so the rail inside it gets the full width for
@@ -8643,9 +8672,11 @@
 
     <!-- INVOICES -->
     <section id="tab-invoices" style="display:none;">
-      <div class="page-head">
-        <h1>Invoices</h1>
-        <p>Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it — it stays visible on the Order tracking board for 24 hours, then moves here only.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Invoices</h1>
+        <p class="ow-ph-sub">Completed orders that were billed.</p>
+        <p class="ow-ph-help">Quotes that reached Step 4 (Completed) and were converted to an invoice. Click the invoice icon on a completed card to convert it — it stays visible on the Order tracking board for 24 hours, then moves here only.</p>
+        <span class="ow-ph-sp"></span>
       </div>
 
       <div class="panel qp-panel">
@@ -9067,9 +9098,10 @@
 
     <!-- FOLLOW-UPS — who is waiting to hear from us -->
     <section id="tab-followups" style="display:none;">
-      <div class="page-head">
-        <h1>Follow-ups</h1>
-        <p>Clients who asked to be kept posted, and what is worth telling them today.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Follow-ups</h1>
+        <p class="ow-ph-sub">Clients who asked to be kept posted, and what is worth telling them today.</p>
+        <span class="ow-ph-sp"></span>
       </div>
       <div class="panel">
         <div class="dir-summary-row" id="fupSummaryRow"></div>
@@ -9093,9 +9125,11 @@
 
     <!-- CUSTOMERS -->
     <section id="tab-customers" style="display:none;">
-      <div class="page-head">
-        <h1>Customers</h1>
-        <p>Everyone you sell to. Track contact details and any outstanding debt owed to you.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Customers</h1>
+        <p class="ow-ph-sub">Everyone you sell to, and what each still owes.</p>
+        <p class="ow-ph-help">Everyone you sell to. Track contact details and any outstanding debt owed to you.</p>
+        <span class="ow-ph-sp"></span>
       </div>
       <div class="panel">
         <div class="panel-head-row">
@@ -9301,9 +9335,11 @@
 
     <!-- SALES AGENTS -->
     <section id="tab-agents" style="display:none;">
-      <div class="page-head">
-        <h1>Sales Agents</h1>
-        <p>External partners who sell on your behalf through the standalone Agent app. Their clients' identities stay private to them -- orders they submit show up here under their own name with an "Agent order" badge.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Sales agents</h1>
+        <p class="ow-ph-sub">Partners who sell for you through the Agent app.</p>
+        <p class="ow-ph-help">External partners who sell on your behalf through the standalone Agent app. Their clients' identities stay private to them -- orders they submit show up here under their own name with an "Agent order" badge.</p>
+        <span class="ow-ph-sp"></span>
       </div>
 
       <div class="agent-subtabs" id="agentSubTabs">
@@ -9631,9 +9667,11 @@
 
     <!-- WHATSAPP: TODAY'S POST -->
     <section id="tab-whatsapp" style="display:none;">
-      <div class="page-head">
-        <h1>WhatsApp</h1>
-        <p>The shop's online front desk &mdash; who is asking, what is selling, what the system answered in your name, and what to show the world today. Every number here is counted live from the shop's own records.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">WhatsApp</h1>
+        <p class="ow-ph-sub">The shop's online front desk.</p>
+        <p class="ow-ph-help">The shop's online front desk &mdash; who is asking, what is selling, what the system answered in your name, and what to show the world today. Every number here is counted live from the shop's own records.</p>
+        <span class="ow-ph-sp"></span>
       </div>
       <div id="wa_hero"></div>
       <div class="wa-tabs" id="wa_tabs">
@@ -17704,8 +17742,24 @@ function placeInfoBubble(info){
    name of every screen. */
 function foldPageInstructions(){
   let n = 0;
-  document.querySelectorAll('.page-head').forEach(head=>{
-    const p = head.querySelector(':scope > p');
+  /* TWO HEADER SHAPES, AND THE DIFFERENCE IS NOT A GUESS.
+
+     The old .page-head opens with a whole paragraph of prose above the
+     work, and the whole of it folds away.
+
+     The console header always shows one line -- .ow-ph-sub -- because
+     that line is a DESCRIPTION, not an instruction, and it is short
+     enough to earn its place. So the console header folds only what is
+     explicitly marked as the longer explanation: .ow-ph-help.
+
+     Guessing here would be wrong immediately. Today's sub is the moment
+     its figures were read at, and putting that behind an "i" bubble
+     would hide the one thing on the screen that goes stale. Marking the
+     paragraph is the whole difference between a rule and a hope. */
+  document.querySelectorAll('.page-head, .ow-ph').forEach(head=>{
+    const p = head.classList.contains('ow-ph')
+      ? head.querySelector(':scope > p.ow-ph-help')
+      : head.querySelector(':scope > p');
     const h1 = head.querySelector('h1');
     if(!p || !h1 || !p.textContent.trim()) return;
     if(foldInstruction(h1, p, 'What this screen is for')) n++;
