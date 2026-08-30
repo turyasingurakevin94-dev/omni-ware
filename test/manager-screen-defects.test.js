@@ -94,7 +94,7 @@ const render = extractFunction(src, 'renderManager', 'index.html');
     'every container the journal fills is cleared before the query goes out');
   /* The playbook clears its own container a few lines earlier, so this
      locates the LOOP rather than the first mention of the class. */
-  const loop = /\[acct,[\s\S]{0,400}?mgr-reading[\s\S]{0,120}?\}\);/.exec(render);
+  const loop = /\[acct,[\s\S]{0,900}?mgr-reading[\s\S]{0,160}?\}\);/.exec(render);
   t.check(!!loop, 'the clearing loop exists and names its containers in one place');
   const at = render.indexOf('managerLoadState().then');
   t.check(loop && render.indexOf(loop[0]) < at,
@@ -105,6 +105,15 @@ const render = extractFunction(src, 'renderManager', 'index.html');
   });
   t.check(/managerTrackWrap/.test(block),
     'including the track record, which is filled by a chain nested two deep and would linger longest');
+  /* Eight containers, ONE sentence. Saying it in every one of them
+     stacked eight identical grey lines down the page and the screen
+     read as broken rather than as busy — which the owner saw in a
+     screenshot before anyone else did. The clearing is the part that
+     matters; the announcement only has to happen once. */
+  t.check(/i === 0 \? '<p class="mgr-reading">/.test(block),
+    'and exactly one of them says so — the rest are emptied in silence');
+  t.check(/: ''/.test(block),
+    'the others really are emptied, not merely left alone');
   t.check(/\.mgr-reading\{/.test(src), 'and the line has a style, so it reads as a wait rather than as content');
 }
 

@@ -59,6 +59,54 @@ APPS.forEach((app) => {
   });
 });
 
+/* ---------- A FALLBACK IS NOT A FREE PASS ----------------------------
+ *
+ * The sweep above skips any var() that carries a fallback, on the
+ * grounds that it renders regardless. True of RENDERING. False of
+ * MEANING.
+ *
+ *     .mgr-pace.behind{border-left-color:var(--bad,var(--accent));}
+ *
+ * There is no --bad in index.html. So the fallback fired every single
+ * time, and a target that was BEHIND rendered in exactly the same oxide
+ * as one that was on course. The line had a colour, the colour looked
+ * deliberate, and it carried no information at all. The same hand wrote
+ * var(--bad,var(--line)) on a MISSED target and var(--bad,var(--ink-soft))
+ * on its footer -- three dead references, all rendering, none meaning
+ * anything, and the app looked completely fine.
+ *
+ * A fallback is for a property that MIGHT not be set — one a script
+ * assigns at runtime, or one a host page may override. A fallback behind
+ * a name the codebase has never heard of is a typo with the alarm
+ * switched off.
+ * ------------------------------------------------------------------- */
+const dead = [];
+APPS.forEach((app) => {
+  let src;
+  try { src = read(app); } catch (e) { return; }
+  const shared = SHARED_BY[app] ? read(SHARED_BY[app]) : '';
+  const known = new Set([
+    ...[...src.matchAll(/(?:^|[;{\s"'])(--[a-zA-Z0-9-]+)\s*:/gm)].map((m) => m[1]),
+    /* Set from JS rather than declared in CSS -- --tip-x, --sq-accent
+       and their kin are real properties with real values, just assigned
+       at runtime, and a fallback in front of them is exactly right. */
+    ...[...src.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9-]+)/g)].map((m) => m[1]),
+    ...[...shared.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9-]+)/g)].map((m) => m[1]),
+  ]);
+  [[app, src], [SHARED_BY[app], shared]].forEach(([name, text]) => {
+    if (!text) return;
+    for (const m of text.matchAll(/var\((--[a-zA-Z0-9-]+)\s*,/g)) {
+      if (known.has(m[1])) continue;
+      const line = text.slice(0, m.index).split(/\r?\n/).length;
+      dead.push(`${m[1]} at ${name}:${line}`);
+    }
+  });
+});
+t.check(dead.length === 0,
+  dead.length
+    ? `these always render their fallback, so the first name means nothing: ${dead.join('; ')}`
+    : 'and every var() WITH a fallback names a property that could actually be set — a fallback behind a name nothing defines is a typo with the alarm off');
+
 t.check(checked > 100, `swept var() usage across the app files (${checked} references)`);
 t.check(problems.length === 0,
   problems.length

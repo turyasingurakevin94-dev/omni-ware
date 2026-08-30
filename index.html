@@ -741,6 +741,23 @@
   .brief-stat b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1.15;}
   .brief-stat em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--ink-soft);}
   .brief-stat em.warn{color:var(--ow-amber-ink);}
+  /* THE BRIEF IN THE RAIL. brief-grid's minmax(175px,1fr) was written
+     for a full-width panel; in a 304px context rail it collapses to one
+     column and the four stats become four tall cards, each with a red
+     bar on top, making the brief the tallest thing on the front door.
+     Beside the work it is context, so it reads as rows. */
+  .ow-side .brief-grid{grid-template-columns:1fr;gap:0;margin:0;}
+  .ow-side .brief-stat{flex-direction:row;align-items:baseline;justify-content:space-between;
+    gap:10px;border:0;border-bottom:1px solid var(--ow-rule-soft);border-radius:0;
+    padding:7px 12px;flex-wrap:wrap;}
+  .ow-side .brief-stat::before{display:none;}
+  .ow-side .brief-stat span{order:1;flex:1;min-width:0;font-size:11.5px;font-weight:600;
+    letter-spacing:0;text-transform:none;color:var(--ink-soft);}
+  .ow-side .brief-stat b{order:2;font-size:13px;font-weight:600;}
+  .ow-side .brief-stat em{order:3;flex-basis:100%;font-size:11px;font-weight:400;}
+  .ow-side .brief-blocks{grid-template-columns:1fr;gap:12px;margin-top:12px;padding:0 12px 12px;}
+  .ow-side .brief-row{font-size:12px;padding:4px 0;}
+  .ow-side .dash-brief,.ow-side .dash-panel-title{margin:0;}
   .brief-blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px 28px;margin-top:16px;}
   .brief-block h4{font-size:10.5px;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.7px;color:var(--ow-ink-400);padding-bottom:5px;border-bottom:1px solid var(--line);}
   .brief-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);}
@@ -1195,10 +1212,13 @@
   .dash-alert-detail{font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
   .dash-alert-action{font-size:12px;font-weight:700;color:var(--ink);margin-top:1px;}
   /* ---- The Manager ---- */
-  .mgr-invite{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-    background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
-    border-radius:12px;padding:13px 16px;margin:0 0 14px;}
-  .mgr-invite p{margin:0;font-size:13.5px;color:var(--ink-soft);max-width:60ch;}
+  /* ONE ROW. This was a 100px banner with a red rail, and on Today it is
+     the first thing under the figures -- so the work started a screen
+     down. An offer is a sentence and a button. */
+  .mgr-invite{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:9px 12px;margin:0 0 12px;}
+  .mgr-invite p{margin:0;font-size:12.5px;color:var(--ink-soft);max-width:76ch;line-height:1.45;}
   .mgr-invite b{color:var(--ink);}
   .mgr-meet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
     margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
@@ -1207,7 +1227,7 @@
     color:var(--ink-soft);margin:18px 0 8px;}
   .mgr-keyline{background:var(--bg);border:1px dashed var(--line);border-radius:10px;
     padding:10px 13px;font-size:13.5px;color:var(--ink);margin:0 0 12px;}
-  .mgr-move{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  .mgr-move{background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:12px 15px;margin:0 0 10px;}
   .mgr-move.done{border-left-color:var(--good);}
   .mgr-move.skipped{border-left-color:var(--line);opacity:.75;}
@@ -1234,7 +1254,7 @@
   .mgr-review-offer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;
     border-top:1px dashed var(--line);padding-top:10px;margin-top:2px;}
   .mgr-review-thin{font-size:12px;color:var(--ink-soft);}
-  .mgr-review{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  .mgr-review{background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:12px 15px;margin:0 0 10px;}
   .mgr-lesson{font-size:13px;color:var(--ink);line-height:1.55;}
   .mgr-week{width:100%;border-collapse:collapse;margin-top:9px;font-size:13px;}
@@ -1242,32 +1262,42 @@
   .mgr-week td:first-child{color:var(--ink-soft);}
   .mgr-week .mgr-prior{color:var(--ink-soft);font-size:12px;text-align:right;}
   .mgr-score{display:flex;flex-direction:column;gap:9px;margin:0 0 14px;}
-  .mgr-target{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  .mgr-target{background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:11px 15px;}
-  .mgr-target.met{border-left-color:var(--good);}
-  .mgr-target.missed{border-left-color:var(--bad,var(--line));opacity:.8;}
+  /* Met and missed are the two states worth a rail, and now that the
+     rail is not on every card they can carry it. `missed` said
+     `--bad` with a fallback to --line -- and --bad does not exist here, so
+     the fallback fired every time and a missed target was outlined in
+     the same grey as an ordinary one. --danger exists. */
+  .mgr-target.met{border-left:3px solid var(--good);}
+  .mgr-target.missed{border-left:3px solid var(--danger);opacity:.8;}
   .mgr-target-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .mgr-target-name{font-weight:700;font-size:14px;color:var(--ink);}
   .mgr-target-fig{font-weight:700;font-size:13.5px;color:var(--accent-ink);white-space:nowrap;text-align:right;}
   .mgr-target-foot{font-size:12px;color:var(--ink-soft);margin-top:5px;}
-  .mgr-pace{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
-    border-radius:12px;padding:11px 15px;margin:0 0 14px;display:flex;align-items:center;
-    justify-content:space-between;gap:14px;flex-wrap:wrap;}
-  .mgr-pace.behind{border-left-color:var(--bad,var(--accent));}
-  .mgr-pace.ok{border-left-color:var(--good);}
-  .mgr-pace-line{font-size:13px;color:var(--ink-soft);line-height:1.5;max-width:64ch;}
+  .mgr-pace{background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;margin:0 0 8px;display:flex;align-items:center;
+    justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  /* THE RAIL SURVIVES HERE, AND ONLY HERE, BECAUSE IT MEANS SOMETHING.
+     It used to fall back from `--bad` to the accent -- and there is no --bad in
+     this file. The fallback fired every time, so a target that was
+     BEHIND rendered in exactly the same oxide as one on course, and the
+     colour on this line has never carried a single bit of information.
+     --danger exists. Now it does. */
+  .mgr-pace.behind{border-left:3px solid var(--danger);}
+  .mgr-pace-line{font-size:12.5px;color:var(--ink-soft);line-height:1.45;max-width:76ch;}
   .mgr-pace-line b{color:var(--ink);}
   .mgr-pace-foot{font-size:12px;color:var(--ink-soft);margin-top:4px;}
-  .mgr-pace-foot.behind{color:var(--bad,var(--ink-soft));}
+  .mgr-pace-foot.behind{color:var(--danger);}
   .mgr-bar{height:6px;border-radius:99px;background:var(--bg);border:1px solid var(--line);
     overflow:hidden;margin-top:7px;}
   .mgr-bar span{display:block;height:100%;background:var(--accent);}
   .mgr-target.met .mgr-bar span{background:var(--good);}
   .mgr-basis{display:block;font-weight:400;font-size:11px;color:var(--ink-soft);text-align:right;margin-top:1px;}
-  .mgr-objective{background:var(--accent-soft,var(--bg));border-left:3px solid var(--accent);
+  .mgr-objective{background:var(--ow-oxide-soft);border-left:3px solid var(--accent);
     border-radius:8px;padding:9px 13px;font-size:13.5px;color:var(--ink);margin:0 0 10px;}
   .mgr-unlocks{font-size:12px;color:var(--accent-ink);margin-top:4px;}
-  .mgr-asks{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  .mgr-asks{background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:13px 15px;margin:0 0 14px;}
   .mgr-ask{padding:9px 0;border-top:1px solid var(--line);}
   .mgr-ask-q{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px;}
@@ -1275,7 +1305,7 @@
   .mgr-ask-input{flex:1 1 260px;min-width:0;}
   .mgr-ask-side{font-size:12px;color:var(--ink-soft);margin:-2px 0 7px;}
   .mgr-ask-when{font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
-  .mgr-play{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  .mgr-play{background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:11px 15px;margin:0 0 9px;}
   .mgr-play-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .mgr-play-name{font-weight:700;font-size:14px;color:var(--ink);}
@@ -7115,7 +7145,7 @@
   .wa-convs{flex:1;overflow-y:auto;}
   .wa-conv{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:none;
     background:none;cursor:pointer;padding:11px 14px;font-family:inherit;
-    border-bottom:1px solid var(--line-soft, #EDEFF1);}
+    border-bottom:1px solid var(--ow-rule-soft);}
   .wa-conv:hover{background:var(--ow-steel-050);}
   .wa-conv.active{background:var(--ow-oxide-soft);}
   .wc-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:inline-flex;
@@ -7144,7 +7174,7 @@
   .wa-msgs{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;
     max-height:440px;background:var(--ow-steel-050);}
   .wa-day{display:flex;justify-content:center;margin:10px 0 8px;}
-  .wa-day span{background:var(--panel);border:1px solid var(--line-soft, #E3E7EA);color:var(--ink-soft);
+  .wa-day span{background:var(--panel);border:1px solid var(--ow-rule-soft);color:var(--ink-soft);
     font-size:10.5px;font-weight:600;letter-spacing:.04em;border-radius:999px;padding:3px 12px;}
   /* Message bubbles. The text alone is pre-wrap (pre-wrap on the whole
      bubble rendered the TEMPLATE's own newlines as blank lines — the
@@ -7182,7 +7212,7 @@
   .wa-round-btn.ghost{background:var(--ow-steel-050);color:var(--ink-soft);border:1px solid var(--line);}
   .wa-round-btn:hover:not(:disabled){filter:brightness(1.08);}
   .wa-round-btn:disabled{opacity:.45;cursor:default;}
-  .wa-window{font-size:11px;padding:5px 16px;border-top:1px solid var(--line-soft, #E3E7EA);
+  .wa-window{font-size:11px;padding:5px 16px;border-top:1px solid var(--ow-rule-soft);
     background:var(--panel);}
   .wa-window.open{color:var(--good);}
   .wa-window.closed{color:var(--ow-amber-ink);background:var(--ow-amber-soft);}
@@ -7749,7 +7779,7 @@
   /* ---- chip: state and severity ---- */
   .ow-cp{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;
     font-weight:var(--ow-fw-600);letter-spacing:.02em;height:18px;padding:0 var(--ow-sp-6);
-    border-radius:var(--ow-r-sm);background:#EDEFF1;color:var(--ow-ink-600);white-space:nowrap;}
+    border-radius:var(--ow-r-sm);background:var(--ow-steel-050);color:var(--ow-ink-600);white-space:nowrap;}
   .ow-cp.ow-mg{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
   .ow-cp.ow-bad{background:var(--ow-crimson-soft);color:var(--ow-crimson);}
   .ow-cp.ow-warn{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
@@ -57695,8 +57725,13 @@ function renderManager(){
      A line is enough. It costs one paint and it cannot be mistaken for
      an answer. */
   [acct, planWrap, scoreWrap, qWrap, revWrap, hist, passed,
-   document.getElementById('managerTrackWrap')].forEach(el=>{
-    if(el) el.innerHTML = '<p class="mgr-reading">Reading the journal…</p>';
+   document.getElementById('managerTrackWrap')].forEach((el, i)=>{
+    /* ONE line, not one per container. Saying it eight times over
+       stacks eight identical grey sentences down the page and the
+       screen reads as broken rather than as busy. The first container
+       speaks; the rest are simply emptied, which is the part that
+       actually matters -- nothing stale is left behind either way. */
+    if(el) el.innerHTML = i === 0 ? '<p class="mgr-reading">Reading the journal…</p>' : '';
   });
 
   /* With memory: the shells now, the journal when it answers. */
