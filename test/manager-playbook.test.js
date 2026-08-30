@@ -144,6 +144,8 @@ const base = {
     ];
     const book = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -151,7 +153,7 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
       q.limit = () => Promise.resolve({ data: rows, error: null }); return q; } } },
-      ['managerPlaybook']).managerPlaybook();
+      ['managerPlaybook', 'managerPlayClock', 'managerPlaysPastSpan']).managerPlaybook();
 
     eq(book.proposed.length, 1, 'a nameless row is not a play in anybody’s book');
     eq(book.running.length, 2, 'what the shop is actually working');
@@ -164,6 +166,8 @@ const base = {
 
     const none = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -171,12 +175,14 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, managerNotesTable: false,
       sb: { from(){ throw new Error('reached for a table that is not there'); } } },
-      ['managerPlaybook']).managerPlaybook();
+      ['managerPlaybook', 'managerPlayClock', 'managerPlaysPastSpan']).managerPlaybook();
     t.check(none.running.length === 0 && none.proposed.length === 0 && none.dropped.length === 0,
       'without the memory table it answers an empty book rather than throwing');
 
     const errBook = await compileScope([
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -184,7 +190,7 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     ], { ...base, sb: { from: () => { const q = {}; q.select = () => q; q.eq = () => q; q.order = () => q;
       q.limit = () => Promise.resolve({ data: null, error: { message: 'no such kind' } }); return q; } } },
-      ['managerPlaybook']).managerPlaybook();
+      ['managerPlaybook', 'managerPlayClock', 'managerPlaysPastSpan']).managerPlaybook();
     eq(errBook.running.length, 0, 'and a refused read is an empty book, never a crashed screen');
   }
 
@@ -261,6 +267,8 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -304,6 +312,8 @@ const base = {
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -338,6 +348,8 @@ const base = {
     t.check(/managerPlayStatus\(id, status\)/.test(render) && /managerAddOwnPlay\(/.test(render),
       'with the taps that try, stop and add one');
     const rest = src.replace(extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEM_METRICS', 'index.html'),
@@ -364,8 +376,21 @@ const base = {
       'at most two, one preferred — a shop works strategies, it does not read lists');
     t.check(/NEVER propose a play the shop has tried and dropped/.test(ext),
       'and never re-proposes what the shop has ruled out — the reason the book is remembered at all');
-    t.check(/say so plainly when a running play is not working and propose stopping it/.test(ext),
-      'a play that is not working is called, not carried');
+    /* A PLAY IS FOR A SPAN, AND THE SPAN IS THE MANAGER'S OWN WORD.
+
+       The rule this replaces — "say so plainly when a running play is
+       not working" — had no clock behind it, so nothing ever said WHEN
+       a play had had its chance: it ran until somebody remembered to
+       stop it, and could be argued from every Monday for a season. The
+       instruction to call a failing play now lives in
+       manager_history's description, where it costs no rulebook, and
+       the rulebook carries the part that needs a number. */
+    t.check(/weeks \(how many weeks it is for\)/.test(ext),
+      'a play names how many weeks it is FOR — a strategy with no horizon is a label');
+    t.check(/A play past its span is never carried into another week in silence/.test(ext),
+      'and one that outlives its own span is named, never carried');
+    t.check(/extend it with a reason, stop it, or replace it/.test(ext),
+      'with the three answers spelled out, so "say something" cannot be satisfied by saying anything');
     t.check(/outranking anything you thought of \\u2014 it is their trade/.test(ext),
       'the owner’s own plays outrank the manager’s');
     t.check(/never to recite/.test(ext),

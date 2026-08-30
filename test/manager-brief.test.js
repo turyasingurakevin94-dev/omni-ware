@@ -168,6 +168,8 @@ const shift = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),

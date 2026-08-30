@@ -75,6 +75,8 @@ const scope = compileScope([
   extractFunction(src, 'buyKeyLabel', 'index.html'),
   extractFunction(src, 'managerAdviceTally', 'index.html'),
   extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
   extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
   extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
   extractFunction(src, 'managerRecentReviews', 'index.html'),

@@ -392,6 +392,8 @@ const books = () => ({
       extractFunction(src, 'managerReviewBrief', 'index.html'),
       extractFunction(src, 'managerAdviceTally', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'buyHoldsStanding', 'index.html'),
       extractFunction(src, 'buyHoldFor', 'index.html'),

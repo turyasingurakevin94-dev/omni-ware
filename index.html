@@ -1268,6 +1268,14 @@
   .mgr-play-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
   .mgr-play-name{font-weight:700;font-size:14px;color:var(--ink);}
   .mgr-play-tag{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  /* WHERE THE PLAY IS IN ITS OWN SPAN. Quiet while it is inside it —
+     "week 2 of 4" is a fact, not a warning — and oxide the moment it
+     is past, because a strategy running on after its own horizon is
+     the manager's failure, not the shop's, and the shop should not
+     have to count the weeks to notice. */
+  .mgr-play-clock{font-size:11px;color:var(--ink-soft);white-space:nowrap;
+    padding:2px 8px;border-radius:20px;background:var(--ow-steel-050);margin-right:auto;}
+  .mgr-play-clock.over{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);font-weight:650;}
   .mgr-play-sized{font-size:12.5px;color:var(--accent-ink);margin:0 0 6px;}
   /* What the books did over the same weeks. Deliberately quiet and
      deliberately neutral by default: a green number beside a strategy
@@ -56087,7 +56095,17 @@ async function managerSaveMeeting(plan){
     .map(x=> ({ shop_id: currentShopId, kind: 'play', meeting_id: ins.data.id, date: todayISO(),
       body: { name: String(x.name).trim().slice(0, 120), treats: String(x.treats),
         how: String(x.how||'').slice(0, 400), sized: String(x.sized||'').slice(0, 300),
-        watch: String(x.watch||'').slice(0, 200), source: 'manager' },
+        watch: String(x.watch||'').slice(0, 200),
+        /* HOW LONG IT IS FOR. A strategy with no horizon is a label:
+           it runs until somebody remembers to stop it, and nothing
+           ever asks whether it has had its chance. Bounded at a
+           quarter -- a play that needs longer than thirteen weeks to
+           show anything is not a play, it is a hope -- and ABSENT
+           rather than defaulted when the meeting gave none, so the
+           screen says "no span named" instead of inventing one and
+           then judging the shop against it. */
+        weeks: (Number(x.weeks) >= 1 && Number(x.weeks) <= 13) ? Math.round(Number(x.weeks)) : null,
+        source: 'manager' },
       status: 'proposed' }));
   if(plays.length){
     const r5 = await sb.from('manager_notes').insert(plays);
@@ -56412,6 +56430,7 @@ async function managerPlaybook(){
     problem: MANAGER_PROBLEMS[(x.body||{}).treats] || 'Other',
     how: (x.body||{}).how || '', sized: (x.body||{}).sized || '', watch: (x.body||{}).watch || '',
     source: (x.body||{}).source === 'owner' ? 'owner' : 'manager',
+    weeks: Number((x.body||{}).weeks) >= 1 ? Math.round(Number((x.body||{}).weeks)) : null,
     baseline: (x.body||{}).baseline == null ? null : Number((x.body||{}).baseline),
     proposed_on: x.date, started_on: (x.body||{}).startedOn || null, ended_on: (x.body||{}).endedOn || null });
   const running = rows.filter(x=> x.status === 'running').map(view);
@@ -56419,12 +56438,61 @@ async function managerPlaybook(){
      screen and the weekly review are looking at the same arithmetic.
      Every running play is passed in, because the other plays live in
      the same weeks are the rival explanations. */
-  running.forEach(p=>{ p.progress = managerPlayProgress(p, todayISO(), running); });
+  running.forEach(p=>{
+    p.progress = managerPlayProgress(p, todayISO(), running);
+    p.clock = managerPlayClock(p, todayISO());
+  });
   return {
     running,
     proposed: rows.filter(x=> x.status === 'proposed').map(view),
     dropped: rows.filter(x=> x.status === 'dropped' || x.status === 'done').map(x=> ({ ...view(x), status: x.status })),
   };
+}
+
+/* HOW FAR THROUGH ITS OWN SPAN A PLAY IS.
+
+   A play had a name, a treatment and a measure, and no clock. It ran
+   until somebody remembered to stop it -- so a strategy the shop meant
+   to try for a month could sit in the playbook for a season, being
+   argued from every Monday, with nobody ever asking whether it had had
+   its chance. That is the difference between working a strategy and
+   keeping a label.
+
+   A span is the Manager's own commitment, so being past it is the
+   Manager's own failure to answer for -- the same shape as advice that
+   is not landing, one level up: not a shop that disagreed, a manager
+   that stopped noticing. It is NAMED, never acted on: this reading
+   stops no play and drops nothing. What to do about a play that has
+   run its course is the owner's, and the choice is put to them in
+   words.
+
+   NO SPAN NAMED IS ITS OWN ANSWER, and it is said rather than filled
+   in. Defaulting to four weeks would judge a shop against a horizon
+   nobody agreed, which is the same invention as a derived due date. */
+function managerPlayClock(view, dateISO){
+  const started = (view || {}).started_on || (view || {}).proposed_on;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(started || ''))) return null;
+  const days = Math.max(0, daysSinceDate(started));
+  const weeks = Number((view || {}).weeks) >= 1 ? Math.round(Number(view.weeks)) : null;
+  /* Week ONE from the day it starts. A play started this morning is in
+     its first week, not its noughth -- and a screen that says "week 0
+     of 4" is a screen written by somebody counting array indexes. */
+  const weekOf = Math.floor(days / 7) + 1;
+  if(weeks == null) return { days, weekOf, weeks: null, spanDays: null,
+    daysLeft: null, past: false, daysOver: 0, noSpan: true };
+  const spanDays = weeks * 7;
+  const past = days > spanDays;
+  return { days, weekOf: Math.min(weekOf, weeks + (past ? weekOf - weeks : 0)), weeks, spanDays,
+    daysLeft: Math.max(0, spanDays - days), past, daysOver: past ? days - spanDays : 0, noSpan: false };
+}
+
+/* The plays that have outlived what they were for, oldest overrun
+   first. One reading, so the screen and the Manager can never disagree
+   about which strategies are past their day. */
+function managerPlaysPastSpan(book){
+  return ((book && book.running) || [])
+    .filter(p=> p.clock && p.clock.past)
+    .sort((a, b)=> b.clock.daysOver - a.clock.daysOver);
 }
 
 /* Trying a play, stopping it, or setting it aside -- the dates that
@@ -57005,8 +57073,23 @@ function renderManager(){
           Running ${g.days_running} days · ${esc(g.measures)} ${num(from)} → ${num(to)} alongside it${
           g.also_running ? ` · so did ${esc(g.also_running.join(', '))}` : ''}</div>`;
       };
+      /* HOW FAR THROUGH ITS OWN SPAN. A play had a name, a treatment
+         and a measure, and no clock: it sat in this list being argued
+         from every Monday with nobody asking whether it had had its
+         chance. A span is the manager's own word, so running past it
+         is the manager's failure to answer for -- and the chip says so
+         where the owner will see it, not only in the meeting. */
+      const clock = (p)=>{
+        const c = p.clock;
+        if(!c) return '';
+        if(c.noSpan) return `<span class="mgr-play-clock">no span named</span>`;
+        if(c.past) return `<span class="mgr-play-clock over">${c.daysOver} ${
+          c.daysOver === 1 ? 'day' : 'days'} past its ${c.weeks} weeks</span>`;
+        return `<span class="mgr-play-clock">week ${c.weekOf} of ${c.weeks}</span>`;
+      };
       const card = (p, buttons)=> `<div class="mgr-play" data-pid="${esc(String(p.id))}">
         <div class="mgr-play-top"><span class="mgr-play-name">${esc(p.name)}</span>
+          ${clock(p)}
           <span class="mgr-play-tag">${esc(p.problem)}${p.source === 'owner' ? ' · yours' : ''}</span></div>
         ${p.how ? `<div class="mgr-why" style="margin:3px 0 6px;">${esc(p.how)}</div>` : ''}
         ${p.sized ? `<div class="mgr-play-sized">${esc(p.sized)}</div>` : ''}
@@ -63486,6 +63569,16 @@ const ASSISTANT_TOOLS = {
     if(book.running.length) out.strategies = book.running.map(p=> ({
       name: p.name, treats: p.treats, whose: p.source, since: p.started_on,
       ...(p.how ? { how: p.how } : {}),
+      /* AGAINST ITS OWN HORIZON. "What moved alongside it" answers a
+         different question from "has it had its chance": a play three
+         days old that moved nothing has not failed, and one nine weeks
+         past a four-week span has been carried rather than worked. The
+         review judges both, and only one of them was ever here. */
+      ...(p.clock ? (p.clock.noSpan
+        ? { no_span_named: true, has_run_days: p.clock.days }
+        : { for_weeks: p.clock.weeks, has_run_days: p.clock.days,
+            past_its_span: p.clock.past,
+            ...(p.clock.past ? { days_over: p.clock.daysOver } : { days_left: p.clock.daysLeft }) }) : {}),
       ...(p.progress ? { alongside_it: p.progress }
         : { nothing_measures_it: 'This app cannot weigh ' + (MANAGER_PROBLEMS[p.treats] || 'that').toLowerCase()
             + ' — ask the owner what they have seen instead of reaching for a number that does not answer it.' }),
@@ -63590,7 +63683,16 @@ const ASSISTANT_TOOLS = {
     const book = await managerPlaybook();
     const playbook = {
       ...(book.running.length ? { running: book.running.map(p=> ({ name: p.name, treats: p.treats,
-        how: p.how, since: p.started_on, whose: p.source })) } : {}),
+        how: p.how, since: p.started_on, whose: p.source,
+        /* HOW LONG IT WAS FOR AND HOW FAR THROUGH IT IS. A play with
+           no clock is a label: argued from every Monday, never asked
+           whether it has had its chance. Absent rather than defaulted
+           when no span was named -- judging a shop against a horizon
+           nobody agreed is the same invention as a derived due date. */
+        ...(p.clock ? (p.clock.noSpan
+          ? { no_span_named: true, has_run_days: p.clock.days }
+          : { for_weeks: p.clock.weeks, in_week: p.clock.weekOf,
+              days_left: p.clock.daysLeft, past_its_span: p.clock.past }) : {}) })) } : {}),
       ...(book.dropped.length ? { tried_and_dropped: book.dropped.map(p=> p.name) } : {}),
     };
     /* The lines it told the shop not to buy yet, and how long they have
@@ -63679,6 +63781,32 @@ const ASSISTANT_TOOLS = {
           + ' times and they have neither done it nor turned it down. Say so plainly in one sentence,'
           + ' and DO NOT propose it again in different words: either ask what is in the way, or spend'
           + ' today’s plan on something else.' });
+    });
+
+    /* A STRATEGY THAT HAS OUTLIVED WHAT IT WAS FOR.
+
+       A play carried a name, a treatment and a measure, and no clock:
+       it ran until somebody remembered to stop it. So a play the shop
+       meant to try for a month could be argued from every Monday for a
+       season with nobody asking whether it had had its chance -- which
+       is keeping a label, not working a strategy.
+
+       The span was the MANAGER'S own commitment, so overrunning it is
+       the Manager's to answer for, not the shop's. Same shape as
+       advice that is not landing, one level up. And the guidance rides
+       with the entry for the same reason: a count with no instruction
+       leaves a mind free to carry the play into another week without
+       saying anything, which is the exact failure. */
+    managerPlaysPastSpan(book).slice(0, 2).forEach(p=>{
+      worth.push({ kind: 'play_past_its_span', play: p.name, treats: p.problem,
+        was_for_weeks: p.clock.weeks, has_run_days: p.clock.days, days_over: p.clock.daysOver,
+        started_on: p.started_on || p.proposed_on,
+        ...(p.progress ? { alongside_it: p.progress } : {}),
+        what_to_do: 'You said this play was for ' + p.clock.weeks + ' weeks and it has run '
+          + p.clock.days + '. That was your own horizon, so it is yours to answer for. Say how long'
+          + ' it was for and how long it has run, then do ONE of three things: extend it with a'
+          + ' reason from the figures, stop it, or replace it. Carrying it into another week without'
+          + ' saying anything is the one response that is forbidden.' });
     });
 
     /* THE FIFTH KEY, and the one the rulebook has demanded since the

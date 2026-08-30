@@ -210,6 +210,8 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
@@ -277,6 +279,8 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
       extractFunction(src, 'booksStartDate', 'index.html'),
       extractFunction(src, 'managerPlayProgress', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),
       extractFunction(src, 'managerScoreProgress', 'index.html'),
       extractFunction(src, 'managerRecentReviews', 'index.html'),
@@ -336,8 +340,8 @@ const invoiced = { savedQuotes: [{ voided: false, invoiced: true, date: '2026-06
   /* ---------- 8. the discipline the mind is held to ---------------- */
   {
     const ext = api.slice(api.indexOf('const MANAGER_COMMON'), api.indexOf('function managerExtension'));
-    t.check(/JUDGE THE STRATEGIES, AND NEVER TAKE CREDIT FOR THEM/.test(ext),
-      'the law, said first: the review accounts for every strategy and claims none of them');
+    t.check(/JUDGE THE STRATEGIES AGAINST THEIR OWN HORIZON, AND NEVER TAKE CREDIT FOR THEM/.test(ext),
+      'the law, said first: the review accounts for every strategy against the span it was given, and claims none of them');
     t.check(/is WHAT MOVED, never what the play DID/.test(ext),
       'movement is not causation, in those words');
     t.check(/two below-cost lines may have been repriced in the same fortnight, or one fat order may have carried the month/.test(ext),

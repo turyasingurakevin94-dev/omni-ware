@@ -140,6 +140,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     extractFunction(src, 'buyHoldFor', 'index.html'),
     extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     /* The clearance reading the meeting now argues from. Whole, not
        stubbed: the Manager and the screen must not disagree about what
@@ -330,6 +332,8 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
       extractFunction(src, 'buyHoldFor', 'index.html'),
       extractFunction(src, 'buyKeyLabel', 'index.html'),
       extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
       extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
       extractFunction(src, 'deriveMoveOutcome', 'index.html'),
       extractFunction(src, 'managerScoreboard', 'index.html'),

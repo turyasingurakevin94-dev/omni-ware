@@ -399,6 +399,8 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
           extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
           extractFunction(src, 'managerAdviceTally', 'index.html'),
           extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
           extractFunction(src, 'managerScoreboard', 'index.html'),
           extractFunction(src, 'managerScoreProgress', 'index.html'),
           extractFunction(src, 'managerRecentReviews', 'index.html'),

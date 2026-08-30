@@ -339,6 +339,8 @@ const build = (data, extraSrc, names, over) => compileScope(
     extractFunction(src, 'buyKeyParts', 'index.html'),
     extractFunction(src, 'managerAdviceTally', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     extractFunction(src, 'deriveMoveOutcome', 'index.html'),
     extractFunction(src, 'managerScoreboard', 'index.html'),

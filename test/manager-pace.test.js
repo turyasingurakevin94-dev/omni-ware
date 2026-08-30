@@ -182,6 +182,8 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
     extractFunction(src, 'buyKeyLabel', 'index.html'),
     extractFunction(src, 'managerAdviceTally', 'index.html'),
     extractFunction(src, 'managerPlaybook', 'index.html'),
+      extractFunction(src, 'managerPlayClock', 'index.html'),
+      extractFunction(src, 'managerPlaysPastSpan', 'index.html'),
     extractDeclaration(src, 'MANAGER_PROBLEMS', 'index.html'),
     extractDeclaration(src, 'MANAGER_METRICS', 'index.html'),
     extractFunction(src, 'managerScoreboard', 'index.html'),
