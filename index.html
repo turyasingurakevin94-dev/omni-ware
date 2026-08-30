@@ -53684,20 +53684,40 @@ function buyOrderToolLines(input){
   const sid = (input && input.supplier_id) != null ? String(input.supplier_id) : '';
   const sup = (data.suppliers || []).find(x=> String(x.id) === sid);
   if(!sup) return { error: 'No supplier with that id — use find_supplier first.' };
-  const asked = ((input && input.lines) || []).filter(x=> x && x.key);
-  if(!asked.length) return { error: 'No lines were named. Say which keys to order, from the buy plan.' };
+  /* A LINE NAMED BY EITHER ID. This filter asked for `key` alone, so a
+     caller doing the right thing -- naming the row with line_id, which
+     is the only unambiguous way to name it -- had every line silently
+     dropped and got back "no lines were named". A guard that throws
+     away the correct call is worse than no guard. */
+  const asked = ((input && input.lines) || []).filter(x=> x && (x.line_id || x.key));
+  if(!asked.length) return { error: 'No lines were named. Say which lines to order by their line_id, from the buy plan.' };
   const plan = purchasePlan(cashAhead(todayISO(), CASH_AHEAD_DAYS).safeToSpend, null, todayISO());
   const pool = plan.lines.concat(plan.didNotFit);
-  const lines = []; const missing = []; const elsewhere = [];
+  const lines = []; const missing = []; const elsewhere = []; const ambiguous = [];
   asked.forEach(a=>{
-    const l = pool.find(x=> String(x.key) === String(a.key));
-    if(!l){ missing.push(String(a.key)); return; }
+    /* THE ROW, NOT THE SHELF. One product can stand on the plan twice --
+       a refill and a buy-in are different arguments and different
+       quantities -- so a bare key can name two rows, and picking either
+       would be ordering a figure nobody chose. line_id says which; a
+       key that is ambiguous is REFUSED by name rather than resolved by
+       guesswork. */
+    const want = String(a.line_id || '');
+    const hits = want ? pool.filter(x=> String(x.tag) === want)
+      : pool.filter(x=> String(x.key) === String(a.key));
+    if(hits.length > 1){
+      ambiguous.push(hits[0].name + ' (' + hits.map(x=> x.tag).join(' or ') + ')');
+      return;
+    }
+    const l = hits[0];
+    if(!l){ missing.push(String(a.line_id || a.key)); return; }
     if(String(l.supplierId) !== sid){ elsewhere.push(l.name + ' (the plan buys it from ' + l.supplier + ')'); return; }
     const qty = a.qty != null ? Math.round(Number(a.qty)) : l.buyQty;
     if(!(qty > 0)) return;
     lines.push({ key: l.key, productId: l.productId, variantIdx: l.variantIdx, name: l.name,
       unit: l.unit, packQty: l.packQty, packUnit: l.packUnit, qty, unitCost: l.unitCost });
   });
+  if(ambiguous.length) return { error: 'That line stands on the plan twice \u2014 once as a shelf refill and once as a repeat buy-in, at different quantities: '
+    + ambiguous.join('; ') + '. Say which with line_id, from purchase_plan, rather than the key.' };
   if(elsewhere.length) return { error: 'Those lines are not this supplier\u2019s on today\u2019s plan: '
     + elsewhere.join('; ') + '. Order each line from the supplier the plan costed it at, or say why not.' };
   if(missing.length) return { error: 'Not on today\u2019s buy plan: ' + missing.join(', ')
@@ -53777,7 +53797,25 @@ function buyLineFor(r, needUnits, kind){
   const packQty = Number(row.packQty) || 0;
   const buyQty = packQty > 0 ? Math.ceil(want / packQty) * packQty : want;
   const unitCost = purchasePriceAtQty(row, buyQty) ?? row.purchasePrice;
-  return { kind, key: r.key, productId: r.productId, variantIdx: r.variantIdx,
+  /* THE ROW'S OWN IDENTITY, which is not the shelf's.
+
+     `key` is the SHELF line, and it has to stay that: a hold, a move's
+     subject and everything on the way are all about the product, not
+     about the argument for buying it. But one product can raise TWO
+     arguments at once -- it sold off the shelf and ran out (a refill)
+     AND it has been bought in order after order (worth stocking) --
+     and the plan shows both, correctly, as separate rows.
+
+     The buying basket was keyed on the shelf key, so those two rows
+     were one thing to it: ticking the 2,520,000 buy-in lit both rows
+     and put the 210,000 refill on the order. The owner would have
+     pressed send on a message for a twelfth of what they chose. So a
+     row carries its own id, the shelf key and the kind of argument
+     together, and the basket, the review and the tool all work on
+     THAT. Unique by construction: each of the two readings yields at
+     most one row per key. */
+  return { kind, key: r.key, tag: r.key + '|' + kind,
+    productId: r.productId, variantIdx: r.variantIdx,
     name: r.name, held: r.qty, units30: r.units30, soldTotal30: r.soldTotal30,
     orders30: r.orders30, profit30: r.profit30, paid30: r.paid30 == null ? null : r.paid30,
     keptPct: buyKeptPct(r),
@@ -54103,10 +54141,13 @@ function dashStockOutExposure(){
 /* ---- the What-to-buy screen ---- */
 let buyBudget = null;    // per-view override; null = use what the forecast says is safe
 let buyPlanLast = null;  // the plan behind the Source-it buttons, index-addressed
-/* WHAT IS TICKED FOR ORDERING. Keys, never lines: the review resolves
-   each one against the CURRENT plan, so a figure cannot be ordered at a
-   price the screen has since moved off. View state -- never saved, and
-   an order that is placed empties it. */
+/* WHAT IS TICKED FOR ORDERING. Row ids, never lines: the review
+   resolves each one against the CURRENT plan, so a figure cannot be
+   ordered at a price the screen has since moved off. The id is the
+   ROW's (see buyLineFor) and not the shelf's, because one product can
+   stand on the plan twice -- once as a refill, once as a buy-in -- and
+   a basket that could not tell them apart ordered the wrong one. View
+   state: never saved, and a placed order empties it. */
 let buyOrderBasket = new Set();
 
 function renderPurchasePlanPanel(){
@@ -54203,7 +54244,7 @@ function renderPurchasePlanPanel(){
      owed until the lorry comes. Reading them as one thing is how a
      shop ends up owing for goods that never arrived. */
   const row = (l, list, i)=> {
-    const picked = buyOrderBasket.has(String(l.key));
+    const picked = buyOrderBasket.has(String(l.tag));
     return `
     <div class="pp-row${picked ? ' picked' : ''}">
       ${holdBand(l)}
@@ -54211,7 +54252,7 @@ function renderPurchasePlanPanel(){
         ${chip(l)}
         <span class="pp-name">${esc(l.name)}</span>
         <span class="pp-cost">${f(l.cost)}</span>
-        <button type="button" class="btn ${picked ? 'btn-accent' : 'btn-ghost'} pp-act buy-pick" data-key="${esc(String(l.key))}">${
+        <button type="button" class="btn ${picked ? 'btn-accent' : 'btn-ghost'} pp-act buy-pick" data-tag="${esc(String(l.tag))}">${
           picked ? 'On the order' : 'Order it'}</button>
         <button type="button" class="btn btn-ghost pp-act buy-act" data-list="${list}" data-i="${i}">Buy it</button>
       </div>
@@ -54347,7 +54388,7 @@ function renderPurchasePlanPanel(){
      into the review -- a line the plan has stopped recommending is not
      a line to order on the strength of a figure nobody can still see. */
   const pool = plan.lines.concat(plan.didNotFit);
-  const basket = [...buyOrderBasket].map(k=> pool.find(l=> String(l.key) === k)).filter(Boolean);
+  const basket = [...buyOrderBasket].map(k=> pool.find(l=> String(l.tag) === k)).filter(Boolean);
   if(basket.length){
     const sups = new Set(basket.map(l=> String(l.supplierId))).size;
     const tot = basket.reduce((n, l)=> n + l.cost, 0);
@@ -54367,7 +54408,7 @@ function renderPurchasePlanPanel(){
      from two suppliers is two orders, and asking the owner to notice
      that themselves is asking them to do the app's arithmetic. */
   el.querySelectorAll('.buy-pick').forEach(btn=> btn.addEventListener('click', ()=>{
-    const k = String(btn.dataset.key || '');
+    const k = String(btn.dataset.tag || '');
     if(!k) return;
     if(buyOrderBasket.has(k)) buyOrderBasket.delete(k); else buyOrderBasket.add(k);
     renderPurchasePlanPanel();
@@ -54470,7 +54511,7 @@ function buyOrderReviewLines(){
   const plan = buyPlanLast || { lines: [], didNotFit: [] };
   const pool = (plan.lines || []).concat(plan.didNotFit || []);
   return [...buyOrderBasket]
-    .map(k=> pool.find(l=> String(l.key) === k))
+    .map(k=> pool.find(l=> String(l.tag) === k))
     .filter(Boolean);
 }
 function renderBuyOrderReview(){
@@ -54491,9 +54532,22 @@ function renderBuyOrderReview(){
     by.get(k).lines.push(l);
   });
   const groups = [...by.values()];
-  if(note) note.textContent = groups.length === 1
-    ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
-    : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`;
+  /* THE SAME GOODS TWICE. A product that both ran out and is bought in
+     order after order is on the plan twice, and both rows can be
+     ticked -- which is two orders for one shelf, and the larger almost
+     always covers the smaller. Said rather than prevented: a shop that
+     means it knows something the books do not, and this app has never
+     pretended otherwise. */
+  const seen = new Map();
+  lines.forEach(l=> seen.set(String(l.key), (seen.get(String(l.key)) || 0) + 1));
+  const twice = lines.filter(l=> seen.get(String(l.key)) > 1)
+    .map(l=> l.name).filter((n, i, a)=> a.indexOf(n) === i);
+  if(note) note.textContent = (twice.length
+    ? `${twice.join(', ')} ${twice.length === 1 ? 'is' : 'are'} on this order twice — once as a shelf refill and once as a repeat buy-in. The bigger one covers the smaller; drop a quantity to nothing to leave it out. `
+    : '')
+    + (groups.length === 1
+      ? 'One supplier, one message. Placing it writes the order down and opens WhatsApp — you read the draft and press send.'
+      : `${groups.length} suppliers, so ${groups.length} orders and ${groups.length} messages. Each one is placed on its own.`);
   wrap.innerHTML = groups.map(g=>{
     const total = g.lines.reduce((n, l)=> n + l.buyQty * l.unitCost, 0);
     const noPhone = !supplierWaNumber(g.supplierId);
@@ -54506,7 +54560,7 @@ function renderBuyOrderReview(){
         <thead><tr><th>Item</th><th class="r">How many</th><th class="r">Each</th><th class="r">Comes to</th></tr></thead>
         <tbody>${g.lines.map(l=> `<tr>
           <td>${esc(l.name)}${l.packQty > 1 ? `<span class="bo-drop"> · ${esc(l.packUnit || 'pack')} of ${l.packQty}</span>` : ''}</td>
-          <td class="r"><input type="number" class="bo-qty" data-key="${esc(String(l.key))}" min="0" step="any" value="${l.buyQty}"></td>
+          <td class="r"><input type="number" class="bo-qty" data-tag="${esc(String(l.tag))}" min="0" step="any" value="${l.buyQty}"></td>
           <td class="r num">${f(l.unitCost)}</td>
           <td class="r num">${f(l.buyQty * l.unitCost)}</td>
         </tr>`).join('')}</tbody>
@@ -54545,19 +54599,19 @@ function placeBuyOrderFromReview(supplierId){
     .find(g=> String(g.dataset.sup) === String(supplierId));
   if(!group) return;
   const want = new Map();
-  group.querySelectorAll('.bo-qty').forEach(i=> want.set(String(i.dataset.key), Number(i.value) || 0));
+  group.querySelectorAll('.bo-qty').forEach(i=> want.set(String(i.dataset.tag), Number(i.value) || 0));
   const dateEl = group.querySelector('.bo-date');
   const lines = buyOrderReviewLines()
     .filter(l=> String(l.supplierId) === String(supplierId))
-    .map(l=> ({ key: l.key, productId: l.productId, variantIdx: l.variantIdx, name: l.name,
+    .map(l=> ({ tag: l.tag, key: l.key, productId: l.productId, variantIdx: l.variantIdx, name: l.name,
       unit: l.unit, packQty: l.packQty, packUnit: l.packUnit,
-      qty: want.has(String(l.key)) ? want.get(String(l.key)) : l.buyQty,
+      qty: want.has(String(l.tag)) ? want.get(String(l.tag)) : l.buyQty,
       unitCost: l.unitCost }));
   const ordered = lines.filter(l=> l.qty > 0);
   if(!ordered.length){ toast('Every line on this order is zero — nothing to order'); return; }
   const o = placeBuyOrder(supplierId, ordered, dateEl ? dateEl.value : '');
   if(!o){ toast('That order could not be written down'); return; }
-  lines.forEach(l=> buyOrderBasket.delete(String(l.key)));
+  lines.forEach(l=> buyOrderBasket.delete(String(l.tag)));
   markBuyOrderSent(o.id);
   window.open(buyOrderWaUrl(o), '_blank');
   renderBuyOrderReview();
@@ -63319,6 +63373,13 @@ const ASSISTANT_TOOLS = {
            rejection stayed a sentence and the screen went on
            recommending what had just been turned down. */
         key: l.key,
+        /* THE ROW's id, which is not the shelf's. A product that both
+           ran out AND is bought in order after order stands here TWICE,
+           at different quantities, under one key -- so an order named by
+           key alone could be for a twelfth of what was meant. This is
+           what place_buy_order takes; `key` above stays the shelf's, and
+           is what a hold is placed on. */
+        line_id: l.tag,
         kind: l.kind === 'stock' ? 'worth stocking — bought in repeatedly' : 'shelf refill',
         why: l.reason, buy_qty: l.buyQty,
         unit: l.unit || 'pc',

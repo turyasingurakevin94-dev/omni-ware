@@ -390,13 +390,20 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
        at a figure a mind worked out is an order at a price nobody
        quoted, and the supplier finds out when the lorry is loaded. */
     const api = read('api/assistant.js');
-    const decl = api.slice(api.indexOf("name: 'place_buy_order'"));
-    const itemProps = decl.slice(decl.indexOf('items: {'), decl.indexOf("required: ['key']"));
+    /* BOUNDED BY THE NEXT TOOL. Slicing to a literal that later moved
+       ran this read straight past the end of the declaration and
+       swallowed three other tools' fields — a check that passes on
+       whatever it happens to find is not a check. */
+    const from = api.indexOf("name: 'place_buy_order'");
+    const decl = api.slice(from, api.indexOf("    name: '", from + 40));
+    t.check(decl.length > 400 && decl.length < 4000,
+      `the declaration was found and bounded, not run past its end (${decl.length} chars)`);
+    const itemProps = decl.slice(decl.indexOf('items: {'), decl.indexOf('additionalProperties: false'));
     const fields = [...itemProps.matchAll(/^\s{14}([a-z_]+): \{/gm)].map((m) => m[1]);
-    eq(fields.join(','), 'key,qty',
-      'the tool offers the model a line id and a quantity, and NOTHING that could carry a price');
-    t.check(/required: \['key'\], additionalProperties: false/.test(decl),
-      'and refuses any other field outright — additionalProperties:false is what makes the law hold');
+    eq(fields.join(','), 'line_id,key,qty',
+      'the tool offers the model a row id, a shelf key and a quantity, and NOTHING that could carry a price');
+    t.check((decl.match(/additionalProperties: false/g) || []).length === 2,
+      'and refuses any other field outright, on the line AND on the call — additionalProperties:false is what makes the law hold');
     t.check(/never supply a price/.test(decl.slice(0, decl.indexOf('input_schema'))),
       'and the description says so, so the mind is not left to infer it');
 
@@ -447,6 +454,87 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     t.check(/Covered by an order already out/.test(html) && /Cement/.test(html),
       'and the line missing from the plan is NAMED as covered, never silently dropped');
   }
+  /* ---------- 12. ONE PRODUCT, TWO ARGUMENTS, TWO ROWS -------------- *
+   *
+   * From the owner's own screen. ABC Black Screws sold off the shelf
+   * and ran out (a refill, 20 Box, 210,000) AND had been bought in for
+   * seven separate orders that month (worth stocking, 240 Box,
+   * 2,520,000). The plan showed both, correctly. The BASKET was keyed
+   * on the shelf key, so the two rows were one thing to it: tapping
+   * "Order it" on the 2,520,000 lit up both rows and put the 210,000
+   * on the order. The owner would have pressed send on a message for a
+   * twelfth of what they chose.
+   */
+  {
+    const data = makeData();
+    /* Wall Angle now ALSO sells off the shelf and holds none, so it
+       raises both arguments at once — exactly the shape that broke. */
+    data.savedQuotes[0].items.push({ productId: 'P2', variantIdx: null, qty: 6,
+      supplierId: '__stock__', sellPrice: 4000, _stockLots: [{ qty: 6, cost: 2500 }] });
+    const el = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+    const s = build(data, ['let buyBudget = null; let buyPlanLast = null; let buyOrderBasket = new Set();',
+      extractFunction(src, 'buyLineFacts', 'index.html'),
+      extractFunction(src, 'buyLineWhy', 'index.html'),
+      extractFunction(src, 'buyHoldsSweep', 'index.html'),
+      extractFunction(src, 'liftBuyHold', 'index.html'),
+      extractFunction(src, 'renderPurchasePlanPanel', 'index.html'),
+      extractFunction(src, 'buyOrderReviewLines', 'index.html'),
+      'function tick(x){ buyOrderBasket.add(x); }',
+      'function basketSize(){ return buyOrderBasket.size; }'],
+      ['renderPurchasePlanPanel', 'buyOrderReviewLines', 'tick', 'basketSize'], {
+        document: { getElementById: (id) => (id === 'buy_plan' ? el : null), activeElement: null },
+        cashOnHandByAccount: () => ({ total: 9000000, byAccount: [] }),
+        cashAhead: () => ({ days: 30, commitments: [], committed: 0, unknown: 0,
+          safeToSpend: 9000000, tightest: { date: TODAY, balance: 9000000 } }),
+        esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
+        listPageSlice: (_k, rows) => rows,
+        listMoreButtonHTML: () => '',
+        targetMarginPct: () => 10,
+      });
+
+    const plan = s.purchasePlan(9000000, null, TODAY);
+    const rows = plan.lines.concat(plan.didNotFit).filter((l) => l.key === 'P2');
+    eq(rows.length, 2,
+      'ONE PRODUCT STANDS ON THE PLAN TWICE — it ran out AND it is bought in order after order, which are two arguments and two quantities');
+    eq(rows[0].key === rows[1].key, true, 'sharing one shelf key, because the shelf is one shelf');
+    t.check(rows[0].tag !== rows[1].tag,
+      'AND CARRYING DIFFERENT ROW IDS — without that the basket cannot tell the 2,520,000 from the 210,000');
+    t.check(rows.some((l) => l.kind === 'refill') && rows.some((l) => l.kind === 'stock'),
+      'one of each kind, which is what makes the row id unique');
+
+    const stock = rows.find((l) => l.kind === 'stock');
+    /* The review reads the plan the SCREEN last drew, so the screen is
+       drawn first — which is also the order the owner does it in. */
+    s.renderPurchasePlanPanel();
+    s.tick(stock.tag);
+    eq(s.basketSize(), 1, 'ticking one row tickets one row');
+    const picked = s.buyOrderReviewLines();
+    eq(picked.length, 1, 'and the review resolves to exactly one line');
+    eq(picked[0].kind, 'stock', 'THE ONE THAT WAS TICKED — not its namesake at a twelfth of the money');
+    eq(picked[0].cost, stock.cost, 'at the figure the owner was looking at when they tapped');
+
+    s.renderPurchasePlanPanel();
+    const html = el.innerHTML;
+    eq((html.match(/On the order/g) || []).length, 1,
+      'and ONE row on the screen says it is on the order — both lighting up was the owner\u2019s first sight of this bug');
+
+    /* THE SAME AMBIGUITY REACHES THE MANAGER, and must fail loudly
+       there too. A tool that picked one of two rows would place an
+       order the owner approved a card for and the machine did not
+       honour — the worst thing this app could do. */
+    const byKey = s.buyOrderToolLines({ supplier_id: 'S3', lines: [{ key: 'P2' }] });
+    t.check(/stands on the plan twice/.test(byKey.error || ''),
+      'a bare key that names TWO rows is refused, not resolved by guesswork');
+    t.check(/line_id/.test(byKey.error || ''),
+      'and the refusal names the field that would settle it');
+    const byRow = s.buyOrderToolLines({ supplier_id: 'S3', lines: [{ line_id: stock.tag }] });
+    eq(byRow.error, undefined, 'the row id resolves');
+    eq(byRow.total, stock.cost, 'to the row that was named, at its own figure');
+    const refill = rows.find((l) => l.kind === 'refill');
+    eq(s.buyOrderToolLines({ supplier_id: 'S3', lines: [{ line_id: refill.tag }] }).total, refill.cost,
+      'and its namesake resolves to ITS figure — the two are told apart, which is the whole point');
+  }
+
 })().then(() => {
   process.exit(t.done() ? 1 : 0);
 }).catch((e) => {
