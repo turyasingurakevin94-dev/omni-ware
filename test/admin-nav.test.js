@@ -54,11 +54,18 @@ const bottomNav = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [
 const tabsIn = (s) => [...s.matchAll(/data-tab="([a-z-]+)"/g)].map((m) => m[1]);
 
 /* Reads the rail the way buildNavIndex() does: a section label sets the
-   group, every button after it belongs to that group. */
+   group, every button after it belongs to that group.
+
+   The heading is a <button> now rather than a <div>, because it folds
+   its section and a thing you click and that reports its own state is a
+   button, not a div wearing a click handler. It still carries the
+   class buildNavIndex keys on, and its NAME is still the whole of its
+   textContent -- the fold caret is an SVG and the count behind a shut
+   door is CSS generated content, neither of which is text. */
 function railIndex() {
   const out = [];
   let group = '';
-  const re = /<div class="nav-section-label">([^<]+)<\/div>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
+  const re = /<button type="button" class="nav-section-label"[^>]*><span>([^<]+)<\/span>[\s\S]*?<\/button>|<button([^>]*?)>([\s\S]*?)<\/button>/g;
   let m;
   while ((m = re.exec(rail))) {
     if (m[1]) { group = m[1].trim(); continue; }
@@ -110,11 +117,47 @@ const INDEX = railIndex();
 
 /* ---------- 2. nothing is behind anything ---------------------------- */
 {
-  // The measure that matters: how much of the map you can see without
-  // opening something. It was 7 of 28.
-  const visible = INDEX.filter((x) => !x.hidden).length;
+  /* The measure that matters: how much of the map you can see without
+     opening something. It was 7 of 28.
+
+     THIS CHECK HAD TO BE REWRITTEN, not patched. It used to read
+     `style="display:none"` off the markup, and the sections now fold
+     through a CLASS -- so the old count would have gone on reporting
+     every destination as "on screen at rest" while five of them sat
+     behind a shut door. A check that cannot see the thing it exists to
+     measure is worse than no check: it reports green about a property
+     nobody is testing any more.
+
+     So it counts what is actually on screen: every row, less the rows
+     in the sections that START folded. The rail offers folding on all
+     six because which of their own work is rare is the owner's
+     judgement -- but what it CHOOSES to fold on first use is a design
+     decision, and this is where that decision is written down. */
+  const FOLD_DEFAULT = (/const NAV_FOLD_DEFAULT = \[([^\]]*)\]/.exec(src) || ['', ''])[1]
+    .split(',').map((x) => x.replace(/['"\s]/g, '')).filter(Boolean);
+  t.check(FOLD_DEFAULT.length > 0, `the rail names which sections start folded (${FOLD_DEFAULT.join(', ')})`);
+
+  const DAILY = ['Sell', 'Buy', 'Money', 'Insight'];
+  DAILY.forEach((g) => {
+    t.check(!FOLD_DEFAULT.includes(g),
+      `"${g}" is open at rest — it is opened every day, and Insight is where the Manager lives`);
+  });
+
+  const visible = INDEX.filter((x) => !x.hidden && !FOLD_DEFAULT.includes(x.group)).length;
   t.check(visible >= 26,
     `${visible} destinations are on screen at rest, none of them behind a menu`);
+  t.check(INDEX.filter((x) => !x.hidden).length > visible,
+    'and folding actually removes something, or it is a control that does nothing');
+
+  /* The reason a fold is allowed here at all when a hover menu was not:
+     a shut section still says how many screens are inside it, and still
+     shows the one you are on. Neither was true of the flyouts. */
+  t.check(/\.nav-group\.folded > \.nav-section-label::after\{[\s\S]{0,200}?content:attr\(data-n\)/.test(src),
+    'a shut door says how much is behind it');
+  t.check(/head\.dataset\.n = g\.querySelectorAll\(':scope > button\[data-tab\]'\)\.length;/.test(src),
+    'counting the destinations in that section, including one its own inline style hides — a number that jumped when a worker signed in would mean nothing');
+  t.check(/\.nav-group\.folded > button\[data-tab\]\.active\{display:flex;\}/.test(src),
+    'and a shut section still shows the row you are on, so the rail never loses your place');
 
   /* One menu is left on the bar and it holds no data-tab -- only the
      four things that act on the whole shop. A destination appearing in
@@ -271,8 +314,8 @@ const INDEX = railIndex();
      than none. */
   t.check(/\.nav-group\{display:flex;flex-direction:column;/.test(src),
     'each section is its own block, so its heading is pushed out by the next');
-  t.check((sidebar.match(/<div class="nav-group">/g) || []).length === 6,
-    'and all six are wrapped');
+  t.check((sidebar.match(/<div class="nav-group" data-group="[A-Za-z]+">/g) || []).length === 6,
+    'and all six are wrapped, each naming itself so the fold state can be remembered by section rather than by position');
   const labelRule = (/\.nav-section-label\{([^}]*)\}/.exec(src) || ['', ''])[1];
   t.check(/position:sticky;top:0/.test(labelRule), 'the heading follows the list');
   t.check(/background:var\(--navy\)/.test(labelRule),

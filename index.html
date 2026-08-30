@@ -343,7 +343,28 @@
      six headings stacked on top of each other, which is worse than
      none. */
   .nav-group{display:flex;flex-direction:column;gap:1px;}
+  /* THE HEADING IS NOW A DOOR.
+
+     Forty-one rows in one column is taller than any screen, so finding
+     a rare one meant scrolling a list you had already read. Each
+     heading folds its own section.
+
+     What does NOT happen here: the six sections do not all shut. This
+     app removed hover menus once for hiding twenty-one destinations
+     behind a pointer, and its own test still carries the law that came
+     out of that -- nothing that is a place to go goes behind a click.
+     So the sections a shop opens every day (Sell, Buy, Money, and
+     Insight, which holds the Manager) are open at rest and stay that
+     way unless the owner folds them; only reference and settings start
+     folded. Folding is offered on all six because whose work is rare is
+     the owner's judgement, not mine, and what they choose is
+     remembered.
+
+     A folded section still shows the row you are ON, so the rail never
+     loses your place. */
   .nav-section-label{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:6px;
+    font-family:inherit;
     font-size:10.5px;font-weight:700;letter-spacing:0.9px;text-transform:uppercase;
     color:#7C8894;padding:15px 12px 5px;white-space:nowrap;overflow:hidden;
     /* Sticky because the list is taller than the rail: scrolled into the
@@ -352,6 +373,35 @@
        through the heading as they slide under it. */
     position:sticky;top:0;z-index:1;background:var(--navy);
   }
+  .nav-section-label:hover{color:#C7CFD8;}
+  .nav-section-label:focus-visible{outline:1px solid rgba(255,255,255,.45);outline-offset:-1px;border-radius:6px;}
+  .nav-fold{width:11px;height:11px;flex-shrink:0;order:2;margin-left:6px;opacity:.55;
+    fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;
+    transform:rotate(90deg);transition:transform .14s ease;}
+  .nav-group.folded .nav-fold{transform:rotate(0deg);}
+  /* A shut door says how much is behind it. A fold with no count is the
+     "place to lose things" this rail was rebuilt to stop being -- five
+     screens and none is a very different section, and the heading is
+     the only thing left saying which.
+
+     Written through CSS content rather than an element because
+     buildNavIndex takes the group's name from this heading's
+     textContent, and a counter inside it would rename "Catalogue" to
+     "Catalogue5" for the search index and the phone's sheet alike.
+     Generated content is not textContent. The order/auto-margin pair
+     puts the count before the caret without moving either in the
+     markup. */
+  .nav-section-label::after{order:1;margin-left:auto;content:"";}
+  .nav-group.folded > .nav-section-label::after{
+    content:attr(data-n);font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:10px;font-weight:700;letter-spacing:0;color:#7C8894;
+  }
+  /* The rows go, the heading stays, and so does wherever you are. */
+  .nav-group.folded > button[data-tab]{display:none;}
+  .nav-group.folded > button[data-tab].active{display:flex;}
+  /* Two shut doors in a row would otherwise sit 20px apart and read as
+     one heading with a second line. */
+  .nav-group.folded > .nav-section-label{padding-bottom:10px;}
   .nav-section-label:first-child{padding-top:2px;}
 
   /* A count on the row it belongs to. Only drawn when there is something
@@ -8086,8 +8136,8 @@
         <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>
         <span class="nav-label">Dashboard</span>
       </button>
-      <div class="nav-group">
-        <div class="nav-section-label">Sell</div>
+      <div class="nav-group" data-group="Sell">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Sell</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="quote" title="Add New Quote (press Q)" data-keywords="new order sale add">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
           <span class="nav-label">New quote</span>
@@ -8123,8 +8173,8 @@
           <span class="nav-label">WhatsApp</span>
         </button>
       </div>
-      <div class="nav-group">
-        <div class="nav-section-label">Buy</div>
+      <div class="nav-group" data-group="Buy">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Buy</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- Deliberately NOT carrying "restock", for the reason in the
              Follow-ups note above: search matches on SUBSTRINGS, so the
              word contains "stock" and put this screen above Inventory
@@ -8160,8 +8210,8 @@
           <span class="nav-label">Purchase invoices</span>
         </button>
       </div>
-      <div class="nav-group">
-        <div class="nav-section-label">Catalogue</div>
+      <div class="nav-group" data-group="Catalogue">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Catalogue</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="products" title="Products (press P)" data-keywords="items catalogue variants">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Products</span>
@@ -8183,8 +8233,8 @@
           <span class="nav-label">Fastener guide</span>
         </button>
       </div>
-      <div class="nav-group">
-        <div class="nav-section-label">Money</div>
+      <div class="nav-group" data-group="Money">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Money</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="cashbook" title="Cash Book (press C)" data-keywords="income expenses ledger takings">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
           <span class="nav-label">Cash book</span>
@@ -8242,8 +8292,8 @@
           <span class="nav-label">Loans</span>
         </button>
       </div>
-      <div class="nav-group">
-        <div class="nav-section-label">Insight</div>
+      <div class="nav-group" data-group="Insight">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Insight</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <!-- Deliberately NOT carrying "sales", "orders" or "stock":
              those words belong to screens named after them, and a
              keyword outranks nothing but it does compete. -->
@@ -8278,8 +8328,8 @@
           <span class="nav-label">Map</span>
         </button>
       </div>
-      <div class="nav-group">
-        <div class="nav-section-label">Setup</div>
+      <div class="nav-group" data-group="Setup">
+        <button type="button" class="nav-section-label" aria-expanded="true"><span>Setup</span><svg class="nav-fold" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button data-tab="staff" title="Staff" data-keywords="employees team users workers">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 21v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 8 19.5V21"/><circle cx="14" cy="8" r="3.5"/><path d="M5 21v-1a3.5 3.5 0 0 1 3.5-3.5"/><circle cx="6" cy="8.5" r="2.3"/></svg>
           <span class="nav-label">Staff</span>
@@ -17412,6 +17462,78 @@ document.addEventListener('click', (e)=>{
   const btn = t && t.closest ? t.closest('nav button[data-tab]') : null;
   if(btn) goToTab(btn.dataset.tab);
 });
+
+/* ---------------- The doors ----------------
+
+   Forty-one destinations in one column is taller than any screen, so
+   finding a rare one meant scrolling a list you had already read. Each
+   section heading now folds its own section.
+
+   WHAT DOES NOT HAPPEN: all six do not shut. This app pulled its hover
+   menus out once for hiding twenty-one destinations behind a pointer,
+   and admin-nav.test.js still carries the law that came out of it --
+   nothing that is a place to go goes behind a click. So the sections a
+   shop opens every day stay open at rest, and only reference and
+   settings start folded. Folding is OFFERED on all six because which of
+   their own work is rare is the owner's judgement and not mine; what
+   they choose is remembered.
+
+   Nothing here reaches into buildNavIndex, mmsRenderDestinations or the
+   badges, all three of which read this rail as their source of truth. A
+   folded row keeps its inline style untouched, so the phone's More
+   sheet -- which skips a row whose OWN style hides it, the worker row
+   before a worker signs in -- still lists every destination there is.
+   The phone never folds anything: it has its own sheet. */
+const NAV_FOLD_KEY = 'owNavFolded';
+const NAV_FOLD_DEFAULT = ['Catalogue', 'Setup'];
+function navFoldedSet(){
+  const raw = lsGet(NAV_FOLD_KEY);
+  if(raw == null) return new Set(NAV_FOLD_DEFAULT);
+  try{
+    const a = JSON.parse(raw);
+    return new Set(Array.isArray(a) ? a : NAV_FOLD_DEFAULT);
+  }catch(e){ return new Set(NAV_FOLD_DEFAULT); }
+}
+function navApplyFolds(){
+  const folded = navFoldedSet();
+  document.querySelectorAll('#sidebar .nav-group[data-group]').forEach(g=>{
+    const shut = folded.has(g.dataset.group);
+    g.classList.toggle('folded', shut);
+    const head = g.querySelector('.nav-section-label');
+    if(head){
+      head.setAttribute('aria-expanded', shut ? 'false' : 'true');
+      /* Every destination in the section, including one hidden by its
+         own inline style -- the worker row before a worker signs in.
+         Counting only what would show would make the number jump when
+         somebody logs in, for no reason the owner could see. */
+      head.dataset.n = g.querySelectorAll(':scope > button[data-tab]').length;
+    }
+  });
+}
+/* Delegated for the same reason the rows are: this heading may one day
+   be drawn rather than written, and a listener bound at parse time
+   would be bound to nothing. */
+document.addEventListener('click', (e)=>{
+  const t = e.target;
+  const head = t && t.closest ? t.closest('#sidebar .nav-section-label') : null;
+  if(!head) return;
+  const group = head.closest('.nav-group');
+  if(!group || !group.dataset.group) return;
+  const folded = navFoldedSet();
+  if(folded.has(group.dataset.group)) folded.delete(group.dataset.group);
+  else folded.add(group.dataset.group);
+  lsSet(NAV_FOLD_KEY, JSON.stringify([...folded]));
+  navApplyFolds();
+});
+navApplyFolds();
+
+/* A destination reached from search, the phone's sheet or a keyboard
+   shortcut can live in a folded section, and goToTab scrolls its rail
+   row into view. It is NOT unfolded to do that -- the owner folded that
+   section on purpose and reopening it would quietly undo their choice.
+   The row you are on shows through a folded section instead, which is
+   what `.nav-group.folded > button[data-tab].active` is for: the rail
+   still says where you are without giving back the space. */
 
 /* Walking the days. The arrows move one day; the box takes any day.
    Nothing here is bounded to the past -- a day ahead simply has nothing
