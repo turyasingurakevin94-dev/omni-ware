@@ -54708,6 +54708,31 @@ async function managerSaveMeeting(plan){
    the rolling window will walk away from, so the figures it judged are
    frozen with the judgement -- from week_review_data's own derivation,
    never from model text. */
+/* WHAT "AFTER CHASES" IS ALLOWED TO SAY.
+
+   A bare zero here reads as "the chases collected nothing" when what it
+   usually meant was "no chase recorded who it was about" -- opposite
+   facts that looked identical on the screen the owner actually reads.
+
+   Three answers, and only one of them is a figure:
+
+     a figure          chases were advised, at least one named somebody,
+                       and this is what their ledgers show since.
+     cannot be traced  chases were advised and not one named anybody, so
+                       nothing can be attributed. NOT nothing collected.
+     not measured      the review predates the record that would say
+                       which of the two it was. Saying 0 for those would
+                       be asserting something this app cannot know. */
+function reviewChaseLine(wk){
+  const w = wk || {};
+  const money = Math.round(Number(w.collected_after_chases) || 0);
+  if(money > 0) return 'after chases ' + fmtUGX(money);
+  if(w.chases_advised == null) return 'after chases — not measured';
+  if(!w.chases_advised) return 'no chases were advised';
+  if(!w.customers_chased) return 'no chase said who it was about';
+  return 'after chases ' + fmtUGX(money);
+}
+
 async function managerSaveReview(review, weekData){
   if(!managerNotesTable) return null;
   const wk = weekData || {}, tw = wk.this_week || {}, pw = wk.prior_week || {}, adv = wk.advice || {};
@@ -54723,7 +54748,15 @@ async function managerSaveReview(review, weekData){
         meetings_held: Number(adv.meetings_held)||0, advised: Number(adv.advised)||0,
         done: Number(adv.done)||0, skipped: Number(adv.skipped)||0,
         not_acted_on: Number(adv.not_acted_on)||0,
+        /* THE HEADLINE, AND WHAT IT IS WORTH. The figure alone was
+           stored and the screen printed it flat -- so the owner read
+           "after chases 0 UGX" as a week whose chases collected
+           nothing, when what it usually meant was that no chase said
+           who it was about. The tool learned to tell those apart; the
+           journal must keep the difference or the screen cannot. */
         collected_after_chases: apRound(adv.collected_after_chases||0),
+        chases_advised: Number(adv.chases_advised)||0,
+        customers_chased: Number(adv.customers_chased)||0,
       },
     },
     status: 'held',
@@ -55726,7 +55759,7 @@ function renderManager(){
           <table class="mgr-week"><tbody>
             <tr><td>Sales</td><td>${fmtUGX(wk.sales||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_sales||0)}</td></tr>
             <tr><td>Gross profit</td><td>${fmtUGX(wk.gross_profit||0)}</td><td class="mgr-prior">prior week ${fmtUGX(wk.prior_gross_profit||0)}</td></tr>
-            <tr><td>Collected</td><td>${fmtUGX(wk.collected||0)}</td><td class="mgr-prior">after chases ${fmtUGX(wk.collected_after_chases||0)}</td></tr>
+            <tr><td>Collected</td><td>${fmtUGX(wk.collected||0)}</td><td class="mgr-prior">${esc(reviewChaseLine(wk))}</td></tr>
             <tr><td>Advice</td><td>${Number(wk.done)||0} of ${Number(wk.advised)||0} done</td>
               <td class="mgr-prior">${Number(wk.skipped)||0} skipped · ${Number(wk.not_acted_on)||0} untouched</td></tr>
           </tbody></table>
@@ -55899,11 +55932,19 @@ function renderDay(){
   const d = dayRecord(day);
   const f = (n)=> fmtUGX(Math.round(n));
   const today = todayISO();
-  const when = day === today ? 'Today' : day === anShiftDate(today, -1) ? 'Yesterday' : fmtShortDate(day);
+  /* THREE WAYS TO NAME ONE DAY, and they are not interchangeable.
+     `when` heads the screen; `phrase` goes inside a sentence, where
+     "on Today" is not English; and `tail` is the date itself, appended
+     only when the heading is a WORD -- appending it to a heading that
+     is already the date printed "25 Aug 2026 — 25 Aug 2026". */
+  const named = day === today ? 'Today' : day === anShiftDate(today, -1) ? 'Yesterday' : null;
+  const when = named || fmtShortDate(day);
+  const phrase = named ? named.toLowerCase() : 'on ' + fmtShortDate(day);
+  const tail = named ? ' — ' + fmtShortDate(day) : '';
 
   if(d.quiet){
     body.innerHTML = `<div class="panel"><div class="pw-empty">
-      <b>Nothing was recorded on ${esc(when)}.</b>
+      <b>Nothing was recorded ${esc(phrase)}.</b>
       <span>No sale, no payment, no stock movement and no cash entry carries this date.
         ${day > today ? 'It has not happened yet.' : 'Either the shop was shut, or the day never reached the books.'}</span>
     </div></div>`;
@@ -55924,7 +55965,7 @@ function renderDay(){
     ? `<p class="pp-more">${total - shown} more ${esc(noun)} not listed.</p>` : '';
 
   let html = `<div class="panel">
-    <div class="mgr-sec-title">${esc(when)}${day === today ? '' : ' — ' + esc(fmtShortDate(day))}</div>
+    <div class="mgr-sec-title">${esc(when)}${esc(tail)}</div>
     <div class="sum-strip">
       ${cell(f(d.sold.total), d.sold.count === 1 ? '1 sale' : d.sold.count + ' sales')}
       ${cell(f(d.sold.profit), 'gross profit' + (d.sold.estimated ? ' *' : ''))}

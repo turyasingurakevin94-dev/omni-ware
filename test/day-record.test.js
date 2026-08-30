@@ -213,6 +213,57 @@ const scope = (data) => compileScope([
   eq(cashOnly.quiet, false, 'one cash entry is a day that did something');
 }
 
+/* ---------- 5b. one day, three ways of naming it ---------------------- */
+{
+  /* The screen called every day by one label and used it in three
+     places, so it printed "Nothing was recorded on Today." and headed
+     an ordinary Tuesday "25 Aug 2026 — 25 Aug 2026". A heading, a
+     sentence and a date are three different jobs. */
+  const view = extractFunction(src, 'renderDay', 'index.html');
+  t.check(/Nothing was recorded \$\{esc\(phrase\)\}/.test(view),
+    'the empty state says it in a sentence — "recorded today", never "recorded on Today"');
+  t.check(/const phrase = named \? named\.toLowerCase\(\) : 'on ' \+ fmtShortDate\(day\)/.test(view),
+    'so Today and Yesterday go in lower case with no "on", and a date keeps its "on"');
+  t.check(/const tail = named \? ' — ' \+ fmtShortDate\(day\) : ''/.test(view),
+    'and the date is appended only where the heading is a WORD — appending it to one that is already the date said it twice');
+  t.check(/mgr-sec-title">\$\{esc\(when\)\}\$\{esc\(tail\)\}/.test(view),
+    'the heading uses the two together and nothing else');
+}
+
+/* ---------- 5c. the review never prints a bare zero to the owner ------ */
+{
+  const line = compileScope([extractFunction(src, 'reviewChaseLine', 'index.html')],
+    { fmtUGX: (n) => String(n), Math, Number }, ['reviewChaseLine']).reviewChaseLine;
+
+  /* THE REPAIR REACHED THE MANAGER AND NOT THE SCREEN. week_review_data
+     learned to say when its headline cannot be read; the review card
+     went on printing "after chases 0 UGX" to the one person who would
+     act on it. */
+  eq(line({ collected_after_chases: 300000, chases_advised: 2, customers_chased: 1 }),
+    'after chases 300000', 'a figure that can be traced is a figure');
+  eq(line({ collected_after_chases: 0, chases_advised: 2, customers_chased: 0 }),
+    'no chase said who it was about',
+    'and a zero that means nobody was named says THAT, not nothing collected');
+  eq(line({ collected_after_chases: 0, chases_advised: 0, customers_chased: 0 }),
+    'no chases were advised',
+    'a week that advised no chase at all is a third answer again');
+  /* Reviews written before the accounting existed carry no such record,
+     and asserting 0 for them would be claiming something this app has
+     no way to know. */
+  eq(line({ collected_after_chases: 0 }), 'after chases — not measured',
+    'and a review from before the record was kept says so rather than asserting a zero');
+  eq(line({}), 'after chases — not measured', 'an empty week is the same admission');
+
+  /* The journal has to keep the difference or the screen cannot draw it. */
+  const save = extractFunction(src, 'managerSaveReview', 'index.html');
+  t.check(/chases_advised: Number\(adv\.chases_advised\)\|\|0/.test(save),
+    'the review stores how many chases were advised');
+  t.check(/customers_chased: Number\(adv\.customers_chased\)\|\|0/.test(save),
+    'and how many of them named somebody');
+  t.check(/\$\{esc\(reviewChaseLine\(wk\)\)\}/.test(src),
+    'and the card draws the sentence rather than the number');
+}
+
 /* ---------- 6. the thread picks the day up --------------------------- */
 {
   const journal = (meeting, moves) => ({ from: () => { const q = { _kind: null };

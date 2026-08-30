@@ -410,8 +410,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   const render = extractFunction(src, 'renderManager', 'index.html');
   t.check(/Weekly review — /.test(render) && /st\.reviews/.test(render),
     'the screen reads journalled reviews and names them in the history');
-  t.check(/wk\.sales/.test(render) && /wk\.collected_after_chases/.test(render),
+  t.check(/wk\.sales/.test(render) && /reviewChaseLine\(wk\)/.test(render),
     'the review card’s week table is built from the stored derivation, never from model text');
+  /* The chase figure moved behind reviewChaseLine, which decides whether
+     the week has a figure at all — a bare zero there read as "the chases
+     collected nothing" when it usually meant "no chase said who it was
+     about". It still reads the STORED week and nothing else. */
+  t.check(/collected_after_chases/.test(extractFunction(src, 'reviewChaseLine', 'index.html')),
+    'and that sentence is drawn from the stored figure too, never from anything the model wrote');
   t.check(/on record this week — the review will be as thin as that/.test(render),
     'and the offer says how thin the evidence is BEFORE the owner spends credit on it');
 
