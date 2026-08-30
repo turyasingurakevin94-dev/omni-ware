@@ -40561,6 +40561,21 @@ const STOCK_PURCHASE_NOTE_RE = /^Purchased\b/;
 function isStockPurchaseRow(e){
   if(!e || e.type !== 'restock') return false;
   if(e.source === 'inv-purchase') return true;
+  /* A DELIVERY AGAINST THE SHOP'S OWN BUY ORDER, which was kept out of
+     here until this screen could repair a bill of more than one line.
+
+     It was excluded for a real reason: this screen used to write
+     pi.items[0], and a delivery raises ONE bill for the whole lorry --
+     so correcting the cement would have rewritten the wall angle with
+     cement's figures, silently. That is fixed below, where the LINE
+     this row is about is found by content, and a bill with no matching
+     line is refused rather than half-written.
+
+     A receipt against a CUSTOMER's order stays out, and always will:
+     those goods belong to somebody's job, the order screen is where
+     they are corrected, and two screens correcting one delivery is how
+     the two come to hold different truths about it. */
+  if(e.source === 'buy-order') return true;
   return !e.source && STOCK_PURCHASE_NOTE_RE.test(String(e.note || ''));
 }
 function stockCostsEqual(a, b){
@@ -40764,13 +40779,36 @@ function applyStockPurchaseEdit(logId, next){
   if(pi && newSupplierId !== pi.supplierId && Number(pi.amountPaid) > 0){
     return {ok: false, error: `${fmtUGX(pi.amountPaid)} has already been paid against ${purchaseInvoiceNumberLabel(pi)}, so the supplier cannot be changed. Void that bill by hand if it went to the wrong supplier.`};
   }
+  /* THE LINE THIS ROW IS ABOUT, found by content and never items[0].
+
+     A purchase from the stock screen raises a bill of ONE line, and
+     items[0] was that line. A delivery against a buy order raises one
+     bill for the whole lorry, and items[0] is whichever line happened
+     to be first -- so correcting the cement would rewrite the wall
+     angle with cement's figures, in a record nobody re-reads until
+     they are arguing with a supplier about it.
+
+     RESOLVED HERE, BEFORE ANYTHING MOVES. It was first written further
+     down, beside the bill write, and a bill with no matching line then
+     refused AFTER the shelf had already been taken down -- a refusal
+     that cost the shop six bags of cement and reported failure. Every
+     check that can fail belongs above the first write. */
+  let billItem = null;
+  if(pi){
+    billItem = (pi.items || []).find(it=> samePiLineTarget(it, e.productId, vIdx)) || null;
+    /* REFUSED, NEVER HALF-WRITTEN. A bill carrying no line for this
+       item is a bill this correction has no business editing, and
+       falling back to its first line is precisely the wrong answer. */
+    if(!billItem) return {ok: false,
+      error: `${purchaseInvoiceNumberLabel(pi)} carries no line for ${e.label || e.productId}, so this correction cannot reach it. Correct that bill by hand, or void it.`};
+  }
   /* "Nothing was changed" must also look at the BILL. When an earlier
      correction fixed the shelf but missed the bill, the figures typed
      today equal the movement exactly -- and refusing that save was the
      dead end that kept a wrong balance wrong. A bill out of line with
      the figures is a change to make. */
-  const billOutOfLine = pi && ((Number(pi.items[0].qty) || 0) !== newQty
-    || (Number(pi.items[0].price) || 0) !== (newCost != null ? Number(newCost) : 0)
+  const billOutOfLine = pi && ((Number(billItem.qty) || 0) !== newQty
+    || (Number(billItem.price) || 0) !== (newCost != null ? Number(newCost) : 0)
     || (!!newSupplierId && pi.supplierId !== newSupplierId));
   if(newQty === eff.qty && stockCostsEqual(newCost, eff.cost) && newSupplierId === eff.supplierId
       && !billOutOfLine && !billAdopted){
@@ -40822,27 +40860,31 @@ function applyStockPurchaseEdit(logId, next){
      the owner is actually waiting for. */
   let overpaid = false, billBefore = null, billAfter = null;
   if(pi){
-    const item = pi.items[0];
-    billBefore = Math.max(0, (Number(item.qty) || 0) * (Number(item.price) || 0) - (Number(pi.amountPaid) || 0));
-    item.qty = newQty;
-    item.price = (newCost != null && !isNaN(newCost)) ? Number(newCost) : 0;
+    /* THE WHOLE BILL, before and after. The toast names what the bill
+       now stands at, and on a bill of nine lines this line's own value
+       is not that figure -- it would tell the shop it owed a ninth of
+       what it owes. */
+    billBefore = Math.round(purchaseInvoiceBalanceDue(pi));
+    billItem.qty = newQty;
+    billItem.price = (newCost != null && !isNaN(newCost)) ? Number(newCost) : 0;
     if(newSupplierId && newSupplierId !== pi.supplierId){
       pi.supplierId = newSupplierId;
       pi.supplierName = supplierName(newSupplierId);
     }
-    billAfter = Math.max(0, newQty * (item.price || 0) - (Number(pi.amountPaid) || 0));
+    billAfter = Math.round(purchaseInvoiceBalanceDue(pi));
     /* Said out loud rather than silently clamped. A bill corrected DOWN
        below what has already been paid on it means the shop is owed money
        back, and that is a conversation with the supplier, not a rounding
-       error to hide. */
-    overpaid = Number(pi.amountPaid) > newQty * (item.price || 0);
+       error to hide. Against the WHOLE bill's worth: on a delivery of
+       nine lines, one line falling under what was paid says nothing. */
+    overpaid = Number(pi.amountPaid) > purchaseInvoiceTotal(pi);
   }
   /* The registry learns the corrected figure the same way it learned the
      wrong one. Leaving it holding a price the shop has just said it never
      paid is worse than re-asking. */
   if(newSupplierId && newCost != null){
     syncPriceRegistryFromPurchase(e.productId, vIdx, newSupplierId, newCost, newQty,
-      {confirms: true, unit: (pi && pi.items && pi.items[0]) ? pi.items[0].unit : ''});
+      {confirms: true, unit: billItem ? (billItem.unit || '') : ''});
   }
   return {ok: true, row, pi, overpaid, tookBack: takeBack, soldFromThis,
     billAdopted, billBefore, billAfter};
@@ -46939,6 +46981,21 @@ function ipeFillBillOptions(e, vIdx){
   if(linked){
     billSel.disabled = true;
     billSel.innerHTML = `<option value="">${esc(purchaseInvoiceNumberLabel(linked))} — ${esc(linked.supplierName || 'supplier')} — ${esc(fmtUGX(Math.round(purchaseInvoiceBalanceDue(linked))))} still owed (corrected with this save)</option>`;
+    /* WHICH LINE OF IT. A delivery against a buy order raises one bill
+       for the whole lorry, so "PINV-9 will be corrected with this save"
+       is true and reads as though the whole bill were about to move.
+       Only this item's line changes, and the rest of the lorry is not
+       this form's business. */
+    const lines = (linked.items || []).length;
+    if(lines > 1){
+      const mine = (linked.items || []).find(it=> samePiLineTarget(it, e.productId, vIdx));
+      note.style.display = '';
+      note.textContent = `${purchaseInvoiceNumberLabel(linked)} covers ${lines} lines — a whole delivery. Only `
+        + `${mine ? (mine.productName || e.label || e.productId) : (e.label || e.productId)} changes here; the other `
+        + `${lines - 1} ${lines - 1 === 1 ? 'line stays' : 'lines stay'} exactly as ${lines - 1 === 1 ? 'it is' : 'they are'}. `
+        + `What the bill comes to is worked out from all of them.`;
+      return;
+    }
     note.style.display = 'none'; note.textContent = '';
     return;
   }

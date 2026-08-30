@@ -314,20 +314,20 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     eq(bill.supplierId, 'S2', 'against the supplier who sent it');
     eq(bill.buyOrderId, o.id, 'and tied to the order it came off, so nothing has to be guessed later');
 
-    /* A DELIVERY IS NOT A ONE-LINE PURCHASE, and must not be marked as
-       one. isStockPurchaseRow admits `inv-purchase` rows to the
-       correction screen, and that screen repairs a bill by writing
-       pi.items[0] — one line. A delivery bill carries every line off
-       the lorry, so admitting it would let the owner correct the
-       cement and silently overwrite the wall angle's row with cement's
-       figures. The marker is the whole guard, so it is pinned here. */
+    /* A DELIVERY IS ITS OWN KIND OF PURCHASE, and says so.
+
+       The marker was a guard before the correction screen could repair
+       a bill of more than one line: that screen wrote pi.items[0], so
+       admitting a delivery would have let the owner correct the cement
+       and silently overwrite the wall angle with cement's figures.
+       delivery-correction.test.js now owns the repaired version — the
+       line is found by content and a bill with no matching line is
+       refused — so the marker's job here is only to say what the row
+       IS. It must still never be filed as a one-line purchase. */
     eq(data.stockLog.every((r) => r.source === 'buy-order'), true,
       'every shelf movement is marked as having come off an order');
     t.check(!/logRow.source = 'inv-purchase'; logRow.piId = billId/.test(src),
-      'and NOT as a one-line purchase — the correction screen writes pi.items[0], and a delivery bill has many');
-    t.check(/if\(e\.source === 'inv-purchase'\) return true;/.test(src)
-      && !/e\.source === 'buy-order'/.test(src),
-      'the correction screen still admits only the one-line kind, which is what makes the marker a guard rather than a label');
+      'and never as a one-line purchase — the two are different records and only one of them has a lorry behind it');
 
     const closed = s.buyOrderFor(o.id);
     eq(closed.state, 'arrived', 'the order is closed');
