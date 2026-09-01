@@ -194,6 +194,35 @@ There are already thirteen in the legacy file. A new one is not a fix,
 it is another one. The console uses the existing `.btn` family and one
 size modifier on it.
 
+### Text that will not fit — the truncation rule
+
+A shop's real data is longer than the box you drew for it. "Ssekitoleko
+Hardware", "Kato Construction Ltd", "Iron sheets — G28, 3m box profile".
+Three rules, and they came out of a fan-out where three separate agents
+produced the same fault:
+
+1. **An `<input>` cannot ellipsis.** It clips its value mid-glyph, with
+   no marker, no tooltip, and no way to read the rest without clicking
+   in. So a value that can exceed its box must NOT sit in a bare input:
+   size the field for the longest realistic value, or render it as text
+   until it is focused. This bit the quote screen's ghost inputs, where
+   "Mulongo Hardware" showed as "Mulongo Hardwar" — which reads as a
+   different supplier, not as a truncation.
+
+2. **Truncation is three declarations, never two.**
+   `overflow:hidden; text-overflow:ellipsis; white-space:nowrap` — all
+   three or none. `nowrap` plus `hidden` without `ellipsis` is a hard
+   cut with no sign that anything was removed. And a truncating element
+   inside a flex or grid parent needs **`min-width:0`**, or it refuses to
+   shrink and pushes its neighbours out of the box instead. Carry the
+   full value in a `title` so the pointer can still read it.
+
+3. **Money never truncates.** In any table the figure columns are sized
+   to their content and the text columns give way. A clipped figure is
+   not a shortened figure, it is a WRONG figure — "1,240,00" is a
+   tenth of "1,240,000" and looks entirely plausible. If something must
+   be cut, cut the name.
+
 ### Icons
 
 24 viewBox, `fill:none`, `stroke:currentColor`, **stroke-width 1.8**,

@@ -183,6 +183,45 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     `and every one of them is tabular${untabular.length ? ' — ' + untabular.join(', ') : ''}`);
 }
 
+/* ---------- text that will not fit ---------- */
+{
+  /* Truncation is THREE declarations. `nowrap` plus `hidden` without
+     `ellipsis` is a hard cut with no sign that anything was removed --
+     and a clipped supplier name reads as a different supplier, not as a
+     shortened one. A fan-out over five screen groups produced this same
+     fault three times, which makes it a missing rule rather than three
+     mistakes. */
+  const half = [];
+  [...layer.matchAll(/([^{}]+)\{([^}]*)\}/g)].forEach((m) => {
+    const sel = m[1].trim(), b = m[2];
+    const nowrap = /white-space:\s*nowrap/.test(b);
+    const hidden = /overflow:\s*hidden/.test(b);
+    const ell = /text-overflow:\s*ellipsis/.test(b);
+    if (ell && !(nowrap && hidden)) half.push(sel + ' (ellipsis without the other two)');
+    if (nowrap && hidden && !ell) half.push(sel + ' (a hard cut, no ellipsis)');
+  });
+  t.check(half.length === 0,
+    `truncation is all three declarations or none${half.length ? ' — ' + half.slice(0, 5).join(', ') : ''}`);
+
+  /* A truncating element that cannot shrink pushes its neighbours out of
+     the box instead of ellipsising. This is a FLEX/GRID ITEM problem
+     only: such an item's min-width defaults to its content, so it
+     refuses to go narrower than the longest word. A display:block
+     element has no such floor -- it truncates against its containing
+     block correctly on its own -- so it is exempt, and saying otherwise
+     would have had me "fix" .ow-q-b, which sits in a fixed 128px grid
+     track and was already right. */
+  const noMin = [];
+  [...layer.matchAll(/([^{}]+)\{([^}]*)\}/g)].forEach((m) => {
+    const sel = m[1].trim(), b = m[2];
+    if (!/text-overflow:\s*ellipsis/.test(b)) return;
+    if (/display:\s*block/.test(b)) return;
+    if (!/min-width:\s*0/.test(b) && !/flex:\s*1 1 auto/.test(b)) noMin.push(sel);
+  });
+  t.check(noMin.length === 0,
+    `and every truncating FLEX or GRID item can actually shrink${noMin.length ? ' — ' + noMin.slice(0, 5).join(', ') : ''}`);
+}
+
 /* ---------- the phone ---------- */
 {
   const phone = (/@media \(max-width:820px\)\{([\s\S]*)$/.exec(layer) || ['', ''])[1];
