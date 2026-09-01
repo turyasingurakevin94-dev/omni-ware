@@ -13,7 +13,7 @@
  * TWO HALVES, and the split matters.
  *
  *   THE CEILINGS. The stylesheet grew for a year and carries real
- *   disease: 32 font sizes in half-pixel steps, 30 radii, 62 shadows,
+ *   disease: 32 font sizes in half-pixel steps, 28 radii, 62 shadows,
  *   119 distinct colours. Those numbers cannot be fixed today and
  *   testing against zero would fail on line one. So they are frozen as
  *   CEILINGS. The count may fall — lower the number here when it does —
@@ -53,12 +53,33 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
      next person cannot quietly raise it back. */
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
-    'radii': [30, /border-radius:\s*([^;}]+)/g],
+    'radii': [28, /border-radius:\s*([^;}]+)/g],
     'shadows': [62, /box-shadow:\s*([^;}]+)/g],
     'distinct colours': [119, /#[0-9A-Fa-f]{6}\b/g],
   };
+  /* RESOLVE THE TOKENS BEFORE COUNTING.
+   *
+   * This gate counts distinct declaration TEXT, and that was wrong in a
+   * way it took a real commit to notice: adopting `var(--ow-r-pill)` in
+   * place of a hand-written `999px` raised the radius count by one and
+   * failed the check — the gate punishing the exact move it exists to
+   * encourage, while the browser rendered the identical corner.
+   *
+   * So every --ow-* value declared in :root is substituted first. A
+   * token now counts as the value it stands for: adopting one is free,
+   * inventing a thirty-first radius still fails. */
+  const tokens = new Map([...css.matchAll(/(--ow-[a-z0-9-]+):\s*([^;{}]+);/g)]
+    .map((m) => [m[1], m[2].trim()]));
+  const resolve = (v) => {
+    let out = v, guard = 0;
+    while (/var\(--ow-/.test(out) && guard++ < 5) {
+      out = out.replace(/var\((--ow-[a-z0-9-]+)(?:,[^)]*)?\)/g,
+        (whole, name) => (tokens.has(name) ? tokens.get(name) : whole));
+    }
+    return out;
+  };
   Object.entries(CEILING).forEach(([name, [max, re]]) => {
-    const found = new Set([...css.matchAll(re)].map(m => (m[1] || m[0]).trim().toUpperCase()));
+    const found = new Set([...css.matchAll(re)].map(m => resolve((m[1] || m[0]).trim()).toUpperCase()));
     t.check(found.size <= max,
       `${name}: ${found.size} (ceiling ${max})${found.size > max ? ' — something new was introduced' : ''}`);
     if (found.size < max) {

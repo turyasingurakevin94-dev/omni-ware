@@ -233,8 +233,16 @@ const INDEX = railIndex();
     'the phone sheet is built from the rail index, not from a second list');
   t.check(!/<button type="button" class="mms-item" data-tab=/.test(sheet),
     'and no hand-written destination rows survive in the markup to drift from it');
-  t.check(/it\.icon/.test(gen) && /class="mms-tile"/.test(gen),
+  t.check(/it\.icon/.test(gen) && /class="mms-row"/.test(gen),
     'every destination carries the rail’s own icon');
+  /* The count too, and read off the rail's own badge rather than worked
+     out again — every one of these numbers already has a function that
+     computes it and a place it is shown, and the first time two
+     reckonings disagreed the owner would have no way to know which was
+     true. */
+  t.check(/mmsCountHTML\(it\)/.test(gen)
+    && /querySelector\('\.nav-badge'\)/.test(extractFunction(src, 'mmsCountHTML', 'index.html')),
+    'and its count, read off that same rail row rather than reckoned a second time');
   t.check(/g\.name/.test(gen) && /mms-group-label/.test(gen),
     'and the rail’s own section names, so the two cannot file a screen differently');
 

@@ -78,8 +78,20 @@ const bar = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [''])[0
      nothing in it would be lit at all, which reads as a screen that
      arrived from nowhere. More has no data-tab, so the filter that
      lights the rest cannot reach it and it must be told. */
-  t.check(/moreBtn\.classList\.toggle\('active', !MMS_BAR_TABS\.includes\(tab\)\)/.test(src),
+  const sync = (/function mmsSyncLit\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/!MMS_BAR_TABS\.includes\(currentActiveTab\)/.test(sync),
     'More is lit whenever the open screen is not one of the bar’s own');
+  t.check(/sheetOpen\s*\?\s*isMore/.test(sync),
+    'and while its own sheet is open, More is the ONLY thing lit — the tab underneath goes dark, or two are lit and neither is where you are');
+  /* Decided in ONE place. The sheet opening, the sheet closing and a tab
+     change can all happen in a single tap, and two of them writing this
+     class from two places is how a bar comes to show a tab that is not
+     the one you are on. */
+  t.check(/\.mbn-btn'\)\.forEach/.test(sync) || /querySelectorAll\('\.mbn-btn'\)/.test(sync),
+    'because it writes the whole bar, not one button of it');
+  t.check(/function closeMobileMoreSheet\(\)\{[\s\S]{0,200}?mmsSyncLit\(\);/.test(src)
+    && /function openMobileMoreSheet\(\)\{[\s\S]{0,200}?mmsSyncLit\(\);/.test(src),
+    'both the opening and the closing go through it');
 }
 
 /* ---------- 4. the + button is gone, and stays gone ------------------ */

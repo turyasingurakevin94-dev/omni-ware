@@ -6604,7 +6604,13 @@
   .mbn-btn.active{background:transparent;color:var(--accent);}
   .mbn-btn.active .mbn-icon{color:var(--accent);}
   .mobile-more-sheet{
-    position:fixed;inset:0;z-index:95;background:var(--panel);
+    /* Stops short of the bottom bar rather than covering it. The bar is
+       where you were and where you are going back to; a sheet that hides
+       it makes "everything else" feel like a screen you have to escape
+       from instead of a drawer you pulled open. More stays lit while it
+       is open, because More is the door you came through. */
+    position:fixed;inset:0 0 calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom)) 0;
+    z-index:95;background:var(--panel);
     flex-direction:column;transform:translateY(100%);transition:transform .2s ease;
   }
   .mobile-more-sheet.show{transform:translateY(0);}
@@ -6714,35 +6720,65 @@
     width:38px;height:38px;border-radius:8px;background:var(--accent);color:#fff;flex-shrink:0;}
   .ap-send:hover{background:var(--ow-oxide-deep);}
   .ap-send:disabled{opacity:.45;cursor:not-allowed;}
+  /* The head is the shop's own dark chrome rather than white-on-white:
+     the sheet slides up over a light page, and a dark bar is what tells
+     you at a glance that you are on top of something rather than in it. */
   .mms-head{
-    display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-    padding:14px 16px;border-bottom:1px solid var(--line);
-    padding-top:calc(14px + env(safe-area-inset-top));
+    display:flex;align-items:center;gap:6px;flex-shrink:0;
+    padding:0 14px;height:46px;background:var(--ow-steel-950);
+    padding-top:env(safe-area-inset-top);
+    height:calc(46px + env(safe-area-inset-top));
   }
-  .mms-title{font-family:'Archivo Black',sans-serif;font-size:17px;color:var(--ink);}
-  .mms-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-  .mms-group{margin-bottom:14px;}
-  .mms-group-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;padding:0 4px 6px;}
-  /* Tiles, three across. Twenty-odd destinations as full-width rows was
-     about 1,400px of scrolling to reach Setup; as tiles the whole map is
-     roughly one screen, which is what a menu is for. Three columns
-     because the longest label -- "Purchase analytics" -- still breaks
-     into two readable lines at that width, and four would break it into
-     three. */
-  .mms-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
-  .mms-tile{
-    all:unset;box-sizing:border-box;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;
-    text-align:center;min-height:76px;padding:11px 5px 9px;border-radius:12px;
-    background:var(--ow-steel-050);border:1px solid transparent;color:var(--ink);
+  .mms-title{font-family:'Archivo Black',sans-serif;font-size:17px;color:var(--ow-paper);}
+  .mms-head .modal-close{color:var(--ow-steel-100);width:34px;height:34px;flex:none;order:-1;}
+  .mms-body{flex:1;overflow-y:auto;padding:16px 16px 24px;}
+  .mms-group{margin-bottom:6px;}
+  /* Ruled off to the right, so the line reads as the label's underline
+     rather than as one more row in the list under it. */
+  .mms-group-label{
+    display:flex;align-items:center;gap:12px;padding:18px 0 6px;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.08em;
+    text-transform:uppercase;color:var(--ow-ink-600);
   }
-  .mms-tile .nav-icon{
-    width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;
-    stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--ink-soft);
+  .mms-group-label::after{content:'';flex:1 1 auto;height:1px;background:var(--ow-rule-soft);}
+  /* ROWS, NOT TILES — and this reverses a measured decision, so it is
+     worth saying why.
+
+     The grid was chosen because thirty-odd destinations as full-width
+     rows is about two and a half screens of scrolling to reach Setup,
+     and as tiles the whole map is roughly one and a half. That
+     arithmetic still holds and the extra screen is a real cost.
+
+     What changed is the search box now sitting at the top of this
+     sheet. Scrolling is no longer how you reach a screen you can name;
+     it is how you BROWSE when you cannot. And browsing is what a grid
+     of centred 11.5px labels is worst at — every screen weighs the
+     same, the longest names break to two lines, and a tile has nowhere
+     to say that three orders are waiting on you. A row reads
+     left-to-right at a size you read at, and carries its count. */
+  .mms-row{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:14px;
+    width:100%;height:46px;color:var(--ow-ink-900);font-size:15px;
+    border-bottom:1px solid var(--ow-rule-soft);
   }
-  .mms-tile span{font-size:11.5px;font-weight:600;line-height:1.3;}
-  .mms-tile:active{background:var(--ow-steel-100);border-color:var(--line);}
-  .mms-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mms-group .mms-row:last-child{border-bottom:0;}
+  .mms-row .nav-icon{
+    width:19px;height:19px;flex:none;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--ow-ink-400);
+  }
+  .mms-row .mms-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The count, read straight off the rail's own badge — the same number
+     the desktop shows, never a second reckoning of it. */
+  .mms-row .mms-n{
+    flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);
+    background:var(--ow-oxide-soft);color:var(--ow-oxide);border-radius:var(--ow-r-pill);
+    padding:2px 8px;line-height:1.4;
+  }
+  .mms-row .mms-go{flex:none;width:16px;height:16px;color:var(--ow-steel-400);
+    fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .mms-row:active{background:var(--ow-paper-2);}
+  .mms-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
   /* The sheet's own door to the search. Sized like the field it opens,
      so it reads as a box you type into rather than as a row you go to. */
   .mms-search{
@@ -8182,10 +8218,12 @@
      shop rather than a word on a button. -->
 <div class="mobile-more-sheet" id="mobileMoreSheet">
   <div class="mms-head">
-    <span class="mms-title">Everything else</span>
-    <button type="button" class="modal-close" id="mobileMoreClose" aria-label="Close">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    <!-- Back, not close. This sheet is a place you went from the bar,
+         and the way out of it is the way you came in. -->
+    <button type="button" class="modal-close" id="mobileMoreClose" aria-label="Back">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
+    <span class="mms-title">Everything else</span>
   </div>
   <div class="mms-body">
     <!-- The door to the search, at the top of the list — because
@@ -17612,14 +17650,12 @@ function goToTab(tab){
   // lit only whichever appeared first in the document, so the sidebar
   // showed no active row for anything the top bar also carried.
   [...navButtons].filter(b=>b.dataset.tab===tab).forEach(b=>b.classList.add('active'));
-  /* The phone's bar carries five of the forty-one screens. On the other
-     thirty-six the bar would otherwise show nothing lit at all -- which
-     reads as a screen that arrived from nowhere. More is the door every
-     one of them was reached through, so More is what lights. It is the
-     one bar button with no data-tab, so it cannot be lit by the filter
-     above and has to be told here. */
-  const moreBtn = document.getElementById('mobileMoreBtn');
-  if(moreBtn) moreBtn.classList.toggle('active', !MMS_BAR_TABS.includes(tab));
+  /* The sheet no longer covers the bar, so a tab can be tapped from
+     underneath it. Going anywhere closes it -- otherwise the sheet
+     stays open over the screen it was used to reach. Closing it also
+     re-reads which bar button should be lit, so More is not told twice
+     from two places. */
+  closeMobileMoreSheet();
   updateTopbarWhere(tab);
   /* The rail is taller than the viewport, so the row that just became
      the active one can easily be off-screen -- which is how a nav that
@@ -18546,11 +18582,44 @@ function updateMobileTopbarTitle(tab){
   if(el) el.textContent = h1 ? h1.textContent : '';
 }
 updateMobileTopbarTitle('quote'); // matches the tab that's active by default in the static HTML
+/* WHICH BAR BUTTON IS LIT, decided in one place.
+
+   The bar carries five of the forty-one screens. On the other
+   thirty-six nothing in it would be lit at all, which reads as a screen
+   that arrived from nowhere -- so More lights, because More is the door
+   every one of them was reached through. It is also lit while its own
+   sheet is open, for the same reason: that is where you are.
+
+   goToTab lights every `nav button[data-tab]` matching the tab, which
+   reaches the rail and the bar alike and is right for the rail. On the
+   bar it is not the whole answer: More has no data-tab so it can never
+   be lit that way, and while the sheet is open the tab UNDER it must go
+   dark or two things are lit at once and neither is where you are. So
+   this runs after, over the bar only, and is the single authority on
+   it -- the sheet opening, the sheet closing and a tab change can all
+   happen in one tap, and two writers would disagree on some of them. */
+function mmsSyncLit(){
+  const bar = document.getElementById('mobileBottomnav');
+  if(!bar) return;
+  const sheetOpen = document.getElementById('mobileMoreSheet').classList.contains('show');
+  bar.querySelectorAll('.mbn-btn').forEach(b=>{
+    const isMore = b.id === 'mobileMoreBtn';
+    const lit = sheetOpen
+      ? isMore
+      : isMore ? !MMS_BAR_TABS.includes(currentActiveTab)
+               : b.dataset.tab === currentActiveTab;
+    b.classList.toggle('active', lit);
+  });
+}
 function openMobileMoreSheet(){
   mmsRenderDestinations();
   document.getElementById('mobileMoreSheet').classList.add('show');
+  mmsSyncLit();
 }
-function closeMobileMoreSheet(){ document.getElementById('mobileMoreSheet').classList.remove('show'); }
+function closeMobileMoreSheet(){
+  document.getElementById('mobileMoreSheet').classList.remove('show');
+  mmsSyncLit();
+}
 document.getElementById('mobileMoreBtn').addEventListener('click', openMobileMoreSheet);
 document.getElementById('mobileMoreClose').addEventListener('click', closeMobileMoreSheet);
 
@@ -18584,11 +18653,25 @@ function mmsRenderDestinations(){
   });
   wrap.innerHTML = groups.map(g=>`
     <div class="mms-group">
-      ${g.name ? `<div class="mms-group-label">${esc(g.name)}</div>` : ''}
-      <div class="mms-grid">${g.items.map(it=>
-        `<button type="button" class="mms-tile" data-tab="${esc(it.tab)}">${it.icon}<span>${esc(it.label)}</span></button>`
-      ).join('')}</div>
+      ${g.name ? `<div class="mms-group-label"><span>${esc(g.name)}</span></div>` : ''}
+      ${g.items.map(it=>
+        `<button type="button" class="mms-row" data-tab="${esc(it.tab)}">${it.icon}`
+        + `<span class="mms-label">${esc(it.label)}</span>${mmsCountHTML(it)}${MMS_GO_ICON}</button>`
+      ).join('')}
     </div>`).join('');
+}
+const MMS_GO_ICON = '<svg class="mms-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+/* Read straight off the rail's own badge rather than worked out again
+   here. Every one of these counts already has a function that computes
+   it and a place it is shown; a second reckoning would be a second thing
+   to keep right, and the first time they disagreed the owner would have
+   no way to know which was true. */
+function mmsCountHTML(entry){
+  const b = entry.el && entry.el.querySelector ? entry.el.querySelector('.nav-badge') : null;
+  if(!b || b.hidden) return '';
+  const n = (b.textContent || '').trim();
+  if(!n) return '';
+  return `<span class="mms-n" title="${esc(b.title || '')}">${esc(n)}</span>`;
 }
 /* Delegated: the tiles are built on each open, and a listener bound to
    the markup that was there at parse time would be bound to nothing. */
