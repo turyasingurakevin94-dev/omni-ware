@@ -253,8 +253,13 @@ const src = read('index.html');
 {
   t.check(/\.q-stickybar\{left:0;bottom:calc\(var\(--mobile-bottomnav-h\) \+ env\(safe-area-inset-bottom, 0px\)\)/.test(src),
     'on a phone the bar sits ABOVE the bottom nav — both are fixed to the bottom, and the nav covered it');
-  t.check(/body\.on-quote-tab \.mobile-fab\{display:none;\}/.test(src),
-    'and the FAB — whose only job is opening this page — yields while the page is open');
+  /* There used to be a rule here hiding the + button while this page
+     was open, because its only job was opening this very page and it
+     otherwise floated over the totals. The bar now carries Sell, which
+     is the same door, so the button is gone and so is the rule — and
+     nothing may quietly bring either back. */
+  t.check(!/mobile-fab/.test(src),
+    'the + button is gone from this page’s rules — Sell in the bar is the same door');
   t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:150px;\}/.test(src),
     'with the reserve covering nav plus bar so the last row clears both');
 }

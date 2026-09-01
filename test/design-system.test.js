@@ -13,7 +13,7 @@
  * TWO HALVES, and the split matters.
  *
  *   THE CEILINGS. The stylesheet grew for a year and carries real
- *   disease: 32 font sizes in half-pixel steps, 30 radii, 63 shadows,
+ *   disease: 32 font sizes in half-pixel steps, 30 radii, 62 shadows,
  *   119 distinct colours. Those numbers cannot be fixed today and
  *   testing against zero would fail on line one. So they are frozen as
  *   CEILINGS. The count may fall — lower the number here when it does —
@@ -54,7 +54,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
     'radii': [30, /border-radius:\s*([^;}]+)/g],
-    'shadows': [63, /box-shadow:\s*([^;}]+)/g],
+    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
     'distinct colours': [119, /#[0-9A-Fa-f]{6}\b/g],
   };
   Object.entries(CEILING).forEach(([name, [max, re]]) => {

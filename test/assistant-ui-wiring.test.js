@@ -35,8 +35,12 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
     'a worker-only login sees neither the panel nor its launchers — the topbar survives worker mode, so the launcher must be named');
   const loadingBlock = (/body\.app-loading[\s\S]{0,400}?display:none !important;\}/.exec(src) || [''])[0];
   t.check(/\.assistant-panel/.test(loadingBlock), 'nor does the loading screen');
-  t.check(/\.mobile-topbar, \.mobile-bottomnav, \.mobile-fab, \.mobile-more-sheet, \.assistant-panel\{display:none !important;\}/.test(src),
+  t.check(/\.mobile-topbar, \.mobile-bottomnav, \.mobile-more-sheet, \.assistant-panel\{display:none !important;\}/.test(src),
     'nor the printer — fixed chrome on an invoice sheet is the fault this block exists for');
+  /* The list shed .mobile-fab when the + button was removed from the
+     bar. It has to shed it: a print rule naming an element that does
+     not exist reads as cover for chrome that IS still escaping. */
+  t.check(!/mobile-fab/.test(src), 'and it names only chrome that still exists');
 }
 
 /* ---------- 2. where it sits ----------------------------------------- */

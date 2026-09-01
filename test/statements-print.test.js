@@ -220,10 +220,13 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
     'an open modal is hidden outright — it outranks the blanket hide and would print its card over the document');
   t.check(hidden('.lightbox-overlay'),
     'and so is the lightbox, which wins the same way');
-  t.check(hidden('.mobile-fab'),
-    'the phone action button is hidden — all:unset resets visibility, so the blanket hide never touched it');
+  /* all:unset resets VISIBILITY, so the blanket `body *` hide never
+     reached any of the phone chrome — each one is fixed, outside the
+     sections, and printed on top of the sheet. .mobile-fab was on this
+     list until the + button was removed from the bar; the rest still
+     open with all:unset and still need naming. */
   ['.mobile-topbar', '.mobile-bottomnav', '.mobile-more-sheet'].forEach((sel) => {
-    t.check(hidden(sel), `and so is ${sel}, fixed and outside the sections like the rest of the phone chrome`);
+    t.check(hidden(sel), `${sel} is hidden — fixed, outside the sections, and it opens with all:unset`);
   });
 
   /* The two bubbles win the visibility fight the same way the modal
@@ -244,7 +247,7 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
      visibility pair and would each need their own copy. */
   const injectedSheets = [...code.matchAll(/styleEl\.textContent = `([\s\S]*?)`;/g)].map((m) => m[1]);
   t.check(injectedSheets.length >= 4, `the per-path sheets are found (${injectedSheets.length})`);
-  t.check(injectedSheets.every((s) => !/modal-overlay|mobile-fab/.test(s)),
+  t.check(injectedSheets.every((s) => !/modal-overlay|mobile-bottomnav/.test(s)),
     'and none of them repeats the chrome rules — one copy, in the shared block, covers every print path');
 }
 

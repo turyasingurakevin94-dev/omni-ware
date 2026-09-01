@@ -96,7 +96,6 @@
   body.app-loading .topbar,
   body.app-loading .mobile-topbar,
   body.app-loading .mobile-bottomnav,
-  body.app-loading .mobile-fab,
   body.app-loading .assistant-panel{display:none !important;}
   .icon{width:16px;height:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;}
 
@@ -1592,9 +1591,8 @@
        Nearly all sit inside `main > section`, already display:none
        above, so nothing came of it. The four that do not are these:
        position:fixed, outside the sections, and on a phone-width screen
-       they print. The orange action button came out as a solid disc in
-       the corner of every sheet. */
-    .mobile-topbar, .mobile-bottomnav, .mobile-fab, .mobile-more-sheet, .assistant-panel{display:none !important;}
+       they print. */
+    .mobile-topbar, .mobile-bottomnav, .mobile-more-sheet, .assistant-panel{display:none !important;}
     #printArea h2{font-family:'Archivo Black',sans-serif;font-size:20px;margin:0 0 4px 0;}
     #printArea .print-meta{font-size:12px;color:#555;margin-bottom:16px;}
     #printArea table{width:100%;border-collapse:collapse;}
@@ -6534,10 +6532,10 @@
   .info-banner.warn .icon{color:var(--accent-ink);}
 
   /* ==================== Mobile shell ====================
-     Bottom tab bar + FAB + top bar + "More" sheet, shown only at the
-     phone breakpoint below. Hidden by default so desktop is unaffected. */
+     Bottom tab bar + top bar + "More" sheet, shown only at the phone
+     breakpoint below. Hidden by default so desktop is unaffected. */
   :root{ --mobile-topbar-h:52px; --mobile-bottomnav-h:60px; }
-  .mobile-topbar, .mobile-bottomnav, .mobile-fab, .mobile-more-sheet{display:none;}
+  .mobile-topbar, .mobile-bottomnav, .mobile-more-sheet{display:none;}
   .mobile-topbar{
     position:fixed;top:0;left:0;right:0;height:var(--mobile-topbar-h);z-index:90;
     background:var(--panel);border-bottom:1px solid var(--line);
@@ -6562,8 +6560,22 @@
     all:unset;box-sizing:border-box;flex:1;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:3px;cursor:pointer;color:var(--ink-soft);min-width:0;
   }
-  .mbn-icon{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  .mbn-label{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mbn-icon{width:24px;height:24px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* Filled when you are on it, drawn in outline when you are not.
+     Every mark carries both path sets and this shows one of them: a
+     shape change is legible at arm's length, in daylight, through a
+     screen protector, where a colour change on its own is not — and it
+     is what every phone in the shop already teaches its owner to
+     expect of a bar along the bottom. */
+  .mbn-icon .mbn-f{display:none;}
+  .mbn-btn.active .mbn-icon .mbn-o{display:none;}
+  .mbn-btn.active .mbn-icon .mbn-f{display:inline;}
+  /* Solid shapes inside the filled set. evenodd so a mark can carry its
+     own hole -- the tag's punch, the note's medallion, the bars inside
+     the Manager's bubble -- instead of needing the bar's background
+     colour painted over itself. */
+  .mbn-icon .sld{fill:currentColor;stroke:none;fill-rule:evenodd;}
+  .mbn-label{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   /* The bar is a <nav> on purpose, so goToTab's `nav button[data-tab]`
      finds it -- which also means the sidebar's
      `nav button.active{background:var(--accent);color:#fff}` reaches it
@@ -6575,19 +6587,6 @@
      it. */
   .mbn-btn.active{background:transparent;color:var(--accent);}
   .mbn-btn.active .mbn-icon{color:var(--accent);}
-  .mobile-fab{
-    /* `all:unset` resets display too, so it has to be re-stated as none
-       right here rather than relying on the shared hide-rule above --
-       otherwise this rule's own `all:unset` (same specificity, later in
-       the stylesheet) would win and show the FAB on desktop. Switched to
-       flex only inside the phone breakpoint below. */
-    all:unset;display:none;box-sizing:border-box;position:fixed;
-    right:16px;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 14px);
-    width:52px;height:52px;border-radius:50%;z-index:91;cursor:pointer;
-    background:var(--accent);color:#fff;
-    box-shadow:0 6px 16px rgba(242,169,60,0.45);
-  }
-  .mobile-fab .icon{width:22px;height:22px;}
   .mobile-more-sheet{
     position:fixed;inset:0;z-index:95;background:var(--panel);
     flex-direction:column;transform:translateY(100%);transition:transform .2s ease;
@@ -6743,7 +6742,6 @@
        A second bar of menus would just take a fifth of the screen. */
     .topbar{display:none;}
     .mobile-topbar, .mobile-bottomnav{display:flex;}
-    .mobile-fab{display:flex;align-items:center;justify-content:center;}
     .mobile-more-sheet.show{display:flex;}
     main{
       padding:calc(var(--mobile-topbar-h) + 16px) 16px calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 24px);
@@ -6817,10 +6815,8 @@
        thumb. */
     /* Above the bottom nav, not underneath it: both are fixed to the
        bottom, and without the offset the nav covered the bar's second
-       line. The FAB's one job is opening this very page, so it yields
-       while the page is open instead of floating over the totals. */
+       line. */
     .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));gap:8px;padding:8px 12px;}
-    body.on-quote-tab .mobile-fab{display:none;}
     .q-stickybar-actions{margin-left:0;width:100%;justify-content:flex-end;flex-wrap:wrap;}
     body.on-quote-tab .quote-layout{padding-bottom:150px;}
     /* Add New Quote: swap the 8-column table for stacked cards -- there's
@@ -6842,11 +6838,10 @@
   }
 
   /* Worker mode: a staff-only login sees nothing but the pick & pack view --
-     the normal admin chrome (sidebar, mobile nav/topbar/FAB) is hidden. */
+     the normal admin chrome (sidebar, mobile nav and topbar) is hidden. */
   body.worker-only-mode .sidebar,
   body.worker-only-mode .mobile-bottomnav,
   body.worker-only-mode .mobile-topbar,
-  body.worker-only-mode .mobile-fab,
   body.worker-only-mode .mobile-more-sheet,
   /* The desktop topbar survives worker mode, so its assistant launcher
      must be named here or a worker-only login could open the owner's
@@ -7998,32 +7993,48 @@
   </button>
 </div>
 
+<!-- The bar the owner approved: the two loops the shop runs on all day,
+     the brain, and everything else. Each mark carries two path sets — a
+     stroked one and a filled one — and .mbn-btn.active swaps between
+     them, because a shape change reads at arm's length in a yard where
+     a colour change alone does not. -->
 <nav class="mobile-bottomnav" id="mobileBottomnav">
   <button type="button" class="mbn-btn" data-tab="dashboard">
-    <svg class="mbn-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="9" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>
-    <span class="mbn-label">Home</span>
+    <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="mbn-o"><path d="M12 3.4v2.3"/><path d="m5.4 6.5 1.6 1.6"/><path d="m18.6 6.5-1.6 1.6"/><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0"/><path d="M2.4 16.4h19.2"/><path d="M5.6 20.4h12.8"/></g>
+      <g class="mbn-f"><path class="sld" d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"/><path d="M12 3.4v2.3"/><path d="m5.4 6.5 1.6 1.6"/><path d="m18.6 6.5-1.6 1.6"/><path d="M2.4 16.4h19.2"/><path d="M5.6 20.4h12.8"/></g>
+    </svg>
+    <span class="mbn-label">Today</span>
   </button>
-  <button type="button" class="mbn-btn" data-tab="quote-saved">
-    <svg class="mbn-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    <span class="mbn-label">Orders</span>
-  </button>
-  <button type="button" class="mbn-btn" data-tab="inventory">
-    <svg class="mbn-icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M3.3 8.5 12 13l8.7-4.5"/></svg>
-    <span class="mbn-label">Inventory</span>
+  <button type="button" class="mbn-btn" data-tab="quote">
+    <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="mbn-o"><path d="M11.6 3.2H5.4A2.2 2.2 0 0 0 3.2 5.4v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"/><circle cx="7.9" cy="7.9" r="1.45"/></g>
+      <g class="mbn-f"><path class="sld" d="M11.6 3.2H5.4A2.2 2.2 0 0 0 3.2 5.4v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6zM7.9 6.45a1.45 1.45 0 1 1 0 2.9 1.45 1.45 0 0 1 0-2.9z"/></g>
+    </svg>
+    <span class="mbn-label">Sell</span>
   </button>
   <button type="button" class="mbn-btn" data-tab="cashbook">
-    <svg class="mbn-icon" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12.3h3.5v2.9H16a1.45 1.45 0 0 1 0-2.9z"/><path d="M3 9.5h18"/></svg>
-    <span class="mbn-label">Cash</span>
+    <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="mbn-o"><path d="M18.8 12.31V6.4A1.8 1.8 0 0 0 17 4.6H4A1.8 1.8 0 0 0 2.2 6.4v6.4A1.8 1.8 0 0 0 4 14.6h10.33"/><circle cx="10.5" cy="9.6" r="2.2"/><circle cx="19.2" cy="18.6" r="3.7"/></g>
+      <g class="mbn-f"><path class="sld" d="M18.8 12.31V6.4A1.8 1.8 0 0 0 17 4.6H4A1.8 1.8 0 0 0 2.2 6.4v6.4A1.8 1.8 0 0 0 4 14.6h10.33A6.3 6.3 0 0 1 18.8 12.31ZM10.5 7.4a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"/><circle class="sld" cx="19.2" cy="18.6" r="3.7"/></g>
+    </svg>
+    <span class="mbn-label">Money</span>
+  </button>
+  <button type="button" class="mbn-btn" data-tab="manager">
+    <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="mbn-o"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8.2 13.4v-2.6"/><path d="M12 13.4V8.4"/><path d="M15.8 13.4V6.4"/></g>
+      <g class="mbn-f"><path class="sld" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM7.3 13.4h1.8v-2.6H7.3zM11.1 13.4h1.8V8.4h-1.8zM14.9 13.4h1.8V6.4h-1.8z"/></g>
+    </svg>
+    <span class="mbn-label">Manager</span>
   </button>
   <button type="button" class="mbn-btn" id="mobileMoreBtn">
-    <svg class="mbn-icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g class="mbn-o"><rect x="2.6" y="2.6" width="14.6" height="5.2" rx="1.5"/><rect x="4.7" y="9.6" width="14.6" height="5.2" rx="1.5"/><rect x="6.8" y="16.6" width="14.6" height="5.2" rx="1.5"/></g>
+      <g class="mbn-f"><rect class="sld" x="2.6" y="2.6" width="14.6" height="5.2" rx="1.5"/><rect class="sld" x="4.7" y="9.6" width="14.6" height="5.2" rx="1.5"/><rect class="sld" x="6.8" y="16.6" width="14.6" height="5.2" rx="1.5"/></g>
+    </svg>
     <span class="mbn-label">More</span>
   </button>
 </nav>
-
-<button type="button" class="mobile-fab" id="mobileFab" title="Add new quote">
-  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-</button>
 
 <!-- Full-screen "More" sheet — every nav destination not on the bottom bar,
      grouped the same way the desktop sidebar groups them. -->
@@ -17446,6 +17457,14 @@ function goToTab(tab){
   // lit only whichever appeared first in the document, so the sidebar
   // showed no active row for anything the top bar also carried.
   [...navButtons].filter(b=>b.dataset.tab===tab).forEach(b=>b.classList.add('active'));
+  /* The phone's bar carries five of the forty-one screens. On the other
+     thirty-six the bar would otherwise show nothing lit at all -- which
+     reads as a screen that arrived from nowhere. More is the door every
+     one of them was reached through, so More is what lights. It is the
+     one bar button with no data-tab, so it cannot be lit by the filter
+     above and has to be told here. */
+  const moreBtn = document.getElementById('mobileMoreBtn');
+  if(moreBtn) moreBtn.classList.toggle('active', !MMS_BAR_TABS.includes(tab));
   updateTopbarWhere(tab);
   /* The rail is taller than the viewport, so the row that just became
      the active one can easily be off-screen -- which is how a nav that
@@ -18238,7 +18257,6 @@ function updateMobileTopbarTitle(tab){
   if(el) el.textContent = h1 ? h1.textContent : '';
 }
 updateMobileTopbarTitle('quote'); // matches the tab that's active by default in the static HTML
-document.getElementById('mobileFab').addEventListener('click', ()=> goToTab('quote'));
 function openMobileMoreSheet(){
   mmsRenderDestinations();
   document.getElementById('mobileMoreSheet').classList.add('show');
@@ -18248,8 +18266,12 @@ document.getElementById('mobileMoreBtn').addEventListener('click', openMobileMor
 document.getElementById('mobileMoreClose').addEventListener('click', closeMobileMoreSheet);
 
 /* The four the bottom bar already carries. Repeating them here would put
-   two doors on one room, which is the thing the rail rework removed. */
-const MMS_BAR_TABS = ['dashboard', 'quote-saved', 'inventory', 'cashbook'];
+   two doors on one room, which is the thing the rail rework removed.
+   Order tracking and Inventory come BACK to the sheet by the same
+   arithmetic the moment they leave the bar -- the sheet is the rail
+   minus this list, so nothing has to be added anywhere to un-hide
+   them. */
+const MMS_BAR_TABS = ['dashboard', 'quote', 'cashbook', 'manager'];
 /* Drawn from NAV_INDEX, which is itself read off the rail. Icons come
    with it -- the copy this replaces had none, so the phone read a wall
    of same-sized words while the desktop got a glance -- and so does the
