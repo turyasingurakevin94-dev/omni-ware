@@ -154,6 +154,34 @@ const src = read('index.html');
   });
   t.check(blank.length === 0,
     `and every one of them resolves a title${blank.length ? ' — blank on the phone: ' + blank.join(', ') : ''}`);
+
+  /* RESOLVING A TITLE AND PAINTING ONE ARE NOW DIFFERENT THINGS, and the
+     difference has to be written down or the check above quietly stops
+     meaning anything.
+
+     The name used to sit in the phone's bar always, which meant it
+     appeared TWICE on every screen — once in 15px in the bar and again
+     immediately below it as the page's own 28px heading. Taking it out
+     of the bar fixes that and breaks something else: scroll a list of
+     two hundred customers and nothing anywhere says which screen you
+     are on.
+
+     So the bar carries it exactly when the page's own heading does not.
+     One name on screen at any moment, and always one. The blank is a
+     position, never the accident this section was written for — a
+     screen whose title the function cannot find, which is still what
+     the check above catches. */
+  t.check(/mtTitleName = mtTitleEl \?/.test(fn),
+    'the name is still resolved for every screen, on every move');
+  t.check(/mtTitleShown = false;/.test(fn) && /el\.textContent = '';/.test(fn),
+    'and cleared on arrival, so the bar never keeps the last screen’s name');
+  const sync = extractFunction(src, 'syncMobileTopbarTitle', 'index.html');
+  t.check(/getBoundingClientRect\(\)\.bottom < bar\.getBoundingClientRect\(\)\.bottom/.test(sync),
+    'and painted once the page’s own heading has passed under the bar, not before');
+  t.check(/if\(past === mtTitleShown\) return;/.test(sync),
+    'written only on the crossing — this runs on every scroll event');
+  t.check(/addEventListener\('scroll', syncMobileTopbarTitle, \{ passive: true \}\)/.test(src),
+    'and it is passive, because a scroll handler that can block scrolling is worse than no title');
 }
 
 process.exit(t.done() ? 1 : 0);

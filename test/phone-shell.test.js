@@ -143,4 +143,43 @@ const bar = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [''])[0
     `and it is at least 56px tall, so a fifth of it is still a thumb-sized target (${tap && tap[1]}px)`);
 }
 
+/* ---------- 7. nothing reads MMS_BAR_TABS before it exists ---------- */
+/*
+ * THE OUTAGE SHAPE, AND IT NEARLY HAPPENED AGAIN.
+ *
+ * MMS_BAR_TABS is a `const`, so it is in the temporal dead zone until
+ * its own line runs. The script has one top-level call —
+ * `updateMobileTopbarTitle('quote')`, which paints the phone's bar for
+ * the tab the static HTML opens on — and that function now reads the
+ * list. Declared after the call, it threw a ReferenceError during the
+ * initial script run, which aborted everything below it and left the
+ * app with half its state uninitialised. Not a wrong value: a script
+ * that stopped, which is exactly how this app went dark once before.
+ *
+ * The check is general for this constant rather than for that one call:
+ * every bare top-level call, in order, and if the function it names
+ * reads MMS_BAR_TABS then the declaration has to come first.
+ */
+{
+  const decl = src.indexOf('const MMS_BAR_TABS');
+  t.check(decl > 0, 'the list is declared');
+
+  /* Top-level statements only: a call at column 0 inside the inline
+     script, not one indented inside a function or a handler. */
+  const topCalls = [...src.matchAll(/\n([a-zA-Z_$][\w$]*)\(/g)]
+    .map((m) => ({ name: m[1], at: m.index + 1 }))
+    .filter((c) => !['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'typeof'].includes(c.name));
+  t.check(topCalls.length > 0, `top-level calls found (${topCalls.length})`);
+
+  const offenders = topCalls.filter((c) => {
+    if (c.at > decl) return false;                 // runs after the const: fine
+    const fn = new RegExp(`function ${c.name}\\(`).exec(src);
+    if (!fn) return false;
+    const body = src.slice(fn.index, src.indexOf('\n}', fn.index));
+    return /MMS_BAR_TABS/.test(body);
+  });
+  t.check(offenders.length === 0,
+    `no top-level call before the declaration reads it${offenders.length ? ' — ' + offenders.map((o) => o.name).join(', ') : ''}`);
+}
+
 process.exit(t.done() ? 1 : 0);
