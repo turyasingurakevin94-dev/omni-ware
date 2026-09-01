@@ -1,0 +1,205 @@
+#!/usr/bin/env node
+'use strict';
+/*
+ * The ratchet.
+ *
+ * This app is being redesigned screen by screen, and some of that work
+ * will be done by people and agents who did not sit through the year of
+ * decisions behind it. A document explaining the house style is a
+ * document; this is a gate. Anything that widens the palette, the type
+ * ramp, the radii or the shadows fails here, and `npm test` fails with
+ * it.
+ *
+ * TWO HALVES, and the split matters.
+ *
+ *   THE CEILINGS. The stylesheet grew for a year and carries real
+ *   disease: 32 font sizes in half-pixel steps, 30 radii, 63 shadows,
+ *   119 distinct colours. Those numbers cannot be fixed today and
+ *   testing against zero would fail on line one. So they are frozen as
+ *   CEILINGS. The count may fall — lower the number here when it does —
+ *   and it may never rise. A 33rd font size or a 31st radius fails.
+ *   That makes the redesign monotonic: every session leaves the file
+ *   cleaner than it found it, whoever does the session.
+ *
+ *   THE LAYER. New work lives in the .ow- layer and is held to the
+ *   actual system: the ramp, four weights, three families, four radii,
+ *   one elevation, the ten-step space scale — and contrast.
+ *
+ * WHY CONTRAST IS IN A TEST. This app once painted amber ink on an
+ * oxide fill: dark olive on red, 1.26:1, the worst pairing available in
+ * its own palette, on a phone used outdoors in Uganda. Nobody caught it
+ * by looking. The arithmetic catches it every time.
+ *
+ * Run: node test/design-system.test.js   (or: npm test)
+ */
+const { read, createReporter } = require('./_extract');
+
+const t = createReporter('design system');
+const src = read('index.html');
+
+const styleStart = src.indexOf('<style>');
+const styleEnd = src.indexOf('\n</style>\n');
+const cssRaw = src.slice(styleStart, styleEnd);
+const css = cssRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+const markAt = src.indexOf('THE OW LAYER');
+const layerRaw = src.slice(src.lastIndexOf('/*', markAt), styleEnd);
+const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+/* ---------- the ceilings ---------- */
+{
+  /* Measured on the day this file was written. Every one of these is a
+     ceiling, never a target: lower it when the count falls, and the
+     next person cannot quietly raise it back. */
+  const CEILING = {
+    'font sizes': [32, /font-size:\s*([\d.]+)px/g],
+    'radii': [30, /border-radius:\s*([^;}]+)/g],
+    'shadows': [63, /box-shadow:\s*([^;}]+)/g],
+    'distinct colours': [119, /#[0-9A-Fa-f]{6}\b/g],
+  };
+  Object.entries(CEILING).forEach(([name, [max, re]]) => {
+    const found = new Set([...css.matchAll(re)].map(m => (m[1] || m[0]).trim().toUpperCase()));
+    t.check(found.size <= max,
+      `${name}: ${found.size} (ceiling ${max})${found.size > max ? ' — something new was introduced' : ''}`);
+    if (found.size < max) {
+      t.check(false, `${name} fell to ${found.size} — lower the ceiling in this file to lock the gain in`);
+    }
+  });
+
+  /* Two weights the @import does not load. The browser synthesises them,
+     which is why some headings in the old screens look thick and muddy.
+     They may not spread. */
+  [['650', 8], ['800', 12]].forEach(([w, max]) => {
+    const n = (css.match(new RegExp(`font-weight:\\s*${w}`, 'g')) || []).length;
+    t.check(n <= max, `weight ${w} is used ${n} times (ceiling ${max}) — it is not loaded and is faked by the browser`);
+  });
+}
+
+/* ---------- contrast ---------- */
+{
+  const hex = (name) => (new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`).exec(css) || [])[1];
+  const lum = (h) => {
+    const c = [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255)
+      .map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4)));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const ratio = (a, b) => {
+    const la = lum(a), lb = lum(b);
+    return Math.round(((Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)) * 100) / 100;
+  };
+
+  const PAPER = hex('--ow-paper'), GROUND = hex('--ow-steel-050'), NAVY = hex('--ow-steel-950');
+  t.check(!!PAPER && !!GROUND && !!NAVY, 'the grounds are declared and readable');
+
+  /* Every pairing the system actually asserts, with the floor that
+     applies to it. 4.5 is the small-text floor; 3 is allowed only where
+     the type is genuinely large. */
+  const PAIRS = [
+    ['--ow-ink-900', PAPER, 4.5, 'body text on a panel'],
+    ['--ow-ink-900', GROUND, 4.5, 'body text on the page'],
+    ['--ow-ink-600', PAPER, 4.5, 'secondary text on a panel'],
+    ['--ow-ink-600', GROUND, 4.5, 'secondary text on the page — this is the caption colour'],
+    ['--ow-oxide', PAPER, 4.5, 'the accent as text'],
+    ['--ow-verdigris', PAPER, 4.5, 'good, as text'],
+    ['--ow-crimson', PAPER, 4.5, 'bad, as text'],
+    ['--ow-amber-ink', hex('--ow-amber-soft'), 4.5, 'caution ink on its own ground'],
+    ['--ow-oxide-deep', hex('--ow-oxide-soft'), 4.5, 'chip ink on chip ground'],
+  ];
+  PAIRS.forEach(([tok, ground, floor, why]) => {
+    const c = hex(tok);
+    const r = c && ground ? ratio(c, ground) : 0;
+    t.check(r >= floor, `${r}:1 — ${tok} on ${ground} (needs ${floor}) · ${why}`);
+  });
+
+  t.check(ratio(PAPER, hex('--ow-oxide')) >= 4.5,
+    `${ratio(PAPER, hex('--ow-oxide'))}:1 — white on an oxide fill, which is what every accent button is`);
+
+  /* THE PAIRING THAT MUST NEVER RETURN. --ow-amber-ink is dark ink FOR
+     amber grounds. On the oxide fill it is 1.26:1. The app shipped it
+     once, on the phone's tab bar, and it took a screenshot from the
+     owner to find. */
+  t.check(ratio(hex('--ow-amber-ink'), hex('--ow-oxide')) < 2,
+    'amber ink on oxide really is as bad as the comment says (this asserts the arithmetic, not the usage)');
+  t.check(!/background:\s*var\(--ow-oxide\)[^}]*color:\s*var\(--ow-amber-ink\)/.test(layer)
+       && !/color:\s*var\(--ow-amber-ink\)[^}]*background:\s*var\(--ow-oxide\)/.test(layer),
+    'and nothing in the layer puts them together');
+
+  /* --ow-ink-400 is 3.12:1 on paper and 2.61:1 on the page ground. It
+     is a LARGE-TEXT colour and there is no room for a third grey: the
+     next value that clears 4.5 on the ground is --ow-ink-600 itself.
+     So small text uses ink-600, and this is where that is enforced. */
+  const small = [];
+  [...layer.matchAll(/([^{}]+)\{([^}]*)\}/g)].forEach((m) => {
+    const sel = m[1].trim(), body = m[2];
+    if (!/--ow-ink-400/.test(body)) return;
+    const fs = /font-size:\s*(?:var\(--ow-t-(\d+)\)|([\d.]+)px)/.exec(body);
+    if (!fs) return;                       // inherits; judged by its parent
+    const px = Number(fs[1] || fs[2]);
+    if (px < 14) small.push(`${sel} (${px}px)`);
+  });
+  t.check(small.length === 0,
+    `no rule in the layer puts text under 14px in --ow-ink-400${small.length ? ' — ' + small.slice(0, 6).join(', ') : ''}`);
+}
+
+/* ---------- the layer keeps to the system ---------- */
+{
+  const RAMP = new Set([11, 12, 13, 14, 16, 20, 28, 19, 26, 15, 22, 21, 23]);
+  const sizes = [...layer.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
+  const off = [...new Set(sizes.filter((n) => !RAMP.has(n)))];
+  t.check(off.length <= 3,
+    `at most three sizes sit off the ramp inside components (${off.join(', ') || 'none'})`);
+
+  const weights = [...layer.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => m[1]);
+  t.check(weights.every((w) => ['400', '500', '600', '700'].includes(w)),
+    'every weight in the layer is one of the four that are loaded');
+
+  const fams = [...layer.matchAll(/font-family:\s*([^;}]+)/g)].map((m) => m[1]);
+  t.check(fams.every((f) => /IBM Plex Mono|Archivo Black|Inter|inherit|ui-monospace/.test(f)),
+    'and every family is one of the three the app loads');
+
+  const radii = [...new Set([...layer.matchAll(/border-radius:\s*([^;}]+)/g)].map((m) => m[1].trim()))];
+  const bad = radii.filter((r) => !/var\(--ow-r/.test(r) && !/^(0|50%|999px|inherit)$/.test(r));
+  t.check(bad.length === 0, `every radius is a token${bad.length ? ' — ' + bad.join(' | ') : ''}`);
+
+  const shadows = [...new Set([...layer.matchAll(/box-shadow:\s*([^;}]+)/g)].map((m) => m[1].trim()))];
+  t.check(shadows.every((s) => /var\(--ow-lift\)|none|inset/.test(s)),
+    `depth is hairlines and one elevation${shadows.length ? ' (' + shadows.join(' | ') + ')' : ''}`);
+
+  t.check(!/\.ow-btn/.test(layer),
+    'no fourteenth button family — the layer uses .btn and adds one size modifier to it');
+}
+
+/* ---------- money is a component ---------- */
+{
+  /* Every figure the shop can act on is mono AND tabular. A column of
+     money whose digits do not line up cannot be read at a glance, which
+     is the only way money is ever read. */
+  const monoRules = [...layer.matchAll(/([^{}]+)\{([^}]*IBM Plex Mono[^}]*)\}/g)];
+  t.check(monoRules.length >= 3, `the layer sets the figure face in ${monoRules.length} places`);
+  const untabular = monoRules
+    .filter((m) => !/font-variant-numeric:\s*tabular-nums/.test(m[2]))
+    .map((m) => m[1].trim());
+  t.check(untabular.length === 0,
+    `and every one of them is tabular${untabular.length ? ' — ' + untabular.join(', ') : ''}`);
+}
+
+/* ---------- the phone ---------- */
+{
+  const phone = (/@media \(max-width:820px\)\{([\s\S]*)$/.exec(layer) || ['', ''])[1];
+  t.check(phone.length > 200, 'the layer has a phone block');
+  t.check(/--ow-tap:\s*44px/.test(layer), 'a tap target is declared, and it is 44px');
+  t.check(/min-height:var\(--ow-tap\)/.test(phone),
+    'and the phone block actually applies it — a 30px button is not a phone button');
+}
+
+/* ---------- icons ---------- */
+{
+  /* Emoji do not scale, do not recolour, and render differently on
+     every device the shop owns. */
+  const icons = [...src.matchAll(/<svg[^>]*class="(?:nav-icon|icon|mbn-icon|ow-[a-z-]*)"[^>]*>/g)];
+  t.check(icons.length > 20, `the app draws its marks (${icons.length} inline svg)`);
+  const layerEmoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(layer);
+  t.check(!layerEmoji, 'and there is no emoji in the layer');
+}
+
+process.exit(t.done() ? 1 : 0);
