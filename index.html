@@ -165,6 +165,9 @@
     border:1px solid rgba(255,255,255,0.18);border-radius:4px;padding:2px 5px;line-height:1;
   }
   .tb-search input:focus ~ .tb-kbd{display:none;}
+  /* The field face of the Manager's door, shown only at the phone
+     breakpoint. Hidden here so the console keeps its button. */
+  .mgr-talk-f{display:none;}
   /* Two children of .topbar that only the phone ever shows -- the sheet's
      Cancel and the line pinned at its foot. They live here rather than in
      the phone's own bar because they belong to the SEARCH, and there is
@@ -6876,7 +6879,12 @@
     }
     body.phone-searching #navSearch:hover,
     body.phone-searching #navSearch:focus{background:var(--panel);border-color:var(--ow-steel-400);}
-    body.phone-searching #navSearch::placeholder{color:var(--ow-ink-400);}
+    /* ink-600, not ink-400. A placeholder is real text somebody has to
+       read before they know what the box is for, and ink-400 on paper
+       is 3.12 to 1 -- fine in an office, not in a yard in daylight,
+       which is where this app is actually used. ink-600 is 6.21 and
+       still reads as the lighter grey a placeholder should be. */
+    body.phone-searching #navSearch::placeholder{color:var(--ow-ink-600);}
     body.phone-searching .tb-search-icon{
       top:calc(24px + env(safe-area-inset-top));left:28px;transform:none;
       width:17px;height:17px;stroke:var(--ow-ink-400);stroke-width:1.8;
@@ -6935,6 +6943,30 @@
       border-top:1px solid var(--ow-rule-soft);
       font-size:var(--ow-t-12);line-height:1.5;color:var(--ow-ink-600);
     }
+    /* THE MANAGER OPENS WITH A FIELD, NOT A BUTTON.
+       A full-width oxide bar under the title reads as "the main thing to
+       do here is leave", which is the opposite of what this screen is
+       for. Wearing the shape of what it opens says the true thing
+       instead. Same element, same handler -- apOpenPanel and nothing
+       else -- so there is still exactly one way in and one chat. */
+    #mgrTalkBtn{all:unset;box-sizing:border-box;cursor:pointer;display:block;
+      width:100%;margin-top:var(--ow-sp-12);}
+    #mgrTalkBtn .mgr-talk-w{display:none;}
+    #mgrTalkBtn .mgr-talk-f{
+      display:flex;align-items:center;gap:12px;height:56px;padding:0 8px 0 14px;
+      background:var(--ow-paper);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+    }
+    #mgrTalkBtn .nav-icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;
+      stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--ow-oxide);}
+    #mgrTalkBtn .mgr-talk-p{flex:1 1 auto;min-width:0;text-align:left;
+      color:var(--ow-ink-600);font-size:15px;}
+    #mgrTalkBtn .mgr-talk-go{flex:none;width:40px;height:40px;border-radius:var(--ow-r);
+      background:var(--ow-oxide);color:var(--ow-paper);
+      display:flex;align-items:center;justify-content:center;}
+    #mgrTalkBtn .mgr-talk-go svg{width:19px;height:19px;fill:none;stroke:currentColor;
+      stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    #mgrTalkBtn:active .mgr-talk-f{background:var(--ow-paper-2);}
+
     /* The sheet is the search. Everything under it is out of reach. */
     body.phone-searching .mobile-topbar,
     body.phone-searching .mobile-bottomnav{display:none;}
@@ -8134,7 +8166,7 @@
      layouts rather than reflowing one.
      ================================================================== */
   @media (max-width:820px){
-    .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;}
+    .ow-ph{position:static;padding:var(--ow-sp-12) 0 var(--ow-sp-8);border-bottom:0;flex-wrap:wrap;}
     /* The name of the screen, large and in the content, because the bar
        above it no longer carries one on the five screens the tab bar
        names. 28 rather than the canvas's 26: the ramp has no 26, and a
@@ -9448,7 +9480,25 @@
         <h1 class="ow-ph-t">The Manager</h1>
         <p class="ow-ph-sub">Reads your books, keeps score on its own advice, and moves nothing without you.</p>
         <span class="ow-ph-sp"></span>
-        <button type="button" class="btn btn-accent ow-sm" id="mgrTalkBtn">Talk to it</button>
+        <!-- One control, one handler, two skins. On the console it is a
+             button in the page header, beside the meeting and the review.
+             On the phone it becomes the first thing on the screen and
+             wears the shape of what it opens: a field. A button says a
+             thing; a field asks for one, and this screen's whole
+             argument is that the brain is something you TALK to. -->
+        <button type="button" class="btn btn-accent ow-sm" id="mgrTalkBtn">
+          <span class="mgr-talk-w">Talk to it</span>
+          <!-- The face is NOT aria-hidden: whichever skin is showing, its
+               words have to be part of the button's name, or the spoken
+               name and the printed one disagree and voice control asks
+               for a control nobody can see. Only the two decorations
+               are hidden. -->
+          <span class="mgr-talk-f">
+            <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="mgr-talk-p">Ask it something…</span>
+            <span class="mgr-talk-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7"/></svg></span>
+          </span>
+        </button>
       </div>
       <div class="ow-rec">
         <div id="managerMemoryNote" class="ow-full"></div>
