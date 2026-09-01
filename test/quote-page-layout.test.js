@@ -253,8 +253,12 @@ const src = read('index.html');
 {
   t.check(/\.q-stickybar\{left:0;bottom:calc\(var\(--mobile-bottomnav-h\) \+ env\(safe-area-inset-bottom, 0px\)\)/.test(src),
     'on a phone the bar sits ABOVE the bottom nav — both are fixed to the bottom, and the nav covered it');
-  t.check(/body\.on-quote-tab \.mobile-fab\{display:none;\}/.test(src),
-    'and the FAB — whose only job is opening this page — yields while the page is open');
+  /* The floating action button used to be hidden here: its only job was
+     opening this page. The phone bar carries Sell now, which IS this
+     page, so the button is gone rather than hidden — and nothing may
+     bring a second door to this room back. */
+  t.check(!/mobile-fab/.test(src),
+    'and no floating action button survives to open the page the bar already opens');
   t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:150px;\}/.test(src),
     'with the reserve covering nav plus bar so the last row clears both');
 }

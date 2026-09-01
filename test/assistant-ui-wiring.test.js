@@ -30,12 +30,17 @@ const code = src.split(/\r?\n/).map(l => l.replace(/(?<!:)\/\/.*$/, '')).join('\
 /* ---------- 1. who can see it ---------------------------------------- */
 {
   const workerBlock = (/body\.worker-only-mode[\s\S]{0,700}?display:none !important;\}/.exec(src) || [''])[0];
-  t.check(/\.assistant-panel/.test(workerBlock) && /#assistantOpenBtn/.test(workerBlock)
-    && /#assistantOpenBtnMobile/.test(workerBlock),
-    'a worker-only login sees neither the panel nor its launchers — the topbar survives worker mode, so the launcher must be named');
+  t.check(/\.assistant-panel/.test(workerBlock) && /#assistantOpenBtn/.test(workerBlock),
+    'a worker-only login sees neither the panel nor its launcher — the topbar survives worker mode, so the launcher must be named');
+  /* The phone has no launcher of its own to name any more: its title bar
+     carries the search box, and the chat is reached from the Manager
+     tab, which worker mode does not show. An id named here that does not
+     exist would read as a guard that is doing something. */
+  t.check(!/assistantOpenBtnMobile/.test(src),
+    'and names no phone launcher, because the phone bar no longer carries one');
   const loadingBlock = (/body\.app-loading[\s\S]{0,400}?display:none !important;\}/.exec(src) || [''])[0];
   t.check(/\.assistant-panel/.test(loadingBlock), 'nor does the loading screen');
-  t.check(/\.mobile-topbar, \.mobile-bottomnav, \.mobile-fab, \.mobile-more-sheet, \.assistant-panel\{display:none !important;\}/.test(src),
+  t.check(/\.mobile-topbar, \.mobile-bottomnav, \.mobile-more-sheet, \.assistant-panel\{display:none !important;\}/.test(src),
     'nor the printer — fixed chrome on an invoice sheet is the fault this block exists for');
 }
 

@@ -220,8 +220,8 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
     'an open modal is hidden outright — it outranks the blanket hide and would print its card over the document');
   t.check(hidden('.lightbox-overlay'),
     'and so is the lightbox, which wins the same way');
-  t.check(hidden('.mobile-fab'),
-    'the phone action button is hidden — all:unset resets visibility, so the blanket hide never touched it');
+  /* all:unset resets visibility, so the blanket hide never touches the
+     phone's chrome — each piece of it has to be named. */
   ['.mobile-topbar', '.mobile-bottomnav', '.mobile-more-sheet'].forEach((sel) => {
     t.check(hidden(sel), `and so is ${sel}, fixed and outside the sections like the rest of the phone chrome`);
   });
@@ -244,7 +244,7 @@ const printCss = (/@media print\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1];
      visibility pair and would each need their own copy. */
   const injectedSheets = [...code.matchAll(/styleEl\.textContent = `([\s\S]*?)`;/g)].map((m) => m[1]);
   t.check(injectedSheets.length >= 4, `the per-path sheets are found (${injectedSheets.length})`);
-  t.check(injectedSheets.every((s) => !/modal-overlay|mobile-fab/.test(s)),
+  t.check(injectedSheets.every((s) => !/modal-overlay|mobile-topbar/.test(s)),
     'and none of them repeats the chrome rules — one copy, in the shared block, covers every print path');
 }
 
