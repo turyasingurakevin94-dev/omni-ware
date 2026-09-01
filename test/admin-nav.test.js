@@ -434,6 +434,13 @@ const INDEX = railIndex();
         navSearchInput: input,
         closeNavSearch: () => { log.closed = true; },
         goToTab: (tab) => { log.went = tab; log.valueWhenNavigating = input.value; },
+        /* Picking a result now also writes it to the recent list and, on
+           the phone, closes the sheet it was picked from. Neither is
+           what this block is about — it is about the box being cleared
+           BEFORE the screen is shown — so both are stubbed. */
+        navRecentPush: () => {},
+        phoneSearching: () => false,
+        closePhoneSearch: () => {},
       },
       ['goToNavSearchHit'],
     );
@@ -459,9 +466,20 @@ const INDEX = railIndex();
   }
 
   /* Two presses, two different jobs. One Escape that did both would
-     throw a search away because the results were not the ones wanted. */
-  t.check(/if\(navSearchInput\.value\)\{ navSearchInput\.value = ''; closeNavSearch\(\); \}\s*\n\s*else navSearchInput\.blur\(\);/.test(src),
-    'Escape clears what was typed first and gives up the field only on the second press');
+     throw a search away because the results were not the ones wanted.
+
+     The first press used to call closeNavSearch directly; it now calls
+     renderNavSearch, which on a computer -- where an empty box has
+     nothing to show -- closes the list by exactly that call, and on the
+     phone falls back to the way-in list rather than to a blank sheet.
+     Same two jobs, one path instead of two. */
+  const esc = (/else if\(e\.key === 'Escape'\)\{([\s\S]*?)\n  \}/.exec(src) || ['', ''])[1]
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  t.check(/if\(navSearchInput\.value\)\{ navSearchInput\.value = ''; renderNavSearch\(\); \}/.test(esc),
+    'Escape clears what was typed first');
+  t.check(/navSearchInput\.blur\(\);/.test(esc) && esc.indexOf('navSearchInput.value = \'\'')
+    < esc.indexOf('navSearchInput.blur()'),
+    'and gives up the field only on the second press, never on the first');
 }
 
 /* ---------- 8. what the bar says instead ----------------------------- */
@@ -482,11 +500,22 @@ const INDEX = railIndex();
      firing while something is being typed into. A bare key for search
      would have to work from inside a field, which is where it must not
      -- so every route that focuses the box is behind a modifier. */
+  /* KEYBOARD routes only, and the distinction is the whole point: the
+     rule exists because a bare LETTER would have to work from inside a
+     field, where it must not. A tap on the phone's magnifier competes
+     with no shortcut at all and is not what this guards — so the check
+     asks what kind of listener each focus call sits in rather than
+     banning the call outright. */
   const focuses = [...src.matchAll(/navSearchInput\.focus\(\)/g)];
-  const unguarded = focuses.filter((m) =>
+  const listenerBefore = (i) => {
+    const types = [...src.slice(0, i).matchAll(/addEventListener\('(\w+)'/g)];
+    return types.length ? types[types.length - 1][1] : '';
+  };
+  const keyRoutes = focuses.filter((m) => listenerBefore(m.index) === 'keydown');
+  const unguarded = keyRoutes.filter((m) =>
     !/e\.ctrlKey \|\| e\.metaKey/.test(src.slice(Math.max(0, m.index - 200), m.index)));
-  t.check(focuses.length > 0 && unguarded.length === 0,
-    `every shortcut that grabs the box is a chord (${focuses.length} route(s), ${unguarded.length} unguarded)`);
+  t.check(keyRoutes.length > 0 && unguarded.length === 0,
+    `every KEY that grabs the box is a chord (${keyRoutes.length} key route(s) of ${focuses.length}, ${unguarded.length} unguarded)`);
 }
 
 /* ---------- 9. the labels name the question, not the table ----------- */

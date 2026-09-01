@@ -165,6 +165,15 @@
     border:1px solid rgba(255,255,255,0.18);border-radius:4px;padding:2px 5px;line-height:1;
   }
   .tb-search input:focus ~ .tb-kbd{display:none;}
+  /* Two children of .topbar that only the phone ever shows -- the sheet's
+     Cancel and the line pinned at its foot. They live here rather than in
+     the phone's own bar because they belong to the SEARCH, and there is
+     only one search. Hidden at every width until the sheet is open. */
+  /* all:unset resets display too, so `none` is re-stated inside the same
+     rule rather than left to a later one -- the same trap that showed
+     the old + button on desktop. The phone's rule out-specifies this. */
+  .tb-cancel{all:unset;box-sizing:border-box;display:none;cursor:pointer;}
+  .tb-foot{display:none;}
   .tb-results{
     display:none;position:absolute;top:calc(100% + 7px);left:0;right:0;min-width:280px;
     background:var(--navy);border:1px solid rgba(255,255,255,0.15);border-radius:11px;
@@ -196,8 +205,15 @@
   .tb-results button.tbr-ask .tbr-q{color:#E4EAF0;min-width:0;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .tb-results button.tbr-ask.cursor .tbr-q{color:#fff;}
-  .tb-results mark{background:transparent;color:#fff;font-weight:700;}
-  .tb-results button.cursor mark{color:#fff;text-decoration:underline;}
+  /* mark.sr-hl, five hundred lines below, paints an amber pill with
+     `color:inherit` -- and it has the SAME specificity as a bare
+     `.tb-results mark`, so it won on order and this rule's intent was
+     never applied. The result was #C7CFD8 on #FBE39A: 1.24 to 1, in the
+     app's own search box, on every match it has ever highlighted.
+     Amber is right on a white page and wrong on this one; naming the
+     class here is what makes the intent win where it belongs. */
+  .tb-results mark.sr-hl{background:transparent;color:#fff;font-weight:700;padding:0;}
+  .tb-results button.cursor mark.sr-hl{color:#fff;text-decoration:underline;}
 
   /* Full height so the menu's `top:100%` measures from the BAR's edge
      rather than the button's -- otherwise the panel opens five pixels up
@@ -6727,6 +6743,17 @@
   .mms-tile span{font-size:11.5px;font-weight:600;line-height:1.3;}
   .mms-tile:active{background:var(--ow-steel-100);border-color:var(--line);}
   .mms-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  /* The sheet's own door to the search. Sized like the field it opens,
+     so it reads as a box you type into rather than as a row you go to. */
+  .mms-search{
+    all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;
+    width:100%;height:44px;margin:0 0 16px;padding:0 14px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+    color:var(--ow-ink-600);font-size:15px;
+  }
+  .mms-search .nav-icon{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--ow-ink-400);}
+  .mms-search:active{background:var(--ow-paper-2);}
   .mms-item{
     all:unset;box-sizing:border-box;display:block;width:100%;padding:14px 12px;font-size:14.5px;
     color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line);
@@ -6742,6 +6769,110 @@
        A second bar of menus would just take a fifth of the screen. */
     .topbar{display:none;}
     .mobile-topbar, .mobile-bottomnav{display:flex;}
+
+    /* ===== PHONE SEARCH — one box, revealed; never a second one =====
+
+       The desktop's search box is the app's whole index: it carries
+       NAV_INDEX, renderNavSearch, the keyboard cursor, and the row that
+       hands a question to the Manager. Writing a second input for the
+       phone would mean a second copy of all four, and they would
+       disagree by the second session that touched either.
+
+       So the phone shows THAT box. .topbar is display:none at this
+       width; the magnifier turns it into a full-screen white sheet and
+       hides every other thing in it. Same input, same index, same
+       results, same Ask row.
+
+       The skin is the phone's, not the desktop's: the bar is navy
+       because it sits on a dark rail, and a navy sheet dropped over a
+       white page reads as a different app. This is the two-designs law
+       — one vocabulary, two layouts — applied to a single element. */
+    body.phone-searching .topbar{
+      display:flex;flex-direction:column;align-items:stretch;
+      position:fixed;inset:0;height:auto;z-index:97;
+      background:var(--panel);color:var(--ink);padding:0;gap:0;box-shadow:none;
+    }
+    body.phone-searching .topbar > *{display:none;}
+    body.phone-searching .topbar > .tb-search{
+      display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+      margin:0;max-width:none;
+    }
+    body.phone-searching .tb-cancel{
+      display:flex;align-items:center;position:absolute;top:calc(10px + env(safe-area-inset-top));
+      right:14px;height:44px;z-index:2;
+      font-size:15px;font-weight:var(--ow-fw-600);color:var(--ow-ink-900);
+    }
+    body.phone-searching #navSearch{
+      flex:0 0 auto;width:auto;height:44px;
+      margin:calc(10px + env(safe-area-inset-top)) 88px 12px 14px;
+      padding:0 12px 0 40px;font-size:16px; /* 16px, or iOS zooms the page on focus */
+      background:var(--panel);border:1px solid var(--ow-rule);border-radius:var(--ow-r-lg);
+      color:var(--ink);
+    }
+    body.phone-searching #navSearch:hover,
+    body.phone-searching #navSearch:focus{background:var(--panel);border-color:var(--ow-steel-400);}
+    body.phone-searching #navSearch::placeholder{color:var(--ow-ink-400);}
+    body.phone-searching .tb-search-icon{
+      top:calc(24px + env(safe-area-inset-top));left:28px;transform:none;
+      width:17px;height:17px;stroke:var(--ow-ink-400);stroke-width:1.8;
+    }
+    body.phone-searching .tb-kbd{display:none;}
+    body.phone-searching .tb-results{
+      position:static;flex:1 1 auto;min-height:0;min-width:0;max-height:none;overflow-y:auto;
+      background:var(--panel);border:0;border-top:1px solid var(--ow-rule-soft);
+      border-radius:0;padding:0 14px;box-shadow:none;z-index:auto;
+    }
+    /* 52px rows, so every one of them is a comfortable target, and a
+       hairline between rather than a highlight behind: nothing here is
+       selected until it is tapped. */
+    body.phone-searching .tb-results button{
+      height:52px;padding:0;gap:14px;border-radius:0;
+      font-size:15px;color:var(--ow-ink-900);
+      border-bottom:1px solid var(--ow-rule-soft);
+    }
+    body.phone-searching .tb-results button:last-child{border-bottom:0;}
+    body.phone-searching .tb-results button .nav-icon{width:19px;height:19px;color:var(--ow-ink-400);}
+    body.phone-searching .tb-results button .tbr-group{color:var(--ow-ink-600);font-size:var(--ow-t-12);}
+    /* The keyboard cursor is a desktop idea. A phone has no arrow keys,
+       and a filled oxide row under the finger before it is tapped reads
+       as a choice already made. */
+    body.phone-searching .tb-results button.cursor{background:transparent;color:var(--ow-ink-900);}
+    body.phone-searching .tb-results button.cursor .tbr-group{color:var(--ow-ink-600);}
+    body.phone-searching .tb-results button.tbr-ask{border-top:0;margin-top:0;padding-top:0;}
+    body.phone-searching .tb-results button.tbr-ask .tbr-q{color:var(--ow-ink-900);}
+    /* Same fault, other ground: on the phone's white sheet the amber
+       pill would carry oxide at 4.70, which passes but reads as a
+       second accent on a screen that already has one. The weight and
+       the colour mark the match; nothing needs a pill behind it. */
+    body.phone-searching .tb-results mark.sr-hl,
+    body.phone-searching .tb-results button.cursor mark.sr-hl{
+      background:transparent;color:var(--ow-oxide);text-decoration:none;}
+    body.phone-searching .tb-results .tbr-empty{color:var(--ow-ink-600);font-size:var(--ow-t-13);padding:16px 0;}
+    /* The chevron: this row goes somewhere. Pushed to the right edge. */
+    body.phone-searching .tb-results .tbr-go{margin-left:auto;width:16px;height:16px;
+      color:var(--ow-steel-400);flex:none;}
+    body.phone-searching .tb-results button .tbr-group + .tbr-go{margin-left:10px;}
+    /* A section label, ruled off to its right so the rule reads as the
+       label's underline rather than as another row. */
+    body.phone-searching .tb-results .tbr-sec{
+      display:flex;align-items:center;gap:12px;padding:18px 0 8px;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.08em;
+      text-transform:uppercase;color:var(--ow-ink-600);
+    }
+    body.phone-searching .tb-results .tbr-sec::after{
+      content:'';flex:1 1 auto;height:1px;background:var(--ow-rule-soft);
+    }
+    /* Pinned at the foot, because it is a claim about EVERY answer above
+       it: the Manager reads the shop's own books and nothing else. */
+    body.phone-searching .tb-foot{
+      display:block;flex:0 0 auto;
+      padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+      border-top:1px solid var(--ow-rule-soft);
+      font-size:var(--ow-t-12);line-height:1.5;color:var(--ow-ink-600);
+    }
+    /* The sheet is the search. Everything under it is out of reach. */
+    body.phone-searching .mobile-topbar,
+    body.phone-searching .mobile-bottomnav{display:none;}
     .mobile-more-sheet.show{display:flex;}
     main{
       padding:calc(var(--mobile-topbar-h) + 16px) 16px calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom) + 24px);
@@ -7987,6 +8118,14 @@
 <div class="mobile-topbar" id="mobileTopbar">
   <span class="mt-title" id="mobileTopbarTitle">Dashboard</span>
   <div class="order-status-bar" id="orderStatusBarMobile" title="Click to view the Order tracking board"></div>
+  <!-- Two doors to the brain, and the owner asked for both: the magnifier
+       for a question you can type, the bubble for one you want to talk
+       through. The magnifier reveals the app's ONE search box rather
+       than opening a second one. -->
+  <button type="button" class="tb-iconbtn" id="phoneSearchBtn" aria-label="Search screens, or ask the Manager"
+    style="color:#C7CFD8;">
+    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+  </button>
   <button type="button" class="tb-iconbtn" id="assistantOpenBtnMobile" aria-label="Assistant"
     style="color:#C7CFD8;">
     <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -8036,16 +8175,27 @@
   </button>
 </nav>
 
-<!-- Full-screen "More" sheet — every nav destination not on the bottom bar,
-     grouped the same way the desktop sidebar groups them. -->
+<!-- Full-screen sheet — every nav destination not on the bottom bar,
+     grouped the same way the desktop sidebar groups them. "Everything
+     else" rather than "More": the bar carries five of forty-one screens
+     and this is the other thirty-six, which is a statement about the
+     shop rather than a word on a button. -->
 <div class="mobile-more-sheet" id="mobileMoreSheet">
   <div class="mms-head">
-    <span class="mms-title">More</span>
+    <span class="mms-title">Everything else</span>
     <button type="button" class="modal-close" id="mobileMoreClose" aria-label="Close">
       <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>
   <div class="mms-body">
+    <!-- The door to the search, at the top of the list — because
+         thirty-six destinations is exactly the length at which typing
+         the name beats reading for it. It opens the same one box the
+         magnifier does. -->
+    <button type="button" class="mms-search" id="mmsSearchBtn">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <span>Search, or ask the Manager</span>
+    </button>
     <!-- Destinations are BUILT from the rail (mmsRenderDestinations), not
          written out again here. This was a hand-kept copy of twenty-odd
          rows, which is how it came to be the one list with no icons on
@@ -8134,6 +8284,11 @@
     <kbd class="tb-kbd" id="tbSearchKbd">Ctrl K</kbd>
     <div class="tb-results" id="navSearchResults" role="listbox" aria-label="Screens, and the Manager"></div>
   </div>
+  <!-- The phone sheet's two extra parts. Both are children of the bar
+       because they belong to the search, and both are display:none at
+       every width until the sheet is open. -->
+  <button type="button" class="tb-cancel" id="phoneSearchCancel">Cancel</button>
+  <div class="tb-foot" id="phoneSearchNote">Answered from your own books — nothing here is a guess.</div>
 
   <div class="tb-spacer"></div>
   <div class="order-status-bar" id="orderStatusBar" title="Click to view the Order tracking board"></div>
@@ -18049,6 +18204,9 @@ function updateTopbarWhere(tab){
    question they answer: "Who owes you" is a better name than "Debtors
    list" and a worse thing to scan for, and typing either finds it. */
 const navSearchInput = document.getElementById('navSearch');
+/* Read off the element rather than written out again, so the two can
+   never disagree about what the box says on a computer. */
+const NAV_DESK_PLACEHOLDER = navSearchInput.placeholder;
 const navSearchResults = document.getElementById('navSearchResults');
 let navSearchHits = [], navSearchCursor = -1;
 
@@ -18078,6 +18236,77 @@ function navSearchMatches(q){
 const NAV_ASK_MIN = 3;
 const NAV_ASK_ICON = '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">'
   + '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+const NAV_RECENT_ICON = '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">'
+  + '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.6V12l3 1.8"/></svg>';
+const NAV_GO_ICON = '<svg class="tbr-go" viewBox="0 0 24 24" aria-hidden="true" fill="none"'
+  + ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+  + '<path d="M9 5l7 7-7 7"/></svg>';
+
+/* THE BOX MUST NOT OPEN ON A DEAD END.
+
+   On a computer the box lives in a bar, wearing a placeholder and a
+   Ctrl-K hint, and what it is for is obvious without doing anything.
+   On a phone it is a sheet that has just covered the whole screen with
+   an empty field in it, and an empty field only helps somebody who
+   already knows what to type. That is the difference between a search
+   box and a way IN: the sheet has to open showing what you did last and
+   what is worth asking.
+
+   Three questions, and each one is answerable from the shop's own
+   books by machinery that already exists -- debtors, the quiet list,
+   the buy plan. A suggested question the Manager cannot answer would
+   teach the owner in one tap not to trust the box. */
+const NAV_START_ASKS = [
+  'Who owes me the most right now?',
+  'Which regular has gone quiet?',
+  'What should I buy this week?',
+];
+const NAV_RECENT_KEY = 'owNavRecent';
+const NAV_RECENT_MAX = 4;
+function navRecentList(){
+  try{ const v = JSON.parse(lsGet(NAV_RECENT_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch(e){ return []; }
+}
+/* Only what was reached THROUGH the box, which is the honest reading of
+   "recent" on a search sheet -- a screen opened from the rail is not a
+   search you might want back. */
+function navRecentPush(kind, value){
+  if(!value) return;
+  const list = navRecentList().filter(x=> !(x && x.kind === kind && x.value === value));
+  list.unshift({ kind, value });
+  lsSet(NAV_RECENT_KEY, JSON.stringify(list.slice(0, NAV_RECENT_MAX)));
+}
+function phoneSearching(){ return document.body.classList.contains('phone-searching'); }
+function renderNavSearchStart(){
+  const recents = [];
+  for(const r of navRecentList()){
+    if(!r) continue;
+    if(r.kind === 'ask'){ recents.push({ ask:true, q:r.value, recent:true }); continue; }
+    /* A screen the rail is not showing -- Worker view on an owner login,
+       a screen since removed -- is not offered. The list is a memory,
+       not a promise. */
+    const x = NAV_INDEX.find(n=> n.tab === r.value && n.el.style.display !== 'none');
+    if(x) recents.push({ ...x, recent:true });
+  }
+  const asks = NAV_START_ASKS.map(q=> ({ ask:true, q }));
+  navSearchHits = recents.concat(asks);
+  navSearchCursor = -1;
+  let i = 0;
+  /* Buttons only, in hit order, because moveNavSearchCursor pairs the
+     buttons it finds with navSearchHits BY POSITION. The section labels
+     are divs and so stay out of that count -- the same rule the "nothing
+     called that" line already follows. */
+  const row = (h)=> h.ask
+    ? `<button type="button" role="option" data-i="${i++}">${h.recent ? NAV_RECENT_ICON : NAV_ASK_ICON}`
+      + `<span class="tbr-q">${esc(h.q)}</span>${NAV_GO_ICON}</button>`
+    : `<button type="button" role="option" data-i="${i++}">${h.icon}`
+      + `<span>${esc(h.label)}</span>${NAV_GO_ICON}</button>`;
+  navSearchResults.innerHTML =
+    (recents.length ? '<div class="tbr-sec">Recent</div>' + recents.map(row).join('') : '')
+    + '<div class="tbr-sec">Ask the Manager</div>' + asks.map(row).join('');
+  navSearchResults.classList.add('show');
+  navSearchInput.setAttribute('aria-expanded', 'true');
+}
 
 /* ONE BOX, TWO KINDS OF ANSWER -- and no guessing between them.
 
@@ -18097,7 +18326,10 @@ const NAV_ASK_ICON = '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="tru
    it just stops being the end of the road. */
 function renderNavSearch(){
   const q = navSearchInput.value.trim();
-  if(!q){ closeNavSearch(); return; }
+  /* An empty box closes the dropdown on a computer, where the bar is
+     still there behind it. On the phone the box IS the screen, so an
+     empty one shows the way in instead of nothing. */
+  if(!q){ if(phoneSearching()) renderNavSearchStart(); else closeNavSearch(); return; }
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const screens = navSearchMatches(q);
   const asking = q.length >= NAV_ASK_MIN;
@@ -18153,9 +18385,13 @@ function goToNavSearchHit(i){
      hits, and the box has already been cleared by the time the question
      would be sent. */
   const ask = hit.ask ? String(hit.q || '') : '';
+  navRecentPush(hit.ask ? 'ask' : 'tab', hit.ask ? ask : hit.tab);
   navSearchInput.value = '';
   closeNavSearch();
   navSearchInput.blur();
+  /* The sheet was the screen, so leaving it open behind the answer
+     would put the Manager's panel over a search field nobody is in. */
+  if(phoneSearching()) closePhoneSearch();
   if(hit.ask){
     /* The panel, and the question straight into it. apMode is NOT set:
        'manager' is an OCCASION -- a meeting, a review -- and it makes
@@ -18179,7 +18415,12 @@ navSearchInput.addEventListener('keydown', (e)=>{
        single Escape that did both would throw away a search because the
        results were not the ones wanted. */
     e.stopPropagation();
-    if(navSearchInput.value){ navSearchInput.value = ''; closeNavSearch(); }
+    /* renderNavSearch rather than closeNavSearch, so that clearing on
+       the phone falls back to the way-in list rather than to a blank
+       sheet. On a computer, where nothing is showing at an empty box,
+       it does exactly what closeNavSearch did. */
+    if(navSearchInput.value){ navSearchInput.value = ''; renderNavSearch(); }
+    else if(phoneSearching()) closePhoneSearch();
     else navSearchInput.blur();
   }
 });
@@ -18195,7 +18436,55 @@ navSearchResults.addEventListener('mousemove', (e)=>{
     b.classList.toggle('cursor', i === navSearchCursor));
 });
 document.addEventListener('click', (e)=>{
+  /* While the phone's sheet is open the SHEET is the search, not just
+     the box inside it: a tap on the footnote or on the empty space
+     below the last row must not blank the list, which is what the
+     #tbSearch test alone would do. */
+  if(phoneSearching()){
+    if(!e.target.closest('.topbar')) closePhoneSearch();
+    return;
+  }
   if(!e.target.closest('#tbSearch')) closeNavSearch();
+});
+/* ---- the phone's sheet ----
+   Opening reveals the one box; closing puts it back. Nothing here
+   duplicates the search -- it moves a class, and the stylesheet does
+   the rest. */
+const NAV_PHONE_PLACEHOLDER = 'Search or ask…';
+function openPhoneSearch(){
+  closeMobileMoreSheet();
+  document.body.classList.add('phone-searching');
+  /* The desktop's placeholder names both jobs because the box is one
+     control in a bar and nothing else says it can be asked a question.
+     Here the sheet says it twice already -- a section headed Ask the
+     Manager, and three questions under it -- so the long form only
+     buys an ellipsis in a 288px field. */
+  navSearchInput.placeholder = NAV_PHONE_PLACEHOLDER;
+  navSearchInput.value = '';
+  renderNavSearchStart();
+  /* After the class, or the field is still display:none when focus is
+     asked for and the keyboard never comes up. */
+  navSearchInput.focus();
+}
+function closePhoneSearch(){
+  document.body.classList.remove('phone-searching');
+  navSearchInput.placeholder = NAV_DESK_PLACEHOLDER;
+  navSearchInput.value = '';
+  closeNavSearch();
+  navSearchInput.blur();
+}
+/* stopPropagation on all three: the click that opens the sheet would
+   otherwise reach the document handler above, which -- seeing the class
+   this very handler just set, and a target outside .topbar -- would
+   close it again in the same tick. */
+document.getElementById('phoneSearchBtn').addEventListener('click', (e)=>{
+  e.stopPropagation(); openPhoneSearch();
+});
+document.getElementById('mmsSearchBtn').addEventListener('click', (e)=>{
+  e.stopPropagation(); openPhoneSearch();
+});
+document.getElementById('phoneSearchCancel').addEventListener('click', (e)=>{
+  e.stopPropagation(); closePhoneSearch();
 });
 /* Ctrl+K / Cmd+K. Deliberately NOT a bare letter: the app already binds
    Q, C, P and R to screens, and those are guarded against firing while
