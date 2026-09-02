@@ -149,8 +149,20 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'while a priced quote that keeps nothing is still red — the warning is not disarmed');
   t.check(/\.qp-margin-pill-lg\.quiet\{background:var\(--ow-steel-050\);color:var\(--ink-soft\);\}/.test(src),
     'the quiet pill is grey, not a colour that means anything');
-  t.check(/color:\$\{empty \? 'var\(--ink-soft\)' :/.test(bar),
-    'and "You keep 0" goes grey with it rather than reporting zero in profit-green');
+  /* "You keep 0" goes grey with the pill rather than reporting zero in
+     profit-green. It used to say so in an inline colour of its own,
+     which meant the figure and the pill were worked out separately —
+     and they disagreed: the pill had four readings and the figure had
+     two, so a quote keeping 6% showed an amber pill beside a green
+     figure. The figure now takes the pill's own class, so grey on an
+     empty quote is the SAME decision as the grey pill rather than a
+     second one that happens to match. */
+  t.check(/You keep <b class="\$\{pillClass\}">/.test(bar),
+    'and the keep figure takes the pill’s reading rather than working out a second one');
+  t.check(/\.qp-shopline b\.quiet\{color:var\(--ink-soft\);\}/.test(src),
+    'so "You keep 0" goes grey with it rather than reporting zero in profit-green');
+  t.check(/\.qp-shopline b\.warn\{color:var\(--warn-ink\);\}/.test(src),
+    'and a thin margin now shows on the figure too, which is the disagreement this ended');
 }
 
 /* ---------- 5. the mobile card says the same thing ------------------- *

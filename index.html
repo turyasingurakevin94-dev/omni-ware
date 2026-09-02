@@ -716,6 +716,9 @@
   }
   .q-more-item:hover{background:var(--ow-steel-050);}
   .q-more-item .icon{width:14px;height:14px;color:var(--ink-soft);}
+  /* Shown only at the phone breakpoint, where the bar has no room for
+     the control this one stands in for. */
+  .q-more-phone{display:none;}
   .q-more-item.danger{color:var(--danger);}
   .q-more-item.danger .icon{color:var(--danger);}
 
@@ -4434,7 +4437,20 @@
     line-height:1.1;color:var(--ink);font-variant-numeric:tabular-nums;}
   .qp-shopline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
     font-size:11.5px;color:var(--ink-soft);}
-  .qp-shopline b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .qp-shopline b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;}
+  /* THE FIGURE AND THE PILL USED TO DISAGREE.
+     The pill has four readings -- healthy, thin, losing, nothing yet --
+     and the figure beside it had two: green unless the profit was
+     negative. So a quote keeping 6% showed an amber pill next to a green
+     figure, two things saying opposite things about one number. The
+     figure now takes the same reading the pill does, which is also what
+     lets the phone drop the pill: one object carries the meaning instead
+     of two, and the one it carries is the number itself.
+     All four clear on paper -- 6.38, 7.48, 10.03 and the caption grey. */
+  .qp-shopline b.good{color:var(--good);}
+  .qp-shopline b.warn{color:var(--warn-ink);}
+  .qp-shopline b.danger{color:var(--danger);}
+  .qp-shopline b.quiet{color:var(--ink-soft);}
   .qp-shopline-sep{color:var(--ow-ink-400);}
 
   /* The rule between the client's side of the row and the shop's, so
@@ -7048,10 +7064,49 @@
        thumb. */
     /* Above the bottom nav, not underneath it: both are fixed to the
        bottom, and without the offset the nav covered the bar's second
-       line. */
-    .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));gap:8px;padding:8px 12px;}
-    .q-stickybar-actions{margin-left:0;width:100%;justify-content:flex-end;flex-wrap:wrap;}
-    body.on-quote-tab .quote-layout{padding-bottom:150px;}
+       line.
+
+       ONE ROW, NOT TWO. The actions used to take width:100% and drop to
+       their own line under the money, so the bar ate about 150px of a
+       screen whose whole job is the quote above it. With Client copy
+       moved into the menu there is room for the figure and three
+       controls side by side, which is what the approved canvas draws:
+       what the client pays on the left, the way to send it and the way
+       to keep it on the right, all in the thumb zone. */
+    .q-stickybar{left:0;bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px));
+      gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));flex-wrap:nowrap;}
+    .q-stickybar-actions{margin-left:auto;width:auto;gap:6px;flex-wrap:nowrap;flex:none;}
+    #q_print_quote_btn{display:none;}
+    .q-more-phone{display:flex;}
+    /* The figure the owner reads down the phone, at a size they can read
+       it at. It is the one number on this screen that a customer is
+       waiting to hear. */
+    .qp-finbar{min-width:0;flex:1 1 auto;}
+    /* The label above the figure, as the canvas draws it -- side by side
+       they cost 80px the figure needs. And the figure NEVER breaks: at
+       390px "1,806,000 UGX" wrapped after the comma, which turned the
+       one number somebody is reading down a phone into two lines of
+       something that no longer looked like a number. */
+    .qp-says{flex-direction:column;align-items:flex-start;gap:0;}
+    .qp-says-label{font-size:var(--ow-t-11);}
+    .qp-says-value{font-size:19px;white-space:nowrap;}
+    .qp-shopline{font-size:var(--ow-t-12);gap:6px;flex-wrap:nowrap;min-width:0;}
+    /* The pill goes. At 390px the bar has about 150 pixels left for the
+       money once the figure, WhatsApp and Save have taken theirs, and
+       "You keep 196,000 UGX" plus a pill needs closer to 180 -- so the
+       line wrapped and broke the keep figure across two lines, which is
+       the one thing a number must never do. The reading is not lost: the
+       figure itself now carries it. */
+    .qp-margin-pill-lg{display:none;}
+    /* Save is the primary action of this screen and the only filled
+       control on the bar, so it says what it does. The icon goes: at
+       this width the label is what carries it, and the 15px mark beside
+       it only costs the figure room. The two icon buttons come down to
+       40px -- still a thumb -- for the same reason. */
+    .qbar-save{padding:0 12px;font-size:14px;flex:none;}
+    .qbar-save .icon{display:none;}
+    .qbar-btn{min-width:40px;min-height:40px;padding:0 6px;flex:none;}
+    body.on-quote-tab .quote-layout{padding-bottom:110px;}
     /* Add New Quote: swap the 8-column table for stacked cards -- there's
        no way to fit Item/Qty/Supplier/Buy/Sell/Margin/Total in ~340px. */
     .qp-items-table-wrap{display:none;}
@@ -8911,6 +8966,22 @@
               <svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
             </button>
             <div class="q-more-menu" id="q_more_menu" style="display:none;">
+              <!-- Client copy, on the phone only. It sits on the bar at
+                   desk width, where printing actually happens and there
+                   is room for it; on a phone the bar has to hold the
+                   figure, WhatsApp and Save, and printing is the one
+                   action nobody does from a handset.
+
+                   It carries no handler of its own -- it clicks the real
+                   button, which is display:none at this width but still
+                   fires. Same pattern the More sheet already uses for
+                   Export, Import and Clear: a phone control proxies to
+                   the one that owns the behaviour rather than keeping a
+                   second copy of it to drift. -->
+              <button class="q-more-item q-more-phone" id="q_print_quote_phone" title="Client copy — the client quotation: item, packing, qty, sell price and total (no supplier or buy price)">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+                Client copy
+              </button>
               <button class="q-more-item" id="q_print_btn" title="Print supplier receipt — item, packing, supplier, qty, buy price and total (internal use)">
                 <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M8 13h8v7H8z"/></svg>
                 Supplier copy
@@ -24303,7 +24374,7 @@ function renderQuoteFinbar(grandBuy, grandSell, profit){
       <div class="qp-says-value">${fmtUGX(grandSell)}</div>
     </div>
     <div class="qp-shopline">
-      <span>You keep <b style="color:${empty ? 'var(--ink-soft)' : (profit<0?'var(--danger)':'var(--good)')};">${fmtUGX(profit)}</b></span>
+      <span>You keep <b class="${pillClass}">${fmtUGX(profit)}</b></span>
       <span class="qp-margin-pill-lg ${pillClass}">${Math.round(marginPct)}%</span>
     </div>
   `;
@@ -24390,6 +24461,17 @@ document.getElementById('q_print_btn').addEventListener('click', ()=>{
 // Client-facing quotation: item, packing, qty, sell price and totals only --
 // deliberately leaves out supplier names and buy prices, since this is the
 // document that goes out to the person asking for a quote.
+/* The phone's Client copy row is a proxy, not a second implementation:
+   it clicks the real button, which is display:none at that width and
+   fires all the same. Same pattern as the More sheet's Export, Import
+   and Clear -- the control that owns the behaviour stays the only one
+   that has any. */
+document.getElementById('q_print_quote_phone').addEventListener('click', ()=>{
+  /* No close() here: the menu already closes on any click inside it
+     (see the ⋯ block above), and calling a second closer would be a
+     second thing to keep in step with it. */
+  document.getElementById('q_print_quote_btn').click();
+});
 document.getElementById('q_print_quote_btn').addEventListener('click', ()=>{
   ensureQuote();
   if(data.quote.items.length===0){ toast('Add at least one item before printing'); return; }

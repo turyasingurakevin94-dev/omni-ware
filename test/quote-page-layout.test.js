@@ -158,9 +158,18 @@ const src = read('index.html');
     t.check(el && /aria-label="[^"]+"/.test(el[0]), `${id} is named for anything not reading the picture`);
     t.check(el && /title="[^"]+"/.test(el[0]), `and keeps the long explanation on hover`);
   });
-  // The labels are gone from the markup, not merely hidden with CSS --
-  // a hidden label still costs layout in some engines and reads out twice.
-  t.check(!/>\s*Client copy\s*<\/button>/.test(bar) && !/>\s*WhatsApp\s*<\/button>/.test(bar),
+  /* The labels are gone from the markup, not merely hidden with CSS --
+     a hidden label still costs layout in some engines and reads out
+     twice.
+
+     Measured on the BAR'S OWN ROW, with the ⋯ menu cut out. A menu item
+     is supposed to have words -- Supplier copy and Clear quote always
+     did, and Client copy joined them when it left the phone's bar. What
+     must stay wordless is the row of icon buttons, which is what this
+     was ever about. */
+  const barRow = bar.replace(/<div class="q-more-menu"[\s\S]*?<\/div>\s*<\/div>/, '');
+  t.check(!/q_more_menu/.test(barRow), 'the ⋯ menu is cut out before the row is measured');
+  t.check(!/>\s*Client copy\s*<\/button>/.test(barRow) && !/>\s*WhatsApp\s*<\/button>/.test(barRow),
     'and the words themselves are gone rather than hidden');
 
   const btnRule = (/\.qbar-btn\{[^}]*\}/.exec(src) || [''])[0];
@@ -260,8 +269,53 @@ const src = read('index.html');
      nothing may quietly bring either back. */
   t.check(!/mobile-fab/.test(src),
     'the + button is gone from this page’s rules — Sell in the bar is the same door');
-  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:150px;\}/.test(src),
+  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:110px;\}/.test(src),
     'with the reserve covering nav plus bar so the last row clears both');
+
+  /* ONE ROW, NOT TWO — and what had to move for it.
+     The actions took width:100% and dropped to their own line under the
+     money, so the bar ate about 150px of a screen whose whole job is
+     the quote above it. The owner chose what the bar carries: the
+     figure, WhatsApp, Save. */
+  t.check(/\.q-stickybar-actions\{margin-left:auto;width:auto;/.test(src),
+    'the actions sit beside the money rather than on a line of their own');
+  t.check(/#q_print_quote_btn\{display:none;\}/.test(src) && /\.q-more-phone\{display:flex;\}/.test(src),
+    'Client copy leaves the phone’s bar for the ⋯ menu — printing is the one thing nobody does from a handset');
+
+  /* And it leaves as a PROXY, not a copy. The menu row has no handler
+     of its own; it clicks the real button, which is display:none at
+     this width and fires all the same. Two buttons with two copies of
+     the same handler is how one of them comes to be quietly wrong. */
+  const proxy = (/getElementById\('q_print_quote_phone'\)\.addEventListener\('click',[\s\S]*?\}\);/.exec(src) || [''])[0];
+  t.check(/getElementById\('q_print_quote_btn'\)\.click\(\)/.test(proxy),
+    'and it clicks the button that owns the behaviour rather than keeping a second copy of it');
+  t.check(!/ensureQuote|printArea/.test(proxy),
+    'so it knows nothing about printing at all');
+
+  /* A number must never break across two lines. At 390px "1,806,000
+     UGX" wrapped after the comma and stopped looking like a number. */
+  t.check(/\.qp-says-value\{font-size:19px;white-space:nowrap;\}/.test(src),
+    'the figure the owner reads down the phone never breaks');
+  t.check(/\.qp-shopline b\{[^}]*white-space:nowrap/.test(src),
+    'and neither does what the shop keeps');
+
+  /* THE FIGURE AND THE PILL USED TO DISAGREE. The pill has four
+     readings; the figure beside it had two — green unless the profit
+     was negative — so a quote keeping 6% showed an amber pill next to a
+     green figure. The figure now takes the pill's own reading, which is
+     also what lets the phone drop the pill: at 390px the bar has about
+     150 pixels for the money, and the two together need closer to 180. */
+  const bar2 = extractFunction(src, 'renderQuoteFinbar', 'index.html');
+  t.check(/You keep <b class="\$\{pillClass\}">/.test(bar2),
+    'the keep figure carries the same reading as the pill, not just the sign of the profit');
+  t.check(!/style="color:/.test(bar2),
+    'and takes it from a class rather than an inline colour, so a rule can reach it');
+  ['good', 'warn', 'danger', 'quiet'].forEach((c) => {
+    t.check(new RegExp('\\.qp-shopline b\\.' + c + '\\{color:').test(src),
+      `all four readings are painted (${c})`);
+  });
+  t.check(/\.qp-margin-pill-lg\{display:none;\}/.test(src),
+    'and the phone drops the pill, because the number is now saying it');
 }
 
 /* ---------- 9. the picker stage speaks the page's grammar ------------ */
