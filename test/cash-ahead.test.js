@@ -411,7 +411,9 @@ const drawBuy = (over) => {
   t.check(/2,500,000 is already promised in the next 30 days/.test(el.innerHTML),
     'and what it held back');
   t.check(/2026-08-31/.test(el.innerHTML), 'naming when the first of it goes');
-  t.check(/type a budget here to overrule it/.test(el.innerHTML),
+  /* "above": the budget field moved from a form beside the note into the
+     page header, and the note now sits in the rail under it. */
+  t.check(/type a budget above to overrule it/.test(el.innerHTML),
     'while leaving the decision the owner’s');
 
   /* The Manager and the tool ask for the same figure. */

@@ -337,9 +337,9 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     'and a way to overrule it, because the shop may know something the books do not');
   t.check(/Buy it/.test(html) && /Buy <b>/.test(html),
     'THE BUY IT BUTTON SURVIVES — the hold is an argument, never a lock');
-  t.check(html.indexOf('pp-hold') < html.indexOf('pp-do'),
+  t.check(html.indexOf('pp-hold') < html.indexOf('bp-do'),
     'and it sits ABOVE the instruction: underneath, it would read as a footnote to a decision already taken');
-  t.check(/5% <\/span>|<b>5%<\/b> kept/.test(html), 'the thin share is on the card too');
+  t.check(/5%<\/span> kept|<b>5%<\/b> kept/.test(html), 'the thin share is on the row too');
 
   /* The ending shows where the owner is looking. */
   data.products[0].variants[0].stockWholesaleMarkupValue = 18;

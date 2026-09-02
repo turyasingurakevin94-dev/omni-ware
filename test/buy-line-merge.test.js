@@ -279,7 +279,7 @@ const build = (data, over) => compileScope(
 
   s.renderPurchasePlanPanel();
   const html = el.innerHTML;
-  eq((html.match(/pp-row/g) || []).length, 1, 'ONE ROW on the screen, not two');
+  eq((html.match(/bp-line/g) || []).length, 1, 'ONE ROW on the screen, not two');
   t.check(/240 Box/.test(html) && !/>20 Box/.test(html),
     'at the quantity that covers both');
 
@@ -287,11 +287,11 @@ const build = (data, over) => compileScope(
      labelled a shelf with nothing left to sell as a quiet grey
      "Buy-in" — the crying-wolf failure inverted: falling silent on the
      row that should be loudest. */
-  t.check(/pp-when out">Out now/.test(html),
+  t.check(/ow-cp ow-bad">Out now/.test(html),
     'and the chip says OUT NOW — the shelf’s own answer, which a stocking row knows nothing about');
   t.check(!/>Buy-in</.test(html), 'not the quiet label of the half that has no deadline');
 
-  t.check(/on the shelf/.test(html) && /pp-fact-bad/.test(html),
+  t.check(/on the shelf/.test(html) && /bp-fg bad/.test(html),
     'the figures carry the empty shelf too, so they do not sit out of step with the chip');
 
   t.check(/shelf is empty too/.test(html) && /answers both/.test(html),

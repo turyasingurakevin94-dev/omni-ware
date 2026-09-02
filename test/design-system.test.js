@@ -54,7 +54,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const CEILING = {
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
     'radii': [28, /border-radius:\s*([^;}]+)/g],
-    'shadows': [62, /box-shadow:\s*([^;}]+)/g],
+    /* 63, not 62: the layer's one elevation, --ow-lift, is used for the
+       first time (the basket bar on What to buy). The value was declared
+       with the layer; no rule had spent it until now. */
+    'shadows': [63, /box-shadow:\s*([^;}]+)/g],
     'distinct colours': [115, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
@@ -292,6 +295,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub'],
       renders: 'renderChaseScreen',
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-tbl', 'ow-cp'],
+    },
+    /* What to buy. The form above the list became two fields in the
+       header; the private list, row, chip, order card and basket became
+       the layer's table, chip, panels and basket bar. .pp-facts and
+       .pp-why are not retired: Supplier prices still wears them. */
+    buying: {
+      retired: ['page-head', 'panel', 'form-panel', 'pp-controls', 'pp-list', 'pp-row', 'pp-top', 'pp-when',
+                'pp-empty', 'pp-ord', 'pp-basket', 'sum-strip', 'sum-cell'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-f'],
+      renders: 'renderPurchasePlanPanel',
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-pan', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-note', 'ow-cp', 'ow-bk'],
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so

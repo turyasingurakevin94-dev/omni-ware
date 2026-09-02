@@ -451,7 +451,7 @@ const build = (data, extraSrc, extraNames, extraEnv) => compileScope(
     t.check(/On the way/.test(html),
       'WHAT IS ALREADY COMING IS DRAWN, above the plan — a buyer who cannot see it buys it twice');
     t.check(/Roto/.test(html) && /810,000/.test(html), 'with who it is from and what it comes to');
-    t.check(/pp-ord/.test(html) && /late/.test(html),
+    t.check(/bp-ord late/.test(html),
       'and a day that has gone by is marked, because somebody named that day');
     t.check(/It came/.test(html), 'with the door that turns it into stock and a bill');
     t.check(/already on order/.test(html),

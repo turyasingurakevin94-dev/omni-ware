@@ -106,7 +106,9 @@ eq(unexpected.length, 0,
 {
   const src = read('index.html');
   const heads = (src.match(/<div class="form-panel-head">/g) || []).length;
-  t.check(heads >= 7, `the preset panels use the real head (${heads} found)`);
+  /* Seven until What to buy's two figures moved into its header as
+     fields; six form panels remain, all on the real head. */
+  t.check(heads >= 6, `the preset panels use the real head (${heads} found)`);
   /* fp-icon must WRAP the svg, never be put on it: the only rule that
      sizes the icon and gives it fill:none is
      `.form-panel-head .fp-icon .icon`, so an svg wearing fp-icon itself
@@ -117,7 +119,7 @@ eq(unexpected.length, 0,
      there by an ICON_* constant is that constant's business, and every
      one of those already spells `class="icon"` itself. */
   const literal = (src.match(/<span class="fp-icon">\s*<svg[^>]*>/g) || []);
-  t.check(literal.length >= 6, `the literal icons were found (${literal.length})`);
+  t.check(literal.length >= 5, `the literal icons were found (${literal.length})`);
   eq(literal.filter((x) => !/class="icon/.test(x)).length, 0,
     'every one of them wraps an svg that carries the class which sizes it');
 }

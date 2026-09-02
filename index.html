@@ -878,32 +878,63 @@
      Consignment pass settled on -- .sum-strip for the figures the
      screen turns on, .form-panel for the controls -- so this reads as
      the same app rather than a fifth idea about what a list looks like. */
-  /* Two numbers, not two paragraphs. The auto-fit grid stretched each
-     input to half the panel, which reads as a form expecting an essay. */
-  .pp-controls .form-grid{grid-template-columns:repeat(2, minmax(160px, 230px));}
-  /* Two 160px columns plus the panel's padding is wider than a phone,
-     and a grid track cannot shrink below a minimum it was given. */
-  @media (max-width:560px){.pp-controls .form-grid{grid-template-columns:1fr;}}
-  .pp-list{display:flex;flex-direction:column;gap:2px;}
-  .pp-row{padding:13px 0;border-bottom:1px solid var(--ow-rule-soft);}
-  .pp-row:last-child{border-bottom:none;}
-  .pp-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .pp-name{font-size:14px;font-weight:700;color:var(--ink);min-width:0;flex:1 1 auto;}
-  /* margin-left:auto pins the money and the button to the right edge
-     however long the name is, and lets both drop to their own line
-     together on a phone rather than one at a time. */
-  .pp-cost{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;}
-  .pp-act{padding:7px 14px;font-size:12.5px;flex-shrink:0;}
-  .pp-when{flex-shrink:0;font-size:10.5px;font-weight:700;letter-spacing:0.3px;padding:3px 9px;
-    border-radius:999px;background:var(--ow-steel-050);color:var(--ink-soft);white-space:nowrap;}
-  .pp-when.now{background:var(--ow-amber-soft);color:var(--ow-amber-ink);}
-  .pp-when.out{background:var(--ow-oxide-soft);color:var(--ow-oxide-deep);}
-  /* The instruction. It was the smallest, faintest line in the row --
-     under forty words of prose -- and it is the only line that says
-     what to actually do. */
-  .pp-do{margin-top:7px;font-size:13px;color:var(--ink);line-height:1.5;}
-  .pp-do b{font-weight:700;}
+  /* ===== What to buy =====
+     The console: the plan as the layer's table -- a tick, when, the
+     item with its instruction and its argument, the cost, the door --
+     with what is already on the way ABOVE it and the budget's own
+     arithmetic in the rail. The phone: each line a card, the tick a
+     full-width button, the basket in the thumb. */
+  /* .ow-tbl.bp-tbl, not .bp-tbl: the layer's .ow-tbl sets the same
+     variable later in the file and wins a tie. Found by rendering. */
+  .ow-tbl.bp-tbl{--ow-tbl-cols:28px 84px minmax(0,1fr) 128px auto;}
+  .bp-tbl .ow-tbl-r{align-items:start;}
+  .bp-line.picked{background:var(--ow-paper-2);}
+  /* The tick is the order: ticked means on it. A button, so the keyboard
+     reaches it; a box, because that is what a tick is. */
+  .bp-ck{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:16px;height:16px;margin-top:2px;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r-sm);background:var(--ow-paper);position:relative;}
+  .bp-ck.on{background:var(--ow-steel-950);border-color:var(--ow-steel-950);}
+  .bp-ck.on::after{content:"";position:absolute;left:5px;top:1px;width:4px;height:9px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);}
+  .bp-ck:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .bp-when{padding-top:1px;}
+  .bp-it{min-width:0;}
+  .bp-do{display:block;font-size:12px;color:var(--ink);margin-top:1px;line-height:1.4;}
+  .bp-do b{font-weight:600;}
+  /* The argument and the figures on one line, the figures in the mono
+     face so they can be read down the list; the full text on hover. */
+  .bp-w{display:block;min-width:0;font-size:11px;color:var(--ink-soft);line-height:1.4;margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bp-fg{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);}
+  .bp-fg.bad{color:var(--ow-crimson);}
+  .bp-fg.good{color:var(--ow-verdigris);}
+  .bp-d{color:var(--ow-rule);margin:0 7px;}
+  .bp-cost .ow-fig-b{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ink-soft);}
+  /* The hold rides the table's note band: the decision, above the
+     recommendation, in the words it was made in. It does not take the
+     Buy it button away. */
+  .pp-hold .bp-hold-t{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11px;}
+  .pp-hold .bp-hold-l{flex:1 1 200px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pp-hold .bp-hold-w{font-size:11px;white-space:nowrap;}
+  .pp-hold.pp-hold-done{background:var(--ow-verdigris-soft);border-top-color:var(--ow-verdigris-soft);color:var(--ow-verdigris);}
+  /* What is on the way: who, when, what; the money; the four answers. */
+  .bp-ord{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center;
+    padding:9px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .bp-ord-m{min-width:0;}
+  .bp-ord-s{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .bp-ord-l{font-size:11px;color:var(--ink-soft);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bp-ord-t{text-align:right;}
+  .bp-ord-a{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;}
+  /* The rail's arithmetic rows and its two-line rows. */
+  .bp-tot{background:var(--ow-paper-2);}
+  .bp-tot .ow-sr-k{color:var(--ink);font-weight:600;}
+  .bp-tot .ow-sr-v{font-weight:600;}
+  .bp-sr{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .bp-sr-n{flex:1;min-width:0;}
+  .bp-sr-n b{display:block;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bp-sr-n em{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);margin-top:1px;
+    font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .bp-bk .bp-bk-clear{color:var(--ow-steel-100);border:1px solid var(--ow-steel-800);}
   .pp-facts{display:flex;flex-wrap:wrap;gap:3px 16px;margin-top:6px;}
   .pp-fact{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
   .pp-fact b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
@@ -1010,79 +1041,19 @@
   .rv-entry{margin-top:8px;display:flex;flex-direction:column;gap:7px;}
   .rv-erow{display:flex;gap:7px;flex-wrap:wrap;}
   .rv-ehint{font-size:11.5px;color:var(--ink-soft);}
-  /* THE HOLD. It sits above the recommendation because it is about
-     whether to follow it at all -- put underneath, it would read as a
-     footnote to a decision already taken. Oxide rather than amber: a
-     manager saying "not yet" is not a soft warning. */
-  .pp-hold{margin:-2px 0 10px;padding:9px 12px;border-radius:9px;
-    background:var(--ow-oxide-soft);border-left:3px solid var(--accent);}
-  .pp-hold-top{font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
-    color:var(--ow-oxide-deep);}
-  .pp-hold-line{margin-top:3px;font-size:12.5px;color:var(--ink);line-height:1.55;max-width:70ch;}
-  .pp-hold-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
-  .pp-hold-who{font-size:11px;color:var(--ink-soft);margin-right:auto;}
-  .pp-hold-acts .btn{padding:5px 11px;font-size:11.5px;}
-  /* An ending is news for a week, then it stops being news. Green,
-     because a hold that lifted itself means the shop acted. */
-  .pp-hold-done{background:var(--good-bg);border-left-color:var(--good);}
-  .pp-hold-done .pp-hold-line{color:var(--ink-soft);}
-  .pp-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
-    color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
   .pp-more{margin:8px 0 0;font-size:12px;color:var(--ink-soft);}
-  .pp-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;
-    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
-  .pp-empty b{font-size:13.5px;color:var(--ink);}
-  .pp-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
-  /* WHAT HAS BEEN ORDERED AND NOT ARRIVED.
-
-     Above the plan, not below it: the first thing a buyer needs to know
-     is what is already coming, or they buy it twice. Steel rather than
-     oxide -- an order in transit is the shop working, not a warning. */
-  .pp-ord{padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-    background:var(--ow-steel-050);margin-bottom:8px;}
-  .pp-ord.late{border-color:#EBD8AE;background:var(--ow-amber-soft);}
-  .pp-ord-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;}
-  .pp-ord-sup{font-size:13.5px;font-weight:650;color:var(--ink);margin-right:auto;}
-  .pp-ord-total{font-size:13px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums;}
-  .pp-ord-when{font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
-    color:var(--ink-soft);}
-  .pp-ord.late .pp-ord-when{color:var(--ow-amber-ink);}
-  .pp-ord-lines{margin-top:5px;font-size:12px;color:var(--ink-soft);line-height:1.6;max-width:74ch;}
-  .pp-ord-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;}
-  .pp-ord-acts .btn{padding:5px 11px;font-size:11.5px;}
-  .pp-ord-note{font-size:11px;color:var(--ink-soft);margin-right:auto;}
-  /* The basket. It only exists while something is ticked, so it is a
-     bar and not a panel: nothing to dismiss, nothing left behind. */
-  .pp-basket{position:sticky;bottom:0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;
-    gap:10px;margin-top:12px;padding:11px 13px;border-radius:11px;
-    background:var(--ow-oxide-soft);border:1px solid var(--accent);}
-  .pp-basket-say{font-size:12.5px;color:var(--ink);margin-right:auto;line-height:1.5;
-    flex:1 1 240px;min-width:0;}
-  /* The two buttons travel together. Loose in the bar they broke apart
-     on a narrow screen and left Clear stranded on a line of its own,
-     reading as an action of equal weight to the one it undoes. */
-  .pp-basket-acts{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
-  /* WHO TO RING, AND WHAT THEIR MONEY BUYS. Two facts per row, the
-     person on the left and the consequence on the right, so the list
-     can be read down either column. */
-  .ctb-list{display:flex;flex-direction:column;gap:2px;margin-top:8px;}
-  .ctb-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;
-    padding:10px 0;border-bottom:1px solid var(--ow-rule-soft);}
-  .ctb-row:last-child{border-bottom:none;}
-  .ctb-who{display:flex;flex-direction:column;font-size:13px;font-weight:650;
-    color:var(--ink);flex:1 1 180px;min-width:0;}
-  .ctb-who em{font-style:normal;font-weight:400;font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .ctb-gets{display:flex;flex-direction:column;font-size:12.5px;color:var(--ink);
-    flex:1 1 220px;min-width:0;font-variant-numeric:tabular-nums;}
-  .ctb-gets em{font-style:normal;font-size:11.5px;color:var(--ink-soft);margin-top:2px;
-    font-variant-numeric:normal;}
-  /* Not enough is an answer, not a warning: the customer has done
-     nothing wrong by owing less than the shelf needs. */
+  /* WHO TO RING, AND WHAT THEIR MONEY BUYS, as rows of the rail: the
+     person and their figure, then what collecting them would cover. */
+  .ctb-list{display:flex;flex-direction:column;}
+  .ctb-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:3px;align-items:center;
+    padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .ctb-who{display:block;min-width:0;font-size:12px;font-weight:600;color:var(--ink);}
+  .ctb-who em{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--ink-soft);margin-top:1px;
+    font-variant-numeric:tabular-nums;}
+  .ctb-gets{grid-column:1/-1;font-size:11.5px;color:var(--ink);line-height:1.4;font-variant-numeric:tabular-nums;}
+  .ctb-gets em{display:block;font-style:normal;font-size:11px;color:var(--ink-soft);font-variant-numeric:normal;}
+  /* Not enough is an answer, not a warning. */
   .ctb-short{color:var(--ink-soft);}
-  .ctb-row .btn{padding:5px 11px;font-size:11.5px;flex:0 0 auto;}
-  .pp-basket-say b{font-variant-numeric:tabular-nums;}
-  /* A ticked row, so the list itself says what is in the basket. */
-  .pp-row.picked{background:var(--ow-oxide-soft);border-radius:9px;padding-left:9px;padding-right:9px;}
   /* THE ORDER, GROUPED THE WAY IT WILL BE SENT: one supplier, one
      message, one delivery, one bill. */
   .bo-group{border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:12px;}
@@ -1103,13 +1074,6 @@
     border-radius:7px;background:var(--ow-paper);color:var(--ink);}
   .bo-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;}
   .bo-drop{font-size:11px;color:var(--ink-soft);margin-right:auto;}
-  @media (max-width:560px){
-    /* The name takes the row and the money and button share the next,
-       rather than three things fighting over 375px. */
-    .pp-name{flex-basis:100%;order:2;}
-    .pp-cost{order:3;margin-left:0;}
-    .pp-act{order:4;margin-left:auto;}
-  }
 
   /* THE .buy-* AND OLD .chase-* ROW CLASSES ARE GONE.
 
@@ -7122,6 +7086,23 @@
     .ch-w-foot .btn-accent{flex:1 1 100%;order:9;}
     .ch-sp{display:none;}
     .ch-rules{display:none;}
+    /* WHAT TO BUY ON A PHONE: each line a card -- the chip and the name,
+       the instruction, the argument wrapped, the cost, then two thumb
+       buttons: the tick as a labelled button, and Buy it. */
+    .bp-when{order:-1;}
+    .pp-hold .bp-hold-l{white-space:normal;flex:1 1 100%;}
+    .bp-it .ow-tbl-p{font-size:16px;white-space:normal;}
+    .bp-w{white-space:normal;}
+    .bp-do{font-size:14px;}
+    .bp-pick{order:9;justify-self:stretch;}
+    .bp-ck{width:100%;height:auto;min-height:var(--ow-tap);margin:0;border-radius:var(--ow-r);
+      display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--ink);}
+    .bp-ck::after{content:attr(data-t);position:static;width:auto;height:auto;border:0;transform:none;}
+    .bp-ck.on{color:#fff;}
+    .bp-tbl .ow-tbl-a{order:10;}
+    .bp-tbl .ow-tbl-a .btn.ow-sm{flex:1 1 auto;min-height:var(--ow-tap);}
+    .bp-ord-a .btn{flex:1 1 calc(50% - 3px);min-height:var(--ow-tap);box-sizing:border-box;}
+    .bp-bk .btn{flex:1 1 auto;min-height:var(--ow-tap);box-sizing:border-box;}
     /* THE QUOTE'S LINE, AS A CARD. The layer turns every .ow-tbl-r into
        a one-column card; this screen's rows carry a gutter (number and
        remove) beside the name, and on a phone those two belong on one
@@ -8269,6 +8250,35 @@
   .ow-msg-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-6) 0 0;
     line-height:1.45;max-width:var(--ow-measure);}
 
+  /* ---- the small field: a name over a figure you can type ---- */
+  /* For the one or two figures a screen turns on -- a budget, a number
+     of days -- in the header beside the name rather than a form above
+     the work. The unit or the source sits inside the box after the
+     figure. */
+  .ow-f{display:flex;flex-direction:column;gap:var(--ow-sp-4);min-width:0;}
+  .ow-f-l{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-f-in{display:flex;align-items:center;gap:var(--ow-sp-4);height:28px;padding:0 var(--ow-sp-8);
+    min-width:124px;border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper);}
+  .ow-f-in:focus-within{border-color:var(--ow-steel-950);}
+  .ow-f-v{width:84px;min-width:0;border:0;background:none;outline:0;padding:0;margin:0;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-12);color:var(--ow-ink-900);}
+  .ow-f-u{font-size:var(--ow-t-11);color:var(--ow-ink-600);white-space:nowrap;margin-left:auto;}
+
+  /* ---- the basket: the one thing on a screen that genuinely floats ---- */
+  /* Dark, lifted and sticky at the foot of the work, only while
+     something is in it. The accent on it is the one accent on the
+     screen: the act the owner came here to do. */
+  .ow-bk{position:sticky;bottom:var(--ow-sp-12);z-index:5;display:flex;align-items:center;gap:var(--ow-sp-12);flex-wrap:wrap;
+    margin-top:var(--ow-sp-16);padding:var(--ow-sp-10) var(--ow-sp-12) var(--ow-sp-10) var(--ow-sp-16);
+    background:var(--ow-steel-950);color:var(--ow-paper);border-radius:var(--ow-r-lg);box-shadow:var(--ow-lift);}
+  .ow-bk-say{flex:1 1 240px;min-width:0;font-size:var(--ow-t-12);line-height:1.4;color:var(--ow-steel-100);}
+  .ow-bk-b{color:var(--ow-paper);font-weight:var(--ow-fw-600);}
+  .ow-bk-m{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    color:var(--ow-paper);font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);letter-spacing:-.02em;}
+  .ow-bk-a{display:flex;gap:var(--ow-sp-8);flex:0 0 auto;}
+
   /* ---- layout: the work column and its context rail ---- */
   .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;
     gap:var(--ow-sp-16);align-items:start;}
@@ -8638,6 +8648,12 @@
     .ow-lr-m,.ow-lr-b{font-size:var(--ow-t-12);}
     .ow-msg{font-size:14px;line-height:1.5;max-height:230px;}
     .ow-msg-n{font-size:var(--ow-t-12);}
+    .ow-f{flex:1 1 40%;}
+    .ow-f-in{height:var(--ow-tap);}
+    .ow-f-v{font-size:16px;width:100%;}
+    /* Above the tab bar, in the thumb. */
+    .ow-bk{bottom:calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--ow-sp-12));}
+    .ow-bk-a{flex:1 1 100%;}
   }
 </style>
 </head>
@@ -11111,32 +11127,21 @@
          priced supplier at the needed quantity, and the cash on hand.
          Every row carries its evidence; nothing is predicted. -->
     <section id="tab-buying" style="display:none;">
-      <div class="page-head">
-        <h1>What to buy</h1>
-        <p>What is worth buying, worked out from the shop's own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held — where the price on file for the whole month's quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget starts at the cash on hand; what does not fit is named rather than dropped. Nothing here is a forecast — every figure comes from an invoice or the Price Registry.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">What to buy</h1>
+        <p class="ow-ph-sub">Ranked by what each line earned in 30 days. Nothing is ordered until you send it.</p>
+        <p class="ow-ph-help">What is worth buying, worked out from the shop's own records and ranked by what each thing actually earned in the last 30 days. Two kinds of line: <b>a shelf refill</b>, for goods that sold off our own stock and are running low, and <b>worth stocking</b>, for goods bought in order after order and never held — where the price on file for the whole month's quantity in one buy is compared with what was really paid across those separate buys. Each line says why in plain words, and names the cheapest supplier at the quantity needed, volume discounts included. The budget starts at the cash on hand; what does not fit is named rather than dropped. Nothing here is a forecast — every figure comes from an invoice or the Price Registry.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- The two figures the whole plan turns on, as fields in the
+             header rather than a form above the list. The ids stay: the
+             listeners below bind to them at parse time with no null
+             guard. The budget's suffix says whether it was worked out
+             from the cash line or typed. -->
+        <label class="ow-f"><span class="ow-f-l">Cover</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_cover" min="1" step="1"><span class="ow-f-u">days</span></span></label>
+        <label class="ow-f"><span class="ow-f-l">Budget</span><span class="ow-f-in"><input type="number" class="ow-f-v" id="buy_budget" min="0" step="any" placeholder="safe to spend"><span class="ow-f-u" id="buy_budget_src">worked out</span></span></label>
+        <button type="button" class="btn ow-sm" id="buy_redo_btn" title="Read the shelf and the price book again">Redo the plan</button>
       </div>
-      <div class="panel">
-        <!-- A form, not a filter bar. Two figures that change what the
-             whole screen recommends deserve their names above them and
-             room to be read; .buy-controls put them on one line with
-             their labels beside them, which is the shape of something
-             you skim past. The ids stay: the listeners below bind to
-             them at parse time with no null guard. -->
-        <div class="form-panel pp-controls">
-          <div class="form-panel-head">
-            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-            <div class="form-panel-title">What the plan is working to
-              <small>Cover is how many days of selling the plan should leave on the shelf. The budget starts at the cash on hand.</small></div>
-          </div>
-          <div class="form-grid">
-            <div class="field"><label for="buy_budget">Budget (UGX)</label>
-              <input type="number" id="buy_budget" min="0" step="any"></div>
-            <div class="field"><label for="buy_cover">Cover (days of selling)</label>
-              <input type="number" id="buy_cover" min="1" step="1"></div>
-          </div>
-        </div>
-        <div id="buy_plan"></div>
-      </div>
+      <div id="buy_plan"></div>
     </section>
 
     <section id="tab-compare" style="display:none;">
@@ -56463,34 +56468,26 @@ function renderPurchasePlanPanel(){
   const coverEl = document.getElementById('buy_cover');
   if(budgetEl && document.activeElement !== budgetEl) budgetEl.value = budget == null ? '' : budget;
   if(coverEl && document.activeElement !== coverEl) coverEl.value = plan.coverDays;
+  const srcEl = document.getElementById('buy_budget_src');
+  if(srcEl) srcEl.textContent = buyBudget == null ? 'worked out' : 'typed';
   const f = n=> fmtUGX(Math.round(n));
+  const num = v=> Number(Math.round(v)).toLocaleString('en-UG');
   const days = n=> `${n} ${n === 1 ? 'day' : 'days'}`;
-  /* Two kinds, said plainly. A shelf line that has run out is urgent
-     and looks it; a repeat buy-in was never held, so calling it "OUT"
-     would be the crying wolf that made the first version unreadable. */
   /* THE SHELF BEFORE THE KIND. A merged line is a buy-in AND a shelf
      that has run out, and the chip is the only urgent thing on the row
      -- reading `kind` first labelled a line with nothing left to sell
      as a quiet "Buy-in", which is the crying-wolf failure inverted:
      falling silent on the one row that should be loudest. */
   const chip = (l)=> (l.daysLeft == null)
-    ? '<span class="pp-when">Buy-in</span>'
-    : `<span class="pp-when${l.daysLeft <= 0 ? ' out' : (l.daysLeft < 2 ? ' now' : '')}">${
+    ? '<span class="ow-cp">Buy-in</span>'
+    : `<span class="ow-cp${l.daysLeft <= 0 ? ' ow-bad' : (l.daysLeft < 2 ? ' ow-warn' : '')}">${
         l.daysLeft <= 0 ? 'Out now' : (l.daysLeft < 1 ? 'Today' : Math.floor(l.daysLeft) + 'd left')}</span>`;
-  /* WHAT TO DO, THEN WHY.
-
-     The row used to lead with forty words of prose and end with the one
-     line that says what to actually buy, in the smallest, faintest text
-     on the screen. So the order is inverted and the numbers come out of
-     the sentences: the action reads first, the figures stand in a row
-     where they can be compared down the list, and the argument -- which
-     is the thing this screen was asked for -- keeps its own line,
-     shorter now that it is not also carrying the arithmetic. */
+  /* The figures, in the mono face, on the same line as the argument so
+     they can be read down the list. */
   const facts = (l)=> {
     const fs = buyLineFacts(l);
-    if(!fs.length) return '';
-    return `<div class="pp-facts">${fs.map(x=>
-      `<span class="pp-fact${x.cls ? ' pp-fact-' + x.cls : ''}"><b>${esc(String(x.v))}</b> ${esc(x.label)}</span>`).join('')}</div>`;
+    if(!fs || !fs.length || !fs.map) return '';
+    return fs.map(x=> `<span class="bp-fg${x.cls ? ' ' + x.cls : ''}">${esc(String(x.v))}</span> ${esc(x.label)}`).join('<span class="bp-d">|</span>');
   };
   const packNote = (l)=> l.packQty > 1
     ? ` (${Math.round(l.buyQty/l.packQty)} ${esc(l.packUnit || 'pack')})` : '';
@@ -56507,59 +56504,121 @@ function renderPurchasePlanPanel(){
   const holdBand = (l)=>{
     const h = l.hold;
     if(!h) return '';
-    if(h.over) return `<div class="pp-hold pp-hold-done">
-      <div class="pp-hold-line"><b>Was held.</b> ${esc(h.note || 'The hold has ended.')}</div></div>`;
+    if(h.over) return `<div class="ow-tbl-note pp-hold pp-hold-done"><span class="bp-hold-t">Was held.</span><span class="bp-hold-l" title="${esc(h.note || 'The hold has ended.')}">${esc(h.note || 'The hold has ended.')}</span></div>`;
     const whose = h.by === 'you' ? 'You' : 'The Manager';
     const when = h.days === 0 ? 'today' : (h.days === 1 ? 'yesterday' : `${h.days} days ago`);
-    return `<div class="pp-hold" data-key="${esc(String(l.key))}">
-      <div class="pp-hold-top">On hold — not yet</div>
-      <div class="pp-hold-line">${esc(h.reason)}</div>
-      <div class="pp-hold-acts">
-        <span class="pp-hold-who">${esc(whose)} · ${esc(when)}</span>
-        <button type="button" class="btn btn-ghost pp-hold-fix" data-pid="${esc(String(l.productId))}"
-          data-vi="${l.variantIdx == null ? '' : esc(String(l.variantIdx))}">Fix the price</button>
-        <button type="button" class="btn btn-ghost pp-hold-lift">Lift it</button>
-      </div>
+    return `<div class="ow-tbl-note pp-hold" data-key="${esc(String(l.key))}">
+      <span class="bp-hold-t">On hold — not yet</span>
+      <span class="bp-hold-l" title="${esc(h.reason)}">${esc(h.reason)}</span>
+      <span class="bp-hold-w">${esc(whose)} · ${esc(when)}</span>
+      <button type="button" class="btn btn-ghost ow-sm pp-hold-fix" data-pid="${esc(String(l.productId))}"
+        data-vi="${l.variantIdx == null ? '' : esc(String(l.variantIdx))}">Fix the price</button>
+      <button type="button" class="btn btn-ghost ow-sm pp-hold-lift">Lift it</button>
     </div>`;
   };
-  /* PART OF IT IS ALREADY COMING. Said on the row that is asking for
-     the rest, or the screen recommends eight bags with no hint that
-     four are on a lorry and the owner orders twelve. */
-  const transitNote = (l)=> l.inTransit
-    ? `<div class="pp-do"><b>${l.inTransit} ${esc(l.unit || 'pc')}</b> of the ${l.shortBefore} needed ${
-        l.inTransit === 1 ? 'is' : 'are'} already on the way — this is the rest.</div>`
-    : '';
   /* TWO DOORS, AND THEY ARE NOT THE SAME DOOR.
 
-     "Buy it" is goods in hand: the purchase form, stock on the shelf,
-     a bill raised now. "Order it" is goods not yet here: a message to
-     the supplier and a record that the shop is waiting, with nothing
-     owed until the lorry comes. Reading them as one thing is how a
-     shop ends up owing for goods that never arrived. */
+     The tick is "order it": a message to the supplier and a record that
+     the shop is waiting, with nothing owed until the lorry comes. "Buy
+     it" is goods in hand: the purchase form, stock on the shelf, a bill
+     raised now. Reading them as one thing is how a shop ends up owing
+     for goods that never arrived. */
   const row = (l, list, i)=> {
     const picked = buyOrderBasket.has(String(l.tag));
-    return `
-    <div class="pp-row${picked ? ' picked' : ''}">
-      ${holdBand(l)}
-      <div class="pp-top">
-        ${chip(l)}
-        <span class="pp-name">${esc(l.name)}</span>
-        <span class="pp-cost">${f(l.cost)}</span>
-        <button type="button" class="btn ${picked ? 'btn-accent' : 'btn-ghost'} pp-act buy-pick" data-tag="${esc(String(l.tag))}">${
-          picked ? 'On the order' : 'Order it'}</button>
-        <button type="button" class="btn btn-ghost pp-act buy-act" data-list="${list}" data-i="${i}">Buy it</button>
+    const transit = l.inTransit
+      ? `<b>${l.inTransit} ${esc(l.unit || 'pc')}</b> of the ${l.shortBefore} needed ${l.inTransit === 1 ? 'is' : 'are'} already on the way — this is the rest. `
+      : '';
+    const why = buyLineWhy(l);
+    const fs = facts(l);
+    return `${holdBand(l)}<div class="ow-tbl-r bp-line${picked ? ' picked' : ''}">
+      <div class="ow-tbl-c bp-pick"><button type="button" class="bp-ck buy-pick${picked ? ' on' : ''}" data-tag="${esc(String(l.tag))}" data-t="${picked ? 'On the order' : 'Order it'}" aria-pressed="${picked ? 'true' : 'false'}" title="${picked ? 'On the order — take it off' : 'Put it on the order'}"></button></div>
+      <div class="ow-tbl-c bp-when">${chip(l)}</div>
+      <div class="ow-tbl-c bp-it">
+        <span class="ow-tbl-p" title="${esc(l.name)}">${esc(l.name)}</span>
+        <span class="bp-do">Buy <b>${l.buyQty} ${esc(l.unit || 'pc')}</b>${packNote(l)} from <b>${esc(l.supplier)}</b> at ${f(l.unitCost)} each</span>
+        <span class="bp-w" title="${esc(transit.replace(/<[^>]+>/g, '') + why)}">${transit}${esc(why)}${fs ? '<span class="bp-d">|</span>' + fs : ''}</span>
       </div>
-      <div class="pp-do">Buy <b>${l.buyQty} ${esc(l.unit || 'pc')}</b>${packNote(l)} from <b>${esc(l.supplier)}</b> at ${f(l.unitCost)} each</div>
-      ${transitNote(l)}
-      ${facts(l)}
-      <div class="pp-why buy-why">${esc(buyLineWhy(l))}</div>
+      <div class="ow-tbl-n bp-cost" data-l="Line cost"><span class="ow-fig">${num(l.cost)}</span><span class="ow-fig-b">${l.buyQty} × ${num(l.unitCost)}</span></div>
+      <div class="ow-tbl-a"><button type="button" class="btn btn-ghost ow-sm buy-act" data-list="${list}" data-i="${i}">Buy it</button></div>
     </div>`;
   };
-  /* WHERE THE BUDGET CAME FROM, when the owner did not type one. The
-     box shows the figure either way, so a screen that does not explain
-     it is a screen quietly disagreeing with the cash on the dashboard.
+  const table = (rows)=> `<div class="ow-tbl bp-tbl">
+      <div class="ow-tbl-h"><div class="ow-tbl-c"></div><div class="ow-tbl-c">When</div><div class="ow-tbl-c">Item · supplier</div><div class="ow-tbl-n">Line cost</div><div class="ow-tbl-c"></div></div>
+      ${rows}</div>`;
 
-     WHAT IS LATE AND WHAT IS NEXT ARE TWO DIFFERENT FACTS. cashCommitments
+  /* ---- the position ---- */
+  const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
+  const out = plan.lines.concat(plan.didNotFit).filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
+  const open = buyOrdersOpenRows(todayISO());
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const strip = `<div class="ow-strip">
+    ${tile('The plan comes to', `${num(plan.spend)}<span class="ow-u">UGX</span>`, plan.lines.length ? `${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}, best earners first` : 'nothing to buy inside it')}
+    ${left == null
+      ? tile('Budget', '—', 'nothing to work to yet — type one above')
+      : tile('Left of your budget', `${num(left)}<span class="ow-u">UGX</span>`, `of ${num(plan.budget)} ${buyBudget == null ? 'safe to spend' : 'you typed'}`, left > 0 ? '' : 'ow-warn')}
+    ${tile('On order', `${num(plan.onOrder || 0)}<span class="ow-u">UGX</span>`, open.length ? `${open.length} ${open.length === 1 ? 'order' : 'orders'} out, already on order and nothing owed yet` : 'nothing out on order')}
+    ${tile(out === 1 ? 'has run out' : 'have run out', String(out), out ? 'nothing left to sell today' : 'nothing has run out', out ? 'ow-bad' : '')}
+  </div>`;
+
+  /* ---- on the way, FIRST: a buyer who cannot see it buys it twice ---- */
+  const ordPanel = !open.length ? '' : `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">On the way</span><span class="ow-pan-n">${open.length} ${open.length === 1 ? 'order' : 'orders'} · ${num(open.reduce((t, o)=> t + o.total, 0))}</span></div>
+    ${open.map(o=> {
+      const names = o.lines.map(l=> `${esc(l.name)} — ${l.qty} ${esc(l.unit || 'pc')}`).join(' · ');
+      const when = o.late
+        ? `Was due ${esc(fmtShortDate(o.expectedOn))}`
+        : (o.expectedOn ? `Due ${esc(fmtShortDate(o.expectedOn))}` : 'No day named');
+      const placed = o.days === 0 ? 'ordered today'
+        : (o.days === 1 ? 'ordered yesterday' : `ordered ${o.days} days ago`);
+      return `<div class="bp-ord${o.late ? ' late' : ''}" data-id="${esc(o.id)}">
+        <div class="bp-ord-m">
+          <div class="bp-ord-s">${esc(o.supplier)} <span class="ow-cp${o.late ? ' ow-bad' : ''}">${when}</span></div>
+          <div class="bp-ord-l" title="${esc(o.lines.map(l=> l.name + ' — ' + l.qty + ' ' + (l.unit || 'pc')).join(' · '))}">${names} · ${esc(placed)}${o.sentAt ? '' : ' — the message was never opened'}</div>
+        </div>
+        <div class="bp-ord-t"><span class="ow-fig">${num(o.total)}</span></div>
+        <div class="bp-ord-a">
+          <button type="button" class="btn btn-accent ow-sm ord-came" data-id="${esc(o.id)}">It came</button>
+          <button type="button" class="btn btn-ghost ow-sm ord-again" data-id="${esc(o.id)}">Message them</button>
+          <button type="button" class="btn btn-ghost ow-sm ord-when" data-id="${esc(o.id)}">${o.expectedOn ? 'Change the day' : 'When is it due?'}</button>
+          <button type="button" class="btn btn-ghost ow-sm ord-drop" data-id="${esc(o.id)}">It is off</button>
+        </div>
+      </div>`;
+    }).join('')}
+    <p class="ow-mini">${plan.onOrder ? `${f(plan.onOrder)} is already out on ${open.length === 1 ? 'an order' : open.length + ' orders'} that ${open.length === 1 ? 'has' : 'have'} not arrived, so the plan is working to ${f(plan.budget)} rather than ${f(plan.budgetBefore)}. ` : ''}Nothing has left the drawer for it yet — it comes off the cash line only when the goods arrive and you name the day you will pay.</p>
+  </div>`;
+
+  /* ---- the plan ---- */
+  const picked = plan.lines.concat(plan.didNotFit).filter(l=> buyOrderBasket.has(String(l.tag))).length;
+  const nothing = !plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length;
+  let work = strip + ordPanel;
+  if(nothing){
+    work += `<div class="ow-pan"><div class="ow-empty"><b>Nothing to buy.</b><br>${plan.coming.length
+      ? 'Everything that was running short is on an order already out.'
+      : `Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.`}</div></div>`;
+  } else {
+    if(plan.budget === 0 && buyBudget == null) work += `<p class="ow-mini"><b>There is nothing safe to spend, so the plan is empty.</b>
+      Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
+      the moment there is something to buy it with. Collecting is what makes it affordable, and Chase debts has who to ring —
+      <b>What collecting would pay for</b>, beside, works out which of them, and exactly what their money would buy.
+      Or type a budget above to overrule this.</p>`;
+    /* The best few, by what they earn. The rest are one tap away --
+       the owner asked for a recommendation, not a catalogue. */
+    work += `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Buy these, in this order</span><span class="ow-pan-n">${plan.lines.length} ${plan.lines.length === 1 ? 'line' : 'lines'}${picked ? ` · ${picked} ticked` : ''}</span></div>
+      ${plan.lines.length
+        ? table(listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')) + listMoreButtonHTML('buyPlan', plan.lines.length, 'lines')
+        : '<p class="ow-mini">Nothing fits inside the budget. What is below is what the shop would buy with more.</p>'}
+    </div>`;
+    if(plan.didNotFit.length) work += `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">Over this budget</span><span class="ow-pan-n">${plan.didNotFit.length} ${plan.didNotFit.length === 1 ? 'line' : 'lines'} · ${num(plan.didNotFit.reduce((t,l)=> t + l.cost, 0))}</span></div>
+      ${table(plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join(''))}${
+      plan.didNotFit.length > 3 ? `<p class="ow-mini">and ${plan.didNotFit.length - 3} more.</p>` : ''}
+    </div>`;
+  }
+
+  /* ---- the rail: where the budget came from, and what would change it ---- */
+  /* WHAT IS LATE AND WHAT IS NEXT ARE TWO DIFFERENT FACTS. cashCommitments
      clamps an overdue payment's date to today so it sits at the head of
      the line, keeping the day it was really due behind it -- so reading
      the first row's dueOn printed "already promised in the next 30 days,
@@ -56569,117 +56628,57 @@ function renderPurchasePlanPanel(){
      found among the rows that are still ahead. */
   const lateCount = ahead.commitments.filter(c=> c.overdue).length;
   const nextUp = ahead.commitments.find(c=> !c.overdue);
-  const budgetNote = (buyBudget == null && ahead.committed > 0)
-    ? `<p class="pp-more">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
-        f(ahead.committed)} is already promised in the next ${ahead.days} days${
-        lateCount ? `, ${lateCount} of them already overdue` : ''}${
-        nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
-      }. What&#39;s coming has the dates — or type a budget here to overrule it.</p>`
-    : '';
-  /* WHAT IS ALREADY COMING, FIRST. A buyer who cannot see it buys it
-     again, which is the single most expensive mistake this screen can
-     cause -- and the one it caused every day before orders existed. */
-  const open = buyOrdersOpenRows(todayISO());
-  const ordHTML = !open.length ? '' : `<div class="pp-tail"><h4>On the way</h4>
-    ${open.map(o=> {
-      const names = o.lines.map(l=> `${esc(l.name)} — ${l.qty} ${esc(l.unit || 'pc')}`).join(' · ');
-      const when = o.late
-        ? `Was due ${esc(fmtShortDate(o.expectedOn))}`
-        : (o.expectedOn ? `Due ${esc(fmtShortDate(o.expectedOn))}` : 'No day named');
-      const placed = o.days === 0 ? 'ordered today'
-        : (o.days === 1 ? 'ordered yesterday' : `ordered ${o.days} days ago`);
-      return `<div class="pp-ord${o.late ? ' late' : ''}" data-id="${esc(o.id)}">
-        <div class="pp-ord-top">
-          <span class="pp-ord-sup">${esc(o.supplier)}</span>
-          <span class="pp-ord-when">${when}</span>
-          <span class="pp-ord-total">${f(o.total)}</span>
-        </div>
-        <div class="pp-ord-lines">${names}</div>
-        <div class="pp-ord-acts">
-          <span class="pp-ord-note">${esc(placed)}${o.sentAt ? '' : ' — the message was never opened'}</span>
-          <button type="button" class="btn btn-accent ord-came" data-id="${esc(o.id)}">It came</button>
-          <button type="button" class="btn btn-ghost ord-again" data-id="${esc(o.id)}">Message them</button>
-          <button type="button" class="btn btn-ghost ord-when" data-id="${esc(o.id)}">${o.expectedOn ? 'Change the day' : 'When is it due?'}</button>
-          <button type="button" class="btn btn-ghost ord-drop" data-id="${esc(o.id)}">It is off</button>
-        </div>
-      </div>`;
-    }).join('')}
-    <p class="pp-more">${f(open.reduce((n, o)=> n + o.total, 0))} on ${open.length === 1 ? 'this order' : 'these orders'}, already taken off the budget below.
-      Nothing is owed until it arrives — the bill is raised when you say it came.</p></div>`;
-  /* The need it covers, said once, so a line that has vanished off the
-     plan is not read as a line that stopped mattering. */
-  const comingHTML = !plan.coming.length ? '' : `<div class="pp-tail"><h4>Covered by an order already out</h4>
-    <div class="pp-list">${plan.coming.slice(0, 5).map(c=> `
-      <div class="pp-row">
-        <div class="pp-top">
-          <span class="pp-when">On the way</span>
-          <span class="pp-name">${esc(c.name)}</span>
-        </div>
-        <div class="pp-do"><b>${c.qty}${c.unit ? ' ' + esc(c.unit) : ''}</b> ordered against the <b>${c.needed}</b> this line needed, so it is not in the plan below.</div>
-      </div>`).join('')}</div>${
-    plan.coming.length > 5 ? `<p class="pp-more">and ${plan.coming.length - 5} more.</p>` : ''}</div>`;
-
-  let html = ordHTML;
-  if(!plan.lines.length && !plan.sourceFirst.length && !plan.didNotFit.length){
-    html += `<div class="pp-empty"><b>Nothing to buy.</b>
-      <span>${plan.coming.length
-        ? `Everything that was running short is on an order already out.`
-        : `Nothing on the shelf runs out within ${days(plan.coverDays)}, and nothing is being bought in order after order.`}</span></div>`
-      + comingHTML + budgetNote;
-  } else {
-    /* The two figures the whole screen turns on, at the top, in the
-       strip every other screen uses for exactly this. They were a
-       footnote under the list. */
-    const left = plan.budget == null ? null : Math.max(0, plan.budget - plan.spend);
-    const out = plan.lines.concat(plan.didNotFit)
-      .filter(l=> l.kind !== 'stock' && l.daysLeft <= 0).length;
-    const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
-      <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
-    html += `<div class="sum-strip">
-      ${cell(f(plan.spend), 'the plan comes to')}
-      ${left == null ? '' : cell(f(left), 'left of your budget', left > 0 ? 'good' : '')}
-      ${plan.onOrder ? cell(f(plan.onOrder), 'already on order') : ''}
-      ${cell(plan.lines.length, plan.lines.length === 1 ? 'line' : 'lines')}
-      ${out ? cell(out, out === 1 ? 'has run out' : 'have run out', 'warn') : ''}
+  const sr = (k, v, tot)=> `<div class="ow-sr${tot ? ' bp-tot' : ''}"><span class="ow-sr-k">${k}</span><span class="ow-sr-v">${v}</span></div>`;
+  let rail = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Where the budget came from</span></div>
+    ${buyBudget == null
+      ? sr('Cash in hand', num(cash))
+        + (ahead.committed > 0 ? sr(`Promised, next ${ahead.days} days`, '−' + num(ahead.committed)) : '')
+        + sr('Safe to spend', num(ahead.safeToSpend), true)
+      : sr('You typed', num(buyBudget), true)}
+    ${plan.onOrder ? sr(`Out on ${open.length} ${open.length === 1 ? 'order' : 'orders'}`, '−' + num(plan.onOrder)) : ''}
+    ${sr('The plan works to', num(plan.budget == null ? 0 : plan.budget), true)}
+    ${buyBudget == null
+      ? (ahead.committed > 0
+        ? `<p class="ow-mini">Budget is ${f(ahead.safeToSpend)}, not the ${f(cash)} in hand: ${
+            f(ahead.committed)} is already promised in the next ${ahead.days} days${
+            lateCount ? `, ${lateCount} of them already overdue` : ''}${
+            nextUp ? `, the ${lateCount ? 'next' : 'first'} on ` + esc(fmtShortDate(nextUp.dueOn)) : ''
+          }. What&#39;s coming has the dates — or type a budget above to overrule it.</p>`
+        : `<p class="ow-mini">Nothing is promised inside the next ${ahead.days} days, so the cash in hand is what is safe to spend. Type a budget above to work to a different figure.</p>`)
+      : '<p class="ow-mini">Typed by you. Clear the box above to go back to what the cash line says is safe to spend.</p>'}
+  </div>`;
+  if(buyBudget == null && ahead.commitments.length){
+    const shown = ahead.commitments.slice(0, 5);
+    rail += `<div class="ow-pan">
+      <div class="ow-pan-h"><span class="ow-pan-t">What is promised</span><span class="ow-pan-n">${num(ahead.committed)}</span></div>
+      ${shown.map(c=> sr(`${esc(c.label || 'Payment')}${c.overdue ? ' <span class="ow-cp ow-bad">overdue</span>' : (c.dueOn ? ' — ' + esc(fmtShortDate(c.dueOn)) : '')}`, num(c.amount || 0))).join('')}
+      ${ahead.commitments.length > shown.length ? `<p class="ow-mini">and ${ahead.commitments.length - shown.length} more — What's coming has them all.</p>` : ''}
     </div>`;
-    html += budgetNote;
-    /* THE SAME SHILLING CANNOT BE OFFERED TWICE. Said in words as well
-       as in the strip, because a budget that quietly shrank is a screen
-       the owner stops trusting. */
-    if(plan.onOrder) html += `<p class="pp-more">${f(plan.onOrder)} is already out on ${
-      open.length === 1 ? 'an order' : open.length + ' orders'} that ${open.length === 1 ? 'has' : 'have'} not arrived,
-      so the plan is working to ${f(plan.budget)} rather than ${f(plan.budgetBefore)}. Nothing has left the drawer for it yet —
-      it comes off the cash line only when the goods arrive and you name the day you will pay.</p>`;
-    if(plan.budget === 0 && buyBudget == null) html += `<p class="pp-more"><b>There is nothing safe to spend, so the plan is empty.</b>
-      Every shilling in the drawer is already promised to a day inside the next ${ahead.days}. What is below is what the shop would buy
-      the moment there is something to buy it with. Collecting is what makes it affordable, and Chase debts has who to ring —
-      <b>What collecting would pay for</b>, underneath, works out which of them, and exactly what their money would buy.
-      Or type a budget above to overrule this.</p>`;
-    /* The best few, by what they earn. The rest are one tap away --
-       the owner asked for a recommendation, not a catalogue. */
-    html += `<div class="pp-list">${listPageSlice('buyPlan', plan.lines).map((l,i)=> row(l, 'lines', i)).join('')}</div>`;
-    if(plan.lines.length) html += listMoreButtonHTML('buyPlan', plan.lines.length, 'lines');
-    if(plan.didNotFit.length) html += `<div class="pp-tail"><h4>Over this budget</h4>
-      <div class="pp-list">${plan.didNotFit.slice(0, 3).map((l,i)=> row(l, 'didNotFit', i)).join('')}</div>${
-      plan.didNotFit.length > 3 ? `<p class="pp-more">and ${plan.didNotFit.length - 3} more.</p>` : ''}</div>`;
-    /* AND WHAT WOULD PAY FOR THEM. The screen used to end the argument
-       at "collecting is what makes it affordable" and leave the owner
-       to work out who and how much. This does the arithmetic. */
-    html += collectToBuyHTML(collectToBuy(plan, todayISO()));
-    html += comingHTML;
-    if(plan.sourceFirst.length) html += `<div class="pp-tail"><h4>Selling with no supplier price on file</h4>
-      <div class="pp-list">${plan.sourceFirst.slice(0, 3).map((sf,i)=> `
-        <div class="pp-row">
-          <div class="pp-top">
-            <span class="pp-when">No price</span>
-            <span class="pp-name">${esc(sf.name)}</span>
-            <button type="button" class="btn btn-ghost pp-act buy-price" data-i="${i}">Add a price</button>
-          </div>
-          <div class="pp-facts"><span class="pp-fact"><b>${sf.units30}</b> sold in 30 days</span><span class="pp-fact"><b>${Math.ceil(sf.qty)}</b> needed</span></div>
-          <div class="pp-why buy-why">No supplier price is on file anywhere, so nothing here can be costed until one is.</div>
-        </div>`).join('')}</div>${
-      plan.sourceFirst.length > 3 ? `<p class="pp-more">and ${plan.sourceFirst.length - 3} more.</p>` : ''}</div>`;
   }
+  /* AND WHAT WOULD PAY FOR THEM. The screen used to end the argument
+     at "collecting is what makes it affordable" and leave the owner
+     to work out who and how much. This does the arithmetic. */
+  rail += collectToBuyHTML(collectToBuy(plan, todayISO()));
+  /* The need an order covers, said once, so a line that has vanished
+     off the plan is not read as a line that stopped mattering. */
+  if(plan.coming.length) rail += `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Covered by an order already out</span><span class="ow-pan-n">${plan.coming.length}</span></div>
+    ${plan.coming.slice(0, 5).map(c=> `<div class="bp-sr"><span class="bp-sr-n"><b>${esc(c.name)}</b><em>${c.qty}${c.unit ? ' ' + esc(c.unit) : ''} ordered against the ${c.needed} needed</em></span></div>`).join('')}
+    ${plan.coming.length > 5 ? `<p class="ow-mini">and ${plan.coming.length - 5} more.</p>` : ''}
+  </div>`;
+  if(plan.sourceFirst.length) rail += `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Selling, no supplier price on file</span><span class="ow-pan-n">${plan.sourceFirst.length}</span></div>
+    ${plan.sourceFirst.slice(0, 3).map((sf,i)=> `<div class="bp-sr">
+      <span class="bp-sr-n"><b>${esc(sf.name)}</b><em>${sf.units30} sold in 30 days · ${Math.ceil(sf.qty)} needed</em></span>
+      <button type="button" class="btn btn-ghost ow-sm buy-price" data-i="${i}">Add a price</button>
+    </div>`).join('')}
+    <p class="ow-mini">Nothing here can be costed until a supplier price exists, so it is named rather than guessed at.</p>
+    ${plan.sourceFirst.length > 3 ? `<p class="ow-mini">and ${plan.sourceFirst.length - 3} more.</p>` : ''}
+  </div>`;
+
+  let html = `<div class="ow-grid"><div class="ow-stack">${work}</div><div class="ow-side">${rail}</div></div>`;
+
   /* THE BASKET, at the foot, only while something is in it. A bar and
      not a panel: there is nothing to dismiss and nothing left behind.
      Keys that no longer resolve are dropped here rather than carried
@@ -56690,13 +56689,13 @@ function renderPurchasePlanPanel(){
   if(basket.length){
     const sups = new Set(basket.map(l=> String(l.supplierId))).size;
     const tot = basket.reduce((n, l)=> n + l.cost, 0);
-    html += `<div class="pp-basket">
-      <span class="pp-basket-say"><b>${basket.length}</b> ${basket.length === 1 ? 'line' : 'lines'} from
-        <b>${sups}</b> ${sups === 1 ? 'supplier' : 'suppliers'}, <b>${f(tot)}</b>.
-        ${sups === 1 ? 'One message' : sups + ' messages'} to send, ${sups === 1 ? 'one delivery' : 'one delivery each'}, nothing owed until they come.</span>
-      <span class="pp-basket-acts">
+    html += `<div class="ow-bk bp-bk">
+      <span class="ow-bk-say"><span class="ow-bk-b">${basket.length}</span> ${basket.length === 1 ? 'line' : 'lines'} from
+        <span class="ow-bk-b">${sups}</span> ${sups === 1 ? 'supplier' : 'suppliers'}, <span class="ow-bk-m">${f(tot)}</span> —
+        ${sups === 1 ? 'one message' : sups + ' messages'} to send, ${sups === 1 ? 'one delivery' : 'one delivery each'}, nothing owed until they come.</span>
+      <span class="ow-bk-a">
+        <button type="button" class="btn ow-sm bp-bk-clear" id="buy_basket_clear">Clear</button>
         <button type="button" class="btn btn-accent" id="buy_basket_go">Review the order</button>
-        <button type="button" class="btn btn-ghost" id="buy_basket_clear">Clear</button>
       </span>
     </div>`;
   }
@@ -56806,11 +56805,13 @@ function renderPurchasePlanPanel(){
 function collectToBuyHTML(c){
   if(!c) return '';
   const f = n=> fmtUGX(Math.round(n));
+  const head = `<div class="ow-pan-h"><span class="ow-pan-t">What collecting would pay for</span>${
+    c.debtors ? `<span class="ow-pan-n">${c.debtors} owe you</span>` : ''}</div>`;
   /* NOTHING OWED IS ITS OWN ANSWER, and a useful one: it means the
      money is not out with customers, so collecting is not the lever
      and the owner should stop looking for it there. */
-  if(!c.debtors) return `<div class="pp-tail"><h4>What collecting would pay for</h4>
-    <p class="pp-more">Nothing. Nobody owes you anything, so there is nothing to collect —
+  if(!c.debtors) return `<div class="ow-pan">${head}
+    <p class="ow-mini">Nothing. Nobody owes you anything, so there is nothing to collect —
       what is over budget is over budget until the shop sells its way there or you decide to spend more than is safe.</p></div>`;
   const gap = c.needForCheapest < c.needForNext
     ? `The best earner left — <b>${esc(c.nextLine)}</b> — needs <b>${f(c.needForNext)}</b> more than you can safely spend, though <b>${f(c.needForCheapest)}</b> would buy the cheapest of them.`
@@ -56820,27 +56821,20 @@ function collectToBuyHTML(c){
       /* Their word, said and never counted. */
       x.promisedOn ? ' · said ' + esc(fmtShortDate(x.promisedOn)) : ''}${
       x.brokenBefore ? ' · broke their word ' + x.brokenBefore + (x.brokenBefore === 1 ? ' time' : ' times') : ''}</em></span>`;
-    /* The headline and its detail are TWO children of the column, not
-       four. A bare <b> inside a flex column becomes a flex item of its
-       own, which broke "covers 3 lines — 1,100,000" over three lines
-       with the number stranded in the middle of them. */
+    /* NOT ENOUGH IS AN ANSWER TOO, and the answer is what is STILL
+       short after their money, never the gap as it stood before it. */
     const gets = x.lines
-      ? `<span class="ctb-gets"><span>covers <b>${x.lines}</b> ${x.lines === 1 ? 'line' : 'lines'} — ${f(x.spend)}</span><em>${esc(x.covers.join(', '))}</em></span>`
-      /* NOT ENOUGH IS AN ANSWER TOO, and the answer is what is STILL
-         short after their money, never the gap as it stood before it.
-         "the cheapest line still needs 90,000" beside a customer owing
-         40,000 reads as if collecting from them did nothing at all. */
-      : `<span class="ctb-gets ctb-short"><span>not enough on its own — ${f(x.debt)} would leave the cheapest line ${f(Math.max(0, c.needForCheapest - x.debt))} short</span></span>`;
-    return `<div class="ctb-row">${who}${gets}
-      <button type="button" class="btn btn-ghost ctb-go" data-id="${esc(String(x.customerId))}">Chase them</button></div>`;
+      ? `<span class="ctb-gets">covers <b>${x.lines}</b> ${x.lines === 1 ? 'line' : 'lines'} — ${f(x.spend)}<em>${esc(x.covers.join(', '))}</em></span>`
+      : `<span class="ctb-gets ctb-short">not enough on its own — ${f(x.debt)} would leave the cheapest line ${f(Math.max(0, c.needForCheapest - x.debt))} short</span>`;
+    return `<div class="ctb-row">${who}<button type="button" class="btn btn-ghost ow-sm ctb-go" data-id="${esc(String(x.customerId))}">Chase them</button>${gets}</div>`;
   };
   const all = c.allCollected;
-  const whole = c.debtors > 1 ? `<p class="pp-more">Everything owed to you is <b>${f(c.owedToYou)}</b> across ${
+  const whole = c.debtors > 1 ? `<p class="ow-mini">Everything owed to you is <b>${f(c.owedToYou)}</b> across ${
     c.debtors} ${c.debtors === 1 ? 'customer' : 'customers'}. ${all.whole
       ? `Collected today, the whole of what is over budget fits.`
       : `Collected today it would cover <b>${all.lines}</b> of the ${c.over}, at ${f(all.spend)}.`}</p>` : '';
-  return `<div class="pp-tail"><h4>What collecting would pay for</h4>
-    <p class="pp-more">${gap} All ${c.over} of them need <b>${f(Math.max(0, c.overTotal - c.leftOfBudget))}</b>.
+  return `<div class="ow-pan">${head}
+    <p class="ow-mini">${gap} All ${c.over} of them need <b>${f(Math.max(0, c.overTotal - c.leftOfBudget))}</b>.
       Every figure below is what that money would buy <b>if it were in the drawer today</b> — a day somebody named is not money in the drawer.</p>
     <div class="ctb-list">${c.candidates.map(row).join('')}</div>
     ${whole}</div>`;
@@ -57054,6 +57048,11 @@ document.getElementById('buy_cover').addEventListener('change', e=>{
   renderPurchasePlanPanel();
   toast('Cover target updated — the plan refills to ' + data.presetRestockCoverDays
     + (data.presetRestockCoverDays === 1 ? ' day' : ' days') + ' of stock');
+});
+/* Reads the shelf and the price book again. Nothing is saved or sent. */
+document.getElementById('buy_redo_btn').addEventListener('click', ()=>{
+  renderPurchasePlanPanel();
+  toast('The plan was read again from the shelf and the price book');
 });
 function dashWeeklyBuckets(numWeeks){
   // Returns numWeeks buckets, oldest first, each {from,to,label}

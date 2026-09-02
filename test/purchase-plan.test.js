@@ -280,7 +280,9 @@ if (scope) {
     'the best few show by default, with the rest one tap away');
   t.check(/buyPlan: 5/.test(src) && /buyPlan: \(\)=> renderPurchasePlanPanel\(\)/.test(src),
     'five of them, redrawn through the same registry every other list uses');
-  t.check(/buy-why/.test(panel), 'and every row carries its reason');
+  /* The reason is the row's argument line (.bp-w), drawn from
+     buyLineWhy -- the same sentence the assistant is handed. */
+  t.check(/class="bp-w"/.test(panel) && /buyLineWhy\(l\)/.test(panel), 'and every row carries its reason');
 
   t.check(/cashOnHandByAccount\(\)\.total/.test(panel),
     'the default budget is the cash actually on hand');
@@ -385,20 +387,26 @@ if (scope) {
 {
   const panel = extractFunction(src, 'renderPurchasePlanPanel', 'index.html');
 
-  // The instruction first, the arithmetic under it, the argument last.
-  const iDo = panel.indexOf('class="pp-do"');
-  const iFacts = panel.indexOf('${facts(l)}');
-  const iWhy = panel.indexOf('class="pp-why buy-why"');
-  t.check(iDo > 0 && iDo < iFacts && iFacts < iWhy,
+  // The instruction first, then the argument with its figures on the
+  // same line -- the argument in words, the figures after it in the
+  // mono face, so both can be read down the list.
+  const iDo = panel.indexOf('class="bp-do"');
+  const iWhy = panel.indexOf('${esc(why)}');
+  const iFacts = panel.indexOf("+ fs");
+  t.check(iDo > 0 && iDo < iWhy && iWhy < iFacts,
     'the row says what to buy before it says why — it used to be the other way round, in the smallest text on the screen');
 
-  t.check(/class="sum-strip"/.test(panel) && /'the plan comes to'/.test(panel)
-    && /'left of your budget'/.test(panel),
-    'the two figures the screen turns on are in the strip every other screen uses for them');
+  t.check(/class="ow-strip"/.test(panel) && /'The plan comes to'/.test(panel)
+    && /'Left of your budget'/.test(panel),
+    'the two figures the screen turns on are in the layer’s strip, like every converted screen');
   t.check(!/Plan total <b>/.test(panel), 'and no longer a footnote under the list');
 
-  t.check(/class="form-panel pp-controls"/.test(src) && /<label for="buy_budget">/.test(src),
-    'the controls are a form with its fields labelled, not a filter bar');
+  /* The two figures live in the page header as labelled fields, beside
+     the name of the screen rather than as a form above the list. The
+     ids are the same ones the listeners bind to at parse time. */
+  t.check(/<label class="ow-f"><span class="ow-f-l">Budget<\/span>[\s\S]{0,160}?id="buy_budget"/.test(src)
+    && /<label class="ow-f"><span class="ow-f-l">Cover<\/span>[\s\S]{0,160}?id="buy_cover"/.test(src),
+    'the controls are two labelled fields in the header, not a form above the list');
   t.check(/id="buy_budget"/.test(src) && /id="buy_cover"/.test(src),
     'keeping the ids — the listeners bind to them at parse time with no null guard');
 
