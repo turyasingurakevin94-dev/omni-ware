@@ -59334,6 +59334,15 @@ function mgrQueueRowHTML(row, all){
     bits.push('waiting on: ' + esc(((blocker.body||{}).title) || 'an earlier move'));
   if(out.derived) bits.push(esc(out.derived));
   if(out.unmeasured) bits.push(esc(out.unmeasured));
+  /* A FIGURE IS A SIZE. IT IS NOT A WARNING.
+     This carried `ow-bad` -- oxide crimson, this app's grammar for
+     something being wrong -- switched on by the figure EXISTING. So a
+     move worth 3,330,000 to GAIN rendered in the same red as a debt
+     about to go bad, and a move worth nothing rendered in calm ink.
+     Exactly backwards, and the same disease as the red rail this
+     redesign already retired: a device that marks everything marks
+     nothing. What a move is worth is how big it is, and usually good
+     news; the row says what KIND of thing it is in its chips. */
   const worth = Number(b.worth) > 0;
   const money = worth ? fmtUGX(Math.round(b.worth)) : '\u2014';
   const basis = worth ? (MANAGER_WORTH_BASES[b.worthBasis] || 'on this move') : 'no figure on it';
@@ -59347,12 +59356,12 @@ function mgrQueueRowHTML(row, all){
     <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
       <span class="ow-q-t">${esc(b.title || '')}</span>
       <span class="ow-q-m">${chips}</span>
-      <span class="ow-q-v${worth ? ' ow-bad' : ''}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(basis)}</span></span>
+      <span class="ow-q-v"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${esc(basis)}</span></span>
     </button>
     <button type="button" class="ow-q-card ow-qtog">
       <span class="ow-q-cm">${chips}${OW_CARET_C}</span>
       <p class="ow-q-ct">${esc(b.title || '')}</p>
-      <span class="ow-q-cv${worth ? ' ow-bad' : ''}">${esc(money)}<span class="ow-q-b">${esc(basis)}</span></span>
+      <span class="ow-q-cv">${esc(money)}<span class="ow-q-b">${esc(basis)}</span></span>
     </button>
     <div class="ow-q-x">
       <p class="ow-q-why">${esc(b.why || '')}</p>${
@@ -59500,18 +59509,25 @@ function renderDashboard(){
     const has = Number(a.money) > 0;
     const money = has ? fmtUGX(Math.round(a.money)) : '\u2014';
     const basis = has ? 'at stake' : 'nothing at stake yet';
+    /* Red for the BAND, never for the figure. This used to redden any
+       alert that carried money at all, so "Money leaking" -- a chronic
+       band, the one thing on this list that is explicitly not urgent --
+       came out with red money beside a red chip, saying one thing twice
+       and leaving nothing louder for the row that genuinely needs
+       today. Only `now` is bad, and it already wears a dot. */
+    const urgent = band.cls === 'bad';
     const chips = `<span class="ow-cp">Watch</span><span class="ow-cp ow-${esc(band.cls)}">${
       band.cls === 'bad' ? '<i class="ow-cp-d"></i>' : ''}${esc(band.label)}</span>`;
     return `<div class="ow-q">
       <button type="button" class="ow-q-r ow-qtog">${OW_CARET}
         <span class="ow-q-t">${esc(a.title)}</span>
         <span class="ow-q-m">${chips}</span>
-        <span class="ow-q-v${has ? ' ow-bad' : ''}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${basis}</span></span>
+        <span class="ow-q-v${urgent ? ' ow-bad' : ''}"><b class="ow-q-f">${esc(money)}</b><span class="ow-q-b">${basis}</span></span>
       </button>
       <button type="button" class="ow-q-card ow-qtog">
         <span class="ow-q-cm">${chips}${OW_CARET_C}</span>
         <p class="ow-q-ct">${esc(a.title)}</p>
-        <span class="ow-q-cv${has ? ' ow-bad' : ''}">${esc(money)}<span class="ow-q-b">${basis}</span></span>
+        <span class="ow-q-cv${urgent ? ' ow-bad' : ''}">${esc(money)}<span class="ow-q-b">${basis}</span></span>
       </button>
       <div class="ow-q-x">
         <p class="ow-q-why">${a.detail}</p>

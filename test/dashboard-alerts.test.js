@@ -462,4 +462,53 @@ if (scope) {
   promiseData.presetBuyOrders = {};
 }
 
+/* ---------- the accent has to keep meaning something ---------- */
+/*
+ * A FIGURE IS A SIZE. IT IS NOT A WARNING.
+ *
+ * Both queue-row builders used to switch on crimson — this app's
+ * grammar for something being wrong — whenever the row carried money at
+ * all:
+ *
+ *     const worth = Number(b.worth) > 0;
+ *     <span class="ow-q-v${worth ? ' ow-bad' : ''}">
+ *
+ * So a Manager move worth 3,330,000 to GAIN rendered in the same red as
+ * a debt about to go bad, and a move worth nothing rendered in calm ink.
+ * On the alert side, "Money leaking" — a chronic band, the one thing on
+ * the list explicitly NOT urgent — came out with red money beside a red
+ * chip, saying one thing twice and leaving nothing louder for the row
+ * that genuinely needs today.
+ *
+ * That is the red-rail disease this redesign already cured once: a
+ * device that marks everything marks nothing. The rule that replaces it
+ * is one sentence — red is the BAND's to give, never the figure's — and
+ * it is checked here because nothing about it looks broken in a
+ * screenshot until you have two rows to compare.
+ */
+{
+  const move = extractFunction(src, 'mgrQueueRowHTML', 'index.html')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  t.check(!/ow-bad/.test(move),
+    'a Manager move never reddens — what it is worth is how big it is, and usually good news');
+
+  const alert = (/const alertCardHTML = \(a\)=>\{[\s\S]*?\n  \};/.exec(src) || [''])[0]
+    .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  t.check(!!alert, 'the alert card builder is found');
+  t.check(/const urgent = band\.cls === 'bad';/.test(alert),
+    'an alert reddens for its BAND — and only `now` is bad');
+  t.check(/ow-q-v\$\{urgent \? ' ow-bad' : ''\}/.test(alert)
+    && /ow-q-cv\$\{urgent \? ' ow-bad' : ''\}/.test(alert),
+    'the console row and the phone card take the same decision — they are two skins of one row, not two rules');
+  t.check(!/has \? ' ow-bad'/.test(alert),
+    'and never for merely having a figure on it');
+
+  /* The bands, so the check above is anchored to what they actually
+     mean rather than to the string 'bad'. */
+  const bands = (/const DASH_BANDS = \{[\s\S]*?\n\};/.exec(src) || [''])[0];
+  t.check((bands.match(/cls: '/g) || []).length === 4
+    && (bands.match(/cls: 'bad'/g) || []).length === 1,
+    'exactly one of the four bands is bad — if a second ever is, this rule has to be argued again');
+}
+
 process.exit(t.done() ? 1 : 0);
