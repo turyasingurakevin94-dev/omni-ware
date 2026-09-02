@@ -315,12 +315,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        with the rail beside them. .price-card and .price-grid are not
        retired from the FILE -- promotions, claims and the catalogue wear
        them -- only from this screen, which is what this list means. */
+    /* Supplier prices joined it as the Paid side: its form panel became
+       one of the layer's fields, its private rows the layer's cards.
+       .pw-account* and .pw-empty stay in the FILE for Margin, Rival
+       prices, Cash ahead and The day; only the two the side still draws
+       (.pw-account, .pw-account-row) may appear here, restyled. */
     prices: {
       retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search', 'p-toolbar-filter', 'field',
                 'sum-strip', 'sum-cell', 'price-grid', 'price-card', 'prc-head', 'prc-prices', 'prc-source-pill',
-                'prc-oos-pill', 'empty', 'reg-group', 'reg-row'],
-      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-tb', 'ow-f', 'ow-f-l', 'ow-f-in'],
-      renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML'],
+                'prc-oos-pill', 'empty', 'reg-group', 'reg-row',
+                'form-panel', 'form-panel-head', 'fp-icon', 'form-grid', 'pw-controls', 'pw-tail', 'pw-list', 'pw-row', 'pw-empty'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-seg', 'ow-seg-b', 'ow-tb', 'ow-f', 'ow-f-l', 'ow-f-in'],
+      renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML', 'renderPriceWatch'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-cards', 'ow-card', 'ow-fig', 'ow-sigs', 'ow-sig', 'ow-cp',
                     'ow-pan', 'ow-sr', 'ow-empty'],
     },

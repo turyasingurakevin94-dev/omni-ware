@@ -269,10 +269,25 @@ if (scope) {
 
 /* ---------- 5. the wiring --------------------------------------------- */
 {
-  t.check(/id="tab-prices-watch"/.test(src) && /data-tab="prices-watch"/.test(src),
-    'Supplier prices is its own screen on the rail');
+  /* THE PAID SIDE OF THE REGISTRY. Three questions about one thing --
+     what suppliers quote, what you actually paid, what other shops
+     charge -- were three screens on the rail. This one is a side of the
+     Price registry now, behind its switch; the old tab key still opens
+     it, on that side, so the Manager's door, a saved last tab and the
+     assistant's prompt all keep working without being told. */
+  t.check(!/id="tab-prices-watch"/.test(src) && !/data-tab="prices-watch"/.test(src)
+    && /data-lens="paid"/.test(src) && /id="pr_lens_paid"/.test(src) && /id="pw_body"/.test(src),
+    'Supplier prices is the Paid side of the Price registry — a lens on that screen, not a screen of its own');
   const go = extractFunction(src, 'goToTab', 'index.html');
-  t.check(/if\(tab==='prices-watch'\) renderPriceWatch\(\);/.test(go), 'and redraws on entry');
+  const alias = extractFunction(src, 'resolveTab', 'index.html');
+  t.check(/^function goToTab\(tab\)\{\n  tab = resolveTab\(tab\);/.test(go)
+    && /if\(tab === 'prices-watch'\)\{ prLens = 'paid'; return 'prices'; \}/.test(alias),
+    'and the old key still opens it, on that side — resolved once at the top of goToTab, never wherever a key happens to be read');
+  t.check(/if\(tab==='prices'\) showPriceLens\(prLens\);/.test(go)
+    && /if\(prLens === 'paid'\) renderPriceWatch\(\);/.test(extractFunction(src, 'showPriceLens', 'index.html')),
+    'and redraws on entry');
+  t.check(/'prices-watch': \{ tab: 'prices-watch'/.test(src),
+    'the Manager\'s door keeps the key, which is what the alias is for');
   const panel = extractFunction(src, 'renderPriceWatch', 'index.html');
   t.check(/listPageSlice\('priceUp', w\.up\)/.test(panel) && /listPageSlice\('priceFile', w\.outOfStep\)/.test(panel),
     'each section shows the few that matter, with the rest one tap away');
@@ -302,9 +317,9 @@ if (scope) {
 {
   const panel = extractFunction(src, 'renderPriceWatch', 'index.html');
 
-  t.check(/class="sum-strip"/.test(panel) && /'pairs compared'/.test(panel)
+  t.check(/class="ow-strip/.test(panel) && /'pairs compared'/.test(panel)
     && /'held their price'/.test(panel) && /'out of step with the file'/.test(panel),
-    'what the screen read is in the strip every other screen uses for it');
+    'what the side read is in the layer\'s strip, the one every converted screen uses for it');
   t.check(!/pw_summary/.test(src),
     'and not squeezed into a hint beside the look-back box — that element is gone');
 
@@ -330,8 +345,8 @@ if (scope) {
   t.check(/accountLines/.test(panel) && /Read <b>\$\{r\.linesRead\}<\/b> purchase line/.test(panel),
     'still saying how many lines it read and how many pairs they make');
 
-  t.check(/class="form-panel pw-controls"/.test(src) && /<label for="pw_days">/.test(src),
-    'the look-back is a labelled field in a form');
+  t.check(/<span class="ow-f-l">Look back<\/span><span class="ow-f-in"><input type="number" class="ow-f-v" id="pw_days"/.test(src),
+    'the look-back is one of the layer\'s labelled fields, its unit in the box');
   t.check(/id="pw_days"/.test(src),
     'keeping the id — the listener binds to it at parse time with no null guard');
 
@@ -350,8 +365,11 @@ if (scope) {
   /* Three kinds of row, three different chips, and none of them is a
      percentage pretending to be the other two. A steady row showing
      "+0%" would be a price change that never happened. */
-  t.check(/<span class="pw-move">held<\/span>/.test(panel)
-    && /<span class="pw-move file">file<\/span>/.test(panel),
+  /* On the layer's chip now, with the mark before the word: a held row
+     wears the flat bar, a file row the not-equal sign in amber. The
+     chip's own names stay. */
+  t.check(/<span class="ow-cp pw-move"[^>]*>\$\{ICON_TREND_FLAT\}held<\/span>/.test(panel)
+    && /<span class="ow-cp ow-warn pw-move file"[^>]*>\$\{ICON_NEQ\}file<\/span>/.test(panel),
     'a held row says held and a file row says file — the chip is passed in, not derived');
   t.check(/pw-move\$\{sr\.rise > 0 \? ' up' : ' down'\}/.test(panel),
     'and only a moved row carries a percentage, up or down');
