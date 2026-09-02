@@ -106,7 +106,7 @@ const src = read('index.html');
 {
   t.check(/<div class="q-item-search-wrap">[\s\S]{0,400}?id="q_item_search"/.test(src),
     'a permanent search field sits at the top of the items panel');
-  const panel = (/<div class="panel qp-panel qp-items-panel">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
+  const panel = (/<div class="ow-pan q-doc">[\s\S]*?id="q_itemsWrap"/.exec(src) || [''])[0];
   t.check(/q_item_search/.test(panel),
     'above the items, inside the document');
   const wiring = extractFunction(src, 'renderQuoteItemSearchDd', 'index.html');
@@ -122,8 +122,11 @@ const src = read('index.html');
   const pick = extractFunction(src, 'quoteItemSearchPick', 'index.html');
   t.check(/openModal\('itemPickerModal'\)/.test(pick) && /ipSelectProduct\(sel\.id, sel\.variantIdx\)/.test(pick),
     'and picking hands over to the same picker stage — suppliers, rec prices, cash hint unchanged');
-  t.check(/id="q_add_row_btn"|q_add_row_btn/.test(src) && /q_add_card_btn/.test(src),
-    'while the + entries stay, so existing muscle memory still works');
+  /* One + row serves both widths now. The phone card used to carry its
+     own dashed "Add item" button (q_add_card_btn) as part of a second
+     template, and the second template is gone: the row IS the card. */
+  t.check(/id="q_add_row_btn"/.test(src) && !/q_add_card_btn/.test(src),
+    'while the + row stays, so existing muscle memory still works — one add entry, not one per template');
 }
 
 /* ---------- 3. the sticky bar is the money and the actions ----------- */
@@ -197,17 +200,27 @@ const src = read('index.html');
 
 /* ---------- 5. the header band and the document grid ----------------- */
 {
-  t.check(/\.qp-client-inline\{[\s\S]{0,200}?border:1px solid var\(--line\)/.test(src),
+  /* The band is the layer's .ow-cb: one bordered row with the inputs as
+     ghosts inside its cells. It was .qp-client-inline, three .field
+     boxes inside a bordered wrapper. */
+  t.check(/\.ow-cb\{[\s\S]{0,200}?border:1px solid var\(--ow-rule-soft\)/.test(src),
     'the client fields are one bordered document-header band, not floating islands');
-  t.check(/\.qp-items-panel table\{[^}]*font-variant-numeric:tabular-nums/.test(src),
-    'every figure in the grid sits in tabular digits');
-  t.check(/\.qp-items-panel td input\[type="number"\], \.qp-items-panel td input\[type="text"\]\{\s*background:transparent;border-color:transparent/.test(src),
+  /* The figures are .ow-tbl-n cells and .ow-gi inputs, and
+     ow-table.test.js and design-system.test.js hold both to the mono
+     face with tabular-nums. What this file pins is that the row really
+     uses them. */
+  t.check(/class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(src)
+    && /class="ow-gi qty-input q-qty"/.test(src) && /class="ow-gi price-input q-price"/.test(src),
+    'every figure in the grid sits in tabular digits — the cells and the inputs are the layer’s');
+  t.check(/\.ow-gi\{[^}]*border:1px solid transparent[^}]*background:transparent/.test(src),
     'inputs rest quiet on the row — an editable document, not a form grid');
   /* Focus is attention, not alarm: this app's accent is oxide RED, and
      a red ring around a focused input is the universal grammar of a
-     validation error. Focus rings on this page are navy. */
-  t.check(/\.qp-items-panel tr:hover td input/.test(src) && /\.qp-items-panel td input:focus\{border-color:var\(--navy\)/.test(src),
-    'and grow their affordance when the hand arrives — in navy, since a red ring reads as an error');
+     validation error. Focus on this page is steel-950, which is what
+     --navy has always been an alias for. */
+  t.check(/\.ow-tbl-r:hover \.ow-gi\{border-color:var\(--ow-steel-100\)/.test(src)
+    && /\.ow-gi:focus\{border-color:var\(--ow-steel-950\)/.test(src) && !/\.ow-gi:focus\{[^}]*--ow-oxide/.test(src),
+    'and grow their affordance when the hand arrives — in steel, since a red ring reads as an error');
   t.check(/\.q-item-search-wrap:focus-within\{border-color:var\(--navy\)/.test(src),
     'the search field focuses in navy for the same reason');
 }
@@ -226,18 +239,18 @@ const src = read('index.html');
     'while the bar still shows its zeros — it is the constant surface');
   /* The add buttons keep their ids in the empty branch too, hidden, so
      the wiring binds either way instead of throwing on a null. */
-  t.check((items.match(/id="q_add_card_btn"/g) || []).length === 2,
-    'and the add entries exist in both branches for the wiring to find');
+  t.check((items.match(/id="q_add_row_btn"/g) || []).length === 2,
+    'and the add entry exists in both branches for the wiring to find');
 
-  /* The client context strips live INSIDE the header band now. The
-     distinguishing fact is what sits between the date field and the
-     history strip: the old markup closed the band there (an extra
-     </div>), the new one flows straight on -- so the assertion is
-     "nothing closes in between", not "both appear somewhere near". */
-  t.check(/id="q_date"><\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-client-history"/.test(src),
-    'history and usual-buys are the band’s own bottom line, not islands under it');
-  t.check(/id="q_client_usual"><\/div>\s*<\/div>/.test(src),
-    'and the band closes after them, holding all five pieces');
+  /* What the books know about the client lives INSIDE the band, as the
+     cell after the date: the date's cell closes, the known-facts cell
+     follows, and only then does the band close. The usual-buys chips
+     sit UNDER the band on purpose -- the band is facts, the chips are a
+     door -- so for them the assertion is that they follow it directly. */
+  t.check(/id="q_date">\s*<\/div>\s*<div class="ow-cb-k" id="q_client_history"><\/div>\s*<\/div>/.test(src),
+    'what the books know is the band’s own last cell, not an island under it');
+  t.check(/id="q_client_history"><\/div>\s*<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="q-client-usual" id="q_client_usual"><\/div>/.test(src),
+    'and the usual-buys chips follow the band directly');
 }
 
 /* ---------- 7. the dropdown is a member, not a copy ------------------ */
@@ -269,7 +282,7 @@ const src = read('index.html');
      nothing may quietly bring either back. */
   t.check(!/mobile-fab/.test(src),
     'the + button is gone from this page’s rules — Sell in the bar is the same door');
-  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:110px;\}/.test(src),
+  t.check(/body\.on-quote-tab #tab-quote\{padding-bottom:110px;\}/.test(src),
     'with the reserve covering nav plus bar so the last row clears both');
 
   /* ONE ROW, NOT TWO — and what had to move for it.

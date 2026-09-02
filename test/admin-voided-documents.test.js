@@ -95,7 +95,11 @@ const INV = (over = {}) => ({
 {
   t.check(/const orders = data\.savedQuotes\.filter\(q=>\s*\n?\s*!q\.voided && \(\(q\.client&&q\.client\.name\)\|\|''\)/.test(code),
     'the "usually buys" list is built from orders that were not cancelled');
-  t.check(/const priorOrders = data\.savedQuotes\.filter\(q=>\s*\n?\s*!q\.voided && \(\(q\.client&&q\.client\.name\)\|\|''\)/.test(code),
+  /* The band's order count is the length of the same filtered list the
+     band's "last order" is read from, so one rule covers both. */
+  const band = (/function renderClientHistoryBox\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const orders = data\.savedQuotes\.filter\(q=>\s*\n?\s*!q\.voided && \(\(q\.client&&q\.client\.name\)\|\|''\)/.test(band)
+    && /const priorOrders = orders\.length;/.test(band),
     'and so is the prior-order count beside their debt standing');
 
   // Both also still exclude the quote being edited, or a client would be

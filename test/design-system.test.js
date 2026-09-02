@@ -55,7 +55,7 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     'font sizes': [32, /font-size:\s*([\d.]+)px/g],
     'radii': [28, /border-radius:\s*([^;}]+)/g],
     'shadows': [62, /box-shadow:\s*([^;}]+)/g],
-    'distinct colours': [119, /#[0-9A-Fa-f]{6}\b/g],
+    'distinct colours': [115, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -260,6 +260,58 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
   t.check(icons.length > 20, `the app draws its marks (${icons.length} inline svg)`);
   const layerEmoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(layer);
   t.check(!layerEmoji, 'and there is no emoji in the layer');
+}
+
+/* ---------- the converted screens ---------- */
+{
+  /* THE RATCHET'S OTHER HALF. A screen joins this list when it has been
+     rebuilt on the layer, and once on it, its own <section> and the
+     function that fills it may never again contain the class families
+     it replaced. Adding a screen here IS the definition of done for its
+     redesign; without it, nothing stops a later session hand-rolling a
+     seventeenth table onto a screen that already has the layer's. */
+  const CONVERTED = {
+    /* New quote. The client band replaced .qp-client-inline's .field
+       boxes; the document replaced .panel.qp-panel; the items <table>
+       and its phone twin (.qp-items-table-wrap / .qp-items-cards /
+       .qc-card) became one .ow-tbl drawn by renderQuoteItems. */
+    quote: {
+      retired: ['qp-client-inline', 'qp-panel', 'quote-layout', 'q-client-history',
+                'qp-items-table-wrap', 'qp-items-cards', 'qc-card'],
+      uses: ['ow-cb', 'ow-grid', 'ow-pan', 'ow-side'],
+      renders: 'renderQuoteItems',
+      rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
+    },
+  };
+  /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
+     \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
+     the band itself still passed on the strength of its own cells. The
+     class attributes are tokenised instead; a template's ${...} tail is
+     stripped from a token so "q-line${rowMarginClass}" reads as q-line. */
+  const classesOf = (html) => new Set([...html.matchAll(/class="([^"]*)"/g)]
+    .flatMap((m) => m[1].split(/\s+/)).map((c) => c.replace(/\$\{[\s\S]*$/, '')).filter(Boolean));
+  Object.entries(CONVERTED).forEach(([tab, spec]) => {
+    const m = new RegExp(`<section id="tab-${tab}"[\\s\\S]*?</section>`).exec(src);
+    t.check(!!m, `${tab}: its section is found`);
+    const sec = classesOf((m || [''])[0].replace(/<!--[\s\S]*?-->/g, ' '));
+    const back = spec.retired.filter((c) => sec.has(c));
+    t.check(back.length === 0,
+      `${tab}: none of the families it replaced is back in its markup${back.length ? ' — ' + back.join(', ') : ''}`);
+    const missing = spec.uses.filter((c) => !sec.has(c));
+    t.check(missing.length === 0,
+      `${tab}: built on the layer${missing.length ? ' — missing ' + missing.join(', ') : ''}`);
+    if (spec.renders) {
+      const fn = new RegExp(`\\nfunction ${spec.renders}\\(\\)\\{[\\s\\S]*?\\n\\}`).exec(src);
+      t.check(!!fn, `${tab}: ${spec.renders} is found`);
+      const body = classesOf((fn || [''])[0].replace(/\/\*[\s\S]*?\*\//g, ' '));
+      const rback = spec.retired.filter((c) => body.has(c));
+      t.check(rback.length === 0,
+        `${tab}: nor in what ${spec.renders} emits${rback.length ? ' — ' + rback.join(', ') : ''}`);
+      const rmiss = (spec.rendersUses || []).filter((c) => !body.has(c));
+      t.check(rmiss.length === 0,
+        `${tab}: and ${spec.renders} draws the layer's table${rmiss.length ? ' — missing ' + rmiss.join(', ') : ''}`);
+    }
+  });
 }
 
 process.exit(t.done() ? 1 : 0);

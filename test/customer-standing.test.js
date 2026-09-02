@@ -132,16 +132,28 @@ if (fns) {
 
   t.check(/const st = customerDebtStanding\(c\);/.test(code) && /q-ac-owed/.test(code),
     'the standing appears in the client dropdown, while choosing');
-  t.check(/debtStandingHTML\(standing\)/.test(code),
-    'and again on the quote once a client is chosen');
+  /* On the quote it is a cell of the client band and a row of the rail,
+     toned by the same band the dropdown uses. It was a block of its own
+     (debtStandingHTML); the band replaced it. */
+  const bandFn = (/function renderClientHistoryBox\(\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  t.check(/const standing = customerDebtStanding\(customer\);\s*const band = debtStandingBand\(standing\);/.test(bandFn)
+    && /Owes now\$\{esc\(age\)\}/.test(bandFn),
+    'and again on the quote once a client is chosen, banded the same way');
   t.check(!/parts\.push\(`<span class="owed">owes/.test(code),
     'the old dot-separated "owes" clause is gone');
 
   // Banded classes must exist for all three, or a band silently renders unstyled.
   ['open', 'late', 'severe'].forEach(b => {
-    t.check(new RegExp(`\\.q-ac-owed\\.${b}\\{`).test(code) && new RegExp(`\\.q-debt-standing\\.${b}\\{`).test(code),
-      `the ${b} band is styled in both places it can appear`);
+    t.check(new RegExp(`\\.q-ac-owed\\.${b}\\{`).test(code), `the ${b} band is styled in the dropdown`);
   });
+  /* On the band the three read as ink, amber and crimson: open is the
+     ordinary trading position and gets no colour at all, late is a
+     caution, severe is the pool the dashboard already flags. The
+     mapping is pinned with its tones, and both tones are painted. */
+  t.check(/band==='severe' \? ' ow-bad' : band==='late' \? ' ow-warn' : ''/.test(bandFn),
+    'and on the quote: open in ink, late in amber, severe in crimson');
+  t.check(/\.ow-fig\.ow-bad\{color:var\(--ow-crimson\);\}/.test(code) && /\.ow-fig\.ow-warn\{color:var\(--ow-amber-ink\);\}/.test(code),
+    'with both tones painted');
 }
 
 process.exit(t.done() ? 1 : 0);

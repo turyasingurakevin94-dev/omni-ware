@@ -322,9 +322,12 @@ if (scope) {
   t.check(/consignTagHTML\(l\.consign, false\)/.test(inv), 'the inventory card carries the marker');
   t.check(/Not ours/.test(inv), 'and names the money that left its value');
 
+  /* One template now: the quote's row is the layer's table row, and
+     below 820px the same row becomes the phone card. The tag appears
+     once because there is one line to mark, not two copies of it. */
   const quote = fn('renderQuoteItems');
-  t.check((quote.match(/\$\{consignTag\}/g) || []).length === 2,
-    'the quote editor marks the line on both the table row and the phone card');
+  t.check((quote.match(/\$\{consignTag\}/g) || []).length === 1 && !/cardsArr/.test(quote),
+    'the quote editor marks the line once, on the one row that serves both widths');
   /* The supplier cell is a searchable input whose value is matched
      against supplier names. A marker inside it would be typed over. */
   t.check(!/supplierDisplayLabel[\s\S]{0,160}consignTag/.test(quote),

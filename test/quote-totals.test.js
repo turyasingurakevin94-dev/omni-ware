@@ -67,9 +67,9 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
      qty times it, grandSell is their sum -- which is the same sum. */
   t.check(/const sell = quoteItemSellPrice\(it\);/.test(items),
     'and the screen prices every line through the same function');
-  t.check(/The client pays<\/td>[\s\S]{0,120}?\$\{fmtUGX\(grandSell\)\}/.test(items),
+  t.check(/The client pays<\/div>[\s\S]{0,120}?\$\{fmtUGX\(grandSell\)\}/.test(items),
     'so the table foots with what the client pays, not what the shop paid');
-  t.check(!/Grand total<\/td>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
+  t.check(!/Grand total<\/(?:td|div)>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
     'and never again puts the cost under the words a rep says out loud');
 }
 
@@ -79,18 +79,23 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * mistakable for the price.
  */
 {
-  t.check(/Costs you<\/td>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
+  t.check(/Costs you<\/div>[\s\S]{0,120}?\$\{fmtUGX\(grandBuy\)\}/.test(items),
     'the cost is still on the page, named as the shop’s');
-  t.check(/You keep<\/td>[\s\S]{0,160}?\$\{fmtUGX\(profit\)\}/.test(items),
+  t.check(/You keep<\/div>[\s\S]{0,160}?\$\{fmtUGX\(profit\)\}/.test(items),
     'and so is what is left over');
   /* A rule between the client's columns and the shop's, so no cost
      figure sits in the run of client figures. */
-  t.check(/<th class="q-shop-first q-supplier-th">Supplier<\/th>/.test(items),
+  /* The table is the layer's .ow-tbl now (a grid, not a <table>); the
+     divider is the same rule on the same class, carried through the
+     header, every row and the foot. */
+  t.check(/<div class="ow-tbl-c q-shop-first">Supplier<\/div>/.test(items),
     'the shop’s columns start behind a divider');
-  t.check(/\.qp-items-table-wrap th\.q-shop-first, \.qp-items-table-wrap td\.q-shop-first\{[\s\S]{0,80}?border-left:/.test(src),
+  t.check(/\.q-doc \.q-shop-first\{[\s\S]{0,120}?border-left:/.test(src),
     'which is a real rule, not just a class name');
-  t.check(/<td class="q-shop-first">\$\{supplierPickerHTML\}<\/td>/.test(items),
+  t.check(/<div class="ow-tbl-c q-shop-first" data-l="Supplier">\$\{supplierPickerHTML\}<\/div>/.test(items),
     'and every row honours it');
+  t.check((items.match(/<div class="q-foot-x q-shop-first"><\/div>/g) || []).length === 3,
+    'as do all three rows of the foot, so the rule runs the length of the document');
 
   // The supplier copy is the shop's own document and must keep the cost.
   t.check(/it\.price/.test(supplierPrint) && !/quoteItemSellPrice/.test(supplierPrint),
@@ -129,7 +134,7 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'and is out of the items panel entirely — pinned to the screen, not to a scroll position');
   t.check(/body\.on-quote-tab \.q-stickybar\{display:flex;\}/.test(src),
     'shown only while the quote tab is, since fixed position ignores tab visibility');
-  t.check(/body\.on-quote-tab \.quote-layout\{padding-bottom:86px;\}/.test(src),
+  t.check(/body\.on-quote-tab #tab-quote\{padding-bottom:86px;\}/.test(src),
     'while the document reserves the bar’s height so the last row is never buried under it');
 
   /* AN EMPTY QUOTE IS NOT A LOSING ONE. With nothing on it every figure
@@ -165,14 +170,23 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
     'and a thin margin now shows on the figure too, which is the disagreement this ended');
 }
 
-/* ---------- 5. the mobile card says the same thing ------------------- *
- * Most of a shop's phone calls are taken on a phone.
+/* ---------- 5. the phone says the same thing, because it is the same row *
+ * Most of a shop's phone calls are taken on a phone. There used to be a
+ * second template here -- a .qc-card pushed onto cardsArr beside each
+ * <tr> -- and this section held the two to the same figure. Now there
+ * is one row: each cell carries its column name as data-l, and the
+ * layer's phone block turns that row into the card. Two templates can
+ * disagree; one cannot.
  */
 {
-  const card = (/cardsArr\.push\(`[\s\S]*?`\);/.exec(items) || [''])[0];
-  t.check(/q-line-total price" title="What this line adds to the client's bill">\$\{fmtUGX\(lineSell\)\}/.test(card),
-    'the card carries the client’s line total, like the row');
-  t.check(!/fmtUGX\(lineCost\)/.test(card), 'and not the cost');
+  t.check(!/cardsArr/.test(items) && !/qp-items-cards/.test(items),
+    'there is no second template for the phone');
+  t.check(/<div data-l="Line total" title="What this line adds to the client's bill" class="ow-tbl-n q-line-total price">\$\{fmtUGX\(lineSell\)\}/.test(items),
+    'the one row carries the client’s line total under its column name, which is the phone’s label');
+  ['Qty', 'Price each', 'Supplier', 'Buy @', 'Margin'].forEach((l) => {
+    t.check(items.includes(`data-l="${l}"`), `and the ${l} cell is labelled for the card`);
+  });
+  t.check(!/fmtUGX\(lineCost\)/.test(items), 'and the cost is never printed on a line');
 }
 
 /* ---------- 6. the words match the document -------------------------- *
@@ -181,9 +195,9 @@ const supplierPrint = (/q_print_btn'\)\.addEventListener[\s\S]*?\n\}\);/.exec(co
  * reading the other were looking at differently-named things.
  */
 {
-  t.check(/<th>Price each<\/th>/.test(items), 'the screen calls it what the quotation calls it');
+  t.check(/<div class="ow-tbl-n">Price each<\/div>/.test(items), 'the screen calls it what the quotation calls it');
   t.check(/<th>Price each<\/th>/.test(clientPrint), 'which is what the quotation calls it');
-  t.check(!/<th>Sell @<\/th>/.test(items), 'rather than the shop’s own word for it');
+  t.check(!/>Sell @</.test(items), 'rather than the shop’s own word for it');
 }
 
 process.exit(t.done() ? 1 : 0);
