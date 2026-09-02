@@ -58,7 +58,10 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        first time (the basket bar on What to buy). The value was declared
        with the layer; no rule had spent it until now. */
     'shadows': [63, /box-shadow:\s*([^;}]+)/g],
-    'distinct colours': [115, /#[0-9A-Fa-f]{6}\b/g],
+    /* 111, not 115: the Price registry's dead grouped rows and its two
+       private pill families took four hexes with them when the screen
+       moved onto the layer. */
+    'distinct colours': [111, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -307,6 +310,20 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: 'renderPurchasePlanPanel',
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-pan', 'ow-tbl', 'ow-tbl-r', 'ow-tbl-note', 'ow-cp', 'ow-bk'],
     },
+    /* The Price registry. The form panel became fields in the layer's
+       toolbar, the summary the strip, the card grid the layer's cards
+       with the rail beside them. .price-card and .price-grid are not
+       retired from the FILE -- promotions, claims and the catalogue wear
+       them -- only from this screen, which is what this list means. */
+    prices: {
+      retired: ['page-head', 'panel', 'panel-head-row', 'p-toolbar', 'p-toolbar-search', 'p-toolbar-filter', 'field',
+                'sum-strip', 'sum-cell', 'price-grid', 'price-card', 'prc-head', 'prc-prices', 'prc-source-pill',
+                'prc-oos-pill', 'empty', 'reg-group', 'reg-row'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-tb', 'ow-f', 'ow-f-l', 'ow-f-in'],
+      renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-cards', 'ow-card', 'ow-fig', 'ow-sigs', 'ow-sig', 'ow-cp',
+                    'ow-pan', 'ow-sr', 'ow-empty'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
@@ -325,16 +342,25 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const missing = spec.uses.filter((c) => !sec.has(c));
     t.check(missing.length === 0,
       `${tab}: built on the layer${missing.length ? ' — missing ' + missing.join(', ') : ''}`);
-    if (spec.renders) {
-      const fn = new RegExp(`\\nfunction ${spec.renders}\\(\\)\\{[\\s\\S]*?\\n\\}`).exec(src);
-      t.check(!!fn, `${tab}: ${spec.renders} is found`);
-      const body = classesOf((fn || [''])[0].replace(/\/\*[\s\S]*?\*\//g, ' '));
+    /* A renderer may take parameters (renderPrices takes six), and a
+       screen may draw through more than one named function -- the card
+       builder beside the screen builder. The first three screens
+       happened to be zero-argument and inline; the rule is the same. */
+    const renders = Array.isArray(spec.renders) ? spec.renders : spec.renders ? [spec.renders] : [];
+    if (renders.length) {
+      const bodies = renders.map((name) => {
+        const fn = new RegExp(`\\nfunction ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`).exec(src);
+        t.check(!!fn, `${tab}: ${name} is found`);
+        return (fn || [''])[0];
+      });
+      const label = renders.join(' + ');
+      const body = classesOf(bodies.join('\n').replace(/\/\*[\s\S]*?\*\//g, ' '));
       const rback = spec.retired.filter((c) => body.has(c));
       t.check(rback.length === 0,
-        `${tab}: nor in what ${spec.renders} emits${rback.length ? ' — ' + rback.join(', ') : ''}`);
+        `${tab}: nor in what ${label} emits${rback.length ? ' — ' + rback.join(', ') : ''}`);
       const rmiss = (spec.rendersUses || []).filter((c) => !body.has(c));
       t.check(rmiss.length === 0,
-        `${tab}: and ${spec.renders} draws the layer's table${rmiss.length ? ' — missing ' + rmiss.join(', ') : ''}`);
+        `${tab}: and ${label} draws the layer's table${rmiss.length ? ' — missing ' + rmiss.join(', ') : ''}`);
     }
   });
 }

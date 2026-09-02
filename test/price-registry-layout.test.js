@@ -222,8 +222,12 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/promotionCardHTML|claimCardHTML/.test(code),
     'because other screens still use them');
 
-  t.check(/\.reg-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src),
-    'the figures are tabular, so two suppliers can be read against each other down the column');
+  /* .reg-fig was the grouped row's figure, and those rows -- never
+     called after the registry went back to cards -- are gone with the
+     rule. The card draws both prices in the layer's .ow-fig. */
+  t.check(/\.ow-fig\{[^}]*font-variant-numeric:tabular-nums;/.test(src)
+    && /class="ow-fig ow-fig-lg[^"]*"[^>]*>\$\{fmtPriceCompact\(r\.wholesale, r\.unit\)\}/.test(code),
+    'the figures are tabular, so two suppliers can be read against each other across the cards');
 
   // Same gap the Presets page had: a summary that only drew at boot.
   t.check(/if\(tab==='prices'\)\{ refreshPriceDropdowns\(\); triggerPricesRender\(\); \}/.test(code),

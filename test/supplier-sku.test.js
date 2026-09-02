@@ -177,14 +177,16 @@ const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join(
 
 /* ---------- 4. visible, or there was no point writing it down --------- */
 {
-  t.check((code.match(/class="prc-sku"/g) || []).length === 2,
-    'both the card and the compact row show it');
-  t.check((code.match(/\$\{r\.supplierSku \? `<span class="prc-sku"/g) || []).length === 2,
-    'and only when there is one — no empty chip on the rows that have none');
-  /* Counted, not merely found: the two renderers are siblings, and one
-     of them still highlighting would let the other quietly stop. */
-  t.check((code.match(/highlightTokens\(r\.supplierSku, tokens\)/g) || []).length === 2,
-    'with the search term lit up in it on BOTH, since searching by code is what it is for');
+  /* One renderer, since the registry's card is the only thing that
+     draws a quote: the grouped row that was the second was never called
+     after the registry went back to cards, and is gone. The card builds
+     the chip once, beside the provenance mark, and places both. */
+  t.check((code.match(/class="prc-sku"/g) || []).length === 1,
+    'the card shows it');
+  t.check((code.match(/r\.supplierSku \? `<span class="prc-sku"/g) || []).length === 1,
+    'and only when there is one — no empty chip on the cards that have none');
+  t.check((code.match(/highlightTokens\(r\.supplierSku, tokens\)/g) || []).length === 1,
+    'with the search term lit up in it, since searching by code is what it is for');
   t.check(/supplier's code/.test(src),
     'and the search box says it can be searched by');
 }

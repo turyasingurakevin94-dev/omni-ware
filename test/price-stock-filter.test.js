@@ -114,7 +114,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
 
 /* ---------- 4. wired into the screen and the sheet -------------------- */
 {
-  t.check(/id="pr_stock_filter"/.test(src) && /<label>Stock<\/label>/.test(src),
+  /* One of the layer's fields now: the word sits in the field's label
+     span rather than in a bare <label> above a select. */
+  t.check(/id="pr_stock_filter"/.test(src) && /<span class="ow-f-l">Stock<\/span>/.test(src),
     'the toolbar has the control, labelled for what it filters');
   /* Built from the same list it is read by, so an option cannot exist
      that the filter does not know -- the reason these are generated. */
