@@ -105,6 +105,10 @@ const env = (data, over) => ({
   allProductVariantEntries: () => data.products.map((p) => ({ p, variantIdx: null })),
   saveData: () => { data._saved = (data._saved || 0) + 1; },
   rivalPriceSideColumn: true,
+  /* The Rivals side draws the layer's card: a thumb and marks these
+     checks never argue about. */
+  productThumbHTML: () => '', fmtPriceCompact: (n) => Number(n || 0).toLocaleString('en-US'),
+  ICON_STORE: '', ICON_TREND_UP: '', ICON_TREND_DOWN: '', ICON_CLOCK: '', ICON_WARN: '',
   console, Date, JSON, Math, Number, String, Array, Object, Map, Set, Promise, Boolean,
   ...(over || {}),
 });

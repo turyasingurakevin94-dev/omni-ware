@@ -92,6 +92,10 @@ const env = (data, over) => ({
   supplierName: (id) => String(id),
   RIVAL_SIDES: ['wholesale', 'retail'],
   rivalPriceSideColumn: true,
+  /* The Rivals side draws the layer's card: a thumb and marks these
+     checks never argue about. */
+  productThumbHTML: () => '', fmtPriceCompact: (n) => Number(n || 0).toLocaleString('en-US'),
+  ICON_STORE: '', ICON_TREND_UP: '', ICON_TREND_DOWN: '', ICON_CLOCK: '', ICON_WARN: '',
   productDisplayLabel: (p, vi) => (vi == null ? p.name : `${p.name} 12"`),
   allProductVariantEntries: () => data.products.flatMap((p) => (p.variants && p.variants.length)
     ? p.variants.map((_v, i) => ({ p, variantIdx: i })) : [{ p, variantIdx: null }]),
