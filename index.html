@@ -8201,6 +8201,14 @@
     gap:var(--ow-sp-16);align-items:start;}
   .ow-side{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
   .ow-stack{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
+  /* A GAPPED STACK CHARGES FOR ITS EMPTY CHILDREN.
+     A wrapper with nothing in it still takes a gap on each side, so an
+     empty slot costs 32px of nothing — twice over on Today, where both
+     the invite and the pace are silent by design a lot of the time: the
+     invite goes once the meeting is held, and the pace stays quiet
+     unless a target is live. A dashboard that leaves a hole where it has
+     nothing to say reads as a screen that failed to load. */
+  .ow-stack > :empty{display:none;}
 
   /* ---- layout: the record ----
      The Manager's twelve sections are flat siblings, so two columns cost
@@ -58347,18 +58355,40 @@ async function runManagerReview(){
 function renderManagerCard(){
   const el = document.getElementById('dash_managerCard');
   if(!el) return;
-  /* TWO THINGS SHARE THIS SLOT, and they do NOT come and go together.
+  /* TWO THINGS, TWO SLOTS — and they do NOT come and go together.
      The invite is hidden once today's meeting is held; the pace of a
      target the shop has taken on matters MOST after that meeting, all
-     week, without another one being held. The old card emptied the
-     whole slot, which would have taken the pace line with it. */
+     week, without another one being held. So the pace has a slot of its
+     own, a SIBLING of this one in the markup, which this rewrite cannot
+     reach and therefore cannot wipe.
+
+     This function used to also emit `<div id="dash_managerPace">` at the
+     end of its own innerHTML — a SECOND element with that id.
+     getElementById returns the first in document order, which is the
+     one in the markup, so the emitted copy was never written to and
+     never could be: an invalid duplicate id and a permanently empty div
+     costing a stack gap on both sides of it, on the phone's front door,
+     for ever. */
   const seen = lsGet(MANAGER_MEETING_KEY);
   const heldToday = seen && String(seen) >= todayISO();
+  /* FORTY-FOUR WORDS IS ONE ROW ON A CONSOLE AND FOUR LINES ON A PHONE.
+
+     This is the first thing under the figures on Today, so on a phone it
+     pushed the work itself below the fold — on the screen the owner
+     opens every morning to find out what needs them.
+
+     The middle clause is the one that goes: it explains HOW the meeting
+     works, which is the part somebody who has held one every morning for
+     months already knows. What must NOT go is the last sentence — a
+     meeting spends the shop's money, and a cost is not a detail to trim
+     for layout. So the phone reads "Your manager is ready. One tap holds
+     the morning meeting. A meeting spends a little AI credit." and the
+     console reads exactly what it read before, word for word. */
   el.innerHTML = (heldToday ? '' : `<div class="mgr-invite">
-    <p><b>Your manager is ready.</b> One tap holds the morning meeting: yesterday's advice accounted
-      for, and today's few moves ranked by the money on them. A meeting spends a little AI credit.</p>
+    <p><b>Your manager is ready.</b> One tap holds the morning meeting<span class="ow-hide-sm">: yesterday's advice accounted
+      for, and today's few moves ranked by the money on them</span>. A meeting spends a little AI credit.</p>
     <button type="button" class="btn btn-accent" id="mgrInviteBtn">Hold the morning meeting</button>
-  </div>`) + `<div id="dash_managerPace"></div>`;
+  </div>`);
   const btn = el.querySelector('#mgrInviteBtn');
   if(btn) btn.addEventListener('click', ()=>{ goToTab('manager'); runManagerMeeting(); });
   renderManagerPace();

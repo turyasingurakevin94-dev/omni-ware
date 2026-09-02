@@ -134,13 +134,81 @@ const row = (body) => ({ date: '2026-08-24', body: { from: '2026-08-24', to: '20
 
   const before = drawCard('2026-08-01');
   t.check(/mgr-invite/.test(before.html), 'with no meeting held today the invite is offered');
-  t.check(/id="dash_managerPace"/.test(before.html), 'and the pace slot is there beside it');
 
   const after = drawCard(TODAY);
   t.check(!/mgr-invite/.test(after.html), 'once today’s meeting is held the invite goes');
-  t.check(/id="dash_managerPace"/.test(after.html),
-    'but the PACE SLOT REMAINS — it matters most after the meeting, and the old card emptied the whole slot');
-  eq(after.paceCalls, 1, 'and it is filled, held meeting or not');
+  eq(after.paceCalls, 1, 'and the pace is filled either way, held meeting or not');
+
+  /* TWO THINGS, TWO SLOTS — AND THE SECOND SLOT WAS A DUPLICATE ID.
+   *
+   * The pace matters MOST after the meeting, all week, without another
+   * one being held — so it must survive this card's rewrite. This test
+   * used to say the card proves that by emitting `id="dash_managerPace"`
+   * at the end of its own innerHTML, in both states.
+   *
+   * It did emit it, and it did nothing. There is already a
+   * #dash_managerPace in the markup, a SIBLING of #dash_managerCard, and
+   * getElementById returns the first in document order — so
+   * renderManagerPace always wrote to the markup's one and the emitted
+   * copy was unreachable by construction. An invalid duplicate id, and a
+   * permanently empty div charging a stack gap on Today's front door.
+   *
+   * What actually keeps the pace safe is that it lives OUTSIDE this
+   * card, where the rewrite cannot reach it. So that is what is checked,
+   * and the id is checked to be unique — which is the thing that was
+   * silently untrue. */
+  t.check(!/dash_managerPace/.test(before.html) && !/dash_managerPace/.test(after.html),
+    'the card does not emit a pace slot of its own — a second element with that id is unreachable by construction');
+  /* Counted in the MARKUP, between the stylesheet and the script, not
+     across the whole file: the note in renderManagerCard quotes the tag
+     it stopped emitting, and that explanation is the reason to keep the
+     comment rather than a reason to fail the check it describes.
+     (Stripping /* *​/ across 66,000 lines is not the answer either — one
+     stray sequence inside a string re-pairs every comment after it.) */
+  const markup = src.slice(src.indexOf('</style>'), src.indexOf('<script>'));
+  t.check(markup.length > 1000, 'the markup region is found');
+  t.check((markup.match(/id="dash_managerPace"/g) || []).length === 1,
+    'there is exactly one #dash_managerPace element');
+  const stack = (/<div class="ow-stack">[\s\S]*?<div class="ow-grid">/.exec(src) || [''])[0];
+  t.check(/id="dash_managerCard"[\s\S]{0,120}?id="dash_managerPace"/.test(stack),
+    'and it sits beside the card, not inside it, which is what the rewrite cannot reach');
+
+  /* An empty slot must cost nothing. Both of these are silent by design
+     a lot of the time — the invite goes once the meeting is held, the
+     pace stays quiet unless a target is live — and a gapped stack
+     charges 16px for a child with nothing in it. Two of them left a
+     hole on the phone's front door that read as a screen half-loaded. */
+  t.check(/\.ow-stack > :empty\{display:none;\}/.test(src),
+    'and an empty slot takes no room at all');
+
+  /* FORTY-FOUR WORDS IS ONE ROW ON A CONSOLE AND FOUR LINES ON A PHONE.
+   *
+   * This card is the first thing under the figures on Today, so on a
+   * phone the full sentence pushed the work itself below the fold — on
+   * the screen the owner opens every morning to find out what needs
+   * them.
+   *
+   * The clause that goes is the one explaining HOW a meeting works,
+   * which somebody who has held one every morning for months already
+   * knows. What must NOT go is the last sentence: a meeting spends the
+   * shop's money, and a cost is never a detail to trim for layout. Both
+   * readings have to be grammatical, which is why the clause carries its
+   * own colon.
+   */
+  const invite = (/<div class="mgr-invite">[\s\S]*?<\/div>/.exec(src) || [''])[0];
+  t.check(/One tap holds the morning meeting<span class="ow-hide-sm">:/.test(invite),
+    'the phone drops the clause that explains how a meeting works, not the offer itself');
+  /* The PROSE, not the whole card — the button's own four words are a
+     label, not something to read. */
+  const prose = (/<p>[\s\S]*?<\/p>/.exec(invite) || [''])[0];
+  const phone = prose.replace(/<span class="ow-hide-sm">[\s\S]*?<\/span>/, '')
+    .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  t.check(/A meeting spends a little AI credit\./.test(phone),
+    'and never the cost — that sentence survives on both');
+  t.check(/morning meeting\. A meeting/.test(phone),
+    'what is left still reads as a sentence, colon and all');
+  t.check(phone.split(' ').length <= 20,
+    `which leaves the phone about two lines (${phone.split(' ').length} words)`);
 
   const pace = extractFunction(src, 'renderManagerPace', 'index.html');
   t.check(/if\(!el \|\| !managerNotesTable\) return;/.test(pace),
