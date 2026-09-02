@@ -8236,6 +8236,148 @@
     display:inline-flex;align-items:center;justify-content:center;gap:var(--ow-sp-6);}
 
   /* ==================================================================
+     THE TABLE.
+
+     This file has FIFTY-NINE hand-built <table>s in SIXTEEN class
+     families -- sp-table, cs-table, bo-table, pi-table-wrap,
+     qp-items-table-wrap, cmp-x-table, fg-table, op-table, st-table,
+     tr-table, age-table, cons-goods-table, dash-mini-table and more --
+     and every one of them settles its own type, its own hairlines, its
+     own numeric alignment and its own idea of what a header row is. It
+     is the single largest source of drift left in the app, and every
+     one of the five screens still to be redesigned is mostly table.
+
+     ONE CALL, TWO SKINS -- the same guarantee .ow-q already gives.
+     Above 820px this is a grid whose columns line up because every row
+     shares one track definition. Below it the header disappears and
+     each row becomes a card, with every cell labelled from the header
+     it lost. There is no second template to keep in step, and so no way
+     for the console and the phone to say different things.
+
+     Columns are declared once per table, on the container:
+         <div class="ow-tbl" style="--ow-tbl-cols:1fr 120px 120px auto">
+     ================================================================== */
+  /* THE CONTAINER OWNS THE TRACKS, AND EVERY ROW BORROWS THEM.
+
+     The first build gave each row its own grid with the same template,
+     which looks equivalent and is not: `auto` and `1fr` resolve per
+     ROW, so a total row with an empty action cell computed a wider
+     first column and its figure landed 77px right of the figures it was
+     totalling. Measured, not guessed -- and a column of money that does
+     not line up is unreadable at exactly the glance it is read at.
+
+     So the tracks are declared once on the container and each row spans
+     all of them with `subgrid`. Rows keep their own box, which is what
+     the hover, the hairline and the tinted total need. Where subgrid is
+     missing the rows fall back to their own copy of the template, which
+     lines up for every table whose tracks are all fixed. */
+  .ow-tbl{--ow-tbl-cols:1fr auto;display:grid;grid-template-columns:var(--ow-tbl-cols);}
+  .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{
+    display:grid;grid-column:1/-1;grid-template-columns:var(--ow-tbl-cols);
+    align-items:center;gap:var(--ow-sp-12);
+    padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-top:1px solid var(--ow-rule-soft);
+  }
+  @supports (grid-template-columns:subgrid){
+    .ow-tbl-h,.ow-tbl-r,.ow-tbl-f{grid-template-columns:subgrid;}
+  }
+  /* The column names. 11px uppercase at caption ink -- a heading, and
+     deliberately not the same treatment a form label gets. */
+  .ow-tbl-h{
+    border-top:0;padding-top:var(--ow-sp-6);padding-bottom:var(--ow-sp-6);
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.06em;
+    /* ink-600, not ink-400. A column name at 11px in ink-400 is 3.12 to
+       1 on paper -- the ratchet caught this on the first run, which is
+       the third time that colour has tried to carry small text in this
+       app. ink-600 is 6.21 and still reads as the quieter of the two. */
+    text-transform:uppercase;color:var(--ow-ink-600);
+    border-bottom:1px solid var(--ow-rule);
+  }
+  .ow-tbl-r:first-child{border-top:0;}
+  .ow-tbl-r{font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-tbl-r.ow-tbl-k{cursor:pointer;}
+  .ow-tbl-r.ow-tbl-k:hover{background:var(--ow-paper-2);}
+  /* A group heading INSIDE the table -- the product line above its
+     suppliers, the day above its entries. It spans every column. */
+  .ow-tbl-g{
+    grid-column:1/-1;
+    display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+    padding:var(--ow-sp-10) var(--ow-sp-12);background:var(--ow-paper-2);
+    border-top:1px solid var(--ow-rule);
+    font-size:var(--ow-t-14);font-weight:var(--ow-fw-600);
+  }
+  .ow-tbl-g .ow-tbl-gs{margin-left:auto;font-size:var(--ow-t-12);
+    font-weight:var(--ow-fw-400);color:var(--ow-ink-600);}
+  /* The total. Tinted and ruled above, because a total that looks like
+     another row gets read as one. */
+  .ow-tbl-f{
+    background:var(--ow-paper-2);border-top:1px solid var(--ow-rule);
+    font-weight:var(--ow-fw-600);font-size:var(--ow-t-13);
+  }
+  /* A cell of words. min-width:0 is load-bearing: a grid item refuses to
+     shrink below its content and pushes its neighbours out of the box
+     instead of truncating. */
+  .ow-tbl-c{min-width:0;}
+  .ow-tbl-p{
+    display:block;min-width:0;font-weight:var(--ow-fw-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ow-tbl-s{
+    display:block;min-width:0;margin-top:1px;
+    font-size:var(--ow-t-12);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  /* THE FIGURE COLUMN NEVER GIVES WAY. A clipped figure is not a
+     shortened figure, it is a WRONG one -- "1,240,00" is a tenth of
+     "1,240,000" and looks entirely plausible. So this cell does not
+     shrink and does not wrap; the words beside it are what yields. */
+  .ow-tbl-n{
+    justify-self:end;text-align:right;white-space:nowrap;min-width:0;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:var(--ow-fw-600);
+  }
+  .ow-tbl-h .ow-tbl-n{font-family:inherit;font-weight:var(--ow-fw-600);letter-spacing:.06em;}
+  .ow-tbl-a{display:flex;align-items:center;gap:var(--ow-sp-6);justify-self:end;}
+  /* A line the table has to say something about -- on hold, held back,
+     disagreeing with its own history. It spans the row and carries the
+     one tone that means caution. */
+  .ow-tbl-note{
+    grid-column:1/-1;
+    display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+    padding:var(--ow-sp-8) var(--ow-sp-12);
+    background:var(--ow-amber-faint);border-top:1px solid var(--ow-amber-soft);
+    font-size:var(--ow-t-12);color:var(--ow-amber-ink);
+  }
+
+  /* ---- money, in its one fixed relationship: figure, unit, basis ---- */
+  .ow-fig{
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+    font-weight:var(--ow-fw-600);color:var(--ow-ink-900);white-space:nowrap;
+  }
+  .ow-fig-u{font-size:.82em;font-weight:var(--ow-fw-400);color:var(--ow-ink-400);letter-spacing:0;}
+  .ow-fig-b{
+    display:block;font-family:'Inter',system-ui,sans-serif;letter-spacing:0;
+    font-size:var(--ow-t-11);font-weight:var(--ow-fw-400);color:var(--ow-ink-600);
+    white-space:normal;
+  }
+  /* The three states, and there is no fourth. A figure is a SIZE unless
+     it is one of these. */
+  .ow-fig.ow-bad{color:var(--ow-crimson);}
+  .ow-fig.ow-good{color:var(--ow-verdigris);}
+  .ow-fig.ow-warn{color:var(--ow-amber-ink);}
+
+  /* ---- the strip above a table: what you are looking at, and at what ---- */
+  .ow-tb{
+    display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;
+    padding:var(--ow-sp-8) var(--ow-sp-12);
+    border-bottom:1px solid var(--ow-rule-soft);
+  }
+  .ow-tb-s{flex:1 1 220px;min-width:0;}
+  .ow-tb-n{margin-left:auto;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
+
+  /* ==================================================================
      THE PHONE. Not the console squeezed — its own design. 820px is the
      app's existing breakpoint and is kept, so this switches between two
      layouts rather than reflowing one.
@@ -8290,6 +8432,56 @@
     .ow-pan-t{font-size:var(--ow-t-12);}
     .ow-sr{height:40px;}
     .ow-sr-k,.ow-sr-v{font-size:14px;}
+
+    /* THE TABLE BECOMES CARDS, from the same call.
+
+       Not a horizontal scroll -- five columns of figures dragged
+       sideways under a thumb is how a table stops being read at all.
+       And not a second template either: the header row goes, and every
+       cell that had a column name carries it instead, from the
+       data-l it was emitted with. One call, two skins, and nothing to
+       keep in step. */
+    .ow-tbl-h{display:none;}
+    /* The container stops being a grid at all: each row is a card and
+       has no columns left to share. */
+    .ow-tbl{display:block;}
+    .ow-tbl-r,.ow-tbl-f{
+      grid-template-columns:minmax(0,1fr);row-gap:var(--ow-sp-4);
+      padding:var(--ow-sp-12);align-items:start;
+    }
+    .ow-tbl-r{font-size:15px;}
+    /* Labelled cells become a line each: the name it lost on the left,
+       its value hard against the right edge where the eye reads down a
+       column of figures. */
+    /* The label takes the slack, not the gap between the figure and its
+       unit. space-between spread all three apart and left "/bag"
+       stranded at the right edge, reading as a column of its own rather
+       than as part of the number -- so the label pushes and everything
+       after it stays glued together. */
+    .ow-tbl-c[data-l],.ow-tbl-n[data-l]{
+      display:flex;align-items:baseline;justify-content:flex-start;gap:var(--ow-sp-4);
+    }
+    .ow-tbl-c[data-l]::before,.ow-tbl-n[data-l]::before{
+      content:attr(data-l);flex:none;margin-right:auto;padding-right:var(--ow-sp-12);
+      font-family:'Inter',system-ui,sans-serif;letter-spacing:.06em;
+      font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);
+      text-transform:uppercase;color:var(--ow-ink-600);
+    }
+    /* The first cell is the row's own name and needs no label -- it is
+       the heading of the card. */
+    .ow-tbl-r > .ow-tbl-c:first-child .ow-tbl-p{font-size:16px;white-space:normal;}
+    .ow-tbl-n{justify-self:stretch;}
+    .ow-tbl-a{justify-self:stretch;justify-content:flex-end;
+      padding-top:var(--ow-sp-4);gap:var(--ow-sp-8);}
+    /* .btn.ow-sm grows to half a row's width at this breakpoint, which
+       is right in the queue where two buttons share a line and wrong
+       here -- a full-width button in a table row reads as the row's
+       one action rather than as a control on it. Scoped through
+       .ow-sm rather than .btn so the rule stays inside its namespace. */
+    .ow-tbl-a .btn.ow-sm{flex:0 0 auto;min-width:0;}
+    .ow-tbl-g{padding:var(--ow-sp-12);font-size:15px;}
+    .ow-tb{padding:var(--ow-sp-12);}
+    .ow-tb-n{margin-left:0;width:100%;}
   }
 </style>
 </head>
