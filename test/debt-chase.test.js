@@ -225,28 +225,37 @@ if (scope) {
     'the terms and the chase stamps load and persist with the shop settings');
 }
 
-/* ---------- 6. the queue is a set of cards, not a stack of rules ----- */
+/* ---------- 6. a queue, and one debtor being worked ------------------ */
 /*
- * The last screen wearing the spare parts. .buy-controls held the two
- * settings with the whole state of the queue -- how many to chase and
- * how much they owe between them -- crammed into a hint beside them,
- * which is where a reader looks last. .buy-tail/.buy-row carried the
- * two tails as shopping rows. And each debtor, who has a name, a
- * figure, an age, three facts, an editable message and four controls,
- * was held apart from the next one by a dashed line.
+ * Two shapes before this one. First the spare parts: .buy-controls with
+ * the queue's state in a hint, .buy-tail/.buy-row as shopping rows, a
+ * dashed line between debtors. Then a card per debtor -- which put five
+ * editable messages on one screen, four of which nobody was about to
+ * send. Now the console shows the queue on the left and ONE debtor's
+ * work on the right: their invoices, their message, their buttons; the
+ * phone shows that debtor open and the rest as rows. The queue's state
+ * is the layer's strip, and the ones deliberately not asked are named
+ * in one panel rather than dropped.
  */
 {
   const panel = extractFunction(src, 'renderChaseScreen', 'index.html');
 
-  t.check(/class="chase-card"/.test(panel) && !/class="chase-row"/.test(panel),
-    'a debtor is a card, which is what that much content needs');
-  t.check(/class="sum-strip"/.test(panel) && /'to chase'/.test(panel) && /'between them'/.test(panel),
-    'what the queue holds is in the strip every other screen uses for it');
+  t.check(/class="ow-pan ch-work" data-id=/.test(panel) && /class="ow-lr ch-row/.test(panel) && !/class="chase-row"/.test(panel),
+    'the debtor being worked is one panel with everything needed to send; the rest are rows in a queue');
+  t.check(/let chaseSelectedId = null;/.test(src) && /chaseSelectedId = btn\.dataset\.id;/.test(panel),
+    'and clicking a row makes it the one being worked');
+  t.check(/class="ow-strip ch-strip/.test(panel) && /'To chase'/.test(panel) && /'Between them'/.test(panel),
+    'what the queue holds is in the layer’s strip, like every converted screen');
   t.check(!/chase_summary/.test(src),
     'and not in a hint beside the settings — that element is gone');
-  t.check(/class="chase-tail"/.test(panel) && !/class="buy-tail"/.test(panel)
-    && !/class="buy-row"/.test(panel),
-    'the resting and held-back tails wear their own classes');
+  t.check(/Deliberately not asked/.test(panel) && /Said when they would pay/.test(panel)
+    && /Chased in the last/.test(panel) && /Held back until the balance is checked/.test(panel)
+    && !/class="buy-tail"/.test(panel) && !/class="buy-row"/.test(panel),
+    'the promised, resting and held-back accounts are named in one panel, in three groups, rather than dropped');
+  /* The message is the layer's .ow-msg and still the textarea the
+     handlers read through data-msg; nothing about how it is sent moved. */
+  t.check(/<textarea class="ow-msg chase-msg" data-msg=/.test(panel) && /Nothing has been sent\./.test(panel),
+    'the message is the layer’s message box, and it says nothing has been sent');
   t.check(/class="form-panel chase-controls"/.test(src) && /<label for="chase_after">/.test(src),
     'the two rules the queue obeys are labelled fields in a form');
   t.check(/id="chase_after"/.test(src) && /id="chase_rest"/.test(src),
@@ -263,8 +272,13 @@ if (scope) {
   /* THE SPARE PARTS ARE GONE. Four screens wore them because they were
      there. A dead rule in the stylesheet is how a fifth ends up in one. */
   t.check(!/\.buy-row\{/.test(src) && !/\.buy-controls\{/.test(src) && !/\.buy-tail h4\{/.test(src)
-    && !/\.chase-row\{/.test(src) && !/\.chase-head\{/.test(src),
-    'the borrowed classes are deleted, not left in the drawer');
+    && !/\.chase-row\{/.test(src) && !/\.chase-head\{/.test(src)
+    && !/\.chase-card\{/.test(src) && !/\.chase-list\{/.test(src) && !/\.chase-acts\{/.test(src),
+    'the borrowed classes are deleted, not left in the drawer — the card-per-debtor rules with them');
+  /* .chase-mini and .chase-tail are NOT chase's own any more: "Who you
+     owe" wears them for its undated and missed bills. They stay. */
+  t.check(/\.chase-mini\{/.test(src) && /\.chase-tail h4\{/.test(src),
+    'while the two families another screen still wears are kept');
 }
 
 process.exit(t.done() ? 1 : 0);

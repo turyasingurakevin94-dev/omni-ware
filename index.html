@@ -1126,21 +1126,49 @@
      which is a note on a panel and never was a note about buying. */
   .dash-note{font-size:12px;color:var(--ink-soft);margin:10px 0 0;}
   .dash-note b{color:var(--ink);}
-  /* ---- Chase debts ---- */
-  /* A card each, like the consignor cards. Every one of these carries a
-     name, a figure, an age, three facts, an editable message and four
-     controls -- more than a dashed rule between rows can hold apart,
-     which is all it had. */
-  .chase-list{display:flex;flex-direction:column;gap:14px;}
-  .chase-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:16px 18px 14px;display:flex;flex-direction:column;gap:11px;}
-  .chase-card-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;}
-  .chase-contact{font-size:11.5px;color:var(--ink-soft);}
-  .chase-owed{text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:2px;margin-left:auto;}
-  .chase-owed b{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;
-    font-variant-numeric:tabular-nums;line-height:1.1;color:var(--accent);}
-  .chase-owed span{font-size:10px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;
-    color:var(--ink-soft);}
+  /* ---- Chase debts ----
+     The console: the queue on the left, one debtor's work on the right.
+     The phone: the open debtor first, the rest as rows under it. One
+     call draws both; the phone is the same markup ordered by CSS. The
+     card-per-debtor this replaced put five editable messages on one
+     screen, four of which nobody was about to send. */
+  .ch-rules-wrap{display:flex;align-items:center;gap:10px;margin-left:auto;white-space:nowrap;}
+  .ch-rules{font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .ch-rules b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;}
+  .chase-controls[hidden]{display:none;}
+  .chase-controls{margin-bottom:16px;}
+  .ch-strip{margin-bottom:16px;}
+  /* The debtor being worked. */
+  .ch-work{display:flex;flex-direction:column;min-height:0;}
+  .ch-w-head{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--ow-rule-soft);}
+  .ch-w-id{min-width:0;flex:1 1 auto;}
+  .ch-w-name{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;}
+  .ch-w-con{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .ch-w-owed{margin-left:auto;text-align:right;flex:none;}
+  .ch-w-owed .ow-fig{display:block;font-size:20px;line-height:1.1;}
+  .ch-w-owed span{font-size:11px;color:var(--ink-soft);letter-spacing:.09em;text-transform:uppercase;font-weight:600;}
+  .ch-w-facts{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--ow-rule-soft);}
+  .ch-w-body{display:grid;grid-template-columns:268px minmax(0,1fr);}
+  .ch-w-inv{border-right:1px solid var(--ow-rule-soft);display:flex;flex-direction:column;min-width:0;}
+  .ch-w-cap{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);padding:10px 12px 6px;}
+  .ch-w-inv .ow-mini{margin-top:auto;}
+  .ch-w-inv .ch-carried{color:var(--ink-soft);}
+  .ch-w-msg{display:flex;flex-direction:column;min-width:0;padding:10px 12px 12px;}
+  .ch-w-msg .ow-msg{flex:1 1 auto;min-height:180px;}
+  .ch-w-foot{display:flex;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid var(--ow-rule-soft);background:var(--ow-paper-2);flex-wrap:wrap;}
+  .ch-sp{flex:1;}
+  /* The ones deliberately not asked: three groups of two-line rows,
+     the reason and the actions on the second line. */
+  .ch-g{padding:10px 12px 2px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);}
+  .ch-qr{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:4px;align-items:center;
+    padding:8px 12px;border-top:1px solid var(--ow-rule-soft);}
+  .ch-qr-n{min-width:0;font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ch-qr-v{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;white-space:nowrap;}
+  .ch-qr-w{grid-column:1/-1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);line-height:1.4;}
+  .ch-qr-why{min-width:0;}
+  .ch-qr-a{display:flex;gap:6px;flex:1 0 100%;justify-content:flex-end;flex-wrap:wrap;}
+  .ch-qr-a .btn{white-space:nowrap;}
+  .ch-qr.held .ch-qr-n,.ch-qr.held .ch-qr-w{color:var(--ow-amber-ink);}
   /* MARGIN. Shares the clearance row's bones, because it is the same
      kind of card: a line, the facts bearing on it, then one decision.
      The stale-rule block is set apart in amber, because it is a finding
@@ -1190,17 +1218,15 @@
   .cl-msg{width:100%;margin:9px 0 0;font-size:12.5px;line-height:1.5;resize:vertical;}
   .cl-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin:9px 0 0;}
   @media (max-width:620px){ .cl-val{text-align:left;} .cl-acts{justify-content:stretch;} }
-  .chase-facts{display:flex;flex-wrap:wrap;gap:3px 16px;}
-  .chase-fact{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
-  .chase-fact b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
-    font-size:12.5px;font-weight:700;color:var(--ink);}
-  .chase-fact.chased b{color:var(--accent);}
-  /* Broken word, in the colour the app keeps for money going wrong. */
-  .chase-fact.broke, .chase-fact.broke b{color:var(--ow-crimson);}
+  .chase-controls .form-grid{grid-template-columns:repeat(2, minmax(170px, 250px));}
+  @media (max-width:560px){
+    .chase-controls .form-grid{grid-template-columns:1fr;}
+  }
+  .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
+  /* Worn by "Who you owe" -- its undated and missed bills -- not by this
+     screen any more. Kept exactly as they were. */
   .chase-tail h4{font-size:10.5px;margin:20px 0 2px;text-transform:uppercase;letter-spacing:0.7px;
     color:var(--ow-ink-400);padding-bottom:6px;border-bottom:1px solid var(--line);}
-  /* The two tails are lists of names with a reason, not shopping rows.
-     The reason takes the slack and the money lines up on the right. */
   .chase-mini{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:10px 0;
     border-bottom:1px solid var(--ow-rule-soft);font-size:12.5px;}
   .chase-mini:last-child{border-bottom:none;}
@@ -1209,23 +1235,9 @@
   .chase-mini-amt{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
     font-weight:700;color:var(--ink);white-space:nowrap;}
   .chase-mini-act{padding:6px 12px;font-size:12px;flex-shrink:0;}
-  .chase-empty{display:flex;flex-direction:column;gap:4px;padding:26px 22px;
-    border:1px dashed var(--line);border-radius:12px;background:var(--ow-steel-050);}
-  .chase-empty b{font-size:13.5px;color:var(--ink);}
-  .chase-empty span{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:62ch;}
-  .chase-controls .form-grid{grid-template-columns:repeat(2, minmax(170px, 250px));}
-  @media (max-width:560px){
-    .chase-controls .form-grid{grid-template-columns:1fr;}
-    .chase-owed{margin-left:0;text-align:left;flex-basis:100%;flex-direction:row;align-items:baseline;gap:8px;}
-  }
-  .chase-msg{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
-    font-family:inherit;font-size:12.5px;line-height:1.5;color:var(--ink);background:var(--bg);resize:vertical;min-height:150px;}
-  /* Right-aligned, with the strongest action last -- the eye lands
-     where the thumb goes. It was left-aligned with Send first, so the
-     three quieter buttons trailed off after the loud one. */
-  .chase-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-top:2px;}
-  .chase-done{font-size:11.5px;font-weight:600;color:var(--accent);}
-  .chase-none{font-size:11.5px;color:var(--ow-ink-400);}
+  /* The textarea keeps its old name for the handlers that read it and
+     takes its look from the layer's .ow-msg. */
+  .chase-msg{resize:vertical;}
   /* Goods of a consignor's that have sold and are recorded as nobody's.
      Amber and inside the card, not a page banner: it is a fact about
      THIS consignor, and it has to sit where their figures are for the
@@ -7094,6 +7106,22 @@
     .qbar-save .icon{display:none;}
     .qbar-btn{min-width:40px;min-height:40px;padding:0 6px;flex:none;}
     body.on-quote-tab #tab-quote{padding-bottom:110px;}
+    /* CHASE DEBTS ON A PHONE: the debtor being worked comes first, the
+       queue and the quiet ones under it; the invoices keep one line
+       each; Send takes the full width, last. */
+    .ch-grid .ch-work{order:-1;}
+    .ch-w-body{grid-template-columns:minmax(0,1fr);}
+    .ch-w-inv{border-right:0;border-bottom:1px solid var(--ow-rule-soft);}
+    .ch-w-inv .ow-tbl-r,.ch-w-inv .ow-tbl-f{grid-template-columns:minmax(0,1fr) auto;padding:var(--ow-sp-8) var(--ow-sp-12);align-items:baseline;}
+    .ch-w-head{flex-wrap:wrap;}
+    .ch-w-head .ow-av{display:none;}
+    .ch-w-owed{flex:1 1 100%;margin-left:0;text-align:left;display:flex;align-items:baseline;gap:8px;}
+    .ch-w-owed .ow-fig{display:inline;}
+    .ch-w-foot .btn{min-height:var(--ow-tap);box-sizing:border-box;}
+    .ch-w-foot .btn.ow-sm{flex:1 1 calc(50% - 3px);min-width:0;}
+    .ch-w-foot .btn-accent{flex:1 1 100%;order:9;}
+    .ch-sp{display:none;}
+    .ch-rules{display:none;}
     /* THE QUOTE'S LINE, AS A CARD. The layer turns every .ow-tbl-r into
        a one-column card; this screen's rows carry a gutter (number and
        remove) beside the name, and on a phone those two belong on one
@@ -8077,7 +8105,7 @@
     background:var(--ow-paper-2);}
   .ow-pan-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
     text-transform:uppercase;color:var(--ow-ink-600);}
-  .ow-pan-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;
+  .ow-pan-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin-left:auto;white-space:nowrap;
     font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;}
   .ow-mini{font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.45;margin:0;
     padding:var(--ow-sp-8) var(--ow-sp-12);border-top:1px solid var(--ow-rule-soft);
@@ -8128,6 +8156,7 @@
   .ow-mt.ow-bad .ow-mt-v{color:var(--ow-crimson);}
   .ow-mt.ow-warn .ow-mt-v{color:var(--ow-amber-ink);}
   .ow-mt.ow-good .ow-mt-v{color:var(--ow-verdigris);}
+  .ow-strip.ow-strip-5{grid-template-columns:repeat(5,1fr);}
 
   /* ---- THE WORK QUEUE.
      One 44px row per thing, columns that line up down the list, and the
@@ -8194,8 +8223,58 @@
   .ow-sr-v.ow-bad{color:var(--ow-crimson);font-weight:var(--ow-fw-600);}
   .ow-sr-v.ow-warn{color:var(--ow-amber-ink);font-weight:var(--ow-fw-600);}
 
+  /* ---- the list row: a name over a line of meta, a figure over its basis ---- */
+  /* A button, so a row that opens something can be reached by keyboard.
+     The mark of the open one is a steel edge on the left, not a colour
+     fill: the accent means something else on every screen. */
+  .ow-lr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:var(--ow-sp-10);
+    width:100%;min-height:var(--ow-tap);padding:var(--ow-sp-6) var(--ow-sp-12);
+    border:0;border-bottom:1px solid var(--ow-rule-soft);border-left:3px solid transparent;
+    background:none;cursor:pointer;text-align:left;font-family:inherit;color:inherit;}
+  .ow-lr:last-child{border-bottom:0;}
+  .ow-lr:hover{background:var(--ow-paper-2);}
+  .ow-lr.ow-on{background:var(--ow-paper-2);border-left-color:var(--ow-steel-950);}
+  .ow-lr-n{display:flex;align-items:center;gap:var(--ow-sp-6);min-width:0;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-500);line-height:1.3;}
+  .ow-lr-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-lr-m{grid-column:1;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);line-height:1.35;margin-top:1px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-lr-v{grid-column:2;grid-row:1 / span 2;text-align:right;white-space:nowrap;
+    font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:var(--ow-t-13);font-weight:var(--ow-fw-600);letter-spacing:-.02em;}
+  .ow-lr-b{display:block;font-family:'Inter',system-ui,sans-serif;font-size:var(--ow-t-11);
+    font-weight:var(--ow-fw-400);color:var(--ow-ink-600);letter-spacing:0;margin-top:1px;}
+
+  /* ---- the avatar: two letters in a quiet square ---- */
+  .ow-av{width:34px;height:34px;border-radius:var(--ow-r);background:var(--ow-steel-050);color:var(--ow-ink-600);
+    font-size:var(--ow-t-12);font-weight:var(--ow-fw-600);letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;flex:none;}
+
+  /* ---- the message about to be sent ---- */
+  /* The one place in the app where a text box is the work. It is a
+     textarea, because the owner edits it before sending, and it looks
+     like a page rather than a form field. .ow-msg-n always says that
+     nothing has been sent, which is the promise the whole app keeps. */
+  .ow-msg{display:block;width:100%;box-sizing:border-box;margin:0;
+    border:1px solid var(--ow-rule);border-radius:var(--ow-r);background:var(--ow-paper-2);
+    padding:var(--ow-sp-10) var(--ow-sp-12);font-family:'Inter',system-ui,sans-serif;
+    font-size:var(--ow-t-13);line-height:1.46;white-space:pre-wrap;color:var(--ow-ink-900);
+    overflow:auto;resize:vertical;}
+  .ow-msg:focus{outline:0;border-color:var(--ow-steel-950);background:var(--ow-paper);}
+  .ow-msg-h{display:flex;align-items:baseline;gap:var(--ow-sp-8);margin-bottom:var(--ow-sp-6);}
+  .ow-msg-t{font-size:var(--ow-t-11);font-weight:var(--ow-fw-600);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--ow-ink-600);}
+  .ow-msg-to{margin-left:auto;min-width:0;font-size:var(--ow-t-11);color:var(--ow-ink-600);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ow-msg-n{font-size:var(--ow-t-11);color:var(--ow-ink-600);margin:var(--ow-sp-6) 0 0;
+    line-height:1.45;max-width:var(--ow-measure);}
+
   /* ---- layout: the work column and its context rail ---- */
   .ow-grid{display:grid;grid-template-columns:minmax(0,1fr) 304px;
+    gap:var(--ow-sp-16);align-items:start;}
+  /* The list on the left, the work on the right: a queue and the one
+     item of it being worked. */
+  .ow-grid-l{display:grid;grid-template-columns:372px minmax(0,1fr);
     gap:var(--ow-sp-16);align-items:start;}
   .ow-side{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
   .ow-stack{display:flex;flex-direction:column;gap:var(--ow-sp-16);}
@@ -8225,7 +8304,7 @@
   .ow-rec .ow-full{grid-column:1 / -1;}
   .ow-rec .ow-full:empty,.ow-rec .ow-half:empty{display:none;}
   @media (max-width:1180px){
-    .ow-grid{grid-template-columns:minmax(0,1fr);}
+    .ow-grid,.ow-grid-l{grid-template-columns:minmax(0,1fr);}
     .ow-rec{grid-template-columns:minmax(0,1fr);}
   }
 
@@ -8551,6 +8630,14 @@
     .ow-cb-kv{font-size:15px;}
     /* The ghost input is a thumb target here. */
     .ow-gi{min-height:var(--ow-tap);font-size:16px;}
+    .ow-strip.ow-strip-5{grid-template-columns:1fr 1fr;}
+    .ow-strip.ow-strip-5 .ow-mt:last-child:nth-child(odd){grid-column:1/-1;}
+    .ow-grid-l{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-12);}
+    .ow-lr{padding:var(--ow-sp-12);}
+    .ow-lr-n,.ow-lr-v{font-size:15px;}
+    .ow-lr-m,.ow-lr-b{font-size:var(--ow-t-12);}
+    .ow-msg{font-size:14px;line-height:1.5;max-height:230px;}
+    .ow-msg-n{font-size:var(--ow-t-12);}
   }
 </style>
 </head>
@@ -9612,30 +9699,34 @@
     </section>
 
     <section id="tab-chase" style="display:none;">
-      <div class="page-head">
-        <h1>Chase debts</h1>
-        <p>Everyone whose balance is past the shop's terms, worst-aged first, each with a message already written from their own invoices. Nobody is chased inside the grace period, nobody is chased twice in the same few days, and a customer whose balance does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Read the message, change it if you like, then send it with your own thumb — the app never sends anything by itself.</p>
+      <div class="ow-ph">
+        <h1 class="ow-ph-t">Chase debts</h1>
+        <p class="ow-ph-sub">Past the shop's terms, worst-aged first, each message written from their own invoices. Nothing sends itself.</p>
+        <p class="ow-ph-help">Everyone whose balance is past the shop's terms, worst-aged first, each with a message already written from their own invoices. Nobody is chased inside the grace period, nobody is chased twice in the same few days, and a customer whose balance does not agree with its own history is held back for checking rather than asked for a figure the shop cannot explain. Read the message, change it if you like, then send it with your own thumb — the app never sends anything by itself.</p>
+        <span class="ow-ph-sp"></span>
+        <!-- The two rules the queue obeys, as a sentence in the header;
+             the form that changes them folds out under it. The ids stay:
+             the listeners below bind to them at parse time with no null
+             guard, and renderChaseScreen writes the two figures. -->
+        <span class="ch-rules-wrap">
+          <span class="ch-rules" id="chase_rules">Chase after <b id="chase_after_v">7</b> days · rest <b id="chase_rest_v">3</b> days</span>
+          <button type="button" class="btn ow-sm" id="chase_rules_btn" aria-expanded="false" aria-controls="chase_controls">Change the rules</button>
+        </span>
       </div>
-      <div class="panel">
-        <!-- The two rules the queue obeys, as a form. They were a filter
-             bar with the count and the money crammed into a hint beside
-             them. The ids stay: the listeners below bind to them at
-             parse time with no null guard. -->
-        <div class="form-panel chase-controls">
-          <div class="form-panel-head">
-            <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-            <div class="form-panel-title">When a debt becomes a chase
-              <small>Nobody is asked inside the grace period, and nobody is asked twice inside the rest period — so a customer is never chased two days running.</small></div>
-          </div>
-          <div class="form-grid">
-            <div class="field"><label for="chase_after">Chase after (days past terms)</label>
-              <input type="number" id="chase_after" min="0" step="1"></div>
-            <div class="field"><label for="chase_rest">Rest between chases (days)</label>
-              <input type="number" id="chase_rest" min="0" step="1"></div>
-          </div>
+      <div class="form-panel chase-controls" id="chase_controls" hidden>
+        <div class="form-panel-head">
+          <span class="fp-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <div class="form-panel-title">When a debt becomes a chase
+            <small>Nobody is asked inside the grace period, and nobody is asked twice inside the rest period — so a customer is never chased two days running.</small></div>
         </div>
-        <div id="chase_list"></div>
+        <div class="form-grid">
+          <div class="field"><label for="chase_after">Chase after (days past terms)</label>
+            <input type="number" id="chase_after" min="0" step="1"></div>
+          <div class="field"><label for="chase_rest">Rest between chases (days)</label>
+            <input type="number" id="chase_rest" min="0" step="1"></div>
+        </div>
       </div>
+      <div id="chase_list"></div>
     </section>
 
     <section id="tab-analytics-creditors" style="display:none;">
@@ -35660,8 +35751,19 @@ function debtChaseRows(){
 function debtChaseInvoices(customerId){
   return customerOrdersFor(customerId)
     .filter(q=> q.invoiced && !q.voided && invoiceBalanceDue(q) > 0.5)
-    .map(q=> ({ no: invoiceNumberLabel(q), date: q.invoicedAt || q.date || '',
-      due: invoiceBalanceDue(q) }))
+    .map(q=> {
+      /* What it was for, from the order's own lines: the first line and
+         how many more, so the owner recognises the invoice without
+         opening it. */
+      const items = q.items || [];
+      const first = items[0];
+      const what = first
+        ? [first.qty, first.unit, first.productName].filter(Boolean).join(' ')
+          + (items.length > 1 ? ' +' + (items.length - 1) + ' more' : '')
+        : '';
+      return { no: invoiceNumberLabel(q), date: q.invoicedAt || q.date || '',
+        due: invoiceBalanceDue(q), what };
+    })
     .sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
 }
 
@@ -36528,6 +36630,11 @@ function renderConsignBadge(){
 
 /* The chase queue on screen. Each row carries the message in a box the
    owner can edit before taking it -- their words, their thumb. */
+/* WHICH DEBTOR IS BEING WORKED. The console shows the queue and ONE
+   debtor's message; the phone shows that debtor open and the rest as
+   rows. Sending or resting the open one moves the selection to the next
+   in the queue, which is the order a person collecting money works in. */
+let chaseSelectedId = null;
 function renderChaseScreen(){
   const el = document.getElementById('chase_list');
   if(!el) return;
@@ -36537,110 +36644,162 @@ function renderChaseScreen(){
   const restEl = document.getElementById('chase_rest');
   if(afterEl && document.activeElement !== afterEl) afterEl.value = q.graceDays;
   if(restEl && document.activeElement !== restEl) restEl.value = q.restDays;
+  const afterV = document.getElementById('chase_after_v');
+  const restV = document.getElementById('chase_rest_v');
+  if(afterV) afterV.textContent = q.graceDays;
+  if(restV) restV.textContent = q.restDays;
   const f = n=> fmtUGX(Math.round(n));
-  const pill = (r)=> `<span class="age-pill age-${r.band}">${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
+  const n = n=> Number(Math.round(n)).toLocaleString('en-UG');
+  const days = (d)=> d === 1 ? '1 day' : d + ' days';
+  /* The age chip: crimson past sixty days, amber past thirty, grey
+     inside a month -- the bands the whole app ages debt by. */
+  const ageChip = (r)=> {
+    const tone = r.band === 'b90p' || r.band === 'b90' ? ' ow-bad' : r.band === 'b60' ? ' ow-warn' : '';
+    return `<span class="ow-cp${tone}">${esc(r.ageDays >= 0 ? agingDaysLabel(r.ageDays) : 'Not dated')}</span>`;
+  };
 
-  const row = (r)=> {
+  if(!q.due.some(r=> r.id === chaseSelectedId)) chaseSelectedId = q.due.length ? q.due[0].id : null;
+  const sel = q.due.find(r=> r.id === chaseSelectedId) || null;
+
+  /* ---- the position ---- */
+  const all = debAllRows().filter(r=> r.debt > 0.5);
+  const owedAll = all.reduce((t,r)=> t + r.debt, 0);
+  const owed = q.due.reduce((t,r)=> t + r.debt, 0);
+  const oldest = q.due.reduce((m,r)=> (!m || r.ageDays > m.ageDays) ? r : m, null);
+  const oldestC = oldest ? (data.customers||[]).find(c=> c.id === oldest.id) : null;
+  const oldestSince = oldestC ? customerOldestOpenChargeDate(oldestC) : null;
+  const promisedSum = q.promised.reduce((t,r)=> t + r.debt, 0);
+  const tile = (label, value, sub, tone)=> `<div class="ow-mt${tone ? ' ' + tone : ''}">
+    <p class="ow-mt-l">${label}</p><span class="ow-mt-v">${value}</span><p class="ow-mt-s">${sub}</p></div>`;
+  const tiles = [
+    tile('To chase', String(q.due.length), `of ${all.length} account${all.length === 1 ? '' : 's'} carrying a balance`, q.due.length ? '' : 'ow-good'),
+    tile('Between them', `${n(owed)}<span class="ow-u">UGX</span>`, `of ${n(owedAll)} UGX owed in all`),
+    tile('Oldest', oldest ? `${oldest.ageDays}<span class="ow-u">days</span>` : '—',
+      oldest ? esc(oldest.name) + (oldestSince ? ' · since ' + esc(fmtShortDate(oldestSince)) : '') : 'nothing past your terms',
+      oldest ? (oldest.band === 'b90p' || oldest.band === 'b90' ? 'ow-bad' : oldest.band === 'b60' ? 'ow-warn' : '') : ''),
+    tile('Named a day', String(q.promised.length), q.promised.length ? `${n(promisedSum)} UGX — left alone until then` : 'nobody has named a day'),
+  ];
+  if(q.blocked.length) tiles.push(tile('Held back', String(q.blocked.length),
+    q.blocked.every(r=> r.why === 'drift') ? (q.blocked.length === 1 ? 'balance disagrees with its history' : 'balances disagree with their history')
+      : q.blocked.every(r=> r.why === 'undated') ? 'nothing dated behind the balance' : 'for checking before anyone is asked', 'ow-warn'));
+  let html = `<div class="ow-strip ch-strip${tiles.length === 5 ? ' ow-strip-5' : ''}">${tiles.join('')}</div>`;
+
+  /* ---- the queue ---- */
+  const queueRow = (r)=> {
+    const meta = [r.location,
+      r.chasedDaysAgo != null ? 'chased ' + agingDaysLabel(r.chasedDaysAgo).toLowerCase() + ' ago' : '',
+      r.promise && r.promise.state === 'broken' ? 'broke ' + fmtShortDate(r.promise.promisedOn) : '',
+      !r.phone ? 'no phone number on file' : (r.lastPaid ? 'last paid ' + fmtShortDate(r.lastPaid) : 'never paid')
+    ].filter(Boolean).join(' · ');
+    return `<button type="button" class="ow-lr ch-row${r.id === chaseSelectedId ? ' ow-on' : ''}" data-id="${esc(r.id)}">
+      <span class="ow-lr-n"><span class="ow-lr-nm">${esc(r.name)}</span>${ageChip(r)}</span>
+      <span class="ow-lr-v">${n(r.debt)}<span class="ow-lr-b">${r.invoices.length ? r.invoices.length + (r.invoices.length === 1 ? ' invoice' : ' invoices') : 'no invoice behind it'}</span></span>
+      <span class="ow-lr-m" title="${esc(meta)}">${esc(meta)}</span>
+    </button>`;
+  };
+  const queuePanel = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">To chase<span class="ow-hide-sm"> — worst aged first</span></span>${q.due.length ? `<span class="ow-pan-n">${q.due.length} · ${n(owed)}</span>` : ''}</div>
+    ${q.due.length ? q.due.map(queueRow).join('')
+      : `<p class="ow-mini">Nobody to chase. Nothing is past ${days(q.graceDays)}${
+          q.resting.length ? `, and ${q.resting.length} ${q.resting.length === 1 ? 'debtor was' : 'debtors were'} chased in the last ${days(q.restDays)}` : ''}${
+          q.promised.length ? `, and ${q.promised.length} ${q.promised.length === 1 ? 'has' : 'have'} named a day and it has not come` : ''}.</p>`}
+  </div>`;
+
+  /* ---- deliberately not asked ---- */
+  /* Named, never dropped: the queue's silence about somebody is visible
+     rather than mysterious, and the two conversations that happen off
+     the queue -- a day named after a chase, a day moved -- have their
+     buttons here, where the person is standing. */
+  const quietCount = q.promised.length + q.resting.length + q.blocked.length;
+  const quietSum = q.promised.concat(q.resting, q.blocked).reduce((t,r)=> t + r.debt, 0);
+  const quietRow = (r, why, acts, held)=> `<div class="ch-qr${held ? ' held' : ''}">
+      <span class="ch-qr-n">${esc(r.name)}</span><span class="ch-qr-v">${n(r.debt)}</span>
+      <span class="ch-qr-w"><span class="ch-qr-why">${why}</span>${acts ? `<span class="ch-qr-a">${acts}</span>` : ''}</span>
+    </div>`;
+  let quiet = '';
+  if(q.promised.length) quiet += `<div class="ch-grp"><div class="ch-g">Said when they would pay</div>${q.promised.map(r=> quietRow(r,
+      `said ${esc(fmtShortDate(r.promise.promisedOn))}${r.promise.amount ? ' — ' + esc(f(r.promise.amount)) : ''}${r.brokenPromises ? ` · has broken ${r.brokenPromises} before` : ''}`,
+      `<button type="button" class="btn btn-ghost ow-sm chase-promise" data-id="${esc(r.id)}">They said a different day</button><button type="button" class="btn btn-ghost ow-sm chase-unpromise" data-pid="${esc(String(r.promise.id))}">They did not say that</button>`)).join('')}</div>`;
+  if(q.resting.length) quiet += `<div class="ch-grp"><div class="ch-g">Chased in the last ${days(q.restDays)}</div>${q.resting.map(r=> quietRow(r,
+      `chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())} ago`,
+      `<button type="button" class="btn btn-ghost ow-sm chase-promise" data-id="${esc(r.id)}">They promised…</button><button type="button" class="btn btn-ghost ow-sm chase-undo" data-id="${esc(r.id)}">Chase again</button>`)).join('')}</div>`;
+  if(q.blocked.length) quiet += `<div class="ch-grp"><div class="ch-g">Held back until the balance is checked</div>${q.blocked.map(r=> quietRow(r,
+      r.why === 'drift' ? 'this balance does not match its own history, so no demand is written for it — fix it on Who owes you'
+                        : 'nothing dated behind this balance, so there is no age to measure against your terms', '', true)).join('')}</div>`;
+  const quietPanel = `<div class="ow-pan">
+    <div class="ow-pan-h"><span class="ow-pan-t">Deliberately not asked</span>${quietCount ? `<span class="ow-pan-n">${quietCount} · ${n(quietSum)}</span>` : ''}</div>
+    ${quiet || '<p class="ow-mini">Nobody is being left alone: no day named, nobody chased inside the rest period, every balance agrees with its history.</p>'}
+  </div>`;
+
+  /* ---- the work: one debtor ---- */
+  let work;
+  if(!sel){
+    work = `<div class="ow-pan ch-work"><div class="ow-empty"><b>Nothing to write.</b><br>When somebody crosses your terms, their message appears here, written from their own invoices, for you to read and send.</div></div>`;
+  } else {
+    const r = sel;
     const chased = r.chasedDaysAgo != null;
     const msg = debtChaseMessage(r, ident);
     /* Sized to the message. A box that clips what is about to be sent
        invites sending something nobody read to the end of. */
     const rows = Math.min(20, Math.max(9, msg.split('\n').length + 1));
-    /* A card, like the consignor cards next door. Each of these carries
-       a name, a figure, four facts, an editable message and four
-       controls -- more than a dashed rule between rows can hold apart,
-       which is what it had. */
-    return `<div class="chase-card" data-id="${esc(r.id)}">
-      <div class="chase-card-head">
-        <div class="sc-avatar">${esc(nameInitials(r.name))}</div>
-        <div class="sc-title">
-          <div class="sc-name">${esc(r.name)}</div>
-          <div class="chase-contact">${r.location ? esc(r.location) + ' · ' : ''}${
-            r.phone ? esc(r.phone) : '<span class="chase-none">no phone number on file</span>'}</div>
+    const listed = r.invoices.reduce((s,i)=> s + i.due, 0);
+    const quotes = r.invoices.length && listed <= r.debt + 0.5;
+    const carried = quotes ? r.debt - listed : 0;
+    const invRows = quotes ? r.invoices.slice(0, DEBT_CHASE_INVOICE_LINES).map(i=> `<div class="ow-tbl-r">
+        <div class="ow-tbl-c"><span class="ow-tbl-p">${esc(i.no)}</span><span class="ow-tbl-s" title="${esc([i.date ? fmtShortDate(i.date) : '', i.what].filter(Boolean).join(' · '))}">${[i.date ? fmtShortDate(i.date) : '', i.what].filter(Boolean).map(esc).join(' · ')}</span></div>
+        <div class="ow-tbl-n">${n(i.due)}</div></div>`).join('')
+      + (r.invoices.length > DEBT_CHASE_INVOICE_LINES ? `<div class="ow-tbl-r ch-carried"><div class="ow-tbl-c"><span class="ow-tbl-p">and ${r.invoices.length - DEBT_CHASE_INVOICE_LINES} more</span></div><div class="ow-tbl-n">${n(r.invoices.slice(DEBT_CHASE_INVOICE_LINES).reduce((s,i)=> s + i.due, 0))}</div></div>` : '')
+      + (carried > 0.5 ? `<div class="ow-tbl-r ch-carried"><div class="ow-tbl-c"><span class="ow-tbl-p">Carried</span><span class="ow-tbl-s">from earlier, no invoice</span></div><div class="ow-tbl-n">${n(carried)}</div></div>` : '')
+      : '';
+    const facts = [
+      r.invoices.length ? `<span class="ow-cp">${r.invoices.length} invoice${r.invoices.length === 1 ? '' : 's'} still due</span>` : '',
+      r.lastPaid ? `<span class="ow-cp">last paid ${esc(fmtShortDate(r.lastPaid))}</span>` : '<span class="ow-cp">never paid</span>',
+      chased ? `<span class="ow-cp">chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())} ago</span>` : '',
+      r.promise && r.promise.state === 'broken' ? `<span class="ow-cp ow-bad">said ${esc(fmtShortDate(r.promise.promisedOn))} and did not pay</span>` : '',
+      r.brokenPromises > 1 ? `<span class="ow-cp ow-bad">${r.brokenPromises} promises broken</span>` : '',
+      !r.phone ? '<span class="ow-cp ow-warn">no phone number on file</span>' : '',
+    ].filter(Boolean).join('');
+    work = `<div class="ow-pan ch-work" data-id="${esc(r.id)}">
+      <div class="ch-w-head">
+        <span class="ow-av">${esc(nameInitials(r.name))}</span>
+        <div class="ch-w-id">
+          <div class="ch-w-name">${esc(r.name)} ${ageChip(r)}</div>
+          <div class="ch-w-con">${r.location ? esc(r.location) + ' · ' : ''}${r.phone ? esc(r.phone) : '<span class="chase-none">no phone number on file</span>'}</div>
         </div>
-        ${/* The pill sits with the name, not after the money: it is a
-             fact about the debt's age, and the age pill and the "owed"
-             label were both carrying it, side by side, saying 67 days
-             twice. */''}
-        ${pill(r)}
-        <div class="chase-owed">
-          <b>${f(r.debt)}</b>
-          <span>owed</span>
+        <div class="ch-w-owed"><b class="ow-fig">${f(r.debt)}</b><span>owed</span></div>
+      </div>
+      <div class="ch-w-facts">${facts}</div>
+      <div class="ch-w-body">
+        <div class="ch-w-inv">
+          <div class="ch-w-cap">What the message quotes</div>
+          ${quotes ? `<div class="ow-tbl">
+            <div class="ow-tbl-h"><div class="ow-tbl-c">Invoice</div><div class="ow-tbl-n">Still due</div></div>
+            ${invRows}
+            <div class="ow-tbl-f"><div class="ow-tbl-c">Balance</div><div class="ow-tbl-n">${n(r.debt)}</div></div>
+          </div>
+          <p class="ow-mini">Every line above comes from the ledger. The balance agrees with its own history, so this account is asked rather than held back.</p>`
+          : `<p class="ow-mini">${r.invoices.length
+              ? 'The invoices on file add up to more than this balance, so the message asks for the balance alone rather than quoting a breakdown the shop cannot stand behind.'
+              : 'No invoice stands behind this balance — it was carried onto the account from earlier — so the message asks for the figure alone.'}</p>`}
+        </div>
+        <div class="ch-w-msg">
+          <div class="ow-msg-h"><span class="ow-msg-t">Message</span><span class="ow-msg-to">${r.phone ? 'to WhatsApp ' + esc(r.phone) + ' — edit it before you send' : 'no number to send it to — copy it instead'}</span></div>
+          <textarea class="ow-msg chase-msg" data-msg="${esc(r.id)}" rows="${rows}">${esc(msg)}</textarea>
+          <p class="ow-msg-n">Nothing has been sent. Sending marks the account chased and rests it for ${days(q.restDays)}.</p>
         </div>
       </div>
-      <div class="chase-facts">
-        ${r.invoices.length ? `<span class="chase-fact"><b>${r.invoices.length}</b> invoice${r.invoices.length === 1 ? '' : 's'} still due</span>` : ''}
-        <span class="chase-fact">${r.lastPaid
-          ? `last paid <b>${esc(fmtShortDate(r.lastPaid))}</b>`
-          : '<b>never</b> paid'}</span>
-        ${chased ? `<span class="chase-fact chased">chased <b>${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</b></span>` : ''}
-        ${r.promise && r.promise.state === 'broken'
-          ? `<span class="chase-fact broke">said <b>${esc(fmtShortDate(r.promise.promisedOn))}</b> and did not pay</span>` : ''}
-        ${r.brokenPromises > 1
-          ? `<span class="chase-fact broke"><b>${r.brokenPromises}</b> promises broken</span>` : ''}
-      </div>
-      <textarea class="chase-msg" data-msg="${esc(r.id)}" rows="${rows}">${esc(msg)}</textarea>
-      <div class="chase-acts">
-        ${chased ? `<button type="button" class="btn btn-ghost chase-undo" data-id="${esc(r.id)}">It did not go</button>` : ''}
-        <button type="button" class="btn btn-ghost chase-promise" data-id="${esc(r.id)}">They promised…</button>
-        <button type="button" class="btn btn-ghost chase-receive" data-id="${esc(r.id)}">Received payment</button>
-        <button type="button" class="btn btn-ghost chase-copy" data-id="${esc(r.id)}">Copy</button>
+      <div class="ch-w-foot">
+        ${chased ? `<button type="button" class="btn btn-ghost ow-sm chase-undo" data-id="${esc(r.id)}">It did not go</button>` : ''}
+        <button type="button" class="btn btn-ghost ow-sm chase-promise" data-id="${esc(r.id)}">They promised…</button>
+        <button type="button" class="btn btn-ghost ow-sm chase-receive" data-id="${esc(r.id)}">Received payment</button>
+        <button type="button" class="btn btn-ghost ow-sm chase-copy" data-id="${esc(r.id)}">Copy</button>
+        <span class="ch-sp"></span>
         <button type="button" class="btn btn-accent chase-send" data-id="${esc(r.id)}">Send on WhatsApp</button>
       </div>
     </div>`;
-  };
-
-  /* What the queue holds, at the top. It was a count and a total in a
-     hint beside the settings, which is where a reader looks last. */
-  const owed = q.due.reduce((t,r)=> t + r.debt, 0);
-  const cell = (v, label, cls)=> `<div class="sum-cell ${cls||''}">
-    <div class="sum-value">${v}</div><div class="sum-label">${esc(label)}</div></div>`;
-  let html = `<div class="sum-strip">
-    ${cell(q.due.length, q.due.length === 1 ? 'to chase' : 'to chase', q.due.length ? 'warn' : '')}
-    ${cell(f(owed), 'between them')}
-    ${q.promised.length ? cell(q.promised.length, 'promised to pay', 'good') : ''}
-    ${q.resting.length ? cell(q.resting.length, 'resting', 'good') : ''}
-    ${q.blocked.length ? cell(q.blocked.length, 'held back', 'warn') : ''}
-  </div>`;
-  if(!q.due.length){
-    html += `<div class="chase-empty"><b>Nobody to chase.</b>
-      <span>Nothing is past ${q.graceDays} ${q.graceDays === 1 ? 'day' : 'days'}${
-      q.resting.length ? `, and ${q.resting.length} ${q.resting.length === 1 ? 'debtor was' : 'debtors were'} chased in the last ${q.restDays} ${q.restDays === 1 ? 'day' : 'days'}` : ''}${
-      q.promised.length ? `, and ${q.promised.length} ${q.promised.length === 1 ? 'has' : 'have'} named a day and it has not come` : ''}.</span></div>`;
-  } else {
-    html += `<div class="chase-list">${q.due.map(row).join('')}</div>`;
   }
-  /* Chased recently, and deliberately not offered again yet -- named so
-     the queue's silence about them is visible rather than mysterious. */
-  if(q.resting.length) html += `<div class="chase-tail"><h4>Chased in the last ${q.restDays} ${q.restDays === 1 ? 'day' : 'days'}</h4>${
-    q.resting.map(r=> `<div class="chase-mini">
-      <span class="chase-mini-name">${esc(r.name)}</span>
-      <span class="chase-mini-why">chased ${esc(agingDaysLabel(r.chasedDaysAgo).toLowerCase())}</span>
-      <span class="chase-mini-amt">${f(r.debt)}</span>
-      <button type="button" class="btn btn-ghost chase-mini-act chase-promise" data-id="${esc(r.id)}">They promised…</button>
-      <button type="button" class="btn btn-ghost chase-mini-act chase-undo" data-id="${esc(r.id)}">Chase again</button>
-    </div>`).join('')}</div>`;
-  /* THEY NAMED A DAY. Not chased until it comes: ringing somebody on
-     the 12th about money they promised on the 20th teaches a shop's
-     customers that what they say makes no difference. */
-  if(q.promised.length) html += `<div class="chase-tail"><h4>Said when they would pay</h4>${
-    q.promised.map(r=> `<div class="chase-mini">
-      <span class="chase-mini-name">${esc(r.name)}</span>
-      <span class="chase-mini-why">said ${esc(fmtShortDate(r.promise.promisedOn))}${
-        r.promise.amount ? ' — ' + esc(f(r.promise.amount)) : ''}${
-        r.brokenPromises ? ` · has broken ${r.brokenPromises} before` : ''}</span>
-      <span class="chase-mini-amt">${f(r.debt)}</span>
-      <button type="button" class="btn btn-ghost chase-mini-act chase-promise" data-id="${esc(r.id)}">They said a different day</button>
-      <button type="button" class="btn btn-ghost chase-mini-act chase-unpromise" data-pid="${esc(String(r.promise.id))}">They did not say that</button>
-    </div>`).join('')}</div>`;
-  if(q.blocked.length) html += `<div class="chase-tail"><h4>Held back until the balance is checked</h4>${
-    q.blocked.map(r=> `<div class="chase-mini">
-      <span class="chase-mini-name">${esc(r.name)}</span>
-      <span class="chase-mini-why">${r.why === 'drift'
-        ? 'this balance does not match its own history, so no demand is written for it — fix it on Who owes you'
-        : 'nothing dated behind this balance, so there is no age to measure against your terms'}</span>
-      <span class="chase-mini-amt">${f(r.debt)}</span>
-    </div>`).join('')}</div>`;
+
+  html += `<div class="ow-grid-l ch-grid"><div class="ow-stack">${queuePanel}${quietPanel}</div>${work}</div>`;
   el.innerHTML = html;
 
   const msgFor = (id)=> {
@@ -36648,6 +36807,10 @@ function renderChaseScreen(){
     return box ? box.value : '';
   };
   const rowFor = (id)=> q.due.find(r=> r.id === id);
+  el.querySelectorAll('.ch-row').forEach(btn=> btn.addEventListener('click', ()=>{
+    chaseSelectedId = btn.dataset.id;
+    renderChaseScreen();
+  }));
   el.querySelectorAll('.chase-send').forEach(btn=> btn.addEventListener('click', ()=>{
     const r = rowFor(btn.dataset.id);
     if(!r) return;
@@ -36656,7 +36819,7 @@ function renderChaseScreen(){
        needs no reply window to have been opened first. */
     window.open(waComposeUrl(r.phone, msgFor(r.id)), '_blank');
     markDebtChased(r.id);
-    toast('Marked as chased today — say "not sent" on the row if it did not go');
+    toast('Marked as chased today — say "It did not go" if it did not');
     renderChaseScreen();
     renderChaseBadge();
   }));
@@ -36671,6 +36834,7 @@ function renderChaseScreen(){
   }));
   el.querySelectorAll('.chase-undo').forEach(btn=> btn.addEventListener('click', ()=>{
     unmarkDebtChased(btn.dataset.id);
+    chaseSelectedId = btn.dataset.id;
     renderChaseScreen();
     renderChaseBadge();
   }));
@@ -37035,6 +37199,16 @@ document.getElementById('chase_rest').addEventListener('change', e=>{
   saveData();
   renderChaseScreen();
   renderChaseBadge();
+});
+/* The rules live in the header as a sentence; this shows the form that
+   changes them. Nothing is saved by opening it. */
+document.getElementById('chase_rules_btn').addEventListener('click', ()=>{
+  const form = document.getElementById('chase_controls');
+  const btn = document.getElementById('chase_rules_btn');
+  const open = form.hasAttribute('hidden');
+  if(open) form.removeAttribute('hidden'); else form.setAttribute('hidden', '');
+  btn.setAttribute('aria-expanded', String(open));
+  if(open) document.getElementById('chase_after').focus();
 });
 
 function renderDebtorsList(filter=''){

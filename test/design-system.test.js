@@ -282,6 +282,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: 'renderQuoteItems',
       rendersUses: ['ow-tbl', 'ow-tbl-r', 'ow-tbl-f', 'ow-tbl-n', 'ow-gi'],
     },
+    /* Chase debts. The page head and the .panel wrapper went; the
+       card-per-debtor (.chase-card, .chase-list) and the private strip
+       (.sum-strip) became the layer's strip, list rows, panels and the
+       message box. .chase-mini is deliberately not retired: "Who you
+       owe" still wears it. */
+    chase: {
+      retired: ['page-head', 'panel', 'chase-card', 'chase-list', 'chase-acts', 'chase-facts', 'sum-strip', 'sum-cell'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub'],
+      renders: 'renderChaseScreen',
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-tbl', 'ow-cp'],
+    },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so
      \bow-cb\b is satisfied by ow-cb-f -- and a bite test that renamed
