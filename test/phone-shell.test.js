@@ -182,4 +182,46 @@ const bar = (/<nav class="mobile-bottomnav"[\s\S]*?<\/nav>/.exec(src) || [''])[0
     `no top-level call before the declaration reads it${offenders.length ? ' — ' + offenders.map((o) => o.name).join(', ') : ''}`);
 }
 
+/* ---------- 8. the dot on Today ---------------------------------- */
+/*
+ * A DOT, AND IT READS A NUMBER THAT ALREADY EXISTS.
+ *
+ * Today writes how many things need you into #dash_actionNote every
+ * time it renders. Working the same figure out again for the bar would
+ * mean a full dashboardContext on every badge refresh, and — worse —
+ * two reckonings of one number, which is the arrangement where nobody
+ * can say which is true when they differ. So the dot reads the line
+ * Today already wrote, exactly as the More sheet reads its counts off
+ * the rail's own badges.
+ *
+ * A dot, not a number: the number is on the screen it takes you to, and
+ * a figure in a 24px slot is one nobody can read. It is also why the
+ * staleness is acceptable — this is fresh from the last time Today
+ * rendered, and between visits it can lag. Fine for "there is something
+ * here"; not fine for a figure.
+ */
+{
+  t.check(/id="mbnDotToday"/.test(bar), 'the Today tab carries a dot');
+  t.check(/<span class="mbn-dot" id="mbnDotToday" hidden><\/span>/.test(bar),
+    'and it starts hidden, so a shop with nothing waiting sees no decoration');
+
+  const sync = (/function syncTodayDot\(\)\{[\s\S]*?\n\}/.exec(src) || [''])[0];
+  t.check(/getElementById\('dash_actionNote'\)/.test(sync),
+    'it reads the count Today already put on the screen');
+  t.check(!/dashboardContext|dashAlerts/.test(sync),
+    'and never works that count out a second time — two reckonings of one number is how they come to differ');
+  t.check(/dot\.hidden = !\(n > 0\);/.test(sync),
+    'shown only when something is actually waiting');
+  t.check(/setAttribute\('aria-label'/.test(sync),
+    'and named, because a coloured dot says nothing to anything not looking at it');
+
+  /* Told at both moments: when the badges refresh, and the instant the
+     count itself changes. Either alone leaves a window where the bar
+     and the screen disagree. */
+  t.check(/function refreshNavBadges\(\)\{[\s\S]{0,200}?syncTodayDot\(\);/.test(src),
+    'refreshed with the rest of the counts');
+  t.check(/dash_actionNote'\)\.textContent = alerts\.length[\s\S]{0,400}?syncTodayDot\(\);/.test(src),
+    'and again the moment the count changes, so the bar and the screen never disagree');
+}
+
 process.exit(t.done() ? 1 : 0);

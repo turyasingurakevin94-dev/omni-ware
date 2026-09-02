@@ -6628,6 +6628,18 @@
      colour painted over itself. */
   .mbn-icon .sld{fill:currentColor;stroke:none;fill-rule:evenodd;}
   .mbn-label{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* Something is waiting on you behind this tab. A dot, not a number:
+     the number is on the screen it takes you to, and a figure in a
+     24px-wide slot is a figure nobody can read anyway. It sits over the
+     mark's top-right, which is where every phone in the shop has taught
+     its owner to look. */
+  .mbn-btn{position:relative;}
+  .mbn-dot{
+    position:absolute;top:6px;left:calc(50% + 6px);width:8px;height:8px;
+    border-radius:var(--ow-r-pill);background:var(--ow-oxide);
+    border:1.5px solid var(--panel);box-sizing:content-box;
+  }
+  .mbn-dot[hidden]{display:none;}
   /* The bar is a <nav> on purpose, so goToTab's `nav button[data-tab]`
      finds it -- which also means the sidebar's
      `nav button.active{background:var(--accent);color:#fff}` reaches it
@@ -8301,6 +8313,7 @@
      a colour change alone does not. -->
 <nav class="mobile-bottomnav" id="mobileBottomnav">
   <button type="button" class="mbn-btn" data-tab="dashboard">
+    <span class="mbn-dot" id="mbnDotToday" hidden></span>
     <svg class="mbn-icon" viewBox="0 0 24 24" aria-hidden="true">
       <g class="mbn-o"><path d="M12 3.4v2.3"/><path d="m5.4 6.5 1.6 1.6"/><path d="m18.6 6.5-1.6 1.6"/><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0"/><path d="M2.4 16.4h19.2"/><path d="M5.6 20.4h12.8"/></g>
       <g class="mbn-f"><path class="sld" d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"/><path d="M12 3.4v2.3"/><path d="m5.4 6.5 1.6 1.6"/><path d="m18.6 6.5-1.6 1.6"/><path d="M2.4 16.4h19.2"/><path d="M5.6 20.4h12.8"/></g>
@@ -59635,6 +59648,9 @@ function renderDashboard(){
   document.getElementById('dash_actionNote').textContent = alerts.length
     ? String(alerts.length)
     : 'nothing';
+  /* The bar's dot reads that line, so it is told the moment the line
+     changes rather than waiting for the next badge refresh. */
+  syncTodayDot();
 
   /* Asks the database separately, because this is the one flag that cannot
      be worked out from what the admin app loads: a detached order is
@@ -63793,8 +63809,33 @@ document.getElementById('tab-fasteners').addEventListener('click', (e)=>{
    at all -- so a debt taken on another device, or an item somebody else
    put into Sourcing, sat uncounted on this rail until the page was
    reloaded. Found by watching a real lead arrive from another tab. */
+/* THE COUNT ALREADY EXISTS. DO NOT WORK IT OUT AGAIN.
+
+   Today writes how many things need you into #dash_actionNote every
+   time it renders. Working the same figure out a second time here would
+   mean a full dashboardContext on every badge refresh -- and worse, two
+   reckonings of one number, which is the arrangement where nobody can
+   say which is true when they differ. So this reads the number Today
+   put on the screen, exactly as the More sheet reads its counts off the
+   rail's own badges.
+
+   The honest limit, and it belongs in the code rather than only in a
+   commit message: this is fresh from the LAST TIME Today rendered --
+   at boot, and on every return to Today. Between visits it can lag.
+   For a dot that only says "there is something here" that is fine; it
+   would not be for a figure, which is the other reason this is a dot. */
+function syncTodayDot(){
+  const dot = document.getElementById('mbnDotToday');
+  if(!dot) return;
+  const note = document.getElementById('dash_actionNote');
+  const n = note ? parseInt(note.textContent, 10) : NaN;
+  dot.hidden = !(n > 0);
+  const b = dot.closest('.mbn-btn');
+  if(b) b.setAttribute('aria-label', n > 0 ? `Today — ${n} need${n === 1 ? 's' : ''} you` : 'Today');
+}
 function refreshNavBadges(){
   updateOrderStatusBar();
+  syncTodayDot();
   updateDebtorsNavBadge();
   renderSourcingBadge();
   renderChaseBadge();
