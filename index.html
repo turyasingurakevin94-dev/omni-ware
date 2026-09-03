@@ -8507,6 +8507,12 @@
   .ow-ot-load .ow-f-in{width:100%;min-width:0;}
   .ow-ot-load .ow-f-v{width:100%;}
   .ow-ot-load-go{display:flex;margin-top:var(--ow-sp-10);}
+  /* The check before invoicing: ordered against picked, one line each. */
+  .ow-ot-ck{display:flex;flex-direction:column;margin-top:var(--ow-sp-6);}
+  .ow-ot-ck-r{display:flex;align-items:baseline;gap:var(--ow-sp-8);padding:var(--ow-sp-4) 0;border-bottom:1px solid var(--ow-rule-soft);}
+  .ow-ot-ck-r:last-child{border-bottom:0;}
+  .ow-ot-ck-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--ow-t-13);color:var(--ow-ink-900);}
+  .ow-ot-ck-q{flex:none;font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
   .ow-ot-tp-n{font-weight:var(--ow-fw-600);}
   .ow-ot-tp-p{color:var(--ow-ink-900);}
   /* a small act in a panel head */
@@ -9477,6 +9483,9 @@
         <p class="ow-ph-sub">What needs you first, then where every order is.</p>
         <p class="ow-ph-help">Every order from saved quote to delivered, grouped by stage and longest waiting first. Open a row to see what is on it and how it got here; the one thing it needs from you sits on the row. The strip counts the shop, and the rail plans the buying trip and the deliveries.</p>
         <span class="ow-ph-sp"></span>
+        <!-- "Invoice all delivered", written by the render and empty
+             unless two or more are actually waiting. -->
+        <span id="ot_invoice_all"></span>
         <label class="ow-f ow-ph-f"><span class="ow-f-in"><svg class="icon ow-f-i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" class="ow-f-v ow-f-t" id="ot_search" placeholder="Client, order number or item" autocomplete="off" aria-label="Search orders"></span></label>
         <button type="button" class="btn ow-sm" id="ot_back_to_new_quote_btn" title="Shortcut: press Q">
           <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
@@ -27642,7 +27651,11 @@ function orderRowBodyHTML(q){
     ghost('edit', 'Edit lines', ICON_EDIT),
     idx > 0 ? ghost('prev', 'Move back') : '',
     q.status === 'completed' && q.invoiced ? ghost('invoice', 'Undo invoice') : '',
-    q.status === 'draft' ? ghost('delete', 'Delete', ICON_TRASH) : '',
+    /* Delete for a Taken order that was a mistake; Cancel once it has
+       moved, because by then goods may have arrived and a delete would
+       erase what is owed for them. */
+    q.status === 'draft' ? ghost('delete', 'Delete', ICON_TRASH)
+      : (!q.voided && !(q.status === 'completed' && q.invoiced) ? ghost('cancel', 'Cancel order', ICON_TRASH) : ''),
   ].join('');
   const total = savedQuoteTotal(q);
   const facts = [`${items.length} line${items.length === 1 ? '' : 's'}`, `client pays ${fmtUGX(total)}`, orderCustomerLocation(q) ? `to ${orderCustomerLocation(q)}` : '', q.client && q.client.phone ? q.client.phone : ''].filter(Boolean);
@@ -27652,6 +27665,7 @@ function orderRowBodyHTML(q){
     ${orderCashStripHTML(q)}
     ${q.status === 'draft' && orderSupplierGroups(q).length ? `<p class="ow-ot-h ow-ot-h2">Suppliers</p><div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>` : ''}
     ${orderLoadFormHTML(q)}
+    ${orderInvoiceCheckHTML(q)}
     <p class="ow-ot-note">${esc(facts.join(' · '))}</p>
     <div class="ow-ot-acts">${acts}</div>
   </div>
@@ -27678,7 +27692,8 @@ function orderLoadFormHTML(q){
   if(out && !orderNeedsDelivery(q)){
     const c = q.carrier || {};
     const who = deliveryAssigneeLabel(q);
-    return `<p class="ow-ot-tp">${otIco(ICON_TRUCK, 12)}<span>Going out with <span class="ow-ot-tp-n">${esc(who)}</span>${c.phone ? ` · <a class="ow-ot-tp-p" href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}${c.at ? ` · loaded ${esc(otWhen(c.at))}${c.by ? ' by ' + esc(c.by) : ''}` : ''}</span></p>`;
+    return `<p class="ow-ot-tp">${otIco(ICON_TRUCK, 12)}<span>Going out with <span class="ow-ot-tp-n">${esc(who)}</span>${c.phone ? ` · <a class="ow-ot-tp-p" href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}${c.at ? ` · loaded ${esc(otWhen(c.at))}${c.by ? ' by ' + esc(c.by) : ''}` : ''}</span></p>
+    <p class="ow-ot-note">When the customer or ${esc(c.phone ? 'the number above' : 'whoever took it')} says it has arrived, ${esc(orderIsCollected(q) ? 'Collected' : 'Delivered')} is your one tap on the row.</p>`;
   }
   if(q.status !== 'preparing' && !out) return '';
   const picker = staffName(q.assignedWorkerId);
@@ -27707,6 +27722,99 @@ function otFocusLoad(id){
   const first = [...f.querySelectorAll('[data-car]')].find(x=> x.closest('label') && x.closest('label').style.display !== 'none');
   if(first) first.focus();
 }
+/* THE CHECK BEFORE INVOICING. What invoicing is about to do, said in
+   figures the owner can look at against the goods: every line as ordered
+   against what was picked, the total, and what it puts on the customer's
+   account. Derived -- the picked numbers are the picker's own, the total
+   is savedQuoteTotal, the balance is the customer's record plus this
+   order. Nothing is computed here that is not already the app's answer
+   somewhere else. */
+function orderInvoiceCheckHTML(q){
+  if(q.status !== 'completed' || q.invoiced) return '';
+  const items = q.items || [];
+  const rows = items.map(it=>{
+    const ordered = Number(it.qty) || 0;
+    const picked = it.pickStatus ? (itemPickedQty(it) == null ? ordered : itemPickedQty(it)) : null;
+    const short = picked != null && picked < ordered;
+    return `<div class="ow-ot-ck-r"><span class="ow-ot-ck-n" title="${esc(itemDisplayName(it))}">${esc(itemDisplayName(it))}</span><span class="ow-ot-ck-q${short ? ' ow-warn' : ''}">${picked == null ? esc(String(ordered)) : `${esc(String(picked))} of ${esc(String(ordered))}`}${it.unit ? ' ' + esc(it.unit) : ''}</span></div>`;
+  }).join('');
+  const total = savedQuoteTotal(q);
+  const cust = q.customerId ? (data.customers || []).find(c=> String(c.id) === String(q.customerId)) : null;
+  const owed = cust ? Math.max(0, Number(cust.debt) || 0) : 0;
+  const paid = Number(q.amountPaid) || 0;
+  const adds = Math.max(0, total - paid);
+  const money = cust
+    ? `Bills ${fmtUGX(total)}${paid > 0 ? ` · ${fmtUGX(paid)} already paid` : ''}. ${esc(cust.name)} owes ${fmtUGX(owed)} now, ${fmtUGX(owed + adds)} after.`
+    : `Bills ${fmtUGX(total)}${paid > 0 ? ` · ${fmtUGX(paid)} already paid` : ''}. No customer account on this order, so nothing is booked to one.`;
+  return `<p class="ow-ot-h ow-ot-h2">Before you invoice</p><div class="ow-ot-ck">${rows || '<div class="ow-ot-ck-r"><span class="ow-ot-ck-n">No lines on this order</span></div>'}</div><p class="ow-ot-note">${money} Invoicing also takes the goods off the shelf and raises each supplier's bill.</p>`;
+}
+
+/* INVOICE ALL DELIVERED. The owner invoices personally, one at a time,
+   at the end of a day that delivered six orders. This is that, once --
+   and it is still one owner's confirm before any money moves. A short
+   pick is left out and named: it is a decision, and the single-order
+   path already refuses to invoice past one. */
+function ordersReadyToInvoice(){
+  return (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
+    && !quoteAgedOffBoard(q) && !orderHasPickShortfall(q));
+}
+async function invoiceAllDelivered(){
+  const ready = ordersReadyToInvoice();
+  const short = (data.savedQuotes || []).filter(q=> q.status === 'completed' && !q.invoiced && !q.voided
+    && !quoteAgedOffBoard(q) && orderHasPickShortfall(q));
+  if(!ready.length){
+    toast(short.length ? `${short.length} delivered order${short.length === 1 ? '' : 's'} came up short — decide on ${short.length === 1 ? 'it' : 'each'} first` : 'Nothing delivered is waiting to be invoiced', 5000);
+    return;
+  }
+  const total = ready.reduce((sum, q)=> sum + savedQuoteTotal(q), 0);
+  const msg = `Invoice ${ready.length} delivered order${ready.length === 1 ? '' : 's'}, billing ${fmtUGX(total)} in total?\n\n${ready.map(q=> `• ${quoteClientName(q)} — ${fmtUGX(savedQuoteTotal(q))}`).join('\n')}\n\nThis takes the goods off the shelf, raises each supplier's bill, and books what is unpaid to each customer's account.${short.length ? `\n\n${short.length} order${short.length === 1 ? '' : 's'} came up short and ${short.length === 1 ? 'is' : 'are'} left for you to decide on.` : ''}`;
+  if(!confirm(msg)) return;
+  /* One at a time, and awaited: each invoice takes the next PINV number
+     from the server, and racing them would interleave the numbers. */
+  let done = 0;
+  for(const q of ready){
+    await toggleQuoteInvoiced(q.id);
+    if(q.invoiced) done++;
+  }
+  renderSavedQuotes();
+  toast(`${done} order${done === 1 ? '' : 's'} invoiced${done < ready.length ? ` — ${ready.length - done} did not go through` : ''}`, 5000);
+}
+
+/* CANCEL, ON THE BOARD. An order past Taken that is not going to happen.
+   Deleting it is wrong once goods have arrived: receiving already put them
+   on the shelf, and the supplier's bill is only ever raised by invoicing
+   -- so deleting would erase what is owed for goods the shop is holding.
+   So cancelling BILLS what came in (received lines only), voids the order
+   through the one writer of that flag, and stamps when. Every derivation
+   already reads !q.voided as "not an order", so it leaves every list at
+   once; the goods stay on the shelf, where they are. */
+function cancelSavedQuote(id){
+  const q = data.savedQuotes.find(x=> x.id === id);
+  if(!q || q.voided) return;
+  const received = (q.items || []).filter(it=> orderLineIsBoughtIn(it) && quoteLineReceived(it));
+  const bill = received.reduce((sum, it)=> sum + (Number(it.receivedQty) || 0) * (Number(it.receivedPrice) || 0), 0);
+  const sups = [...new Set(received.map(it=> supplierName(it.supplierId)))];
+  const goods = received.length
+    ? `${received.length} line${received.length === 1 ? '' : 's'} already came in from ${sups.join(' and ')} and ${received.length === 1 ? 'is' : 'are'} on the shelf. Their bill — ${fmtUGX(bill)} — is raised now, because the goods are yours whether the order happens or not.`
+    : 'Nothing has come in for it, so no supplier is billed.';
+  const money = (q.payments || []).length
+    ? ` ${q.payments.length} payment${q.payments.length === 1 ? '' : 's'} already taken stay${q.payments.length === 1 ? 's' : ''} on record — refund at the counter if you are giving it back.`
+    : '';
+  if(!confirm(`Cancel ${quoteClientName(q)}'s order?\n\n${goods}${money}\n\nIt leaves the board and stops counting anywhere. It is not deleted — the record stays.`)) return;
+  const finish = ()=>{
+    q.cancelledAt = Date.now();
+    setInvoicesVoided([q], true); // the one writer of voided; it saves and re-syncs the debt
+    otOpenRows.delete(id);
+    renderSavedQuotes();
+    toast(`${quoteClientName(q)}'s order is cancelled${received.length ? ` — ${sups.join(' and ')} billed ${fmtUGX(bill)} for what came in` : ''}`, 6000);
+  };
+  if(received.length){
+    generatePurchaseInvoicesForQuote(q, { receivedOnly: true }).then(finish);
+  } else {
+    finish();
+  }
+}
+
 /* Back to the queue: the way out for an order held by somebody whose
    phone cannot show it -- a picker who left, or a row from before the
    queue existed. The pick goes with it; nobody walked it. */
@@ -27820,6 +27928,15 @@ function otOrderMatches(q, tokens){
   return matchesAllTokens(hay, tokens);
 }
 
+/* "Invoice all delivered", on the header, only when there is more than
+   one to do -- a button for a single order beside that order's own
+   Invoice act would be the same tap twice. */
+function otInvoiceAllHTML(){
+  const n = ordersReadyToInvoice().length;
+  if(n < 2) return '';
+  return `<button type="button" class="btn btn-ghost ow-sm" data-act="invoiceall" data-id="0">${otIco(ICON_CHECK, 12)}Invoice all delivered (${n})</button>`;
+}
+
 function renderSavedQuotes(){
   ensureQuote();
   updateOrderStatusBar();
@@ -27845,7 +27962,7 @@ function renderSavedQuotes(){
   [strip, needsEl, segEl, railEl, el('ot_needs_h'), el('ot_all_h')].forEach(n=> hide(n, bare));
   if(bare){
     put(strip, ''); put(needsEl, ''); put(segEl, ''); put(railEl, '');
-    put(el('ot_needs_n'), ''); put(el('ot_all_n'), '');
+    put(el('ot_needs_n'), ''); put(el('ot_all_n'), ''); put(el('ot_invoice_all'), '');
     wrap.innerHTML = `<div class="ow-empty">${!allQuotes.length
       ? 'No orders yet — build a quote above and click "Save quote".'
       : 'No active quotes right now — invoiced orders move to the Invoices tab 24 hours after invoicing. Check the Invoices tab to view them.'}</div>`;
@@ -27878,6 +27995,8 @@ function renderSavedQuotes(){
     tile('Out for delivery', String(byStage.pending_delivery.length), esc([del.runs.length ? `${del.runs.length} place${del.runs.length === 1 ? '' : 's'} to reach` : '', del.collected.length ? `${del.collected.length} collecting` : ''].filter(Boolean).join(', ') || 'nothing out')),
     tile('To invoice', esc(fmtUGX(toInvoiceTotal)), `${toInvoice.length} of ${byStage.completed.length} delivered, not yet invoiced`, toInvoice.length ? 'ow-warn' : ''),
   ].join(''));
+
+  put(el('ot_invoice_all'), otInvoiceAllHTML());
 
   /* The queue. Longest waiting first, whatever the reason. */
   put(el('ot_needs_n'), String(needs.length));
@@ -27929,6 +28048,8 @@ function otAct(act, id, el){
     case 'loaded': otOpenRow(id); otFocusLoad(id); break;
     case 'loadgo': otLoadGo(id, el); break;
     case 'release': releaseOrderToQueue(id); break;
+    case 'cancel': cancelSavedQuote(id); break;
+    case 'invoiceall': invoiceAllDelivered(); break;
     case 'shortpick': openPickShortfallModal(id, false); break;
     case 'prepay': if(q) promptAgentPrepayment(q); break;
     case 'invoice': toggleQuoteInvoiced(id); break;
@@ -28960,11 +29081,18 @@ function purchaseInvoiceSupplierPaidPct(pi){
 // Async because each PINV- number is issued one at a time to keep that
 // sequence dense (see issueRowId) -- a supplier's copy of a purchase
 // invoice carries this number, so it can't skip.
-async function generatePurchaseInvoicesForQuote(q){
+async function generatePurchaseInvoicesForQuote(q, opts){
   removePurchaseInvoicesForQuote(q.id);
+  /* RECEIVED ONLY, for a cancelled order. Invoicing bills every bought-in
+     line, because invoicing says the whole order went out. Cancelling says
+     the opposite -- and the only thing owed then is what actually came
+     through the door and is standing on the shelf. Billing the rest would
+     raise a supplier's bill for goods nobody collected. */
+  const receivedOnly = !!(opts && opts.receivedOnly);
   const bySupplier = {};
   (q.items||[]).forEach(it=>{
     if(!it.supplierId || it.supplierId==='__stock__') return;
+    if(receivedOnly && !quoteLineReceived(it)) return;
     if(!bySupplier[it.supplierId]) bySupplier[it.supplierId] = [];
     const base = {
       productId: it.productId, variantIdx: it.variantIdx, productName: it.productName,
