@@ -409,8 +409,17 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       rendersUses: ['ow-strip', 'ow-mt', 'ow-mt-l', 'ow-mt-v', 'ow-mt-s',
                     'ow-pan', 'ow-pan-h', 'ow-pan-t', 'ow-pan-n',
                     'ow-tb', 'ow-tb-s', 'ow-tb-n', 'ow-f', 'ow-f-l', 'ow-f-in', 'ow-f-sel',
+                    /* No ow-q-why: an open debtor opens straight onto its
+                       invoices. The sentence that used to stand there
+                       repeated the row it had just opened -- the
+                       balance, the age and the paid-off share are all
+                       already on that row -- and the paragraph under it
+                       said the same thing about every debtor in the
+                       book. The reasoning a screen genuinely owes the
+                       reader is in the rail; what is left in an open
+                       row is the evidence. */
                     'ow-q', 'ow-q-r', 'ow-q-card', 'ow-q-x', 'ow-q-t', 'ow-q-who', 'ow-q-v',
-                    'ow-q-f', 'ow-q-why', 'ow-q-note', 'ow-q-a', 'ow-cp',
+                    'ow-q-f', 'ow-q-note', 'ow-q-a', 'ow-cp',
                     'ow-tbl', 'ow-tbl-h', 'ow-tbl-r', 'ow-tbl-n',
                     'ow-sr', 'ow-sr-k', 'ow-sr-v', 'ow-mini', 'ow-empty'],
     },

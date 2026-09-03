@@ -38913,19 +38913,9 @@ function renderDebtorsList(){
      differently. This is what the screen is for: seeing WHY the figure
      is what it is before anybody is asked for it. */
   const openBody = (r)=>{
-    const p = r.progress;
     const invs = debtChaseInvoices(r.id);
     const listed = invs.reduce((s,i)=> s + i.due, 0);
     const carried = r.debt - listed;
-    const why = [
-      `<b>${esc(fmtUGX(Math.round(r.debt)))}</b> still open`,
-      invs.length ? `across ${invs.length} invoice${invs.length===1?'':'s'}` : 'with no invoice behind it',
-      r.ageDays >= 0 ? `and the oldest of it has been owing <b>${r.ageDays}</b> day${r.ageDays===1?'':'s'}`
-                     : 'and nothing dated stands behind it, so its age cannot be worked out',
-    ].join(' ') + '.';
-    const paidLine = p && p.pct !== null
-      ? ` They have paid <b>${esc(fmtUGX(Math.round(p.paid)))}</b> of the <b>${esc(fmtUGX(Math.round(p.charged)))}</b> charged on what is still open.`
-      : '';
 
     const table = invs.length ? `<div class="ow-tbl" style="--ow-tbl-cols:minmax(0,1fr) 92px 116px">
       <div class="ow-tbl-h"><span class="ow-tbl-c">Invoice</span><span class="ow-tbl-c">Dated</span><span class="ow-tbl-n">Still open</span></div>
@@ -38939,10 +38929,25 @@ function renderDebtorsList(){
         <span class="ow-tbl-c"></span><span class="ow-tbl-n">${f(Math.abs(carried))}</span></div>` : ''}
     </div>` : `<p class="ow-q-note">No open invoice stands behind this balance &mdash; it was recorded straight onto their account. Their debt history on the customer page says where it came from.</p>`;
 
+    /* NOTHING HERE THAT THE ROW ALREADY SAYS.
+
+       The open row used to open with a sentence -- "255,000 UGX still
+       open across 1 invoice and the oldest of it has been owing 0 days.
+       They have paid 0 UGX of the 255,000 UGX charged on what is still
+       open." -- and close with a standing paragraph about how a payment
+       settles. Every figure in the first was already on the row it had
+       just opened (the balance, the age chip, the paid-off bar) or in
+       the table directly below it, and the second said the same thing
+       under every debtor in the book, whoever they were. Two blocks of
+       prose between the reader and the four lines they opened the row
+       to see.
+
+       The invoices are the reason to open a row, so they are what the
+       row opens onto. The figures behind the paid-off bar are still one
+       hover away on the bar itself, and what a payment does is said
+       once, in the rail, where a standing rule belongs. */
     return `<div class="ow-q-x">
-      <p class="ow-q-why">${why}${paidLine}</p>
       ${table}
-      <p class="ow-q-note">A payment clears their <b>oldest invoice first</b>, the way a ledger settles, and posts straight to the cash book. Nothing is asked for from here &mdash; the words for that are on Chase debts, already written.</p>
       <div class="ow-q-a">
         <button type="button" class="btn btn-accent ow-sm deb-receive" data-id="${esc(r.id)}">Receive a payment</button>
         <button type="button" class="btn btn-ghost ow-sm" data-stats="${esc(r.id)}">Their statement</button>
