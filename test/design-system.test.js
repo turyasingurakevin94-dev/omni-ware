@@ -58,10 +58,11 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
        first time (the basket bar on What to buy). The value was declared
        with the layer; no rule had spent it until now. */
     'shadows': [63, /box-shadow:\s*([^;}]+)/g],
-    /* 106, not 111: the order board's lane-only rules -- the purple
-       pickups pill, the invoice icon's amber, the cash banner -- went
-       when that screen became a console on the layer. */
-    'distinct colours': [106, /#[0-9A-Fa-f]{6}\b/g],
+    /* 105, not 106: Follow-ups' card wall carried its own hover border,
+       its own two near-whites for a card and a settled row, and its own
+       hover fill. All four went when that screen became a console on the
+       layer, and the one that survives is the layer's --ow-paper-2. */
+    'distinct colours': [105, /#[0-9A-Fa-f]{6}\b/g],
   };
   /* RESOLVE THE TOKENS BEFORE COUNTING.
    *
@@ -334,6 +335,26 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       renders: ['renderPrices', 'priceCardHTML', 'priceRailHTML', 'renderPriceWatch', 'renderMarket'],
       rendersUses: ['ow-strip', 'ow-mt', 'ow-grid', 'ow-cards', 'ow-card', 'ow-fig', 'ow-sigs', 'ow-sig', 'ow-cp',
                     'ow-pan', 'ow-sr', 'ow-empty'],
+    },
+    /* Follow-ups. A wall of cards -- one white block per client, each
+       with its own avatar, its own coloured item stripes, its own flag
+       and its own action bar carrying the brand accent -- became a queue
+       and the one client being worked. The borrowed .dir-summary-card
+       strip, the .st-tabs switch and the .panel wrapper went with it:
+       the layer has a strip, a segmented switch and a bordered region of
+       its own, and a fourth opinion about what a summary tile looks like
+       is exactly what makes a screen read as bolted on. .fup-row and
+       .fup-link stay in the FILE -- the follow-up list MODAL still wears
+       them, and it is a list to edit rather than a queue to work -- but
+       this screen may not emit the card families again. */
+    followups: {
+      retired: ['panel', 'dir-summary-row', 'dir-summary-card', 'st-bar', 'st-tabs', 'st-tab', 'search-bar',
+                'fup-card', 'fup-card-head', 'fup-avatar', 'fup-flag', 'fup-item', 'fup-item-head', 'fup-item-name',
+                'fup-reason', 'fup-acts', 'fup-warn', 'fup-group', 'fup-group-head', 'fup-empty', 'fup-pill'],
+      uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-seg', 'ow-seg-b', 'ow-f', 'ow-f-l', 'ow-f-in'],
+      renders: ['renderFollowUpsContact', 'renderFollowUpSummary', 'renderFollowUpsAll', 'fupCp'],
+      rendersUses: ['ow-strip', 'ow-mt', 'ow-grid-l', 'ow-pan', 'ow-lr', 'ow-msg', 'ow-cp', 'ow-av',
+                    'ow-tbl', 'ow-tbl-g', 'ow-tbl-r', 'ow-fig', 'ow-empty'],
     },
     /* Order tracking. The lane board -- the step rail, the lanes, the
        cards with six controls, the select-all/print row -- became a

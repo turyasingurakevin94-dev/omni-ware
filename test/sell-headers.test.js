@@ -93,6 +93,15 @@ const sectionOf = (tab) => {
       'what each line of a quote is telling you'],
     ['quote-saved', 'how it got here',
       'what opening a row shows, which nobody would guess from the table'],
+    /* Follow-ups moved up from the list below. It was one line because
+       there was one thing to say -- "clients who asked to be kept
+       posted". The screen now has a rule worth stating and no room in a
+       header for it: ONE MESSAGE PER CLIENT however many things they are
+       waiting for, and the four kinds of news that put somebody in the
+       queue at all. That is not the sub repeating itself, which is the
+       only thing the rule below was guarding against. */
+    ['followups', 'One message per client',
+      'the rule the whole queue is built on, which will not fit a header line'],
   ];
   kept.forEach(([tab, needle, why]) => {
     const sec = sectionOf(tab);
@@ -101,13 +110,16 @@ const sectionOf = (tab) => {
     t.check(help.includes(needle), `and it is behind the "i" rather than loose on the page`);
   });
 
-  /* The two that were already one line stay one line and are NOT
-     folded -- there is nothing longer to fold, and a bubble holding the
-     same sentence as the line beside it is a bubble worth nothing. */
-  ['followups'].forEach(tab => {
+  /* The rule this list held is unchanged and still worth having: a
+     bubble holding the same sentence as the line beside it is a bubble
+     worth nothing. It is asserted from the other side now -- every
+     screen that HAS a bubble must say something its sub does not -- so
+     that it keeps biting with the list empty. */
+  kept.forEach(([tab, needle]) => {
     const sec = sectionOf(tab);
-    t.check(!/ow-ph-help/.test(sec),
-      `${tab} was already one line, so it has no bubble repeating itself`);
+    const sub = (/<p class="ow-ph-sub">([\s\S]*?)<\/p>/.exec(sec) || ['', ''])[1];
+    t.check(!sub.includes(needle),
+      `${tab}'s bubble says something the line beside it does not`);
   });
 }
 

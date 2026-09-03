@@ -361,10 +361,27 @@ const stockMove = (before, after, whenDays) => {
 }
 {
 
+  /* THE LAW HERE IS UNCHANGED and it is the important one: opening a
+     chat records nothing. What changed is the call's arity, because the
+     message is now on the screen in a box the owner can edit before
+     sending -- and an app that shows you words, lets you change them and
+     then sends the unedited ones has made that box a decoration. So the
+     url is built from what is actually in front of them, and the test
+     asks for that too rather than for the no-argument form it used to
+     pin. The second half of the assertion is the law and is untouched. */
   const wire = extractFunction(src, 'wireFollowUpsScreen', 'index.html');
-  t.check(/window\.open\(followUpWaUrl\(row\)[\s\S]{0,200}toast\(/.test(wire)
+  t.check(/window\.open\(followUpWaUrl\(row[\s\S]{0,200}toast\(/.test(wire)
     && !/window\.open\(followUpWaUrl[\s\S]{0,200}recordFollowUpContact/.test(wire),
     'opening the chat records NOTHING — a chat opened is not a message sent, and a stamp saying the client knows when they were never told is worse than no stamp');
+  t.check(/window\.open\(followUpWaUrl\(row, draftOf\(/.test(wire),
+    'and it sends the words on the screen, not the ones the digest would have written — the box is editable, so it has to be the box that goes');
+  /* And the other half of the same law, which the old screen got wrong
+     in the opposite direction: "I told them" sat beside "Message" as a
+     PEER, so it could be pressed having sent nothing at all. It is asked
+     as a consequence of the send now -- the footer changes after the
+     chat opens -- which is what fupAwaiting is for. */
+  t.check(/fupAwaiting = cid;/.test(wire) && /fup-notsent/.test(wire),
+    'and the send asks afterwards whether it went, rather than offering "I told them" as a button beside it');
 }
 
 /* ---------- 7. what it refuses to record ------------------------------ */
@@ -463,10 +480,23 @@ const stockMove = (before, after, whenDays) => {
      about what a summary tile looks like is exactly what makes a screen
      read as bolted on. Named here rather than pattern-matched so a fourth
      borrowed class has to be argued for. */
-  const ALLOWED = ['btn', 'preset-hint', 'dir-summary-card', 'good', 'warn', 'closed'];
-  const stray = used.filter((c) => !c.startsWith('fup-') && !ALLOWED.includes(c) && !c.startsWith('btn-'));
+  /* ow- IS NOT A STRAY PREFIX, IT IS THE HOUSE.
+     This list used to name dir-summary-card as one borrowed class, on
+     the argument that a third opinion about what a summary tile looks
+     like is what makes a screen read as bolted on. That argument is why
+     the OW layer exists, and this screen is built on it now: the strip,
+     the list row, the chip, the initials, the panel, the table and the
+     message box are the same ones Chase debts and What to buy draw, and
+     holding this screen to a private prefix would be holding it away
+     from the very thing the prefix rule was protecting.
+     What the rule was actually catching stays caught: a NEW bare or
+     colliding family. Anything that is neither the layer nor this
+     screen's own fup- is still a stray. */
+  const ALLOWED = ['btn', 'preset-hint', 'good', 'warn', 'closed'];
+  const stray = used.filter((c) => !c.startsWith('fup-') && !c.startsWith('ow-')
+    && !ALLOWED.includes(c) && !c.startsWith('btn-'));
   t.check(stray.length === 0,
-    `every class the follow-up screens render is fup- prefixed (stray: ${stray.join(', ') || 'none'})`);
+    `every class the follow-up screens render is fup- prefixed or the layer's (stray: ${stray.join(', ') || 'none'})`);
   ['good', 'warn', 'closed'].forEach((m) => {
     t.check(!new RegExp(`^\\s*\\.${m}\\{`, 'm').test(code),
       `.${m} is never a rule on its own, so using it here cannot restyle anything else`);
@@ -475,7 +505,14 @@ const stockMove = (before, after, whenDays) => {
      MARKUP, so renaming a rule in the stylesheet left the class unstyled
      with every assertion still passing. The structural few are named
      here, so losing one is a failure rather than a silent flattening. */
-  ['fup-card', 'fup-item', 'fup-pill', 'fup-row', 'fup-link'].forEach((c) => {
+  /* .fup-card, .fup-item and .fup-pill are gone rather than renamed: the
+     card wall they built is what this redesign removed, and a chip is
+     the layer's .ow-cp on every other screen. The four below are what
+     this screen still owns -- the client being worked, one thing they
+     are waiting on, its footer, and the modal's rows and their quiet
+     Close. Losing a rule for one of them is still a silent flattening,
+     which is the whole point of naming them. */
+  ['fup-work', 'fup-it', 'fup-w-foot', 'fup-row', 'fup-link'].forEach((c) => {
     t.check(new RegExp(`^\\s*\\.${c}\\{`, 'm').test(code),
       `.${c} has a rule of its own — without it the class renders as unstyled text and nothing else would notice`);
   });
@@ -496,8 +533,16 @@ const stockMove = (before, after, whenDays) => {
   }
   t.check(/\.fup-link\{[^}]*position:relative;/.test(code),
     'and it is positioned, or the ring would hang off the page instead of the button');
-  t.check(/@media \(max-width:1000px\)\{[\s\S]{0,200}\.fup-acts \.btn\{[^}]*padding:13px/.test(code),
-    'and the two real actions go back to full size on a narrow screen, where 12px padding measured 42');
+  /* The 1000px block and .fup-acts went with the card wall. The rule it
+     was enforcing did not: the buttons this screen is worked with must
+     be a thumb tall on a phone. It is enforced at the layer's own
+     breakpoint now, against the layer's own token, rather than against a
+     padding figure measured once by hand -- and it is Send that has to
+     clear it, which the old assertion could not say. */
+  t.check(/@media \(max-width:820px\)\{[\s\S]*?\.fup-w-foot \.btn\{[^}]*min-height:var\(--ow-tap\)/.test(code),
+    'and on a phone every button in the footer is a full tap target, measured against --ow-tap rather than a hand-counted padding');
+  t.check(/\.fup-w-foot \.btn-accent\{[^}]*flex:1 1 100%[^}]*order:9;\}/.test(code),
+    'with Send taking the full width, last, where a thumb already is');
 }
 
 /* ---------- 11. the three capture points ------------------------------ */
@@ -584,14 +629,26 @@ const stockMove = (before, after, whenDays) => {
   const contact = extractFunction(src, 'renderFollowUpsContact', 'index.html');
   const summary = extractFunction(src, 'renderFollowUpSummary', 'index.html');
 
-  /* Counted, not merely present. Checking that the string appears
-     somewhere passed happily with one of the three tiles swapped for
-     something else -- which is exactly the inconsistency the strip exists
-     to avoid. */
-  eq((summary.match(/dir-summary-card/g) || []).length, 3,
-    'all three tiles are the app’s own, the one Suppliers and Customers already carry');
-  t.check(/Clients to message/.test(summary) && /Never followed up/.test(summary),
-    'and it leads with the two numbers somebody opens this screen to find');
+  /* Counted, not merely present -- the argument for counting is
+     unchanged, and it is why this still asserts a number rather than a
+     substring: one tile swapped for something else is exactly the
+     inconsistency a strip exists to avoid.
+     What changed is what the tiles are. Three borrowed .dir-summary-card
+     boxes said "Clients to message / Being watched / Never followed up",
+     and only the first was a decision -- the third is a curiosity, and
+     none of them said what today's work IS. Five of the layer's own
+     tiles do: the size of the queue, and then its composition, which is
+     the four reasons followUpReasons already computes. A strip that
+     names the work is a triage line; one that counts rows is a header. */
+  eq((summary.match(/class="ow-mt\$\{/g) || []).length, 1,
+    'the tiles are the layer’s, drawn from one template rather than five copies of a box');
+  eq((summary.match(/\$\{tile\(/g) || []).length, 5,
+    'and there are five of them — the queue, and then what the queue is made of');
+  ['To message', 'Goods arrived', 'Sourcing moved', 'Price changed', 'Gone quiet'].forEach((k) => {
+    t.check(summary.includes(k), `the strip names ${k.toLowerCase()} — the composition of the work, not a count of rows`);
+  });
+  t.check(/counts\[r\.kind\]/.test(summary),
+    'and the four are counted from followUpReasons itself, so the strip can never disagree with the queue beneath it');
 
   /* Keyed on the customer and NOTHING else. `byCustomer` being mentioned
      proved nothing: a map keyed per row still has the name and still
@@ -599,17 +656,42 @@ const stockMove = (before, after, whenDays) => {
      again wearing a group's clothes. */
   t.check(/const key = String\(f\.customerId\);\s*\n\s*if\(!byCustomer\.has\(key\)\)/.test(all),
     'the full list groups by client alone — the flat one repeated a name down the page while splitting the two things one person was waiting for');
-  t.check(/fup-group/.test(all), 'and renders them as groups');
-  t.check(/followUpStatePill/.test(all) && /fup-pill/.test(all),
-    'and state is a pill, not a sentence in grey among other sentences in grey');
+  t.check(/ow-tbl-g/.test(all), 'and renders them as groups — the layer’s group heading inside its table, not a private card');
+  t.check(/followUpStatePill/.test(all) && /fupCp\(/.test(all),
+    'and state is a chip, not a sentence in grey among other sentences in grey');
 
-  t.check(/nameInitials/.test(contact) && /fup-avatar/.test(contact),
-    'a client is shown the way the supplier directory shows one');
-  t.check(/fup-warn/.test(contact) && /ICON_WARN/.test(contact),
-    'and no phone number is a blocker with a banner, not an italic footnote under the item');
+  /* The initials used to be a private 38px square painting the brand
+     accent on navy -- 2.7:1 at 14px bold, which is under the floor and
+     was the worst pairing in the app on a phone in daylight. .ow-av is
+     the same idea in the layer's hands, and it passes. */
+  t.check(/nameInitials/.test(contact) && /ow-av/.test(contact),
+    'a client is shown with the layer’s initials, not a private square painting the accent on navy');
+
+  /* NO PHONE NUMBER IS STILL A BLOCKER, and it is now said in three
+     places at once rather than in one amber band below the items: on the
+     contact line where the number would be, in the line addressing the
+     message, and by the absence of Send itself. The banner said it
+     loudest; this says it where the reader is already looking, and --
+     the part the banner could not do -- it makes the missing button
+     explicable instead of mysterious. */
+  t.check(/fup-w-none/.test(contact) && /no phone number on file/.test(contact),
+    'no phone number is named where the number would be, in the caution ink');
+  t.check(/no number to send it to/.test(contact),
+    'and again on the line that says where the message is going');
+  t.check(/\$\{row\.phone \? `<button type="button" class="btn btn-accent fup-send"/.test(contact),
+    'and Send is withheld rather than offered and then failing — which is what makes the other two lines an explanation');
 
   // Close is routine housekeeping. Painted in --accent it was a red, which
   // made the most ordinary action on the screen look like the worst one.
+  /* THE ACCENT APPEARS ONCE. The old screen put an oxide "Message on
+     WhatsApp" on every card and painted every avatar in it too: at this
+     shop's fourteen clients that is twenty-eight oxide elements on a
+     screen whose rule is that the accent means the one thing to do next.
+     There is one now, and it is the send. */
+  const oxide = (contact.match(/btn-accent/g) || []).length;
+  eq(oxide, 2, 'the accent is drawn in exactly two branches — Send, and the confirmation that replaces it — so only ever one is on the screen');
+  t.check(!/btn-accent/.test(all), 'and the register carries none at all: nothing on that side is an act');
+
   const linkRule = (code.match(/\.fup-link\{[^}]*\}/) || [''])[0];
   t.check(/color:var\(--ink-soft\)/.test(linkRule),
     'Close is quiet — in the brand accent it read as a destructive action, which it is not');
