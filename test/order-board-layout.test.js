@@ -445,46 +445,92 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   t.check(/closest\('#savedQuotesWrap \[data-load\]'\)/.test(extractFunction(src, 'otTyping', 'index.html')),
     "while the board's own minute timer still asks the narrower question about its own form");
 
-  /* And where the owner had scrolled to. The redraw rebuilds the screen,
-     and a rebuilt element starts at the beginning -- a table scrolled
-     sideways to read the far columns jumps back to the first one, hiding
-     the very thing being looked at. The sourcing board already kept its
-     own place this way; the refresh now does it for every scroller on the
-     screen, and for the window itself. */
+  /* And where the owner had scrolled to. A rebuilt element starts at the
+     beginning, so a table scrolled sideways to read the far columns comes
+     back at the first one, hiding the thing being read.
+
+     THIS USED TO PIN A DIFFERENT ANSWER, and it is worth saying what it
+     meant. It asserted that the background refresh snapshotted every
+     scroller by its INDEX PATH just before its own goToTab and put them
+     back after it. That was true and it was not enough, twice over: the
+     refresh is one redraw of many — the board alone rebuilds from a
+     sixty-second timer and from some twenty actions, and renderSavedQuotes
+     replaces the row's table outright — and an index path is exactly what
+     a refresh that brought new rows changes, so it held the place when
+     nothing had happened and lost it when something had.
+
+     What is pinned now: the place is remembered as it is scrolled, under a
+     name a rebuild cannot change, and given back after ANY redraw. */
   const pollFn = extractFunction(src, 'pollForUpdatesNow', 'index.html');
-  const iNoted = pollFn.indexOf('owScrollSnapshot(scrolledSection)');
   const iRedraw = pollFn.indexOf('goToTab(currentActiveTab)');
-  const iPutBack = pollFn.indexOf('owScrollRestore(');
-  t.check(iNoted > -1 && iRedraw > -1 && iPutBack > -1 && iNoted < iRedraw && iRedraw < iPutBack,
-    'the refresh notes where every scroller was, redraws, and puts them back — in that order');
+  const iPutBack = pollFn.indexOf('owScrollGiveBack()');
+  t.check(iRedraw > -1 && iPutBack > iRedraw,
+    'the refresh redraws and then puts every scroller back, in that order — called straight out rather than left to a frame, so it never shows the screen at the start of itself first');
   t.check(/if\(window\.scrollX !== pageX \|\| window\.scrollY !== pageY\) window\.scrollTo\(pageX, pageY\);/.test(pollFn),
     'and the page itself does not move under a refresh nobody asked for');
+  t.check(/new MutationObserver\(\(\)=>\{[\s\S]{0,200}owScrollGiveBack\(\)[\s\S]{0,80}\}\)\.observe\(document\.body, \{ childList:true, subtree:true \}\)/.test(src),
+    'every OTHER redraw is caught by the screen being rebuilt — nothing has to call it, and forty renderers would each have had to remember');
+  t.check(/if\(owScrollDue \|\| !owScrollMem\.size\) return;/.test(src),
+    'one pass per frame however many renderers fired, and no pass at all until something has been scrolled');
+  const back = extractFunction(src, 'owScrollGiveBack', 'index.html');
+  t.check(/if\(el\.scrollLeft \|\| el\.scrollTop\) return;/.test(back),
+    'and it only ever writes to a scroller sitting at the very beginning — which is what a rebuilt one looks like, and means it can never argue with a place somebody chose');
+  const roots = extractFunction(src, 'owScrollRoots', 'index.html');
+  t.check(/tab-' \+ currentActiveTab/.test(roots) && /modal-overlay\.show/.test(roots),
+    'the sweep is the screen being looked at and any open modal — all forty sections are in the document at once, and the other thirty-nine are not worth walking');
 
-  const snapFn = extractFunction(src, 'owScrollSnapshot', 'index.html');
-  t.check(/if\(!el\.scrollLeft && !el\.scrollTop\) return;/.test(snapFn),
-    'only what was actually scrolled is recorded, so nothing is put back that was never moved');
-  const restoreFn = extractFunction(src, 'owScrollRestore', 'index.html');
-  t.check(/owScrollAt\(root, s\.path\)/.test(restoreFn),
-    'and each is found again by its place in the tree -- the rebuilt element is a different object, so identity is no use');
-
-  // Driven, not just read: a rebuild loses the place and the restore returns it.
+  /* Driven: the name survives a rebuild that the old index path did not. */
   {
-    const kids = (n) => n.children || [];
-    const mk = (children) => ({ children, scrollLeft: 0, scrollTop: 0, parentElement: null });
-    const scroller = mk([]); scroller.scrollLeft = 300;
-    const row = mk([scroller]); scroller.parentElement = row;
-    const root = mk([row]); row.parentElement = root;
-    root.querySelectorAll = () => [row, scroller];
-    const sc = compileScope(['owScrollPath', 'owScrollAt', 'owScrollSnapshot', 'owScrollRestore']
-      .map((n) => extractFunction(src, n, 'index.html')), {},
-      ['owScrollPath', 'owScrollAt', 'owScrollSnapshot', 'owScrollRestore']);
-    const snap = sc.owScrollSnapshot(root);
-    t.check(snap.length === 1 && JSON.stringify(snap[0].path) === '[0,0]' && snap[0].l === 300,
-      'the scrolled element is recorded by its path and its place');
-    scroller.scrollLeft = 0;                       // what the rebuild does
-    sc.owScrollRestore(root, snap);
-    t.check(scroller.scrollLeft === 300, 'and the restore puts it back where it was');
-    t.check(kids(root).length === 1, 'without disturbing the tree it walked');
+    const NAMES = ['owScrollClasses', 'owScrollMark', 'owScrollKey', 'owScrollRoots', 'owScrollGiveBack'];
+    const body = { tagName: 'BODY', className: '', children: [], parentElement: null };
+    const mk = (tag, cls, over) => Object.assign({ tagName: tag, className: cls, dataset: {},
+      children: [], parentElement: null, scrollLeft: 0, scrollTop: 0,
+      scrollWidth: 0, clientWidth: 0, scrollHeight: 0, clientHeight: 0 }, over || {});
+    const join = (parent, kid) => { kid.parentElement = parent; parent.children.push(kid); return kid; };
+
+    // A row keyed by its order, a table inside it, and a NEW row arriving
+    // above — the case an index path gets wrong.
+    const build = (extraRowFirst) => {
+      const sec = mk('SECTION', '', { id: 'tab-quote-saved' });
+      sec.parentElement = body;
+      if (extraRowFirst) join(sec, mk('DIV', 'ow-ot-r', { dataset: { id: '9' } }));
+      const row = join(sec, mk('DIV', 'ow-ot-r', { dataset: { id: '7' } }));
+      const tbl = join(row, mk('DIV', 'ow-tbl-s', { scrollWidth: 400, clientWidth: 300 }));
+      sec.querySelectorAll = () => [row, tbl].concat(extraRowFirst ? [sec.children[0]] : []);
+      return { sec, tbl };
+    };
+
+    const owScrollMem = new Map();
+    const first = build(false);
+    const later = build(true);
+    let root = first.sec;
+    const env = { OW_SCROLL_LOUD: /^(ow-open|ow-on|ow-here|show|open|active|focused|selected|panning|editing|dragging|can-left|can-right|lane-flash|collected|got)$/,
+      currentActiveTab: 'quote-saved',
+      document: { body,
+      getElementById: (id) => (id === 'tab-quote-saved' ? root : null),
+      querySelectorAll: () => [] }, owScrollMem };
+    const sc = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), env, NAMES);
+
+    t.check(src.includes("const OW_SCROLL_LOUD = " + String(env.OW_SCROLL_LOUD) + ";"),
+      'the set of classes a screen flips as it works is the one this test drives');
+
+    const k1 = sc.owScrollKey(first.tbl);
+    const k2 = sc.owScrollKey(later.tbl);
+    t.check(k1 === k2 && /\[7\]/.test(k1),
+      `the scroller is named by the record it belongs to, so a new row above it is still the same scroller (${k1})`);
+    t.check(!/:0|:1/.test(k1), 'and the name carries no sibling index that a new row would shift');
+    t.check(/ow-tbl-s/.test(k1) && !/ow-open/.test(sc.owScrollKey(
+      Object.assign(first.tbl, { className: 'ow-tbl-s ow-open' }))),
+      'a class the screen flips as it works is not part of the name — expanding a row must not rename its table');
+
+    first.tbl.className = 'ow-tbl-s';
+    owScrollMem.set(k1, { l: 92, t: 0 });
+    root = later.sec;                       // what the rebuild handed back
+    sc.owScrollGiveBack();
+    t.check(later.tbl.scrollLeft === 92, 'and the place is given back to the rebuilt one');
+    later.tbl.scrollLeft = 40;
+    sc.owScrollGiveBack();
+    t.check(later.tbl.scrollLeft === 40, 'while one already somewhere is left exactly where it is');
   }
 }
 

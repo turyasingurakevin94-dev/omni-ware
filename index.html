@@ -65530,52 +65530,122 @@ let lastUserInputAt = 0;
    but not yet saved is gone. A control with the focus is the honest
    signal for "wait" -- a native select keeps the focus for as long as its
    list is open. */
-/* WHERE THE OWNER HAS SCROLLED TO, kept across the refresh's redraw.
+/* WHERE THE OWNER HAS SCROLLED TO, kept across ANY redraw.
 
-   The redraw rebuilds the screen, and a rebuilt element starts at the
-   beginning: a table scrolled sideways to read the far columns jumps
-   back to the first one, hiding the very thing being looked at. The
-   sourcing board already kept its own place this way; this does it for
-   every scroller on the screen rather than the one that happened to be
-   noticed first.
+   A rebuilt element starts at the beginning. So a table scrolled sideways
+   to read the far columns jumps back to the first one the moment anything
+   redraws it, hiding the very thing being read — reported by the owner as
+   "the scroller automatically goes back to the starting point, covering
+   the work I am trying to scroll to".
 
-   Only elements actually scrolled are recorded, so nothing is restored
-   that was never moved, and each is found again by its position in the
-   tree -- the rebuilt element is a different object, so identity is no
-   use here. */
-function owScrollPath(el, root){
-  const path = [];
-  for(let n = el; n && n !== root; n = n.parentElement){
-    const p = n.parentElement;
-    if(!p) return null;
-    path.unshift([...p.children].indexOf(n));
+   THE REFRESH WAS NEVER THE ONLY REDRAW. The first answer to this
+   snapshotted every scroller just before the background refresh's own
+   goToTab and put them back after it, which fixed the one redraw that
+   announced itself. The order board alone rebuilds from a sixty-second
+   timer and from some twenty actions, and every one of those still lost
+   the place: renderSavedQuotes() replaces the row's table outright, and
+   it comes back at nought.
+
+   AND AN INDEX PATH WAS THE WRONG NAME FOR A SCROLLER. That first answer
+   found each one again by its position among its parent's children —
+   which is exactly what a refresh that brought new rows changes. It held
+   the place when nothing had happened and lost it when something had.
+
+   So: remembered as it is scrolled, under a name the rebuild cannot
+   change, and given back after any redraw at all. Nothing has to call it.
+   The screen being rebuilt IS the signal, and forty renderers would
+   otherwise each have had to remember. */
+const OW_SCROLL_LIMIT = 400;
+/* Classes a screen writes and rewrites as it works — open or shut, which
+   lane is lit, which card has the focus. They say nothing about WHICH
+   scroller this is, and leaving them in would make the same table a
+   different one the moment its row was expanded. */
+const OW_SCROLL_LOUD = /^(ow-open|ow-on|ow-here|show|open|active|focused|selected|panning|editing|dragging|can-left|can-right|lane-flash|collected|got)$/;
+function owScrollClasses(el){
+  const raw = el.className;
+  const s = (raw && raw.baseVal !== undefined ? raw.baseVal : raw) || '';
+  return String(s).trim().split(/\s+/).filter(c=> c && !OW_SCROLL_LOUD.test(c)).sort().join('.');
+}
+// The record a row belongs to, when it carries one. An order's own table
+// is then named by that order rather than by where the order sits in a
+// list that reorders itself.
+function owScrollMark(el){
+  const d = el.dataset || {};
+  return d.id || d.load || d.lens || d.tab || '';
+}
+/* Which scroller this is, in a form a rebuild cannot change: up to the
+   nearest id, describing each step by what it IS -- its tag, its own
+   classes, and the record it belongs to. Two like-classed scrollers under
+   one parent are told apart by their order among their OWN kind, which a
+   new row of some other kind above them does not move. */
+function owScrollKey(el){
+  const bits = [];
+  for(let n = el; n && n !== document.body && bits.length < 12; n = n.parentElement){
+    if(n.id){ bits.unshift('#' + n.id); break; }
+    const cls = owScrollClasses(n);
+    const mark = owScrollMark(n);
+    let at = '';
+    if(mark) at = '[' + mark + ']';
+    else {
+      const p = n.parentElement;
+      const kin = p ? [...p.children].filter(c=> c.tagName === n.tagName && owScrollClasses(c) === cls) : [];
+      if(kin.length > 1) at = ':' + kin.indexOf(n);
+    }
+    bits.unshift(n.tagName.toLowerCase() + (cls ? '.' + cls : '') + at);
   }
-  return path;
+  return bits.join('>');
 }
-function owScrollAt(root, path){
-  let n = root;
-  for(const i of path){ n = n && n.children[i]; if(!n) return null; }
-  return n;
-}
-function owScrollSnapshot(root){
+const owScrollMem = new Map();
+// Only what is on screen: every one of the app's forty sections is in the
+// document at once, so a sweep of the whole body would walk the other
+// thirty-nine to reach the one being looked at.
+function owScrollRoots(){
   const out = [];
-  if(!root || !root.querySelectorAll) return out;
-  root.querySelectorAll('*').forEach(el=>{
-    if(!el.scrollLeft && !el.scrollTop) return;
-    const path = owScrollPath(el, root);
-    if(path) out.push({ path, l: el.scrollLeft, t: el.scrollTop });
-  });
+  const sec = document.getElementById('tab-' + currentActiveTab);
+  if(sec) out.push(sec);
+  document.querySelectorAll('.modal-overlay.show').forEach(m=> out.push(m));
   return out;
 }
-function owScrollRestore(root, snap){
-  if(!root || !snap || !snap.length) return;
-  snap.forEach(s=>{
-    const el = owScrollAt(root, s.path);
-    if(!el) return;
-    if(s.l) el.scrollLeft = s.l;
-    if(s.t) el.scrollTop = s.t;
+document.addEventListener('scroll', (e)=>{
+  const el = e.target;
+  if(!el || el.nodeType !== 1) return;
+  if(el.closest && el.closest('.ow-selm')) return;
+  if(el.scrollWidth - el.clientWidth < 8 && el.scrollHeight - el.clientHeight < 8) return;
+  const key = owScrollKey(el);
+  if(!key) return;
+  // Oldest out first, so a long day at the console cannot grow this
+  // without bound.
+  if(!owScrollMem.has(key) && owScrollMem.size >= OW_SCROLL_LIMIT){
+    owScrollMem.delete(owScrollMem.keys().next().value);
+  }
+  owScrollMem.set(key, { l: el.scrollLeft, t: el.scrollTop });
+}, true);
+/* Put back — but only onto a scroller sitting at the very beginning.
+   That is what a rebuilt element looks like, and it means this can never
+   argue with a position somebody actually chose: scroll back to the start
+   yourself and nought is what is remembered. */
+function owScrollGiveBack(){
+  if(!owScrollMem.size) return;
+  owScrollRoots().forEach(root=>{
+    if(!root || !root.querySelectorAll) return;
+    root.querySelectorAll('*').forEach(el=>{
+      if(el.scrollLeft || el.scrollTop) return;
+      const cx = el.scrollWidth - el.clientWidth, cy = el.scrollHeight - el.clientHeight;
+      if(cx < 8 && cy < 8) return;
+      const was = owScrollMem.get(owScrollKey(el));
+      if(!was) return;
+      if(was.l && cx >= 8) el.scrollLeft = Math.min(was.l, cx);
+      if(was.t && cy >= 8) el.scrollTop = Math.min(was.t, cy);
+    });
   });
 }
+let owScrollDue = 0;
+/* The screen being rebuilt is the signal. One pass per frame however many
+   renderers fired, and no pass at all until something has been scrolled. */
+new MutationObserver(()=>{
+  if(owScrollDue || !owScrollMem.size) return;
+  owScrollDue = requestAnimationFrame(()=>{ owScrollDue = 0; owScrollGiveBack(); });
+}).observe(document.body, { childList:true, subtree:true });
 function owControlInUse(){
   const el = document.activeElement;
   if(!el || !el.tagName) return false;
@@ -65681,12 +65751,12 @@ async function pollForUpdatesNow(){
        || (owControlInUse() && Date.now() - lastUserInputAt < 60000)) return;
     /* The redraw, with the page kept where it was. A refresh nobody
        asked for must not move the ground: the window's own position and
-       every scroller on the screen are put back after it. */
-    const scrolledSection = document.getElementById('tab-' + currentActiveTab);
-    const scrollSnap = owScrollSnapshot(scrolledSection);
+       every scroller on the screen are put back after it. Called straight
+       out rather than left to the frame the observer would wait for, so a
+       refresh never shows the screen at the start of itself first. */
     const pageX = window.scrollX, pageY = window.scrollY;
     goToTab(currentActiveTab);
-    owScrollRestore(document.getElementById('tab-' + currentActiveTab), scrollSnap);
+    owScrollGiveBack();
     if(window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
     // goToTab redraws ONE screen. The rail's counts describe collections
     // this refresh may have just changed underneath every other screen.
