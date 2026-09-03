@@ -16,10 +16,11 @@
  *                  the answer to "is this still waiting" became no, and
  *                  the app knew before anybody walked to the board.
  *
- *   SPEAKS ONLY    the last supplier confirming. Leaving Draft copies the
- *                  order to the sales group and opens WhatsApp for a
- *                  paste — a person's act. So the shop is told the
- *                  waiting is over and the arrow stays theirs.
+ *   MOVES ITSELF   on the last supplier confirming. Copying the order to
+ *                  the sales group and opening WhatsApp for a paste is
+ *                  a person's act, so it is a tap (announceOrderToGroup)
+ *                  rather than a gate -- which is what lets the move be
+ *                  the app's.
  *
  *   REACHES OUT    an order past its stage limit. The flag blinked at
  *                  whoever was already looking at the board, which is
@@ -99,9 +100,9 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   t.check(/2 orders/.test(autoAdvanceNote([1, 2])), 'several are counted rather than listed');
 }
 
-/* ---------- 2. the last confirmation speaks, and does not move ------ */
+/* ---------- 2. the last confirmation moves the order, and says so ---- */
 {
-  const seen = { toasts: [], statuses: [] };
+  const seen = { toasts: [], moves: [] };
   const data = { savedQuotes: [], suppliers: [] };
   const NAMES = ['setOrderSupplierConfirm'];
   const scope = compileScope(NAMES.map((n) => extractFunction(src, n, 'index.html')), {
@@ -111,37 +112,61 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     toast: (m) => seen.toasts.push(String(m)),
     quoteClientName: (q) => (q && q.client && q.client.name) || 'Walk-in',
     orderSupplierTerms: () => ({}),
+    ORDER_STATUS_SHORT_LABELS: { awaiting_goods: 'Buying', preparing: 'Preparing' },
     /* Derived from what the function under test actually writes, so the
        order becomes ready BECAUSE of the confirmation rather than
-       before it. Emptying a list up front made every order already
-       ready, and "was it ready before" is the whole test. */
+       before it. */
     orderDraftReady: (q) => (q.suppliers || []).every((id) =>
       (q.supplierConfirms || {})[id] && q.supplierConfirms[id].state === 'confirmed'),
-    setSavedQuoteStatus: (id, s) => seen.statuses.push([id, s]),
+    /* The move is a collaborator here -- its own rules are exercised in
+       2b -- so this records that it was asked, and moves the order the
+       way the real one would. */
+    orderLeaveDraft: (q, o) => { seen.moves.push([q.id, o]); q.status = 'awaiting_goods'; return true; },
   }, NAMES);
   const { setOrderSupplierConfirm } = scope;
 
   data.savedQuotes = [{ id: 3, status: 'draft', client: { name: 'Milly' }, suppliers: ['S1', 'S2'] }];
-  // One of two answers: still waiting, so nothing is said.
   setOrderSupplierConfirm(3, 'S1', 'confirmed');
-  t.check(!seen.toasts.some((m) => /ready to go/.test(m)),
-    'a confirmation that still leaves somebody outstanding says nothing');
-  // The last one lands.
+  t.check(seen.moves.length === 0 && !seen.toasts.some((m) => /moved/.test(m)),
+    'a confirmation that still leaves somebody outstanding moves nothing and says nothing');
   setOrderSupplierConfirm(3, 'S2', 'confirmed');
-  t.check(seen.toasts.some((m) => /ready to go to the group/.test(m)),
-    `the shop is told the waiting is over (${JSON.stringify(seen.toasts)})`);
-  t.check(seen.toasts.some((m) => /Milly/.test(m)), 'and which order it is about');
-  /* THE WHOLE POINT. Leaving Draft copies the order to the sales group
-     and opens WhatsApp for a paste; a card that moved itself would
-     either skip the group silently or grab the screen unasked. */
-  eq(seen.statuses.length, 0, 'and the order is NOT moved — leaving Draft posts to the group, which is a person’s act');
-  eq(data.savedQuotes[0].status, 'draft', 'so it is still sitting in Draft afterwards');
+  eq(seen.moves.length, 1, 'the last one lands and the order is moved');
+  t.check(!!(seen.moves[0][1] && seen.moves[0][1].auto === true), "marked as the app's own move, for the trail");
+  t.check(seen.toasts.some((m) => /Milly/.test(m) && /moved to Buying/.test(m)),
+    `the shop is told where it went (${JSON.stringify(seen.toasts)})`);
+  t.check(seen.toasts.some((m) => /Announce it to the group when you like/.test(m)),
+    'and that the group is a tap of theirs, not a gate');
+  eq(data.savedQuotes[0].status, 'awaiting_goods', 'so it is no longer sitting in Draft afterwards');
 
   // Said once. Re-answering on an already-ready order is not news.
-  seen.toasts.length = 0;
+  seen.toasts.length = 0; seen.moves.length = 0;
   setOrderSupplierConfirm(3, 'S2', 'confirmed');
-  t.check(!seen.toasts.some((m) => /ready to go/.test(m)),
-    'an order that was already ready does not announce itself again on every later answer');
+  t.check(seen.moves.length === 0 && seen.toasts.length === 0,
+    'an order that was already ready is not moved or announced again on every later answer');
+}
+
+/* ---------- 2b. the move itself -------------------------------------- */
+{
+  const seen = { statuses: [] };
+  const mk = (over) => Object.assign({ id: 5, status: 'draft' }, over);
+  const leave = compileScope([extractFunction(src, 'orderLeaveDraft', 'index.html')], {
+    orderDraftReady: (q) => !!q.ready,
+    agentPaymentBlocksPreparing: (q) => !!q.unpaid,
+    orderAwaitsGoods: (q) => !!q.incoming,
+    setSavedQuoteStatus: (id, st, o) => seen.statuses.push([id, st, o]),
+  }, ['orderLeaveDraft']).orderLeaveDraft;
+  let m;
+  t.check(leave(mk({ ready: true, incoming: true }), { auto: true }) === true && (m = seen.statuses.pop()) && m[1] === 'awaiting_goods' && m[2].auto === true,
+    'a ready draft with goods to fetch goes to Buying, as the app\'s own move');
+  t.check(leave(mk({ ready: true }), { auto: true }) === true && seen.statuses.pop()[1] === 'preparing',
+    'and one with nothing to fetch steps over Buying to Preparing, as the arrow does');
+  t.check(leave(mk({ ready: false }), { auto: true }) === false && seen.statuses.length === 0,
+    'a draft still waiting on a supplier is not moved');
+  t.check(leave(mk({ ready: true, unpaid: true }), { auto: true }) === false && seen.statuses.length === 0,
+    "nor a prepay agent's order before the money is recorded -- the gate holds either way");
+  t.check(leave(mk({ ready: true, status: 'preparing' }), { auto: true }) === false, 'and an order past Taken is left alone');
+  leave(mk({ ready: true }), { auto: false });
+  t.check(seen.statuses.pop()[2].auto === false, "the owner's own tap is recorded as theirs, not the app's");
 }
 
 /* ---------- 3. an order past its limit reaches out ------------------ */
@@ -245,6 +270,14 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
     'leaving Draft still requires every supplier to have confirmed');
   t.check(!/setSavedQuoteStatus\([^)]*'completed'\)/.test(code),
     'and nothing moves an order to Completed on its own — "probably delivered by now" is a guess written as a fact');
+  /* The hand-off to the sales group is an owner's tap, never a move's
+     side effect: nothing in the status setter opens a window. */
+  const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
+  t.check(!/shareOrderToSalesGroup|window\.open|SALES_GROUP_WA_LINK/.test(setter),
+    'moving an order never tells the group by itself');
+  t.check(/shareOrderToSalesGroup\(q\);\s*q\.announcedAt = Date\.now\(\);/.test(extractFunction(src, 'announceOrderToGroup', 'index.html')),
+    'the group is told by announceOrderToGroup, which stamps when');
+  eq((code.match(/shareOrderToSalesGroup\(/g) || []).length, 2, 'and that is its only caller besides its own definition');
 }
 
 process.exit(t.done() ? 1 : 0);

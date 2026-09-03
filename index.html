@@ -8464,6 +8464,21 @@
   .ow-ot-qs{font-size:var(--ow-t-13);color:var(--ow-ink-600);line-height:1.45;min-width:0;max-width:var(--ow-measure);}
   .ow-ot-qa{display:flex;gap:var(--ow-sp-6);flex-wrap:wrap;justify-content:flex-end;}
   .ow-ot-qmore{display:none;}
+  /* a supplier on the row: who, where the asking has got to, the two taps */
+  .ow-ot-sups{display:flex;flex-direction:column;margin-top:var(--ow-sp-10);}
+  .ow-ot-h2{margin-top:var(--ow-sp-12);}
+  .ow-ot-sup{display:flex;align-items:center;gap:var(--ow-sp-8);flex-wrap:wrap;padding:var(--ow-sp-4) 0;font-size:var(--ow-t-12);min-width:0;}
+  .ow-ot-sups .ow-ot-sup{border-top:1px solid var(--ow-rule-soft);padding:var(--ow-sp-6) 0;}
+  .ow-ot-sups .ow-ot-sup:first-child{border-top:0;}
+  .ow-ot-sup-n{font-weight:var(--ow-fw-600);color:var(--ow-ink-900);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+  .ow-ot-sup-s{flex:1 1 auto;min-width:0;color:var(--ow-ink-600);}
+  .ow-ot-sup-a{display:flex;gap:var(--ow-sp-4);margin-left:auto;flex:none;}
+  .ow-ot-q-sup{grid-template-columns:168px minmax(0,1fr);}
+  .ow-ot-q-sup .ow-ot-qc{grid-row:1/3;}
+  .ow-ot-qa-sup{grid-column:2;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-width:0;margin-top:var(--ow-sp-4);}
+  .ow-ot-qa-sup .ow-ot-sup{padding:2px 0;}
+  .ow-ot-qa-sup .ow-ot-sup-n{flex:0 1 auto;max-width:260px;}
+  .ow-ot-qa-sup .ow-ot-sup-a{margin-left:auto;}
   /* a small act in a panel head */
   .ow-pan-a{flex:none;margin-left:var(--ow-sp-8);}
 
@@ -8658,11 +8673,16 @@
     .ow-ot-acts .btn.ow-sm{flex:1 1 calc(50% - 3px);min-height:var(--ow-tap);box-sizing:border-box;}
     .ow-trk-d{width:9px;height:9px;}
     .ow-trk-d.ow-now{width:11px;height:11px;}
-    .ow-ot-q{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-8);padding:var(--ow-sp-12);}
+    .ow-ot-q,.ow-ot-q-sup{grid-template-columns:minmax(0,1fr);gap:var(--ow-sp-8);padding:var(--ow-sp-12);}
+    .ow-ot-q-sup .ow-ot-qc{grid-row:auto;}
+    .ow-ot-qa-sup{grid-column:auto;}
     .ow-ot-qw-n{font-size:16px;}
     .ow-ot-qs{font-size:14px;max-width:none;}
     .ow-ot-qa{justify-content:stretch;}
     .ow-ot-qa .btn.ow-sm{flex:1 1 auto;min-height:var(--ow-tap);font-size:14px;box-sizing:border-box;}
+    .ow-ot-sup{font-size:var(--ow-t-13);row-gap:var(--ow-sp-4);}
+    .ow-ot-sup-a{flex:1 1 100%;margin-left:0;gap:var(--ow-sp-6);}
+    .ow-ot-sup-a .btn.ow-sm{flex:1 1 auto;min-height:var(--ow-tap);font-size:14px;box-sizing:border-box;}
     .ow-ot-more{display:none;}
     .ow-ot-needs.ow-open .ow-ot-more{display:grid;}
     .ow-ot-qmore{display:flex;width:100%;justify-content:center;min-height:var(--ow-tap);box-sizing:border-box;margin:var(--ow-sp-8) 0 var(--ow-sp-4);}
@@ -25416,15 +25436,6 @@ function setSavedQuoteStatus(id, status, opts){
     q.pickingStatus = 'done';
   }
   const moved = q.status!==status;
-  /* The one moment the sales group is told. Read BEFORE q.status is
-     overwritten, and here rather than in stepSavedQuoteStatus for the
-     same reason announceOrderMove is: this is the one place a status
-     actually changes, and the assign-staff modal and the agent-prepay
-     path land here too. A forward move only -- an order sent BACK to
-     Draft and pushed on again would otherwise re-announce itself, and
-     the group would read that as a second order. */
-  const leavingDraft = moved && q.status==='draft'
-    && SQ_STATUS_ORDER.indexOf(status) > SQ_STATUS_ORDER.indexOf('draft');
   if(moved){
     q.stageEnteredAt = Date.now();
     /* How it got here. Kept on the record from this build on, so the
@@ -25441,10 +25452,6 @@ function setSavedQuoteStatus(id, status, opts){
      actually changes: the assign-staff modal and the agent-prepay path
      land here too, and their moves were just as silent. */
   if(moved) announceOrderMove(q, status);
-  /* Last, so its toast is the one left on screen: announceOrderMove says
-     where the card went, which the eye can see anyway, while this one is
-     an instruction somebody has to act on. */
-  if(leavingDraft) shareOrderToSalesGroup(q);
 }
 
 /* Copy the order out to the sales group. WhatsApp group invite links
@@ -25456,8 +25463,8 @@ function shareOrderToSalesGroup(q){
   const openGroupAndToast = (copied)=>{
     window.open(SALES_GROUP_WA_LINK, '_blank');
     toast(copied
-      ? 'Suppliers confirmed — message copied, paste it in the group'
-      : 'Suppliers confirmed — open the group and paste the order from Order tracking', 4000);
+      ? 'Message copied — paste it in the sales group'
+      : 'Open the sales group and paste the order from Order tracking', 4000);
   };
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(msg).then(()=>openGroupAndToast(true)).catch(()=>openGroupAndToast(false));
@@ -25543,7 +25550,9 @@ document.getElementById('agentPrepayConfirm').addEventListener('click', ()=>{
     q.amountPaid = (Number(q.amountPaid)||0) + owed;
   }
   saveData();
-  stepSavedQuoteStatus(q.id, 1); // re-attempt now that payment is recorded
+  // The gate that asked for the money is open now. A ready draft leaves
+  // Taken as the app's own move; anything else re-attempts the step.
+  if(!orderLeaveDraft(q, { auto:true })) stepSavedQuoteStatus(q.id, 1);
 });
 document.getElementById('agentPrepayCancel').addEventListener('click', ()=>closeModal('agentPrepayModal'));
 document.getElementById('agentPrepayModalClose').addEventListener('click', ()=>closeModal('agentPrepayModal'));
@@ -25632,6 +25641,25 @@ function orderUnconfirmedSuppliers(q){
 function orderDraftReady(q){
   return orderUnconfirmedSuppliers(q).length === 0;
 }
+/* LEAVING TAKEN. The one move the board used to hold for a tap, made
+   here for both of the ways it can happen: by itself, when the last
+   supplier confirms (auto), or by the owner's own tap on an order that
+   has nothing to buy in and so no answer to wait for. Stepping over
+   Buying when nothing is incoming is the same rule stepSavedQuoteStatus
+   applies, and the prepay gate holds either way -- an agent who pays
+   first is asked for the money before anybody picks. What used to be
+   welded to this move -- copying the order to the sales group and
+   opening WhatsApp -- is an owner's tap now (announceOrderToGroup),
+   never a gate and never automatic. */
+function orderLeaveDraft(q, opts){
+  if(!q || q.status !== 'draft') return false;
+  const force = !!(opts && opts.auto === false);
+  if(!force && !orderDraftReady(q)) return false;
+  if(!orderDraftReady(q)) return false;
+  if(agentPaymentBlocksPreparing(q)) return false;
+  setSavedQuoteStatus(q.id, orderAwaitsGoods(q) ? 'awaiting_goods' : 'preparing', { auto: !force });
+  return true;
+}
 
 function setOrderSupplierConfirm(orderId, supplierId, state, note){
   const q = data.savedQuotes.find(x=> x.id === orderId);
@@ -25668,21 +25696,19 @@ function setOrderSupplierConfirm(orderId, supplierId, state, note){
   }
   saveData();
   renderSavedQuotes();
-  /* THE LAST CONFIRMATION IS NEWS, AND IT IS SAID -- BUT THE ORDER IS
-     NOT MOVED.
-
-     Every other automation on this board acts. This one deliberately
-     only speaks, because leaving Draft is not just a stage change: it
-     copies the order to the sales group and opens WhatsApp for a paste.
-     That is a person's act, and a card that moved itself would either
-     skip the group silently or try to open WhatsApp at a moment nobody
-     asked it to.
-
-     So the shop is told the waiting is over, and the arrow stays theirs
-     to press. The card carries the same state as a pill, because a
-     toast is gone in four seconds and this is worth finding again. */
+  /* THE LAST CONFIRMATION MOVES THE ORDER, AND SAYS SO. Every other
+     automation on this board acts; this one used to only speak, because
+     leaving Draft copied the order to the sales group and opened
+     WhatsApp for a paste -- a person's act. That paste is a chip now,
+     never a gate, so the move can be the app's. Told with where it
+     went, because a row that moved itself with no word about it is how
+     somebody loses track of their own board. */
   if(!wasReady && q.status === 'draft' && orderDraftReady(q)){
-    toast(`All suppliers have confirmed — ${quoteClientName(q)}'s order is ready to go to the group`, 6000);
+    if(orderLeaveDraft(q, { auto:true })){
+      toast(`All suppliers confirmed — ${quoteClientName(q)}'s order has moved to ${ORDER_STATUS_SHORT_LABELS[q.status]}. Announce it to the group when you like.`, 6000);
+    } else {
+      toast(`All suppliers confirmed — ${quoteClientName(q)}'s order waits for the agent's payment before it moves.`, 6000);
+    }
   }
   return q.supplierConfirms[key] || null;
 }
@@ -25825,8 +25851,8 @@ function renderSupplierConfirmList(){
   if(hint){
     hint.textContent = groups.length
       ? (left
-        ? `${left} of ${groups.length} still to come back. The order stays in Draft until every one of them has confirmed.`
-        : 'Every supplier has confirmed — move the order on and the sales group gets it.')
+        ? `${left} of ${groups.length} still to come back. The order leaves Taken by itself when the last one confirms.`
+        : 'Every supplier has confirmed — the order has moved on. Announce it to the group from the board when you like.')
       : 'Nothing on this order is being bought in, so there is nobody to ask.';
   }
 
@@ -25930,9 +25956,9 @@ function wireSupplierConfirmPanel(){
       setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'confirmed', '');
       const leftNow = orderUnconfirmedSuppliers(
         data.savedQuotes.find(x=> x.id === supplierConfirmOrderId)).length;
-      toast(leftNow
-        ? `${supplierName(sup)} confirmed — ${leftNow} to go`
-        : 'Every supplier confirmed — move the order on to tell the group', 3500);
+      // The last one is spoken for by setOrderSupplierConfirm, which
+      // also moves the order; a second toast here contradicted it.
+      if(leftNow) toast(`${supplierName(sup)} confirmed — ${leftNow} to go`, 3500);
     } else if(btn.classList.contains('sconf-undo')){
       supplierConfirmWhyFor = null;
       setOrderSupplierConfirm(supplierConfirmOrderId, sup, 'pending', '');
@@ -26146,7 +26172,9 @@ function stepSavedQuoteStatus(id, dir){
       : stale.length
         ? `The quote changed after ${stale.length===1 ? supplierName(stale[0].supplierId)+' confirmed' : stale.length+' suppliers confirmed'} — ask again at the new terms`
         : `${left.length} supplier${left.length===1?'':'s'} still to confirm — ask ${left.length===1?'them':'each of them'} before the group is told`, 5000);
-    openSupplierConfirmModal(id);
+    /* Opens the ROW rather than a panel: the suppliers and their two
+       taps are on it, which is where the next thing anybody does is. */
+    otOpenRow(id);
     return;
   }
   if(dir>0 && toStatus==='preparing' && agentPaymentBlocksPreparing(q)){
@@ -27234,7 +27262,7 @@ setInterval(()=>{
    still wears that board's .sq-* vocabulary by design; this screen no
    longer emits any of it. */
 const OT_STAGE_SENTENCE = {
-  draft: 'suppliers answer, then it moves on',
+  draft: 'suppliers answer, then it moves itself',
   awaiting_goods: 'moves itself when the last line is checked in',
   preparing: 'the pickers finish on their phones',
   pending_delivery: 'delivered when the call comes',
@@ -27282,6 +27310,60 @@ function orderTrackHTML(status){
     `<span class="ow-trk-d${j < i ? ' ow-on' : j === i ? ' ow-now' : ''}"></span>`).join('')}</span>`;
 }
 
+/* THE SUPPLIERS, ON THE ROW. One line per supplier still to come back:
+   who, where the asking has got to, and the two taps -- Ask (their
+   WhatsApp, with their lines already written) and Confirmed. A problem
+   with its reason, and undoing an answer, stay in the panel, where the
+   reason can be typed; the open row keeps a way to it. */
+function orderSupplierActsHTML(q, opts){
+  const o = opts || {};
+  const btn = (sid, act, label)=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${act}" data-id="${q.id}" data-sid="${esc(sid)}">${label}</button>`;
+  const rows = orderSupplierGroups(q).map(g=>{
+    const sid = String(g.supplierId);
+    const st = orderSupplierConfirmState(q, sid);
+    if(st.state === 'confirmed' && !o.all) return '';
+    let words, acts;
+    if(st.state === 'confirmed'){ words = `confirmed ${otWhen(st.at)}`; acts = btn(sid, 'undoconfirm', 'Undo'); }
+    else if(st.state === 'problem'){ words = `problem${st.note ? ': ' + esc(st.note) : ''}`; acts = btn(sid, 'ask', 'Ask again') + btn(sid, 'confirmed', 'Confirmed'); }
+    else if(st.state === 'stale'){ words = 'the quote changed since they confirmed'; acts = btn(sid, 'ask', 'Ask again') + btn(sid, 'confirmed', 'Confirmed'); }
+    else if(st.askedAt){ words = `asked ${otDuration(Date.now() - st.askedAt)} ago · no reply yet`; acts = btn(sid, 'ask', 'Ask again') + btn(sid, 'confirmed', 'Confirmed'); }
+    else { words = 'not asked yet'; acts = btn(sid, 'ask', 'Ask') + btn(sid, 'confirmed', 'Confirmed'); }
+    return `<div class="ow-ot-sup"><span class="ow-ot-sup-n" title="${esc(supplierName(sid))}">${esc(supplierName(sid))}</span><span class="ow-ot-sup-s">${words}</span><span class="ow-ot-sup-a">${acts}</span></div>`;
+  }).filter(Boolean);
+  const cut = o.max && rows.length > o.max ? rows.length - o.max : 0;
+  return rows.slice(0, cut ? o.max : rows.length).join('') + (cut
+    ? `<div class="ow-ot-sup"><span class="ow-ot-sup-s">and ${cut} more</span><span class="ow-ot-sup-a"><button type="button" class="btn btn-ghost ow-sm" data-act="open" data-id="${q.id}">Suppliers</button></span></div>` : '');
+}
+/* Ask opens their WhatsApp with the lines written, inside the same
+   gesture so the popup blocker lets it through, and only then stamps
+   that we asked -- a stamp is worthless if the message never opened. */
+function askOrderSupplier(id, sid){
+  const q = data.savedQuotes.find(x=> x.id === id);
+  if(!q || !sid) return;
+  window.open(supplierConfirmWaUrl(q, sid), '_blank');
+  markOrderSupplierAsked(id, sid);
+}
+function confirmOrderSupplier(id, sid){
+  if(!sid) return;
+  setOrderSupplierConfirm(id, sid, 'confirmed', '');
+  const q = data.savedQuotes.find(x=> x.id === id);
+  const left = q ? orderUnconfirmedSuppliers(q).length : 0;
+  if(left) toast(`${supplierName(sid)} confirmed — ${left} to go`, 3000);
+}
+function otOpenRow(id){ otOpenRows.add(id); renderSavedQuotes(); }
+/* The sales group is told when the owner taps, never by a move: the
+   link cannot carry text, so it is a copy and a paste, and a screen
+   must never look as if it already sent. Stamped so the chip goes
+   quiet and the trail says when. */
+function announceOrderToGroup(id){
+  const q = data.savedQuotes.find(x=> x.id === id);
+  if(!q) return;
+  shareOrderToSalesGroup(q);
+  q.announcedAt = Date.now();
+  saveData();
+  renderSavedQuotes();
+}
+
 /* WHAT NEEDS YOU. A decision only the owner can make, or a chore the
    app cannot do by itself -- and nothing else. Every chip is a named
    derivation: the supplier confirm states, the agent-prepay gate, the
@@ -27303,26 +27385,26 @@ function orderNeedsYou(q, isOverdue){
     const unasked = states.filter(x=> x.st.state === 'pending' && !x.st.askedAt);
     const silent = states.filter(x=> x.st.state === 'pending' && x.st.askedAt);
     if(problem){
-      need = { chip:'Problem', tone:'ow-warn', acts:[{act:'confirm', label:'Suppliers'}],
+      need = { chip:'Problem', tone:'ow-warn', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
         say:`${em(supplierName(problem.g.supplierId))} reported a problem${problem.st.note ? ': ' + esc(problem.st.note) : ''}. Sort it out with them, then mark them confirmed or ask again.` };
     } else if(stale.length){
-      need = { chip:'Quote changed', tone:'ow-warn', acts:[{act:'confirm', label:'Ask again'}],
+      need = { chip:'Quote changed', tone:'ow-warn', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
         say:`The quote changed after ${stale.length === 1 ? em(supplierName(stale[0].g.supplierId)) + ' confirmed' : stale.length + ' suppliers confirmed'} — ask again at the new terms.` };
     } else if(unasked.length){
       const all = unasked.length === groups.length;
-      need = { chip: all ? 'Not asked' : `${unasked.length} not asked`, tone: late ? 'ow-warn' : '', acts:[{act:'confirm', label:'Ask suppliers'}],
-        say:`Taken ${waited} ago and ${all ? 'no supplier has been asked' : unasked.length + ' of ' + groups.length + ' suppliers have not been asked'}. To buy in from ${unasked.map(x=> em(supplierName(x.g.supplierId))).join(', ')}.` };
+      need = { chip: all ? 'Not asked' : `${unasked.length} not asked`, tone: late ? 'ow-warn' : '', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
+        say:`Taken ${waited} ago and ${all ? 'no supplier has been asked' : unasked.length + ' of ' + groups.length + ' suppliers have not been asked'}. Ask opens their WhatsApp with the lines written; Confirmed is one tap when they answer.` };
     } else if(silent.length){
       const askedAgo = otDuration(Date.now() - Math.min(...silent.map(x=> x.st.askedAt)));
-      need = { chip:'Supplier silent', tone: late ? 'ow-warn' : '', acts:[{act:'confirm', label:'Suppliers'}],
+      need = { chip:'Supplier silent', tone: late ? 'ow-warn' : '', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
         say:`${silent.map(x=> em(supplierName(x.g.supplierId))).join(' and ')} ${silent.length === 1 ? 'was' : 'were'} asked ${askedAgo} ago and ${silent.length === 1 ? 'has' : 'have'} not answered. Ask again, or mark them confirmed if they rang.` };
     } else if(agentPaymentBlocksPreparing(q)){
       const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
       need = { chip:'Agent unpaid', tone:'ow-warn', acts:[{act:'prepay', label:'Record payment'}],
         say:`${em(agent ? agent.name : 'This agent')} pays before their orders are prepared — ${fig(invoiceBalanceDue(q))} owed for this one.` };
     } else {
-      need = { chip:'Ready', tone:'', acts:[{act:'next', label:'Move on'}],
-        say: groups.length ? 'Every supplier has confirmed. Move it on, and the sales group is told.' : 'Nothing to buy in — everything is on the shelf. Move it on to the pickers.' };
+      need = { chip:'Ready', tone:'', acts:[{act:'leave', label: groups.length ? 'Move on' : 'To the pickers'}],
+        say: groups.length ? 'Every supplier has confirmed. Move it on; announce it to the group when you like.' : 'Nothing to buy in — everything is on the shelf, so there is no answer to wait for. Send it to the pickers.' };
     }
   } else if(q.status === 'awaiting_goods'){
     const p = orderGoodsProgress(q);
@@ -27369,19 +27451,21 @@ function orderNeedsYou(q, isOverdue){
    the rest of what can be done to an order lives in the open row. */
 function orderActSpec(q){
   if(q.status === 'draft'){
-    if(!orderDraftReady(q)) return { act:'confirm', label:'Suppliers' };
+    if(!orderDraftReady(q)) return { act:'open', label:'Suppliers' };
     if(agentPaymentBlocksPreparing(q)) return { act:'prepay', label:'Record payment' };
-    return { act:'next', label:'Move on' };
+    return { act:'leave', label: orderSupplierGroups(q).length ? 'Move on' : 'To the pickers' };
   }
+  /* Past Taken the group can be told, once, whenever the owner likes:
+     the act a row carries when it needs nothing else. */
   if(q.status === 'awaiting_goods'){
     if(orderGoodsProgress(q).short || orderLinesWithNobodySent(q).length) return { act:'buying', label:'Buying list' };
-    return null;
+    return q.announcedAt ? null : { act:'announce', label:'Announce' };
   }
   if(q.status === 'preparing'){
     if(orderHasPickShortfall(q)) return { act:'shortpick', label:'Decide' };
     if(q.pickingStatus === 'done') return { act:'next', label:'Move on' };
     if(orderNeedsWorker(q)) return { act:'assign', label:'Assign a picker' };
-    return null;
+    return q.announcedAt ? null : { act:'announce', label:'Announce' };
   }
   if(q.status === 'pending_delivery'){
     if(orderNeedsDelivery(q)) return { act:'assigndelivery', label:'Assign delivery' };
@@ -27436,7 +27520,7 @@ function orderWho(q){
       : q.pickingStatus === 'done' ? `Picked by ${name} · waiting to go out` : 'Nobody picking yet';
     else if(q.pickingStatus === 'awaiting_accept') main = `Offered to ${name} · not yet accepted`;
     else main = `${name} picking · ${answered} of ${items.length}`;
-    return { main, sub: orderHasPickShortfall(q) ? pickShortfallLabel(q) : '' };
+    return { main, sub: orderHasPickShortfall(q) ? pickShortfallLabel(q) : (q.announcedAt ? `announced ${otWhen(q.announcedAt)}` : '') };
   }
   if(q.status === 'pending_delivery'){
     if(orderNeedsDelivery(q)) return { main: otStaffGone(q.assignedDeliveryId) ? 'Driver no longer on staff' : 'Nobody delivering', sub: q.deliveryAddress || '' };
@@ -27521,6 +27605,7 @@ function orderRowBodyHTML(q){
   const acts = [
     ghost('print', 'Print', ICON_PRINT_SMALL),
     ghost('preview', 'Preview'),
+    q.status === 'draft' && orderSupplierGroups(q).length ? ghost('confirm', 'Every supplier') : '',
     ghost('edit', 'Edit lines', ICON_EDIT),
     idx > 0 ? ghost('prev', 'Move back') : '',
     q.status === 'completed' && q.invoiced ? ghost('invoice', 'Undo invoice') : '',
@@ -27532,6 +27617,7 @@ function orderRowBodyHTML(q){
     <p class="ow-ot-h">What is on it</p>
     <div class="ow-ot-lns">${lines || '<div class="ow-ot-ln"><span class="ow-ot-ln-n">No lines on this order</span></div>'}</div>
     ${orderCashStripHTML(q)}
+    ${q.status === 'draft' && orderSupplierGroups(q).length ? `<p class="ow-ot-h ow-ot-h2">Suppliers</p><div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>` : ''}
     <p class="ow-ot-note">${esc(facts.join(' · '))}</p>
     <div class="ow-ot-acts">${acts}</div>
   </div>
@@ -27562,11 +27648,11 @@ function orderRowHTML(q, isOverdue){
 
 function otQueueRowHTML(x, i){
   const { q, need } = x;
-  const acts = (need.acts || []).map(a=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${a.act}" data-id="${q.id}">${esc(a.label)}</button>`).join('');
-  return `<div class="ow-ot-q${i >= 3 ? ' ow-ot-more' : ''}" data-id="${q.id}">
+  const acts = need.html || (need.acts || []).map(a=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${a.act}" data-id="${q.id}">${esc(a.label)}</button>`).join('');
+  return `<div class="ow-ot-q${i >= 3 ? ' ow-ot-more' : ''}${need.html ? ' ow-ot-q-sup' : ''}" data-id="${q.id}">
     <div class="ow-ot-qc"><span class="ow-cp${need.tone ? ' ' + need.tone : ''}">${esc(need.chip)}</span><span class="ow-ot-qw-n" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))}</span><span class="ow-ot-qw-s">#${q.id} · ${esc(fmtUGX(savedQuoteTotal(q)))}</span></div>
     <div class="ow-ot-qs">${need.say}</div>
-    <div class="ow-ot-qa">${acts}</div>
+    <div class="ow-ot-qa${need.html ? ' ow-ot-qa-sup' : ''}">${acts}</div>
   </div>`;
 }
 
@@ -27729,9 +27815,16 @@ function renderSavedQuotes(){
 /* Everything the screen can do, from one listener bound once at parse
    time -- so an act never depends on which render last wired it, and a
    row opens in place with no listener of its own. */
-function otAct(act, id){
+function otAct(act, id, el){
   const q = data.savedQuotes.find(x=> x.id === id);
+  const sid = el && el.dataset ? el.dataset.sid : null;
   switch(act){
+    case 'open': otOpenRow(id); break;
+    case 'leave': if(q && !orderLeaveDraft(q, { auto:false })) toast('Nothing to move — is every supplier confirmed?'); break;
+    case 'announce': announceOrderToGroup(id); break;
+    case 'ask': askOrderSupplier(id, sid); break;
+    case 'confirmed': confirmOrderSupplier(id, sid); break;
+    case 'undoconfirm': if(sid){ setOrderSupplierConfirm(id, sid, 'pending', ''); toast(`${supplierName(sid)} is back to unconfirmed`, 3000); } break;
     case 'confirm': openSupplierConfirmModal(id); break;
     case 'next': stepSavedQuoteStatus(id, 1); break;
     case 'prev': stepSavedQuoteStatus(id, -1); break;
@@ -27757,7 +27850,7 @@ document.getElementById('tab-quote-saved').addEventListener('click', (e)=>{
   const lens = t.closest('[data-lens]');
   if(lens && lens.closest('#ot_seg')){ otStageLens = lens.dataset.lens; renderSavedQuotes(); return; }
   const act = t.closest('[data-act]');
-  if(act){ otAct(act.dataset.act, Number(act.dataset.id)); return; }
+  if(act){ otAct(act.dataset.act, Number(act.dataset.id), act); return; }
   if(t.closest('[data-trip-gap]')){ openBuyingList(); return; }
   if(t.closest('a, button, input, select, label')) return;
   const row = t.closest('.ow-ot-r');

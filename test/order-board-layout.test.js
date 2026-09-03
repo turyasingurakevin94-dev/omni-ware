@@ -52,13 +52,13 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   const bound = (src.match(/document\.getElementById\('tab-quote-saved'\)\.addEventListener\('click'/g) || []).length;
   t.check(bound === 1, `one delegated listener on the section, bound once at parse time (${bound})`);
   t.check(!/addEventListener/.test(render), 'and the render binds nothing -- an act never depends on which render last wired it');
-  t.check(/const act = t\.closest\('\[data-act\]'\);\s*if\(act\)\{ otAct\(act\.dataset\.act, Number\(act\.dataset\.id\)\); return; \}/.test(src),
-    'every act is a data-act the listener dispatches');
+  t.check(/const act = t\.closest\('\[data-act\]'\);\s*if\(act\)\{ otAct\(act\.dataset\.act, Number\(act\.dataset\.id\), act\); return; \}/.test(src),
+    'every act is a data-act the listener dispatches, with the element so a supplier act knows its supplier');
   t.check(/if\(t\.closest\('a, button, input, select, label'\)\) return;/.test(src),
     'and a control inside a row never opens the row by accident');
   const dispatch = extractFunction(src, 'otAct', 'index.html');
-  ['confirm', 'next', 'prev', 'buying', 'pickups', 'runs', 'assign', 'assigndelivery', 'shortpick', 'prepay',
-    'invoice', 'print', 'preview', 'edit', 'delete'].forEach((a) => {
+  ['open', 'leave', 'announce', 'ask', 'confirmed', 'undoconfirm', 'confirm', 'next', 'prev', 'buying', 'pickups', 'runs',
+    'assign', 'assigndelivery', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete'].forEach((a) => {
     t.check(new RegExp(`case '${a}':`).test(dispatch), `otAct knows ${a}`);
   });
 }
@@ -110,29 +110,37 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   };
   const scope = compileScope([
     extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html'),
-    ...['otStageShort', 'otDuration', 'otWhen', 'otStageSince', 'otStaffGone', 'orderNeedsYou', 'orderActSpec',
-      'orderWho', 'orderWhoText', 'orderWhoHTML'].map((n) => extractFunction(src, n, 'index.html')),
+    ...['otStageShort', 'otDuration', 'otWhen', 'otStageSince', 'otStaffGone', 'orderSupplierActsHTML', 'orderNeedsYou',
+      'orderActSpec', 'orderWho', 'orderWhoText', 'orderWhoHTML'].map((n) => extractFunction(src, n, 'index.html')),
   ], env, ['orderNeedsYou', 'orderActSpec', 'orderWho', 'otDuration']);
   const late = () => true, fine = () => false;
   const q = (over) => Object.assign({ id: 7, status: 'draft', client: { name: 'Musa Hardware' }, total: 851000,
     stageEnteredAt: NOW - 3600000, items: [] }, over);
   const need = (o, over) => scope.orderNeedsYou(q(o), over || fine);
 
+  const taps = (h, sid) => new RegExp(`data-act="ask" data-id="7" data-sid="${sid}"`).test(h) && new RegExp(`data-act="confirmed" data-id="7" data-sid="${sid}"`).test(h);
   let n = need({ sup: ['S1', 'S2'] });
-  t.check(n && n.chip === 'Not asked' && n.acts[0].act === 'confirm', `a draft nobody has asked for is Not asked, with the suppliers act (${n && n.chip})`);
-  t.check(n && /Roofings/.test(n.say) && /Hima/.test(n.say), 'and names who is to be asked');
+  t.check(n && n.chip === 'Not asked' && n.acts.length === 0 && taps(n.html, 'S1') && taps(n.html, 'S2'),
+    `a draft nobody has asked for is Not asked, with Ask and Confirmed on the row for each supplier (${n && n.chip})`);
+  t.check(n && /Roofings/.test(n.html) && /Hima/.test(n.html) && !/Roofings/.test(n.say), 'the lines name who is to be asked, and the sentence does not say it twice');
+  t.check(n && /not asked yet/.test(n.html) && /Ask</.test(n.html), 'each line says where the asking has got to');
   n = need({ sup: ['S1'], states: { S1: { state: 'pending', askedAt: NOW - 7200000 } } });
-  t.check(n && n.chip === 'Supplier silent' && /Roofings/.test(n.say) && /2 h/.test(n.say),
-    `asked and unanswered is Supplier silent, saying who and for how long (${n && n.say})`);
+  t.check(n && n.chip === 'Supplier silent' && /Roofings/.test(n.say) && /2 h/.test(n.say) && /Ask again/.test(n.html),
+    `asked and unanswered is Supplier silent, saying who and for how long, with Ask again (${n && n.say})`);
   n = need({ sup: ['S1'], states: { S1: { state: 'problem', note: 'no stock' } } });
-  t.check(n && n.chip === 'Problem' && n.tone === 'ow-warn' && /no stock/.test(n.say), 'a problem outranks the count and carries the note');
+  t.check(n && n.chip === 'Problem' && n.tone === 'ow-warn' && /no stock/.test(n.say) && taps(n.html, 'S1'),
+    'a problem outranks the count and carries the note');
   n = need({ sup: ['S1'], states: { S1: { state: 'stale' } } });
-  t.check(n && n.chip === 'Quote changed' && n.tone === 'ow-warn', 'a confirmation the quote moved under is Quote changed');
+  t.check(n && n.chip === 'Quote changed' && n.tone === 'ow-warn' && /Ask again/.test(n.html), 'a confirmation the quote moved under is Quote changed');
+  n = need({ sup: ['S1', 'S2', 'S3'] });
+  t.check(n && (n.html.match(/data-act="ask"/g) || []).length === 2 && /and 1 more/.test(n.html) && /data-act="open"/.test(n.html),
+    'the queue shows two suppliers and counts the rest, with the row as the way to them');
   n = need({ sup: ['S1'], states: { S1: { state: 'confirmed' } } });
-  t.check(n && n.chip === 'Ready' && n.acts[0].act === 'next' && n.tone === '',
+  t.check(n && n.chip === 'Ready' && n.acts[0].act === 'leave' && n.acts[0].label === 'Move on' && n.tone === '',
     'every supplier back is Ready, with the move as the act, and no amber -- nothing is wrong');
   n = need({ sup: [] });
-  t.check(n && n.chip === 'Ready' && /shelf/.test(n.say), 'and an order with nothing to buy is ready by default, and says so');
+  t.check(n && n.chip === 'Ready' && /shelf/.test(n.say) && n.acts[0].act === 'leave' && n.acts[0].label === 'To the pickers',
+    'and an order with nothing to buy waits for one tap -- it has no answer to leave on, and a saved quote can still be a quote');
   n = need({ sup: ['S1'], states: { S1: { state: 'confirmed' } }, unpaid: true, originAgentId: 'A1' });
   t.check(n && n.chip === 'Agent unpaid' && n.acts[0].act === 'prepay' && /851,000/.test(n.say),
     'a prepay agent who has not paid is asked for the money first, with the figure');
@@ -270,7 +278,7 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
     'the queue shows three rows and folds the rest');
   t.check(/\.ow-ot-qmore\{display:none;\}/.test(desk) && /\.ow-ot-qmore\{display:flex/.test(phone),
     'behind a control the console never needs');
-  t.check(/class="ow-ot-q\$\{i >= 3 \? ' ow-ot-more' : ''\}"/.test(extractFunction(src, 'otQueueRowHTML', 'index.html'))
+  t.check(/class="ow-ot-q\$\{i >= 3 \? ' ow-ot-more' : ''\}\$\{need\.html \? ' ow-ot-q-sup' : ''\}"/.test(extractFunction(src, 'otQueueRowHTML', 'index.html'))
     && /data-act="needsmore"/.test(render) && /and \$\{needs\.length - 3\} more/.test(render),
     'and the control says how many are folded rather than hiding them silently');
   t.check(/\.ow-ot-r\.ow-open \+ \.ow-tbl-x\{display:flex;flex-direction:column/.test(phone),

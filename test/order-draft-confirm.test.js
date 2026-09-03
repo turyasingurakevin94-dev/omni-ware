@@ -50,18 +50,19 @@ const src = read('index.html');
 const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
 const data = { savedQuotes: [], suppliers: [] };
-const calls = { announced: [], panelOpened: null, toasts: [] };
+const calls = { announced: [], rowOpened: null, toasts: [] };
 
 const NAMES = ['orderSupplierGroups', 'orderLinesWithNoSupplier', 'orderSupplierTerms',
   'orderSupplierConfirmState', 'orderUnconfirmedSuppliers', 'orderDraftReady',
   'setOrderSupplierConfirm', 'markOrderSupplierAsked', 'supplierConfirmMessage',
-  'setSavedQuoteStatus', 'stepSavedQuoteStatus'];
+  'setSavedQuoteStatus', 'stepSavedQuoteStatus', 'orderLeaveDraft', 'announceOrderToGroup'];
 
 const scope = compileScope([
   extractDeclaration(src, 'SQ_STATUSES', 'index.html'),
   extractDeclaration(src, 'SQ_STATUS_ORDER', 'index.html'),
   extractDeclaration(src, 'STAGE_ASSIGNMENT_ROLE', 'index.html'),
   extractDeclaration(src, 'STAGE_ASSIGNMENT_FIELD', 'index.html'),
+  extractDeclaration(src, 'ORDER_STATUS_SHORT_LABELS', 'index.html'),
   ...NAMES.map((n) => extractFunction(src, n, 'index.html')),
 ], {
   data,
@@ -71,7 +72,7 @@ const scope = compileScope([
   // The one collaborator that matters here: whether, and how often, the
   // sales group was told.
   shareOrderToSalesGroup: (q) => { calls.announced.push(q.id); },
-  openSupplierConfirmModal: (id) => { calls.panelOpened = id; },
+  otOpenRow: (id) => { calls.rowOpened = id; },
   toast: (m) => { calls.toasts.push(String(m)); },
   supplierName: (id) => 'Supplier ' + id,
   quoteClientName: (q) => (q && q.client && q.client.name) || 'Walk-in',
@@ -400,8 +401,8 @@ const draft = (items) => {
   scope.stepSavedQuoteStatus(500, 1);
   eq(q.status, 'draft', 'an unconfirmed order does not leave Draft');
   eq(calls.announced.length, 0, 'so the sales group is not told');
-  eq(calls.panelOpened, 500,
-    'and the panel opens — going to look at who is outstanding is the next thing anybody does');
+  eq(calls.rowOpened, 500,
+    'and the row opens — the suppliers and their two taps are on it, which is where the next thing anybody does is');
   t.check(/still to confirm/.test(calls.toasts.join(' ')), 'the refusal says what is missing');
 }
 {
@@ -414,31 +415,24 @@ const draft = (items) => {
 }
 {
   const q = draft([line({ supplierId: 'S1' })]);
+  calls.announced = [];
   scope.setOrderSupplierConfirm(500, 'S1', 'confirmed', '');
-  scope.stepSavedQuoteStatus(500, 1);
-  t.check(q.status !== 'draft', 'a fully confirmed order moves on');
-  eq(calls.announced.length, 1, 'and THAT is when the sales group is told');
+  t.check(q.status !== 'draft', 'the last confirmation moves the order on by itself');
+  eq(calls.announced.length, 0, "and the sales group is NOT told by the move — that is a tap of the owner's");
+  scope.announceOrderToGroup(500);
+  eq(calls.announced.length, 1, 'which tells it once');
+  t.check(typeof q.announcedAt === 'number', 'and stamps when, so the chip goes quiet and the trail can say');
 }
 
-/* ---------- 7. told once, and only forward ---------------------------- */
+/* ---------- 7. no move tells the group ------------------------------- */
 {
   const q = draft([line({ supplierId: '__stock__' })]);
-  scope.setSavedQuoteStatus(500, 'preparing');
-  eq(calls.announced.length, 1, 'leaving Draft announces once');
-  scope.setSavedQuoteStatus(500, 'pending_delivery');
-  eq(calls.announced.length, 1, 'later moves do not announce again');
-  scope.setSavedQuoteStatus(500, 'draft');
-  eq(calls.announced.length, 1, 'going back to Draft announces nothing');
-  scope.setSavedQuoteStatus(500, 'preparing');
-  eq(calls.announced.length, 2,
-    'and pushing it on again announces once more — the correction the group needs, not a duplicate of the first');
-}
-{
-  const q = draft([line({ supplierId: '__stock__' })]);
-  q.status = 'preparing';
   calls.announced = [];
+  scope.setSavedQuoteStatus(500, 'preparing');
+  scope.setSavedQuoteStatus(500, 'pending_delivery');
   scope.setSavedQuoteStatus(500, 'draft');
-  eq(calls.announced.length, 0, 'a backward move into Draft never announces');
+  scope.setSavedQuoteStatus(500, 'preparing');
+  eq(calls.announced.length, 0, 'no move, forward or back, tells the group — only announceOrderToGroup does');
 }
 
 /* ---------- 8. what the supplier is actually sent --------------------- */
@@ -484,10 +478,8 @@ const draft = (items) => {
 }
 {
   const setter = extractFunction(src, 'setSavedQuoteStatus', 'index.html');
-  t.check(/SQ_STATUS_ORDER\.indexOf\(status\) > SQ_STATUS_ORDER\.indexOf\('draft'\)/.test(setter),
-    'the hand-off is keyed on moving FORWARD out of draft');
-  t.check(/const leavingDraft = moved && q\.status==='draft'/.test(setter),
-    'and read before q.status is overwritten, or it would never be true');
+  t.check(!/leavingDraft|shareOrderToSalesGroup|window\.open/.test(setter),
+    'the setter carries no hand-off at all — the group is a tap, not a side effect of a move');
 }
 
 /* ---------- 10. it survives a save ------------------------------------ */
@@ -506,8 +498,10 @@ const draft = (items) => {
   // They are two acts, deliberately: the console dispatches 'assign' to
   // the staff picker, so sharing it would have made the confirm act open
   // a staff picker.
-  t.check(/if\(!orderDraftReady\(q\)\) return \{ act:'confirm', label:'Suppliers' \};/.test(code),
-    'the confirm act is its own act on the row');
+  t.check(/if\(!orderDraftReady\(q\)\) return \{ act:'open', label:'Suppliers' \};/.test(code),
+    'an unconfirmed draft\'s act opens the row, where each supplier has its own Ask and Confirmed');
+  t.check(/data-act="\$\{act\}" data-id="\$\{q\.id\}" data-sid="\$\{esc\(sid\)\}"/.test(extractFunction(src, 'orderSupplierActsHTML', 'index.html')),
+    'and those taps carry the supplier, so one row can hold several');
   t.check(!/act:'assign', label:'Suppliers'/.test(code),
     'and does not share the assign act, which is wired to the staff picker');
   t.check(/case 'confirm': openSupplierConfirmModal\(id\); break;/.test(code),
