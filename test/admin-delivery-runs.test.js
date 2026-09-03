@@ -425,4 +425,45 @@ const reset = () => { data.savedQuotes = []; data.customers = []; data.staff = [
     'into its own modal rather than over the buying list');
 }
 
+/* ---------- the track scrolls, and stays where it is put ---------- */
+{
+  /* THE SNAP WAS THE BUG. .dr-track carries three carousels — the pickup
+     clusters, the delivery clusters, and the buying list — and all three
+     had `scroll-snap-type:x mandatory`. Measured on the real rule in the
+     running app: a card is 290px in a 704px track, so a step is 302 and
+     half a step is 151. Mandatory snapping puts the track on a snap point
+     after EVERY scroll, and anything short of 151px rounds back to the
+     card it started on —
+     which is every scrollbar drag, every soft trackpad swipe and every
+     press of an arrow key. Reported as the track springing back to the
+     start and covering the card being scrolled to. Driven in a real
+     browser: 60 -> 2, 120 -> 2, and only 200 -> 306. Driven again after,
+     on the app's own rule: 40 -> 40, 120 -> 120, and one arrow key -> 40,
+     which under the snap was 0.
+
+     `x proximity` is not the fix — measured identically, 60 -> 2 — because
+     the nearest snap point to a small scroll is still the one behind it.
+
+     `scroll-behavior:smooth` went with it: it made that correction animate
+     against the pointer mid-drag, and the buttons do not need it. */
+  const rule = /\.dr-track\{([^}]*)\}/.exec(src);
+  t.check(!!rule, 'the track has its rule');
+  const body = rule ? rule[1] : '';
+  t.check(!/scroll-snap-type/.test(body),
+    'and no snap on it — mandatory rounds every small scroll back to the card it started on, which is every drag, swipe and arrow key');
+  // Anchored, because `overscroll-behavior-x` contains the same letters.
+  t.check(!/(^|;)\s*scroll-behavior:/.test(body),
+    'nor a scroll-behavior that would animate that correction against the pointer');
+  t.check(/overflow-x:auto/.test(body), 'it still scrolls sideways, which is the whole point of it');
+  t.check(/overscroll-behavior-x:contain/.test(body),
+    'and reaching its end does not carry the gesture on to the page behind it');
+
+  /* The buttons still glide, because nav() asks for that itself rather
+     than leaning on a property on the element. Driven in a browser with
+     the element's own scroll-behavior gone: seventeen scroll events to
+     cross one card, not a jump. */
+  t.check(/track\.scrollBy\(\{ left: target - track\.scrollLeft, behavior: 'smooth' \}\)/.test(src),
+    'the nav buttons carry their own smooth, so taking it off the element did not turn them into a jump');
+}
+
 process.exit(t.done() ? 1 : 0);

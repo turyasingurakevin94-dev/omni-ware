@@ -4959,10 +4959,28 @@
      trips get compared with each other -- so they sit side by side and one
      gesture moves between them, rather than stacking into a document. */
   .dr-carousel{position:relative;margin:14px 0 6px;}
+  /* NO SCROLL-SNAP, and it is the whole fix. Measured on the real rule: a
+     card is 290px in a 704px track, so a step is 302px and half a step is
+     151. `x mandatory` puts the track on a snap point after EVERY scroll,
+     and anything short of 151px rounds back to the card it started on --
+     which is every scrollbar drag, every soft trackpad swipe and every
+     press of an arrow key. The track sprang back to the first card and
+     covered the one being scrolled to. `scroll-behavior:smooth` then made
+     that correction animate, so it fought the pointer mid-drag.
+
+     `x proximity` is NOT the fix: measured here it snaps back identically
+     (60 -> 2, 120 -> 2), because the nearest snap point to a small scroll
+     is still the one behind it.
+
+     The nav buttons still glide without the element's own
+     scroll-behavior: nav() passes behavior:'smooth' to scrollBy itself,
+     which is a seventeen-frame animation either way. */
   .dr-track{
-    display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;
-    padding:2px 2px 10px;scroll-behavior:smooth;
+    display:flex;gap:12px;
+    overflow-x:auto;overflow-y:hidden;
+    padding:2px 2px 10px;
     scrollbar-width:thin;
+    overscroll-behavior-x:contain;
   }
   .dr-track:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
   .dr-card{
@@ -22084,8 +22102,10 @@ function wireRunCarousel(trackId, prevId, nextId){
     // half off the edge. Rounding to the nearest card first means every tap
     // lands flush however the track was last moved.
     //
-    // scrollBy rather than scrollTo: with scroll-snap-type on this track,
-    // scrollTo is overridden by the snap engine and goes nowhere.
+    // scrollBy and not scrollTo: this track carried scroll-snap-type once,
+    // which overrode scrollTo and sent it nowhere. The snap is gone (it was
+    // rounding every small scroll back to the start), and scrollBy is kept
+    // because it is what the rounding above already computes a delta for.
     const nav = (dir)=>{
       const s = step();
       if(!s) return;
