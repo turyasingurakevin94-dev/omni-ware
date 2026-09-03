@@ -1,0 +1,10 @@
+import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+const [file, out, w, h] = process.argv.slice(2);
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 2 });
+const errs = []; p.on('pageerror', e => errs.push(String(e)));
+await p.goto('file://' + file);
+await p.waitForTimeout(900);
+await p.screenshot({ path: out, fullPage: false });
+console.log(errs.length ? 'ERRORS ' + errs.join('|') : 'ok ' + out);
+await b.close();
