@@ -65226,7 +65226,35 @@ async function boot(){
 // e.g. after tabbing away without blurring, would otherwise block every
 // refresh forever, which is why the poll looked like it never ran).
 let lastUserInputAt = 0;
-document.addEventListener('input', ()=>{ lastUserInputAt = Date.now(); }, true);
+/* When the owner last did something, which is what the background refresh
+   backs off from.
+
+   'input' alone was too narrow, and a native dropdown is the case that
+   proves it: opening one and reading down the list fires no input, no
+   change and no key -- so as far as this clock was concerned nobody was
+   doing anything, and the refresh was free to redraw the screen out from
+   under an open list. The same set the worker app has used for its own
+   quiet period since it had this bug. */
+['input','change','keydown','pointerdown','focusin'].forEach(ev=>{
+  document.addEventListener(ev, ()=>{ lastUserInputAt = Date.now(); }, true);
+});
+/* Something the owner is in the middle of. The background refresh redraws
+   the whole screen (goToTab), which rebuilds every control on it: an open
+   dropdown shuts itself, a half-typed box is replaced, and a choice made
+   but not yet saved is gone. A control with the focus is the honest
+   signal for "wait" -- a native select keeps the focus for as long as its
+   list is open. */
+function owControlInUse(){
+  const el = document.activeElement;
+  if(!el || !el.tagName) return false;
+  if(el.isContentEditable) return true;
+  const tag = el.tagName.toLowerCase();
+  if(tag === 'select' || tag === 'textarea') return true;
+  if(tag !== 'input') return false;
+  // A button, a tick or a radio holds no unsaved words and is not harmed
+  // by a redraw; a box being typed into is.
+  return !['button','submit','reset','checkbox','radio','file'].includes(String(el.type || 'text').toLowerCase());
+}
 // One refresh at a time. Declared beside the guard it feeds rather than
 // after the function that reads it.
 let pollInFlight = false;
@@ -65264,17 +65292,17 @@ async function pollForUpdatesNow(){
      owner reads the question. */
   if(document.querySelector('.ap-confirm-pending')) return;
   if(Date.now() - lastUserInputAt < 5000) return;
-  /* Same idea as the line above, for the one form on the board that is
-     filled in by hand. A redraw replaces the field being used: the caret
-     is given back (otRestoreFocus), but an OPEN dropdown cannot be --
-     no page can reopen a native select -- so the list of who is carrying
-     the order shut itself while the owner was reading it.
+  /* Same idea as the line above, for every control in the app rather than
+     one form on one screen. A redraw replaces whatever is being used: a
+     caret can be given back where the screen bothers to (otRestoreFocus,
+     on the order board), but an OPEN dropdown never can -- no page can
+     reopen a native select -- so a list being read shuts itself, which
+     reads as a dropdown that will not let you choose.
 
-     Bounded by the same clock, so focus left parked in a field by
-     somebody who walked away cannot hold the shop's refresh off for
-     good: after a minute untouched this stops applying and the refresh
-     goes ahead. */
-  if(otTyping() && Date.now() - lastUserInputAt < 60000) return;
+     Bounded by the same clock, so focus left parked by somebody who
+     walked away cannot hold the shop's refresh off for good: after a
+     minute untouched this stops applying and the refresh goes ahead. */
+  if(owControlInUse() && Date.now() - lastUserInputAt < 60000) return;
   pollInFlight = true;
   try{
     /* Work that has not reached the server yet must survive this.

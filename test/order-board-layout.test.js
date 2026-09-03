@@ -428,11 +428,22 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
 
   // The other half: the refresh keeps its hands off an entry in progress,
   // but cannot be held off for good by focus somebody parked and left.
+  /* The guard started here, on this form. It is app-wide now -- every
+     screen has controls a redraw would replace, and a dropdown shutting
+     itself while it is being read is the same fault wherever it happens
+     -- so what is pinned is the general one. */
   const poll = src.slice(src.indexOf('if(document.querySelector(\'.ap-confirm-pending\')) return;'));
-  t.check(/if\(otTyping\(\) && Date\.now\(\) - lastUserInputAt < 60000\) return;/.test(poll.slice(0, 1400)),
-    'the background refresh defers while the form is being used, and only while it is actually being used');
+  t.check(/if\(owControlInUse\(\) && Date\.now\(\) - lastUserInputAt < 60000\) return;/.test(poll.slice(0, 1600)),
+    'the background refresh defers while a control is being used, and only while it is actually being used');
+  const inUse = extractFunction(src, 'owControlInUse', 'index.html');
+  t.check(/tag === 'select'/.test(inUse) && /isContentEditable/.test(inUse),
+    'an open dropdown counts -- it keeps the focus for as long as its list is open');
+  t.check(/\['button','submit','reset','checkbox','radio','file'\]/.test(inUse),
+    'a button or a tick does not, holding no unsaved words');
+  t.check(/\['input','change','keydown','pointerdown','focusin'\]/.test(src),
+    "and the clock it reads is armed by opening a control, not only by typing into one -- a dropdown being read fires no input event at all");
   t.check(/closest\('#savedQuotesWrap \[data-load\]'\)/.test(extractFunction(src, 'otTyping', 'index.html')),
-    'which it asks by whether the focus is in a row\'s Loaded form');
+    "while the board's own minute timer still asks the narrower question about its own form");
 }
 
 process.exit(t.done() ? 1 : 0);
