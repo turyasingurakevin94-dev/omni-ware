@@ -26,6 +26,19 @@ notifications via Firebase Cloud Messaging.
 If `FIREBASE_SERVICE_ACCOUNT_JSON` isn't set, `notify-worker` just skips the
 send and logs why — no error, no crash.
 
+`notify-worker` sends two pushes. **New order to prepare** goes to the one
+worker an order was just put in front of. **Next to pick** goes to every
+worker in the shop when an order enters Preparing with nobody on it — it
+is in the pickers' queue on each phone, and the next free picker takes it.
+The second push exists from the order-tracking rebuild on, and only after
+the function is redeployed:
+```
+supabase functions deploy notify-worker --no-verify-jwt
+```
+Until then the queue still works — an open worker app polls it once a
+minute — but a closed app hears nothing about a new order until somebody
+finishes a pick and is handed the next one.
+
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically to
 every deployed function — no need to set those.
 

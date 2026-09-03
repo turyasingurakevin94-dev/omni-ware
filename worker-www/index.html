@@ -267,9 +267,47 @@
   #wv_pendingWrap{order:1;}
   #wv_activeWrap{order:2;}
   #wv_pendingWrap.is-upnext{order:3;}
-  /* Last of all, behind even the up-next strip: with a pick open, a setup
-     prompt is the least urgent thing on the screen. */
-  #wv_enablePushWrap.is-deferred{order:4;}
+  /* After the pick: what is packed (mine, one tap left) and then what is
+     waiting for anybody. Neither is the thing being picked, so neither
+     sits above it. */
+  #wv_packedWrap{order:5;}
+  #wv_queueWrap{order:6;}
+  /* Last of all, behind even the up-next strip and the queue: with a pick
+     open, a setup prompt is the least urgent thing on the screen. */
+  #wv_enablePushWrap.is-deferred{order:7;}
+  /* Section heads for the two lists below the pick. Small caps, like the
+     trip label and the up-next label -- a heading here is a signpost, not
+     a title. */
+  .wv-sec{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:14px 2px 8px;}
+  .wv-sec-t{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);}
+  .wv-sec-n{font-size:11.5px;color:var(--ink-faint);}
+  /* The queue: one line per order, numbered, oldest first. Rows, not
+     cards -- nothing on them is pressed; the one button is under them. */
+  /* Two lines, not one: the client's name is the thing being read and a
+     row that puts it beside "1 item · in the queue 7 hours ago" clips it
+     to "David Ochi…" -- a different customer, as far as a picker glancing
+     at it can tell. */
+  .wv-qrow{display:grid;grid-template-columns:18px minmax(0,1fr);gap:1px 10px;padding:10px 13px;border-radius:12px;background:var(--panel);box-shadow:var(--shadow-card);margin-bottom:6px;}
+  .wv-qrow-i{grid-row:1/3;align-self:center;font-family:'Manrope',sans-serif;font-weight:800;font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .wv-qrow-n{font-family:'Manrope',sans-serif;font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wv-qrow-m{font-size:11.5px;color:var(--ink-faint);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wv-qmore{margin:2px 2px 8px;font-size:11.5px;color:var(--ink-faint);}
+  .wv-take-btn{width:100%;margin-top:6px;box-sizing:border-box;}
+  /* A packed order: the same card a pending order wears, carrying the
+     Loaded form instead of Accept and Deny. */
+  .wv-packed{background:var(--panel);border-radius:18px;padding:13px 14px;margin-bottom:10px;box-shadow:var(--shadow-card);}
+  .wv-load{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 10px;}
+  .wv-load-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  /* The kind runs the full width; it decides which of the rest are asked. */
+  .wv-load-f:first-child{grid-column:1/-1;}
+  .wv-load-l{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);}
+  /* 44px, like everything else pressed on this screen. */
+  .wv-load-v{all:unset;box-sizing:border-box;display:block;width:100%;min-height:44px;padding:10px 12px;border-radius:10px;
+    background:var(--ow-night-800);border:1.5px solid var(--line);color:var(--ink);font-size:14px;font-family:inherit;}
+  .wv-load-v:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  select.wv-load-v{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%),linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px;}
+  .wv-load-btn{width:100%;box-sizing:border-box;}
   /* Quiet on purpose: it is the only thing on this screen that is not
      asking to be acted on. No avatar, no buttons -- a line telling a picker
      what is coming so the queue is not a surprise when they finish. */
@@ -453,7 +491,7 @@
     <div class="page-head" id="wv_pageHead">
       <p class="wv-eyebrow">Pick &amp; pack</p>
       <h1>Your queue</h1>
-      <p>Orders assigned to you for preparation.</p>
+      <p>What you are picking, what you have packed, and what is waiting for whoever is free next.</p>
     </div>
     <div id="wv_activeHeader" style="display:none;"></div>
   </div>
@@ -469,6 +507,12 @@
     <div id="wv_tripsWrap"></div>
     <div id="wv_pendingWrap"></div>
     <div id="wv_activeWrap"></div>
+    <!-- Packed and waiting for the transport: mine, with the one question
+         left (who is carrying it) and the tap that answers it. -->
+    <div id="wv_packedWrap"></div>
+    <!-- The pickers' queue: what nobody holds yet. The next free picker
+         takes the top one from here, so the desk never has to choose. -->
+    <div id="wv_queueWrap"></div>
   </div>
 </div>
 
@@ -633,7 +677,7 @@ function buildWorkerSyncRows(d, shopId){
       date:q.date, status:q.status, invoiced:q.invoiced, invoiced_at:q.invoicedAt,
       invoiced_ts: q.invoicedTs ? new Date(q.invoicedTs).toISOString() : null,
       amount_paid:q.amountPaid, voided:q.voided,
-      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null}
+      payload:{client:q.client, items:q.items, savedAt:q.savedAt, payments:q.payments, customerId:q.customerId, debtCharged:q.debtCharged, stageEnteredAt:q.stageEnteredAt, assignedWorkerId:q.assignedWorkerId, assignedDeliveryId:q.assignedDeliveryId, pickingStatus:q.pickingStatus||null, pickCursor:q.pickCursor||0, pickingAssignedAt:q.pickingAssignedAt||null, workerAcceptedAt:q.workerAcceptedAt||null, pickingDoneAt:q.pickingDoneAt||null, carrier:q.carrier||null}
     })),
     collectionTrips: (d.collectionTrips||[]).map(t=>({
       id:t.id, shop_id:shopId, supplier_id:t.supplierId, status:t.status||'open',
@@ -652,17 +696,24 @@ function buildWorkerSyncRows(d, shopId){
 const WORKER_OWNED_KEYS = [
   'assignedWorkerId', 'assignedDeliveryId',
   'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt',
+  // Packed (finishPreparingOrder) and who carried it out (loadOrder).
+  // Both are written on this app's own moments and merged onto the
+  // server's row like the rest -- a key missing here is overwritten with
+  // the server's copy on the next save, which for a brand-new key is
+  // nothing at all.
+  'pickingDoneAt', 'carrier',
   'stageEnteredAt'
 ];
 
-// The only status moves this app makes, keyed by where the order has to be
-// for the move to mean anything: finishPreparingOrder sends a pick it has
-// just completed to pending_delivery (its own guard admits draft as well as
-// preparing), and autoAssignNextOrder promotes the draft it takes on next.
+// The only status move this app makes, keyed by where the order has to be
+// for the move to mean anything: loadOrder sends a packed order out
+// (preparing -> pending_delivery, with the carrier on it). Finishing a
+// pick no longer moves anything -- packed is a state inside Preparing --
+// and a draft is never taken by this app: Taken means the suppliers have
+// not all answered, and the last confirmation is what moves it on.
 // Anything else arriving from here is not a move, it is a stale snapshot.
 const WORKER_STATUS_MOVES = {
   preparing: ['pending_delivery'],
-  draft: ['preparing', 'pending_delivery'],
 };
 
 // Pick state lives on the items, so it has to be merged onto the SERVER's

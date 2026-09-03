@@ -347,9 +347,18 @@ const layer = layerRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
       uses: ['ow-ph', 'ow-ph-t', 'ow-ph-sub', 'ow-f', 'ow-f-in', 'ow-strip', 'ow-grid', 'ow-sec', 'ow-seg', 'ow-pan',
              'ow-tbl', 'ow-side'],
       renders: ['renderSavedQuotes', 'orderRowHTML', 'orderTrackHTML', 'orderWhoHTML', 'orderActHTML', 'orderRowBodyHTML',
-                'otQueueRowHTML', 'orderTripPanelHTML', 'orderOutPanelHTML', 'orderLatePanelHTML'],
+                'otQueueRowHTML', 'orderTripPanelHTML', 'orderOutPanelHTML', 'orderLatePanelHTML',
+                /* The Loaded form, in the open row -- the one place this
+                   screen takes typing rather than only reading, so its
+                   fields are held to the layer's like everything else. */
+                'orderLoadFormHTML'],
       rendersUses: ['ow-mt', 'ow-cp', 'ow-tbl-g', 'ow-tbl-r', 'ow-tbl-n', 'ow-tbl-a', 'ow-tbl-x', 'ow-trk', 'ow-sr',
                     'ow-empty', 'ow-seg-b'],
+      /* The Loaded form's own field classes are not named here on purpose:
+         orderLoadFormHTML hands them to carrierFormHTML (shared-worker.js)
+         as a set, so the phone and the console ask the same question from
+         one template. What this list can see is what the screen writes
+         itself, and that is what it holds to. */
     },
   };
   /* EXACT NAMES, NOT WORD BOUNDARIES. \b matches before a hyphen, so

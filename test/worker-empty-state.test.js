@@ -46,9 +46,9 @@ const scope = compileScope([
   denyOrderAssignment: () => {},
 }, ['renderWorkerPendingList']);
 
-const render = (pending, hasActive) => {
+const render = (pending, hasActive, hasQueue) => {
   wrap.innerHTML = '__untouched__';
-  scope.renderWorkerPendingList(pending, hasActive);
+  scope.renderWorkerPendingList(pending, hasActive, hasQueue);
   return wrap.innerHTML;
 };
 
@@ -169,9 +169,17 @@ const pendingOrder = (id, name, lines) => ({
   // undefined, which is falsy -- so the failure mode is a visible message
   // where none was wanted, never a blank screen.
   const src = read('shared-worker.js');
-  t.check(/renderWorkerPendingList\(pending, !!active\);/.test(src),
-    'renderWorkerView passes whether a pick is open');
+  /* Two flags now. The second is the pickers' queue: an order in Preparing
+     with nobody on it is on every worker's phone in its own panel, so
+     "Nothing to pick right now" printed above a list of what to pick would
+     be the screen arguing with itself. The empty state means what it says
+     only when both are empty. */
+  t.check(/renderWorkerPendingList\(pending, !!active, queue\.length > 0\);/.test(src),
+    'renderWorkerView passes whether a pick is open, and whether the queue has anything');
   t.check(render([], undefined) !== '', 'and a missing flag errs toward showing the message');
+  t.check(render([], false, true) === '', 'with work in the queue below, the message is not printed over it');
+  t.check(/Nothing to pick right now/.test(render([], false, false)),
+    'and with nothing anywhere it still says so');
 }
 
 process.exit(t.done() ? 1 : 0);

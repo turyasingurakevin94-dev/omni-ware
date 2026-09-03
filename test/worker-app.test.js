@@ -159,6 +159,17 @@ const sharedJs = read('shared-worker.js');
         leaked.length ? `this app claims ownership of ${leaked.join(', ')}` : `the owned list is picking and assignment only (${owned.length} keys)`);
       t.check(owned.includes('pickingStatus') && owned.includes('assignedWorkerId') && owned.includes('assignedDeliveryId'),
         'the fields this app genuinely drives are all in the owned list');
+      /* Two more, from the moments this app now owns: packing an order
+         (finishPreparingOrder stamps pickingDoneAt) and loading it out
+         (loadOrder writes the carrier note -- who is carrying it, in what,
+         on what number). A field missing from this list is overwritten by
+         the server's copy on the next save from this app, which for a
+         brand-new key means overwritten with nothing. */
+      t.check(owned.includes('pickingDoneAt') && owned.includes('carrier'),
+        'as are the pack stamp and the carrier note, both written on this app\'s own moments');
+      const literal = (/payload:\{[^}]*\}/.exec(workerHtml) || [''])[0];
+      ['pickingDoneAt:', 'carrier:'].forEach((k) => t.check(literal.includes(k),
+        `and this app's own payload literal carries ${k.slice(0, -1)} — a key missing there is dropped before the merge ever sees it`));
     }
 
     /* ---------- 4. a save never sends a row it could not re-read ------- */
@@ -179,11 +190,16 @@ const sharedJs = read('shared-worker.js');
     {
       const fin = extractFunction(sharedJs, 'finishPreparingOrder', 'shared-worker.js');
       const iGuard = fin.indexOf("q.status !== 'preparing'");
-      const iSet = fin.indexOf("q.status = 'pending_delivery'");
-      t.check(iGuard > -1 && iGuard < iSet,
-        'finishing a pick checks the order is still being prepared before moving it');
-      t.check(iGuard < fin.indexOf("q.pickingStatus = 'done'"),
-        'the check happens before anything is mutated, so a stale finish changes nothing');
+      t.check(iGuard > -1 && iGuard < fin.indexOf("q.pickingStatus = 'done'"),
+        'finishing a pick checks the order is still being prepared before it writes anything');
+      // And the move it no longer makes: finishing means PACKED, still in
+      // Preparing. Loading is what sends an order out, and it carries who
+      // is carrying it.
+      const load = extractFunction(sharedJs, 'loadOrder', 'shared-worker.js');
+      const iLoadGuard = load.indexOf("q.status !== 'preparing'");
+      const iLoadSet = load.indexOf("q.status = 'pending_delivery'");
+      t.check(iLoadGuard > -1 && iLoadSet > -1 && iLoadGuard < iLoadSet,
+        'and loading it out checks the same before moving it');
 
       // That guard reads the LOCAL status, which is the stale one -- it can
       // only catch a worker acting on a screen they can see is out of date.
@@ -202,10 +218,16 @@ const sharedJs = read('shared-worker.js');
       };
 
       const CASES = [
-        // [server has, this app sends, must end up]  -- the real moves
-        ['preparing', 'pending_delivery', 'pending_delivery', 'a finished pick still moves the order on'],
-        ['draft', 'preparing', 'preparing', 'taking on the next order still promotes it'],
-        ['draft', 'pending_delivery', 'pending_delivery', "finishing a draft pick still lands, as that function's own guard allows"],
+        // [server has, this app sends, must end up]  -- the real move
+        ['preparing', 'pending_delivery', 'pending_delivery', 'a loaded order still goes out for delivery'],
+        /* The two draft rows are gone with the moves themselves. This app
+           never takes a draft now: an order in Taken is waiting on its
+           suppliers, and the last confirmation is what moves it into
+           Preparing (orderLeaveDraft, index.html). A "preparing" arriving
+           here on a server draft is therefore a stale snapshot, not a
+           move, and is refused like any other. */
+        ['draft', 'preparing', 'draft', 'a draft is never promoted from here — the suppliers move it, not a picker'],
+        ['draft', 'pending_delivery', 'draft', 'and never sent out from here either'],
         // ...and the stale ones
         ['completed', 'preparing', 'completed', 'an order completed since this app loaded is not reopened'],
         ['completed', 'pending_delivery', 'completed', 'nor by a finish this app had already sent once'],
@@ -243,19 +265,29 @@ const sharedJs = read('shared-worker.js');
       const body = fin.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
 
       t.check((body.match(/await saveData\(\)/g) || []).length === 1,
-        'finishing writes once, so there is no moment where the pick is done and the status is not');
+        'finishing writes once, so there is no moment where the pick is done and the pack is not stamped');
       const doneAt = body.indexOf("pickingStatus = 'done'");
       const saveAt = body.indexOf('await saveData()');
-      const statusAt = body.indexOf("status = 'pending_delivery'");
-      t.check(doneAt > -1 && statusAt > -1 && doneAt < saveAt && statusAt < saveAt,
-        'with the finished pick and the new status both set before it');
+      const stampAt = body.indexOf('pickingDoneAt =');
+      t.check(doneAt > -1 && stampAt > -1 && doneAt < saveAt && stampAt < saveAt,
+        'with the finished pick and its stamp both set before it');
       t.check(!/promptAssignDelivery/.test(body),
-        'and no delivery picker in the middle of it -- that is the admin\'s decision');
+        'and no delivery picker in the middle of it -- nothing has been loaded yet');
 
+      /* 'done' is not one of the two picking lists, and that is still what
+         frees the picker for the next order. What changed is that it is no
+         longer invisible: a packed order has its own panel on the phone
+         ("Packed, waiting to go", the Loaded form on it) and its own
+         reading on the board, so the state the two lists skip is now shown
+         by name rather than falling through the floor. */
       const render = extractFunction(sharedJs, 'renderWorkerView', 'shared-worker.js');
       const shown = (render.match(/pickingStatus==='(\w+)'/g) || []).map((s) => s.split("'")[1]);
       t.check(shown.includes('awaiting_accept') && shown.includes('in_progress') && !shown.includes('done'),
-        `the worker's screen only ever shows these picking states: ${shown.join(', ')}`);
+        `the two picking lists are still these, and not the packed state: ${shown.join(', ')}`);
+      const packed = extractFunction(sharedJs, 'myPackedOrders', 'shared-worker.js');
+      t.check(/q\.status==='preparing' && q\.pickingStatus==='done'/.test(packed)
+        && /renderWorkerPacked\(packed\)/.test(render),
+        'and a packed order is on the screen in its own list, not stranded off every one of them');
     }
 
     /* ---------- 7. accept/deny only touch this worker's own order ------ */

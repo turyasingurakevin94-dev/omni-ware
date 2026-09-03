@@ -72,7 +72,14 @@ const SOURCES = [
   extractFunction(sharedJs, 'denyOrderAssignment', 'shared-worker.js'),
   extractFunction(sharedJs, 'toggleItemPickedAt', 'shared-worker.js'),
   extractFunction(sharedJs, 'setItemPickedQty', 'shared-worker.js'),
+  extractFunction(sharedJs, 'workerPickQueue', 'shared-worker.js'),
+  extractFunction(sharedJs, 'takeNextOrder', 'shared-worker.js'),
   extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js'),
+  extractDeclaration(sharedJs, 'CARRIER_KINDS', 'shared-worker.js'),
+  extractFunction(sharedJs, 'staffEligibleForRole', 'shared-worker.js'),
+  extractFunction(sharedJs, 'staffName', 'shared-worker.js'),
+  extractFunction(sharedJs, 'carrierKindsFor', 'shared-worker.js'),
+  extractFunction(sharedJs, 'loadOrder', 'shared-worker.js'),
   extractFunction(adminHtml, 'setSavedQuoteStatus', 'index.html'),
   extractFunction(adminHtml, 'stepSavedQuoteStatus', 'index.html'),
   extractFunction(adminHtml, 'orderNeedsWorker', 'index.html'),
@@ -88,6 +95,7 @@ const SOURCES = [
 ];
 const NAMES = ['myWorkerOrders', 'acceptOrderAssignment', 'denyOrderAssignment',
   'toggleItemPickedAt', 'setItemPickedQty', 'autoAssignNextOrder', 'setSavedQuoteStatus',
+  'workerPickQueue', 'takeNextOrder', 'loadOrder', 'deliveryIsSelfCarried',
   'stepSavedQuoteStatus', 'orderNeedsWorker', 'orderNeedsDelivery', 'deleteStaff',
   'itemPickedQty', 'itemPickAnswered', 'itemOrderedQty', 'pickShortfallLines',
   'resetPickingProgress', 'quoteAgedOffBoard', '__setMyStaff'];
@@ -111,9 +119,14 @@ const scope = compileScope(SOURCES.concat(['function __setMyStaff(s){ myStaff = 
   confirm: () => true,
   promptPickedQty: () => {},
   promptAgentPrepayment: () => {},
-  // The staff picker is a modal; the property test drives the choice it
-  // would have produced, which is what openAssignStaffModal writes.
-  openAssignStaffModal: () => {},
+  // The board's refusal to send an order out by the arrow says so and
+  // opens the row where the Loaded form is; both are DOM work.
+  otOpenRow: () => {},
+  /* The supplier gate on leaving Taken is order-draft-confirm.test.js's
+     business, held open here -- the arrow reaches it now that entering
+     Being Prepared no longer diverts to a picker, and a closed gate would
+     stop every lifecycle before the stages this file is about. */
+  orderDraftReady: () => true,
 }, NAMES);
 
 /* ---------- invariants ------------------------------------------------ */
@@ -150,15 +163,22 @@ const INVARIANTS = {
       .map(([w, ids]) => `${w} holds ${ids.length} open picks (${ids.join(', ')})`);
   },
 
-  // The stranding, stated positively.
+  /* The stranding, stated positively -- and it now has three answers
+     rather than one. An order in Being Prepared is fine if SOMEBODY can
+     see it: the worker holding it (offered or open), or every worker at
+     once, because an unassigned one is in the pickers' queue on all their
+     phones. A packed one is nobody's pick but is on the board and on the
+     packer's own screen with the Loaded form on it. Failing all three,
+     the board must offer a way out -- which is what AFFORDANCE.worker
+     asks. */
   I4: () => data.savedQuotes
     .filter((q) => !q.voided && q.status === 'preparing' && !scope.quoteAgedOffBoard(q))
     .filter((q) => {
-      // Somebody can see it in their app...
-      const visibleToWorker = HOLDING.includes(q.pickingStatus)
+      const heldBySomebodyReal = HOLDING.includes(q.pickingStatus)
         && q.assignedWorkerId && staffExists(q.assignedWorkerId);
-      // ...or the board offers a way to put it on somebody.
-      return !visibleToWorker && !AFFORDANCE.worker(q);
+      const inThePickQueue = scope.workerPickQueue().some((x) => x.id === q.id);
+      const packed = q.pickingStatus === 'done';
+      return !heldBySomebodyReal && !inThePickQueue && !packed && !AFFORDANCE.worker(q);
     })
     .map((q) => `order ${q.id} (worker ${q.assignedWorkerId}, picking ${q.pickingStatus}) can be moved by nobody`),
 
@@ -190,11 +210,14 @@ const INVARIANTS = {
     return bad;
   },
 
+  /* Named now includes the two carriers that are not staff and not the
+     agent: the client's own person, and hired transport carrying the
+     shop's goods under a name and a phone number on the carrier note. */
   I7: () => data.savedQuotes
     .filter((q) => !q.voided && q.status === 'pending_delivery' && !scope.quoteAgedOffBoard(q))
     .filter((q) => {
       const named = q.assignedDeliveryId
-        && (q.assignedDeliveryId === '__agent__' || staffExists(q.assignedDeliveryId));
+        && (scope.deliveryIsSelfCarried(q) || staffExists(q.assignedDeliveryId));
       return !named && !AFFORDANCE.delivery(q);
     })
     .map((q) => `order ${q.id} is out for delivery with nobody on it and no way to name one`),
@@ -206,16 +229,15 @@ const rand = () => { rng = (rng * 1103515245 + 12345) & 0x7fffffff; return rng /
 const pick = (arr) => (arr.length ? arr[Math.floor(rand() * arr.length)] : null);
 
 const OPS = {
-  adminAssignsWorker: () => {
-    const q = pick(data.savedQuotes.filter((x) => !x.voided && x.status === 'preparing' && scope.orderNeedsWorker(x)));
+  /* The board no longer assigns anybody. A worker takes the top of the
+     pickers' queue from their own phone, and that is the whole operation
+     -- assigned and accepted in one write, because the person tapping is
+     the person taking it. */
+  workerTakesNext: () => {
     const s = pick(data.staff.filter((x) => x.role === 'worker'));
-    if (!q || !s) return;
-    // Exactly what openAssignStaffModal's row handler writes.
-    q.assignedWorkerId = s.id;
-    q.pickingStatus = 'awaiting_accept';
-    q.pickCursor = 0;
-    q.pickingAssignedAt = Date.now();
-    scope.setSavedQuoteStatus(q.id, 'preparing');
+    if (!s) return;
+    scope.__setMyStaff(s);
+    scope.takeNextOrder();
   },
   workerAccepts: () => {
     const q = pick(data.savedQuotes.filter((x) => x.pickingStatus === 'awaiting_accept'));
@@ -240,22 +262,22 @@ const OPS = {
     const i = Math.floor(rand() * q.items.length);
     scope.setItemPickedQty(q.id, i, Math.floor(rand() * (scope.itemOrderedQty(q.items[i]) + 2)));
   },
+  /* Loaded, from either app: the packed order goes out with somebody
+     named. Every kind the form offers, so the sentinels and the staff id
+     are all exercised. */
+  loaded: () => {
+    const q = pick(data.savedQuotes.filter((x) => !x.voided && x.status === 'preparing'));
+    if (!q) return;
+    const d = pick(data.staff.filter((s) => s.role === 'delivery' || s.role === 'worker'));
+    const kind = pick(q.deliveryMode === 'agent_pickup' ? ['agent', 'hired', 'client']
+      : (d ? ['hired', 'staff', 'client'] : ['hired', 'client']));
+    scope.loadOrder(q.id, { kind, staffId: d && d.id, name: kind === 'hired' ? 'Kasule' : '', what: 'Fuso', phone: '0772' });
+  },
   adminStepsForward: () => {
     const q = pick(data.savedQuotes.filter((x) => !x.voided));
     if (!q) return;
-    // The board's forward step hands off to a picker for the role-gated
-    // stages; drive the outcome that picker produces.
-    const role = { preparing: 'worker', pending_delivery: 'delivery' }[
-      ['draft', 'preparing', 'pending_delivery', 'completed'][
-        ['draft', 'preparing', 'pending_delivery', 'completed'].indexOf(q.status) + 1] || ''];
-    if (role === 'worker') { OPS.adminAssignsWorker(); return; }
-    if (role === 'delivery') {
-      const d = pick(data.staff.filter((s) => s.role === 'delivery' || s.role === 'worker'));
-      if (!d) return;
-      q.assignedDeliveryId = d.id;
-      scope.setSavedQuoteStatus(q.id, 'pending_delivery');
-      return;
-    }
+    // The arrow refuses to send a shop delivery out (that is Loaded's
+    // job); everything else it does itself.
     scope.stepSavedQuoteStatus(q.id, +1);
   },
   adminStepsBack: () => {
@@ -357,9 +379,12 @@ function run(steps) {
     }],
     ['I4', 'an order in Being Prepared nobody can move', () => {
       freshWorld();
-      // pickingStatus 'done' is in neither of the worker app's lists, and a
-      // named worker means the board offers no Assign either.
-      Object.assign(data.savedQuotes[0], { status: 'preparing', assignedWorkerId: 'ST1', pickingStatus: 'done' });
+      /* Held by a real worker in a picking state their app does not list:
+         not offered, not open, and not packed either -- so it is on no
+         phone, and a named worker keeps it out of the pickers' queue.
+         'done' used to be this case; it is now the packed state, which is
+         on two screens and has its own act. */
+      Object.assign(data.savedQuotes[0], { status: 'preparing', assignedWorkerId: 'ST1', pickingStatus: 'stranded' });
     }],
     ['I5', 'a line picked above what was ordered', () => {
       freshWorld();
@@ -417,7 +442,9 @@ function run(steps) {
     }],
     ['6e64103  an order sent back kept a pick nobody could see', () => {
       freshWorld();
-      Object.assign(data.savedQuotes[0], { status: 'preparing', assignedWorkerId: 'ST1', pickingStatus: 'done' });
+      // The shape of that bug, in the state that is still nobody's: held,
+      // and in no list any app renders.
+      Object.assign(data.savedQuotes[0], { status: 'preparing', assignedWorkerId: 'ST1', pickingStatus: 'stranded' });
     }],
     ['8d7ba0a  deleting the worker left the order pointing at them', () => {
       freshWorld();

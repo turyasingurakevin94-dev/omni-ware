@@ -106,11 +106,19 @@ const order = (items, over) => Object.assign({ id: 'Q1', status: 'preparing', it
   t.check(/orderIncomingLines\(q\)\.length/.test(accept),
     'being told how many are still out, which is the thing they would go and ask');
 
-  const auto = extractFunction(shared, 'autoAssignNextOrder', 'shared-worker.js');
-  t.check(/&& !goodsBlockPreparing\(q\)\)/.test(auto),
-    'and the queue does not hand one out either');
-  t.check(!/'awaiting_goods'/.test(auto),
+  /* The queue is its own function now -- workerPickQueue -- because three
+     things read it: the "Next to pick" panel on every worker's phone,
+     "Take the next one", and the hand-over after a finished pick. The gate
+     lives in the queue, so all three are covered by one rule instead of
+     one of them remembering it. */
+  const queue = extractFunction(shared, 'workerPickQueue', 'shared-worker.js');
+  t.check(/&& !goodsBlockPreparing\(q\)/.test(queue),
+    'and the queue does not offer one either');
+  t.check(!/'awaiting_goods'/.test(queue),
     'nor does it reach into Awaiting Goods for work');
+  const auto = extractFunction(shared, 'autoAssignNextOrder', 'shared-worker.js');
+  t.check(/workerPickQueue\(\)\[0\]/.test(auto),
+    'and the hand-over after a finished pick takes the top of that same queue');
 
   // The admin's own step-forward.
   const step = extractFunction(src, 'stepSavedQuoteStatus', 'index.html');

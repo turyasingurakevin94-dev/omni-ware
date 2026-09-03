@@ -213,10 +213,15 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
     };
     data.savedQuotes = [q];
     await scope.finishPreparingOrder(700);
-    t.check(q.status === 'pending_delivery' && q.pickingStatus === 'done',
-      'a short order finishes and moves on, instead of sitting on the worker forever');
-    t.check(q.assignedDeliveryId === null,
-      'arriving with no driver on it, because choosing one is the admin\'s job (orderNeedsDelivery asks)');
+    /* Finished means PACKED now, not gone: the goods sit waiting for
+       transport, and "Loaded, it has gone" is the tap that sends them.
+       What matters here is unchanged -- the picker is released from an
+       order they cannot complete, rather than holding it forever. */
+    t.check(q.pickingStatus === 'done' && q.status === 'preparing',
+      'a short order finishes and is packed, instead of sitting on the worker forever');
+    t.check(!q.assignedDeliveryId,
+      'with nobody named as carrying it, because nothing has been loaded yet');
+    t.check(typeof q.pickingDoneAt === 'number', 'and the pack is stamped');
 
     const stillPicking = {
       id: 701, status: 'preparing', assignedWorkerId: 'ST1', client: { name: 'Achen' },

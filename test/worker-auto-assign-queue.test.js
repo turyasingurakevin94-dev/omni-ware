@@ -17,6 +17,12 @@
  * "waiting since", and renderSavedQuotes back-fills it for any row missing
  * one, so it is there to be used.
  *
+ * The queue itself is now workerPickQueue: ONE rule, read three ways --
+ * the "Next to pick" panel on every worker's phone, "Take the next one",
+ * and this hand-over after a finished pick. So the order it puts things in
+ * and the orders it refuses to hand out are checked here, and the
+ * hand-over is checked for reading it rather than filtering again.
+ *
  * Run: node test/worker-auto-assign-queue.test.js   (or: npm test)
  */
 const { read, extractFunction, extractDeclaration, compileScope, createReporter } = require('./_extract');
@@ -42,12 +48,13 @@ const scope = compileScope([
   extractFunction(sharedJs, 'orderAwaitsGoods', 'shared-worker.js'),
   extractFunction(sharedJs, 'goodsBlockPreparing', 'shared-worker.js'),
   extractFunction(sharedJs, 'agentPaymentBlocksPreparing', 'shared-worker.js'),
+  extractFunction(sharedJs, 'workerPickQueue', 'shared-worker.js'),
   extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js'),
 ], {
   data,
   saveData: () => { saved++; },
   refreshAdminOrderBoardIfOpen: () => {},
-}, ['autoAssignNextOrder']);
+}, ['autoAssignNextOrder', 'workerPickQueue']);
 
 // placedHoursAgo drives stageEnteredAt (when it started waiting);
 // editedHoursAgo drives savedAt (when someone last touched it).
@@ -58,7 +65,11 @@ const order = (id, name, placedHoursAgo, editedHoursAgo, over) => Object.assign(
   savedAt: new Date(NOW - editedHoursAgo * HOUR).toISOString(),
   stageEnteredAt: NOW - placedHoursAgo * HOUR,
   items: [{ productId: 'P001', qty: 1 }],
-  status: 'draft',
+  /* Preparing, not draft. An order in Taken is waiting on its suppliers
+     and the last confirmation is what moves it on (orderLeaveDraft,
+     index.html) -- so the pickers' queue starts at Preparing, and a draft
+     in it would have sent somebody to pack a maybe. */
+  status: 'preparing',
   assignedWorkerId: null,
   voided: false,
   pickingStatus: null,
@@ -135,6 +146,16 @@ const handOut = (quotes, staff) => {
     order(1, 'Moses', 9, 9, { status: 'pending_delivery' }),
     order(2, 'Sarah', 1, 1),
   ]) === 'Sarah', 'an order past preparation is skipped');
+
+  t.check(handOut([
+    order(1, 'Moses', 9, 9, { status: 'draft' }),
+    order(2, 'Sarah', 1, 1),
+  ]) === 'Sarah', 'and so is one still in Taken, waiting on its suppliers');
+
+  t.check(handOut([
+    order(1, 'Moses', 9, 9, { pickingStatus: 'done' }),
+    order(2, 'Sarah', 1, 1),
+  ]) === 'Sarah', 'a packed order is not picked again — it is waiting for transport, not for a picker');
 }
 
 /* ---------- 5. an unavailable worker is handed nothing ---------------- */
@@ -152,7 +173,7 @@ const handOut = (quotes, staff) => {
   t.check(q.pickingStatus === 'awaiting_accept', 'it arrives on the device as a pending accept');
   t.check(q.pickCursor === 0, 'the pick starts at the first item');
   t.check(typeof q.pickingAssignedAt === 'number', 'the hand-over is timestamped');
-  t.check(q.status === 'preparing', 'a draft moves to being prepared');
+  t.check(q.status === 'preparing', 'the order is where it was — the queue is Preparing');
   t.check(saved === 1, 'and the change is saved once');
 }
 

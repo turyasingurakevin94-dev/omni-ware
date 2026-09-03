@@ -57,8 +57,15 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
   t.check(/if\(t\.closest\('a, button, input, select, label'\)\) return;/.test(src),
     'and a control inside a row never opens the row by accident');
   const dispatch = extractFunction(src, 'otAct', 'index.html');
+  /* 'assign' and 'assigndelivery' are gone with the pop-up they opened.
+     A picker is not assigned from here at all now -- the order joins the
+     pickers' queue and the next free one takes it from their phone -- and
+     a driver is named by loading the order out, which is 'loaded' (open
+     the row's form) and 'loadgo' (the form's own button). 'release' is
+     the way back to the queue for an order held by somebody whose phone
+     cannot show it. */
   ['open', 'leave', 'announce', 'ask', 'confirmed', 'undoconfirm', 'confirm', 'next', 'prev', 'buying', 'pickups', 'runs',
-    'assign', 'assigndelivery', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete'].forEach((a) => {
+    'loaded', 'loadgo', 'release', 'shortpick', 'prepay', 'invoice', 'print', 'preview', 'edit', 'delete'].forEach((a) => {
     t.check(new RegExp(`case '${a}':`).test(dispatch), `otAct knows ${a}`);
   });
 }
@@ -96,7 +103,10 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
     quoteLineShortfall: (l) => l.short || 0,
     orderHasPickShortfall: (q) => !!q.pickShort,
     pickShortfallLabel: () => 'Picked short — 2 of 5 found',
-    orderNeedsWorker: (q) => q.status === 'preparing' && !q.assignedWorkerId,
+    orderNeedsWorker: (q) => q.status === 'preparing' && !!q.assignedWorkerId && q.pickingStatus === 'stranded',
+    workerPickQueue: () => [],
+    goodsBlockPreparing: (q) => !!q.goodsOut,
+    orderIncomingLines: (q) => q.incoming || [],
     orderNeedsDelivery: (q) => q.status === 'pending_delivery' && !q.assignedDeliveryId,
     deliveryIsSelfCarried: (q) => q.assignedDeliveryId === '__agent__',
     deliveryAssigneeLabel: (q) => (q.assignedDeliveryId === '__agent__' ? 'Agent pickup' : 'Kasule'),
@@ -152,14 +162,34 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
     'a short delivery is named with the number and the item');
   n = need({ status: 'awaiting_goods', goods: { received: 0, total: 2, short: 0 } });
   t.check(n === null, 'goods on their way need nothing from the owner');
+  /* Nobody on a preparing order is not the owner's problem any more: it
+     is in the pickers' queue on every worker's phone, and the next free
+     one takes it. So the queue says nothing about it at all. */
   n = need({ status: 'preparing' });
-  t.check(n && n.chip === 'Nobody picking' && n.acts[0].act === 'assign', 'nobody picking asks for a picker');
+  t.check(n === null, 'an order waiting for the next free picker needs nothing from the owner');
   n = need({ status: 'preparing', assignedWorkerId: 'W1', pickShort: true });
   t.check(n && n.chip === 'Short pick' && n.tone === 'ow-warn' && n.acts[0].act === 'shortpick', 'a short pick is a decision');
   n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'in_progress' });
   t.check(n === null, 'an order being picked needs nothing');
+  // Packed: the pick is over, the goods are on the floor, and the one
+  // thing left is saying who took them.
+  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'done', pickingDoneAt: NOW - 3600000 });
+  t.check(n && n.chip === 'Packed' && n.acts[0].act === 'loaded' && /Musa/.test(n.say) && /1 h/.test(n.say),
+    'a packed order says who packed it and when, and its act is Loaded');
+  // Held by somebody whose phone cannot show it -- the one stranding the
+  // board still has to offer a way out of.
+  n = need({ status: 'preparing', assignedWorkerId: 'W1', pickingStatus: 'stranded' });
+  t.check(n && n.acts[0].act === 'release' && /queue/.test(n.say),
+    'an order held by somebody whose phone is not showing it goes back to the queue');
+  // Why an order is NOT in that queue, when it is not.
+  n = need({ status: 'preparing', goodsOut: true, incoming: [{}, {}] });
+  t.check(n && n.chip === 'Goods not in' && n.acts[0].act === 'buying' && /2 lines/.test(n.say),
+    'and an order no picker is offered says why — the goods are still at a supplier');
+  n = need({ status: 'preparing', unpaid: true, originAgentId: 'A1' });
+  t.check(n && n.chip === 'Agent unpaid' && n.acts[0].act === 'prepay',
+    'as does one waiting on an agent who pays first');
   n = need({ status: 'pending_delivery' });
-  t.check(n && n.chip === 'Nobody delivering' && n.acts[0].act === 'assigndelivery', 'nobody delivering asks for a driver');
+  t.check(n && n.chip === 'Nobody named' && n.acts[0].act === 'loaded', 'an order out with nobody named asks who has it');
   n = need({ status: 'pending_delivery', assignedDeliveryId: 'D1' });
   t.check(n === null, 'an order out with somebody needs nothing until the call comes');
   n = need({ status: 'completed', invoiced: false });
@@ -262,8 +292,18 @@ const desk = layer.slice(0, layer.indexOf('THE PHONE.'));
 /* ---------- 9. the timer ---------------------------------------------- */
 {
   const timer = (/setInterval\(\(\)=>\{\s*const tab = document\.getElementById\('tab-quote-saved'\);[\s\S]*?\}, 60000\);/.exec(src) || [''])[0];
-  t.check(/if\(tab && tab\.style\.display !== 'none'\) renderSavedQuotes\(\);/.test(timer),
+  t.check(/if\(tab && tab\.style\.display !== 'none' && !otTyping\(\)\) renderSavedQuotes\(\);/.test(timer),
     'the board redraws itself every minute while it is showing, so a wait crosses its limit on its own');
+  /* ...unless somebody is typing into a row's Loaded form, where a redraw
+     mid-word would take the caret with it. What is typed survives a
+     redraw either way (otLoadDrafts), so this is about the caret, not the
+     characters -- and it is the same lesson the search box learned by
+     living outside what the render rewrites. */
+  const typing = extractFunction(src, 'otTyping', 'index.html');
+  t.check(/document\.activeElement/.test(typing) && /\[data-load\]/.test(typing),
+    'and holds off while a carrier field has the caret');
+  t.check(/carrierDraftsFrom\(wrap\)\.forEach\(\(v, k\)=> otLoadDrafts\.set\(k, v\)\);/.test(render),
+    'while what was typed survives every redraw, typed into or not');
   t.check(/if\(!document\.hidden\) runStageAlerts\(\);/.test(timer),
     'and the stage alerts ride the same timer whatever screen is open');
   t.check(/const otOpenRows = new Set\(\);/.test(src) && /otOpenRows\.has\(q\.id\)/.test(extractFunction(src, 'orderRowHTML', 'index.html')),

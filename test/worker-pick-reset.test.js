@@ -170,15 +170,25 @@ const allPicks = (q, v) => q.items.every((it) => it.pickStatus === v);
   t.check(allPicks(q, 'done'), 'and its ticks stand');
 }
 
-/* ---------- 6. forward steps are untouched ---------------------------- */
+/* ---------- 6. forward, into a stage that asks for nobody -------------- */
+/*
+ * This used to open a pop-up asking who would pick it, and hold the move
+ * until somebody was chosen. Nothing asks now: the order enters Preparing
+ * unassigned, joins the pickers' queue (workerPickQueue, shared-worker.js)
+ * and the next free picker takes it from their own phone. The pop-up was
+ * the tap and the interruption the owner asked to lose, and it was also
+ * the only thing making an unassigned order look like a problem.
+ */
 {
   seen.assignPrompted = false;
   const q = load({ status: 'draft', assignedWorkerId: null, pickingStatus: null, pickCursor: 0 });
   q.items.forEach((it) => { it.pickStatus = null; it.pickedQty = null; });
   scope.stepSavedQuoteStatus(900, 1);
 
-  t.check(seen.assignPrompted, 'moving forward into preparing still prompts for a worker');
-  t.check(q.status === 'draft', 'and holds the stage move until one is chosen');
+  t.check(!seen.assignPrompted, 'moving forward into preparing asks for nobody');
+  t.check(q.status === 'preparing', 'the order advances unassigned, into the pickers\' queue');
+  t.check(!q.assignedWorkerId && !q.pickingStatus,
+    'with no worker on it and no pick pretended — which is exactly what puts it in that queue');
 }
 
 /* ---------- 7. the helper leaves the assignment to its caller ---------- */

@@ -426,8 +426,14 @@ const trip = (over) => Object.assign({
     'a trip somebody is already out on cannot be assigned');
   t.check(/filter\(s=> !s\.unavailable/.test(fn),
     'to somebody actually available');
-  t.check(/pendingAssign = null;/.test(fn),
-    'without tripping the order-stage flow that shares the modal');
+  /* pendingAssign is gone with the order-stage flow that owned it. The
+     two forward steps that used to open this modal ask for nobody now: a
+     picker takes the next order from the queue on their phone, and an
+     order goes out on "Loaded, it has gone" with the carrier named in the
+     row. A trip is the one thing left that is assigned from a modal, so
+     the modal has one caller and nothing to be tripped up by. */
+  t.check(!/pendingAssign/.test(src),
+    'and nothing is left of the order-stage flow that used to share this modal');
   t.check(/trip\.status = 'assigned';[\s\S]*?trip\.assignedAt = /.test(fn),
     'and picking a row assigns with a timestamp');
   t.check(/openAssignTripModal\(btn\.dataset\.assign\)/.test(src) && !/const pick = prompt\(/.test(src),
@@ -1192,17 +1198,22 @@ const trip = (over) => Object.assign({
   t.check(!s.orderNeedsDelivery({ status: 'preparing', assignedDeliveryId: null }),
     'an order not yet at the delivery step is not waiting for a driver');
 
-  /* The modal is where this is chosen, and it used to refuse to open at
+  /* Where this is chosen. It used to be a modal that refused to open at
      all when no delivery staff existed -- which would have made "the
-     client is collecting it" impossible to record in exactly the shop
-     most likely to need it. */
-  const code = src.split(/\r?\n/).map((l) => l.replace(/(?<!:)\/\/.*$/, '')).join('\n');
-  const modal = (/function openAssignStaffModal\([\s\S]*?\n\}/.exec(code) || [''])[0];
-  t.check(/const selfCarry = role === 'delivery';/.test(modal)
-    && /if\(candidates\.length===0 && !selfCarry\)/.test(modal),
-    'the no-staff refusal no longer applies to a delivery, which has a way out');
-  t.check(/data-id="__client__"/.test(modal),
-    'and the option is offered in the same list as the people');
+     client is collecting it" impossible to record in exactly the shop most
+     likely to need it. It is now the Loaded form, in the row and on the
+     picker's phone, and the question it asks is who is carrying it: hired
+     transport, one of ours, the client's own person, the agent. A shop
+     with no delivery staff simply picks one of the other three. */
+  const shared = read('shared-worker.js');
+  const kinds = extractDeclaration(shared, 'CARRIER_KINDS', 'shared-worker.js');
+  ['hired', 'staff', 'client', 'agent'].forEach((k) => t.check(new RegExp(`${k}:`).test(kinds),
+    `the Loaded form offers "${k}" as a way an order can leave`));
+  const load = extractFunction(shared, 'loadOrder', 'shared-worker.js');
+  t.check(/assignee = '__client__'/.test(load) || /} else {\n    assignee = '__client__';/.test(load),
+    "and the client's own person is written as the sentinel the board reads as settled");
+  t.check(/if\(!st\)\{ toast\('Choose who of ours is taking it'\); return false; \}/.test(load),
+    'while "one of ours" must actually name somebody on the delivery list');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -3,11 +3,17 @@
 /*
  * Order status transitions and delivery routing.
  *
- * The board's forward/back arrows are the only way an order moves, and each
- * step carries a gate: a prepay agent's order can't start being prepared
- * until they've paid, and a step that needs a worker or a driver can't be
- * entered without one -- except a self-pickup agent order, which has no
- * shop driver to assign and uses the '__agent__' sentinel instead.
+ * The board's forward/back arrows move an order, and each step carries a
+ * gate: a prepay agent's order can't start being prepared until they've
+ * paid, and an order can't be sent out for delivery by the arrow at all --
+ * "out for delivery" has to mean something is out, so the move belongs to
+ * Loaded (loadOrder, shared-worker.js), which carries who is carrying it.
+ * The one exception is a self-pickup agent order, which has no carrier to
+ * name and uses the '__agent__' sentinel.
+ *
+ * Entering Being Prepared asks for nobody: the order joins the pickers'
+ * queue and the next free picker takes it from their own phone. The
+ * pop-up that used to stand there was the tap the owner asked to lose.
  *
  * Getting a gate wrong doesn't throw. An order just quietly slips into a
  * stage it shouldn't be in: unpaid stock gets picked, or an order sits in
@@ -29,12 +35,13 @@ const workerSrc = read('shared-worker.js');
 
 /* ---------- live state + stubs ---------------------------------------- */
 const data = {};
-const calls = { prompted: null, assignPicker: null };
+const calls = { prompted: null, toasts: [], openedRow: null };
 function reset(quote, agents) {
   Object.keys(data).forEach((k) => delete data[k]);
   Object.assign(data, { savedQuotes: quote ? [quote] : [], agents: agents || [] });
   calls.prompted = null;
-  calls.assignPicker = null;
+  calls.toasts = [];
+  calls.openedRow = null;
 }
 
 const env = {
@@ -56,7 +63,11 @@ const env = {
   // Both gates divert instead of advancing; recording that is how the tests
   // tell "blocked" apart from "moved".
   promptAgentPrepayment: (q) => { calls.prompted = q.id; },
-  openAssignStaffModal: (id, toStatus, role) => { calls.assignPicker = { id, toStatus, role }; },
+  // The delivery refusal says what to do instead and opens the row where
+  // the Loaded form is; both are DOM work, recorded as the collaborators
+  // they are so the gate itself is what is measured.
+  toast: (m) => { calls.toasts.push(String(m)); },
+  otOpenRow: (id) => { calls.openedRow = id; },
 };
 
 const NAMES = ['agentPaymentBlocksPreparing', 'quoteAgedOffBoard', 'setSavedQuoteStatus', 'stepSavedQuoteStatus'];
@@ -97,10 +108,9 @@ const status = () => data.savedQuotes[0].status;
 
 /* ---------- 1. the sequence walks forward and stops at the ends -------- */
 /*
- * A role-gated forward step ALWAYS hands off to the staff picker, even when
- * someone is already assigned -- the picker is the confirmation step, and it
- * calls setSavedQuoteStatus() once a person is chosen. So the walk is driven
- * the way the picker drives it; the gates themselves are checked in 4 below.
+ * Driven through setSavedQuoteStatus, which is where every move lands --
+ * the arrow, the last supplier confirmation, and Loaded alike. The gates
+ * on the arrow itself are checked in 4 below.
  */
 {
   reset(mkQuote());
@@ -218,19 +228,21 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
 
   // Past the payment gate, the step lands on the worker-assignment gate --
   // so "proceeded" means the prepay prompt didn't fire and the picker did.
+  // Past the payment gate the step lands, because nothing else asks --
+  // so "proceeded" is now the order actually being in Being Prepared.
   reset(mkQuote({ originAgentId: 'AG1', agentPaymentStatus: 'paid' }), PREPAY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && calls.assignPicker && calls.assignPicker.toStatus === 'preparing',
-    'once paid it clears the payment gate and moves on to worker assignment');
+  t.check(calls.prompted === null && status() === 'preparing',
+    'once paid it clears the payment gate and enters Being Prepared');
 
   reset(mkQuote({ originAgentId: 'AG1', agentPaymentStatus: 'unpaid' }), ONDELIVERY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && calls.assignPicker !== null,
+  t.check(calls.prompted === null && status() === 'preparing',
     'a pay-on-delivery agent is never held at this gate');
 
   reset(mkQuote(), PREPAY);
   stepSavedQuoteStatus(1, +1);
-  t.check(calls.prompted === null && calls.assignPicker !== null,
+  t.check(calls.prompted === null && status() === 'preparing',
     "a shop's own order (no agent) is never held at this gate");
 }
 {
@@ -251,35 +263,49 @@ const ONDELIVERY = [{ id: 'AG1', paymentTerm: 'pay_on_delivery' }];
     'an order whose agent is no longer on the roster is not held at the gate');
 }
 
-/* ---------- 4. role gates and self-pickup ----------------------------- */
+/* ---------- 4. what each forward step asks for ------------------------ */
 {
-  // Entering 'preparing' with no worker assigned must open the picker
-  // rather than silently advancing.
+  /* Entering 'preparing' asks for nobody. The order goes in unassigned and
+     joins the pickers' queue on every worker's phone; the next free one
+     takes it. This used to open a pop-up and hold the move until somebody
+     was chosen, which put the choice on the person with the least
+     information and cost a tap on every order. */
   reset(mkQuote({ status: 'draft' }));
   stepSavedQuoteStatus(1, +1);
-  t.check(status() === 'draft' && calls.assignPicker && calls.assignPicker.role === 'worker',
-    `entering Preparing without a worker opens the picker instead of advancing (status ${status()})`);
+  t.check(status() === 'preparing' && !data.savedQuotes[0].assignedWorkerId,
+    `entering Preparing advances with nobody on it (status ${status()})`);
+  t.check(!data.savedQuotes[0].pickingStatus,
+    'and no pick is pretended, which is what puts it in the queue');
 
-  // Shop delivery still needs a driver picked.
+  /* Shop delivery refuses, and says where the move actually lives. "Out
+     for delivery" has to mean something is out; the arrow cannot know who
+     took it, and the shop rings that person by name and number when the
+     customer asks. So the move belongs to Loaded, which carries them. */
   reset(mkQuote({ status: 'preparing', deliveryMode: 'shop_delivery' }));
   stepSavedQuoteStatus(1, +1);
-  t.check(status() === 'preparing' && calls.assignPicker && calls.assignPicker.role === 'delivery',
-    `shop delivery asks for a driver (status ${status()})`);
+  t.check(status() === 'preparing', `shop delivery is not sent out by the arrow (status ${status()})`);
+  t.check(/Loaded/.test(calls.toasts.join(' ')), 'the refusal names the tap that does it');
+  t.check(calls.openedRow === 1, 'and opens the row, where that form is');
 
-  // Self-pickup has no driver to ask for -- it uses the shared sentinel.
+  // Self-pickup has no carrier to name -- it uses the shared sentinel.
   reset(mkQuote({ status: 'preparing', deliveryMode: 'agent_pickup' }));
   stepSavedQuoteStatus(1, +1);
   t.check(status() === 'pending_delivery' && data.savedQuotes[0].assignedDeliveryId === '__agent__'
-    && calls.assignPicker === null,
-    `agent pickup skips the driver picker and marks it __agent__ (status ${status()}, assignee ${data.savedQuotes[0].assignedDeliveryId})`);
+    && !calls.toasts.some((m) => /Loaded/.test(m)),
+    `agent pickup goes out on the arrow and is marked __agent__ (status ${status()}, assignee ${data.savedQuotes[0].assignedDeliveryId})`);
 }
 
 /* ---------- 5. stepping back retires the assignment ------------------- */
 {
-  reset(mkQuote({ status: 'pending_delivery', assignedWorkerId: 'ST1', assignedDeliveryId: 'ST2' }));
+  reset(mkQuote({ status: 'pending_delivery', assignedWorkerId: 'ST1', assignedDeliveryId: 'ST2',
+    carrier: { kind: 'staff', name: 'Kasule', at: 5 } }));
   stepSavedQuoteStatus(1, -1);
   t.check(status() === 'preparing' && data.savedQuotes[0].assignedDeliveryId === null,
     `moving back out of Pending Delivery clears the driver (assignee ${data.savedQuotes[0].assignedDeliveryId})`);
+  // And the carrier note with it: an order pulled back inside has not gone
+  // out with anybody, so a note saying it did is a false record.
+  t.check(data.savedQuotes[0].carrier === null,
+    'and the carrier note it went out with, which is no longer true of it');
   stepSavedQuoteStatus(1, -1);
   t.check(status() === 'draft' && data.savedQuotes[0].assignedWorkerId === null,
     `moving back out of Preparing clears the worker (assignee ${data.savedQuotes[0].assignedWorkerId})`);

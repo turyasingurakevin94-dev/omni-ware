@@ -1,9 +1,19 @@
 // Fired by a Supabase Database Webhook on `saved_quotes` UPDATE (see
-// README.md in this directory for the one-time deploy + Dashboard setup).
-// Sends a push notification to whichever staff member an order's
-// assignedWorkerId just changed to -- covers manual assignment, deny +
-// reassignment, and autoAssignNextOrder() alike, since all three just
-// mutate the same payload.assignedWorkerId field on this table.
+// ../README.md for the one-time deploy + Dashboard setup).
+// Two pushes come out of it:
+//
+//   "New order to prepare"   to the one staff member an order was just put
+//                            in front of -- autoAssignNextOrder() after a
+//                            finished pick, or a re-offer after a step back;
+//                            all of them set payload.pickingStatus to
+//                            'awaiting_accept' on this table.
+//   "Next to pick"           to EVERY worker in the shop, when an order
+//                            enters Preparing with nobody on it. That order
+//                            is in the pickers' queue on each of their
+//                            phones (workerPickQueue, shared-worker.js) and
+//                            the next free one takes it; an app that is
+//                            open sees it on the next poll, and this is what
+//                            reaches an app that is closed.
 //
 // Delivery is native FCM only (see 0014_native_push.sql for the
 // push_subscriptions.fcm_token column) -- Web Push was retired since every
@@ -169,6 +179,17 @@ Deno.serve(async (req) => {
   const oldPicking = oldRecord.payload?.pickingStatus ?? null;
   const handedOver = newWorkerId !== oldWorkerId;
   const offeredAgain = newPicking === "awaiting_accept" && oldPicking !== "awaiting_accept";
+
+  // NEXT TO PICK. An order that has just entered Preparing with nobody on
+  // it is in the pickers' queue. Keyed on the transition, so an edit to an
+  // order already waiting there does not ring every phone again, and
+  // checked before the assignment path below, which would otherwise turn
+  // it away for having no assignee -- that is the point of it.
+  const enteredPreparing = record.status === "preparing" && oldRecord.status !== "preparing";
+  if (enteredPreparing && !newWorkerId) {
+    return await notifyPickQueue(record);
+  }
+
   if (!newWorkerId || !(handedOver || offeredAgain)) {
     return json({ ok: true, skipped: "no new assignment to announce" });
   }
@@ -235,6 +256,69 @@ Deno.serve(async (req) => {
   const title = "New order to prepare";
   const body = `${clientName} — ${itemCount} item${itemCount === 1 ? "" : "s"}`;
 
+  return await pushToDevices(fsa, subs, title, body, order.id);
+});
+
+/* "Next to pick": every worker's device in the shop, for an order that has
+   just joined the pickers' queue. Re-read first, for the same reason the
+   assignment path does -- the body says which row changed and nothing
+   else -- and with its own guard: the row must still be in Preparing with
+   nobody on it and not yet packed, or a stale event would announce an
+   order somebody already took. */
+async function notifyPickQueue(record: { id?: number; shop_id?: string }) {
+  const { data: order, error: orderErr } = await admin
+    .from("saved_quotes")
+    .select("id, shop_id, status, client_name, payload")
+    .eq("shop_id", record.shop_id)
+    .eq("id", record.id)
+    .maybeSingle();
+  if (orderErr) return json({ error: orderErr.message, stage: "queue_reread" }, 500);
+  if (!order) return json({ ok: true, skipped: "order not found" });
+
+  const stillQueued = order.status === "preparing"
+    && (order.payload?.assignedWorkerId ?? null) == null
+    && (order.payload?.pickingStatus ?? null) !== "done";
+  if (!stillQueued) return json({ ok: true, skipped: "order is no longer in the pickers' queue" });
+
+  // Workers only: a delivery-only staff member does not pick.
+  const { data: workers, error: staffErr } = await admin
+    .from("staff")
+    .select("id")
+    .eq("shop_id", order.shop_id)
+    .eq("role", "worker");
+  if (staffErr) return json({ error: staffErr.message, stage: "queue_staff" }, 500);
+  const workerIds = (workers ?? []).map((w) => String(w.id));
+  if (!workerIds.length) return json({ ok: true, skipped: "no workers on staff" });
+
+  const { data: subs, error: subErr } = await admin
+    .from("push_subscriptions")
+    .select("id, fcm_token")
+    .eq("shop_id", order.shop_id)
+    .in("staff_id", workerIds)
+    .not("fcm_token", "is", null);
+  console.log("notify-worker: queue subscription lookup", { shopId: order.shop_id, workers: workerIds.length, subCount: subs?.length, subErr });
+  if (subErr) return json({ error: subErr.message, stage: "queue_subs" }, 500);
+  if (!subs?.length) return json({ ok: true, skipped: "no worker has a push subscription" });
+
+  if (!firebaseServiceAccount) {
+    return json({ ok: true, skipped: "FIREBASE_SERVICE_ACCOUNT_JSON not configured" });
+  }
+  const itemCount = Array.isArray(order.payload?.items) ? order.payload.items.length : 0;
+  const clientName = order.client_name || "a client";
+  const title = "Next to pick";
+  const body = `${clientName} — ${itemCount} item${itemCount === 1 ? "" : "s"} · the next free picker takes it`;
+  return await pushToDevices(firebaseServiceAccount, subs, title, body, order.id);
+}
+
+/* One send loop for both pushes. A token FCM has retired is dropped from
+   push_subscriptions rather than retried forever. */
+async function pushToDevices(
+  fsa: { project_id: string; client_email: string; private_key: string },
+  subs: { id: unknown; fcm_token: unknown }[],
+  title: string,
+  body: string,
+  orderId: number,
+) {
   let fcmAccessToken: string;
   try {
     fcmAccessToken = await getFcmAccessToken(fsa);
@@ -245,9 +329,9 @@ Deno.serve(async (req) => {
 
   const results = await Promise.allSettled(
     subs.map((sub) =>
-      // order.id, not record.id -- the id the device opens on tap comes
-      // from the row that was read back, not from the request body.
-      sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token as string, title, body, order.id)
+      // orderId is order.id from the row that was read back, never the id
+      // supplied in the request body.
+      sendFcmNotification(fsa.project_id, fcmAccessToken, sub.fcm_token as string, title, body, orderId)
         .then(async (resp: Response) => {
           if (!resp.ok) {
             const errBody = await resp.json().catch(() => ({}));
@@ -262,7 +346,7 @@ Deno.serve(async (req) => {
         })
     ),
   );
-  console.log("notify-worker: send results", results.map((r) => r.status === "fulfilled" ? "ok" : String(r.reason)));
+  console.log("notify-worker: send results", { title, results: results.map((r) => r.status === "fulfilled" ? "ok" : String(r.reason)) });
 
   return json({ ok: true, sent: results.filter((r) => r.status === "fulfilled").length, total: subs.length });
-});
+}

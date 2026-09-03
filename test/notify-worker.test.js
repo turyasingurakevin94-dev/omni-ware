@@ -43,10 +43,16 @@ const code = src.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
   t.check(!/Array\.isArray\(record\.payload\?\.items\)/.test(code),
     'and not from the body');
 
-  t.check(/title, body, order\.id\)/.test(code),
-    'the id the device opens on tap is the one that was read back');
-  t.check(!/title, body, record\.id\)/.test(code),
-    'not the id supplied in the request');
+  /* Both pushes go out through one send loop (pushToDevices), which takes
+     the id as an argument -- so this is checked at each call site: what is
+     handed over is always the id of the row that was read back. */
+  t.check(/return await pushToDevices\(fsa, subs, title, body, order\.id\);/.test(code)
+    && /return await pushToDevices\(firebaseServiceAccount, subs, title, body, order\.id\);/.test(code),
+    'the id the device opens on tap is the one that was read back, on both pushes');
+  const sender = code.slice(code.indexOf('async function pushToDevices'));
+  t.check(/sendFcmNotification\(fsa\.project_id, fcmAccessToken, sub\.fcm_token as string, title, body, orderId\)/.test(sender)
+    && !/record\./.test(sender),
+    'and the loop that sends knows nothing of the request body at all');
 }
 
 /* ---------- 2. a forged or stale assignment is refused ---------------- */
@@ -170,6 +176,76 @@ const code = src.split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '')).join('\n');
   t.check(announces(null, null, 'ST1', AA, 'in_progress') === false,
     'an event for an order the worker has already accepted is dropped');
   t.check(announces(null, null, 'ST1', AA, 'done') === false, 'and one already finished');
+}
+
+/* ---------- 4b. and the second push: "Next to pick" ------------------- */
+/*
+ * A stage change alone used to tell nobody. An order entering Preparing
+ * with no worker on it is in the pickers' queue -- on every worker's phone,
+ * oldest first, taken by the next one free -- but an app that is closed
+ * hears nothing, and an app that is open only finds out on its next poll.
+ * That was the hole the assign-a-picker pop-up used to paper over: with
+ * the pop-up gone, the queue has to reach the phones itself.
+ *
+ * It sits BEFORE the assignment filter, which turns away anything with no
+ * assignee -- an order with no assignee being exactly what this announces.
+ */
+{
+  t.check(/const enteredPreparing = record\.status === "preparing" && oldRecord\.status !== "preparing";/.test(code),
+    'an order entering Being Prepared is recognised, by the transition rather than the state');
+  t.check(/if \(enteredPreparing && !newWorkerId\) \{\s*return await notifyPickQueue\(record\);/.test(code),
+    'and one arriving with nobody on it announces the queue');
+
+  // Ordering. The assignment filter returns early on a missing assignee,
+  // so this branch has to come first or it could never fire.
+  const iQueue = code.indexOf('enteredPreparing && !newWorkerId');
+  const iFilter = code.indexOf('if (!newWorkerId || !(handedOver || offeredAgain))');
+  t.check(iQueue > 0 && iQueue < iFilter,
+    'checked before the filter that turns away an order with no assignee');
+
+  // Its own re-read and its own guard, for the same reason the assignment
+  // path has them: the body says which row changed and nothing else.
+  const fn = code.slice(code.indexOf('async function notifyPickQueue'));
+  t.check(/\.from\("saved_quotes"\)[\s\S]{0,240}?\.eq\("shop_id", record\.shop_id\)[\s\S]{0,80}?\.eq\("id", record\.id\)/.test(fn),
+    'the order is read back from the database before anything is sent');
+  t.check(/order\.status === "preparing"/.test(fn)
+    && /\(order\.payload\?\.assignedWorkerId \?\? null\) == null/.test(fn)
+    && /\(order\.payload\?\.pickingStatus \?\? null\) !== "done"/.test(fn),
+    'and the stored row must still be unassigned, in Preparing, and not already packed');
+  t.check(/skipped: "order is no longer in the pickers' queue"/.test(fn),
+    'or the push is skipped — an order somebody already took is not news');
+
+  const iRead = fn.indexOf('queue_reread');
+  const iGuard = fn.indexOf('stillQueued');
+  const iSubs = fn.indexOf('push_subscriptions');
+  t.check(iRead > 0 && iRead < iGuard && iGuard < iSubs,
+    'read, check it is still in the queue, then look up subscriptions');
+
+  // Every worker in the shop, and only workers: a delivery-only staff
+  // member does not pick, so a push telling them to would be noise on the
+  // one channel this app has.
+  t.check(/\.from\("staff"\)[\s\S]{0,160}?\.eq\("shop_id", order\.shop_id\)[\s\S]{0,60}?\.eq\("role", "worker"\)/.test(fn),
+    "the shop's workers are looked up from the verified row's own shop");
+  t.check(/\.in\("staff_id", workerIds\)/.test(fn),
+    'and every one of their devices is told, because any of them may be the next one free');
+  t.check(/const title = "Next to pick";/.test(fn) && /the next free picker takes it/.test(fn),
+    'the notification says what it is and what happens next');
+  t.check(/skipped: "no workers on staff"/.test(fn) && /skipped: "no worker has a push subscription"/.test(fn),
+    'and a shop with nobody to tell is skipped rather than treated as an error');
+
+  // The decision itself, over the transitions an order actually makes.
+  const announces = (oldStatus, newStatus, worker) =>
+    newStatus === 'preparing' && oldStatus !== 'preparing' && !worker;
+  t.check(announces('draft', 'preparing', null) === true,
+    'the last supplier confirming moves an order in, and the queue is announced');
+  t.check(announces('awaiting_goods', 'preparing', null) === true,
+    'as does the last of its goods arriving');
+  t.check(announces('preparing', 'preparing', null) === false,
+    'an edit to an order already waiting does not ring every phone again');
+  t.check(announces('draft', 'preparing', 'ST1') === false,
+    'and an order arriving already on somebody goes down the assignment path instead');
+  t.check(announces('pending_delivery', 'preparing', null) === true,
+    'an order sent back to be picked again is in the queue like any other');
 }
 
 /* ---------- 5. dead tokens are cleaned up ----------------------------- */

@@ -9,15 +9,21 @@
  * a declined order looked exactly like one being worked on, minus a line
  * nobody would notice was missing.
  *
- * And there was no way to put it back on somebody. The forward arrow from
- * Being Prepared asks for a DELIVERY person, so the obvious move sent an
- * unpicked order out for delivery. The only real route was stepping back to
- * Draft and forward again -- two non-obvious clicks that also throw the pick
- * away.
+ * And there was no way to put it back on somebody. The answer at the time
+ * was a modal on the board: the owner picked a name and the order went to
+ * that phone.
  *
- * Same modal the first assignment goes through, given the status the order is
- * already in, so setSavedQuoteStatus leaves stageEnteredAt alone and
- * re-assigning does not reset how long the order has been waiting.
+ * The answer now is that nobody picks. A declined order is unassigned, and
+ * an unassigned order in Being Prepared is IN THE PICKERS' QUEUE
+ * (workerPickQueue, shared-worker.js) -- on every worker's phone, oldest
+ * first, taken by the next one free. Declining is no longer a state the
+ * board has to rescue an order from; it is the ordinary way an order goes
+ * back to being anybody's.
+ *
+ * So what this file checks changed with it. The board still has to say
+ * where an order stands, and it still has to offer a way out of the ONE
+ * stranding that remains -- an order held by somebody whose app cannot
+ * show it -- but "nobody is on it" is now a sentence, not an alarm.
  *
  * Run: node test/admin-reassign-declined.test.js   (or: npm test)
  */
@@ -34,48 +40,59 @@ const shared = read('shared-worker.js');
      row's one act puts it on somebody. */
   const who = extractFunction(admin, 'orderWho', 'index.html');
   const act = extractFunction(admin, 'orderActSpec', 'index.html');
-  t.check(/if\(orderNeedsWorker\(q\)\) main = /.test(who),
-    'an order in Preparing with nobody who can pick it says so in its own cell');
-  t.check(/'Assigned to someone no longer on staff'/.test(who) && /'Nobody picking yet'/.test(who),
-    'and says which of the two it is');
-  t.check(/if\(orderNeedsWorker\(q\)\) return \{ act:'assign', label:'Assign a picker' \};/.test(act),
-    'with an act to put it on somebody');
+  t.check(/if\(orderNeedsWorker\(q\)\) main = otStaffGone\(q\.assignedWorkerId\) \? 'Assigned to someone no longer on staff'/.test(who),
+    'an order held by somebody who cannot pick it says so in its own cell');
+  t.check(/not on their phone/.test(who), 'and says which of the two it is');
+  t.check(/if\(orderNeedsWorker\(q\)\) return \{ act:'release', label:'Back to the queue' \};/.test(act),
+    'with an act that puts it back where anybody can take it');
+  // A declined order -- nobody on it -- is the ordinary case now, and it
+  // reads as a place in a queue rather than as an absence.
+  t.check(/Next free picker takes it/.test(who) && /ahead of it in the queue/.test(who),
+    'while an order nobody holds says where it stands in the pickers\' queue');
 
-  // The two readings are exact opposites: the same predicate decides
-  // whether the cell names a picker or the absence of one.
+  // The readings are exact opposites: no two can be true of one order.
   t.check(/else if\(q\.pickingStatus === 'awaiting_accept'\) main = `Offered to \$\{name\}/.test(who)
     && /else main = `\$\{name\} picking/.test(who),
-    'the assigned and unassigned readings are conditioned on opposites');
+    'the offered and being-picked readings are conditioned on opposites');
 }
 
-/* ---------- 2. the button opens the assignment the first one uses ----- */
+/* ---------- 2. the act puts it back in the queue ----------------------- */
 {
-  t.check(/case 'assign': openAssignStaffModal\(id, 'preparing', 'worker'\); break;/.test(extractFunction(admin, 'otAct', 'index.html')),
-    "it opens the worker picker for the stage it is already in");
-
-  // Which matters: openAssignStaffModal ends by calling setSavedQuoteStatus,
-  // and re-entering the same stage must not restamp it.
-  const setStatus = extractFunction(admin, 'setSavedQuoteStatus', 'index.html');
-  t.check(/if\(q\.status===status\)/.test(setStatus) || /q\.status!==status/.test(setStatus),
-    'and setSavedQuoteStatus only restamps stageEnteredAt on a real move');
+  t.check(/case 'release': releaseOrderToQueue\(id\); break;/.test(extractFunction(admin, 'otAct', 'index.html')),
+    'the act on a stranded order releases it');
+  const rel = extractFunction(admin, 'releaseOrderToQueue', 'index.html');
+  t.check(/q\.assignedWorkerId = null;/.test(rel) && /resetPickingProgress\(q\)/.test(rel),
+    'letting go of both the name and the pick — nobody walked it, so nothing is done');
+  t.check(/q\.status !== 'preparing'/.test(rel),
+    'and only while the order is at the stage a picker is needed for');
+  // Which is the whole rescue: unassigned + preparing IS the queue.
+  const queue = extractFunction(read('shared-worker.js'), 'workerPickQueue', 'shared-worker.js');
+  t.check(/q\.status==='preparing' && !q\.assignedWorkerId/.test(queue),
+    'because an unassigned order in Being Prepared is exactly what the pickers\' queue is');
+  t.check(!/stageEnteredAt =/.test(rel),
+    'and how long it has been waiting is not reset by handing it back — it has been waiting all along');
 }
 
-/* ---------- 3. what the modal writes is what the worker app reads ----- */
+/* ---------- 3. and the phone is what picks it up ---------------------- */
 {
-  // The picker's row handler is the single place a worker assignment is made
-  // from the board; a declined order now goes back through it unchanged.
-  const modal = admin.slice(admin.indexOf('function openAssignStaffModal'), admin.indexOf('function closeAssignStaffModal'));
+  /* The board no longer writes an assignment at all -- the modal that did
+     is gone from this flow, and with it the pop-up on every order. What
+     puts an order on a phone is the worker taking it, or being handed it
+     when they finish the last one. Both write the same fields the modal
+     used to, which is why nothing downstream had to change. */
+  t.check(!/openAssignStaffModal/.test(admin),
+    'the assign-staff pop-up is gone from the order flow rather than left sitting there unused');
 
-  // The worker id is written through the role->field map rather than by
-  // name, which is the point: 'worker' resolves to assignedWorkerId, so the
-  // re-assignment goes through exactly the same path as the first one.
-  t.check(/order\[STAGE_ASSIGNMENT_FIELD\[role\]\] = row\.dataset\.id;/.test(modal),
-    'assigning writes the id through the role-to-field map');
-  t.check(/STAGE_ASSIGNMENT_FIELD = \{ worker: 'assignedWorkerId'/.test(admin),
-    "and 'worker' maps to assignedWorkerId");
+  const take = extractFunction(shared, 'takeNextOrder', 'shared-worker.js');
+  ["pickingStatus = 'in_progress'", 'pickCursor = 0', 'pickingAssignedAt', 'workerAcceptedAt'].forEach((bit) => {
+    t.check(take.includes(bit), `taking the next order sets ${bit}`);
+  });
+  t.check(/workerAcceptedAt = now;/.test(take),
+    'accepted in the same write, because the person tapping is the person taking it');
 
+  const auto = extractFunction(shared, 'autoAssignNextOrder', 'shared-worker.js');
   ["pickingStatus = 'awaiting_accept'", 'pickCursor = 0', 'pickingAssignedAt'].forEach((bit) => {
-    t.check(modal.includes(bit), `assigning sets ${bit}`);
+    t.check(auto.includes(bit), `being handed the next one sets ${bit}`);
   });
 
   // awaiting_accept is what makes it appear on the worker's device -- their
@@ -83,6 +100,8 @@ const shared = read('shared-worker.js');
   const mine = extractFunction(shared, 'renderWorkerView', 'shared-worker.js');
   t.check(/pickingStatus==='awaiting_accept'/.test(mine),
     'and awaiting_accept is exactly what the worker app puts in the pending list');
+  t.check(/renderWorkerQueue\(queue, !!active\)/.test(mine),
+    'while the queue itself is a panel on that same screen — which is how an unassigned order is seen at all');
 }
 
 /* ---------- 4. declining is what creates this state ------------------- */
@@ -109,8 +128,15 @@ const shared = read('shared-worker.js');
   const del = extractFunction(admin, 'deleteStaff', 'index.html');
   t.check(/const live = \(data\.savedQuotes\|\|\[\]\)\.filter\(q=>!q\.voided\);/.test(del),
     'a cancelled order is nobody\'s work, so it is excluded once for both halves');
-  t.check(/const picking = live\.filter\(q=>q\.assignedWorkerId===id && q\.status==='preparing'\);/.test(del),
+  t.check(/const picking = live\.filter\(q=>q\.assignedWorkerId===id && q\.status==='preparing' && q\.pickingStatus!=='done'\);/.test(del),
     'deleting a staff member finds the orders they are actively preparing');
+  /* Not the ones they packed. Those goods are on the floor waiting for
+     transport and the pick is over -- releasing them would throw away a
+     finished pick and send somebody to walk the shelves again for an
+     order already in boxes. It keeps their name, the way a delivered
+     order keeps its picker: the record of who did it. */
+  t.check(/pickingStatus!=='done'/.test(del),
+    'and leaves a packed one alone — the pick is done and the goods are waiting for transport, not for a picker');
   t.check(/q\.assignedWorkerId = null;/.test(del) && /resetPickingProgress\(q\)/.test(del),
     'and lets go of both the assignment and the pick');
   t.check(/Orders they have already finished keep their name|already finished will keep showing their name/.test(del),
@@ -129,10 +155,16 @@ const shared = read('shared-worker.js');
   // Shops carry orders assigned to staff deleted before the fix above, so
   // the board has to offer a way out of a state it can no longer create.
   const needs = extractFunction(admin, 'orderNeedsWorker', 'index.html');
-  t.check(/if\(!q\.assignedWorkerId\) return true;/.test(needs),
-    'an order with nobody assigned needs a worker');
+  /* "Nobody assigned" is no longer the question. That order is in the
+     pickers' queue, which is a place, not a hole -- the alarm the board
+     used to raise for it was the alarm that made an unassigned order look
+     broken, and it fired on every single new order. */
+  t.check(/if\(!q\.assignedWorkerId\) return false;/.test(needs),
+    'an order with nobody assigned is in the queue, and needs nothing from the board');
+  t.check(/if\(q\.pickingStatus==='done'\) return false;/.test(needs),
+    'nor does a packed one — what it needs is Loaded, not a picker');
   t.check(/if\(!\(data\.staff\|\|\[\]\)\.some\(s=>s\.id===q\.assignedWorkerId\)\) return true;/.test(needs),
-    'and so does one assigned to somebody who is no longer on staff');
+    'while one HELD by somebody no longer on staff still does — nobody can see it and it is in no queue');
   // Assigned to somebody real is not enough: the picking state has to be one
   // their app actually lists, or the order is on nobody's screen. 'done'
   // sitting in Being Prepared is exactly that, and finishPreparingOrder
@@ -177,13 +209,18 @@ const shared = read('shared-worker.js');
     'and a driver no longer on staff needs replacing');
 
   const who = extractFunction(admin, 'orderWho', 'index.html');
-  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ act:'assigndelivery', label:'Assign delivery' \};/.test(extractFunction(admin, 'orderActSpec', 'index.html')),
+  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ act:'loaded', label:'Who has it' \};/.test(extractFunction(admin, 'orderActSpec', 'index.html')),
     'the row offers a way to name one');
-  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ main: otStaffGone\(q\.assignedDeliveryId\) \? 'Driver no longer on staff' : 'Nobody delivering'/.test(who)
+  t.check(/if\(orderNeedsDelivery\(q\)\) return \{ main: otStaffGone\(q\.assignedDeliveryId\) \? 'Driver no longer on staff' : 'Nobody named as carrying it'/.test(who)
     && /Going out with \$\{deliveryAssigneeLabel\(q\)\}/.test(who),
     'and the "going out with" reading is its exact opposite');
-  t.check(/case 'assigndelivery': openAssignStaffModal\(id, 'pending_delivery', 'delivery'\); break;/.test(admin),
-    'wired to the delivery picker for the stage it is already in');
+  t.check(/case 'loaded': otOpenRow\(id\); otFocusLoad\(id\); break;/.test(admin),
+    'wired to the form in the row rather than to a pop-up over it');
+  // A third carrier that is not a person of ours: hired transport, named
+  // on the note. Without it, every hired lorry had to be recorded as
+  // somebody on the payroll or as nobody at all.
+  t.check(/__carrier__: 'Hired transport'/.test(carriers),
+    'and hired transport is one of the ways an order can be settled');
 
   // Both halves released, but not the same way.
   const del = extractFunction(admin, 'deleteStaff', 'index.html');

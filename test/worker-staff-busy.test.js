@@ -99,6 +99,15 @@ const eq = (got, want) => JSON.stringify(got) === JSON.stringify(want);
   })]), []), 'a driver who has finished a delivery is free again');
   t.check(eq(busy(ANDREW, [order({ assignedWorkerId: 'ST7' })]), []),
     "nor somebody else's order");
+  /* Packed is not picking. The pick is over and the goods are on the floor
+     waiting for the transport -- the picker was handed their next order at
+     the moment they tapped finish, so counting them as still busy on this
+     one would make everyone deciding who is free read them as holding two.
+     It keeps their name (who packed it) and it is still theirs to load. */
+  t.check(eq(busy(ANDREW, [order({ pickingStatus: 'done' })]), []),
+    'a packed order does not keep its picker busy — the pick is finished, it is waiting for transport');
+  t.check(eq(busy(ANDREW, [order({ pickingStatus: 'in_progress' })]), ['worker:Moses']),
+    'while one still being picked does');
   t.check(eq(busy(ANDREW, [order({ status: 'pending_delivery', assignedDeliveryId: 'ST9' })]), []),
     'being the picker does not make you the driver');
 }
@@ -107,14 +116,25 @@ const eq = (got, want) => JSON.stringify(got) === JSON.stringify(want);
 {
   // The point of the fix: three readers of "is this order still live", one
   // of which disagreed. If a fourth appears, it should read like these.
+  /* autoAssignNextOrder used to carry this filter itself. It now reads
+     workerPickQueue -- the one rule for "what is there to pick", shared
+     with the queue on every worker's phone and with "Take the next one" --
+     so the rule is checked where it lives, and the hand-over is checked
+     for going through it rather than filtering again beside it. */
   const myWorkerOrders = extractFunction(sharedJs, 'myWorkerOrders', 'shared-worker.js');
-  const autoAssign = extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js');
+  const pickQueue = extractFunction(sharedJs, 'workerPickQueue', 'shared-worker.js');
   const staffActive = extractFunction(sharedJs, 'staffActiveOrders', 'shared-worker.js');
-  [['myWorkerOrders', myWorkerOrders], ['autoAssignNextOrder', autoAssign], ['staffActiveOrders', staffActive]]
+  [['myWorkerOrders', myWorkerOrders], ['workerPickQueue', pickQueue], ['staffActiveOrders', staffActive]]
     .forEach(([name, src]) => {
       t.check(/!q\.voided/.test(src), `${name}() excludes voided orders`);
       t.check(/quoteAgedOffBoard\(q\)/.test(src), `${name}() excludes orders aged off the board`);
     });
+  const autoAssign = extractFunction(sharedJs, 'autoAssignNextOrder', 'shared-worker.js');
+  t.check(/workerPickQueue\(\)\[0\]/.test(autoAssign) && !/data\.savedQuotes/.test(autoAssign),
+    'and the hand-over takes the top of that queue rather than filtering the orders a second time');
+  const take = extractFunction(sharedJs, 'takeNextOrder', 'shared-worker.js');
+  t.check(/workerPickQueue\(\)\[0\]/.test(take),
+    'as does the picker taking the next one from their own phone — one rule, three readers');
 }
 
 process.exit(t.done() ? 1 : 0);

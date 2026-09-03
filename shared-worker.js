@@ -822,11 +822,36 @@ function myWorkerOrders(){
   if(!myStaff) return [];
   return data.savedQuotes.filter(q=>q.assignedWorkerId===myStaff.id && !q.voided && !quoteAgedOffBoard(q));
 }
+/* MINE, PACKED. Picked and packed, still in Preparing, waiting for the
+   transport. The pick is over -- so it is not the picker's open work and
+   it does not keep them from the next order -- but it stays theirs until
+   somebody says it has gone: "Loaded, it has gone" is that tap, from this
+   phone or from the desk. */
+function myPackedOrders(){
+  return myWorkerOrders().filter(q=> q.status==='preparing' && q.pickingStatus==='done');
+}
+/* THE PICKERS' QUEUE. Every order in Preparing that nobody holds and that
+   can actually be walked -- goods in, agent paid -- oldest first. One
+   rule, read by everything that hands work out: the "Next to pick" panel
+   on every worker's phone, "Take the next one", and the hand-over after a
+   finished pick (autoAssignNextOrder). Draft is not in it: Taken means the
+   suppliers have not all answered yet, and it is the last confirmation
+   that moves an order into this queue. stageEnteredAt rather than savedAt,
+   because savedAt is rewritten by every edit and an order corrected once
+   used to go to the back of the line. */
+function workerPickQueue(){
+  const waitingSince = (q)=> q.stageEnteredAt || new Date(q.savedAt||0).getTime() || 0;
+  return data.savedQuotes
+    .filter(q=> !q.voided && !quoteAgedOffBoard(q) && q.status==='preparing' && !q.assignedWorkerId
+      && q.pickingStatus !== 'done' && !agentPaymentBlocksPreparing(q) && !goodsBlockPreparing(q))
+    .sort((a, b)=> waitingSince(a) - waitingSince(b));
+}
 
 function renderWorkerView(){
   if(!myStaff){
     document.getElementById('wv_pendingWrap').innerHTML = `<div class="empty">This login isn't linked to a staff profile yet. Ask an admin to send you a login invite from the Staff tab.</div>`;
     document.getElementById('wv_activeWrap').innerHTML = '';
+    ['wv_packedWrap','wv_queueWrap'].forEach(id=>{ const el = document.getElementById(id); if(el) el.innerHTML = ''; });
     return;
   }
   const greetingEl = document.getElementById('wv_greeting');
@@ -834,6 +859,10 @@ function renderWorkerView(){
   const mine = myWorkerOrders();
   const pending = mine.filter(q=>q.pickingStatus==='awaiting_accept');
   const active = mine.find(q=>q.pickingStatus==='in_progress');
+  // What is packed and what is waiting for anybody -- neither is a pick,
+  // so neither is in the two lists above; each has its own panel below.
+  const packed = myPackedOrders();
+  const queue = workerPickQueue();
   // The notifications prompt is a setup task, and it shows on every render
   // until it is done -- which on the Android build is every worker's state
   // until they tap it once. It sat at the top of the body, so mid-pick it
@@ -874,8 +903,10 @@ function renderWorkerView(){
     }
   }
   renderWorkerTrips();
-  renderWorkerPendingList(pending, !!active);
+  renderWorkerPendingList(pending, !!active, queue.length > 0);
   renderWorkerPickStepper(active);
+  renderWorkerPacked(packed);
+  renderWorkerQueue(queue, !!active);
 }
 
 /* Trips, above the picking. A worker who has been sent out is not on the
@@ -957,7 +988,7 @@ function timeAgoLabel(ts){
   return `Requested ${days} day${days===1?'':'s'} ago`;
 }
 
-function renderWorkerPendingList(pending, hasActive){
+function renderWorkerPendingList(pending, hasActive, hasQueue){
   const wrap = document.getElementById('wv_pendingWrap');
   wrap.classList.toggle('is-upnext', !!(hasActive && pending.length));
   // Mid-pick, a waiting order is news, not a decision.
@@ -994,7 +1025,10 @@ function renderWorkerPendingList(pending, hasActive){
     // shop with no work waiting -- and this app loads once and never
     // refreshes itself, so a worker had no way to tell the two apart or any
     // reason to think waiting would help.
-    wrap.innerHTML = hasActive ? '' : `<div class="empty">Nothing to pick right now. New orders appear here as soon as they're assigned to you.</div>`;
+    //
+    // Unless the queue below has something in it: "nothing to pick" over a
+    // panel that says what to pick would be the screen arguing with itself.
+    wrap.innerHTML = (hasActive || hasQueue) ? '' : `<div class="empty">Nothing to pick right now. New orders appear here as they come in — the next free picker takes the top one.</div>`;
     return;
   }
   wrap.innerHTML = pending.map(q=>{
@@ -1078,6 +1112,216 @@ function acceptOrderAssignment(orderId){
   renderWorkerView();
 }
 
+/* ---- The pickers' queue, on the phone ------------------------------
+   An order entering Preparing used to be on nobody's screen until an admin
+   put it on somebody through a pop-up. Now it is on every worker's, as the
+   queue: the next free picker takes the top one, from here. The desk never
+   has to choose. */
+function renderWorkerQueue(queue, hasActive){
+  const wrap = document.getElementById('wv_queueWrap');
+  if(!wrap) return;
+  if(!queue.length){ wrap.innerHTML = ''; return; }
+  const shown = queue.slice(0, 5);
+  const rows = shown.map((q, i)=>{
+    const count = (q.items||[]).length;
+    const since = q.stageEnteredAt ? savedAgoLabel(new Date(q.stageEnteredAt).toISOString()) : '';
+    return `<div class="wv-qrow"><span class="wv-qrow-i">${i+1}</span><span class="wv-qrow-n">${esc(q.client.name || 'Unnamed client')}</span><span class="wv-qrow-m">${count} item${count===1?'':'s'}${since ? ' · in the queue ' + esc(since) : ''}</span></div>`;
+  }).join('');
+  const more = queue.length > shown.length ? `<p class="wv-qmore">and ${queue.length - shown.length} more behind them</p>` : '';
+  // One pick at a time is the rule (acceptOrderAssignment), so with a pick
+  // open the queue is news, not a button.
+  const take = hasActive ? '' : `<button type="button" class="btn btn-accent wv-take-btn" id="wv_take_btn">Take the next one</button>`;
+  wrap.innerHTML = `<div class="wv-sec"><span class="wv-sec-t">Next to pick</span><span class="wv-sec-n">${queue.length} waiting</span></div>${rows}${more}${take}`;
+  const btn = document.getElementById('wv_take_btn');
+  if(btn) btn.addEventListener('click', ()=> takeNextOrder());
+}
+
+/* Take the top of the queue: assigned and accepted in ONE write, because
+   the person tapping is the person taking it -- handing it to themselves
+   as "awaiting accept" and then accepting would be two taps, two saves,
+   and a push notification to their own pocket in between. */
+function takeNextOrder(){
+  if(!myStaff){ toast('This login is not linked to a staff profile yet'); return false; }
+  const open = myWorkerOrders().find(q=> q.pickingStatus === 'in_progress');
+  if(open){
+    toast(`Finish ${open.client.name || 'the order you have open'} first — one order at a time`, 5000);
+    return false;
+  }
+  const next = workerPickQueue()[0];
+  if(!next){ toast('Nothing is waiting to be picked'); renderWorkerView(); return false; }
+  const now = Date.now();
+  next.assignedWorkerId = myStaff.id;
+  next.pickingAssignedAt = now;
+  next.workerAcceptedAt = now;
+  next.pickingStatus = 'in_progress';
+  next.pickCursor = 0;
+  (next.items||[]).forEach(it=>{ if(!it.pickStatus) it.pickStatus = 'pending'; });
+  saveData();
+  refreshAdminOrderBoardIfOpen();
+  renderWorkerView();
+  return true;
+}
+
+/* ---- Packed, waiting to go -----------------------------------------
+   The picker's own packed orders, each with the one question left --
+   who is carrying it -- and the tap that answers it. */
+const WV_LOAD_CLS = { form:'wv-load', field:'wv-load-f', label:'wv-load-l', input:'wv-load-v', select:'wv-load-v',
+  staffField:'wv-load-staff', hiredField:'wv-load-hired', phoneField:'wv-load-phone' };
+function renderWorkerPacked(packed){
+  const wrap = document.getElementById('wv_packedWrap');
+  if(!wrap) return;
+  if(!packed.length){ wrap.innerHTML = ''; return; }
+  // What was typed and not yet sent survives the redraw (the poll redraws
+  // this screen once a minute).
+  const drafts = carrierDraftsFrom(wrap);
+  wrap.innerHTML = `<div class="wv-sec"><span class="wv-sec-t">Packed, waiting to go</span><span class="wv-sec-n">${packed.length}</span></div>` + packed.map(q=>{
+    const name = q.client.name || 'Unnamed client';
+    const count = (q.items||[]).length;
+    const ago = q.pickingDoneAt ? savedAgoLabel(new Date(q.pickingDoneAt).toISOString()) : '';
+    const where = q.deliveryAddress ? ' · to ' + q.deliveryAddress : '';
+    return `<div class="wv-packed" data-id="${q.id}">
+      <div class="wv-pending-top">
+        <div class="wv-avatar">${esc((name.trim().charAt(0) || '?').toUpperCase())}</div>
+        <div class="wv-pending-text">
+          <div class="wv-pending-name">${esc(name)}</div>
+          <div class="wv-pending-meta">${count} item${count===1?'':'s'}${ago ? ' · packed ' + esc(ago) : ''}${esc(where)}</div>
+        </div>
+      </div>
+      ${carrierFormHTML(q, WV_LOAD_CLS, drafts.get(q.id))}
+      <button type="button" class="btn btn-accent wv-load-btn" data-load-go="${q.id}">Loaded, it has gone</button>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-car="kind"]').forEach(sel=> sel.addEventListener('change', ()=> syncCarrierForm(sel.closest('[data-load]'))));
+  wrap.querySelectorAll('[data-load-go]').forEach(b=> b.addEventListener('click', ()=>{
+    const car = readCarrierForm(b.closest('.wv-packed').querySelector('[data-load]'));
+    car.by = myStaff ? myStaff.name : '';
+    loadOrder(Number(b.dataset.loadGo), car);
+  }));
+}
+
+/* ---- Who is carrying it --------------------------------------------
+   One template for both apps -- the picker's packed card and the desk's
+   open row -- so the two can never ask different questions. `cls` is the
+   skin: the worker app's own classes on the phone, the layer's field
+   classes on the console. */
+const CARRIER_KINDS = {
+  hired:  'Hired transport',
+  staff:  'One of ours',
+  client: 'The client’s own person',
+  agent:  'The agent, collecting it',
+};
+function carrierKindsFor(q){
+  return Object.keys(CARRIER_KINDS).filter(k=> k !== 'agent' || (q && q.deliveryMode === 'agent_pickup'));
+}
+function carrierFormHTML(q, cls, draft){
+  const d = draft || {};
+  const kinds = carrierKindsFor(q);
+  const kind = kinds.includes(d.kind) ? d.kind : (q.deliveryMode === 'agent_pickup' ? 'agent' : 'hired');
+  const drivers = (data.staff||[]).filter(s=> staffEligibleForRole(s, 'delivery') && !s.unavailable);
+  const v = (x)=> esc(x == null ? '' : x);
+  const show = (k)=> ({ staff: kind === 'staff', hired: kind === 'hired' || kind === 'staff' || kind === 'client', phone: kind === 'hired' || kind === 'client' })[k];
+  // The console's field puts its control in a bordered box (.ow-f-in);
+  // the phone's control is its own box. `cls.wrap` is that difference.
+  const box = (inner)=> cls.wrap ? `<span class="${cls.wrap}">${inner}</span>` : inner;
+  const field = (label, inner, extra, on)=> `<label class="${cls.field}${extra ? ' ' + extra : ''}"${on === false ? ' style="display:none"' : ''}><span class="${cls.label}">${label}</span>${box(inner)}</label>`;
+  return `<div class="${cls.form}" data-load="${q.id}">
+    ${field('Who is carrying it', `<select class="${cls.select}" data-car="kind">${kinds.map(k=> `<option value="${k}"${k === kind ? ' selected' : ''}>${esc(CARRIER_KINDS[k])}</option>`).join('')}</select>`)}
+    ${field('Who of ours', `<select class="${cls.select}" data-car="staff">${drivers.length ? drivers.map(st=> `<option value="${v(st.id)}"${String(st.id) === String(d.staffId) ? ' selected' : ''}>${esc(st.name)}</option>`).join('') : '<option value="">Nobody on the delivery list</option>'}</select>`, cls.staffField, show('staff'))}
+    ${field(kind === 'client' ? 'Their name' : 'Driver or company', `<input class="${cls.input}" data-car="name" value="${v(d.name)}" placeholder="Kasule" autocomplete="off">`, cls.hiredField, show('hired') && kind !== 'staff')}
+    ${field('Vehicle', `<input class="${cls.input}" data-car="what" value="${v(d.what)}" placeholder="Fuso UAX 123K" autocomplete="off">`, cls.hiredField, show('hired'))}
+    ${field('Phone', `<input class="${cls.input}" data-car="phone" value="${v(d.phone)}" inputmode="tel" placeholder="07…" autocomplete="off">`, cls.phoneField, show('phone'))}
+  </div>`;
+}
+/* The kind decides which of the other fields are asked. Shown and hidden
+   with style rather than the hidden attribute: a field's own display rule
+   would outrank the attribute. */
+function syncCarrierForm(root){
+  if(!root) return;
+  const kindEl = root.querySelector('[data-car="kind"]');
+  const kind = kindEl ? kindEl.value : 'hired';
+  const on = { staff: kind === 'staff', name: kind === 'hired' || kind === 'client', what: kind === 'hired' || kind === 'staff', phone: kind === 'hired' || kind === 'client' };
+  ['staff','name','what','phone'].forEach(k=>{
+    const el = root.querySelector(`[data-car="${k}"]`);
+    const label = el && el.closest('label');
+    if(label) label.style.display = on[k] ? '' : 'none';
+  });
+  const nameLabel = root.querySelector('[data-car="name"]');
+  const nl = nameLabel && nameLabel.closest('label') && nameLabel.closest('label').firstElementChild;
+  if(nl) nl.textContent = kind === 'client' ? 'Their name' : 'Driver or company';
+}
+function readCarrierForm(root){
+  const get = (k)=>{ const el = root && root.querySelector(`[data-car="${k}"]`); return el ? el.value : ''; };
+  return { kind: get('kind') || 'hired', staffId: get('staff'), name: get('name'), what: get('what'), phone: get('phone') };
+}
+function carrierDraftsFrom(root){
+  const m = new Map();
+  if(!root || !root.querySelectorAll) return m;
+  root.querySelectorAll('[data-load]').forEach(f=> m.set(Number(f.dataset.load), readCarrierForm(f)));
+  return m;
+}
+
+/* LOADED, IT HAS GONE. Out for delivery begins when something is out --
+   not when the pick ends, which is what the app used to say while the
+   goods sat on the floor. So this is its own moment, with its own tap,
+   and it carries who is carrying it: hired transport by name and phone,
+   one of ours by staff id, the client's own person, or the agent. The
+   record is the same shape from either app.
+
+   The status move goes through the admin's setSavedQuoteStatus where it
+   exists -- the one place a status changes on the console, which logs
+   the move and says where it went -- and is written directly in the
+   worker app, whose save only ever moves preparing -> pending_delivery
+   (WORKER_STATUS_MOVES). An order already out keeps its stage and only
+   has its carrier corrected. */
+function loadOrder(orderId, carrier){
+  const q = data.savedQuotes.find(x=> x.id === orderId);
+  if(!q) return false;
+  const alreadyOut = q.status === 'pending_delivery';
+  if(q.status !== 'preparing' && !alreadyOut){
+    toast('This order has already moved on — refresh to see where it is now', 5000);
+    return false;
+  }
+  const c = carrier || {};
+  const kind = carrierKindsFor(q).includes(c.kind) ? c.kind : null;
+  if(!kind){ toast('Say who is carrying it first'); return false; }
+  const name = String(c.name || '').trim(), what = String(c.what || '').trim(), phone = String(c.phone || '').trim();
+  let assignee;
+  if(kind === 'staff'){
+    const st = (data.staff||[]).find(x=> String(x.id) === String(c.staffId) && staffEligibleForRole(x, 'delivery'));
+    if(!st){ toast('Choose who of ours is taking it'); return false; }
+    assignee = st.id;
+  } else if(kind === 'hired'){
+    if(!name){ toast('Name the transport — the driver or the company'); return false; }
+    assignee = '__carrier__';
+  } else if(kind === 'agent'){
+    assignee = '__agent__';
+  } else {
+    assignee = '__client__';
+  }
+  const now = Date.now();
+  q.carrier = { kind, name: kind === 'staff' ? (name || staffName(assignee)) : name, what, phone, at: now,
+    by: String(c.by || (typeof myStaff !== 'undefined' && myStaff ? myStaff.name : '') || '') };
+  q.assignedDeliveryId = assignee;
+  if(alreadyOut){
+    saveData();
+    refreshAdminOrderBoardIfOpen();
+  } else {
+    // Loading it IS the claim that it is picked and packed -- from the desk
+    // it may never have had a picker at all.
+    q.pickingStatus = 'done';
+    if(!q.pickingDoneAt) q.pickingDoneAt = now;
+    if(typeof setSavedQuoteStatus === 'function'){
+      setSavedQuoteStatus(q.id, 'pending_delivery');
+    } else {
+      q.status = 'pending_delivery';
+      q.stageEnteredAt = now;
+      saveData();
+    }
+  }
+  if(typeof document !== 'undefined' && document.getElementById('wv_packedWrap')) renderWorkerView();
+  return true;
+}
+
 // renderSavedQuotes() only exists in the admin app's Order Tracking board --
 // guarded so the same function works from the standalone worker app too,
 // where there's no such board to refresh.
@@ -1111,6 +1355,8 @@ function resetPickingProgress(q){
   // already settled -- and settled in favour of billing the full quantity,
   // which is the one outcome that must never happen by default.
   q.pickShortfallAckAt = null;
+  // And the pack: a re-pick means the goods are not packed any more.
+  q.pickingDoneAt = null;
   // acceptOrderAssignment fills a missing pickStatus back in as 'pending'.
   (q.items||[]).forEach(it=>{ it.pickStatus = null; it.pickedQty = null; });
 }
@@ -1829,8 +2075,11 @@ function savedAgoLabel(iso){
 // (myWorkerOrders, autoAssignNextOrder) already excludes voided.
 function staffActiveOrders(s){
   const live = data.savedQuotes.filter(q=>!q.voided && !quoteAgedOffBoard(q));
+  // Packed is not picking: the goods are on the floor waiting for the
+  // transport, and the picker is free for the next order the moment they
+  // tap finish (which is also when autoAssignNextOrder hands them one).
   const asWorker = live
-    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing')
+    .filter(q=>q.assignedWorkerId===s.id && q.status==='preparing' && q.pickingStatus!=='done')
     .map(q=>({order:q, capacity:'worker'}));
   const asDelivery = live
     .filter(q=>q.assignedDeliveryId===s.id && q.status==='pending_delivery')
@@ -1838,15 +2087,9 @@ function staffActiveOrders(s){
   return [...asWorker, ...asDelivery];
 }
 
-// The worker's delivery picker used to live here. Choosing a driver is
-// the admin's call now (see finishPreparingOrder), so it is gone rather
-// than left unreferenced -- the admin's own assign-staff modal
-// (openAssignStaffModal, index.html) is the one place that decision is
-// made, and a second implementation of it sitting unused is how the two
-// drift apart.
-//
-// staffEligibleForRole and STAFF_ROLE_LABELS above are NOT dead with it:
-// the admin's modal reads both from this file.
+// staffEligibleForRole above is what the Loaded form (carrierFormHTML)
+// reads to list who of ours can carry an order; STAFF_ROLE_LABELS is the
+// Staff tab's.
 
 // An agent's own payment term gates whether their draft order can even
 // start being prepared -- "pay before we prepare" (set per-agent in the
@@ -1864,64 +2107,33 @@ function agentPaymentBlocksPreparing(q){
 // A worker says the order is picked and packed. That is the whole of
 // what they are reporting, and it is all this does.
 //
-// It used to also make them choose a driver, mirroring the admin board's
-// step-forward gate. That put the decision on the person with the least
-// information: a worker on the shop floor cannot see who is already out,
-// who is nearest the customer, or what else is going on the same run. It
-// also gave them a way to strand their own work -- backing out of the
-// picker left a finished pick that had to be un-finished to escape.
-//
-// The order now arrives in Pending Delivery unassigned, and the admin
-// board asks for the driver (orderNeedsDelivery / "Nobody delivering",
-// index.html).
+// It used to move the order to Pending Delivery as well, which said
+// "out for delivery" of goods still sitting on the floor -- hired
+// transport arrives later than the picker finishes. Packed is now its
+// own state (pickingStatus 'done', still in Preparing, stamped with
+// pickingDoneAt), and the order leaves when somebody taps "Loaded, it has
+// gone" with the carrier's name -- see loadOrder. The picker is free the
+// moment they finish: staffActiveOrders drops a packed order, and the
+// next one in the queue is handed to them here.
 async function finishPreparingOrder(orderId){
   const q = data.savedQuotes.find(x=>x.id===orderId);
   if(!q) return;
   // This app's copy of an order can be behind -- the poll skips a hidden
   // app, the quiet period after a touch, and any refresh that failed.
   // Without this, finishing a pick on an order an admin had since moved on
-  // (delivered, completed) would drag it back to pending_delivery -- a
-  // status regression driven entirely by a stale screen, and invisible to
-  // whoever had already moved it.
+  // (loaded, delivered) would mark a pick done on an order that is out of
+  // the building -- a write driven entirely by a stale screen.
   if(q.status !== 'preparing' && q.status !== 'draft'){
     toast('This order has already moved on — refresh to see where it is now', 5000);
     return;
   }
   const items = q.items||[];
   if(items.length && items.some(row=>!itemPickAnswered(row))) return; // guard: button is hidden otherwise
-  // Who delivers it is the admin's call, not the worker's -- the admin is
-  // the one running the operation and the only one who can see every
-  // driver's whole day. A worker finishing a pick knows the order is
-  // ready; they do not know who is already out, who is closest, or what
-  // else is going out on the same run.
-  //
-  // So the order moves to Pending Delivery with nobody on it, and the
-  // admin board asks: orderNeedsDelivery() is already true for exactly
-  // this shape, and the card already carries "Nobody delivering" with an
-  // Assign button (index.html). Nothing is stranded by arriving
-  // unassigned -- that state was always reachable anyway, by a driver
-  // being deleted or an order being stepped back.
-  //
-  // The one case that assigns itself: an agent collecting their own order.
-  // There is no driver to choose, and leaving it null would put a
-  // "Nobody delivering" alarm on every self-pickup order for the rest of
-  // its life. '__agent__' is the same sentinel the admin's own
-  // stepSavedQuoteStatus() uses, and orderNeedsDelivery() reads it as
-  // settled rather than missing.
-  //
-  // One write, and no await anywhere before it. This used to save the
-  // finished pick first and move the status afterwards, because the
-  // picker sat between them -- which left a window where the order was
-  // 'done' but still in Being Prepared. renderWorkerView builds its lists
-  // from awaiting_accept and in_progress only, so an order caught in that
-  // window was on nobody's screen at all: the worker who had just
-  // finished it could not see it, and no admin knew to look. The window
-  // was as long as the worker took to choose a driver. With the picker
-  // gone there is nothing to do between the two, so there are not two.
+  // One write, and no await anywhere before it, for the reason recorded in
+  // test/worker-finish-refresh.test.js: a background refresh replaces
+  // `data`, and a field set after an await lands in a discarded copy.
   q.pickingStatus = 'done';
-  q.assignedDeliveryId = q.deliveryMode==='agent_pickup' ? '__agent__' : null;
-  q.status = 'pending_delivery';
-  q.stageEnteredAt = Date.now();
+  q.pickingDoneAt = Date.now();
   const workerId = q.assignedWorkerId;
   await saveData();
   if(workerId) autoAssignNextOrder(workerId);
@@ -1929,40 +2141,23 @@ async function finishPreparingOrder(orderId){
   renderWorkerView();
 }
 
-// Opportunistic auto-assign: whenever a worker finishes an order they may
-// already have others assigned to them (being handed an order has never been
-// exclusive -- only accepting one is), so this just hands them the unassigned
-// order that has been waiting longest and still needs preparation, if one
-// exists -- skipping any agent order
-// that's still waiting on its required prepayment, since that one isn't
-// actually ready to be worked on yet.
+// Opportunistic hand-over: when a worker finishes an order, the top of the
+// pickers' queue is put in front of them (as awaiting accept, so their
+// phone asks). The queue is workerPickQueue -- the one rule -- so what is
+// handed here is exactly what "Take the next one" would have taken, and
+// never a draft: an order in Taken is still waiting on its suppliers.
 function autoAssignNextOrder(workerId){
   const staff = data.staff.find(s=>s.id===workerId);
-  if(!staff || staff.unavailable) return;
-  // How long the order has actually been waiting, which is not savedAt --
-  // that is rewritten on every save, so this sorted by least-recently-edited
-  // and an order went to the back of the queue each time anyone touched it.
-  // A five-hour-old order with a corrected line lost its place to one taken
-  // an hour ago, and one being repeatedly amended could keep losing it.
-  // stageEnteredAt is the field the board's own overdue warning treats as
-  // "waiting since", and re-saving a quote deliberately does not reset it.
-  const waitingSince = (q)=> q.stageEnteredAt || new Date(q.savedAt||0).getTime() || 0;
-  const next = data.savedQuotes
-    /* awaiting_goods is deliberately NOT in this list, and the goods gate
-       covers a preparing order whose delivery was undone underneath it:
-       handing somebody a pick they cannot walk is worse than handing them
-       nothing, because they find out at the shelf. */
-    .filter(q=>!q.voided && !q.assignedWorkerId && !quoteAgedOffBoard(q) && (q.status==='draft' || q.status==='preparing')
-      && !agentPaymentBlocksPreparing(q) && !goodsBlockPreparing(q))
-    .sort((a,b)=> waitingSince(a) - waitingSince(b))[0];
-  if(!next) return;
+  if(!staff || staff.unavailable) return null;
+  const next = workerPickQueue()[0];
+  if(!next) return null;
   next.assignedWorkerId = workerId;
   next.pickingStatus = 'awaiting_accept';
   next.pickCursor = 0;
   next.pickingAssignedAt = Date.now();
-  if(next.status==='draft'){ next.status = 'preparing'; next.stageEnteredAt = Date.now(); }
   saveData(); // saveData()'s upsert is what the notify-worker webhook fires on
   refreshAdminOrderBoardIfOpen();
+  return next;
 }
 
 // True only inside the installed Android APK (Capacitor's native bridge

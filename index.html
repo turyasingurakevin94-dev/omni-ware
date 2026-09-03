@@ -6964,6 +6964,27 @@
   .wv-pending-name{font-weight:700;font-size:15px;}
   .wv-pending-meta{font-size:11.5px;color:var(--ink-soft);margin-top:1px;}
   .wv-count-pill{background:#F1F3F1;color:var(--ink-soft);font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap;}
+  /* The pickers' queue and the packed list -- the same panels worker.html
+     draws, on this app's light ground. */
+  .wv-sec{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:14px 2px 8px;}
+  .wv-sec-t{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-soft);}
+  .wv-sec-n{font-size:12px;color:var(--ink-soft);}
+  /* Two lines, so a long client name is not clipped to a shorter one that
+     reads as a different customer. */
+  .wv-qrow{display:grid;grid-template-columns:18px minmax(0,1fr);gap:1px 10px;padding:10px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);margin-bottom:6px;}
+  .wv-qrow-i{grid-row:1/3;align-self:center;font-weight:800;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .wv-qrow-n{font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wv-qrow-m{font-size:12px;color:var(--ink-soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .wv-qmore{margin:2px 2px 8px;font-size:12px;color:var(--ink-soft);}
+  .wv-take-btn{width:100%;margin-top:6px;box-sizing:border-box;}
+  .wv-packed{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;}
+  .wv-load{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 10px;}
+  .wv-load-f{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .wv-load-f:first-child{grid-column:1/-1;}
+  .wv-load-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .wv-load-v{box-sizing:border-box;display:block;width:100%;min-height:44px;padding:10px 12px;border-radius:10px;
+    background:var(--bg);border:1.5px solid var(--line);color:var(--ink);font-size:14px;font-family:inherit;}
+  .wv-load-btn{width:100%;box-sizing:border-box;}
   .wv-carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -12px;padding:4px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .wv-carousel::before,.wv-carousel::after{content:'';flex:0 0 5%;}
   .wv-carousel::-webkit-scrollbar{display:none;}
@@ -8479,6 +8500,15 @@
   .ow-ot-qa-sup .ow-ot-sup{padding:2px 0;}
   .ow-ot-qa-sup .ow-ot-sup-n{flex:0 1 auto;max-width:260px;}
   .ow-ot-qa-sup .ow-ot-sup-a{margin-left:auto;}
+  /* Loaded, in the row. Two columns of the layer's fields; the kind
+     runs full width because it decides which of the rest are asked. */
+  .ow-ot-load{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ow-sp-8) var(--ow-sp-12);margin-top:var(--ow-sp-8);max-width:520px;}
+  .ow-ot-load .ow-f:first-child{grid-column:1/-1;}
+  .ow-ot-load .ow-f-in{width:100%;min-width:0;}
+  .ow-ot-load .ow-f-v{width:100%;}
+  .ow-ot-load-go{display:flex;margin-top:var(--ow-sp-10);}
+  .ow-ot-tp-n{font-weight:var(--ow-fw-600);}
+  .ow-ot-tp-p{color:var(--ow-ink-900);}
   /* a small act in a panel head */
   .ow-pan-a{flex:none;margin-left:var(--ow-sp-8);}
 
@@ -8686,6 +8716,11 @@
     .ow-ot-more{display:none;}
     .ow-ot-needs.ow-open .ow-ot-more{display:grid;}
     .ow-ot-qmore{display:flex;width:100%;justify-content:center;min-height:var(--ow-tap);box-sizing:border-box;margin:var(--ow-sp-8) 0 var(--ow-sp-4);}
+    /* The Loaded form, one column, every control a thumb high. */
+    .ow-ot-load{grid-template-columns:minmax(0,1fr);max-width:none;}
+    .ow-ot-load .ow-f-in{height:var(--ow-tap);}
+    .ow-ot-load .ow-f-v{font-size:16px;}
+    .ow-ot-load-go .btn.ow-sm{width:100%;justify-content:center;min-height:var(--ow-tap);font-size:14px;box-sizing:border-box;}
     .ow-pan-a{min-height:0;height:28px;flex:none;}
   }
 </style>
@@ -10268,7 +10303,7 @@
         <div id="wv_header">
           <div class="page-head" id="wv_pageHead">
             <h1>Pick &amp; Pack</h1>
-            <p>Orders assigned to you for preparation.</p>
+            <p>What you are picking, what you have packed, and what is waiting for whoever is free next.</p>
           </div>
           <div class="wv-active-header" id="wv_activeHeader" style="display:none;"></div>
         </div>
@@ -10283,6 +10318,8 @@
         <div id="wv_tripsWrap"></div>
         <div id="wv_pendingWrap"></div>
         <div id="wv_activeWrap"></div>
+        <div id="wv_packedWrap"></div>
+        <div id="wv_queueWrap"></div>
         <div class="wv-footer" id="wv_signout_btn" style="display:none;">Sign out</div>
       </div>
     </section>
@@ -25354,6 +25391,9 @@ function orderCustomerLocation(q){
 const DELIVERY_SELF_CARRIERS = {
   __agent__:  'Agent pickup',
   __client__: 'Client’s own person',
+  /* Hired transport, named on the carrier note (loadOrder). Not a staff
+     member, so not somebody who can stop being one. */
+  __carrier__: 'Hired transport',
 };
 function deliveryIsSelfCarried(q){
   return !!q && Object.prototype.hasOwnProperty.call(DELIVERY_SELF_CARRIERS, String(q.assignedDeliveryId));
@@ -25361,6 +25401,10 @@ function deliveryIsSelfCarried(q){
 // staffName() resolves a real staff id; a sentinel resolves to what it
 // means, so no screen ever prints '__client__' at a customer.
 function deliveryAssigneeLabel(q){
+  /* The carrier note first: "Kasule · Fuso UAX 123K" says more than
+     "Hired transport", and for one of ours it is the same name. */
+  const c = q && q.carrier;
+  if(c && (c.name || c.what)) return [c.name, c.what].filter(Boolean).join(' · ');
   return DELIVERY_SELF_CARRIERS[String(q.assignedDeliveryId)] || staffName(q.assignedDeliveryId);
 }
 
@@ -25449,8 +25493,8 @@ function setSavedQuoteStatus(id, status, opts){
   renderSavedQuotes();
   /* Where it went, said out loud -- see announceOrderMove. Here rather
      than in the arrow handlers, because this is the one place a status
-     actually changes: the assign-staff modal and the agent-prepay path
-     land here too, and their moves were just as silent. */
+     actually changes: the move out of Taken, Loaded and the agent-prepay
+     path land here too, and their moves were just as silent. */
   if(moved) announceOrderMove(q, status);
 }
 
@@ -26108,15 +26152,18 @@ const STAGE_ASSIGNMENT_FIELD = { worker: 'assignedWorkerId', delivery: 'assigned
 // staff)" and offer nothing to do about it.
 function orderNeedsWorker(q){
   if(!q || q.status!=='preparing') return false;
-  if(!q.assignedWorkerId) return true;
+  // Packed. The pick is over and the goods are on the floor waiting for
+  // the transport: what it needs is Loaded (loadOrder), not a picker.
+  if(q.pickingStatus==='done') return false;
+  // Nobody on it is not a problem any more. It is in the pickers' queue
+  // (workerPickQueue), on every worker's phone, and the next free one
+  // takes it -- the desk has nothing to do.
+  if(!q.assignedWorkerId) return false;
   if(!(data.staff||[]).some(s=>s.id===q.assignedWorkerId)) return true;
   // Assigned to somebody real, but in a picking state their app does not
-  // list. It shows orders awaiting acceptance and orders in progress, and
-  // nothing else -- so 'done' sitting in Being Prepared is on nobody's
-  // screen. finishPreparingOrder persists exactly that for as long as its
-  // delivery picker is open (it saves 'done' before asking, and puts it back
-  // to 'in_progress' only if the worker backs out), so an app killed at that
-  // moment leaves the order there for good.
+  // list -- neither offered, nor open, nor packed -- so it is on nobody's
+  // screen. Nothing writes that shape any more; rows from before still
+  // carry it, and the way out is back to the queue.
   return !['awaiting_accept','in_progress'].includes(q.pickingStatus);
 }
 // The same question one stage on. Less dire than a missing picker -- the
@@ -26199,21 +26246,33 @@ function stepSavedQuoteStatus(id, dir){
   }
   if(dir>0){
     const role = STAGE_ASSIGNMENT_ROLE[toStatus];
-    // A self-pickup agent order has no shop delivery staff to assign --
-    // skip the picker and use the same '__agent__' sentinel
-    // finishPreparingOrder() (shared-worker.js) uses for the same case.
+    // A self-pickup agent order has no carrier to name -- the same
+    // '__agent__' sentinel loadOrder (shared-worker.js) writes for it.
     if(role==='delivery' && q.deliveryMode==='agent_pickup'){
       q.assignedDeliveryId = '__agent__';
-    } else if(role){
-      openAssignStaffModal(id, toStatus, role); return;
+    } else if(role==='delivery'){
+      /* OUT FOR DELIVERY BEGINS WHEN SOMETHING IS OUT. The arrow used to
+         open a pop-up asking for a driver and then move the order; the
+         move now belongs to Loaded (loadOrder), which carries who is
+         carrying it -- the transport by name and phone, one of ours, the
+         client's person. The row's own form is where that is said, so
+         the refusal opens the row rather than only refusing. */
+      toast('Say who is carrying it — open the row and tap Loaded', 5000);
+      otOpenRow(id);
+      return;
     }
+    /* Entering Preparing needs nobody. The order joins the pickers'
+       queue (workerPickQueue) and the next free picker takes it from
+       their phone; the pop-up that stood here was the tap and the
+       interruption the owner asked to lose. */
   } else {
     // Moving backward out of a role-gated step retires that assignment --
     // an order sent back from Pending Delivery to Being Prepared isn't
     // "being delivered" by anyone anymore, so that badge shouldn't follow
-    // it back. Re-entering the step forward again will prompt afresh.
+    // it back, and nor should the carrier note it came with.
     const leavingRole = STAGE_ASSIGNMENT_ROLE[q.status];
     if(leavingRole) q[STAGE_ASSIGNMENT_FIELD[leavingRole]] = null;
+    if(leavingRole==='delivery') q.carrier = null;
     // The pick belongs to the stage, not to the order, so stepping across
     // Being Prepared in either direction has to retire it the same way. Left
     // behind, those ticks read as this stage's work already done: an order
@@ -26248,67 +26307,13 @@ function stepSavedQuoteStatus(id, dir){
   setSavedQuoteStatus(id, toStatus);
 }
 
-/* ---- Assign-staff modal: gates the two step transitions above on
-   picking a registered staff member of the right role. One person can be
-   assigned to multiple orders at once -- no exclusivity check here. ---- */
-let pendingAssign = null; // {orderId, toStatus, role}
-function openAssignStaffModal(orderId, toStatus, role){
-  const candidates = (data.staff||[]).filter(s=>staffEligibleForRole(s, role) && !s.unavailable);
-  /* A delivery has a way out that a pick does not: the client can send
-     their own person. So the "no staff" refusal only applies where a
-     staff member is genuinely the only answer -- refusing here would
-     have made "the client is collecting it" impossible to record in a
-     shop with no delivery staff, which is exactly the shop most likely
-     to need it. */
-  const selfCarry = role === 'delivery';
-  if(candidates.length===0 && !selfCarry){
-    toast(`Add a ${STAFF_ROLE_LABELS[role]} in the Staff tab first`);
-    return;
-  }
-  pendingAssign = {orderId, toStatus, role};
-  const q = data.savedQuotes.find(x=>x.id===orderId);
-  document.getElementById('assignStaffModalTitle').textContent = `Assign ${STAFF_ROLE_LABELS[role]}`;
-  document.getElementById('assignStaffHint').textContent = candidates.length
-    ? `Choose who's moving "${q ? (q.client.name||'this order') : 'this order'}" to ${SQ_STATUSES[toStatus].label}.`
-    : `Nobody on the delivery list is free — but "${q ? (q.client.name||'this order') : 'this order'}" can still go out with the client's own person.`;
-  const listWrap = document.getElementById('assignStaffList');
-  listWrap.innerHTML = `<div class="assign-staff-list">${candidates.map(s=>`
-    <div class="assign-staff-row" data-id="${esc(s.id)}">
-      <span class="assign-staff-name">${esc(s.name)}${(role==='delivery' && s.role==='worker') ? ' <span class="assign-staff-tag">worker</span>' : ''}</span>
-      ${s.phone ? `<span class="assign-staff-phone">${esc(s.phone)}</span>` : ''}
-    </div>`).join('')}${selfCarry ? `
-    <div class="assign-staff-row assign-staff-self" data-id="__client__">
-      <span class="assign-staff-name">The client is sending their own person</span>
-      <span class="assign-staff-phone">no one of ours goes out</span>
-    </div>` : ''}</div>`;
-  listWrap.querySelectorAll('.assign-staff-row').forEach(row=>{
-    row.addEventListener('click', ()=>{
-      if(!pendingAssign) return;
-      const {orderId, toStatus, role} = pendingAssign;
-      const order = data.savedQuotes.find(x=>x.id===orderId);
-      if(order){
-        order[STAGE_ASSIGNMENT_FIELD[role]] = row.dataset.id;
-        // Worker assignments need pickingStatus set so the Worker view's
-        // accept/deny + item stepper actually picks this order up --
-        // autoAssignNextOrder() does this too, but that only fires for
-        // orders picked up *after* a worker finishes a previous one; this
-        // is the path every order's first-ever assignment goes through.
-        if(role==='worker'){
-          order.pickingStatus = 'awaiting_accept';
-          order.pickCursor = 0;
-          order.pickingAssignedAt = Date.now();
-        }
-      }
-      pendingAssign = null;
-      closeModal('assignStaffModal');
-      setSavedQuoteStatus(orderId, toStatus);
-    });
-  });
-  openModal('assignStaffModal');
-}
-/* Sending somebody on a collection trip, through the same modal every
-   other assignment uses. pendingAssign stays null: that variable belongs
-   to the order-stage flow, and the rows here carry their own handler. */
+/* The assign-staff modal used to gate the two forward steps above on
+   choosing a person. Neither step asks any more: Preparing is taken by
+   the next free picker from the queue on their phone, and Out for
+   delivery is Loaded, said in the row with the carrier's name. The modal
+   itself stays for the one chooser left in it, a collection trip. */
+/* Sending somebody on a collection trip, through the modal that used to
+   serve every assignment and now serves this one. */
 function openAssignTripModal(tripId){
   const trip = (data.collectionTrips||[]).find(t=> t.id === tripId);
   /* Open, or handed out and not yet accepted -- in both of those nobody
@@ -26319,7 +26324,6 @@ function openAssignTripModal(tripId){
   if(!trip || trip.voided || (trip.status !== 'open' && trip.status !== 'assigned')) return;
   const candidates = (data.staff||[]).filter(s=> !s.unavailable && String(s.id) !== String(trip.assignedWorkerId));
   if(candidates.length===0){ toast(trip.assignedWorkerId ? 'Nobody else available to send' : 'Add somebody in the Staff tab first'); return; }
-  pendingAssign = null;
   document.getElementById('assignStaffModalTitle').textContent = trip.assignedWorkerId ? 'Hand this trip to who?' : 'Send who to collect?';
   document.getElementById('assignStaffHint').textContent =
     `Choose who is going to ${supplierName(trip.supplierId)} for ${tripLines(trip).length} line${tripLines(trip).length===1?'':'s'}.`;
@@ -26344,7 +26348,6 @@ function openAssignTripModal(tripId){
 }
 
 function closeAssignStaffModal(){
-  pendingAssign = null;
   closeModal('assignStaffModal');
 }
 document.getElementById('assignStaffModalClose').addEventListener('click', closeAssignStaffModal);
@@ -27237,7 +27240,7 @@ function updateOrderStatusBar(){
 // while the board is actually the visible tab.
 setInterval(()=>{
   const tab = document.getElementById('tab-quote-saved');
-  if(tab && tab.style.display !== 'none') renderSavedQuotes();
+  if(tab && tab.style.display !== 'none' && !otTyping()) renderSavedQuotes();
   /* Deliberately NOT behind the board being visible, unlike the render
      above. The whole point is to reach somebody who is looking at
      something else -- an alert that only fires while you are watching
@@ -27419,21 +27422,31 @@ function orderNeedsYou(q, isOverdue){
         say:`${em(nobody.length + ' line' + (nobody.length === 1 ? '' : 's'))} ${nobody.length === 1 ? 'is' : 'are'} on no buying trip: ${sups.map(esc).join(', ')}.` };
     }
   } else if(q.status === 'preparing'){
+    const picker = staffName(q.assignedWorkerId);
     if(orderHasPickShortfall(q)){
       need = { chip:'Short pick', tone:'ow-warn', acts:[{act:'shortpick', label:'Decide'}],
         say:`${esc(pickShortfallLabel(q))}. Amend the order to what was found, or bill it as ordered — nothing can be invoiced until you decide.` };
+    } else if(q.pickingStatus === 'done'){
+      const packedAgo = q.pickingDoneAt ? otDuration(Date.now() - q.pickingDoneAt) + ' ago' : '';
+      need = { chip:'Packed', tone: late ? 'ow-warn' : '', acts:[{act:'loaded', label:'Loaded'}],
+        say:`Packed${picker ? ' by ' + em(picker) : ''}${packedAgo ? ' ' + packedAgo : ''}, waiting for the transport. When it is here, say who is carrying it and tap Loaded — here, or the picker does it from their phone.` };
     } else if(orderNeedsWorker(q)){
-      const gone = otStaffGone(q.assignedWorkerId);
-      need = gone
-        ? { chip:'Picker left', tone:'ow-warn', acts:[{act:'assign', label:'Assign a picker'}], say:'Assigned to someone no longer on staff. Put it on somebody who is.' }
-        : q.pickingStatus === 'done'
-          ? { chip:'Picked', tone:'', acts:[{act:'next', label:'Move on'}], say:'Picked and waiting to go out. Move it on and say who is delivering it.' }
-          : { chip:'Nobody picking', tone: late ? 'ow-warn' : '', acts:[{act:'assign', label:'Assign a picker'}], say:'Nobody is picking this order. Put it on somebody, and their phone asks them to accept it.' };
+      need = otStaffGone(q.assignedWorkerId)
+        ? { chip:'Picker left', tone:'ow-warn', acts:[{act:'release', label:'Back to the queue'}], say:'Held by someone no longer on staff. Put it back in the queue and the next free picker takes it.' }
+        : { chip:'Not on a phone', tone: late ? 'ow-warn' : '', acts:[{act:'release', label:'Back to the queue'}], say:`${em(picker)} holds it, but their phone is not showing it. Put it back in the queue and the next free picker takes it.` };
+    } else if(!q.assignedWorkerId && agentPaymentBlocksPreparing(q)){
+      const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
+      need = { chip:'Agent unpaid', tone:'ow-warn', acts:[{act:'prepay', label:'Record payment'}],
+        say:`${em(agent ? agent.name : 'This agent')} pays before their orders are picked — it stays out of the pickers' queue until ${fig(invoiceBalanceDue(q))} is in.` };
+    } else if(!q.assignedWorkerId && goodsBlockPreparing(q)){
+      const left = orderIncomingLines(q).length;
+      need = { chip:'Goods not in', tone:'ow-warn', acts:[{act:'buying', label:'Buying list'}],
+        say:`${em(left + ' line' + (left === 1 ? '' : 's'))} ${left === 1 ? 'is' : 'are'} still at a supplier, so no picker is offered it. Check the goods in from the buying list.` };
     }
   } else if(q.status === 'pending_delivery'){
     if(orderNeedsDelivery(q)){
-      need = { chip: otStaffGone(q.assignedDeliveryId) ? 'Driver left' : 'Nobody delivering', tone: late ? 'ow-warn' : '', acts:[{act:'assigndelivery', label:'Assign delivery'}],
-        say:'Picked and waiting, with nobody named to deliver it. Say who is taking it out, or that the client is sending their own person.' };
+      need = { chip: otStaffGone(q.assignedDeliveryId) ? 'Driver left' : 'Nobody named', tone: late ? 'ow-warn' : '', acts:[{act:'loaded', label:'Who has it'}],
+        say:'Out, with nobody named as carrying it. Open the row and say who has it — the transport, one of ours, or the client’s own person.' };
     }
   } else if(q.status === 'completed' && !q.invoiced){
     need = { chip:'Not invoiced', tone: late ? 'ow-warn' : '', acts:[{act:'invoice', label:'Invoice'}],
@@ -27463,12 +27476,14 @@ function orderActSpec(q){
   }
   if(q.status === 'preparing'){
     if(orderHasPickShortfall(q)) return { act:'shortpick', label:'Decide' };
-    if(q.pickingStatus === 'done') return { act:'next', label:'Move on' };
-    if(orderNeedsWorker(q)) return { act:'assign', label:'Assign a picker' };
+    /* Packed: the row's act opens the Loaded form in the row; the form's
+       own button is the move. Never a pop-up. */
+    if(q.pickingStatus === 'done') return { act:'loaded', label:'Loaded' };
+    if(orderNeedsWorker(q)) return { act:'release', label:'Back to the queue' };
     return q.announcedAt ? null : { act:'announce', label:'Announce' };
   }
   if(q.status === 'pending_delivery'){
-    if(orderNeedsDelivery(q)) return { act:'assigndelivery', label:'Assign delivery' };
+    if(orderNeedsDelivery(q)) return { act:'loaded', label:'Who has it' };
     return { act:'next', label: q.deliveryMode === 'agent_pickup' ? 'Collected' : 'Delivered', primary:true };
   }
   if(q.status === 'completed' && !q.invoiced) return { act:'invoice', label:'Invoice', primary:true };
@@ -27480,7 +27495,7 @@ function orderActSpec(q){
 function orderActHTML(q, open){
   const a = orderActSpec(q);
   if(!a){
-    const word = q.status === 'completed' ? 'invoiced' : q.status === 'preparing' ? 'picking' : q.status === 'awaiting_goods' ? 'on its way' : 'nothing for you';
+    const word = q.status === 'completed' ? 'invoiced' : q.status === 'preparing' ? (q.assignedWorkerId ? 'picking' : 'queued') : q.status === 'awaiting_goods' ? 'on its way' : 'nothing for you';
     return `<span class="ow-ot-none">${word}</span>`;
   }
   const accent = !!(open && a.primary);
@@ -27515,16 +27530,31 @@ function orderWho(q){
   if(q.status === 'preparing'){
     const items = q.items || [];
     const answered = items.filter(itemPickAnswered).length;
-    let main;
-    if(orderNeedsWorker(q)) main = otStaffGone(q.assignedWorkerId) ? 'Assigned to someone no longer on staff'
-      : q.pickingStatus === 'done' ? `Picked by ${name} · waiting to go out` : 'Nobody picking yet';
+    let main, sub = '';
+    /* Five readings, each the exact opposite of the others: packed;
+       held by somebody whose phone cannot show it; in the queue; offered;
+       being picked. */
+    if(q.pickingStatus === 'done'){
+      main = `Packed${name ? ' by ' + name : ''}`;
+      sub = `waiting to be loaded${q.pickingDoneAt ? ' · packed ' + otWhen(q.pickingDoneAt) : ''}`;
+    } else if(orderNeedsWorker(q)) main = otStaffGone(q.assignedWorkerId) ? 'Assigned to someone no longer on staff' : `${name} holds it · not on their phone`;
+    else if(!q.assignedWorkerId){
+      const ahead = workerPickQueue().findIndex(x=> x.id === q.id);
+      main = ahead < 0 ? (goodsBlockPreparing(q) ? 'Waits for goods before anyone can pick it' : agentPaymentBlocksPreparing(q) ? 'Waits for the agent’s payment' : 'Next free picker takes it')
+        : 'Next free picker takes it';
+      sub = ahead > 0 ? `${ahead} ahead of it in the queue` : ahead === 0 ? 'top of the queue' : '';
+    }
     else if(q.pickingStatus === 'awaiting_accept') main = `Offered to ${name} · not yet accepted`;
     else main = `${name} picking · ${answered} of ${items.length}`;
-    return { main, sub: orderHasPickShortfall(q) ? pickShortfallLabel(q) : (q.announcedAt ? `announced ${otWhen(q.announcedAt)}` : '') };
+    if(!sub) sub = orderHasPickShortfall(q) ? pickShortfallLabel(q) : (q.announcedAt ? `announced ${otWhen(q.announcedAt)}` : '');
+    return { main, sub };
   }
   if(q.status === 'pending_delivery'){
-    if(orderNeedsDelivery(q)) return { main: otStaffGone(q.assignedDeliveryId) ? 'Driver no longer on staff' : 'Nobody delivering', sub: q.deliveryAddress || '' };
-    return { main: deliveryIsSelfCarried(q) ? deliveryAssigneeLabel(q) : `Going out with ${deliveryAssigneeLabel(q)}`, sub: q.deliveryAddress || '' };
+    if(orderNeedsDelivery(q)) return { main: otStaffGone(q.assignedDeliveryId) ? 'Driver no longer on staff' : 'Nobody named as carrying it', sub: q.deliveryAddress || '' };
+    const c = q.carrier || {};
+    const bare = deliveryIsSelfCarried(q) && !c.name && !c.what;
+    return { main: bare ? deliveryAssigneeLabel(q) : `Going out with ${deliveryAssigneeLabel(q)}`,
+      sub: [c.phone || '', q.deliveryAddress || '', c.at ? `loaded ${otWhen(c.at)}` : ''].filter(Boolean).join(' · ') };
   }
   if(q.status === 'completed'){
     if(q.invoiced) return { main:`Invoiced ${otWhen(q.invoicedTs || q.invoicedAt)}`, sub:`${invoiceNumberLabel(q)} · leaves the board ${q.invoicedTs ? otWhen(q.invoicedTs + SQ_BOARD_HIDE_AFTER_MS) : 'a day after invoicing'}` };
@@ -27559,14 +27589,17 @@ function orderTrail(q){
     if(rec.at && rec.state === 'confirmed') push(rec.at, `${supplierName(sid)} confirmed`);
     if(rec.at && rec.state === 'problem') push(rec.at, `${supplierName(sid)} reported a problem`);
   });
+  /* Before the stage log, because loading an order and its move to Out
+     for delivery happen in the same instant and the sort is stable: the
+     act reads above the move it caused rather than under it. */
+  if(q.carrier && q.carrier.at) push(q.carrier.at, `Loaded — ${[q.carrier.name, q.carrier.what].filter(Boolean).join(' · ') || DELIVERY_SELF_CARRIERS[String(q.assignedDeliveryId)] || 'gone out'}${q.carrier.by ? ' · by ' + q.carrier.by : ''}`);
   (q.stageLog || []).forEach(e=> push(e.at, `Moved to ${otStageShort(e.status)}`, e.auto));
   (q.items || []).forEach(it=>{
     if(quoteLineReceived(it)) push(it.receivedAt, `${Number(it.receivedQty).toLocaleString('en-UG')}${it.unit ? ' ' + it.unit : ''} of ${it.productName || 'an item'} received from ${supplierName(it.supplierId)}`);
   });
   if(q.pickingAssignedAt) push(q.pickingAssignedAt, `Offered to ${staffName(q.assignedWorkerId)}`);
   if(q.workerAcceptedAt) push(q.workerAcceptedAt, `${staffName(q.assignedWorkerId)} started picking`);
-  if(q.pickingDoneAt) push(q.pickingDoneAt, `${staffName(q.assignedWorkerId)} finished picking`);
-  if(q.carrier && q.carrier.at) push(q.carrier.at, `Loaded — ${[q.carrier.name, q.carrier.what].filter(Boolean).join(' · ')}${q.carrier.by ? ' by ' + q.carrier.by : ''}`);
+  if(q.pickingDoneAt) push(q.pickingDoneAt, staffName(q.assignedWorkerId) ? `${staffName(q.assignedWorkerId)} finished picking — packed` : 'Packed');
   if(q.announcedAt) push(q.announcedAt, 'Announced to the sales group');
   if(q.invoicedTs) push(q.invoicedTs, `Invoiced — ${invoiceNumberLabel(q)}`);
   if(q.cancelledAt) push(q.cancelledAt, 'Cancelled');
@@ -27618,6 +27651,7 @@ function orderRowBodyHTML(q){
     <div class="ow-ot-lns">${lines || '<div class="ow-ot-ln"><span class="ow-ot-ln-n">No lines on this order</span></div>'}</div>
     ${orderCashStripHTML(q)}
     ${q.status === 'draft' && orderSupplierGroups(q).length ? `<p class="ow-ot-h ow-ot-h2">Suppliers</p><div class="ow-ot-sups">${orderSupplierActsHTML(q, { all:true })}</div>` : ''}
+    ${orderLoadFormHTML(q)}
     <p class="ow-ot-note">${esc(facts.join(' · '))}</p>
     <div class="ow-ot-acts">${acts}</div>
   </div>
@@ -27625,6 +27659,65 @@ function orderRowBodyHTML(q){
     <p class="ow-ot-h">How it got here</p>
     ${orderTrailHTML(q)}
   </div>`;
+}
+
+/* LOADED, IN THE ROW. Who is carrying it, asked where the order is --
+   no modal. The same template the picker's phone uses (carrierFormHTML,
+   shared-worker.js), wearing the layer's field classes here. Shown for
+   every order in Preparing (packed or not: the desk may be the only
+   thing doing this in a shop with nobody on the worker app) and for an
+   order out with nobody named; an order out with a carrier shows the
+   carrier instead, with the phone as a link. What was typed and not yet
+   sent survives a redraw through otLoadDrafts. */
+const OT_LOAD_CLS = { form:'ow-ot-load', field:'ow-f', label:'ow-f-l', wrap:'ow-f-in', input:'ow-f-v ow-f-t', select:'ow-f-v ow-f-sel',
+  staffField:'ow-ot-load-staff', hiredField:'ow-ot-load-hired', phoneField:'ow-ot-load-phone' };
+const otLoadDrafts = new Map();
+function orderLoadFormHTML(q){
+  const packed = q.status === 'preparing' && q.pickingStatus === 'done';
+  const out = q.status === 'pending_delivery';
+  if(out && !orderNeedsDelivery(q)){
+    const c = q.carrier || {};
+    const who = deliveryAssigneeLabel(q);
+    return `<p class="ow-ot-tp">${otIco(ICON_TRUCK, 12)}<span>Going out with <span class="ow-ot-tp-n">${esc(who)}</span>${c.phone ? ` · <a class="ow-ot-tp-p" href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ''}${c.at ? ` · loaded ${esc(otWhen(c.at))}${c.by ? ' by ' + esc(c.by) : ''}` : ''}</span></p>`;
+  }
+  if(q.status !== 'preparing' && !out) return '';
+  const picker = staffName(q.assignedWorkerId);
+  const lead = out ? 'Nobody is named as carrying it. Say who has it.'
+    : packed ? `Packed${picker ? ' by ' + picker : ''}${q.pickingDoneAt ? ' ' + otDuration(Date.now() - q.pickingDoneAt) + ' ago' : ''} — waiting to be loaded. When the transport is here, say who is carrying it. The picker can do this from their phone too.`
+    : 'Not packed yet. Loading it from here counts it as picked and packed — for when nobody is on the worker app.';
+  return `<p class="ow-ot-h ow-ot-h2">${out ? 'Who has it' : 'Loaded'}</p><p class="ow-ot-note">${esc(lead)}</p>${carrierFormHTML(q, OT_LOAD_CLS, otLoadDrafts.get(q.id))}<div class="ow-ot-load-go"><button type="button" class="btn btn-accent ow-sm" data-act="loadgo" data-id="${q.id}">${otIco(ICON_TRUCK, 12)}${out ? 'That is who has it' : 'Loaded, it has gone'}</button></div>`;
+}
+/* Typing in the form and a redraw landing mid-word: the timer skips a
+   redraw while a field in a row has focus, and every redraw keeps what
+   was typed. */
+function otTyping(){
+  const el = document.activeElement;
+  return !!(el && el.closest && el.closest('#savedQuotesWrap [data-load]'));
+}
+function otLoadGo(id, el){
+  const form = el && el.closest ? el.closest('.ow-tbl-x') : null;
+  const car = readCarrierForm(form ? form.querySelector('[data-load]') : null);
+  car.by = '';
+  if(loadOrder(id, car)) otLoadDrafts.delete(id);
+}
+function otFocusLoad(id){
+  const f = document.querySelector(`#savedQuotesWrap [data-load="${id}"]`);
+  if(!f) return;
+  f.scrollIntoView({ block:'nearest' });
+  const first = [...f.querySelectorAll('[data-car]')].find(x=> x.closest('label') && x.closest('label').style.display !== 'none');
+  if(first) first.focus();
+}
+/* Back to the queue: the way out for an order held by somebody whose
+   phone cannot show it -- a picker who left, or a row from before the
+   queue existed. The pick goes with it; nobody walked it. */
+function releaseOrderToQueue(id){
+  const q = data.savedQuotes.find(x=> x.id === id);
+  if(!q || q.status !== 'preparing') return;
+  q.assignedWorkerId = null;
+  resetPickingProgress(q); // shared-worker.js
+  saveData();
+  renderSavedQuotes();
+  toast(`${quoteClientName(q)}'s order is back in the queue — the next free picker takes it`, 4000);
 }
 
 /* One row of the table: client · order · place · lines / the track and
@@ -27732,6 +27825,8 @@ function renderSavedQuotes(){
   updateOrderStatusBar();
   const wrap = document.getElementById('savedQuotesWrap');
   if(!wrap) return;
+  // What is in a row's Loaded form, kept across the redraw (carrierDraftsFrom, shared-worker.js).
+  carrierDraftsFrom(wrap).forEach((v, k)=> otLoadDrafts.set(k, v));
   const allQuotes = data.savedQuotes;
   // Back-fill stageEnteredAt on older orders that pre-date the field (their
   // overdue timer starts from "now", which is the only honest choice).
@@ -27831,8 +27926,9 @@ function otAct(act, id, el){
     case 'buying': openBuyingList(); break;
     case 'pickups': openPickupRuns(); break;
     case 'runs': openDeliveryRuns(); break;
-    case 'assign': openAssignStaffModal(id, 'preparing', 'worker'); break;
-    case 'assigndelivery': openAssignStaffModal(id, 'pending_delivery', 'delivery'); break;
+    case 'loaded': otOpenRow(id); otFocusLoad(id); break;
+    case 'loadgo': otLoadGo(id, el); break;
+    case 'release': releaseOrderToQueue(id); break;
     case 'shortpick': openPickShortfallModal(id, false); break;
     case 'prepay': if(q) promptAgentPrepayment(q); break;
     case 'invoice': toggleQuoteInvoiced(id); break;
@@ -27861,6 +27957,11 @@ document.getElementById('tab-quote-saved').addEventListener('click', (e)=>{
   }
 });
 document.getElementById('ot_search').addEventListener('input', ()=> renderSavedQuotes());
+/* The carrier kind decides which of the other fields are asked. */
+document.getElementById('tab-quote-saved').addEventListener('change', (e)=>{
+  const sel = e.target && e.target.closest ? e.target.closest('[data-car="kind"]') : null;
+  if(sel && sel.closest('#savedQuotesWrap')) syncCarrierForm(sel.closest('[data-load]'));
+});
 
 /* ================= INVOICES ================= */
 // invoiceBalanceDue() is defined once, above, alongside the debt-sync
@@ -32892,7 +32993,10 @@ function deleteStaff(id){
   // prepared it, and staffName() already renders a departed member
   // gracefully.
   const live = (data.savedQuotes||[]).filter(q=>!q.voided);
-  const picking = live.filter(q=>q.assignedWorkerId===id && q.status==='preparing');
+  // Not a packed one: the goods are on the floor and the pick is over,
+  // so it keeps the name of who packed it -- the record, the same way a
+  // delivered order keeps its picker -- and waits for Loaded as before.
+  const picking = live.filter(q=>q.assignedWorkerId===id && q.status==='preparing' && q.pickingStatus!=='done');
   // The same for a driver holding an order out for delivery. Less dire --
   // that order is still visible and can be stepped to Completed -- but the
   // only way to name a new one was stepping it back to Being Prepared,
